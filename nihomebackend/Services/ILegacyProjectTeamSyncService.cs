@@ -13,5 +13,6 @@ public interface ILegacyProjectTeamSyncService
         int? projectManagerUserId,
         int? designLeadUserId,
         int actorUserId,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        int? designProjectId = null);
 }

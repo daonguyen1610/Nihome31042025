@@ -192,6 +192,7 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
       {project.operationalProjectId ? (
         <ProjectDocumentsPanel
           projectId={project.operationalProjectId}
+          designProjectId={project.id}
           canManage={has("operations.projects.manage") || has("design.projects.manage")}
           sourceOptions={sourceOptions}
         />

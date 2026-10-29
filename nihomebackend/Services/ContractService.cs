@@ -199,8 +199,11 @@ public class ContractService(
                     m.DueDate != null && m.DueDate < today),
                 DesignProject = db.DesignProjects
                     .Where(dp => dp.ContractId == c.Id ||
-                        c.OperationalProjectId != null && dp.OperationalProjectId == c.OperationalProjectId)
+                        dp.ContractId == null && c.OperationalProjectId != null &&
+                        dp.OperationalProjectId == c.OperationalProjectId &&
+                        db.DesignProjects.Count(other => other.OperationalProjectId == c.OperationalProjectId) == 1)
                     .OrderByDescending(dp => dp.ContractId == c.Id)
+                    .ThenBy(dp => dp.Id)
                     .Select(dp => new { dp.Id, dp.ProjectCode, dp.Name, dp.CurrentStage })
                     .FirstOrDefault(),
             })
@@ -332,8 +335,11 @@ public class ContractService(
                 // the same shape the list projection already uses.
                 DesignProject = db.DesignProjects
                     .Where(dp => dp.ContractId == c.Id ||
-                        c.OperationalProjectId != null && dp.OperationalProjectId == c.OperationalProjectId)
+                        dp.ContractId == null && c.OperationalProjectId != null &&
+                        dp.OperationalProjectId == c.OperationalProjectId &&
+                        db.DesignProjects.Count(other => other.OperationalProjectId == c.OperationalProjectId) == 1)
                     .OrderByDescending(dp => dp.ContractId == c.Id)
+                    .ThenBy(dp => dp.Id)
                     .Select(dp => new { dp.Id, dp.ProjectCode, dp.Name, dp.CurrentStage })
                     .FirstOrDefault(),
             })

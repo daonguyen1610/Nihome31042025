@@ -113,6 +113,8 @@
   {"key":"deletionImpact.item.operations.surveyChecklistResults","category":"deletionImpact","vi":"Kết quả checklist khảo sát","en":"Survey checklist results","zh":"勘察检查结果","ja":"調査チェックリスト結果"},
   {"key":"deletionImpact.item.operations.surveySiteConditions","category":"deletionImpact","vi":"Điều kiện hiện trạng khảo sát","en":"Survey site conditions","zh":"勘察现场条件","ja":"調査現場条件"},
   {"key":"deletionImpact.item.operations.teamMembers","category":"deletionImpact","vi":"Thành viên dự án","en":"Project members","zh":"项目成员","ja":"プロジェクトメンバー"},
+  {"key":"deletionImpact.item.design.otherTeamReferences","category":"deletionImpact","vi":"Phân công ngoài luồng đang tham chiếu thành viên: cần đổi người quản lý trước khi xóa","en":"Assignments outside this flow reference its members: reassign their manager before deleting","zh":"流程外任务引用此流程成员：删除前请重新指定管理人","ja":"他フローの担当がこのメンバーを参照しています。削除前に管理者を変更してください"},
+  {"key":"deletionImpact.item.design.otherReportingLines","category":"deletionImpact","vi":"Thành viên ngoài luồng đang báo cáo cho đội ngũ này: cần đổi người quản lý trước khi xóa","en":"Members outside this flow report to its team: change their manager before deleting","zh":"流程外成员向此团队汇报：删除前请更改管理人","ja":"他フローのメンバーがこのチームに報告しています。削除前に管理者を変更してください"},
   {"key":"deletionImpact.item.operations.teamRoles","category":"deletionImpact","vi":"Vai trò thành viên dự án","en":"Project member roles","zh":"项目成员角色","ja":"プロジェクトメンバーの役割"},
   {"key":"deletionImpact.item.operations.assignments","category":"deletionImpact","vi":"Phân công và RACI","en":"Assignments and RACI","zh":"任务分配与 RACI","ja":"担当と RACI"},
   {"key":"deletionImpact.item.operations.teamHistory","category":"deletionImpact","vi":"Lịch sử đội dự án","en":"Project team history","zh":"项目团队历史","ja":"プロジェクトチーム履歴"},

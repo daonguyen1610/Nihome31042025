@@ -3348,9 +3348,7 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("DesignLeadUserId");
 
-                    b.HasIndex("OperationalProjectId")
-                        .IsUnique()
-                        .HasFilter("[OperationalProjectId] IS NOT NULL");
+                    b.HasIndex("OperationalProjectId");
 
                     b.HasIndex("ProjectCode")
                         .IsUnique();
@@ -3655,8 +3653,7 @@ namespace nihomebackend.Migrations
                     b.HasIndex("DesignProjectId", "Code")
                         .IsUnique();
 
-                    b.HasIndex("OperationalProjectId", "Code")
-                        .IsUnique();
+                    b.HasIndex("OperationalProjectId", "Code");
 
                     b.ToTable("design_schedule_phases", null, t =>
                         {
@@ -3797,8 +3794,6 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("AssigneeMemberId");
 
-                    b.HasIndex("DesignProjectId");
-
                     b.HasIndex("DownstreamContractId");
 
                     b.HasIndex("ParentTaskId");
@@ -3807,10 +3802,12 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("VendorId");
 
+                    b.HasIndex("DesignProjectId", "Code")
+                        .IsUnique();
+
                     b.HasIndex("OperationalProjectId", "AssigneeMemberId");
 
-                    b.HasIndex("OperationalProjectId", "Code")
-                        .IsUnique();
+                    b.HasIndex("OperationalProjectId", "Code");
 
                     b.HasIndex("OperationalProjectId", "DepartmentCode");
 
@@ -6440,6 +6437,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("DesignProjectId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("EndedAt")
                         .HasColumnType("datetime2");
 
@@ -6487,9 +6487,13 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("UserId");
 
+                    b.HasIndex("DesignProjectId", "UserId")
+                        .IsUnique()
+                        .HasFilter("[EndedAt] IS NULL AND [DesignProjectId] IS NOT NULL");
+
                     b.HasIndex("OperationalProjectId", "UserId")
                         .IsUnique()
-                        .HasFilter("[EndedAt] IS NULL");
+                        .HasFilter("[EndedAt] IS NULL AND [DesignProjectId] IS NULL");
 
                     b.ToTable("operational_project_members", (string)null);
                 });
@@ -12572,8 +12576,8 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
-                        .WithOne("DesignProject")
-                        .HasForeignKey("NihomeBackend.Models.DesignProject", "OperationalProjectId")
+                        .WithMany("DesignProjects")
+                        .HasForeignKey("OperationalProjectId")
                         .OnDelete(DeleteBehavior.SetNull);
 
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "ProjectManager")
@@ -13339,6 +13343,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectMember", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
+                        .WithMany()
+                        .HasForeignKey("DesignProjectId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
                         .WithMany("TeamMembers")
                         .HasForeignKey("OperationalProjectId")
@@ -13355,6 +13364,8 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("DesignProject");
 
                     b.Navigation("OperationalProject");
 
@@ -15051,7 +15062,7 @@ namespace nihomebackend.Migrations
 
                     b.Navigation("Contracts");
 
-                    b.Navigation("DesignProject");
+                    b.Navigation("DesignProjects");
 
                     b.Navigation("DesignSchedulePhases");
 

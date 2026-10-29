@@ -110,9 +110,9 @@ public class DesignProjectService(
             throw new DesignProjectOperationException("Tên dự án là bắt buộc.");
         }
         var designManagerUserId = ResolveDesignManagerId(request.DesignManagerUserId, request.ProjectManagerUserId);
-        await EnsureRelationsAsync(request, designManagerUserId, excludeDesignProjectId: null, ct);
         var allocationYear = DateTime.UtcNow.Year;
         await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
+        await EnsureRelationsAsync(request, designManagerUserId, excludeDesignProjectId: null, ct);
 
         var entity = new DesignProject
         {
@@ -134,6 +134,7 @@ public class DesignProjectService(
             UpdatedAt = DateTime.UtcNow,
         };
         db.DesignProjects.Add(entity);
+        await db.SaveChangesAsync(ct);
         if (entity.OperationalProjectId.HasValue)
         {
             await projectTeamSync.SyncDesignProjectRolesAsync(
@@ -141,7 +142,8 @@ public class DesignProjectService(
                 entity.ProjectManagerUserId,
                 entity.DesignLeadUserId,
                 callerUserId,
-                ct);
+                ct,
+                entity.Id);
         }
         await db.SaveChangesAsync(ct);
         if (allocationTransaction is not null)
@@ -180,10 +182,12 @@ public class DesignProjectService(
                 "Cơ hội chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế.");
         }
 
+        await using var handoffTransaction = await BeginCodeAllocationAsync(DateTime.UtcNow.Year, ct);
         var existing = await db.DesignProjects.AsNoTracking()
             .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value)
+            .OrderBy(project => project.Id)
             .Select(project => project.Id)
-            .SingleOrDefaultAsync(ct);
+            .FirstOrDefaultAsync(ct);
         if (existing != 0)
         {
             return new EnsureDesignProjectResult((await GetAsync(existing, ct))!, false);
@@ -198,18 +202,18 @@ public class DesignProjectService(
                 CustomerId = source.CustomerId,
                 Note = note,
             }, callerUserId, ct);
+            if (handoffTransaction is not null) await handoffTransaction.CommitAsync(ct);
             return new EnsureDesignProjectResult(created, true);
         }
         catch (DbUpdateException)
         {
-            // Two users can click the handoff concurrently. The unique
-            // operational-project index chooses the winner; return that row
-            // so the second request is an idempotent success.
+            // A concurrent contract handoff may have created a compatible row.
             db.ChangeTracker.Clear();
             existing = await db.DesignProjects.AsNoTracking()
                 .Where(project => project.OperationalProjectId == source.OperationalProjectId.Value)
+                .OrderBy(project => project.Id)
                 .Select(project => project.Id)
-                .SingleOrDefaultAsync(ct);
+                .FirstOrDefaultAsync(ct);
             if (existing == 0) throw;
             return new EnsureDesignProjectResult((await GetAsync(existing, ct))!, false);
         }
@@ -218,6 +222,7 @@ public class DesignProjectService(
     public async Task<DesignProjectResponse?> UpdateAsync(int id, UpdateDesignProjectRequest request,
         int callerUserId, CancellationToken ct = default)
     {
+        await using var updateTransaction = await BeginCodeAllocationAsync(DateTime.UtcNow.Year, ct);
         var entity = await db.DesignProjects.FirstOrDefaultAsync(dp => dp.Id == id, ct);
         if (entity is null) return null;
 
@@ -265,10 +270,12 @@ public class DesignProjectService(
                 entity.ProjectManagerUserId,
                 entity.DesignLeadUserId,
                 callerUserId,
-                ct);
+                ct,
+                entity.Id);
         }
         await db.SaveChangesAsync(ct);
         logger.LogInformation("DesignProject {Id} updated by user {UserId}", id, callerUserId);
+        if (updateTransaction is not null) await updateTransaction.CommitAsync(ct);
         return await GetAsync(id, ct);
     }
 
@@ -316,17 +323,19 @@ public class DesignProjectService(
 
     public async Task<DesignProjectResponse> EnsureForContractAsync(Contract contract, int? callerUserId, CancellationToken ct = default)
     {
+        var allocationYear = DateTime.UtcNow.Year;
+        await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
         var existing = await db.DesignProjects
             .OrderByDescending(dp => dp.ContractId == contract.Id)
+            .ThenBy(dp => dp.Id)
             .FirstOrDefaultAsync(dp => dp.ContractId == contract.Id ||
-                contract.OperationalProjectId != null && dp.OperationalProjectId == contract.OperationalProjectId, ct);
+                dp.ContractId == null && contract.OperationalProjectId != null &&
+                dp.OperationalProjectId == contract.OperationalProjectId &&
+                db.DesignProjects.Count(other => other.OperationalProjectId == contract.OperationalProjectId) == 1, ct);
         if (existing is not null)
         {
             return (await GetAsync(existing.Id, ct))!;
         }
-
-        var allocationYear = DateTime.UtcNow.Year;
-        await using var allocationTransaction = await BeginCodeAllocationAsync(allocationYear, ct);
 
         var entity = new DesignProject
         {
@@ -456,6 +465,9 @@ public class DesignProjectService(
         }
         if (request.ContractId.HasValue)
         {
+            if (await db.DesignProjects.AsNoTracking().AnyAsync(design => design.ContractId == request.ContractId &&
+                (!excludeDesignProjectId.HasValue || design.Id != excludeDesignProjectId.Value), ct))
+                throw new DesignProjectOperationException("Hợp đồng đã gắn với một luồng Thiết kế. Hãy mở luồng đã liên kết hoặc chọn hợp đồng khác.");
             var contract = await db.Contracts
                 .AsNoTracking()
                 .Where(item => item.Id == request.ContractId.Value)
@@ -496,16 +508,6 @@ public class DesignProjectService(
             {
                 throw new DesignProjectOperationException(
                     "Dự án thiết kế và Dự án vận hành phải thuộc cùng một Khách hàng.");
-            }
-            var alreadyLinked = await db.DesignProjects
-                .AsNoTracking()
-                .AnyAsync(item =>
-                    item.OperationalProjectId == request.OperationalProjectId.Value &&
-                    (!excludeDesignProjectId.HasValue || item.Id != excludeDesignProjectId.Value), ct);
-            if (alreadyLinked)
-            {
-                throw new DesignProjectOperationException(
-                    "Dự án vận hành đã có một luồng thiết kế.");
             }
         }
         if (designManagerUserId.HasValue &&
@@ -554,9 +556,10 @@ public class DesignProjectService(
             db.Database.ProviderName,
             "Microsoft.EntityFrameworkCore.SqlServer",
             StringComparison.Ordinal);
-        var transaction = await db.Database.BeginTransactionAsync(
-            isSqlServer ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable,
-            ct);
+        var transaction = db.Database.CurrentTransaction is null
+            ? await db.Database.BeginTransactionAsync(
+                isSqlServer ? IsolationLevel.ReadCommitted : IsolationLevel.Serializable, ct)
+            : null;
 
         if (!isSqlServer) return transaction;
 
@@ -577,7 +580,7 @@ public class DesignProjectService(
         }
         catch
         {
-            await transaction.DisposeAsync();
+            if (transaction is not null) await transaction.DisposeAsync();
             throw;
         }
     }

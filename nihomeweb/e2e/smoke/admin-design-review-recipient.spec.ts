@@ -58,7 +58,7 @@ test("design review UI explains task approval and dossier responsibilities", asy
   await expect(page.getByTestId("create-design-review")).toHaveCount(0);
 });
 
-test("newly uploaded design evidence explains Drive sync and becomes selectable after refresh", async ({
+test("design evidence becomes selectable automatically after Drive sync without losing the draft", async ({
   page,
   api,
   loginAs,
@@ -112,6 +112,8 @@ test("newly uploaded design evidence explains Drive sync and becomes selectable 
     await page.getByRole("option", { name: /Thiết kế cơ sở|Basic design/i }).click();
 
     const documentRow = dialog.getByTestId(`review-document-${documentId}`);
+    const titleField = dialog.locator("input").first();
+    await titleField.fill(`Basic design review ${unique}`);
     await expect(documentRow).toContainText(fileName);
     await expect(documentRow.getByRole("checkbox")).toBeDisabled();
     await expect(documentRow).toContainText(/đang chờ đồng bộ|waiting for Drive sync/i);
@@ -126,10 +128,39 @@ test("newly uploaded design evidence explains Drive sync and becomes selectable 
     execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
       UPDATE project_documents SET SyncStatus='Synced', DesiredOperation='None',
         NextSyncAttemptAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE Id=${documentId};`);
-    await dialog
-      .getByRole("button", { name: /Tải lại trạng thái tài liệu|Refresh document status/i })
-      .click();
-    await expect(documentRow.getByRole("checkbox")).toBeEnabled();
+    await expect(documentRow.getByRole("checkbox")).toBeEnabled({ timeout: 12_000 });
+    await expect(titleField).toHaveValue(`Basic design review ${unique}`);
+    await documentRow.getByRole("checkbox").check();
+    await expect(documentRow.getByRole("checkbox")).toBeChecked();
+    execSql(`SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus='Failed',
+      SyncError='operationalProjects.documents.loadError' WHERE Id=${documentId};`);
+    await expect(documentRow.getByRole("checkbox")).toBeDisabled({ timeout: 12_000 });
+    await expect(documentRow.getByRole("checkbox")).not.toBeChecked();
+    await expect(titleField).toHaveValue(`Basic design review ${unique}`);
+    await dialog.getByRole("button", { name: /^(Hủy|Cancel)$/i }).click();
+    execSql(`SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus='Pending',
+      SyncError=NULL, DesiredOperation='Upsert' WHERE Id=${documentId};`);
+    await page.goto(`/admin/design-projects/${project!.id}?tab=docs`);
+    const catalog = page.getByTestId("project-documents-section");
+    for (const width of [390, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      await expect(catalog.getByTestId("project-documents-upload")).toBeVisible();
+      const card = catalog.locator("article").filter({ hasText: fileName });
+      await expect(card).toContainText(/Đang chờ|Pending/i);
+      const controls = catalog.getByTestId("project-documents-upload");
+      for (const control of await controls.locator('input, button[role="combobox"]').all()) {
+        const bounds = await control.boundingBox();
+        expect(bounds, `upload field visible at ${width}px`).toBeTruthy();
+        expect(bounds!.x).toBeGreaterThanOrEqual(0);
+        expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      }
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+    }
+    execSql(`SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus='Synced',
+      DesiredOperation='None' WHERE Id=${documentId};`);
+    await expect(catalog.locator("article").filter({ hasText: fileName })).toContainText(
+      /Đã đồng bộ|Synced/i, { timeout: 12_000 },
+    );
   } finally {
     execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
       DELETE FROM project_documents WHERE Id=${documentId};`);

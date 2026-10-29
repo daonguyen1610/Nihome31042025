@@ -1245,6 +1245,13 @@ export interface OperationalProjectListItemResponse {
 }
 
 export interface OperationalProjectResponse extends OperationalProjectListItemResponse {
+  designProjects: Array<{
+    id: number;
+    projectCode: string;
+    name: string;
+    contractId?: number | null;
+    status: string;
+  }>;
   note?: string | null;
   designProjectId?: number | null;
   designProjectCode?: string | null;
@@ -3585,6 +3592,7 @@ export interface InitializeDesignSchedulePhaseRequest {
 }
 
 export interface InitializeDesignScheduleRequest {
+  designProjectId?: number;
   phases: InitializeDesignSchedulePhaseRequest[];
 }
 
@@ -3617,6 +3625,7 @@ export interface UpsertDesignScheduleTaskRequest extends UpsertDesignSchedulePha
 }
 
 export interface DesignScheduleQuery {
+  designProjectId?: number;
   phase?: DesignSchedulePhaseCode;
   assigneeMemberId?: number;
   departmentCode?: string;
@@ -3795,6 +3804,7 @@ export interface ProjectMemberRoleResponse {
 }
 
 export interface OperationalProjectMemberResponse {
+  designProjectId?: number | null;
   id: number;
   userId: number;
   userName: string;
@@ -3868,6 +3878,7 @@ export interface ProjectMemberRoleRequest {
 }
 
 export interface UpsertOperationalProjectMemberRequest {
+  designProjectId?: number | null;
   userId: number;
   position: string;
   reportsToMemberId?: number | null;
@@ -3878,6 +3889,7 @@ export interface UpsertOperationalProjectMemberRequest {
 }
 
 export interface UpsertOperationalProjectAssignmentRequest {
+  designProjectId?: number | null;
   workKey: string;
   title: string;
   module: string;
@@ -8128,14 +8140,15 @@ export const adminApi = {
     ),
   getOperationalProjectTimeline: (id: number) =>
     api.get<OperationalProjectTimelineItem[]>(`/operational-projects/${id}/timeline`),
-  getOperationalProjectTeam: (projectId: number) =>
-    api.get<OperationalProjectTeamResponse>(`/operational-projects/${projectId}/team`),
-  getOperationalProjectTeamHistory: (projectId: number) =>
+  getOperationalProjectTeam: (projectId: number, designProjectId?: number) =>
+    api.get<OperationalProjectTeamResponse>(`/operational-projects/${projectId}/team`, { params: { designProjectId } }),
+  getOperationalProjectTeamHistory: (projectId: number, designProjectId?: number) =>
     api.get<OperationalProjectTeamHistoryResponse[]>(
       `/operational-projects/${projectId}/team/history`,
+      { params: { designProjectId } },
     ),
-  getOperationalProjectTeamCandidates: (projectId: number) =>
-    api.get<ProjectMemberCandidateResponse[]>(`/operational-projects/${projectId}/team/candidates`),
+  getOperationalProjectTeamCandidates: (projectId: number, designProjectId?: number) =>
+    api.get<ProjectMemberCandidateResponse[]>(`/operational-projects/${projectId}/team/candidates`, { params: { designProjectId } }),
   listHseViolations: (projectId: number, params: HseViolationListParams = {}) =>
     api.get<HseViolationListResponse>(`/operational-projects/${projectId}/hse-violations`, {
       params,
@@ -8320,8 +8333,10 @@ export const adminApi = {
     api.get<Blob>("/kpi/export", { params, responseType: "blob" }),
   listProjectDocumentCategories: () =>
     api.get<ProjectDocumentCategoryResponse[]>("/operational-projects/document-categories"),
-  listProjectDocuments: (projectId: number) =>
-    api.get<ProjectDocumentResponse[]>(`/operational-projects/${projectId}/documents`),
+  listProjectDocuments: (projectId: number, designProjectId?: number) =>
+    api.get<ProjectDocumentResponse[]>(`/operational-projects/${projectId}/documents`, {
+      params: designProjectId ? { designProjectId } : undefined,
+    }),
   uploadProjectDocument: (
     projectId: number,
     file: File,

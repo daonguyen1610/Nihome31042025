@@ -93,6 +93,8 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
                 db.OperationalProjectMembers.Add(new OperationalProjectMember
                 {
                     OperationalProjectId = assignment.ProjectId,
+                    DesignProjectId = await db.DesignProjects.Where(item => item.OperationalProjectId == assignment.ProjectId)
+                        .Select(item => item.Id).SingleAsync(),
                     UserId = designLeadId,
                     Position = "Design Lead",
                     StartedAt = DateTime.UtcNow.AddDays(-1),
@@ -842,6 +844,7 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
             var member = new OperationalProjectMember
             {
                 OperationalProjectId = project.Id,
+                DesignProject = designProject,
                 UserId = memberUserId,
                 Position = "Architect",
                 StartedAt = DateTime.UtcNow.AddDays(-1),
@@ -851,6 +854,7 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
             var approver = new OperationalProjectMember
             {
                 OperationalProjectId = project.Id,
+                DesignProject = designProject,
                 UserId = managerRoleCode == "DESIGN_LEAD" ? managerId : localLead.Id,
                 Position = "Design Lead",
                 StartedAt = DateTime.UtcNow.AddDays(-1),

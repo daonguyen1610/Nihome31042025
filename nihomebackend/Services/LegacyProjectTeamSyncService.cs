@@ -32,13 +32,15 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
             actorUserId,
             ct);
 
-    public Task SyncDesignProjectRolesAsync(
+    public async Task SyncDesignProjectRolesAsync(
         int operationalProjectId,
         int? projectManagerUserId,
         int? designLeadUserId,
         int actorUserId,
-        CancellationToken ct = default) => SyncAsync(
-            operationalProjectId,
+        CancellationToken ct = default,
+        int? designProjectId = null)
+    {
+        IReadOnlyCollection<LegacyRole> desired =
             [
                 new LegacyRole(
                     projectManagerUserId,
@@ -54,19 +56,21 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
                     "Design",
                     "Design Lead",
                     DesignLeadReference),
-            ],
-            actorUserId,
-            ct);
+            ];
+        await SyncAsync(operationalProjectId, desired, actorUserId, ct, designProjectId);
+    }
 
     private async Task SyncAsync(
         int operationalProjectId,
         IReadOnlyCollection<LegacyRole> desiredRoles,
         int actorUserId,
-        CancellationToken ct)
+        CancellationToken ct,
+        int? designProjectId = null)
     {
         var members = await db.OperationalProjectMembers
             .Include(member => member.Roles)
-            .Where(member => member.OperationalProjectId == operationalProjectId && member.EndedAt == null)
+            .Where(member => member.OperationalProjectId == operationalProjectId && member.EndedAt == null &&
+                member.DesignProjectId == designProjectId)
             .ToListAsync(ct);
         var references = desiredRoles.Select(role => role.SourceReference).ToHashSet(StringComparer.Ordinal);
         var now = DateTime.UtcNow;
@@ -87,11 +91,9 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
                      references.Contains(role.SourceReference ?? string.Empty) &&
                      role.Source is RuntimeSource or BackfillSource))
         {
-            var desired = desiredRoles.Single(item => item.SourceReference == role.SourceReference);
-            if (desired.UserId != role.Member.UserId ||
-                !desired.UserId.HasValue ||
-                !activeUserIds.Contains(desired.UserId.Value) ||
-                !Matches(role, desired))
+            if (!desiredRoles.Any(desired => desired.SourceReference == role.SourceReference &&
+                desired.UserId == role.Member.UserId && desired.UserId.HasValue &&
+                activeUserIds.Contains(desired.UserId.Value) && Matches(role, desired)))
             {
                 role.EndedAt = now;
                 changed = true;
@@ -107,6 +109,7 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
                 member = new OperationalProjectMember
                 {
                     OperationalProjectId = operationalProjectId,
+                    DesignProjectId = designProjectId,
                     UserId = desired.UserId!.Value,
                     Position = desired.Position,
                     StartedAt = now,

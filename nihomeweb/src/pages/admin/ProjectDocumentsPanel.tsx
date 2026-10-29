@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useProjectDocumentSync } from "@/hooks/useProjectDocumentSync";
 import { extractApiError } from "@/lib/apiError";
 import { newIdempotencyKey } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
@@ -58,6 +59,7 @@ const statusClass: Record<ProjectDocumentSyncStatus, string> = {
 
 type Props = {
   projectId: number;
+  designProjectId?: number;
   canManage: boolean;
   onCountChange?: (count: number) => void;
   sourceOptions?: Array<{ entityType: string; recordId: number; label: string; category: string }>;
@@ -67,6 +69,7 @@ const extensionOf = (fileName: string) => fileName.split(".").pop()?.toLowerCase
 
 export default function ProjectDocumentsPanel({
   projectId,
+  designProjectId,
   canManage,
   onCountChange,
   sourceOptions,
@@ -85,6 +88,19 @@ export default function ProjectDocumentsPanel({
   const [uploading, setUploading] = useState(false);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [classifications, setClassifications] = useState<Record<number, string>>({});
+  const updateDocuments = useCallback(
+    (nextDocuments: ProjectDocumentResponse[]) => {
+      setDocuments(nextDocuments);
+      onCountChange?.(nextDocuments.length);
+    },
+    [onCountChange],
+  );
+  const syncError = useProjectDocumentSync(
+    projectId,
+    documents.some((item) => item.syncStatus === "Pending" || item.syncStatus === "Processing"),
+    updateDocuments,
+    designProjectId,
+  );
 
   const dateTimeFormat = useMemo(
     () =>
@@ -102,7 +118,7 @@ export default function ProjectDocumentsPanel({
     setError(null);
     try {
       const [documentResponse, categoryResponse] = await Promise.all([
-        adminApi.listProjectDocuments(projectId),
+        adminApi.listProjectDocuments(projectId, designProjectId),
         adminApi.listProjectDocumentCategories(),
       ]);
       const nextDocuments = documentResponse.data ?? [];
@@ -114,7 +130,7 @@ export default function ProjectDocumentsPanel({
     } finally {
       setLoading(false);
     }
-  }, [onCountChange, projectId]);
+  }, [onCountChange, projectId, designProjectId]);
 
   useEffect(() => {
     void load();
@@ -427,13 +443,13 @@ export default function ProjectDocumentsPanel({
   );
 
   return (
-    <div className="space-y-4" data-testid="project-documents-section">
+    <div className="min-w-0 space-y-4" data-testid="project-documents-section">
       <p className="text-sm text-muted-foreground">
         {t("operationalProjects.documents.description")}
       </p>
       {canManage && (
         <div
-          className="grid gap-3 rounded-md border bg-muted/30 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(13rem,0.65fr)_minmax(13rem,0.65fr)_auto] xl:items-end"
+          className="grid min-w-0 grid-cols-1 gap-3 rounded-md border bg-muted/30 p-4 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.65fr)_minmax(0,0.65fr)_auto] xl:items-end [&>div]:min-w-0"
           data-testid="project-documents-upload"
         >
           <div>
@@ -442,7 +458,7 @@ export default function ProjectDocumentsPanel({
               ref={fileInputRef}
               id="project-document-file"
               type="file"
-              className="mt-1"
+              className="mt-1 min-w-0 max-w-full"
               onChange={(event) => selectFile(event.target.files?.[0])}
             />
           </div>
@@ -461,7 +477,10 @@ export default function ProjectDocumentsPanel({
                   if (source) selectCategory(source.category);
                 }}
               >
-                <SelectTrigger id="project-document-source" className="mt-1">
+                <SelectTrigger
+                  id="project-document-source"
+                  className="mt-1 min-w-0 [&>span]:truncate"
+                >
                   <SelectValue placeholder={t("designProjects.documents.selectSourceRecord")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -486,7 +505,10 @@ export default function ProjectDocumentsPanel({
               onValueChange={selectCategory}
               disabled={Boolean(sourceOptions?.length)}
             >
-              <SelectTrigger id="project-document-category" className="mt-1">
+              <SelectTrigger
+                id="project-document-category"
+                className="mt-1 min-w-0 [&>span]:truncate"
+              >
                 <SelectValue placeholder={t("operationalProjects.documents.selectCategory")} />
               </SelectTrigger>
               <SelectContent>
@@ -509,6 +531,11 @@ export default function ProjectDocumentsPanel({
         </div>
       )}
 
+      {syncError ? (
+        <p role="status" className="break-words text-sm text-destructive">
+          {t("operationalProjects.documents.loadError")}: {extractApiError(syncError)}
+        </p>
+      ) : null}
       {loading ? (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
           <Loader2 className="h-4 w-4 animate-spin" />

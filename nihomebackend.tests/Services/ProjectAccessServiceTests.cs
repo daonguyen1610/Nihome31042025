@@ -340,6 +340,11 @@ public sealed class ProjectAccessServiceTests : IDisposable
         };
         _db.AddRange(member, designProject);
         _db.SaveChanges();
+        if (scope != ProjectRoleScope.Project)
+        {
+            member.DesignProjectId = designProject.Id;
+            _db.SaveChanges();
+        }
         return (user.Id, project.Id, designProject.Id);
     }
 

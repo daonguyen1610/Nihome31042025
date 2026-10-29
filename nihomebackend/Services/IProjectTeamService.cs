@@ -9,6 +9,8 @@ public interface IProjectAccessService
     Task<bool> CanManageTeamAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanManageDesignScheduleAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanManageDesignDocumentsAsync(int userId, int operationalProjectId, CancellationToken ct = default);
+    Task<bool> CanManageDesignDocumentSourceAsync(int userId, int operationalProjectId, string? sourceType, long? sourceId, CancellationToken ct = default);
+    Task<bool> CanManageDesignDocumentAsync(int userId, int operationalProjectId, long documentId, CancellationToken ct = default);
     Task<bool> CanViewDesignProjectAsync(int userId, int designProjectId, CancellationToken ct = default);
     Task<bool> CanManageDesignProjectAsync(int userId, int designProjectId, CancellationToken ct = default, string? disciplineCode = null);
     Task<bool> CanApproveDesignProjectAsync(int userId, int designProjectId, CancellationToken ct = default, string? disciplineCode = null);
@@ -40,9 +42,9 @@ public enum DesignProjectResourceType
 
 public interface IProjectTeamService
 {
-    Task<OperationalProjectTeamResponse?> GetAsync(int projectId, int callerUserId, CancellationToken ct = default);
-    Task<IReadOnlyList<OperationalProjectTeamHistoryResponse>?> GetHistoryAsync(int projectId, int callerUserId, CancellationToken ct = default);
-    Task<IReadOnlyList<ProjectMemberCandidateResponse>?> GetCandidatesAsync(int projectId, int callerUserId, CancellationToken ct = default);
+    Task<OperationalProjectTeamResponse?> GetAsync(int projectId, int callerUserId, CancellationToken ct = default, int? designProjectId = null);
+    Task<IReadOnlyList<OperationalProjectTeamHistoryResponse>?> GetHistoryAsync(int projectId, int callerUserId, CancellationToken ct = default, int? designProjectId = null);
+    Task<IReadOnlyList<ProjectMemberCandidateResponse>?> GetCandidatesAsync(int projectId, int callerUserId, CancellationToken ct = default, int? designProjectId = null);
     Task<OperationalProjectMemberResponse> AddMemberAsync(int projectId, UpsertOperationalProjectMemberRequest request, int callerUserId, CancellationToken ct = default);
     Task<OperationalProjectMemberResponse?> UpdateMemberAsync(int projectId, int memberId, UpsertOperationalProjectMemberRequest request, int callerUserId, CancellationToken ct = default);
     Task<OperationalProjectAssignmentResponse> AddAssignmentAsync(int projectId, UpsertOperationalProjectAssignmentRequest request, int callerUserId, CancellationToken ct = default);

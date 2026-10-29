@@ -13,10 +13,12 @@ public sealed class ProjectDocumentService(
     IGoogleDriveAdapter drive,
     IProjectDriveFolderService folders,
     IGoogleDriveSettingsStore driveSettings,
-    IPermissionService? permissions = null) : IProjectDocumentService, IProjectDocumentStagingService
+    IPermissionService? permissions = null,
+    IProjectAccessService? access = null) : IProjectDocumentService, IProjectDocumentStagingService
 {
     public const int MaxSyncAttempts = 3;
     private readonly IPermissionService permissionService = permissions ?? new PermissionService(db);
+    private readonly IProjectAccessService projectAccess = access ?? new ProjectAccessService(db, permissions ?? new PermissionService(db));
 
     public async Task<IReadOnlyList<ProjectDocumentResponse>?> ListAsync(
         int projectId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
@@ -24,6 +26,27 @@ public sealed class ProjectDocumentService(
         var readable = await ReadableDocumentsAsync(projectId, callerUserId, canSeeAll, ct);
         if (readable is null) return null;
         return await readable
+            .OrderBy(document => document.Category).ThenByDescending(document => document.UpdatedAt)
+            .Select(document => Map(document)).ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<ProjectDocumentResponse>?> ListForDesignAsync(
+        int projectId, int designProjectId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    {
+        if (!await db.DesignProjects.AsNoTracking().AnyAsync(design =>
+            design.Id == designProjectId && design.OperationalProjectId == projectId, ct)) return null;
+        if (!await projectAccess.CanViewDesignProjectAsync(callerUserId, designProjectId, ct)) return null;
+        var readable = await ReadableDocumentsAsync(projectId, callerUserId, canSeeAll, ct);
+        if (readable is null) return null;
+        var hasSingleDesign = await db.DesignProjects.CountAsync(design => design.OperationalProjectId == projectId, ct) == 1;
+        return await readable.Where(document => document.SourceModule == ProjectDocumentSourceModule.Design &&
+            (document.SourceEntityType == null && hasSingleDesign ||
+             document.SourceEntityType == nameof(ConceptOption) && db.ConceptOptions.Any(source =>
+                 source.Id == document.SourceRecordId && source.DesignProjectId == designProjectId) ||
+             document.SourceEntityType == nameof(BasicDesignDoc) && db.BasicDesignDocs.Any(source =>
+                 source.Id == document.SourceRecordId && source.DesignProjectId == designProjectId) ||
+             document.SourceEntityType == nameof(ShopDrawing) && db.ShopDrawings.Any(source =>
+                 source.Id == document.SourceRecordId && source.DesignProjectId == designProjectId)))
             .OrderBy(document => document.Category).ThenByDescending(document => document.UpdatedAt)
             .Select(document => Map(document)).ToListAsync(ct);
     }
@@ -272,6 +295,10 @@ public sealed class ProjectDocumentService(
         var linkedId = document.ConflictWithDocumentId ?? document.Id;
         var conflictDocuments = await db.ProjectDocuments.Where(item =>
             item.Id == document.Id || item.Id == linkedId || item.ConflictWithDocumentId == linkedId).ToListAsync(ct);
+        if (conflictDocuments.Any(item => item.OperationalProjectId != projectId ||
+            item.SourceModule != document.SourceModule || item.SourceEntityType != document.SourceEntityType ||
+            item.SourceRecordId != document.SourceRecordId))
+            throw new ProjectDocumentValidationException("Các phiên bản xung đột không thuộc cùng hồ sơ nguồn; hãy liên hệ quản trị viên để kiểm tra liên kết.");
         var now = DateTime.UtcNow;
         foreach (var conflictDocument in conflictDocuments)
         {
@@ -401,18 +428,27 @@ public sealed class ProjectDocumentService(
         var now = DateTime.UtcNow;
         var isOperationalMember = await db.OperationalProjectMembers.AsNoTracking().AnyAsync(item =>
             item.OperationalProjectId == projectId && item.UserId == userId && item.User.IsActive &&
+            item.DesignProjectId == null &&
             item.StartedAt <= now && item.EndedAt == null, ct);
         if (!isOperationalMember)
         {
-            var isDirectDesignAssignee = await db.DesignProjects.AsNoTracking().AnyAsync(item =>
-                item.OperationalProjectId == projectId &&
-                (item.ProjectManagerUserId == userId || item.DesignLeadUserId == userId), ct);
-            if (!isDirectDesignAssignee) return null;
-
+            var assignedDesignIds = db.DesignProjects.Where(design => design.OperationalProjectId == projectId &&
+                (design.ProjectManagerUserId == userId || design.DesignLeadUserId == userId ||
+                 db.OperationalProjectMembers.Any(member => member.DesignProjectId == design.Id &&
+                     member.UserId == userId && member.EndedAt == null && member.User.IsActive))).Select(design => design.Id);
+            if (!await assignedDesignIds.AnyAsync(ct)) return null;
+            var hasSingleDesign = await db.DesignProjects.CountAsync(design => design.OperationalProjectId == projectId, ct) == 1;
             return query.Where(item => item.SourceModule == ProjectDocumentSourceModule.Design &&
                 (item.Category == ProjectDocumentCategory.DesignConcept ||
                  item.Category == ProjectDocumentCategory.DesignBasic ||
-                 item.Category == ProjectDocumentCategory.DesignShopDrawing));
+                 item.Category == ProjectDocumentCategory.DesignShopDrawing) &&
+                (item.SourceEntityType == null && hasSingleDesign ||
+                 item.SourceEntityType == nameof(ConceptOption) && db.ConceptOptions.Any(source =>
+                     source.Id == item.SourceRecordId && assignedDesignIds.Contains(source.DesignProjectId)) ||
+                 item.SourceEntityType == nameof(BasicDesignDoc) && db.BasicDesignDocs.Any(source =>
+                     source.Id == item.SourceRecordId && assignedDesignIds.Contains(source.DesignProjectId)) ||
+                 item.SourceEntityType == nameof(ShopDrawing) && db.ShopDrawings.Any(source =>
+                     source.Id == item.SourceRecordId && assignedDesignIds.Contains(source.DesignProjectId))));
         }
 
         var codes = await permissionService.GetForUserAsync(userId, ct);
@@ -438,7 +474,18 @@ public sealed class ProjectDocumentService(
             sources.Add(ProjectDocumentSourceModule.Construction);
         if (Has("construction.acceptance.view")) sources.Add(ProjectDocumentSourceModule.Acceptance);
         if (Has("construction.handover.view")) sources.Add(ProjectDocumentSourceModule.Handover);
-        return query.Where(item => categories.Contains(item.Category) && sources.Contains(item.SourceModule));
+        query = query.Where(item => categories.Contains(item.Category) && sources.Contains(item.SourceModule));
+        var allowedDesignIds = (await projectAccess.GetAccessibleDesignProjectIdsAsync(userId, ct)).ToList();
+        var singleAllowedDesign = await db.DesignProjects.CountAsync(design => design.OperationalProjectId == projectId, ct) == 1 &&
+            await db.DesignProjects.AnyAsync(design => design.OperationalProjectId == projectId && allowedDesignIds.Contains(design.Id), ct);
+        return query.Where(item => item.SourceModule != ProjectDocumentSourceModule.Design ||
+            item.SourceEntityType == null && singleAllowedDesign ||
+            item.SourceEntityType == nameof(ConceptOption) && db.ConceptOptions.Any(source =>
+                source.Id == item.SourceRecordId && allowedDesignIds.Contains(source.DesignProjectId)) ||
+            item.SourceEntityType == nameof(BasicDesignDoc) && db.BasicDesignDocs.Any(source =>
+                source.Id == item.SourceRecordId && allowedDesignIds.Contains(source.DesignProjectId)) ||
+            item.SourceEntityType == nameof(ShopDrawing) && db.ShopDrawings.Any(source =>
+                source.Id == item.SourceRecordId && allowedDesignIds.Contains(source.DesignProjectId)));
     }
 
     private async Task ValidateMetadataAsync(int projectId, ProjectDocumentSourceModule sourceModule,
@@ -478,11 +525,7 @@ public sealed class ProjectDocumentService(
             throw new ProjectDocumentValidationException(
                 "Tài liệu Thiết kế phải gắn với đúng hồ sơ nguồn Concept, Basic Design hoặc Shop Drawing.");
 
-        var designProjectId = await db.DesignProjects.AsNoTracking()
-            .Where(item => item.OperationalProjectId == projectId)
-            .Select(item => (int?)item.Id)
-            .SingleOrDefaultAsync(ct);
-        if (!designProjectId.HasValue)
+        if (!await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct))
             throw new ProjectDocumentValidationException("Dự án vận hành chưa có Dự án Thiết kế liên kết.");
 
         if (request.SourceRecordId.Value > int.MaxValue)
@@ -492,13 +535,13 @@ public sealed class ProjectDocumentService(
         {
             nameof(ConceptOption) => request.Category == ProjectDocumentCategory.DesignConcept &&
                 await db.ConceptOptions.AsNoTracking().AnyAsync(item =>
-                    item.Id == recordId && item.DesignProjectId == designProjectId.Value, ct),
+                    item.Id == recordId && item.DesignProject.OperationalProjectId == projectId, ct),
             nameof(BasicDesignDoc) => request.Category == ProjectDocumentCategory.DesignBasic &&
                 await db.BasicDesignDocs.AsNoTracking().AnyAsync(item =>
-                    item.Id == recordId && item.DesignProjectId == designProjectId.Value, ct),
+                    item.Id == recordId && item.DesignProject.OperationalProjectId == projectId, ct),
             nameof(ShopDrawing) => request.Category == ProjectDocumentCategory.DesignShopDrawing &&
                 await db.ShopDrawings.AsNoTracking().AnyAsync(item =>
-                    item.Id == recordId && item.DesignProjectId == designProjectId.Value, ct),
+                    item.Id == recordId && item.DesignProject.OperationalProjectId == projectId, ct),
             _ => false,
         };
         if (!valid)

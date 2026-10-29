@@ -32,7 +32,8 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
             .Where(item => item.Id == projectId)
             .Select(item => item.OperationalProjectId)
             .SingleAsync(ct);
-        if (operationalProjectId.HasValue)
+        if (operationalProjectId.HasValue && await db.DesignProjects.CountAsync(design =>
+            design.OperationalProjectId == operationalProjectId, ct) == 1)
         {
             documentIds.AddRange(await db.ProjectDocuments.AsNoTracking()
                 .Where(item => item.OperationalProjectId == operationalProjectId &&
@@ -253,7 +254,16 @@ internal static class DesignDocumentScope
         var referenceRecords = references.Select(reference =>
             $"{reference.SourceEntityType}:{reference.SourceRecordId}")
             .ToHashSet(StringComparer.Ordinal);
-        if (referenceRecords.Count == 0) return [];
+        var ownedDocumentIds = await db.ProjectDocuments.AsNoTracking().Where(document =>
+            document.SourceModule == ProjectDocumentSourceModule.Design &&
+            (document.SourceEntityType == nameof(ConceptOption) && db.ConceptOptions.Any(source =>
+                source.Id == document.SourceRecordId && designProjectIds.Contains(source.DesignProjectId)) ||
+             document.SourceEntityType == nameof(BasicDesignDoc) && db.BasicDesignDocs.Any(source =>
+                source.Id == document.SourceRecordId && designProjectIds.Contains(source.DesignProjectId)) ||
+             document.SourceEntityType == nameof(ShopDrawing) && db.ShopDrawings.Any(source =>
+                source.Id == document.SourceRecordId && designProjectIds.Contains(source.DesignProjectId))))
+            .Select(document => document.Id).ToListAsync(ct);
+        if (referenceRecords.Count == 0) return ownedDocumentIds;
         var candidates = await db.ProjectDocuments.AsNoTracking()
             .Where(item => item.SourceEntityType != null && item.SourceRecordId.HasValue)
             .Select(item => new
@@ -266,6 +276,7 @@ internal static class DesignDocumentScope
         return candidates.Where(item => referenceRecords.Contains(
             $"{item.SourceEntityType}:{item.SourceRecordId!.Value}"))
             .Select(item => item.Id)
+            .Concat(ownedDocumentIds).Distinct()
             .ToList();
     }
 }

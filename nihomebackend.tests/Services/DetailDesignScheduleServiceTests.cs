@@ -143,6 +143,10 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         var approver = Member(project.Id, approverUser.Id);
         var inactiveMember = Member(project.Id, inactiveUser.Id);
         var otherMember = Member(otherProject.Id, otherUser.Id);
+        member.DesignProjectId = design.Id;
+        approver.DesignProjectId = design.Id;
+        inactiveMember.DesignProjectId = design.Id;
+        otherMember.DesignProjectId = otherDesign.Id;
         db.AddRange(member, approver, inactiveMember, otherMember);
         db.MasterDataOptions.Add(new MasterDataOption
         {
@@ -168,6 +172,8 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         otherProjectTaskId = otherTask.Id;
         var access = new Mock<IProjectAccessService>();
         access.Setup(item => item.CanManageDesignScheduleAsync(callerId, projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        access.Setup(item => item.CanManageDesignProjectAsync(callerId, design.Id, It.IsAny<CancellationToken>(), null))
             .ReturnsAsync(true);
         service = new DetailDesignScheduleService(
             db, access.Object, new Mock<INotificationService>().Object,

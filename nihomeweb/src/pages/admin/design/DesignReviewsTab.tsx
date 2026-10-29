@@ -39,6 +39,7 @@ import { extractApiError, extractDownloadError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useProjectDocumentSync } from "@/hooks/useProjectDocumentSync";
 import {
   adminApi,
   type DesignProjectResponse,
@@ -100,6 +101,16 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
   const [commentDocumentIds, setCommentDocumentIds] = useState<Record<number, string>>({});
   const createKey = useRef(newIdempotencyKey());
   const createTrigger = useRef<HTMLButtonElement>(null);
+  const documentSyncError = useProjectDocumentSync(
+    operationalProjectId,
+    isDesignManager &&
+      (open ||
+        documents.some(
+          (item) => item.syncStatus === "Pending" || item.syncStatus === "Processing",
+        )),
+    setDocuments,
+    project?.id,
+  );
 
   const actionableError = useCallback(
     (reason: unknown) => {
@@ -132,7 +143,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
         const [teamResponse, documentResponse] = await Promise.all([
           adminApi.listDesignReviewRecipientCandidates(projectId),
           operationalProjectId
-            ? adminApi.listProjectDocuments(operationalProjectId)
+            ? adminApi.listProjectDocuments(operationalProjectId, projectId)
             : Promise.resolve({ data: [] }),
         ]);
         setRecipientCandidates(teamResponse.data);
@@ -866,6 +877,11 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                 {t("designProjects.reviews.recipients")}
               </legend>
               <div className="mt-1 max-h-44 overflow-y-auto rounded-md border p-2">
+                {documentSyncError ? (
+                  <p role="status" className="p-2 text-sm text-destructive">
+                    {actionableError(documentSyncError)}
+                  </p>
+                ) : null}
                 {recipients.map((recipient) => (
                   <label key={recipient.userId} className="flex min-h-11 items-center gap-3 px-2">
                     <Checkbox

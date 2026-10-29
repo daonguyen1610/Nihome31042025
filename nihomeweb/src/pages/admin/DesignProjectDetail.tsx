@@ -5,6 +5,8 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { extractApiError } from "@/lib/apiError";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsTrigger } from "@/components/ui/tabs";
@@ -61,6 +63,7 @@ const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
 
 const AdminDesignProjectDetail = () => {
   const { t, lang } = useI18n();
+  const { has } = usePermissions();
   const { id: idParam } = useParams<{ id: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const selectTab = (tab: string) =>
@@ -122,15 +125,22 @@ const AdminDesignProjectDetail = () => {
   }, [fetchProject]);
 
   const infoRows = useMemo(() => {
-    if (!project) return [] as { label: string; value: string }[];
+    if (!project) return [] as { label: string; value: string; href?: string }[];
     return [
       {
         label: t("designProjects.field.customer"),
         value: project.customerName ?? `#${project.customerId}`,
+        href: has(ADMIN_PERMS.customers)
+          ? `/admin/customers?open=${project.customerId}`
+          : undefined,
       },
       {
         label: t("designProjects.field.contract"),
         value: project.contractNumber ?? (project.contractId ? `#${project.contractId}` : "—"),
+        href:
+          project.contractId && has(ADMIN_PERMS.contracts)
+            ? `/admin/contracts/${project.contractId}`
+            : undefined,
       },
       {
         label: t("designProjects.field.pm"),
@@ -148,7 +158,7 @@ const AdminDesignProjectDetail = () => {
         value: formatDateTime(project.updatedAt, lang),
       },
     ];
-  }, [project, t, lang]);
+  }, [project, t, lang, has]);
 
   if (!isValidId) {
     return (
@@ -292,7 +302,15 @@ const AdminDesignProjectDetail = () => {
                 {infoRows.map((r) => (
                   <div key={r.label}>
                     <dt className="text-xs uppercase tracking-wide text-slate-500">{r.label}</dt>
-                    <dd className="mt-0.5 text-sm text-slate-900">{r.value}</dd>
+                    <dd className="mt-0.5 break-words text-sm text-slate-900">
+                      {r.href ? (
+                        <Link className="text-primary underline underline-offset-4" to={r.href}>
+                          {r.value}
+                        </Link>
+                      ) : (
+                        r.value
+                      )}
+                    </dd>
                   </div>
                 ))}
               </dl>
@@ -330,6 +348,7 @@ const AdminDesignProjectDetail = () => {
               ) : tab === "team" ? (
                 <OperationalProjectTeamPanel
                   operationalProjectId={project.operationalProjectId}
+                  designProjectId={project.id}
                   designProjectContext
                 />
               ) : tab === "schedule" ? (

@@ -529,15 +529,19 @@ const OperationalProjects = () => {
               label={t("operationalProjects.field.period")}
               value={`${formatDate(detail.startDate)} – ${formatDate(detail.endDate)}`}
             />
-            <Summary
-              label={t("operationalProjects.field.designProject")}
-              value={detail.designProjectCode || "—"}
-              href={
-                detail.designProjectId
-                  ? `/admin/design-projects/${detail.designProjectId}`
-                  : undefined
-              }
-            />
+            <div className="min-w-0 rounded-lg border bg-card p-3">
+              <p className="text-xs text-muted-foreground">{t("operationalProjects.field.designProject")}</p>
+              <ul className="mt-1 space-y-2 text-sm">
+                {(detail.designProjects ?? []).map((design) => (
+                  <li key={design.id}>
+                    <Link className="break-words text-primary underline underline-offset-4" to={`/admin/design-projects/${design.id}`}>
+                      {design.projectCode} · {design.name}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+              {!detail.designProjects?.length && <p>—</p>}
+            </div>
             <Summary
               label={t("operationalProjects.field.updatedAt")}
               value={formatDate(detail.updatedAt)}

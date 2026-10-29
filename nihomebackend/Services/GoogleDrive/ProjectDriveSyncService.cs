@@ -40,8 +40,8 @@ public sealed class ProjectDriveSyncProcessor(
         // The persisted Design workspace is the durable initialization intent:
         // missing category bindings survive crashes/disabled Drive without a
         // remote call inside the sales handoff transaction. Include old workspaces.
-        var projects = await db.OperationalProjects.AsNoTracking().Include(project => project.DesignProject)
-            .Where(project => project.Id > afterProjectId && project.DesignProject != null &&
+        var projects = await db.OperationalProjects.AsNoTracking().Include(project => project.DesignProjects)
+            .Where(project => project.Id > afterProjectId && project.DesignProjects.Any() &&
                 db.ProjectDriveFolders.Count(folder => folder.OperationalProjectId == project.Id &&
                     categories.Contains(folder.Category)) < categories.Length)
             .OrderBy(project => project.Id).Take(5).ToListAsync(ct);
@@ -52,7 +52,8 @@ public sealed class ProjectDriveSyncProcessor(
             try
             {
                 foreach (var category in categories)
-                    await folderService.EnsureAsync(project, category, project.DesignProject?.CreatedByUserId, ct);
+                    await folderService.EnsureAsync(project, category,
+                        project.DesignProjects.OrderBy(item => item.Id).FirstOrDefault()?.CreatedByUserId, ct);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

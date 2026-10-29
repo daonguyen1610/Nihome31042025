@@ -37,6 +37,7 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             (project.ProjectManagerUserId == userId ||
              project.TeamMembers.Any(member =>
                  member.UserId == userId &&
+                 member.DesignProjectId == null &&
                  member.EndedAt == null &&
                  member.Roles.Any(role => role.EndedAt == null &&
                      (role.RoleCode == ProjectTeamRoleCode.ProjectManager ||
@@ -60,9 +61,8 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
 
         return await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
             project.Id == projectId &&
-            (project.DesignProject != null &&
-                 (project.DesignProject.ProjectManagerUserId == userId ||
-                  project.DesignProject.DesignLeadUserId == userId) ||
+            (project.DesignProjects.Any(design =>
+                 design.ProjectManagerUserId == userId || design.DesignLeadUserId == userId) ||
              project.TeamMembers.Any(member =>
                  member.UserId == userId &&
                  member.EndedAt == null &&
@@ -80,14 +80,43 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             return await db.OperationalProjects.AsNoTracking()
                 .AnyAsync(project => project.Id == operationalProjectId, ct);
         return await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
-            project.Id == operationalProjectId && project.DesignProject != null &&
-            (project.DesignProject.ProjectManagerUserId == userId ||
-             project.DesignProject.DesignLeadUserId == userId ||
+            project.Id == operationalProjectId && project.DesignProjects.Any() &&
+            (project.DesignProjects.Any(design =>
+                design.ProjectManagerUserId == userId || design.DesignLeadUserId == userId) ||
              project.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
                  member.Roles.Any(role => role.EndedAt == null &&
                      role.RoleCode == ProjectTeamRoleCode.DesignLead &&
                      (role.Scope == ProjectRoleScope.Project ||
                       role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")))), ct);
+    }
+
+    public async Task<bool> CanManageDesignDocumentAsync(int userId, int operationalProjectId,
+        long documentId, CancellationToken ct = default)
+    {
+        var document = await db.ProjectDocuments.AsNoTracking().SingleOrDefaultAsync(item =>
+            item.Id == documentId && item.OperationalProjectId == operationalProjectId &&
+            item.SourceModule == ProjectDocumentSourceModule.Design, ct);
+        return document is not null && await CanManageDesignDocumentSourceAsync(userId,
+            operationalProjectId, document.SourceEntityType, document.SourceRecordId, ct);
+    }
+
+    public async Task<bool> CanManageDesignDocumentSourceAsync(int userId, int operationalProjectId,
+        string? sourceType, long? sourceId, CancellationToken ct = default)
+    {
+        if (!await permissions.HasAsync(userId, "design.projects.manage", ct) ||
+            sourceId is null or <= 0 or > int.MaxValue) return false;
+        var resourceType = sourceType switch
+        {
+            nameof(ConceptOption) => (DesignProjectResourceType?)DesignProjectResourceType.ConceptOption,
+            nameof(BasicDesignDoc) => DesignProjectResourceType.BasicDesignDoc,
+            nameof(ShopDrawing) => DesignProjectResourceType.ShopDrawing,
+            _ => null,
+        };
+        if (!resourceType.HasValue) return false;
+        var designId = await ResolveDesignProjectIdAsync(resourceType.Value, (int)sourceId.Value, ct);
+        return designId.HasValue && await db.DesignProjects.AnyAsync(design => design.Id == designId &&
+            design.OperationalProjectId == operationalProjectId, ct) &&
+            await CanManageDesignProjectAsync(userId, designId.Value, ct);
     }
 
     private async Task<bool> IsScheduleAdministratorAsync(int userId, CancellationToken ct)
@@ -133,7 +162,12 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
         if (project.ProjectManagerUserId == userId || project.DesignLeadUserId == userId) return true;
         if (project.OperationalProjectId.HasValue)
         {
-            return await CanViewOperationalProjectAsync(userId, project.OperationalProjectId.Value, ct);
+            return await db.OperationalProjects.AnyAsync(root => root.Id == project.OperationalProjectId.Value &&
+                (root.ProjectManagerUserId == userId || root.CreatedByUserId == userId ||
+                 root.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
+                     (member.DesignProjectId == designProjectId || member.DesignProjectId == null &&
+                         member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)))), ct) ||
+                await HasAdministrativeBypassAsync(userId, ct);
         }
 
         return await HasAdministrativeBypassAsync(userId, ct);
@@ -226,11 +260,17 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                 .ToHashSet();
         }
 
-        var operationalProjectIds = await GetAccessibleOperationalProjectIdsAsync(userId, ct);
+        var operationalProjectIds = await db.OperationalProjects.Where(root =>
+            root.ProjectManagerUserId == userId || root.CreatedByUserId == userId ||
+            root.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
+                member.DesignProjectId == null && member.Roles.Any(role => role.EndedAt == null &&
+                    role.Scope == ProjectRoleScope.Project))).Select(root => root.Id).ToListAsync(ct);
         return (await db.DesignProjects.AsNoTracking()
             .Where(project =>
                 project.ProjectManagerUserId == userId ||
                 project.DesignLeadUserId == userId ||
+                db.OperationalProjectMembers.Any(member => member.UserId == userId &&
+                    member.EndedAt == null && member.DesignProjectId == project.Id) ||
                 project.OperationalProjectId.HasValue &&
                     operationalProjectIds.Contains(project.OperationalProjectId.Value))
             .Select(project => project.Id)
@@ -355,6 +395,8 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
 
         var roles = await db.OperationalProjectMemberRoles.AsNoTracking()
             .Where(role => role.Member.OperationalProjectId == project.OperationalProjectId.Value &&
+                (role.Member.DesignProjectId == designProjectId || role.Member.DesignProjectId == null &&
+                    role.Scope == ProjectRoleScope.Project) &&
                 role.Member.UserId == userId && role.Member.EndedAt == null && role.EndedAt == null)
             .Select(role => new { role.Scope, role.ScopeValue })
             .ToListAsync(ct);
@@ -436,11 +478,14 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             })
             .SingleOrDefaultAsync(ct);
         if (project is null) return false;
+        if (project.DesignLeadUserId == userId || !approvalOnly && project.ProjectManagerUserId == userId) return true;
         if (!project.OperationalProjectId.HasValue)
             return project.DesignLeadUserId == userId || (!approvalOnly && project.ProjectManagerUserId == userId);
 
         return await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
             member.OperationalProjectId == project.OperationalProjectId.Value &&
+            (member.DesignProjectId == designProjectId || member.DesignProjectId == null &&
+                member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)) &&
             member.UserId == userId && member.EndedAt == null &&
             member.Roles.Any(role => role.EndedAt == null &&
                 (role.RoleCode == ProjectTeamRoleCode.DesignLead ||

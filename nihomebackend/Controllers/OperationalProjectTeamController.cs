@@ -17,15 +17,16 @@ namespace NihomeBackend.Controllers;
 public sealed class OperationalProjectTeamController(
     IProjectTeamService service,
     IProjectAccessService access,
+    IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("operations.projects", "view")]
-    public async Task<ActionResult<OperationalProjectTeamResponse>> Get(int projectId, CancellationToken ct)
+    public async Task<ActionResult<OperationalProjectTeamResponse>> Get(int projectId, CancellationToken ct, [FromQuery] int? designProjectId = null)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var result = await service.GetAsync(projectId, userId.Value, ct);
+        var result = await service.GetAsync(projectId, userId.Value, ct, designProjectId);
         return result is null ? NotFound() : Ok(result);
     }
 
@@ -33,11 +34,12 @@ public sealed class OperationalProjectTeamController(
     [RequirePermission("operations.projects", "view")]
     public async Task<ActionResult<IReadOnlyList<OperationalProjectTeamHistoryResponse>>> GetHistory(
         int projectId,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var result = await service.GetHistoryAsync(projectId, userId.Value, ct);
+        var result = await service.GetHistoryAsync(projectId, userId.Value, ct, designProjectId);
         return result is null ? NotFound() : Ok(result);
     }
 
@@ -45,16 +47,17 @@ public sealed class OperationalProjectTeamController(
     [RequirePermission("operations.projects", "view")]
     public async Task<ActionResult<IReadOnlyList<ProjectMemberCandidateResponse>>> GetCandidates(
         int projectId,
-        CancellationToken ct)
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        var result = await service.GetCandidatesAsync(projectId, userId.Value, ct);
+        var result = await service.GetCandidatesAsync(projectId, userId.Value, ct, designProjectId);
         return result is null ? NotFound() : Ok(result);
     }
 
     [HttpPost("members")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("operations.projects", "view")]
     [Idempotency("operations.projects.team.members.create")]
     public async Task<ActionResult<OperationalProjectMemberResponse>> AddMember(
         int projectId,
@@ -63,7 +66,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
+        if (!await CanWriteTeamAsync(userId.Value, projectId, request.DesignProjectId, ct)) return NotFound();
         try
         {
             var result = await service.AddMemberAsync(projectId, request, userId.Value, ct);
@@ -78,7 +81,7 @@ public sealed class OperationalProjectTeamController(
     }
 
     [HttpPut("members/{memberId:int}")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("operations.projects", "view")]
     [Idempotency("operations.projects.team.members.update")]
     public async Task<ActionResult<OperationalProjectMemberResponse>> UpdateMember(
         int projectId,
@@ -88,7 +91,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
+        if (!await CanWriteTeamAsync(userId.Value, projectId, request.DesignProjectId, ct)) return NotFound();
         request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
@@ -105,7 +108,7 @@ public sealed class OperationalProjectTeamController(
     }
 
     [HttpPost("assignments")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("operations.projects", "view")]
     [Idempotency("operations.projects.team.assignments.create")]
     public async Task<ActionResult<OperationalProjectAssignmentResponse>> AddAssignment(
         int projectId,
@@ -114,7 +117,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
+        if (!await CanWriteTeamAsync(userId.Value, projectId, request.DesignProjectId, ct)) return NotFound();
         try
         {
             var result = await service.AddAssignmentAsync(projectId, request, userId.Value, ct);
@@ -129,7 +132,7 @@ public sealed class OperationalProjectTeamController(
     }
 
     [HttpPut("assignments/{assignmentId:int}")]
-    [RequirePermission("operations.projects", "manage")]
+    [RequirePermission("operations.projects", "view")]
     [Idempotency("operations.projects.team.assignments.update")]
     public async Task<ActionResult<OperationalProjectAssignmentResponse>> UpdateAssignment(
         int projectId,
@@ -139,7 +142,7 @@ public sealed class OperationalProjectTeamController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await access.CanManageTeamAsync(userId.Value, projectId, ct)) return NotFound();
+        if (!await CanWriteTeamAsync(userId.Value, projectId, request.DesignProjectId, ct)) return NotFound();
         request.RowVersion = CrmConcurrency.ResolveRequestToken(Request, request.RowVersion);
         try
         {
@@ -153,6 +156,16 @@ public sealed class OperationalProjectTeamController(
         {
             return BadRequest(new { message = exception.Message });
         }
+    }
+
+    private async Task<bool> CanWriteTeamAsync(int userId, int projectId, int? designProjectId, CancellationToken ct)
+    {
+        var manageOperations = await permissions.HasAsync(userId, "operations.projects.manage", ct);
+        if (!designProjectId.HasValue)
+            return manageOperations && await access.CanManageTeamAsync(userId, projectId, ct);
+        return (manageOperations || await permissions.HasAsync(userId, "design.projects.manage", ct)) &&
+            (await access.CanManageTeamAsync(userId, projectId, ct) ||
+             await access.CanManageDesignProjectAsync(userId, designProjectId.Value, ct));
     }
 
     private void Audit(string action, int projectId, int entityId, object value) => audit.Log(new AuditEvent

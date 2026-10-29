@@ -175,12 +175,13 @@ public class PermitChecklistService(
     {
         var project = await db.OperationalProjects.AsNoTracking()
             .Where(x => x.Id == request.OperationalProjectId)
-            .Select(x => new { x.Id, DesignProjectId = x.DesignProject == null ? null : (int?)x.DesignProject.Id })
+            .Select(x => new { x.Id, DesignIds = x.DesignProjects.Select(design => design.Id).ToList() })
             .SingleOrDefaultAsync(ct);
         if (project is null)
             throw new PermitChecklistOperationException($"Dự án vận hành #{request.OperationalProjectId} không tồn tại.");
-        request.DesignProjectId ??= project.DesignProjectId;
-        if (request.DesignProjectId.HasValue && request.DesignProjectId != project.DesignProjectId)
+        if (!request.DesignProjectId.HasValue && project.DesignIds.Count == 1)
+            request.DesignProjectId = project.DesignIds[0];
+        if (request.DesignProjectId.HasValue && !project.DesignIds.Contains(request.DesignProjectId.Value))
             throw new PermitChecklistOperationException("Dự án thiết kế không thuộc đúng Dự án vận hành.");
         if (request.DesignProjectId.HasValue && !await db.DesignProjects.AsNoTracking().AnyAsync(x => x.Id == request.DesignProjectId.Value, ct))
         {

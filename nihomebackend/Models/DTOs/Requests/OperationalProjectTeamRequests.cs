@@ -4,6 +4,7 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 public sealed class UpsertOperationalProjectMemberRequest : IConcurrencyRequest
 {
+    public int? DesignProjectId { get; set; }
     [Range(1, int.MaxValue)]
     public int UserId { get; set; }
 
@@ -37,6 +38,8 @@ public sealed class ProjectMemberRoleRequest
 
 public sealed class UpsertOperationalProjectAssignmentRequest : IConcurrencyRequest
 {
+    [Range(1, int.MaxValue)]
+    public int? DesignProjectId { get; set; }
     [Required, StringLength(120, MinimumLength = 2)]
     public string WorkKey { get; set; } = string.Empty;
 

@@ -116,7 +116,7 @@ public class OperationalProjectService(
             .AsSplitQuery()
             .Include(item => item.Customer)
             .Include(item => item.ProjectManager)
-            .Include(item => item.DesignProject)
+            .Include(item => item.DesignProjects)
             .Include(item => item.Opportunities)
                 .ThenInclude(o => o.Customer)
             .Include(item => item.Opportunities)
@@ -178,7 +178,21 @@ public class OperationalProjectService(
                             MidpointRounding.AwayFromZero)),
                     group.Where(milestone => milestone.Status == PaymentMilestoneStatus.Paid)
                         .Sum(milestone => milestone.PercentValue)));
-        return Map(project, approvedVoTotals, milestoneSummaries);
+        var response = Map(project, approvedVoTotals, milestoneSummaries);
+        if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
+            role.Member.OperationalProjectId == id && role.Member.UserId == callerUserId &&
+            role.Member.DesignProjectId == null && role.Member.EndedAt == null && role.EndedAt == null &&
+            role.Scope == ProjectRoleScope.Project, ct))
+        {
+            var allowedIds = project.DesignProjects.Where(design => design.ProjectManagerUserId == callerUserId ||
+                design.DesignLeadUserId == callerUserId || project.TeamMembers.Any(member =>
+                    member.UserId == callerUserId && member.EndedAt == null && member.DesignProjectId == design.Id))
+                .Select(design => design.Id).ToHashSet();
+            response.DesignProjects = response.DesignProjects.Where(design => allowedIds.Contains(design.Id)).ToList();
+            response.DesignProjectId = response.DesignProjects.FirstOrDefault()?.Id;
+            response.DesignProjectCode = response.DesignProjects.FirstOrDefault()?.ProjectCode;
+        }
+        return response;
     }
 
     public async Task<IReadOnlyList<OperationalProjectTimelineItemResponse>?> GetTimelineAsync(
@@ -594,18 +608,19 @@ public class OperationalProjectService(
                 "Tiến độ thiết kế của Dự án chưa hoàn tất.");
         }
 
-        var designProject = await db.DesignProjects.AsNoTracking()
+        var designProjects = await db.DesignProjects.AsNoTracking()
             .Where(item => item.OperationalProjectId == projectId)
             .Select(item => new { item.Id, item.Status })
-            .SingleOrDefaultAsync(ct);
-        if (designProject is null) return;
-        if (designProject.Status is not (DesignProjectStatus.Completed or DesignProjectStatus.Cancelled))
+            .ToListAsync(ct);
+        if (designProjects.Count == 0) return;
+        if (designProjects.Any(item => item.Status is not (DesignProjectStatus.Completed or DesignProjectStatus.Cancelled)))
         {
             throw new OperationalProjectOperationException(
                 "Dự án thiết kế chưa ở trạng thái hoàn tất.");
         }
+        var designIds = designProjects.Select(item => item.Id).ToList();
         if (await db.ConstructionTasks.AsNoTracking().AnyAsync(item =>
-            item.DesignProjectId == designProject.Id &&
+            designIds.Contains(item.DesignProjectId) &&
             item.Status != ConstructionTaskStatus.Completed &&
             item.Status != ConstructionTaskStatus.Cancelled, ct))
         {
@@ -613,7 +628,7 @@ public class OperationalProjectService(
                 "Dự án còn công việc thi công chưa hoàn tất.");
         }
         if (await db.HandoverRecords.AsNoTracking().AnyAsync(item =>
-            item.DesignProjectId == designProject.Id &&
+            designIds.Contains(item.DesignProjectId) &&
             item.Status != HandoverStatus.HandedOver &&
             item.Status != HandoverStatus.Cancelled, ct))
         {
@@ -791,8 +806,17 @@ public class OperationalProjectService(
             OpportunityCount = project.Opportunities.Count,
             QuoteCount = project.Quotes.Count,
             ContractCount = project.Contracts.Count,
-            DesignProjectId = project.DesignProject?.Id,
-            DesignProjectCode = project.DesignProject?.ProjectCode,
+            // Preserve the legacy single-link fields deterministically for old clients.
+            DesignProjectId = project.DesignProjects.OrderBy(item => item.Id).FirstOrDefault()?.Id,
+            DesignProjectCode = project.DesignProjects.OrderBy(item => item.Id).FirstOrDefault()?.ProjectCode,
+            DesignProjects = project.DesignProjects.OrderBy(item => item.Id).Select(item => new OperationalProjectDesignResponse
+            {
+                Id = item.Id,
+                ProjectCode = item.ProjectCode,
+                Name = item.Name,
+                ContractId = item.ContractId,
+                Status = item.Status.ToString(),
+            }).ToList(),
             RowVersion = CrmConcurrency.Encode(project.RowVersion),
             CreatedAt = project.CreatedAt,
             UpdatedAt = project.UpdatedAt,

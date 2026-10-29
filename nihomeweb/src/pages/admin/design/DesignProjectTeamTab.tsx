@@ -54,6 +54,7 @@ interface Props {
   operationalProjectId?: number | null;
   refreshKey?: string;
   designProjectContext?: boolean;
+  designProjectId?: number;
 }
 type MemberDialogMode = "add" | "edit" | "end";
 type AssignmentDialogMode = "add" | "edit";
@@ -103,6 +104,7 @@ export const OperationalProjectTeamPanel = ({
   operationalProjectId,
   refreshKey,
   designProjectContext = false,
+  designProjectId,
 }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
@@ -136,14 +138,14 @@ export const OperationalProjectTeamPanel = ({
     setError(null);
     try {
       const [teamResponse, historyResponse] = await Promise.all([
-        adminApi.getOperationalProjectTeam(operationalProjectId),
-        adminApi.getOperationalProjectTeamHistory(operationalProjectId),
+        adminApi.getOperationalProjectTeam(operationalProjectId, designProjectId),
+        adminApi.getOperationalProjectTeamHistory(operationalProjectId, designProjectId),
       ]);
       setTeam(teamResponse.data);
       setHistory(historyResponse.data ?? []);
       if (teamResponse.data.canManage) {
         const candidateResponse =
-          await adminApi.getOperationalProjectTeamCandidates(operationalProjectId);
+          await adminApi.getOperationalProjectTeamCandidates(operationalProjectId, designProjectId);
         setCandidates(candidateResponse.data ?? []);
       } else setCandidates([]);
     } catch (loadError) {
@@ -151,7 +153,7 @@ export const OperationalProjectTeamPanel = ({
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId]);
+  }, [operationalProjectId, designProjectId]);
 
   useEffect(() => {
     void load();
@@ -303,6 +305,7 @@ export const OperationalProjectTeamPanel = ({
     setFormError(null);
     const request: UpsertOperationalProjectMemberRequest = {
       ...memberForm,
+      designProjectId,
       position: memberForm.position.trim(),
       startedAt: toUtcDate(memberForm.startedAt)!,
       endedAt: toUtcDate(memberForm.endedAt),
@@ -405,6 +408,7 @@ export const OperationalProjectTeamPanel = ({
   };
   const assignmentRequest = (form: AssignmentForm): UpsertOperationalProjectAssignmentRequest => ({
     ...form,
+    designProjectId: designProjectId ?? null,
     workKey: form.workKey.trim(),
     title: form.title.trim(),
     module: form.module.trim(),
@@ -1304,7 +1308,7 @@ export const OperationalProjectTeamPanel = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {team.moduleOptions.map((option) => (
+                  {team.moduleOptions.filter((option) => !designProjectId || option === "Design").map((option) => (
                     <SelectItem key={option} value={option}>
                       {option}
                     </SelectItem>
