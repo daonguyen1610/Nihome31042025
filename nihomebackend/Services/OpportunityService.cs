@@ -148,7 +148,7 @@ public class OpportunityService(
             .Include(o => o.Customer)
             .Include(o => o.Owner)
             .Include(o => o.OperationalProject)
-                .ThenInclude(project => project!.DesignProject)
+                .ThenInclude(project => project!.DesignProjects)
             .Include(o => o.Activities)
                 .ThenInclude(a => a.CreatedBy)
             .FirstOrDefaultAsync(o => o.Id == id, ct);
@@ -694,7 +694,7 @@ public class OpportunityService(
     {
         var query = db.Opportunities.AsNoTracking()
             .Include(o => o.OperationalProject)
-                .ThenInclude(project => project!.DesignProject)
+                .ThenInclude(project => project!.DesignProjects)
             .AsQueryable();
 
         if (!canSeeAll)
@@ -833,8 +833,8 @@ public class OpportunityService(
             CustomerId = op.CustomerId,
             CustomerName = customerName,
             OperationalProjectId = op.OperationalProjectId,
-            DesignProjectId = op.OperationalProject?.DesignProject?.Id,
-            DesignProjectCode = op.OperationalProject?.DesignProject?.ProjectCode,
+            DesignProjectId = op.OperationalProject?.DesignProjects.OrderBy(project => project.Id).FirstOrDefault()?.Id,
+            DesignProjectCode = op.OperationalProject?.DesignProjects.OrderBy(project => project.Id).FirstOrDefault()?.ProjectCode,
             OwnerUserId = op.OwnerUserId,
             OwnerName = ownerName,
             EstimatedValue = op.EstimatedValue,

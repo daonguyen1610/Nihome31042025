@@ -1979,6 +1979,7 @@ public static class SampleCrmDataSeeder
         var legacyProjectManager = ResolveRoleUser(db, "PM", owner);
         var designManager = ResolveRoleUser(db, "DESIGN_MANAGER", ResolveRoleUser(db, "DESIGN", owner));
         var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
+        var newDesignProjects = new List<DesignProject>();
         var deletedProjectCodes = db.SeededRootDeletions
             .Where(item => item.ResourceType == EntityTypes.DesignProject)
             .Select(item => item.ResourceKey)
@@ -2048,6 +2049,15 @@ public static class SampleCrmDataSeeder
                 UpdatedAt = now.AddDays(-1),
             };
             db.DesignProjects.Add(dp);
+            newDesignProjects.Add(dp);
+        }
+        db.SaveChanges();
+        var teamSync = new NihomeBackend.Services.LegacyProjectTeamSyncService(db);
+        foreach (var design in newDesignProjects.Where(item => item.OperationalProjectId.HasValue))
+        {
+            teamSync.SyncDesignProjectRolesAsync(design.OperationalProjectId!.Value,
+                design.ProjectManagerUserId, design.DesignLeadUserId, owner.Id,
+                designProjectId: design.Id).GetAwaiter().GetResult();
         }
         db.SaveChanges();
     }

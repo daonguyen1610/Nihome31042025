@@ -317,11 +317,13 @@ public class OperationalProjectsController(
 
     [HttpGet("{id:int}/documents")]
     [RequirePermission("operations.projects", "view")]
-    public async Task<ActionResult<IReadOnlyList<ProjectDocumentResponse>>> ListDocuments(int id, CancellationToken ct)
+    public async Task<ActionResult<IReadOnlyList<ProjectDocumentResponse>>> ListDocuments(int id, CancellationToken ct, [FromQuery] int? designProjectId = null)
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
-        var result = await documents.ListAsync(id, scope.Value.UserId, scope.Value.CanSeeAll, ct);
+        var result = designProjectId.HasValue
+            ? await documents.ListForDesignAsync(id, designProjectId.Value, scope.Value.UserId, scope.Value.CanSeeAll, ct)
+            : await documents.ListAsync(id, scope.Value.UserId, scope.Value.CanSeeAll, ct);
         return result is null ? NotFound() : Ok(result);
     }
 
@@ -339,7 +341,8 @@ public class OperationalProjectsController(
         if (scope is null) return Unauthorized();
         var operationsManager = await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct);
         var designManager = request.SourceModule == ProjectDocumentSourceModule.Design &&
-            await projectAccess.CanManageDesignDocumentsAsync(scope.Value.UserId, id, ct);
+            await projectAccess.CanManageDesignDocumentSourceAsync(scope.Value.UserId, id,
+                request.SourceEntityType, request.SourceRecordId, ct);
         if (!operationsManager && !designManager) return Forbid();
         if (await service.GetAsync(id, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct) is null) return NotFound();
         if (!IdempotencyService.IsValidKey(Request.Headers["Idempotency-Key"].FirstOrDefault()))
@@ -381,14 +384,15 @@ public class OperationalProjectsController(
     }
 
     [HttpDelete("{id:int}/documents/{documentId:long}")]
-    [RequirePermission("operations.projects", "manage")]
     public async Task<IActionResult> DeleteDocument(int id, long documentId, CancellationToken ct)
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
+        if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
         try
         {
-            if (!await documents.DeleteAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll, ct)) return NotFound();
+            if (!await documents.DeleteAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct)) return NotFound();
             AuditDocument("project-document.delete_requested", id, documentId, "queued for deletion");
             return NoContent();
         }
@@ -403,35 +407,38 @@ public class OperationalProjectsController(
     }
 
     [HttpPost("{id:int}/documents/{documentId:long}/retry")]
-    [RequirePermission("operations.projects", "manage")]
     public async Task<ActionResult<ProjectDocumentResponse>> RetryDocument(int id, long documentId, CancellationToken ct)
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
+        if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
         return await MutateDocumentAsync("project-document.retry", id, documentId,
-            () => documents.RetryAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll, ct));
+            () => documents.RetryAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct));
     }
 
     [HttpPost("{id:int}/documents/{documentId:long}/classify")]
-    [RequirePermission("operations.projects", "manage")]
     public async Task<ActionResult<ProjectDocumentResponse>> ClassifyDocument(
         int id, long documentId, [FromBody] ClassifyProjectDocumentRequest request, CancellationToken ct)
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
+        if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
         return await MutateDocumentAsync("project-document.classify", id, documentId,
-            () => documents.ClassifyAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll, ct));
+            () => documents.ClassifyAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct));
     }
 
     [HttpPost("{id:int}/documents/{documentId:long}/resolve-conflict")]
-    [RequirePermission("operations.projects", "manage")]
     public async Task<ActionResult<ProjectDocumentResponse>> ResolveDocumentConflict(
         int id, long documentId, [FromBody] ResolveProjectDocumentConflictRequest request, CancellationToken ct)
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
+        if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
         return await MutateDocumentAsync("project-document.resolve_conflict", id, documentId,
-            () => documents.ResolveConflictAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll, ct));
+            () => documents.ResolveConflictAsync(id, documentId, request, scope.Value.UserId, scope.Value.CanSeeAll || designManager, ct));
     }
 
     private async Task<ActionResult<ProjectDocumentResponse>> MutateDocumentAsync(

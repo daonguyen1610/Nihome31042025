@@ -29,8 +29,8 @@ public interface IDesignProjectService
 
     /// <summary>
     /// Starts Concept from an Opportunity's shared operational project. The
-    /// operation is idempotent because one operational project owns at most
-    /// one design project.
+    /// operation reuses the oldest Design flow under the allocation lock;
+    /// additional flows are created explicitly with independent teams/schedules.
     /// </summary>
     Task<EnsureDesignProjectResult> EnsureForOpportunityAsync(
         int opportunityId,

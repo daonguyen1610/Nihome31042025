@@ -54,16 +54,17 @@ interface Props {
 const PAGE_SIZE = 10;
 const DEPENDENCY_PAGE_SIZE = 100;
 
-const loadAllScheduleTasks = async (projectId: number) => {
+const loadAllScheduleTasks = async (projectId: number, designProjectId: number) => {
   const first = await adminApi.getDesignSchedule(projectId, {
     page: 1,
     pageSize: DEPENDENCY_PAGE_SIZE,
+    designProjectId,
   });
   const pageCount = Math.ceil(first.data.tasks.totalCount / DEPENDENCY_PAGE_SIZE);
   if (pageCount <= 1) return first.data.tasks.items;
   const remaining = await Promise.all(
     Array.from({ length: pageCount - 1 }, (_, index) =>
-      adminApi.getDesignSchedule(projectId, { page: index + 2, pageSize: DEPENDENCY_PAGE_SIZE }),
+      adminApi.getDesignSchedule(projectId, { page: index + 2, pageSize: DEPENDENCY_PAGE_SIZE, designProjectId }),
     ),
   );
   return [first.data.tasks.items, ...remaining.map((response) => response.data.tasks.items)].flat();
@@ -106,9 +107,9 @@ export const DesignScheduleTab = ({ project }: Props) => {
     setError(null);
     try {
       const [scheduleResponse, allTasks, teamResponse, departmentResponse] = await Promise.all([
-        adminApi.getDesignSchedule(operationalProjectId, query),
-        loadAllScheduleTasks(operationalProjectId),
-        adminApi.getOperationalProjectTeam(operationalProjectId),
+        adminApi.getDesignSchedule(operationalProjectId, { ...query, designProjectId: project.id }),
+        loadAllScheduleTasks(operationalProjectId, project.id),
+        adminApi.getOperationalProjectTeam(operationalProjectId, project.id),
         adminApi.getMasterDataOptions("project-department"),
       ]);
       setSchedule(scheduleResponse.data);
@@ -120,7 +121,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId, query]);
+  }, [operationalProjectId, query, project.id]);
 
   useEffect(() => {
     void load();
@@ -163,6 +164,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
       await adminApi.initializeDesignSchedule(
         operationalProjectId,
         {
+          designProjectId: project.id,
           phases: [
             { code: "Concept", weight: 34 },
             { code: "BasicDesign", weight: 33 },
@@ -196,6 +198,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
   const reloadPhaseVersion = async () => {
     if (!editingPhase) return undefined;
     const response = await adminApi.getDesignSchedule(operationalProjectId, {
+      designProjectId: project.id,
       page: 1,
       pageSize: 1,
     });

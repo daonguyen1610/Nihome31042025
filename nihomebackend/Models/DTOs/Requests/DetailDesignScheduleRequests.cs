@@ -4,6 +4,7 @@ namespace NihomeBackend.Models.DTOs.Requests;
 
 public sealed class InitializeDesignScheduleRequest
 {
+    public int? DesignProjectId { get; set; }
     [Required, MinLength(3), MaxLength(3)]
     public List<InitializeDesignSchedulePhaseRequest> Phases { get; set; } = new();
 }
@@ -120,6 +121,7 @@ public sealed class CompleteDesignScheduleTaskRequest
 
 public sealed class DesignScheduleQuery
 {
+    public int? DesignProjectId { get; set; }
     public string? Phase { get; set; }
     public int? AssigneeMemberId { get; set; }
     public string? DepartmentCode { get; set; }

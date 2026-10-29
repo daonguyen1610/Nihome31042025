@@ -22,6 +22,7 @@ public sealed class ProjectRoleDefinitionResponse
 
 public sealed class OperationalProjectMemberResponse
 {
+    public int? DesignProjectId { get; set; }
     public int Id { get; set; }
     public int UserId { get; set; }
     public string UserName { get; set; } = string.Empty;

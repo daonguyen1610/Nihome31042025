@@ -178,6 +178,15 @@ internal static class AggregateDeletionService
         db.DesignScheduleHistory.RemoveRange(scheduleHistory);
         db.DesignScheduleTasks.RemoveRange(scheduleTasks);
         db.DesignSchedulePhases.RemoveRange(schedulePhases);
+        var flowMembers = await db.OperationalProjectMembers.Include(member => member.Roles)
+            .Where(member => member.DesignProjectId.HasValue && foundIds.Contains(member.DesignProjectId.Value))
+            .ToListAsync(ct);
+        var flowMemberIds = flowMembers.Select(member => member.Id).ToList();
+        db.OperationalProjectAssignments.RemoveRange(await db.OperationalProjectAssignments
+            .Where(assignment => flowMemberIds.Contains(assignment.AssigneeMemberId)).ToListAsync(ct));
+        foreach (var member in flowMembers) member.ReportsToMemberId = null;
+        db.OperationalProjectMemberRoles.RemoveRange(flowMembers.SelectMany(member => member.Roles));
+        db.OperationalProjectMembers.RemoveRange(flowMembers);
         db.AcceptanceRecords.RemoveRange(acceptanceRecords);
         db.HandoverStatusHistory.RemoveRange(handoverHistory);
         db.HandoverRecords.RemoveRange(handoverRecords);

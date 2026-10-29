@@ -125,6 +125,24 @@ internal static class DeletionImpactPlanner
 
         var items = new List<PlanItem>();
         await AddDesignDependenciesAsync(db, [projectId], items, ct);
+        var scopedMembers = db.OperationalProjectMembers.Where(member => member.DesignProjectId == projectId);
+        var scopedMemberIds = scopedMembers.Select(member => member.Id);
+        await AddAsync(items, "operations.teamMembers", DeletionImpactActions.Delete,
+            scopedMembers, member => member.Id, member => member.Position, ct);
+        await AddAsync(items, "operations.teamRoles", DeletionImpactActions.Delete,
+            db.OperationalProjectMemberRoles.Where(role => scopedMemberIds.Contains(role.MemberId)),
+            role => role.Id, role => role.Source, ct);
+        await AddAsync(items, "operations.assignments", DeletionImpactActions.Delete,
+            db.OperationalProjectAssignments.Where(assignment => scopedMemberIds.Contains(assignment.AssigneeMemberId)),
+            assignment => assignment.Id, assignment => assignment.Title, ct);
+        await AddAsync(items, "design.otherTeamReferences", DeletionImpactActions.Block,
+            db.OperationalProjectAssignments.Where(assignment => !scopedMemberIds.Contains(assignment.AssigneeMemberId) &&
+                assignment.ManagerMemberId.HasValue && scopedMemberIds.Contains(assignment.ManagerMemberId.Value)),
+            assignment => assignment.Id, assignment => assignment.Title, ct);
+        await AddAsync(items, "design.otherReportingLines", DeletionImpactActions.Block,
+            db.OperationalProjectMembers.Where(member => member.DesignProjectId != projectId &&
+                member.ReportsToMemberId.HasValue && scopedMemberIds.Contains(member.ReportsToMemberId.Value)),
+            member => member.Id, member => member.Position, ct);
 
         return Build("DesignProject", project.Id, $"{project.ProjectCode} · {project.Name}",
             project.ProjectCode, items);

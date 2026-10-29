@@ -344,6 +344,11 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     expect(contract.quoteId).toBe(quoteId);
     expect(contract.opportunityId).toBe(opportunityId);
     expect(contract.value).toBe(810_000_000);
+    await page.goto(`/admin/contracts/${contractId}`);
+    const financeLink = page.getByTestId("contract-finance-review-link");
+    await expect(financeLink).toHaveAttribute("href", `/admin/work-packages/${financePackageId}`);
+    await financeLink.click();
+    await expect(page).toHaveURL(new RegExp(`/admin/work-packages/${financePackageId}$`));
   } finally {
     if (contractId) await hardDeleteBusinessRoot(api, headers, `/api/contracts/${contractId}`);
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);

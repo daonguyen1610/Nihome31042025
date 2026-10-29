@@ -213,6 +213,81 @@ public class DesignProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task MultipleDesignFlows_ShareOperationalProjectWithoutReplacingEachOther()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
+        var ids = new List<int>();
+        foreach (var name in new[] { "NICON - Thiết kế nhà xưởng", "NICON - Thiết kế văn phòng" })
+        {
+            var created = await Client.PostAsJsonAsync("/api/design-projects", new
+            {
+                name,
+                customerId,
+                operationalProjectId,
+            });
+            created.StatusCode.Should().Be(HttpStatusCode.Created);
+            ids.Add((await ReadJsonAsync(created)).GetProperty("id").GetInt32());
+        }
+        ids.Distinct().Should().HaveCount(2);
+        var project = await Client.GetAsync($"/api/operational-projects/{operationalProjectId}");
+        project.StatusCode.Should().Be(HttpStatusCode.OK);
+        var body = await ReadJsonAsync(project);
+        body.GetProperty("designProjects").EnumerateArray().Select(item => item.GetProperty("id").GetInt32())
+            .Should().BeEquivalentTo(ids);
+        body.GetProperty("designProjectId").GetInt32().Should().Be(ids.Min());
+        var documentIds = await WithDbAsync(async db =>
+        {
+            var result = new List<long>();
+            foreach (var designId in ids)
+            {
+                var source = new BasicDesignDoc
+                {
+                    DesignProjectId = designId,
+                    DocumentCode = $"NICON-BD-{designId}",
+                    Title = "Hồ sơ cơ sở độc lập theo luồng",
+                    DisciplineCode = "ARCH",
+                };
+                db.BasicDesignDocs.Add(source);
+                await db.SaveChangesAsync();
+                var document = new ProjectDocument
+                {
+                    OperationalProjectId = operationalProjectId,
+                    Category = ProjectDocumentCategory.DesignBasic,
+                    SourceModule = ProjectDocumentSourceModule.Design,
+                    SourceType = ProjectDocumentSourceType.ManualUpload,
+                    SourceEntityType = nameof(BasicDesignDoc),
+                    SourceRecordId = source.Id,
+                    OriginalFileName = $"nicon-design-{designId}.pdf",
+                    LocalPath = $"/files/project-documents/{operationalProjectId}/{designId}.pdf",
+                    Sha256 = new string('a', 64),
+                    SyncStatus = ProjectDocumentSyncStatus.Pending,
+                };
+                db.ProjectDocuments.Add(document);
+                await db.SaveChangesAsync();
+                result.Add(document.Id);
+            }
+            return result;
+        });
+        for (var index = 0; index < ids.Count; index++)
+        {
+            var documents = await Client.GetAsync($"/api/operational-projects/{operationalProjectId}/documents?designProjectId={ids[index]}");
+            documents.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(documents)).EnumerateArray().Select(item => item.GetProperty("id").GetInt64())
+                .Should().Equal(documentIds[index]);
+        }
+        (await Client.GetAsync($"/api/operational-projects/{operationalProjectId}/documents?designProjectId=2147483647"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        foreach (var id in ids)
+        {
+            var design = await Client.GetAsync($"/api/design-projects/{id}");
+            design.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(design)).GetProperty("operationalProjectId").GetInt32().Should().Be(operationalProjectId);
+        }
+    }
+
+    [Fact]
     public async Task Create_HappyPath_AsSuperAdmin_ReturnsAutoCode()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));

@@ -29,11 +29,12 @@ public sealed class ProjectTeamService(
     public async Task<OperationalProjectTeamResponse?> GetAsync(
         int projectId,
         int callerUserId,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int? designProjectId = null)
     {
-        if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
-        var members = await MemberQuery(projectId).ToListAsync(ct);
-        var assignments = await AssignmentQuery(projectId).ToListAsync(ct);
+        if (!await CanViewTeamAsync(projectId, designProjectId, callerUserId, ct)) return null;
+        var members = await MemberQuery(projectId).Where(member => member.DesignProjectId == designProjectId).ToListAsync(ct);
+        var assignments = await AssignmentQuery(projectId).Where(item => item.AssigneeMember.DesignProjectId == designProjectId).ToListAsync(ct);
         var disciplineOptions = await db.MasterDataOptions.AsNoTracking()
             .Where(option => option.Category == ProjectTeamCatalog.DisciplineCategory && option.IsActive)
             .OrderBy(option => option.SortOrder)
@@ -43,7 +44,7 @@ public sealed class ProjectTeamService(
         return new OperationalProjectTeamResponse
         {
             OperationalProjectId = projectId,
-            CanManage = await access.CanManageTeamAsync(callerUserId, projectId, ct),
+            CanManage = await CanManageTeamAsync(projectId, designProjectId, callerUserId, ct),
             RoleDefinitions = RoleDefinitions.Select(CloneRoleDefinition).ToList(),
             ModuleOptions = [.. ProjectTeamCatalog.ModuleCodes],
             DisciplineOptions = disciplineOptions,
@@ -55,11 +56,17 @@ public sealed class ProjectTeamService(
     public async Task<IReadOnlyList<OperationalProjectTeamHistoryResponse>?> GetHistoryAsync(
         int projectId,
         int callerUserId,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int? designProjectId = null)
     {
-        if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
+        if (!await CanViewTeamAsync(projectId, designProjectId, callerUserId, ct)) return null;
         var teamHistory = await db.OperationalProjectTeamHistory.AsNoTracking()
-            .Where(item => item.OperationalProjectId == projectId)
+            .Where(item => item.OperationalProjectId == projectId &&
+                (item.EntityType == "Member" && db.OperationalProjectMembers.Any(member =>
+                    member.Id == item.EntityId && member.DesignProjectId == designProjectId) ||
+                 item.EntityType == "Assignment" && db.OperationalProjectAssignments.Any(assignment =>
+                    assignment.Id == item.EntityId && assignment.AssigneeMember.DesignProjectId == designProjectId) ||
+                 !designProjectId.HasValue && item.EntityType != "Member" && item.EntityType != "Assignment"))
             .OrderByDescending(item => item.ChangedAt)
             .ThenByDescending(item => item.Id)
             .Select(item => new OperationalProjectTeamHistoryResponse
@@ -76,7 +83,7 @@ public sealed class ProjectTeamService(
             .ToListAsync(ct);
         var codeHistory = await (
             from change in db.OperationalProjectCodeChanges.AsNoTracking()
-            where change.OperationalProjectId == projectId
+            where change.OperationalProjectId == projectId && designProjectId == null
             join user in db.Users.AsNoTracking() on change.ChangedByUserId equals user.Id into actors
             from actor in actors.DefaultIfEmpty()
             select new OperationalProjectTeamHistoryResponse
@@ -102,9 +109,10 @@ public sealed class ProjectTeamService(
     public async Task<IReadOnlyList<ProjectMemberCandidateResponse>?> GetCandidatesAsync(
         int projectId,
         int callerUserId,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        int? designProjectId = null)
     {
-        if (!await access.CanManageTeamAsync(callerUserId, projectId, ct)) return null;
+        if (!await CanManageTeamAsync(projectId, designProjectId, callerUserId, ct)) return null;
         return await db.Users.AsNoTracking()
             .Where(user => user.IsActive)
             .OrderBy(user => user.FullName ?? user.Email)
@@ -123,7 +131,7 @@ public sealed class ProjectTeamService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        await EnsureCanManageAsync(projectId, callerUserId, ct);
+        await EnsureCanManageAsync(projectId, callerUserId, ct, request.DesignProjectId);
         await ValidateMemberAsync(projectId, null, request, ct);
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
@@ -131,6 +139,7 @@ public sealed class ProjectTeamService(
         var now = DateTime.UtcNow;
         var member = new OperationalProjectMember
         {
+            DesignProjectId = request.DesignProjectId,
             OperationalProjectId = projectId,
             UserId = request.UserId,
             Position = request.Position.Trim(),
@@ -166,11 +175,13 @@ public sealed class ProjectTeamService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        await EnsureCanManageAsync(projectId, callerUserId, ct);
         var member = await db.OperationalProjectMembers
             .Include(item => item.Roles)
             .SingleOrDefaultAsync(item => item.Id == memberId && item.OperationalProjectId == projectId, ct);
         if (member is null) return null;
+        if (member.DesignProjectId != request.DesignProjectId)
+            throw new ProjectTeamOperationException("Không thể chuyển thành viên sang luồng Thiết kế khác. Hãy tạo phân công riêng tại luồng cần dùng.");
+        await EnsureCanManageAsync(projectId, callerUserId, ct, member.DesignProjectId);
         if (request.UserId != member.UserId)
             throw new ProjectTeamOperationException(
                 "Không thể thay đổi người dùng của một thành viên Dự án. Hãy kết thúc phân công cũ và tạo thành viên mới.");
@@ -213,7 +224,8 @@ public sealed class ProjectTeamService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        await EnsureCanManageAsync(projectId, callerUserId, ct);
+        if (!await CanManageTeamAsync(projectId, request.DesignProjectId, callerUserId, ct))
+            throw new ProjectTeamOperationException("Bạn không có quyền quản lý đội ngũ của luồng này.");
         var status = await ValidateAssignmentAsync(projectId, null, request, ct);
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
@@ -263,9 +275,10 @@ public sealed class ProjectTeamService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        await EnsureCanManageAsync(projectId, callerUserId, ct);
+        if (!await CanManageTeamAsync(projectId, request.DesignProjectId, callerUserId, ct)) return null;
         var assignment = await db.OperationalProjectAssignments.SingleOrDefaultAsync(item =>
-            item.Id == assignmentId && item.OperationalProjectId == projectId, ct);
+            item.Id == assignmentId && item.OperationalProjectId == projectId &&
+            item.AssigneeMember.DesignProjectId == request.DesignProjectId, ct);
         if (assignment is null) return null;
         if (assignment.Status is ProjectAssignmentStatus.Completed or ProjectAssignmentStatus.Cancelled)
         {
@@ -316,7 +329,10 @@ public sealed class ProjectTeamService(
             throw new ProjectTeamOperationException("Ngày kết thúc phân công không được trước ngày bắt đầu.");
         await NormalizeRoleScopeValuesAsync(request.Roles, ct);
         var roles = ParseRoles(request.Roles, request.StartedAt, request.EndedAt);
-        if (roles.Any(role => role.RoleCode == ProjectTeamRoleCode.ProjectManager))
+        if (request.DesignProjectId.HasValue && roles.Any(role =>
+            role.Scope == ProjectRoleScope.Module && role.ScopeValue != "Design"))
+            throw new ProjectTeamOperationException("Vai trò của đội ngũ Thiết kế phải thuộc phân hệ Design hoặc bộ môn của luồng hiện tại.");
+        if (!request.DesignProjectId.HasValue && roles.Any(role => role.RoleCode == ProjectTeamRoleCode.ProjectManager))
         {
             var primaryManagerUserId = await db.OperationalProjects.AsNoTracking()
                 .Where(project => project.Id == projectId)
@@ -334,12 +350,14 @@ public sealed class ProjectTeamService(
         {
             var manager = await db.OperationalProjectMembers.AsNoTracking()
                 .SingleOrDefaultAsync(item => item.Id == request.ReportsToMemberId.Value, ct);
-            if (manager is null || manager.OperationalProjectId != projectId || manager.EndedAt.HasValue)
+            if (manager is null || manager.OperationalProjectId != projectId || manager.EndedAt.HasValue ||
+                manager.DesignProjectId != request.DesignProjectId)
                 throw new ProjectTeamOperationException("Người quản lý phải là thành viên đang hiệu lực của cùng Dự án.");
             if (memberId.HasValue) await EnsureNoReportingCycleAsync(memberId.Value, manager.Id, ct);
         }
         if (await db.OperationalProjectMembers.AsNoTracking().AnyAsync(item =>
             item.OperationalProjectId == projectId && item.UserId == request.UserId &&
+            item.DesignProjectId == request.DesignProjectId &&
             item.EndedAt == null && item.Id != memberId, ct))
         {
             throw new ProjectTeamOperationException(
@@ -354,6 +372,8 @@ public sealed class ProjectTeamService(
         CancellationToken ct)
     {
         request.Module = NormalizeModule(request.Module);
+        if (request.DesignProjectId.HasValue && request.Module != "Design")
+            throw new ProjectTeamOperationException("Phân công của đội Design phải thuộc phân hệ Design.");
         request.Discipline = await NormalizeDisciplineAsync(request.Discipline, ct);
         if (!Enum.TryParse<ProjectAssignmentStatus>(request.Status, true, out var status))
             throw new ProjectTeamOperationException($"Trạng thái phân công '{request.Status}' không hợp lệ.");
@@ -366,6 +386,7 @@ public sealed class ProjectTeamService(
             .ToList();
         var activeMemberIds = await db.OperationalProjectMembers.AsNoTracking()
             .Where(item => item.OperationalProjectId == projectId &&
+                item.DesignProjectId == request.DesignProjectId &&
                 item.EndedAt == null && memberIds.Contains(item.Id))
             .Select(item => item.Id)
             .ToListAsync(ct);
@@ -472,9 +493,25 @@ public sealed class ProjectTeamService(
         throw new ProjectTeamOperationException("Quan hệ quản lý tạo thành vòng lặp không hợp lệ.");
     }
 
-    private async Task EnsureCanManageAsync(int projectId, int callerUserId, CancellationToken ct)
+    private async Task<bool> CanViewTeamAsync(int projectId, int? designProjectId, int userId, CancellationToken ct)
     {
-        if (!await access.CanManageTeamAsync(callerUserId, projectId, ct))
+        if (!designProjectId.HasValue) return await access.CanViewOperationalProjectAsync(userId, projectId, ct);
+        return await db.DesignProjects.AnyAsync(design => design.Id == designProjectId &&
+            design.OperationalProjectId == projectId, ct) && await access.CanViewDesignProjectAsync(userId, designProjectId.Value, ct);
+    }
+
+    private async Task<bool> CanManageTeamAsync(int projectId, int? designProjectId, int userId, CancellationToken ct)
+    {
+        if (!designProjectId.HasValue) return await access.CanManageTeamAsync(userId, projectId, ct);
+        return await db.DesignProjects.AnyAsync(design => design.Id == designProjectId &&
+            design.OperationalProjectId == projectId, ct) &&
+            (await access.CanManageTeamAsync(userId, projectId, ct) ||
+             await access.CanManageDesignProjectAsync(userId, designProjectId.Value, ct));
+    }
+
+    private async Task EnsureCanManageAsync(int projectId, int callerUserId, CancellationToken ct, int? designProjectId = null)
+    {
+        if (!await CanManageTeamAsync(projectId, designProjectId, callerUserId, ct))
             throw new ProjectTeamOperationException("Không tìm thấy Dự án hoặc bạn không có quyền quản lý đội Dự án.");
     }
 
@@ -556,6 +593,7 @@ public sealed class ProjectTeamService(
 
     private static OperationalProjectMemberResponse MapMember(OperationalProjectMember member) => new()
     {
+        DesignProjectId = member.DesignProjectId,
         Id = member.Id,
         UserId = member.UserId,
         UserName = member.User.FullName ?? member.User.Email,

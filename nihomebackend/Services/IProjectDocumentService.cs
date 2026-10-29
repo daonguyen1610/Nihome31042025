@@ -13,6 +13,7 @@ public sealed record ProjectDocumentDownload(
 public interface IProjectDocumentService
 {
     Task<IReadOnlyList<ProjectDocumentResponse>?> ListAsync(int projectId, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+    Task<IReadOnlyList<ProjectDocumentResponse>?> ListForDesignAsync(int projectId, int designProjectId, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<ProjectDocumentResponse?> UploadAsync(int projectId, ProjectDocumentUploadRequest request, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<ProjectDocumentDownload?> DownloadAsync(int projectId, long documentId, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<ProjectDocumentResponse?> ClassifyAsync(int projectId, long documentId, ClassifyProjectDocumentRequest request, int callerUserId, bool canSeeAll, CancellationToken ct = default);

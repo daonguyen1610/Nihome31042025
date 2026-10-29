@@ -1031,7 +1031,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         for (var index = 0; index < 7; index++)
         {
             var root = new OperationalProject { Code = $"NIC-FOLDER-{index}", Name = "NICON handoff", CustomerId = 10 };
-            root.DesignProject = new DesignProject { ProjectCode = $"DP-FOLDER-{index}", Name = root.Name, CustomerId = 10 };
+            root.DesignProjects.Add(new DesignProject { ProjectCode = $"DP-FOLDER-{index}", Name = root.Name, CustomerId = 10 });
             roots.Add(root);
         }
         db.AddRange(roots);

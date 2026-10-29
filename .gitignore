@@ -19,6 +19,7 @@ nihomebackend.integration.tests/bin/
 nihomebackend.integration.tests/obj/
 TestResults/
 translation-key-report.md
+.tmp/
 
 # Backend wwwroot is reserved for backend-managed static assets only
 # (user-uploaded images, CVs, process-assets). The React SPA is built to

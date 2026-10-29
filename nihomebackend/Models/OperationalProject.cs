@@ -40,7 +40,7 @@ public class OperationalProject : IConcurrencyTracked
     public List<Opportunity> Opportunities { get; set; } = new();
     public List<Quote> Quotes { get; set; } = new();
     public List<Contract> Contracts { get; set; } = new();
-    public DesignProject? DesignProject { get; set; }
+    public List<DesignProject> DesignProjects { get; set; } = new();
     public List<ProjectDocument> Documents { get; set; } = new();
     public List<ProjectDriveFolder> DriveFolders { get; set; } = new();
     public List<OperationalProjectCodeChange> CodeChanges { get; set; } = new();

@@ -94,6 +94,33 @@ public class DesignProjectServiceTests : IDisposable
     // ---------------- Create ----------------
 
     [Fact]
+    public async Task CreateAsync_AllowsSeparateDesignFlowsOnSameOperationalProject()
+    {
+        var operational = new OperationalProject
+        {
+            Code = "OP-NICON-MULTI-DESIGN",
+            Name = "NICON - Nhà xưởng và khu văn phòng",
+            CustomerId = _customerId,
+        };
+        _db.OperationalProjects.Add(operational);
+        await _db.SaveChangesAsync();
+        var factory = ValidCreate(name: "Thiết kế nhà xưởng");
+        factory.OperationalProjectId = operational.Id;
+        var office = ValidCreate(name: "Thiết kế khu văn phòng");
+        office.OperationalProjectId = operational.Id;
+
+        var first = await _sut.CreateAsync(factory, _userId);
+        var second = await _sut.CreateAsync(office, _userId);
+
+        Assert.NotEqual(first.Id, second.Id);
+        Assert.NotEqual(first.ProjectCode, second.ProjectCode);
+        Assert.Equal(2, await _db.DesignProjects.CountAsync(project =>
+            project.OperationalProjectId == operational.Id));
+        Assert.Equal("Thiết kế nhà xưởng", (await _sut.GetAsync(first.Id))!.Name);
+        Assert.Equal("Thiết kế khu văn phòng", (await _sut.GetAsync(second.Id))!.Name);
+    }
+
+    [Fact]
     public async Task CreateAsync_HappyPath_AllocatesCode()
     {
         var resp = await _sut.CreateAsync(ValidCreate(), _userId);

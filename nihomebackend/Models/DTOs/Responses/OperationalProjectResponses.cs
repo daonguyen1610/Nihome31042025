@@ -38,6 +38,7 @@ public class OperationalProjectResponse : OperationalProjectListItemResponse
     public string? Note { get; set; }
     public int? DesignProjectId { get; set; }
     public string? DesignProjectCode { get; set; }
+    public List<OperationalProjectDesignResponse> DesignProjects { get; set; } = new();
     public string RowVersion { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public ProjectDriveRenameResponse? LatestCodeChange { get; set; }
@@ -45,6 +46,15 @@ public class OperationalProjectResponse : OperationalProjectListItemResponse
     public List<OperationalProjectOpportunityResponse> Opportunities { get; set; } = new();
     public List<OperationalProjectQuoteResponse> Quotes { get; set; } = new();
     public List<OperationalProjectContractResponse> Contracts { get; set; } = new();
+}
+
+public sealed class OperationalProjectDesignResponse
+{
+    public int Id { get; set; }
+    public string ProjectCode { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public int? ContractId { get; set; }
+    public string Status { get; set; } = string.Empty;
 }
 
 public sealed class ProjectDriveRenameResponse

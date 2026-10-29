@@ -25,6 +25,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
+import ContractFinanceReviewLink from "@/components/admin/ContractFinanceReviewLink";
 import ContractSourceLeads from "@/components/admin/ContractSourceLeads";
 import ContractExecutionProgress from "@/components/admin/ContractExecutionProgress";
 import ContractCareActivities from "@/components/admin/ContractCareActivities";
@@ -2550,6 +2551,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           onTransition={handleTransition}
           transitionBusy={transitionBusy}
         />
+        {contract.direction === "Upstream" && <ContractFinanceReviewLink quoteId={contract.quoteId} />}
         <LegalActivationWizard
           contract={contract}
           open={legalWizardOpen}

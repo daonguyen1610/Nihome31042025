@@ -2,6 +2,8 @@ namespace NihomeBackend.Models;
 
 public class OperationalProjectMember : IConcurrencyTracked
 {
+    public int? DesignProjectId { get; set; }
+    public DesignProject? DesignProject { get; set; }
     public int Id { get; set; }
     public int OperationalProjectId { get; set; }
     public OperationalProject OperationalProject { get; set; } = null!;

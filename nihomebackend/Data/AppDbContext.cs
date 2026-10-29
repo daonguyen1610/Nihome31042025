@@ -2118,8 +2118,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(dp => dp.Status).HasConversion<string>().HasMaxLength(20);
 
             b.HasOne(dp => dp.OperationalProject)
-                .WithOne(p => p.DesignProject)
-                .HasForeignKey<DesignProject>(dp => dp.OperationalProjectId)
+                .WithMany(p => p.DesignProjects)
+                .HasForeignKey(dp => dp.OperationalProjectId)
                 .OnDelete(DeleteBehavior.SetNull);
 
             b.HasOne(dp => dp.Customer)
@@ -2140,7 +2140,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .OnDelete(DeleteBehavior.NoAction);
 
             b.HasIndex(dp => dp.CustomerId);
-            b.HasIndex(dp => dp.OperationalProjectId).IsUnique().HasFilter("[OperationalProjectId] IS NOT NULL");
+            b.HasIndex(dp => dp.OperationalProjectId);
             b.HasIndex(dp => dp.ContractId).IsUnique().HasFilter("[ContractId] IS NOT NULL");
             b.HasIndex(dp => dp.ProjectManagerUserId);
             b.HasIndex(dp => dp.DesignLeadUserId);
@@ -2160,10 +2160,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(member => member.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(member => member.User).WithMany().HasForeignKey(member => member.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(member => member.DesignProject).WithMany().HasForeignKey(member => member.DesignProjectId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasOne(member => member.ReportsToMember).WithMany().HasForeignKey(member => member.ReportsToMemberId)
                 .OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(member => new { member.OperationalProjectId, member.UserId })
-                .IsUnique().HasFilter("[EndedAt] IS NULL");
+                .IsUnique().HasFilter("[EndedAt] IS NULL AND [DesignProjectId] IS NULL");
+            b.HasIndex(member => new { member.DesignProjectId, member.UserId })
+                .IsUnique().HasFilter("[EndedAt] IS NULL AND [DesignProjectId] IS NOT NULL");
             b.HasIndex(member => member.ReportsToMemberId);
         });
 
@@ -2417,7 +2421,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(phase => phase.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(phase => phase.DesignProject).WithMany(project => project.SchedulePhases)
                 .HasForeignKey(phase => phase.DesignProjectId).OnDelete(DeleteBehavior.Cascade);
-            b.HasIndex(phase => new { phase.OperationalProjectId, phase.Code }).IsUnique();
+            b.HasIndex(phase => new { phase.OperationalProjectId, phase.Code });
             b.HasIndex(phase => new { phase.DesignProjectId, phase.Code }).IsUnique();
             b.ToTable(table =>
             {
@@ -2456,7 +2460,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(task => task.DownstreamContractId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(task => task.ParentTask).WithMany(parent => parent.Children)
                 .HasForeignKey(task => task.ParentTaskId).OnDelete(DeleteBehavior.NoAction);
-            b.HasIndex(task => new { task.OperationalProjectId, task.Code }).IsUnique();
+            b.HasIndex(task => new { task.OperationalProjectId, task.Code });
+            b.HasIndex(task => new { task.DesignProjectId, task.Code }).IsUnique();
             b.HasIndex(task => new { task.OperationalProjectId, task.PhaseId, task.PlannedStart, task.PlannedEnd });
             b.HasIndex(task => new { task.OperationalProjectId, task.AssigneeMemberId });
             b.HasIndex(task => new { task.OperationalProjectId, task.ApproverMemberId, task.ApprovalStatus });

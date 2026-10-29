@@ -136,8 +136,9 @@ public sealed class DetailDesignScheduleService(
         CancellationToken ct)
     {
         if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
-        var designProjectId = await GetDesignProjectIdAsync(projectId, ct);
+        var designProjectId = await GetDesignProjectIdAsync(projectId, ct, query.DesignProjectId);
         if (!designProjectId.HasValue) return null;
+        if (!await access.CanViewDesignProjectAsync(callerUserId, designProjectId.Value, ct)) return null;
         return await BuildResponseAsync(projectId, designProjectId.Value, query, callerUserId, ct);
     }
 
@@ -173,9 +174,11 @@ public sealed class DetailDesignScheduleService(
         CancellationToken ct)
     {
         await EnsureCanManageAsync(projectId, callerUserId, ct);
+        var selectedDesignId = await GetDesignProjectIdAsync(projectId, ct, request.DesignProjectId);
         var project = await db.DesignProjects.SingleOrDefaultAsync(item =>
-            item.OperationalProjectId == projectId, ct)
+            item.OperationalProjectId == projectId && item.Id == selectedDesignId, ct)
             ?? throw new DesignScheduleOperationException("Dự án thiết kế không tồn tại trong Dự án vận hành.");
+        await EnsureCanManageFlowAsync(projectId, project.Id, callerUserId, ct);
         if (!project.StartDate.HasValue || !project.Deadline.HasValue)
             throw new DesignScheduleOperationException(
                 "Khởi tạo lịch yêu cầu Dự án thiết kế có ngày bắt đầu và hạn hoàn thành.");
@@ -183,7 +186,7 @@ public sealed class DetailDesignScheduleService(
         var definitions = ParseInitialization(request);
         await using var transaction = await BeginScheduleMutationAsync(projectId, ct);
         var existing = await db.DesignSchedulePhases.Where(item =>
-                item.OperationalProjectId == projectId)
+                item.OperationalProjectId == projectId && item.DesignProjectId == project.Id)
             .OrderBy(item => item.Code)
             .ToListAsync(ct);
         if (existing.Count > 0)
@@ -235,7 +238,7 @@ public sealed class DetailDesignScheduleService(
             }
             await db.SaveChangesAsync(ct);
             foreach (var phase in await db.DesignSchedulePhases.Where(item =>
-                         item.OperationalProjectId == projectId).ToListAsync(ct))
+                         item.OperationalProjectId == projectId && item.DesignProjectId == project.Id).ToListAsync(ct))
                 await AddHistoryAsync(phase, "Phase", phase.Id, "Initialized", callerUserId, ct);
         }
 
@@ -256,6 +259,7 @@ public sealed class DetailDesignScheduleService(
         var phase = await db.DesignSchedulePhases.SingleOrDefaultAsync(item =>
             item.Id == phaseId && item.OperationalProjectId == projectId, ct);
         if (phase is null) return null;
+        await EnsureCanManageFlowAsync(projectId, phase.DesignProjectId, callerUserId, ct);
         var status = DesignScheduleRules.ParseStatus(request.Status);
         if (status == DesignScheduleStatus.Completed)
             throw new DesignScheduleOperationException(
@@ -266,7 +270,7 @@ public sealed class DetailDesignScheduleService(
         DesignScheduleRules.ValidateDatesAndStatus(plannedStart, plannedEnd,
             request.ActualStart, request.ActualEnd, status, request.ProgressPercent, request.Weight);
         var baseline = await db.DesignSchedulePhases.AsNoTracking()
-            .Where(item => item.OperationalProjectId == projectId)
+            .Where(item => item.OperationalProjectId == projectId && item.DesignProjectId == phase.DesignProjectId)
             .Select(item => new { item.Id, item.DesignProjectId, item.Code, item.Weight })
             .ToListAsync(ct);
         var canonicalCodes = Enum.GetValues<DesignSchedulePhaseCode>();
@@ -310,10 +314,11 @@ public sealed class DetailDesignScheduleService(
         var phase = await db.DesignSchedulePhases.AsNoTracking().SingleOrDefaultAsync(item =>
             item.Id == phaseId && item.OperationalProjectId == projectId, ct);
         if (phase is null) return null;
-        var status = await ValidateTaskAsync(projectId, null, request, ct);
+        await EnsureCanManageFlowAsync(projectId, phase.DesignProjectId, callerUserId, ct);
+        var status = await ValidateTaskAsync(projectId, phase.DesignProjectId, null, request, ct);
         var predecessorIds = NormalizePredecessors(request.PredecessorTaskIds);
         var ccMemberIds = NormalizeMemberIds(request.CcMemberIds);
-        await ValidatePredecessorScopeAsync(projectId, predecessorIds, ct);
+        await ValidatePredecessorScopeAsync(projectId, predecessorIds, ct, phase.DesignProjectId);
         var plannedStart = RequireDate(request.PlannedStart, "Ngày bắt đầu kế hoạch");
         var plannedEnd = RequireDate(request.PlannedEnd, "Ngày kết thúc kế hoạch");
         var now = DateTime.UtcNow;
@@ -370,10 +375,11 @@ public sealed class DetailDesignScheduleService(
             .Include(item => item.CcMembers).SingleOrDefaultAsync(item =>
             item.Id == taskId && item.OperationalProjectId == projectId, ct);
         if (task is null) return null;
+        await EnsureCanManageFlowAsync(projectId, task.DesignProjectId, callerUserId, ct);
         if (task.ApprovalStatus is DesignTaskApprovalStatus.Pending or DesignTaskApprovalStatus.Approved)
             throw new DesignScheduleOperationException(
                 "Đầu việc đang chờ duyệt hoặc đã duyệt không được sửa nội dung.");
-        var status = await ValidateTaskAsync(projectId, taskId, request, ct);
+        var status = await ValidateTaskAsync(projectId, task.DesignProjectId, taskId, request, ct);
         DesignScheduleRules.ValidateTransition(task.Status, status);
         var predecessorIds = NormalizePredecessors(request.PredecessorTaskIds);
         var ccMemberIds = NormalizeMemberIds(request.CcMemberIds);
@@ -518,6 +524,7 @@ public sealed class DetailDesignScheduleService(
         var activeMembers = await db.OperationalProjectMembers.AsNoTracking()
             .Where(member => (member.Id == task.AssigneeMemberId || member.Id == task.ApproverMemberId) &&
                 member.OperationalProjectId == task.OperationalProjectId && member.User.IsActive &&
+                member.DesignProjectId == task.DesignProjectId &&
                 member.StartedAt <= now && (!member.EndedAt.HasValue || member.EndedAt > now))
             .Select(member => new
             {
@@ -544,6 +551,7 @@ public sealed class DetailDesignScheduleService(
 
     private async Task<DesignScheduleStatus> ValidateTaskAsync(
         int projectId,
+        int designProjectId,
         int? taskId,
         UpsertDesignScheduleTaskRequest request,
         CancellationToken ct)
@@ -578,6 +586,7 @@ public sealed class DetailDesignScheduleService(
                 "Hợp đồng thiết kế thuê ngoài phải thuộc cùng Dự án, đúng nhà cung cấp, có chiều đầu vào và loại Thiết kế hoặc Thầu phụ.");
         if (!await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
                 member.Id == request.AssigneeMemberId && member.OperationalProjectId == projectId &&
+                member.DesignProjectId == designProjectId &&
                 member.EndedAt == null && member.User.IsActive, ct))
             throw new DesignScheduleOperationException(
                 "Người phụ trách phải là thành viên đang hiệu lực của cùng Dự án.");
@@ -586,6 +595,7 @@ public sealed class DetailDesignScheduleService(
             .Append(request.ApproverMemberId).Distinct().ToList();
         var activeMembers = await db.OperationalProjectMembers.AsNoTracking().Where(member =>
             memberIds.Contains(member.Id) && member.OperationalProjectId == projectId &&
+            member.DesignProjectId == designProjectId &&
             member.EndedAt == null && member.User.IsActive)
             .Select(member => new
             {
@@ -609,7 +619,7 @@ public sealed class DetailDesignScheduleService(
                 "Người duyệt phải là một người khác người phụ trách đầu việc.");
         var approver = activeMembers.Single(member => member.Id == request.ApproverMemberId);
         var assignedDesignLeadUserId = await db.DesignProjects.AsNoTracking()
-            .Where(item => item.OperationalProjectId == projectId)
+            .Where(item => item.Id == designProjectId && item.OperationalProjectId == projectId)
             .Select(item => item.DesignLeadUserId)
             .SingleOrDefaultAsync(ct);
         if (!approver.IsDesignLead && approver.UserId != assignedDesignLeadUserId)
@@ -623,13 +633,15 @@ public sealed class DetailDesignScheduleService(
             if (request.ParentTaskId == taskId)
                 throw new DesignScheduleOperationException("Đầu việc không thể là công việc cha của chính nó.");
             if (!await db.DesignScheduleTasks.AsNoTracking().AnyAsync(item =>
-                    item.Id == request.ParentTaskId && item.OperationalProjectId == projectId, ct))
+                    item.Id == request.ParentTaskId && item.OperationalProjectId == projectId &&
+                    item.DesignProjectId == designProjectId, ct))
                 throw new DesignScheduleOperationException("Công việc cha phải thuộc cùng lịch thiết kế.");
             if (taskId.HasValue && await WouldCreateParentCycleAsync(taskId.Value, request.ParentTaskId.Value, ct))
                 throw new DesignScheduleOperationException("Cấu trúc đầu việc con tạo thành vòng lặp.");
         }
         if (await db.DesignScheduleTasks.AsNoTracking().AnyAsync(item =>
                 item.OperationalProjectId == projectId && item.Code == request.Code.Trim() &&
+                item.DesignProjectId == designProjectId &&
                 item.Id != taskId, ct))
             throw new DesignScheduleOperationException("Mã công việc đã tồn tại trong lịch thiết kế.");
         return status;
@@ -643,7 +655,7 @@ public sealed class DetailDesignScheduleService(
         var predecessorIds = requestedIds.Distinct().ToList();
         if (predecessorIds.Contains(task.Id))
             throw new DesignScheduleOperationException("Công việc không thể phụ thuộc vào chính nó.");
-        await ValidatePredecessorScopeAsync(task.OperationalProjectId, predecessorIds, ct);
+        await ValidatePredecessorScopeAsync(task.OperationalProjectId, predecessorIds, ct, task.DesignProjectId);
 
         var edges = (await db.DesignScheduleTaskDependencies.AsNoTracking()
                 .Where(item => item.OperationalProjectId == task.OperationalProjectId && item.TaskId != task.Id)
@@ -695,11 +707,13 @@ public sealed class DetailDesignScheduleService(
     private async Task ValidatePredecessorScopeAsync(
         int projectId,
         IEnumerable<int> requestedIds,
-        CancellationToken ct)
+        CancellationToken ct,
+        int designProjectId)
     {
         var predecessorIds = requestedIds.Distinct().ToList();
         var validCount = await db.DesignScheduleTasks.AsNoTracking().CountAsync(item =>
-            predecessorIds.Contains(item.Id) && item.OperationalProjectId == projectId, ct);
+            predecessorIds.Contains(item.Id) && item.OperationalProjectId == projectId &&
+            item.DesignProjectId == designProjectId, ct);
         if (validCount != predecessorIds.Count)
             throw new DesignScheduleOperationException(
                 "Mọi công việc tiền nhiệm phải thuộc cùng Dự án vận hành.");
@@ -808,7 +822,7 @@ public sealed class DetailDesignScheduleService(
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
         var phases = await db.DesignSchedulePhases.AsNoTracking()
-            .Where(item => item.OperationalProjectId == projectId)
+            .Where(item => item.OperationalProjectId == projectId && item.DesignProjectId == designProjectId)
             .OrderBy(item => item.Code)
             .ToListAsync(ct);
         var allTasks = await db.DesignScheduleTasks.AsNoTracking()
@@ -818,7 +832,7 @@ public sealed class DetailDesignScheduleService(
             .Include(item => item.Phase)
             .Include(item => item.Vendor)
             .Include(item => item.DownstreamContract)
-            .Where(item => item.OperationalProjectId == projectId)
+            .Where(item => item.OperationalProjectId == projectId && item.DesignProjectId == designProjectId)
             .ToListAsync(ct);
         var filtered = allTasks.AsEnumerable();
         if (!string.IsNullOrWhiteSpace(query.Phase))
@@ -876,7 +890,7 @@ public sealed class DetailDesignScheduleService(
         {
             OperationalProjectId = projectId,
             DesignProjectId = designProjectId,
-            CanManage = await access.CanManageDesignScheduleAsync(callerUserId, projectId, ct),
+            CanManage = await CanManageFlowAsync(projectId, designProjectId, callerUserId, ct),
             BaselineReady = projectReady,
             ProgressPercent = projectReady ? rollupSources.Sum(item => item.WeightedValue!.Value) : null,
             Phases = phases.Select(phase => MapPhase(phase, rollupSources.Single(item =>
@@ -1000,9 +1014,24 @@ public sealed class DetailDesignScheduleService(
         return parsed.OrderBy(item => item.Code).ToList();
     }
 
-    private async Task<int?> GetDesignProjectIdAsync(int projectId, CancellationToken ct) =>
-        await db.DesignProjects.AsNoTracking().Where(item => item.OperationalProjectId == projectId)
-            .Select(item => (int?)item.Id).SingleOrDefaultAsync(ct);
+    private async Task<int?> GetDesignProjectIdAsync(int projectId, CancellationToken ct, int? selectedId = null)
+    {
+        var ids = await db.DesignProjects.AsNoTracking().Where(item => item.OperationalProjectId == projectId &&
+            (!selectedId.HasValue || item.Id == selectedId.Value)).Select(item => item.Id).Take(2).ToListAsync(ct);
+        if (ids.Count > 1) throw new DesignScheduleOperationException(
+            "Dự án có nhiều luồng Thiết kế. Hãy mở tab Tiến độ từ đúng Dự án thiết kế cần quản lý.");
+        return ids.Count == 0 ? null : ids[0];
+    }
+
+    private async Task<bool> CanManageFlowAsync(int projectId, int designProjectId, int userId, CancellationToken ct) =>
+        await access.CanManageDesignScheduleAsync(userId, projectId, ct) &&
+        await access.CanManageDesignProjectAsync(userId, designProjectId, ct);
+
+    private async Task EnsureCanManageFlowAsync(int projectId, int designProjectId, int userId, CancellationToken ct)
+    {
+        if (!await CanManageFlowAsync(projectId, designProjectId, userId, ct))
+            throw new DesignScheduleOperationException("Bạn không có quyền quản lý tiến độ của luồng Thiết kế này. Hãy liên hệ người phụ trách luồng để được phân công.");
+    }
 
     private async Task EnsureCanManageAsync(int projectId, int callerUserId, CancellationToken ct)
     {
