@@ -1,4 +1,6 @@
 import { useDeferredValue, useEffect, useState } from "react";
+import { personOption, type PersonIdentity } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -79,7 +81,7 @@ const severityStyle: Record<HseViolationSeverity, string> = {
   Critical: "border-rose-300 bg-rose-100 text-rose-900",
 };
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   name: string;
 }
@@ -245,17 +247,18 @@ const HseViolationsPage = () => {
         setRows(listResponse.data.items ?? []);
         setStatusCounts(listResponse.data.statusCounts ?? {});
         const project = projects.find((item) => item.id === projectId);
-        const options = new Map<number, string>();
+        const options = new Map<number, UserOption>();
         if (project?.projectManagerUserId) {
-          options.set(
-            project.projectManagerUserId,
-            project.projectManagerName ?? `#${project.projectManagerUserId}`,
-          );
+          options.set(project.projectManagerUserId, {
+            id: project.projectManagerUserId,
+            name: project.projectManagerName ?? `#${project.projectManagerUserId}`,
+            roleLabelKey: "designProjects.team.role.ProjectManager",
+          });
         }
         for (const member of teamResponse.data.members.filter((item) => item.isActive)) {
-          options.set(member.userId, member.userName);
+          options.set(member.userId, { ...member, id: member.userId, name: member.userName });
         }
-        setUsers(Array.from(options, ([id, name]) => ({ id, name })));
+        setUsers(Array.from(options.values()));
       })
       .catch((requestError) => {
         if (active) setError(extractApiError(requestError));
@@ -939,23 +942,19 @@ const UserSelect = ({
   users: UserOption[];
   optional?: boolean;
   onChange: (value: string) => void;
-}) => (
-  <Select
-    value={value || (optional ? "none" : "")}
-    onValueChange={(next) => onChange(next === "none" ? "" : next)}
-  >
-    <SelectTrigger>
-      <SelectValue />
-    </SelectTrigger>
-    <SelectContent>
-      {optional && <SelectItem value="none">-</SelectItem>}
-      {users.map((user) => (
-        <SelectItem key={user.id} value={String(user.id)}>
-          {user.name}
-        </SelectItem>
-      ))}
-    </SelectContent>
-  </Select>
-);
+}) => {
+  const { t } = useI18n();
+  return (
+    <SearchableSelect
+      ariaLabel={t("people.select")}
+      value={value || (optional ? "none" : "")}
+      onChange={(next) => onChange(next === "none" ? "" : next)}
+      options={[
+        ...(optional ? [{ value: "none", label: t("designProjects.team.value.none") }] : []),
+        ...users.map((user) => ({ ...personOption(user, t), value: String(user.id) })),
+      ]}
+    />
+  );
+};
 
 export default HseViolationsPage;

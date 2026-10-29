@@ -1,3 +1,6 @@
+import { projectMemberOption, projectMemberRole } from "@/lib/people";
+import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -294,13 +297,6 @@ export const DesignScheduleTaskDialog = ({
         ? [...current.predecessorTaskIds, id]
         : current.predecessorTaskIds.filter((item) => item !== id),
     }));
-  const toggleCc = (id: number, checked: boolean) =>
-    setForm((current) => ({
-      ...current,
-      ccMemberIds: checked
-        ? [...current.ccMemberIds, id]
-        : current.ccMemberIds.filter((item) => item !== id),
-    }));
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -470,41 +466,43 @@ export const DesignScheduleTaskDialog = ({
           </div>
           <div>
             <Label>{t("designProjects.schedule.field.assignee")}</Label>
-            <Select
+            <SearchableSelect
               value={form.assigneeMemberId ? String(form.assigneeMemberId) : ""}
-              onValueChange={(value) => setForm({ ...form, assigneeMemberId: Number(value) })}
-            >
-              <SelectTrigger className="mt-1 min-h-11">
-                <SelectValue placeholder={t("designProjects.schedule.placeholder.assignee")} />
-              </SelectTrigger>
-              <SelectContent>
-                {activeMembers.map((member) => (
-                  <SelectItem key={member.id} value={String(member.id)}>
-                    {member.userName} · {member.position}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              onChange={(value) => {
+                const memberId = Number(value);
+                setForm((current) => ({
+                  ...current,
+                  assigneeMemberId: memberId,
+                  approverMemberId:
+                    current.approverMemberId === memberId ? 0 : current.approverMemberId,
+                  ccMemberIds: current.ccMemberIds.filter((id) => id !== memberId),
+                }));
+              }}
+              ariaLabel={t("designProjects.schedule.field.assignee")}
+              placeholder={t("designProjects.schedule.field.assignee")}
+              options={[...activeMembers.map((member) => projectMemberOption(member, t))]}
+            />
           </div>
           <div>
             <Label>{t("designProjects.schedule.field.approver")}</Label>
-            <Select
+            <SearchableSelect
               value={form.approverMemberId ? String(form.approverMemberId) : ""}
-              onValueChange={(value) => setForm({ ...form, approverMemberId: Number(value) })}
-            >
-              <SelectTrigger className="mt-1 min-h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {activeMembers
+              onChange={(value) => {
+                const memberId = Number(value);
+                setForm((current) => ({
+                  ...current,
+                  approverMemberId: memberId,
+                  ccMemberIds: current.ccMemberIds.filter((id) => id !== memberId),
+                }));
+              }}
+              ariaLabel={t("designProjects.schedule.field.approver")}
+              placeholder={t("designProjects.schedule.field.approver")}
+              options={[
+                ...activeMembers
                   .filter((member) => member.id !== form.assigneeMemberId)
-                  .map((member) => (
-                    <SelectItem key={member.id} value={String(member.id)}>
-                      {member.userName} / {member.position}
-                    </SelectItem>
-                  ))}
-              </SelectContent>
-            </Select>
+                  .map((member) => projectMemberOption(member, t)),
+              ]}
+            />
           </div>
           <div>
             <Label>{t("designProjects.schedule.field.parentTask")}</Label>
@@ -679,27 +677,22 @@ export const DesignScheduleTaskDialog = ({
             <legend className="text-sm font-medium text-slate-800">
               {t("designProjects.schedule.field.cc")}
             </legend>
-            <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border p-2">
-              {activeMembers
+            <PeopleChecklist
+              people={activeMembers
                 .filter(
                   (member) =>
                     member.id !== form.assigneeMemberId && member.id !== form.approverMemberId,
                 )
-                .map((member) => (
-                  <label
-                    key={member.id}
-                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded px-2 hover:bg-slate-50"
-                  >
-                    <Checkbox
-                      checked={form.ccMemberIds.includes(member.id)}
-                      onCheckedChange={(checked) => toggleCc(member.id, checked === true)}
-                    />
-                    <span className="text-sm">
-                      {member.userName} / {member.position}
-                    </span>
-                  </label>
-                ))}
-            </div>
+                .map((member) => ({
+                  ...member,
+                  userId: member.id,
+                  name: member.userName,
+                  roleName: projectMemberRole(member, t),
+                  roleLabelKey: null,
+                }))}
+              selected={form.ccMemberIds}
+              onChange={(ccMemberIds) => setForm((current) => ({ ...current, ccMemberIds }))}
+            />
           </fieldset>
         </div>
         {error ? (

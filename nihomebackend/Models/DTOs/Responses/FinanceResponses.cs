@@ -141,4 +141,6 @@ public sealed record PaymentContractOption(int Id, string ContractNumber, int Ve
 public sealed record PaymentMilestoneOption(int Id, int Order, string Name);
 public sealed record PaymentQsOption(int Id, int ContractId, string Code, decimal CertifiedAmount);
 public sealed record PaymentVendorOption(int Id, string VendorCode, string CompanyName);
-public sealed record PaymentAccountantOption(int Id, string? FullName);
+public sealed record PaymentAccountantOption(int Id, string? FullName,
+    string RoleCode = "", string RoleName = "", string? RoleLabelKey = null,
+    int? DepartmentId = null, string? DepartmentLabelKey = null);

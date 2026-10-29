@@ -3,6 +3,8 @@ import { AlertTriangle, Check, ChevronLeft, ChevronRight, Loader2 } from "lucide
 import { adminApi, type ContractResponse, type LegalActivationPreview } from "@/services/adminApi";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
+import { personOption } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -16,13 +18,6 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 
 type PermitDraft = {
   code: string;
@@ -483,6 +478,7 @@ export default function LegalActivationWizard({
               <div className="grid gap-3 rounded-lg border p-3 sm:grid-cols-3">
                 <Field label={t("contracts.legal.lead")}>
                   <MemberSelect
+                    ariaLabel={t("contracts.legal.lead")}
                     disabled={
                       !!preview.existingWorkPackageId && !preview.appliedTemplate && !!template
                     }
@@ -634,33 +630,32 @@ function Field({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 function MemberSelect({
+  ariaLabel,
   disabled,
   value,
   members,
   onChange,
 }: {
+  ariaLabel: string;
   disabled?: boolean;
   value: number;
   members: LegalActivationPreview["projectMembers"];
   onChange: (id: number) => void;
 }) {
+  const { t } = useI18n();
   return (
-    <Select
+    <SearchableSelect
       disabled={disabled}
       value={value ? String(value) : ""}
-      onValueChange={(next) => onChange(Number(next))}
-    >
-      <SelectTrigger>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        {members.map((member) => (
-          <SelectItem key={member.userId} value={String(member.userId)}>
-            {member.name} · {member.roleGroupCode}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      onChange={(next) => onChange(Number(next))}
+      ariaLabel={ariaLabel}
+      placeholder={ariaLabel}
+      options={members
+        .filter(
+          (member, index) => members.findIndex((item) => item.userId === member.userId) === index,
+        )
+        .map((member) => personOption(member, t))}
+    />
   );
 }
 function Predecessors({
@@ -707,6 +702,7 @@ function PermitRow({
   update: (code: string, patch: Partial<PermitDraft>) => void;
   error?: string;
 }) {
+  const { t } = useI18n();
   return (
     <tr className={cn("border-b align-top", error && "bg-destructive/5")}>
       <td className="p-2 font-medium">
@@ -726,6 +722,7 @@ function PermitRow({
       </td>
       <td className="p-2">
         <MemberSelect
+          ariaLabel={t("contracts.legal.assignee")}
           value={permit.assigneeUserId}
           members={preview.projectMembers}
           onChange={(id) =>
@@ -739,6 +736,7 @@ function PermitRow({
       </td>
       <td className="p-2">
         <MemberSelect
+          ariaLabel={t("contracts.legal.approver")}
           value={permit.approverUserId}
           members={preview.projectMembers.filter(
             (member) => member.userId !== permit.assigneeUserId,
@@ -800,6 +798,7 @@ function PermitCard({
       </Field>
       <Field label={t("contracts.legal.assignee")}>
         <MemberSelect
+          ariaLabel={t("contracts.legal.assignee")}
           value={permit.assigneeUserId}
           members={preview.projectMembers}
           onChange={(id) =>
@@ -813,6 +812,7 @@ function PermitCard({
       </Field>
       <Field label={t("contracts.legal.approver")}>
         <MemberSelect
+          ariaLabel={t("contracts.legal.approver")}
           value={permit.approverUserId}
           members={preview.projectMembers.filter(
             (member) => member.userId !== permit.assigneeUserId,

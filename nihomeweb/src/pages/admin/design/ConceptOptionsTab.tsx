@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
@@ -69,7 +70,7 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   }
 };
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -172,10 +173,11 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getUsers({ take: 200 });
+        const { data } = await adminApi.getPeopleDirectory();
         if (!cancelled) {
           setUsers(
             (data.items ?? []).map((u) => ({
+              ...u,
               id: u.id,
               fullName: u.fullName ?? u.email ?? `#${u.id}`,
             })),
@@ -190,10 +192,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     };
   }, [canPickOwner]);
 
-  const userOptions = useMemo(
-    () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
-    [users],
-  );
+  const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   // Once the parent project is past Concept, options are read-only.
   const isLocked = project.currentStage !== "Concept";
@@ -560,6 +559,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
               <div>
                 <Label>{t("concepts.field.owner")}</Label>
                 <SearchableSelect
+                  ariaLabel={t("concepts.field.owner")}
                   className="mt-1"
                   value={form.ownerUserId != null ? String(form.ownerUserId) : ""}
                   onChange={(v) => setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))}

@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -75,7 +76,7 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   }
 };
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -186,10 +187,11 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       }
       if (canPickOwner) {
         try {
-          const { data } = await adminApi.getUsers({ take: 200 });
+          const { data } = await adminApi.getPeopleDirectory();
           if (!cancelled) {
             setUsers(
               (data.items ?? []).map((u) => ({
+                ...u,
                 id: u.id,
                 fullName: u.fullName ?? u.email ?? `#${u.id}`,
               })),
@@ -209,10 +211,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
     () => disciplines.map((d) => ({ value: d.code, label: d.name })),
     [disciplines],
   );
-  const userOptions = useMemo(
-    () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
-    [users],
-  );
+  const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const disciplineLabelByCode = useMemo(() => {
     const m = new Map<string, string>();
@@ -720,6 +719,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
               <div>
                 <Label>{t("basicDesign.field.owner")}</Label>
                 <SearchableSelect
+                  ariaLabel={t("basicDesign.field.owner")}
                   className="mt-1"
                   value={form.ownerUserId != null ? String(form.ownerUserId) : ""}
                   onChange={(v) => setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))}

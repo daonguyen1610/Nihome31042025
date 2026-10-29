@@ -40,6 +40,8 @@ import { useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useProjectDocumentSync } from "@/hooks/useProjectDocumentSync";
+import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
+import { personRole, type PersonIdentity } from "@/lib/people";
 import {
   adminApi,
   type DesignProjectResponse,
@@ -77,7 +79,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       has("operations.projects.view.all"));
   const [reviews, setReviews] = useState<DesignReviewResponse[]>([]);
   const [recipientCandidates, setRecipientCandidates] = useState<
-    Array<{ userId: number; name: string }>
+    Array<PersonIdentity & { userId: number; name: string }>
   >([]);
   const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [conceptOptions, setConceptOptions] = useState<ConceptOptionResponse[]>([]);
@@ -449,7 +451,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
             </div>
             <p className="mt-2 text-xs text-slate-500">
               {t("designProjects.reviews.recipients")}:{" "}
-              {review.recipients.map((item) => item.name).join(", ")}
+              {review.recipients.map((item) => `${item.name} · ${personRole(item, t)}`).join(", ")}
             </p>
             <div className="mt-3 flex flex-wrap gap-2">
               {review.documents.map((document) => (
@@ -876,25 +878,17 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               <legend className="text-sm font-medium">
                 {t("designProjects.reviews.recipients")}
               </legend>
-              <div className="mt-1 max-h-44 overflow-y-auto rounded-md border p-2">
+              <div className="mt-1">
                 {documentSyncError ? (
                   <p role="status" className="p-2 text-sm text-destructive">
                     {actionableError(documentSyncError)}
                   </p>
                 ) : null}
-                {recipients.map((recipient) => (
-                  <label key={recipient.userId} className="flex min-h-11 items-center gap-3 px-2">
-                    <Checkbox
-                      checked={recipientIds.includes(recipient.userId)}
-                      onCheckedChange={(checked) =>
-                        setRecipientIds((items) =>
-                          toggle(items, recipient.userId, checked === true),
-                        )
-                      }
-                    />
-                    {recipient.name}
-                  </label>
-                ))}
+                <PeopleChecklist
+                  people={recipients}
+                  selected={recipientIds}
+                  onChange={setRecipientIds}
+                />
               </div>
             </fieldset>
             <fieldset>

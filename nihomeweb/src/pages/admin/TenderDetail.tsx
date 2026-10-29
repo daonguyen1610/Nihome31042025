@@ -1,3 +1,5 @@
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -655,29 +657,17 @@ const ChecklistTab = ({
                 </td>
                 <td className="px-3 py-2 text-xs text-slate-700">
                   {!disabled && assignees ? (
-                    <Select
+                    <SearchableSelect
                       value={item.ownerUserId == null ? "unassigned" : String(item.ownerUserId)}
                       disabled={savingId === item.id}
-                      onValueChange={(value) => void handleOwner(item, value)}
-                    >
-                      <SelectTrigger
-                        className="h-8 w-44 text-xs"
-                        aria-label={t("tenders.detail.checklist.assign")}
-                        data-testid={`tender-checklist-owner-${item.templateCode ?? item.id}-desktop`}
-                      >
-                        <SelectValue placeholder={t("tenders.detail.checklist.assign")} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="unassigned">
-                          {t("tenders.detail.checklist.clearOwner")}
-                        </SelectItem>
-                        {assignees.map((assignee) => (
-                          <SelectItem key={assignee.id} value={String(assignee.id)}>
-                            {assignee.fullName}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
+                      onChange={(value) => void handleOwner(item, value)}
+                      ariaLabel={t("tenders.detail.checklist.assign")}
+                      data-testid={`tender-checklist-owner-${item.templateCode ?? item.id}-desktop`}
+                      options={[
+                        { value: "unassigned", label: t("tenders.detail.checklist.clearOwner") },
+                        ...assignees.map((person) => personOption(person, t)),
+                      ]}
+                    />
                   ) : (
                     (item.ownerName ?? <span className="text-slate-400">—</span>)
                   )}
@@ -824,29 +814,17 @@ const ChecklistTab = ({
                   )}
                 </Badge>
                 {!disabled && assignees ? (
-                  <Select
+                  <SearchableSelect
                     value={item.ownerUserId == null ? "unassigned" : String(item.ownerUserId)}
                     disabled={savingId === item.id}
-                    onValueChange={(value) => void handleOwner(item, value)}
-                  >
-                    <SelectTrigger
-                      className="mt-2 h-9 w-full text-xs"
-                      aria-label={t("tenders.detail.checklist.assign")}
-                      data-testid={`tender-checklist-owner-${item.templateCode ?? item.id}-mobile`}
-                    >
-                      <SelectValue placeholder={t("tenders.detail.checklist.assign")} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="unassigned">
-                        {t("tenders.detail.checklist.clearOwner")}
-                      </SelectItem>
-                      {assignees.map((assignee) => (
-                        <SelectItem key={assignee.id} value={String(assignee.id)}>
-                          {assignee.fullName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => void handleOwner(item, value)}
+                    ariaLabel={t("tenders.detail.checklist.assign")}
+                    data-testid={`tender-checklist-owner-${item.templateCode ?? item.id}-mobile`}
+                    options={[
+                      { value: "unassigned", label: t("tenders.detail.checklist.clearOwner") },
+                      ...assignees.map((person) => personOption(person, t)),
+                    ]}
+                  />
                 ) : (
                   <div className="mt-0.5 text-xs text-slate-500">{item.ownerName ?? "—"}</div>
                 )}

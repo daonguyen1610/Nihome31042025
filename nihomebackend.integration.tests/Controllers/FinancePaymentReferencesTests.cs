@@ -35,7 +35,12 @@ public sealed class FinancePaymentReferencesTests(NihomeWebApplicationFactory fa
         foreach (var vendor in vendors) Fields(vendor).Should().BeEquivalentTo("id", "vendorCode", "companyName");
         var accountants = references.GetProperty("accountants").EnumerateArray().ToArray();
         accountants.Select(Id).Should().Contain(fixture.AccountantId).And.NotContain(fixture.InactiveAccountantId).And.NotContain(fixture.ProcurementId);
-        foreach (var accountant in accountants) Fields(accountant).Should().BeEquivalentTo("id", "fullName");
+        foreach (var accountant in accountants)
+        {
+            Fields(accountant).Should().BeEquivalentTo("id", "fullName", "roleCode", "roleName", "roleLabelKey", "departmentId", "departmentLabelKey");
+            accountant.GetProperty("roleCode").GetString().Should().Be("ACCOUNTANT");
+            accountant.GetProperty("roleName").GetString().Should().NotBeNullOrWhiteSpace();
+        }
         var allowedAccountants = await WithDbAsync(db => db.Users.Where(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == "ACCOUNTANT").Select(x => x.Id).ToListAsync());
         accountants.Select(Id).Should().BeEquivalentTo(allowedAccountants);
         var qsBatches = references.GetProperty("qsBatches").EnumerateArray().ToArray();

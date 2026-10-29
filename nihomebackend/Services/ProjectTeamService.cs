@@ -121,6 +121,11 @@ public sealed class ProjectTeamService(
                 UserId = user.Id,
                 Name = user.FullName ?? user.Email,
                 Email = user.Email,
+                RoleCode = user.RoleEntity != null ? user.RoleEntity.Code : user.Role.ToString(),
+                RoleName = user.RoleEntity != null ? user.RoleEntity.Name : user.Role.ToString(),
+                RoleLabelKey = user.RoleEntity != null ? user.RoleEntity.LabelKey : null,
+                DepartmentId = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = user.RoleEntity != null && user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
             })
             .ToListAsync(ct);
     }
@@ -540,6 +545,7 @@ public sealed class ProjectTeamService(
     private IQueryable<OperationalProjectMember> MemberQuery(int projectId) =>
         db.OperationalProjectMembers.AsNoTracking()
             .Include(item => item.User)
+                .ThenInclude(user => user.RoleEntity).ThenInclude(role => role!.RoleGroup)
             .Include(item => item.ReportsToMember)!
                 .ThenInclude(item => item!.User)
             .Include(item => item.Roles)
@@ -597,6 +603,11 @@ public sealed class ProjectTeamService(
         Id = member.Id,
         UserId = member.UserId,
         UserName = member.User.FullName ?? member.User.Email,
+        RoleCode = member.User.RoleEntity?.Code ?? member.User.Role.ToString(),
+        RoleName = member.User.RoleEntity?.Name ?? member.User.Role.ToString(),
+        RoleLabelKey = member.User.RoleEntity?.LabelKey,
+        DepartmentId = member.User.RoleEntity?.RoleGroup is { IsActive: true } group ? group.Id : null,
+        DepartmentLabelKey = member.User.RoleEntity?.RoleGroup is { IsActive: true } department ? department.LabelKey : null,
         Email = member.User.Email,
         Position = member.Position,
         ReportsToMemberId = member.ReportsToMemberId,

@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { personOption, projectMemberOption } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   CheckCircle2,
   ClipboardList,
@@ -144,8 +146,10 @@ export const OperationalProjectTeamPanel = ({
       setTeam(teamResponse.data);
       setHistory(historyResponse.data ?? []);
       if (teamResponse.data.canManage) {
-        const candidateResponse =
-          await adminApi.getOperationalProjectTeamCandidates(operationalProjectId, designProjectId);
+        const candidateResponse = await adminApi.getOperationalProjectTeamCandidates(
+          operationalProjectId,
+          designProjectId,
+        );
         setCandidates(candidateResponse.data ?? []);
       } else setCandidates([]);
     } catch (loadError) {
@@ -961,24 +965,20 @@ export const OperationalProjectTeamPanel = ({
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="sm:col-span-2">
               <Label>{t("designProjects.team.field.user")} *</Label>
-              <Select
+              <SearchableSelect
+                ariaLabel={t("designProjects.team.field.user")}
                 disabled={memberDialog !== "add"}
                 value={memberForm.userId ? String(memberForm.userId) : ""}
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setMemberForm((current) => ({ ...current, userId: Number(value) }))
                 }
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={t("designProjects.team.placeholder.user")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableCandidates.map((candidate) => (
-                    <SelectItem key={candidate.userId} value={String(candidate.userId)}>
-                      {candidate.name} · {candidate.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder={t("designProjects.team.placeholder.user")}
+                options={
+                  memberDialog !== "add" && editingMember
+                    ? [personOption({ ...editingMember, name: editingMember.userName }, t)]
+                    : availableCandidates.map((candidate) => personOption(candidate, t))
+                }
+              />
             </div>
             <div className="sm:col-span-2">
               <Label>{t("designProjects.team.field.position")} *</Label>
@@ -1027,30 +1027,24 @@ export const OperationalProjectTeamPanel = ({
             )}
             <div className="sm:col-span-2">
               <Label>{t("designProjects.team.field.reportsTo")}</Label>
-              <Select
+              <SearchableSelect
                 disabled={memberDialog === "end"}
                 value={memberForm.reportsToMemberId ? String(memberForm.reportsToMemberId) : "none"}
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setMemberForm((current) => ({
                     ...current,
                     reportsToMemberId: value === "none" ? null : Number(value),
                   }))
                 }
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("designProjects.team.value.none")}</SelectItem>
-                  {activeMembers
+                ariaLabel={t("designProjects.team.field.reportsTo")}
+                placeholder={t("designProjects.team.field.reportsTo")}
+                options={[
+                  { value: "none", label: t("designProjects.team.value.none") },
+                  ...activeMembers
                     .filter((member) => member.id !== editingMember?.id)
-                    .map((member) => (
-                      <SelectItem key={member.id} value={String(member.id)}>
-                        {member.userName} · {member.position}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                    .map((member) => projectMemberOption(member, t)),
+                ]}
+              />
             </div>
             <div className="space-y-3 sm:col-span-2">
               <div
@@ -1308,11 +1302,13 @@ export const OperationalProjectTeamPanel = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {team.moduleOptions.filter((option) => !designProjectId || option === "Design").map((option) => (
-                    <SelectItem key={option} value={option}>
-                      {option}
-                    </SelectItem>
-                  ))}
+                  {team.moduleOptions
+                    .filter((option) => !designProjectId || option === "Design")
+                    .map((option) => (
+                      <SelectItem key={option} value={option}>
+                        {option}
+                      </SelectItem>
+                    ))}
                 </SelectContent>
               </Select>
             </div>
@@ -1342,12 +1338,12 @@ export const OperationalProjectTeamPanel = ({
             </div>
             <div>
               <Label>{t("designProjects.team.field.assignee")} *</Label>
-              <Select
+              <SearchableSelect
                 disabled={assignmentDialog === "edit"}
                 value={
                   assignmentForm.assigneeMemberId ? String(assignmentForm.assigneeMemberId) : ""
                 }
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setAssignmentForm((current) => {
                     const assigneeMemberId = Number(value);
                     return {
@@ -1360,46 +1356,32 @@ export const OperationalProjectTeamPanel = ({
                     };
                   })
                 }
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue placeholder={t("designProjects.team.placeholder.member")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {activeMembers.map((member) => (
-                    <SelectItem key={member.id} value={String(member.id)}>
-                      {member.userName} · {member.position}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                ariaLabel={t("designProjects.team.field.assignee")}
+                placeholder={t("designProjects.team.field.assignee")}
+                options={[...activeMembers.map((member) => projectMemberOption(member, t))]}
+              />
             </div>
             <div>
               <Label>{t("designProjects.team.field.assignmentManager")}</Label>
-              <Select
+              <SearchableSelect
                 value={
                   assignmentForm.managerMemberId ? String(assignmentForm.managerMemberId) : "none"
                 }
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setAssignmentForm((current) => ({
                     ...current,
                     managerMemberId: value === "none" ? null : Number(value),
                   }))
                 }
-              >
-                <SelectTrigger className="mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">{t("designProjects.team.value.none")}</SelectItem>
-                  {activeMembers
+                ariaLabel={t("designProjects.team.field.assignmentManager")}
+                placeholder={t("designProjects.team.field.assignmentManager")}
+                options={[
+                  { value: "none", label: t("designProjects.team.value.none") },
+                  ...activeMembers
                     .filter((member) => member.id !== assignmentForm.assigneeMemberId)
-                    .map((member) => (
-                      <SelectItem key={member.id} value={String(member.id)}>
-                        {member.userName} · {member.position}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
+                    .map((member) => projectMemberOption(member, t)),
+                ]}
+              />
             </div>
             <div>
               <Label>{t("designProjects.team.field.plannedStart")}</Label>

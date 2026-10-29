@@ -380,10 +380,19 @@ project is in that user's scope without a PM assignment.
 `SALES_MANAGER` deliberately has neither `users.view` nor `system.audit.view`.
 The opportunity screen therefore uses two narrow reads:
 `GET /api/opportunities/owner-options` (`crm.opportunities.view.all`) returns
-only the id and name of active users whose role holds
+the id, name, role and department identity of active users whose role holds
 `crm.opportunities.manage`, and `GET /api/opportunities/{id}/history`
 (`crm.opportunities.view`, same owner scope as the record) returns that
 opportunity's audit entries without IP, device, or phone details.
+
+Personnel option endpoints retain their existing permission and eligibility
+rules. Role/department labels support recognition and filtering; they do not
+grant access to the global user directory. `GET /api/users` still requires
+`users.view`; optional `departmentId` intersects with role/search filters,
+and `0` selects users without an active department. Scoped Design team reads
+use `designProjectId`: access to one Design flow does not authorize another
+flow's team, schedule or source documents. Project-wide roles retain their
+existing Operational Project scope.
 
 ### Starting a design flow
 

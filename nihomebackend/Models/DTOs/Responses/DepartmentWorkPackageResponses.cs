@@ -25,6 +25,7 @@ public sealed class DepartmentWorkPackageResponse
     public string? SourceOpportunityName { get; set; }
     public int? SourceQuoteId { get; set; }
     public string? SourceQuoteCode { get; set; }
+    public int? SourceQuoteVersion { get; set; }
     public int? SourceTenderId { get; set; }
     public string? SourceTenderCode { get; set; }
     public int DepartmentRoleGroupId { get; set; }
@@ -165,6 +166,10 @@ public sealed class DepartmentUserOptionResponse
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
     public int RoleGroupId { get; set; }
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public string? DepartmentLabelKey { get; set; }
     public bool CanLead { get; set; }
 }
 

@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -103,7 +104,7 @@ const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
  * calendar date intact across the UTC+7 boundary. */
 const toUtcMidnight = (yyyyMmDd: string): string => (yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "");
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -204,10 +205,11 @@ const AdminPermits = () => {
 
         if (canPickUser) {
           try {
-            const { data } = await adminApi.getUsers({ take: 200 });
+            const { data } = await adminApi.getPeopleDirectory();
             if (!cancelled) {
               setUsers(
                 (data.items ?? []).map((u) => ({
+                  ...u,
                   id: u.id,
                   fullName: u.fullName ?? u.email ?? `#${u.id}`,
                 })),
@@ -291,10 +293,7 @@ const AdminPermits = () => {
       })),
     [projects],
   );
-  const userOptions = useMemo(
-    () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
-    [users],
-  );
+  const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const resetFilters = () => {
     setSearch("");
@@ -739,6 +738,7 @@ const AdminPermits = () => {
               <div>
                 <Label className="text-xs">{t("permits.field.owner")}</Label>
                 <SearchableSelect
+                  ariaLabel={t("permits.field.owner")}
                   className="mt-1"
                   value={ownerUserId != null ? String(ownerUserId) : ""}
                   onChange={(v) => {
@@ -754,6 +754,7 @@ const AdminPermits = () => {
               <div>
                 <Label className="text-xs">{t("permits.field.approver")}</Label>
                 <SearchableSelect
+                  ariaLabel={t("permits.field.approver")}
                   className="mt-1"
                   value={approverUserId != null ? String(approverUserId) : ""}
                   onChange={(value) => {
@@ -1096,6 +1097,7 @@ const AdminPermits = () => {
                 <div className="md:col-span-2">
                   <Label>{t("permits.field.owner")}</Label>
                   <SearchableSelect
+                    ariaLabel={t("permits.field.owner")}
                     className="mt-1"
                     value={form.ownerUserId != null ? String(form.ownerUserId) : ""}
                     onChange={(v) =>

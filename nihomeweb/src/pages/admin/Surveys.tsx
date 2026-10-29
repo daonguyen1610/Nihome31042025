@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -99,7 +100,7 @@ const emptyForm = (): CreateSurveyRequest => ({
   note: "",
 });
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -216,10 +217,11 @@ const AdminSurveys = () => {
 
         if (canPickSurveyor) {
           try {
-            const { data } = await adminApi.getUsers({ take: 200 });
+            const { data } = await adminApi.getPeopleDirectory();
             if (!cancelled) {
               setUsers(
                 (data.items ?? []).map((u) => ({
+                  ...u,
                   id: u.id,
                   fullName: u.fullName ?? u.email ?? `#${u.id}`,
                 })),
@@ -295,10 +297,7 @@ const AdminSurveys = () => {
     dateFrom !== "" ||
     dateTo !== "";
 
-  const surveyorOptions = useMemo(
-    () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
-    [users],
-  );
+  const surveyorOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
   const projectOptions = useMemo(
     () => projects.map((p) => ({ value: String(p.id), label: p.name })),
     [projects],

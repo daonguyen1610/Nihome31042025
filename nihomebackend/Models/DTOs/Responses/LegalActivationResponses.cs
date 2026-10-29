@@ -39,6 +39,10 @@ public sealed class LegalProjectMemberOptionResponse
     public string Email { get; set; } = string.Empty;
     public int RoleGroupId { get; set; }
     public string RoleGroupCode { get; set; } = string.Empty;
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public string? DepartmentLabelKey { get; set; }
     public bool CanLeadLegal { get; set; }
 }
 

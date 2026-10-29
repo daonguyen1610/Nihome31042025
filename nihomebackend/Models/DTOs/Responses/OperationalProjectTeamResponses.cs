@@ -22,6 +22,11 @@ public sealed class ProjectRoleDefinitionResponse
 
 public sealed class OperationalProjectMemberResponse
 {
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
     public int? DesignProjectId { get; set; }
     public int Id { get; set; }
     public int UserId { get; set; }
@@ -89,4 +94,9 @@ public sealed class ProjectMemberCandidateResponse
     public int UserId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string Email { get; set; } = string.Empty;
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
 }

@@ -168,12 +168,17 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
                 x.Id,
                 Name = x.FullName ?? x.Email,
                 IsProcurement = x.RoleEntity != null && x.RoleEntity.Code == "PROCUREMENT",
+                RoleCode = x.RoleEntity != null ? x.RoleEntity.Code : x.Role.ToString(),
+                RoleName = x.RoleEntity != null ? x.RoleEntity.Name : x.Role.ToString(),
+                RoleLabelKey = x.RoleEntity != null ? x.RoleEntity.LabelKey : null,
+                DepartmentId = x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup.IsActive ? x.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup.IsActive ? x.RoleEntity.RoleGroup.LabelKey : null,
             })
             .OrderBy(x => x.Name)
             .ToListAsync(ct);
-        var siteUsers = users.Select(x => new ConstructionResourceUserReferenceResponse(x.Id, x.Name)).ToList();
+        var siteUsers = users.Select(x => new ConstructionResourceUserReferenceResponse(x.Id, x.Name, x.RoleCode, x.RoleName, x.RoleLabelKey, x.DepartmentId, x.DepartmentLabelKey)).ToList();
         var procurementUsers = users.Where(x => x.IsProcurement)
-            .Select(x => new ConstructionResourceUserReferenceResponse(x.Id, x.Name)).ToList();
+            .Select(x => new ConstructionResourceUserReferenceResponse(x.Id, x.Name, x.RoleCode, x.RoleName, x.RoleLabelKey, x.DepartmentId, x.DepartmentLabelKey)).ToList();
         return new ConstructionResourceReferenceDataResponse(boqLines, siteUsers, procurementUsers);
     }
     public async Task<ConstructionResourceRequestResponse?> GetResourceAsync(int projectId, int id, CancellationToken ct)

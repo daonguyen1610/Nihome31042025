@@ -25,6 +25,9 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { personOption } from "@/lib/people";
+import { selectQuoteFinanceReview } from "@/lib/financeReview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import BoqBulkEntryDialog from "@/components/admin/BoqBulkEntryDialog";
 import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
@@ -745,15 +748,7 @@ const AdminQuoteDetail = () => {
     canManage && !editing && !isTerminal && (!awaitingInputPrice || approvedInputOffers.length > 0);
   const primaryInputPackage =
     inputPricePackages.find((item) => item.status !== "Completed") ?? inputPricePackages[0];
-  const primaryFinancePackage = financeReviewPackages.find(
-    (item) =>
-      item.status !== "Cancelled" &&
-      (item.financeReview?.reviewedQuoteVersion === quote.version ||
-        (item.status !== "Completed" &&
-          (!item.financeReview ||
-            item.financeReview.status === "Draft" ||
-            item.financeReview.status === "Rejected"))),
-  );
+  const primaryFinancePackage = selectQuoteFinanceReview(financeReviewPackages, quote.version);
 
   // A quote the customer or an approver has signed off on is the point where a
   // contract can be raised from it.
@@ -1556,25 +1551,19 @@ const AdminQuoteDetail = () => {
           {workflow === "submit" && (
             <div className="space-y-3">
               <Label htmlFor="quote-approval-approver">{t("quotes.approval.recipient")}</Label>
-              <Select
-                value={selectedApproverId?.toString()}
-                onValueChange={(value) => {
-                  setSelectedApproverId(Number(value));
-                  setApprovalPreview(null);
-                  setApprovalError("");
-                }}
-              >
-                <SelectTrigger id="quote-approval-approver" data-testid="quote-approval-approver">
-                  <SelectValue placeholder={t("quotes.approval.selectApprover")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {approvalCandidates.map((candidate) => (
-                    <SelectItem key={candidate.id} value={candidate.id.toString()}>
-                      {candidate.name} · {candidate.email}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div data-testid="quote-approval-approver">
+                <SearchableSelect
+                  ariaLabel={t("quotes.approval.recipient")}
+                  value={selectedApproverId?.toString() ?? null}
+                  onChange={(value) => {
+                    setSelectedApproverId(Number(value));
+                    setApprovalPreview(null);
+                    setApprovalError("");
+                  }}
+                  placeholder={t("quotes.approval.selectApprover")}
+                  options={approvalCandidates.map((candidate) => personOption(candidate, t))}
+                />
+              </div>
               {approvalCandidates.length === 0 && (
                 <p role="alert" className="text-sm text-destructive">
                   {t("quotes.approval.noCandidates")}

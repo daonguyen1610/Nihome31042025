@@ -35,7 +35,10 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             .Select(vendor => new PaymentVendorOption(vendor.Id, vendor.VendorCode, vendor.CompanyName)).ToListAsync(ct);
         var accountants = await db.Users.AsNoTracking().Where(user => user.IsActive && user.RoleEntity != null && user.RoleEntity.Code.ToUpper() == AccountantRole)
             .OrderBy(user => user.FullName).ThenBy(user => user.Id)
-            .Select(user => new PaymentAccountantOption(user.Id, user.FullName)).ToListAsync(ct);
+            .Select(user => new PaymentAccountantOption(user.Id, user.FullName,
+                user.RoleEntity!.Code, user.RoleEntity.Name, user.RoleEntity.LabelKey,
+                user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
+                user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null)).ToListAsync(ct);
         var contractIds = contracts.Select(contract => contract.Id).ToArray();
         var qsBatches = await db.ConstructionQsBatches.AsNoTracking()
             .Where(item => contractIds.Contains(item.ContractId) &&

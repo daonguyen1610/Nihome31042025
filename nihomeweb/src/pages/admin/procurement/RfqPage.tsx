@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type MouseEvent } from "react";
+import { personOption } from "@/lib/people";
 import { MoveHorizontal } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -421,18 +422,15 @@ function RfqWorkspace({
             </select>
           </RfqField>
           <RfqField label={t("rfq.field.owner")}>
-            <select
-              className={rfqSelectClass}
-              value={filter.ownerUserId ?? ""}
-              onChange={(e) => changeFilter({ ownerUserId: Number(e.target.value) || undefined })}
-            >
-              <option value="">{t("rfq.all")}</option>
-              {references.owners.map((x) => (
-                <option key={x.id} value={x.id}>
-                  {x.name}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect
+              ariaLabel={t("rfq.field.owner")}
+              value={filter.ownerUserId ? String(filter.ownerUserId) : ""}
+              onChange={(value) => changeFilter({ ownerUserId: Number(value) || undefined })}
+              options={[
+                { value: "", label: t("rfq.all") },
+                ...references.owners.map((person) => personOption(person, t)),
+              ]}
+            />
           </RfqField>
           <RfqField label={t("rfq.sort")}>
             <select

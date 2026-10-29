@@ -19,6 +19,9 @@ public class UserListItemResponse
 
     /// <summary>Human-readable role name from the <c>roles</c> table. Null for legacy users.</summary>
     public string? RoleName { get; set; }
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
 
     public bool IsActive { get; set; }
     public string? AvatarUrl { get; set; }

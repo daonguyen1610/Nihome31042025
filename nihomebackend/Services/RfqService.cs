@@ -118,7 +118,11 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
             (x.VendorType == VendorType.Supplier || x.VendorType == VendorType.SubContractor || x.VendorType == VendorType.Both))
             .OrderBy(x => x.CompanyName).Select(x => new RfqVendorResponse(x.Id, x.CompanyName,
                 x.VendorType, x.IsActive, false, null, null)).ToListAsync(ct);
-        var owners = await Owners(projectId).OrderBy(x => x.FullName).Select(x => new RfqUserOption(x.Id, x.FullName ?? x.PhoneNumber)).ToListAsync(ct);
+        var owners = await Owners(projectId).OrderBy(x => x.FullName).Select(x => new RfqUserOption(x.Id, x.FullName ?? x.PhoneNumber,
+x.RoleEntity != null ? x.RoleEntity.Code : x.Role.ToString(), x.RoleEntity != null ? x.RoleEntity.Name : x.Role.ToString(),
+x.RoleEntity != null ? x.RoleEntity.LabelKey : null,
+x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup.IsActive ? x.RoleEntity.RoleGroupId : null,
+x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup.IsActive ? x.RoleEntity.RoleGroup.LabelKey : null)).ToListAsync(ct);
         var documents = await db.ProjectDocuments.AsNoTracking().Where(x => x.OperationalProjectId == projectId &&
             x.Category == ProjectDocumentCategory.Procurement && x.DeletedAt == null &&
             x.DesiredOperation != ProjectDocumentDesiredOperation.Delete && x.SyncStatus != ProjectDocumentSyncStatus.Deleted &&

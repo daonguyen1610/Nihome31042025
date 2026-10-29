@@ -32,7 +32,9 @@ public sealed record ConstructionResourceBoqLineReferenceResponse(
     int Id, string ItemCode, string Description, string Unit,
     decimal ApprovedQuantity, decimal RemainingQuantity);
 
-public sealed record ConstructionResourceUserReferenceResponse(int UserId, string UserName);
+public sealed record ConstructionResourceUserReferenceResponse(int UserId, string UserName,
+    string RoleCode = "", string RoleName = "", string? RoleLabelKey = null,
+    int? DepartmentId = null, string? DepartmentLabelKey = null);
 
 public sealed record QaQcTemplateResponse(int Id, string Code, int Version, string NameVi,
     string Name, string NameZh, string NameJa, string SchemaJson, bool IsPublished, string RowVersion);

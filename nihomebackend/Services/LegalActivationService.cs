@@ -522,6 +522,11 @@ public sealed class LegalActivationService(
             {
                 UserId = item.UserId,
                 Name = item.User.FullName ?? item.User.Email,
+                RoleCode = item.User.RoleEntity != null ? item.User.RoleEntity.Code : item.User.Role.ToString(),
+                RoleName = item.User.RoleEntity != null ? item.User.RoleEntity.Name : item.User.Role.ToString(),
+                RoleLabelKey = item.User.RoleEntity != null ? item.User.RoleEntity.LabelKey : null,
+                DepartmentLabelKey = item.User.RoleEntity != null && item.User.RoleEntity.RoleGroup != null
+                    ? item.User.RoleEntity.RoleGroup.LabelKey : null,
                 Email = item.User.Email!,
                 RoleGroupId = item.User.RoleEntity != null && item.User.RoleEntity.RoleGroupId.HasValue
                     ? item.User.RoleEntity.RoleGroupId.Value : 0,

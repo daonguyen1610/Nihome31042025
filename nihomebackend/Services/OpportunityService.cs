@@ -190,6 +190,11 @@ public class OpportunityService(
             {
                 Id = user.Id,
                 FullName = user.FullName ?? user.Email,
+                RoleCode = user.RoleEntity!.Code,
+                RoleName = user.RoleEntity.Name,
+                RoleLabelKey = user.RoleEntity.LabelKey,
+                DepartmentId = user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroupId : null,
+                DepartmentLabelKey = user.RoleEntity.RoleGroup != null && user.RoleEntity.RoleGroup.IsActive ? user.RoleEntity.RoleGroup.LabelKey : null,
             })
             .ToListAsync(ct);
 

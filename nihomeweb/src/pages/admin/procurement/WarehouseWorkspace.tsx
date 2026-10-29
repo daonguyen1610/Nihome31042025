@@ -1,3 +1,5 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   ArrowDownToLine,
   ArrowUpFromLine,
@@ -24,7 +26,7 @@ import type {
   WarehouseTransactionListItemResponse,
 } from "@/services/adminApi";
 
-type UserOption = { userId: number; userName: string };
+type UserOption = PersonIdentity & { userId: number; userName: string };
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 
 interface WarehouseWorkspaceProps {
@@ -284,22 +286,15 @@ const WarehouseWorkspace = ({
             ))}
           </SelectContent>
         </Select>
-        <Select value={responsibleUserId} onValueChange={onResponsibleUser}>
-          <SelectTrigger
-            className="h-11 sm:h-10"
-            aria-label={t("procurement.warehouse.responsibleUser")}
-          >
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("procurement.warehouse.allUsers")}</SelectItem>
-            {users.map((user) => (
-              <SelectItem key={user.userId} value={String(user.userId)}>
-                {user.userName}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={responsibleUserId}
+          onChange={onResponsibleUser}
+          ariaLabel={t("procurement.warehouse.responsibleUser")}
+          options={[
+            { value: "all", label: t("procurement.warehouse.allUsers") },
+            ...users.map((user) => personOption(user, t)),
+          ]}
+        />
         <div>
           <Label htmlFor="warehouse-from" className="sr-only">
             {t("procurement.warehouse.from")}

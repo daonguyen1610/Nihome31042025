@@ -3,6 +3,7 @@ import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useI18n } from "@/lib/i18n";
 import {
   Command,
   CommandEmpty,
@@ -22,10 +23,11 @@ export interface SearchableSelectOption {
   keywords?: string;
   /** Optional classes for a multi-line secondary description. */
   hintClassName?: string;
+  department?: { value: string; label: string };
 }
 
 export interface SearchableSelectProps {
-  value: string | null;
+  value?: string | null;
   onChange: (value: string) => void;
   options: SearchableSelectOption[];
   placeholder?: string;
@@ -41,6 +43,9 @@ export interface SearchableSelectProps {
   loadingText?: string;
   /** Fixed pixel width for the popover; defaults to the trigger width. */
   popoverWidthPx?: number;
+  id?: string;
+  required?: boolean;
+  "data-testid"?: string;
 }
 
 /**
@@ -65,61 +70,134 @@ export function SearchableSelect({
   loading = false,
   loadingText = "…",
   popoverWidthPx,
+  id,
+  required,
+  "data-testid": testId,
 }: SearchableSelectProps) {
+  const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
+  const [department, setDepartment] = React.useState("all");
+  const filterId = React.useId();
+  const searchInput = React.useRef<HTMLInputElement>(null);
+  const departments = React.useMemo(
+    () =>
+      Array.from(
+        new Map(
+          options.flatMap((option) =>
+            option.department ? [[option.department.value, option.department] as const] : [],
+          ),
+        ).values(),
+      ).sort((a, b) => a.label.localeCompare(b.label)),
+    [options],
+  );
+  const visibleOptions =
+    department === "all"
+      ? options
+      : options.filter((option) => !option.department || option.department.value === department);
   const selected = React.useMemo(
     () => options.find((o) => o.value === value) ?? null,
     [options, value],
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setDepartment("all");
+      }}
+    >
       <PopoverTrigger asChild>
         <Button
           type="button"
           variant="outline"
           role="combobox"
-          aria-label={ariaLabel}
+          id={id}
+          data-testid={testId}
+          aria-required={required}
+          aria-label={ariaLabel ?? placeholder}
           aria-expanded={open}
           disabled={disabled}
           className={cn(
             "w-full justify-between font-normal",
+            selected?.department && "h-auto min-h-12 py-2",
             !selected && "text-muted-foreground",
             className,
           )}
         >
-          <span className="truncate text-left">{selected ? selected.label : placeholder}</span>
+          <span className="min-w-0 flex-1 text-left">
+            <span className="block truncate">{selected ? selected.label : placeholder}</span>
+            {selected?.department && selected.hint && (
+              <span className="block truncate text-xs text-muted-foreground">{selected.hint}</span>
+            )}
+          </span>
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="p-0"
+        className="max-w-[calc(100vw-2rem)] p-0"
         style={
           popoverWidthPx
             ? { width: popoverWidthPx }
             : { width: "var(--radix-popover-trigger-width)" }
         }
         align="start"
+        data-people-picker={departments.length ? "true" : undefined}
+        onOpenAutoFocus={(event) => {
+          if (departments.length > 0) {
+            event.preventDefault();
+            searchInput.current?.focus();
+          }
+        }}
       >
+        {departments.length > 0 && (
+          <div className="space-y-1 border-b p-3">
+            <label htmlFor={filterId} className="text-xs font-medium text-muted-foreground">
+              {t("people.departmentFilter")}
+            </label>
+            <select
+              id={filterId}
+              value={department}
+              onChange={(event) => setDepartment(event.target.value)}
+              className="h-11 w-full rounded-md border border-input bg-background px-3 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <option value="all">{t("people.allDepartments")}</option>
+              {departments.map((item) => (
+                <option key={item.value} value={item.value}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <Command shouldFilter={shouldFilter}>
           <CommandInput
-            placeholder={searchPlaceholder ?? placeholder}
+            ref={searchInput}
+            placeholder={
+              searchPlaceholder ?? (departments.length ? t("people.search") : placeholder)
+            }
             value={searchValue}
             onValueChange={onSearchValueChange}
           />
           <CommandList>
-            {!loading && <CommandEmpty>{emptyText ?? "—"}</CommandEmpty>}
+            {!loading && (
+              <CommandEmpty>
+                {emptyText ?? (departments.length ? t("people.noResults") : "—")}
+              </CommandEmpty>
+            )}
             {loading ? (
               <div className="py-6 text-center text-sm text-muted-foreground">{loadingText}</div>
             ) : (
               <CommandGroup>
-                {options.map((o) => (
+                {visibleOptions.map((o) => (
                   <CommandItem
                     key={o.value}
-                    value={`${o.label} ${o.hint ?? ""} ${o.keywords ?? ""}`}
+                    value={`${o.value} ${o.label} ${o.hint ?? ""} ${o.keywords ?? ""}`}
+                    className="min-h-11"
                     onSelect={() => {
                       onChange(o.value);
                       setOpen(false);
+                      setDepartment("all");
                     }}
                   >
                     <Check
@@ -132,7 +210,10 @@ export function SearchableSelect({
                       <span className="truncate">{o.label}</span>
                       {o.hint && (
                         <span
-                          className={cn("truncate text-xs text-muted-foreground", o.hintClassName)}
+                          className={cn(
+                            "whitespace-normal break-words text-xs text-muted-foreground",
+                            o.hintClassName,
+                          )}
                         >
                           {o.hint}
                         </span>

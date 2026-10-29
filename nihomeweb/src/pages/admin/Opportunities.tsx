@@ -1,3 +1,4 @@
+import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContinuationFields } from "@/components/admin/ContractContinuations";
 import { useContractContinuation } from "@/hooks/useContractContinuation";
@@ -1328,21 +1329,12 @@ const AdminOpportunities = () => {
             {canSeeAll && (
               <div>
                 <Label>{t("opportunities.field.owner")}</Label>
-                <Select
+                <SearchableSelect
                   value={createForm.ownerUserId ? String(createForm.ownerUserId) : ""}
-                  onValueChange={(v) => setCreateForm({ ...createForm, ownerUserId: Number(v) })}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="—" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {salesUsers.map((u) => (
-                      <SelectItem key={u.id} value={String(u.id)}>
-                        {u.fullName}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                  onChange={(v) => setCreateForm({ ...createForm, ownerUserId: Number(v) })}
+                  ariaLabel={t("people.select")}
+                  options={[...salesUsers.map((person) => personOption(person, t))]}
+                />
               </div>
             )}
             <div className="grid grid-cols-2 gap-3">
@@ -1847,23 +1839,14 @@ const AdminOpportunities = () => {
                             {canSeeAll && (
                               <div>
                                 <Label>{t("opportunities.field.owner")}</Label>
-                                <Select
+                                <SearchableSelect
                                   value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
-                                  onValueChange={(v) =>
+                                  onChange={(v) =>
                                     setEditForm({ ...editForm, ownerUserId: Number(v) })
                                   }
-                                >
-                                  <SelectTrigger>
-                                    <SelectValue placeholder="—" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    {salesUsers.map((u) => (
-                                      <SelectItem key={u.id} value={String(u.id)}>
-                                        {u.fullName}
-                                      </SelectItem>
-                                    ))}
-                                  </SelectContent>
-                                </Select>
+                                  ariaLabel={t("people.select")}
+                                  options={[...salesUsers.map((person) => personOption(person, t))]}
+                                />
                               </div>
                             )}
                             <div>

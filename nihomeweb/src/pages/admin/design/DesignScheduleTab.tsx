@@ -1,3 +1,5 @@
+import { projectMemberOption } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CalendarClock,
@@ -64,7 +66,11 @@ const loadAllScheduleTasks = async (projectId: number, designProjectId: number) 
   if (pageCount <= 1) return first.data.tasks.items;
   const remaining = await Promise.all(
     Array.from({ length: pageCount - 1 }, (_, index) =>
-      adminApi.getDesignSchedule(projectId, { page: index + 2, pageSize: DEPENDENCY_PAGE_SIZE, designProjectId }),
+      adminApi.getDesignSchedule(projectId, {
+        page: index + 2,
+        pageSize: DEPENDENCY_PAGE_SIZE,
+        designProjectId,
+      }),
     ),
   );
   return [first.data.tasks.items, ...remaining.map((response) => response.data.tasks.items)].flat();
@@ -206,7 +212,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
   };
   const reloadTaskVersion = async () => {
     if (!editingTask) return undefined;
-    const tasks = await loadAllScheduleTasks(operationalProjectId);
+    const tasks = await loadAllScheduleTasks(operationalProjectId, project.id);
     setDependencyTasks(tasks);
     return tasks.find((task) => task.id === editingTask.id);
   };
@@ -503,26 +509,18 @@ export const DesignScheduleTab = ({ project }: Props) => {
           </div>
           <div>
             <Label>{t("designProjects.schedule.field.assignee")}</Label>
-            <Select
+            <SearchableSelect
               value={query.assigneeMemberId ? String(query.assigneeMemberId) : "all"}
-              onValueChange={(value) =>
+              onChange={(value) =>
                 updateQuery({ assigneeMemberId: value === "all" ? undefined : Number(value) })
               }
-            >
-              <SelectTrigger className="mt-1 min-h-11">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">
-                  {t("designProjects.schedule.filter.allAssignees")}
-                </SelectItem>
-                {activeMembers.map((member) => (
-                  <SelectItem key={member.id} value={String(member.id)}>
-                    {member.userName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              ariaLabel={t("designProjects.schedule.field.assignee")}
+              placeholder={t("designProjects.schedule.field.assignee")}
+              options={[
+                { value: "all", label: t("designProjects.schedule.filter.allAssignees") },
+                ...activeMembers.map((member) => projectMemberOption(member, t)),
+              ]}
+            />
           </div>
           <div>
             <Label>{t("designProjects.schedule.field.department")}</Label>

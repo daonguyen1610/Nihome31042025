@@ -35,7 +35,7 @@
   {"key": "designProjects.status.Cancelled", "category": "designProjects", "vi": "Đã huỷ", "en": "Cancelled", "zh": "已取消", "ja": "キャンセル"},
   {"key": "designProjects.filter.search", "category": "designProjects", "vi": "Tìm mã hoặc tên dự án...", "en": "Search by code or name...", "zh": "按编号或名称搜索...", "ja": "番号または名称で検索..."},
   {"key": "designProjects.filter.allCustomers", "category": "designProjects", "vi": "Tất cả khách hàng", "en": "All customers", "zh": "全部客户", "ja": "すべての顧客"},
-  {"key": "designProjects.filter.allPms", "category": "designProjects", "vi": "Tất cả quản lý dự án", "en": "All PMs", "zh": "全部 PM", "ja": "すべての PM"},
+  {"key": "designProjects.filter.allPms", "category": "designProjects", "vi": "Tất cả chủ nhiệm thiết kế", "en": "All design managers", "zh": "全部设计经理", "ja": "すべてのデザインマネージャー"},
   {"key": "designProjects.filter.allLeads", "category": "designProjects", "vi": "Tất cả chủ trì thiết kế", "en": "All design leads", "zh": "全部设计负责人", "ja": "すべての設計リード"},
   {"key": "designProjects.filter.allStages", "category": "designProjects", "vi": "Tất cả giai đoạn", "en": "All stages", "zh": "全部阶段", "ja": "すべての段階"},
   {"key": "designProjects.filter.allStatuses", "category": "designProjects", "vi": "Tất cả trạng thái", "en": "All statuses", "zh": "全部状态", "ja": "すべての状態"},

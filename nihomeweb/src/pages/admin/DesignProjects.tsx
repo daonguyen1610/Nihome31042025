@@ -1,3 +1,4 @@
+import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Pencil, PenTool, Plus, RefreshCcw, Search, Trash2 } from "lucide-react";
@@ -92,7 +93,7 @@ const emptyForm = (): UpdateDesignProjectRequest => ({
   status: "Active",
 });
 
-interface UserOption {
+interface UserOption extends PersonIdentity {
   id: number;
   fullName: string;
 }
@@ -159,10 +160,11 @@ const AdminDesignProjects = () => {
         }
         if (canPickUser) {
           try {
-            const { data } = await adminApi.getUsers({ take: 200 });
+            const { data } = await adminApi.getPeopleDirectory();
             if (!cancelled) {
               setUsers(
                 (data.items ?? []).map((u) => ({
+                  ...u,
                   id: u.id,
                   fullName: u.fullName ?? u.email ?? `#${u.id}`,
                 })),
@@ -235,10 +237,7 @@ const AdminDesignProjects = () => {
     }
     return options;
   }, [customers, projects]);
-  const userOptions = useMemo(
-    () => users.map((u) => ({ value: String(u.id), label: u.fullName })),
-    [users],
-  );
+  const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const openDetail = (id: number) => navigate(`/admin/design-projects/${id}`);
 
@@ -557,6 +556,7 @@ const AdminDesignProjects = () => {
                 <div>
                   <Label className="text-xs">{t("designProjects.field.pm")}</Label>
                   <SearchableSelect
+                    ariaLabel={t("designProjects.field.pm")}
                     className="mt-1"
                     value={pmId != null ? String(pmId) : ""}
                     onChange={(v) => {
@@ -573,6 +573,7 @@ const AdminDesignProjects = () => {
                 <div>
                   <Label className="text-xs">{t("designProjects.field.designLead")}</Label>
                   <SearchableSelect
+                    ariaLabel={t("designProjects.field.designLead")}
                     className="mt-1"
                     value={leadId != null ? String(leadId) : ""}
                     onChange={(v) => {
@@ -909,6 +910,7 @@ const AdminDesignProjects = () => {
                 <div>
                   <Label>{t("designProjects.field.pm")}</Label>
                   <SearchableSelect
+                    ariaLabel={t("designProjects.field.pm")}
                     className="mt-1"
                     value={
                       form.projectManagerUserId != null ? String(form.projectManagerUserId) : ""
@@ -926,6 +928,7 @@ const AdminDesignProjects = () => {
                 <div>
                   <Label>{t("designProjects.field.designLead")}</Label>
                   <SearchableSelect
+                    ariaLabel={t("designProjects.field.designLead")}
                     className="mt-1"
                     value={form.designLeadUserId != null ? String(form.designLeadUserId) : ""}
                     onChange={(v) =>

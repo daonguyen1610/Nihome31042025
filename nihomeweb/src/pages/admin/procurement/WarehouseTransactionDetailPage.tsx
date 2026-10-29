@@ -1,3 +1,5 @@
+import { personOption, mergePeople, type PersonIdentity } from "@/lib/people";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, Edit3, PackageCheck, RotateCcw } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -41,7 +43,7 @@ import { useAppSelector } from "@/store";
 
 type WarehouseKind = "receipt" | "issue";
 type WarehouseDetail = WarehouseReceiptDetailResponse | WarehouseIssueDetailResponse;
-type UserOption = { userId: number; userName: string };
+type UserOption = PersonIdentity & { userId: number; userName: string };
 type ReceiptLineDraft = WarehouseReceiptUpsertRequest["lines"][number];
 type IssueLineDraft = WarehouseIssueUpsertRequest["lines"][number];
 
@@ -119,8 +121,9 @@ const WarehouseTransactionDetailPage = () => {
       setStock(listResult.data.stock);
       const teamUsers = (teamResult.data?.members ?? [])
         .filter((member) => member.isActive)
-        .map((member) => ({ userId: member.userId, userName: member.userName }));
+        .map((member) => ({ ...member, userId: member.userId, userName: member.userName }));
       const fallbackUsers = kpiUsersResult.data.map((user) => ({
+        ...user,
         userId: user.userId,
         userName: user.userName,
       }));
@@ -135,13 +138,7 @@ const WarehouseTransactionDetailPage = () => {
               },
             ]
           : [];
-      setUsers(
-        Array.from(
-          new Map(
-            [...teamUsers, ...fallbackUsers, ...detailUsers].map((user) => [user.userId, user]),
-          ).values(),
-        ),
-      );
+      setUsers(mergePeople([...teamUsers, ...fallbackUsers, ...detailUsers]));
     } catch (loadError) {
       setError(extractApiError(loadError));
     } finally {
@@ -662,21 +659,13 @@ const WarehouseTransactionDetailPage = () => {
                   <Label htmlFor="warehouse-responsible-user">
                     {t("procurement.field.responsibleSite")}
                   </Label>
-                  <Select
+                  <SearchableSelect
                     value={responsibleSiteUserId ? String(responsibleSiteUserId) : ""}
-                    onValueChange={(value) => setResponsibleSiteUserId(Number(value))}
-                  >
-                    <SelectTrigger className="h-11 sm:h-10" id="warehouse-responsible-user">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map((user) => (
-                        <SelectItem key={user.userId} value={String(user.userId)}>
-                          {user.userName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    onChange={(value) => setResponsibleSiteUserId(Number(value))}
+                    id="warehouse-responsible-user"
+                    ariaLabel={t("people.select")}
+                    options={[...users.map((user) => personOption(user, t))]}
+                  />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="warehouse-work-item">{t("procurement.field.workItem")}</Label>

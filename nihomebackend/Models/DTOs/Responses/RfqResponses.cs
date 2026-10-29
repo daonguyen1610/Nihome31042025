@@ -32,7 +32,7 @@ public sealed record RfqBidLineResponse(int RfqLineId, decimal UnitPrice, decima
     decimal? LeadTimeScore = null, decimal? VendorRatingScore = null, decimal? WeightedScore = null);
 public sealed record RfqEventResponse(string Action, string Actor, DateTime At, string? Reason);
 public sealed record RfqFileResponse(long Id, int? BidId, string Name);
-public sealed record RfqUserOption(int Id, string Name);
+public sealed record RfqUserOption(int Id, string Name, string RoleCode = "", string RoleName = "", string? RoleLabelKey = null, int? DepartmentId = null, string? DepartmentLabelKey = null);
 public sealed record RfqBoqOption(int Id, int Revision, string Currency, IReadOnlyList<RfqBoqLineOption> Lines);
 public sealed record RfqBoqLineOption(int Id, string ItemCode, string Description, string Unit, decimal Quantity);
 public sealed record RfqReferenceResponse(IReadOnlyList<RfqBoqOption> Revisions,

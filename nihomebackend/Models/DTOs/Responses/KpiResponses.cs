@@ -7,6 +7,11 @@ public class KpiUserOptionResponse
     public int UserId { get; set; }
     public string UserName { get; set; } = string.Empty;
     public string PositionCode { get; set; } = string.Empty;
+    public string RoleCode { get; set; } = string.Empty;
+    public string RoleName { get; set; } = string.Empty;
+    public string? RoleLabelKey { get; set; }
+    public int? DepartmentId { get; set; }
+    public string? DepartmentLabelKey { get; set; }
 }
 
 public class KpiDefinitionResponse
