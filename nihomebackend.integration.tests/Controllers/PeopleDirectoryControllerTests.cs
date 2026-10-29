@@ -1,10 +1,63 @@
 using System.Net;
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
 public sealed class PeopleDirectoryControllerTests(NihomeWebApplicationFactory factory) : IntegrationTestBase(factory)
 {
+    [Theory]
+    [InlineData("create")]
+    [InlineData("update-profile")]
+    [InlineData("change-role")]
+    [InlineData("deactivate")]
+    [InlineData("reactivate")]
+    public async Task UserWriteResponse_RetainsRoleAndDepartmentIdentity(string operation)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var phone = $"098{Random.Shared.Next(1_000_000, 9_999_999)}";
+        var email = $"nicon-finance-{Guid.NewGuid():N}@example.com";
+        var id = operation == "create" ? 0 : await WithDbAsync(async db =>
+        {
+            var role = await db.Roles.SingleAsync(item => item.Code == "ACCOUNTANT");
+            var user = new ApplicationUser
+            {
+                PhoneNumber = phone,
+                Email = email,
+                FullName = "NICON Finance – Nguyễn Minh Anh",
+                RoleEntityId = role.Id,
+                Role = UserRole.ACCOUNTANT,
+                IsActive = operation != "reactivate",
+            };
+            db.Users.Add(user);
+            await db.SaveChangesAsync();
+            return user.Id;
+        });
+        using var response = operation switch
+        {
+            "create" => await Client.PostAsJsonAsync("/api/users", new
+            {
+                phoneNumber = phone, email, fullName = "NICON Finance – Nguyễn Minh Anh", password = "P@ssword1", role = "ACCOUNTANT",
+            }),
+            "update-profile" => await Client.PutAsJsonAsync($"/api/users/{id}", new { fullName = "NICON Finance – Nguyễn Minh Anh cập nhật" }),
+            "change-role" => await Client.PutAsJsonAsync($"/api/users/{id}", new { role = "PROCUREMENT" }),
+            _ => await Client.PatchAsync($"/api/users/{id}/toggle-active", null),
+        };
+        response.StatusCode.Should().Be(operation == "create" ? HttpStatusCode.Created : HttpStatusCode.OK);
+        var written = await ReadJsonAsync(response);
+        var expectedRole = operation == "change-role" ? "PROCUREMENT" : "ACCOUNTANT";
+        var expected = await WithDbAsync(db => db.Roles.Where(role => role.Code == expectedRole)
+            .Select(role => new { role.RoleGroupId, role.RoleGroup!.LabelKey }).SingleAsync());
+        expected.RoleGroupId.Should().NotBeNull();
+        written.GetProperty("role").GetString().Should().Be(expectedRole);
+        written.GetProperty("departmentId").GetInt32().Should().Be(expected.RoleGroupId!.Value);
+        written.GetProperty("departmentLabelKey").GetString().Should().Be(expected.LabelKey);
+        written.GetProperty("isActive").GetBoolean().Should().Be(operation != "deactivate");
+        var persisted = await ReadJsonAsync(await Client.GetAsync($"/api/users/{written.GetProperty("id").GetInt32()}"));
+        foreach (var field in new[] { "role", "roleName", "roleLabelKey", "departmentId", "departmentLabelKey", "isActive" })
+            written.GetProperty(field).GetRawText().Should().Be(persisted.GetProperty(field).GetRawText(), $"write and GET must agree on {field}");
+    }
+
     [Fact]
     public async Task OpportunityOwners_ExposeRoleAndDepartmentWithinExistingSalesScope()
     {

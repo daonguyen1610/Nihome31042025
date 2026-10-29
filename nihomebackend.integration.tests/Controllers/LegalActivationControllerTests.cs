@@ -12,6 +12,26 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
 {
     public LegalActivationControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task SharedAndDesignMemberships_DoNotDuplicateLegalCandidatesOrBlockActivation(bool activateContract)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        var designOnlyUserId = await AddDesignMembershipsAsync(fixture);
+        var request = ActivationRequest(fixture, includePermit: true);
+        using var response = activateContract
+            ? await PostActivationAsync(fixture.ContractId, request, Guid.NewGuid().ToString("N"))
+            : await PostSetupAsync(fixture.ProjectId, request);
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        var preview = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{fixture.ProjectId}/legal-setup"));
+        var memberIds = preview.GetProperty("projectMembers").EnumerateArray().Select(item => item.GetProperty("userId").GetInt32()).ToList();
+        memberIds.Should().BeEquivalentTo(new[] { fixture.LegalLeadUserId, fixture.AssigneeUserId });
+        memberIds.Should().NotContain(designOnlyUserId);
+        (await CountsAsync(fixture.ProjectId)).Should().Be((1, 1, activateContract ? 1 : 0));
+    }
+
     [Fact]
     public async Task PreviewIsReadOnly_DirectTransitionIsBlocked_ActivationIsAtomicAndIdempotent()
     {
@@ -529,6 +549,32 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
             History = await db.DepartmentWorkPackageHistory.AsNoTracking().Where(x => x.WorkPackageId == package.Id).OrderBy(x => x.Id).ToListAsync(),
             Activations = includeActivations ? await db.ContractLegalActivations.AsNoTracking().CountAsync(x => x.OperationalProjectId == projectId) : 0,
         });
+    });
+
+    private Task<int> AddDesignMembershipsAsync(LegalFixture fixture) => WithDbAsync(async db =>
+    {
+        var architect = await db.Users.SingleAsync(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"]);
+        var flow = new DesignProject
+        {
+            OperationalProjectId = fixture.ProjectId,
+            CustomerId = fixture.CustomerId,
+            ProjectCode = UniqueSlug("DP-LEGAL"),
+            Name = "NICON – Luồng thiết kế nhà máy",
+            StartDate = DateTime.UtcNow.Date,
+            Deadline = DateTime.UtcNow.Date.AddMonths(6),
+        };
+        db.DesignProjects.Add(flow);
+        foreach (var userId in new[] { fixture.LegalLeadUserId, architect.Id })
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = fixture.ProjectId,
+                DesignProject = flow,
+                UserId = userId,
+                Position = "NICON – Nhóm thiết kế nhà máy",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+            });
+        await db.SaveChangesAsync();
+        return architect.Id;
     });
 
     private async Task<LegalFixture> SeedFixtureAsync()
