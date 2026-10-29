@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { personOption } from "../fixtures/people";
 
 // Real SQL-backed stack. API calls only establish authentication and locate
 // the dedicated demo project; the assertions exercise the browser UI.
@@ -9,6 +10,11 @@ test("Procurement can create an RFQ through the browser", async ({
   loginInBrowserAs,
 }, testInfo) => {
   const token = await loginAs(TEST_USERS.procurement);
+  const identity = await api.get("/api/users/me", {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  expect(identity.ok(), await identity.text()).toBeTruthy();
+  const owner = (await identity.json()) as { fullName: string };
   const response = await api.get("/api/operational-projects?pageSize=100", {
     headers: { Authorization: `Bearer ${token}` },
   });
@@ -25,15 +31,14 @@ test("Procurement can create an RFQ through the browser", async ({
     page.getByRole("heading", { name: "RFQs & bid comparison", exact: true }),
   ).toBeVisible();
   await page.getByRole("button", { name: "Create RFQ", exact: true }).click();
-  const dialog = page.getByRole("dialog");
+  const dialog = page.getByRole("dialog", { name: "Create RFQ", exact: true });
   const title = `Browser RFQ ${Date.now()}`;
   await dialog.getByLabel("Package title", { exact: true }).fill(title);
   await dialog
     .getByRole("combobox", { name: "Source BOQ", exact: true })
     .selectOption({ index: 1 });
-  await dialog
-    .getByRole("combobox", { name: "Procurement owner", exact: true })
-    .selectOption({ index: 1 });
+  await dialog.getByRole("combobox", { name: "Procurement owner", exact: true }).click();
+  await personOption(page, owner.fullName).click();
   await dialog.getByLabel("Quotation deadline", { exact: true }).fill("2035-01-01T09:00");
   await dialog.getByLabel("Quantity CABLE-01", { exact: true }).fill("20");
   await dialog.getByRole("checkbox").first().check();

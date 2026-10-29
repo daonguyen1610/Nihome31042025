@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { type Page } from "@playwright/test";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
+import { personOption } from "../fixtures/people";
 
 // APIs provision only customer, project and team foundations. All construction
 // records, evidence uploads, approvals and handover transitions use the browser.
@@ -134,7 +135,7 @@ test("PM and Design deliver completed site works and a verified dossier to the c
     await page.getByRole("option", { name: projectName, exact: true }).click();
     await dialog.getByRole("combobox").nth(1).click();
     await page.getByPlaceholder("Search responsible users...").fill(pm.fullName);
-    await page.getByRole("option", { name: pm.fullName, exact: true }).dispatchEvent("click");
+    await personOption(page, pm.fullName).click();
     await page.getByTestId("handover-form-title").fill(`Client fire-water handover ${suffix}`);
     await dialog.locator('input[type="date"]').fill("2035-09-15");
     await dialog.getByRole("checkbox").first().check();

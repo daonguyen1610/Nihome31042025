@@ -2129,7 +2129,9 @@ Personnel-option DTOs carry organizational role code/name/translation key and
 department ID/translation key from the same authorized query. The shared
 frontend `personOption`, `SearchableSelect` and `PeopleChecklist` render and
 filter that identity; project members retain member IDs rather than user IDs
-for schedule fields. Global directory pickers paginate `/api/users` in batches
+for schedule fields. Each personnel control keeps its translated field label
+as its accessible name; generic picker hints must not override that label.
+Global directory pickers paginate `/api/users` in batches
 of at most 100. Optional nonnegative `departmentId` filters that API on the
 server (`0`: no active department), intersecting with existing role/search.
 Narrow candidate endpoints preserve their existing eligibility and permissions.

@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { test, expect, TEST_USERS, type TestUser } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
+import { personOption } from "../fixtures/people";
 
 test.describe.configure({ mode: "serial" });
 
@@ -114,7 +115,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       await loginInBrowserAs(page, TEST_USERS.procurement);
       await page.goto(`${workspace}&tab=boq`);
       await page.getByRole("button", { name: "Create BOQ revision", exact: true }).click();
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("dialog", { name: /\S/ });
       await dialog.getByRole("combobox").first().click();
       await page.getByRole("option", { name: upstreamContract.contractNumber }).click();
       await dialog.getByLabel("Item code", { exact: true }).fill("PIPE-CABLE");
@@ -137,16 +138,15 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       await loginInBrowserAs(page, TEST_USERS.procurement);
       await page.goto(`/admin/procurement-control/rfqs?projectId=${project.id}`);
       await page.getByRole("button", { name: "Create RFQ", exact: true }).click();
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("dialog", { name: /\S/ });
       await dialog
         .getByLabel("Package title", { exact: true })
         .fill(`Factory cable package ${suffix}`);
       await dialog
         .getByRole("combobox", { name: "Source BOQ", exact: true })
         .selectOption({ index: 1 });
-      await dialog
-        .getByRole("combobox", { name: "Procurement owner", exact: true })
-        .selectOption(String(procurementId));
+      await dialog.getByRole("combobox", { name: "Procurement owner", exact: true }).click();
+      await personOption(page, userNames.get("PROCUREMENT")!).click();
       await dialog.getByLabel("Quotation deadline", { exact: true }).fill("2035-01-01T09:00");
       await dialog.getByLabel("Quantity PIPE-CABLE", { exact: true }).fill("20");
       await dialog.getByRole("checkbox", { name: vendorName, exact: true }).check();
@@ -189,14 +189,14 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
     });
 
     await test.step("Site demand is approved before the Supply award", async () => {
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("dialog", { name: /\S/ });
       await loginInBrowserAs(page, TEST_USERS.pm);
       await page.goto(`${workspace}&tab=requests`);
       await page.getByRole("button", { name: "Create request", exact: true }).click();
       await dialog.getByRole("combobox", { name: "Responsible site user", exact: true }).click();
-      await page.getByRole("option", { name: userNames.get("PM")!, exact: true }).click();
+      await personOption(page, userNames.get("PM")!).click();
       await dialog.getByRole("combobox", { name: "Procurement owner", exact: true }).click();
-      await page.getByRole("option", { name: userNames.get("PROCUREMENT")!, exact: true }).click();
+      await personOption(page, userNames.get("PROCUREMENT")!).click();
       await dialog.getByLabel("Required at", { exact: true }).fill("2035-01-01T09:00");
       await dialog.getByRole("combobox", { name: "BOQ item", exact: true }).click();
       await page.getByRole("option", { name: /PIPE-CABLE/ }).click();
@@ -218,7 +218,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       await page
         .getByRole("button", { name: "Award and create draft contract", exact: true })
         .click();
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("dialog", { name: /\S/ });
       await expect(dialog.getByRole("combobox").nth(1)).not.toHaveValue("");
       await dialog
         .getByRole("textbox")
@@ -262,7 +262,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
     });
 
     await test.step("Warehouse receives and issues the awarded demand", async () => {
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("dialog", { name: /\S/ });
       await loginInBrowserAs(page, TEST_USERS.warehouse);
       await page.goto(`${workspace}&tab=warehouse`);
       await page.getByRole("button", { name: "Create receipt", exact: true }).click();
@@ -282,7 +282,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       await expect(page.getByRole("cell", { name: "Posted", exact: true })).toBeVisible();
       await page.getByRole("button", { name: "Create issue", exact: true }).click();
       await dialog.getByRole("combobox", { name: "Responsible site user", exact: true }).click();
-      await page.getByRole("option", { name: userNames.get("PM")!, exact: true }).click();
+      await personOption(page, userNames.get("PM")!).click();
       await dialog.getByLabel("Work item code", { exact: true }).fill("FACTORY-ELECTRICAL");
       await dialog.getByRole("combobox", { name: "BOQ item", exact: true }).click();
       await page.getByRole("option", { name: /PIPE-CABLE/ }).click();
@@ -306,7 +306,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       await loginInBrowserAs(page, TEST_USERS.accountant);
       await page.goto("/admin/finance-control");
       await page.getByRole("button", { name: "Create request", exact: true }).click();
-      const dialog = page.getByRole("dialog");
+      const dialog = page.getByRole("dialog", { name: /\S/ });
       await dialog.getByRole("combobox", { name: "Downstream contract", exact: true }).click();
       // This is a business handoff assertion. Do not replace it with a direct API
       // payment or elevated-role session if the ordinary accountant cannot select it.
@@ -317,7 +317,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
         .fill(`INV-PIPE-${suffix}`);
       await dialog.getByLabel("Amount", { exact: true }).fill("3600000");
       await dialog.getByRole("combobox", { name: "Assigned accountant", exact: true }).click();
-      await page.getByRole("option", { name: userNames.get("ACCOUNTANT")!, exact: true }).click();
+      await personOption(page, userNames.get("ACCOUNTANT")!).click();
       await dialog.locator('input[maxlength="260"]').fill("supplier-invoice.pdf");
       await dialog
         .getByPlaceholder("/documents/invoice.pdf")
