@@ -117,6 +117,34 @@ Report ambiguity, missing evidence, defects, blocked checks, and residual risk. 
 - Every application email must have an editable template in `/admin/email-templates` (subject and body), a preview of the actual rendered message before sending, and a documented set of supported variables. Do not hardcode a send-only email body in a service or controller. Render variables server-side with appropriate HTML encoding, validate edited templates/content on the server, enforce template-management and send/edit permissions, and cover the rendered email in tests. Keep existing templates working when adding a new email type.
 - For entities with fields such as 'NameVi', 'Name', 'NameZh', and 'NameJa', populate every required language field on every write path: create, seed, migration, and legacy-data auto-create. Do not rely on read-time fallback.
 
+## Clear responses and diagnostic logs
+
+- For every backend result shown to a customer or staff member, make the UI
+  state what happened, which record or step is affected, why an action is blocked
+  when the reason is known, and what the user can do next. Make success, pending,
+  empty, validation, permission, conflict, and failure states truthful and
+  distinct. Do not show a generic failure when the server knows a useful reason.
+- Return a stable error code and field or workflow context from the API where
+  applicable. The client must present an understandable, localized message and
+  an actionable next step based on the actual response; do not silently replace
+  a specific server error with a vague toast or invent a cause on the client.
+  Give examples for input rules and tell the user when to retry, refresh, correct
+  data, request access, or contact support. Suggest only actions their role can
+  perform, and do not disclose restricted record details in permission errors.
+- Keep customer-facing text free of stack traces, SQL, internal paths, secrets,
+  raw exception names, and sensitive personal data. When an unexpected error
+  has no safe explanation, state that the operation did not complete, preserve
+  the user's work where possible, and provide a support reference or request ID.
+- Write structured diagnostic logs with the operation, outcome, safe record
+  identifier, reason or error code, and correlation ID needed to investigate.
+  Use an appropriate severity and include the next operational step for failures
+  that need intervention. Do not log credentials, tokens, full request bodies,
+  sensitive customer data, or misleading success before a durable operation
+  completes. Logs provide detail for operators; API and UI messages guide users.
+- Cover the returned error code and message context in integration tests, and
+  verify the rendered guidance in a browser test when user action depends on it.
+  Keep all user-visible wording in the supported translation system.
+
 ## Validation rules
 
 Every user-writable field needs explicit rules for presence, format, length, range, normalization, and cross-field relationships as applicable.
