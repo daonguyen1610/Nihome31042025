@@ -1,5 +1,6 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import type { Page } from "@playwright/test";
+import { personOption } from "../fixtures/people";
 
 const projectId = 169001;
 const boqLineId = 169101;
@@ -364,7 +365,7 @@ test("warehouse list filters, exports, validates creates, and stays responsive",
   await page.getByRole("button", { name: "Create issue" }).click();
   const issueDialog = page.getByRole("dialog");
   await issueDialog.locator("#issue-site-user").click();
-  await page.getByRole("option", { name: "Super Admin", exact: true }).click();
+  await personOption(page, "Super Admin").click();
   await issueDialog
     .getByText("BOQ item", { exact: true })
     .locator("..")

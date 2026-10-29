@@ -2617,7 +2617,7 @@ const UserField = ({
         value={value ? String(value) : ""}
         onChange={(next) => onChange(Number(next))}
         id={id}
-        ariaLabel={t("people.select")}
+        ariaLabel={label}
         options={[...users.map((user) => personOption(user, t))]}
       />
     ) : (

@@ -1,4 +1,5 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { personOption } from "../fixtures/people";
 
 const projectId = 180001;
 const request = {
@@ -269,15 +270,10 @@ test("material request list filters and exports within the selected project on m
   await expect(page.getByRole("option", { name: /MAT-CEMENT.*60 remaining/ })).toBeVisible();
   await page.getByRole("option", { name: /MAT-CEMENT.*60 remaining/ }).click();
   await page.locator("#request-site-user").click();
-  await page.getByRole("option", { name: "Super Admin", exact: true }).click();
+  await personOption(page, "Super Admin").click();
   await page.locator("#request-proc-user").click();
-  const procurementOwnerOptions = page.getByRole("listbox");
-  await expect(
-    procurementOwnerOptions.getByRole("option", { name: "Super Admin", exact: true }),
-  ).toHaveCount(0);
-  await procurementOwnerOptions
-    .getByRole("option", { name: "Procurement Owner", exact: true })
-    .click();
+  await expect(personOption(page, "Super Admin")).toHaveCount(0);
+  await personOption(page, "Procurement Owner").click();
   const requiredAt = page.locator("#request-required-at");
   expect(new Date(await requiredAt.inputValue()).getTime()).toBeGreaterThan(Date.now());
   const createQuantity = page.getByRole("dialog").getByRole("spinbutton", { name: "Quantity" });
@@ -300,11 +296,8 @@ test("material request list filters and exports within the selected project on m
   await page.getByRole("option", { name: "Submitted" }).click();
   const ownerFilter = page.getByRole("combobox", { name: "Procurement owner" });
   await ownerFilter.click();
-  await page
-    .getByRole("listbox")
-    .getByRole("option", { name: "Procurement Owner", exact: true })
-    .click();
-  await expect(ownerFilter).toHaveText("Procurement Owner");
+  await personOption(page, "Procurement Owner").click();
+  await expect(ownerFilter.getByText("Procurement Owner", { exact: true })).toBeVisible();
   await expect
     .poll(() => listQueries.at(-1)?.searchParams.get("assignedProcurementUserId"))
     .toBe(String(request.assignedProcurementUserId));

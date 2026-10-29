@@ -1,6 +1,7 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import type { Page } from "@playwright/test";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
+import { personOption } from "../fixtures/people";
 
 const ONE_PIXEL_PNG = Buffer.from(
   "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",
@@ -324,7 +325,7 @@ test("tender plan assigns owners and deadlines and manages checklist files", asy
         response.url().includes(`/api/tenders/${tenderId}/checklist/${plannedItem.id}`),
     );
     await page.getByTestId(`tender-checklist-owner-${plannedKey}-desktop`).click();
-    await page.getByRole("option", { name: assignee.fullName, exact: true }).click();
+    await personOption(page, assignee.fullName).click();
     const ownerResponse = await ownerResponsePromise;
     expect(ownerResponse.status(), await ownerResponse.text()).toBe(200);
     expect(
