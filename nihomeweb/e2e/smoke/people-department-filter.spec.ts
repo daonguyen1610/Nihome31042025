@@ -96,7 +96,7 @@ test("person picker identifies roles, filters departments and preserves selectio
       picker.getByRole("option").filter({ hasText: person.fullName || person.email }),
     ).toContainText(/Procurement/i);
   }
-  const search = picker.getByPlaceholder("Search name, role or email…");
+  const search = picker.getByRole("combobox", { name: "Search name, role or email…", exact: true });
   await search.fill("nicon-no-matching-person-948372");
   await expect(picker).toContainText("No matching people. Change the filter or search.");
   await search.fill("");

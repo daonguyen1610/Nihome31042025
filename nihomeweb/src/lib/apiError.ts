@@ -10,7 +10,11 @@
  *  2. Simple `{ message: "..." }` bodies from our service exceptions.
  *  3. Any other Error / value — falls back to `.message` then `String(err)`.
  */
-export function extractApiError(err: unknown, fallback?: string): string {
+export function extractApiError(
+  err: unknown,
+  fallback?: string,
+  translate?: (key: string) => string,
+): string {
   if (typeof err !== "object" || err === null) return fallback ?? String(err);
 
   const anyErr = err as {
@@ -20,6 +24,15 @@ export function extractApiError(err: unknown, fallback?: string): string {
   const data = anyErr.response?.data;
 
   if (data && typeof data === "object") {
+    if (translate && "code" in data) {
+      const key =
+        data.code === "LEGAL_MEMBER_INVALID"
+          ? "people.legalMemberInvalid"
+          : data.code === "PUNCH_DESIGN_MEMBER_INVALID"
+            ? "people.designMemberInvalid"
+            : null;
+      if (key) return translate(key);
+    }
     if ("errors" in data && data.errors && typeof data.errors === "object") {
       return Object.entries(data.errors as Record<string, string[]>)
         .map(([field, messages]) => `${field}: ${messages.join("; ")}`)

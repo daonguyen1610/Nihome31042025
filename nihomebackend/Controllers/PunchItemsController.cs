@@ -63,7 +63,7 @@ public class PunchItemsController(
         }
         catch (PunchItemOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return OperationFailure(ex);
         }
     }
 
@@ -90,7 +90,7 @@ public class PunchItemsController(
         }
         catch (PunchItemOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return OperationFailure(ex);
         }
     }
 
@@ -149,7 +149,7 @@ public class PunchItemsController(
         }
         catch (PunchItemOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return OperationFailure(ex);
         }
     }
 
@@ -172,7 +172,7 @@ public class PunchItemsController(
         }
         catch (PunchItemOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return OperationFailure(ex);
         }
     }
 
@@ -195,9 +195,13 @@ public class PunchItemsController(
         }
         catch (PunchItemOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return OperationFailure(ex);
         }
     }
+
+    private BadRequestObjectResult OperationFailure(PunchItemOperationException exception) => exception.Code is null
+        ? BadRequest(new { message = exception.Message })
+        : BadRequest(new { code = exception.Code, field = exception.Field, message = exception.Message });
 
     private int? GetUserId()
     {

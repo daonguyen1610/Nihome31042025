@@ -2131,6 +2131,14 @@ frontend `personOption`, `SearchableSelect` and `PeopleChecklist` render and
 filter that identity; project members retain member IDs rather than user IDs
 for schedule fields. Each personnel control keeps its translated field label
 as its accessible name; generic picker hints must not override that label.
+Search inputs also have translated accessible names. Saved inactive schedule
+CC remain visible as remove-only chips; they cannot be selected for new work.
+User create, update and active-status responses include the same role and
+active-department identity as the subsequent detail read.
+Team-member eligibility also reflects account activation; deactivating a user
+does not erase or end their historical membership. The team response keeps
+`isActive` for membership state and exposes `isUserActive` separately; schedule
+assignment, approval and new CC choices require both states to be active.
 Global directory pickers paginate `/api/users` in batches
 of at most 100. Optional nonnegative `departmentId` filters that API on the
 server (`0`: no active department), intersecting with existing role/search.
@@ -2150,6 +2158,18 @@ role-group catalogue, matching the API's `departmentId=0` semantics. A negative
 department filter returns HTTP `400`, code `PEOPLE_DEPARTMENT_FILTER_INVALID`
 and field `departmentId`; the client asks the user to select a listed group or
 clear the filter.
+
+Legal preview, activation, setup and later legal-task reassignment use active
+shared-root team members (`DesignProjectId == null`). A Design-only membership
+does not confer eligibility for the Operational Project's Legal package.
+Punch Design responsibility belongs to the Punch's actual Design flow, its
+explicit Design Lead, or an active root member with a project-wide Design role;
+sibling-flow and root module-only roles do not confer responsibility.
+Invalid legal-task members return HTTP `400`, code `LEGAL_MEMBER_INVALID`, and
+field `assigneeUserId` or `approverUserId`. Invalid responsible designers return
+HTTP `400`, code `PUNCH_DESIGN_MEMBER_INVALID`, and field
+`responsibleDesignUserId`. The client keeps the form open and translates the
+instruction to choose an eligible member.
 
 The aggregate migration is incomplete by design. Construction Task, Site Diary,
 Punch Item, Acceptance, As-Built, Handover and Permit still persist

@@ -8,11 +8,51 @@ const source = await readFile(new URL("../src/lib/apiError.ts", import.meta.url)
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const { extractDownloadError } = await import(
+const { extractDownloadError, extractApiError } = await import(
   "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
 );
 
 const failure = (data) => ({ response: { status: 409, data }, message: "HTTP 409" });
+
+test("member eligibility codes use localized guidance and preserve unknown server reasons", () => {
+  const translate = (key) =>
+    ({
+      "people.legalMemberInvalid": "Select a member of the shared project team.",
+      "people.designMemberInvalid": "Select a designer in this flow.",
+    })[key];
+  assert.equal(
+    extractApiError(
+      failure({ code: "LEGAL_MEMBER_INVALID", field: "assigneeUserId", message: "Server reason" }),
+      undefined,
+      translate,
+    ),
+    "Select a member of the shared project team.",
+  );
+  assert.equal(
+    extractApiError(
+      failure({
+        code: "PUNCH_DESIGN_MEMBER_INVALID",
+        field: "responsibleDesignUserId",
+        message: "Server reason",
+      }),
+      undefined,
+      translate,
+    ),
+    "Select a designer in this flow.",
+  );
+  assert.equal(
+    extractApiError(
+      failure({ code: "OTHER", message: "Keep the specific server reason" }),
+      undefined,
+      translate,
+    ),
+    "Keep the specific server reason",
+  );
+  assert.equal(
+    extractApiError(failure({ code: "LEGAL_MEMBER_INVALID", message: "Server reason" })),
+    "Server reason",
+  );
+});
 
 test("download conflict preserves the server's recovery message from a JSON Blob", async () => {
   const message = "Nội dung tệp không khớp bản đã trình. Liên hệ Chủ nhiệm thiết kế.";

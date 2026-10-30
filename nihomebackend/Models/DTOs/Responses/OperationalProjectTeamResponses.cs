@@ -38,6 +38,7 @@ public sealed class OperationalProjectMemberResponse
     public DateTime StartedAt { get; set; }
     public DateTime? EndedAt { get; set; }
     public bool IsActive { get; set; }
+    public bool IsUserActive { get; set; }
     public string Source { get; set; } = string.Empty;
     public string? SourceReference { get; set; }
     public List<ProjectMemberRoleResponse> Roles { get; set; } = new();

@@ -413,13 +413,16 @@ public class PunchItemService(
                 .AnyAsync(member => member.OperationalProjectId == project.OperationalProjectId &&
                     member.UserId == responsibleDesignUserId && member.EndedAt == null &&
                     member.Roles.Any(role => role.EndedAt == null &&
+                        (member.DesignProjectId == project.Id || member.DesignProjectId == null && role.Scope == ProjectRoleScope.Project) &&
                         (role.RoleCode == ProjectTeamRoleCode.DesignLead ||
                          role.RoleCode == ProjectTeamRoleCode.Architect ||
                          role.RoleCode == ProjectTeamRoleCode.StructuralEngineer ||
                          role.RoleCode == ProjectTeamRoleCode.MepEngineer ||
                          role.RoleCode == ProjectTeamRoleCode.InteriorDesigner)), ct)));
         if (!isDesignMember)
-            throw new PunchItemOperationException("Người chịu trách nhiệm phải là thành viên thiết kế đang hoạt động của dự án.");
+            throw new PunchItemOperationException(
+                "Người chịu trách nhiệm phải thuộc đội thiết kế đang hoạt động của đúng luồng hoặc có vai trò chung toàn Dự án. Chọn lại người chịu trách nhiệm phù hợp.",
+                "PUNCH_DESIGN_MEMBER_INVALID", "responsibleDesignUserId");
     }
 
     private static PunchItemResponse Map(PunchItem pi, DateOnly today) => new()

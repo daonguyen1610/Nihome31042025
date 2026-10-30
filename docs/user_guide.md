@@ -114,6 +114,10 @@ when filters hide their rows. Project-team selectors also show project roles
 and position. In **Users**, department and role filters apply together across
 the paginated directory.
 
+When editing a Design schedule task, a saved CC member who has become inactive
+remains visible with an inactive label and a removal button. Remove that CC
+before saving; inactive members cannot be added to new tasks.
+
 The two approval surfaces serve different decisions:
 
 1. In **Schedule**, the assignee completes the task and the task's one assigned

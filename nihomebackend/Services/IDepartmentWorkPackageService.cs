@@ -3,7 +3,11 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public sealed class DepartmentWorkPackageOperationException(string message) : Exception(message);
+public sealed class DepartmentWorkPackageOperationException(string message, string? code = null, string? field = null) : Exception(message)
+{
+    public string? Code { get; } = code;
+    public string? Field { get; } = field;
+}
 public sealed class DepartmentWorkPackageScopeException(string message) : Exception(message);
 
 public interface IDepartmentWorkPackageService

@@ -179,6 +179,71 @@ public class PunchItemsControllerTests : IntegrationTestBase
         body.GetProperty("rootCauseConfirmedAt").ValueKind.Should().Be(JsonValueKind.String);
     }
 
+    [Theory]
+    [InlineData("same-flow", HttpStatusCode.OK)]
+    [InlineData("sibling-flow", HttpStatusCode.BadRequest)]
+    [InlineData("root-project", HttpStatusCode.OK)]
+    [InlineData("root-design-module", HttpStatusCode.BadRequest)]
+    [InlineData("ended-same-flow", HttpStatusCode.BadRequest)]
+    public async Task Verify_DesignResponsibility_UsesTheActualFlowOrRootProjectRole(string membership, HttpStatusCode expected)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var projectId = await CreateProjectAsync();
+        var architectId = await WithDbAsync(async db =>
+        {
+            var project = await db.DesignProjects.FindAsync(projectId);
+            var architect = await db.Users.SingleAsync(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"]);
+            var sibling = new DesignProject
+            {
+                OperationalProjectId = project!.OperationalProjectId,
+                CustomerId = project.CustomerId,
+                ProjectCode = UniqueSlug("DP-PUNCH-SIBLING"),
+                Name = "NICON – Thiết kế văn phòng độc lập",
+            };
+            db.DesignProjects.Add(sibling);
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = project.OperationalProjectId!.Value,
+                DesignProjectId = membership.EndsWith("same-flow", StringComparison.Ordinal) ? projectId : null,
+                DesignProject = membership == "sibling-flow" ? sibling : null,
+                UserId = architect.Id,
+                Position = "NICON – Kiến trúc sư",
+                StartedAt = DateTime.UtcNow.AddDays(-2),
+                EndedAt = membership == "ended-same-flow" ? DateTime.UtcNow.AddDays(-1) : null,
+                Roles = [new OperationalProjectMemberRole
+                {
+                    RoleCode = ProjectTeamRoleCode.Architect,
+                    Scope = membership == "root-project" ? ProjectRoleScope.Project : ProjectRoleScope.Module,
+                    ScopeValue = membership == "root-project" ? null : "Design",
+                    StartedAt = DateTime.UtcNow.AddDays(-2),
+                }],
+            });
+            await db.SaveChangesAsync();
+            return architect.Id;
+        });
+        var id = await CreatePunchAsync(projectId);
+        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "InProgress" })).EnsureSuccessStatusCode();
+        (await Client.PostAsJsonAsync($"/api/punch-items/{id}/status", new { status = "Fixed" })).EnsureSuccessStatusCode();
+        var response = await Client.PostAsJsonAsync($"/api/punch-items/{id}/verify", new { rootCause = "Design", responsibleDesignUserId = architectId });
+        response.StatusCode.Should().Be(expected);
+        if (expected == HttpStatusCode.OK)
+        {
+            (await ReadJsonAsync(response)).GetProperty("responsibleDesignUserId").GetInt32().Should().Be(architectId);
+            return;
+        }
+        var error = await ReadJsonAsync(response);
+        error.GetProperty("code").GetString().Should().Be("PUNCH_DESIGN_MEMBER_INVALID");
+        error.GetProperty("field").GetString().Should().Be("responsibleDesignUserId");
+        await WithDbAsync(async db =>
+        {
+            var punch = await db.PunchItems.FindAsync(id);
+            punch!.Status.Should().Be(PunchStatus.Fixed);
+            punch.RootCause.Should().Be(PunchRootCause.Unclassified);
+            punch.ResponsibleDesignUserId.Should().BeNull();
+            punch.RootCauseConfirmedAt.Should().BeNull();
+        });
+    }
+
     [Fact]
     public async Task Delete_NonOpen_HardDeletes()
     {

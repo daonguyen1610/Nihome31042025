@@ -26,7 +26,7 @@ public sealed class PeopleDirectoryControllerTests(NihomeWebApplicationFactory f
                 Email = email,
                 FullName = "NICON Finance – Nguyễn Minh Anh",
                 RoleEntityId = role.Id,
-                Role = UserRole.ACCOUNTANT,
+                Role = UserRole.USER,
                 IsActive = operation != "reactivate",
             };
             db.Users.Add(user);
@@ -37,7 +37,11 @@ public sealed class PeopleDirectoryControllerTests(NihomeWebApplicationFactory f
         {
             "create" => await Client.PostAsJsonAsync("/api/users", new
             {
-                phoneNumber = phone, email, fullName = "NICON Finance – Nguyễn Minh Anh", password = "P@ssword1", role = "ACCOUNTANT",
+                phoneNumber = phone,
+                email,
+                fullName = "NICON Finance – Nguyễn Minh Anh",
+                password = "P@ssword1",
+                role = "ACCOUNTANT",
             }),
             "update-profile" => await Client.PutAsJsonAsync($"/api/users/{id}", new { fullName = "NICON Finance – Nguyễn Minh Anh cập nhật" }),
             "change-role" => await Client.PutAsJsonAsync($"/api/users/{id}", new { role = "PROCUREMENT" }),
@@ -50,6 +54,7 @@ public sealed class PeopleDirectoryControllerTests(NihomeWebApplicationFactory f
             .Select(role => new { role.RoleGroupId, role.RoleGroup!.LabelKey }).SingleAsync());
         expected.RoleGroupId.Should().NotBeNull();
         written.GetProperty("role").GetString().Should().Be(expectedRole);
+        written.GetProperty("departmentId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Number);
         written.GetProperty("departmentId").GetInt32().Should().Be(expected.RoleGroupId!.Value);
         written.GetProperty("departmentLabelKey").GetString().Should().Be(expected.LabelKey);
         written.GetProperty("isActive").GetBoolean().Should().Be(operation != "deactivate");

@@ -505,7 +505,7 @@ const AdminPunchList = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: extractApiError(err, undefined, t),
         variant: "destructive",
       });
     } finally {
@@ -1517,10 +1517,8 @@ const AdminPunchList = () => {
                     <SearchableSelect
                       value={verifyResponsibleUserId == null ? "" : String(verifyResponsibleUserId)}
                       onChange={(value) => setVerifyResponsibleUserId(value ? Number(value) : null)}
-                      options={verifyCandidates.map((candidate) => ({
-                        value: String(candidate.id),
-                        label: candidate.fullName,
-                      }))}
+                      ariaLabel={t("punch.field.responsibleDesigner")}
+                      options={verifyCandidates.map((candidate) => personOption(candidate, t))}
                       placeholder="—"
                     />
                   </div>
@@ -1540,7 +1538,10 @@ const AdminPunchList = () => {
             <AlertDialogFooter>
               <AlertDialogCancel disabled={actionBusy}>{t("common.cancel")}</AlertDialogCancel>
               <AlertDialogAction
-                onClick={runConfirmAction}
+                onClick={(event) => {
+                  event.preventDefault();
+                  void runConfirmAction();
+                }}
                 disabled={actionBusy}
                 data-testid="punch-action-confirm"
               >
