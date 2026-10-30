@@ -384,6 +384,10 @@ ra**, chọn phương thức
 **Suất đầu tư** hoặc **BOQ**, gắn nguồn giá đầu vào, nhập diện tích/đơn giá
 hoặc BOQ rồi lưu. Chỉ bản nháp có giá trị hợp lệ mới
 được gửi duyệt nội bộ; yêu cầu Tài chính rà soát sau khi báo giá đã duyệt.
+Khi gửi duyệt báo giá đầu ra, chọn Trưởng phòng Cung ứng đang hoạt động và
+xem trước To/CC. Hệ thống chỉ CC thành viên dự án có quyền xem báo giá; người
+được chọn là người duy nhất có thể duyệt hoặc từ chối. Trước khi ký hợp đồng
+Upstream gắn báo giá, dùng lại hồ sơ Tài chính đã duyệt đúng phiên bản báo giá.
 
 **Cung ứng (Procurement) — input prices.** Procurement runs first and supplies
 the supplier and subcontractor prices that Sales needs to build the customer
@@ -975,6 +979,10 @@ Design project. New roles use the Design module automatically; no RACI scope
 selection is needed. Existing shared-project roles remain visible and unchanged
 when editing from this tab. The Operational Project team screen retains its
 broader scope controls.
+Each Design flow has at most one active Design Manager and one active Design
+Lead. Assigning or removing either role in **Team** updates the names in the
+Design overview and edit form. Editing those people in the Design project form
+updates the matching Team roles; the former role remains in history.
 The end-member action is available here only when every role belongs to the
 Design module. For a member who also has a shared-project role, use **Edit
 member** to remove the Design role; the shared-project role and membership

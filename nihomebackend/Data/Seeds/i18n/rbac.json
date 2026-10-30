@@ -2766,6 +2766,8 @@
   {"key":"rbac.perm.operations.projects.rename.description","category":"rbac","vi":"Đổi mã dự án có lý do, lưu lịch sử và đồng bộ tên thư mục Google Drive.","en":"Change a project code with a reason, audit history, and Google Drive folder synchronization.","zh":"更改项目编号并记录原因和历史，同时同步 Google Drive 文件夹名称。","ja":"理由と監査履歴を記録し、Google Drive フォルダー名と同期してプロジェクト番号を変更します。"},
   {"key":"rbac.role.HR.label","category":"rbac","vi":"Nhân sự","en":"Human Resources","zh":"人力资源","ja":"人事"},
   {"key":"rbac.role.HR.description","category":"rbac","vi":"Quản lý tuyển dụng và dữ liệu nhân sự được phép, không có quyền tài chính mặc định.","en":"Manages approved recruitment and HR data without default finance permissions.","zh":"管理获准的招聘和人力资源数据，默认不授予财务权限。","ja":"承認された採用・人事データを管理し、既定では財務権限を持ちません。"},
+  {"key":"rbac.role.PROCUREMENT_MANAGER.label","category":"rbac","vi":"Trưởng phòng Cung ứng","en":"Head of Procurement","zh":"采购部经理","ja":"調達部長"},
+  {"key":"rbac.role.PROCUREMENT_MANAGER.description","category":"rbac","vi":"Quản lý Cung ứng và duyệt báo giá đầu ra.","en":"Manages procurement and approves outgoing quotes.","zh":"管理采购并审批对外报价。","ja":"調達業務を管理し、顧客向け見積を承認します。"},
   {"key": "adminRbac.groups.editPermissions", "category": "rbac", "vi": "Xem/chỉnh quyền mẫu", "en": "View/edit baseline permissions", "zh": "查看/编辑权限基线", "ja": "権限基準を表示・編集"},
   {"key": "adminRbac.groups.viewPermissions", "category": "rbac", "vi": "Xem quyền mẫu", "en": "View baseline permissions", "zh": "查看权限基线", "ja": "権限基準を表示"},
   {"key": "adminRbac.groups.permissionsTitle", "category": "rbac", "vi": "Quyền chung của nhóm", "en": "Group baseline permissions", "zh": "组权限基线", "ja": "グループの権限基準"},

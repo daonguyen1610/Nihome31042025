@@ -68,10 +68,42 @@ public class ContractsControllerTests : IntegrationTestBase
             {
                 Code = $"QT-CONTRACT-{Guid.NewGuid():N}",
                 Opportunity = opportunity,
+                OperationalProjectId = await db.OperationalProjects
+                    .Where(project => project.CustomerId == customerId)
+                    .Select(project => (int?)project.Id).FirstOrDefaultAsync(),
                 Status = QuoteStatus.Approved,
             };
             db.Quotes.Add(quote);
             await db.SaveChangesAsync();
+            if (quote.OperationalProjectId.HasValue)
+            {
+                var financeGroupId = await db.RoleGroups.Where(group => group.Code == "FINANCE")
+                    .Select(group => group.Id).SingleAsync();
+                var accountantId = await db.Users.Where(user => user.RoleEntity != null &&
+                    user.RoleEntity.Code == "ACCOUNTANT").Select(user => user.Id).SingleAsync();
+                db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+                {
+                    Code = $"FIN-QUOTE-{Guid.NewGuid():N}",
+                    Name = "Rà soát điều kiện hợp đồng",
+                    Kind = WorkPackageKind.Internal,
+                    Purpose = WorkPackagePurpose.FinanceCommercialReview,
+                    OperationalProjectId = quote.OperationalProjectId,
+                    SourceQuoteId = quote.Id,
+                    DepartmentRoleGroupId = financeGroupId,
+                    LeadUserId = accountantId,
+                    CreatedByUserId = accountantId,
+                    UpdatedByUserId = accountantId,
+                    FinanceReview = new DepartmentFinanceReview
+                    {
+                        Status = FinanceReviewStatus.Approved,
+                        ReviewedQuoteVersion = quote.Version,
+                        ReviewedAt = DateTime.UtcNow,
+                        CreatedByUserId = accountantId,
+                        UpdatedByUserId = accountantId,
+                    },
+                });
+                await db.SaveChangesAsync();
+            }
             return quote.Id;
         });
     }
@@ -87,6 +119,30 @@ public class ContractsControllerTests : IntegrationTestBase
             value,
             signedDate = "2026-06-01T00:00:00Z",
         };
+
+    [Fact]
+    public async Task Sign_RequiresApprovedFinanceReviewOfSourceQuoteVersion()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var created = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var contract = await ReadJsonAsync(created);
+        await WithDbAsync(async db =>
+        {
+            var review = await db.DepartmentFinanceReviews.SingleAsync(item =>
+                item.WorkPackage.SourceQuoteId == _approvedQuoteIds[customerId]);
+            review.ReviewedQuoteVersion = 0;
+            await db.SaveChangesAsync();
+        });
+        var response = await Client.PostAsJsonAsync(
+            $"/api/contracts/{contract.GetProperty("id").GetInt32()}/transition",
+            new { newStatus = "Signed", rowVersion = contract.GetProperty("rowVersion").GetString() });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var unchanged = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/contracts/{contract.GetProperty("id").GetInt32()}"));
+        unchanged.GetProperty("status").GetString().Should().Be("Draft");
+    }
 
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()
@@ -801,13 +857,11 @@ public class ContractsControllerTests : IntegrationTestBase
 
         async Task<(int Id, string Type)> CreateContractAsync(int operationalProjectId, string type)
         {
-            await SeedApprovedQuoteAsync(customerId);
             var response = await Client.PostAsJsonAsync("/api/contracts", new
             {
                 customerId,
                 operationalProjectId,
                 direction = "Upstream",
-                quoteId = _approvedQuoteIds[customerId],
                 type,
                 status = "Draft",
                 value = 100_000_000,
@@ -848,7 +902,14 @@ public class ContractsControllerTests : IntegrationTestBase
             client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync(createOperationalProject: false);
 
-        var response = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+        var response = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 100_000_000,
+        });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
@@ -868,7 +929,14 @@ public class ContractsControllerTests : IntegrationTestBase
         });
         secondProject.StatusCode.Should().Be(HttpStatusCode.Created);
 
-        var response = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+        var response = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 100_000_000,
+        });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
@@ -895,7 +963,6 @@ public class ContractsControllerTests : IntegrationTestBase
             customerId = contractCustomerId,
             operationalProjectId = projectId,
             direction = "Upstream",
-            quoteId = _approvedQuoteIds[contractCustomerId],
             type = "Design",
             status = "Draft",
             value = 100,

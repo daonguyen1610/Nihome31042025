@@ -130,7 +130,7 @@ test.describe.serial("quote document management", () => {
       await submitAndApproveQuote(
         api,
         headers,
-        { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+        { Authorization: `Bearer ${await loginAs(TEST_USERS.procurementManager)}` },
         quoteId,
         quote.rowVersion,
       );
@@ -342,7 +342,7 @@ test.describe.serial("quote document management", () => {
       await submitAndApproveQuote(
         api,
         headers,
-        { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+        { Authorization: `Bearer ${await loginAs(TEST_USERS.procurementManager)}` },
         quoteId,
         quote.rowVersion,
       );

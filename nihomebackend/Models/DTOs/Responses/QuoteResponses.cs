@@ -149,7 +149,7 @@ public class QuoteEmailPreviewResponse
 }
 
 public sealed record QuoteApprovalPreviewResponse(string PreviewToken, int ApproverUserId,
-    string ApproverName, string ToEmail, string Subject, string Body);
+    string ApproverName, string ToEmail, IReadOnlyList<string> CcEmails, string Subject, string Body);
 
 public sealed record QuoteApprovalCandidateResponse(int Id, string Name, string Email,
     string RoleCode, string RoleName, string? RoleLabelKey, int? DepartmentId, string? DepartmentLabelKey);

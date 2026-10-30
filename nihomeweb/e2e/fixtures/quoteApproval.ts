@@ -14,10 +14,10 @@ export async function submitAndApproveQuote(
     headers: senderHeaders,
   });
   expect(candidates.status(), await candidates.text()).toBe(200);
-  const approver = ((await candidates.json()) as { id: number; name: string }[]).find(
-    (candidate) => candidate.name === "Super Admin",
+  const approver = ((await candidates.json()) as { id: number; roleCode: string }[]).find(
+    (candidate) => candidate.roleCode === "PROCUREMENT_MANAGER",
   );
-  expect(approver, "Super Admin must be an eligible, independent quote approver").toBeTruthy();
+  expect(approver, "Head of Procurement must be an eligible quote approver").toBeTruthy();
 
   const preview = await api.post(`/api/quotes/${quoteId}/approval-email-preview`, {
     headers: senderHeaders,

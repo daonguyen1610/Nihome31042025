@@ -2664,6 +2664,7 @@ export interface QuoteApprovalPreview {
   approverUserId: number;
   approverName: string;
   toEmail: string;
+  ccEmails: string[];
   subject: string;
   body: string;
 }

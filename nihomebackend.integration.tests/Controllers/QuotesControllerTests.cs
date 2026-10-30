@@ -450,7 +450,9 @@ public class QuotesControllerTests : IntegrationTestBase
         var quoteId = await CreateQuoteAsync();
         var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
         var candidates = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/approval-candidates"));
-        var approver = candidates.EnumerateArray().First(c => c.GetProperty("email").GetString() == "superadmin@nihome.test");
+        candidates.EnumerateArray().Should().OnlyContain(candidate =>
+            candidate.GetProperty("roleCode").GetString() == "PROCUREMENT_MANAGER");
+        var approver = candidates.EnumerateArray().First(c => c.GetProperty("roleCode").GetString() == "PROCUREMENT_MANAGER");
         var approverId = approver.GetProperty("id").GetInt32();
         var rowVersion = quote.GetProperty("rowVersion").GetString();
 
@@ -473,9 +475,56 @@ public class QuotesControllerTests : IntegrationTestBase
 
         (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
         (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { }))
             .StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ApprovalPreview_CopiesOnlyActiveTeamMembersWithQuoteAccess()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var projectId = await AttachSharedProjectAsync(quoteId);
+        var managerEmail = await WithDbAsync(async db =>
+        {
+            var manager = await db.Users.Include(user => user.RoleEntity).SingleAsync(user => user.RoleEntity != null &&
+                user.RoleEntity.Code == "SALES_MANAGER");
+            var warehouse = await db.Users.Include(user => user.RoleEntity).SingleAsync(user => user.RoleEntity != null &&
+                user.RoleEntity.Code == "WAREHOUSE");
+            foreach (var user in new[] { manager, warehouse })
+                db.OperationalProjectMembers.Add(new OperationalProjectMember
+                {
+                    OperationalProjectId = projectId,
+                    UserId = user.Id,
+                    Position = user.RoleEntity!.Code,
+                    StartedAt = DateTime.UtcNow,
+                    CreatedByUserId = manager.Id,
+                    UpdatedByUserId = manager.Id,
+                });
+            await db.SaveChangesAsync();
+            return manager.Email;
+        });
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var approverId = await WithDbAsync(db => db.Users.Where(user =>
+            user.RoleEntity != null && user.RoleEntity.Code == "PROCUREMENT_MANAGER")
+            .Select(user => user.Id).SingleAsync());
+        var rowVersion = quote.GetProperty("rowVersion").GetString();
+        var preview = await ReadJsonAsync(await Client.PostAsJsonAsync(
+            $"/api/quotes/{quoteId}/approval-email-preview",
+            new { approverUserId = approverId, rowVersion }));
+        preview.GetProperty("ccEmails").EnumerateArray().Select(item => item.GetString())
+            .Should().Equal(managerEmail);
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
+        {
+            approverUserId = approverId,
+            previewToken = preview.GetProperty("previewToken").GetString(),
+            rowVersion,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var queued = await WithDbAsync(db => db.QuoteApprovalEmails
+            .SingleAsync(email => email.QuoteId == quoteId));
+        queued.CcEmailsJson.Should().Contain(managerEmail);
+        queued.CcEmailsJson.Should().NotContain("warehouse");
     }
 
     [Fact]
@@ -492,7 +541,7 @@ public class QuotesControllerTests : IntegrationTestBase
 
         var candidates = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/approval-candidates"));
         var approverId = candidates.EnumerateArray()
-            .First(candidate => candidate.GetProperty("email").GetString() == "superadmin@nihome.test")
+            .First(candidate => candidate.GetProperty("roleCode").GetString() == "PROCUREMENT_MANAGER")
             .GetProperty("id").GetInt32();
         var preview = await ReadJsonAsync(await Client.PostAsJsonAsync(
             $"/api/quotes/{quoteId}/approval-email-preview",
@@ -1208,7 +1257,7 @@ public class QuotesControllerTests : IntegrationTestBase
     {
         var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
         var approverId = await WithDbAsync(db => db.Users.AsNoTracking()
-            .Where(user => user.Email == "superadmin@nihome.test")
+            .Where(user => user.RoleEntity != null && user.RoleEntity.Code == "PROCUREMENT_MANAGER")
             .Select(user => user.Id).SingleAsync());
         var rowVersion = quote.GetProperty("rowVersion").GetString();
         var previewResponse = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approval-email-preview",
@@ -1228,7 +1277,7 @@ public class QuotesControllerTests : IntegrationTestBase
         var prior = Client.DefaultRequestHeaders.Authorization;
         try
         {
-            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
             return await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", body);
         }
         finally { Client.DefaultRequestHeaders.Authorization = prior; }

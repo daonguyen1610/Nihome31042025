@@ -636,7 +636,9 @@ test.describe("MoM §5 pre-contract department controls", () => {
       "get",
       `/api/quotes/${quoteId}/approval-candidates`,
     )) as unknown as { id: number; name: string }[];
-    const quoteApprover = quoteApprovers.find((candidate) => candidate.name === "Super Admin")!;
+    const quoteApprover = quoteApprovers.find(
+      (candidate) => candidate.roleCode === "PROCUREMENT_MANAGER",
+    )!;
     expect(quoteApprover).toBeTruthy();
     const quotePreview = await call(
       "salesManager",
@@ -649,7 +651,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
       previewToken: quotePreview.previewToken,
       rowVersion: quoteBeforeSubmit.rowVersion,
     });
-    await call("superAdmin", "post", `/api/quotes/${quoteId}/approve`, {
+    await call("procurementManager", "post", `/api/quotes/${quoteId}/approve`, {
       rowVersion: submittedQuote.rowVersion,
     });
     await page.reload({ waitUntil: "networkidle" });

@@ -109,7 +109,7 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
     quote = await submitAndApproveQuote(
       api,
       headers,
-      { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+      { Authorization: `Bearer ${await loginAs(TEST_USERS.procurementManager)}` },
       quoteId,
       quote.rowVersion,
     );

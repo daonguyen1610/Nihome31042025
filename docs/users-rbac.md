@@ -63,16 +63,23 @@ access are applied independently; seeing a Contract never expands Lead scope.
 The current business-role catalog contains `SALE`, `SALES_MANAGER`, `DESIGN`,
 `DESIGN_MANAGER`, `DESIGN_LEAD`, `ARCHITECT`, `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`,
 `SITE_COMMANDER`, `SITE_QAQC`, `LEGAL_OFFICER`, `QS`, `PROCUREMENT`,
+`PROCUREMENT_MANAGER`,
 `ACCOUNTANT`, `HR`, `WAREHOUSE`, and `BGD`.
 Authorized administrators may also create or delete non-system roles and edit
 their permission matrices.
+
+Only an active user assigned the seeded `PROCUREMENT_MANAGER` role, with
+`crm.quotes.view` and `crm.quotes.approve`, can be selected to approve an
+outgoing quote. Changing the role or permissions after submission blocks the
+queued approval email from delivery. CC addresses are limited to active
+project-team members who can view the quote within their own scope.
 
 ### NICON role groups and permission baselines
 
 The current implementation assigns business roles to six seeded groups:
 `CRM`, `HR`, `PROCUREMENT`, `CONSTRUCTION`, `DESIGN`, and `FINANCE`. The initial
 mapping is seeded once from `rbac-defaults.json`: Sales roles belong to `CRM`;
-Procurement and Warehouse belong to `PROCUREMENT`; PM, site roles, Legal, and
+Procurement, Head of Procurement and Warehouse belong to `PROCUREMENT`; PM, site roles, Legal, and
 QS belong to `CONSTRUCTION`; design roles belong to `DESIGN`; Accountant belongs
 to `FINANCE`; and Human Resources belongs to `HR`. `BGD` remains ungrouped
 because it is cross-functional. After the initial seed, administrator
@@ -479,7 +486,8 @@ Development and integration seeders provide deterministic accounts for the syste
 The development seed now provides a deterministic login for every declared
 business role: `SALE`, `SALES_MANAGER`, `DESIGN`, `DESIGN_MANAGER`, `DESIGN_LEAD`, `ARCHITECT`,
 `MEP_ENGINEER`, `STRUCT_ENGINEER`, `PM`, `SITE_COMMANDER`, `SITE_QAQC`,
-`LEGAL_OFFICER`, `QS`, `PROCUREMENT`, `ACCOUNTANT`, `HR`, `WAREHOUSE`, and
+`LEGAL_OFFICER`, `QS`, `PROCUREMENT`, `PROCUREMENT_MANAGER`, `ACCOUNTANT`,
+`HR`, `WAREHOUSE`, and
 `BGD`. Integration tests additionally provide a deterministic `USER` account.
 
 System roles are stored using the legacy `UserRole` enum; business-role users carry `Role = USER` and the real role link via `RoleEntityId`. `PermissionService` reads `RoleEntityId` first, so the business-role permission matrix from `rbac-defaults.json` applies as-is.

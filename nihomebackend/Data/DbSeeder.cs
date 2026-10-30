@@ -289,6 +289,7 @@ public static class DbSeeder
         // people, so the demo data contradicted the business rule. Appended last
         // so existing seeded accounts keep their identifiers.
         ("PROCUREMENT", "0911000017", "Lý Thanh Tùng", "thanh.tung.procurement@nihome.vn", null, null),
+        ("PROCUREMENT_MANAGER", "0911000022", "Nguyễn Thị Thu Trang", "thu.trang.procurement.manager@nihome.vn", null, null),
     ];
 
     private static void SeedBusinessRoleUsers(AppDbContext db)

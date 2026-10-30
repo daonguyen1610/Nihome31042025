@@ -102,8 +102,13 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     });
     expect(candidateResponse.status(), await candidateResponse.text()).toBe(200);
     const approver = (
-      (await candidateResponse.json()) as { id: number; name: string; email: string }[]
-    ).find((candidate) => candidate.name === "Super Admin")!;
+      (await candidateResponse.json()) as {
+        id: number;
+        name: string;
+        roleCode: string;
+        email: string;
+      }[]
+    ).find((candidate) => candidate.roleCode === "PROCUREMENT_MANAGER")!;
     expect(approver).toBeTruthy();
     const beforeMailResponse = await api.get(`${mailSinkUrl}/messages`);
     expect(beforeMailResponse.status()).toBe(200);
@@ -118,7 +123,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await expect(approvalDialog.getByTestId("quote-approval-approver")).toBeVisible();
     await expect(approvalDialog.getByRole("button", { name: "Gửi duyệt" })).toBeDisabled();
     await approvalDialog.getByTestId("quote-approval-approver").click();
-    await page.getByRole("option", { name: /Super Admin/ }).click();
+    await page.getByRole("option", { name: new RegExp(approver.name) }).click();
     const previewResponsePromise = page.waitForResponse(
       (response) =>
         response.url().endsWith(`/api/quotes/${quoteId}/approval-email-preview`) &&
@@ -143,7 +148,7 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     }
     await approvalDialog.getByRole("button", { name: "Gửi duyệt" }).click();
     await expect(approvalDialog).not.toBeVisible();
-    await expect(page.getByTestId("quote-approval-email-status")).toContainText("Super Admin");
+    await expect(page.getByTestId("quote-approval-email-status")).toContainText(approver.name);
     await expect
       .poll(
         async () => {
@@ -165,12 +170,12 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     const submittedResponse = await api.get(`/api/quotes/${quoteId}`, { headers });
     quote = await submittedResponse.json();
     expect(quote.status).toBe("PendingApproval");
-    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await loginInBrowserAs(page, TEST_USERS.procurementManager);
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
     await expect(page.getByRole("heading", { name: new RegExp(quote.code) })).toBeVisible();
     await expect(page.getByRole("button", { name: "Duyệt", exact: true })).toBeEnabled();
     const approved = await api.post(`/api/quotes/${quoteId}/approve`, {
-      headers: { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+      headers: { Authorization: `Bearer ${await loginAs(TEST_USERS.procurementManager)}` },
       data: { rowVersion: quote.rowVersion },
     });
     expect(approved.status(), await approved.text()).toBe(200);

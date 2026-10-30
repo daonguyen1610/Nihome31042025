@@ -103,6 +103,53 @@ public sealed class ProjectTeamServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task DesignLeadership_FromTeam_UpdatesProjectAndRejectsSecondHolder()
+    {
+        var operational = await _db.OperationalProjects.FindAsync(_projectId);
+        var design = new DesignProject
+        {
+            OperationalProjectId = _projectId,
+            CustomerId = operational!.CustomerId,
+            ProjectCode = "DP-TEAM-SYNC",
+            Name = "NICON – Nhà xưởng An Phú",
+        };
+        _db.DesignProjects.Add(design);
+        await _db.SaveChangesAsync();
+        _access.Setup(value => value.CanManageDesignProjectAsync(_callerId, design.Id,
+                It.IsAny<CancellationToken>(), null))
+            .ReturnsAsync(true);
+
+        var managerRequest = Member(_managerUserId, "Chủ nhiệm thiết kế",
+            Role("ProjectManager", "Module", "Design"));
+        managerRequest.DesignProjectId = design.Id;
+        var manager = await _service.AddMemberAsync(_projectId, managerRequest, _callerId);
+        Assert.Equal(_managerUserId, (await _db.DesignProjects.FindAsync(design.Id))!.ProjectManagerUserId);
+
+        var duplicate = Member(_otherUserId, "Chủ nhiệm thiết kế khác",
+            Role("ProjectManager", "Module", "Design"));
+        duplicate.DesignProjectId = design.Id;
+        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
+            _service.AddMemberAsync(_projectId, duplicate, _callerId));
+        Assert.Equal(_managerUserId, (await _db.DesignProjects.FindAsync(design.Id))!.ProjectManagerUserId);
+
+        var architectRequest = Member(_otherUserId, "Kiến trúc sư",
+            Role("Architect", "Module", "Design"));
+        architectRequest.DesignProjectId = design.Id;
+        var architect = await _service.AddMemberAsync(_projectId, architectRequest, _callerId);
+        Assert.Equal(_managerUserId, (await _db.DesignProjects.FindAsync(design.Id))!.ProjectManagerUserId);
+        architectRequest.RowVersion = architect.RowVersion;
+        architectRequest.Position = "Kiến trúc sư trưởng";
+        await _service.UpdateMemberAsync(_projectId, architect.Id, architectRequest, _callerId);
+        Assert.Equal(_managerUserId, (await _db.DesignProjects.FindAsync(design.Id))!.ProjectManagerUserId);
+
+        var changed = Member(_managerUserId, "Kiến trúc sư", Role("Architect", "Module", "Design"));
+        changed.DesignProjectId = design.Id;
+        changed.RowVersion = manager.RowVersion;
+        await _service.UpdateMemberAsync(_projectId, manager.Id, changed, _callerId);
+        Assert.Null((await _db.DesignProjects.FindAsync(design.Id))!.ProjectManagerUserId);
+    }
+
+    [Fact]
     public async Task GetAsync_AccountActivationControlsEligibilityWithoutEndingMembership()
     {
         var member = await AddMemberAsync(_memberUserId, "NICON – Design coordinator", Role("Architect"));
