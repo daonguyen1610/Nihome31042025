@@ -20,9 +20,9 @@ test.describe("NIH-144 — Project handover", () => {
       name: projectName,
       customerId,
     });
-    const users = await api.get("/api/users?take=1", { headers: authHeader });
-    expect(users.ok()).toBeTruthy();
-    const responsibleUserId = (await users.json()).items?.[0]?.id as number;
+    const currentUser = await api.get("/api/users/me", { headers: authHeader });
+    expect(currentUser.ok(), await currentUser.text()).toBeTruthy();
+    const responsibleUserId = (await currentUser.json()).id as number;
     expect(responsibleUserId).toBeGreaterThan(0);
     const title = `E2E handover ${uid()}`;
     const documentPath = "/images/activities/activity-ceremony.jpg";
