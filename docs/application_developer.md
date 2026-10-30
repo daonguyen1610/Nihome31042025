@@ -1881,9 +1881,14 @@ in [Operational Project Historical Migration](#67-operational-project-historical
 packages require an `OperationalProjectId`. General packages can target any
 active department (product-owner decision, 29 October 2026). Design and
 Construction keep their specialist aggregates for specialist records; a general
-package does not create a duplicate project wrapper. Their `ContractId` and
-`SourceOpportunityId` are optional references. Internal packages reject all
-three business-root references. Endpoints are available at `/api/work-packages`
+package does not create a duplicate project wrapper. `ContractId` and
+`SourceOpportunityId` are optional references on the persisted Project kind.
+The public `kind` is `Project` when `ContractId` is null and `Contract` when it
+is set; existing records are classified without a schema migration. New
+`Contract` requests require a same-project contract. Legacy `Project` requests
+with `ContractId` remain accepted and return `Contract`, while the `kind=Project`
+list filter now excludes linked packages. Internal packages reject all
+business-root references. Endpoints are available at `/api/work-packages`
 and `/api/v1/work-packages`:
 
 The input-price editor uses persistent, associated labels and a responsive
@@ -1900,11 +1905,11 @@ test quote to `SentToCustomer` in SQL; it does not test email delivery.
 
 | Method | Path | Permission | Purpose |
 |---|---|---|---|
-| `GET` | `/api/work-packages` | `work.packages.view` | List scoped project/internal packages with server filters |
+| `GET` | `/api/work-packages` | `work.packages.view` | List scoped Project/Contract/Internal packages with server filters |
 | `GET` | `/api/work-packages/options` | `work.packages.view` + `manage` or `assign` | Return active department, user, and work-KPI options |
 | `GET` | `/api/work-packages/{id}` | `work.packages.view` | Read package, tasks, access flags, and ETag |
 | `GET` | `/api/work-packages/{id}/history` | `work.packages.view` | Read immutable package/task change snapshots |
-| `POST` | `/api/work-packages` | `work.packages.manage` | Create a project or internal package |
+| `POST` | `/api/work-packages` | `work.packages.manage` | Create a Project, Contract, or Internal package |
 | `PUT` | `/api/work-packages/{id}` | `work.packages.manage` | Update metadata, optional contract, or lifecycle |
 | `GET` | `/api/work-packages/{id}/deletion-impact` | `work.packages.manage` + management scope | Preview deletion, unlinking and blockers |
 | `DELETE` | `/api/work-packages/{id}` | Same management scope | Hard delete with code, planToken, rowVersion and idempotency key |

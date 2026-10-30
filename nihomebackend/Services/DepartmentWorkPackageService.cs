@@ -27,8 +27,12 @@ public sealed partial class DepartmentWorkPackageService(
         var page = Math.Max(query.Page, 1);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
         var packages = await ApplyViewScopeAsync(BaseQuery(), callerUserId, canViewAll, ct);
-        if (!string.IsNullOrWhiteSpace(query.Kind) && Enum.TryParse<WorkPackageKind>(query.Kind, true, out var kind))
-            packages = packages.Where(item => item.Kind == kind);
+        if (string.Equals(query.Kind, "Contract", StringComparison.OrdinalIgnoreCase))
+            packages = packages.Where(item => item.Kind == WorkPackageKind.Project && item.ContractId != null);
+        else if (Enum.TryParse<WorkPackageKind>(query.Kind, true, out var kind))
+            packages = kind == WorkPackageKind.Project
+                ? packages.Where(item => item.Kind == kind && item.ContractId == null)
+                : packages.Where(item => item.Kind == kind);
         if (query.OperationalProjectId.HasValue)
             packages = packages.Where(item => item.OperationalProjectId == query.OperationalProjectId);
         if (query.ContractId.HasValue) packages = packages.Where(item => item.ContractId == query.ContractId);
@@ -210,8 +214,12 @@ public sealed partial class DepartmentWorkPackageService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        if (!Enum.TryParse<WorkPackageKind>(request.Kind, true, out var kind))
-            throw Error("Loại nhóm công việc không hợp lệ. Giá trị hợp lệ: Project hoặc Internal.");
+        var contractKind = string.Equals(request.Kind, "Contract", StringComparison.OrdinalIgnoreCase);
+        if (!Enum.TryParse<WorkPackageKind>(request.Kind, true, out var kind) && !contractKind)
+            throw Error("Loại nhóm công việc không hợp lệ. Giá trị hợp lệ: Project, Contract hoặc Internal.");
+        if (contractKind) kind = WorkPackageKind.Project;
+        if (contractKind && !request.ContractId.HasValue)
+            throw Error("Nhóm công việc theo Hợp đồng phải chọn Hợp đồng thuộc Dự án vận hành.");
         if (!Enum.TryParse<WorkPackagePurpose>(request.Purpose, true, out var purpose))
             throw Error("Mục đích nhóm công việc không hợp lệ.");
         if (purpose == WorkPackagePurpose.LegalPermitting)
@@ -1009,7 +1017,8 @@ public sealed partial class DepartmentWorkPackageService(
         {
             Id = item.Id,
             Code = item.Code,
-            Kind = item.Kind.ToString(),
+            Kind = item.Kind == WorkPackageKind.Project && item.ContractId.HasValue
+                ? "Contract" : item.Kind.ToString(),
             Purpose = item.Purpose.ToString(),
             Name = item.Name,
             Description = item.Description,

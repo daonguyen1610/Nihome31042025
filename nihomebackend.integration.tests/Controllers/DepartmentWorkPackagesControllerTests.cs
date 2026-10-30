@@ -81,6 +81,94 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
+    public async Task ContractPackages_RequireSameProjectContract_AndClassifyExistingLinks()
+    {
+        var seed = await SeedProjectScopeAsync();
+        var otherProject = await SeedProjectScopeAsync();
+        var (contractId, otherContractId) = await WithDbAsync(async db =>
+        {
+            var projects = await db.OperationalProjects.Where(item =>
+                    item.Id == seed.ProjectId || item.Id == otherProject.ProjectId)
+                .Select(item => new { item.Id, item.CustomerId }).ToListAsync();
+            Contract MakeContract(int projectId) => new()
+            {
+                ContractNumber = $"HD-WORK-{Guid.NewGuid():N}"[..20],
+                CustomerId = projects.Single(item => item.Id == projectId).CustomerId,
+                OperationalProjectId = projectId,
+            };
+            var contract = MakeContract(seed.ProjectId);
+            var otherContract = MakeContract(otherProject.ProjectId);
+            db.Contracts.AddRange(contract, otherContract);
+            await db.SaveChangesAsync();
+            return (contract.Id, otherContract.Id);
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+
+        var missingContract = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Contract",
+            name = "Điều phối thi công theo hợp đồng",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        missingContract.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var wrongProject = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Contract",
+            name = "Hợp đồng không thuộc dự án",
+            operationalProjectId = seed.ProjectId,
+            contractId = otherContractId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        wrongProject.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        async Task<System.Text.Json.JsonElement> CreateAsync(string kind, string name)
+        {
+            var response = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+            {
+                kind,
+                name,
+                operationalProjectId = seed.ProjectId,
+                contractId,
+                departmentRoleGroupId = seed.DepartmentGroupId,
+                leadUserId = seed.DepartmentLeadId,
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            return await ReadJsonAsync(response);
+        }
+
+        var current = await CreateAsync("Contract", "Điều phối hồ sơ hợp đồng xây dựng");
+        var legacy = await CreateAsync("Project", "Kế hoạch vật tư theo hợp đồng");
+        current.GetProperty("kind").GetString().Should().Be("Contract");
+        legacy.GetProperty("kind").GetString().Should().Be("Contract");
+        var contractList = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/work-packages?kind=Contract&operationalProjectId={seed.ProjectId}"));
+        contractList.GetProperty("totalCount").GetInt32().Should().Be(2);
+        var projectList = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/work-packages?kind=Project&operationalProjectId={seed.ProjectId}"));
+        projectList.GetProperty("totalCount").GetInt32().Should().Be(0);
+
+        var moved = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{current.GetProperty("id").GetInt32()}", new
+            {
+                name = current.GetProperty("name").GetString(),
+                status = "Planned",
+                contractId = (int?)null,
+                rowVersion = current.GetProperty("rowVersion").GetString(),
+            }, current.GetProperty("rowVersion").GetString());
+        moved.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(moved)).GetProperty("kind").GetString().Should().Be("Project");
+        contractList = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/work-packages?kind=Contract&operationalProjectId={seed.ProjectId}"));
+        contractList.GetProperty("totalCount").GetInt32().Should().Be(1);
+        projectList = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/work-packages?kind=Project&operationalProjectId={seed.ProjectId}"));
+        projectList.GetProperty("totalCount").GetInt32().Should().Be(1);
+    }
+
+    [Fact]
     public async Task ProjectPackage_FollowsDepartmentAssignmentProgressAndIndependentKpiVerification()
     {
         var seed = await SeedProjectScopeAsync();

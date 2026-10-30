@@ -104,13 +104,18 @@ const DepartmentWorkPackages = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const packageId = id && /^\d+$/.test(id) ? Number(id) : null;
-  const kind: WorkPackageKind = params.get("kind") === "Internal" ? "Internal" : "Project";
+  const kind: WorkPackageKind =
+    params.get("kind") === "Internal"
+      ? "Internal"
+      : params.get("kind") === "Contract"
+        ? "Contract"
+        : "Project";
   const canViewProjects = has(ADMIN_PERMS.operationalProjects);
   const canManage = has(ADMIN_PERMS.workPackagesManage);
   const canAssign = has(ADMIN_PERMS.workPackagesAssign);
   const canProgress = has(ADMIN_PERMS.workPackagesProgress);
   const canVerifyBusiness = has(ADMIN_PERMS.workPackagesVerify);
-  const canCreate = canManage && (kind === "Project" || canAssign);
+  const canCreate = canManage && (kind !== "Internal" || canAssign);
 
   const [rows, setRows] = useState<DepartmentWorkPackageResponse[]>([]);
   const [detail, setDetail] = useState<DepartmentWorkPackageResponse | null>(null);
@@ -121,7 +126,7 @@ const DepartmentWorkPackages = () => {
   const departmentFilter = params.get("departmentId") ?? "";
   const statusFilter = params.get("status") ?? "";
   const purposeFilter = params.get("purpose") ?? "";
-  const projectFilter = kind === "Project" ? (params.get("projectId") ?? "") : "";
+  const projectFilter = kind !== "Internal" ? (params.get("projectId") ?? "") : "";
   const updateFilter = (key: string, value: string) => {
     setParams(
       (current) => {
@@ -443,7 +448,7 @@ const DepartmentWorkPackages = () => {
   );
   const availableDepartments = useMemo(
     () =>
-      packageForm.kind === "Project"
+      packageForm.kind !== "Internal"
         ? options.departments.filter(
             (group) => packageForm.purpose === "TenderPlanning" || group.canReceiveProjectPackage,
           )
@@ -472,12 +477,16 @@ const DepartmentWorkPackages = () => {
   };
 
   const savePackage = async () => {
+    if (packageForm.kind === "Contract" && !packageForm.contractId) {
+      toast({ variant: "destructive", title: t("workPackages.validation.contractRequired") });
+      return;
+    }
     if (
       packageForm.name.trim().length < 2 ||
       packageForm.name.length > 300 ||
       !packageForm.departmentRoleGroupId ||
       !packageForm.leadUserId ||
-      (packageForm.kind === "Project" && !packageForm.operationalProjectId) ||
+      (packageForm.kind !== "Internal" && !packageForm.operationalProjectId) ||
       (packageForm.purpose === "TenderPlanning" &&
         (!packageForm.plannedStart || !packageForm.plannedEnd)) ||
       (packageForm.plannedStart &&
@@ -515,7 +524,7 @@ const DepartmentWorkPackages = () => {
       rowVersion: detail.rowVersion,
     });
     setPackageEditOpen(true);
-    if (detail.kind === "Project" && detail.purpose === "General" && detail.operationalProjectId) {
+    if (detail.kind !== "Internal" && detail.purpose === "General" && detail.operationalProjectId) {
       setContracts([]);
       try {
         const response = await adminApi.listContracts({
@@ -1124,7 +1133,7 @@ const DepartmentWorkPackages = () => {
                 icon={<BriefcaseBusiness />}
                 label={t("workPackages.field.scope")}
                 value={
-                  detail.kind === "Project"
+                  detail.kind !== "Internal"
                     ? `${detail.operationalProjectCode} · ${detail.operationalProjectName}`
                     : t("workPackages.kind.Internal")
                 }
@@ -1544,6 +1553,7 @@ const DepartmentWorkPackages = () => {
             >
               <TabsList>
                 <TabsTrigger value="Project">{t("workPackages.tab.project")}</TabsTrigger>
+                <TabsTrigger value="Contract">{t("workPackages.tab.contract")}</TabsTrigger>
                 <TabsTrigger value="Internal">{t("workPackages.tab.internal")}</TabsTrigger>
               </TabsList>
             </Tabs>
@@ -1596,7 +1606,7 @@ const DepartmentWorkPackages = () => {
                   ))}
                 </select>
               </div>
-              {kind === "Project" && canViewProjects && (
+              {kind !== "Internal" && canViewProjects && (
                 <div className="min-w-0 space-y-1 sm:col-span-2">
                   <Label htmlFor="wp-project">{t("workPackages.field.project")}</Label>
                   <select
@@ -1650,7 +1660,7 @@ const DepartmentWorkPackages = () => {
                     !purposeFilter &&
                     !projectFilter
                   }
-                  onClick={() => setParams(kind === "Internal" ? { kind } : {})}
+                  onClick={() => setParams(kind === "Project" ? {} : { kind })}
                 >
                   {t("workPackages.filters.clear")}
                 </Button>
@@ -1675,9 +1685,11 @@ const DepartmentWorkPackages = () => {
                     </div>
                     <h2 className="mt-4 font-semibold">{item.name}</h2>
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                      {item.kind === "Project"
-                        ? `${item.operationalProjectCode} · ${item.operationalProjectName}`
-                        : t("workPackages.kind.Internal")}
+                      {item.kind === "Internal"
+                        ? t("workPackages.kind.Internal")
+                        : item.kind === "Contract"
+                          ? `${item.contractNumber} · ${item.operationalProjectName}`
+                          : `${item.operationalProjectCode} · ${item.operationalProjectName}`}
                     </p>
                     <div className="mt-4 flex items-center justify-between text-sm">
                       <span>
@@ -1741,6 +1753,7 @@ const DepartmentWorkPackages = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Project">{t("workPackages.kind.Project")}</SelectItem>
+                  <SelectItem value="Contract">{t("workPackages.kind.Contract")}</SelectItem>
                   {canAssign && (
                     <SelectItem value="Internal">{t("workPackages.kind.Internal")}</SelectItem>
                   )}
@@ -1792,7 +1805,7 @@ const DepartmentWorkPackages = () => {
                 </Select>
               </Field>
             )}
-            {packageForm.kind === "Project" && (
+            {packageForm.kind !== "Internal" && (
               <Field label={t("workPackages.field.project")}>
                 <Select
                   disabled={packageForm.sourceTenderId != null || packageForm.sourceQuoteId != null}
@@ -1818,10 +1831,10 @@ const DepartmentWorkPackages = () => {
                 </Select>
               </Field>
             )}
-            {packageForm.kind === "Project" && packageForm.purpose === "General" && (
-              <Field label={t("workPackages.field.contract")}>
+            {packageForm.kind === "Contract" && (
+              <Field label={t("workPackages.field.requiredContract")}>
                 <Select
-                  value={packageForm.contractId?.toString() ?? "none"}
+                  value={packageForm.contractId?.toString() ?? ""}
                   onValueChange={(value) =>
                     setPackageForm((current) => ({
                       ...current,
@@ -1830,10 +1843,9 @@ const DepartmentWorkPackages = () => {
                   }
                 >
                   <SelectTrigger>
-                    <SelectValue />
+                    <SelectValue placeholder={t("workPackages.placeholder.contract")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">{t("workPackages.contract.none")}</SelectItem>
                     {contracts.map((contract) => (
                       <SelectItem key={contract.id} value={String(contract.id)}>
                         {contract.contractNumber}
@@ -1977,7 +1989,7 @@ const DepartmentWorkPackages = () => {
                   }
                 />
               </Field>
-              {detail.kind === "Project" && detail.purpose === "General" && (
+              {detail.kind !== "Internal" && detail.purpose === "General" && (
                 <Field label={t("workPackages.field.contract")} className="sm:col-span-2">
                   <Select
                     value={packageEditForm.contractId?.toString() ?? "none"}

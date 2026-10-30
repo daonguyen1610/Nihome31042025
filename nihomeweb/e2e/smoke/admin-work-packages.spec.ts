@@ -3,7 +3,7 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { execSql } from "../fixtures/db";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
-test("shared-project and internal work package tabs render without browser errors", async ({
+test("project, contract and internal work package tabs render without browser errors", async ({
   page,
   loginInBrowserAs,
 }) => {
@@ -15,10 +15,15 @@ test("shared-project and internal work package tabs render without browser error
   });
 
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.setViewportSize({ width: 390, height: 844 });
   const response = await page.goto("/admin/work-packages");
   expect(response?.status()).toBeLessThan(400);
   await expect(page.getByTestId("work-packages-page")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("tab", { name: /Theo dự án|Project \/ contract/i })).toBeVisible();
+  await expect(page.getByRole("tab", { name: /Theo dự án|Project work/i })).toBeVisible();
+
+  await page.getByRole("tab", { name: /Theo hợp đồng|Contract work/i }).click();
+  await expect(page).toHaveURL(/kind=Contract/);
+  await expect(page.getByTestId("work-packages-page")).toBeVisible();
 
   await page.getByRole("tab", { name: /Công việc nội bộ|Internal work/i }).click();
   await expect(page).toHaveURL(/kind=Internal/);
@@ -153,7 +158,12 @@ test("general project package can link and unlink its contract from the edit dia
     await expect(dialog).toHaveCount(0);
     let saved = await api.get(`/api/work-packages/${packageId}`, { headers });
     expect(saved.status()).toBe(200);
-    expect((await saved.json()).contractId).toBe(contract!.id);
+    expect(await saved.json()).toMatchObject({ contractId: contract!.id, kind: "Contract" });
+    await page.goto("/admin/work-packages?kind=Contract");
+    await expect(
+      page.getByTestId("work-package-card").filter({ hasText: contract!.contractNumber }),
+    ).toBeVisible();
+    await page.goto(`/admin/work-packages/${packageId}`);
 
     await page.getByTestId("work-package-edit").click();
     dialog = page.getByRole("dialog");
@@ -163,7 +173,7 @@ test("general project package can link and unlink its contract from the edit dia
     await expect(dialog).toHaveCount(0);
     saved = await api.get(`/api/work-packages/${packageId}`, { headers });
     expect(saved.status()).toBe(200);
-    expect((await saved.json()).contractId).toBeNull();
+    expect(await saved.json()).toMatchObject({ contractId: null, kind: "Project" });
   } finally {
     await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${packageId}`);
   }

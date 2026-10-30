@@ -937,7 +937,7 @@ export const OPERATIONAL_PROJECT_STATUSES: OperationalProjectStatus[] = [
   "Cancelled",
 ];
 
-export type WorkPackageKind = "Project" | "Internal";
+export type WorkPackageKind = "Project" | "Contract" | "Internal";
 export type WorkPackagePurpose =
   | "General"
   | "ProcurementInputPricing"
