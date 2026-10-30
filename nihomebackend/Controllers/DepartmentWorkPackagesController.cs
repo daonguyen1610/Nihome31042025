@@ -418,7 +418,9 @@ public sealed class DepartmentWorkPackagesController(
         }
         catch (DepartmentWorkPackageOperationException exception)
         {
-            return BadRequest(new { message = exception.Message });
+            return exception.Code is null
+                ? BadRequest(new { message = exception.Message })
+                : BadRequest(new { code = exception.Code, field = exception.Field, message = exception.Message });
         }
     }
 

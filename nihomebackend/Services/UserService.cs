@@ -171,7 +171,7 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
     public async Task<UserDetailResponse?> UpdateAsync(int id, UpdateUserRequest req, int currentUserId)
     {
         var user = await db.Users
-            .Include(u => u.RoleEntity)
+            .Include(u => u.RoleEntity).ThenInclude(role => role!.RoleGroup)
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.Id == id);
         if (user == null)
@@ -246,7 +246,7 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
     public async Task<UserDetailResponse?> ToggleActiveAsync(int id, int currentUserId)
     {
         var user = await db.Users
-            .Include(u => u.RoleEntity)
+            .Include(u => u.RoleEntity).ThenInclude(role => role!.RoleGroup)
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.Id == id);
         if (user == null)
@@ -434,6 +434,7 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
         // identity-map conflict on SaveChanges. The Roles table is tiny and
         // looked up by indexed Code, so the tracking cost is negligible.
         var roleEntity = await db.Roles
+            .Include(role => role.RoleGroup)
             .FirstOrDefaultAsync(r => r.Code == trimmed && r.IsActive);
 
         if (roleEntity != null)

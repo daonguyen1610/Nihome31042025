@@ -103,6 +103,27 @@ public sealed class ProjectTeamServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_AccountActivationControlsEligibilityWithoutEndingMembership()
+    {
+        var member = await AddMemberAsync(_memberUserId, "NICON – Design coordinator", Role("Architect"));
+        var user = await _db.Users.FindAsync(_memberUserId);
+        user!.IsActive = false;
+        await _db.SaveChangesAsync();
+
+        var inactive = (await _service.GetAsync(_projectId, _callerId))!.Members.Single(item => item.Id == member.Id);
+        Assert.True(inactive.IsActive);
+        Assert.False(inactive.IsUserActive);
+        Assert.Null(inactive.EndedAt);
+        Assert.Equal(_memberUserId, inactive.UserId);
+
+        user.IsActive = true;
+        await _db.SaveChangesAsync();
+        var reactivated = (await _service.GetAsync(_projectId, _callerId))!.Members.Single(item => item.Id == member.Id);
+        Assert.True(reactivated.IsActive);
+        Assert.True(reactivated.IsUserActive);
+    }
+
+    [Fact]
     public async Task AddAssignmentAsync_CanonicalizesValuesAndRejectsUnknownCodes()
     {
         var member = await AddMemberAsync(_memberUserId, "Architect", Role("Architect"));

@@ -19,7 +19,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     loginAs,
     loginInBrowserAs,
     baseURL,
-  }) => {
+  }, testInfo) => {
     test.slow();
 
     const adminToken = await loginAs(TEST_USERS.superAdmin);
@@ -36,8 +36,12 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     const architect = users.items?.find(
       (user) => user.phoneNumber === TEST_USERS.architect.phoneNumber,
     );
+    const mep = users.items?.find(
+      (user) => user.phoneNumber === TEST_USERS.mepEngineer.phoneNumber,
+    );
     expect(designLead?.id).toBeGreaterThan(0);
     expect(architect?.id).toBeGreaterThan(0);
+    expect(mep?.id).toBeGreaterThan(0);
 
     const customerId = await createOwnCustomer(api, adminHeaders, "schedule");
     const suffix = uid();
@@ -82,6 +86,47 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
         },
       }),
       "add architect member",
+    )) as { id: number };
+
+    const ccMember = (await expectOk(
+      await api.post(`/api/operational-projects/${operationalProject.id}/team/members`, {
+        headers: { ...adminHeaders, "Idempotency-Key": `e2e-schedule-cc-${suffix}` },
+        data: {
+          designProjectId: designProject.id,
+          userId: mep!.id,
+          position: "NICON – MEP coordination reviewer",
+          startedAt: "2026-04-01T00:00:00Z",
+          roles: [{ roleCode: "MepEngineer", scope: "Module", scopeValue: "Design" }],
+        },
+      }),
+      "add MEP follower",
+    )) as { id: number; rowVersion: string };
+
+    const inactiveCcUser = (await expectOk(
+      await api.post("/api/users", {
+        headers: { ...adminHeaders, "Idempotency-Key": `e2e-schedule-user-${suffix}` },
+        data: {
+          phoneNumber: `09${Date.now().toString().slice(-8)}`,
+          fullName: `NICON MEP coordinator ${suffix}`,
+          email: `nicon-cc-${suffix}@example.com`,
+          password: "Demo@123!",
+          role: "MEP_ENGINEER",
+        },
+      }),
+      "create isolated CC account",
+    )) as { id: number; fullName: string };
+    const inactiveCcMember = (await expectOk(
+      await api.post(`/api/operational-projects/${operationalProject.id}/team/members`, {
+        headers: { ...adminHeaders, "Idempotency-Key": `e2e-schedule-account-cc-${suffix}` },
+        data: {
+          designProjectId: designProject.id,
+          userId: inactiveCcUser.id,
+          position: "NICON – MEP coordination reviewer",
+          startedAt: "2026-04-01T00:00:00Z",
+          roles: [{ roleCode: "MepEngineer", scope: "Module", scopeValue: "Design" }],
+        },
+      }),
+      "add isolated CC member",
     )) as { id: number };
 
     const designLeadToken = await loginAs(TEST_USERS.designLead);
@@ -153,6 +198,12 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       .getByRole("option", { name: designLead!.fullName })
       .click();
     await expect(cc.getByRole("button")).toHaveCount(0);
+    await cc.locator("label").filter({ hasText: mep!.fullName }).getByRole("checkbox").check();
+    await cc
+      .locator("label")
+      .filter({ hasText: inactiveCcUser.fullName })
+      .getByRole("checkbox")
+      .check();
     await dialog.locator("#task-planned-start").fill("2026-04-01");
     await dialog.locator("#task-planned-end").fill("2026-04-15");
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
@@ -209,12 +260,16 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
           progressPercent: number;
           weight: number;
           predecessorTaskIds: number[];
+          ccMemberIds: number[];
           rowVersion: string;
         }>;
       };
     };
     const currentTask = currentSchedule.tasks.items.find((item) => item.code === `ARC-${suffix}`);
     expect(currentTask?.id).toBeGreaterThan(0);
+    expect([...currentTask!.ccMemberIds].sort((a, b) => a - b)).toEqual(
+      [ccMember.id, inactiveCcMember.id].sort((a, b) => a - b),
+    );
     const competingName = `Competing update ${suffix}`;
     const competingUpdate = await api.put(
       `/api/operational-projects/${operationalProject.id}/design-schedule/tasks/${currentTask!.id}`,
@@ -234,7 +289,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
           progressPercent: currentTask!.progressPercent,
           weight: currentTask!.weight,
           predecessorTaskIds: currentTask!.predecessorTaskIds,
-          ccMemberIds: [],
+          ccMemberIds: currentTask!.ccMemberIds,
           isCritical: false,
           rowVersion: currentTask!.rowVersion,
         },
@@ -269,6 +324,105 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     );
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
+
+    const ended = await api.put(
+      `/api/operational-projects/${operationalProject.id}/team/members/${ccMember.id}`,
+      {
+        headers: { ...adminHeaders, "Idempotency-Key": `e2e-schedule-end-cc-${suffix}` },
+        data: {
+          designProjectId: designProject.id,
+          userId: mep!.id,
+          position: "NICON – MEP coordination reviewer",
+          startedAt: "2026-04-01T00:00:00Z",
+          endedAt: new Date().toISOString(),
+          roles: [{ roleCode: "MepEngineer", scope: "Module", scopeValue: "Design" }],
+          rowVersion: ccMember.rowVersion,
+        },
+      },
+    );
+    expect((await expectOk(ended, "end saved CC membership")).isActive).toBe(false);
+    const deactivated = await api.patch(`/api/users/${inactiveCcUser.id}/toggle-active`, {
+      headers: adminHeaders,
+    });
+    expect((await expectOk(deactivated, "deactivate isolated CC account")).isActive).toBe(false);
+    const teamAfterDeactivation = await expectOk(
+      await api.get(
+        `/api/operational-projects/${operationalProject.id}/team?designProjectId=${designProject.id}`,
+        {
+          headers: adminHeaders,
+        },
+      ),
+      "read membership and account states separately",
+    );
+    expect(
+      teamAfterDeactivation.members.find(
+        (member: { id: number }) => member.id === inactiveCcMember.id,
+      ),
+    ).toMatchObject({ isActive: true, isUserActive: false, endedAt: null });
+    await page.reload({ waitUntil: "networkidle" });
+    const historicalRow = schedule.locator("article").filter({ hasText: competingName });
+    await historicalRow.getByRole("button", { name: /Sửa công việc|Edit task/i }).click();
+    const historicalCc = dialog.getByTestId("people-checklist");
+    const removeHistoricalCc = historicalCc.getByRole("button").filter({ hasText: mep!.fullName });
+    await expect(removeHistoricalCc).toBeVisible();
+    await expect(removeHistoricalCc).toContainText(/Không còn hoạt động|Inactive/i);
+    await expect(historicalCc).toContainText(
+      /Chưa có nhân sự đang hoạt động|No active people are eligible/i,
+    );
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      const bounds = await dialog.boundingBox();
+      expect(bounds).not.toBeNull();
+      expect(bounds!.x).toBeGreaterThanOrEqual(0);
+      expect(bounds!.x + bounds!.width).toBeLessThanOrEqual(width);
+      const contentWidth = await dialog.evaluate((element) => ({
+        scroll: element.scrollWidth,
+        client: element.clientWidth,
+      }));
+      if (contentWidth.scroll > contentWidth.client) {
+        const grids = await dialog.evaluate((element) =>
+          Array.from(element.querySelectorAll<HTMLElement>("*"))
+            .filter((node) => getComputedStyle(node).display === "grid")
+            .map((node) => ({
+              classes: node.className,
+              width: node.getBoundingClientRect().width,
+              columns: getComputedStyle(node).gridTemplateColumns,
+              minWidth: getComputedStyle(node).minWidth,
+            })),
+        );
+        await testInfo.attach(`grid-layout-${width}`, {
+          body: JSON.stringify(grids, null, 2),
+          contentType: "application/json",
+        });
+      }
+      expect(contentWidth.scroll).toBeLessThanOrEqual(contentWidth.client);
+      await removeHistoricalCc.scrollIntoViewIfNeeded();
+      await page.screenshot({ path: testInfo.outputPath(`inactive-cc-${width}.png`) });
+    }
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await expect(
+      historicalCc.locator("label").filter({ hasText: mep!.fullName }).getByRole("checkbox"),
+    ).toHaveCount(0);
+    await removeHistoricalCc.click();
+    await expect(removeHistoricalCc).toHaveCount(0);
+    const removeDeactivatedCc = historicalCc
+      .getByRole("button")
+      .filter({ hasText: inactiveCcUser.fullName });
+    await expect(removeDeactivatedCc).toContainText(/Không còn hoạt động|Inactive/i);
+    await expect(
+      historicalCc
+        .locator("label")
+        .filter({ hasText: inactiveCcUser.fullName })
+        .getByRole("checkbox"),
+    ).toHaveCount(0);
+    await removeDeactivatedCc.click();
+    await expect(removeDeactivatedCc).toHaveCount(0);
+    await dialog.locator("#schedule-task-name").fill(`Recovered CC ${suffix}`);
+    await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
+    await expect(dialog).toBeHidden();
+    await expect(
+      tasksSection.locator("article").filter({ hasText: `Recovered CC ${suffix}` }),
+    ).toBeVisible();
 
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(schedule).toBeVisible();

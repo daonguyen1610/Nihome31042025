@@ -292,7 +292,7 @@ export default function LegalActivationWizard({
       onOpenChange(false);
     } catch (reason) {
       setConcurrency(isConcurrencyConflict(reason));
-      setError(extractApiError(reason));
+      setError(extractApiError(reason, undefined, t));
     } finally {
       setSaving(false);
     }

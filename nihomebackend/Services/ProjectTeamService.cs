@@ -615,6 +615,7 @@ public sealed class ProjectTeamService(
         StartedAt = member.StartedAt,
         EndedAt = member.EndedAt,
         IsActive = !member.EndedAt.HasValue,
+        IsUserActive = member.User.IsActive,
         Source = member.Source,
         SourceReference = member.SourceReference,
         Roles = member.Roles.Where(role => role.EndedAt == null).Select(role => new ProjectMemberRoleResponse

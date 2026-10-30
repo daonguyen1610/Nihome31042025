@@ -3866,6 +3866,7 @@ export interface OperationalProjectMemberResponse {
   startedAt: string;
   endedAt?: string | null;
   isActive: boolean;
+  isUserActive?: boolean;
   source: string;
   sourceReference?: string | null;
   roles: ProjectMemberRoleResponse[];

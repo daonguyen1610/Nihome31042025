@@ -736,10 +736,10 @@ public sealed partial class DepartmentWorkPackageService(
         }
         if (package.Purpose == WorkPackagePurpose.LegalPermitting)
         {
-            await ValidateActiveProjectMemberAsync(package.OperationalProjectId!.Value, request.AssigneeUserId, "Người phụ trách", ct);
+            await ValidateActiveProjectMemberAsync(package.OperationalProjectId!.Value, request.AssigneeUserId, "Người phụ trách", "assigneeUserId", ct);
             if (!request.ApproverUserId.HasValue)
                 throw Error("Đầu việc Pháp lý phải có người duyệt độc lập.");
-            await ValidateActiveProjectMemberAsync(package.OperationalProjectId.Value, request.ApproverUserId.Value, "Người duyệt", ct);
+            await ValidateActiveProjectMemberAsync(package.OperationalProjectId.Value, request.ApproverUserId.Value, "Người duyệt", "approverUserId", ct);
         }
         else
         {
@@ -932,13 +932,15 @@ public sealed partial class DepartmentWorkPackageService(
     }
 
     private async Task ValidateActiveProjectMemberAsync(
-        int projectId, int userId, string field, CancellationToken ct)
+        int projectId, int userId, string field, string fieldKey, CancellationToken ct)
     {
         var now = DateTime.UtcNow;
         if (!await db.OperationalProjectMembers.AsNoTracking().AnyAsync(item =>
-                item.OperationalProjectId == projectId && item.UserId == userId && item.User.IsActive &&
+                item.OperationalProjectId == projectId && item.DesignProjectId == null && item.UserId == userId && item.User.IsActive &&
                 item.StartedAt <= now && (!item.EndedAt.HasValue || item.EndedAt > now), ct))
-            throw Error($"{field} phải là thành viên đang hoạt động của đúng Dự án.");
+            throw new DepartmentWorkPackageOperationException(
+                $"{field} phải là thành viên đang hoạt động trong đội ngũ chung của đúng Dự án. Chọn người trong đội ngũ chung của Dự án.",
+                "LEGAL_MEMBER_INVALID", fieldKey);
     }
 
     private async Task ValidateDepartmentLeadAsync(int userId, int roleGroupId, CancellationToken ct)

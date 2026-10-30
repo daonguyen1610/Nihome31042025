@@ -173,6 +173,9 @@ export function SearchableSelect({
         <Command shouldFilter={shouldFilter}>
           <CommandInput
             ref={searchInput}
+            aria-label={
+              searchPlaceholder ?? (departments.length ? t("people.search") : t("common.search"))
+            }
             placeholder={
               searchPlaceholder ?? (departments.length ? t("people.search") : placeholder)
             }

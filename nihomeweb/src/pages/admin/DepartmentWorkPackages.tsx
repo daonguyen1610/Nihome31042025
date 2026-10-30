@@ -670,7 +670,7 @@ const DepartmentWorkPackages = () => {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("workPackages.error.save")),
+        title: extractApiError(cause, t("workPackages.error.save"), t),
       });
     } finally {
       setSaving(false);

@@ -33,6 +33,58 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Activation_RejectsDesignOnlyAssigneeWithoutCreatingLegalRecords()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        var designOnlyUserId = await AddDesignMembershipsAsync(fixture, duplicateLegalLead: false);
+        var before = await CountsAsync(fixture.ProjectId);
+        var response = await PostActivationAsync(fixture.ContractId,
+            ActivationRequest(fixture with { AssigneeUserId = designOnlyUserId }, includePermit: true), Guid.NewGuid().ToString("N"));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("code").GetString().Should().Be("LEGAL_MEMBER_INVALID");
+        (await CountsAsync(fixture.ProjectId)).Should().Be(before);
+        await WithDbAsync(async db => (await db.Contracts.FindAsync(fixture.ContractId))!.Status.Should().Be(ContractStatus.Signed));
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task LegalTaskUpdate_RejectsDesignOnlyAssigneeOrApproverWithoutWrites(bool changeApprover)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var fixture = await SeedFixtureAsync();
+        (await PostActivationAsync(fixture.ContractId, ActivationRequest(fixture, true), Guid.NewGuid().ToString("N"))).EnsureSuccessStatusCode();
+        var designOnlyUserId = await AddDesignMembershipsAsync(fixture);
+        var task = await WithDbAsync(db => db.DepartmentWorkTasks.AsNoTracking().SingleAsync(item => item.WorkPackage.OperationalProjectId == fixture.ProjectId));
+        var before = await LegalStateAsync(fixture.ProjectId);
+        using var request = new HttpRequestMessage(HttpMethod.Put, $"/api/work-packages/{task.WorkPackageId}/tasks/{task.Id}")
+        {
+            Content = JsonContent.Create(new
+            {
+                task.WbsCode,
+                task.Title,
+                task.Description,
+                task.Resources,
+                task.DepartmentRoleGroupId,
+                task.KpiDefinitionId,
+                assigneeUserId = changeApprover ? task.AssigneeUserId : designOnlyUserId,
+                approverUserId = changeApprover ? designOnlyUserId : task.ApproverUserId,
+                task.PlannedStart,
+                task.PlannedEnd,
+                rowVersion = CrmConcurrency.Encode(task.RowVersion),
+            }),
+        };
+        request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
+        var response = await Client.SendAsync(request);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var error = await ReadJsonAsync(response);
+        error.GetProperty("code").GetString().Should().Be("LEGAL_MEMBER_INVALID");
+        error.GetProperty("field").GetString().Should().Be(changeApprover ? "approverUserId" : "assigneeUserId");
+        (await LegalStateAsync(fixture.ProjectId)).Should().Be(before);
+    }
+
+    [Fact]
     public async Task PreviewIsReadOnly_DirectTransitionIsBlocked_ActivationIsAtomicAndIdempotent()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
@@ -551,7 +603,7 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
         });
     });
 
-    private Task<int> AddDesignMembershipsAsync(LegalFixture fixture) => WithDbAsync(async db =>
+    private Task<int> AddDesignMembershipsAsync(LegalFixture fixture, bool duplicateLegalLead = true) => WithDbAsync(async db =>
     {
         var architect = await db.Users.SingleAsync(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"]);
         var flow = new DesignProject
@@ -564,7 +616,7 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
             Deadline = DateTime.UtcNow.Date.AddMonths(6),
         };
         db.DesignProjects.Add(flow);
-        foreach (var userId in new[] { fixture.LegalLeadUserId, architect.Id })
+        foreach (var userId in duplicateLegalLead ? new[] { fixture.LegalLeadUserId, architect.Id } : new[] { architect.Id })
             db.OperationalProjectMembers.Add(new OperationalProjectMember
             {
                 OperationalProjectId = fixture.ProjectId,

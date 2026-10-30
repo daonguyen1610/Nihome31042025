@@ -6,7 +6,12 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 
-type Person = PersonIdentity & { userId: number; name: string; email?: string };
+type Person = PersonIdentity & {
+  userId: number;
+  name: string;
+  email?: string;
+  selectable?: boolean;
+};
 
 export function PeopleChecklist({
   people,
@@ -21,7 +26,14 @@ export function PeopleChecklist({
   const id = useId();
   const [department, setDepartment] = useState("all");
   const [search, setSearch] = useState("");
-  const options = useMemo(() => people.map((person) => personOption(person, t)), [people, t]);
+  const options = useMemo(
+    () =>
+      people.map((person) => ({
+        ...personOption(person, t),
+        selectable: person.selectable !== false,
+      })),
+    [people, t],
+  );
   const departments = Array.from(
     new Map(options.map((option) => [option.department!.value, option.department!])).values(),
   ).sort((a, b) => a.label.localeCompare(b.label));
@@ -33,14 +45,15 @@ export function PeopleChecklist({
       .toLocaleLowerCase();
   const visible = options.filter(
     (option) =>
+      option.selectable &&
       (department === "all" || option.department?.value === department) &&
       normalize(`${option.label} ${option.hint} ${option.keywords}`).includes(
         normalize(search.trim()),
       ),
   );
   return (
-    <div className="mt-2 space-y-3" data-testid="people-checklist">
-      <div className="grid gap-2 sm:grid-cols-2">
+    <div className="mt-2 min-w-0 space-y-3" data-testid="people-checklist">
+      <div className="grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
         <div className="min-w-0 space-y-1">
           <label htmlFor={`${id}-department`} className="text-xs font-medium text-muted-foreground">
             {t("people.departmentFilter")}
@@ -85,11 +98,14 @@ export function PeopleChecklist({
                 size="sm"
                 variant="secondary"
                 type="button"
-                className="h-auto min-h-11 max-w-full whitespace-normal text-left"
+                className="h-auto min-h-11 min-w-0 max-w-full whitespace-normal text-left"
                 onClick={() => onChange(selected.filter((value) => String(value) !== option.value))}
                 aria-label={`${t("people.deselect")}: ${option.label}`}
               >
-                {option.label} · {option.hint}
+                <span className="min-w-0 flex-1 break-words">
+                  {option.label} · {option.hint}
+                  {!option.selectable && <> · {t("people.inactiveSelected")}</>}
+                </span>
                 <X className="ml-2 h-4 w-4 shrink-0" aria-hidden="true" />
               </Button>
             ))}
@@ -98,7 +114,11 @@ export function PeopleChecklist({
       <div className="max-h-56 overflow-y-auto rounded-md border p-1">
         {visible.length === 0 && (
           <p role="status" className="p-3 text-sm text-muted-foreground">
-            {t("people.noResults")}
+            {t(
+              options.some((option) => option.selectable)
+                ? "people.noResults"
+                : "people.noneEligible",
+            )}
           </p>
         )}
         {visible.map((option) => (

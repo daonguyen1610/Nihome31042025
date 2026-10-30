@@ -1,5 +1,37 @@
 [
   {
+    "key": "people.noneEligible",
+    "category": "common",
+    "vi": "Chưa có nhân sự đang hoạt động phù hợp để chọn.",
+    "en": "No active people are eligible for this selection.",
+    "zh": "暂无可供选择的在职人员。",
+    "ja": "選択できる有効なメンバーはいません。"
+  },
+  {
+    "key": "people.inactiveSelected",
+    "category": "common",
+    "vi": "Không còn hoạt động – chỉ có thể bỏ chọn",
+    "en": "Inactive – remove selection only",
+    "zh": "已停用 – 仅可取消选择",
+    "ja": "無効 – 選択解除のみ可能"
+  },
+  {
+    "key": "people.legalMemberInvalid",
+    "category": "common",
+    "vi": "Người phụ trách và người duyệt Pháp lý phải thuộc đội ngũ chung đang hoạt động của đúng Dự án. Chọn lại người trong đội ngũ chung của Dự án.",
+    "en": "Legal assignees and approvers must be active members of this project's shared team. Select a person from the shared project team.",
+    "zh": "法务负责人和审批人必须是本项目公共团队的在职成员。请从项目公共团队中重新选择。",
+    "ja": "法務担当者と承認者は、このプロジェクトの共通チームの有効なメンバーである必要があります。共通チームから選択し直してください。"
+  },
+  {
+    "key": "people.designMemberInvalid",
+    "category": "common",
+    "vi": "Người chịu trách nhiệm phải thuộc đội thiết kế đang hoạt động của đúng luồng hoặc có vai trò chung toàn Dự án. Chọn lại người chịu trách nhiệm phù hợp.",
+    "en": "The responsible designer must be active in this Design flow or hold a project-wide Design role. Select an eligible designer.",
+    "zh": "责任设计人员必须属于当前设计流程的在职团队，或拥有项目级设计职责。请重新选择符合条件的设计人员。",
+    "ja": "責任設計者は、この設計フローの有効なメンバー、またはプロジェクト全体の設計担当者である必要があります。対象の設計者を選択し直してください。"
+  },
+  {
     "key": "people.select",
     "category": "common",
     "vi": "Chọn người",

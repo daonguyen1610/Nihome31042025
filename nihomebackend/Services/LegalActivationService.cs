@@ -516,7 +516,7 @@ public sealed class LegalActivationService(
     {
         var now = DateTime.UtcNow;
         return await db.OperationalProjectMembers.AsNoTracking()
-            .Where(item => item.OperationalProjectId == projectId && item.User.IsActive &&
+            .Where(item => item.OperationalProjectId == projectId && item.DesignProjectId == null && item.User.IsActive &&
                 item.StartedAt <= now && (!item.EndedAt.HasValue || item.EndedAt > now))
             .Select(item => new LegalProjectMemberOptionResponse
             {

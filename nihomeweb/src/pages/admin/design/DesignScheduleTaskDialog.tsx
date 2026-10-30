@@ -138,7 +138,10 @@ export const DesignScheduleTaskDialog = ({
     [],
   );
   const idempotencyKey = useRef("");
-  const activeMembers = useMemo(() => members.filter((member) => member.isActive), [members]);
+  const activeMembers = useMemo(
+    () => members.filter((member) => member.isActive && member.isUserActive !== false),
+    [members],
+  );
   const availablePredecessors = useMemo(
     () => tasks.filter((item) => item.id !== task?.id),
     [tasks, task],
@@ -313,7 +316,7 @@ export const DesignScheduleTaskDialog = ({
             {t("designProjects.schedule.taskDialog.description")}
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 [&>div]:min-w-0">
           <div>
             <Label>{t("designProjects.schedule.field.phase")}</Label>
             <Select
@@ -645,7 +648,7 @@ export const DesignScheduleTaskDialog = ({
             />
             {t("designProjects.schedule.field.critical")}
           </label>
-          <fieldset className="space-y-2 sm:col-span-2">
+          <fieldset className="min-w-0 space-y-2 sm:col-span-2">
             <legend className="text-sm font-medium text-slate-800">
               {t("designProjects.schedule.field.predecessors")}
             </legend>
@@ -673,12 +676,12 @@ export const DesignScheduleTaskDialog = ({
               </p>
             )}
           </fieldset>
-          <fieldset className="space-y-2 sm:col-span-2">
+          <fieldset className="min-w-0 space-y-2 sm:col-span-2">
             <legend className="text-sm font-medium text-slate-800">
               {t("designProjects.schedule.field.cc")}
             </legend>
             <PeopleChecklist
-              people={activeMembers
+              people={members
                 .filter(
                   (member) =>
                     member.id !== form.assigneeMemberId && member.id !== form.approverMemberId,
@@ -689,6 +692,7 @@ export const DesignScheduleTaskDialog = ({
                   name: member.userName,
                   roleName: projectMemberRole(member, t),
                   roleLabelKey: null,
+                  selectable: member.isActive && member.isUserActive !== false,
                 }))}
               selected={form.ccMemberIds}
               onChange={(ccMemberIds) => setForm((current) => ({ ...current, ccMemberIds }))}

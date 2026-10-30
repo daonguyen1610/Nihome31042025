@@ -19,4 +19,8 @@ public interface IPunchItemService
     Task<PunchItemBulkDeleteResponse> BulkDeleteAsync(IReadOnlyList<int> ids, CancellationToken ct = default);
 }
 
-public class PunchItemOperationException(string message) : Exception(message);
+public class PunchItemOperationException(string message, string? code = null, string? field = null) : Exception(message)
+{
+    public string? Code { get; } = code;
+    public string? Field { get; } = field;
+}
