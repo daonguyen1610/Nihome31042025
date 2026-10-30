@@ -302,8 +302,10 @@ governed project lifecycle.
 The detail view's **Project documents** section provides the project-wide file
 catalog. Users with view permission can inspect synchronization status,
 download private content, and open an available Drive copy. Users with manage
-permission can upload files up to 100 MiB into a category supplied by the
-server, retry an eligible synchronization, classify an unknown Drive import,
+permission can select up to 20 files per batch, each up to 100 MiB, for one
+category supplied by the server. Successful files enter the Drive sync queue;
+failed files remain selected for retry. Users can retry an eligible
+synchronization, classify an unknown Drive import,
 confirm **Keep both** for concurrent changes, and delete manual uploads or
 Drive imports. Files owned by Quote, Contract, Survey, Design, Permit,
 Acceptance, As-Built, or Handover records must be replaced or deleted in that

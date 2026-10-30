@@ -160,7 +160,13 @@ test("project manager operates the responsive Drive document catalog", async ({
           });
           return;
         }
-        documents.push(documentResponse({ id: 13, originalFileName: "new-plan.pdf" }));
+        documents.push(
+          documentResponse({
+            id: uploadIdempotencyKeys.length === 2 ? 13 : 15,
+            originalFileName:
+              uploadIdempotencyKeys.length === 2 ? "new-plan-2.pdf" : "new-plan.pdf",
+          }),
+        );
         await route.fulfill({
           status: 201,
           contentType: "application/json",
@@ -258,11 +264,18 @@ test("project manager operates the responsive Drive document catalog", async ({
   expect(deleteRequested).toBe(true);
   expect(documents.some((document) => document.id === 14)).toBe(true);
 
-  await page.locator("#project-document-file").setInputFiles({
-    name: "new-plan.pdf",
-    mimeType: "application/pdf",
-    buffer: Buffer.from("%PDF-1.4 NIH-456"),
-  });
+  await page.locator("#project-document-file").setInputFiles([
+    {
+      name: "new-plan.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4 NIH-456"),
+    },
+    {
+      name: "new-plan-2.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.from("%PDF-1.4 NIH-457"),
+    },
+  ]);
   await page.locator("#project-document-category").click();
   await page
     .getByRole("option", { name: /Thiết kế cơ sở|Basic design|基础设计|基本設計/i })
@@ -271,11 +284,28 @@ test("project manager operates the responsive Drive document catalog", async ({
     name: /^(Tải lên|Upload|上传|アップロード)$/i,
   });
   await uploadButton.click();
-  await expect.poll(() => uploadIdempotencyKeys.length).toBe(1);
+  await expect.poll(() => uploadIdempotencyKeys.length).toBe(2);
+  await expect(section.locator("article").filter({ hasText: "new-plan-2.pdf" })).toBeVisible();
+  await expect(section.getByText(/new-plan\.pdf/).first()).toBeVisible();
   await uploadButton.click();
   await expect(section.locator("article").filter({ hasText: "new-plan.pdf" })).toBeVisible();
-  expect(uploadIdempotencyKeys).toHaveLength(2);
+  expect(uploadIdempotencyKeys).toHaveLength(3);
   expect(uploadIdempotencyKeys[0]).not.toBe("");
-  expect(uploadIdempotencyKeys[1]).toBe(uploadIdempotencyKeys[0]);
+  expect(uploadIdempotencyKeys[1]).not.toBe(uploadIdempotencyKeys[0]);
+  expect(uploadIdempotencyKeys[2]).toBe(uploadIdempotencyKeys[0]);
   expect(documents.filter((document) => document.id === 13)).toHaveLength(1);
+  expect(documents.filter((document) => document.id === 15)).toHaveLength(1);
+
+  await page.locator("#project-document-file").setInputFiles(
+    Array.from({ length: 21 }, (_, index) => ({
+      name: `extra-plan-${index + 1}.pdf`,
+      mimeType: "application/pdf",
+      buffer: Buffer.from(`%PDF-1.4 NIH-${index + 1}`),
+    })),
+  );
+  await expect(
+    page.getByText("Mỗi lần chỉ được chọn tối đa 20 tệp dự án.", { exact: true }),
+  ).toBeVisible();
+  await expect(page.locator("#project-document-file")).toHaveValue("");
+  expect(uploadIdempotencyKeys).toHaveLength(3);
 });
