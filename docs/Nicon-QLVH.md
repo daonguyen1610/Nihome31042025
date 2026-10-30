@@ -80,8 +80,10 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 
 - Kinh doanh phụ trách Cơ hội hoặc PM của Operational Project tạo một nhóm công
   việc cho phòng nhận; quản trị viên có quyền ngoại lệ. Nhóm theo Dự án luôn giữ
-  `OperationalProjectId`; `ContractId` chỉ là liên kết tùy chọn và không làm đổi
-  gốc dữ liệu khi ký hợp đồng.
+  `OperationalProjectId`. Nhóm chưa gắn `ContractId` thuộc loại hiển thị
+  **Dự án**; nhóm đã gắn hợp đồng cùng Dự án thuộc loại **Hợp đồng**. Dữ liệu
+  hiện có được phân loại theo `ContractId` (xác nhận người dùng 31/10/2026),
+  không làm đổi gốc dữ liệu.
 - Theo xác nhận của chủ sản phẩm ngày 29/10/2026, nhóm việc Dự án mục đích
   `General` có thể giao cho mọi phòng ban đang hoạt động. Design và Construction
   vẫn vận hành hồ sơ chuyên môn trên aggregate hiện có; nhóm việc dùng chung
@@ -103,9 +105,9 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Xóa Dự án xóa các nhóm việc thuộc Dự án theo deletion-impact. Xóa Hợp đồng
   hoặc Cơ hội chỉ gỡ liên kết tùy chọn và giữ nguyên nhóm việc dưới Dự án.
 
-Các quy tắc giữ nhóm ở Dự án khi có hợp đồng, người được quyền khởi tạo giao
-việc liên phòng và việc duyệt/KPI của công việc nội bộ là hành vi triển khai hiện
-tại, chưa phải quyết định đã được NICON chốt (Q-01 đến Q-03).
+Quy tắc phân loại theo Hợp đồng đã được xác nhận; quyền khởi tạo giao việc liên
+phòng và việc duyệt/KPI của công việc nội bộ vẫn là hành vi triển khai hiện tại,
+chưa phải quyết định đã được NICON chốt (Q-02, Q-03).
 
 ### 2.2.2. Liên phòng ban ở giai đoạn trước hợp đồng — Implemented
 

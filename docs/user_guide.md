@@ -313,16 +313,19 @@ source screen; the generic catalog does not bypass the business record.
 
 #### 3.0.1 Department work packages
 
-Open **CRM → Work packages**. Use **Project / contract work** for work attached
-to the shared Operational Project, or **Internal work** for activities such as
-company training that have no customer, project, or contract.
+Open **CRM → Work packages**. Use **Project work** before a contract is linked,
+**Contract work** for packages linked to a contract of the shared Operational
+Project, or **Internal work** for activities such as company training that have
+no customer, project, or contract. Existing packages appear in Project or
+Contract work according to their current `ContractId`.
 
 For project work, the Opportunity owner or Project PM selects the shared
-project, optional contract, any active receiving department, department lead,
+project, any active receiving department, department lead,
 and planned dates. Design and Construction specialist records stay in their
 specialist screens; a general package can coordinate work for those departments.
 The Project and Opportunity screens also provide **Assign department work** shortcuts.
-Adding a contract later does not create or move the Project.
+Contract work also requires a contract from that project. Linking a contract
+later moves the package to the Contract tab without creating or moving the Project.
 On the package detail page, **Edit** changes the name, description and planned
 dates. General Project packages may also change the optional same-project
 contract. The shared Project and receiving department stay fixed.
