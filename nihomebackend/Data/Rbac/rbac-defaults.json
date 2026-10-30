@@ -325,6 +325,7 @@
     { "code": "LEGAL_OFFICER", "name": "Legal Officer", "groupCode": "CONSTRUCTION" },
     { "code": "QS", "name": "Quantity Surveyor", "groupCode": "CONSTRUCTION" },
     { "code": "PROCUREMENT", "name": "Procurement", "groupCode": "PROCUREMENT" },
+    { "code": "PROCUREMENT_MANAGER", "name": "Head of Procurement", "groupCode": "PROCUREMENT" },
     { "code": "ACCOUNTANT", "name": "Accountant", "groupCode": "FINANCE" },
     { "code": "HR", "name": "Human Resources", "groupCode": "HR" },
     { "code": "WAREHOUSE", "name": "Warehouse", "groupCode": "PROCUREMENT" },
@@ -661,6 +662,21 @@
         "proc.material-alerts.*",
         "proc.vendor-ratings.view", "proc.vendor-ratings.manage",
         "profile.me.*"
+      ]
+    },
+    "PROCUREMENT_MANAGER": {
+      "patterns": [
+        "dashboard.view", "master-data.view", "workflow.view",
+        "operations.projects.view", "work.packages.view",
+        "work.packages.manage", "work.packages.assign",
+        "work.packages.progress", "work.packages.verify",
+        "crm.quotes.view", "crm.quotes.view.all", "crm.quotes.approve",
+        "proc.vendors.*", "proc.boq.view", "proc.boq.manage",
+        "proc.rfqs.view", "proc.rfqs.manage", "proc.rfqs.export",
+        "proc.material-requests.*", "proc.contract-lines.*",
+        "proc.resource-requests.*", "proc.warehouse.view",
+        "proc.material-alerts.*", "proc.vendor-ratings.view",
+        "proc.vendor-ratings.manage", "profile.me.*"
       ]
     },
     "ACCOUNTANT": {

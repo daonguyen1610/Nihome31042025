@@ -1590,6 +1590,12 @@ const AdminQuoteDetail = () => {
                   <p>
                     <strong>{t("quotes.approval.to")}:</strong> {approvalPreview.toEmail}
                   </p>
+                  <p className="break-words">
+                    <strong>{t("quotes.approval.cc")}:</strong>{" "}
+                    {approvalPreview.ccEmails.length
+                      ? approvalPreview.ccEmails.join(", ")
+                      : t("quotes.approval.noCc")}
+                  </p>
                   <p>
                     <strong>{t("quotes.email.subject")}:</strong> {approvalPreview.subject}
                   </p>

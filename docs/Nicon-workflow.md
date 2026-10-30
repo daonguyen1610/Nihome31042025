@@ -97,14 +97,18 @@ Kinh doanh (người phụ trách Cơ hội) hoặc PM Dự án
   → gửi duyệt báo giá đầu ra khi đã có nội dung và tổng giá trị hợp lệ
 ```
 
-Khi gửi duyệt Báo giá đầu ra, Kinh doanh chọn đúng một người đang hoạt động có
-quyền xem và duyệt Báo giá, khác người gửi. Người gửi xem trước email đã điền
-dữ liệu rồi xác nhận; hệ thống chuyển Báo giá sang `PendingApproval` và xếp
-email vào hàng gửi trong cùng lần lưu. Chỉ người được chọn có thể duyệt hoặc
-từ chối trên hệ thống. Quy trình duyệt nội bộ có một bước; email là thông báo,
-không tự phê duyệt. Màn hình Báo giá hiển thị người duyệt và kết quả gửi email;
-nếu kết quả chưa xác định, người dùng liên hệ quản trị viên kiểm tra trước khi
-gửi lại. Quy tắc này được người dùng chốt ngày 29/10/2026.
+Khi gửi duyệt Báo giá đầu ra, Kinh doanh chọn đúng một Trưởng phòng Cung ứng
+đang hoạt động, có quyền xem và duyệt Báo giá, khác người gửi. Người gửi xem
+trước email đã điền dữ liệu, gồm To và CC, rồi xác nhận; hệ thống chuyển Báo giá
+sang `PendingApproval` và xếp email vào hàng gửi trong cùng lần lưu. CC gồm
+thành viên đang hoạt động của Dự án vận hành gắn Báo giá mà tại thời điểm gửi
+vẫn có quyền xem chính Báo giá đó; không gửi giá trị báo giá cho thành viên
+thiếu quyền. Chỉ Trưởng phòng Cung ứng được chọn có thể duyệt hoặc từ chối
+trên hệ thống. Quy trình duyệt nội bộ có một bước; email là thông báo, không
+tự phê duyệt. Màn hình Báo giá hiển thị người duyệt và kết quả gửi email; nếu
+kết quả chưa xác định, người dùng liên hệ quản trị viên kiểm tra trước khi gửi
+lại. Quy tắc người duyệt được chốt ngày 29/10/2026 và đổi theo ghi chú
+30/10/2026, với xác nhận bổ sung ngày 31/10/2026 về role và phạm vi CC.
 
 Chỉ sửa được chào giá ở `Draft`/`Rejected`; chào giá đã bị báo giá tham chiếu thì
 khoá lại. Báo giá lưu bản chụp giá đầu vào tại thời điểm gắn. Giá hết hiệu lực,
@@ -124,6 +128,8 @@ Kinh doanh gửi báo giá (đã duyệt nội bộ)
   → Tài chính lập hồ sơ rà soát điều kiện hợp đồng / bảo lãnh / điều khoản thanh toán
   → Tài chính gửi duyệt, người duyệt độc lập phê duyệt
   → Kinh doanh gửi báo giá cho khách hàng
+  → trước khi ký Hợp đồng Upstream gắn Báo giá nguồn, dùng lại hồ sơ Tài chính
+    đã duyệt cho đúng phiên bản Báo giá; không lập hồ sơ hợp đồng riêng
 
 Kinh doanh chuẩn bị hồ sơ dự thầu (gói thầu đã gắn Dự án vận hành)
   → lập Kế hoạch đấu thầu (`TenderPlanning`) theo từng phòng: người phụ trách, người duyệt độc lập,

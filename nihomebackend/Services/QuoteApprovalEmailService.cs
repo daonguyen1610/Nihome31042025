@@ -29,42 +29,31 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
     public async Task<IReadOnlyList<QuoteApprovalCandidateResponse>> CandidatesAsync(int callerId, CancellationToken ct)
     {
         var users = await db.Users.AsNoTracking().Where(u => u.IsActive && u.Id != callerId)
-            .Select(u => new { u.Id, u.FullName, u.Email, u.Role, u.RoleEntityId }).ToListAsync(ct);
-        var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive)
+            .Select(u => new { u.Id, u.FullName, u.Email, u.RoleEntityId }).ToListAsync(ct);
+        var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive && r.Code == "PROCUREMENT_MANAGER")
             .Select(r => new
             {
                 r.Id,
                 r.Code,
                 r.Name,
                 r.LabelKey,
-                r.IsSystem,
                 DepartmentId = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroupId : null,
                 DepartmentLabelKey = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroup.LabelKey : null
             }).ToListAsync(ct);
-        var permissionsByRole = (await db.RolePermissions.AsNoTracking()
-            .Where(rp => rp.Permission.IsActive && rp.Permission.Module == "crm.quotes" &&
-                (rp.Permission.Action == "approve" || rp.Permission.Action == "view"))
-            .Select(rp => new { rp.RoleId, rp.Permission.Action }).ToListAsync(ct))
-            .GroupBy(item => item.RoleId).ToDictionary(group => group.Key,
-                group => group.Select(item => item.Action).ToHashSet(StringComparer.OrdinalIgnoreCase));
-        bool HasApproverAccess(int roleId) => permissionsByRole.TryGetValue(roleId, out var actions) &&
-            actions.IsSupersetOf(["approve", "view"]);
         var roleById = roles.ToDictionary(r => r.Id);
-        var systemRoleByCode = roles.Where(r => r.IsSystem).ToDictionary(r => r.Code, StringComparer.OrdinalIgnoreCase);
-        return users.Where(u => ContactValidation.IsValidEmail(u.Email) &&
-                (u.RoleEntityId is int roleId
-                    ? roleById.ContainsKey(roleId) && HasApproverAccess(roleId)
-                    : systemRoleByCode.TryGetValue(UserRoleCodeMapper.ToCode(u.Role), out var role) && HasApproverAccess(role.Id)))
-            .Select(u =>
-            {
-                var role = u.RoleEntityId is int roleId ? roleById[roleId] : systemRoleByCode[UserRoleCodeMapper.ToCode(u.Role)];
-                return new QuoteApprovalCandidateResponse(u.Id, u.FullName ?? u.Email, u.Email,
-                    role.Code, role.Name, role.LabelKey, role.DepartmentId, role.DepartmentLabelKey);
-            })
-            .OrderBy(u => u.Name).ToList();
+        var candidates = new List<QuoteApprovalCandidateResponse>();
+        foreach (var user in users.Where(user => ContactValidation.IsValidEmail(user.Email) &&
+            user.RoleEntityId is int roleId && roleById.ContainsKey(roleId)))
+        {
+            if (!await HasQuoteApproverAccessAsync(user.Id, ct)) continue;
+            var role = roleById[user.RoleEntityId!.Value];
+            candidates.Add(new QuoteApprovalCandidateResponse(user.Id, user.FullName ?? user.Email,
+                user.Email, role.Code, role.Name, role.LabelKey, role.DepartmentId, role.DepartmentLabelKey));
+        }
+        return candidates.OrderBy(user => user.Name).ToList();
     }
 
-    private async Task<(Quote Quote, ApplicationUser Approver, QuoteApprovalTemplate Message, string Hash)> RenderAsync(
+    private async Task<(Quote Quote, ApplicationUser Approver, string[] CcEmails, QuoteApprovalTemplate Message, string Hash)> RenderAsync(
         int quoteId, int approverId, string? rowVersion, int callerId, bool canSeeAll, CancellationToken ct)
     {
         var quote = await db.Quotes.Include(q => q.Opportunity).SingleOrDefaultAsync(q => q.Id == quoteId, ct);
@@ -77,9 +66,12 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         var approver = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == approverId, ct);
         if (approver is null || !approver.IsActive || approver.Id == callerId ||
             !ContactValidation.IsValidEmail(approver.Email) ||
-            !await permissions.HasAsync(approverId, "crm.quotes.approve", ct) ||
-            !await permissions.HasAsync(approverId, "crm.quotes.view", ct))
-            throw new QuoteOperationException("Chọn người duyệt khác người gửi, đang hoạt động, có quyền xem và duyệt báo giá cùng email hợp lệ (ví dụ: ten@nicon.vn).");
+            !await IsProcurementManagerAsync(approver.Id, ct) ||
+            !await HasQuoteApproverAccessAsync(approverId, ct))
+            throw new QuoteOperationException("Chọn Trưởng phòng Cung ứng khác người gửi, đang hoạt động, có quyền xem và duyệt báo giá cùng email hợp lệ (ví dụ: ten@nicon.vn).");
+        var ccEmails = await GetCcEmailsAsync(quote, approver.Id, ct);
+        if (JsonSerializer.Serialize(ccEmails).Length > 20000)
+            throw new QuoteOperationException("Danh sách CC của đội ngũ quá dài. Hãy cập nhật đội ngũ dự án trước khi gửi duyệt.");
         var sender = await db.Users.AsNoTracking().SingleAsync(u => u.Id == callerId, ct);
         var origin = GetPublicOrigin();
         var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -112,11 +104,12 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             quote.ValidUntil,
             ApproverId = approver.Id,
             approver.Email,
+            ccEmails,
             callerId,
             message.Subject,
             message.Body
         }));
-        return (quote, approver, message, hash);
+        return (quote, approver, ccEmails, message, hash);
     }
 
     public async Task<QuoteApprovalPreviewResponse> PreviewAsync(int quoteId, int approverId,
@@ -126,7 +119,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         var token = protector.Protect(JsonSerializer.Serialize(
             new Preview(callerId, approverId, rendered.Hash, DateTime.UtcNow.AddMinutes(15))));
         return new(token, approverId, rendered.Approver.FullName ?? rendered.Approver.Email,
-            rendered.Approver.Email, rendered.Message.Subject, rendered.Message.Body);
+            rendered.Approver.Email, rendered.CcEmails, rendered.Message.Subject, rendered.Message.Body);
     }
 
     public async Task QueueAsync(int quoteId, int approverId, string? rowVersion, string? previewToken,
@@ -146,6 +139,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             QuoteId = quoteId,
             ApproverUserId = approverId,
             ToEmail = rendered.Approver.Email.Trim(),
+            CcEmailsJson = JsonSerializer.Serialize(rendered.CcEmails),
             Subject = rendered.Message.Subject,
             Body = rendered.Message.Body,
         });
@@ -166,13 +160,19 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
                 await db.Entry(message).ReloadAsync(ct);
                 if (message.Status != "Pending") continue;
                 var approver = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == message.ApproverUserId, ct);
+                var currentCc = await GetCcEmailsAsync(message.Quote, message.ApproverUserId, ct);
+                string[] queuedCc;
+                var validCc = true;
+                try { queuedCc = JsonSerializer.Deserialize<string[]>(message.CcEmailsJson) ?? []; }
+                catch (JsonException) { queuedCc = []; validCc = false; }
                 message.Status = message.Quote.Status == QuoteStatus.PendingApproval &&
                     message.Quote.ApprovalApproverUserId == message.ApproverUserId &&
                     message.Quote.SubmittedByUserId != message.ApproverUserId &&
                     approver is { IsActive: true } && approver.Email.Trim() == message.ToEmail &&
                     ContactValidation.IsValidEmail(approver.Email) &&
-                    await permissions.HasAsync(message.ApproverUserId, "crm.quotes.view", ct) &&
-                    await permissions.HasAsync(message.ApproverUserId, "crm.quotes.approve", ct)
+                    await IsProcurementManagerAsync(message.ApproverUserId, ct) &&
+                    await HasQuoteApproverAccessAsync(message.ApproverUserId, ct) &&
+                    validCc && queuedCc.SequenceEqual(currentCc, StringComparer.OrdinalIgnoreCase)
                     ? "Sending" : "NeedsReview";
                 message.AttemptedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(ct);
@@ -181,7 +181,8 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             if (message.Status != "Sending") continue;
             try
             {
-                await email.SendEmailAsync(message.ToEmail, message.Subject, message.Body);
+                var ccEmails = JsonSerializer.Deserialize<string[]>(message.CcEmailsJson) ?? [];
+                await email.SendEmailWithCcAsync(message.ToEmail, ccEmails, message.Subject, message.Body, ct);
                 message.Status = "Sent";
                 message.SentAt = DateTime.UtcNow;
             }
@@ -192,6 +193,36 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             }
             await db.SaveChangesAsync(ct);
         }
+    }
+
+    private Task<bool> IsProcurementManagerAsync(int userId, CancellationToken ct) =>
+        db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.IsActive &&
+            user.RoleEntity != null && user.RoleEntity.IsActive &&
+            user.RoleEntity.Code == "PROCUREMENT_MANAGER", ct);
+
+    private async Task<bool> HasQuoteApproverAccessAsync(int userId, CancellationToken ct) =>
+        await permissions.HasAsync(userId, "crm.quotes.view", ct) &&
+        await permissions.HasAsync(userId, "crm.quotes.approve", ct);
+
+    private async Task<string[]> GetCcEmailsAsync(Quote quote, int approverId, CancellationToken ct)
+    {
+        if (!quote.OperationalProjectId.HasValue) return [];
+        var members = await db.OperationalProjectMembers.AsNoTracking()
+            .Where(member => member.OperationalProjectId == quote.OperationalProjectId &&
+                member.EndedAt == null && member.User.IsActive && member.UserId != approverId)
+            .Select(member => new { member.UserId, member.User.Email })
+            .Distinct().ToListAsync(ct);
+        var result = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var member in members)
+        {
+            if (!ContactValidation.IsValidEmail(member.Email) ||
+                !await permissions.HasAsync(member.UserId, "crm.quotes.view", ct) ||
+                (member.UserId != quote.OwnerUserId &&
+                 !await permissions.HasAsync(member.UserId, "crm.quotes.view.all", ct)))
+                continue;
+            result.Add(member.Email.Trim());
+        }
+        return result.OrderBy(address => address, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
     private string GetPublicOrigin()

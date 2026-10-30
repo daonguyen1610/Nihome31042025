@@ -113,6 +113,53 @@ public sealed class LegacyProjectTeamSyncServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task SyncDesignProjectRolesAsync_FormChange_ReplacesManualDesignLeader()
+    {
+        var original = AddUser("0900200011", "Original design lead");
+        var replacement = AddUser("0900200012", "Replacement design lead");
+        var design = new DesignProject
+        {
+            OperationalProjectId = _projectId,
+            CustomerId = (await _db.OperationalProjects.FindAsync(_projectId))!.CustomerId,
+            ProjectCode = "DP-DUAL-WRITE",
+            Name = "NICON – Thiết kế nhà xưởng",
+        };
+        _db.DesignProjects.Add(design);
+        await _db.SaveChangesAsync();
+        var manual = new OperationalProjectMember
+        {
+            OperationalProjectId = _projectId,
+            DesignProjectId = design.Id,
+            UserId = original.Id,
+            Position = "Chủ trì thiết kế",
+            StartedAt = DateTime.UtcNow,
+            CreatedByUserId = _actorUserId,
+            UpdatedByUserId = _actorUserId,
+            Roles = [new OperationalProjectMemberRole
+            {
+                RoleCode = ProjectTeamRoleCode.DesignLead,
+                Scope = ProjectRoleScope.Module,
+                ScopeValue = "Design",
+                Source = LegacyProjectTeamSyncService.ManualSource,
+                StartedAt = DateTime.UtcNow,
+            }],
+        };
+        _db.OperationalProjectMembers.Add(manual);
+        await _db.SaveChangesAsync();
+
+        await _sut.SyncDesignProjectRolesAsync(_projectId, null, replacement.Id, _actorUserId,
+            designProjectId: design.Id);
+        await _db.SaveChangesAsync();
+
+        var members = await _db.OperationalProjectMembers.Include(item => item.Roles)
+            .Where(item => item.DesignProjectId == design.Id).ToListAsync();
+        Assert.DoesNotContain(members.Single(item => item.UserId == original.Id).Roles,
+            role => role.RoleCode == ProjectTeamRoleCode.DesignLead && role.EndedAt == null);
+        Assert.Contains(members.Single(item => item.UserId == replacement.Id).Roles,
+            role => role.RoleCode == ProjectTeamRoleCode.DesignLead && role.EndedAt == null);
+    }
+
+    [Fact]
     public async Task SyncDesignProjectRolesAsync_RemovingDerivedRole_PreservesOtherSource()
     {
         var user = AddUser("0900200007", "Multi-source member");

@@ -1261,16 +1261,19 @@ Quote email bodies must use valid safe HTML. The send dialog previews the
 rendered message in an isolated iframe, and the submitted body is validated
 before SMTP delivery.
 
-Internal quote approval (user decision, 29 October 2026) is one step with one
-selected approver. `GET /api/quotes/{id}/approval-candidates` returns active
-users other than the caller with `crm.quotes.approve`, `view` and a
-valid email. `POST /api/quotes/{id}/approval-email-preview` accepts
+Internal quote approval is one step with one selected Head of Procurement
+(`PROCUREMENT_MANAGER`; updated per the 30 October 2026 note and 31 October
+confirmation). `GET /api/quotes/{id}/approval-candidates` returns active
+users with that role, `crm.quotes.approve`, `crm.quotes.view`, a valid email,
+and a different identity from the caller. `POST /api/quotes/{id}/approval-email-preview` accepts
 `approverUserId` and current `rowVersion`; it returns To, rendered subject/HTML
-and a protected 15-minute `previewToken`. `POST /api/quotes/{id}/submit`
+and eligible CC addresses plus a protected 15-minute `previewToken`.
+CC includes active members of the quote's operational project only when they
+can view that quote (owner or `crm.quotes.view.all`). `POST /api/quotes/{id}/submit`
 requires the same approver, row version and token. The server rerenders and
-checks the quote, recipient, template and token before changing Draft to
+checks the quote, recipient, CC list, template and token before changing Draft to
 PendingApproval and queuing a `quote_approval_emails` row in one save. Only
-that approver, and never the submitter, may call `approve` or
+that Procurement Manager, and never the submitter, may call `approve` or
 `reject-internal`. The worker sends pending snapshots through `IEmailService`
 and records `Sent` or `NeedsReview`; the quote response exposes the approver
 and latest delivery state. A failed/uncertain send is not called successful.
@@ -2077,6 +2080,10 @@ Server-side gates that consume these records:
   and `GET /api/work-packages/{id}`, expose nullable `reviewedQuoteVersion`.
   The quotation screen filters packages by `sourceQuoteId` and uses that value
   to open a reusable review or offer a new request for a changed quotation.
+- `ContractService` reuses the same approved review of the source quote and
+  its current version before an Upstream contract with that quote can become
+  signed. This gate covers signed creation, update, status transition and
+  attaching a source quote to an already signed contract.
 - `QuoteService` resolves `inputPriceOfferId` only when the offer is `Approved`,
   still valid, and belongs to a `ProcurementInputPricing` package of the quote's
   project; the quote stores `InputPriceSnapshotJson` at link time.
@@ -2124,6 +2131,13 @@ flows abort the backfill. Rehearse against a restored backup before deployment;
 take a fresh backup before applying. Down refuses scoped members or conflicting
 task codes, so rollback after use needs an explicit reconciliation or a backup
 restore rather than merging teams automatically.
+
+Design Team member writes and Design Project form writes synchronize the two
+legacy leadership fields (`ProjectManagerUserId` for Design Manager and
+`DesignLeadUserId`) with the flow-scoped Team roles. Team writes reject a second
+active holder of either role and serialize leadership changes per flow. Form
+changes end superseded Design leadership roles while preserving other roles and
+role history. The Operational Project Manager remains a separate root role.
 
 Personnel-option DTOs carry organizational role code/name/translation key and
 department ID/translation key from the same authorized query. The shared

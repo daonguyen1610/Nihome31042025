@@ -1,4 +1,5 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
+import { randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
 import { createApprovedInvestmentRate, retireInvestmentRate } from "../fixtures/materialRate";
 import { submitAndApproveQuote } from "../fixtures/quoteApproval";
@@ -23,7 +24,7 @@ function authed(api: APIRequestContext, token: string) {
 
 test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () => {
   test("complete sales cycle from lead to signed contract", async ({ api, loginAs }) => {
-    test.setTimeout(60_000);
+    test.setTimeout(90_000);
 
     const token = await loginAs(TEST_USERS.salesManager);
     const c = authed(api, token);
@@ -164,7 +165,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       const approvedQuote = await submitAndApproveQuote(
         api,
         { Authorization: `Bearer ${token}` },
-        { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+        { Authorization: `Bearer ${await loginAs(TEST_USERS.procurementManager)}` },
         quoteId,
         quote.rowVersion,
       );
@@ -172,6 +173,78 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
       // ====== STEP 8: Approve Quote ======
       console.log("Step 8: Approved by selected approver.");
       expect(approvedQuote.status).toBe("Approved");
+
+      // The same approved Finance dossier gates customer delivery and signing
+      // the Upstream contract that uses this quote.
+      const optionsResponse = await c.get("/api/work-packages/options");
+      expect(optionsResponse.status(), await optionsResponse.text()).toBe(200);
+      const options = (await optionsResponse.json()) as {
+        departments: { id: number; code: string }[];
+        users: { userId: number; roleGroupId: number; canLead: boolean }[];
+      };
+      const financeGroup = options.departments.find((group) => group.code === "FINANCE")!;
+      const accountant = options.users.find(
+        (user) => user.roleGroupId === financeGroup.id && user.canLead,
+      )!;
+      const packageResponse = await api.post("/api/work-packages", {
+        headers: { Authorization: `Bearer ${token}`, "Idempotency-Key": randomUUID() },
+        data: {
+          kind: "Project",
+          purpose: "FinanceCommercialReview",
+          name: `Rà soát tài chính ${quote.code}`,
+          operationalProjectId,
+          sourceOpportunityId: opportunityId,
+          sourceQuoteId: quoteId,
+          departmentRoleGroupId: financeGroup.id,
+          leadUserId: accountant.userId,
+        },
+      });
+      expect(packageResponse.status(), await packageResponse.text()).toBe(201);
+      const financePackageId = ((await packageResponse.json()) as { id: number }).id;
+      const authorHeaders = {
+        Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}`,
+        "Idempotency-Key": randomUUID(),
+      };
+      const reviewResponse = await api.put(
+        `/api/work-packages/${financePackageId}/finance-review`,
+        {
+          headers: authorHeaders,
+          data: {
+            contractConditionsReviewed: true,
+            paymentTermsReviewed: true,
+            guaranteesReviewed: true,
+            findings: "Điều khoản thanh toán theo tiến độ đã được rà soát.",
+          },
+        },
+      );
+      expect(reviewResponse.status(), await reviewResponse.text()).toBe(200);
+      const review = (await reviewResponse.json()) as { rowVersion: string };
+      const previewResponse = await api.post(
+        `/api/work-packages/${financePackageId}/finance-review/approval-email-preview`,
+        { headers: authorHeaders },
+      );
+      expect(previewResponse.status(), await previewResponse.text()).toBe(200);
+      const preview = (await previewResponse.json()) as { previewToken: string };
+      const submitResponse = await api.post(
+        `/api/work-packages/${financePackageId}/finance-review/submit`,
+        {
+          headers: { ...authorHeaders, "Idempotency-Key": randomUUID() },
+          data: { rowVersion: review.rowVersion, previewToken: preview.previewToken },
+        },
+      );
+      expect(submitResponse.status(), await submitResponse.text()).toBe(200);
+      const submittedReview = (await submitResponse.json()) as { rowVersion: string };
+      const decisionResponse = await api.post(
+        `/api/work-packages/${financePackageId}/finance-review/decision`,
+        {
+          headers: {
+            Authorization: `Bearer ${await loginAs(TEST_USERS.accountant)}`,
+            "Idempotency-Key": randomUUID(),
+          },
+          data: { approved: true, rowVersion: submittedReview.rowVersion },
+        },
+      );
+      expect(decisionResponse.status(), await decisionResponse.text()).toBe(200);
 
       // ====== STEP 9: Move Opportunity to Negotiation ======
       console.log("Step 9: Moving opportunity to Negotiation...");

@@ -509,8 +509,10 @@ public class QuoteService(
             }, ct, requireOpenOpportunity: true);
     }
 
-    public Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default) =>
-        TransitionAsync(id, caller, canSeeAll: true,
+    public async Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default)
+    {
+        await EnsureProcurementManagerAsync(caller, ct);
+        return await TransitionAsync(id, caller, canSeeAll: true,
             allowedFrom: [QuoteStatus.PendingApproval],
             to: QuoteStatus.Approved,
             action: QuoteWorkflowAction.Approve,
@@ -525,9 +527,12 @@ public class QuoteService(
                 q.ApprovedByUserId = caller;
             },
             ct: ct);
+    }
 
-    public Task<QuoteResponse?> RejectInternalAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default) =>
-        TransitionAsync(id, caller, canSeeAll: true,
+    public async Task<QuoteResponse?> RejectInternalAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default)
+    {
+        await EnsureProcurementManagerAsync(caller, ct);
+        return await TransitionAsync(id, caller, canSeeAll: true,
             allowedFrom: [QuoteStatus.PendingApproval],
             to: QuoteStatus.Draft,
             action: QuoteWorkflowAction.RejectInternal,
@@ -542,6 +547,15 @@ public class QuoteService(
                 q.SubmittedByUserId = null;
                 q.ApprovalApproverUserId = null;
             }, ct);
+    }
+
+    private async Task EnsureProcurementManagerAsync(int caller, CancellationToken ct)
+    {
+        if (!await db.Users.AsNoTracking().AnyAsync(user => user.Id == caller && user.IsActive &&
+            user.RoleEntity != null && user.RoleEntity.IsActive &&
+            user.RoleEntity.Code == "PROCUREMENT_MANAGER", ct))
+            throw new QuoteOperationException("Chỉ Trưởng phòng Cung ứng đang hoạt động được duyệt hoặc từ chối báo giá.");
+    }
 
     public async Task<QuoteEmailPreviewResponse?> GetEmailPreviewAsync(
         int id, int caller, bool canSeeAll, bool canEdit, CancellationToken ct = default)
@@ -578,6 +592,7 @@ public class QuoteService(
         // one may have been approved for a version that has since changed.
         var financePackage = await db.DepartmentWorkPackages.AsNoTracking()
             .Where(package => package.SourceQuoteId == quote.Id &&
+                package.OperationalProjectId == quote.OperationalProjectId &&
                 package.Purpose == WorkPackagePurpose.FinanceCommercialReview &&
                 package.FinanceReview != null)
             .OrderByDescending(package => package.FinanceReview!.ReviewedAt ?? package.FinanceReview!.UpdatedAt)

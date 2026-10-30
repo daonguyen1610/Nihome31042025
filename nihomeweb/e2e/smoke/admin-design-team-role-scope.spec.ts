@@ -44,15 +44,21 @@ test("design team assigns roles in the current design project without a scope pi
   await expect(dialog.getByTestId("design-team-role-row").getByRole("combobox")).toHaveText(
     "Select a role",
   );
-  const roleSelect = await dialog
-    .getByTestId("design-team-role-row")
-    .getByRole("combobox")
-    .boundingBox();
-  const removeRole = await dialog.getByRole("button", { name: "Remove role" }).boundingBox();
-  expect(roleSelect).not.toBeNull();
-  expect(removeRole).not.toBeNull();
-  expect(removeRole!.x).toBeGreaterThan(roleSelect!.x + roleSelect!.width - 10);
-  expect(removeRole!.y).toBeLessThan(roleSelect!.y + roleSelect!.height);
+  const roleBounds = await dialog.getByTestId("design-team-role-row").evaluate((row) => {
+    const select = row.querySelector('[role="combobox"]')?.getBoundingClientRect();
+    const remove = row.querySelector('button[aria-label="Remove role"]')?.getBoundingClientRect();
+    return select && remove
+      ? {
+          select: { x: select.x, y: select.y, width: select.width, height: select.height },
+          remove: { x: remove.x, y: remove.y },
+        }
+      : null;
+  });
+  expect(roleBounds).not.toBeNull();
+  expect(roleBounds!.remove.x).toBeGreaterThan(
+    roleBounds!.select.x + roleBounds!.select.width - 10,
+  );
+  expect(roleBounds!.remove.y).toBeLessThan(roleBounds!.select.y + roleBounds!.select.height);
   await page.screenshot({ path: testInfo.outputPath("design-team-role-mobile.png") });
   await page.setViewportSize({ width: 768, height: 900 });
   const dialogBounds = await dialog.boundingBox();

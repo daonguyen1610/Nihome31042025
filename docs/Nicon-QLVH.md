@@ -141,6 +141,9 @@ Yêu cầu MoM §5. Cả ba điểm giao việc dưới đây đều chạy trê
   khi báo giá được gửi khách hàng. Hồ sơ gắn với **phiên bản báo giá** đã rà
   soát (`ReviewedQuoteVersion`): báo giá đổi giá trị sau khi duyệt sẽ tăng
   phiên bản và phải được Tài chính rà soát lại trước khi gửi.
+  Khi kiểm tra trước ký hợp đồng Upstream có Báo giá nguồn, dùng lại hồ sơ
+  `FinanceCommercialReview` đã duyệt cho đúng phiên bản Báo giá; không lập
+  một hồ sơ duyệt hợp đồng riêng (xác nhận người dùng ngày 31/10/2026).
 - **Tài chính – Kế toán rà soát hồ sơ tài chính dự thầu trước khi nộp.** Nhóm
   việc mục đích `FinanceTenderReview` gắn Gói thầu nguồn. Checklist gồm hồ sơ tài
   chính và bảo lãnh; hồ sơ phải được duyệt độc lập trước khi Gói thầu chuyển

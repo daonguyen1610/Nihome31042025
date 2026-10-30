@@ -1,3 +1,4 @@
+using System.Data;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
@@ -137,10 +138,11 @@ public sealed class ProjectTeamService(
         CancellationToken ct = default)
     {
         await EnsureCanManageAsync(projectId, callerUserId, ct, request.DesignProjectId);
-        await ValidateMemberAsync(projectId, null, request, ct);
         await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct)
+            ? await db.Database.BeginTransactionAsync(
+                request.DesignProjectId.HasValue ? IsolationLevel.Serializable : IsolationLevel.ReadCommitted, ct)
             : null;
+        await ValidateMemberAsync(projectId, null, request, ct);
         var now = DateTime.UtcNow;
         var member = new OperationalProjectMember
         {
@@ -161,6 +163,8 @@ public sealed class ProjectTeamService(
         try
         {
             await db.SaveChangesAsync(ct);
+            await SyncDesignLeadershipAsync(member, callerUserId, false, false, ct);
+            await db.SaveChangesAsync(ct);
         }
         catch (DbUpdateException)
         {
@@ -180,6 +184,10 @@ public sealed class ProjectTeamService(
         int callerUserId,
         CancellationToken ct = default)
     {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(
+                request.DesignProjectId.HasValue ? IsolationLevel.Serializable : IsolationLevel.ReadCommitted, ct)
+            : null;
         var member = await db.OperationalProjectMembers
             .Include(item => item.Roles)
             .SingleOrDefaultAsync(item => item.Id == memberId && item.OperationalProjectId == projectId, ct);
@@ -193,11 +201,12 @@ public sealed class ProjectTeamService(
         await ValidateMemberAsync(projectId, memberId, request, ct);
         if (request.EndedAt.HasValue && !member.EndedAt.HasValue)
             await EnsureMemberCanEndAsync(projectId, memberId, ct);
-        await using var transaction = db.Database.IsRelational()
-            ? await db.Database.BeginTransactionAsync(ct)
-            : null;
         CrmConcurrency.Apply(db, member, request.RowVersion);
         var now = DateTime.UtcNow;
+        var wasManager = member.EndedAt == null && member.Roles.Any(role =>
+            role.EndedAt == null && IsDesignLeadershipRole(role, ProjectTeamRoleCode.ProjectManager));
+        var wasLead = member.EndedAt == null && member.Roles.Any(role =>
+            role.EndedAt == null && IsDesignLeadershipRole(role, ProjectTeamRoleCode.DesignLead));
         var requestedRoles = ParseRoles(request.Roles, now, request.EndedAt);
         foreach (var role in member.Roles.Where(role => role.EndedAt == null))
         {
@@ -215,6 +224,7 @@ public sealed class ProjectTeamService(
         member.UpdatedAt = now;
         member.UpdatedByUserId = callerUserId;
         if (!request.EndedAt.HasValue) member.Roles.AddRange(requestedRoles);
+        await SyncDesignLeadershipAsync(member, callerUserId, wasManager, wasLead, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = MapMember(await MemberQuery(projectId).SingleAsync(item => item.Id == member.Id, ct));
         await AddHistoryAsync(projectId, "Member", member.Id,
@@ -337,6 +347,27 @@ public sealed class ProjectTeamService(
         if (request.DesignProjectId.HasValue && roles.Any(role =>
             role.Scope == ProjectRoleScope.Module && role.ScopeValue != "Design"))
             throw new ProjectTeamOperationException("Vai trò của đội ngũ Thiết kế phải thuộc phân hệ Design hoặc bộ môn của luồng hiện tại.");
+        if (request.DesignProjectId.HasValue && !request.EndedAt.HasValue)
+        {
+            var design = await db.DesignProjects.AsNoTracking()
+                .SingleAsync(item => item.Id == request.DesignProjectId.Value && item.OperationalProjectId == projectId, ct);
+            foreach (var roleCode in new[] { ProjectTeamRoleCode.ProjectManager, ProjectTeamRoleCode.DesignLead })
+            {
+                if (!roles.Any(role => IsDesignLeadershipRole(role, roleCode))) continue;
+                var currentUserId = roleCode == ProjectTeamRoleCode.ProjectManager
+                    ? design.ProjectManagerUserId : design.DesignLeadUserId;
+                if (currentUserId.HasValue && currentUserId != request.UserId)
+                    throw new ProjectTeamOperationException(
+                        "Luồng Thiết kế đã có người giữ vai trò Chủ nhiệm hoặc Chủ trì. Hãy thay đổi phân công hiện có trước.");
+                if (await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
+                    member.DesignProjectId == request.DesignProjectId && member.EndedAt == null &&
+                    member.Id != memberId && member.UserId != request.UserId &&
+                    member.Roles.Any(role => role.EndedAt == null && role.RoleCode == roleCode &&
+                        role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design"), ct))
+                    throw new ProjectTeamOperationException(
+                        "Luồng Thiết kế đã có người giữ vai trò Chủ nhiệm hoặc Chủ trì. Hãy thay đổi phân công hiện có trước.");
+            }
+        }
         if (!request.DesignProjectId.HasValue && roles.Any(role => role.RoleCode == ProjectTeamRoleCode.ProjectManager))
         {
             var primaryManagerUserId = await db.OperationalProjects.AsNoTracking()
@@ -462,6 +493,51 @@ public sealed class ProjectTeamService(
             string.Equals(option, value?.Trim(), StringComparison.OrdinalIgnoreCase));
         return canonical ?? throw new ProjectTeamOperationException(errorMessage);
     }
+
+    private async Task SyncDesignLeadershipAsync(
+        OperationalProjectMember member,
+        int callerUserId,
+        bool wasManager,
+        bool wasLead,
+        CancellationToken ct)
+    {
+        if (!member.DesignProjectId.HasValue) return;
+        var design = await db.DesignProjects.SingleAsync(item => item.Id == member.DesignProjectId.Value, ct);
+        OperationalProjectMemberRole[] activeRoles = member.EndedAt.HasValue
+            ? []
+            : member.Roles.Where(role => role.EndedAt == null).ToArray();
+        var manager = activeRoles.Any(role => IsDesignLeadershipRole(role, ProjectTeamRoleCode.ProjectManager));
+        var lead = activeRoles.Any(role => IsDesignLeadershipRole(role, ProjectTeamRoleCode.DesignLead));
+        var changed = false;
+        if (manager && design.ProjectManagerUserId != member.UserId)
+        {
+            design.ProjectManagerUserId = member.UserId;
+            changed = true;
+        }
+        else if (wasManager && !manager && design.ProjectManagerUserId == member.UserId)
+        {
+            design.ProjectManagerUserId = null;
+            changed = true;
+        }
+        if (lead && design.DesignLeadUserId != member.UserId)
+        {
+            design.DesignLeadUserId = member.UserId;
+            changed = true;
+        }
+        else if (wasLead && !lead && design.DesignLeadUserId == member.UserId)
+        {
+            design.DesignLeadUserId = null;
+            changed = true;
+        }
+        if (changed)
+        {
+            design.UpdatedAt = DateTime.UtcNow;
+            design.UpdatedByUserId = callerUserId;
+        }
+    }
+
+    private static bool IsDesignLeadershipRole(OperationalProjectMemberRole role, ProjectTeamRoleCode code) =>
+        role.RoleCode == code && role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design";
 
     private async Task EnsureMemberCanEndAsync(int projectId, int memberId, CancellationToken ct)
     {

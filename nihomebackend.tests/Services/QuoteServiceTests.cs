@@ -1682,6 +1682,26 @@ public class QuoteServiceTests : IDisposable
         OpportunityStage stage = OpportunityStage.Proposal)
     {
         var user = await SeedUserAsync();
+        var managerRole = await _db.Roles.SingleOrDefaultAsync(role => role.Code == "PROCUREMENT_MANAGER");
+        if (managerRole is null)
+        {
+            managerRole = new Role { Code = "PROCUREMENT_MANAGER", Name = "Head of Procurement", IsActive = true };
+            _db.Roles.Add(managerRole);
+            await _db.SaveChangesAsync();
+        }
+        var manager = new ApplicationUser
+        {
+            PhoneNumber = Guid.NewGuid().ToString("N")[..12],
+            PasswordHash = "hash",
+            Role = UserRole.USER,
+            RoleEntityId = managerRole.Id,
+            IsActive = true,
+            Email = $"procurement-manager-{Guid.NewGuid():N}@nihome.test",
+            FullName = "Head of Procurement",
+        };
+        _db.Users.Add(manager);
+        await _db.SaveChangesAsync();
+        Assert.Equal(user.Id + 1, manager.Id);
         var cust = new Customer
         {
             Name = "Test KH " + Guid.NewGuid().ToString("N")[..6],

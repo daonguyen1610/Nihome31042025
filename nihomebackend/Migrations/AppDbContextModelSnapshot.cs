@@ -8308,6 +8308,11 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(16000)
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("CcEmailsJson")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 

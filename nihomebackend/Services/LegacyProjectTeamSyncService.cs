@@ -88,10 +88,15 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
 
         foreach (var role in members.SelectMany(member => member.Roles).Where(role =>
                      role.EndedAt == null &&
-                     references.Contains(role.SourceReference ?? string.Empty) &&
-                     role.Source is RuntimeSource or BackfillSource))
+                     (references.Contains(role.SourceReference ?? string.Empty) &&
+                      role.Source is RuntimeSource or BackfillSource ||
+                      designProjectId.HasValue && role.Source == ManualSource &&
+                      role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design" &&
+                      role.RoleCode is ProjectTeamRoleCode.ProjectManager or ProjectTeamRoleCode.DesignLead)))
         {
-            if (!desiredRoles.Any(desired => desired.SourceReference == role.SourceReference &&
+            if (!desiredRoles.Any(desired =>
+                (desired.SourceReference == role.SourceReference ||
+                 designProjectId.HasValue && role.Source == ManualSource) &&
                 desired.UserId == role.Member.UserId && desired.UserId.HasValue &&
                 activeUserIds.Contains(desired.UserId.Value) && Matches(role, desired)))
             {

@@ -107,9 +107,39 @@ public class ContractServiceTests : IDisposable
             {
                 Code = $"QT-CONTRACT-{Guid.NewGuid():N}",
                 Opportunity = opportunity,
+                OperationalProjectId = selectedCustomerId == _customerB ? _projectB : _projectA,
                 Status = QuoteStatus.Approved,
             };
             _db.Quotes.Add(quote);
+            _db.SaveChanges();
+            var financeGroup = _db.RoleGroups.FirstOrDefault(group => group.Code == "FINANCE");
+            if (financeGroup is null)
+            {
+                financeGroup = new RoleGroup { Code = "FINANCE", LabelKey = "rbac.group.finance" };
+                _db.RoleGroups.Add(financeGroup);
+                _db.SaveChanges();
+            }
+            _db.DepartmentWorkPackages.Add(new DepartmentWorkPackage
+            {
+                Code = $"FIN-QUOTE-{Guid.NewGuid():N}",
+                Name = "Rà soát điều kiện hợp đồng",
+                Kind = WorkPackageKind.Internal,
+                Purpose = WorkPackagePurpose.FinanceCommercialReview,
+                OperationalProjectId = quote.OperationalProjectId,
+                SourceQuoteId = quote.Id,
+                DepartmentRoleGroupId = financeGroup.Id,
+                LeadUserId = _accountantId,
+                CreatedByUserId = _accountantId,
+                UpdatedByUserId = _accountantId,
+                FinanceReview = new DepartmentFinanceReview
+                {
+                    Status = FinanceReviewStatus.Approved,
+                    ReviewedQuoteVersion = quote.Version,
+                    ReviewedAt = DateTime.UtcNow,
+                    CreatedByUserId = _accountantId,
+                    UpdatedByUserId = _accountantId,
+                },
+            });
             _db.SaveChanges();
             quoteId = quote.Id;
         }
@@ -791,6 +821,7 @@ public class ContractServiceTests : IDisposable
         _db.OperationalProjects.AddRange(oldProject, newProject);
         await _db.SaveChangesAsync();
         var create = Req(number: "HD-MOVE");
+        create.QuoteId = null;
         create.OperationalProjectId = oldProject.Id;
         var contract = await _sut.CreateAsync(create, 1, canReassignOwner: true);
         var attachment = new ContractAttachment
@@ -810,6 +841,7 @@ public class ContractServiceTests : IDisposable
         _db.AddRange(attachment, appendix);
         await _db.SaveChangesAsync();
         var update = Req(number: contract.ContractNumber);
+        update.QuoteId = null;
         update.OperationalProjectId = newProject.Id;
 
         await _sut.UpdateAsync(contract.Id, update, 1, canSeeAll: true, canReassignOwner: true);
@@ -829,7 +861,9 @@ public class ContractServiceTests : IDisposable
     [Fact]
     public async Task Update_ProjectChange_WithLinkedDesignProject_Throws()
     {
-        var contract = await _sut.CreateAsync(Req(number: "HD-DESIGN-LINK"), 1, canReassignOwner: true);
+        var create = Req(number: "HD-DESIGN-LINK");
+        create.QuoteId = null;
+        var contract = await _sut.CreateAsync(create, 1, canReassignOwner: true);
         var otherProject = new OperationalProject
         {
             Code = "OP-DESIGN-OTHER",
@@ -848,6 +882,7 @@ public class ContractServiceTests : IDisposable
         });
         await _db.SaveChangesAsync();
         var update = Req(number: contract.ContractNumber);
+        update.QuoteId = null;
         update.OperationalProjectId = otherProject.Id;
 
         var exception = await Assert.ThrowsAsync<ContractValidationException>(() =>
@@ -1228,6 +1263,24 @@ public class ContractServiceTests : IDisposable
         Assert.NotNull(updated);
         Assert.Equal(ContractStatus.Signed, updated!.Status);
         Assert.NotNull(updated.SignedDate);
+    }
+
+    [Fact]
+    public async Task Transition_DraftToSigned_RejectsFinanceReviewForOldQuoteVersion()
+    {
+        var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        var review = _db.DepartmentFinanceReviews.Single(item =>
+            item.WorkPackage.SourceQuoteId == contract.QuoteId);
+        review.ReviewedQuoteVersion = 0;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<ContractValidationException>(() =>
+            _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true));
+
+        _db.ChangeTracker.Clear();
+        var unchanged = await _db.Contracts.FindAsync(contract.Id);
+        Assert.Equal(ContractStatus.Draft, unchanged!.Status);
+        Assert.Null(unchanged.SignedDate);
     }
 
     [Fact]

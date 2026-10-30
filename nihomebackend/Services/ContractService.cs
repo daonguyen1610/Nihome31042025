@@ -442,6 +442,8 @@ public class ContractService(
         {
             var quote = await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
             await EnsureQuoteAvailableForContractAsync(quote, null, ct);
+            if (req.Direction == ContractDirection.Upstream && RequiresSignedCustomer(req.Status))
+                await EnsureSourceQuoteFinanceReviewAsync(req.QuoteId.Value, ct);
         }
         var operationalProjectId = await ResolveOperationalProjectIdAsync(req, null, ct);
         if (req.SourceContractId.HasValue && operationalProjectId.HasValue &&
@@ -619,6 +621,10 @@ public class ContractService(
             var quote = await EnsureQuoteReadyForContractAsync(req.QuoteId.Value, ct);
             await EnsureQuoteAvailableForContractAsync(quote, id, ct);
         }
+        if (req.QuoteId.HasValue && req.Direction == ContractDirection.Upstream &&
+            RequiresSignedCustomer(req.Status) &&
+            (!RequiresSignedCustomer(entity.Status) || req.QuoteId != entity.QuoteId))
+            await EnsureSourceQuoteFinanceReviewAsync(req.QuoteId.Value, ct);
         var operationalProjectId = await ResolveOperationalProjectIdAsync(
             req,
             entity.OperationalProjectId,
@@ -839,6 +845,8 @@ public class ContractService(
         }
 
         var quote = await EnsureQuoteReadyForContractAsync(quoteId, ct);
+        if (RequiresSignedCustomer(entity.Status))
+            await EnsureSourceQuoteFinanceReviewAsync(quoteId, ct);
         await ValidateContinuationAssociationAsync(quote.OpportunityId, entity, callerUserId, ct);
         if (await db.Opportunities.AnyAsync(x => x.Id == quote.OpportunityId && x.SourceContractId != null &&
             (x.SourceContractId != entity.SourceContractId || x.ContinuationKind != entity.ContinuationKind), ct))
@@ -947,6 +955,35 @@ public class ContractService(
             quote.Id, quote.Code, quote.OpportunityId, quote.CustomerId, quote.OperationalProjectId);
     }
 
+    private async Task EnsureSourceQuoteFinanceReviewAsync(int quoteId, CancellationToken ct)
+    {
+        var quote = await db.Quotes.AsNoTracking()
+            .Where(item => item.Id == quoteId)
+            .Select(item => new { item.Code, item.Version, item.OperationalProjectId })
+            .SingleAsync(ct);
+        if (!quote.OperationalProjectId.HasValue)
+            throw new ContractValidationException(
+                $"Báo giá {quote.Code} chưa gắn Dự án để Tài chính rà soát trước khi ký Hợp đồng.");
+        var review = await db.DepartmentWorkPackages.AsNoTracking()
+            .Where(package => package.SourceQuoteId == quoteId &&
+                package.OperationalProjectId == quote.OperationalProjectId &&
+                package.Purpose == WorkPackagePurpose.FinanceCommercialReview &&
+                package.FinanceReview != null)
+            .OrderByDescending(package => package.FinanceReview!.ReviewedAt ?? package.FinanceReview!.UpdatedAt)
+            .Select(package => new
+            {
+                package.Status,
+                ReviewStatus = package.FinanceReview!.Status,
+                package.FinanceReview!.ReviewedQuoteVersion,
+            })
+            .FirstOrDefaultAsync(ct);
+        if (review is null || review.Status == WorkPackageStatus.Cancelled ||
+            review.ReviewStatus != FinanceReviewStatus.Approved ||
+            review.ReviewedQuoteVersion != quote.Version)
+            throw new ContractValidationException(
+                $"Báo giá {quote.Code} cần hồ sơ Tài chính đã duyệt cho đúng phiên bản {quote.Version} trước khi ký Hợp đồng.");
+    }
+
     public async Task<ContractResponse?> TransitionStatusAsync(
         int id, ContractStatus newStatus, int callerUserId, bool canSeeAll, CancellationToken ct = default, string? rowVersion = null)
     {
@@ -983,6 +1020,9 @@ public class ContractService(
         }
 
         EnsureTransitionAllowed(entity.Status, newStatus);
+        if (newStatus == ContractStatus.Signed && entity.Direction == ContractDirection.Upstream &&
+            entity.QuoteId.HasValue)
+            await EnsureSourceQuoteFinanceReviewAsync(entity.QuoteId.Value, ct);
         if (RequiresSignedCustomer(newStatus))
         {
             await EnsureCustomerReadyForSignatureAsync(entity.CustomerId, ct);
