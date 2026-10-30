@@ -34,6 +34,7 @@ import {
 } from "@/services/adminApi";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
+const MAX_FILES = 20;
 const BLOCKED_EXTENSIONS = new Set([
   "exe",
   "dll",
@@ -77,12 +78,12 @@ export default function ProjectDocumentsPanel({
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const uploadIdempotencyKeyRef = useRef<string | null>(null);
+  const uploadIdempotencyKeysRef = useRef(new Map<File, string>());
   const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [categories, setCategories] = useState<ProjectDocumentCategoryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [file, setFile] = useState<File | null>(null);
+  const [files, setFiles] = useState<File[]>([]);
   const [category, setCategory] = useState("");
   const [sourceKey, setSourceKey] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -136,50 +137,42 @@ export default function ProjectDocumentsPanel({
     void load();
   }, [load]);
   useEffect(() => {
-    uploadIdempotencyKeyRef.current = null;
+    uploadIdempotencyKeysRef.current.clear();
+    setFiles([]);
   }, [projectId]);
 
-  const selectFile = (selected?: File) => {
-    if (!selected) {
-      setFile(null);
-      uploadIdempotencyKeyRef.current = null;
-      return;
-    }
-    if (!selected.name.trim() || selected.size === 0) {
+  const selectFiles = (selected: FileList | null) => {
+    const nextFiles = Array.from(selected ?? []);
+    const validationMessage =
+      nextFiles.length > MAX_FILES
+        ? t("operationalProjects.documents.validation.maxFiles", { count: MAX_FILES })
+        : nextFiles.some((file) => !file.name.trim() || file.size === 0)
+          ? t("operationalProjects.documents.validation.fileRequired")
+          : nextFiles.some((file) => BLOCKED_EXTENSIONS.has(extensionOf(file.name)))
+            ? t("operationalProjects.documents.validation.extension")
+            : nextFiles.some((file) => file.size > MAX_FILE_SIZE)
+              ? t("operationalProjects.documents.validation.size")
+              : null;
+    if (validationMessage) {
       toast({
         title: t("common.error"),
-        description: t("operationalProjects.documents.validation.fileRequired"),
+        description: validationMessage,
         variant: "destructive",
       });
+      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
-    if (BLOCKED_EXTENSIONS.has(extensionOf(selected.name))) {
-      toast({
-        title: t("common.error"),
-        description: t("operationalProjects.documents.validation.extension"),
-        variant: "destructive",
-      });
-      return;
-    }
-    if (selected.size > MAX_FILE_SIZE) {
-      toast({
-        title: t("common.error"),
-        description: t("operationalProjects.documents.validation.size"),
-        variant: "destructive",
-      });
-      return;
-    }
-    setFile(selected);
-    uploadIdempotencyKeyRef.current = null;
+    setFiles(nextFiles);
+    uploadIdempotencyKeysRef.current.clear();
   };
 
   const selectCategory = (value: string) => {
     setCategory(value);
-    uploadIdempotencyKeyRef.current = null;
+    uploadIdempotencyKeysRef.current.clear();
   };
 
   const upload = async () => {
-    if (!file) {
+    if (files.length === 0) {
       toast({
         title: t("common.error"),
         description: t("operationalProjects.documents.validation.fileRequired"),
@@ -195,46 +188,55 @@ export default function ProjectDocumentsPanel({
       });
       return;
     }
-    setUploading(true);
-    try {
-      const idempotencyKey = uploadIdempotencyKeyRef.current ?? newIdempotencyKey();
-      uploadIdempotencyKeyRef.current = idempotencyKey;
-      const source = sourceOptions?.find(
-        (item) => `${item.entityType}:${item.recordId}` === sourceKey,
-      );
-      if (sourceOptions?.length && !source) {
-        toast({
-          title: t("common.error"),
-          description: t("designProjects.documents.validation.sourceRequired"),
-          variant: "destructive",
-        });
-        return;
-      }
-      await adminApi.uploadProjectDocument(
-        projectId,
-        file,
-        category,
-        idempotencyKey,
-        source
-          ? { module: "Design", entityType: source.entityType, recordId: source.recordId }
-          : undefined,
-      );
-      setFile(null);
-      setCategory("");
-      setSourceKey("");
-      uploadIdempotencyKeyRef.current = null;
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      toast({ title: t("operationalProjects.documents.uploaded") });
-      await load();
-    } catch (reason) {
+    const source = sourceOptions?.find(
+      (item) => `${item.entityType}:${item.recordId}` === sourceKey,
+    );
+    if (sourceOptions?.length && !source) {
       toast({
         title: t("common.error"),
-        description: extractApiError(reason),
+        description: t("designProjects.documents.validation.sourceRequired"),
         variant: "destructive",
       });
-    } finally {
-      setUploading(false);
+      return;
     }
+    setUploading(true);
+    const failed: File[] = [];
+    let firstError: string | null = null;
+    let uploaded = 0;
+    for (const file of files) {
+      const idempotencyKey = uploadIdempotencyKeysRef.current.get(file) ?? newIdempotencyKey();
+      uploadIdempotencyKeysRef.current.set(file, idempotencyKey);
+      try {
+        await adminApi.uploadProjectDocument(
+          projectId,
+          file,
+          category,
+          idempotencyKey,
+          source
+            ? { module: "Design", entityType: source.entityType, recordId: source.recordId }
+            : undefined,
+        );
+        uploadIdempotencyKeysRef.current.delete(file);
+        uploaded += 1;
+      } catch (reason) {
+        failed.push(file);
+        firstError ??= `${file.name}: ${extractApiError(reason)}`;
+      }
+    }
+    setFiles(failed);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (uploaded > 0) {
+      toast({ title: t("operationalProjects.documents.uploaded") });
+      await load();
+    }
+    if (firstError) {
+      toast({ title: t("common.error"), description: firstError, variant: "destructive" });
+    }
+    if (failed.length === 0) {
+      setCategory("");
+      setSourceKey("");
+    }
+    setUploading(false);
   };
 
   const mutate = async (
@@ -458,9 +460,19 @@ export default function ProjectDocumentsPanel({
               ref={fileInputRef}
               id="project-document-file"
               type="file"
+              multiple
+              disabled={uploading}
               className="mt-1 min-w-0 max-w-full"
-              onChange={(event) => selectFile(event.target.files?.[0])}
+              onChange={(event) => selectFiles(event.target.files)}
             />
+            {files.length > 0 && (
+              <p className="mt-1 break-words text-xs text-muted-foreground">
+                {t("operationalProjects.documents.selectedFiles", {
+                  count: files.length,
+                  names: files.map((item) => item.name).join(", "),
+                })}
+              </p>
+            )}
           </div>
           {sourceOptions?.length ? (
             <div>
@@ -469,11 +481,13 @@ export default function ProjectDocumentsPanel({
               </Label>
               <Select
                 value={sourceKey}
+                disabled={uploading}
                 onValueChange={(value) => {
                   const source = sourceOptions.find(
                     (item) => `${item.entityType}:${item.recordId}` === value,
                   );
                   setSourceKey(value);
+                  uploadIdempotencyKeysRef.current.clear();
                   if (source) selectCategory(source.category);
                 }}
               >
@@ -503,7 +517,7 @@ export default function ProjectDocumentsPanel({
             <Select
               value={category}
               onValueChange={selectCategory}
-              disabled={Boolean(sourceOptions?.length)}
+              disabled={uploading || Boolean(sourceOptions?.length)}
             >
               <SelectTrigger
                 id="project-document-category"
