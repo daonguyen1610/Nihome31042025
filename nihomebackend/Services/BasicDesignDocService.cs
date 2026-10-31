@@ -183,9 +183,9 @@ public class BasicDesignDocService(
         }
 
         if (request.OwnerUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            !await DesignTeamMembership.ContainsActiveUserAsync(db, request.DesignProjectId, request.OwnerUserId.Value, ct))
         {
-            throw new BasicDesignDocOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+            throw new BasicDesignDocOperationException("Người phụ trách phải là thành viên đang hiệu lực trong đội ngũ Hợp đồng Thiết kế.");
         }
 
         var code = await AllocateDocumentCodeAsync(request.DesignProjectId, discipline, ct);
@@ -266,9 +266,9 @@ public class BasicDesignDocService(
         }
 
         if (request.OwnerUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            !await DesignTeamMembership.ContainsActiveUserAsync(db, entity.DesignProjectId, request.OwnerUserId.Value, ct))
         {
-            throw new BasicDesignDocOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+            throw new BasicDesignDocOperationException("Người phụ trách phải là thành viên đang hiệu lực trong đội ngũ Hợp đồng Thiết kế.");
         }
 
         entity.Title = title;

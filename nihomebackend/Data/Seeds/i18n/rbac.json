@@ -1802,34 +1802,34 @@
   {
     "key": "rbac.perm.design.projects.view.label",
     "category": "rbac",
-    "vi": "Xem dự án thiết kế",
-    "en": "View design projects",
-    "zh": "查看设计项目",
-    "ja": "設計プロジェクトを表示"
+    "vi": "Xem hợp đồng thiết kế",
+    "en": "View design contracts",
+    "zh": "查看设计合同",
+    "ja": "設計契約を表示"
   },
   {
     "key": "rbac.perm.design.projects.view.description",
     "category": "rbac",
-    "vi": "Cho phép xem dự án thiết kế và tiến độ 3 giai đoạn.",
-    "en": "Allows viewing design projects and the 3-stage progress board.",
-    "zh": "允许查看设计项目及三阶段进度看板。",
-    "ja": "設計プロジェクトと3段階の進捗ボードの閲覧を許可します。"
+    "vi": "Cho phép xem hợp đồng thiết kế và tiến độ 3 giai đoạn.",
+    "en": "Allows viewing design contracts and the 3-stage progress board.",
+    "zh": "允许查看设计合同及三阶段进度看板。",
+    "ja": "設計契約と3段階の進捗ボードの閲覧を許可します。"
   },
   {
     "key": "rbac.perm.design.projects.manage.label",
     "category": "rbac",
-    "vi": "Quản lý dự án thiết kế",
-    "en": "Manage design projects",
-    "zh": "管理设计项目",
-    "ja": "設計プロジェクトを管理"
+    "vi": "Quản lý hợp đồng thiết kế",
+    "en": "Manage design contracts",
+    "zh": "管理设计合同",
+    "ja": "設計契約を管理"
   },
   {
     "key": "rbac.perm.design.projects.manage.description",
     "category": "rbac",
-    "vi": "Cho phép tạo/sửa dự án thiết kế và cấu hình đội ngũ bộ môn.",
-    "en": "Allows creating/editing design projects and configuring discipline teams.",
-    "zh": "允许创建/编辑设计项目并配置专业团队。",
-    "ja": "設計プロジェクトの作成・編集及び専門チームの設定を許可します。"
+    "vi": "Cho phép tạo/sửa hợp đồng thiết kế và cấu hình đội ngũ bộ môn.",
+    "en": "Allows creating/editing design contracts and configuring discipline teams.",
+    "zh": "允许创建/编辑设计合同并配置专业团队。",
+    "ja": "設計契約の作成・編集及び専門チームの設定を許可します。"
   },
   {
     "key": "rbac.perm.design.schedule.manage.label",

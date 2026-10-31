@@ -1,4 +1,3 @@
-import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
@@ -11,6 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { ConceptDossierPanel } from "./ConceptDossierPanel";
+import { useDesignTeamOwners } from "./useDesignTeamOwners";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -36,7 +36,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useI18n } from "@/lib/i18n";
+import { translateError, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -69,11 +69,6 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
     return iso;
   }
 };
-
-interface UserOption extends PersonIdentity {
-  id: number;
-  fullName: string;
-}
 
 interface FormState {
   name: string;
@@ -110,12 +105,16 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
   const canManage = has(ADMIN_PERMS.designConceptsManage);
   const canFinalize = has(ADMIN_PERMS.designConceptsFinalize);
   const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
-  const canPickOwner = has(ADMIN_PERMS.users);
+  const canPickOwner = canManage;
+  const {
+    options: userOptions,
+    error: ownersError,
+    loading: ownersLoading,
+  } = useDesignTeamOwners(project, canPickOwner);
 
   const [rows, setRows] = useState<ConceptOptionResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [users, setUsers] = useState<UserOption[]>([]);
   const [expandedId, setExpandedId] = useState<number | null>(null);
   const [reviews, setReviews] = useState<DesignReviewResponse[]>([]);
   const confirmationTrigger = useRef<HTMLButtonElement | null>(null);
@@ -163,36 +162,11 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     }
     return latest;
   }, [reviews]);
+  const expandedRow = rows.find((row) => row.id === expandedId);
 
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
-
-  useEffect(() => {
-    if (!canPickOwner) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await adminApi.getPeopleDirectory();
-        if (!cancelled) {
-          setUsers(
-            (data.items ?? []).map((u) => ({
-              ...u,
-              id: u.id,
-              fullName: u.fullName ?? u.email ?? `#${u.id}`,
-            })),
-          );
-        }
-      } catch {
-        // no permission → owner picker stays hidden
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [canPickOwner]);
-
-  const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   // Once the parent project is past Concept, options are read-only.
   const isLocked = project.currentStage !== "Concept";
@@ -255,7 +229,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       setEditing(null);
       await fetchRows();
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(translateError(t, extractApiError(err)));
     } finally {
       setSaving(false);
     }
@@ -413,7 +387,6 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
               key={row.id}
               className={cn(
                 "min-w-0 rounded-lg border bg-white p-4 shadow-sm",
-                expandedId === row.id && "md:col-span-2",
                 row.status === "Finalized" && "border-emerald-300 ring-1 ring-emerald-200",
                 row.status === "Discarded" && "border-slate-200 bg-slate-50/40",
               )}
@@ -502,18 +475,32 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
                   )}
                 </Button>
               ) : null}
-              {expandedId === row.id && project.operationalProjectId ? (
-                <ConceptDossierPanel
-                  projectId={project.operationalProjectId}
-                  optionId={row.id}
-                  reviews={reviews.filter((review) => review.conceptOptionId === row.id)}
-                  canManage={canManage}
-                  locked={isLocked || row.status === "Finalized" || row.status === "Discarded"}
-                  onChanged={refreshRows}
-                />
-              ) : null}
             </article>
           ))}
+        </div>
+      ) : null}
+
+      {expandedRow && project.operationalProjectId ? (
+        <div className="min-w-0 rounded-lg border bg-white p-4 sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
+            <div>
+              <h3 className="text-base font-semibold">{expandedRow.name}</h3>
+              <p className="text-sm text-muted-foreground">{t("concepts.dossier.open")}</p>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => setExpandedId(null)}>
+              {t("common.close")}
+            </Button>
+          </div>
+          <ConceptDossierPanel
+            projectId={project.operationalProjectId}
+            optionId={expandedRow.id}
+            reviews={reviews.filter((review) => review.conceptOptionId === expandedId)}
+            canManage={canManage}
+            locked={
+              isLocked || expandedRow.status === "Finalized" || expandedRow.status === "Discarded"
+            }
+            onChanged={refreshRows}
+          />
         </div>
       ) : null}
 
@@ -565,7 +552,19 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
                   onChange={(v) => setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))}
                   options={[{ value: "", label: t("concepts.form.ownerNone") }, ...userOptions]}
                   placeholder={t("concepts.form.ownerNone")}
+                  disabled={!!ownersError || ownersLoading}
                 />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t(
+                    ownersError
+                      ? "designProjects.team.ownerPickerError"
+                      : ownersLoading
+                        ? "common.loading"
+                        : userOptions.length
+                          ? "designProjects.team.ownerPickerHint"
+                          : "designProjects.team.ownerPickerEmpty",
+                  )}
+                </p>
               </div>
             ) : null}
           </div>

@@ -2,6 +2,37 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
+test("team member picker stays scrollable on a short screen", async ({
+  api,
+  page,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const projects = await api.get("/api/design-projects?page=1&pageSize=1", { headers });
+  const projectId = (await projects.json()).items[0]?.id;
+  expect(projectId).toBeGreaterThan(0);
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
+  await page.setViewportSize({ width: 390, height: 380 });
+  await page.goto(`/admin/design-projects/${projectId}?tab=team`);
+  await page.getByRole("button", { name: "Add member" }).click();
+  await page.getByRole("dialog").getByRole("combobox", { name: "User" }).click();
+  const picker = page.locator('[data-people-picker="true"]');
+  await expect(picker).toBeVisible();
+  const bounds = await picker.boundingBox();
+  expect(bounds).not.toBeNull();
+  expect(bounds!.y).toBeGreaterThanOrEqual(0);
+  expect(bounds!.y + bounds!.height).toBeLessThanOrEqual(380);
+  const list = picker.locator("[cmdk-list]");
+  const movement = await list.evaluate((element) => {
+    const before = element.scrollTop;
+    element.scrollTop = element.scrollHeight;
+    return element.scrollTop - before;
+  });
+  expect(movement).toBeGreaterThan(0);
+});
+
 test("design team assigns roles in the current design project without a scope picker", async ({
   api,
   page,
@@ -34,9 +65,9 @@ test("design team assigns roles in the current design project without a scope pi
 
   const dialog = page.getByRole("dialog");
   await expect(
-    dialog.getByText("Choose a user and assign roles for this design project."),
+    dialog.getByText("Choose a user and assign roles for this design contract."),
   ).toBeVisible();
-  await expect(dialog.getByText("Roles in this design project")).toBeVisible();
+  await expect(dialog.getByText("Roles in this design contract")).toBeVisible();
   await expect(dialog.getByText("Design module")).toBeVisible();
   await expect(dialog.getByText("End date")).toHaveCount(0);
   await expect(dialog.getByText("Roles / RACI / scope")).toHaveCount(0);
@@ -71,8 +102,22 @@ test("design team assigns roles in the current design project without a scope pi
     page.getByTestId("design-project-team-tab").locator("ul li p").filter({ hasText: "@" }).first(),
   ).not.toContainText(" · ");
   await page.setViewportSize({ width: 1440, height: 900 });
+  await expect(page.locator('aside nav > a[href="/admin/work-packages"]')).toBeVisible();
+  await expect(page.locator('aside nav > a[href="/admin/work-packages"]')).toHaveText(
+    "Work packages",
+  );
+  await expect(page.locator("aside nav > a").first()).toHaveAttribute("href", "/admin");
+  await expect(page.locator("aside nav > a").nth(1)).toHaveAttribute(
+    "href",
+    "/admin/notifications",
+  );
+  await expect(page.locator("aside nav > a").nth(2)).toHaveAttribute(
+    "href",
+    "/admin/work-packages",
+  );
+  await expect(page.locator('#admin-nav-group-crm a[href="/admin/work-packages"]')).toHaveCount(0);
   await expect(
-    page.getByRole("columnheader", { name: "Roles in this design project" }),
+    page.getByRole("columnheader", { name: "Roles in this design contract" }),
   ).toBeVisible();
 
   await page.goto(`/admin/operational-projects/${operationalProjectId}`);
@@ -169,7 +214,7 @@ test("design team saves a role scoped to its current design project", async ({
     const memberRow = page.locator("li").filter({ hasText: candidate.email });
     await memberRow.getByRole("button", { name: "Edit member" }).click();
     const editDialog = page.getByRole("dialog");
-    await expect(editDialog.getByText("Update roles in this design project.")).toBeVisible();
+    await expect(editDialog.getByText("Update roles in this design contract.")).toBeVisible();
     const currentUser = editDialog.getByRole("combobox", { name: "User", exact: true });
     await expect(currentUser).toBeDisabled();
     await expect(currentUser).toContainText(candidate.name);
@@ -196,6 +241,22 @@ test("design team saves a role scoped to its current design project", async ({
     });
     expect(afterEdit.ok(), await afterEdit.text()).toBeTruthy();
     expect((await afterEdit.json()).members).toEqual((await team.json()).members);
+
+    await page.goto(`/admin/design-projects/${designProjectId}?tab=concept`);
+    await page.getByRole("button", { name: "New option" }).click();
+    const owner = page.getByRole("dialog").getByRole("combobox", { name: "Owner" });
+    await expect(owner).toBeEnabled();
+    await owner.click();
+    const names = await page.locator("[cmdk-item]").allTextContents();
+    expect(names.some((name) => name.includes(candidate.name))).toBe(true);
+    const procurementUser = (await users.json()).items.find(
+      (user: { phoneNumber: string }) => user.phoneNumber === TEST_USERS.procurement.phoneNumber,
+    );
+    const procurementCandidate = (await candidates.json()).find(
+      (item: { userId: number }) => item.userId === procurementUser.id,
+    );
+    expect(procurementCandidate).toBeTruthy();
+    expect(names.some((name) => name.includes(procurementCandidate.name))).toBe(false);
   } finally {
     if (designProjectId)
       await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);

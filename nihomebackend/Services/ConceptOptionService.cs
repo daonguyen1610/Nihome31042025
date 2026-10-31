@@ -90,9 +90,9 @@ public class ConceptOptionService(
         }
 
         if (request.OwnerUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            !await DesignTeamMembership.ContainsActiveUserAsync(db, request.DesignProjectId, request.OwnerUserId.Value, ct))
         {
-            throw new ConceptOptionOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+            throw new ConceptOptionOperationException("Người phụ trách phải là thành viên đang hiệu lực trong đội ngũ Hợp đồng Thiết kế.");
         }
 
         var entity = new ConceptOption
@@ -148,9 +148,9 @@ public class ConceptOptionService(
             throw new ConceptOptionOperationException("Hồ sơ đã trình được giữ bất biến; hãy tạo revision mới.");
 
         if (request.OwnerUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            !await DesignTeamMembership.ContainsActiveUserAsync(db, entity.DesignProjectId, request.OwnerUserId.Value, ct))
         {
-            throw new ConceptOptionOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+            throw new ConceptOptionOperationException("Người phụ trách phải là thành viên đang hiệu lực trong đội ngũ Hợp đồng Thiết kế.");
         }
 
         entity.Name = name;

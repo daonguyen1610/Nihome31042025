@@ -66,6 +66,7 @@ export const ConceptDossierPanel = ({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
+  const [activeSection, setActiveSection] = useState<"files" | "feedback">("files");
   const [kind, setKind] = useState<ConceptArtifactKind>("Perspective");
   const [floorLabel, setFloorLabel] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -223,7 +224,7 @@ export const ConceptDossierPanel = ({
       id={`concept-dossier-${optionId}`}
       aria-label={t("concepts.dossier.open")}
       aria-busy={working}
-      className="mt-4 min-w-0 space-y-5 border-t pt-4 text-sm"
+      className="min-w-0 space-y-5 pt-4 text-sm"
       data-testid={`concept-dossier-${optionId}`}
     >
       <div className="flex flex-wrap items-end justify-between gap-3">
@@ -297,13 +298,45 @@ export const ConceptDossierPanel = ({
       ) : null}
       {revision ? (
         <>
+          <div
+            role="tablist"
+            aria-label={t("concepts.dossier.open")}
+            className="flex gap-2 border-b"
+          >
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeSection === "files"}
+              aria-controls={`${prefix}-files-panel`}
+              onClick={() => setActiveSection("files")}
+              className={`min-h-11 border-b-2 px-3 font-medium ${activeSection === "files" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              {t("concepts.dossier.tab.files")}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeSection === "feedback"}
+              aria-controls={`${prefix}-feedback-panel`}
+              onClick={() => setActiveSection("feedback")}
+              className={`min-h-11 border-b-2 px-3 font-medium ${activeSection === "feedback" ? "border-primary text-foreground" : "border-transparent text-muted-foreground hover:text-foreground"}`}
+            >
+              {t("concepts.dossier.feedback")}
+              {revision.feedback.length ? ` (${revision.feedback.length})` : ""}
+            </button>
+          </div>
           <p className="rounded-md bg-slate-50 p-3 text-slate-600">
             {revision.frozenAt ? t("concepts.dossier.frozen") : t("concepts.dossier.draftHint")}
           </p>
           {canManage && !locked && revision.frozenAt && !canCreateRevision ? (
             <p className="text-muted-foreground">{t("concepts.dossier.newRevisionHint")}</p>
           ) : null}
-          <section aria-labelledby={`${prefix}-checklist`}>
+          <section
+            id={`${prefix}-files-panel`}
+            role="tabpanel"
+            hidden={activeSection !== "files"}
+            aria-labelledby={`${prefix}-checklist`}
+          >
             <h4 id={`${prefix}-checklist`} className="mb-2 font-semibold">
               {t("concepts.dossier.checklist")}
             </h4>
@@ -568,7 +601,13 @@ export const ConceptDossierPanel = ({
               </div>
             ) : null}
           </section>
-          <section aria-labelledby={`${prefix}-feedback`} className="space-y-3 border-t pt-4">
+          <section
+            id={`${prefix}-feedback-panel`}
+            role="tabpanel"
+            hidden={activeSection !== "feedback"}
+            aria-labelledby={`${prefix}-feedback`}
+            className="space-y-3"
+          >
             <h4 id={`${prefix}-feedback`} className="font-semibold">
               {t("concepts.dossier.feedback")}
             </h4>

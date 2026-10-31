@@ -1477,7 +1477,7 @@
   },
   {
     "key": "contracts.timeline.action.designProjectEnsure", "category": "contracts",
-    "vi": "Tạo hoặc liên kết Dự án thiết kế", "en": "Design project created or linked", "zh": "已创建或关联设计项目", "ja": "設計プロジェクトを作成または連携"
+    "vi": "Tạo hoặc liên kết Hợp Đồng Thiết Kế", "en": "Design contract created or linked", "zh": "已创建或关联设计合同", "ja": "設計契約を作成または連携"
   },
   {
     "key": "contracts.timeline.action.milestoneStatus", "category": "contracts",
@@ -1518,42 +1518,42 @@
   {
     "key": "contracts.designProject.title",
     "category": "contracts",
-    "vi": "Dự án thiết kế",
-    "en": "Design project",
-    "zh": "设计项目",
-    "ja": "設計プロジェクト"
+    "vi": "Hợp Đồng Thiết Kế",
+    "en": "Design contract",
+    "zh": "设计合同",
+    "ja": "設計契約"
   },
   {
     "key": "contracts.designProject.pending",
     "category": "contracts",
-    "vi": "Chuyển trạng thái hợp đồng không tự tạo dự án thiết kế. Kinh doanh có thể tạo dự án thiết kế từ Cơ hội khi chưa có hợp đồng.",
-    "en": "Changing contract status does not create a design project. Sales can create one from the opportunity before a contract exists.",
-    "zh": "变更合同状态不会自动创建设计项目。销售人员可在签约前从商机创建设计项目。",
-    "ja": "契約のステータス変更では設計プロジェクトは自動作成されません。営業担当者は契約前に商談から作成できます。"
+    "vi": "Chuyển trạng thái hợp đồng không tự tạo hợp đồng thiết kế. Kinh doanh có thể tạo hợp đồng thiết kế từ Cơ hội khi chưa có hợp đồng.",
+    "en": "Changing contract status does not create a design contract. Sales can create one from the opportunity before a contract exists.",
+    "zh": "变更合同状态不会自动创建设计合同。销售人员可在签约前从商机创建设计合同。",
+    "ja": "契約のステータス変更では設計契約は自動作成されません。営業担当者は契約前に商談から作成できます。"
   },
   {
     "key": "contracts.designProject.missing",
     "category": "contracts",
-    "vi": "Hợp đồng chưa có dự án thiết kế. Chỉ chọn Tạo dự án thiết kế nếu thực sự cần một dự án mới.",
-    "en": "This contract has no design project. Select Create design project only if a new project is needed.",
-    "zh": "此合同尚无设计项目。仅在确实需要新项目时选择创建设计项目。",
-    "ja": "この契約には設計プロジェクトがありません。新規作成が必要な場合のみ作成を選択してください。"
+    "vi": "Hợp đồng chưa có hợp đồng thiết kế. Chỉ chọn Tạo hợp đồng thiết kế nếu thực sự cần một dự án mới.",
+    "en": "This contract has no design contract. Select Create design contract only if a new project is needed.",
+    "zh": "此合同尚无设计合同。仅在确实需要新项目时选择创建设计合同。",
+    "ja": "この契約には設計契約がありません。新規作成が必要な場合のみ作成を選択してください。"
   },
   {
     "key": "contracts.designProject.create",
     "category": "contracts",
-    "vi": "Tạo dự án thiết kế",
-    "en": "Create design project",
-    "zh": "创建设计项目",
-    "ja": "設計プロジェクトを作成"
+    "vi": "Tạo hợp đồng thiết kế",
+    "en": "Create design contract",
+    "zh": "创建设计合同",
+    "ja": "設計契約を作成"
   },
   {
     "key": "contracts.designProject.created",
     "category": "contracts",
-    "vi": "Đã tạo dự án thiết kế.",
-    "en": "Design project created.",
-    "zh": "设计项目已创建。",
-    "ja": "設計プロジェクトを作成しました。"
+    "vi": "Đã tạo hợp đồng thiết kế.",
+    "en": "Design contract created.",
+    "zh": "设计合同已创建。",
+    "ja": "設計契約を作成しました。"
   },
   {
     "key": "contracts.source.title",
