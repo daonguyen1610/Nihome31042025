@@ -102,6 +102,13 @@ internal static class DeletionImpactPlanner
         var offers = db.ProcurementInputPriceOffers.Where(item => item.WorkPackageId == id);
         var offerIds = offers.Select(item => item.Id);
         await AddAsync(items, "workPackages.tasks", DeletionImpactActions.Delete, tasks, item => item.Id, item => item.Title, ct);
+        var attachments = db.DepartmentWorkTaskAttachments.Where(item => taskIds.Contains(item.WorkTaskId));
+        await AddAsync(items, "workPackages.attachments", DeletionImpactActions.Delete,
+            attachments.Where(item => item.StorageDeletedAt != null),
+            item => item.Id, item => item.OriginalFileName, ct);
+        await AddAsync(items, "workPackages.attachmentCleanup", DeletionImpactActions.Block,
+            attachments.Where(item => item.StorageDeletedAt == null),
+            item => item.Id, item => item.OriginalFileName, ct);
         var cc = await db.DepartmentWorkTaskCcUsers.AsNoTracking().Where(item => taskIds.Contains(item.WorkTaskId)).Select(item => new { item.WorkTaskId, item.UserId }).ToListAsync(ct);
         AddRaw(items, "workPackages.cc", DeletionImpactActions.Delete, cc.Select(item => $"{item.WorkTaskId}:{item.UserId}"), []);
         var dependencies = await db.DepartmentWorkTaskDependencies.AsNoTracking().Where(item => taskIds.Contains(item.WorkTaskId) || taskIds.Contains(item.PredecessorTaskId)).Select(item => new { item.WorkTaskId, item.PredecessorTaskId }).ToListAsync(ct);

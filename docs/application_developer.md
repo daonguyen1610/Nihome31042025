@@ -1899,6 +1899,17 @@ package progress counts only leaf tasks. Parent tasks cannot receive direct
 progress or verification and cannot hold a KPI definition. Older task update
 requests may omit `parentTaskId` without unlinking an existing subtask.
 
+`AddWorkTaskAttachments` adds private task-file metadata. The work-task file
+area reuses the business-document 20 MB and extension checks, while static
+`/files/business-documents` access remains blocked. The API returns file
+metadata without a public path. A delete removes the host file before marking
+the attachment hidden; a failed cleanup remains retryable and blocks the
+package deletion plan. Attachments are not yet staged to the Project Drive
+registry. Back up the private `wwwroot/files/business-documents/work-tasks`
+directory alongside the database before deploying this migration. Docker
+Compose mounts `work_task_files` at that path; deployments outside Compose
+must provide equivalent persistent storage and include it in backups.
+
 The input-price editor uses persistent, associated labels and a responsive
 five-column desktop layout with stacked mobile fields. The dialog body scrolls
 independently of its header/footer. Its read-only line amount uses the existing
@@ -1923,6 +1934,10 @@ test quote to `SentToCustomer` in SQL; it does not test email delivery.
 | `DELETE` | `/api/work-packages/{id}` | Same management scope | Hard delete with code, planToken, rowVersion and idempotency key |
 | `POST` | `/api/work-packages/{id}/tasks` | `work.packages.assign` | Add a department task with WBS, dependencies, CC, and optional KPI |
 | `PUT` | `/api/work-packages/{id}/tasks/{taskId}` | `work.packages.assign` | Edit a non-terminal assignment |
+| `GET` | `/api/work-packages/{id}/tasks/{taskId}/attachments` | `work.packages.view` + package scope | List active private task files |
+| `POST` | `/api/work-packages/{id}/tasks/{taskId}/attachments` | `work.packages.view` + lead/assignee scope | Upload one multipart `file` with `Idempotency-Key`; the UI sends selected files individually |
+| `GET` | `/api/work-packages/{id}/tasks/{taskId}/attachments/{attachmentId}/content` | `work.packages.view` + package scope | Download a task file through authorization |
+| `DELETE` | `/api/work-packages/{id}/tasks/{taskId}/attachments/{attachmentId}` | `work.packages.view` + lead/assignee scope; lead may clean closed packages | Clean a task file and mark it deleted; retry after a cleanup conflict |
 | `PUT` | `/api/work-packages/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Record monotonic assignee progress |
 | `POST` | `/api/work-packages/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Independently verify a completed KPI task |
 | `POST` | `/api/work-packages/{id}/input-price-offers` | `work.packages.progress` | Add a supplier/subcontractor input price offer to a Procurement pricing package |

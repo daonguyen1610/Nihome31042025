@@ -6,6 +6,8 @@ node_modules
 **/bin
 **/obj
 **/out
+**/publish
+deployment-config/
 **/.DS_Store
 docs
 **/playwright-report

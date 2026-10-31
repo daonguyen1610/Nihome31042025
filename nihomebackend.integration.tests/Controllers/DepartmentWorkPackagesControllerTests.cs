@@ -81,6 +81,110 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
+    public async Task TaskAttachments_RequireScope_StayPrivate_AndBlockPackageDeleteUntilCleaned()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var packageResponse = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "General",
+            name = "Hồ sơ giao việc lắp đặt điện nhà máy",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var packageId = (await ReadJsonAsync(packageResponse)).GetProperty("id").GetInt32();
+        var taskResponse = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            wbsCode = "MEP-01",
+            title = "Tập hợp bản vẽ và biên bản vật tư điện",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = "2026-10-12T00:00:00Z",
+            plannedEnd = "2026-10-30T00:00:00Z",
+            ccUserIds = Array.Empty<int>(),
+            predecessorTaskIds = Array.Empty<int>(),
+        });
+        taskResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var taskId = (await ReadJsonAsync(taskResponse)).GetProperty("id").GetInt32();
+        var path = $"/api/work-packages/{packageId}/tasks/{taskId}/attachments";
+
+        async Task<HttpResponseMessage> Upload(string name, string contents, string key)
+        {
+            using var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes(contents)), "file", name);
+            using var request = new HttpRequestMessage(HttpMethod.Post, path) { Content = form };
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", key);
+            return await Client.SendAsync(request);
+        }
+
+        var key = Guid.NewGuid().ToString("N");
+        var first = await Upload("ban-ve-dien.pdf", "NICON MEP drawing", key);
+        first.StatusCode.Should().Be(HttpStatusCode.Created);
+        var firstId = (await ReadJsonAsync(first)).GetProperty("id").GetInt64();
+        var replay = await Upload("ban-ve-dien.pdf", "NICON MEP drawing", key);
+        replay.StatusCode.Should().Be(HttpStatusCode.Created);
+        replay.Headers.Contains("Idempotency-Replayed").Should().BeTrue();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var second = await Upload("bien-ban-vat-tu.xlsx", "NICON material record", Guid.NewGuid().ToString("N"));
+        second.StatusCode.Should().Be(HttpStatusCode.Created);
+        var secondId = (await ReadJsonAsync(second)).GetProperty("id").GetInt64();
+        var listed = await ReadJsonAsync(await Client.GetAsync(path));
+        listed.GetArrayLength().Should().Be(2);
+        (await Client.GetAsync($"{path}/{firstId}/content")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsCustomerAsync);
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync($"{path}/{firstId}/content")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var storedPath = await WithDbAsync(db => db.DepartmentWorkTaskAttachments.AsNoTracking()
+            .Where(item => item.Id == firstId).Select(item => item.Path).SingleAsync());
+        (await Client.GetAsync(storedPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        (await Upload("invalid.exe", "not an accepted business file", Guid.NewGuid().ToString("N")))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DepartmentWorkTaskAttachments.CountAsync(item => item.WorkTaskId == taskId)))
+            .Should().Be(2);
+
+        var beforeCancel = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var cancel = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = beforeCancel.GetProperty("name").GetString(),
+            status = "Cancelled",
+            rowVersion = beforeCancel.GetProperty("rowVersion").GetString(),
+        });
+        cancel.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Upload("too-late.pdf", "late evidence", Guid.NewGuid().ToString("N")))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.DeleteAsync($"{path}/{firstId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+
+        (await Client.DeleteAsync($"{path}/{firstId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.DeleteAsync($"{path}/{secondId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"{path}/{firstId}/content")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.DepartmentWorkTaskAttachments.CountAsync(item => item.WorkTaskId == taskId &&
+            item.StorageDeletedAt != null))).Should().Be(2);
+        impact = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        var current = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var deleted = await SendAsync(HttpMethod.Delete, $"/api/work-packages/{packageId}", new
+        {
+            planToken = impact.GetProperty("planToken").GetString(),
+            confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            rowVersion = current.GetProperty("rowVersion").GetString(),
+        });
+        deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await WithDbAsync(db => db.DepartmentWorkTaskAttachments.AnyAsync(item => item.WorkTaskId == taskId)))
+            .Should().BeFalse();
+    }
+
+    [Fact]
     public async Task ContractPackages_RequireSameProjectContract_AndClassifyExistingLinks()
     {
         var seed = await SeedProjectScopeAsync();

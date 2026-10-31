@@ -46,6 +46,8 @@ public sealed partial class DepartmentWorkPackageService
             document.SourceRecordId = null;
         }
         db.DepartmentWorkTaskDependencies.RemoveRange(await db.DepartmentWorkTaskDependencies.Where(item => taskIds.Contains(item.WorkTaskId) || taskIds.Contains(item.PredecessorTaskId)).ToListAsync(ct));
+        db.DepartmentWorkTaskAttachments.RemoveRange(await db.DepartmentWorkTaskAttachments
+            .Where(item => taskIds.Contains(item.WorkTaskId)).ToListAsync(ct));
         db.EntityTranslations.RemoveRange(await db.EntityTranslations.Where(item =>
             (item.EntityType == EntityTypes.DepartmentWorkPackage && item.EntityId == id) ||
             (item.EntityType == EntityTypes.DepartmentWorkTask && taskIds.Contains(item.EntityId))).ToListAsync(ct));

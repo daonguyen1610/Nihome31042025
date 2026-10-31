@@ -8,10 +8,14 @@ import {
   BriefcaseBusiness,
   CheckCircle2,
   ClipboardList,
+  Download,
+  Loader2,
+  Paperclip,
   Plus,
   Search,
   RotateCcw,
   Trash2,
+  Upload,
   Users,
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
@@ -43,6 +47,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useAppSelector } from "@/store";
 import { useToast } from "@/hooks/use-toast";
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
@@ -57,6 +62,7 @@ import {
   type DepartmentWorkPackageOptionsResponse,
   type DepartmentWorkPackageResponse,
   type DepartmentWorkTaskResponse,
+  type DepartmentWorkTaskAttachmentResponse,
   type InputPriceOfferResponse,
   type UpsertFinanceReviewRequest,
   type UpsertInputPriceOfferRequest,
@@ -80,6 +86,8 @@ const money = (value: number, currency: string) =>
   `${new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 2 }).format(value)} ${currency}`;
 const formatPriceNumber = (value: number) =>
   new Intl.NumberFormat("vi-VN", { maximumFractionDigits: 4 }).format(value);
+const TASK_FILE_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"];
+const TASK_FILE_MAX_SIZE = 20 * 1024 * 1024;
 const newPriceLine = () => ({
   itemCode: "",
   description: "",
@@ -102,6 +110,7 @@ const DepartmentWorkPackages = () => {
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const { toast } = useToast();
   const { has } = usePermissions();
   const packageId = id && /^\d+$/.test(id) ? Number(id) : null;
@@ -148,6 +157,14 @@ const DepartmentWorkPackages = () => {
     null,
   );
   const [taskOpen, setTaskOpen] = useState(false);
+  const [taskFiles, setTaskFiles] = useState<File[]>([]);
+  const taskFileKeys = useRef(new Map<File, string>());
+  const [attachmentsOpen, setAttachmentsOpen] = useState(false);
+  const [attachmentTask, setAttachmentTask] = useState<DepartmentWorkTaskResponse | null>(null);
+  const [attachments, setAttachments] = useState<DepartmentWorkTaskAttachmentResponse[]>([]);
+  const [attachmentFiles, setAttachmentFiles] = useState<File[]>([]);
+  const [attachmentBusy, setAttachmentBusy] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [progressOpen, setProgressOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -600,6 +617,8 @@ const DepartmentWorkPackages = () => {
 
   const openTask = (task?: DepartmentWorkTaskResponse, parent?: DepartmentWorkTaskResponse) => {
     setTaskEditing(task ?? null);
+    setTaskFiles([]);
+    taskFileKeys.current.clear();
     setTaskForm(
       task
         ? {
@@ -636,6 +655,125 @@ const DepartmentWorkPackages = () => {
           },
     );
     setTaskOpen(true);
+  };
+
+  const selectTaskFiles = (selected: FileList | null, target: "form" | "attachments") => {
+    const files = Array.from(selected ?? []);
+    if (
+      files.length > 10 ||
+      files.some(
+        (file) =>
+          file.size < 1 ||
+          file.size > TASK_FILE_MAX_SIZE ||
+          file.name.length > 255 ||
+          !TASK_FILE_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension)),
+      )
+    ) {
+      if (target === "form") setTaskFiles([]);
+      else setAttachmentFiles([]);
+      toast({ variant: "destructive", title: t("workPackages.attachments.validation") });
+      return;
+    }
+    if (target === "form") setTaskFiles(files);
+    else setAttachmentFiles(files);
+    taskFileKeys.current.clear();
+  };
+
+  const uploadTaskFiles = async (taskId: number, files: File[]) => {
+    if (!detail) return { failed: files, error: t("workPackages.error.save") };
+    const failed: File[] = [];
+    let error: string | null = null;
+    for (const file of files) {
+      const key = taskFileKeys.current.get(file) ?? newIdempotencyKey();
+      taskFileKeys.current.set(file, key);
+      try {
+        await adminApi.uploadWorkTaskAttachment(detail.id, taskId, file, key);
+        taskFileKeys.current.delete(file);
+      } catch (cause) {
+        failed.push(file);
+        error ??= `${file.name}: ${extractApiError(cause)}`;
+      }
+    }
+    return { failed, error };
+  };
+
+  const openAttachments = async (task: DepartmentWorkTaskResponse) => {
+    if (!detail) return;
+    setAttachmentTask(task);
+    setAttachmentsOpen(true);
+    setAttachments([]);
+    setAttachmentFiles([]);
+    setAttachmentError(null);
+    setAttachmentBusy(true);
+    try {
+      setAttachments((await adminApi.listWorkTaskAttachments(detail.id, task.id)).data);
+    } catch (cause) {
+      setAttachmentError(extractApiError(cause));
+    } finally {
+      setAttachmentBusy(false);
+    }
+  };
+
+  const addAttachments = async () => {
+    if (!detail || !attachmentTask || attachmentFiles.length === 0) return;
+    setAttachmentBusy(true);
+    setAttachmentError(null);
+    try {
+      const result = await uploadTaskFiles(attachmentTask.id, attachmentFiles);
+      setAttachmentFiles(result.failed);
+      setAttachments((await adminApi.listWorkTaskAttachments(detail.id, attachmentTask.id)).data);
+      if (result.error) setAttachmentError(result.error);
+      else toast({ title: t("workPackages.attachments.uploaded") });
+    } catch (cause) {
+      setAttachmentError(extractApiError(cause));
+    } finally {
+      setAttachmentBusy(false);
+    }
+  };
+
+  const downloadAttachment = async (attachment: DepartmentWorkTaskAttachmentResponse) => {
+    if (!detail || !attachmentTask) return;
+    setAttachmentBusy(true);
+    setAttachmentError(null);
+    try {
+      const response = await adminApi.downloadWorkTaskAttachment(
+        detail.id,
+        attachmentTask.id,
+        attachment.id,
+      );
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = attachment.originalFileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (cause) {
+      setAttachmentError(extractApiError(cause));
+    } finally {
+      setAttachmentBusy(false);
+    }
+  };
+
+  const deleteAttachment = async (attachment: DepartmentWorkTaskAttachmentResponse) => {
+    if (
+      !detail ||
+      !attachmentTask ||
+      !window.confirm(
+        t("workPackages.attachments.deleteConfirm", { name: attachment.originalFileName }),
+      )
+    )
+      return;
+    setAttachmentBusy(true);
+    setAttachmentError(null);
+    try {
+      await adminApi.deleteWorkTaskAttachment(detail.id, attachmentTask.id, attachment.id);
+      setAttachments((current) => current.filter((item) => item.id !== attachment.id));
+      toast({ title: t("workPackages.attachments.deleted") });
+    } catch (cause) {
+      setAttachmentError(extractApiError(cause));
+    } finally {
+      setAttachmentBusy(false);
+    }
   };
 
   const previewDelete = async () => {
@@ -696,9 +834,18 @@ const DepartmentWorkPackages = () => {
       plannedEnd: apiDate(taskForm.plannedEnd),
     };
     try {
-      if (taskEditing)
-        await adminApi.updateWorkTask(detail.id, taskEditing.id, body, newIdempotencyKey());
-      else await adminApi.addWorkTask(detail.id, body, newIdempotencyKey());
+      const saved = taskEditing
+        ? (await adminApi.updateWorkTask(detail.id, taskEditing.id, body, newIdempotencyKey())).data
+        : (await adminApi.addWorkTask(detail.id, body, newIdempotencyKey())).data;
+      const uploads = await uploadTaskFiles(saved.id, taskFiles);
+      setTaskFiles(uploads.failed);
+      if (uploads.error) {
+        setTaskEditing(saved);
+        setTaskForm((current) => ({ ...current, rowVersion: saved.rowVersion }));
+        toast({ variant: "destructive", title: uploads.error });
+        await load();
+        return;
+      }
       setTaskOpen(false);
       toast({
         title: t(taskEditing ? "workPackages.toast.taskUpdated" : "workPackages.toast.taskCreated"),
@@ -1475,6 +1622,14 @@ const DepartmentWorkPackages = () => {
                         <span className="w-12 text-right text-sm font-medium">
                           {task.progressPercent}%
                         </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => void openAttachments(task)}
+                        >
+                          <Paperclip className="mr-1.5 h-4 w-4" />
+                          {t("workPackages.attachments.title")}
+                        </Button>
                         {canAssign &&
                           detail.canAssignTasks &&
                           ["Planned", "InProgress"].includes(task.status) && (
@@ -2456,6 +2611,23 @@ const DepartmentWorkPackages = () => {
                 }
               />
             </Field>
+            <Field label={t("workPackages.attachments.addFiles")} className="sm:col-span-2">
+              <Input
+                type="file"
+                multiple
+                accept={TASK_FILE_EXTENSIONS.join(",")}
+                disabled={saving}
+                onChange={(event) => {
+                  selectTaskFiles(event.target.files, "form");
+                  event.target.value = "";
+                }}
+              />
+              <p className="mt-1 break-words text-xs text-muted-foreground">
+                {taskFiles.length > 0
+                  ? taskFiles.map((file) => file.name).join(", ")
+                  : t("workPackages.attachments.help")}
+              </p>
+            </Field>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setTaskOpen(false)}>
@@ -2465,6 +2637,104 @@ const DepartmentWorkPackages = () => {
               {t("common.save")}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={attachmentsOpen} onOpenChange={setAttachmentsOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>{t("workPackages.attachments.title")}</DialogTitle>
+            <DialogDescription>
+              {attachmentTask?.wbsCode} · {attachmentTask?.title}
+            </DialogDescription>
+          </DialogHeader>
+          {attachmentError && (
+            <p role="alert" className="break-words text-sm text-destructive">
+              {attachmentError}
+            </p>
+          )}
+          {attachmentBusy && attachments.length === 0 ? (
+            <p className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              {t("common.loading")}
+            </p>
+          ) : attachments.length === 0 ? (
+            <p className="text-sm text-muted-foreground">{t("workPackages.attachments.empty")}</p>
+          ) : (
+            <ul className="divide-y rounded-md border">
+              {attachments.map((attachment) => (
+                <li
+                  key={attachment.id}
+                  className="flex flex-wrap items-center justify-between gap-2 p-3"
+                >
+                  <span className="min-w-0 break-all text-sm">{attachment.originalFileName}</span>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      disabled={attachmentBusy}
+                      onClick={() => void downloadAttachment(attachment)}
+                    >
+                      <Download className="mr-1.5 h-4 w-4" />
+                      {t("workPackages.attachments.download")}
+                    </Button>
+                    {detail &&
+                      attachmentTask &&
+                      (detail.canAssignTasks ||
+                        (detail.status !== "Completed" &&
+                          detail.status !== "Cancelled" &&
+                          attachmentTask.status !== "Cancelled" &&
+                          attachmentTask.assigneeUserId === currentUserId)) && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={attachmentBusy}
+                          onClick={() => void deleteAttachment(attachment)}
+                        >
+                          <Trash2 className="mr-1.5 h-4 w-4" />
+                          {t("common.delete")}
+                        </Button>
+                      )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {detail &&
+            attachmentTask &&
+            detail.status !== "Completed" &&
+            detail.status !== "Cancelled" &&
+            attachmentTask.status !== "Cancelled" &&
+            (detail.canAssignTasks || attachmentTask.assigneeUserId === currentUserId) && (
+              <div className="space-y-2">
+                <Label htmlFor="work-task-attachment-upload">
+                  {t("workPackages.attachments.addFiles")}
+                </Label>
+                <Input
+                  id="work-task-attachment-upload"
+                  type="file"
+                  multiple
+                  accept={TASK_FILE_EXTENSIONS.join(",")}
+                  disabled={attachmentBusy}
+                  onChange={(event) => {
+                    selectTaskFiles(event.target.files, "attachments");
+                    event.target.value = "";
+                  }}
+                />
+                <p className="break-words text-xs text-muted-foreground">
+                  {attachmentFiles.length > 0
+                    ? attachmentFiles.map((file) => file.name).join(", ")
+                    : t("workPackages.attachments.help")}
+                </p>
+                <Button
+                  disabled={attachmentBusy || attachmentFiles.length === 0}
+                  onClick={() => void addAttachments()}
+                >
+                  <Upload className="mr-1.5 h-4 w-4" />
+                  {t("workPackages.attachments.upload")}
+                </Button>
+              </div>
+            )}
         </DialogContent>
       </Dialog>
 

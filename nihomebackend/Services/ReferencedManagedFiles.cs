@@ -144,6 +144,8 @@ public static class ReferencedManagedFiles
         await AddValuesAsync(db.SurveyMedia.Select(x => x.RelativePath));
         await AddValuesAsync(db.ProjectDocuments.Select(x => x.LocalPath));
         await AddValuesAsync(db.PaymentRequestAttachments.Select(x => x.FilePath));
+        await AddValuesAsync(db.DepartmentWorkTaskAttachments
+            .Where(x => x.StorageDeletedAt == null).Select(x => x.Path));
         await AddValuesAsync(db.BasicDesignDocs.Select(x => x.FilePath));
         await AddValuesAsync(db.ShopDrawings.Select(x => x.FilePath));
 

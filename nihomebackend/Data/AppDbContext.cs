@@ -108,6 +108,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
     public DbSet<OperationalProjectCodeChange> OperationalProjectCodeChanges => Set<OperationalProjectCodeChange>();
     public DbSet<DepartmentWorkPackage> DepartmentWorkPackages => Set<DepartmentWorkPackage>();
+    public DbSet<DepartmentWorkTaskAttachment> DepartmentWorkTaskAttachments => Set<DepartmentWorkTaskAttachment>();
     public DbSet<DepartmentWorkPackageParticipantGroup> DepartmentWorkPackageParticipantGroups => Set<DepartmentWorkPackageParticipantGroup>();
     public DbSet<DepartmentWorkTask> DepartmentWorkTasks => Set<DepartmentWorkTask>();
     public DbSet<DepartmentWorkTaskCc> DepartmentWorkTaskCcUsers => Set<DepartmentWorkTaskCc>();
@@ -2376,6 +2377,19 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(item => item.WorkTaskId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(item => item.User).WithMany()
                 .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+
+        modelBuilder.Entity<DepartmentWorkTaskAttachment>(b =>
+        {
+            b.ToTable("department_work_task_attachments");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Path).HasMaxLength(500).IsRequired();
+            b.Property(item => item.OriginalFileName).HasMaxLength(255).IsRequired();
+            b.Property(item => item.ContentType).HasMaxLength(150).IsRequired();
+            b.HasOne(item => item.WorkTask).WithMany(task => task.Attachments)
+                .HasForeignKey(item => item.WorkTaskId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.WorkTaskId, item.DeletedAt });
+            b.ToTable(table => table.HasCheckConstraint("CK_department_work_task_attachments_size", "[FileSize] > 0"));
         });
 
         modelBuilder.Entity<DepartmentWorkTaskDependency>(b =>
