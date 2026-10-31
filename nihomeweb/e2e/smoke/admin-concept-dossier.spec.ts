@@ -43,8 +43,10 @@ test("Concept dossier preserves context and supports accessible responsive forms
     dossier.getByRole("button", { name: /Gắn vào phiên bản|Attach to revision/i }),
   ).toBeDisabled();
   await expect(dossier.getByText(/Chưa gắn tài liệu|No documents attached/i)).toBeVisible();
+  await dossier.getByRole("tab", { name: /Ý kiến khách hàng|Client feedback/i }).click();
   await expect(dossier.getByText(/Chưa có ý kiến khách hàng|No client feedback/i)).toBeVisible();
   await expect(dossier.getByLabel(/Tên người góp ý|Client representative name/i)).toHaveCount(0);
+  await dossier.getByRole("tab", { name: /Hồ sơ|Documents/i }).click();
   await expect(
     dossier.getByRole("button", { name: /Tạo phiên bản sửa đổi|Create revised version/i }),
   ).toHaveCount(0);
@@ -204,6 +206,7 @@ test("Concept dossier preserves context and supports accessible responsive forms
   await page.keyboard.press("Escape");
   await expect(discardDialog).toHaveCount(0);
   await expect(discard).toBeFocused();
+  await dossier.getByRole("tab", { name: /Ý kiến khách hàng|Client feedback/i }).click();
   await dossier
     .getByLabel(/Tên người góp ý|Client representative name/i)
     .fill("Ông Nguyễn Minh - Chủ đầu tư");
@@ -263,6 +266,7 @@ test("Concept dossier preserves context and supports accessible responsive forms
   ).toBeVisible();
   await page.reload({ waitUntil: "networkidle" });
   await page.getByRole("button", { name: /Hồ sơ và ý kiến|Files and feedback/i }).click();
+  await dossier.getByRole("tab", { name: /Ý kiến khách hàng|Client feedback/i }).click();
   await expect(dossier.getByText(/Giữ sân trong theo thống nhất với chủ đầu tư/)).toBeVisible();
   await expect(dossier.getByLabel(/Phản hồi xử lý|^Response$/i)).toHaveCount(0);
   await page.setViewportSize({ width: 390, height: 900 });
@@ -371,6 +375,7 @@ test("Concept dossier preserves context and supports accessible responsive forms
     .click();
   await expect(page.getByRole("alertdialog")).toHaveCount(0);
   await expect(page.getByRole("button", { name: "破棄", exact: true })).toHaveCount(0);
+  await dossier.getByRole("tab", { name: /お客様の意見|意見|Client feedback/i }).click();
   await expect(dossier.getByText(/Giữ sân trong theo thống nhất với chủ đầu tư/)).toBeVisible();
   expect(browserErrors).toEqual([]);
 });

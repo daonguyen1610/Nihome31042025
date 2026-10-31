@@ -156,6 +156,34 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_RejectsOwnerOutsideDesignTeam()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        var outsiderId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT"])
+            .Select(user => user.Id).SingleAsync());
+        var response = await Client.PostAsJsonAsync("/api/basic-design-docs", new
+        {
+            designProjectId = projectId, disciplineCode = "architecture",
+            title = "Mặt bằng tổng thể nhà máy NICON", ownerUserId = outsiderId,
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("đội ngũ");
+
+        var documentId = await CreateDocAsync(projectId, "architecture");
+        var updated = await Client.PutAsJsonAsync($"/api/basic-design-docs/{documentId}", new
+        {
+            disciplineCode = "architecture", title = "Mặt bằng tổng thể nhà máy NICON",
+            ownerUserId = outsiderId,
+        });
+        updated.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var persistedOwner = await WithDbAsync(db => db.BasicDesignDocs.AsNoTracking()
+            .Where(document => document.Id == documentId).Select(document => document.OwnerUserId).SingleAsync());
+        persistedOwner.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Create_ProjectNotInBasicStage_IsBadRequest()
     {
         // The auto-created project after DesignProject POST is at Concept stage.

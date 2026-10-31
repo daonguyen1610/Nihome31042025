@@ -132,6 +132,14 @@ counts equal.
 the default `DESIGN_LEAD` permission set and adds vendor management, RFQ
 negotiation/export, and downstream-contract visibility. The legacy `DESIGN`
 role remains a general design role.
+The team API accepts `design.projects.view` for a scoped Design Project even
+when the actor lacks `operations.projects.view`; root project team reads still
+require the operational-project permission. Writes also require the matching
+manage permission and project-level access. Each design workspace has one
+active Chủ Nhiệm Thiết Kế and may have multiple active Chủ Trì Thiết Kế.
+The legacy `DesignLeadUserId` stores the primary lead while the scoped team
+stores all leads. Owner assignments in Concept, Basic Design and Shop Drawing
+require an active member of the same scoped team.
 Task approval is not implied by either role: the API compares the current user
 to the task's single assigned approver. Internal review recipients
 receive record-scoped view/comment access only when explicitly listed.
