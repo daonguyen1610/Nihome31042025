@@ -108,6 +108,8 @@ public sealed class DepartmentWorkTaskResponse
 {
     public int Id { get; set; }
     public int WorkPackageId { get; set; }
+    public int? ParentTaskId { get; set; }
+    public bool HasSubtasks { get; set; }
     public string WbsCode { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }

@@ -91,6 +91,10 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Người chủ trì phòng nhận chỉ giao đầu việc cho nhân sự đang hoạt động thuộc
   cùng nhóm phòng ban. Mỗi đầu việc có WBS, thời gian, nguồn lực, người phụ
   trách, công tác tiên quyết và người theo dõi CC.
+- Công việc thường có thể có công việc con trong cùng nhóm việc. Trạng thái và
+  phần trăm hoàn thành của cha tự tổng hợp từ con đang hoạt động, kể cả nhiều
+  cấp (xác nhận người dùng 31/10/2026). Chỉ công việc lá cập nhật tiến độ và
+  được xác nhận trực tiếp; cha không ghi KPI riêng để tránh tính trùng.
 - Người phụ trách tự cập nhật tiến độ sau khi nhóm chuyển sang `Active`. Công
   tác chỉ được bắt đầu khi mọi công tác tiên quyết đã hoàn thành. Thông báo mở
   trực tiếp đúng đầu việc.

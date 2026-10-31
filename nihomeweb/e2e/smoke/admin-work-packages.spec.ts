@@ -31,6 +31,90 @@ test("project, contract and internal work package tabs render without browser er
   expect(errors).toEqual([]);
 });
 
+for (const width of [390, 768])
+  test(`ordinary work subtasks render as a hierarchy at ${width}px`, async ({
+    page,
+    api,
+    loginAs,
+    loginInBrowserAs,
+  }) => {
+    const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+    const writeHeaders = () => ({ ...headers, "Idempotency-Key": randomUUID() });
+    const options = await (await api.get("/api/work-packages/options", { headers })).json();
+    const department = options.departments.find(
+      (item: { code: string }) => item.code === "PROCUREMENT",
+    );
+    const lead = options.users.find(
+      (item: { roleGroupId: number; canLead: boolean }) =>
+        item.roleGroupId === department.id && item.canLead,
+    );
+    const assignee = options.users.find(
+      (item: { roleGroupId: number; userId: number }) =>
+        item.roleGroupId === department.id && item.userId !== lead.userId,
+    );
+    expect(lead).toBeTruthy();
+    expect(assignee).toBeTruthy();
+    const projects = await (
+      await api.get("/api/operational-projects?pageSize=1", { headers })
+    ).json();
+    const created = await api.post("/api/work-packages", {
+      headers: writeHeaders(),
+      data: {
+        kind: "Project",
+        purpose: "General",
+        name: `Điều phối vật tư dự án NICON ${Date.now()}`,
+        operationalProjectId: projects.items[0].id,
+        departmentRoleGroupId: department.id,
+        leadUserId: lead.userId,
+      },
+    });
+    expect(created.status(), await created.text()).toBe(201);
+    const workPackage = await created.json();
+    try {
+      const parentResponse = await api.post(`/api/work-packages/${workPackage.id}/tasks`, {
+        headers: writeHeaders(),
+        data: {
+          wbsCode: "VT-01",
+          title: "Tổng hợp yêu cầu vật tư thi công",
+          assigneeUserId: assignee.userId,
+          approverUserId: lead.userId,
+          plannedStart: "2026-10-23T00:00:00Z",
+          plannedEnd: "2026-10-30T00:00:00Z",
+        },
+      });
+      expect(parentResponse.status(), await parentResponse.text()).toBe(201);
+      const parent = await parentResponse.json();
+      const childResponse = await api.post(`/api/work-packages/${workPackage.id}/tasks`, {
+        headers: writeHeaders(),
+        data: {
+          parentTaskId: parent.id,
+          wbsCode: "VT-01.1",
+          title: "Kiểm tra khối lượng vật tư",
+          assigneeUserId: assignee.userId,
+          approverUserId: lead.userId,
+          plannedStart: "2026-10-23T00:00:00Z",
+          plannedEnd: "2026-10-30T00:00:00Z",
+        },
+      });
+      expect(childResponse.status(), await childResponse.text()).toBe(201);
+      await loginInBrowserAs(page, TEST_USERS.superAdmin);
+      await page.setViewportSize({ width, height: 844 });
+      await page.goto(`/admin/work-packages/${workPackage.id}`);
+      const rows = page.getByTestId("work-task-row");
+      await expect(rows).toHaveCount(2);
+      await expect(rows.nth(0)).toContainText("Tổng hợp yêu cầu vật tư thi công");
+      await expect(rows.nth(0)).toContainText(/Tự tổng hợp từ con|Rolled up from subtasks/);
+      await expect(rows.nth(1)).toContainText("Kiểm tra khối lượng vật tư");
+      await rows
+        .nth(0)
+        .getByRole("button", { name: /Thêm công việc con|Add subtask/ })
+        .click();
+      await expect(page.getByRole("dialog")).toContainText("VT-01");
+    } finally {
+      await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${workPackage.id}`);
+    }
+  });
+
 test("project package picker offers every active receiving department", async ({
   page,
   api,

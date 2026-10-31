@@ -3162,6 +3162,9 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("KpiDefinitionId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ParentTaskId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("PlannedEnd")
                         .HasColumnType("datetime2");
 
@@ -3216,6 +3219,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ApproverUserId");
 
                     b.HasIndex("DepartmentRoleGroupId");
+
+                    b.HasIndex("ParentTaskId");
 
                     b.HasIndex("VerifiedByUserId");
 
@@ -12500,6 +12505,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("KpiDefinitionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkTask", "ParentTask")
+                        .WithMany("Subtasks")
+                        .HasForeignKey("ParentTaskId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "VerifiedByUser")
                         .WithMany()
                         .HasForeignKey("VerifiedByUserId")
@@ -12518,6 +12528,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("DepartmentRoleGroup");
 
                     b.Navigation("KpiDefinition");
+
+                    b.Navigation("ParentTask");
 
                     b.Navigation("VerifiedByUser");
 
@@ -14961,6 +14973,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("CcUsers");
 
                     b.Navigation("Predecessors");
+
+                    b.Navigation("Subtasks");
 
                     b.Navigation("Successors");
                 });

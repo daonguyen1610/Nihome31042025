@@ -1891,6 +1891,14 @@ list filter now excludes linked packages. Internal packages reject all
 business-root references. Endpoints are available at `/api/work-packages`
 and `/api/v1/work-packages`:
 
+`department_work_tasks.ParentTaskId` is a nullable self-reference added by
+`AddWorkTaskSubtasks`. New subtasks require an unfinished parent in the same
+package. The parent link is fixed after creation. Parent status and progress
+are persisted rollups of direct active children and propagated upward;
+package progress counts only leaf tasks. Parent tasks cannot receive direct
+progress or verification and cannot hold a KPI definition. Older task update
+requests may omit `parentTaskId` without unlinking an existing subtask.
+
 The input-price editor uses persistent, associated labels and a responsive
 five-column desktop layout with stacked mobile fields. The dialog body scrolls
 independently of its header/footer. Its read-only line amount uses the existing

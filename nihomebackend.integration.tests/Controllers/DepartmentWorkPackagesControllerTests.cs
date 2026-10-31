@@ -169,6 +169,214 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
+    public async Task Subtasks_RollUpProgressAndVerificationThroughMultipleLevels()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var packageResponse = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            name = "Lập kế hoạch cung ứng cho nhà máy linh kiện",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var workPackage = await ReadJsonAsync(packageResponse);
+        var packageId = workPackage.GetProperty("id").GetInt32();
+
+        async Task<System.Text.Json.JsonElement> AddTaskAsync(string wbs, string title, int? parentId = null)
+        {
+            var response = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+            {
+                parentTaskId = parentId,
+                wbsCode = wbs,
+                title,
+                assigneeUserId = seed.DepartmentStaffId,
+                approverUserId = seed.DepartmentLeadId,
+                plannedStart = "2026-10-12T00:00:00Z",
+                plannedEnd = "2026-10-30T00:00:00Z",
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            return await ReadJsonAsync(response);
+        }
+
+        var parent = await AddTaskAsync("SUP-01", "Điều phối vật tư nhà máy");
+        var missingParent = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            parentTaskId = int.MaxValue,
+            wbsCode = "SUP-MISSING",
+            title = "Không có công việc cha trong nhóm",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = "2026-10-12T00:00:00Z",
+            plannedEnd = "2026-10-30T00:00:00Z",
+        });
+        missingParent.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var child = await AddTaskAsync("SUP-01.1", "Lập danh mục vật tư", parent.GetProperty("id").GetInt32());
+        var leaf = await AddTaskAsync("SUP-01.1.1", "Kiểm tra danh mục vật tư", child.GetProperty("id").GetInt32());
+        var sibling = await AddTaskAsync("SUP-01.2", "Đối chiếu tồn kho", parent.GetProperty("id").GetInt32());
+        workPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        workPackage.GetProperty("tasks").GetArrayLength().Should().Be(4);
+        workPackage.GetProperty("progressPercent").GetInt32().Should().Be(0);
+        var activated = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = workPackage.GetProperty("name").GetString(),
+            status = "Active",
+            rowVersion = workPackage.GetProperty("rowVersion").GetString(),
+        }, workPackage.GetProperty("rowVersion").GetString());
+        activated.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var parentProgress = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/progress", new
+            {
+                status = "InProgress",
+                progressPercent = 20,
+                rowVersion = parent.GetProperty("rowVersion").GetString(),
+            }, parent.GetProperty("rowVersion").GetString());
+        parentProgress.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var leafProgress = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{packageId}/tasks/{leaf.GetProperty("id").GetInt32()}/progress", new
+            {
+                status = "InProgress",
+                progressPercent = 40,
+                rowVersion = leaf.GetProperty("rowVersion").GetString(),
+            }, leaf.GetProperty("rowVersion").GetString());
+        leafProgress.StatusCode.Should().Be(HttpStatusCode.OK);
+        var progressedLeaf = await ReadJsonAsync(leafProgress);
+        workPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        workPackage.GetProperty("progressPercent").GetInt32().Should().Be(20);
+        var tasks = workPackage.GetProperty("tasks").EnumerateArray().ToDictionary(
+            item => item.GetProperty("id").GetInt32());
+        foreach (var (id, progress) in new[]
+        {
+            (parent.GetProperty("id").GetInt32(), 20),
+            (child.GetProperty("id").GetInt32(), 40),
+        })
+        {
+            tasks[id].GetProperty("progressPercent").GetInt32().Should().Be(progress);
+            tasks[id].GetProperty("status").GetString().Should().Be("InProgress");
+            tasks[id].GetProperty("hasSubtasks").GetBoolean().Should().BeTrue();
+            tasks[id].GetProperty("canUpdateProgress").GetBoolean().Should().BeFalse();
+        }
+        tasks[leaf.GetProperty("id").GetInt32()].GetProperty("parentTaskId").GetInt32()
+            .Should().Be(child.GetProperty("id").GetInt32());
+
+        var completed = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{packageId}/tasks/{leaf.GetProperty("id").GetInt32()}/progress", new
+            {
+                status = "Completed",
+                progressPercent = 100,
+                rowVersion = progressedLeaf.GetProperty("rowVersion").GetString(),
+            }, progressedLeaf.GetProperty("rowVersion").GetString());
+        completed.StatusCode.Should().Be(HttpStatusCode.OK);
+        var completedLeaf = await ReadJsonAsync(completed);
+        workPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        tasks = workPackage.GetProperty("tasks").EnumerateArray().ToDictionary(
+            item => item.GetProperty("id").GetInt32());
+        tasks[child.GetProperty("id").GetInt32()].GetProperty("status").GetString().Should().Be("Completed");
+        tasks[parent.GetProperty("id").GetInt32()].GetProperty("status").GetString().Should().Be("InProgress");
+        var completedSibling = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{packageId}/tasks/{sibling.GetProperty("id").GetInt32()}/progress", new
+            {
+                status = "Completed",
+                progressPercent = 100,
+                rowVersion = sibling.GetProperty("rowVersion").GetString(),
+            }, sibling.GetProperty("rowVersion").GetString());
+        completedSibling.StatusCode.Should().Be(HttpStatusCode.OK);
+        var siblingReady = await ReadJsonAsync(completedSibling);
+        workPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        tasks = workPackage.GetProperty("tasks").EnumerateArray().ToDictionary(
+            item => item.GetProperty("id").GetInt32());
+        var parentReady = tasks[parent.GetProperty("id").GetInt32()];
+        var directParentVerification = await SendAsync(HttpMethod.Post,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/verify", new
+            {
+                confirm = true,
+                rowVersion = parentReady.GetProperty("rowVersion").GetString(),
+            }, parentReady.GetProperty("rowVersion").GetString());
+        directParentVerification.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
+        var verified = await SendAsync(HttpMethod.Post,
+            $"/api/work-packages/{packageId}/tasks/{leaf.GetProperty("id").GetInt32()}/verify", new
+            {
+                confirm = true,
+                rowVersion = completedLeaf.GetProperty("rowVersion").GetString(),
+            }, completedLeaf.GetProperty("rowVersion").GetString());
+        verified.StatusCode.Should().Be(HttpStatusCode.OK);
+        workPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        tasks = workPackage.GetProperty("tasks").EnumerateArray().ToDictionary(
+            item => item.GetProperty("id").GetInt32());
+        tasks[parent.GetProperty("id").GetInt32()].GetProperty("status").GetString().Should().Be("Completed");
+        var verifiedSibling = await SendAsync(HttpMethod.Post,
+            $"/api/work-packages/{packageId}/tasks/{sibling.GetProperty("id").GetInt32()}/verify", new
+            {
+                confirm = true,
+                rowVersion = siblingReady.GetProperty("rowVersion").GetString(),
+            }, siblingReady.GetProperty("rowVersion").GetString());
+        verifiedSibling.StatusCode.Should().Be(HttpStatusCode.OK);
+        workPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        workPackage.GetProperty("tasks").EnumerateArray()
+            .All(item => item.GetProperty("status").GetString() == "Verified").Should().BeTrue();
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var closedParent = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            parentTaskId = parent.GetProperty("id").GetInt32(),
+            wbsCode = "SUP-LATE",
+            title = "Bổ sung sau khi cha đã kết thúc",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = "2026-10-12T00:00:00Z",
+            plannedEnd = "2026-10-30T00:00:00Z",
+        });
+        closedParent.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task Subtask_CannotAttachToKpiParent()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var created = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            name = "Theo dõi KPI vật tư nhà máy",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var packageId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+        var parent = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            wbsCode = "KPI-01",
+            title = "Báo cáo KPI cung ứng",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            kpiDefinitionId = seed.KpiDefinitionId,
+            plannedStart = "2026-10-12T00:00:00Z",
+            plannedEnd = "2026-10-30T00:00:00Z",
+        });
+        parent.StatusCode.Should().Be(HttpStatusCode.Created);
+        var parentId = (await ReadJsonAsync(parent)).GetProperty("id").GetInt32();
+        var child = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            parentTaskId = parentId,
+            wbsCode = "KPI-01.1",
+            title = "Phần việc không được tính KPI hai lần",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = "2026-10-12T00:00:00Z",
+            plannedEnd = "2026-10-30T00:00:00Z",
+        });
+        child.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var workPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        workPackage.GetProperty("tasks").GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
     public async Task ProjectPackage_FollowsDepartmentAssignmentProgressAndIndependentKpiVerification()
     {
         var seed = await SeedProjectScopeAsync();

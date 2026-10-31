@@ -59,6 +59,9 @@ public sealed class UpdateDepartmentWorkPackageRequest : IConcurrencyRequest
 
 public sealed class UpsertDepartmentWorkTaskRequest : IConcurrencyRequest
 {
+    [Range(1, int.MaxValue)]
+    public int? ParentTaskId { get; set; }
+
     [Required, StringLength(120, MinimumLength = 1)]
     public string WbsCode { get; set; } = string.Empty;
 

@@ -135,6 +135,9 @@ public class DepartmentWorkTask : IConcurrencyTracked
     public int Id { get; set; }
     public int WorkPackageId { get; set; }
     public DepartmentWorkPackage WorkPackage { get; set; } = null!;
+    public int? ParentTaskId { get; set; }
+    public DepartmentWorkTask? ParentTask { get; set; }
+    public List<DepartmentWorkTask> Subtasks { get; set; } = new();
     public string WbsCode { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
