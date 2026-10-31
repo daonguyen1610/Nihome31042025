@@ -49,6 +49,7 @@ import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
 import { isValidEmail } from "@/lib/validation";
+import { cn } from "@/lib/utils";
 import {
   adminApi,
   type ContractResponse,
@@ -224,6 +225,7 @@ const DepartmentWorkPackages = () => {
     plannedEnd: null,
   });
   const [taskForm, setTaskForm] = useState<UpsertDepartmentWorkTaskRequest>({
+    parentTaskId: null,
     wbsCode: "",
     title: "",
     description: "",
@@ -446,6 +448,30 @@ const DepartmentWorkPackages = () => {
       ),
     [detail?.departmentRoleGroupId, options.users, taskForm.departmentRoleGroupId],
   );
+  const orderedTasks = useMemo(() => {
+    const tasks = detail?.tasks ?? [];
+    const ids = new Set(tasks.map((task) => task.id));
+    const children = new Map<number, DepartmentWorkTaskResponse[]>();
+    for (const task of tasks) {
+      if (!task.parentTaskId) continue;
+      const siblings = children.get(task.parentTaskId) ?? [];
+      siblings.push(task);
+      children.set(task.parentTaskId, siblings);
+    }
+    const seen = new Set<number>();
+    const result: { task: DepartmentWorkTaskResponse; depth: number }[] = [];
+    const visit = (task: DepartmentWorkTaskResponse, depth: number) => {
+      if (seen.has(task.id)) return;
+      seen.add(task.id);
+      result.push({ task, depth });
+      children.get(task.id)?.forEach((child) => visit(child, depth + 1));
+    };
+    tasks
+      .filter((task) => !task.parentTaskId || !ids.has(task.parentTaskId))
+      .forEach((task) => visit(task, 0));
+    tasks.forEach((task) => visit(task, 0));
+    return result;
+  }, [detail?.tasks]);
   const availableDepartments = useMemo(
     () =>
       packageForm.kind !== "Internal"
@@ -572,11 +598,12 @@ const DepartmentWorkPackages = () => {
     }
   };
 
-  const openTask = (task?: DepartmentWorkTaskResponse) => {
+  const openTask = (task?: DepartmentWorkTaskResponse, parent?: DepartmentWorkTaskResponse) => {
     setTaskEditing(task ?? null);
     setTaskForm(
       task
         ? {
+            parentTaskId: task.parentTaskId ?? null,
             wbsCode: task.wbsCode,
             title: task.title,
             description: task.description ?? "",
@@ -592,6 +619,7 @@ const DepartmentWorkPackages = () => {
             rowVersion: task.rowVersion,
           }
         : {
+            parentTaskId: parent?.id ?? null,
             wbsCode: "",
             title: "",
             description: "",
@@ -601,8 +629,8 @@ const DepartmentWorkPackages = () => {
             assigneeUserId: 0,
             approverUserId: null,
             kpiDefinitionId: null,
-            plannedStart: dateValue(detail?.plannedStart),
-            plannedEnd: dateValue(detail?.plannedEnd),
+            plannedStart: dateValue(parent?.plannedStart ?? detail?.plannedStart),
+            plannedEnd: dateValue(parent?.plannedEnd ?? detail?.plannedEnd),
             ccUserIds: [],
             predecessorTaskIds: [],
           },
@@ -1401,12 +1429,17 @@ const DepartmentWorkPackages = () => {
                 <Progress value={detail.progressPercent} />
               </div>
               <div className="divide-y">
-                {detail.tasks.map((task) => (
+                {orderedTasks.map(({ task, depth }) => (
                   <article
                     key={task.id}
                     id={`task-${task.id}`}
                     data-testid="work-task-row"
-                    className={params.get("taskId") === String(task.id) ? "bg-amber-50 p-4" : "p-4"}
+                    className={cn(
+                      "p-4",
+                      depth > 0 && "border-l-2 border-l-primary/30",
+                      params.get("taskId") === String(task.id) && "bg-amber-50",
+                    )}
+                    style={{ marginLeft: Math.min(depth, 3) * 12 }}
                   >
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                       <div className="min-w-0 space-y-1">
@@ -1416,6 +1449,9 @@ const DepartmentWorkPackages = () => {
                           <Badge variant="secondary">
                             {t(`workPackages.taskStatus.${task.status}`)}
                           </Badge>
+                          {task.hasSubtasks && (
+                            <Badge variant="outline">{t("workPackages.task.aggregated")}</Badge>
+                          )}
                           {task.kpiDefinitionCode && <Badge>{t("workPackages.tasks.kpi")}</Badge>}
                         </div>
                         <p className="text-sm text-muted-foreground">
@@ -1424,6 +1460,18 @@ const DepartmentWorkPackages = () => {
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
+                        {canAssign &&
+                          detail.canAssignTasks &&
+                          !task.kpiDefinitionId &&
+                          ["Planned", "InProgress"].includes(task.status) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => openTask(undefined, task)}
+                            >
+                              {t("workPackages.action.addSubtask")}
+                            </Button>
+                          )}
                         <span className="w-12 text-right text-sm font-medium">
                           {task.progressPercent}%
                         </span>
@@ -2198,6 +2246,42 @@ const DepartmentWorkPackages = () => {
             <DialogDescription>{t("workPackages.task.help")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
+            {taskEditing?.parentTaskId && (
+              <p className="text-sm text-muted-foreground sm:col-span-2">
+                {t("workPackages.field.parentTask")}:{" "}
+                {detail?.tasks.find((task) => task.id === taskEditing.parentTaskId)?.title}
+              </p>
+            )}
+            {!taskEditing && (detail?.tasks.length ?? 0) > 0 && (
+              <Field label={t("workPackages.field.parentTask")} className="sm:col-span-2">
+                <Select
+                  value={taskForm.parentTaskId?.toString() ?? "none"}
+                  onValueChange={(value) =>
+                    setTaskForm((current) => ({
+                      ...current,
+                      parentTaskId: value === "none" ? null : Number(value),
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">{t("workPackages.parent.none")}</SelectItem>
+                    {detail?.tasks
+                      .filter(
+                        (task) =>
+                          !task.kpiDefinitionId && ["Planned", "InProgress"].includes(task.status),
+                      )
+                      .map((task) => (
+                        <SelectItem key={task.id} value={String(task.id)}>
+                          {task.wbsCode} · {task.title}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
             <Field label={t("workPackages.field.wbs")}>
               <Input
                 maxLength={120}

@@ -951,6 +951,8 @@ export type WorkTaskStatus = "Planned" | "InProgress" | "Completed" | "Verified"
 export interface DepartmentWorkTaskResponse {
   id: number;
   workPackageId: number;
+  parentTaskId?: number | null;
+  hasSubtasks: boolean;
   wbsCode: string;
   title: string;
   description?: string | null;
@@ -1179,6 +1181,7 @@ export interface UpdateDepartmentWorkPackageRequest {
 }
 
 export interface UpsertDepartmentWorkTaskRequest {
+  parentTaskId?: number | null;
   wbsCode: string;
   title: string;
   description?: string | null;

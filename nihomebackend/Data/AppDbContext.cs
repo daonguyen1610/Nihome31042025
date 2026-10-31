@@ -2332,6 +2332,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.WorkPackage).WithMany(package => package.Tasks)
                 .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.ParentTask).WithMany(item => item.Subtasks)
+                .HasForeignKey(item => item.ParentTaskId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => item.ParentTaskId);
             b.HasOne(item => item.DepartmentRoleGroup).WithMany()
                 .HasForeignKey(item => item.DepartmentRoleGroupId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.AssigneeUser).WithMany()

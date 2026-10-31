@@ -334,6 +334,13 @@ For internal work, select the lead department and every additional
 participating department. Each task then selects its responsible department;
 the assignee list is limited to active members of that department.
 
+Use **Add subtask** on an unfinished task to break down ordinary work. The
+parent task stays in the same package and automatically shows progress and
+status rolled up from its active subtasks. Update progress on leaf tasks;
+parents with subtasks cannot receive direct progress or KPI verification.
+The hierarchy can contain more than one level. A task with a linked KPI must
+have that KPI removed before subtasks can be added.
+
 An authorized package manager can select **Reopen: In progress** on a Completed
 package to add work again. Existing task completion, verified KPI and approved
 finance checklists stay intact and retain their individual edit guards.

@@ -65,6 +65,11 @@ Các trạng thái nhóm là `Planned → Active → Completed`, hoặc `Cancell
 chuyển trạng thái hợp lệ. Nhóm chỉ hoàn thành khi mọi đầu việc đã kết thúc và
 mọi đầu việc Dự án đã được xác nhận. Quan hệ tiên quyết không được tạo vòng lặp;
 đầu việc sau không được bắt đầu trước khi đầu việc trước hoàn tất.
+Người chủ trì có thể thêm công việc con vào công việc cha chưa kết thúc trong
+cùng nhóm việc. Tiến độ cha là trung bình tiến độ con đang hoạt động; trạng thái
+cha chuyển theo con: chưa bắt đầu, đang làm, hoàn thành, rồi được xác nhận khi
+mọi con đều được xác nhận. Với nhiều cấp, kết quả lan lên từng cấp cha. Chỉ
+công việc lá cập nhật tiến độ và nhận xác nhận trực tiếp.
 
 Công việc không theo hợp đồng dùng tab **Công việc nội bộ**, không mang project,
 customer hoặc contract. Khi không chọn KPI, hoàn thành không cần bước xác nhận.
