@@ -1,4 +1,4 @@
-import { personOption, type PersonIdentity } from "@/lib/people";
+import { useDesignTeamOwners } from "./useDesignTeamOwners";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -39,7 +39,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useI18n } from "@/lib/i18n";
+import { translateError, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -84,11 +84,6 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   }
 };
 
-interface UserOption extends PersonIdentity {
-  id: number;
-  fullName: string;
-}
-
 interface FormState {
   disciplineCode: string;
   constructionItem: string;
@@ -125,7 +120,12 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const canManage = has(ADMIN_PERMS.designShopManage);
   const canApprove = has(ADMIN_PERMS.designShopApprove);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
-  const canPickOwner = has(ADMIN_PERMS.users);
+  const canPickOwner = canManage;
+  const {
+    options: userOptions,
+    error: ownersError,
+    loading: ownersLoading,
+  } = useDesignTeamOwners(project, canPickOwner);
   const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
   const [searchParams] = useSearchParams();
   const focusedDocumentId = Number(searchParams.get("documentId"));
@@ -140,7 +140,6 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const [error, setError] = useState<string | null>(null);
 
   const [disciplines, setDisciplines] = useState<MasterDataOption[]>([]);
-  const [users, setUsers] = useState<UserOption[]>([]);
 
   // filter state
   const [filterDiscipline, setFilterDiscipline] = useState<string>("");
@@ -187,33 +186,16 @@ export const ShopDrawingTab = ({ project }: Props) => {
       } catch {
         // non-fatal
       }
-      if (canPickOwner) {
-        try {
-          const { data } = await adminApi.getPeopleDirectory();
-          if (!cancelled) {
-            setUsers(
-              (data.items ?? []).map((u) => ({
-                ...u,
-                id: u.id,
-                fullName: u.fullName ?? u.email ?? `#${u.id}`,
-              })),
-            );
-          }
-        } catch {
-          // no permission → owner picker stays hidden
-        }
-      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [canPickOwner]);
+  }, []);
 
   const disciplineOptions = useMemo(
     () => disciplines.map((d) => ({ value: d.code, label: d.name })),
     [disciplines],
   );
-  const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const disciplineLabelByCode = useMemo(() => {
     const m = new Map<string, string>();
@@ -331,7 +313,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
       setEditing(null);
       await fetchRows();
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(translateError(t, extractApiError(err)));
     } finally {
       setSaving(false);
     }
@@ -630,7 +612,19 @@ export const ShopDrawingTab = ({ project }: Props) => {
                   onChange={(v) => setForm((f) => ({ ...f, ownerUserId: v ? Number(v) : null }))}
                   options={[{ value: "", label: t("shopDrawing.form.ownerNone") }, ...userOptions]}
                   placeholder={t("shopDrawing.form.ownerNone")}
+                  disabled={!!ownersError || ownersLoading}
                 />
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t(
+                    ownersError
+                      ? "designProjects.team.ownerPickerError"
+                      : ownersLoading
+                        ? "common.loading"
+                        : userOptions.length
+                          ? "designProjects.team.ownerPickerHint"
+                          : "designProjects.team.ownerPickerEmpty",
+                  )}
+                </p>
               </div>
             ) : null}
             <div>

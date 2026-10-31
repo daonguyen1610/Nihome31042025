@@ -119,6 +119,35 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_RejectsOwnerOutsideDesignTeam()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateShopStageProjectAsync();
+        var outsiderId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT"])
+            .Select(user => user.Id).SingleAsync());
+        var response = await Client.PostAsJsonAsync("/api/shop-drawings", new
+        {
+            designProjectId = projectId, disciplineCode = "architecture",
+            constructionItem = "Móng cọc", title = "Bản vẽ kết cấu móng NICON",
+            ownerUserId = outsiderId,
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("đội ngũ");
+
+        var drawingId = await CreateDrawingAsync(projectId, "architecture");
+        var updated = await Client.PutAsJsonAsync($"/api/shop-drawings/{drawingId}", new
+        {
+            disciplineCode = "architecture", constructionItem = "Móng cọc",
+            title = "Bản vẽ kết cấu móng NICON", ownerUserId = outsiderId,
+        });
+        updated.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var persistedOwner = await WithDbAsync(db => db.ShopDrawings.AsNoTracking()
+            .Where(drawing => drawing.Id == drawingId).Select(drawing => drawing.OwnerUserId).SingleAsync());
+        persistedOwner.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Create_ProjectNotInShopStage_IsBadRequest()
     {
         // The auto-created project after DesignProject POST is at Concept stage.

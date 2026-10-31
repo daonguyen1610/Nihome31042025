@@ -296,13 +296,19 @@ Kiểm soát độ chín, version và người chịu trách nhiệm của hồ 
 4. **IFC:** gói phát hành có drawing/revision cụ thể, người nhận và xác nhận đã
    nhận; hủy gói không được làm mất lịch sử.
 
-Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc Dự án. Team và tiến độ
-Thiết kế giữ `OperationalProjectId` để truy vết business root, đồng thời được
-tách theo `DesignProjectId` của từng luồng; không dùng đội ngũ/tiến độ chung
-giữa các luồng Design. Theo xác nhận của chủ sản phẩm ngày
+Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc Dự án. Giao diện gọi
+luồng này là **Hợp Đồng Thiết Kế**; tên hiển thị không có nghĩa đã ký hợp đồng
+CRM. Team và tiến độ Thiết kế giữ `OperationalProjectId` để truy vết business
+root, đồng thời được tách theo `DesignProjectId` của từng luồng; không dùng đội
+ngũ/tiến độ chung giữa các luồng Design. Theo xác nhận của chủ sản phẩm ngày
 29/10/2026, khi phân vai trong tab Đội ngũ của Dự án thiết kế, vai trò mới
 áp dụng cho Module Thiết kế của Dự án thiết kế đang mở; người dùng không phải
-chọn phạm vi RACI. Vai trò toàn Dự án đã lưu trước đó được giữ nguyên.
+chọn phạm vi RACI. Vai trò toàn Dự án đã lưu trước đó được giữ nguyên. Mỗi
+luồng chỉ có một **Chủ Nhiệm Thiết Kế**, có thể có nhiều **Chủ Trì Thiết Kế**.
+Khi giao người phụ trách phương án Concept, hồ sơ Basic Design hoặc Shop
+Drawing, chỉ chọn nhân sự đang hiệu lực trong Đội ngũ của chính luồng đó; thêm
+nhân sự vào Đội ngũ trước khi phân công. Quyền xem và quản lý Đội ngũ theo
+luồng Thiết kế được kiểm tra riêng với quyền Dự án vận hành.
 
 Concept quản lý từng phương án với revision
 R00, R01... và bộ tài liệu phân loại: mô hình 3D gốc, phối cảnh, mặt bằng

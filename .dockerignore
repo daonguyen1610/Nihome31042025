@@ -8,6 +8,8 @@ node_modules
 **/out
 **/publish
 deployment-config/
+nihomebackend.tests
+nihomebackend.integration.tests
 **/.DS_Store
 docs
 **/playwright-report

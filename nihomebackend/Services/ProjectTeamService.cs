@@ -351,21 +351,18 @@ public sealed class ProjectTeamService(
         {
             var design = await db.DesignProjects.AsNoTracking()
                 .SingleAsync(item => item.Id == request.DesignProjectId.Value && item.OperationalProjectId == projectId, ct);
-            foreach (var roleCode in new[] { ProjectTeamRoleCode.ProjectManager, ProjectTeamRoleCode.DesignLead })
+            if (roles.Any(role => IsDesignLeadershipRole(role, ProjectTeamRoleCode.ProjectManager)))
             {
-                if (!roles.Any(role => IsDesignLeadershipRole(role, roleCode))) continue;
-                var currentUserId = roleCode == ProjectTeamRoleCode.ProjectManager
-                    ? design.ProjectManagerUserId : design.DesignLeadUserId;
-                if (currentUserId.HasValue && currentUserId != request.UserId)
+                if (design.ProjectManagerUserId.HasValue && design.ProjectManagerUserId != request.UserId)
                     throw new ProjectTeamOperationException(
-                        "Luồng Thiết kế đã có người giữ vai trò Chủ nhiệm hoặc Chủ trì. Hãy thay đổi phân công hiện có trước.");
+                        "Hợp đồng Thiết kế đã có Chủ nhiệm Thiết kế. Hãy thay đổi phân công hiện có trước.");
                 if (await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
                     member.DesignProjectId == request.DesignProjectId && member.EndedAt == null &&
                     member.Id != memberId && member.UserId != request.UserId &&
-                    member.Roles.Any(role => role.EndedAt == null && role.RoleCode == roleCode &&
+                    member.Roles.Any(role => role.EndedAt == null && role.RoleCode == ProjectTeamRoleCode.ProjectManager &&
                         role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design"), ct))
                     throw new ProjectTeamOperationException(
-                        "Luồng Thiết kế đã có người giữ vai trò Chủ nhiệm hoặc Chủ trì. Hãy thay đổi phân công hiện có trước.");
+                        "Hợp đồng Thiết kế đã có Chủ nhiệm Thiết kế. Hãy thay đổi phân công hiện có trước.");
             }
         }
         if (!request.DesignProjectId.HasValue && roles.Any(role => role.RoleCode == ProjectTeamRoleCode.ProjectManager))
@@ -519,14 +516,23 @@ public sealed class ProjectTeamService(
             design.ProjectManagerUserId = null;
             changed = true;
         }
-        if (lead && design.DesignLeadUserId != member.UserId)
+        // The legacy scalar identifies the primary lead; additional active leads
+        // stay in the scoped team without replacing that primary reference.
+        if (lead && design.DesignLeadUserId is null)
         {
             design.DesignLeadUserId = member.UserId;
             changed = true;
         }
         else if (wasLead && !lead && design.DesignLeadUserId == member.UserId)
         {
-            design.DesignLeadUserId = null;
+            design.DesignLeadUserId = await db.OperationalProjectMembers.AsNoTracking()
+                .Where(other => other.DesignProjectId == member.DesignProjectId &&
+                    other.Id != member.Id && other.EndedAt == null &&
+                    other.Roles.Any(role => role.EndedAt == null &&
+                        role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+                        role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design"))
+                .OrderBy(other => other.Id).Select(other => (int?)other.UserId)
+                .FirstOrDefaultAsync(ct);
             changed = true;
         }
         if (changed)

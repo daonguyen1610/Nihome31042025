@@ -16,6 +16,7 @@ public static class TranslationSeeder
                 StringComparer.OrdinalIgnoreCase);
 
         var assembly = Assembly.GetExecutingAssembly();
+        var legacyDefaults = LoadLegacyDefaults(assembly);
         var seedResources = assembly.GetManifestResourceNames()
             .Where(n => n.Contains(".Data.Seeds.i18n.") && n.EndsWith(".json"))
             .OrderBy(n => n)
@@ -50,6 +51,15 @@ public static class TranslationSeeder
                     var compositeKey = key + "|" + lang;
                     if (existingRows.TryGetValue(compositeKey, out var existing))
                     {
+                        // Upgrade only untouched default copy. Editors keep their
+                        // explicitly customized translation for the same key.
+                        if (legacyDefaults.TryGetValue(compositeKey, out var oldValue) &&
+                            existing.Value == oldValue && existing.Value != value)
+                        {
+                            existing.Value = value;
+                            existing.UpdatedAt = now;
+                            hasUpdates = true;
+                        }
                         if (string.IsNullOrWhiteSpace(existing.Category)
                             && !string.IsNullOrWhiteSpace(category))
                         {
@@ -92,5 +102,29 @@ public static class TranslationSeeder
         {
             db.SaveChanges();
         }
+    }
+
+    private static Dictionary<string, string> LoadLegacyDefaults(Assembly assembly)
+    {
+        var defaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        var resources = assembly.GetManifestResourceNames()
+            .Where(name => name.Contains(".Data.Seeds.i18n-upgrades.") && name.EndsWith(".json"));
+        foreach (var resource in resources)
+        {
+            using var stream = assembly.GetManifestResourceStream(resource)!;
+            using var document = JsonDocument.Parse(stream);
+            foreach (var entry in document.RootElement.EnumerateArray())
+            {
+                var key = entry.GetProperty("key").GetString();
+                if (string.IsNullOrWhiteSpace(key)) continue;
+                foreach (var language in entry.GetProperty("old").EnumerateObject())
+                {
+                    var oldValue = language.Value.GetString();
+                    if (oldValue is not null)
+                        defaults[$"{key}|{language.Name}"] = oldValue;
+                }
+            }
+        }
+        return defaults;
     }
 }

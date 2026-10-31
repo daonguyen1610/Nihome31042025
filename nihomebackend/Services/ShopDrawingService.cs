@@ -186,9 +186,9 @@ public class ShopDrawingService(
         }
 
         if (request.OwnerUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            !await DesignTeamMembership.ContainsActiveUserAsync(db, request.DesignProjectId, request.OwnerUserId.Value, ct))
         {
-            throw new ShopDrawingOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+            throw new ShopDrawingOperationException("Người phụ trách phải là thành viên đang hiệu lực trong đội ngũ Hợp đồng Thiết kế.");
         }
 
         var code = await AllocateDrawingCodeAsync(request.DesignProjectId, discipline, ct);
@@ -281,9 +281,9 @@ public class ShopDrawingService(
         }
 
         if (request.OwnerUserId.HasValue &&
-            !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
+            !await DesignTeamMembership.ContainsActiveUserAsync(db, entity.DesignProjectId, request.OwnerUserId.Value, ct))
         {
-            throw new ShopDrawingOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
+            throw new ShopDrawingOperationException("Người phụ trách phải là thành viên đang hiệu lực trong đội ngũ Hợp đồng Thiết kế.");
         }
 
         entity.Title = title;

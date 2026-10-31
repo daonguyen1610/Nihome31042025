@@ -135,11 +135,19 @@ export function SearchableSelect({
         </Button>
       </PopoverTrigger>
       <PopoverContent
-        className="max-w-[calc(100vw-2rem)] p-0"
+        className="flex max-w-[calc(100vw-2rem)] flex-col overflow-hidden p-0"
         style={
           popoverWidthPx
-            ? { width: popoverWidthPx }
-            : { width: "var(--radix-popover-trigger-width)" }
+            ? {
+                width: popoverWidthPx,
+                maxHeight:
+                  "min(calc(100dvh - 2rem), var(--radix-popover-content-available-height))",
+              }
+            : {
+                width: "var(--radix-popover-trigger-width)",
+                maxHeight:
+                  "min(calc(100dvh - 2rem), var(--radix-popover-content-available-height))",
+              }
         }
         align="start"
         data-people-picker={departments.length ? "true" : undefined}
@@ -170,7 +178,7 @@ export function SearchableSelect({
             </select>
           </div>
         )}
-        <Command shouldFilter={shouldFilter}>
+        <Command shouldFilter={shouldFilter} className="min-h-0 flex-1">
           <CommandInput
             ref={searchInput}
             aria-label={
@@ -182,7 +190,7 @@ export function SearchableSelect({
             value={searchValue}
             onValueChange={onSearchValueChange}
           />
-          <CommandList>
+          <CommandList className="min-h-0 overscroll-contain">
             {!loading && (
               <CommandEmpty>
                 {emptyText ?? (departments.length ? t("people.noResults") : "—")}

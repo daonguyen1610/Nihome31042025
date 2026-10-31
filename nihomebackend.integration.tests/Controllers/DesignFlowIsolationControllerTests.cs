@@ -9,6 +9,151 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFactory factory) : IntegrationTestBase(factory)
 {
     [Fact]
+    public async Task DesignManager_WithoutOperationalProjectView_CanManageOwnDesignTeam()
+    {
+        await LoginAsync("SUPER_ADMIN");
+        var fixture = await WithDbAsync(async db =>
+        {
+            var manager = await db.Users.SingleAsync(user => user.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["DESIGN_MANAGER"]);
+            var architect = await db.Users.SingleAsync(user => user.PhoneNumber ==
+                TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"]);
+            var customer = new Customer { Name = "NICON – Hợp đồng thiết kế xưởng", Type = CustomerType.Company, SourceCode = "referral" };
+            var root = new OperationalProject { Code = $"OP-PERM-{Guid.NewGuid():N}"[..30], Name = customer.Name, Customer = customer };
+            var flow = new DesignProject
+            {
+                OperationalProject = root, Customer = customer,
+                ProjectCode = $"DP-PERM-{Guid.NewGuid():N}"[..30], Name = customer.Name,
+                ProjectManagerUserId = manager.Id,
+            };
+            db.DesignProjects.Add(flow);
+            var grant = await db.RolePermissions.Include(item => item.Permission).SingleAsync(item =>
+                item.RoleId == manager.RoleEntityId && item.Permission.Module == "operations.projects" &&
+                item.Permission.Action == "view");
+            db.RolePermissions.Remove(grant);
+            await db.SaveChangesAsync();
+            return (Root: root.Id, Flow: flow.Id, Architect: architect.Id,
+                GrantRole: grant.RoleId, GrantPermission: grant.PermissionId);
+        });
+        int? revokedManagePermissionId = null;
+        try
+        {
+            await LoginAsync("DESIGN_MANAGER");
+            var path = $"/api/operational-projects/{fixture.Root}/team";
+            (await Client.GetAsync($"{path}?designProjectId={fixture.Flow}"))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            var payload = new
+            {
+                designProjectId = fixture.Flow, userId = fixture.Architect,
+                position = "Kiến trúc sư chủ trì mặt bằng",
+                startedAt = DateTime.UtcNow.AddDays(-1),
+                roles = new[] { new { roleCode = "Architect", scope = "Module", scopeValue = "Design" } },
+            };
+            var key = $"design-team-permission-{Guid.NewGuid():N}";
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"{path}/members")
+            {
+                Content = JsonContent.Create(payload),
+            };
+            request.Headers.Add("Idempotency-Key", key);
+            var added = await Client.SendAsync(request);
+            added.StatusCode.Should().Be(HttpStatusCode.Created, await added.Content.ReadAsStringAsync());
+            revokedManagePermissionId = await WithDbAsync(async db =>
+            {
+                var grant = await db.RolePermissions.Include(item => item.Permission).SingleAsync(item =>
+                    item.RoleId == fixture.GrantRole && item.Permission.Module == "design.projects" &&
+                    item.Permission.Action == "manage");
+                db.RolePermissions.Remove(grant);
+                await db.SaveChangesAsync();
+                return grant.PermissionId;
+            });
+            using var replay = new HttpRequestMessage(HttpMethod.Post, $"{path}/members")
+            {
+                Content = JsonContent.Create(payload),
+            };
+            replay.Headers.Add("Idempotency-Key", key);
+            (await Client.SendAsync(replay)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+            (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission
+                {
+                    RoleId = fixture.GrantRole, PermissionId = fixture.GrantPermission,
+                });
+                if (revokedManagePermissionId.HasValue)
+                    db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission
+                    {
+                        RoleId = fixture.GrantRole, PermissionId = revokedManagePermissionId.Value,
+                    });
+                await db.SaveChangesAsync();
+            });
+        }
+    }
+
+    [Fact]
+    public async Task DesignTeam_AllowsSeveralLeadsButOnlyOneManager()
+    {
+        await LoginAsync("SUPER_ADMIN");
+        var fixture = await WithDbAsync(async db =>
+        {
+            var users = await db.Users.Where(user => new[]
+            {
+                TestDataSeeder.BusinessRolePhonesByCode["DESIGN_MANAGER"],
+                TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"],
+                TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"],
+                TestDataSeeder.BusinessRolePhonesByCode["DESIGN"],
+            }.Contains(user.PhoneNumber)).ToDictionaryAsync(user => user.PhoneNumber);
+            var customer = new Customer { Name = "NICON – Nhóm thiết kế nhà máy", Type = CustomerType.Company, SourceCode = "referral" };
+            var root = new OperationalProject { Code = $"OP-LEADS-{Guid.NewGuid():N}"[..30], Name = customer.Name, Customer = customer };
+            var flow = new DesignProject
+            {
+                OperationalProject = root, Customer = customer,
+                ProjectCode = $"DP-LEADS-{Guid.NewGuid():N}"[..30], Name = customer.Name,
+                ProjectManagerUserId = users[TestDataSeeder.BusinessRolePhonesByCode["DESIGN_MANAGER"]].Id,
+                DesignLeadUserId = users[TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"]].Id,
+            };
+            db.DesignProjects.Add(flow);
+            await db.SaveChangesAsync();
+            return (Root: root.Id, Flow: flow.Id,
+                Lead: users[TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"]].Id,
+                Architect: users[TestDataSeeder.BusinessRolePhonesByCode["ARCHITECT"]].Id,
+                Design: users[TestDataSeeder.BusinessRolePhonesByCode["DESIGN"]].Id);
+        });
+        async Task<HttpResponseMessage> Add(int userId, string role) => await SendAsync(
+            $"/api/operational-projects/{fixture.Root}/team/members",
+            new { designProjectId = fixture.Flow, userId, position = role,
+                startedAt = DateTime.UtcNow.AddDays(-1),
+                roles = new[] { new { roleCode = role, scope = "Module", scopeValue = "Design" } } });
+
+        var firstLead = await Add(fixture.Lead, "DesignLead");
+        firstLead.StatusCode.Should().Be(HttpStatusCode.Created);
+        var firstLeadBody = await ReadJsonAsync(firstLead);
+        var secondLead = await Add(fixture.Architect, "DesignLead");
+        secondLead.StatusCode.Should().Be(HttpStatusCode.Created, await secondLead.Content.ReadAsStringAsync());
+        (await Add(fixture.Design, "ProjectManager")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var storedLead = await WithDbAsync(db => db.DesignProjects.AsNoTracking()
+            .Where(project => project.Id == fixture.Flow).Select(project => project.DesignLeadUserId).SingleAsync());
+        storedLead.Should().Be(fixture.Lead);
+
+        var ended = await Client.PutAsJsonAsync(
+            $"/api/operational-projects/{fixture.Root}/team/members/{firstLeadBody.GetProperty("id").GetInt32()}",
+            new
+            {
+                designProjectId = fixture.Flow, userId = fixture.Lead,
+                position = "DesignLead", startedAt = firstLeadBody.GetProperty("startedAt").GetString(),
+                endedAt = DateTime.UtcNow,
+                rowVersion = firstLeadBody.GetProperty("rowVersion").GetString(),
+                roles = new[] { new { roleCode = "DesignLead", scope = "Module", scopeValue = "Design" } },
+            });
+        ended.StatusCode.Should().Be(HttpStatusCode.OK, await ended.Content.ReadAsStringAsync());
+        var replacementLead = await WithDbAsync(db => db.DesignProjects.AsNoTracking()
+            .Where(project => project.Id == fixture.Flow).Select(project => project.DesignLeadUserId).SingleAsync());
+        replacementLead.Should().Be(fixture.Architect);
+    }
+
+    [Fact]
     public async Task IndependentFlows_KeepTeamsSchedulesAndDocumentWritesIsolated()
     {
         await LoginAsync("SUPER_ADMIN");
