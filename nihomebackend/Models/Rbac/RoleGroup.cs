@@ -3,8 +3,9 @@ using System.ComponentModel.DataAnnotations;
 namespace NihomeBackend.Models.Rbac;
 
 /// <summary>
-/// NICON department-level role grouping. Groups are developer-defined; their
-/// baseline permission sets and role memberships are managed at runtime.
+/// NICON department-level role grouping. Seeded groups remain protected;
+/// administrators manage custom groups, labels, ordering, permission baselines
+/// and role memberships at runtime.
 /// </summary>
 public class RoleGroup
 {

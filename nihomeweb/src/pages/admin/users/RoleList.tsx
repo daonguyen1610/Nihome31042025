@@ -15,6 +15,8 @@ import {
   Users,
 } from "lucide-react";
 import RoleGroupPermissionsDialog from "./RoleGroupPermissionsDialog";
+import RoleGroupEditorDialog from "./RoleGroupEditorDialog";
+import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { Can } from "@/components/auth/Can";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -42,8 +44,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
-import { useI18n } from "@/lib/i18n";
+import { TRANSLATIONS_CHANGED_EVENT, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
+import type { DeletionImpactResponse } from "@/services/adminApi";
 import {
   rbacApi,
   type PermissionResponse,
@@ -73,7 +76,7 @@ function setsEqual(a: Set<string>, b: Set<string>) {
 }
 
 export default function RoleList() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const { has } = usePermissions();
@@ -394,6 +397,27 @@ export default function RoleList() {
   useEffect(() => {
     if (selectedGroup && selectedGroup.id !== selectedGroupId) setSelectedGroupId(selectedGroup.id);
   }, [selectedGroup, selectedGroupId]);
+  const groupName = (group: RoleGroupResponse) => group.names?.[lang] || t(group.labelKey);
+  const [groupEditorOpen, setGroupEditorOpen] = useState(false);
+  const [editingGroup, setEditingGroup] = useState<RoleGroupResponse | null>(null);
+  const [groupDeleteTarget, setGroupDeleteTarget] = useState<RoleGroupResponse | null>(null);
+  const [groupDeleteImpact, setGroupDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [groupDeleteLoading, setGroupDeleteLoading] = useState(false);
+  const [groupDeleting, setGroupDeleting] = useState(false);
+  const [groupDeleteError, setGroupDeleteError] = useState<string | null>(null);
+  const openGroupDelete = async (group: RoleGroupResponse) => {
+    setGroupDeleteTarget(group);
+    setGroupDeleteImpact(null);
+    setGroupDeleteError(null);
+    setGroupDeleteLoading(true);
+    try {
+      setGroupDeleteImpact((await rbacApi.getRoleGroupDeletionImpact(group.id)).data);
+    } catch (error) {
+      setGroupDeleteError(error instanceof Error ? error.message : t("common.error"));
+    } finally {
+      setGroupDeleteLoading(false);
+    }
+  };
   const toggleRoleVisible = (id: number) =>
     setHiddenRoleIds((prev) => {
       const next = new Set(prev);
@@ -816,7 +840,24 @@ export default function RoleList() {
               >
                 <aside className="overflow-hidden rounded-xl border bg-card lg:sticky lg:top-4 lg:self-start">
                   <div className="border-b p-4">
-                    <h2 className="font-semibold">{t("adminRbac.groups.title")}</h2>
+                    <div className="flex items-center justify-between gap-2">
+                      <h2 className="font-semibold">{t("adminRbac.groups.title")}</h2>
+                      {canManage && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setEditingGroup(null);
+                            setGroupEditorOpen(true);
+                          }}
+                          data-testid="role-group-create"
+                        >
+                          <Plus className="mr-1 h-4 w-4" />
+                          {t("adminRbac.groups.create")}
+                        </Button>
+                      )}
+                    </div>
                     <p className="mt-1 text-xs text-muted-foreground">
                       {t("adminRbac.groups.help")}
                     </p>
@@ -835,7 +876,7 @@ export default function RoleList() {
                         onClick={() => setSelectedGroupId(group.id)}
                         data-testid={`rbac-group-${group.code}`}
                       >
-                        <span className="block text-sm font-semibold">{t(group.labelKey)}</span>
+                        <span className="block text-sm font-semibold">{groupName(group)}</span>
                         <span className="mt-1 block text-xs text-muted-foreground">
                           {group.roleCount} {t("adminRbac.groups.roles")} ·{" "}
                           {group.baselinePermissions.length} {t("adminRbac.permissionsShort")}
@@ -855,7 +896,7 @@ export default function RoleList() {
                               <FolderTree className="h-5 w-5" />
                             </span>
                             <div>
-                              <h2 className="text-lg font-semibold">{t(selectedGroup.labelKey)}</h2>
+                              <h2 className="text-lg font-semibold">{groupName(selectedGroup)}</h2>
                               <p className="text-xs text-muted-foreground">{selectedGroup.code}</p>
                             </div>
                           </div>
@@ -863,13 +904,42 @@ export default function RoleList() {
                             {t("adminRbac.groups.baselineHelp")}
                           </p>
                         </div>
-                        <RoleGroupPermissionsDialog
-                          key={selectedGroup.id}
-                          group={selectedGroup}
-                          permissions={allPerms}
-                          canManage={canManage}
-                          onSaved={invalidateAll}
-                        />
+                        <div className="flex flex-wrap gap-2">
+                          {canManage && (
+                            <>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setEditingGroup(selectedGroup);
+                                  setGroupEditorOpen(true);
+                                }}
+                                data-testid="role-group-edit"
+                              >
+                                <Pencil className="mr-1.5 h-4 w-4" />
+                                {t("adminRbac.groups.edit")}
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => void openGroupDelete(selectedGroup)}
+                                data-testid="role-group-delete"
+                              >
+                                <Trash2 className="mr-1.5 h-4 w-4" />
+                                {t("adminRbac.groups.delete")}
+                              </Button>
+                            </>
+                          )}
+                          <RoleGroupPermissionsDialog
+                            key={selectedGroup.id}
+                            group={selectedGroup}
+                            permissions={allPerms}
+                            canManage={canManage}
+                            onSaved={invalidateAll}
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -1212,6 +1282,54 @@ export default function RoleList() {
           </>
         )}
       </div>
+
+      <RoleGroupEditorDialog
+        open={groupEditorOpen}
+        group={editingGroup}
+        onOpenChange={setGroupEditorOpen}
+        onSaved={async (saved) => {
+          await invalidateAll();
+          setSelectedGroupId(saved.id);
+        }}
+      />
+      <DeletionImpactDialog
+        open={groupDeleteTarget != null}
+        impact={groupDeleteImpact}
+        loading={groupDeleteLoading}
+        deleting={groupDeleting}
+        error={groupDeleteError}
+        onOpenChange={(open) => {
+          if (!open) setGroupDeleteTarget(null);
+        }}
+        onConfirm={async (confirmation) => {
+          if (!groupDeleteTarget || !groupDeleteImpact) return null;
+          setGroupDeleting(true);
+          setGroupDeleteError(null);
+          try {
+            await rbacApi.deleteRoleGroup(groupDeleteTarget.id, {
+              confirmation,
+              planToken: groupDeleteImpact.planToken,
+            });
+            return null;
+          } catch (error) {
+            setGroupDeleteError(
+              isAxiosError(error)
+                ? (error.response?.data?.message ?? t("adminRbac.groups.deleteFailed"))
+                : t("adminRbac.groups.deleteFailed"),
+            );
+            throw error;
+          } finally {
+            setGroupDeleting(false);
+          }
+        }}
+        onCompleted={async () => {
+          setGroupDeleteTarget(null);
+          setSelectedGroupId(null);
+          await invalidateAll();
+          window.dispatchEvent(new Event(TRANSLATIONS_CHANGED_EVENT));
+          toast({ title: t("adminRbac.groups.deleted") });
+        }}
+      />
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto sm:w-full">

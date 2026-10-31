@@ -32,6 +32,7 @@ public class RoleGroupResponse
     public string LabelKey { get; set; } = string.Empty;
     public int SortOrder { get; set; }
     public int RoleCount { get; set; }
+    public Dictionary<string, string> Names { get; set; } = [];
     public List<string> BaselinePermissions { get; set; } = [];
 }
 

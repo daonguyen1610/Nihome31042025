@@ -95,6 +95,19 @@ public class RbacSeederTests : IDisposable
     }
 
     [Fact]
+    public void Seed_PreservesEditedDepartmentOrder()
+    {
+        RbacSeeder.Seed(_db);
+        var group = _db.RoleGroups.Single(item => item.Code == "DESIGN");
+        group.SortOrder = 47;
+        _db.SaveChanges();
+
+        RbacSeeder.Seed(_db);
+
+        Assert.Equal(47, _db.RoleGroups.Single(item => item.Code == "DESIGN").SortOrder);
+    }
+
+    [Fact]
     public void Seed_AssignsBusinessRolesToConfiguredNiconGroups()
     {
         RbacSeeder.Seed(_db);

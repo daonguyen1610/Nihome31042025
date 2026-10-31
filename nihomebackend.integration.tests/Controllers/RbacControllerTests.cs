@@ -97,7 +97,159 @@ public class RbacControllerTests : IntegrationTestBase
         groups.Select(group => group.GetProperty("code").GetString())
             .Should().Equal("CRM", "HR", "PROCUREMENT", "CONSTRUCTION", "DESIGN", "FINANCE");
         groups.Select(group => group.GetProperty("roleCount").GetInt32())
-            .Should().Equal(2, 1, 2, 5, 6, 1);
+            .Should().Equal(2, 1, 3, 5, 6, 1);
+    }
+
+    [Fact]
+    public async Task RoleGroupLifecycle_RequiresPermission_TracksTranslations_AndRejectsStaleDeletion()
+    {
+        var code = "TEAM_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var names = new { vi = "Phòng Pháp lý", en = "Legal Department", zh = "法务部门", ja = "法務部門" };
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsCustomerAsync);
+        (await Client.PostAsJsonAsync("/api/admin/rbac/role-groups", new { code, names, sortOrder = 15 }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        await Client.GetAsync("/api/translations/en"); // Prime the translation cache before creation.
+        var created = await Client.PostAsJsonAsync("/api/admin/rbac/role-groups", new { code, names, sortOrder = 15 });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        (await Client.PostAsJsonAsync("/api/admin/rbac/role-groups", new { code, names, sortOrder = 15 }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await Client.PostAsJsonAsync("/api/admin/rbac/role-groups", new
+        {
+            code = "BAD_GROUP",
+            names = new { vi = "Pháp lý", en = "Legal", zh = " ", ja = "法務" },
+            sortOrder = 0,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var group = await ReadJsonAsync(created);
+        var id = group.GetProperty("id").GetInt32();
+        group.GetProperty("names").GetProperty("ja").GetString().Should().Be("法務部門");
+        var key = group.GetProperty("labelKey").GetString()!;
+        (await WithDbAsync(db => db.Translations.CountAsync(row => row.Key == key))).Should().Be(4);
+        (await ReadJsonAsync(await Client.GetAsync("/api/translations/en")))
+            .GetProperty("translations").GetProperty(key).GetString().Should().Be("Legal Department");
+
+        var updated = await Client.PutAsJsonAsync($"/api/admin/rbac/role-groups/{id}", new
+        {
+            names = new { vi = "Ban Pháp lý", en = "Legal Team", zh = "法务团队", ja = "法務チーム" },
+            sortOrder = 20,
+        });
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(updated)).GetProperty("names").GetProperty("vi").GetString()
+            .Should().Be("Ban Pháp lý");
+        (await ReadJsonAsync(await Client.GetAsync("/api/translations/en")))
+            .GetProperty("translations").GetProperty(key).GetString().Should().Be("Legal Team");
+
+        var beforeRole = await ReadJsonAsync(await Client.GetAsync($"/api/admin/rbac/role-groups/{id}/deletion-impact"));
+        beforeRole.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        beforeRole.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("key").GetString())
+            .Should().Contain("roleGroups.translations");
+        var roleCode = "ROLE_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var role = await Client.PostAsJsonAsync("/api/admin/rbac/roles", new
+        {
+            code = roleCode,
+            name = "Legal coordinator",
+            roleGroupId = id,
+        });
+        role.StatusCode.Should().Be(HttpStatusCode.Created);
+        var roleId = (await ReadJsonAsync(role)).GetProperty("id").GetInt32();
+
+        var blocked = await ReadJsonAsync(await Client.GetAsync($"/api/admin/rbac/role-groups/{id}/deletion-impact"));
+        blocked.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        blocked.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("key").GetString())
+            .Should().Contain("roleGroups.roles");
+        (await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/admin/rbac/role-groups/{id}")
+        {
+            Content = JsonContent.Create(new { confirmation = code, planToken = blocked.GetProperty("planToken").GetString() }),
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.RoleGroups.CountAsync(row => row.Id == id))).Should().Be(1);
+        (await Client.DeleteAsync($"/api/admin/rbac/roles/{roleId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/admin/rbac/role-groups/{id}")
+        {
+            Content = JsonContent.Create(new { confirmation = code, planToken = blocked.GetProperty("planToken").GetString() }),
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var current = await ReadJsonAsync(await Client.GetAsync($"/api/admin/rbac/role-groups/{id}/deletion-impact"));
+        (await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/admin/rbac/role-groups/{id}")
+        {
+            Content = JsonContent.Create(new { confirmation = "WRONG", planToken = current.GetProperty("planToken").GetString() }),
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/admin/rbac/role-groups/{id}")
+        {
+            Content = JsonContent.Create(new { confirmation = code, planToken = current.GetProperty("planToken").GetString() }),
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.Translations.CountAsync(row => row.Key == key))).Should().Be(0);
+        (await WithDbAsync(db => db.RoleGroups.CountAsync(row => row.Id == id))).Should().Be(0);
+        (await ReadJsonAsync(await Client.GetAsync("/api/translations/en")))
+            .GetProperty("translations").TryGetProperty(key, out _).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task RoleGroupDeletionImpact_BlocksWorkPackagesTasksAndParticipantGroups()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var code = "TEAM_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var createdResponse = await Client.PostAsJsonAsync("/api/admin/rbac/role-groups", new
+        {
+            code,
+            names = new { vi = "Ban Điều phối", en = "Coordination Team", zh = "协调团队", ja = "調整チーム" },
+            sortOrder = 40,
+        });
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created,
+            await createdResponse.Content.ReadAsStringAsync());
+        var created = await ReadJsonAsync(createdResponse);
+        var groupId = created.GetProperty("id").GetInt32();
+        var packageId = await WithDbAsync(async db =>
+        {
+            var adminId = await db.Users.Where(user => user.RoleEntity != null && user.RoleEntity.Code == "SUPER_ADMIN")
+                .Select(user => user.Id).FirstAsync();
+            var package = new NihomeBackend.Models.DepartmentWorkPackage
+            {
+                Code = "WP-COORD-" + Guid.NewGuid().ToString("N"),
+                Name = "Điều phối hồ sơ pháp lý NICON",
+                Kind = NihomeBackend.Models.WorkPackageKind.Internal,
+                DepartmentRoleGroupId = groupId,
+                LeadUserId = adminId,
+                CreatedByUserId = adminId,
+                UpdatedByUserId = adminId,
+                ParticipantGroups = [new NihomeBackend.Models.DepartmentWorkPackageParticipantGroup { RoleGroupId = groupId }],
+                Tasks = [new NihomeBackend.Models.DepartmentWorkTask
+                {
+                    WbsCode = "LEGAL-01", Title = "Kiểm tra hồ sơ cấp phép",
+                    DepartmentRoleGroupId = groupId, AssigneeUserId = adminId,
+                    CreatedByUserId = adminId, UpdatedByUserId = adminId,
+                }],
+            };
+            db.DepartmentWorkPackages.Add(package);
+            await db.SaveChangesAsync();
+            return package.Id;
+        });
+        var impact = await ReadJsonAsync(await Client.GetAsync($"/api/admin/rbac/role-groups/{groupId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        var items = impact.GetProperty("items").EnumerateArray().ToDictionary(item =>
+            item.GetProperty("key").GetString()!, item => item);
+        foreach (var key in new[] { "roleGroups.packages", "roleGroups.tasks", "roleGroups.participants" })
+        {
+            items[key].GetProperty("action").GetString().Should().Be("Block");
+            items[key].GetProperty("count").GetInt32().Should().Be(1);
+        }
+        (await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/admin/rbac/role-groups/{groupId}")
+        {
+            Content = JsonContent.Create(new { confirmation = code, planToken = impact.GetProperty("planToken").GetString() }),
+        })).StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.CountAsync(item => item.Id == packageId))).Should().Be(1);
+        await WithDbAsync(async db =>
+        {
+            var package = await db.DepartmentWorkPackages.Include(item => item.Tasks)
+                .Include(item => item.ParticipantGroups).SingleAsync(item => item.Id == packageId);
+            db.DepartmentWorkPackages.Remove(package);
+            await db.SaveChangesAsync();
+        });
+        var current = await ReadJsonAsync(await Client.GetAsync($"/api/admin/rbac/role-groups/{groupId}/deletion-impact"));
+        (await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, $"/api/admin/rbac/role-groups/{groupId}")
+        {
+            Content = JsonContent.Create(new { confirmation = code, planToken = current.GetProperty("planToken").GetString() }),
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]

@@ -65,3 +65,30 @@ public class SetRoleGroupRequest
 {
     public int? RoleGroupId { get; set; }
 }
+
+public sealed class RoleGroupNamesRequest
+{
+    [Required, StringLength(100, MinimumLength = 2)] public string Vi { get; set; } = string.Empty;
+    [Required, StringLength(100, MinimumLength = 2)] public string En { get; set; } = string.Empty;
+    [Required, StringLength(100, MinimumLength = 2)] public string Zh { get; set; } = string.Empty;
+    [Required, StringLength(100, MinimumLength = 2)] public string Ja { get; set; } = string.Empty;
+}
+
+public sealed class CreateRoleGroupRequest
+{
+    [Required]
+    [RegularExpression("^[A-Z][A-Z0-9_]{1,49}$",
+        ErrorMessage = "Group code must be UPPER_SNAKE_CASE (2-50 chars, example: LEGAL_TEAM).")]
+    public string Code { get; set; } = string.Empty;
+
+    [Required] public RoleGroupNamesRequest Names { get; set; } = new();
+
+    [Range(0, int.MaxValue)] public int SortOrder { get; set; }
+}
+
+public sealed class UpdateRoleGroupRequest
+{
+    [Required] public RoleGroupNamesRequest Names { get; set; } = new();
+
+    [Range(0, int.MaxValue)] public int SortOrder { get; set; }
+}

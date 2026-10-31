@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using System.Data;
 using NihomeBackend.Data;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
@@ -11,7 +12,8 @@ public sealed class RoleService(
     AppDbContext db,
     IPermissionService permissions,
     IAuditLogger audit,
-    INotificationService notifications) : IRoleService
+    INotificationService notifications,
+    TranslationService translations) : IRoleService
 {
     private const string ResourceType = "rbac.role";
     private const string ActionUpdateRole = "rbac.role.update";
@@ -94,7 +96,7 @@ public sealed class RoleService(
 
     public async Task<List<RoleGroupResponse>> ListRoleGroupsAsync(CancellationToken ct = default)
     {
-        return await db.RoleGroups.AsNoTracking()
+        var groups = await db.RoleGroups.AsNoTracking()
             .Where(g => g.IsActive)
             .OrderBy(g => g.SortOrder).ThenBy(g => g.Code)
             .Select(g => new RoleGroupResponse
@@ -111,6 +113,17 @@ public sealed class RoleService(
                     .ToList(),
             })
             .ToListAsync(ct);
+        var keys = groups.Select(group => group.LabelKey).ToList();
+        var names = await db.Translations.AsNoTracking()
+            .Where(row => keys.Contains(row.Key))
+            .Select(row => new { row.Key, row.LanguageCode, row.Value })
+            .ToListAsync(ct);
+        var byKey = names.GroupBy(row => row.Key).ToDictionary(
+            group => group.Key,
+            group => group.ToDictionary(row => row.LanguageCode, row => row.Value));
+        foreach (var group in groups)
+            group.Names = byKey.GetValueOrDefault(group.LabelKey) ?? [];
+        return groups;
     }
 
     public async Task<List<PermissionResponse>> ListPermissionsAsync(CancellationToken ct = default)
@@ -588,5 +601,124 @@ public sealed class RoleService(
             PermissionCount = 0,
             RoleGroupId = role.RoleGroupId,
         });
+    }
+
+    public async Task<RoleWriteResult<RoleGroupResponse>> CreateRoleGroupAsync(
+        CreateRoleGroupRequest req, int actorUserId, CancellationToken ct = default)
+    {
+        var validation = ValidateGroupNames(req.Names);
+        if (validation is not null) return RoleWriteResult<RoleGroupResponse>.Invalid(validation);
+        var code = req.Code.Trim();
+        if (await db.RoleGroups.AnyAsync(item => item.Code == code, ct))
+            return RoleWriteResult<RoleGroupResponse>.Conflict("Group code already exists.");
+        var now = DateTime.UtcNow;
+        var group = new RoleGroup
+        {
+            Code = code,
+            LabelKey = $"rbac.group.custom.{code}",
+            SortOrder = req.SortOrder,
+            IsActive = true,
+            InitialPermissionsSeeded = true,
+            CreatedAt = now,
+        };
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct) : null;
+        db.RoleGroups.Add(group);
+        await db.SaveChangesAsync(ct);
+        await WriteGroupNamesAsync(group.LabelKey, req.Names, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        audit.Log(new AuditEvent
+        {
+            Action = "rbac.roleGroup.create",
+            ResourceType = "rbac.roleGroup",
+            ResourceId = code,
+            Message = $"Created role group '{code}'.",
+            NewValue = new { group.SortOrder, req.Names }
+        });
+        return RoleWriteResult<RoleGroupResponse>.Ok((await ListRoleGroupsAsync(ct)).Single(item => item.Id == group.Id));
+    }
+
+    public async Task<RoleWriteResult<RoleGroupResponse>> UpdateRoleGroupAsync(
+        int id, UpdateRoleGroupRequest req, int actorUserId, CancellationToken ct = default)
+    {
+        var validation = ValidateGroupNames(req.Names);
+        if (validation is not null) return RoleWriteResult<RoleGroupResponse>.Invalid(validation);
+        var group = await db.RoleGroups.SingleOrDefaultAsync(item => item.Id == id, ct);
+        if (group is null) return RoleWriteResult<RoleGroupResponse>.NotFound();
+        var old = new { group.SortOrder, group.UpdatedAt };
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(ct) : null;
+        group.SortOrder = req.SortOrder;
+        group.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        await WriteGroupNamesAsync(group.LabelKey, req.Names, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        audit.Log(new AuditEvent
+        {
+            Action = "rbac.roleGroup.update",
+            ResourceType = "rbac.roleGroup",
+            ResourceId = group.Code,
+            Message = $"Updated role group '{group.Code}'.",
+            OldValue = old,
+            NewValue = new { group.SortOrder, req.Names }
+        });
+        return RoleWriteResult<RoleGroupResponse>.Ok((await ListRoleGroupsAsync(ct)).Single(item => item.Id == id));
+    }
+
+    public Task<DeletionImpactResponse?> GetRoleGroupDeletionImpactAsync(int id, CancellationToken ct = default) =>
+        DeletionImpactPlanner.ForRoleGroupAsync(db, id, ct);
+
+    public async Task<RoleWriteResult<RoleGroupResponse>> DeleteRoleGroupAsync(
+        int id, ConfirmDeletionRequest req, int actorUserId, CancellationToken ct = default)
+    {
+        await using var transaction = db.Database.IsRelational()
+            ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+        var impact = await DeletionImpactPlanner.ForRoleGroupAsync(db, id, ct);
+        if (impact is null) return RoleWriteResult<RoleGroupResponse>.NotFound();
+        if (req.Confirmation != impact.RequiredConfirmation)
+            return RoleWriteResult<RoleGroupResponse>.Invalid("Group code confirmation does not match.");
+        if (!string.Equals(req.PlanToken, impact.PlanToken, StringComparison.Ordinal))
+            return RoleWriteResult<RoleGroupResponse>.Conflict("Deletion impact changed. Refresh the preview.");
+        if (!impact.CanDelete)
+            return RoleWriteResult<RoleGroupResponse>.Conflict("Group is referenced or seeded. Resolve blockers before deleting.");
+        var group = await db.RoleGroups.SingleAsync(item => item.Id == id, ct);
+        var response = (await ListRoleGroupsAsync(ct)).Single(item => item.Id == id);
+        var rows = await db.Translations.Where(item => item.Key == group.LabelKey).ToListAsync(ct);
+        db.Translations.RemoveRange(rows);
+        var baseline = await db.RoleGroupPermissions.Where(item => item.RoleGroupId == id).ToListAsync(ct);
+        db.RoleGroupPermissions.RemoveRange(baseline);
+        db.RoleGroups.Remove(group);
+        await db.SaveChangesAsync(ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        translations.InvalidateAllCaches();
+        audit.Log(new AuditEvent
+        {
+            Action = "rbac.roleGroup.delete",
+            ResourceType = "rbac.roleGroup",
+            ResourceId = group.Code,
+            Message = $"Deleted role group '{group.Code}'.",
+            OldValue = response
+        });
+        return RoleWriteResult<RoleGroupResponse>.Ok(response);
+    }
+
+    private static string? ValidateGroupNames(RoleGroupNamesRequest? names)
+    {
+        if (names is null) return "Group names are required in vi, en, zh and ja.";
+        foreach (var (language, value) in new[] { ("vi", names.Vi), ("en", names.En), ("zh", names.Zh), ("ja", names.Ja) })
+            if (string.IsNullOrWhiteSpace(value) || value.Trim().Length is < 2 or > 100)
+                return $"Group name {language} must contain 2-100 characters (example: Design).";
+        return null;
+    }
+
+    private async Task WriteGroupNamesAsync(string key, RoleGroupNamesRequest names, CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+        await translations.UpsertPairAsync(key, names.Vi.Trim(), new Dictionary<string, string>
+        {
+            ["en"] = names.En.Trim(),
+            ["zh"] = names.Zh.Trim(),
+            ["ja"] = names.Ja.Trim(),
+        }, "rbac");
     }
 }
