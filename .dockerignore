@@ -6,8 +6,8 @@ node_modules
 **/bin
 **/obj
 **/out
-deployment-config
-nihomebackend/publish
+**/publish
+deployment-config/
 nihomebackend.tests
 nihomebackend.integration.tests
 **/.DS_Store

@@ -18,6 +18,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public sealed class DepartmentWorkPackagesController(
     IDepartmentWorkPackageService service,
+    WorkTaskAttachmentService attachments,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
 {
@@ -182,6 +183,85 @@ public sealed class DepartmentWorkPackagesController(
             var result = await service.UpdateTaskAsync(id, taskId, request, userId.Value, ct);
             return result is null ? NotFound() : Ok(result);
         });
+    }
+
+    [HttpGet("{id:int}/tasks/{taskId:int}/attachments")]
+    [RequirePermission("work.packages", "view")]
+    public async Task<ActionResult<IReadOnlyList<DepartmentWorkTaskAttachmentResponse>>> ListTaskAttachments(
+        int id, int taskId, CancellationToken ct)
+    {
+        var scope = await ScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        var result = await attachments.ListAsync(id, taskId, scope.Value.UserId, scope.Value.CanViewAll, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{id:int}/tasks/{taskId:int}/attachments")]
+    [Consumes("multipart/form-data")]
+    [RequirePermission("work.packages", "view")]
+    [Idempotency("work.packages.tasks.attachments.upload",
+        typeof(WorkTaskAttachmentIdempotencyGuard), requireKey: true)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 21 * 1024 * 1024)]
+    public async Task<ActionResult<DepartmentWorkTaskAttachmentResponse>> UploadTaskAttachment(
+        int id, int taskId, IFormFile? file, CancellationToken ct)
+    {
+        var scope = await ScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        try
+        {
+            var result = await attachments.UploadAsync(id, taskId, file,
+                scope.Value.UserId, scope.Value.CanViewAll, ct);
+            if (result is not null)
+                audit.Log(new AuditEvent
+                {
+                    Action = "work-task.attachment.upload",
+                    ResourceType = nameof(DepartmentWorkTaskAttachment),
+                    ResourceId = result.Id.ToString(),
+                    Message = $"Attachment uploaded for work task #{taskId}.",
+                    NewValue = result,
+                });
+            return result is null ? NotFound() : StatusCode(StatusCodes.Status201Created, result);
+        }
+        catch (DepartmentWorkPackageScopeException) { return NotFound(); }
+        catch (DepartmentWorkPackageOperationException exception) { return BadRequest(new { message = exception.Message }); }
+        catch (BusinessDocumentStorageException exception) { return BadRequest(new { message = exception.Message }); }
+    }
+
+    [HttpGet("{id:int}/tasks/{taskId:int}/attachments/{attachmentId:long}/content")]
+    [RequirePermission("work.packages", "view")]
+    public async Task<IActionResult> DownloadTaskAttachment(
+        int id, int taskId, long attachmentId, CancellationToken ct)
+    {
+        var scope = await ScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        var content = await attachments.DownloadAsync(id, taskId, attachmentId,
+            scope.Value.UserId, scope.Value.CanViewAll, ct);
+        return content is null ? NotFound() : PhysicalFile(content.FullPath,
+            content.ContentType, content.OriginalFileName, enableRangeProcessing: true);
+    }
+
+    [HttpDelete("{id:int}/tasks/{taskId:int}/attachments/{attachmentId:long}")]
+    [RequirePermission("work.packages", "view")]
+    public async Task<IActionResult> DeleteTaskAttachment(
+        int id, int taskId, long attachmentId, CancellationToken ct)
+    {
+        var scope = await ScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        try
+        {
+            if (!await attachments.DeleteAsync(id, taskId, attachmentId,
+                scope.Value.UserId, scope.Value.CanViewAll, ct)) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "work-task.attachment.delete",
+                ResourceType = nameof(DepartmentWorkTaskAttachment),
+                ResourceId = attachmentId.ToString(),
+                Message = $"Attachment deleted for work task #{taskId}.",
+            });
+            return NoContent();
+        }
+        catch (DepartmentWorkPackageScopeException) { return NotFound(); }
+        catch (DepartmentWorkPackageOperationException exception) { return Conflict(new { message = exception.Message }); }
     }
 
     [HttpPut("{id:int}/tasks/{taskId:int}/progress")]

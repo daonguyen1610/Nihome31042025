@@ -31,6 +31,125 @@ test("project, contract and internal work package tabs render without browser er
   expect(errors).toEqual([]);
 });
 
+test("ordinary task accepts multiple private attachments on mobile and tablet", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const writeHeaders = () => ({ ...headers, "Idempotency-Key": randomUUID() });
+  const options = await (await api.get("/api/work-packages/options", { headers })).json();
+  const department = options.departments.find(
+    (item: { code: string }) => item.code === "PROCUREMENT",
+  );
+  const lead = options.users.find(
+    (item: { roleGroupId: number; canLead: boolean }) =>
+      item.roleGroupId === department.id && item.canLead,
+  );
+  const assignee = options.users.find(
+    (item: { roleGroupId: number; userId: number }) =>
+      item.roleGroupId === department.id && item.userId !== lead.userId,
+  );
+  const projects = await (
+    await api.get("/api/operational-projects?pageSize=1", { headers })
+  ).json();
+  const created = await api.post("/api/work-packages", {
+    headers: writeHeaders(),
+    data: {
+      kind: "Project",
+      purpose: "General",
+      name: `Hồ sơ lắp đặt điện NICON ${Date.now()}`,
+      operationalProjectId: projects.items[0].id,
+      departmentRoleGroupId: department.id,
+      leadUserId: lead.userId,
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const workPackage = await created.json();
+  try {
+    const taskResponse = await api.post(`/api/work-packages/${workPackage.id}/tasks`, {
+      headers: writeHeaders(),
+      data: {
+        wbsCode: "MEP-01",
+        title: "Kiểm tra bản vẽ và biên bản vật tư điện",
+        assigneeUserId: assignee.userId,
+        approverUserId: lead.userId,
+        plannedStart: "2026-10-23T00:00:00Z",
+        plannedEnd: "2026-10-30T00:00:00Z",
+      },
+    });
+    expect(taskResponse.status(), await taskResponse.text()).toBe(201);
+    const task = await taskResponse.json();
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto(`/admin/work-packages/${workPackage.id}`);
+    const row = page.getByTestId("work-task-row").filter({ hasText: task.title });
+    await row.getByRole("button", { name: /^(Sửa|Edit)$/i }).click();
+    const form = page.getByRole("dialog");
+    await form.locator('input[type="file"]').setInputFiles([
+      {
+        name: "ban-ve-dien.pdf",
+        mimeType: "application/pdf",
+        buffer: Buffer.from("NICON drawing"),
+      },
+      {
+        name: "bien-ban-vat-tu.xlsx",
+        mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        buffer: Buffer.from("NICON material record"),
+      },
+    ]);
+    await expect(form).toContainText("ban-ve-dien.pdf");
+    await expect(form).toContainText("bien-ban-vat-tu.xlsx");
+    await form.getByRole("button", { name: /Lưu thay đổi|Save changes/i }).click();
+    await expect(form).toHaveCount(0);
+
+    await row.getByRole("button", { name: /Tệp đính kèm|Attachments/i }).click();
+    const attachmentDialog = page.getByRole("dialog");
+    await expect(attachmentDialog).toContainText("ban-ve-dien.pdf");
+    await expect(attachmentDialog).toContainText("bien-ban-vat-tu.xlsx");
+    for (const width of [390, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
+        true,
+      );
+      await expect
+        .poll(async () => {
+          const box = await attachmentDialog.boundingBox();
+          return box ? box.x >= 0 && box.x + box.width <= width : false;
+        })
+        .toBe(true);
+    }
+    const attachments = await (
+      await api.get(`/api/work-packages/${workPackage.id}/tasks/${task.id}/attachments`, {
+        headers,
+      })
+    ).json();
+    expect(attachments).toHaveLength(2);
+  } finally {
+    const detail = await api.get(`/api/work-packages/${workPackage.id}`, { headers });
+    if (detail.ok()) {
+      const work = await detail.json();
+      for (const task of work.tasks) {
+        const response = await api.get(
+          `/api/work-packages/${workPackage.id}/tasks/${task.id}/attachments`,
+          { headers },
+        );
+        if (response.ok()) {
+          for (const attachment of await response.json()) {
+            await api.delete(
+              `/api/work-packages/${workPackage.id}/tasks/${task.id}/attachments/${attachment.id}`,
+              { headers },
+            );
+          }
+        }
+      }
+    }
+    await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${workPackage.id}`);
+  }
+});
+
 for (const width of [390, 768])
   test(`ordinary work subtasks render as a hierarchy at ${width}px`, async ({
     page,

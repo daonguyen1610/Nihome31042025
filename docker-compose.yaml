@@ -21,6 +21,7 @@ services:
       DataProtection__KeysPath: /root/.aspnet/DataProtection-Keys
     volumes:
       - data_protection_keys:/root/.aspnet/DataProtection-Keys
+      - work_task_files:/app/wwwroot/files/business-documents/work-tasks
     networks:
       - nihome-network
 
@@ -47,6 +48,7 @@ services:
 
 volumes:
   data_protection_keys:
+  work_task_files:
   sqlserver_data:
 
 networks:

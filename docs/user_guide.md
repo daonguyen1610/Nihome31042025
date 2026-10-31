@@ -362,6 +362,14 @@ default when no approver is selected.
 When editing a task, the predecessor picker excludes that task and any task
 that depends on it, directly or through other tasks, to prevent a dependency
 cycle. CC followers are selected independently.
+Select up to ten attachments in the task form (PDF, Word, Excel, JPG or PNG;
+20 MB per file). The task is saved first, then each file uploads; if an upload
+fails, the task stays saved and the form keeps failed files for retry. Open
+**Attachments** on any task to view and download files. The package lead or
+task assignee can add or delete files while the package is open. The lead can
+still delete files after the package closes. Delete task files before
+permanently deleting the package. Ordinary task attachments
+currently stay in private host storage and do not appear in the Drive catalog.
 Start the package before assignees update progress. A dependent task cannot
 start until every selected predecessor is complete.
 
