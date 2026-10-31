@@ -1065,7 +1065,9 @@ client feedback verbatim after submission to the client, with the representative
 channel, time and an evidence reference (meeting minutes, email or document).
 Record both a response and its resolution outcome before
 submitting a replacement R01+ revision. Submitted revisions stay frozen.
-The expanded dossier uses the full available width. Its checklist shows attached
+Open **Hồ sơ và ý kiến** for one Concept option, then switch between **Hồ sơ**
+and **Ý kiến khách hàng và phản hồi**. The dossier opens below the option list
+at full width, so the forms no longer stretch each option card. Its checklist shows attached
 documents, recorded exceptions and missing components; sync status remains
 visible for each file. Refreshing or saving feedback keeps the revision and
 in-progress form context. Customer feedback becomes available after client
@@ -1074,6 +1076,14 @@ it. Finalize remains disabled until client approval and signed acceptance are
 recorded. Internal submission numbers are labelled separately from option
 revisions in Reviews. Discarding an option requires confirmation and preserves
 submitted documents and history. The Concept header links directly to Reviews.
+The Design menu calls this workspace **Hợp Đồng Thiết Kế**; the underlying
+Design Project route and IDs remain unchanged, and the workspace can start
+before a CRM contract is signed. Add staff in its **Đội ngũ** tab first. One
+Chủ Nhiệm Thiết Kế is allowed per workspace, while several Chủ Trì Thiết Kế
+may serve together. Concept, Basic Design and Shop Drawing owner pickers show
+only active team members. The member picker scrolls within the visible screen
+on a short viewport. **Nhóm công việc** is a top-level admin navigation item
+directly below **Thông báo**.
 Design circulation notifications open the specific assigned review, including
 for recipients outside the project team. Read its submitted files and add
 general or file-specific comments while internal review is open. This page

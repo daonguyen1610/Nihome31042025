@@ -349,6 +349,7 @@ const AdminDesignProjectDetail = () => {
                 <OperationalProjectTeamPanel
                   operationalProjectId={project.operationalProjectId}
                   designProjectId={project.id}
+                  designManagerUserId={project.projectManagerUserId}
                   designProjectContext
                 />
               ) : tab === "schedule" ? (

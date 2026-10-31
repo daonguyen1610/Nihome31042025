@@ -1,0 +1,347 @@
+[
+  {
+    "key": "nav.designProjects",
+    "old": {
+      "vi": "Dự án thiết kế",
+      "en": "Design projects",
+      "zh": "设计项目",
+      "ja": "設計プロジェクト"
+    }
+  },
+  {
+    "key": "designProjects.title",
+    "old": {
+      "vi": "Quản lý Dự án thiết kế",
+      "en": "Design project management",
+      "zh": "设计项目管理",
+      "ja": "設計プロジェクト管理"
+    }
+  },
+  {
+    "key": "designProjects.subtitle",
+    "old": {
+      "en": "Track design projects moving through Concept → Basic Design → Detail Design.",
+      "zh": "跟踪设计项目在概念设计 → 基本设计 → 详细设计三个阶段的进展。"
+    }
+  },
+  {
+    "key": "designProjects.new",
+    "old": {
+      "vi": "Tạo dự án thiết kế",
+      "en": "New design project",
+      "zh": "新建设计项目"
+    }
+  },
+  {
+    "key": "designProjects.edit",
+    "old": {
+      "en": "Edit design project",
+      "zh": "编辑设计项目"
+    }
+  },
+  {
+    "key": "designProjects.created",
+    "old": {
+      "vi": "Đã tạo dự án thiết kế",
+      "en": "Design project created",
+      "zh": "已创建设计项目",
+      "ja": "設計プロジェクトを作成しました"
+    }
+  },
+  {
+    "key": "designProjects.updated",
+    "old": {
+      "en": "Design project updated",
+      "zh": "已更新设计项目",
+      "ja": "設計プロジェクトを更新しました"
+    }
+  },
+  {
+    "key": "designProjects.deleted",
+    "old": {
+      "en": "Design project deleted",
+      "zh": "已删除设计项目",
+      "ja": "設計プロジェクトを削除しました"
+    }
+  },
+  {
+    "key": "designProjects.empty",
+    "old": {
+      "vi": "Chưa có dự án thiết kế nào.",
+      "en": "No design projects yet.",
+      "zh": "暂无设计项目。",
+      "ja": "設計プロジェクトがまだありません。"
+    }
+  },
+  {
+    "key": "designProjects.emptyFiltered",
+    "old": {
+      "en": "No design projects match the current filters."
+    }
+  },
+  {
+    "key": "designProjects.delete.confirmTitle",
+    "old": {
+      "vi": "Xoá dự án thiết kế?",
+      "en": "Delete design project?",
+      "zh": "删除设计项目？",
+      "ja": "設計プロジェクトを削除しますか？"
+    }
+  },
+  {
+    "key": "designProjects.detail.back",
+    "old": {
+      "vi": "Quay lại danh sách dự án thiết kế",
+      "en": "Back to design projects",
+      "zh": "返回设计项目列表",
+      "ja": "設計プロジェクト一覧へ戻る"
+    }
+  },
+  {
+    "key": "designProjects.error.contractTaken",
+    "old": {
+      "vi": "Hợp đồng này đã có dự án thiết kế. Đang mở dự án hiện có.",
+      "en": "This contract already has a design project. Opening the existing one.",
+      "zh": "该合同已有设计项目，正在打开现有项目。",
+      "ja": "この契約には既に設計プロジェクトがあります。既存のものを開きます。"
+    }
+  },
+  {
+    "key": "designProjects.team.unlinkedDescription",
+    "old": {
+      "vi": "Liên kết Dự án thiết kế với Dự án vận hành để quản lý đội ngũ chính thức.",
+      "en": "Link this design project to an operational project to manage its authoritative team."
+    }
+  },
+  {
+    "key": "designProjects.team.field.designRoles",
+    "old": {
+      "vi": "Vai trò trong dự án thiết kế này",
+      "en": "Roles in this design project",
+      "zh": "此设计项目中的角色",
+      "ja": "この設計プロジェクトの役割"
+    }
+  },
+  {
+    "key": "designProjects.team.dialog.member.design.add.description",
+    "old": {
+      "vi": "Chọn người dùng và phân vai cho dự án thiết kế này.",
+      "en": "Choose a user and assign roles for this design project.",
+      "zh": "选择用户并为此设计项目分配角色。",
+      "ja": "ユーザーを選択し、この設計プロジェクトの役割を割り当てます。"
+    }
+  },
+  {
+    "key": "designProjects.team.dialog.member.design.edit.description",
+    "old": {
+      "vi": "Cập nhật vai trò trong dự án thiết kế này.",
+      "en": "Update roles in this design project.",
+      "zh": "更新此设计项目中的角色。",
+      "ja": "この設計プロジェクトの役割を更新します。"
+    }
+  },
+  {
+    "key": "designProjects.schedule.unlinkedDescription",
+    "old": {
+      "vi": "Liên kết Dự án thiết kế với Dự án vận hành để lập và theo dõi tiến độ thiết kế chi tiết.",
+      "en": "Link this design project to an operational project to plan and track its detail-design schedule."
+    }
+  },
+  {
+    "key": "designProjects.schedule.emptyDescription",
+    "old": {
+      "vi": "Khởi tạo ba giai đoạn chuẩn với trọng số 34%, 33% và 33% theo khoảng ngày của Dự án thiết kế.",
+      "zh": "按设计项目日期范围初始化三个标准阶段，权重为 34%、33% 和 33%。",
+      "ja": "設計プロジェクトの期間に標準3段階を34%、33%、33%の重みで初期化します。"
+    }
+  },
+  {
+    "key": "opportunities.action.createDesignProject",
+    "old": {
+      "vi": "Tạo dự án thiết kế",
+      "en": "Create design project",
+      "zh": "创建设计项目",
+      "ja": "設計プロジェクトを作成"
+    }
+  },
+  {
+    "key": "opportunities.action.openDesignProject",
+    "old": {
+      "vi": "Mở dự án thiết kế",
+      "en": "Open design project",
+      "zh": "打开设计项目",
+      "ja": "設計プロジェクトを開く"
+    }
+  },
+  {
+    "key": "opportunities.action.designProjectCreated",
+    "old": {
+      "vi": "Đã tạo dự án thiết kế",
+      "en": "Design project created",
+      "zh": "设计项目已创建",
+      "ja": "設計プロジェクト作成済み"
+    }
+  },
+  {
+    "key": "opportunities.designProject.created",
+    "old": {
+      "vi": "Đã tạo dự án thiết kế ở giai đoạn Thiết kế ý tưởng.",
+      "en": "The design project was created at the Concept stage.",
+      "zh": "设计项目已在概念设计阶段创建。",
+      "ja": "設計プロジェクトをコンセプト段階で作成しました。"
+    }
+  },
+  {
+    "key": "opportunities.designProject.alreadyExists",
+    "old": {
+      "vi": "Dự án thiết kế đã tồn tại; hệ thống không tạo bản ghi trùng.",
+      "en": "The design project already exists; no duplicate was created.",
+      "zh": "设计项目已存在，未创建重复记录。",
+      "ja": "設計プロジェクトは既に存在するため、重複作成されませんでした。"
+    }
+  },
+  {
+    "key": "opportunities.designProject.nameRule",
+    "old": {
+      "vi": "Tên dự án thiết kế phải có 1–300 ký tự, ví dụ: Thiết kế nhà máy Alpha.",
+      "en": "Design project name must contain 1–300 characters, e.g. Alpha factory design.",
+      "zh": "设计项目名称须为 1–300 个字符，例如：Alpha 工厂设计。",
+      "ja": "設計プロジェクト名は1～300文字です。例：Alpha工場設計。"
+    }
+  },
+  {
+    "key": "opportunities.designProject.noteRule",
+    "old": {
+      "vi": "Ghi chú dự án thiết kế tối đa 4.000 ký tự.",
+      "en": "Design project note must be at most 4,000 characters.",
+      "zh": "设计项目备注最多 4,000 个字符。",
+      "ja": "設計プロジェクトの備考は4,000文字以内です。"
+    }
+  },
+  {
+    "key": "opportunities.designProject.lost",
+    "old": {
+      "vi": "Cơ hội đã đánh dấu Thua nên không thể tạo dự án thiết kế.",
+      "en": "A lost opportunity cannot start a design project.",
+      "zh": "已标记为失败的商机不能创建设计项目。",
+      "ja": "失注した商談から設計プロジェクトは作成できません。"
+    }
+  },
+  {
+    "key": "contracts.timeline.action.designProjectEnsure",
+    "old": {
+      "vi": "Tạo hoặc liên kết Dự án thiết kế",
+      "en": "Design project created or linked",
+      "zh": "已创建或关联设计项目",
+      "ja": "設計プロジェクトを作成または連携"
+    }
+  },
+  {
+    "key": "contracts.designProject.title",
+    "old": {
+      "vi": "Dự án thiết kế",
+      "en": "Design project",
+      "zh": "设计项目",
+      "ja": "設計プロジェクト"
+    }
+  },
+  {
+    "key": "contracts.designProject.pending",
+    "old": {
+      "vi": "Chuyển trạng thái hợp đồng không tự tạo dự án thiết kế. Kinh doanh có thể tạo dự án thiết kế từ Cơ hội khi chưa có hợp đồng.",
+      "en": "Changing contract status does not create a design project. Sales can create one from the opportunity before a contract exists.",
+      "zh": "变更合同状态不会自动创建设计项目。销售人员可在签约前从商机创建设计项目。",
+      "ja": "契約のステータス変更では設計プロジェクトは自動作成されません。営業担当者は契約前に商談から作成できます。"
+    }
+  },
+  {
+    "key": "contracts.designProject.missing",
+    "old": {
+      "vi": "Hợp đồng chưa có dự án thiết kế. Chỉ chọn Tạo dự án thiết kế nếu thực sự cần một dự án mới.",
+      "en": "This contract has no design project. Select Create design project only if a new project is needed.",
+      "zh": "此合同尚无设计项目。仅在确实需要新项目时选择创建设计项目。",
+      "ja": "この契約には設計プロジェクトがありません。新規作成が必要な場合のみ作成を選択してください。"
+    }
+  },
+  {
+    "key": "contracts.designProject.create",
+    "old": {
+      "vi": "Tạo dự án thiết kế",
+      "en": "Create design project",
+      "zh": "创建设计项目",
+      "ja": "設計プロジェクトを作成"
+    }
+  },
+  {
+    "key": "contracts.designProject.created",
+    "old": {
+      "vi": "Đã tạo dự án thiết kế.",
+      "en": "Design project created.",
+      "zh": "设计项目已创建。",
+      "ja": "設計プロジェクトを作成しました。"
+    }
+  },
+  {
+    "key": "rbac.perm.design.projects.view.label",
+    "old": {
+      "vi": "Xem dự án thiết kế",
+      "en": "View design projects",
+      "zh": "查看设计项目",
+      "ja": "設計プロジェクトを表示"
+    }
+  },
+  {
+    "key": "rbac.perm.design.projects.view.description",
+    "old": {
+      "vi": "Cho phép xem dự án thiết kế và tiến độ 3 giai đoạn.",
+      "en": "Allows viewing design projects and the 3-stage progress board.",
+      "zh": "允许查看设计项目及三阶段进度看板。",
+      "ja": "設計プロジェクトと3段階の進捗ボードの閲覧を許可します。"
+    }
+  },
+  {
+    "key": "rbac.perm.design.projects.manage.label",
+    "old": {
+      "vi": "Quản lý dự án thiết kế",
+      "en": "Manage design projects",
+      "zh": "管理设计项目",
+      "ja": "設計プロジェクトを管理"
+    }
+  },
+  {
+    "key": "rbac.perm.design.projects.manage.description",
+    "old": {
+      "vi": "Cho phép tạo/sửa dự án thiết kế và cấu hình đội ngũ bộ môn.",
+      "en": "Allows creating/editing design projects and configuring discipline teams.",
+      "zh": "允许创建/编辑设计项目并配置专业团队。",
+      "ja": "設計プロジェクトの作成・編集及び専門チームの設定を許可します。"
+    }
+  },
+  {
+    "key": "deletionImpact.item.customer.designProjects",
+    "old": {
+      "vi": "Dự án thiết kế phải được xử lý trước",
+      "en": "Design projects that must be resolved first",
+      "zh": "必须先处理的设计项目",
+      "ja": "先に処理が必要な設計プロジェクト"
+    }
+  },
+  {
+    "key": "deletionImpact.item.contract.designProjects",
+    "old": {
+      "vi": "Dự án thiết kế sẽ được gỡ liên kết hợp đồng",
+      "en": "Design projects to unlink from the contract",
+      "zh": "将与合同解除关联的设计项目",
+      "ja": "契約とのリンクを解除する設計プロジェクト"
+    }
+  },
+  {
+    "key": "deletionImpact.item.operations.designProjects",
+    "old": {
+      "vi": "Dự án thiết kế",
+      "en": "Design projects",
+      "zh": "设计项目",
+      "ja": "設計プロジェクト"
+    }
+  }
+]

@@ -30,6 +30,10 @@ const backendErrorMap: Record<string, string> = {
     "auth.err.otpDisabledComplete",
   "Network Error": "auth.err.networkError",
   "An unexpected error occurred": "auth.err.unexpected",
+  "Người phụ trách phải là thành viên đang hiệu lực trong đội ngũ Hợp đồng Thiết kế.":
+    "designProjects.team.validation.ownerActive",
+  "Hợp đồng Thiết kế đã có Chủ nhiệm Thiết kế. Hãy thay đổi phân công hiện có trước.":
+    "designProjects.team.validation.managerAlreadyAssigned",
 };
 
 /** Translate a backend error message using the current i18n translate function. */

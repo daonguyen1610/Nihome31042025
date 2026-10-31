@@ -147,6 +147,15 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     }),
     [t],
   );
+  const workPackagesItem: NavItem = useMemo(
+    () => ({
+      to: "/admin/work-packages",
+      label: t("nav.workPackages"),
+      icon: ClipboardList,
+      permission: ADMIN_PERMS.workPackages,
+    }),
+    [t],
+  );
 
   const rawGroups: NavGroup[] = useMemo(
     () => [
@@ -172,12 +181,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             label: t("nav.contracts"),
             icon: FileText,
             permission: ADMIN_PERMS.contracts,
-          },
-          {
-            to: "/admin/work-packages",
-            label: t("nav.workPackages"),
-            icon: ClipboardList,
-            permission: ADMIN_PERMS.workPackages,
           },
           {
             to: "/admin/leads",
@@ -662,6 +665,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     !dashboardItem.permission || permissions.has(dashboardItem.permission as string);
   const showNotifications =
     !notificationsItem.permission || permissions.has(notificationsItem.permission as string);
+  const showWorkPackages =
+    !workPackagesItem.permission || permissions.has(workPackagesItem.permission as string);
 
   // Group expand/collapse: keep group containing active route open
   const initialOpen = useMemo(() => {
@@ -701,6 +706,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     const all: { to: string; label: string; groupLabel?: string }[] = [
       { to: dashboardItem.to, label: dashboardItem.label },
       { to: notificationsItem.to, label: notificationsItem.label },
+      { to: workPackagesItem.to, label: workPackagesItem.label },
     ];
     for (const g of rawGroups) {
       for (const it of g.items) {
@@ -708,7 +714,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       }
     }
     return all;
-  }, [dashboardItem, notificationsItem, rawGroups]);
+  }, [dashboardItem, notificationsItem, workPackagesItem, rawGroups]);
 
   const breadcrumb = useMemo(() => {
     const path = location.pathname;
@@ -798,6 +804,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           {/* Dashboard */}
           {showDashboard && renderItem(dashboardItem)}
           {showNotifications && renderItem(notificationsItem)}
+          {showWorkPackages && renderItem(workPackagesItem)}
 
           {/* Groups */}
           {groups.map((g) => {

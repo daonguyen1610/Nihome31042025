@@ -57,6 +57,66 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_RejectsOwnerOutsideDesignTeam()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateDesignProjectAsync();
+        var outsiderId = await WithDbAsync(db => db.Users
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT"])
+            .Select(user => user.Id).SingleAsync());
+
+        var response = await Client.PostAsJsonAsync("/api/concept-options", new
+        {
+            designProjectId = projectId,
+            name = "Phương án nhà máy NICON",
+            ownerUserId = outsiderId,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("đội ngũ");
+
+        var createdId = await CreateOptionAsync(projectId);
+        var updated = await Client.PutAsJsonAsync($"/api/concept-options/{createdId}", new
+        {
+            name = "Phương án nhà máy NICON",
+            ownerUserId = outsiderId,
+        });
+        updated.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var persistedOwner = await WithDbAsync(db => db.ConceptOptions.AsNoTracking()
+            .Where(option => option.Id == createdId).Select(option => option.OwnerUserId).SingleAsync());
+        persistedOwner.Should().BeNull();
+
+        await WithDbAsync(async db =>
+        {
+            var rootId = await db.DesignProjects.Where(project => project.Id == projectId)
+                .Select(project => project.OperationalProjectId!.Value).SingleAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = rootId, DesignProjectId = projectId,
+                UserId = outsiderId, Position = "Tư vấn vật tư trong đội thiết kế",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+                CreatedByUserId = outsiderId, UpdatedByUserId = outsiderId,
+                Roles =
+                [
+                    new OperationalProjectMemberRole
+                    {
+                        RoleCode = ProjectTeamRoleCode.Observer, Scope = ProjectRoleScope.Module,
+                        ScopeValue = "Design", StartedAt = DateTime.UtcNow.AddDays(-1),
+                    },
+                ],
+            });
+            await db.SaveChangesAsync();
+        });
+        var assigned = await Client.PostAsJsonAsync("/api/concept-options", new
+        {
+            designProjectId = projectId,
+            name = "Phương án có người phụ trách trong đội",
+            ownerUserId = outsiderId,
+        });
+        assigned.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
     public async Task Create_UnknownProject_IsNotFoundAfterAccessCheck()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));

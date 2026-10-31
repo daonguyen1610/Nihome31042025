@@ -38,7 +38,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
-import { useI18n } from "@/lib/i18n";
+import { translateError, useI18n } from "@/lib/i18n";
 import {
   adminApi,
   type OperationalProjectAssignmentResponse,
@@ -57,6 +57,7 @@ interface Props {
   refreshKey?: string;
   designProjectContext?: boolean;
   designProjectId?: number;
+  designManagerUserId?: number | null;
 }
 type MemberDialogMode = "add" | "edit" | "end";
 type AssignmentDialogMode = "add" | "edit";
@@ -107,6 +108,7 @@ export const OperationalProjectTeamPanel = ({
   refreshKey,
   designProjectContext = false,
   designProjectId,
+  designManagerUserId,
 }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
@@ -166,6 +168,17 @@ export const OperationalProjectTeamPanel = ({
     () => team?.members.filter((member) => member.isActive) ?? [],
     [team],
   );
+  const currentDesignManagerUserId =
+    designManagerUserId ??
+    activeMembers.find((member) =>
+      member.roles.some(
+        (role) =>
+          role.roleCode === "ProjectManager" &&
+          role.scope === "Module" &&
+          role.scopeValue === "Design" &&
+          !role.endedAt,
+      ),
+    )?.userId;
   const endedMembers = useMemo(
     () => team?.members.filter((member) => !member.isActive) ?? [],
     [team],
@@ -262,6 +275,13 @@ export const OperationalProjectTeamPanel = ({
     if (!editingMember && activeMembers.some((member) => member.userId === memberForm.userId))
       return t("designProjects.team.validation.userAlreadyActive");
     if (!memberForm.roles.length) return t("designProjects.team.validation.roleRequired");
+    if (
+      designProjectContext &&
+      currentDesignManagerUserId &&
+      currentDesignManagerUserId !== memberForm.userId &&
+      memberForm.roles.some((role) => role.roleCode === "ProjectManager" && isDesignRole(role))
+    )
+      return t("designProjects.team.validation.managerAlreadyAssigned");
     const roleKeys = new Set<string>();
     for (const role of memberForm.roles) {
       const definition = team?.roleDefinitions.find((item) => item.code === role.roleCode);
@@ -342,7 +362,7 @@ export const OperationalProjectTeamPanel = ({
       setMemberDialog(null);
       await load();
     } catch (saveError) {
-      setFormError(extractApiError(saveError));
+      setFormError(translateError(t, extractApiError(saveError)));
     } finally {
       setSaving(false);
     }
@@ -1130,11 +1150,19 @@ export const OperationalProjectTeamPanel = ({
                           />
                         </SelectTrigger>
                         <SelectContent>
-                          {team.roleDefinitions.map((item) => (
-                            <SelectItem key={item.code} value={item.code}>
-                              {roleLabel(item.code, role.scope, role.scopeValue)} · {item.raci}
-                            </SelectItem>
-                          ))}
+                          {team.roleDefinitions
+                            .filter(
+                              (item) =>
+                                !designProjectContext ||
+                                item.code !== "ProjectManager" ||
+                                !currentDesignManagerUserId ||
+                                currentDesignManagerUserId === memberForm.userId,
+                            )
+                            .map((item) => (
+                              <SelectItem key={item.code} value={item.code}>
+                                {roleLabel(item.code, role.scope, role.scopeValue)} · {item.raci}
+                              </SelectItem>
+                            ))}
                         </SelectContent>
                       </Select>
                     )}
