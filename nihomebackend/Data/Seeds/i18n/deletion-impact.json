@@ -146,6 +146,8 @@
   {"key":"deletionImpact.item.roleGroups.baseline","category":"deletionImpact","vi":"Quyền mẫu sẽ xóa","en":"Baseline permissions to delete","zh":"将删除的权限基线","ja":"削除される権限基準"},
   {"key":"deletionImpact.item.roleGroups.translations","category":"deletionImpact","vi":"Tên đa ngôn ngữ sẽ xóa","en":"Translated names to delete","zh":"将删除的多语言名称","ja":"削除される翻訳名"},
   {"key":"deletionImpact.item.workPackages.tasks","category":"deletionImpact","vi":"Đầu việc (bao gồm xác nhận KPI)","en":"Tasks (including KPI verification)","zh":"任务（含KPI确认）","ja":"タスク（KPI確認を含む）"},
+  {"key":"deletionImpact.item.workPackages.attachments","category":"deletionImpact","vi":"Thông tin tệp đầu việc đã dọn","en":"Cleaned task attachment records","zh":"已清理的任务附件记录","ja":"削除済みタスク添付ファイルの記録"},
+  {"key":"deletionImpact.item.workPackages.attachmentCleanup","category":"deletionImpact","vi":"Tệp đầu việc cần xóa trước","en":"Task attachments to delete first","zh":"需先删除的任务附件","ja":"先に削除が必要なタスク添付ファイル"},
   {"key":"deletionImpact.item.workPackages.cc","category":"deletionImpact","vi":"Người nhận CC","en":"Task CC recipients","zh":"抄送人员","ja":"タスクのCC宛先"},
   {"key":"deletionImpact.item.workPackages.dependencies","category":"deletionImpact","vi":"Liên kết phụ thuộc đầu việc","en":"Task dependencies","zh":"任务依赖关系","ja":"タスク依存関係"},
   {"key":"deletionImpact.item.workPackages.groups","category":"deletionImpact","vi":"Thành viên phòng ban của nhóm","en":"Package department memberships","zh":"工作包部门成员","ja":"部門の参加情報"},

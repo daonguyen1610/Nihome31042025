@@ -165,6 +165,7 @@ public class DepartmentWorkTask : IConcurrencyTracked
     public int UpdatedByUserId { get; set; }
     public byte[] RowVersion { get; set; } = [];
     public List<DepartmentWorkTaskCc> CcUsers { get; set; } = new();
+    public List<DepartmentWorkTaskAttachment> Attachments { get; set; } = new();
     public List<DepartmentWorkTaskDependency> Predecessors { get; set; } = new();
     public List<DepartmentWorkTaskDependency> Successors { get; set; } = new();
 }

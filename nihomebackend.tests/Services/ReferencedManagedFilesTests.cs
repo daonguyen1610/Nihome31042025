@@ -13,6 +13,36 @@ public sealed class ReferencedManagedFilesTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
+    public async Task GetAsync_ProtectsActiveWorkTaskAttachmentsOnly()
+    {
+        _db.DepartmentWorkTaskAttachments.AddRange(
+            new DepartmentWorkTaskAttachment
+            {
+                WorkTaskId = 1,
+                Path = "/files/business-documents/work-tasks/active.pdf",
+                OriginalFileName = "ban-ve.pdf",
+                FileSize = 10,
+                ContentType = "application/pdf",
+            },
+            new DepartmentWorkTaskAttachment
+            {
+                WorkTaskId = 1,
+                Path = "/files/business-documents/work-tasks/deleted.pdf",
+                OriginalFileName = "ban-ve-cu.pdf",
+                FileSize = 10,
+                ContentType = "application/pdf",
+                DeletedAt = DateTime.UtcNow,
+                StorageDeletedAt = DateTime.UtcNow,
+            });
+        await _db.SaveChangesAsync();
+
+        var referenced = await ReferencedManagedFiles.GetAsync(_db);
+
+        Assert.Contains("/files/business-documents/work-tasks/active.pdf", referenced);
+        Assert.DoesNotContain("/files/business-documents/work-tasks/deleted.pdf", referenced);
+    }
+
+    [Fact]
     public async Task GetAsync_ProtectsServiceItemIntroBlockImage()
     {
         // ServiceItem was previously never scanned at all, so every image

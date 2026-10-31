@@ -982,6 +982,14 @@ export interface DepartmentWorkTaskResponse {
   rowVersion: string;
 }
 
+export interface DepartmentWorkTaskAttachmentResponse {
+  id: number;
+  workTaskId: number;
+  originalFileName: string;
+  fileSize: number;
+  createdAt: string;
+}
+
 export interface DepartmentWorkPackageResponse {
   id: number;
   code: string;
@@ -7844,6 +7852,26 @@ export const adminApi = {
       body,
       withIdempotencyKey(idempotencyKey),
     ),
+  listWorkTaskAttachments: (packageId: number, taskId: number) =>
+    api.get<DepartmentWorkTaskAttachmentResponse[]>(
+      `/work-packages/${packageId}/tasks/${taskId}/attachments`,
+    ),
+  uploadWorkTaskAttachment: (packageId: number, taskId: number, file: File, key: string) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<DepartmentWorkTaskAttachmentResponse>(
+      `/work-packages/${packageId}/tasks/${taskId}/attachments`,
+      formData,
+      withIdempotencyKey(key),
+    );
+  },
+  downloadWorkTaskAttachment: (packageId: number, taskId: number, attachmentId: number) =>
+    api.get<Blob>(
+      `/work-packages/${packageId}/tasks/${taskId}/attachments/${attachmentId}/content`,
+      { responseType: "blob" },
+    ),
+  deleteWorkTaskAttachment: (packageId: number, taskId: number, attachmentId: number) =>
+    api.delete(`/work-packages/${packageId}/tasks/${taskId}/attachments/${attachmentId}`),
   updateWorkTask: (
     packageId: number,
     taskId: number,

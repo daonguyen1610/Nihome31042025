@@ -3243,6 +3243,57 @@ namespace nihomebackend.Migrations
                         });
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskAttachment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("StorageDeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("WorkTaskId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WorkTaskId", "DeletedAt");
+
+                    b.ToTable("department_work_task_attachments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_department_work_task_attachments_size", "[FileSize] > 0");
+                        });
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskCc", b =>
                 {
                     b.Property<int>("WorkTaskId")
@@ -12536,6 +12587,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("WorkPackage");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskAttachment", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkTask", "WorkTask")
+                        .WithMany("Attachments")
+                        .HasForeignKey("WorkTaskId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("WorkTask");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTaskCc", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
@@ -14970,6 +15032,8 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
                 {
+                    b.Navigation("Attachments");
+
                     b.Navigation("CcUsers");
 
                     b.Navigation("Predecessors");

@@ -98,6 +98,12 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Người phụ trách tự cập nhật tiến độ sau khi nhóm chuyển sang `Active`. Công
   tác chỉ được bắt đầu khi mọi công tác tiên quyết đã hoàn thành. Thông báo mở
   trực tiếp đúng đầu việc.
+- Công việc thường cho chọn nhiều tệp khi tạo/sửa đầu việc và tải thêm sau đó.
+  Tệp lưu riêng tư trên host, chỉ người xem được nhóm việc mới tải xuống; người
+  chủ trì hoặc người được giao có thể thêm/xóa trước khi nhóm kết thúc; người
+  chủ trì vẫn có thể dọn tệp khi nhóm đã kết thúc. Nhóm việc còn tệp chưa dọn
+  bị chặn xóa vĩnh viễn. Đồng bộ các tệp này lên Drive
+  chưa được triển khai.
 - Mọi đầu việc Dự án ở `Completed` cần người xác nhận độc lập chuyển sang
   `Verified` trước khi đóng nhóm; trả lại phải có lý do và đưa đầu việc về
   `InProgress`. Đầu việc không gắn KPI không phát sinh điểm KPI.
