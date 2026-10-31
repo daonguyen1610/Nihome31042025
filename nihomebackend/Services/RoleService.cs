@@ -612,10 +612,12 @@ public sealed class RoleService(
         if (await db.RoleGroups.AnyAsync(item => item.Code == code, ct))
             return RoleWriteResult<RoleGroupResponse>.Conflict("Group code already exists.");
         var now = DateTime.UtcNow;
+        // This runtime key is created together with all four translations below.
+        var labelKey = $"rbac.group.custom.{code}";
         var group = new RoleGroup
         {
             Code = code,
-            LabelKey = $"rbac.group.custom.{code}",
+            LabelKey = labelKey,
             SortOrder = req.SortOrder,
             IsActive = true,
             InitialPermissionsSeeded = true,
