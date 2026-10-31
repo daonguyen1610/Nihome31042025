@@ -11,6 +11,45 @@ namespace NihomeBackend.Services;
 
 internal static class DeletionImpactPlanner
 {
+    public static async Task<DeletionImpactResponse?> ForRoleGroupAsync(AppDbContext db, int id, CancellationToken ct)
+    {
+        var group = await db.RoleGroups.AsNoTracking().SingleOrDefaultAsync(item => item.Id == id, ct);
+        if (group is null) return null;
+        var items = new List<PlanItem>();
+        if (RbacSeedData.Default.RoleGroups.Any(item => item.Code == group.Code))
+            AddRaw(items, "roleGroups.seeded", DeletionImpactActions.Block, [group.Code], [group.Code]);
+        await AddAsync(items, "roleGroups.roles", DeletionImpactActions.Block,
+            db.Roles.Where(item => item.RoleGroupId == id), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "roleGroups.packages", DeletionImpactActions.Block,
+            db.DepartmentWorkPackages.Where(item => item.DepartmentRoleGroupId == id),
+            item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "roleGroups.tasks", DeletionImpactActions.Block,
+            db.DepartmentWorkTasks.Where(item => item.DepartmentRoleGroupId == id),
+            item => item.Id, item => item.Title, ct);
+        var participants = await db.DepartmentWorkPackageParticipantGroups.AsNoTracking()
+            .Where(item => item.RoleGroupId == id).Select(item => item.WorkPackageId).ToListAsync(ct);
+        AddRaw(items, "roleGroups.participants", DeletionImpactActions.Block,
+            participants.Select(item => item.ToString()), []);
+        await AddAsync(items, "roleGroups.baseline", DeletionImpactActions.Delete,
+            db.RoleGroupPermissions.Where(item => item.RoleGroupId == id),
+            item => item.Id, item => item.Permission.Module + "." + item.Permission.Action, ct);
+        if (group.LabelKey.StartsWith("rbac.group.custom.", StringComparison.Ordinal))
+            await AddAsync(items, "roleGroups.translations", DeletionImpactActions.Delete,
+                db.Translations.Where(item => item.Key == group.LabelKey),
+                item => item.TranslationId, item => item.LanguageCode, ct);
+        var impact = Build("rbac.roleGroup", id, group.Code, group.Code, items);
+        var translations = await db.Translations.AsNoTracking()
+            .Where(item => item.Key == group.LabelKey)
+            .OrderBy(item => item.LanguageCode)
+            .Select(item => new { item.LanguageCode, item.Value, item.UpdatedAt })
+            .ToListAsync(ct);
+        var version = $"{group.SortOrder}:{group.IsActive}:{group.UpdatedAt?.Ticks}:{group.LabelKey}:" +
+            string.Join('|', translations.Select(item => $"{item.LanguageCode}:{item.Value}:{item.UpdatedAt.Ticks}"));
+        impact.PlanToken = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"{impact.PlanToken}:{version}"))).ToLowerInvariant();
+        return impact;
+    }
+
     internal static void ApplyDurableFileEvidence(
         DeletionImpactResponse impact,
         IReadOnlyCollection<string> identities,

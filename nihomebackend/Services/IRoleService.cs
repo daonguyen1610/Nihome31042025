@@ -16,6 +16,13 @@ public interface IRoleService
     Task<List<PermissionResponse>> ListPermissionsAsync(CancellationToken ct = default);
     Task<RolePermissionsResponse?> GetRolePermissionsAsync(int id, CancellationToken ct = default);
     Task<List<RoleGroupResponse>> ListRoleGroupsAsync(CancellationToken ct = default);
+    Task<RoleWriteResult<RoleGroupResponse>> CreateRoleGroupAsync(
+        CreateRoleGroupRequest req, int actorUserId, CancellationToken ct = default);
+    Task<RoleWriteResult<RoleGroupResponse>> UpdateRoleGroupAsync(
+        int id, UpdateRoleGroupRequest req, int actorUserId, CancellationToken ct = default);
+    Task<DeletionImpactResponse?> GetRoleGroupDeletionImpactAsync(int id, CancellationToken ct = default);
+    Task<RoleWriteResult<RoleGroupResponse>> DeleteRoleGroupAsync(
+        int id, ConfirmDeletionRequest req, int actorUserId, CancellationToken ct = default);
 
     Task<RoleWriteResult<RoleResponse>> CreateRoleAsync(
         CreateRoleRequest req, int actorUserId, CancellationToken ct = default);

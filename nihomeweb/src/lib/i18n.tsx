@@ -2,6 +2,7 @@ import { createContext, ReactNode, useContext, useEffect, useMemo, useState } fr
 import api from "@/lib/api";
 
 export type Lang = "vi" | "en" | "zh" | "ja";
+export const TRANSLATIONS_CHANGED_EVENT = "nicon:translations-changed";
 
 type TranslationMap = Record<string, string>;
 
@@ -55,6 +56,13 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   });
   const [fallbackViMap, setFallbackViMap] = useState<TranslationMap>({});
   const [currentMap, setCurrentMap] = useState<TranslationMap>({});
+  const [translationRevision, setTranslationRevision] = useState(0);
+
+  useEffect(() => {
+    const reload = () => setTranslationRevision((revision) => revision + 1);
+    window.addEventListener(TRANSLATIONS_CHANGED_EVENT, reload);
+    return () => window.removeEventListener(TRANSLATIONS_CHANGED_EVENT, reload);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem("nicon_lang", lang);
@@ -97,7 +105,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     return () => {
       canceled = true;
     };
-  }, [lang]);
+  }, [lang, translationRevision]);
 
   const setLang = (l: Lang) => setLangState(l);
 

@@ -89,8 +89,8 @@ public static class RbacSeeder
         {
             if (existing.TryGetValue(definition.Code, out var group))
             {
-                group.LabelKey = definition.LabelKey;
-                group.SortOrder = definition.SortOrder;
+                // Runtime edits to a department's label and order are authoritative.
+                // Seeded groups remain active because they are core RBAC defaults.
                 group.IsActive = true;
                 continue;
             }

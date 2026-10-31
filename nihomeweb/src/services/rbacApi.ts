@@ -1,4 +1,5 @@
 import api from "@/lib/api";
+import type { ConfirmDeletionRequest, DeletionImpactResponse } from "@/services/adminApi";
 
 // Mirrors the RoleResponse / PermissionResponse DTOs in
 // nihomebackend/Models/DTOs/Responses/RbacResponses.cs.
@@ -32,7 +33,26 @@ export interface RoleGroupResponse {
   labelKey: string;
   sortOrder: number;
   roleCount: number;
+  names: Record<"vi" | "en" | "zh" | "ja", string>;
   baselinePermissions: string[];
+}
+
+export interface RoleGroupNames {
+  vi: string;
+  en: string;
+  zh: string;
+  ja: string;
+}
+
+export interface CreateRoleGroupRequest {
+  code: string;
+  names: RoleGroupNames;
+  sortOrder: number;
+}
+
+export interface UpdateRoleGroupRequest {
+  names: RoleGroupNames;
+  sortOrder: number;
 }
 
 export interface RolePermissionsResponse {
@@ -73,6 +93,14 @@ export const rbacApi = {
   listRoles: () => api.get<RoleResponse[]>("/admin/rbac/roles"),
 
   listRoleGroups: () => api.get<RoleGroupResponse[]>("/admin/rbac/role-groups"),
+  createRoleGroup: (data: CreateRoleGroupRequest) =>
+    api.post<RoleGroupResponse>("/admin/rbac/role-groups", data),
+  updateRoleGroup: (id: number, data: UpdateRoleGroupRequest) =>
+    api.put<RoleGroupResponse>(`/admin/rbac/role-groups/${id}`, data),
+  getRoleGroupDeletionImpact: (id: number) =>
+    api.get<DeletionImpactResponse>(`/admin/rbac/role-groups/${id}/deletion-impact`),
+  deleteRoleGroup: (id: number, data: ConfirmDeletionRequest) =>
+    api.delete<RoleGroupResponse>(`/admin/rbac/role-groups/${id}`, { data }),
 
   getRole: (id: number) => api.get<RoleResponse>(`/admin/rbac/roles/${id}`),
 

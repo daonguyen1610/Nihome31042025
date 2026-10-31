@@ -39,6 +39,47 @@ public class RbacController(
         return Ok(await roles.ListRoleGroupsAsync(ct));
     }
 
+    [HttpPost("role-groups")]
+    public async Task<ActionResult<RoleGroupResponse>> CreateRoleGroup(
+        [FromBody] CreateRoleGroupRequest req, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var actorId = GetCurrentUserId();
+        if (actorId <= 0) return Unauthorized();
+        var result = await roles.CreateRoleGroupAsync(req, actorId, ct);
+        return result.Status == RoleWriteStatus.Success
+            ? StatusCode(StatusCodes.Status201Created, result.Value)
+            : MapGroupWrite(result);
+    }
+
+    [HttpPut("role-groups/{id:int}")]
+    public async Task<ActionResult<RoleGroupResponse>> UpdateRoleGroup(
+        int id, [FromBody] UpdateRoleGroupRequest req, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var actorId = GetCurrentUserId();
+        if (actorId <= 0) return Unauthorized();
+        return MapGroupWrite(await roles.UpdateRoleGroupAsync(id, req, actorId, ct));
+    }
+
+    [HttpGet("role-groups/{id:int}/deletion-impact")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetRoleGroupDeletionImpact(int id, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var impact = await roles.GetRoleGroupDeletionImpactAsync(id, ct);
+        return impact is null ? NotFound() : Ok(impact);
+    }
+
+    [HttpDelete("role-groups/{id:int}")]
+    public async Task<ActionResult<RoleGroupResponse>> DeleteRoleGroup(
+        int id, [FromBody] ConfirmDeletionRequest req, CancellationToken ct)
+    {
+        if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        var actorId = GetCurrentUserId();
+        if (actorId <= 0) return Unauthorized();
+        return MapGroupWrite(await roles.DeleteRoleGroupAsync(id, req, actorId, ct));
+    }
+
     [HttpGet("roles/{id:int}")]
     public async Task<ActionResult<RoleResponse>> GetRole(int id, CancellationToken ct)
     {
@@ -162,6 +203,16 @@ public class RbacController(
         }),
         _ => StatusCode(StatusCodes.Status500InternalServerError),
     };
+
+    private ActionResult<RoleGroupResponse> MapGroupWrite(RoleWriteResult<RoleGroupResponse> result) =>
+        result.Status switch
+        {
+            RoleWriteStatus.Success => Ok(result.Value!),
+            RoleWriteStatus.NotFound => NotFound(),
+            RoleWriteStatus.InvalidRequest => BadRequest(new { error = "invalid_request", message = result.Error }),
+            RoleWriteStatus.Conflict => Conflict(new { error = "role_group_conflict", message = result.Error }),
+            _ => StatusCode(StatusCodes.Status500InternalServerError),
+        };
 
     private async Task<bool> RequirePermissionAsync(string code, CancellationToken ct)
     {

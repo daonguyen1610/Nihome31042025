@@ -104,6 +104,22 @@ role writes use the same anti-escalation rule: the actor cannot grant a
 permission they do not currently hold. System roles cannot be assigned to a
 business group.
 
+Administrators with `rbac.roles.manage` can create department groups with a
+permanent uppercase code, Vietnamese/English/Chinese/Japanese names, and a
+display order. They can edit names and order without losing changes on restart;
+group names are stored in the central translations catalog. A deletion preview
+lists linked roles, work packages, tasks, participating packages, baseline
+permissions, and translations. The server blocks deletion while a linked
+record remains, and also protects the six seeded groups, which are required by
+the RBAC default bundle. For an unreferenced custom group, the administrator
+must enter its code and the current plan token; the server checks both inside
+a serializable transaction before deleting the group, its baseline, and its
+translations. A changed plan returns `409 Conflict` and requires a fresh
+preview. The API routes are `POST /api/admin/rbac/role-groups`,
+`PUT /api/admin/rbac/role-groups/{id}`,
+`GET /api/admin/rbac/role-groups/{id}/deletion-impact`, and
+`DELETE /api/admin/rbac/role-groups/{id}` with `{planToken, confirmation}`.
+
 These 18 role codes are access-control bundles, not the NICON 11-position KPI
 framework. The current KPI service maps several roles into six broad scorecards;
 that does not prove distinct PM CM, BCH, Field/QA-QC or Site QS responsibilities.

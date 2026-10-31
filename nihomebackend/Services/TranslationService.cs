@@ -139,7 +139,7 @@ public class TranslationService(AppDbContext db, IMemoryCache cache)
         InvalidateAllCaches();
     }
 
-    private void InvalidateAllCaches()
+    public void InvalidateAllCaches()
     {
         foreach (var lang in new[] { "vi", "en", "zh", "ja" })
             cache.Remove($"translations:{lang}");

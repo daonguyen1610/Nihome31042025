@@ -30,7 +30,9 @@ public class RoleServiceTests : IDisposable
         _db = DbContextFactory.Create();
         RbacSeeder.Seed(_db);
         _permSvc = new PermissionService(_db);
-        _svc = new RoleService(_db, _permSvc, _audit.Object, _notif.Object);
+        _svc = new RoleService(_db, _permSvc, _audit.Object, _notif.Object,
+            new TranslationService(_db, new Microsoft.Extensions.Caching.Memory.MemoryCache(
+                new Microsoft.Extensions.Caching.Memory.MemoryCacheOptions())));
         _notif.Setup(n => n.CreateForAdminsAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
             .ReturnsAsync(0);
     }
@@ -115,7 +117,7 @@ public class RoleServiceTests : IDisposable
         Assert.Equal(new[] { "CRM", "HR", "PROCUREMENT", "CONSTRUCTION", "DESIGN", "FINANCE" },
             groups.Select(group => group.Code));
         Assert.All(groups, group => Assert.NotEmpty(group.BaselinePermissions));
-        Assert.Equal(new[] { 2, 1, 2, 5, 6, 1 }, groups.Select(group => group.RoleCount));
+        Assert.Equal(new[] { 2, 1, 3, 5, 6, 1 }, groups.Select(group => group.RoleCount));
     }
 
     // ---------- UpdateRole ----------
