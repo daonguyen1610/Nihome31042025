@@ -1,0 +1,17 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "nihomeweb/src/components/layout/AdminLayout.tsx"
+        ],
+        "createdAt": "2026-10-31T12:06:36.284Z",
+        "reason": "Agent: existing nested-navigation guide since 2026-08-17 (git blame 61e2294d5); not a card accent"
+      }
+    ]
+  }
+}
