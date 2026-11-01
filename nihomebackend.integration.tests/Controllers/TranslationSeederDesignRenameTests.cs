@@ -1,4 +1,6 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using NihomeBackend.Data;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
@@ -28,5 +30,24 @@ public sealed class TranslationSeederDesignRenameTests(NihomeWebApplicationFacto
             englishLabel.Value.Should().Be("Design contracts");
             customized.Value.Should().Be("Tên thiết kế theo cấu hình riêng");
         });
+    }
+
+    [Fact]
+    public void Migration_UpdatesOnlyPreviousDefaultsForAllLanguages()
+    {
+        using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlServer("Server=migration-script-only;Database=NiconMigrationReview;Integrated Security=true;TrustServerCertificate=true")
+            .Options);
+        var script = db.GetService<IMigrator>().GenerateScript(
+            "20261031180001_AddWorkTaskAttachments",
+            "20261101040313_SyncDesignContractTranslations");
+
+        script.Split("UPDATE translations", StringSplitOptions.None).Length.Should().Be(146);
+        script.Should().Contain("WHERE [Key] = N'nav.designProjects'");
+        script.Should().Contain("AND LanguageCode = N'vi'");
+        script.Should().Contain("AND Value = N'Dự án thiết kế'");
+        script.Should().Contain("SET Value = N'Hợp Đồng Thiết Kế'");
+        script.Should().Contain("AND LanguageCode = N'ja'");
+        script.Should().NotContain("INSERT INTO translations");
     }
 }
