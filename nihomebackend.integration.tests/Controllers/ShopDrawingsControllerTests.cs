@@ -128,8 +128,10 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
             .Select(user => user.Id).SingleAsync());
         var response = await Client.PostAsJsonAsync("/api/shop-drawings", new
         {
-            designProjectId = projectId, disciplineCode = "architecture",
-            constructionItem = "Móng cọc", title = "Bản vẽ kết cấu móng NICON",
+            designProjectId = projectId,
+            disciplineCode = "architecture",
+            constructionItem = "Móng cọc",
+            title = "Bản vẽ kết cấu móng NICON",
             ownerUserId = outsiderId,
         });
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -138,8 +140,10 @@ public class ShopDrawingsControllerTests : IntegrationTestBase
         var drawingId = await CreateDrawingAsync(projectId, "architecture");
         var updated = await Client.PutAsJsonAsync($"/api/shop-drawings/{drawingId}", new
         {
-            disciplineCode = "architecture", constructionItem = "Móng cọc",
-            title = "Bản vẽ kết cấu móng NICON", ownerUserId = outsiderId,
+            disciplineCode = "architecture",
+            constructionItem = "Móng cọc",
+            title = "Bản vẽ kết cấu móng NICON",
+            ownerUserId = outsiderId,
         });
         updated.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         var persistedOwner = await WithDbAsync(db => db.ShopDrawings.AsNoTracking()

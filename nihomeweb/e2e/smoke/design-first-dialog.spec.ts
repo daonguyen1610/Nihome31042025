@@ -13,7 +13,7 @@ test("design project dialog requires an operational project when no contract is 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto("/admin/design-projects");
   await page
-    .getByRole("button", { name: /Tạo dự án thiết kế|New design project/i })
+    .getByRole("button", { name: /Tạo hợp đồng thiết kế|New design contract/i })
     .first()
     .click();
 
@@ -52,10 +52,10 @@ test("Design Lead cannot create the project root from the Design list", async ({
   await page.goto("/admin/design-projects", { waitUntil: "networkidle" });
 
   await expect(
-    page.getByRole("heading", { name: /Dự án thiết kế|Design projects/i }),
+    page.getByRole("heading", { name: /Hợp Đồng Thiết Kế|Design contract/i }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Tạo dự án thiết kế|New design project/i }),
+    page.getByRole("button", { name: /Tạo hợp đồng thiết kế|New design contract/i }),
   ).toHaveCount(0);
 });
 

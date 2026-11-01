@@ -27,7 +27,7 @@ for (const width of [1440, 768, 390]) {
     for (const [path, heading] of [
       ["/admin/users", "User management"],
       ["/admin/customers", "Customer Management"],
-      ["/admin/design-projects", "Design project management"],
+      ["/admin/design-projects", "Design contract management"],
       ["/admin/roles", "Roles & Permissions"],
       ["/admin/settings", "Settings"],
     ]) {

@@ -92,10 +92,13 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
                 .Select(project => project.OperationalProjectId!.Value).SingleAsync();
             db.OperationalProjectMembers.Add(new OperationalProjectMember
             {
-                OperationalProjectId = rootId, DesignProjectId = projectId,
-                UserId = outsiderId, Position = "Tư vấn vật tư trong đội thiết kế",
+                OperationalProjectId = rootId,
+                DesignProjectId = projectId,
+                UserId = outsiderId,
+                Position = "Tư vấn vật tư trong đội thiết kế",
                 StartedAt = DateTime.UtcNow.AddDays(-1),
-                CreatedByUserId = outsiderId, UpdatedByUserId = outsiderId,
+                CreatedByUserId = outsiderId,
+                UpdatedByUserId = outsiderId,
                 Roles =
                 [
                     new OperationalProjectMemberRole

@@ -11,7 +11,7 @@ internal static class QuoteApprovalTestHelper
         candidates.EnsureSuccessStatusCode();
         using var candidateBody = JsonDocument.Parse(await candidates.Content.ReadAsStringAsync());
         var approverId = candidateBody.RootElement.EnumerateArray()
-            .Single(candidate => candidate.GetProperty("roleCode").GetString() == "SUPER_ADMIN")
+            .Single(candidate => candidate.GetProperty("roleCode").GetString() == "PROCUREMENT_MANAGER")
             .GetProperty("id").GetInt32();
         using var preview = await client.PostAsJsonAsync($"/api/quotes/{quoteId}/approval-email-preview", new { approverUserId = approverId, rowVersion });
         preview.EnsureSuccessStatusCode();
@@ -29,7 +29,8 @@ internal static class QuoteApprovalTestHelper
         var prior = client.DefaultRequestHeaders.Authorization;
         try
         {
-            await AuthTestHelper.AuthenticateAsync(client, AuthTestHelper.LoginAsSuperAdminAsync);
+            await AuthTestHelper.AuthenticateAsync(client,
+                actor => AuthTestHelper.LoginAsRoleAsync(actor, "PROCUREMENT_MANAGER"));
             return await client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { rowVersion });
         }
         finally { client.DefaultRequestHeaders.Authorization = prior; }

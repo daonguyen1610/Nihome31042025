@@ -128,7 +128,8 @@ public sealed class ContractQuoteLinkTests(NihomeWebApplicationFactory factory) 
     {
         var previousAuthorization = Client.DefaultRequestHeaders.Authorization;
         await LoginAsync("SALES_MANAGER");
-        var approverId = await WithDbAsync(db => db.Users.Where(user => user.Email == "superadmin@nihome.test")
+        var approverId = await WithDbAsync(db => db.Users.Where(user => user.RoleEntity != null &&
+                user.RoleEntity.Code == "PROCUREMENT_MANAGER")
             .Select(user => user.Id).SingleAsync());
         var preview = await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/approval-email-preview",
             new { approverUserId = approverId, rowVersion = Version(quote) });
@@ -138,7 +139,8 @@ public sealed class ContractQuoteLinkTests(NihomeWebApplicationFactory factory) 
             rowVersion = Version(quote),
             previewToken = preview.GetProperty("previewToken").GetString(),
         });
-        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        await AuthTestHelper.AuthenticateAsync(Client,
+            actor => AuthTestHelper.LoginAsRoleAsync(actor, "PROCUREMENT_MANAGER"));
         var approved = await WriteAsync(HttpMethod.Post, $"/api/quotes/{Id(quote)}/approve",
             new { rowVersion = Version(quote) });
         Client.DefaultRequestHeaders.Authorization = previousAuthorization;
