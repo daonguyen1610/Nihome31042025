@@ -5,8 +5,12 @@ distinction is impossible to miss.
 
 ## `i18n/` — UI string translations
 
-Files here are loaded by [`TranslationSeeder`](../TranslationSeeder.cs) and
-upserted into the `translations` table. The frontend reads them from
+Files here are loaded by [`TranslationSeeder`](../TranslationSeeder.cs), which
+adds missing translations and fills blank categories. When changing an existing
+default, keep its previous values in an optional `old` object beside the new
+translations, and add a guarded data migration for existing databases. Only
+rows still matching a previous default are updated; administrator edits are
+preserved. The frontend reads them from
 `/api/translations/{lang}` to render UI text (`actPage.eyebrow`,
 `site.nav.home`, etc.).
 

@@ -540,6 +540,13 @@ them stopped after a reset unless sample data is intentionally wanted.
 
 Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process documents and logos are also reconciled additively: missing canonical rows are restored without deleting custom rows or overwriting administrator-managed values. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
 
+UI translation defaults live in `nihomebackend/Data/Seeds/i18n/` for all four
+supported languages. `TranslationSeeder` adds missing keys, fills blank
+categories, and preserves administrator edits. When changing a default, add
+an `old` value beside the current translation in the same i18n entry and a
+data migration guarded by that exact previous value. Existing databases
+receive the new wording without overwriting edits in `/admin/translations`.
+
 #### Process Document Seeder Identity
 
 Canonical process rows carry an internal nullable `SeedKey` with a filtered unique index. The key is derived from the process group and its first canonical asset URL, so manifest or administrator title and sort-order changes do not alter identity. On the first startup after the migration, existing canonical rows are identified by their canonical title or seeded asset URLs and assigned that identity. Rows without a seed identity remain administrator-owned and are not deleted or repurposed.
