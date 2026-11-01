@@ -22,8 +22,10 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
             var root = new OperationalProject { Code = $"OP-PERM-{Guid.NewGuid():N}"[..30], Name = customer.Name, Customer = customer };
             var flow = new DesignProject
             {
-                OperationalProject = root, Customer = customer,
-                ProjectCode = $"DP-PERM-{Guid.NewGuid():N}"[..30], Name = customer.Name,
+                OperationalProject = root,
+                Customer = customer,
+                ProjectCode = $"DP-PERM-{Guid.NewGuid():N}"[..30],
+                Name = customer.Name,
                 ProjectManagerUserId = manager.Id,
             };
             db.DesignProjects.Add(flow);
@@ -44,7 +46,8 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
                 .StatusCode.Should().Be(HttpStatusCode.OK);
             var payload = new
             {
-                designProjectId = fixture.Flow, userId = fixture.Architect,
+                designProjectId = fixture.Flow,
+                userId = fixture.Architect,
                 position = "Kiến trúc sư chủ trì mặt bằng",
                 startedAt = DateTime.UtcNow.AddDays(-1),
                 roles = new[] { new { roleCode = "Architect", scope = "Module", scopeValue = "Design" } },
@@ -80,12 +83,14 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
             {
                 db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission
                 {
-                    RoleId = fixture.GrantRole, PermissionId = fixture.GrantPermission,
+                    RoleId = fixture.GrantRole,
+                    PermissionId = fixture.GrantPermission,
                 });
                 if (revokedManagePermissionId.HasValue)
                     db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission
                     {
-                        RoleId = fixture.GrantRole, PermissionId = revokedManagePermissionId.Value,
+                        RoleId = fixture.GrantRole,
+                        PermissionId = revokedManagePermissionId.Value,
                     });
                 await db.SaveChangesAsync();
             });
@@ -109,8 +114,10 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
             var root = new OperationalProject { Code = $"OP-LEADS-{Guid.NewGuid():N}"[..30], Name = customer.Name, Customer = customer };
             var flow = new DesignProject
             {
-                OperationalProject = root, Customer = customer,
-                ProjectCode = $"DP-LEADS-{Guid.NewGuid():N}"[..30], Name = customer.Name,
+                OperationalProject = root,
+                Customer = customer,
+                ProjectCode = $"DP-LEADS-{Guid.NewGuid():N}"[..30],
+                Name = customer.Name,
                 ProjectManagerUserId = users[TestDataSeeder.BusinessRolePhonesByCode["DESIGN_MANAGER"]].Id,
                 DesignLeadUserId = users[TestDataSeeder.BusinessRolePhonesByCode["DESIGN_LEAD"]].Id,
             };
@@ -123,9 +130,14 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
         });
         async Task<HttpResponseMessage> Add(int userId, string role) => await SendAsync(
             $"/api/operational-projects/{fixture.Root}/team/members",
-            new { designProjectId = fixture.Flow, userId, position = role,
+            new
+            {
+                designProjectId = fixture.Flow,
+                userId,
+                position = role,
                 startedAt = DateTime.UtcNow.AddDays(-1),
-                roles = new[] { new { roleCode = role, scope = "Module", scopeValue = "Design" } } });
+                roles = new[] { new { roleCode = role, scope = "Module", scopeValue = "Design" } }
+            });
 
         var firstLead = await Add(fixture.Lead, "DesignLead");
         firstLead.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -141,8 +153,10 @@ public sealed class DesignFlowIsolationControllerTests(NihomeWebApplicationFacto
             $"/api/operational-projects/{fixture.Root}/team/members/{firstLeadBody.GetProperty("id").GetInt32()}",
             new
             {
-                designProjectId = fixture.Flow, userId = fixture.Lead,
-                position = "DesignLead", startedAt = firstLeadBody.GetProperty("startedAt").GetString(),
+                designProjectId = fixture.Flow,
+                userId = fixture.Lead,
+                position = "DesignLead",
+                startedAt = firstLeadBody.GetProperty("startedAt").GetString(),
                 endedAt = DateTime.UtcNow,
                 rowVersion = firstLeadBody.GetProperty("rowVersion").GetString(),
                 roles = new[] { new { roleCode = "DesignLead", scope = "Module", scopeValue = "Design" } },

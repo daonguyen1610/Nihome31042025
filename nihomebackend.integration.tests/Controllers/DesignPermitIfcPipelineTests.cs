@@ -20,6 +20,8 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
         // Permit tracking shares the project; automatic Basic-document transfer
         // is not implemented.
         var fixture = await SeedFoundationAsync();
+        await CreateApprovedFinanceReviewAsync(fixture.OperationalProjectId,
+            "FinanceCommercialReview", quoteId: fixture.QuoteId);
         await LoginAsync("SALES_MANAGER");
         var contract = await PostAsync("/api/contracts", new
         {

@@ -134,7 +134,10 @@ test.describe("CRM workflow navigation", () => {
 
     // CRM submenu should expand
     const crmLinks = page.locator("#admin-nav-group-crm a");
-    await expect(crmLinks).toHaveCount(12);
+    await expect(crmLinks).toHaveCount(11);
+    await expect(page.locator('#admin-nav-group-crm a[href="/admin/work-packages"]')).toHaveCount(
+      0,
+    );
     await expect
       .poll(async () =>
         crmLinks.evaluateAll((links) =>

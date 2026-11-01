@@ -51,11 +51,6 @@ jobs:
              --results-directory ../TestResults/unit
         working-directory: nihomebackend.tests
 
-      - name: Generate HTML report
-        if: always()
-        run: |
-          npx --yes xunit-viewer -r TestResults/unit/unit-results.xml -o TestResults/unit/unit-results.html -t "Backend unit tests"
-
       - name: Publish test results to PR check
         if: always()
         uses: dorny/test-reporter@v1
@@ -105,11 +100,6 @@ jobs:
              --logger "trx;LogFileName=integration-results.trx"
              --logger "junit;LogFileName=integration-results.xml"
              --results-directory TestResults
-
-      - name: Generate HTML report
-        if: always()
-        run: |
-          npx --yes xunit-viewer -r TestResults/integration-results.xml -o TestResults/integration-results.html -t "Backend integration tests"
 
       - name: Publish test results to PR check
         if: always()

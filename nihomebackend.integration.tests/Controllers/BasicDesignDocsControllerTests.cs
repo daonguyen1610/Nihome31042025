@@ -165,8 +165,10 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
             .Select(user => user.Id).SingleAsync());
         var response = await Client.PostAsJsonAsync("/api/basic-design-docs", new
         {
-            designProjectId = projectId, disciplineCode = "architecture",
-            title = "Mặt bằng tổng thể nhà máy NICON", ownerUserId = outsiderId,
+            designProjectId = projectId,
+            disciplineCode = "architecture",
+            title = "Mặt bằng tổng thể nhà máy NICON",
+            ownerUserId = outsiderId,
         });
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).Should().Contain("đội ngũ");
@@ -174,7 +176,8 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         var documentId = await CreateDocAsync(projectId, "architecture");
         var updated = await Client.PutAsJsonAsync($"/api/basic-design-docs/{documentId}", new
         {
-            disciplineCode = "architecture", title = "Mặt bằng tổng thể nhà máy NICON",
+            disciplineCode = "architecture",
+            title = "Mặt bằng tổng thể nhà máy NICON",
             ownerUserId = outsiderId,
         });
         updated.StatusCode.Should().Be(HttpStatusCode.BadRequest);
