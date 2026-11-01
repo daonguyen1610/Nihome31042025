@@ -199,7 +199,8 @@ jobs:
     # only runs the real-browser specs and deployment-only contracts (CORS etc.)
     # against isolated docker-compose stacks. Shards run concurrently, while
     # each shard stays serial because its specs share one SQL database.
-    runs-on: ubuntu-latest
+    # Playwright 1.60 cannot install Chromium on the ubuntu-latest 26.04 image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     strategy:
       fail-fast: false
