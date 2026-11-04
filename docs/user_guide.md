@@ -805,13 +805,13 @@ other roles.
 
 1. Ask the system administrator to authorize the approved Google Drive account using OAuth 2.0. Do not provide or store its password in Nicon.
 2. While signed in as that account, create the target folder in **My Drive** or an approved Shared Drive and provide its folder URL to the administrator. The ID is the value after `/folders/` in the URL.
-3. A user with `system.settings.manage` opens **Settings > Google Drive**, enters and saves the OAuth client identity, write-only client secret, callback URL, root folder, deployment identity, folder paths, and synchronization settings.
+3. A user with `system.settings.manage` opens **Settings > Google Drive**, enters and saves the OAuth client identity, write-only client secret, callback URL, root folder, deployment identity, folder paths, synchronization settings, and the two deletion-direction switches.
 4. The same user selects **Connect Google Drive**. Nicon opens Google's sign-in and consent screen in a popup; the user chooses the approved account and grants access. The popup closes after authorization. No OAuth secret or refresh token is copied into an application settings file.
 5. Confirm that the authenticated account and status show **Connected**. Upload a small test image; the media card changes from Pending/Processing to Synced and displays a Drive link. Use **Check connection** if it remains pending.
 
 To change accounts, select **Disconnect** and then **Connect Google Drive**, or select **Switch Google account** to disconnect first and immediately open Google's account chooser. If the replacement sign-in is cancelled or fails, Nicon remains disconnected. Disconnecting removes Nicon's stored access but does not sign the user out of their broader Google browser session.
 
-Every Survey persists an Operational Project and stores media in that project's configured `01_Khao_sat` category. Opportunity, project, and customer relationships must agree. Reassigning a Survey stages current media into the new project. Deployment backfills historical Surveys from their linked Opportunity and aborts atomically if any row cannot be routed; unrouted Surveys are not supported at runtime. Files added or changed directly in a managed project folder are reflected in the Nicon catalog. Deletion through Nicon moves the Drive replica to trash so it remains recoverable. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. The worker uploads only while the connection is `Connected`, makes at most three claims per file, and rejects retry or deletion while a file is actively synchronizing.
+Every Survey persists an Operational Project and stores media in that project's configured `01_Khao_sat` category. Opportunity, project, and customer relationships must agree. Reassigning a Survey stages current media into the new project. Deployment backfills historical Surveys from their linked Opportunity and aborts atomically if any row cannot be routed; unrouted Surveys are not supported at runtime. Files added or changed directly in a managed project folder are reflected in the Nicon catalog. By default, deletion through Nicon preserves the Drive replica; an administrator can enable **Delete on web → delete on Drive** when the approved retention policy requires remote cleanup. `Read only` means the OAuth account can see the folder but cannot add files, and `Invalid folder` means the configured ID is not a live folder. The worker uploads only while the connection is `Connected`, makes at most three claims per file, and rejects retry or deletion while a file is actively synchronizing.
 
 | Page | Functions |
 |------|-----------|
@@ -1865,26 +1865,32 @@ stores the file on the host and displays Pending. Once connected, the worker
 uploads it, verifies its contents and removes the temporary host copy. Downloads
 remain authorized through Nicon. For failed files, use Send to Drive again;
 manual retry is available even after automatic attempts are exhausted. Delete
-removes an unlinked host-only upload immediately or queues its Drive deletion.
+removes an unlinked host-only upload immediately. For a synchronized file, it
+queues Drive deletion only when **Delete on web → delete on Drive** is enabled;
+otherwise the Drive file is preserved and only its Nicon binding is removed.
 Files owned by another business module must be removed through that module.
 Files referenced by QA/QC or QS dossiers cannot be deleted through the catalog
 or through their source module while those links remain. Resolve the evidence
 at its source dossier first; approved records retain their evidence.
 Deleting an Operational Project also deletes its verified empty Nicon folder
-tree on Drive after dependent-file cleanup. Unknown/shared files and independent
-CRM documents block deletion and must be handled explicitly first. Files added or edited directly in a managed
-Drive category are reflected in the catalog, and files moved to Drive trash are
-marked deleted. Native Google Docs, Sheets, and Slides can be opened through
+tree on Drive after dependent-file cleanup only when **Delete on web → delete
+on Drive** is enabled. Otherwise the folder tree is unlinked and preserved.
+Unknown/shared files and independent CRM documents remain protected by the
+impact plan. Files added or edited directly in a managed Drive category are
+reflected in the catalog. With **Delete on Drive → delete on web** enabled (the
+default), files removed or moved to Drive trash are marked deleted in the web
+catalog; when disabled, their web records are preserved. Native Google Docs,
+Sheets, and Slides can be opened through
 their Drive link but cannot be downloaded through the binary-content action.
-Deleting through Nicon moves the Drive file to trash instead of permanently
-erasing it. Existing files owned by Quote, Contract, Survey, Design, Permit,
-Acceptance, As-Built, or Handover retain their source-module lifecycle during
-the compatibility migration; for those sidecars, remote deletion is restored
-and concurrent edits preserve both versions for confirmation.
+When web-to-Drive deletion is enabled, deleting an individual document through
+Nicon moves the Drive file to trash instead of permanently erasing it. Existing
+files owned by Quote, Contract, Survey, Design, Permit, Acceptance, As-Built, or
+Handover retain their source-module lifecycle; concurrent edits continue to
+preserve both versions for confirmation.
 
 | Page | Functions | Delivery status |
 |------|-----------|----------|
-| Folder Structure Configuration | Admin-managed category paths and Drive connection settings | Implemented |
+| Folder Structure Configuration | Admin-managed category paths, Drive connection and bidirectional deletion policy | Implemented |
 | Project Document Catalog | Responsive list, upload, status, download, classification, retry, conflict and delete controls | Implemented |
 
 ### 3.8 Module 8: Dashboard and Analytics

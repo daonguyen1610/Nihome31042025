@@ -20,6 +20,8 @@ internal sealed class TestGoogleDriveSettingsStore(GoogleDriveOptions options) :
             options.ApplicationName,
             options.Folders,
             options.SupportsAllDrives,
+            options.DeleteDriveFilesOnWebDelete,
+            options.DeleteWebRecordsOnDriveDelete,
             options.PollIntervalSeconds,
             null,
             null,

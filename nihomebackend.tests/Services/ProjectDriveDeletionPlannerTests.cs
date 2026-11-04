@@ -12,7 +12,13 @@ namespace nihomebackend.tests.Services;
 
 public sealed class ProjectDriveDeletionPlannerTests
 {
-    private readonly GoogleDriveOptions options = new() { Enabled = true, InstanceId = "nicon-test", RootFolderId = "root" };
+    private readonly GoogleDriveOptions options = new()
+    {
+        Enabled = true,
+        InstanceId = "nicon-test",
+        RootFolderId = "root",
+        DeleteDriveFilesOnWebDelete = true,
+    };
 
     [Fact]
     public async Task Plan_DeduplicatesBindingsAndDeletesChildrenBeforeRoot()
@@ -107,6 +113,45 @@ public sealed class ProjectDriveDeletionPlannerTests
         drive.Setup(item => item.ListDeletionChildrenAsync("project", default)).ReturnsAsync([]);
         var plan = await ProjectDriveDeletionPlanner.BuildAsync(7, ["missing-category"], drive.Object, options, default);
         Assert.Equal(rootSurvives ? new[] { "project" } : [], plan.Select(item => item.ActionIdentifier));
+    }
+
+    [Fact]
+    public async Task ProjectPlan_WebToDriveDeleteDisabled_UnlinksAndPreservesDriveTree()
+    {
+        using var db = DbContextFactory.Create();
+        var project = new OperationalProject
+        {
+            Code = "PJ-DRIVE-PRESERVE",
+            Name = "NICON văn phòng",
+            CustomerId = 10,
+        };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        db.ProjectDriveFolders.Add(new ProjectDriveFolder
+        {
+            OperationalProjectId = project.Id,
+            Category = ProjectDocumentCategory.DesignBasic,
+            DriveFolderId = "design-folder",
+        });
+        await db.SaveChangesAsync();
+        var preservingOptions = new GoogleDriveOptions
+        {
+            Enabled = true,
+            InstanceId = options.InstanceId,
+            RootFolderId = options.RootFolderId,
+            DeleteDriveFilesOnWebDelete = false,
+        };
+        var drive = new Mock<IGoogleDriveAdapter>();
+        var plans = new ProjectHardDeletePlanService(
+            db, drive.Object, new TestGoogleDriveSettingsStore(preservingOptions));
+
+        var plan = (await plans.ForOperationalProjectAsync(project.Id))!;
+
+        Assert.DoesNotContain(plan.Items, item =>
+            item.Kind is HardDeleteItemKind.DriveFile or HardDeleteItemKind.DriveFolder);
+        Assert.Equal(DeletionImpactActions.Unlink,
+            plan.Impact.Items.Single(item => item.Key == "operations.driveFolders").Action);
+        drive.VerifyNoOtherCalls();
     }
 
     [Fact]

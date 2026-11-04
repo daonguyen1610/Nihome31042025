@@ -2786,6 +2786,27 @@
     "key": "settings.drive.configuration.saveError", "category": "settings", "vi": "Không lưu được cấu hình. Kiểm tra dữ liệu và tải lại nếu cấu hình đã được người khác thay đổi.", "en": "Could not save the configuration. Check the values and reload if another user changed it.", "zh": "无法保存配置。请检查输入；如被其他用户修改，请重新加载。", "ja": "設定を保存できません。値を確認し、他のユーザーが変更した場合は再読み込みしてください。"
   },
   {
+    "key": "settings.drive.deletionPolicy.title", "category": "settings", "vi": "Chính sách đồng bộ khi xóa", "en": "Deletion synchronization policy", "zh": "删除同步策略", "ja": "削除同期ポリシー"
+  },
+  {
+    "key": "settings.drive.deletionPolicy.description", "category": "settings", "vi": "Chọn riêng từng chiều đồng bộ xóa giữa Nicon và Google Drive.", "en": "Control each deletion direction between Nicon and Google Drive independently.", "zh": "分别控制 Nicon 与 Google Drive 之间的各个删除同步方向。", "ja": "Nicon と Google Drive 間の削除同期を方向ごとに設定します。"
+  },
+  {
+    "key": "settings.drive.deletionPolicy.webToDrive", "category": "settings", "vi": "Xóa trên web → xóa trên Drive", "en": "Delete on web → delete on Drive", "zh": "网页删除 → Drive 删除", "ja": "Web で削除 → Drive でも削除"
+  },
+  {
+    "key": "settings.drive.deletionPolicy.help.webToDrive", "category": "settings", "vi": "Khi bật, xóa tài liệu hoặc xóa vĩnh viễn bản ghi gốc trên Nicon cũng xóa dữ liệu Drive thuộc phạm vi được quản lý. Mặc định tắt để giữ tệp Drive.", "en": "When enabled, deleting a document or permanently deleting a root record in Nicon also deletes managed Drive data. It is off by default so Drive files are preserved.", "zh": "启用后，在 Nicon 中删除文档或永久删除根记录时，也会删除受管理的 Drive 数据。默认关闭以保留 Drive 文件。", "ja": "有効にすると、Nicon での文書削除またはルートレコードの完全削除により、管理対象の Drive データも削除されます。Drive ファイルを保持するため、既定では無効です。"
+  },
+  {
+    "key": "settings.drive.deletionPolicy.driveToWeb", "category": "settings", "vi": "Xóa trên Drive → xóa trên web", "en": "Delete on Drive → delete on web", "zh": "Drive 删除 → 网页删除", "ja": "Drive で削除 → Web でも削除"
+  },
+  {
+    "key": "settings.drive.deletionPolicy.help.driveToWeb", "category": "settings", "vi": "Khi bật, lượt đối soát tiếp theo đánh dấu đã xóa các bản ghi tài liệu đồng bộ không còn tồn tại trên Drive. Mặc định bật.", "en": "When enabled, the next reconciliation marks synchronized document records as deleted when they no longer exist on Drive. It is on by default.", "zh": "启用后，下次对账会将 Drive 上已不存在的同步文档记录标记为已删除。默认启用。", "ja": "有効にすると、次回の照合時に Drive 上に存在しない同期文書レコードを削除済みにします。既定では有効です。"
+  },
+  {
+    "key": "settings.drive.deletionPolicy.scopeNote", "category": "settings", "vi": "Áp dụng cho tài liệu đồng bộ và thao tác xóa vĩnh viễn bản ghi gốc. Các kiểm tra quyền sở hữu, kế hoạch ảnh hưởng và xác nhận xóa vẫn luôn được giữ.", "en": "Applies to synchronized documents and permanent root-record deletion. Ownership checks, impact plans, and deletion confirmation always remain enforced.", "zh": "适用于同步文档和根记录的永久删除。所有权检查、影响计划和删除确认始终保持强制执行。", "ja": "同期文書とルートレコードの完全削除に適用されます。所有権確認、影響計画、削除確認は常に適用されます。"
+  },
+  {
     "key": "settings.drive.validation.clientId", "category": "settings", "vi": "Client ID không hợp lệ. Ví dụ: 123.apps.googleusercontent.com.", "en": "Client ID is invalid. Example: 123.apps.googleusercontent.com.", "zh": "客户端 ID 无效，例如：123.apps.googleusercontent.com。", "ja": "クライアント ID が無効です。例: 123.apps.googleusercontent.com。"
   },
   {

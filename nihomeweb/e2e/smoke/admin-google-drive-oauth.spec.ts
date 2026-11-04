@@ -22,11 +22,86 @@ const configuration = {
     financeContracts: "06_Tai_chinh_Hop_dong",
   },
   supportsAllDrives: true,
+  deleteDriveFilesOnWebDelete: false,
+  deleteWebRecordsOnDriveDelete: true,
   pollIntervalSeconds: 15,
   accountEmail: "current@nicon.test",
   connectedAt: "2026-08-31T10:00:00Z",
   rowVersion: "AAAAAAAAB9Q=",
 };
+
+test("deletion policy toggles save both synchronization directions", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  let savedRequest: Record<string, unknown> | null = null;
+  await page.route(/\/api\/(?:v1\/)?site-settings\/google-drive\/configuration$/, async (route) => {
+    if (route.request().method() === "PUT") {
+      savedRequest = route.request().postDataJSON();
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ ...configuration, ...savedRequest }),
+      });
+      return;
+    }
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(configuration),
+    });
+  });
+  await page.route(/\/api\/(?:v1\/)?site-settings\/google-drive\/status$/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(connectedStatus("current@nicon.test")),
+    }),
+  );
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/admin/settings?tab=drive");
+
+  const webToDrive = page.getByLabel(
+    /Delete on web → delete on Drive|Xóa trên web → xóa trên Drive|网页删除 → Drive 删除|Web で削除 → Drive でも削除/i,
+  );
+  const driveToWeb = page.getByLabel(
+    /Delete on Drive → delete on web|Xóa trên Drive → xóa trên web|Drive 删除 → 网页删除|Drive で削除 → Web でも削除/i,
+  );
+  await expect(webToDrive).not.toBeChecked();
+  await expect(driveToWeb).toBeChecked();
+
+  await webToDrive.click();
+  await driveToWeb.click();
+  await page
+    .getByRole("button", { name: /Save configuration|Lưu cấu hình|保存配置|設定を保存/i })
+    .click();
+
+  await expect.poll(() => savedRequest).not.toBeNull();
+  expect(savedRequest).toMatchObject({
+    deleteDriveFilesOnWebDelete: true,
+    deleteWebRecordsOnDriveDelete: false,
+  });
+});
+
+test("live settings API renders persisted deletion policy defaults", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.goto("/admin/settings?tab=drive", { waitUntil: "networkidle" });
+
+  await expect(
+    page.getByLabel(
+      /Delete on web → delete on Drive|Xóa trên web → xóa trên Drive|网页删除 → Drive 删除|Web で削除 → Drive でも削除/i,
+    ),
+  ).not.toBeChecked();
+  await expect(
+    page.getByLabel(
+      /Delete on Drive → delete on web|Xóa trên Drive → xóa trên web|Drive 删除 → 网页删除|Drive で削除 → Web でも削除/i,
+    ),
+  ).toBeChecked();
+});
 
 const connectedStatus = (accountEmail: string) => ({
   status: "Connected",

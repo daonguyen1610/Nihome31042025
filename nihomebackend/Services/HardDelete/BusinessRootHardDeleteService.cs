@@ -424,17 +424,20 @@ public sealed class BusinessRootHardDeletePlanService(
             sidecarIdentifiers.Add(identity);
             if (sidecar.SyncStatus == ProjectDocumentSyncStatus.Deleted) continue;
             driveIdentifiers.Add(sidecar.DriveFileId!);
-            driveDefinitions.Add(new HardDeleteItemDefinition(
-                HardDeleteItemKind.DriveFile,
-                sidecar.DriveFileId!,
-                localPaths.Count + driveDefinitions.Count,
-                new Dictionary<string, string>
-                {
-                    ["niconInstance"] = driveOptions.InstanceId,
-                    ["niconReplicaKey"] = $"project-document:{sidecar.Id}",
-                    ["niconGeneration"] = sidecar.Generation.ToString(CultureInfo.InvariantCulture),
-                },
-                sidecar.DriveFolderId));
+            if (driveOptions.DeleteDriveFilesOnWebDelete)
+            {
+                driveDefinitions.Add(new HardDeleteItemDefinition(
+                    HardDeleteItemKind.DriveFile,
+                    sidecar.DriveFileId!,
+                    localPaths.Count + driveDefinitions.Count,
+                    new Dictionary<string, string>
+                    {
+                        ["niconInstance"] = driveOptions.InstanceId,
+                        ["niconReplicaKey"] = $"project-document:{sidecar.Id}",
+                        ["niconGeneration"] = sidecar.Generation.ToString(CultureInfo.InvariantCulture),
+                    },
+                    sidecar.DriveFolderId));
+            }
         }
         sidecarIdentifiers.Sort(StringComparer.Ordinal);
         sidecarBlockers.Sort(StringComparer.Ordinal);
@@ -473,7 +476,9 @@ public sealed class BusinessRootHardDeletePlanService(
         Add(items, "contract.appendices", appendices.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.localFiles", localPaths, DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.fileBlockers", blockers, DeletionImpactActions.Block, detail, [Link(root.ContractNumber, detail)]);
-        Add(items, "contract.driveFiles", driveIdentifiers, DeletionImpactActions.Delete, detail, [Link(root.ContractNumber, detail)]);
+        Add(items, "contract.driveFiles", driveIdentifiers,
+            driveOptions.DeleteDriveFilesOnWebDelete ? DeletionImpactActions.Delete : DeletionImpactActions.Unlink,
+            detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.projectDocumentSidecars", sidecarIdentifiers, DeletionImpactActions.Unlink, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.projectDocumentSidecarBlockers", sidecarBlockers, DeletionImpactActions.Block, detail, [Link(root.ContractNumber, detail)]);
         Add(items, "contract.designProjects", projects.Select(item => Id(item.Id)).ToList(), DeletionImpactActions.Unlink,
@@ -508,6 +513,7 @@ public sealed class BusinessRootHardDeletePlanService(
             Part("appendices", appendices.Select(item => item.Id)), Part("paths", localPaths),
             Part("file-blockers", blockers), Part("projects", projects.Select(item => item.Id)),
             Part("lifecycle", lifecycleBlockers.Select(item => item.Id)), $"drive-instance:{driveOptions.InstanceId}",
+            $"drive-delete-from-web:{driveOptions.DeleteDriveFilesOnWebDelete}",
             Part("drive-files", driveIdentifiers), Part("sidecars", sidecarIdentifiers),
             Part("sidecar-blockers", sidecarBlockers),
             Part("procurement-lines", procurementLines.Select(item => item.Id)),
