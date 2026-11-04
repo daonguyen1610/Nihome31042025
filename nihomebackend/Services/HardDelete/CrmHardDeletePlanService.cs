@@ -588,19 +588,21 @@ public sealed class CrmHardDeletePlanService(
 
             sidecarIdentifiers.Add(identity);
             if (sidecar.SyncStatus == ProjectDocumentSyncStatus.Deleted) continue;
-
             driveIdentifiers.Add(sidecar.DriveFileId!);
-            driveDefinitions.Add(new HardDeleteItemDefinition(
-                HardDeleteItemKind.DriveFile,
-                sidecar.DriveFileId!,
-                localDefinitions.Count + driveDefinitions.Count,
-                new Dictionary<string, string>
-                {
-                    ["niconInstance"] = driveOptions.InstanceId,
-                    ["niconReplicaKey"] = $"project-document:{sidecar.Id}",
-                    ["niconGeneration"] = sidecar.Generation.ToString(CultureInfo.InvariantCulture),
-                },
-                sidecar.DriveFolderId));
+            if (driveOptions.DeleteDriveFilesOnWebDelete)
+            {
+                driveDefinitions.Add(new HardDeleteItemDefinition(
+                    HardDeleteItemKind.DriveFile,
+                    sidecar.DriveFileId!,
+                    localDefinitions.Count + driveDefinitions.Count,
+                    new Dictionary<string, string>
+                    {
+                        ["niconInstance"] = driveOptions.InstanceId,
+                        ["niconReplicaKey"] = $"project-document:{sidecar.Id}",
+                        ["niconGeneration"] = sidecar.Generation.ToString(CultureInfo.InvariantCulture),
+                    },
+                    sidecar.DriveFolderId));
+            }
         }
 
         fileBlockers = fileBlockers.Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToList();
@@ -633,7 +635,9 @@ public sealed class CrmHardDeletePlanService(
         AddImpact(impactItems, "quote.translations", translationIdentifiers);
         AddImpact(impactItems, "quote.localFiles", localPaths, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
         AddImpact(impactItems, "quote.fileBlockers", fileBlockers, DeletionImpactActions.Block, quoteDetail, quoteLinks);
-        AddImpact(impactItems, "quote.driveFiles", driveIdentifiers, resolutionUrl: quoteDetail, resolutionLinks: quoteLinks);
+        AddImpact(impactItems, "quote.driveFiles", driveIdentifiers,
+            driveOptions.DeleteDriveFilesOnWebDelete ? DeletionImpactActions.Delete : DeletionImpactActions.Unlink,
+            quoteDetail, quoteLinks);
         AddImpact(impactItems, "quote.projectDocumentSidecars", sidecarIdentifiers, DeletionImpactActions.Unlink, quoteDetail, quoteLinks);
         AddImpact(impactItems, "quote.projectDocumentSidecarBlockers", sidecarBlockers, DeletionImpactActions.Block, quoteDetail, quoteLinks);
         AddImpact(impactItems, "quote.winningOpportunities", opportunityIdentifiers, DeletionImpactActions.Unlink, null,
@@ -654,6 +658,7 @@ public sealed class CrmHardDeletePlanService(
             $"quote.localFiles:{string.Join(',', localPaths)}",
             $"quote.fileBlockers:{string.Join(',', fileBlockers)}",
             $"quote.driveInstance:{driveOptions.InstanceId}",
+            $"quote.driveDeleteFromWeb:{driveOptions.DeleteDriveFilesOnWebDelete}",
             $"quote.driveFiles:{string.Join(',', driveIdentifiers)}",
             $"quote.projectDocumentSidecars:{string.Join(',', sidecarIdentifiers)}",
             $"quote.projectDocumentSidecarBlockers:{string.Join(',', sidecarBlockers)}",

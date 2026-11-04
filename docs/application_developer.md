@@ -4245,7 +4245,7 @@ After extracting `publish-release.zip` on IIS:
 
 1. Set `DataProtection:KeysPath` in protected deployed configuration, or `DataProtection__KeysPath` in the application-pool environment, to a durable directory such as `D:\\NiconSecrets\\DataProtection-Keys`.
 2. Grant Modify access on that directory only to the IIS application-pool identity and responsible administrators. The key ring must survive application recycle and deployment; losing it makes encrypted SQL secrets unreadable and requires entering the client secret and reconnecting.
-3. Sign in with `system.settings.manage`, open **Settings > Google Drive**, enter and save the OAuth identity, exact callback URI, internal Admin return path, root folder, stable deployment instance ID, application name, all business folder paths, Drive compatibility mode, polling interval, and enabled state. Blank client-secret input preserves the stored secret; changing the client ID or secret clears the existing OAuth connection.
+3. Sign in with `system.settings.manage`, open **Settings > Google Drive**, enter and save the OAuth identity, exact callback URI, internal Admin return path, root folder, stable deployment instance ID, application name, all business folder paths, Drive compatibility mode, polling interval, deletion synchronization policy, and enabled state. Blank client-secret input preserves the stored secret; changing the client ID or secret clears the existing OAuth connection.
 4. Select **Connect Google Drive**. Nicon opens Google's sign-in and consent screen in a popup and closes it after the callback. The callback validates state, PKCE, current Admin permission, and root-folder write capability before saving the connection.
 5. Confirm status is `Connected`, then perform a controlled project upload. Saved settings are loaded dynamically; application recycle is not required to enable, disable, or update the integration.
 
@@ -4268,10 +4268,20 @@ Project document storage is Drive-primary after synchronization. Manual uploads
 are queued in private host storage while Drive is unavailable; the worker
 verifies the remote byte count and SHA-256 before removing the staged copy.
 Authenticated downloads serve host or Drive content according to sync state.
-Document deletion through Nicon moves its Drive replica to trash. SQL remains
-authoritative for catalog, authorization, claims and workflow state.
-Reconciliation catalogs unknown files without a host copy and reflects remote
-changes. Source-module files retain their compatibility storage and lifecycle.
+Deletion synchronization is configured independently in both directions. The
+default **Web → Drive** policy is off: deleting a synchronized document or an
+aggregate root removes/unlinks its Nicon data but preserves managed Drive files
+and project folders. When enabled, document deletion moves the verified replica
+to Drive trash and aggregate deletion may permanently delete only items that
+pass the existing ownership and impact-plan checks. The default **Drive → Web**
+policy is on: reconciliation marks a synchronized catalog record deleted when
+its bound Drive file disappears. When off, reconciliation leaves that web
+record unchanged. Both policy values are part of deterministic aggregate
+deletion plans, so changing either setting invalidates an earlier confirmation
+plan. SQL remains authoritative for catalog, authorization, claims and workflow
+state. Reconciliation catalogs unknown files without a host copy and reflects
+permitted remote changes. Source-module files retain their compatibility storage
+and lifecycle.
 Drive sharing and permission synchronization remain disabled until IT supplies
 approved group mappings.
 

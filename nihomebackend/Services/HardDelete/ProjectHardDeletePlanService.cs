@@ -99,6 +99,8 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
             .Select(item => $"preserved:{DocumentIdentity(item)}"));
         identities.AddRange(designReferences.Select(reference => reference.Identifier));
         identities.AddRange(documents.Select(DocumentIdentity));
+        var driveOptions = await settingsStore.GetRuntimeAsync(ct);
+        identities.Add($"drive-delete-from-web:{driveOptions.DeleteDriveFilesOnWebDelete}");
 
         var referenceRecords = designReferences.Select(reference =>
                 $"{reference.SourceEntityType}:{reference.SourceRecordId}")
@@ -137,6 +139,12 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
             if (bindings.Count > 0)
             {
                 var folderImpact = impact.Items.Single(item => item.Key == "operations.driveFolders");
+                if (!driveOptions.DeleteDriveFilesOnWebDelete)
+                {
+                    folderImpact.Action = DeletionImpactActions.Unlink;
+                    folderImpact.Examples = ["Thư mục và tệp trên Google Drive được giữ nguyên theo cấu hình hiện tại."];
+                }
+                else
                 try
                 {
                     var activeItems = await db.HardDeleteItems.AsNoTracking()
@@ -151,7 +159,7 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
                             JsonSerializer.Deserialize<Dictionary<string, string>>(item.ExpectedAppPropertiesJson!)!,
                             item.ExpectedParentId)).ToList()
                         : await ProjectDriveDeletionPlanner.BuildAsync(impact.ResourceId,
-                            bindings, drive, await settingsStore.GetRuntimeAsync(ct), ct,
+                            bindings, drive, driveOptions, ct,
                             documents.Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Deleted &&
                                 item.DesiredOperation == ProjectDocumentDesiredOperation.None)
                                 .ToDictionary(item => ProjectDriveSyncProcessor.ReplicaKey(item.Id), item => item.Generation));

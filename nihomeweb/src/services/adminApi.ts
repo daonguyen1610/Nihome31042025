@@ -436,6 +436,8 @@ export interface GoogleDriveAdminConfigurationResponse {
   applicationName: string;
   folders: GoogleDriveFolderConfiguration;
   supportsAllDrives: boolean;
+  deleteDriveFilesOnWebDelete: boolean;
+  deleteWebRecordsOnDriveDelete: boolean;
   pollIntervalSeconds: number;
   accountEmail: string | null;
   connectedAt: string | null;
@@ -453,6 +455,8 @@ export interface UpdateGoogleDriveConfigurationRequest {
   applicationName: string;
   folders: GoogleDriveFolderConfiguration;
   supportsAllDrives: boolean;
+  deleteDriveFilesOnWebDelete: boolean;
+  deleteWebRecordsOnDriveDelete: boolean;
   pollIntervalSeconds: number;
   rowVersion: string;
 }

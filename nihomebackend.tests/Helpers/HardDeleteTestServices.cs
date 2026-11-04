@@ -18,7 +18,11 @@ internal static class HardDeleteTestServices
     {
         var settings = new Mock<IGoogleDriveSettingsStore>();
         settings.Setup(item => item.GetRuntimeAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GoogleDriveOptions { InstanceId = "unit-test" });
+            .ReturnsAsync(new GoogleDriveOptions
+            {
+                InstanceId = "unit-test",
+                DeleteDriveFilesOnWebDelete = true,
+            });
 
         var files = new Mock<IHardDeleteFileService>();
         files.Setup(item => item.ValidateManagedPath(It.IsAny<string>()))

@@ -18,6 +18,8 @@ public sealed class GoogleDriveOptions
     public string InstanceId { get; set; } = string.Empty;
     public GoogleDriveFolderOptions Folders { get; set; } = new();
     public bool SupportsAllDrives { get; set; } = true;
+    public bool DeleteDriveFilesOnWebDelete { get; set; }
+    public bool DeleteWebRecordsOnDriveDelete { get; set; } = true;
     public int PollIntervalSeconds { get; set; } = 15;
     public string ConfigurationVersion { get; set; } = string.Empty;
 }

@@ -4117,6 +4117,12 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<bool>("DeleteDriveFilesOnWebDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("DeleteWebRecordsOnDriveDelete")
+                        .HasColumnType("bit");
+
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
 

@@ -276,6 +276,28 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
+    public async Task ProcessNextOutboundAsync_WebDeletePreservesDriveFileWhenDisabled()
+    {
+        options.DeleteDriveFilesOnWebDelete = false;
+        var document = AddKnownDocument("remote-preserved", "1", DateTime.UtcNow.AddMinutes(-5));
+        document.SourceType = ProjectDocumentSourceType.ExistingManagedFile;
+        document.DesiredOperation = ProjectDocumentDesiredOperation.Delete;
+        document.SyncStatus = ProjectDocumentSyncStatus.Pending;
+        document.NextSyncAttemptAt = DateTime.UtcNow.AddMinutes(-1);
+        db.SaveChanges();
+
+        Assert.True(await processor.ProcessNextOutboundAsync());
+
+        var persisted = db.ProjectDocuments.Single(item => item.Id == document.Id);
+        Assert.Equal(ProjectDocumentSyncStatus.Deleted, persisted.SyncStatus);
+        Assert.Null(persisted.DriveFileId);
+        drive.Verify(item => item.DeleteAsync(
+            It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        drive.Verify(item => item.CheckConnectionAsync(
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
     public void ClaimRules_EnforceAttemptLimitAndTokenGenerationFence()
     {
         var now = DateTime.UtcNow;
@@ -484,7 +506,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task ReconcileProjectAsync_KnownRemoteDeletion_QueuesRestorationWithNewGeneration()
+    public async Task ReconcileProjectAsync_KnownRemoteDeletion_MarksWebRecordDeletedWhenEnabled()
     {
         var document = AddKnownDocument("remote-missing", "1", DateTime.UtcNow.AddMinutes(-5));
         drive.Setup(item => item.ListChildrenAsync(folder.DriveFolderId, It.IsAny<CancellationToken>()))
@@ -493,9 +515,25 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         await processor.ReconcileProjectAsync(project.Id);
 
         Assert.Null(document.DriveFileId);
-        Assert.Equal(2, document.Generation);
-        Assert.Equal(ProjectDocumentDesiredOperation.Upsert, document.DesiredOperation);
-        Assert.Equal(ProjectDocumentSyncStatus.Pending, document.SyncStatus);
+        Assert.Equal(1, document.Generation);
+        Assert.Equal(ProjectDocumentDesiredOperation.None, document.DesiredOperation);
+        Assert.Equal(ProjectDocumentSyncStatus.Deleted, document.SyncStatus);
+        Assert.NotNull(document.DeletedAt);
+    }
+
+    [Fact]
+    public async Task ReconcileProjectAsync_KnownRemoteDeletion_PreservesWebRecordWhenDisabled()
+    {
+        options.DeleteWebRecordsOnDriveDelete = false;
+        var document = AddKnownDocument("remote-missing", "1", DateTime.UtcNow.AddMinutes(-5));
+        drive.Setup(item => item.ListChildrenAsync(folder.DriveFolderId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([]);
+
+        await processor.ReconcileProjectAsync(project.Id);
+
+        Assert.Equal("remote-missing", document.DriveFileId);
+        Assert.Equal(ProjectDocumentDesiredOperation.None, document.DesiredOperation);
+        Assert.Equal(ProjectDocumentSyncStatus.Synced, document.SyncStatus);
     }
 
     [Fact]
@@ -512,6 +550,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         Assert.Equal(ProjectDocumentSyncStatus.Deleted, document.SyncStatus);
         Assert.Equal(ProjectDocumentDesiredOperation.None, document.DesiredOperation);
         Assert.Equal(1, document.Generation);
+        Assert.Null(document.DriveFileId);
     }
 
     [Fact]
@@ -553,6 +592,8 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         db.ProjectDriveFolders.Add(destination);
         db.SaveChanges();
         var remote = Remote(document.DriveFileId!, "2", DateTime.UtcNow);
+        drive.Setup(item => item.GetMetadataAsync(document.DriveFileId!, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(remote);
         drive.Setup(item => item.ListChildrenAsync(folder.DriveFolderId, It.IsAny<CancellationToken>()))
             .ReturnsAsync([]);
         drive.Setup(item => item.ListChildrenAsync(destination.DriveFolderId, It.IsAny<CancellationToken>()))
@@ -637,6 +678,37 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         Assert.Single(db.ProjectDocuments);
         Assert.Equal(remote.Id, document.DriveFileId);
         Assert.Equal(ProjectDocumentSyncStatus.Synced, document.SyncStatus);
+    }
+
+    [Fact]
+    public async Task ReconcileProjectAsync_PreservedManagedReplica_DoesNotReviveDeletedWebRecord()
+    {
+        var document = AddKnownDocument("preserved-remote", "1", DateTime.UtcNow.AddMinutes(-5));
+        document.DriveFileId = null;
+        document.DriveWebViewLink = null;
+        document.SyncStatus = ProjectDocumentSyncStatus.Deleted;
+        document.DeletedAt = DateTime.UtcNow.AddMinutes(-1);
+        db.SaveChanges();
+        var remote = Remote("preserved-remote", "2", DateTime.UtcNow) with
+        {
+            AppProperties = new Dictionary<string, string>
+            {
+                ["nihomeInstance"] = options.InstanceId,
+                ["nihomeReplicaKey"] = ProjectDriveSyncProcessor.ReplicaKey(document.Id),
+                ["nihomeGeneration"] = document.Generation.ToString(),
+            },
+        };
+        drive.Setup(item => item.ListChildrenAsync(folder.DriveFolderId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync([remote]);
+
+        await processor.ReconcileProjectAsync(project.Id);
+
+        Assert.Single(db.ProjectDocuments);
+        Assert.Equal(ProjectDocumentSyncStatus.Deleted, document.SyncStatus);
+        Assert.NotNull(document.DeletedAt);
+        Assert.Null(document.DriveFileId);
+        drive.Verify(item => item.DeleteAsync(remote.Id, It.IsAny<CancellationToken>()), Times.Never);
+        drive.Verify(item => item.DownloadAsync(remote.Id, It.IsAny<Stream>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 
     [Fact]

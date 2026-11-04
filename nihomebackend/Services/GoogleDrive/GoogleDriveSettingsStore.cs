@@ -18,6 +18,8 @@ public sealed record GoogleDriveAdminConfigurationResponse(
     string ApplicationName,
     GoogleDriveFolderOptions Folders,
     bool SupportsAllDrives,
+    bool DeleteDriveFilesOnWebDelete,
+    bool DeleteWebRecordsOnDriveDelete,
     int PollIntervalSeconds,
     string? AccountEmail,
     DateTime? ConnectedAt,
@@ -35,6 +37,8 @@ public sealed class UpdateGoogleDriveConfigurationRequest
     public string ApplicationName { get; set; } = string.Empty;
     public GoogleDriveFolderOptions Folders { get; set; } = new();
     public bool SupportsAllDrives { get; set; } = true;
+    public bool DeleteDriveFilesOnWebDelete { get; set; }
+    public bool DeleteWebRecordsOnDriveDelete { get; set; } = true;
     public int PollIntervalSeconds { get; set; } = 15;
     public string? RowVersion { get; set; }
 }
@@ -96,6 +100,8 @@ public sealed class GoogleDriveSettingsStore(
             ApplicationName = settings.ApplicationName,
             Folders = ToFolders(settings),
             SupportsAllDrives = settings.SupportsAllDrives,
+            DeleteDriveFilesOnWebDelete = settings.DeleteDriveFilesOnWebDelete,
+            DeleteWebRecordsOnDriveDelete = settings.DeleteWebRecordsOnDriveDelete,
             PollIntervalSeconds = settings.PollIntervalSeconds,
             ConfigurationVersion = ToVersion(settings.RowVersion),
         };
@@ -190,6 +196,8 @@ public sealed class GoogleDriveSettingsStore(
         settings.ApplicationName = normalized.ApplicationName;
         ApplyFolders(settings, normalized.Folders);
         settings.SupportsAllDrives = normalized.SupportsAllDrives;
+        settings.DeleteDriveFilesOnWebDelete = normalized.DeleteDriveFilesOnWebDelete;
+        settings.DeleteWebRecordsOnDriveDelete = normalized.DeleteWebRecordsOnDriveDelete;
         settings.PollIntervalSeconds = normalized.PollIntervalSeconds;
         settings.UpdatedByUserId = updatedByUserId;
         settings.UpdatedAt = DateTime.UtcNow;
@@ -317,6 +325,8 @@ public sealed class GoogleDriveSettingsStore(
                 FinanceContracts = Trim(request.Folders.FinanceContracts),
             },
             SupportsAllDrives = request.SupportsAllDrives,
+            DeleteDriveFilesOnWebDelete = request.DeleteDriveFilesOnWebDelete,
+            DeleteWebRecordsOnDriveDelete = request.DeleteWebRecordsOnDriveDelete,
             PollIntervalSeconds = request.PollIntervalSeconds,
             RowVersion = request.RowVersion,
         };
@@ -495,7 +505,8 @@ public sealed class GoogleDriveSettingsStore(
         var defaults = new GoogleDriveOptions();
         return new(false, string.Empty, false, false, string.Empty,
             defaults.FrontendReturnUrl, string.Empty, string.Empty, defaults.ApplicationName,
-            defaults.Folders, defaults.SupportsAllDrives, defaults.PollIntervalSeconds,
+            defaults.Folders, defaults.SupportsAllDrives, defaults.DeleteDriveFilesOnWebDelete,
+            defaults.DeleteWebRecordsOnDriveDelete, defaults.PollIntervalSeconds,
             null, null, string.Empty);
     }
 
@@ -511,6 +522,8 @@ public sealed class GoogleDriveSettingsStore(
         settings.ApplicationName,
         ToFolders(settings),
         settings.SupportsAllDrives,
+        settings.DeleteDriveFilesOnWebDelete,
+        settings.DeleteWebRecordsOnDriveDelete,
         settings.PollIntervalSeconds,
         settings.AccountEmail,
         settings.ConnectedAt,

@@ -47,8 +47,30 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.False(runtime.Enabled);
         Assert.Empty(runtime.ClientId);
         Assert.Empty(runtime.RefreshToken);
+        Assert.False(runtime.DeleteDriveFilesOnWebDelete);
+        Assert.True(runtime.DeleteWebRecordsOnDriveDelete);
         Assert.False(admin.HasClientSecret);
         Assert.False(admin.HasRefreshToken);
+        Assert.False(admin.DeleteDriveFilesOnWebDelete);
+        Assert.True(admin.DeleteWebRecordsOnDriveDelete);
+    }
+
+    [Fact]
+    public async Task SettingsStore_PersistsDeletionSynchronizationDirections()
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var request = ValidConfiguration("client-secret-value");
+        request.DeleteDriveFilesOnWebDelete = true;
+        request.DeleteWebRecordsOnDriveDelete = false;
+
+        var saved = await store.UpdateAsync(request, 7);
+        var runtime = await store.GetRuntimeAsync();
+
+        Assert.True(saved.DeleteDriveFilesOnWebDelete);
+        Assert.False(saved.DeleteWebRecordsOnDriveDelete);
+        Assert.True(runtime.DeleteDriveFilesOnWebDelete);
+        Assert.False(runtime.DeleteWebRecordsOnDriveDelete);
     }
 
     [Fact]
@@ -632,7 +654,7 @@ public sealed class GoogleDriveOAuthServiceTests
             .ReturnsAsync(new GoogleDriveAdminConfigurationResponse(
                 true, options.ClientId, true, true, options.OAuthRedirectUri,
                 options.FrontendReturnUrl, options.RootFolderId, options.InstanceId,
-                options.ApplicationName, options.Folders, true, 15,
+                options.ApplicationName, options.Folders, true, false, true, 15,
                 "owner@example.com", DateTime.UtcNow, "row-version"));
         var drive = new Mock<IGoogleDriveAdapter>();
         drive.Setup(adapter => adapter.CheckConnectionAsync(It.IsAny<CancellationToken>()))
@@ -668,7 +690,7 @@ public sealed class GoogleDriveOAuthServiceTests
             .ReturnsAsync(new GoogleDriveAdminConfigurationResponse(
                 true, options.ClientId, true, true, options.OAuthRedirectUri,
                 options.FrontendReturnUrl, options.RootFolderId, options.InstanceId,
-                options.ApplicationName, options.Folders, true, 15,
+                options.ApplicationName, options.Folders, true, false, true, 15,
                 "drive-audit@example.com", DateTime.UtcNow, "row-version"));
         settings.Setup(store => store.GetRuntimeAsync(It.IsAny<CancellationToken>()))
             .ThrowsAsync(new GoogleDriveReconnectRequiredException(

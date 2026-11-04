@@ -222,19 +222,28 @@ public sealed class ProjectDriveSyncProcessor(
         var candidates = await db.ProjectDocuments.AsNoTracking().Where(IsDueForClaim(now))
             .OrderBy(document => document.NextSyncAttemptAt ?? document.CreatedAt)
             .ThenBy(document => document.Id)
-            .Select(document => document.Id).Take(10).ToListAsync(ct);
-        if (candidates.Count == 0 || !await HasWritableConnectionAsync(ct)) return false;
-        foreach (var documentId in candidates)
+            .Select(document => new { document.Id, document.DesiredOperation })
+            .Take(10).ToListAsync(ct);
+        if (candidates.Count == 0) return false;
+        var requiresDrive = candidates.Any(candidate =>
+            candidate.DesiredOperation != ProjectDocumentDesiredOperation.Delete ||
+            options.DeleteDriveFilesOnWebDelete);
+        var driveAvailable = !requiresDrive || await HasWritableConnectionAsync(ct);
+        foreach (var candidate in candidates)
         {
+            var candidateRequiresDrive = candidate.DesiredOperation != ProjectDocumentDesiredOperation.Delete ||
+                options.DeleteDriveFilesOnWebDelete;
+            if (candidateRequiresDrive && !driveAvailable) continue;
             var token = Guid.NewGuid();
             await using var claimTransaction = db.Database.IsRelational()
                 ? await db.Database.BeginTransactionAsync(ct)
                 : null;
-            var generation = await TryClaimAsync(documentId, token, now, ct);
+            var generation = await TryClaimAsync(candidate.Id, token, now, ct);
             if (!generation.HasValue) continue;
-            await PropagateSurveyClaimAsync(documentId, now, ct);
+            await PropagateSurveyClaimAsync(candidate.Id, now, ct);
             if (claimTransaction is not null) await claimTransaction.CommitAsync(ct);
-            await ProcessClaimAsync(documentId, token, generation.Value, ct);
+            await ProcessClaimAsync(
+                candidate.Id, token, generation.Value, options.DeleteDriveFilesOnWebDelete, ct);
             return true;
         }
         return false;
@@ -271,7 +280,8 @@ public sealed class ProjectDriveSyncProcessor(
                  !folder.ReconciliationClaimExpiresAt.HasValue || folder.ReconciliationClaimExpiresAt <= now))
             .OrderBy(folder => folder.UpdatedAt).ThenBy(folder => folder.Id)
             .Take(10).ToListAsync(ct);
-        foreach (var folder in folders) await ReconcileFolderWithLeaseAsync(folder, ct);
+        foreach (var folder in folders)
+            await ReconcileFolderWithLeaseAsync(folder, options.DeleteWebRecordsOnDriveDelete, ct);
     }
 
     public async Task ReconcileProjectAsync(int projectId, CancellationToken ct = default)
@@ -281,17 +291,22 @@ public sealed class ProjectDriveSyncProcessor(
         if (!options.Enabled) return;
         var folders = await db.ProjectDriveFolders.Where(folder => folder.OperationalProjectId == projectId)
             .OrderBy(folder => folder.Category).ThenBy(folder => folder.Id).ToListAsync(ct);
-        foreach (var folder in folders) await ReconcileFolderWithLeaseAsync(folder, ct);
+        foreach (var folder in folders)
+            await ReconcileFolderWithLeaseAsync(folder, options.DeleteWebRecordsOnDriveDelete, ct);
     }
 
-    private async Task ReconcileFolderWithLeaseAsync(ProjectDriveFolder folder, CancellationToken ct)
+    private async Task ReconcileFolderWithLeaseAsync(
+        ProjectDriveFolder folder,
+        bool deleteWebRecordsOnDriveDelete,
+        CancellationToken ct)
     {
         var leaseToken = Guid.NewGuid();
         if (!await TryAcquireReconciliationLeaseAsync(folder, leaseToken, ct)) return;
         var completed = false;
         try
         {
-            await ReconcileFolderAsync(folder.OperationalProjectId, folder, ct);
+            await ReconcileFolderAsync(
+                folder.OperationalProjectId, folder, deleteWebRecordsOnDriveDelete, ct);
             completed = true;
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
@@ -304,7 +319,11 @@ public sealed class ProjectDriveSyncProcessor(
         }
     }
 
-    private async Task ReconcileFolderAsync(int projectId, ProjectDriveFolder folder, CancellationToken ct)
+    private async Task ReconcileFolderAsync(
+        int projectId,
+        ProjectDriveFolder folder,
+        bool deleteWebRecordsOnDriveDelete,
+        CancellationToken ct)
     {
         var remoteItems = await drive.ListChildrenAsync(folder.DriveFolderId, ct);
         var remoteFiles = remoteItems.Where(item => !item.IsTrashed &&
@@ -327,24 +346,16 @@ public sealed class ProjectDriveSyncProcessor(
             }
             if (!remoteById.TryGetValue(document.DriveFileId!, out var remote))
             {
-                if (IsDrivePrimary(document))
-                {
-                    document.DesiredOperation = ProjectDocumentDesiredOperation.None;
-                    document.SyncStatus = ProjectDocumentSyncStatus.Deleted;
-                    document.DeletedAt = now;
-                    document.UpdatedAt = now;
-                    continue;
-                }
+                if (!deleteWebRecordsOnDriveDelete) continue;
+                var currentRemote = await drive.GetMetadataAsync(document.DriveFileId!, ct);
+                if (currentRemote is not null && !currentRemote.IsTrashed) continue;
+                document.DesiredOperation = ProjectDocumentDesiredOperation.None;
+                document.SyncStatus = ProjectDocumentSyncStatus.Deleted;
                 document.DriveFileId = null;
                 document.DriveWebViewLink = null;
                 document.DriveVersion = null;
                 document.DriveModifiedAt = null;
-                document.Generation++;
-                document.DesiredOperation = ProjectDocumentDesiredOperation.Upsert;
-                document.SyncStatus = ProjectDocumentSyncStatus.Pending;
-                document.SyncAttemptCount = 0;
-                document.NextSyncAttemptAt = now;
-                document.SyncError = null;
+                document.DeletedAt = now;
                 document.UpdatedAt = now;
                 continue;
             }
@@ -378,6 +389,17 @@ public sealed class ProjectDriveSyncProcessor(
                     document.DriveFileId == remote.Id, ct);
                 if (existingBinding is not null)
                 {
+                    if (existingBinding.DeletedAt.HasValue)
+                    {
+                        existingBinding.SyncStatus = ProjectDocumentSyncStatus.Deleted;
+                        existingBinding.DesiredOperation = ProjectDocumentDesiredOperation.None;
+                        existingBinding.DriveFileId = null;
+                        existingBinding.DriveWebViewLink = null;
+                        existingBinding.DriveVersion = null;
+                        existingBinding.DriveModifiedAt = null;
+                        existingBinding.UpdatedAt = DateTime.UtcNow;
+                        continue;
+                    }
                     if (existingBinding.OperationalProjectId == projectId && IsDrivePrimary(existingBinding) &&
                         existingBinding.DesiredOperation != ProjectDocumentDesiredOperation.Delete)
                     {
@@ -404,6 +426,7 @@ public sealed class ProjectDriveSyncProcessor(
                     var managedDocument = await db.ProjectDocuments.FirstOrDefaultAsync(document =>
                         document.Id == managedDocumentId && document.OperationalProjectId == projectId &&
                         document.Generation == generation, ct);
+                    if (managedDocument?.DeletedAt is not null) continue;
                     if (managedDocument is not null && !IsProtectedFromReconciliation(managedDocument, DateTime.UtcNow))
                     {
                         managedDocument.DriveFileId = remote.Id;
@@ -521,7 +544,12 @@ public sealed class ProjectDriveSyncProcessor(
         if (transaction is not null) await transaction.CommitAsync(ct);
     }
 
-    private async Task ProcessClaimAsync(long documentId, Guid token, long generation, CancellationToken ct)
+    private async Task ProcessClaimAsync(
+        long documentId,
+        Guid token,
+        long generation,
+        bool deleteDriveFilesOnWebDelete,
+        CancellationToken ct)
     {
         var document = await db.ProjectDocuments.AsNoTracking().Include(item => item.OperationalProject)
             .SingleAsync(item => item.Id == documentId && item.ClaimToken == token && item.Generation == generation, ct);
@@ -529,8 +557,10 @@ public sealed class ProjectDriveSyncProcessor(
         {
             if (document.DesiredOperation == ProjectDocumentDesiredOperation.Delete)
             {
-                if (!await CanDeleteRemoteAsync(document, token, generation, ct)) return;
-                if (!string.IsNullOrWhiteSpace(document.DriveFileId)) await drive.DeleteAsync(document.DriveFileId, ct);
+                if (deleteDriveFilesOnWebDelete &&
+                    !await CanDeleteRemoteAsync(document, token, generation, ct)) return;
+                if (deleteDriveFilesOnWebDelete && !string.IsNullOrWhiteSpace(document.DriveFileId))
+                    await drive.DeleteAsync(document.DriveFileId, ct);
                 await using var deleteTransaction = db.Database.IsRelational()
                     ? await db.Database.BeginTransactionAsync(ct)
                     : null;

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { BookOpen, Save } from "lucide-react";
+import { BookOpen, Save, Trash2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -232,6 +232,8 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
         FOLDER_FIELDS.map((field) => [field, form.folders[field].trim()]),
       ) as unknown as GoogleDriveFolderConfiguration,
       supportsAllDrives: form.supportsAllDrives,
+      deleteDriveFilesOnWebDelete: form.deleteDriveFilesOnWebDelete,
+      deleteWebRecordsOnDriveDelete: form.deleteWebRecordsOnDriveDelete,
       pollIntervalSeconds: Number(form.pollIntervalSeconds),
       rowVersion: form.rowVersion,
     };
@@ -423,6 +425,64 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
             />
           ))}
         </div>
+      </div>
+
+      <div className="space-y-4 border-t pt-5">
+        <div className="flex items-start gap-3">
+          <div className="rounded-md bg-destructive/10 p-2 text-destructive">
+            <Trash2 className="h-4 w-4" aria-hidden="true" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold">{t("settings.drive.deletionPolicy.title")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("settings.drive.deletionPolicy.description")}
+            </p>
+          </div>
+        </div>
+
+        <div className="grid gap-3 md:grid-cols-2">
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/20 p-4">
+            <Switch
+              id="drive-delete-from-web"
+              className="mt-0.5"
+              checked={form.deleteDriveFilesOnWebDelete}
+              onCheckedChange={(value) => update("deleteDriveFilesOnWebDelete", value)}
+              disabled={disabled}
+              aria-describedby="drive-delete-from-web-help"
+            />
+            <div>
+              <Label htmlFor="drive-delete-from-web">
+                {t("settings.drive.deletionPolicy.webToDrive")}
+              </Label>
+              <p id="drive-delete-from-web-help" className="mt-1 text-xs text-muted-foreground">
+                {t("settings.drive.deletionPolicy.help.webToDrive")}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3 rounded-lg border bg-muted/20 p-4">
+            <Switch
+              id="drive-delete-from-drive"
+              className="mt-0.5"
+              checked={form.deleteWebRecordsOnDriveDelete}
+              onCheckedChange={(value) => update("deleteWebRecordsOnDriveDelete", value)}
+              disabled={disabled}
+              aria-describedby="drive-delete-from-drive-help"
+            />
+            <div>
+              <Label htmlFor="drive-delete-from-drive">
+                {t("settings.drive.deletionPolicy.driveToWeb")}
+              </Label>
+              <p id="drive-delete-from-drive-help" className="mt-1 text-xs text-muted-foreground">
+                {t("settings.drive.deletionPolicy.help.driveToWeb")}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+          {t("settings.drive.deletionPolicy.scopeNote")}
+        </p>
       </div>
 
       <div className="flex flex-col gap-4 border-t pt-4 sm:flex-row sm:items-center sm:justify-between">
