@@ -142,5 +142,77 @@
     "en": "Work package link",
     "zh": "打开工作组的链接",
     "ja": "業務グループを開くリンク"
+  },
+  {
+    "key": "emailTemplate.schedule.tab",
+    "category": "emailTemplates",
+    "vi": "Tiến độ tổng thể",
+    "en": "Master schedule",
+    "zh": "总体进度",
+    "ja": "全体工程"
+  },
+  {
+    "key": "emailTemplate.schedule.hint",
+    "category": "emailTemplates",
+    "vi": "Email thông báo duyệt/cập nhật tiến độ. Xem trước dùng dữ liệu mẫu; lúc gửi hệ thống thay bằng dữ liệu dự án thực tế.",
+    "en": "Approval and schedule-change emails. Preview uses sample data; delivery fills in the actual project details.",
+    "zh": "用于进度审批和变更通知。预览使用示例数据；发送时替换为实际项目内容。",
+    "ja": "工程の承認・変更通知メールです。プレビューにはサンプルを表示し、送信時に実際のプロジェクト情報を挿入します。"
+  },
+  {
+    "key": "emailTemplate.schedule.token.eventName",
+    "category": "emailTemplates",
+    "vi": "Loại thông báo (gửi duyệt hoặc cập nhật)",
+    "en": "Notification type (approval or update)",
+    "zh": "通知类型（审批或更新）",
+    "ja": "通知の種類（承認または更新）"
+  },
+  {
+    "key": "emailTemplate.schedule.token.recipientName",
+    "category": "emailTemplates",
+    "vi": "Tên người nhận",
+    "en": "Recipient name",
+    "zh": "收件人姓名",
+    "ja": "宛先名"
+  },
+  {
+    "key": "emailTemplate.schedule.token.projectCode",
+    "category": "emailTemplates",
+    "vi": "Mã dự án",
+    "en": "Project code",
+    "zh": "项目编号",
+    "ja": "プロジェクト番号"
+  },
+  {
+    "key": "emailTemplate.schedule.token.projectName",
+    "category": "emailTemplates",
+    "vi": "Tên dự án",
+    "en": "Project name",
+    "zh": "项目名称",
+    "ja": "プロジェクト名"
+  },
+  {
+    "key": "emailTemplate.schedule.token.version",
+    "category": "emailTemplates",
+    "vi": "Phiên bản tiến độ",
+    "en": "Schedule version",
+    "zh": "进度版本",
+    "ja": "工程バージョン"
+  },
+  {
+    "key": "emailTemplate.schedule.token.changeReason",
+    "category": "emailTemplates",
+    "vi": "Lý do yêu cầu của khách hàng",
+    "en": "Customer change reason",
+    "zh": "客户变更原因",
+    "ja": "顧客変更の理由"
+  },
+  {
+    "key": "emailTemplate.schedule.token.changeSummary",
+    "category": "emailTemplates",
+    "vi": "So sánh thay đổi với bản phát hành trước",
+    "en": "Changes compared with the previous published revision",
+    "zh": "与上一个已发布版本的变更对比",
+    "ja": "前回公開版との変更内容"
   }
 ]

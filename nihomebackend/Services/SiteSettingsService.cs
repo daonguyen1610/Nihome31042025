@@ -18,7 +18,9 @@ public class SiteSettingsService(AppDbContext db)
         string? otpEmailSubject = null,
         string? otpEmailBody = null,
         string? quoteEmailSubject = null,
-        string? quoteEmailBody = null)
+        string? quoteEmailBody = null,
+        string? projectScheduleEmailSubject = null,
+        string? projectScheduleEmailBody = null)
     {
         var settings = await db.SiteSettings.FirstOrDefaultAsync()
             ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
@@ -39,6 +41,14 @@ public class SiteSettingsService(AppDbContext db)
             if (!EmailTemplateFormatter.IsSafeQuoteHtml(quoteBody))
                 throw new ArgumentException("Nội dung mẫu email báo giá chỉ hỗ trợ HTML cơ bản, CSS nội tuyến an toàn; không cho phép script, liên kết hoặc thuộc tính sự kiện.");
             settings.QuoteEmailBodyTemplate = quoteBody;
+        }
+        if (projectScheduleEmailSubject is not null || projectScheduleEmailBody is not null)
+        {
+            var scheduleTemplate = ProjectScheduleEmailTemplates.Validate(
+                projectScheduleEmailSubject ?? ProjectScheduleEmailTemplates.Get(settings).Subject,
+                projectScheduleEmailBody ?? ProjectScheduleEmailTemplates.Get(settings).Body);
+            settings.ProjectScheduleEmailSubjectTemplate = scheduleTemplate.Subject;
+            settings.ProjectScheduleEmailBodyTemplate = scheduleTemplate.Body;
         }
         settings.UpdatedAt = DateTime.UtcNow;
 

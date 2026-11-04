@@ -42,6 +42,7 @@ public sealed class DesignScheduleTaskResponse
     public int AssigneeMemberId { get; set; }
     public int ApproverMemberId { get; set; }
     public int? ParentTaskId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     public string? ResourceSummary { get; set; }
     public int? VendorId { get; set; }
     public string? VendorName { get; set; }

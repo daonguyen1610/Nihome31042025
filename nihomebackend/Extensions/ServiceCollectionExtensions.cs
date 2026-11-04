@@ -181,6 +181,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IKpiService, KpiService>();
         services.AddHostedService<KpiCalculationBackgroundService>();
         services.AddScoped<IDetailDesignScheduleService, DetailDesignScheduleService>();
+        services.AddScoped<IProjectScheduleService, ProjectScheduleService>();
         services.AddScoped<IDesignReviewService, DesignReviewService>();
         services.AddScoped<IDesignRecordDeletionService, DesignRecordDeletionService>();
         services.AddScoped<IProjectReportService, ProjectReportService>();

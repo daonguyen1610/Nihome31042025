@@ -67,6 +67,7 @@ import {
   type UpsertFinanceReviewRequest,
   type UpsertInputPriceOfferRequest,
   type OperationalProjectListItemResponse,
+  type ProjectScheduleResponse,
   type UpsertDepartmentWorkTaskRequest,
   type UpdateDepartmentWorkPackageRequest,
   type WorkPackageKind,
@@ -75,6 +76,19 @@ import {
 } from "@/services/adminApi";
 
 const dateValue = (value?: string | null) => value?.slice(0, 10) ?? "";
+
+function suggestTaskWbsCode(tasks: DepartmentWorkTaskResponse[], parentTaskId: number | null) {
+  const parent = tasks.find((task) => task.id === parentTaskId);
+  const prefix = parent ? `${parent.wbsCode}.` : "";
+  const ordinals = tasks
+    .filter((task) => task.parentTaskId === parentTaskId)
+    .map((task) => {
+      const code = parent ? task.wbsCode.slice(prefix.length) : task.wbsCode;
+      return /^\d+$/.test(code) ? Number(code) : 0;
+    })
+    .filter(Number.isSafeInteger);
+  return `${prefix}${Math.max(0, ...ordinals) + 1}`;
+}
 const apiDate = (value: string) => `${value}T00:00:00.000Z`;
 const emptyOptions: DepartmentWorkPackageOptionsResponse = {
   departments: [],
@@ -132,6 +146,7 @@ const DepartmentWorkPackages = () => {
   const [options, setOptions] = useState(emptyOptions);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
+  const [projectSchedule, setProjectSchedule] = useState<ProjectScheduleResponse | null>(null);
   const search = params.get("search") ?? "";
   const departmentFilter = params.get("departmentId") ?? "";
   const statusFilter = params.get("status") ?? "";
@@ -251,6 +266,7 @@ const DepartmentWorkPackages = () => {
     assigneeUserId: 0,
     approverUserId: null,
     kpiDefinitionId: null,
+    projectScheduleNodeId: null,
     plannedStart: "",
     plannedEnd: "",
     ccUserIds: [],
@@ -393,6 +409,17 @@ const DepartmentWorkPackages = () => {
       .then((response) => setContracts(response.data.items))
       .catch(() => setContracts([]));
   }, [packageForm.operationalProjectId]);
+  useEffect(() => {
+    const projectIdValue = detail?.operationalProjectId;
+    if (!projectIdValue) {
+      setProjectSchedule(null);
+      return;
+    }
+    adminApi
+      .getProjectSchedule(projectIdValue)
+      .then((response) => setProjectSchedule(response.data))
+      .catch(() => setProjectSchedule(null));
+  }, [detail?.operationalProjectId]);
   useEffect(() => {
     if (!packageId && params.get("create") === "1" && canManage) {
       const project = Number(params.get("projectId"));
@@ -631,6 +658,7 @@ const DepartmentWorkPackages = () => {
             assigneeUserId: task.assigneeUserId,
             approverUserId: task.approverUserId ?? null,
             kpiDefinitionId: task.kpiDefinitionId ?? null,
+            projectScheduleNodeId: task.projectScheduleNodeId ?? null,
             plannedStart: dateValue(task.plannedStart),
             plannedEnd: dateValue(task.plannedEnd),
             ccUserIds: task.ccUserIds,
@@ -639,7 +667,7 @@ const DepartmentWorkPackages = () => {
           }
         : {
             parentTaskId: parent?.id ?? null,
-            wbsCode: "",
+            wbsCode: suggestTaskWbsCode(detail?.tasks ?? [], parent?.id ?? null),
             title: "",
             description: "",
             resources: "",
@@ -648,6 +676,7 @@ const DepartmentWorkPackages = () => {
             assigneeUserId: 0,
             approverUserId: null,
             kpiDefinitionId: null,
+            projectScheduleNodeId: null,
             plannedStart: dateValue(parent?.plannedStart ?? detail?.plannedStart),
             plannedEnd: dateValue(parent?.plannedEnd ?? detail?.plannedEnd),
             ccUserIds: [],
@@ -2415,6 +2444,10 @@ const DepartmentWorkPackages = () => {
                     setTaskForm((current) => ({
                       ...current,
                       parentTaskId: value === "none" ? null : Number(value),
+                      wbsCode: suggestTaskWbsCode(
+                        detail?.tasks ?? [],
+                        value === "none" ? null : Number(value),
+                      ),
                     }))
                   }
                 >
@@ -2455,6 +2488,29 @@ const DepartmentWorkPackages = () => {
                 }
               />
             </Field>
+            {projectSchedule?.publishedRevisionId && (
+              <Field label={t("operationalProjects.schedule.milestone")} className="sm:col-span-2">
+                <Select
+                  value={taskForm.projectScheduleNodeId ?? ""}
+                  onValueChange={(value) =>
+                    setTaskForm((current) => ({ ...current, projectScheduleNodeId: value }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={t("operationalProjects.schedule.chooseMilestone")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projectSchedule.revisions
+                      .find((revision) => revision.id === projectSchedule.publishedRevisionId)
+                      ?.items.map((item) => (
+                        <SelectItem key={item.nodeId} value={item.nodeId}>
+                          {item.wbsCode} · {item.title} ({item.plannedStart} – {item.plannedEnd})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </Field>
+            )}
             {detail?.kind === "Internal" && (
               <Field label={t("workPackages.field.department")}>
                 <Select

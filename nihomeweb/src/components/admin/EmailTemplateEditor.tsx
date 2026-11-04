@@ -51,6 +51,7 @@ export default function EmailTemplateEditor({
   hint,
   beforeSubject,
   previewTitle = "Email preview",
+  previewValues,
 }: {
   id: string;
   subject: string;
@@ -64,12 +65,19 @@ export default function EmailTemplateEditor({
   hint?: string;
   beforeSubject?: ReactNode;
   previewTitle?: string;
+  previewValues?: Record<string, string>;
 }) {
   const { t } = useI18n();
   const [fullscreen, setFullscreen] = useState(false);
   const bodyRef = useRef<HTMLTextAreaElement>(null);
   const subjectRef = useRef<HTMLInputElement>(null);
   const targetRef = useRef<"subject" | "body">("body");
+  const previewSubject = previewValues
+    ? subject.replace(/\{\{(\w+)\}\}/g, (token, name: string) => previewValues[name] ?? token)
+    : subject;
+  const previewBody = previewValues
+    ? body.replace(/\{\{(\w+)\}\}/g, (token, name: string) => previewValues[name] ?? token)
+    : body;
 
   useEffect(() => {
     if (!fullscreen) return;
@@ -184,11 +192,11 @@ export default function EmailTemplateEditor({
         </div>
         <div className="overflow-hidden rounded-lg border bg-white">
           <div className="truncate border-b bg-muted/50 px-4 py-2 font-mono text-xs text-muted-foreground">
-            {t("emailTemplate.editor.subject")}: {subject}
+            {t("emailTemplate.editor.subject")}: {previewSubject}
           </div>
           <iframe
             title={previewTitle}
-            srcDoc={body}
+            srcDoc={previewBody}
             className="w-full border-0 bg-white"
             style={{ height: fullscreen ? "calc(100dvh - 140px)" : "500px" }}
             sandbox=""

@@ -15,4 +15,10 @@ public class UpdateEmailTemplatesRequest
 
     [StringLength(8000, MinimumLength = 1)]
     public string? QuoteEmailBodyTemplate { get; set; }
+
+    [StringLength(200, MinimumLength = 1)]
+    public string? ProjectScheduleEmailSubjectTemplate { get; set; }
+
+    [StringLength(8000, MinimumLength = 1)]
+    public string? ProjectScheduleEmailBodyTemplate { get; set; }
 }

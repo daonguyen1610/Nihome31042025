@@ -83,6 +83,8 @@ public sealed class UpsertDepartmentWorkTaskRequest : IConcurrencyRequest
     public int? ApproverUserId { get; set; }
     public int? KpiDefinitionId { get; set; }
 
+    public Guid? ProjectScheduleNodeId { get; set; }
+
     [Required]
     public DateTime PlannedStart { get; set; }
 

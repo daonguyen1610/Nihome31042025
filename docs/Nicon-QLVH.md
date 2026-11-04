@@ -76,7 +76,32 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Backend phải kiểm tra quyền, scope Dự án, trạng thái và concurrency; ẩn nút ở
   frontend không phải biện pháp bảo mật.
 
-### 2.2.1. Nhóm công việc liên phòng ban — Partial
+### 2.2.1. Tiến độ tổng thể CRM — Partial
+
+- CRM quản lý WBS/mốc gốc cho Operational Project. Lịch Design, Gantt thi công
+  CM/BCH (vẫn giữ `DesignProjectId` theo ranh giới tương thích hiện tại) và công
+  việc phòng ban liên kết bằng ID mốc ổn định; ngày chi tiết phải nằm trong
+  khoảng mốc gốc đã phát hành.
+- Sửa tiến độ đã phát hành tạo revision kế tiếp. Revision mới chờ người duyệt
+  được chỉ định; bản đã phát hành trước tiếp tục là lịch có hiệu lực cho đến
+  khi duyệt revision mới. Lịch sử revision không bị ghi đè.
+- Trước khi ký Hợp đồng Upstream, người duyệt phải có role Trưởng phòng Kinh
+  doanh (`SALES_MANAGER`) trong nhóm CRM và còn quyền quản lý Cơ hội; sau khi
+  ký, người duyệt là PM dự án. Chỉ người được gán mới
+  được duyệt/trả lại ở server. Email thông báo dùng mẫu có thể cấu hình.
+- Không phát hành revision làm đầu việc liên kết vượt khung ngày mới hoặc gỡ
+  mốc WBS còn được đầu việc phòng ban, Thiết kế hay Thi công tham chiếu.
+- Khi phát hành revision mới, người nhận đầu việc liên kết với các WBS thay đổi
+  được thông báo kèm khác biệt ngày/mốc. Các lịch phòng không tự đổi ngày.
+  Người quản lý phải rà soát và cập nhật lịch chi tiết để đáp ứng mốc mới.
+- **Partial:** đã có persistence, API, giao diện quản lý revision và liên kết
+  WBS cho lịch Design, Construction Task và công việc phòng ban. Unit test và
+  live E2E (`admin-project-master-schedule.spec.ts`) đã xác nhận luồng duyệt,
+  giới hạn khung ngày, thông báo thay đổi và quy tắc người duyệt theo hợp đồng;
+  chưa có integration test riêng. Email thông báo chưa có hàng đợi retry bền
+  vững.
+
+### 2.2.2. Nhóm công việc liên phòng ban — Partial
 
 - Kinh doanh phụ trách Cơ hội hoặc PM của Operational Project tạo một nhóm công
   việc cho phòng nhận; quản trị viên có quyền ngoại lệ. Nhóm theo Dự án luôn giữ
@@ -119,7 +144,7 @@ Quy tắc phân loại theo Hợp đồng đã được xác nhận; quyền kh�
 phòng và việc duyệt/KPI của công việc nội bộ vẫn là hành vi triển khai hiện tại,
 chưa phải quyết định đã được NICON chốt (Q-02, Q-03).
 
-### 2.2.2. Liên phòng ban ở giai đoạn trước hợp đồng — Implemented
+### 2.2.3. Liên phòng ban ở giai đoạn trước hợp đồng — Implemented
 
 Yêu cầu MoM §5. Cả ba điểm giao việc dưới đây đều chạy trên "nhóm công việc dự
 án" hiện có, không thêm tab hay màn hình riêng.

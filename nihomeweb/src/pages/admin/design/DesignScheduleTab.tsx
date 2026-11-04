@@ -44,6 +44,7 @@ import {
   type DesignScheduleTaskResponse,
   type MasterDataOption,
   type OperationalProjectTeamResponse,
+  type ProjectScheduleItemResponse,
 } from "@/services/adminApi";
 import { DesignSchedulePhaseDialog } from "./DesignSchedulePhaseDialog";
 import { DesignScheduleTaskDialog } from "./DesignScheduleTaskDialog";
@@ -92,6 +93,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
   const [dependencyTasks, setDependencyTasks] = useState<DesignScheduleTaskResponse[]>([]);
   const [team, setTeam] = useState<OperationalProjectTeamResponse | null>(null);
   const [departments, setDepartments] = useState<MasterDataOption[]>([]);
+  const [masterScheduleItems, setMasterScheduleItems] = useState<ProjectScheduleItemResponse[]>([]);
   const [query, setQuery] = useState<DesignScheduleQuery>({ page: 1, pageSize: PAGE_SIZE });
   const [loading, setLoading] = useState(Boolean(operationalProjectId));
   const [error, setError] = useState<string | null>(null);
@@ -111,9 +113,13 @@ export const DesignScheduleTab = ({ project }: Props) => {
     }
     setLoading(true);
     setError(null);
+    setMasterScheduleItems([]);
     try {
       const [scheduleResponse, allTasks, teamResponse, departmentResponse] = await Promise.all([
-        adminApi.getDesignSchedule(operationalProjectId, { ...query, designProjectId: project.id }),
+        adminApi.getDesignSchedule(operationalProjectId, {
+          ...query,
+          designProjectId: project.id,
+        }),
         loadAllScheduleTasks(operationalProjectId, project.id),
         adminApi.getOperationalProjectTeam(operationalProjectId, project.id),
         adminApi.getMasterDataOptions("project-department"),
@@ -122,6 +128,17 @@ export const DesignScheduleTab = ({ project }: Props) => {
       setDependencyTasks(allTasks);
       setTeam(teamResponse.data);
       setDepartments(departmentResponse.data ?? []);
+      // The master schedule only powers the optional WBS link picker; a
+      // failure or missing schedule must not blank the design schedule.
+      try {
+        const masterScheduleResponse = await adminApi.getProjectSchedule(operationalProjectId);
+        const published = masterScheduleResponse.data.revisions.find(
+          (item) => item.id === masterScheduleResponse.data.publishedRevisionId,
+        );
+        setMasterScheduleItems(published?.items ?? []);
+      } catch {
+        setMasterScheduleItems([]);
+      }
     } catch (loadError) {
       setError(extractApiError(loadError));
     } finally {
@@ -874,6 +891,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
       <DesignScheduleTaskDialog
         operationalProjectId={operationalProjectId}
         phases={schedule.phases}
+        masterScheduleItems={masterScheduleItems}
         tasks={dependencyTasks}
         departments={departments}
         members={team?.members ?? []}

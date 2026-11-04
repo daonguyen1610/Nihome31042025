@@ -129,6 +129,88 @@ public class ConstructionTaskServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_links_task_to_published_project_milestone()
+    {
+        var designProject = await _db.DesignProjects.SingleAsync(item => item.Id == _projectId);
+        var operationalProject = new OperationalProject
+        {
+            Code = "PJ-2026-0141",
+            Name = "Gantt schedule fixture",
+            CustomerId = designProject.CustomerId,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        await _db.SaveChangesAsync();
+        designProject.OperationalProjectId = operationalProject.Id;
+        var node = new ProjectScheduleNode { Id = Guid.NewGuid(), OperationalProjectId = operationalProject.Id };
+        var revision = new ProjectScheduleRevision
+        {
+            OperationalProjectId = operationalProject.Id,
+            Version = 1,
+            Status = ProjectScheduleRevisionStatus.Published,
+            CreatedByUserId = _userId,
+            Items =
+            [
+                new ProjectScheduleItem
+                {
+                    Node = node,
+                    WbsCode = "1.2",
+                    Title = "Thi công phần kết cấu",
+                    PlannedStart = new DateOnly(2026, 6, 1),
+                    PlannedEnd = new DateOnly(2026, 6, 30),
+                },
+            ],
+        };
+        _db.ProjectScheduleRevisions.Add(revision);
+        await _db.SaveChangesAsync();
+
+        var request = Req(start: new DateOnly(2026, 6, 10), end: new DateOnly(2026, 6, 20));
+        request.ProjectScheduleNodeId = node.Id;
+        var response = await _sut.CreateAsync(request, _userId);
+
+        Assert.Equal(node.Id, response.ProjectScheduleNodeId);
+    }
+
+    [Fact]
+    public async Task CreateAsync_rejects_construction_dates_outside_published_milestone()
+    {
+        var designProject = await _db.DesignProjects.SingleAsync(item => item.Id == _projectId);
+        var operationalProject = new OperationalProject
+        {
+            Code = "PJ-2026-0142",
+            Name = "Gantt schedule fixture",
+            CustomerId = designProject.CustomerId,
+        };
+        _db.OperationalProjects.Add(operationalProject);
+        await _db.SaveChangesAsync();
+        designProject.OperationalProjectId = operationalProject.Id;
+        var node = new ProjectScheduleNode { Id = Guid.NewGuid(), OperationalProjectId = operationalProject.Id };
+        _db.ProjectScheduleRevisions.Add(new ProjectScheduleRevision
+        {
+            OperationalProjectId = operationalProject.Id,
+            Version = 1,
+            Status = ProjectScheduleRevisionStatus.Published,
+            CreatedByUserId = _userId,
+            Items =
+            [
+                new ProjectScheduleItem
+                {
+                    Node = node,
+                    WbsCode = "1.2",
+                    Title = "Thi công phần kết cấu",
+                    PlannedStart = new DateOnly(2026, 6, 1),
+                    PlannedEnd = new DateOnly(2026, 6, 30),
+                },
+            ],
+        });
+        await _db.SaveChangesAsync();
+
+        var request = Req(start: new DateOnly(2026, 5, 25), end: new DateOnly(2026, 6, 20));
+        request.ProjectScheduleNodeId = node.Id;
+
+        await Assert.ThrowsAsync<ConstructionTaskOperationException>(() => _sut.CreateAsync(request, _userId));
+    }
+
+    [Fact]
     public async Task CreateAsync_accepts_predecessors_and_persists_edges()
     {
         var a = await _sut.CreateAsync(Req("A"), _userId);

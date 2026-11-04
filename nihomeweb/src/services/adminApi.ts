@@ -327,6 +327,8 @@ export interface EmailTemplatesResponse {
   otpEmailBodyTemplate: string | null;
   quoteEmailSubjectTemplate: string | null;
   quoteEmailBodyTemplate: string | null;
+  projectScheduleEmailSubjectTemplate: string;
+  projectScheduleEmailBodyTemplate: string;
 }
 
 export interface WorkPackageApprovalPreview {
@@ -374,6 +376,8 @@ export interface UpdateEmailTemplatesRequest {
   otpEmailBodyTemplate?: string | null;
   quoteEmailSubjectTemplate?: string | null;
   quoteEmailBodyTemplate?: string | null;
+  projectScheduleEmailSubjectTemplate?: string | null;
+  projectScheduleEmailBodyTemplate?: string | null;
 }
 
 export interface OtpSettingsResponse {
@@ -969,6 +973,7 @@ export interface DepartmentWorkTaskResponse {
   approverUserId?: number | null;
   approverName?: string | null;
   kpiDefinitionId?: number | null;
+  projectScheduleNodeId?: string | null;
   kpiDefinitionCode?: string | null;
   status: WorkTaskStatus;
   progressPercent: number;
@@ -1202,6 +1207,7 @@ export interface UpsertDepartmentWorkTaskRequest {
   assigneeUserId: number;
   approverUserId?: number | null;
   kpiDefinitionId?: number | null;
+  projectScheduleNodeId?: string | null;
   plannedStart: string;
   plannedEnd: string;
   ccUserIds: number[];
@@ -1374,6 +1380,55 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     ownerName?: string | null;
     createdAt: string;
   }>;
+}
+
+export interface ProjectScheduleItemResponse {
+  nodeId: string;
+  parentNodeId?: string | null;
+  wbsCode: string;
+  title: string;
+  plannedStart: string;
+  plannedEnd: string;
+  sortOrder: number;
+}
+
+export interface ProjectScheduleRevisionResponse {
+  id: number;
+  version: number;
+  status: "Draft" | "PendingApproval" | "Published" | "Rejected";
+  changeReason?: string | null;
+  approverUserId?: number | null;
+  approverName?: string | null;
+  submittedAt?: string | null;
+  reviewedAt?: string | null;
+  reviewedByUserId?: number | null;
+  reviewComment?: string | null;
+  publishedAt?: string | null;
+  rowVersion: string;
+  items: ProjectScheduleItemResponse[];
+}
+
+export interface ProjectScheduleResponse {
+  operationalProjectId: number;
+  hasSignedUpstreamContract: boolean;
+  publishedRevisionId?: number | null;
+  approverOptions: Array<{ userId: number; name: string; email?: string | null }>;
+  revisions: ProjectScheduleRevisionResponse[];
+}
+
+export interface SaveProjectScheduleItemRequest {
+  nodeId?: string | null;
+  parentNodeId?: string | null;
+  wbsCode: string;
+  title: string;
+  plannedStart: string;
+  plannedEnd: string;
+  sortOrder: number;
+}
+
+export interface SaveProjectScheduleRevisionRequest {
+  changeReason: string;
+  items: SaveProjectScheduleItemRequest[];
 }
 
 // Module 4 construction operations
@@ -3669,6 +3724,7 @@ export interface UpsertDesignScheduleTaskRequest extends UpsertDesignSchedulePha
   assigneeMemberId: number;
   approverMemberId: number;
   parentTaskId?: number | null;
+  projectScheduleNodeId?: string | null;
   resourceSummary?: string | null;
   vendorId?: number | null;
   downstreamContractId?: number | null;
@@ -3718,6 +3774,7 @@ export interface DesignScheduleTaskResponse {
   assigneeMemberId: number;
   approverMemberId: number;
   parentTaskId?: number | null;
+  projectScheduleNodeId?: string | null;
   resourceSummary?: string | null;
   vendorId?: number | null;
   vendorName?: string | null;
@@ -4638,6 +4695,7 @@ export interface ConstructionTaskResponse {
   progressPercent: number;
   ownerUserId?: number | null;
   ownerName?: string | null;
+  projectScheduleNodeId?: string | null;
   status: ConstructionTaskStatus;
   isOverdue: boolean;
   predecessors: ConstructionTaskDependencyResponse[];
@@ -4673,6 +4731,7 @@ export interface CreateConstructionTaskRequest {
   plannedStart: string;
   plannedEnd: string;
   ownerUserId?: number | null;
+  projectScheduleNodeId?: string | null;
   predecessorTaskIds?: number[];
 }
 
@@ -4686,6 +4745,7 @@ export interface UpdateConstructionTaskRequest {
   actualEnd?: string | null;
   progressPercent: number;
   ownerUserId?: number | null;
+  projectScheduleNodeId?: string | null;
   status: ConstructionTaskStatus;
 }
 
@@ -8047,6 +8107,47 @@ export const adminApi = {
     api.get<Blob>("/reports/projects/export", { params, responseType: "blob" }),
   getOperationalProject: (id: number) =>
     api.get<OperationalProjectResponse>(`/operational-projects/${id}`),
+  getProjectSchedule: (projectId: number) =>
+    api.get<ProjectScheduleResponse>(`/operational-projects/${projectId}/master-schedule`),
+  createProjectScheduleRevision: (projectId: number, body: SaveProjectScheduleRevisionRequest) =>
+    api.post<ProjectScheduleResponse>(
+      `/operational-projects/${projectId}/master-schedule/revisions`,
+      body,
+      withIdempotencyKey(crypto.randomUUID()),
+    ),
+  updateProjectScheduleRevision: (
+    projectId: number,
+    revisionId: number,
+    body: SaveProjectScheduleRevisionRequest,
+  ) =>
+    api.put<ProjectScheduleResponse>(
+      `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}`,
+      body,
+      withIdempotencyKey(crypto.randomUUID()),
+    ),
+  submitProjectScheduleRevision: (
+    projectId: number,
+    revisionId: number,
+    approverUserId: number,
+    rowVersion: string,
+  ) =>
+    api.post<ProjectScheduleResponse>(
+      `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/submit`,
+      { approverUserId, rowVersion },
+      withIdempotencyKey(crypto.randomUUID()),
+    ),
+  reviewProjectScheduleRevision: (
+    projectId: number,
+    revisionId: number,
+    decision: "Approve" | "Reject",
+    comment: string,
+    rowVersion: string,
+  ) =>
+    api.post<ProjectScheduleResponse>(
+      `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/review`,
+      { decision, comment, rowVersion },
+      withIdempotencyKey(crypto.randomUUID()),
+    ),
   getConstructionPreparation: (projectId: number) =>
     api.get<ConstructionPreparationResponse>(
       `/operational-projects/${projectId}/construction/preparation`,

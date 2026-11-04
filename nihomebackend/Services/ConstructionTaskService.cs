@@ -128,6 +128,11 @@ public partial class ConstructionTaskService(
         {
             throw new ConstructionTaskOperationException($"Dự án #{request.DesignProjectId} không tồn tại.");
         }
+        if (project.OperationalProjectId.HasValue)
+            await ValidateProjectScheduleNodeAsync(project.OperationalProjectId.Value, request.ProjectScheduleNodeId,
+                request.PlannedStart, request.PlannedEnd, ct);
+        else if (request.ProjectScheduleNodeId.HasValue)
+            throw new ConstructionTaskOperationException("Luồng Thiết kế chưa gắn với Dự án vận hành để liên kết WBS.");
 
         if (request.OwnerUserId.HasValue &&
             !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
@@ -148,6 +153,7 @@ public partial class ConstructionTaskService(
         var entity = new ConstructionTask
         {
             DesignProjectId = request.DesignProjectId,
+            ProjectScheduleNodeId = request.ProjectScheduleNodeId,
             TaskCode = code,
             Wbs = TrimOrNull(request.Wbs),
             Name = name,
@@ -205,8 +211,17 @@ public partial class ConstructionTaskService(
         {
             throw new ConstructionTaskOperationException($"Người phụ trách #{request.OwnerUserId} không tồn tại.");
         }
+        var operationalProjectId = await db.DesignProjects.AsNoTracking()
+            .Where(item => item.Id == entity.DesignProjectId)
+            .Select(item => item.OperationalProjectId).SingleAsync(ct);
+        if (operationalProjectId.HasValue)
+            await ValidateProjectScheduleNodeAsync(operationalProjectId.Value, request.ProjectScheduleNodeId,
+                request.PlannedStart, request.PlannedEnd, ct);
+        else if (request.ProjectScheduleNodeId.HasValue)
+            throw new ConstructionTaskOperationException("Luồng Thiết kế chưa gắn với Dự án vận hành để liên kết WBS.");
 
         entity.Wbs = TrimOrNull(request.Wbs);
+        entity.ProjectScheduleNodeId = request.ProjectScheduleNodeId;
         entity.Name = name;
         entity.Description = TrimOrNull(request.Description);
         entity.PlannedStart = request.PlannedStart;
@@ -524,6 +539,29 @@ public partial class ConstructionTaskService(
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 
+    private async Task ValidateProjectScheduleNodeAsync(int projectId, Guid? nodeId,
+        DateOnly plannedStart, DateOnly plannedEnd, CancellationToken ct)
+    {
+        var revisionId = await db.ProjectScheduleRevisions.AsNoTracking().Where(item =>
+                item.OperationalProjectId == projectId && item.Status == ProjectScheduleRevisionStatus.Published)
+            .OrderByDescending(item => item.Version).Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
+        if (!revisionId.HasValue)
+        {
+            if (nodeId.HasValue)
+                throw new ConstructionTaskOperationException("Chưa có tiến độ tổng thể đã phát hành để liên kết đầu việc.");
+            return;
+        }
+        if (!nodeId.HasValue)
+            throw new ConstructionTaskOperationException("Cần liên kết đầu việc thi công với mốc WBS đang phát hành.");
+        var item = await db.ProjectScheduleItems.AsNoTracking().SingleOrDefaultAsync(entry =>
+            entry.RevisionId == revisionId.Value && entry.NodeId == nodeId.Value, ct);
+        if (item is null)
+            throw new ConstructionTaskOperationException("Mốc WBS không còn trong tiến độ đang phát hành. Hãy chọn lại mốc hiện hành.");
+        if (plannedStart < item.PlannedStart || plannedEnd > item.PlannedEnd)
+            throw new ConstructionTaskOperationException(
+                $"Ngày thi công phải nằm trong khung WBS {item.WbsCode} ({item.PlannedStart:yyyy-MM-dd} đến {item.PlannedEnd:yyyy-MM-dd}).");
+    }
+
     private static ConstructionTaskResponse Map(ConstructionTask t, DateOnly today) => new()
     {
         Id = t.Id,
@@ -541,6 +579,7 @@ public partial class ConstructionTaskService(
         ProgressPercent = t.ProgressPercent,
         OwnerUserId = t.OwnerUserId,
         OwnerName = t.Owner?.FullName,
+        ProjectScheduleNodeId = t.ProjectScheduleNodeId,
         Status = t.Status.ToString(),
         IsOverdue = t.PlannedEnd < today
                     && t.Status != ConstructionTaskStatus.Completed

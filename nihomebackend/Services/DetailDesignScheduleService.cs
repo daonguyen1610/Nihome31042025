@@ -334,6 +334,7 @@ public sealed class DetailDesignScheduleService(
             AssigneeMemberId = request.AssigneeMemberId,
             ApproverMemberId = request.ApproverMemberId,
             ParentTaskId = request.ParentTaskId,
+            ProjectScheduleNodeId = request.ProjectScheduleNodeId,
             ResourceSummary = NormalizeOptional(request.ResourceSummary),
             VendorId = request.VendorId,
             DownstreamContractId = request.DownstreamContractId,
@@ -393,6 +394,7 @@ public sealed class DetailDesignScheduleService(
         task.AssigneeMemberId = request.AssigneeMemberId;
         task.ApproverMemberId = request.ApproverMemberId;
         task.ParentTaskId = request.ParentTaskId;
+        task.ProjectScheduleNodeId = request.ProjectScheduleNodeId;
         task.ResourceSummary = NormalizeOptional(request.ResourceSummary);
         task.VendorId = request.VendorId;
         task.DownstreamContractId = request.DownstreamContractId;
@@ -567,6 +569,7 @@ public sealed class DetailDesignScheduleService(
         DesignScheduleRules.ValidateDatesAndStatus(plannedStart, plannedEnd,
             request.ActualStart, request.ActualEnd, status, request.ProgressPercent, request.Weight,
             request.IsMilestone);
+        await ValidateProjectScheduleNodeAsync(projectId, request.ProjectScheduleNodeId, plannedStart, plannedEnd, ct);
         var department = request.DepartmentCode.Trim().ToLowerInvariant();
         if (!await db.MasterDataOptions.AsNoTracking().AnyAsync(option =>
                 option.Category == DepartmentCategory && option.Code == department && option.IsActive, ct))
@@ -645,6 +648,26 @@ public sealed class DetailDesignScheduleService(
                 item.Id != taskId, ct))
             throw new DesignScheduleOperationException("Mã công việc đã tồn tại trong lịch thiết kế.");
         return status;
+    }
+
+    private async Task ValidateProjectScheduleNodeAsync(
+        int projectId, Guid? nodeId, DateOnly plannedStart, DateOnly plannedEnd, CancellationToken ct)
+    {
+        var publishedRevisionId = await db.ProjectScheduleRevisions.AsNoTracking().Where(item =>
+                item.OperationalProjectId == projectId && item.Status == ProjectScheduleRevisionStatus.Published)
+            .OrderByDescending(item => item.Version).Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
+        if (!publishedRevisionId.HasValue)
+        {
+            if (nodeId.HasValue) throw new DesignScheduleOperationException("Chưa có tiến độ tổng thể đã phát hành để liên kết đầu việc.");
+            return;
+        }
+        if (!nodeId.HasValue)
+            throw new DesignScheduleOperationException("Cần liên kết đầu việc với một mốc WBS trong tiến độ tổng thể đã phát hành.");
+        var item = await db.ProjectScheduleItems.AsNoTracking().SingleOrDefaultAsync(entry =>
+            entry.RevisionId == publishedRevisionId.Value && entry.NodeId == nodeId.Value, ct);
+        if (item is null) throw new DesignScheduleOperationException("Mốc WBS đã bị gỡ khỏi tiến độ tổng thể hiện hành. Chọn lại mốc đang phát hành.");
+        if (plannedStart < item.PlannedStart || plannedEnd > item.PlannedEnd)
+            throw new DesignScheduleOperationException($"Ngày của đầu việc phải nằm trong khung WBS {item.WbsCode} ({item.PlannedStart:yyyy-MM-dd} đến {item.PlannedEnd:yyyy-MM-dd}).");
     }
 
     private async Task ReplaceDependenciesAsync(
@@ -963,6 +986,7 @@ public sealed class DetailDesignScheduleService(
         AssigneeMemberId = task.AssigneeMemberId,
         ApproverMemberId = task.ApproverMemberId,
         ParentTaskId = task.ParentTaskId,
+        ProjectScheduleNodeId = task.ProjectScheduleNodeId,
         ResourceSummary = task.ResourceSummary,
         VendorId = task.VendorId,
         VendorName = task.Vendor?.CompanyName,

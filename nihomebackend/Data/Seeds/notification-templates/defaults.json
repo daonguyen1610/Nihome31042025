@@ -191,6 +191,18 @@
       "module": "design.reviews",
       "channel": "InApp",
       "adminDescription": "Notify internal recipients when the Design Manager records the client decision."
+    },
+    {
+      "code": "project.schedule.submitted",
+      "module": "operations.projects",
+      "channel": "InApp",
+      "adminDescription": "Email the assigned reviewer when a CRM master schedule revision is submitted."
+    },
+    {
+      "code": "project.schedule.published",
+      "module": "operations.projects",
+      "channel": "InApp",
+      "adminDescription": "Tell linked department task owners when an approved master schedule changes."
     }
   ]
 }

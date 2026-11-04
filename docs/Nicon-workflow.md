@@ -45,6 +45,27 @@ ra quyền truy cập luồng khác chỉ vì cùng Dự án vận hành. Financ
 Danh sách chọn nhân sự phải hiển thị tên, vai trò và cho lọc theo phòng ban/nhóm
 trong phạm vi ứng viên mà người dùng được quyền chọn.
 
+### Tiến độ tổng thể CRM — Partial
+
+CRM quản lý WBS/mốc tổng thể gắn với Operational Project. Revision đã phát
+hành là khung đang có hiệu lực. Sửa do khách hàng đổi yêu cầu tạo revision kế
+tiếp và chờ người được chỉ định duyệt; bản cũ vẫn có hiệu lực và lưu lịch sử
+cho đến khi revision mới được duyệt. Trước hợp đồng Upstream chọn role Trưởng
+phòng Kinh doanh `SALES_MANAGER` thuộc CRM; sau hợp đồng chọn PM dự án. Server
+chỉ cho người được gán duyệt hoặc trả lại. Email duyệt dùng mẫu quản trị được.
+
+Lịch công việc phòng ban, lịch Design và Construction Task Gantt (vẫn thuộc
+`DesignProjectId` theo ranh giới tương thích) có thể gắn vào WBS ID ổn định của
+bản gốc. Ngày công việc liên kết phải nằm trong khoảng mốc gốc đã phát hành.
+Revision mới không được làm đầu việc liên kết vượt khung ngày hoặc gỡ mốc đang
+được tham chiếu. Khi revision mới được phát hành, lịch phòng vẫn giữ dữ liệu
+hiện tại; người nhận đầu việc bị ảnh hưởng nhận thông báo nêu khác biệt so với
+bản phát hành trước. Quản lý phòng rà soát để điều chỉnh chi tiết. **Partial:**
+dữ liệu/API/UI và liên kết lịch đã triển khai; unit test và live E2E
+(`admin-project-master-schedule.spec.ts`) đã chạy qua, chưa có integration test
+riêng. Trước hợp đồng, ứng viên duyệt phải có role `SALES_MANAGER` thuộc CRM và
+còn quyền quản lý Cơ hội. Email chưa có hàng đợi retry bền vững.
+
 ### 2.1. Nhóm công việc của phòng ban — Hiện có
 
 ```text

@@ -979,6 +979,31 @@ exceed 40 characters.
 | Contract Create/Edit | Create new or from quotation, update terms |
 | Contract Detail | Info, appendices, payment schedule, attachments, convert to project |
 
+#### 3.1.8 Project master schedule (Partial)
+
+In the Operational Project detail, users with project management access can
+create the CRM master schedule as a WBS of dated milestones. Saving creates a
+draft revision. Select an eligible approver and submit it; before an Upstream
+contract is signed the approver must hold the CRM `SALES_MANAGER` role and
+opportunity-management permission, and after signing only the Project Manager
+is eligible. The assigned approver can approve to publish or return the revision
+with a reason. The previous published
+revision stays active until approval.
+
+After publication, department work and Design schedule tasks can select a
+master WBS item. Construction Gantt tasks also link to the master WBS while
+remaining under their existing Design Project for compatibility. Planned dates
+must remain inside the linked milestone's dates. Publishing is blocked when a
+linked department, Design, or Construction task would fall outside the revised
+WBS dates or its referenced milestone is removed. A changed published revision
+sends affected assignees a notification with the changed dates; project and
+department managers then review their task dates.
+Update the project schedule email subject/body in **Admin → Email
+Templates → Project Schedule**. **Partial:** the approval, framing, change
+notification, and contract-based approver rules are covered by unit and live
+end-to-end tests. Delivery email retry is not available; email failures are
+logged and need operational follow-up.
+
 ### 3.2 Module 2: Design Management (3-Phase)
 
 **Objective**: Control technical documents and prevent discrepancies before construction.
