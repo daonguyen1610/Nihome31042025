@@ -1084,7 +1084,7 @@ it. Finalize remains disabled until client approval and signed acceptance are
 recorded. Internal submission numbers are labelled separately from option
 revisions in Reviews. Discarding an option requires confirmation and preserves
 submitted documents and history. The Concept header links directly to Reviews.
-The Design menu calls this workspace **Hợp Đồng Thiết Kế**; the underlying
+The Design menu calls this workspace **Hồ Sơ Thiết Kế**; the underlying
 Design Project route and IDs remain unchanged, and the workspace can start
 before a CRM contract is signed. Add staff in its **Đội ngũ** tab first. One
 Chủ Nhiệm Thiết Kế is allowed per workspace, while several Chủ Trì Thiết Kế

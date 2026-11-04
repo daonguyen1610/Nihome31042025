@@ -6,9 +6,9 @@ namespace nihomebackend.Migrations;
 
 public partial class SyncDesignContractTranslations : Migration
 {
-    private sealed record Rename(string Key, string Language, string PreviousValue, string Value);
+    internal sealed record Rename(string Key, string Language, string PreviousValue, string Value);
 
-    private static readonly Rename[] Renames =
+    internal static readonly Rename[] Renames =
     [
         new("nav.designProjects", "vi", "Dự án thiết kế", "Hợp Đồng Thiết Kế"),
         new("nav.designProjects", "en", "Design projects", "Design contracts"),
