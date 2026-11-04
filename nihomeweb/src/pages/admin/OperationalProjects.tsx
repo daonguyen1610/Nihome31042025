@@ -23,6 +23,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
+import { ProjectMasterSchedule } from "@/pages/admin/ProjectMasterSchedule";
 import { OperationalProjectTeamPanel } from "@/pages/admin/design/DesignProjectTeamTab";
 import { PageError, PageLoading } from "@/components/PageState";
 import {
@@ -223,6 +224,17 @@ const OperationalProjects = () => {
       sequence.current++;
     };
   }, [load]);
+
+  useEffect(() => {
+    if (!detail) return;
+    if (new URLSearchParams(window.location.search).get("tab") !== "schedule") return;
+    const frame = window.requestAnimationFrame(() => {
+      document
+        .getElementById("project-master-schedule")
+        ?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [detail]);
 
   const openCreate = useCallback(async () => {
     setForm({ ...emptyForm(), customerId: customerFilter ?? 0 });
@@ -554,6 +566,12 @@ const OperationalProjects = () => {
               value={formatDate(detail.updatedAt)}
             />
           </section>
+
+          <ProjectMasterSchedule
+            projectId={detail.id}
+            projectStart={detail.startDate}
+            projectEnd={detail.endDate}
+          />
 
           {detail.latestCodeChange && detail.latestCodeChange.status !== "NotRequired" && (
             <div className="rounded-lg border bg-card p-3 text-sm">

@@ -64,6 +64,8 @@ public class DesignScheduleTask : IConcurrencyTracked
     public OperationalProjectMember AssigneeMember { get; set; } = null!;
     public int ApproverMemberId { get; set; }
     public OperationalProjectMember ApproverMember { get; set; } = null!;
+    public Guid? ProjectScheduleNodeId { get; set; }
+    public ProjectScheduleNode? ProjectScheduleNode { get; set; }
     public int? ParentTaskId { get; set; }
     public DesignScheduleTask? ParentTask { get; set; }
     public List<DesignScheduleTask> Children { get; set; } = new();

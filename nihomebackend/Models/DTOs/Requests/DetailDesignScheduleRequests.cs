@@ -63,6 +63,8 @@ public sealed class UpsertDesignScheduleTaskRequest
     [Range(1, int.MaxValue)]
     public int? ParentTaskId { get; set; }
 
+    public Guid? ProjectScheduleNodeId { get; set; }
+
     [MaxLength(2000)]
     public string? ResourceSummary { get; set; }
 

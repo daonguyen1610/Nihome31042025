@@ -122,6 +122,7 @@ public sealed class DepartmentWorkTaskResponse
     public int? ApproverUserId { get; set; }
     public string? ApproverName { get; set; }
     public int? KpiDefinitionId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     public string? KpiDefinitionCode { get; set; }
     public string Status { get; set; } = string.Empty;
     public int ProgressPercent { get; set; }

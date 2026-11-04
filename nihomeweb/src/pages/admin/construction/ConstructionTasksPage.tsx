@@ -68,6 +68,7 @@ import {
   type ConstructionTaskStatus,
   type CreateConstructionTaskRequest,
   type DesignProjectListItemResponse,
+  type ProjectScheduleItemResponse,
   type UpdateConstructionTaskRequest,
 } from "@/services/adminApi";
 
@@ -121,6 +122,7 @@ interface CreateForm {
   plannedStart: string;
   plannedEnd: string;
   ownerUserId: number | null;
+  projectScheduleNodeId: string;
 }
 
 interface EditForm {
@@ -134,6 +136,7 @@ interface EditForm {
   progressPercent: number;
   ownerUserId: number | null;
   status: ConstructionTaskStatus;
+  projectScheduleNodeId: string;
 }
 
 const emptyCreateForm = (defaultProjectId: number | null): CreateForm => ({
@@ -145,6 +148,7 @@ const emptyCreateForm = (defaultProjectId: number | null): CreateForm => ({
   plannedStart: todayIso(),
   plannedEnd: isoAfter(todayIso(), 7),
   ownerUserId: null,
+  projectScheduleNodeId: "",
 });
 
 const editFormFrom = (row: ConstructionTaskResponse): EditForm => ({
@@ -158,6 +162,7 @@ const editFormFrom = (row: ConstructionTaskResponse): EditForm => ({
   progressPercent: row.progressPercent,
   ownerUserId: row.ownerUserId ?? null,
   status: row.status,
+  projectScheduleNodeId: row.projectScheduleNodeId ?? "",
 });
 
 // ---------------------------- Gantt helpers ----------------------------
@@ -260,6 +265,10 @@ const AdminConstructionTasks = () => {
   // lookups
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
+  const [createScheduleItems, setCreateScheduleItems] = useState<ProjectScheduleItemResponse[]>([]);
+  const [detailScheduleItems, setDetailScheduleItems] = useState<ProjectScheduleItemResponse[]>([]);
+  const [createScheduleFailed, setCreateScheduleFailed] = useState(false);
+  const [detailScheduleFailed, setDetailScheduleFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -292,6 +301,81 @@ const AdminConstructionTasks = () => {
       cancelled = true;
     };
   }, [canListUsers]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const operationalProjectId = projects.find(
+      (item) => item.id === createForm.designProjectId,
+    )?.operationalProjectId;
+    setCreateScheduleFailed(false);
+    if (!operationalProjectId) {
+      setCreateScheduleItems([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+    void adminApi
+      .getProjectSchedule(operationalProjectId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setCreateScheduleFailed(false);
+        const revision = data.revisions.find((item) => item.id === data.publishedRevisionId);
+        const scheduleItems = revision?.items ?? [];
+        setCreateScheduleItems(scheduleItems);
+        setCreateForm((form) =>
+          form.projectScheduleNodeId &&
+          !scheduleItems.some((item) => item.nodeId === form.projectScheduleNodeId)
+            ? { ...form, projectScheduleNodeId: "" }
+            : form,
+        );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setCreateScheduleItems([]);
+        setCreateScheduleFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [createForm.designProjectId, projects]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const operationalProjectId = projects.find(
+      (item) => item.id === detail?.designProjectId,
+    )?.operationalProjectId;
+    setDetailScheduleFailed(false);
+    if (!operationalProjectId) {
+      setDetailScheduleItems([]);
+      return () => {
+        cancelled = true;
+      };
+    }
+    void adminApi
+      .getProjectSchedule(operationalProjectId)
+      .then(({ data }) => {
+        if (cancelled) return;
+        setDetailScheduleFailed(false);
+        const revision = data.revisions.find((item) => item.id === data.publishedRevisionId);
+        const scheduleItems = revision?.items ?? [];
+        setDetailScheduleItems(scheduleItems);
+        setDetailForm((form) =>
+          form &&
+          form.projectScheduleNodeId &&
+          !scheduleItems.some((item) => item.nodeId === form.projectScheduleNodeId)
+            ? { ...form, projectScheduleNodeId: "" }
+            : form,
+        );
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setDetailScheduleItems([]);
+        setDetailScheduleFailed(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [detail?.designProjectId, projects]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -384,6 +468,21 @@ const AdminConstructionTasks = () => {
       setCreateError(t("constructionTasks.form.endBeforeStart"));
       return;
     }
+    if (createScheduleItems.length > 0 && !createForm.projectScheduleNodeId) {
+      setCreateError(t("constructionTasks.form.masterWbsRequired"));
+      return;
+    }
+    const createMilestone = createScheduleItems.find(
+      (item) => item.nodeId === createForm.projectScheduleNodeId,
+    );
+    if (
+      createMilestone &&
+      (createForm.plannedStart < createMilestone.plannedStart ||
+        createForm.plannedEnd > createMilestone.plannedEnd)
+    ) {
+      setCreateError(t("constructionTasks.form.masterWbsDates", { wbs: createMilestone.wbsCode }));
+      return;
+    }
     setSaving(true);
     try {
       const body: CreateConstructionTaskRequest = {
@@ -395,6 +494,7 @@ const AdminConstructionTasks = () => {
         wbs: createForm.wbs.trim() || undefined,
         description: createForm.description.trim() || undefined,
         ownerUserId: createForm.ownerUserId ?? undefined,
+        projectScheduleNodeId: createForm.projectScheduleNodeId || undefined,
       };
       await adminApi.createConstructionTask(body);
       toast({ title: t("constructionTasks.created") });
@@ -470,6 +570,21 @@ const AdminConstructionTasks = () => {
       setDetailError(t("constructionTasks.form.endBeforeStart"));
       return;
     }
+    if (detailScheduleItems.length > 0 && !detailForm.projectScheduleNodeId) {
+      setDetailError(t("constructionTasks.form.masterWbsRequired"));
+      return;
+    }
+    const detailMilestone = detailScheduleItems.find(
+      (item) => item.nodeId === detailForm.projectScheduleNodeId,
+    );
+    if (
+      detailMilestone &&
+      (detailForm.plannedStart < detailMilestone.plannedStart ||
+        detailForm.plannedEnd > detailMilestone.plannedEnd)
+    ) {
+      setDetailError(t("constructionTasks.form.masterWbsDates", { wbs: detailMilestone.wbsCode }));
+      return;
+    }
     setDetailSaving(true);
     try {
       const body: UpdateConstructionTaskRequest = {
@@ -482,6 +597,7 @@ const AdminConstructionTasks = () => {
         actualEnd: detailForm.actualEnd || undefined,
         progressPercent: detailForm.progressPercent,
         ownerUserId: detailForm.ownerUserId ?? undefined,
+        projectScheduleNodeId: detailForm.projectScheduleNodeId || undefined,
         status: detailForm.status,
       };
       const { data: updated } = await adminApi.updateConstructionTask(detail.id, body);
@@ -1145,6 +1261,36 @@ const AdminConstructionTasks = () => {
                   />
                 </div>
               </div>
+              {createScheduleItems.length > 0 && (
+                <div>
+                  <Label>{t("constructionTasks.field.masterWbs")}</Label>
+                  <Select
+                    value={createForm.projectScheduleNodeId}
+                    onValueChange={(value) =>
+                      setCreateForm((form) => ({
+                        ...form,
+                        projectScheduleNodeId: value,
+                      }))
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder={t("constructionTasks.field.chooseMasterWbs")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {createScheduleItems.map((item) => (
+                        <SelectItem key={item.nodeId} value={item.nodeId}>
+                          {item.wbsCode} · {item.title} ({item.plannedStart}–{item.plannedEnd})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              {createScheduleFailed && (
+                <p className="text-sm text-rose-600">
+                  {t("constructionTasks.form.masterWbsLoadFailed")}
+                </p>
+              )}
               <div>
                 <Label>{t("constructionTasks.field.owner")}</Label>
                 {canListUsers ? (
@@ -1235,6 +1381,40 @@ const AdminConstructionTasks = () => {
                       </Select>
                     </div>
                   </div>
+                  {detailScheduleItems.length > 0 && (
+                    <div>
+                      <Label>{t("constructionTasks.field.masterWbs")}</Label>
+                      <Select
+                        value={detailForm.projectScheduleNodeId}
+                        onValueChange={(value) =>
+                          setDetailForm(
+                            (form) =>
+                              form && {
+                                ...form,
+                                projectScheduleNodeId: value,
+                              },
+                          )
+                        }
+                        disabled={!canManage}
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder={t("constructionTasks.field.chooseMasterWbs")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {detailScheduleItems.map((item) => (
+                            <SelectItem key={item.nodeId} value={item.nodeId}>
+                              {item.wbsCode} · {item.title} ({item.plannedStart}–{item.plannedEnd})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  {detailScheduleFailed && (
+                    <p className="text-sm text-rose-600">
+                      {t("constructionTasks.form.masterWbsLoadFailed")}
+                    </p>
+                  )}
                   <div>
                     <Label>{t("constructionTasks.field.description")}</Label>
                     <Textarea

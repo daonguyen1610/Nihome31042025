@@ -125,6 +125,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DesignScheduleTaskCcMember> DesignScheduleTaskCcMembers => Set<DesignScheduleTaskCcMember>();
     public DbSet<DesignScheduleTaskDependency> DesignScheduleTaskDependencies => Set<DesignScheduleTaskDependency>();
     public DbSet<DesignScheduleHistory> DesignScheduleHistory => Set<DesignScheduleHistory>();
+    public DbSet<ProjectScheduleRevision> ProjectScheduleRevisions => Set<ProjectScheduleRevision>();
+    public DbSet<ProjectScheduleItem> ProjectScheduleItems => Set<ProjectScheduleItem>();
+    public DbSet<ProjectScheduleNode> ProjectScheduleNodes => Set<ProjectScheduleNode>();
     public DbSet<DesignReview> DesignReviews => Set<DesignReview>();
     public DbSet<DesignReviewRecipient> DesignReviewRecipients => Set<DesignReviewRecipient>();
     public DbSet<DesignReviewComment> DesignReviewComments => Set<DesignReviewComment>();
@@ -1540,6 +1543,53 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(p => p.UpdatedAt);
         });
 
+        modelBuilder.Entity<ProjectScheduleRevision>(b =>
+        {
+            b.ToTable("project_schedule_revisions");
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(30).IsRequired();
+            b.Property(item => item.ChangeReason).HasMaxLength(2000);
+            b.Property(item => item.ReviewComment).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.ScheduleRevisions)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ApproverUser).WithMany().HasForeignKey(item => item.ApproverUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(item => item.CreatedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(item => item.SubmittedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<ApplicationUser>().WithMany().HasForeignKey(item => item.ReviewedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.OperationalProjectId, item.Version }).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.Status });
+        });
+
+        modelBuilder.Entity<ProjectScheduleNode>(b =>
+        {
+            b.ToTable("project_schedule_nodes");
+            b.HasKey(item => item.Id);
+            b.HasOne(item => item.OperationalProject).WithMany(project => project.ScheduleNodes)
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(item => new { item.OperationalProjectId, item.Id }).IsUnique();
+        });
+
+        modelBuilder.Entity<ProjectScheduleItem>(b =>
+        {
+            b.ToTable("project_schedule_items");
+            b.Property(item => item.WbsCode).HasMaxLength(80).IsRequired();
+            b.Property(item => item.Title).HasMaxLength(300).IsRequired();
+            b.HasOne(item => item.Revision).WithMany(revision => revision.Items)
+                .HasForeignKey(item => item.RevisionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.Node).WithMany().HasForeignKey(item => item.NodeId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ParentNode).WithMany().HasForeignKey(item => item.ParentNodeId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.RevisionId, item.NodeId }).IsUnique();
+            b.HasIndex(item => new { item.RevisionId, item.WbsCode }).IsUnique();
+            b.ToTable(table => table.HasCheckConstraint(
+                "CK_project_schedule_items_planned_dates", "[PlannedEnd] >= [PlannedStart]"));
+        });
+
         RfqModelConfiguration.Configure(modelBuilder);
 
         modelBuilder.Entity<ProjectBoqRevision>(b =>
@@ -2346,6 +2396,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(item => item.VerifiedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.KpiDefinition).WithMany()
                 .HasForeignKey(item => item.KpiDefinitionId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ProjectScheduleNode).WithMany()
+                .HasForeignKey(item => item.ProjectScheduleNodeId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(item => new { item.WorkPackageId, item.WbsCode }).IsUnique();
             b.HasIndex(item => new { item.WorkPackageId, item.DepartmentRoleGroupId, item.Status });
             b.HasIndex(item => new { item.AssigneeUserId, item.Status, item.PlannedEnd });
@@ -2477,6 +2529,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(task => task.DownstreamContractId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(task => task.ParentTask).WithMany(parent => parent.Children)
                 .HasForeignKey(task => task.ParentTaskId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(task => task.ProjectScheduleNode).WithMany()
+                .HasForeignKey(task => task.ProjectScheduleNodeId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(task => new { task.OperationalProjectId, task.Code });
             b.HasIndex(task => new { task.DesignProjectId, task.Code }).IsUnique();
             b.HasIndex(task => new { task.OperationalProjectId, task.PhaseId, task.PlannedStart, task.PlannedEnd });
@@ -2986,8 +3040,11 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany()
                 .HasForeignKey(t => t.OwnerUserId)
                 .OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(t => t.ProjectScheduleNode).WithMany()
+                .HasForeignKey(t => t.ProjectScheduleNodeId).OnDelete(DeleteBehavior.Restrict);
 
             b.HasIndex(t => t.DesignProjectId);
+            b.HasIndex(t => t.ProjectScheduleNodeId);
             b.HasIndex(t => new { t.DesignProjectId, t.TaskCode }).IsUnique();
             b.HasIndex(t => t.Status);
         });

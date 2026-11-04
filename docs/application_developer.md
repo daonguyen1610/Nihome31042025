@@ -1837,6 +1837,11 @@ it must not be confused with public portfolio content or the three-phase
 | `GET` | `/api/operational-projects` | `operations.projects.view` | List the caller's project scope with filters and rollup counts |
 | `GET` | `/api/operational-projects/{id}` | `operations.projects.view` | Read the customer, opportunity, quote, contract, and design rollup |
 | `GET` | `/api/operational-projects/{id}/timeline` | `operations.projects.view` | Read payment milestones from every Contract in the caller's project scope |
+| `GET` | `/api/operational-projects/{id}/master-schedule` | Authorized project member or linked department/Design task assignee; published revisions only except managers and assigned approver | Read master schedule and eligible approver choices |
+| `POST` | `/api/operational-projects/{id}/master-schedule/revisions` | `operations.projects.manage` | Create a WBS revision draft; requires idempotency key |
+| `PUT` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}` | `operations.projects.manage` | Replace an editable draft/rejected revision; requires idempotency key |
+| `POST` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/submit` | `operations.projects.manage` | Assign the eligible CRM/PM approver and submit with row-version; requires idempotency key |
+| `POST` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/review` | Assigned approver only | Approve/publish or return with reason and row-version; requires idempotency key |
 | `GET` | `/api/operational-projects/document-categories` | `operations.projects.view` | Read the server-defined upload categories and Drive paths |
 | `GET` | `/api/operational-projects/{id}/documents` | `operations.projects.view` | List the caller's project document catalog |
 | `GET` | `/api/operational-projects/{id}/documents/{documentId}/content` | `operations.projects.view` | Download private document content through project scope |

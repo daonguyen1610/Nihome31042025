@@ -221,7 +221,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await expect(dialog).toBeVisible();
     await dialog.locator("#task-actual-start").fill("2026-04-02");
     await dialog.locator("#task-progress").fill("25");
-    await dialog.locator('button[role="combobox"]').nth(8).click();
+    await dialog.locator("#task-status").click();
     await page.getByRole("option", { name: /Đang thực hiện|In progress/i }).click();
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
 
@@ -368,6 +368,11 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await expect(removeHistoricalCc).toContainText(/Không còn hoạt động|Inactive/i);
     await expect(historicalCc).toContainText(
       /Chưa có nhân sự đang hoạt động|No active people are eligible/i,
+    );
+    // Layout bounds are only meaningful once the open zoom/slide animation finishes;
+    // mid-animation the dialog is still translated and scaled.
+    await dialog.evaluate((element) =>
+      Promise.all(element.getAnimations().map((animation) => animation.finished)),
     );
     for (const width of [390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });

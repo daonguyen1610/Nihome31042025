@@ -21,7 +21,12 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
             project.Id == projectId &&
             (project.ProjectManagerUserId == userId ||
              project.CreatedByUserId == userId ||
-             project.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null)), ct);
+             project.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null) ||
+             // The assigned approver needs to open the project to review the
+             // master schedule; this grant ends when the revision is decided.
+             project.ScheduleRevisions.Any(revision =>
+                 revision.Status == ProjectScheduleRevisionStatus.PendingApproval &&
+                 revision.ApproverUserId == userId)), ct);
     }
 
     public async Task<bool> CanManageTeamAsync(

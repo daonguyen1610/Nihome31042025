@@ -28,6 +28,8 @@
   { "key": "constructionTasks.field.actualEnd", "category": "constructionTasks", "vi": "Kết thúc thực tế", "en": "Actual end", "zh": "实际结束", "ja": "実終了" },
   { "key": "constructionTasks.field.progress", "category": "constructionTasks", "vi": "% Hoàn thành", "en": "% Complete", "zh": "完成 %", "ja": "進捗 %" },
   { "key": "constructionTasks.field.owner", "category": "constructionTasks", "vi": "Người phụ trách", "en": "Owner", "zh": "负责人", "ja": "担当者" },
+  { "key": "constructionTasks.field.masterWbs", "category": "constructionTasks", "vi": "Mốc WBS tiến độ tổng thể", "en": "Master schedule WBS milestone", "zh": "总体进度 WBS 里程碑", "ja": "全体工程 WBS マイルストーン" },
+  { "key": "constructionTasks.field.chooseMasterWbs", "category": "constructionTasks", "vi": "Chọn mốc WBS", "en": "Select a WBS milestone", "zh": "选择 WBS 里程碑", "ja": "WBS マイルストーンを選択" },
   { "key": "constructionTasks.field.status", "category": "constructionTasks", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "状態" },
   { "key": "constructionTasks.field.predecessors", "category": "constructionTasks", "vi": "Tiền nhiệm (Finish-to-Start)", "en": "Predecessors (Finish-to-Start)", "zh": "前置任务 (完成-开始)", "ja": "先行タスク (Finish-to-Start)" },
 
@@ -75,5 +77,8 @@
   { "key": "constructionTasks.detail.progress", "category": "constructionTasks", "vi": "Tiến độ", "en": "Progress", "zh": "进度", "ja": "進捗" },
   { "key": "constructionTasks.detail.predecessors", "category": "constructionTasks", "vi": "Tiền nhiệm", "en": "Predecessors", "zh": "前置任务", "ja": "先行タスク" },
   { "key": "constructionTasks.detail.noPredecessors", "category": "constructionTasks", "vi": "Không có tiền nhiệm.", "en": "No predecessors.", "zh": "无前置任务。", "ja": "先行タスクはありません。" },
-  { "key": "constructionTasks.detail.selectPredecessors", "category": "constructionTasks", "vi": "Chọn các công việc tiền nhiệm (phải cùng dự án, không được tạo vòng phụ thuộc).", "en": "Pick predecessor tasks (must be in the same project — no dependency cycles).", "zh": "选择前置任务（须在同一项目内，且不得形成循环依赖）。", "ja": "先行タスクを選択してください（同一案件内・循環依存は不可）。" }
+  { "key": "constructionTasks.detail.selectPredecessors", "category": "constructionTasks", "vi": "Chọn các công việc tiền nhiệm (phải cùng dự án, không được tạo vòng phụ thuộc).", "en": "Pick predecessor tasks (must be in the same project — no dependency cycles).", "zh": "选择前置任务（须在同一项目内，且不得形成循环依赖）。", "ja": "先行タスクを選択してください（同一案件内・循環依存は不可）。" },
+  {"key": "constructionTasks.form.masterWbsRequired", "category": "constructionTasks", "vi": "Hãy chọn mốc WBS đang phát hành cho công việc thi công.", "en": "Choose a published WBS milestone for this construction task.", "zh": "请为此施工任务选择已发布的 WBS 里程碑。", "ja": "この施工タスクに公開済みの WBS マイルストーンを選択してください。"},
+  {"key": "constructionTasks.form.masterWbsDates", "category": "constructionTasks", "vi": "Ngày thi công phải nằm trong khung mốc WBS {wbs}.", "en": "The construction dates must stay within WBS milestone {wbs}.", "zh": "施工日期必须位于 WBS 里程碑 {wbs} 的范围内。", "ja": "施工日は WBS マイルストーン {wbs} の期間内にしてください。"},
+  {"key": "constructionTasks.form.masterWbsLoadFailed", "category": "constructionTasks", "vi": "Không tải được tiến độ tổng thể. Hãy thử lại trước khi lưu để chọn đúng mốc WBS.", "en": "Could not load the master schedule. Retry before saving so the WBS milestone can be selected.", "zh": "无法加载总体进度。请重试后再保存，以选择正确的 WBS 里程碑。", "ja": "全体工程を読み込めませんでした。保存前に再試行し、WBS マイルストーンを選択してください。"}
 ]

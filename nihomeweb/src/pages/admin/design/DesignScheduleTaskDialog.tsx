@@ -34,6 +34,7 @@ import {
   type DesignScheduleTaskResponse,
   type MasterDataOption,
   type OperationalProjectMemberResponse,
+  type ProjectScheduleItemResponse,
   type DesignScheduleOutsourceOptionResponse,
   type UpsertDesignScheduleTaskRequest,
 } from "@/services/adminApi";
@@ -41,6 +42,7 @@ import {
 interface Props {
   operationalProjectId: number;
   phases: DesignSchedulePhaseResponse[];
+  masterScheduleItems: ProjectScheduleItemResponse[];
   tasks: DesignScheduleTaskResponse[];
   departments: MasterDataOption[];
   members: OperationalProjectMemberResponse[];
@@ -73,6 +75,7 @@ const emptyForm = (phaseId: number): TaskForm => ({
   assigneeMemberId: 0,
   approverMemberId: 0,
   parentTaskId: null,
+  projectScheduleNodeId: null,
   resourceSummary: null,
   vendorId: null,
   downstreamContractId: null,
@@ -98,6 +101,7 @@ const taskForm = (task: DesignScheduleTaskResponse): TaskForm => ({
   assigneeMemberId: task.assigneeMemberId,
   approverMemberId: task.approverMemberId,
   parentTaskId: task.parentTaskId ?? null,
+  projectScheduleNodeId: task.projectScheduleNodeId ?? null,
   resourceSummary: task.resourceSummary ?? null,
   vendorId: task.vendorId ?? null,
   downstreamContractId: task.downstreamContractId ?? null,
@@ -118,6 +122,7 @@ const taskForm = (task: DesignScheduleTaskResponse): TaskForm => ({
 export const DesignScheduleTaskDialog = ({
   operationalProjectId,
   phases,
+  masterScheduleItems,
   tasks,
   departments,
   members,
@@ -209,6 +214,18 @@ export const DesignScheduleTaskDialog = ({
       return t("designProjects.schedule.validation.plannedRequired");
     if (form.plannedEnd < form.plannedStart)
       return t("designProjects.schedule.validation.plannedOrder");
+    if (masterScheduleItems.length > 0 && !form.projectScheduleNodeId)
+      return t("designProjects.schedule.validation.masterScheduleRequired");
+    const milestone = masterScheduleItems.find(
+      (item) => item.nodeId === form.projectScheduleNodeId,
+    );
+    if (
+      milestone &&
+      (form.plannedStart < milestone.plannedStart || form.plannedEnd > milestone.plannedEnd)
+    )
+      return t("designProjects.schedule.validation.masterScheduleDates", {
+        wbs: milestone.wbsCode,
+      });
     if (form.isMilestone && form.plannedStart !== form.plannedEnd)
       return t("designProjects.schedule.validation.milestoneDates");
     if (form.actualEnd && !form.actualStart)
@@ -543,6 +560,37 @@ export const DesignScheduleTaskDialog = ({
             />
           </div>
           <div>
+            <Label htmlFor="task-master-schedule-node">
+              {t("operationalProjects.schedule.milestone")}
+            </Label>
+            <Select
+              value={form.projectScheduleNodeId ?? "none"}
+              onValueChange={(value) =>
+                setForm({ ...form, projectScheduleNodeId: value === "none" ? null : value })
+              }
+              disabled={masterScheduleItems.length === 0}
+            >
+              <SelectTrigger id="task-master-schedule-node" className="mt-1 min-h-11">
+                <SelectValue placeholder={t("operationalProjects.schedule.chooseMilestone")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">
+                  {t("operationalProjects.schedule.noMilestone")}
+                </SelectItem>
+                {masterScheduleItems.map((item) => (
+                  <SelectItem key={item.nodeId} value={item.nodeId}>
+                    {item.wbsCode} · {item.title} ({item.plannedStart} – {item.plannedEnd})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {masterScheduleItems.length > 0 && !form.projectScheduleNodeId && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("operationalProjects.schedule.milestoneRequired")}
+              </p>
+            )}
+          </div>
+          <div>
             <Label htmlFor="task-planned-start">
               {t("designProjects.schedule.field.plannedStart")}
             </Label>
@@ -603,7 +651,7 @@ export const DesignScheduleTaskDialog = ({
               value={form.status}
               onValueChange={(value) => setForm({ ...form, status: value as DesignScheduleStatus })}
             >
-              <SelectTrigger className="mt-1 min-h-11">
+              <SelectTrigger id="task-status" className="mt-1 min-h-11">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>

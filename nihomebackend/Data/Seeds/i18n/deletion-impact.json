@@ -166,5 +166,8 @@
   {"key":"deletionImpact.item.workPackages.translations","category":"deletionImpact","vi":"Bản dịch nhóm và đầu việc","en":"Package and task translations","zh":"工作包与任务翻译","ja":"パッケージとタスクの翻訳"},
   {"key":"deletionImpact.item.workPackages.parents","category":"deletionImpact","vi":"Giữ dự án, hợp đồng và hồ sơ nguồn","en":"Preserve project, contract and source records","zh":"保留项目、合同和来源记录","ja":"プロジェクト・契約・元の記録を保持"},
   {"key":"deletionImpact.item.workPackages.sentQuotes","category":"deletionImpact","vi":"Báo giá đã gửi dùng bằng chứng rà soát","en":"Sent quotations using finance evidence","zh":"使用财务审核依据的已发送报价","ja":"財務審査の根拠を使用する送信済み見積"},
-  {"key":"deletionImpact.item.workPackages.submittedPlanning","category":"deletionImpact","vi":"Hồ sơ nộp thầu dùng kế hoạch nhóm","en":"Tender submissions using package planning","zh":"使用工作包计划的投标文件","ja":"作業計画を使用する入札提出書類"}
+  {"key":"deletionImpact.item.workPackages.submittedPlanning","category":"deletionImpact","vi":"Hồ sơ nộp thầu dùng kế hoạch nhóm","en":"Tender submissions using package planning","zh":"使用工作包计划的投标文件","ja":"作業計画を使用する入札提出書類"},
+  {"key":"deletionImpact.item.operations.projectScheduleRevisions","category":"deletionImpact","vi":"Các phiên bản tiến độ tổng thể","en":"Master schedule revisions","zh":"总体进度版本","ja":"全体工程の改訂"},
+  {"key":"deletionImpact.item.operations.projectScheduleItems","category":"deletionImpact","vi":"Các mốc WBS tiến độ tổng thể","en":"Master schedule WBS items","zh":"总体进度 WBS 项","ja":"全体工程 WBS 項目"},
+  {"key":"deletionImpact.item.operations.projectScheduleNodes","category":"deletionImpact","vi":"Danh tính liên kết các mốc WBS","en":"Master schedule WBS link identities","zh":"总体进度 WBS 关联标识","ja":"全体工程 WBS リンク ID"}
 ]

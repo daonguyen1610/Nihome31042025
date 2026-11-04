@@ -47,6 +47,8 @@ public class OperationalProject : IConcurrencyTracked
     public List<OperationalProjectMember> TeamMembers { get; set; } = new();
     public List<OperationalProjectAssignment> TeamAssignments { get; set; } = new();
     public List<DesignSchedulePhase> DesignSchedulePhases { get; set; } = new();
+    public List<ProjectScheduleRevision> ScheduleRevisions { get; set; } = new();
+    public List<ProjectScheduleNode> ScheduleNodes { get; set; } = new();
     public List<DesignScheduleTask> DesignScheduleTasks { get; set; } = new();
     public List<ProjectBoqRevision> BoqRevisions { get; set; } = new();
     public List<MaterialRequest> MaterialRequests { get; set; } = new();

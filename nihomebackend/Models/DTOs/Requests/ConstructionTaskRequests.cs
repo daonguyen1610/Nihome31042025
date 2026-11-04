@@ -9,6 +9,7 @@ public class ConstructionTaskListParams
 {
     public int? DesignProjectId { get; set; }
     public int? OwnerUserId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     /// <summary>Comma-separated status names, e.g. <c>Planned,InProgress</c>.</summary>
     public string? Status { get; set; }
     /// <summary>Match against task code / name / WBS.</summary>
@@ -29,6 +30,7 @@ public class CreateConstructionTaskRequest
     public DateOnly PlannedStart { get; set; }
     public DateOnly PlannedEnd { get; set; }
     public int? OwnerUserId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     /// <summary>Optional predecessors (existing task ids in the same project).</summary>
     public List<int>? PredecessorTaskIds { get; set; }
 }
@@ -36,6 +38,7 @@ public class CreateConstructionTaskRequest
 public class UpdateConstructionTaskRequest
 {
     public string? Wbs { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public DateOnly PlannedStart { get; set; }

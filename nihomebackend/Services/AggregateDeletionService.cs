@@ -107,6 +107,10 @@ internal static class AggregateDeletionService
             .Where(task => foundIds.Contains(task.DesignProjectId))
             .Select(task => task.Id)
             .ToListAsync(ct);
+        var constructionTasks = await db.ConstructionTasks
+            .Where(task => foundIds.Contains(task.DesignProjectId))
+            .ToListAsync(ct);
+        foreach (var task in constructionTasks) task.ProjectScheduleNodeId = null;
         var scheduleTaskIds = await db.DesignScheduleTasks
             .Where(task => foundIds.Contains(task.DesignProjectId))
             .Select(task => task.Id)
@@ -280,6 +284,18 @@ internal static class AggregateDeletionService
         var workPackages = await db.DepartmentWorkPackages
             .Where(item => item.OperationalProjectId == projectId)
             .ToListAsync(ct);
+        db.DepartmentWorkTasks.RemoveRange(await db.DepartmentWorkTasks
+            .Where(item => item.WorkPackage.OperationalProjectId == projectId).ToListAsync(ct));
+        db.DesignScheduleTasks.RemoveRange(await db.DesignScheduleTasks
+            .Where(item => item.OperationalProjectId == projectId).ToListAsync(ct));
+        var projectScheduleRevisions = await db.ProjectScheduleRevisions
+            .Where(item => item.OperationalProjectId == projectId).ToListAsync(ct);
+        var projectScheduleNodes = await db.ProjectScheduleNodes
+            .Where(item => item.OperationalProjectId == projectId).ToListAsync(ct);
+        db.ProjectScheduleItems.RemoveRange(await db.ProjectScheduleItems
+            .Where(item => item.Revision.OperationalProjectId == projectId).ToListAsync(ct));
+        db.ProjectScheduleRevisions.RemoveRange(projectScheduleRevisions);
+        db.ProjectScheduleNodes.RemoveRange(projectScheduleNodes);
         var legalPermitIds = await db.PermitChecklistItems
             .Where(item => item.OperationalProjectId == projectId)
             .Select(item => item.Id).ToListAsync(ct);

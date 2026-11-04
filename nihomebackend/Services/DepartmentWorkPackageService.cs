@@ -392,6 +392,7 @@ public sealed partial class DepartmentWorkPackageService(
             AssigneeUserId = request.AssigneeUserId,
             ApproverUserId = request.ApproverUserId,
             KpiDefinitionId = request.KpiDefinitionId,
+            ProjectScheduleNodeId = request.ProjectScheduleNodeId,
             PlannedStart = request.PlannedStart.ToUniversalTime(),
             PlannedEnd = request.PlannedEnd.ToUniversalTime(),
             CreatedAt = now,
@@ -446,6 +447,7 @@ public sealed partial class DepartmentWorkPackageService(
         task.AssigneeUserId = request.AssigneeUserId;
         task.ApproverUserId = request.ApproverUserId;
         task.KpiDefinitionId = request.KpiDefinitionId;
+        task.ProjectScheduleNodeId = request.ProjectScheduleNodeId;
         task.PlannedStart = request.PlannedStart.ToUniversalTime();
         task.PlannedEnd = request.PlannedEnd.ToUniversalTime();
         task.UpdatedAt = DateTime.UtcNow;
@@ -615,9 +617,9 @@ public sealed partial class DepartmentWorkPackageService(
             .SingleAsync(ct);
         var expectedGroup = purpose switch
         {
-            WorkPackagePurpose.ProcurementInputPricing => "PROCUREMENT",
-            WorkPackagePurpose.FinanceCommercialReview or WorkPackagePurpose.FinanceTenderReview => "FINANCE",
-            WorkPackagePurpose.LegalPermitting => "CONSTRUCTION",
+            WorkPackagePurpose.ProcurementInputPricing => RoleGroupCodes.Procurement,
+            WorkPackagePurpose.FinanceCommercialReview or WorkPackagePurpose.FinanceTenderReview => RoleGroupCodes.Finance,
+            WorkPackagePurpose.LegalPermitting => RoleGroupCodes.Construction,
             _ => null,
         };
         if (expectedGroup is not null && !string.Equals(groupCode, expectedGroup, StringComparison.OrdinalIgnoreCase))
@@ -767,6 +769,12 @@ public sealed partial class DepartmentWorkPackageService(
         }
         if (request.PlannedEnd < request.PlannedStart)
             throw Error("Ngày kết thúc đầu việc không được trước ngày bắt đầu.");
+        if (package.OperationalProjectId.HasValue)
+            await ValidateProjectScheduleNodeAsync(package.OperationalProjectId.Value, request.ProjectScheduleNodeId,
+                DateOnly.FromDateTime(request.PlannedStart.ToUniversalTime()),
+                DateOnly.FromDateTime(request.PlannedEnd.ToUniversalTime()), ct);
+        else if (request.ProjectScheduleNodeId.HasValue)
+            throw Error("Chỉ đầu việc thuộc dự án vận hành mới được liên kết với mốc WBS của tiến độ tổng thể.");
         if (request.ApproverUserId == request.AssigneeUserId)
             throw Error("Người duyệt phải khác người phụ trách đầu việc.");
         if (RequiresIndependentVerification(package, request.KpiDefinitionId) &&
@@ -821,6 +829,26 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Tất cả công tác trước phải thuộc cùng nhóm công việc.");
         if (taskId.HasValue && await CreatesDependencyCycleAsync(taskId.Value, predecessorIds, ct))
             throw Error("Quan hệ công tác trước tạo thành vòng lặp không hợp lệ.");
+    }
+
+    private async Task ValidateProjectScheduleNodeAsync(
+        int projectId, Guid? nodeId, DateOnly plannedStart, DateOnly plannedEnd, CancellationToken ct)
+    {
+        var publishedRevisionId = await db.ProjectScheduleRevisions.AsNoTracking().Where(item =>
+                item.OperationalProjectId == projectId && item.Status == ProjectScheduleRevisionStatus.Published)
+            .OrderByDescending(item => item.Version).Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
+        if (!publishedRevisionId.HasValue)
+        {
+            if (nodeId.HasValue) throw Error("Chưa có tiến độ tổng thể đã phát hành để liên kết đầu việc.");
+            return;
+        }
+        if (!nodeId.HasValue)
+            throw Error("Cần liên kết đầu việc với một mốc WBS trong tiến độ tổng thể đã phát hành.");
+        var item = await db.ProjectScheduleItems.AsNoTracking().SingleOrDefaultAsync(entry =>
+            entry.RevisionId == publishedRevisionId.Value && entry.NodeId == nodeId.Value, ct);
+        if (item is null) throw Error("Mốc WBS đã bị gỡ khỏi tiến độ tổng thể hiện hành. Chọn lại mốc đang phát hành.");
+        if (plannedStart < item.PlannedStart || plannedEnd > item.PlannedEnd)
+            throw Error($"Ngày của đầu việc phải nằm trong khung WBS {item.WbsCode} ({item.PlannedStart:yyyy-MM-dd} đến {item.PlannedEnd:yyyy-MM-dd}).");
     }
 
     private static int ResolveTaskDepartmentRoleGroupId(
@@ -1064,7 +1092,7 @@ public sealed partial class DepartmentWorkPackageService(
             })
             .SingleOrDefaultAsync(ct);
         if (user is null) return false;
-        return user.IsSystem && (user.RoleCode == "ADMIN" || user.RoleCode == "SUPER_ADMIN") ||
+        return user.IsSystem && (user.RoleCode == RbacRoleCodes.Admin || user.RoleCode == RbacRoleCodes.SuperAdmin) ||
             user.Role is UserRole.ADMIN or UserRole.SUPER_ADMIN;
     }
 
@@ -1172,6 +1200,7 @@ public sealed partial class DepartmentWorkPackageService(
             ApproverUserId = task.ApproverUserId,
             ApproverName = task.ApproverUser == null ? null : task.ApproverUser.FullName ?? task.ApproverUser.Email,
             KpiDefinitionId = task.KpiDefinitionId,
+            ProjectScheduleNodeId = task.ProjectScheduleNodeId,
             KpiDefinitionCode = task.KpiDefinition?.Code,
             Status = task.Status.ToString(),
             ProgressPercent = task.ProgressPercent,

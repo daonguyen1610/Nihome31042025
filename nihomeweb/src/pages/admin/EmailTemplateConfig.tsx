@@ -13,7 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import EmailTemplateEditor from "@/components/admin/EmailTemplateEditor";
 
-type TabType = "application" | "otp" | "quote" | "quoteApproval" | "contract" | "approval";
+type TabType =
+  "application" | "otp" | "quote" | "projectSchedule" | "quoteApproval" | "contract" | "approval";
 
 const APPLICATION_TOKENS = [
   { token: "{{siteName}}", desc: "Tên website" },
@@ -43,6 +44,15 @@ const QUOTE_TOKENS = [
   "grandTotal",
   "validUntil",
 ];
+const PROJECT_SCHEDULE_TOKENS = [
+  "eventName",
+  "recipientName",
+  "projectCode",
+  "projectName",
+  "version",
+  "changeReason",
+  "changeSummary",
+];
 
 const EmailTemplateConfig = () => {
   const { t } = useI18n();
@@ -57,6 +67,8 @@ const EmailTemplateConfig = () => {
   const [otpBody, setOtpBody] = useState("");
   const [quoteSubject, setQuoteSubject] = useState("");
   const [quoteBody, setQuoteBody] = useState("");
+  const [projectScheduleSubject, setProjectScheduleSubject] = useState("");
+  const [projectScheduleBody, setProjectScheduleBody] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -71,6 +83,8 @@ const EmailTemplateConfig = () => {
       setOtpBody(res.data.otpEmailBodyTemplate ?? "");
       setQuoteSubject(res.data.quoteEmailSubjectTemplate ?? "");
       setQuoteBody(res.data.quoteEmailBodyTemplate ?? "");
+      setProjectScheduleSubject(res.data.projectScheduleEmailSubjectTemplate);
+      setProjectScheduleBody(res.data.projectScheduleEmailBodyTemplate);
     } catch {
       toast({
         title: t("common.error"),
@@ -86,9 +100,22 @@ const EmailTemplateConfig = () => {
     loadTemplates();
   }, [loadTemplates]);
 
-  const activeBody = activeTab === "application" ? body : activeTab === "otp" ? otpBody : quoteBody;
+  const activeBody =
+    activeTab === "application"
+      ? body
+      : activeTab === "otp"
+        ? otpBody
+        : activeTab === "projectSchedule"
+          ? projectScheduleBody
+          : quoteBody;
   const activeSubject =
-    activeTab === "application" ? subject : activeTab === "otp" ? otpSubject : quoteSubject;
+    activeTab === "application"
+      ? subject
+      : activeTab === "otp"
+        ? otpSubject
+        : activeTab === "projectSchedule"
+          ? projectScheduleSubject
+          : quoteSubject;
   const handleSave = async () => {
     const normalizedQuoteBody = quoteBody.toLowerCase();
     if (
@@ -136,6 +163,8 @@ const EmailTemplateConfig = () => {
         otpEmailBodyTemplate: otpBody || null,
         quoteEmailSubjectTemplate: quoteSubject,
         quoteEmailBodyTemplate: quoteBody,
+        projectScheduleEmailSubjectTemplate: projectScheduleSubject,
+        projectScheduleEmailBodyTemplate: projectScheduleBody,
       });
       toast({ title: "Đã lưu", description: "Cấu hình email template đã được cập nhật." });
     } catch (error) {
@@ -159,10 +188,15 @@ const EmailTemplateConfig = () => {
       ? APPLICATION_TOKENS
       : activeTab === "otp"
         ? OTP_TOKENS
-        : QUOTE_TOKENS.map((name) => ({
-            token: `{{${name}}}`,
-            desc: t(`emailTemplate.quote.token.${name}`),
-          }));
+        : activeTab === "projectSchedule"
+          ? PROJECT_SCHEDULE_TOKENS.map((name) => ({
+              token: `{{${name}}}`,
+              desc: t(`emailTemplate.schedule.token.${name}`),
+            }))
+          : QUOTE_TOKENS.map((name) => ({
+              token: `{{${name}}}`,
+              desc: t(`emailTemplate.quote.token.${name}`),
+            }));
 
   if (loading) {
     return (
@@ -245,6 +279,19 @@ const EmailTemplateConfig = () => {
           >
             <FileText className="h-4 w-4" /> {t("emailTemplate.quote.tab")}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab("projectSchedule")}
+            aria-pressed={activeTab === "projectSchedule"}
+            className={cn(
+              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
+              activeTab === "projectSchedule"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            <FileText className="h-4 w-4" /> {t("emailTemplate.schedule.tab")}
+          </button>
           {(["contract", "approval", "quoteApproval"] as const).map((tab) => (
             <button
               key={tab}
@@ -300,19 +347,44 @@ const EmailTemplateConfig = () => {
                 ? setSubject
                 : activeTab === "otp"
                   ? setOtpSubject
-                  : setQuoteSubject
+                  : activeTab === "projectSchedule"
+                    ? setProjectScheduleSubject
+                    : setQuoteSubject
             }
             onBodyChange={
               activeTab === "application"
                 ? setBody
                 : activeTab === "otp"
                   ? setOtpBody
-                  : setQuoteBody
+                  : activeTab === "projectSchedule"
+                    ? setProjectScheduleBody
+                    : setQuoteBody
             }
-            subjectMaxLength={activeTab === "quote" ? 200 : 255}
-            bodyMaxLength={activeTab === "quote" ? 8000 : undefined}
-            hint={activeTab === "quote" ? t("emailTemplate.quote.hint") : undefined}
+            subjectMaxLength={activeTab === "quote" || activeTab === "projectSchedule" ? 200 : 255}
+            bodyMaxLength={
+              activeTab === "quote" || activeTab === "projectSchedule" ? 8000 : undefined
+            }
+            hint={
+              activeTab === "quote"
+                ? t("emailTemplate.quote.hint")
+                : activeTab === "projectSchedule"
+                  ? t("emailTemplate.schedule.hint")
+                  : undefined
+            }
             tokens={currentTokens}
+            previewValues={
+              activeTab === "projectSchedule"
+                ? {
+                    eventName: "Yêu cầu duyệt tiến độ tổng thể",
+                    recipientName: "Nguyễn Văn An",
+                    projectCode: "PJ-2026-001",
+                    projectName: "Trung tâm dịch vụ NICON",
+                    version: "2",
+                    changeReason: "Khách hàng điều chỉnh thời gian bàn giao.",
+                    changeSummary: "1.1 2026-03-01–2026-04-01 → 1.1 2026-03-15–2026-04-15",
+                  }
+                : undefined
+            }
             beforeSubject={
               activeTab === "application" ? (
                 <div className="space-y-1.5">

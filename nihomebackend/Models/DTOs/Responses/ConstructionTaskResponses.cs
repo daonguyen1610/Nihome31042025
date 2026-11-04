@@ -21,6 +21,7 @@ public class ConstructionTaskResponse
     public int ProgressPercent { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
 
     /// <summary>Enum name (Planned/InProgress/Completed/Cancelled).</summary>
     public string Status { get; set; } = "Planned";

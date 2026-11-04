@@ -62,6 +62,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
             settings.OtpEmailBodyTemplate,
             QuoteEmailSubjectTemplate = settings.QuoteEmailSubjectTemplate ?? EmailTemplateFormatter.DefaultQuoteSubject,
             QuoteEmailBodyTemplate = settings.QuoteEmailBodyTemplate ?? EmailTemplateFormatter.DefaultQuoteBody,
+            ProjectScheduleEmailSubjectTemplate = ProjectScheduleEmailTemplates.Get(settings).Subject,
+            ProjectScheduleEmailBodyTemplate = ProjectScheduleEmailTemplates.Get(settings).Body,
         });
     }
 
@@ -81,7 +83,9 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
                 req.OtpEmailSubjectTemplate,
                 req.OtpEmailBodyTemplate,
                 req.QuoteEmailSubjectTemplate,
-                req.QuoteEmailBodyTemplate);
+                req.QuoteEmailBodyTemplate,
+                req.ProjectScheduleEmailSubjectTemplate,
+                req.ProjectScheduleEmailBodyTemplate);
         }
         catch (ArgumentException ex)
         {
@@ -97,6 +101,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
             settings.OtpEmailBodyTemplate,
             settings.QuoteEmailSubjectTemplate,
             settings.QuoteEmailBodyTemplate,
+            ProjectScheduleEmailSubjectTemplate = ProjectScheduleEmailTemplates.Get(settings).Subject,
+            ProjectScheduleEmailBodyTemplate = ProjectScheduleEmailTemplates.Get(settings).Body,
         });
     }
 

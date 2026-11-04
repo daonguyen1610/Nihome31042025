@@ -26,6 +26,9 @@ public class ConstructionTask
     public int DesignProjectId { get; set; }
     public DesignProject DesignProject { get; set; } = null!;
 
+    public Guid? ProjectScheduleNodeId { get; set; }
+    public ProjectScheduleNode? ProjectScheduleNode { get; set; }
+
     /// <summary>Human-friendly code, unique inside a project (e.g. <c>T-001</c>).</summary>
     public string TaskCode { get; set; } = string.Empty;
 

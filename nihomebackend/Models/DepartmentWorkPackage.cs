@@ -150,6 +150,8 @@ public class DepartmentWorkTask : IConcurrencyTracked
     public ApplicationUser? ApproverUser { get; set; }
     public int? KpiDefinitionId { get; set; }
     public KpiDefinition? KpiDefinition { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
+    public ProjectScheduleNode? ProjectScheduleNode { get; set; }
     public WorkTaskStatus Status { get; set; } = WorkTaskStatus.Planned;
     public int ProgressPercent { get; set; }
     public DateTime PlannedStart { get; set; }
