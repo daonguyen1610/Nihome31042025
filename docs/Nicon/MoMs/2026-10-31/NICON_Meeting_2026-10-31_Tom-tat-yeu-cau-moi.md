@@ -74,11 +74,11 @@ Pháp lý và Thi công hẹn buổi sau.
 - CUNG ỨNG: thêm tab HỢP ĐỒNG để tạo và quản lý hợp đồng với nhà cung cấp, từ
   lúc báo giá đến khi quản lý hợp đồng.
 - PHÒNG CM có 5 đầu mục quản lý chính:
-    1. Tiến độ
-    2. Khối lượng và chi phí
-    3. Chất lượng
-    4. An toàn (HSE)
-    5. Hợp đồng
+  1. Tiến độ
+  2. Khối lượng và chi phí
+  3. Chất lượng
+  4. An toàn (HSE)
+  5. Hợp đồng
 - Mô hình: CM lập kế hoạch rồi giám sát và kiểm tra; BCH trực tiếp thực hiện.
   Cùng một công việc nhưng một người làm, một người kiểm tra. Anh Nguyên yêu
   cầu sắp xếp GỌN, tránh tab trùng giữa BCH và CM.
@@ -93,25 +93,25 @@ Pháp lý và Thi công hẹn buổi sau.
 - CRM: ba tab Dự án, Cơ hội, Hợp đồng đã lên đầu. Cơ hội có liên kết dự án vận
   hành và giao việc cho phòng ban.
 - Luồng báo giá mới:
-    1. Tạo báo giá nháp.
-    2. Tạo nhóm việc "yêu cầu báo giá đầu vào" cho Cung ứng; hệ thống gửi email
-       cho trưởng phòng Cung ứng.
-    3. Cung ứng xong thì TC–KT rà soát.
-    4. Gửi khách (mẫu email chỉnh sửa được, đính kèm file).
-    5. Khách duyệt.
-    6. Gắn hoặc tạo hợp đồng.
+  1. Tạo báo giá nháp.
+  2. Tạo nhóm việc "yêu cầu báo giá đầu vào" cho Cung ứng; hệ thống gửi email
+     cho trưởng phòng Cung ứng.
+  3. Cung ứng xong thì TC–KT rà soát.
+  4. Gửi khách (mẫu email chỉnh sửa được, đính kèm file).
+  5. Khách duyệt.
+  6. Gắn hoặc tạo hợp đồng.
 - Hợp đồng liên kết báo giá, cơ hội, Lead và hồ sơ thiết kế. BẮT BUỘC upload
   bản scan hợp đồng đã ký trước khi chuyển sang trạng thái đã ký.
 - Thiết kế:
-    - Đội ngũ có 1 chủ nhiệm thiết kế, nhiều chủ trì và nhân viên. Vai trò
-      trong dự án được gán độc lập với vai trò tài khoản. Chị Yến confirm: chỉ
-      1 chủ nhiệm, chủ trì có thể 2-3 người.
-    - Người trình và người duyệt phải khác nhau.
-    - Trình duyệt chọn được phòng ban hoặc người nội bộ.
-    - Tiến độ đã cập nhật theo mẫu MS Project, nhưng host chưa có dữ liệu để
-      xem.
-    - Phiếu phát hành IFC mới dừng ở bước "xác nhận đã nhận". Chuyển sang Cung
-      ứng và Thi công chưa làm.
+  - Đội ngũ có 1 chủ nhiệm thiết kế, nhiều chủ trì và nhân viên. Vai trò
+    trong dự án được gán độc lập với vai trò tài khoản. Chị Yến confirm: chỉ
+    1 chủ nhiệm, chủ trì có thể 2-3 người.
+  - Người trình và người duyệt phải khác nhau.
+  - Trình duyệt chọn được phòng ban hoặc người nội bộ.
+  - Tiến độ đã cập nhật theo mẫu MS Project, nhưng host chưa có dữ liệu để
+    xem.
+  - Phiếu phát hành IFC mới dừng ở bước "xác nhận đã nhận". Chuyển sang Cung
+    ứng và Thi công chưa làm.
 - Google Drive đã liên kết cho tài liệu thiết kế. Đồng bộ hai chiều, tạo thư
   mục theo cấu trúc NICON đã gửi. Dũng sẽ gửi file hướng dẫn kết nối.
 - BOQ Cung ứng: có 6 file mẫu và đang dựng template chuẩn. File phức tạp,
