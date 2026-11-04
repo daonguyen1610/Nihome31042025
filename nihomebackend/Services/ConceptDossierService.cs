@@ -3,6 +3,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -296,7 +297,7 @@ public sealed class ConceptDossierService(AppDbContext db) : IConceptDossierServ
             !await db.Users.AsNoTracking().AnyAsync(item => item.Id == userId && item.IsActive &&
                 (item.Role == UserRole.SUPER_ADMIN || item.Role == UserRole.ADMIN ||
                  item.RoleEntity != null &&
-                 (item.RoleEntity.Code == "SUPER_ADMIN" || item.RoleEntity.Code == "ADMIN")), ct))
+                 (item.RoleEntity.Code == RbacRoleCodes.SuperAdmin || item.RoleEntity.Code == RbacRoleCodes.Admin)), ct))
             throw new ConceptOptionOperationException("Chỉ Chủ nhiệm thiết kế được quản lý hồ sơ Concept.");
         return option;
     }

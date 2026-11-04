@@ -1,4 +1,5 @@
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
 
@@ -105,10 +106,10 @@ public static class DepartmentWorkPackageSampleSeeder
         const string code = "WP-DEMO-SUPPLY";
         if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
         var project = db.OperationalProjects.OrderBy(item => item.Id).FirstOrDefault();
-        var groupId = db.RoleGroups.Where(item => item.Code == "PROCUREMENT" && item.IsActive)
+        var groupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Procurement && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
-        var leadId = ActiveUserForRole(db, "PROCUREMENT");
-        var assigneeId = ActiveUserForRole(db, "WAREHOUSE");
+        var leadId = ActiveUserForRole(db, RbacRoleCodes.Procurement);
+        var assigneeId = ActiveUserForRole(db, RbacRoleCodes.Warehouse);
         if (project is null || groupId == 0 || leadId == 0 || assigneeId == 0) return;
 
         var start = DateTime.UtcNow.Date.AddDays(-2);
@@ -163,13 +164,13 @@ public static class DepartmentWorkPackageSampleSeeder
     {
         const string code = "WP-DEMO-TRAINING";
         if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
-        var groupId = db.RoleGroups.Where(item => item.Code == "FINANCE" && item.IsActive)
+        var groupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Finance && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
-        var procurementGroupId = db.RoleGroups.Where(item => item.Code == "PROCUREMENT" && item.IsActive)
+        var procurementGroupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Procurement && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
-        var crmGroupId = db.RoleGroups.Where(item => item.Code == "CRM" && item.IsActive)
+        var crmGroupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Crm && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
-        var leadId = ActiveUserForRole(db, "ACCOUNTANT");
+        var leadId = ActiveUserForRole(db, RbacRoleCodes.Accountant);
         if (groupId == 0 || leadId == 0) return;
 
         var start = DateTime.UtcNow.Date.AddDays(3);
@@ -220,9 +221,9 @@ public static class DepartmentWorkPackageSampleSeeder
         var quote = db.Quotes.Where(item => item.OperationalProjectId != null)
             .OrderBy(item => item.Id).FirstOrDefault();
         if (quote?.OperationalProjectId is null) return;
-        var groupId = db.RoleGroups.Where(item => item.Code == "PROCUREMENT" && item.IsActive)
+        var groupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Procurement && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
-        var leadId = ActiveUserForRole(db, "PROCUREMENT");
+        var leadId = ActiveUserForRole(db, RbacRoleCodes.Procurement);
         var vendor = db.Vendors.Where(item => item.IsActive).OrderBy(item => item.Id).FirstOrDefault();
         if (groupId == 0 || leadId == 0 || vendor is null) return;
 
@@ -295,9 +296,9 @@ public static class DepartmentWorkPackageSampleSeeder
         if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
         var quote = db.Quotes.Where(item => item.OperationalProjectId != null)
             .OrderBy(item => item.Id).FirstOrDefault();
-        var groupId = db.RoleGroups.Where(item => item.Code == "FINANCE" && item.IsActive)
+        var groupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Finance && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
-        var leadId = ActiveUserForRole(db, "ACCOUNTANT");
+        var leadId = ActiveUserForRole(db, RbacRoleCodes.Accountant);
         if (quote?.OperationalProjectId is null || groupId == 0 || leadId == 0) return;
 
         var now = DateTime.UtcNow;

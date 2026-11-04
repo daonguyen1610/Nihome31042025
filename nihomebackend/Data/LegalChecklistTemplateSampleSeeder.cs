@@ -1,6 +1,7 @@
 using System.Text.Json;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
 
@@ -10,7 +11,7 @@ public static class LegalChecklistTemplateSampleSeeder
     {
         const string code = "DEMO-LEGAL-INDUSTRIAL";
         if (db.LegalChecklistTemplates.Any(x => x.Code == code)) return;
-        var author = db.Users.Where(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == "LEGAL_OFFICER")
+        var author = db.Users.Where(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == RbacRoleCodes.LegalOfficer)
             .OrderBy(x => x.Id).FirstOrDefault();
         if (author is null || !db.MasterDataOptions.Any(x => x.Category == "permit_type" && x.Code == "gpxd" && x.IsActive)) return;
         db.LegalChecklistTemplates.Add(new LegalChecklistTemplate

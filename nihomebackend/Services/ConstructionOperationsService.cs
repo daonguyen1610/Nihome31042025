@@ -5,6 +5,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -167,7 +168,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             {
                 x.Id,
                 Name = x.FullName ?? x.Email,
-                IsProcurement = x.RoleEntity != null && x.RoleEntity.Code == "PROCUREMENT",
+                IsProcurement = x.RoleEntity != null && x.RoleEntity.Code == RbacRoleCodes.Procurement,
                 RoleCode = x.RoleEntity != null ? x.RoleEntity.Code : x.Role.ToString(),
                 RoleName = x.RoleEntity != null ? x.RoleEntity.Name : x.Role.ToString(),
                 RoleLabelKey = x.RoleEntity != null ? x.RoleEntity.LabelKey : null,
@@ -410,7 +411,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             if (!await IsActiveProjectUserAsync(projectId, procurementUserId, ct))
                 throw new ConstructionOperationException("Assigned procurement user must be an active project member.");
             var hasProcurementRole = await db.Users.AsNoTracking().AnyAsync(x => x.Id == procurementUserId && x.IsActive &&
-                x.RoleEntity != null && x.RoleEntity.Code == "PROCUREMENT", ct);
+                x.RoleEntity != null && x.RoleEntity.Code == RbacRoleCodes.Procurement, ct);
             if (!hasProcurementRole)
                 throw new ConstructionOperationException("Assigned procurement user must have the PROCUREMENT role.");
         }

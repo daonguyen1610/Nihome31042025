@@ -4,6 +4,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -1072,7 +1073,7 @@ public class ContractService(
             throw new ContractValidationException("Phải gán kế toán phụ trách trước khi yêu cầu hoặc ghi nhận thanh toán.");
         if (accountantUserId.HasValue && !await db.Users.AsNoTracking().AnyAsync(user =>
             user.Id == accountantUserId && user.IsActive && user.RoleEntity != null &&
-            user.RoleEntity.Code == "ACCOUNTANT", ct))
+            user.RoleEntity.Code == RbacRoleCodes.Accountant, ct))
             throw new ContractValidationException("Kế toán phụ trách không tồn tại hoặc không còn hoạt động.");
 
         var previousStatus = milestone.Status;
@@ -1559,7 +1560,7 @@ public class ContractService(
         if (accountantIds.Count == 0) return;
         var validCount = await db.Users.AsNoTracking().CountAsync(user =>
             accountantIds.Contains(user.Id) && user.IsActive &&
-            user.RoleEntity != null && user.RoleEntity.Code == "ACCOUNTANT", ct);
+            user.RoleEntity != null && user.RoleEntity.Code == RbacRoleCodes.Accountant, ct);
         if (validCount != accountantIds.Count)
         {
             throw new ContractValidationException(

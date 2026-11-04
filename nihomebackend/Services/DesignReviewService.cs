@@ -3,6 +3,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -342,7 +343,7 @@ public sealed class DesignReviewService(
         db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.IsActive &&
             (user.Role == UserRole.SUPER_ADMIN || user.Role == UserRole.ADMIN ||
              user.RoleEntity != null &&
-             (user.RoleEntity.Code == "SUPER_ADMIN" || user.RoleEntity.Code == "ADMIN")), ct);
+             (user.RoleEntity.Code == RbacRoleCodes.SuperAdmin || user.RoleEntity.Code == RbacRoleCodes.Admin)), ct);
 
     private async Task<bool> CanViewProjectOrAssignedReviewAsync(int projectId, int callerUserId, CancellationToken ct) =>
         await access.CanViewDesignProjectAsync(callerUserId, projectId, ct) ||

@@ -5,12 +5,13 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
 public sealed class FinanceService(AppDbContext db, IProjectAccessService projectAccess) : IFinanceService
 {
-    private const string AccountantRole = "ACCOUNTANT";
+    private const string AccountantRole = RbacRoleCodes.Accountant;
     private static readonly HashSet<string> CorrectionSourceTypes =
         [nameof(PaymentRequest), nameof(ContractPaymentMilestone), nameof(Contract)];
 

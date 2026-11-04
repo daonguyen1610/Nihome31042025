@@ -11,6 +11,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -105,7 +106,7 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
     }
 
     private IQueryable<ApplicationUser> Owners(int projectId) => db.Users.AsNoTracking().Where(u => u.IsActive &&
-        u.RoleEntity != null && u.RoleEntity.IsActive && u.RoleEntity.Code == "PROCUREMENT" &&
+        u.RoleEntity != null && u.RoleEntity.IsActive && u.RoleEntity.Code == RbacRoleCodes.Procurement &&
         db.OperationalProjectMembers.Any(m => m.OperationalProjectId == projectId && m.UserId == u.Id && m.EndedAt == null));
 
     private IQueryable<ProjectBoqRevision> ApprovedBoqs(int projectId) => db.ProjectBoqRevisions.AsNoTracking()

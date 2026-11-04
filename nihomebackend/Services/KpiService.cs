@@ -6,6 +6,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -747,12 +748,12 @@ public sealed class KpiService(AppDbContext db, INotificationService notificatio
 
     internal static string KpiPosition(string roleCode) => roleCode switch
     {
-        "SALE" or "SALES_MANAGER" => "SALES",
-        "DESIGN" or "DESIGN_MANAGER" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" => "DESIGN",
-        "PM" => "SITE",
-        "QS" => "TENDERING",
-        "PROCUREMENT" => "PROCUREMENT",
-        "ACCOUNTANT" => "PROJECT_ACCOUNTING",
+        RbacRoleCodes.Sale or RbacRoleCodes.SalesManager => "SALES",
+        RbacRoleCodes.Design or RbacRoleCodes.DesignManager or RbacRoleCodes.DesignLead or RbacRoleCodes.Architect or RbacRoleCodes.MepEngineer or RbacRoleCodes.StructuralEngineer => RbacRoleCodes.Design,
+        RbacRoleCodes.ProjectManager => "SITE",
+        RbacRoleCodes.QuantitySurveyor => "TENDERING",
+        RbacRoleCodes.Procurement => RbacRoleCodes.Procurement,
+        RbacRoleCodes.Accountant => "PROJECT_ACCOUNTING",
         _ => roleCode,
     };
 
