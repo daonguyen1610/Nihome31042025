@@ -167,7 +167,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
-    public async Task DeletionImpact_WithEnumFolderCategory_TranslatesOnRelationalProvider()
+    public async Task DeletionImpact_WithEnumFolderCategory_TranslatesAndUnlinksWhenWebToDriveDeleteIsDisabled()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");
         var projectId = await CreateProjectAsync();
@@ -184,10 +184,10 @@ public sealed class OperationalProjectDocumentsControllerTests(
         var response = await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact");
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var impact = await ReadJsonAsync(response);
-        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
             item.GetProperty("key").GetString() == "operations.driveFolders" &&
-            item.GetProperty("action").GetString() == "Block");
+            item.GetProperty("action").GetString() == "Unlink");
     }
 
     [Fact]
@@ -274,6 +274,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
     public async Task Upload_FailedReadbackThenDelete_TrashesReplicaAndRemovesStagedFile()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");
+        var originalDeleteDriveFilesOnWebDelete = factory.DriveOptions.DeleteDriveFilesOnWebDelete;
         var projectId = await CreateProjectAsync();
         using var content = CreateUploadContent("DesignBasic", "NICON-nghiem-thu.pdf", PdfBytes);
         var uploaded = await SendUploadAsync(projectId, content);
@@ -298,6 +299,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
             var download = await Client.GetAsync($"/api/operational-projects/{projectId}/documents/{documentId}/content");
             (await download.Content.ReadAsByteArrayAsync()).Should().Equal(PdfBytes);
 
+            factory.DriveOptions.DeleteDriveFilesOnWebDelete = true;
             var deleted = await Client.DeleteAsync($"/api/operational-projects/{projectId}/documents/{documentId}");
             deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
             (await LoadDocumentAsync(documentId)).DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.Delete);
@@ -312,7 +314,11 @@ public sealed class OperationalProjectDocumentsControllerTests(
             removed.LocalPath.Should().BeEmpty();
             File.Exists(FullPath(pending.LocalPath)).Should().BeFalse();
         }
-        finally { factory.CorruptDownloads = false; }
+        finally
+        {
+            factory.CorruptDownloads = false;
+            factory.DriveOptions.DeleteDriveFilesOnWebDelete = originalDeleteDriveFilesOnWebDelete;
+        }
     }
 
     [Fact]
