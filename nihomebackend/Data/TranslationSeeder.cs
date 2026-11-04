@@ -40,8 +40,6 @@ public static class TranslationSeeder
                 if (string.IsNullOrWhiteSpace(key)) continue;
 
                 var category = entry.TryGetProperty("category", out var catProp) ? catProp.GetString() : null;
-                var hasOldValues = entry.TryGetProperty("old", out var oldValues);
-
                 foreach (var lang in LanguageCodes)
                 {
                     if (!entry.TryGetProperty(lang, out var valProp)) continue;
@@ -51,14 +49,6 @@ public static class TranslationSeeder
                     var compositeKey = key + "|" + lang;
                     if (existingRows.TryGetValue(compositeKey, out var existing))
                     {
-                        // Upgrade only a previous default; preserve admin edits.
-                        if (hasOldValues && oldValues.TryGetProperty(lang, out var oldValueProp) &&
-                            existing.Value == oldValueProp.GetString() && existing.Value != value)
-                        {
-                            existing.Value = value;
-                            existing.UpdatedAt = now;
-                            hasUpdates = true;
-                        }
                         if (string.IsNullOrWhiteSpace(existing.Category)
                             && !string.IsNullOrWhiteSpace(category))
                         {
