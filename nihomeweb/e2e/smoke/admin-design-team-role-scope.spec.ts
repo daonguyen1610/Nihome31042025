@@ -65,9 +65,9 @@ test("design team assigns roles in the current design project without a scope pi
 
   const dialog = page.getByRole("dialog");
   await expect(
-    dialog.getByText("Choose a user and assign roles for this design contract."),
+    dialog.getByText("Choose a user and assign roles for this design dossier."),
   ).toBeVisible();
-  await expect(dialog.getByText("Roles in this design contract")).toBeVisible();
+  await expect(dialog.getByText("Roles in this design dossier")).toBeVisible();
   await expect(dialog.getByText("Design module")).toBeVisible();
   await expect(dialog.getByText("End date")).toHaveCount(0);
   await expect(dialog.getByText("Roles / RACI / scope")).toHaveCount(0);
@@ -117,7 +117,7 @@ test("design team assigns roles in the current design project without a scope pi
   );
   await expect(page.locator('#admin-nav-group-crm a[href="/admin/work-packages"]')).toHaveCount(0);
   await expect(
-    page.getByRole("columnheader", { name: "Roles in this design contract" }),
+    page.getByRole("columnheader", { name: "Roles in this design dossier" }),
   ).toBeVisible();
 
   await page.goto(`/admin/operational-projects/${operationalProjectId}`);
@@ -214,7 +214,7 @@ test("design team saves a role scoped to its current design project", async ({
     const memberRow = page.locator("li").filter({ hasText: candidate.email });
     await memberRow.getByRole("button", { name: "Edit member" }).click();
     const editDialog = page.getByRole("dialog");
-    await expect(editDialog.getByText("Update roles in this design contract.")).toBeVisible();
+    await expect(editDialog.getByText("Update roles in this design dossier.")).toBeVisible();
     const currentUser = editDialog.getByRole("combobox", { name: "User", exact: true });
     await expect(currentUser).toBeDisabled();
     await expect(currentUser).toContainText(candidate.name);

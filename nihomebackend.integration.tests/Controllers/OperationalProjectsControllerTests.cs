@@ -1257,7 +1257,7 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Delete_WithUnverifiedDriveFolder_BlocksAndPreservesBinding()
+    public async Task Delete_WithDriveDeletionDisabled_UnlinksFolderBindingAndPreservesDriveData()
     {
         await AuthTestHelper.AuthenticateAsync(
             Client,
@@ -1286,16 +1286,18 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
         var impact = await ReadJsonAsync(
             await Client.GetAsync($"/api/operational-projects/{projectId}/deletion-impact"));
 
-        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
         impact.GetProperty("items").EnumerateArray().Should().Contain(item =>
             item.GetProperty("key").GetString() == "operations.driveFolders" &&
-            item.GetProperty("action").GetString() == "Block" &&
+            item.GetProperty("action").GetString() == "Unlink" &&
             item.GetProperty("count").GetInt32() == 1);
         var delete = await ConfirmDeleteAsync(projectId, project, impact);
 
-        delete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        delete.StatusCode.Should().Be(HttpStatusCode.NoContent);
         (await WithDbAsync(db => db.ProjectDriveFolders
-            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeTrue();
+            .AnyAsync(folder => folder.DriveFolderId == externalFolderId))).Should().BeFalse();
+        (await WithDbAsync(db => db.OperationalProjects.AnyAsync(item => item.Id == projectId)))
+            .Should().BeFalse();
     }
 
     [Fact]
