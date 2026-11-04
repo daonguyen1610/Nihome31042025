@@ -30,7 +30,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
     {
         var users = await db.Users.AsNoTracking().Where(u => u.IsActive && u.Id != callerId)
             .Select(u => new { u.Id, u.FullName, u.Email, u.RoleEntityId }).ToListAsync(ct);
-        var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive && r.Code == "PROCUREMENT_MANAGER")
+        var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive && r.Code == RbacRoleCodes.ProcurementManager)
             .Select(r => new
             {
                 r.Id,
@@ -198,7 +198,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
     private Task<bool> IsProcurementManagerAsync(int userId, CancellationToken ct) =>
         db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.IsActive &&
             user.RoleEntity != null && user.RoleEntity.IsActive &&
-            user.RoleEntity.Code == "PROCUREMENT_MANAGER", ct);
+            user.RoleEntity.Code == RbacRoleCodes.ProcurementManager, ct);
 
     private async Task<bool> HasQuoteApproverAccessAsync(int userId, CancellationToken ct) =>
         await permissions.HasAsync(userId, "crm.quotes.view", ct) &&

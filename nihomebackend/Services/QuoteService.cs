@@ -8,6 +8,7 @@ using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services.HardDelete;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -553,7 +554,7 @@ public class QuoteService(
     {
         if (!await db.Users.AsNoTracking().AnyAsync(user => user.Id == caller && user.IsActive &&
             user.RoleEntity != null && user.RoleEntity.IsActive &&
-            user.RoleEntity.Code == "PROCUREMENT_MANAGER", ct))
+            user.RoleEntity.Code == RbacRoleCodes.ProcurementManager, ct))
             throw new QuoteOperationException("Chỉ Trưởng phòng Cung ứng đang hoạt động được duyệt hoặc từ chối báo giá.");
     }
 

@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -76,7 +77,7 @@ public sealed class KpiCalculationBackgroundService(
     }
 
     internal static bool HasKpiPosition(string roleCode) => roleCode is
-        "SALE" or "SALES_MANAGER" or
-        "DESIGN" or "DESIGN_MANAGER" or "DESIGN_LEAD" or "ARCHITECT" or "MEP_ENGINEER" or "STRUCT_ENGINEER" or
-        "PM" or "QS" or "PROCUREMENT" or "ACCOUNTANT";
+        RbacRoleCodes.Sale or RbacRoleCodes.SalesManager or
+        RbacRoleCodes.Design or RbacRoleCodes.DesignManager or RbacRoleCodes.DesignLead or RbacRoleCodes.Architect or RbacRoleCodes.MepEngineer or RbacRoleCodes.StructuralEngineer or
+        RbacRoleCodes.ProjectManager or RbacRoleCodes.QuantitySurveyor or RbacRoleCodes.Procurement or RbacRoleCodes.Accountant;
 }

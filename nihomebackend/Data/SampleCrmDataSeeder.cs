@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
 
@@ -64,9 +65,9 @@ public static class SampleCrmDataSeeder
                 ?? db.Users.Where(u => u.Role == UserRole.SUPER_ADMIN).OrderBy(u => u.Id).FirstOrDefault()
                     ?? db.Users.OrderBy(u => u.Id).FirstOrDefault();
         if (owner is null) return;
-        var projectManager = ResolveRoleUser(db, "PM", owner);
-        var designOwner = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
-        var legalOwner = ResolveRoleUser(db, "LEGAL_OFFICER", projectManager);
+        var projectManager = ResolveRoleUser(db, RbacRoleCodes.ProjectManager, owner);
+        var designOwner = ResolveRoleUser(db, RbacRoleCodes.DesignLead, ResolveRoleUser(db, RbacRoleCodes.Design, owner));
+        var legalOwner = ResolveRoleUser(db, RbacRoleCodes.LegalOfficer, projectManager);
 
         SeedLeads(db, owner, now);
         SeedCustomers(db, owner, now);
@@ -105,8 +106,8 @@ public static class SampleCrmDataSeeder
     {
         var project = db.OperationalProjects.FirstOrDefault(x => x.Code == "PJ-SAMPLE-003");
         if (project is null) return;
-        var bch = ResolveRoleUser(db, "QS", fallback);
-        var procurement = ResolveRoleUser(db, "PROCUREMENT", fallback);
+        var bch = ResolveRoleUser(db, RbacRoleCodes.QuantitySurveyor, fallback);
+        var procurement = ResolveRoleUser(db, RbacRoleCodes.Procurement, fallback);
         if (bch.Id == cm.Id) return;
         foreach (var user in new[] { bch, procurement }.DistinctBy(x => x.Id))
         {
@@ -1976,9 +1977,9 @@ public static class SampleCrmDataSeeder
         var sampleCustomers = GetCoreCustomers(db);
         if (sampleCustomers.All(customer => customer is null)) return;
 
-        var legacyProjectManager = ResolveRoleUser(db, "PM", owner);
-        var designManager = ResolveRoleUser(db, "DESIGN_MANAGER", ResolveRoleUser(db, "DESIGN", owner));
-        var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
+        var legacyProjectManager = ResolveRoleUser(db, RbacRoleCodes.ProjectManager, owner);
+        var designManager = ResolveRoleUser(db, RbacRoleCodes.DesignManager, ResolveRoleUser(db, RbacRoleCodes.Design, owner));
+        var designLead = ResolveRoleUser(db, RbacRoleCodes.DesignLead, ResolveRoleUser(db, RbacRoleCodes.Design, owner));
         var newDesignProjects = new List<DesignProject>();
         var deletedProjectCodes = db.SeededRootDeletions
             .Where(item => item.ResourceType == EntityTypes.DesignProject)
@@ -2160,7 +2161,7 @@ public static class SampleCrmDataSeeder
         var project = db.OperationalProjects.SingleOrDefault(item => item.Code == "PJ-SAMPLE-003");
         if (project is null || db.DepartmentWorkPackages.Any(item => item.OperationalProjectId == project.Id &&
                 item.Purpose == WorkPackagePurpose.LegalPermitting)) return;
-        var constructionGroup = db.RoleGroups.SingleOrDefault(item => item.Code == "CONSTRUCTION");
+        var constructionGroup = db.RoleGroups.SingleOrDefault(item => item.Code == RoleGroupCodes.Construction);
         int GroupOf(ApplicationUser user) => db.Roles.Where(role => role.Id == user.RoleEntityId)
             .Select(role => role.RoleGroupId ?? 0).SingleOrDefault();
         var legalGroupId = GroupOf(legalLead);
@@ -3947,8 +3948,8 @@ public static class SampleCrmDataSeeder
             convertedLead.ConvertedAt ??= convertedOpportunity.CreatedAt;
         }
 
-        var projectManager = ResolveRoleUser(db, "PM", owner);
-        var designLead = ResolveRoleUser(db, "DESIGN_LEAD", ResolveRoleUser(db, "DESIGN", owner));
+        var projectManager = ResolveRoleUser(db, RbacRoleCodes.ProjectManager, owner);
+        var designLead = ResolveRoleUser(db, RbacRoleCodes.DesignLead, ResolveRoleUser(db, RbacRoleCodes.Design, owner));
         var sampleProjects = db.DesignProjects
             .Where(project => project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker))
             .OrderBy(project => project.Id)

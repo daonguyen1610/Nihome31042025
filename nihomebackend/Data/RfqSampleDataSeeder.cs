@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
 
@@ -11,8 +12,8 @@ public static class RfqSampleDataSeeder
         const string code = "PJ-SAMPLE-RFQ";
         if (db.OperationalProjects.Any(x => x.Code == code) ||
             db.SeededRootDeletions.Any(x => x.ResourceType == "OperationalProject" && x.ResourceKey == code)) return;
-        var owner = db.Users.FirstOrDefault(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == "PROCUREMENT");
-        var pm = db.Users.FirstOrDefault(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == "PM");
+        var owner = db.Users.FirstOrDefault(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == RbacRoleCodes.Procurement);
+        var pm = db.Users.FirstOrDefault(x => x.IsActive && x.RoleEntity != null && x.RoleEntity.Code == RbacRoleCodes.ProjectManager);
         if (owner is null || pm is null) return;
         var primary = db.Vendors.SingleOrDefault(x => x.IsActive && x.VendorCode == "NCC-ELECTRIC-01");
         if (primary is null) return;

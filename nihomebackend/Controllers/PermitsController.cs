@@ -10,6 +10,7 @@ using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Controllers;
 
@@ -232,7 +233,7 @@ public class PermitsController(
         if (await db.Users.AsNoTracking().AnyAsync(item => item.Id == userId && item.IsActive &&
                 (item.Role == UserRole.ADMIN || item.Role == UserRole.SUPER_ADMIN ||
                  item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.IsSystem &&
-                 (item.RoleEntity.Code == "ADMIN" || item.RoleEntity.Code == "SUPER_ADMIN")), ct))
+                 (item.RoleEntity.Code == RbacRoleCodes.Admin || item.RoleEntity.Code == RbacRoleCodes.SuperAdmin)), ct))
             return true;
         return await db.PermitChecklistItems.AsNoTracking().AnyAsync(item => item.Id == resourceId &&
             (item.OperationalProject.ProjectManagerUserId == userId ||

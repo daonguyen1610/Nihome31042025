@@ -58,7 +58,7 @@ public static class RbacSeeder
         // Earlier design.** defaults granted this destructive capability to
         // existing Design Lead roles. Correct that specific unsafe default;
         // preserve every other grant and explicitly configured custom role.
-        var grants = db.RolePermissions.Where(item => item.Role.Code == "DESIGN_LEAD" &&
+        var grants = db.RolePermissions.Where(item => item.Role.Code == RbacRoleCodes.DesignLead &&
             item.Permission.Module == "design.records" && item.Permission.Action == "hard-delete").ToList();
         if (grants.Count == 0) return;
         db.RolePermissions.RemoveRange(grants);
@@ -70,9 +70,9 @@ public static class RbacSeeder
         // Introduce only newly discovered permissions once. Later administrator revocations stay revoked.
         if (newActions.Count == 0) return;
         var permissions = db.Permissions.Where(x => x.Module == "permit.templates").ToList();
-        foreach (var role in db.Roles.Where(x => x.Code == "PM" || x.Code == "LEGAL_OFFICER").ToList())
+        foreach (var role in db.Roles.Where(x => x.Code == RbacRoleCodes.ProjectManager || x.Code == RbacRoleCodes.LegalOfficer).ToList())
         {
-            var actions = role.Code == "PM" ? new[] { "view", "publish" } : new[] { "view", "manage" };
+            var actions = role.Code == RbacRoleCodes.ProjectManager ? new[] { "view", "publish" } : new[] { "view", "manage" };
             foreach (var permission in permissions.Where(x => newActions.Contains(x.Action) && actions.Contains(x.Action)))
                 if (!db.RolePermissions.Any(x => x.RoleId == role.Id && x.PermissionId == permission.Id))
                     db.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id, CreatedAt = DateTime.UtcNow });

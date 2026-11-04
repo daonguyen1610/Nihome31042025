@@ -7,6 +7,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Services;
 
@@ -1195,7 +1196,7 @@ public sealed class ProcurementService(
         if (request.RequiredAt <= DateTime.UtcNow)
             throw new ProcurementOperationException("Ngày cần vật tư phải ở tương lai.");
         await ValidateProjectUserAsync(projectId, request.ResponsibleSiteUserId, null, "Người chịu trách nhiệm tại công trường", ct);
-        await ValidateProjectUserAsync(projectId, request.AssignedProcurementUserId, "PROCUREMENT", "Nhân viên mua hàng", ct);
+        await ValidateProjectUserAsync(projectId, request.AssignedProcurementUserId, RbacRoleCodes.Procurement, "Nhân viên mua hàng", ct);
         var ids = request.Lines.Select(item => item.ProjectBoqLineId).ToList();
         if (ids.Count != ids.Distinct().Count())
             throw new ProcurementOperationException("Mỗi dòng BOQ chỉ được xuất hiện một lần trong yêu cầu vật tư.");
@@ -1275,7 +1276,7 @@ public sealed class ProcurementService(
         var currentRevisionId = await CurrentApprovedRevisionIdAsync(projectId, ct);
         if (!await db.ProjectBoqLines.AnyAsync(item => item.Id == request.ProjectBoqLineId && item.ProjectBoqRevisionId == currentRevisionId, ct))
             throw new ProcurementOperationException("Dòng hợp đồng phải tham chiếu BOQ đang được duyệt.");
-        await ValidateProjectUserAsync(projectId, request.ProcurementOwnerUserId, "PROCUREMENT", "Chủ sở hữu mua hàng", ct);
+        await ValidateProjectUserAsync(projectId, request.ProcurementOwnerUserId, RbacRoleCodes.Procurement, "Chủ sở hữu mua hàng", ct);
         if (await db.ContractLines.AnyAsync(item => item.ContractId == request.ContractId &&
             item.ProjectBoqLineId == request.ProjectBoqLineId && item.Id != excludeId, ct))
             throw new ProcurementOperationException("Hợp đồng đã có dòng cho mã BOQ này.");

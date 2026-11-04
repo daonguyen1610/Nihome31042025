@@ -221,7 +221,7 @@ public sealed class LegalActivationService(
         }
 
         var constructionGroup = await db.RoleGroups.AsNoTracking()
-            .SingleOrDefaultAsync(item => item.Code == "CONSTRUCTION" && item.IsActive, ct)
+            .SingleOrDefaultAsync(item => item.Code == RoleGroupCodes.Construction && item.IsActive, ct)
             ?? throw Error("LEGAL_DEPARTMENT_MISSING", "Nhóm phòng ban CONSTRUCTION chưa được cấu hình.");
         var reused = package is not null;
         if (package is null)
@@ -534,7 +534,7 @@ public sealed class LegalActivationService(
                     ? item.User.RoleEntity.RoleGroup.Code : string.Empty,
                 CanLeadLegal = item.Roles.Any(role => role.RoleCode == ProjectTeamRoleCode.LegalOfficer &&
                     role.StartedAt <= now && (!role.EndedAt.HasValue || role.EndedAt > now)) ||
-                    item.User.RoleEntity != null && item.User.RoleEntity.Code == "LEGAL_OFFICER",
+                    item.User.RoleEntity != null && item.User.RoleEntity.Code == RbacRoleCodes.LegalOfficer,
             }).Where(item => item.RoleGroupId > 0).ToListAsync(ct);
     }
 
@@ -543,7 +543,7 @@ public sealed class LegalActivationService(
         var admin = await db.Users.AsNoTracking().AnyAsync(item => item.Id == callerUserId && item.IsActive &&
             (item.Role == UserRole.ADMIN || item.Role == UserRole.SUPER_ADMIN || item.RoleEntity != null &&
                 item.RoleEntity.IsActive && item.RoleEntity.IsSystem &&
-                (item.RoleEntity.Code == "ADMIN" || item.RoleEntity.Code == "SUPER_ADMIN")), ct);
+                (item.RoleEntity.Code == RbacRoleCodes.Admin || item.RoleEntity.Code == RbacRoleCodes.SuperAdmin)), ct);
         if (admin) return;
         if (!await db.OperationalProjects.AsNoTracking().AnyAsync(
                 item => item.Id == projectId && item.ProjectManagerUserId == callerUserId, ct))
