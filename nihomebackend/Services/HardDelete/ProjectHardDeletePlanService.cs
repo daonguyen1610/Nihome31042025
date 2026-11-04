@@ -145,31 +145,33 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
                     folderImpact.Examples = ["Thư mục và tệp trên Google Drive được giữ nguyên theo cấu hình hiện tại."];
                 }
                 else
-                try
                 {
-                    var activeItems = await db.HardDeleteItems.AsNoTracking()
-                        .Where(item => item.Operation.ResourceType == EntityTypes.OperationalProject &&
-                            item.Operation.ResourceId == impact.ResourceId.ToString() &&
-                            item.Operation.Status != HardDeleteOperationStatus.Completed &&
-                            (item.Kind == HardDeleteItemKind.DriveFolder || item.Kind == HardDeleteItemKind.DriveFile))
-                        .OrderBy(item => item.Sequence).ToListAsync(ct);
-                    folderDeletes = activeItems.Count > 0
-                        ? activeItems.Select(item => new HardDeleteItemDefinition(item.Kind,
-                            item.ActionIdentifier, item.Sequence,
-                            JsonSerializer.Deserialize<Dictionary<string, string>>(item.ExpectedAppPropertiesJson!)!,
-                            item.ExpectedParentId)).ToList()
-                        : await ProjectDriveDeletionPlanner.BuildAsync(impact.ResourceId,
-                            bindings, drive, driveOptions, ct,
-                            documents.Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Deleted &&
-                                item.DesiredOperation == ProjectDocumentDesiredOperation.None)
-                                .ToDictionary(item => ProjectDriveSyncProcessor.ReplicaKey(item.Id), item => item.Generation));
-                    impact.Items.Remove(folderImpact);
-                }
-                catch (Exception exception) when (exception is not OperationCanceledException)
-                {
-                    folderImpact.Action = DeletionImpactActions.Block;
-                    folderImpact.Examples = ["Kết nối Drive và dọn nội dung thư mục tại phân hệ nguồn trước khi xóa dự án."];
-                    identities.Add("drive-folders:verification-blocked");
+                    try
+                    {
+                        var activeItems = await db.HardDeleteItems.AsNoTracking()
+                            .Where(item => item.Operation.ResourceType == EntityTypes.OperationalProject &&
+                                item.Operation.ResourceId == impact.ResourceId.ToString() &&
+                                item.Operation.Status != HardDeleteOperationStatus.Completed &&
+                                (item.Kind == HardDeleteItemKind.DriveFolder || item.Kind == HardDeleteItemKind.DriveFile))
+                            .OrderBy(item => item.Sequence).ToListAsync(ct);
+                        folderDeletes = activeItems.Count > 0
+                            ? activeItems.Select(item => new HardDeleteItemDefinition(item.Kind,
+                                item.ActionIdentifier, item.Sequence,
+                                JsonSerializer.Deserialize<Dictionary<string, string>>(item.ExpectedAppPropertiesJson!)!,
+                                item.ExpectedParentId)).ToList()
+                            : await ProjectDriveDeletionPlanner.BuildAsync(impact.ResourceId,
+                                bindings, drive, driveOptions, ct,
+                                documents.Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Deleted &&
+                                    item.DesiredOperation == ProjectDocumentDesiredOperation.None)
+                                    .ToDictionary(item => ProjectDriveSyncProcessor.ReplicaKey(item.Id), item => item.Generation));
+                        impact.Items.Remove(folderImpact);
+                    }
+                    catch (Exception exception) when (exception is not OperationCanceledException)
+                    {
+                        folderImpact.Action = DeletionImpactActions.Block;
+                        folderImpact.Examples = ["Kết nối Drive và dọn nội dung thư mục tại phân hệ nguồn trước khi xóa dự án."];
+                        identities.Add("drive-folders:verification-blocked");
+                    }
                 }
             }
 
