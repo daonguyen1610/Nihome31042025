@@ -62,6 +62,78 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task SharedLayout_RequiresAdmin_ValidatesAndUpdatesSchedulePreview()
+    {
+        const string path = "/api/site-settings/email-templates";
+        const string layout = "<div><p>NICON · {{heading}}</p><div>{{content}}</div><p>{{footer}}</p></div>";
+        (await Client.PutAsJsonAsync(path, new { sharedBusinessEmailLayoutTemplate = layout }))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.PutAsJsonAsync(path, new { sharedBusinessEmailLayoutTemplate = layout }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var original = await ReadJsonAsync(await Client.GetAsync(path));
+        var originalLayout = original.GetProperty("sharedBusinessEmailLayoutTemplate").GetString();
+        var applicationSubject = original.GetProperty("newApplicationEmailSubjectTemplate").GetString();
+        var applicationBody = original.GetProperty("newApplicationEmailBodyTemplate").GetString();
+        var notificationEmail = original.GetProperty("notificationEmail").GetString();
+        var otpSubject = original.GetProperty("otpEmailSubjectTemplate").GetString();
+        var otpBody = original.GetProperty("otpEmailBodyTemplate").GetString();
+        try
+        {
+            var invalid = await Client.PutAsJsonAsync(path, new
+            {
+                sharedBusinessEmailLayoutTemplate = "<div onclick=\"alert(1)\">{{content}}</div>"
+            });
+            invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var missingSlot = await Client.PutAsJsonAsync(path, new
+            {
+                sharedBusinessEmailLayoutTemplate = "<div>{{heading}}{{content}}</div>"
+            });
+            missingSlot.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(await Client.GetAsync(path)))
+                .GetProperty("sharedBusinessEmailLayoutTemplate").GetString().Should().Be(originalLayout);
+
+            var saved = await Client.PutAsJsonAsync(path, new
+            {
+                newApplicationEmailSubjectTemplate = applicationSubject,
+                newApplicationEmailBodyTemplate = applicationBody,
+                notificationEmail,
+                otpEmailSubjectTemplate = otpSubject,
+                otpEmailBodyTemplate = otpBody,
+                sharedBusinessEmailLayoutTemplate = layout
+            });
+            saved.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(await Client.GetAsync(path)))
+                .GetProperty("sharedBusinessEmailLayoutTemplate").GetString().Should().Be(layout);
+            var configured = await ReadJsonAsync(await Client.GetAsync(path));
+            configured.GetProperty("otpEmailBodyTemplate").GetString().Should().StartWith("<div><p>NICON · ");
+            configured.GetProperty("newApplicationEmailBodyTemplate").GetString().Should().StartWith("<div><p>NICON · ");
+            configured.GetProperty("quoteEmailBodyTemplate").GetString().Should().StartWith("<div><p>NICON · ");
+            var preview = await Client.PostAsJsonAsync(path + "/project-schedule/preview", new
+            {
+                subject = NihomeBackend.Services.ProjectScheduleEmailTemplates.DefaultSubject,
+                body = NihomeBackend.Services.ProjectScheduleEmailTemplates.DefaultBody
+            });
+            preview.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(preview)).GetProperty("body").GetString().Should().StartWith("<div><p>NICON · ");
+        }
+        finally
+        {
+            await Client.PutAsJsonAsync(path, new
+            {
+                newApplicationEmailSubjectTemplate = applicationSubject,
+                newApplicationEmailBodyTemplate = applicationBody,
+                notificationEmail,
+                otpEmailSubjectTemplate = otpSubject,
+                otpEmailBodyTemplate = otpBody,
+                sharedBusinessEmailLayoutTemplate = originalLayout
+            });
+        }
+    }
+
+    [Fact]
     public async Task ProjectSchedulePreview_UsesServerRenderingAndRequiresManagementPermission()
     {
         const string path = "/api/site-settings/email-templates/project-schedule/preview";

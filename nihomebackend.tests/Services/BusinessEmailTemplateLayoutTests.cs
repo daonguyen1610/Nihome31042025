@@ -7,6 +7,71 @@ namespace nihomebackend.tests.Services;
 
 public sealed class BusinessEmailTemplateLayoutTests
 {
+    [Fact]
+    public void BusinessDefaults_UseTheSameNiconLayout()
+    {
+        var bodies = new[]
+        {
+            EmailTemplateFormatter.DefaultQuoteBody,
+            QuoteApprovalEmailTemplates.DefaultBody,
+            ContractReminderTemplates.RenewalBody,
+            ContractReminderTemplates.EndBody,
+            WorkPackageApprovalEmailTemplates.DefaultBody,
+            ProjectScheduleEmailTemplates.DefaultBody
+        };
+
+        foreach (var body in bodies)
+        {
+            AssertLayout(body);
+            Assert.True(EmailTemplateFormatter.IsSafeQuoteHtml(body.Replace("<a href=\"{{workPackageUrl}}\">", "<span>")
+                .Replace("<a href=\"{{quoteUrl}}\">", "<span>").Replace("</a>", "</span>")));
+        }
+    }
+
+    [Fact]
+    public void SharedLayout_ChangesPresentationAndPreservesEventContent()
+    {
+        const string layout = "<div><p>NICON · {{heading}}</p><div>{{content}}</div><p>{{footer}}</p></div>";
+        var settings = new SiteSettings { SharedBusinessEmailLayoutTemplate = layout };
+
+        var schedule = ProjectScheduleEmailTemplates.Get(settings);
+        var quoteApproval = QuoteApprovalEmailTemplates.Get(settings);
+        var contract = ContractReminderTemplates.Get(settings);
+        var workPackage = WorkPackageApprovalEmailTemplates.Get(settings);
+
+        Assert.All(new[] { schedule.Body, quoteApproval.Body, contract.RenewalBody,
+            contract.EndBody, workPackage.Body }, body => Assert.StartsWith("<div><p>NICON · ", body));
+        Assert.Contains("{{changeSummary}}", schedule.Body);
+        Assert.Contains("{{quoteUrl}}", quoteApproval.Body);
+        Assert.Contains("{{contractNumber}}", contract.RenewalBody);
+        Assert.Contains("{{workPackageUrl}}", workPackage.Body);
+
+        var otp = EmailTemplateFormatter.BuildOtpEmail(null, null, "NICON", "123456", layoutTemplate: layout);
+        var application = EmailTemplateFormatter.BuildNewApplicationEmail(null, null, "NICON",
+            "Kỹ sư MEP", "Thiết kế", "Nguyễn Văn An", "an@example.test", null, null, null,
+            new DateTime(2026, 11, 5), layout);
+        Assert.StartsWith("<div><p>NICON · ", otp.body);
+        Assert.Contains("123456", otp.body);
+        Assert.StartsWith("<div><p>NICON · ", application.body);
+        Assert.Contains("Kỹ sư MEP", application.body);
+
+        var quote = EmailTemplateFormatter.BuildQuoteEmail(null, null,
+            new Dictionary<string, string>
+            {
+                ["customerName"] = "Nhà máy An Phú",
+                ["quoteCode"] = "BG-2026-01",
+                ["opportunityName"] = "Thiết kế MEP",
+                ["quoteLines"] = "Hạng mục MEP",
+                ["discountPercent"] = "0",
+                ["vatPercent"] = "8",
+                ["grandTotal"] = "100.000.000",
+                ["validUntil"] = "30/11/2026"
+            }, layout);
+        Assert.StartsWith("<div><p>NICON · ", quote.body);
+        Assert.Contains("BG-2026-01", quote.body);
+        Assert.Contains("Hạng mục MEP", quote.body);
+    }
+
     [Theory]
     [InlineData("Renewal")]
     [InlineData("End")]

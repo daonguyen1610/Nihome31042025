@@ -31,7 +31,8 @@ public class SiteSettingsService(AppDbContext db)
         string? quoteEmailSubject = null,
         string? quoteEmailBody = null,
         string? projectScheduleEmailSubject = null,
-        string? projectScheduleEmailBody = null)
+        string? projectScheduleEmailBody = null,
+        string? sharedBusinessEmailLayout = null)
     {
         var settings = await db.SiteSettings.FirstOrDefaultAsync()
             ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
@@ -61,6 +62,8 @@ public class SiteSettingsService(AppDbContext db)
             settings.ProjectScheduleEmailSubjectTemplate = scheduleTemplate.Subject;
             settings.ProjectScheduleEmailBodyTemplate = scheduleTemplate.Body;
         }
+        if (sharedBusinessEmailLayout is not null)
+            settings.SharedBusinessEmailLayoutTemplate = NiconEmailLayout.Validate(sharedBusinessEmailLayout);
         settings.UpdatedAt = DateTime.UtcNow;
 
         await db.SaveChangesAsync();

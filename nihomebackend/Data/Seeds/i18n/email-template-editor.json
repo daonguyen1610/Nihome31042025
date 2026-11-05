@@ -1,5 +1,61 @@
 [
   {
+    "key": "emailTemplate.layout.tab",
+    "category": "emailTemplate",
+    "vi": "Giao diện chung",
+    "en": "Shared layout",
+    "zh": "共用版式",
+    "ja": "共通レイアウト"
+  },
+  {
+    "key": "emailTemplate.layout.label",
+    "category": "emailTemplate",
+    "vi": "HTML giao diện email chung",
+    "en": "Shared email layout HTML",
+    "zh": "共用邮件版式 HTML",
+    "ja": "共通メールのレイアウト HTML"
+  },
+  {
+    "key": "emailTemplate.layout.guidance",
+    "category": "emailTemplate",
+    "vi": "Giữ đúng một biến {{heading}}, {{content}} và {{footer}}. Thay đổi áp dụng cho email mới; email đã xếp hàng giữ nguyên bản đã xác nhận.",
+    "en": "Keep exactly one {{heading}}, {{content}}, and {{footer}}. Changes apply to new emails; queued emails retain their confirmed snapshot.",
+    "zh": "每个 {{heading}}、{{content}} 和 {{footer}} 变量须恰好出现一次。更改适用于新邮件；已排队邮件保留原快照。",
+    "ja": "{{heading}}、{{content}}、{{footer}} をそれぞれ 1 回だけ残してください。変更は新規メールに適用され、送信待ちメールは確定済み内容を保持します。"
+  },
+  {
+    "key": "emailTemplate.layout.sample.heading",
+    "category": "emailTemplate",
+    "vi": "TIẾN ĐỘ TỔNG THỂ · Yêu cầu duyệt",
+    "en": "MASTER SCHEDULE · Approval requested",
+    "zh": "项目总进度 · 审批请求",
+    "ja": "マスタースケジュール · 承認依頼"
+  },
+  {
+    "key": "emailTemplate.layout.sample.content",
+    "category": "emailTemplate",
+    "vi": "Kính gửi Nguyễn Văn An,|Dự án PJ-2026-001 · Trung tâm dịch vụ NICON",
+    "en": "Dear Nguyễn Văn An,|Project PJ-2026-001 · NICON Service Center",
+    "zh": "尊敬的 Nguyễn Văn An：|项目 PJ-2026-001 · NICON 服务中心",
+    "ja": "Nguyễn Văn An 様|プロジェクト PJ-2026-001 · NICON サービスセンター"
+  },
+  {
+    "key": "emailTemplate.layout.sample.footer",
+    "category": "emailTemplate",
+    "vi": "NICON · Thông báo tiến độ dự án",
+    "en": "NICON · Project schedule notification",
+    "zh": "NICON · 项目进度通知",
+    "ja": "NICON · プロジェクト日程通知"
+  },
+  {
+    "key": "emailTemplate.layout.preview",
+    "category": "emailTemplate",
+    "vi": "Xem trước giao diện",
+    "en": "Layout preview",
+    "zh": "版式预览",
+    "ja": "レイアウトのプレビュー"
+  },
+  {
     "key": "emailTemplate.editor.subject",
     "category": "emailTemplates",
     "vi": "Tiêu đề email",

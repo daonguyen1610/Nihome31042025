@@ -10,37 +10,31 @@ public static class QuoteApprovalEmailTemplates
 {
     public static readonly string[] Tokens = ["recipientName", "senderName", "quoteCode", "quoteVersion", "grandTotal", "validUntil", "quoteUrl"];
     public const string DefaultSubject = "NICON – Duyệt báo giá {{quoteCode}}";
-    public const string DefaultBody = """
-        <div style="margin:0;padding:24px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1f2937">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb">
-            <tr><td style="padding:18px 24px;background:#e5394a;color:#ffffff">
-              <div style="font-size:20px;font-weight:700">NICON</div>
-              <div style="font-size:12px;margin:6px 0 0">YÊU CẦU DUYỆT BÁO GIÁ · {{quoteCode}}</div>
-            </td></tr>
-            <tr><td style="padding:24px">
-              <p style="margin:0 0 16px;font-size:15px;line-height:24px">Kính gửi <strong>{{recipientName}}</strong>,</p>
-              <p style="margin:0 0 18px;font-size:14px;line-height:22px"><strong>{{senderName}}</strong> đã gửi báo giá để anh/chị kiểm tra và phê duyệt.</p>
-              <div style="padding:16px;background:#f8fafc;border:1px solid #e5e7eb">
-                <div style="font-size:12px;font-weight:700;color:#64748b">THÔNG TIN BÁO GIÁ</div>
-                <p style="margin:8px 0 0;font-size:16px;font-weight:700;line-height:24px">{{quoteCode}} · Phiên bản {{quoteVersion}}</p>
-                <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#64748b">Tổng giá trị</p>
-                <p style="margin:4px 0 0;font-size:18px;font-weight:700;line-height:26px">{{grandTotal}} VND</p>
-                <p style="margin:12px 0 0;font-size:13px;line-height:20px;color:#64748b">Hiệu lực đến</p>
-                <p style="margin:4px 0 0;font-size:14px;font-weight:700;line-height:22px">{{validUntil}}</p>
-              </div>
-              <div style="margin:18px 0 0;padding:16px;background:#fff1f2;color:#9f1239;font-size:14px;line-height:22px">Vui lòng đăng nhập NICON, kiểm tra báo giá và ghi nhận quyết định trong hệ thống.</div>
-              <p style="margin:16px 0 0;font-size:14px;line-height:22px"><a href="{{quoteUrl}}">Mở báo giá để duyệt hoặc từ chối</a></p>
-              <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#64748b">Email này chỉ thông báo; quyết định phê duyệt không được thực hiện qua email.</p>
-              <p style="margin:22px 0 0;font-size:14px;line-height:22px">Trân trọng,<br /><strong>NICON</strong></p>
-            </td></tr>
-            <tr><td style="padding:12px 24px;background:#f8fafc;color:#64748b;font-size:12px;line-height:18px">NICON · Thông báo phê duyệt báo giá</td></tr>
-          </table>
+    public static string DefaultBody => NiconEmailLayout.Wrap(
+        "YÊU CẦU DUYỆT BÁO GIÁ · {{quoteCode}}",
+        """
+        <p style="margin:0 0 16px;font-size:15px;line-height:24px">Kính gửi <strong>{{recipientName}}</strong>,</p>
+        <p style="margin:0 0 18px;font-size:14px;line-height:22px"><strong>{{senderName}}</strong> đã gửi báo giá để anh/chị kiểm tra và phê duyệt.</p>
+        <div style="padding:16px;background:#f8fafc;border:1px solid #e5e7eb">
+          <div style="font-size:12px;font-weight:700;color:#64748b">THÔNG TIN BÁO GIÁ</div>
+          <p style="margin:8px 0 0;font-size:16px;font-weight:700;line-height:24px">{{quoteCode}} · Phiên bản {{quoteVersion}}</p>
+          <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#64748b">Tổng giá trị</p>
+          <p style="margin:4px 0 0;font-size:18px;font-weight:700;line-height:26px">{{grandTotal}} VND</p>
+          <p style="margin:12px 0 0;font-size:13px;line-height:20px;color:#64748b">Hiệu lực đến</p>
+          <p style="margin:4px 0 0;font-size:14px;font-weight:700;line-height:22px">{{validUntil}}</p>
         </div>
-        """;
+        <div style="margin:18px 0 0;padding:16px;background:#fff1f2;color:#9f1239;font-size:14px;line-height:22px">Vui lòng đăng nhập NICON, kiểm tra báo giá và ghi nhận quyết định trong hệ thống.</div>
+        <p style="margin:16px 0 0;font-size:14px;line-height:22px"><a href="{{quoteUrl}}">Mở báo giá để duyệt hoặc từ chối</a></p>
+        <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#64748b">Email này chỉ thông báo; quyết định phê duyệt không được thực hiện qua email.</p>
+        <p style="margin:22px 0 0;font-size:14px;line-height:22px">Trân trọng,<br /><strong>NICON</strong></p>
+        """,
+        "NICON · Thông báo phê duyệt báo giá");
 
     public static QuoteApprovalTemplate Get(SiteSettings? settings) => new(
         settings?.QuoteApprovalEmailSubjectTemplate ?? DefaultSubject,
-        settings?.QuoteApprovalEmailBodyTemplate ?? DefaultBody);
+        NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate,
+            settings?.QuoteApprovalEmailBodyTemplate ?? DefaultBody,
+            "YÊU CẦU DUYỆT BÁO GIÁ · {{quoteCode}}", "NICON · Thông báo phê duyệt báo giá"));
 
     public static string Validate(string value, bool body)
     {

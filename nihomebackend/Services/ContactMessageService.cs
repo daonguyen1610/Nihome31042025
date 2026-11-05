@@ -65,7 +65,9 @@ public class ContactMessageService(
                       </div>
                     </div>
                     """;
-                await emailService.SendEmailAsync(notifyEmail, subject, body);
+                await emailService.SendEmailAsync(notifyEmail, subject,
+                    NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate, body,
+                        subject, "NICON"));
             }
         }
         catch (Exception ex)
@@ -119,7 +121,9 @@ public class ContactMessageService(
                   </div>
                 </div>
                 """;
-            await emailService.SendEmailAsync(entity.Email, subject, body);
+            await emailService.SendEmailAsync(entity.Email, subject,
+                NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate, body,
+                    subject, "NICON"));
         }
         catch (Exception ex)
         {

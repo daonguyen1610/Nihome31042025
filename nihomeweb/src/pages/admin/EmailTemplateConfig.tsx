@@ -12,11 +12,19 @@ import type { ProjectScheduleEmailReviewItem } from "@/services/adminApi";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import EmailTemplateEditor from "@/components/admin/EmailTemplateEditor";
 
 type TabType =
-  "application" | "otp" | "quote" | "projectSchedule" | "quoteApproval" | "contract" | "approval";
+  | "application"
+  | "otp"
+  | "quote"
+  | "projectSchedule"
+  | "quoteApproval"
+  | "contract"
+  | "approval"
+  | "layout";
 
 const APPLICATION_TOKENS = [
   { token: "{{siteName}}", desc: "Tên website" },
@@ -56,6 +64,13 @@ const PROJECT_SCHEDULE_TOKENS = [
   "changeSummary",
 ];
 
+const escapePreviewText = (value: string) =>
+  value.replace(
+    /[&<>"']/g,
+    (character) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[character],
+  );
+
 const EmailTemplateConfig = () => {
   const { t } = useI18n();
   const { toast } = useToast();
@@ -80,6 +95,7 @@ const EmailTemplateConfig = () => {
   const [quoteBody, setQuoteBody] = useState("");
   const [projectScheduleSubject, setProjectScheduleSubject] = useState("");
   const [projectScheduleBody, setProjectScheduleBody] = useState("");
+  const [sharedLayout, setSharedLayout] = useState("");
   const [schedulePreview, setSchedulePreview] = useState<{ subject: string; body: string } | null>(
     null,
   );
@@ -101,6 +117,7 @@ const EmailTemplateConfig = () => {
       setQuoteBody(res.data.quoteEmailBodyTemplate ?? "");
       setProjectScheduleSubject(res.data.projectScheduleEmailSubjectTemplate);
       setProjectScheduleBody(res.data.projectScheduleEmailBodyTemplate);
+      setSharedLayout(res.data.sharedBusinessEmailLayoutTemplate);
     } catch {
       toast({
         title: t("common.error"),
@@ -223,6 +240,7 @@ const EmailTemplateConfig = () => {
         quoteEmailBodyTemplate: quoteBody,
         projectScheduleEmailSubjectTemplate: projectScheduleSubject,
         projectScheduleEmailBodyTemplate: projectScheduleBody,
+        sharedBusinessEmailLayoutTemplate: sharedLayout,
       });
       toast({ title: "Đã lưu", description: "Cấu hình email template đã được cập nhật." });
     } catch (error) {
@@ -301,6 +319,19 @@ const EmailTemplateConfig = () => {
         </header>
 
         <div className="flex flex-wrap gap-1 border-b">
+          <button
+            type="button"
+            onClick={() => setActiveTab("layout")}
+            aria-pressed={activeTab === "layout"}
+            className={cn(
+              "-mb-px border-b-2 px-4 py-2 text-sm font-medium",
+              activeTab === "layout"
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground",
+            )}
+          >
+            {t("emailTemplate.layout.tab")}
+          </button>
           <button
             type="button"
             onClick={() => setActiveTab("application")}
@@ -394,66 +425,110 @@ const EmailTemplateConfig = () => {
             actionsContainer={actionsContainer}
           />
         </div>
-        {activeTab !== "contract" && activeTab !== "approval" && activeTab !== "quoteApproval" && (
-          <EmailTemplateEditor
-            key={activeTab}
-            id="email"
-            subject={activeSubject}
-            body={activeBody}
-            onSubjectChange={
-              activeTab === "application"
-                ? setSubject
-                : activeTab === "otp"
-                  ? setOtpSubject
-                  : activeTab === "projectSchedule"
-                    ? setProjectScheduleSubject
-                    : setQuoteSubject
-            }
-            onBodyChange={
-              activeTab === "application"
-                ? setBody
-                : activeTab === "otp"
-                  ? setOtpBody
-                  : activeTab === "projectSchedule"
-                    ? setProjectScheduleBody
-                    : setQuoteBody
-            }
-            subjectMaxLength={activeTab === "quote" || activeTab === "projectSchedule" ? 200 : 255}
-            bodyMaxLength={
-              activeTab === "quote" || activeTab === "projectSchedule" ? 8000 : undefined
-            }
-            hint={
-              activeTab === "quote"
-                ? t("emailTemplate.quote.hint")
-                : activeTab === "projectSchedule"
-                  ? t("emailTemplate.schedule.hint")
-                  : undefined
-            }
-            tokens={currentTokens}
-            renderedPreview={activeTab === "projectSchedule" ? schedulePreview : undefined}
-            previewError={activeTab === "projectSchedule" ? schedulePreviewError : undefined}
-            previewLoading={activeTab === "projectSchedule" && schedulePreviewLoading}
-            beforeSubject={
-              activeTab === "application" ? (
-                <div className="space-y-1.5">
-                  <Label className="text-xs" htmlFor="notification-email">
-                    Email nhận thông báo
-                  </Label>
-                  <Input
-                    id="notification-email"
-                    type="email"
-                    value={notificationEmail}
-                    onChange={(event) => setNotificationEmail(event.target.value)}
-                    placeholder="hr@nihome.vn"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    Email sẽ nhận thông báo khi có đơn ứng tuyển mới.
-                  </p>
-                </div>
-              ) : undefined
-            }
-          />
+        {activeTab === "layout" && (
+          <section className="grid gap-5 lg:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="shared-email-layout">{t("emailTemplate.layout.label")}</Label>
+              <p className="text-sm text-muted-foreground">{t("emailTemplate.layout.guidance")}</p>
+              <Textarea
+                id="shared-email-layout"
+                value={sharedLayout}
+                maxLength={8000}
+                onChange={(event) => setSharedLayout(event.target.value)}
+                className="min-h-96 font-mono text-xs"
+              />
+            </div>
+            <div className="space-y-2">
+              <h2 className="text-sm font-medium">{t("emailTemplate.layout.preview")}</h2>
+              <iframe
+                title={t("emailTemplate.layout.preview")}
+                sandbox=""
+                className="h-[520px] w-full rounded-md border bg-white"
+                srcDoc={sharedLayout
+                  .replace(
+                    "{{heading}}",
+                    escapePreviewText(t("emailTemplate.layout.sample.heading")),
+                  )
+                  .replace(
+                    "{{content}}",
+                    t("emailTemplate.layout.sample.content")
+                      .split("|")
+                      .map((line) => `<p>${escapePreviewText(line)}</p>`)
+                      .join(""),
+                  )
+                  .replace(
+                    "{{footer}}",
+                    escapePreviewText(t("emailTemplate.layout.sample.footer")),
+                  )}
+              />
+            </div>
+          </section>
         )}
+        {activeTab !== "layout" &&
+          activeTab !== "contract" &&
+          activeTab !== "approval" &&
+          activeTab !== "quoteApproval" && (
+            <EmailTemplateEditor
+              key={activeTab}
+              id="email"
+              subject={activeSubject}
+              body={activeBody}
+              onSubjectChange={
+                activeTab === "application"
+                  ? setSubject
+                  : activeTab === "otp"
+                    ? setOtpSubject
+                    : activeTab === "projectSchedule"
+                      ? setProjectScheduleSubject
+                      : setQuoteSubject
+              }
+              onBodyChange={
+                activeTab === "application"
+                  ? setBody
+                  : activeTab === "otp"
+                    ? setOtpBody
+                    : activeTab === "projectSchedule"
+                      ? setProjectScheduleBody
+                      : setQuoteBody
+              }
+              subjectMaxLength={
+                activeTab === "quote" || activeTab === "projectSchedule" ? 200 : 255
+              }
+              bodyMaxLength={
+                activeTab === "quote" || activeTab === "projectSchedule" ? 8000 : undefined
+              }
+              hint={
+                activeTab === "quote"
+                  ? t("emailTemplate.quote.hint")
+                  : activeTab === "projectSchedule"
+                    ? t("emailTemplate.schedule.hint")
+                    : undefined
+              }
+              tokens={currentTokens}
+              renderedPreview={activeTab === "projectSchedule" ? schedulePreview : undefined}
+              previewError={activeTab === "projectSchedule" ? schedulePreviewError : undefined}
+              previewLoading={activeTab === "projectSchedule" && schedulePreviewLoading}
+              beforeSubject={
+                activeTab === "application" ? (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs" htmlFor="notification-email">
+                      Email nhận thông báo
+                    </Label>
+                    <Input
+                      id="notification-email"
+                      type="email"
+                      value={notificationEmail}
+                      onChange={(event) => setNotificationEmail(event.target.value)}
+                      placeholder="hr@nihome.vn"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Email sẽ nhận thông báo khi có đơn ứng tuyển mới.
+                    </p>
+                  </div>
+                ) : undefined
+              }
+            />
+          )}
         {activeTab === "projectSchedule" && (
           <section id="schedule-delivery" className="space-y-3 border-t pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3">

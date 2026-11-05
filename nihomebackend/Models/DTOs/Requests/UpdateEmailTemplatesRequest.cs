@@ -21,6 +21,9 @@ public class UpdateEmailTemplatesRequest
 
     [StringLength(8000, MinimumLength = 1)]
     public string? ProjectScheduleEmailBodyTemplate { get; set; }
+
+    [StringLength(8000, MinimumLength = 1)]
+    public string? SharedBusinessEmailLayoutTemplate { get; set; }
 }
 
 public sealed class PreviewProjectScheduleEmailRequest

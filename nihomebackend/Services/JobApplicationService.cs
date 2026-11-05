@@ -72,7 +72,8 @@ public class JobApplicationService(
                     entity.Phone,
                     entity.ExperienceYears,
                     entity.CoverLetter,
-                    entity.AppliedAt);
+                    entity.AppliedAt,
+                    settings?.SharedBusinessEmailLayoutTemplate);
 
                 await emailService.SendEmailAsync(notifyEmail, subject, body);
             }

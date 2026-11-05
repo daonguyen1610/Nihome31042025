@@ -46,6 +46,7 @@ public class SiteSettings
     public string? WorkPackageApprovalEmailBodyTemplate { get; set; }
     public string? ProjectScheduleEmailSubjectTemplate { get; set; }
     public string? ProjectScheduleEmailBodyTemplate { get; set; }
+    public string? SharedBusinessEmailLayoutTemplate { get; set; }
 
     public string? NotificationEmail { get; set; }
 

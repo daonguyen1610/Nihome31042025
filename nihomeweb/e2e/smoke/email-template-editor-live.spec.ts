@@ -3,6 +3,63 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
 const contractTab = "Mẫu email gia hạn và kết thúc hợp đồng";
 const approvalTab = "Duyệt nhóm công việc";
 
+test("shared layout edits apply to schedule preview on the live stack", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}, testInfo) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const path = "/api/site-settings/email-templates";
+  const original = await (await api.get(path, { headers })).json();
+  const layout = "<div><p>NICON · {{heading}}</p><div>{{content}}</div><p>{{footer}}</p></div>";
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => {
+    if (window === window.top) localStorage.setItem("nicon_lang", "vi");
+  });
+  await page.goto("/admin/email-templates");
+  try {
+    await page.getByRole("button", { name: "Giao diện chung" }).click();
+    await page.locator("#shared-email-layout").fill(layout);
+    await expect(
+      page.frameLocator('iframe[title="Xem trước giao diện"]').locator("body"),
+    ).toContainText("Trung tâm dịch vụ NICON");
+    for (const width of [390, 768, 1440]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      );
+      await page.locator('iframe[title="Xem trước giao diện"]').scrollIntoViewIfNeeded();
+      await expect(
+        page.frameLocator('iframe[title="Xem trước giao diện"]').locator("body"),
+      ).toContainText("Trung tâm dịch vụ NICON");
+      await page.screenshot({
+        path: testInfo.outputPath(`shared-layout-editor-${width}.png`),
+        fullPage: true,
+      });
+    }
+    const saved = page.waitForResponse(
+      (response) => response.url().endsWith(path) && response.request().method() === "PUT",
+    );
+    await page.getByRole("button", { name: "Lưu thay đổi" }).click();
+    expect((await saved).ok()).toBe(true);
+    await page.getByRole("button", { name: "Tiến độ tổng thể", exact: true }).click();
+    const preview = page.frameLocator('iframe[title="Email preview"]');
+    await expect(preview.locator("body")).toContainText("PJ-2026-001");
+    await expect(preview.locator("body > div > p").first()).toContainText(
+      "NICON · TIẾN ĐỘ TỔNG THỂ",
+    );
+    for (const width of [390, 768]) {
+      await page.setViewportSize({ width, height: 900 });
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      );
+    }
+  } finally {
+    await api.put(path, { headers, data: original });
+  }
+});
+
 test("schedule email preview uses server rendering at mobile and desktop widths", async ({
   page,
   loginInBrowserAs,
