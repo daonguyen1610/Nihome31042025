@@ -6199,6 +6199,11 @@ export const adminApi = {
 
   // Email templates
   getEmailTemplates: () => api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
+  previewProjectScheduleEmail: (data: { subject: string; body: string }) =>
+    api.post<{ subject: string; body: string }>(
+      "/site-settings/email-templates/project-schedule/preview",
+      data,
+    ),
   getWorkPackageApprovalTemplate: () =>
     api.get<{ subject: string; body: string }>("/site-settings/work-package-approval-template"),
   updateWorkPackageApprovalTemplate: (data: { subject: string; body: string }) =>

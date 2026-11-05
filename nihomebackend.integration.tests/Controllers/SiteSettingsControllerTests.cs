@@ -61,6 +61,35 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ProjectSchedulePreview_UsesServerRenderingAndRequiresManagementPermission()
+    {
+        const string path = "/api/site-settings/email-templates/project-schedule/preview";
+        var request = new
+        {
+            subject = "NICON · {{eventName}} · {{projectCode}} · v{{version}}",
+            body = NihomeBackend.Services.ProjectScheduleEmailTemplates.DefaultBody,
+        };
+
+        (await Client.PostAsJsonAsync(path, request)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.PostAsJsonAsync(path, request)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        using var previewResponse = await Client.PostAsJsonAsync(path, request);
+        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = await ReadJsonAsync(previewResponse);
+        preview.GetProperty("subject").GetString().Should().Contain("PJ-2026-001");
+        preview.GetProperty("body").GetString().Should().Contain("Nguyễn Văn An");
+        preview.GetProperty("body").GetString().Should().Contain("<table role=\"presentation\"");
+        preview.GetProperty("body").GetString().Should().NotContain("{{");
+
+        using var invalidResponse = await Client.PostAsJsonAsync(path,
+            new { request.subject, body = "<script>{{changeSummary}}</script>" });
+        invalidResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task QuoteEmailTemplate_OnlyAdminCanUpdateAndInvalidBodyDoesNotPersist()
     {
         await AuthTestHelper.AuthenticateAsync(Client,

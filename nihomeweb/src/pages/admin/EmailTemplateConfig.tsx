@@ -69,6 +69,11 @@ const EmailTemplateConfig = () => {
   const [quoteBody, setQuoteBody] = useState("");
   const [projectScheduleSubject, setProjectScheduleSubject] = useState("");
   const [projectScheduleBody, setProjectScheduleBody] = useState("");
+  const [schedulePreview, setSchedulePreview] = useState<{ subject: string; body: string } | null>(
+    null,
+  );
+  const [schedulePreviewError, setSchedulePreviewError] = useState<string | null>(null);
+  const [schedulePreviewLoading, setSchedulePreviewLoading] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -99,6 +104,31 @@ const EmailTemplateConfig = () => {
   useEffect(() => {
     loadTemplates();
   }, [loadTemplates]);
+
+  useEffect(() => {
+    if (activeTab !== "projectSchedule" || loading) return;
+    let stale = false;
+    setSchedulePreview(null);
+    setSchedulePreviewError(null);
+    setSchedulePreviewLoading(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const response = await adminApi.previewProjectScheduleEmail({
+          subject: projectScheduleSubject,
+          body: projectScheduleBody,
+        });
+        if (!stale) setSchedulePreview(response.data);
+      } catch (error) {
+        if (!stale) setSchedulePreviewError(extractApiError(error));
+      } finally {
+        if (!stale) setSchedulePreviewLoading(false);
+      }
+    }, 300);
+    return () => {
+      stale = true;
+      window.clearTimeout(timer);
+    };
+  }, [activeTab, loading, projectScheduleSubject, projectScheduleBody]);
 
   const activeBody =
     activeTab === "application"
@@ -372,19 +402,9 @@ const EmailTemplateConfig = () => {
                   : undefined
             }
             tokens={currentTokens}
-            previewValues={
-              activeTab === "projectSchedule"
-                ? {
-                    eventName: "Yêu cầu duyệt tiến độ tổng thể",
-                    recipientName: "Nguyễn Văn An",
-                    projectCode: "PJ-2026-001",
-                    projectName: "Trung tâm dịch vụ NICON",
-                    version: "2",
-                    changeReason: "Khách hàng điều chỉnh thời gian bàn giao.",
-                    changeSummary: "1.1 2026-03-01–2026-04-01 → 1.1 2026-03-15–2026-04-15",
-                  }
-                : undefined
-            }
+            renderedPreview={activeTab === "projectSchedule" ? schedulePreview : undefined}
+            previewError={activeTab === "projectSchedule" ? schedulePreviewError : undefined}
+            previewLoading={activeTab === "projectSchedule" && schedulePreviewLoading}
             beforeSubject={
               activeTab === "application" ? (
                 <div className="space-y-1.5">

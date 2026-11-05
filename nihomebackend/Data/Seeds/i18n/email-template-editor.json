@@ -154,10 +154,18 @@
   {
     "key": "emailTemplate.schedule.hint",
     "category": "emailTemplates",
-    "vi": "Email thông báo duyệt/cập nhật tiến độ. Xem trước dùng dữ liệu mẫu; lúc gửi hệ thống thay bằng dữ liệu dự án thực tế.",
-    "en": "Approval and schedule-change emails. Preview uses sample data; delivery fills in the actual project details.",
-    "zh": "用于进度审批和变更通知。预览使用示例数据；发送时替换为实际项目内容。",
-    "ja": "工程の承認・変更通知メールです。プレビューにはサンプルを表示し、送信時に実際のプロジェクト情報を挿入します。"
+    "vi": "Email thông báo duyệt/cập nhật tiến độ. Bản xem trước được server kết xuất bằng dữ liệu mẫu; khi gửi dùng dữ liệu dự án thực tế.",
+    "en": "Approval and schedule-change emails. The server renders the preview with sample data; delivery uses actual project details.",
+    "zh": "用于进度审批和变更通知。服务器使用示例数据生成预览；发送时使用实际项目内容。",
+    "ja": "工程の承認・変更通知メールです。プレビューはサーバーがサンプルデータで生成し、送信時は実際のプロジェクト情報を使用します。"
+  },
+  {
+    "key": "emailTemplate.schedule.previewLoading",
+    "category": "emailTemplates",
+    "vi": "Đang tạo bản xem trước...",
+    "en": "Rendering preview...",
+    "zh": "正在生成预览...",
+    "ja": "プレビューを生成中..."
   },
   {
     "key": "emailTemplate.schedule.token.eventName",

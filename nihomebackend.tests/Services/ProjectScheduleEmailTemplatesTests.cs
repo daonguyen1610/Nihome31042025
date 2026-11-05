@@ -27,6 +27,29 @@ public sealed class ProjectScheduleEmailTemplatesTests
     }
 
     [Fact]
+    public void RenderKeepsSubjectPlainTextAndBodyHtmlEncoded()
+    {
+        var template = ProjectScheduleEmailTemplates.Get(null);
+        var values = new Dictionary<string, string>
+        {
+            ["eventName"] = "Duyệt & phát hành",
+            ["recipientName"] = "An <script>",
+            ["projectCode"] = "PJ&A",
+            ["projectName"] = "Trung tâm <mới>",
+            ["version"] = "2",
+            ["changeReason"] = "Điều chỉnh",
+            ["changeSummary"] = "Mốc 1 → Mốc 2",
+        };
+
+        var rendered = ProjectScheduleEmailTemplates.Render(template, values);
+
+        Assert.Contains("Duyệt & phát hành · PJ&A", rendered.Subject);
+        Assert.DoesNotContain("&amp;", rendered.Subject);
+        Assert.Contains("PJ&amp;A", rendered.Body);
+        Assert.Contains("An &lt;script&gt;", rendered.Body);
+    }
+
+    [Fact]
     public void DefaultTemplatePassesServerValidation()
     {
         var template = ProjectScheduleEmailTemplates.Validate(

@@ -22,3 +22,12 @@ public class UpdateEmailTemplatesRequest
     [StringLength(8000, MinimumLength = 1)]
     public string? ProjectScheduleEmailBodyTemplate { get; set; }
 }
+
+public sealed class PreviewProjectScheduleEmailRequest
+{
+    [Required, StringLength(200, MinimumLength = 1)]
+    public string Subject { get; set; } = string.Empty;
+
+    [Required, StringLength(8000, MinimumLength = 1)]
+    public string Body { get; set; } = string.Empty;
+}
