@@ -1001,7 +1001,9 @@ department managers then review their task dates.
 Update the project schedule email subject/body in **Admin → Email
 Templates → Project Schedule**. This template editor uses sample data. Before
 submitting or publishing a schedule, review the actual email for each recipient
-in the project dialog, then choose **Continue** to complete the action.
+in the project dialog, then choose **Continue** to complete the action. If the
+recipient or message changes after the preview, or the preview expires after
+15 minutes, open the preview again before continuing.
 The schedule email queue retries failed deliveries and marks a message
 `NeedsReview` after five unsuccessful attempts. The project manager receives
 an alert linking to the project schedule. They must ask the recipient whether

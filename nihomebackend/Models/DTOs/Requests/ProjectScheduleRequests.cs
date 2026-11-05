@@ -38,6 +38,9 @@ public sealed class SubmitProjectScheduleRevisionRequest
 
     [Required]
     public string? RowVersion { get; set; }
+
+    [StringLength(16000)]
+    public string? PreviewToken { get; set; }
 }
 
 public sealed class ReviewProjectScheduleRevisionRequest
@@ -50,6 +53,9 @@ public sealed class ReviewProjectScheduleRevisionRequest
 
     [Required]
     public string? RowVersion { get; set; }
+
+    [StringLength(16000)]
+    public string? PreviewToken { get; set; }
 }
 
 public sealed class ResolveProjectScheduleEmailRequest

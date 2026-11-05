@@ -12,6 +12,88 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
     public ProjectScheduleControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
+    public async Task Submit_RequiresTheEmailPreviewBeforeQueueing()
+    {
+        var projectId = await CreateProjectAsync(await UserIdAsync("PM"));
+        var approverId = await UserIdAsync("SALES_MANAGER");
+        await AuthenticateAsync("SUPER_ADMIN");
+        using var createdResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions",
+            RevisionPayload(), $"schedule-create-{Guid.NewGuid():N}");
+        var revision = (await ReadJsonAsync(createdResponse)).GetProperty("revisions")[0];
+        var revisionId = revision.GetProperty("id").GetInt32();
+
+        using var submittedResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
+            new { approverUserId = approverId, rowVersion = revision.GetProperty("rowVersion").GetString() },
+            $"schedule-submit-without-preview-{Guid.NewGuid():N}");
+
+        submittedResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await submittedResponse.Content.ReadAsStringAsync()).Should().Contain("Hãy xem trước email");
+        (await WithDbAsync(db => db.ProjectScheduleEmails.AsNoTracking()
+            .CountAsync(item => item.RevisionId == revisionId))).Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Submit_RejectsPreviewAfterRecipientChangesAndQueuesFreshPreview()
+    {
+        var projectId = await CreateProjectAsync(await UserIdAsync("PM"));
+        var approverId = await UserIdAsync("SALES_MANAGER");
+        await AuthenticateAsync("SUPER_ADMIN");
+        using var createdResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions",
+            RevisionPayload(), $"schedule-create-{Guid.NewGuid():N}");
+        var revision = (await ReadJsonAsync(createdResponse)).GetProperty("revisions")[0];
+        var revisionId = revision.GetProperty("id").GetInt32();
+        var rowVersion = revision.GetProperty("rowVersion").GetString();
+        var previewPath = $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Submit&recipientUserId={approverId}";
+        using var originalPreviewResponse = await Client.GetAsync(previewPath);
+        var originalToken = (await ReadJsonAsync(originalPreviewResponse)).GetProperty("previewToken").GetString();
+        var originalEmail = await WithDbAsync(async db =>
+        {
+            var user = await db.Users.SingleAsync(item => item.Id == approverId);
+            var email = user.Email;
+            user.Email = $"schedule-{Guid.NewGuid():N}@example.com";
+            await db.SaveChangesAsync();
+            return email;
+        });
+        try
+        {
+            using var staleResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+                $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
+                new { approverUserId = approverId, rowVersion, previewToken = originalToken },
+                $"schedule-submit-stale-preview-{Guid.NewGuid():N}");
+            staleResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await WithDbAsync(db => db.ProjectScheduleEmails.AsNoTracking()
+                .CountAsync(item => item.RevisionId == revisionId))).Should().Be(0);
+            (await WithDbAsync(db => db.ProjectScheduleRevisions.AsNoTracking()
+                .SingleAsync(item => item.Id == revisionId))).Status.Should().Be(ProjectScheduleRevisionStatus.Draft);
+
+            using var freshPreviewResponse = await Client.GetAsync(previewPath);
+            var freshPreview = await ReadJsonAsync(freshPreviewResponse);
+            var freshToken = freshPreview.GetProperty("previewToken").GetString();
+            using var submitted = await SendJsonWithKeyAsync(HttpMethod.Post,
+                $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
+                new { approverUserId = approverId, rowVersion, previewToken = freshToken },
+                $"schedule-submit-fresh-preview-{Guid.NewGuid():N}");
+            submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
+            var queued = await WithDbAsync(db => db.ProjectScheduleEmails.AsNoTracking()
+                .SingleAsync(item => item.RevisionId == revisionId));
+            queued.ToEmail.Should().Be(freshPreview.GetProperty("emails")[0].GetProperty("toEmail").GetString());
+            queued.Body.Should().Be(freshPreview.GetProperty("emails")[0].GetProperty("body").GetString());
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                var user = await db.Users.SingleAsync(item => item.Id == approverId);
+                user.Email = originalEmail;
+                await db.SaveChangesAsync();
+            });
+        }
+    }
+
+    [Fact]
     public async Task SubmitAndApprove_PublishesRevisionAndQueuesDurableApprovalEmail()
     {
         var projectId = await CreateProjectAsync(await UserIdAsync("PM"));
@@ -39,13 +121,23 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
         using var previewResponse = await Client.GetAsync(
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Submit&recipientUserId={approverId}");
         previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var preview = (await ReadJsonAsync(previewResponse))[0];
+        var previewResult = await ReadJsonAsync(previewResponse);
+        var preview = previewResult.GetProperty("emails")[0];
+        var previewToken = previewResult.GetProperty("previewToken").GetString();
         preview.GetProperty("toEmail").GetString().Should().Be(approver.Email);
         preview.GetProperty("body").GetString().Should().Contain("Công trình tiến độ tổng thể");
 
+        using var wrongPreviewResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
+            new { approverUserId = approverId, rowVersion = revision.GetProperty("rowVersion").GetString(), previewToken = "invalid" },
+            $"schedule-submit-invalid-preview-{Guid.NewGuid():N}");
+        wrongPreviewResponse.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.ProjectScheduleEmails.AsNoTracking().CountAsync(item => item.RevisionId == revisionId)))
+            .Should().Be(0);
+
         using var submittedResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
-            new { approverUserId = approverId, rowVersion = revision.GetProperty("rowVersion").GetString() },
+            new { approverUserId = approverId, rowVersion = revision.GetProperty("rowVersion").GetString(), previewToken },
             $"schedule-submit-{Guid.NewGuid():N}");
         submittedResponse.StatusCode.Should().Be(HttpStatusCode.OK,
             await submittedResponse.Content.ReadAsStringAsync());
@@ -71,9 +163,21 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
             ProjectScheduleEmail.PendingStatus, ProjectScheduleEmail.SentStatus);
 
         await AuthenticateAsync("SALES_MANAGER");
+        using var publicationPreviewResponse = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Publish");
+        publicationPreviewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var publicationToken = (await ReadJsonAsync(publicationPreviewResponse)).GetProperty("previewToken").GetString();
+        using var missingPublicationPreview = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/review",
+            new { decision = "Approve", rowVersion = submittedRevision.GetProperty("rowVersion").GetString() },
+            $"schedule-approve-without-preview-{Guid.NewGuid():N}");
+        missingPublicationPreview.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await missingPublicationPreview.Content.ReadAsStringAsync()).Should().Contain("Hãy xem trước email");
+        (await WithDbAsync(db => db.ProjectScheduleRevisions.AsNoTracking()
+            .SingleAsync(item => item.Id == revisionId))).Status.Should().Be(ProjectScheduleRevisionStatus.PendingApproval);
         using var approvedResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/review",
-            new { decision = "Approve", comment = "Đồng ý phát hành", rowVersion = submittedRevision.GetProperty("rowVersion").GetString() },
+            new { decision = "Approve", comment = "Đồng ý phát hành", rowVersion = submittedRevision.GetProperty("rowVersion").GetString(), previewToken = publicationToken },
             $"schedule-approve-{Guid.NewGuid():N}");
         approvedResponse.StatusCode.Should().Be(HttpStatusCode.OK,
             await approvedResponse.Content.ReadAsStringAsync());
@@ -242,6 +346,9 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
         var revision = (await ReadJsonAsync(validCreate)).GetProperty("revisions")[0];
         var revisionId = revision.GetProperty("id").GetInt32();
         var rowVersion = revision.GetProperty("rowVersion").GetString();
+        using var validPreviewResponse = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Submit&recipientUserId={approverId}");
+        var validPreviewToken = (await ReadJsonAsync(validPreviewResponse)).GetProperty("previewToken").GetString();
 
         using var secondDraft = await SendJsonWithKeyAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/master-schedule/revisions",
@@ -250,7 +357,7 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
 
         using var ineligibleApprover = await SendJsonWithKeyAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
-            new { approverUserId = await UserIdAsync("PM"), rowVersion },
+            new { approverUserId = await UserIdAsync("PM"), rowVersion, previewToken = validPreviewToken },
             $"schedule-ineligible-{Guid.NewGuid():N}");
         ineligibleApprover.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ineligibleApprover.Content.ReadAsStringAsync())
@@ -258,13 +365,13 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
 
         using var staleSubmit = await SendJsonWithKeyAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
-            new { approverUserId = approverId, rowVersion = "AAAAAAAAAAA=" },
+            new { approverUserId = approverId, rowVersion = "AAAAAAAAAAA=", previewToken = validPreviewToken },
             $"schedule-stale-{Guid.NewGuid():N}");
         staleSubmit.StatusCode.Should().Be(HttpStatusCode.Conflict);
 
         using var submit = await SendJsonWithKeyAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
-            new { approverUserId = approverId, rowVersion },
+            new { approverUserId = approverId, rowVersion, previewToken = validPreviewToken },
             $"schedule-submit-{Guid.NewGuid():N}");
         submit.StatusCode.Should().Be(HttpStatusCode.OK,
             await submit.Content.ReadAsStringAsync());

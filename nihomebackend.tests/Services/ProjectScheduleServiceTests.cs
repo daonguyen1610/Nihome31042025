@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
@@ -195,6 +196,6 @@ public sealed class ProjectScheduleServiceTests
                 It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         return new ProjectScheduleService(db, access.Object, permissions.Object,
-            Mock.Of<INotificationService>(), NullLogger<ProjectScheduleService>.Instance);
+            Mock.Of<INotificationService>(), new EphemeralDataProtectionProvider(), NullLogger<ProjectScheduleService>.Instance);
     }
 }

@@ -20,7 +20,7 @@ import {
   adminApi,
   type ProjectScheduleItemResponse,
   type ProjectScheduleResponse,
-  type ProjectScheduleEmailPreview,
+  type ProjectScheduleEmailPreviewResponse,
   type ProjectScheduleEmailReviewItem,
   type ProjectScheduleRevisionResponse,
   type SaveProjectScheduleItemRequest,
@@ -101,9 +101,13 @@ export const ProjectMasterSchedule = ({
   const [reviewComment, setReviewComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [emailPreviews, setEmailPreviews] = useState<ProjectScheduleEmailPreview[] | null>(null);
+  const [emailPreview, setEmailPreview] = useState<ProjectScheduleEmailPreviewResponse | null>(
+    null,
+  );
   const [previewIndex, setPreviewIndex] = useState(0);
-  const [pendingEmailAction, setPendingEmailAction] = useState<(() => Promise<void>) | null>(null);
+  const [pendingEmailAction, setPendingEmailAction] = useState<
+    ((previewToken: string) => Promise<void>) | null
+  >(null);
   const [emailsNeedingReview, setEmailsNeedingReview] = useState<ProjectScheduleEmailReviewItem[]>(
     [],
   );
@@ -285,7 +289,7 @@ export const ProjectMasterSchedule = ({
     if (saved) setToastSuccess("operationalProjects.schedule.saved");
   };
 
-  const sendForApproval = async (target: ProjectScheduleRevisionResponse) => {
+  const sendForApproval = async (target: ProjectScheduleRevisionResponse, previewToken: string) => {
     setBusy(true);
     setError(null);
     try {
@@ -294,6 +298,7 @@ export const ProjectMasterSchedule = ({
         target.id,
         Number(approverId),
         target.rowVersion,
+        previewToken,
       );
       setSchedule(response.data);
       setRevisionId(target.id);
@@ -308,7 +313,7 @@ export const ProjectMasterSchedule = ({
   const showEmailPreview = async (
     target: ProjectScheduleRevisionResponse,
     action: "Submit" | "Publish",
-    next: () => Promise<void>,
+    next: (previewToken: string) => Promise<void>,
   ) => {
     setBusy(true);
     setError(null);
@@ -319,7 +324,7 @@ export const ProjectMasterSchedule = ({
         action,
         action === "Submit" ? Number(approverId) : undefined,
       );
-      setEmailPreviews(response.data);
+      setEmailPreview(response.data);
       setPreviewIndex(0);
       setPendingEmailAction(() => next);
     } catch (reason) {
@@ -334,18 +339,20 @@ export const ProjectMasterSchedule = ({
     // Do not silently drop edits made after the last save.
     const target = isDirty || revisionId == null ? await persist() : selected;
     if (!target || target.status !== "Draft") return;
-    await showEmailPreview(target, "Submit", () => sendForApproval(target));
+    await showEmailPreview(target, "Submit", (token) => sendForApproval(target, token));
   };
 
   const reassign = async () => {
     if (!selected || selected.status !== "PendingApproval" || !approverId) return;
-    await showEmailPreview(selected, "Submit", () => sendForApproval(selected));
+    await showEmailPreview(selected, "Submit", (token) => sendForApproval(selected, token));
   };
 
   const review = async (decision: "Approve" | "Reject") => {
     if (!selected) return;
     if (decision === "Approve") {
-      await showEmailPreview(selected, "Publish", () => performReview(selected, decision));
+      await showEmailPreview(selected, "Publish", (token) =>
+        performReview(selected, decision, token),
+      );
       return;
     }
     await performReview(selected, decision);
@@ -354,6 +361,7 @@ export const ProjectMasterSchedule = ({
   const performReview = async (
     target: ProjectScheduleRevisionResponse,
     decision: "Approve" | "Reject",
+    previewToken?: string,
   ) => {
     setBusy(true);
     setError(null);
@@ -364,6 +372,7 @@ export const ProjectMasterSchedule = ({
         decision,
         reviewComment,
         target.rowVersion,
+        previewToken,
       );
       setSchedule(response.data);
       setRevisionId(target.id);
@@ -416,10 +425,10 @@ export const ProjectMasterSchedule = ({
       className="space-y-4 rounded-lg border bg-card p-4 shadow-sm"
     >
       <Dialog
-        open={emailPreviews !== null}
+        open={emailPreview !== null}
         onOpenChange={(open) => {
           if (!open) {
-            setEmailPreviews(null);
+            setEmailPreview(null);
             setPendingEmailAction(null);
           }
         }}
@@ -431,7 +440,7 @@ export const ProjectMasterSchedule = ({
           <p className="text-sm text-muted-foreground">
             {t("operationalProjects.schedule.email.previewGuidance")}
           </p>
-          {emailPreviews?.length ? (
+          {emailPreview?.emails.length ? (
             <>
               <Label htmlFor="schedule-email-recipient">
                 {t("operationalProjects.schedule.email.recipient")}
@@ -444,18 +453,18 @@ export const ProjectMasterSchedule = ({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {emailPreviews.map((preview, index) => (
+                  {emailPreview.emails.map((preview, index) => (
                     <SelectItem key={preview.recipientUserId} value={String(index)}>
                       {preview.toEmail}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm font-semibold">{emailPreviews[previewIndex]?.subject}</p>
+              <p className="text-sm font-semibold">{emailPreview.emails[previewIndex]?.subject}</p>
               <iframe
                 title={t("operationalProjects.schedule.email.previewTitle")}
                 sandbox=""
-                srcDoc={emailPreviews[previewIndex]?.body}
+                srcDoc={emailPreview.emails[previewIndex]?.body}
                 className="h-80 w-full rounded border bg-white"
               />
             </>
@@ -466,7 +475,7 @@ export const ProjectMasterSchedule = ({
             <Button
               variant="outline"
               onClick={() => {
-                setEmailPreviews(null);
+                setEmailPreview(null);
                 setPendingEmailAction(null);
               }}
             >
@@ -476,9 +485,10 @@ export const ProjectMasterSchedule = ({
               disabled={busy}
               onClick={() => {
                 const action = pendingEmailAction;
-                setEmailPreviews(null);
+                const token = emailPreview?.previewToken;
+                setEmailPreview(null);
                 setPendingEmailAction(null);
-                if (action) void action();
+                if (action && token) void action(token);
               }}
             >
               {t("operationalProjects.schedule.email.continue")}
