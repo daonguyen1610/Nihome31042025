@@ -28,9 +28,11 @@ public sealed class ProjectScheduleService(
     IProjectAccessService access,
     IPermissionService permissions,
     INotificationService notifications,
-    IEmailService email,
     ILogger<ProjectScheduleService> logger) : IProjectScheduleService
 {
+    private const int NotificationChangeSummaryMaxLength = 900;
+    private const int EmailChangeSummaryMaxLength = 6000;
+
     public async Task<ProjectScheduleResponse?> GetAsync(int projectId, int callerUserId, CancellationToken ct)
     {
         if (!await CanReadScheduleAsync(projectId, callerUserId, ct)) return null;
@@ -141,7 +143,7 @@ public sealed class ProjectScheduleService(
                 "Failed to create in-app notification for schedule revision {RevisionId} and approver {ApproverId}.",
                 revision.Id, request.ApproverUserId);
         }
-        await SendEmailAsync(projectId, revision, request.ApproverUserId, "Yêu cầu duyệt tiến độ tổng thể",
+        await QueueEmailAsync(projectId, revision, request.ApproverUserId, "Yêu cầu duyệt tiến độ tổng thể",
             await GetChangeSummaryAsync(projectId, revision, ct), ct);
         logger.LogInformation("Project schedule revision {RevisionId} submitted for project {ProjectId}; approver {ApproverId}.", revision.Id, projectId, request.ApproverUserId);
         return await BuildResponseAsync(projectId, ct);
@@ -331,19 +333,23 @@ public sealed class ProjectScheduleService(
             .Union(constructionOwners).Distinct().ToList();
         if (users.Count == 0) return;
         var changes = string.Join("; ", changed.Select(id => FormatChange(id, oldItems, currentItems)));
+        // Notification.Body is capped at 1.000 characters; an unbounded change
+        // summary would fail SaveChanges and silently drop the notification.
+        var notificationChanges = Truncate(changes, NotificationChangeSummaryMaxLength);
+        var emailChanges = Truncate(changes, EmailChangeSummaryMaxLength);
         foreach (var userId in users)
         {
             try
             {
                 await notifications.NotifyFromTemplateAsync(userId, "project.schedule.published",
-                    new Dictionary<string, string> { ["projectId"] = projectId.ToString(), ["version"] = revision.Version.ToString(), ["changes"] = changes },
+                    new Dictionary<string, string> { ["projectId"] = projectId.ToString(), ["version"] = revision.Version.ToString(), ["changes"] = notificationChanges },
                     "ProjectScheduleRevision", revision.Id, $"/admin/operational-projects/{projectId}?tab=schedule");
             }
             catch (Exception exception)
             {
                 logger.LogError(exception, "Failed to notify user {UserId} about schedule revision {RevisionId} for project {ProjectId}.", userId, revision.Id, projectId);
             }
-            await SendEmailAsync(projectId, revision, userId, "Tiến độ tổng thể đã cập nhật", changes, ct);
+            await QueueEmailAsync(projectId, revision, userId, "Tiến độ tổng thể đã cập nhật", emailChanges, ct);
         }
     }
 
@@ -506,7 +512,7 @@ public sealed class ProjectScheduleService(
         return $"{Describe(oldItem, before)} → {Describe(newItem, after)}";
     }
 
-    private async Task SendEmailAsync(int projectId, ProjectScheduleRevision revision, int userId,
+    private async Task QueueEmailAsync(int projectId, ProjectScheduleRevision revision, int userId,
         string eventName, string changeSummary, CancellationToken ct)
     {
         try
@@ -529,9 +535,23 @@ public sealed class ProjectScheduleService(
                 ["projectName"] = project.Name,
                 ["version"] = revision.Version.ToString(),
                 ["changeReason"] = revision.ChangeReason ?? "—",
-                ["changeSummary"] = changeSummary,
+                ["changeSummary"] = Truncate(changeSummary, EmailChangeSummaryMaxLength),
             });
-            await email.SendEmailAsync(recipient.Email, rendered.Subject, rendered.Body);
+            // Store first, send later: the worker retries a failed delivery and
+            // keeps the row for review instead of losing the message.
+            db.ProjectScheduleEmails.Add(new ProjectScheduleEmail
+            {
+                OperationalProjectId = projectId,
+                RevisionId = revision.Id,
+                RecipientUserId = userId,
+                ToEmail = recipient.Email.Trim(),
+                Subject = rendered.Subject,
+                Body = rendered.Body,
+                Status = ProjectScheduleEmail.PendingStatus,
+                CreatedAt = DateTime.UtcNow,
+                NextAttemptAt = DateTime.UtcNow,
+            });
+            await db.SaveChangesAsync(ct);
         }
         catch (OperationCanceledException) when (ct.IsCancellationRequested)
         {
@@ -539,7 +559,10 @@ public sealed class ProjectScheduleService(
         }
         catch (Exception exception)
         {
-            logger.LogError(exception, "Project schedule email delivery failed for project {ProjectId}, revision {RevisionId}, recipient {UserId}.", projectId, revision.Id, userId);
+            logger.LogError(exception, "Project schedule email could not be queued for project {ProjectId}, revision {RevisionId}, recipient {UserId}.", projectId, revision.Id, userId);
         }
     }
+
+    private static string Truncate(string value, int maxLength) =>
+        value.Length <= maxLength ? value : string.Concat(value.AsSpan(0, maxLength - 1), "…");
 }

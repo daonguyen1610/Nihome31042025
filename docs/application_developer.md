@@ -1856,6 +1856,18 @@ it must not be confused with public portfolio content or the three-phase
 | `POST` | `/api/operational-projects/{id}/code/drive-retry` | `operations.projects.rename` | Requeue the latest failed Drive folder rename without creating a new folder |
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
 
+Schedule approval and publication notifications create rows in
+`project_schedule_emails` instead of calling SMTP inside the request.
+`ProjectScheduleEmailService.SendPendingAsync` runs every 15 seconds via
+`ProjectScheduleEmailWorker`, retries failed deliveries with exponential
+backoff (1, 2, 4, 8 minutes, then `NeedsReview` after five attempts), and
+records `LastError` without recipient or credential details. Rows stuck in
+`Sending` for 15 minutes are reclaimed after a crash. The change summary is
+truncated to 900 characters for `Notification.Body` (column limit 1,000) and to
+6,000 characters for the email body (rendered limit 16,000), so a revision with
+many WBS changes cannot silently drop the notification. Integration coverage:
+`ProjectScheduleControllerTests`; unit coverage: `ProjectScheduleEmailServiceTests`.
+
 The pre-contract Design handoff is
 `POST /api/opportunities/{id}/design-project` with a required design project
 `name` (1–300 characters) and optional `note` (up to 4,000 characters). It requires both

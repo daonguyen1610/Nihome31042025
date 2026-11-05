@@ -128,6 +128,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<ProjectScheduleRevision> ProjectScheduleRevisions => Set<ProjectScheduleRevision>();
     public DbSet<ProjectScheduleItem> ProjectScheduleItems => Set<ProjectScheduleItem>();
     public DbSet<ProjectScheduleNode> ProjectScheduleNodes => Set<ProjectScheduleNode>();
+    public DbSet<ProjectScheduleEmail> ProjectScheduleEmails => Set<ProjectScheduleEmail>();
     public DbSet<DesignReview> DesignReviews => Set<DesignReview>();
     public DbSet<DesignReviewRecipient> DesignReviewRecipients => Set<DesignReviewRecipient>();
     public DbSet<DesignReviewComment> DesignReviewComments => Set<DesignReviewComment>();
@@ -1588,6 +1589,22 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(item => new { item.RevisionId, item.WbsCode }).IsUnique();
             b.ToTable(table => table.HasCheckConstraint(
                 "CK_project_schedule_items_planned_dates", "[PlannedEnd] >= [PlannedStart]"));
+        });
+
+        modelBuilder.Entity<ProjectScheduleEmail>(b =>
+        {
+            b.ToTable("project_schedule_emails");
+            b.Property(item => item.ToEmail).HasMaxLength(254).IsRequired();
+            b.Property(item => item.Subject).HasMaxLength(200).IsRequired();
+            b.Property(item => item.Body).HasMaxLength(16000).IsRequired();
+            b.Property(item => item.Status).HasMaxLength(30).IsRequired();
+            b.Property(item => item.LastError).HasMaxLength(1000);
+            // The revision owns queued mail; deleting a project cascades through
+            // the revision to avoid a second cascade path on SQL Server.
+            b.HasOne(item => item.Revision).WithMany()
+                .HasForeignKey(item => item.RevisionId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.Status, item.NextAttemptAt, item.Id });
+            b.HasIndex(item => item.OperationalProjectId);
         });
 
         RfqModelConfiguration.Configure(modelBuilder);

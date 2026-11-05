@@ -95,11 +95,15 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   được thông báo kèm khác biệt ngày/mốc. Các lịch phòng không tự đổi ngày.
   Người quản lý phải rà soát và cập nhật lịch chi tiết để đáp ứng mốc mới.
 - **Partial:** đã có persistence, API, giao diện quản lý revision và liên kết
-  WBS cho lịch Design, Construction Task và công việc phòng ban. Unit test và
-  live E2E (`admin-project-master-schedule.spec.ts`) đã xác nhận luồng duyệt,
-  giới hạn khung ngày, thông báo thay đổi và quy tắc người duyệt theo hợp đồng;
-  chưa có integration test riêng. Email thông báo chưa có hàng đợi retry bền
-  vững.
+  WBS cho lịch Design, Construction Task và công việc phòng ban. Unit test,
+  integration test (`ProjectScheduleControllerTests`) và live E2E
+  (`admin-project-master-schedule.spec.ts`) đã xác nhận luồng duyệt, giới hạn
+  khung ngày, thông báo thay đổi, quy tắc người duyệt theo hợp đồng và các
+  nhánh lỗi xác thực/quyền. Email thông báo dùng hàng đợi bền vững
+  `project_schedule_emails`: gửi lại theo backoff, dừng ở `NeedsReview` sau năm
+  lần thất bại thay vì mất thông báo. Phần còn mở: nội dung email giới hạn độ
+  dài tóm tắt thay đổi, chưa có cơ chế báo cho người vận hành ngoài log khi một
+  bản ghi chuyển `NeedsReview`.
 
 ### 2.2.2. Nhóm công việc liên phòng ban — Partial
 

@@ -61,10 +61,12 @@ Revision mới không được làm đầu việc liên kết vượt khung ngà
 được tham chiếu. Khi revision mới được phát hành, lịch phòng vẫn giữ dữ liệu
 hiện tại; người nhận đầu việc bị ảnh hưởng nhận thông báo nêu khác biệt so với
 bản phát hành trước. Quản lý phòng rà soát để điều chỉnh chi tiết. **Partial:**
-dữ liệu/API/UI và liên kết lịch đã triển khai; unit test và live E2E
-(`admin-project-master-schedule.spec.ts`) đã chạy qua, chưa có integration test
-riêng. Trước hợp đồng, ứng viên duyệt phải có role `SALES_MANAGER` thuộc CRM và
-còn quyền quản lý Cơ hội. Email chưa có hàng đợi retry bền vững.
+dữ liệu/API/UI và liên kết lịch đã triển khai; unit test, integration test
+(`ProjectScheduleControllerTests`) và live E2E
+(`admin-project-master-schedule.spec.ts`) đã chạy qua. Trước hợp đồng, ứng viên
+duyệt phải có role `SALES_MANAGER` thuộc CRM và còn quyền quản lý Cơ hội. Email
+được xếp vào hàng đợi `project_schedule_emails` và worker gửi lại theo backoff;
+bản ghi thất bại năm lần chuyển `NeedsReview` để người vận hành xử lý.
 
 ### 2.1. Nhóm công việc của phòng ban — Hiện có
 

@@ -149,7 +149,6 @@ public sealed class ProjectScheduleServiceTests
                 It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         return new ProjectScheduleService(db, access.Object, permissions.Object,
-            Mock.Of<INotificationService>(), Mock.Of<IEmailService>(),
-            NullLogger<ProjectScheduleService>.Instance);
+            Mock.Of<INotificationService>(), NullLogger<ProjectScheduleService>.Instance);
     }
 }
