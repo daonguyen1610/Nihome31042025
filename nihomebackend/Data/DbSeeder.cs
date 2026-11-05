@@ -54,6 +54,7 @@ public static class DbSeeder
                 ContractEndEmailBodyTemplate = ContractReminderTemplates.EndBody,
                 WorkPackageApprovalEmailSubjectTemplate = WorkPackageApprovalEmailTemplates.DefaultSubject,
                 WorkPackageApprovalEmailBodyTemplate = WorkPackageApprovalEmailTemplates.DefaultBody,
+                SharedBusinessEmailLayoutTemplate = NiconEmailLayout.DefaultTemplate,
                 NotificationEmail = "nihome@nihome.vn",
                 CreatedAt = now,
                 UpdatedAt = now
@@ -65,6 +66,12 @@ public static class DbSeeder
         if (existingSettings != null)
         {
             var updated = false;
+
+            if (string.IsNullOrWhiteSpace(existingSettings.SharedBusinessEmailLayoutTemplate))
+            {
+                existingSettings.SharedBusinessEmailLayoutTemplate = NiconEmailLayout.DefaultTemplate;
+                updated = true;
+            }
 
             if (existingSettings.SiteName == "Nihome")
             {

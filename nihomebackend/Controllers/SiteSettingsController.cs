@@ -56,14 +56,21 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         return Ok(new
         {
             settings.NewApplicationEmailSubjectTemplate,
-            settings.NewApplicationEmailBodyTemplate,
+            NewApplicationEmailBodyTemplate = NiconEmailLayout.Apply(settings.SharedBusinessEmailLayoutTemplate,
+                settings.NewApplicationEmailBodyTemplate ?? EmailTemplateFormatter.DefaultNewApplicationBody,
+                "ĐƠN ỨNG TUYỂN MỚI", "Email tự động · vui lòng không trả lời"),
             settings.NotificationEmail,
             settings.OtpEmailSubjectTemplate,
-            settings.OtpEmailBodyTemplate,
+            OtpEmailBodyTemplate = NiconEmailLayout.Apply(settings.SharedBusinessEmailLayoutTemplate,
+                settings.OtpEmailBodyTemplate ?? EmailTemplateFormatter.DefaultOtpBody,
+                "XÁC THỰC TÀI KHOẢN", "Email tự động · vui lòng không trả lời"),
             QuoteEmailSubjectTemplate = settings.QuoteEmailSubjectTemplate ?? EmailTemplateFormatter.DefaultQuoteSubject,
-            QuoteEmailBodyTemplate = settings.QuoteEmailBodyTemplate ?? EmailTemplateFormatter.DefaultQuoteBody,
+            QuoteEmailBodyTemplate = NiconEmailLayout.Apply(settings.SharedBusinessEmailLayoutTemplate,
+                settings.QuoteEmailBodyTemplate ?? EmailTemplateFormatter.DefaultQuoteBody,
+                "BÁO GIÁ DỰ ÁN · {{quoteCode}}", "NICON · Đối tác phát triển của Quý khách"),
             ProjectScheduleEmailSubjectTemplate = ProjectScheduleEmailTemplates.Get(settings).Subject,
             ProjectScheduleEmailBodyTemplate = ProjectScheduleEmailTemplates.Get(settings).Body,
+            SharedBusinessEmailLayoutTemplate = settings.SharedBusinessEmailLayoutTemplate ?? NiconEmailLayout.DefaultTemplate,
         });
     }
 
@@ -78,12 +85,17 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     [HttpPost("email-templates/project-schedule/preview")]
     [Authorize]
     [RequirePermission("system.settings", "manage")]
-    public IActionResult PreviewProjectScheduleEmail([FromBody] PreviewProjectScheduleEmailRequest req)
+    public async Task<IActionResult> PreviewProjectScheduleEmail([FromBody] PreviewProjectScheduleEmailRequest req)
     {
         try
         {
             var template = ProjectScheduleEmailTemplates.Validate(req.Subject, req.Body);
-            return Ok(ProjectScheduleEmailTemplates.Preview(template));
+            var settings = await svc.GetAsync();
+            return Ok(ProjectScheduleEmailTemplates.Preview(template with
+            {
+                Body = NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate, template.Body,
+                    "TIẾN ĐỘ TỔNG THỂ · {{eventName}}", "NICON · Thông báo tiến độ dự án")
+            }));
         }
         catch (ArgumentException ex)
         {
@@ -109,7 +121,8 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
                 req.QuoteEmailSubjectTemplate,
                 req.QuoteEmailBodyTemplate,
                 req.ProjectScheduleEmailSubjectTemplate,
-                req.ProjectScheduleEmailBodyTemplate);
+                req.ProjectScheduleEmailBodyTemplate,
+                req.SharedBusinessEmailLayoutTemplate);
         }
         catch (ArgumentException ex)
         {
@@ -119,14 +132,21 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         return Ok(new
         {
             settings.NewApplicationEmailSubjectTemplate,
-            settings.NewApplicationEmailBodyTemplate,
+            NewApplicationEmailBodyTemplate = NiconEmailLayout.Apply(settings.SharedBusinessEmailLayoutTemplate,
+                settings.NewApplicationEmailBodyTemplate ?? EmailTemplateFormatter.DefaultNewApplicationBody,
+                "ĐƠN ỨNG TUYỂN MỚI", "Email tự động · vui lòng không trả lời"),
             settings.NotificationEmail,
             settings.OtpEmailSubjectTemplate,
-            settings.OtpEmailBodyTemplate,
+            OtpEmailBodyTemplate = NiconEmailLayout.Apply(settings.SharedBusinessEmailLayoutTemplate,
+                settings.OtpEmailBodyTemplate ?? EmailTemplateFormatter.DefaultOtpBody,
+                "XÁC THỰC TÀI KHOẢN", "Email tự động · vui lòng không trả lời"),
             settings.QuoteEmailSubjectTemplate,
-            settings.QuoteEmailBodyTemplate,
+            QuoteEmailBodyTemplate = NiconEmailLayout.Apply(settings.SharedBusinessEmailLayoutTemplate,
+                settings.QuoteEmailBodyTemplate ?? EmailTemplateFormatter.DefaultQuoteBody,
+                "BÁO GIÁ DỰ ÁN · {{quoteCode}}", "NICON · Đối tác phát triển của Quý khách"),
             ProjectScheduleEmailSubjectTemplate = ProjectScheduleEmailTemplates.Get(settings).Subject,
             ProjectScheduleEmailBodyTemplate = ProjectScheduleEmailTemplates.Get(settings).Body,
+            SharedBusinessEmailLayoutTemplate = settings.SharedBusinessEmailLayoutTemplate ?? NiconEmailLayout.DefaultTemplate,
         });
     }
 

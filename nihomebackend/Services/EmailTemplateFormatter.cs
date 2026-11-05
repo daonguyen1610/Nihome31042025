@@ -43,34 +43,29 @@ public static partial class EmailTemplateFormatter
 
     public static string DefaultQuoteSubject => "Báo giá {{quoteCode}} – {{opportunityName}}";
 
-    public static string DefaultQuoteBody => """
-        <div style="margin:0;padding:24px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1f2937">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb">
-            <tr><td style="padding:18px 24px;background:#e5394a;color:#ffffff">
-              <div style="font-size:20px;font-weight:700">NICON</div>
-              <div style="font-size:12px;margin:6px 0 0">BÁO GIÁ DỰ ÁN · {{quoteCode}}</div>
-            </td></tr>
-            <tr><td style="padding:24px">
-              <p style="margin:0 0 16px;font-size:15px">Kính gửi <strong>{{customerName}}</strong>,</p>
-              <p style="margin:0 0 18px;font-size:14px;line-height:22px">NICON trân trọng gửi Quý khách báo giá cho <strong>{{opportunityName}}</strong>.</p>
-              <div style="padding:16px;background:#f8fafc;border:1px solid #e5e7eb">
-                <div style="font-size:13px;font-weight:700;color:#334155">HẠNG MỤC VÀ ĐƠN GIÁ</div>
-                <div style="margin:12px 0 0;font-size:14px;line-height:23px;white-space:pre-line">{{quoteLines}}</div>
-              </div>
-              <p style="margin:18px 0 8px;font-size:13px;color:#64748b">Chiết khấu {{discountPercent}}% · VAT {{vatPercent}}%</p>
-              <div style="padding:16px;background:#fff1f2;color:#9f1239;font-size:18px;font-weight:700">Tổng giá trị: {{grandTotal}} VND</div>
-              <p style="margin:18px 0 0;font-size:13px;color:#475569">Báo giá có hiệu lực đến {{validUntil}}.</p>
-              <p style="margin:22px 0 0;font-size:14px">Trân trọng,<br />NICON</p>
-            </td></tr>
-            <tr><td style="padding:12px 24px;background:#f8fafc;color:#64748b;font-size:12px">NICON · Đối tác phát triển của Quý khách</td></tr>
-          </table>
+    public static string DefaultQuoteBody => NiconEmailLayout.Wrap(
+        "BÁO GIÁ DỰ ÁN · {{quoteCode}}",
+        """
+        <p style="margin:0 0 16px;font-size:15px">Kính gửi <strong>{{customerName}}</strong>,</p>
+        <p style="margin:0 0 18px;font-size:14px;line-height:22px">NICON trân trọng gửi Quý khách báo giá cho <strong>{{opportunityName}}</strong>.</p>
+        <div style="padding:16px;background:#f8fafc;border:1px solid #e5e7eb">
+          <div style="font-size:13px;font-weight:700;color:#334155">HẠNG MỤC VÀ ĐƠN GIÁ</div>
+          <div style="margin:12px 0 0;font-size:14px;line-height:23px;white-space:pre-line">{{quoteLines}}</div>
         </div>
-        """;
+        <p style="margin:18px 0 8px;font-size:13px;color:#64748b">Chiết khấu {{discountPercent}}% · VAT {{vatPercent}}%</p>
+        <div style="padding:16px;background:#fff1f2;color:#9f1239;font-size:18px;font-weight:700">Tổng giá trị: {{grandTotal}} VND</div>
+        <p style="margin:18px 0 0;font-size:13px;color:#475569">Báo giá có hiệu lực đến {{validUntil}}.</p>
+        <p style="margin:22px 0 0;font-size:14px">Trân trọng,<br />NICON</p>
+        """,
+        "NICON · Đối tác phát triển của Quý khách");
 
     public static (string subject, string body) BuildQuoteEmail(
-        string? subjectTemplate, string? bodyTemplate, Dictionary<string, string> tokens) =>
+        string? subjectTemplate, string? bodyTemplate, Dictionary<string, string> tokens,
+        string? layoutTemplate = null) =>
         (ReplaceTokens(string.IsNullOrWhiteSpace(subjectTemplate) ? DefaultQuoteSubject : subjectTemplate, tokens),
-         RenderQuoteBody(string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultQuoteBody : bodyTemplate, tokens));
+         RenderQuoteBody(NiconEmailLayout.Apply(layoutTemplate,
+             string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultQuoteBody : bodyTemplate,
+             "BÁO GIÁ DỰ ÁN · {{quoteCode}}", "NICON · Đối tác phát triển của Quý khách"), tokens));
 
     private static string RenderQuoteBody(string template, Dictionary<string, string> tokens)
     {
@@ -163,7 +158,8 @@ public static partial class EmailTemplateFormatter
         string? phone,
         int? experienceYears,
         string? coverLetter,
-        DateTime appliedAt)
+        DateTime appliedAt,
+        string? layoutTemplate = null)
     {
         var phoneValue = phone ?? "—";
         var expValue = experienceYears?.ToString() ?? "—";
@@ -203,7 +199,9 @@ public static partial class EmailTemplateFormatter
             plainTokens);
 
         var body = ReplaceTokens(
-            string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultNewApplicationBody : bodyTemplate,
+            NiconEmailLayout.Apply(layoutTemplate,
+                string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultNewApplicationBody : bodyTemplate,
+                "ĐƠN ỨNG TUYỂN MỚI", "Email tự động · vui lòng không trả lời"),
             htmlTokens);
 
         return (subject, body);
@@ -290,7 +288,8 @@ public static partial class EmailTemplateFormatter
         string? bodyTemplate,
         string siteName,
         string otpCode,
-        string otpExpireMinutes = "5")
+        string otpExpireMinutes = "5",
+        string? layoutTemplate = null)
     {
         // OTP tokens are all system-generated, but encode for body safety
         var plainTokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -312,7 +311,9 @@ public static partial class EmailTemplateFormatter
             plainTokens);
 
         var body = ReplaceTokens(
-            string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultOtpBody : bodyTemplate,
+            NiconEmailLayout.Apply(layoutTemplate,
+                string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultOtpBody : bodyTemplate,
+                "XÁC THỰC TÀI KHOẢN", "Email tự động · vui lòng không trả lời"),
             htmlTokens);
 
         return (subject, body);

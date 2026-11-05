@@ -2483,10 +2483,16 @@ both contract templates. Switching types or tabs preserves unsaved drafts.
 Contract, quote approval, and work package approval previews keep variables visible until actual
 business data is rendered in the corresponding send/scheduling workflow.
 
-The default renewal, end-date and work package approval emails use the same
-NICON red header, white message card and highlighted details as quote emails.
-Startup upgrades only missing bodies or exact previous defaults; customized
-templates and already confirmed/queued message snapshots retain their content.
+Automated email types can use one NICON layout while keeping their own subject,
+message, and supported variables. The shared layout is editable once in
+**Giao diện chung** at `/admin/email-templates`.
+It requires exactly one `{{heading}}`, `{{content}}`, and `{{footer}}` placeholder.
+Saved event bodies remain individually editable; their message content is
+placed inside the shared layout when new business emails are previewed or
+queued. Already queued emails retain their confirmed HTML snapshot.
+Startup initializes the shared layout for existing installations. Customized
+event bodies retain their content inside it, and already confirmed/queued
+message snapshots retain their original HTML.
 
 **OTP Template Placeholders:**
 

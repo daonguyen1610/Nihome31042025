@@ -675,7 +675,8 @@ public class QuoteService(
             ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", culture),
         };
         var (subject, body) = EmailTemplateFormatter.BuildQuoteEmail(
-            settings?.QuoteEmailSubjectTemplate, settings?.QuoteEmailBodyTemplate, tokens);
+            settings?.QuoteEmailSubjectTemplate, settings?.QuoteEmailBodyTemplate, tokens,
+            settings?.SharedBusinessEmailLayoutTemplate);
         return new QuoteEmailPreviewResponse
         {
             ToEmail = recipient?.Email?.Trim() ?? string.Empty,

@@ -338,16 +338,19 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
     {
         var origin = configuration.GetValue<string>("Frontend:PublicBaseUrl") ??
             configuration.GetSection("Frontend:AllowedOrigins").Get<string[]>()?.FirstOrDefault();
+        var layout = await db.SiteSettings.AsNoTracking()
+            .Select(settings => settings.SharedBusinessEmailLayoutTemplate).FirstOrDefaultAsync(ct);
         foreach (var delivery in deliveries)
         {
             try
             {
                 if (string.IsNullOrWhiteSpace(origin)) throw new InvalidOperationException("Frontend public URL is not configured.");
                 var link = $"{origin.TrimEnd('/')}/vendor/rfqs#token={delivery.Token}";
-                await email.SendEmailAsync(delivery.Email, $"RFQ {entity.Code}: {entity.Title}",
-                    $"<p>{WebUtility.HtmlEncode(delivery.Invitation.VendorName)},</p>" +
+                var body = $"<p>{WebUtility.HtmlEncode(delivery.Invitation.VendorName)},</p>" +
                     $"<p>You are invited to quote for <strong>{WebUtility.HtmlEncode(entity.Title)}</strong>.</p>" +
-                    $"<p>Deadline: {entity.DueAt:O}</p><p><a href=\"{WebUtility.HtmlEncode(link)}\">Open secure quotation form</a></p>");
+                    $"<p>Deadline: {entity.DueAt:O}</p><p><a href=\"{WebUtility.HtmlEncode(link)}\">Open secure quotation form</a></p>";
+                await email.SendEmailAsync(delivery.Email, $"RFQ {entity.Code}: {entity.Title}",
+                    NiconEmailLayout.Apply(layout, body, $"RFQ {entity.Code}: {entity.Title}", "NICON"));
                 delivery.Invitation.InvitationSentAt = DateTime.UtcNow;
                 delivery.Invitation.InvitationDeliveryError = null;
             }

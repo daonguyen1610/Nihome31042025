@@ -10098,6 +10098,9 @@ namespace nihomebackend.Migrations
                     b.Property<string>("SecondaryPhone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("SharedBusinessEmailLayoutTemplate")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("SiteDescription")
                         .HasColumnType("nvarchar(max)");
 
