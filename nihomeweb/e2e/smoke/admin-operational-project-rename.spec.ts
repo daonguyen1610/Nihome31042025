@@ -111,6 +111,12 @@ test("authorized manager changes the project code and retries Drive rename", asy
         }),
       }),
   );
+  await page.route(
+    new RegExp(
+      `/api/(?:v1/)?operational-projects/${projectId}/master-schedule/emails/needs-review$`,
+    ),
+    (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
+  );
   await page.route(new RegExp("/api/(?:v1/)?operational-projects/document-categories$"), (route) =>
     route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
   );
