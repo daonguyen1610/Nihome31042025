@@ -10,6 +10,7 @@ public sealed record ProjectScheduleEmailTemplate(string Subject, string Body);
 public static partial class ProjectScheduleEmailTemplates
 {
     public const string DefaultSubject = "NICON · {{eventName}} · {{projectCode}} · v{{version}}";
+    public const string LegacyDefaultBody = "<div style=\"font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#17233b\"><p><strong>NICON · {{eventName}}</strong></p><p>Kính gửi {{recipientName}},</p><p>Tiến độ tổng thể dự án <strong>{{projectCode}} · {{projectName}}</strong>, phiên bản v{{version}}.</p><p><strong>Lý do cập nhật:</strong> {{changeReason}}</p><p><strong>Thay đổi so với bản đã phát hành trước:</strong><br />{{changeSummary}}</p><p>Vui lòng đăng nhập NICON để xem tiến độ và thực hiện bước được giao.</p></div>";
     public const string DefaultBody = """
         <div style="margin:0;padding:24px;background:#f3f6fb;font-family:Arial,sans-serif;color:#1f2937">
           <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="width:100%;max-width:600px;margin:0 auto;background:#ffffff;border:1px solid #e5e7eb">
@@ -46,9 +47,12 @@ public static partial class ProjectScheduleEmailTemplates
     // Keep Vietnamese and other Unicode text readable while escaping HTML-significant characters.
     private static readonly HtmlEncoder EmailHtmlEncoder = HtmlEncoder.Create(UnicodeRanges.All);
 
-    public static ProjectScheduleEmailTemplate Get(SiteSettings? settings) => new(
-        settings?.ProjectScheduleEmailSubjectTemplate ?? DefaultSubject,
-        settings?.ProjectScheduleEmailBodyTemplate ?? DefaultBody);
+    public static ProjectScheduleEmailTemplate Get(SiteSettings? settings)
+    {
+        var body = settings?.ProjectScheduleEmailBodyTemplate;
+        return new(settings?.ProjectScheduleEmailSubjectTemplate ?? DefaultSubject,
+            body is null || string.Equals(body, LegacyDefaultBody, StringComparison.Ordinal) ? DefaultBody : body);
+    }
 
     public static ProjectScheduleEmailTemplate Validate(string subject, string body)
     {
