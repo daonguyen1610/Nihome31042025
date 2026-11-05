@@ -12,7 +12,7 @@ using NihomeBackend.Data;
 namespace NihomeBackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261105021429_AddProjectScheduleEmailQueue")]
+    [Migration("20261105121000_AddProjectScheduleEmailQueue")]
     partial class AddProjectScheduleEmailQueue
     {
         /// <inheritdoc />
