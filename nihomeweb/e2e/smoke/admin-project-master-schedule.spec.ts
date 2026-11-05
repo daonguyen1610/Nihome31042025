@@ -114,14 +114,22 @@ const submitRevision = async (
   projectId: number,
   revision: ScheduleRevision,
   approverUserId: number,
-): Promise<ScheduleResponse> =>
-  expectJson<ScheduleResponse>(
+): Promise<ScheduleResponse> => {
+  const preview = await expectJson<{ previewToken: string }>(
+    await api.get(
+      `${scheduleUrl(projectId)}/revisions/${revision.id}/email-preview?action=Submit&recipientUserId=${approverUserId}`,
+      { headers },
+    ),
+    "preview approval email",
+  );
+  return expectJson<ScheduleResponse>(
     await api.post(`${scheduleUrl(projectId)}/revisions/${revision.id}/submit`, {
       headers: { ...headers, "Idempotency-Key": `schedule-submit-${uid()}` },
-      data: { approverUserId, rowVersion: revision.rowVersion },
+      data: { approverUserId, rowVersion: revision.rowVersion, previewToken: preview.previewToken },
     }),
     "submit schedule revision",
   );
+};
 
 const reviewRevision = async (
   api: APIRequestContext,
@@ -130,14 +138,27 @@ const reviewRevision = async (
   revision: ScheduleRevision,
   decision: "Approve" | "Reject",
   comment?: string,
-): Promise<ScheduleResponse> =>
-  expectJson<ScheduleResponse>(
+): Promise<ScheduleResponse> => {
+  const previewToken =
+    decision === "Approve"
+      ? (
+          await expectJson<{ previewToken: string }>(
+            await api.get(
+              `${scheduleUrl(projectId)}/revisions/${revision.id}/email-preview?action=Publish`,
+              { headers },
+            ),
+            "preview publication email",
+          )
+        ).previewToken
+      : undefined;
+  return expectJson<ScheduleResponse>(
     await api.post(`${scheduleUrl(projectId)}/revisions/${revision.id}/review`, {
       headers: { ...headers, "Idempotency-Key": `schedule-review-${uid()}` },
-      data: { decision, comment, rowVersion: revision.rowVersion },
+      data: { decision, comment, rowVersion: revision.rowVersion, previewToken },
     }),
     `review schedule revision ${decision}`,
   );
+};
 
 test.describe("Master schedule — MoM one-way planning contract", () => {
   test("project manager resolves failed schedule email in the live browser", async ({
@@ -736,7 +757,11 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
 
     const crmAttempt = await api.post(`${scheduleUrl(projectId)}/revisions/${revision.id}/submit`, {
       headers: { ...adminHeaders, "Idempotency-Key": `schedule-crm-${suffix}` },
-      data: { approverUserId: users.salesManager.id, rowVersion: revision.rowVersion },
+      data: {
+        approverUserId: users.salesManager.id,
+        rowVersion: revision.rowVersion,
+        previewToken: "invalid",
+      },
     });
     expect(crmAttempt.status()).toBe(400);
     expect(await crmAttempt.text()).toContain("người quản lý dự án");

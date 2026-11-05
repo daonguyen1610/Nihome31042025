@@ -351,6 +351,11 @@ export interface ProjectScheduleEmailPreview {
   body: string;
 }
 
+export interface ProjectScheduleEmailPreviewResponse {
+  previewToken: string;
+  emails: ProjectScheduleEmailPreview[];
+}
+
 export interface WorkPackageApprovalPreview {
   previewToken: string;
   toEmail: string;
@@ -8144,7 +8149,7 @@ export const adminApi = {
     action: "Submit" | "Publish",
     recipientUserId?: number,
   ) =>
-    api.get<ProjectScheduleEmailPreview[]>(
+    api.get<ProjectScheduleEmailPreviewResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/email-preview`,
       { params: { action, recipientUserId } },
     ),
@@ -8181,10 +8186,11 @@ export const adminApi = {
     revisionId: number,
     approverUserId: number,
     rowVersion: string,
+    previewToken: string,
   ) =>
     api.post<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/submit`,
-      { approverUserId, rowVersion },
+      { approverUserId, rowVersion, previewToken },
       withIdempotencyKey(crypto.randomUUID()),
     ),
   reviewProjectScheduleRevision: (
@@ -8193,10 +8199,11 @@ export const adminApi = {
     decision: "Approve" | "Reject",
     comment: string,
     rowVersion: string,
+    previewToken?: string,
   ) =>
     api.post<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/review`,
-      { decision, comment, rowVersion },
+      { decision, comment, rowVersion, previewToken },
       withIdempotencyKey(crypto.randomUUID()),
     ),
   getConstructionPreparation: (projectId: number) =>

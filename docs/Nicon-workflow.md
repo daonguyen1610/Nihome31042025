@@ -71,7 +71,9 @@ báo, kiểm tra với người nhận rồi chọn **Đã nhận** hoặc **G�
 Quản trị viên vẫn xem danh sách cần kiểm tra trong trang Mẫu email. Email lưu
 đầy đủ khác biệt WBS; trạng thái revision và email xếp hàng được ghi trong
 cùng giao dịch. Trước thao tác gửi duyệt hoặc phát hành, màn hình xem trước
-hiển thị email thực theo dự án và từng người nhận. Việc xác minh email đã đến
+hiển thị email thực theo dự án và từng người nhận. Nếu nội dung hoặc người nhận
+đổi trước lúc xác nhận, người thao tác phải xem lại; hệ thống không gửi nội dung
+chưa được xác nhận. Việc xác minh email đã đến
 là trách nhiệm thủ công của người quản lý dự án.
 
 ### 2.1. Nhóm công việc của phòng ban — Hiện có

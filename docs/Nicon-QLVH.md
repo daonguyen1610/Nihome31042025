@@ -109,10 +109,11 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   email cần kiểm tra trong trang Mẫu email.
   Trạng thái revision và email xếp hàng được ghi trong cùng giao dịch.
   Trước khi gửi duyệt hoặc phát hành, người thao tác xem bản email thực theo
-  dự án và từng người nhận. Bản xem trước ở trang Mẫu email vẫn dùng dữ liệu
-  minh họa để quản trị viên chỉnh mẫu. Việc người nhận thực sự đã thấy email
-  là xác minh thủ công của người quản lý dự án, không thể suy ra từ phản hồi
-  của máy chủ gửi email.
+  dự án và từng người nhận. Nếu mẫu, người nhận hoặc bản tiến độ đổi trước khi
+  xác nhận, hệ thống yêu cầu xem lại và không xếp email cũ. Bản xem trước ở
+  trang Mẫu email vẫn dùng dữ liệu minh họa để quản trị viên chỉnh mẫu. Việc
+  người nhận thực sự đã thấy email là xác minh thủ công của người quản lý dự án,
+  không thể suy ra từ phản hồi của máy chủ gửi email.
 
 ### 2.2.2. Nhóm công việc liên phòng ban — Partial
 

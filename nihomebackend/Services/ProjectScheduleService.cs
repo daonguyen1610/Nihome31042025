@@ -1,4 +1,8 @@
 using System.Data;
+using System.Security.Cryptography;
+using System.Text;
+using System.Text.Json;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
 using NihomeBackend.Data;
@@ -21,19 +25,24 @@ public interface IProjectScheduleService
     Task<ProjectScheduleResponse?> UpdateRevisionAsync(int projectId, int revisionId, SaveProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
     Task<ProjectScheduleResponse?> SubmitAsync(int projectId, int revisionId, SubmitProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
     Task<ProjectScheduleResponse?> ReviewAsync(int projectId, int revisionId, ReviewProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
-    Task<List<ProjectScheduleEmailPreview>> PreviewEmailAsync(int projectId, int revisionId, string action, int? recipientUserId, int callerUserId, CancellationToken ct);
+    Task<ProjectScheduleEmailPreviewResponse> PreviewEmailAsync(int projectId, int revisionId, string action, int? recipientUserId, int callerUserId, CancellationToken ct);
 }
 
 public sealed record ProjectScheduleEmailPreview(int RecipientUserId, string ToEmail, string Subject, string Body);
+public sealed record ProjectScheduleEmailPreviewResponse(string PreviewToken, List<ProjectScheduleEmailPreview> Emails);
 
 public sealed class ProjectScheduleService(
     AppDbContext db,
     IProjectAccessService access,
     IPermissionService permissions,
     INotificationService notifications,
+    IDataProtectionProvider protection,
     ILogger<ProjectScheduleService> logger) : IProjectScheduleService
 {
     private const int NotificationChangeSummaryMaxLength = 900;
+    private readonly IDataProtector previewProtector = protection.CreateProtector("ProjectSchedule.EmailPreview.v1");
+    private sealed record EmailPreviewClaim(int ProjectId, int RevisionId, int UserId, string Action,
+        int? RecipientUserId, string RowVersion, string ContentHash, DateTime ExpiresAt);
 
     public async Task<ProjectScheduleResponse?> GetAsync(int projectId, int callerUserId, CancellationToken ct)
     {
@@ -129,6 +138,10 @@ public sealed class ProjectScheduleService(
         if (!MatchesRowVersion(revision, request.RowVersion))
             throw new ProjectScheduleOperationException("Bản tiến độ đã được cập nhật. Hãy tải lại trước khi gửi duyệt.", 409);
         await using var transaction = await BeginTransactionAsync(null, ct);
+        var approvalEmail = await RenderEmailAsync(projectId, revision, request.ApproverUserId,
+            "Yêu cầu duyệt tiến độ tổng thể", await GetChangeSummaryAsync(projectId, revision, ct), ct);
+        var approvalEmails = approvalEmail is null ? new List<ProjectScheduleEmailPreview>() : new List<ProjectScheduleEmailPreview> { approvalEmail };
+        RequireEmailPreview(request.PreviewToken, projectId, revision, callerUserId, "Submit", request.ApproverUserId, approvalEmails);
         revision.ApproverUserId = request.ApproverUserId;
         revision.SubmittedByUserId = callerUserId;
         revision.SubmittedAt = DateTime.UtcNow;
@@ -146,8 +159,7 @@ public sealed class ProjectScheduleService(
                 "Failed to create in-app notification for schedule revision {RevisionId} and approver {ApproverId}.",
                 revision.Id, request.ApproverUserId);
         }
-        await QueueEmailAsync(projectId, revision, request.ApproverUserId, "Yêu cầu duyệt tiến độ tổng thể",
-            await GetChangeSummaryAsync(projectId, revision, ct), ct);
+        if (approvalEmail is not null) await QueueEmailAsync(projectId, revision, approvalEmail, ct);
         await CommitAsync(transaction, ct);
         logger.LogInformation("Project schedule revision {RevisionId} submitted for project {ProjectId}; approver {ApproverId}.", revision.Id, projectId, request.ApproverUserId);
         return await BuildResponseAsync(projectId, ct);
@@ -169,6 +181,9 @@ public sealed class ProjectScheduleService(
             throw new ProjectScheduleOperationException("Cần nêu lý do khi trả lại bản tiến độ.");
 
         await using var transaction = await BeginTransactionAsync(IsolationLevel.Serializable, ct);
+        List<int> publicationUsers = [];
+        string publicationChanges = string.Empty;
+        List<ProjectScheduleEmailPreview> publicationEmails = [];
         if (request.Decision == "Approve")
         {
             if (await db.ProjectScheduleRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
@@ -177,6 +192,9 @@ public sealed class ProjectScheduleService(
                 throw new ProjectScheduleOperationException(
                     "Đã có phiên bản tiến độ mới hơn được phát hành. Hãy trả lại bản này thay vì phát hành.", 409);
             await ValidateLinkedTasksForPublicationAsync(projectId, revision, ct);
+            (publicationUsers, publicationChanges) = await GetPublicationRecipientsAsync(projectId, revision, ct);
+            publicationEmails = await RenderPublicationEmailsAsync(projectId, revision, publicationUsers, publicationChanges, ct);
+            RequireEmailPreview(request.PreviewToken, projectId, revision, callerUserId, "Publish", null, publicationEmails);
         }
 
         revision.ReviewedAt = DateTime.UtcNow;
@@ -190,7 +208,7 @@ public sealed class ProjectScheduleService(
         }
         await db.SaveChangesAsync(ct);
         if (revision.Status == ProjectScheduleRevisionStatus.Published)
-            await NotifyAffectedDepartmentsAsync(projectId, revision, ct);
+            await NotifyAffectedDepartmentsAsync(projectId, revision, publicationUsers, publicationChanges, publicationEmails, ct);
         await CommitAsync(transaction, ct);
         logger.LogInformation("Project schedule revision {RevisionId} reviewed as {Decision} by assigned approver {UserId}.", revision.Id, request.Decision, callerUserId);
         var canManage = await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct) &&
@@ -305,11 +323,12 @@ public sealed class ProjectScheduleService(
         catch (FormatException) { return false; }
     }
 
-    private async Task NotifyAffectedDepartmentsAsync(int projectId, ProjectScheduleRevision revision, CancellationToken ct)
+    private async Task NotifyAffectedDepartmentsAsync(int projectId, ProjectScheduleRevision revision,
+        IReadOnlyCollection<int> users, string changes, IReadOnlyCollection<ProjectScheduleEmailPreview> emails, CancellationToken ct)
     {
-        var (users, changes) = await GetPublicationRecipientsAsync(projectId, revision, ct);
         if (users.Count == 0) return;
         var notificationChanges = Truncate(changes, NotificationChangeSummaryMaxLength);
+        var emailByUser = emails.ToDictionary(item => item.RecipientUserId);
         foreach (var userId in users)
         {
             try
@@ -322,7 +341,8 @@ public sealed class ProjectScheduleService(
             {
                 logger.LogError(exception, "Failed to notify user {UserId} about schedule revision {RevisionId} for project {ProjectId}.", userId, revision.Id, projectId);
             }
-            await QueueEmailAsync(projectId, revision, userId, "Tiến độ tổng thể đã cập nhật", changes, ct);
+            if (emailByUser.TryGetValue(userId, out var preview))
+                await QueueEmailAsync(projectId, revision, preview, ct);
         }
     }
 
@@ -355,8 +375,8 @@ public sealed class ProjectScheduleService(
                 task.ProjectScheduleNodeId.HasValue && changed.Contains(task.ProjectScheduleNodeId.Value))
             .Select(task => task.OwnerUserId!.Value).Distinct().ToListAsync(ct);
         var users = departmentAssignees.Union(departmentApprovers).Union(designUserIds)
-            .Union(constructionOwners).Distinct().ToList();
-        var changes = string.Join("; ", changed.Select(id => FormatChange(id, oldItems, currentItems)));
+            .Union(constructionOwners).Distinct().OrderBy(userId => userId).ToList();
+        var changes = string.Join("; ", changed.OrderBy(id => id).Select(id => FormatChange(id, oldItems, currentItems)));
         return (users, changes);
     }
 
@@ -495,7 +515,7 @@ public sealed class ProjectScheduleService(
             !before.TryGetValue(id, out var oldItem) || !after.TryGetValue(id, out var newItem) ||
             oldItem.WbsCode != newItem.WbsCode || oldItem.Title != newItem.Title ||
             oldItem.PlannedStart != newItem.PlannedStart || oldItem.PlannedEnd != newItem.PlannedEnd ||
-            oldItem.ParentNodeId != newItem.ParentNodeId).ToList();
+            oldItem.ParentNodeId != newItem.ParentNodeId).OrderBy(id => id).ToList();
         if (changes.Count == 0) return "Không thay đổi nội dung so với bản đã phát hành.";
         return string.Join("; ", changes.Select(id => FormatChange(id, before, after)));
     }
@@ -519,16 +539,14 @@ public sealed class ProjectScheduleService(
         return $"{Describe(oldItem, before)} → {Describe(newItem, after)}";
     }
 
-    private async Task QueueEmailAsync(int projectId, ProjectScheduleRevision revision, int userId,
-        string eventName, string changeSummary, CancellationToken ct)
+    private async Task QueueEmailAsync(int projectId, ProjectScheduleRevision revision,
+        ProjectScheduleEmailPreview preview, CancellationToken ct)
     {
-        var preview = await RenderEmailAsync(projectId, revision, userId, eventName, changeSummary, ct);
-        if (preview is null) return;
         db.ProjectScheduleEmails.Add(new ProjectScheduleEmail
         {
             OperationalProjectId = projectId,
             RevisionId = revision.Id,
-            RecipientUserId = userId,
+            RecipientUserId = preview.RecipientUserId,
             ToEmail = preview.ToEmail,
             Subject = preview.Subject,
             Body = preview.Body,
@@ -539,7 +557,7 @@ public sealed class ProjectScheduleService(
         await db.SaveChangesAsync(ct);
     }
 
-    public async Task<List<ProjectScheduleEmailPreview>> PreviewEmailAsync(int projectId, int revisionId,
+    public async Task<ProjectScheduleEmailPreviewResponse> PreviewEmailAsync(int projectId, int revisionId,
         string action, int? recipientUserId, int callerUserId, CancellationToken ct)
     {
         var revision = await db.ProjectScheduleRevisions.AsNoTracking().Include(item => item.Items)
@@ -555,12 +573,20 @@ public sealed class ProjectScheduleService(
                 throw new ProjectScheduleOperationException("Hãy chọn người duyệt phù hợp và kiểm tra trạng thái bản tiến độ.", 409);
             var preview = await RenderEmailAsync(projectId, revision, recipientUserId.Value,
                 "Yêu cầu duyệt tiến độ tổng thể", await GetChangeSummaryAsync(projectId, revision, ct), ct);
-            return preview is null ? [] : [preview];
+            var emails = preview is null ? new List<ProjectScheduleEmailPreview>() : new List<ProjectScheduleEmailPreview> { preview };
+            return CreateEmailPreview(projectId, revision, callerUserId, action, recipientUserId, emails);
         }
         if (action != "Publish" || revision.Status != ProjectScheduleRevisionStatus.PendingApproval ||
             revision.ApproverUserId != callerUserId || !await IsEligibleApproverAsync(projectId, callerUserId, ct))
             throw new ProjectScheduleOperationException("Bạn không thể xem email phát hành cho bản tiến độ này.", 403);
         var (users, changes) = await GetPublicationRecipientsAsync(projectId, revision, ct);
+        var previews = await RenderPublicationEmailsAsync(projectId, revision, users, changes, ct);
+        return CreateEmailPreview(projectId, revision, callerUserId, action, null, previews);
+    }
+
+    private async Task<List<ProjectScheduleEmailPreview>> RenderPublicationEmailsAsync(int projectId,
+        ProjectScheduleRevision revision, IEnumerable<int> users, string changes, CancellationToken ct)
+    {
         var previews = new List<ProjectScheduleEmailPreview>();
         foreach (var userId in users)
         {
@@ -570,6 +596,34 @@ public sealed class ProjectScheduleService(
         }
         return previews;
     }
+
+    private ProjectScheduleEmailPreviewResponse CreateEmailPreview(int projectId, ProjectScheduleRevision revision,
+        int callerUserId, string action, int? recipientUserId, List<ProjectScheduleEmailPreview> emails)
+    {
+        var claim = new EmailPreviewClaim(projectId, revision.Id, callerUserId, action, recipientUserId,
+            Convert.ToBase64String(revision.RowVersion), EmailHash(emails), DateTime.UtcNow.AddMinutes(15));
+        return new(previewProtector.Protect(JsonSerializer.Serialize(claim)), emails);
+    }
+
+    private void RequireEmailPreview(string? token, int projectId, ProjectScheduleRevision revision,
+        int callerUserId, string action, int? recipientUserId, IReadOnlyCollection<ProjectScheduleEmailPreview> emails)
+    {
+        if (string.IsNullOrWhiteSpace(token))
+            throw new ProjectScheduleOperationException("Hãy xem trước email trước khi tiếp tục.");
+        EmailPreviewClaim? claim;
+        try { claim = JsonSerializer.Deserialize<EmailPreviewClaim>(previewProtector.Unprotect(token)); }
+        catch (Exception error) when (error is CryptographicException or JsonException or ArgumentException)
+        { throw new ProjectScheduleOperationException("Bản xem trước không còn hợp lệ. Hãy xem lại email trước khi tiếp tục.", 409); }
+        if (claim is null || claim.ProjectId != projectId || claim.RevisionId != revision.Id ||
+            claim.UserId != callerUserId || claim.Action != action || claim.RecipientUserId != recipientUserId ||
+            claim.RowVersion != Convert.ToBase64String(revision.RowVersion) ||
+            claim.ContentHash != EmailHash(emails) || claim.ExpiresAt < DateTime.UtcNow)
+            throw new ProjectScheduleOperationException("Nội dung email hoặc người nhận đã thay đổi. Hãy xem lại email trước khi tiếp tục.", 409);
+    }
+
+    private static string EmailHash(IEnumerable<ProjectScheduleEmailPreview> emails) =>
+        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(
+            emails.OrderBy(item => item.RecipientUserId)))));
 
     private async Task<ProjectScheduleEmailPreview?> RenderEmailAsync(int projectId, ProjectScheduleRevision revision,
         int userId, string eventName, string changeSummary, CancellationToken ct)
