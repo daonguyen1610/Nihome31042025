@@ -999,10 +999,13 @@ WBS dates or its referenced milestone is removed. A changed published revision
 sends affected assignees a notification with the changed dates; project and
 department managers then review their task dates.
 Update the project schedule email subject/body in **Admin → Email
-Templates → Project Schedule**. **Partial:** the approval, framing, change
-notification, and contract-based approver rules are covered by unit and live
-end-to-end tests. Delivery email retry is not available; email failures are
-logged and need operational follow-up.
+Templates → Project Schedule**. The preview is rendered by the server with
+sample project data; delivery uses the saved template and actual project data.
+The schedule email queue retries failed deliveries and marks a message
+`NeedsReview` after five unsuccessful attempts. **Partial:** the approval,
+framing, change notification, and contract-based approver rules are covered by
+unit and live end-to-end tests. An operator alert for `NeedsReview` is not yet
+available beyond backend logs.
 
 ### 3.2 Module 2: Design Management (3-Phase)
 

@@ -67,6 +67,23 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         });
     }
 
+    /// <summary>Preview an unsaved project schedule template using the production renderer and sample data.</summary>
+    [HttpPost("email-templates/project-schedule/preview")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public IActionResult PreviewProjectScheduleEmail([FromBody] PreviewProjectScheduleEmailRequest req)
+    {
+        try
+        {
+            var template = ProjectScheduleEmailTemplates.Validate(req.Subject, req.Body);
+            return Ok(ProjectScheduleEmailTemplates.Preview(template));
+        }
+        catch (ArgumentException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     /// <summary>Update email templates and notification email.</summary>
     [HttpPut("email-templates")]
     [Authorize]

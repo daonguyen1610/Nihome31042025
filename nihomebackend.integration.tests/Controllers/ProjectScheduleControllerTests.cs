@@ -16,8 +16,8 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
     {
         var projectId = await CreateProjectAsync(await UserIdAsync("PM"));
         var approverId = await UserIdAsync("SALES_MANAGER");
-        var approverEmail = await WithDbAsync(db => db.Users.AsNoTracking()
-            .Where(user => user.Id == approverId).Select(user => user.Email!).SingleAsync());
+        var approver = await WithDbAsync(db => db.Users.AsNoTracking()
+            .Where(user => user.Id == approverId).Select(user => new { user.Email, user.FullName }).SingleAsync());
         await AuthenticateAsync("SUPER_ADMIN");
 
         using var createdResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
@@ -49,11 +49,15 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
 
         var queued = await WithDbAsync(db => db.ProjectScheduleEmails.AsNoTracking()
             .Where(item => item.RevisionId == revisionId)
-            .Select(item => new { item.ToEmail, item.Subject, item.Status })
+            .Select(item => new { item.ToEmail, item.Subject, item.Body, item.Status })
             .ToListAsync());
         var queuedApproval = queued.Should().ContainSingle().Subject;
-        queuedApproval.ToEmail.Should().Be(approverEmail);
+        queuedApproval.ToEmail.Should().Be(approver.Email);
         queuedApproval.Subject.Should().Contain("Yêu cầu duyệt tiến độ tổng thể");
+        queuedApproval.Body.Should().Contain("<table role=\"presentation\"");
+        queuedApproval.Body.Should().Contain("PJ-");
+        queuedApproval.Body.Should().Contain(WebUtility.HtmlEncode(approver.FullName));
+        queuedApproval.Body.Should().NotContain("{{");
         queuedApproval.Status.Should().BeOneOf(
             ProjectScheduleEmail.PendingStatus, ProjectScheduleEmail.SentStatus);
 

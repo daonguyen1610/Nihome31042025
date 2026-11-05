@@ -3,6 +3,51 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
 const contractTab = "Mẫu email gia hạn và kết thúc hợp đồng";
 const approvalTab = "Duyệt nhóm công việc";
 
+test("schedule email preview uses server rendering at mobile and desktop widths", async ({
+  page,
+  loginInBrowserAs,
+}, testInfo) => {
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => {
+    if (window === window.top) localStorage.setItem("nicon_lang", "vi");
+  });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/admin/email-templates");
+  const previewResponse = page.waitForResponse((response) =>
+    response.url().endsWith("/api/site-settings/email-templates/project-schedule/preview"),
+  );
+  await page.getByRole("button", { name: "Tiến độ tổng thể", exact: true }).click();
+  const body = page.locator("#email-body");
+  await expect(body).toBeVisible();
+  const originalBody = await body.inputValue();
+  expect((await previewResponse).ok()).toBe(true);
+  const frame = page.frameLocator('iframe[title="Email preview"]');
+  await expect(frame.locator('table[role="presentation"]')).toHaveCSS("max-width", "600px");
+  await expect(frame.locator("body")).toContainText("PJ-2026-001");
+  await expect(frame.locator("body")).toContainText("Nguyễn Văn An");
+  for (const width of [390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    expect(
+      await frame
+        .locator("body")
+        .evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    ).toBe(true);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+      width,
+    );
+    await page.locator('iframe[title="Email preview"]').screenshot({
+      path: testInfo.outputPath(`schedule-email-preview-${width}.png`),
+    });
+  }
+  await page.setViewportSize({ width: 390, height: 844 });
+
+  await body.fill("<script>{{changeSummary}}</script>");
+  await expect(page.getByRole("alert")).toContainText("HTML an toàn");
+  await expect(frame.locator("body")).toBeEmpty();
+  await body.fill(originalBody);
+  await expect(frame.locator("body")).toContainText("PJ-2026-001");
+});
+
 test("email editors share responsive previews and preserve drafts", async ({
   page,
   loginInBrowserAs,
@@ -74,7 +119,8 @@ test("email editors share responsive previews and preserve drafts", async ({
       await page.getByTitle(editor.desc, { exact: true }).filter({ visible: true }).click();
       await expect(subject).toHaveValue(`NICON draft ${editor.token}`);
       await body.fill("<p>NICON preview </p>");
-      await body.press("Home");
+      await body.selectText();
+      await body.press("ArrowLeft");
       await page.getByTitle(editor.desc, { exact: true }).filter({ visible: true }).click();
       await expect(body).toHaveValue(`${editor.token}<p>NICON preview </p>`);
       await expect(iframe).toHaveAttribute("sandbox", "");

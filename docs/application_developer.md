@@ -1858,6 +1858,10 @@ it must not be confused with public portfolio content or the three-phase
 
 Schedule approval and publication notifications create rows in
 `project_schedule_emails` instead of calling SMTP inside the request.
+`POST /api/site-settings/email-templates/project-schedule/preview` requires
+`system.settings.manage` and renders an unsaved, validated subject/body with
+sample values through the same server formatter used for delivery. It does not
+send or save an email.
 `ProjectScheduleEmailService.SendPendingAsync` runs every 15 seconds via
 `ProjectScheduleEmailWorker`, retries failed deliveries with exponential
 backoff (1, 2, 4, 8 minutes, then `NeedsReview` after five attempts), and
