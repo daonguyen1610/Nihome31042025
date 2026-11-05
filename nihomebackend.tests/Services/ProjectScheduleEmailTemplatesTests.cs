@@ -60,6 +60,24 @@ public sealed class ProjectScheduleEmailTemplatesTests
         Assert.Equal(ProjectScheduleEmailTemplates.DefaultBody, template.Body);
     }
 
+    [Fact]
+    public void GetUpgradesOnlyThePreviousBuiltInBody()
+    {
+        var previousDefault = new SiteSettings
+        {
+            ProjectScheduleEmailBodyTemplate = ProjectScheduleEmailTemplates.LegacyDefaultBody,
+        };
+        var custom = new SiteSettings
+        {
+            ProjectScheduleEmailBodyTemplate = "<p>Custom {{eventName}}</p>",
+        };
+
+        Assert.Equal(ProjectScheduleEmailTemplates.DefaultBody,
+            ProjectScheduleEmailTemplates.Get(previousDefault).Body);
+        Assert.Equal(custom.ProjectScheduleEmailBodyTemplate,
+            ProjectScheduleEmailTemplates.Get(custom).Body);
+    }
+
     [Theory]
     [InlineData("<script>alert(1)</script>")]
     [InlineData("<div onclick=\"run()\">{{eventName}}</div>")]

@@ -1862,6 +1862,8 @@ Schedule approval and publication notifications create rows in
 `system.settings.manage` and renders an unsaved, validated subject/body with
 sample values through the same server formatter used for delivery. It does not
 send or save an email.
+The previous built-in schedule body is replaced on read with the current
+NICON layout; other saved bodies remain unchanged.
 `ProjectScheduleEmailService.SendPendingAsync` runs every 15 seconds via
 `ProjectScheduleEmailWorker`, retries failed deliveries with exponential
 backoff (1, 2, 4, 8 minutes, then `NeedsReview` after five attempts), and
