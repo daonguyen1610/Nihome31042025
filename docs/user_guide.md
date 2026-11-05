@@ -979,7 +979,7 @@ exceed 40 characters.
 | Contract Create/Edit | Create new or from quotation, update terms |
 | Contract Detail | Info, appendices, payment schedule, attachments, convert to project |
 
-#### 3.1.8 Project master schedule (Partial)
+#### 3.1.8 Project master schedule (Implemented)
 
 In the Operational Project detail, users with project management access can
 create the CRM master schedule as a WBS of dated milestones. Saving creates a
@@ -999,15 +999,18 @@ WBS dates or its referenced milestone is removed. A changed published revision
 sends affected assignees a notification with the changed dates; project and
 department managers then review their task dates.
 Update the project schedule email subject/body in **Admin → Email
-Templates → Project Schedule**. The preview is rendered by the server with
-sample project data; delivery uses the saved template and actual project data.
+Templates → Project Schedule**. This template editor uses sample data. Before
+submitting or publishing a schedule, review the actual email for each recipient
+in the project dialog, then choose **Continue** to complete the action.
 The schedule email queue retries failed deliveries and marks a message
-`NeedsReview` after five unsuccessful attempts. Administrators receive an
-in-app alert linking to **Admin → Email Templates → Project Schedule**, where
-the delivery section lists affected projects, revisions, and attempt counts.
-Check SMTP delivery before any manual resend because the recipient may have
-received a message even when the sender reported an error. Schedule change
-emails contain the full WBS difference.
+`NeedsReview` after five unsuccessful attempts. The project manager receives
+an alert linking to the project schedule. They must ask the recipient whether
+the message arrived, then choose **Received** or **Send again** in the project's
+email review section. The decision and manager are recorded; a second decision
+on the same failure is rejected. Administrators can see the affected projects
+in **Admin → Email Templates → Project Schedule**. A sender error does not
+prove non-delivery, so check before retrying. Schedule change emails contain
+the full WBS difference.
 
 ### 3.2 Module 2: Design Management (3-Phase)
 

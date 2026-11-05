@@ -14,7 +14,7 @@ public class SiteSettingsService(AppDbContext db)
             .Select(email => new ProjectScheduleEmailReviewItem(
                 email.Id, email.OperationalProjectId, email.RevisionId,
                 email.Revision.Version, email.Revision.OperationalProject.Code,
-                email.AttemptCount, email.LastAttemptAt))
+                email.AttemptCount, email.LastAttemptAt, null, null, null))
             .ToListAsync(ct);
 
     public async Task<SiteSettings?> GetAsync()
@@ -112,4 +112,5 @@ public class SiteSettingsService(AppDbContext db)
 }
 
 public sealed record ProjectScheduleEmailReviewItem(int Id, int ProjectId, int RevisionId,
-    int Version, string ProjectCode, int AttemptCount, DateTime? LastAttemptAt);
+    int Version, string ProjectCode, int AttemptCount, DateTime? LastAttemptAt,
+    string? ToEmail = null, string? Subject = null, string? Body = null);

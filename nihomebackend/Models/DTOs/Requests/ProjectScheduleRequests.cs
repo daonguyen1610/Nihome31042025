@@ -51,3 +51,9 @@ public sealed class ReviewProjectScheduleRevisionRequest
     [Required]
     public string? RowVersion { get; set; }
 }
+
+public sealed class ResolveProjectScheduleEmailRequest
+{
+    [Required, RegularExpression("^(ConfirmReceived|Retry)$")]
+    public string Decision { get; set; } = string.Empty;
+}

@@ -45,7 +45,7 @@ ra quyền truy cập luồng khác chỉ vì cùng Dự án vận hành. Financ
 Danh sách chọn nhân sự phải hiển thị tên, vai trò và cho lọc theo phòng ban/nhóm
 trong phạm vi ứng viên mà người dùng được quyền chọn.
 
-### Tiến độ tổng thể CRM — Partial
+### Tiến độ tổng thể CRM — Implemented
 
 CRM quản lý WBS/mốc tổng thể gắn với Operational Project. Revision đã phát
 hành là khung đang có hiệu lực. Sửa do khách hàng đổi yêu cầu tạo revision kế
@@ -60,18 +60,19 @@ bản gốc. Ngày công việc liên kết phải nằm trong khoảng mốc g�
 Revision mới không được làm đầu việc liên kết vượt khung ngày hoặc gỡ mốc đang
 được tham chiếu. Khi revision mới được phát hành, lịch phòng vẫn giữ dữ liệu
 hiện tại; người nhận đầu việc bị ảnh hưởng nhận thông báo nêu khác biệt so với
-bản phát hành trước. Quản lý phòng rà soát để điều chỉnh chi tiết. **Partial:**
+bản phát hành trước. Quản lý phòng rà soát để điều chỉnh chi tiết. **Implemented:**
 dữ liệu/API/UI và liên kết lịch đã triển khai; unit test, integration test
 (`ProjectScheduleControllerTests`) và live E2E
 (`admin-project-master-schedule.spec.ts`) đã chạy qua. Trước hợp đồng, ứng viên
 duyệt phải có role `SALES_MANAGER` thuộc CRM và còn quyền quản lý Cơ hội. Email
 được xếp vào hàng đợi `project_schedule_emails` và worker gửi lại theo backoff;
-bản ghi thất bại năm lần chuyển `NeedsReview`; quản trị viên nhận cảnh báo và
-xem danh sách cần kiểm tra trong trang Mẫu email. Email lưu đầy đủ khác biệt
-WBS; trạng thái revision và email xếp hàng được ghi trong cùng giao dịch.
-Quy trình xác minh SMTP/xử lý lại email `NeedsReview` và người chịu trách nhiệm
-cần NICON xác nhận; bản xem trước email hiện dùng dữ liệu mẫu, chưa hiển thị
-nội dung thực tế theo dự án/người nhận trước từng lần gửi.
+bản ghi thất bại năm lần chuyển `NeedsReview`; người quản lý dự án nhận cảnh
+báo, kiểm tra với người nhận rồi chọn **Đã nhận** hoặc **Gửi lại** tại dự án.
+Quản trị viên vẫn xem danh sách cần kiểm tra trong trang Mẫu email. Email lưu
+đầy đủ khác biệt WBS; trạng thái revision và email xếp hàng được ghi trong
+cùng giao dịch. Trước thao tác gửi duyệt hoặc phát hành, màn hình xem trước
+hiển thị email thực theo dự án và từng người nhận. Việc xác minh email đã đến
+là trách nhiệm thủ công của người quản lý dự án.
 
 ### 2.1. Nhóm công việc của phòng ban — Hiện có
 

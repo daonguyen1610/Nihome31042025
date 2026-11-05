@@ -1849,6 +1849,9 @@ it must not be confused with public portfolio content or the three-phase
 | `PUT` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}` | `operations.projects.manage` | Replace an editable draft/rejected revision; requires idempotency key |
 | `POST` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/submit` | `operations.projects.manage` | Assign the eligible CRM/PM approver and submit with row-version; requires idempotency key |
 | `POST` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/review` | Assigned approver only | Approve/publish or return with reason and row-version; requires idempotency key |
+| `GET` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/email-preview` | Project access and `operations.projects.manage` for `Submit`; assigned approver for `Publish` | Render actual emails and recipients without sending |
+| `GET` | `/api/operational-projects/{id}/master-schedule/emails/needs-review` | Assigned project manager | List failed emails with the stored recipient and rendered content |
+| `POST` | `/api/operational-projects/{id}/master-schedule/emails/{emailId}/resolve` | Assigned project manager | Record `ConfirmReceived` or `Retry` after checking with the recipient |
 | `GET` | `/api/operational-projects/document-categories` | `operations.projects.view` | Read the server-defined upload categories and Drive paths |
 | `GET` | `/api/operational-projects/{id}/documents` | `operations.projects.view` | List the caller's project document catalog |
 | `GET` | `/api/operational-projects/{id}/documents/{documentId}/content` | `operations.projects.view` | Download private document content through project scope |
@@ -1869,6 +1872,12 @@ Schedule approval and publication notifications create rows in
 `system.settings.manage` and renders an unsaved, validated subject/body with
 sample values through the same server formatter used for delivery. It does not
 send or save an email.
+`GET /api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview`
+with `action=Submit&recipientUserId={userId}` or `action=Publish` renders the
+actual project, revision, recipient, and change summary through the same
+renderer that queues delivery. Submission preview requires project access,
+`operations.projects.manage`, and an eligible approver; publication preview
+requires the assigned eligible approver. It does not enqueue an email.
 The previous built-in schedule body is replaced on read with the current
 NICON layout; other saved bodies remain unchanged.
 `ProjectScheduleEmailService.SendPendingAsync` runs every 15 seconds via
@@ -1879,7 +1888,15 @@ records `LastError` without recipient or credential details. Rows stuck in
 truncated to 900 characters for `Notification.Body` (column limit 1,000), while
 the email body keeps the complete WBS difference in `nvarchar(max)`. Revision
 transitions and email queue rows commit together. After five failed attempts,
-administrators receive an in-app alert and can inspect a read-only queue at
+the project's assigned manager receives an in-app alert. The manager can inspect
+the actual recipient and rendered email at
+`GET /api/operational-projects/{projectId}/master-schedule/emails/needs-review`,
+then record `ConfirmReceived` or `Retry` at
+`POST /api/operational-projects/{projectId}/master-schedule/emails/{emailId}/resolve`.
+The server checks project-manager ownership and the `NeedsReview` state, records
+`ReviewedByUserId` and `ReviewedAt`, and rejects duplicate decisions with 409.
+Retry preserves the original message and starts a new delivery attempt cycle.
+Administrators can inspect a read-only queue at
 `GET /api/site-settings/email-templates/project-schedule/needs-review`
 (`system.settings.view`). The endpoint returns the 100 most recent exhausted
 messages without email addresses or body content. Integration coverage:

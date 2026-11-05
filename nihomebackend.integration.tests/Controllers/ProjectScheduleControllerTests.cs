@@ -36,6 +36,13 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
             .Select(option => option.GetProperty("userId").GetInt32()).ToList();
         approverOptions.Should().Contain(approverId);
 
+        using var previewResponse = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Submit&recipientUserId={approverId}");
+        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = (await ReadJsonAsync(previewResponse))[0];
+        preview.GetProperty("toEmail").GetString().Should().Be(approver.Email);
+        preview.GetProperty("body").GetString().Should().Contain("Công trình tiến độ tổng thể");
+
         using var submittedResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
             new { approverUserId = approverId, rowVersion = revision.GetProperty("rowVersion").GetString() },
@@ -58,6 +65,8 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
         queuedApproval.Body.Should().Contain("PJ-");
         queuedApproval.Body.Should().Contain(WebUtility.HtmlEncode(approver.FullName));
         queuedApproval.Body.Should().NotContain("{{");
+        queuedApproval.Body.Should().Be(preview.GetProperty("body").GetString());
+        queuedApproval.Subject.Should().Be(preview.GetProperty("subject").GetString());
         queuedApproval.Status.Should().BeOneOf(
             ProjectScheduleEmail.PendingStatus, ProjectScheduleEmail.SentStatus);
 
@@ -81,6 +90,79 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
             .SingleAsync(item => item.RevisionId == revisionId));
         delivered.Status.Should().Be(ProjectScheduleEmail.SentStatus);
         delivered.SentAt.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task EmailReview_OnlyProjectManagerMayConfirmOrRetryAnExhaustedEmail()
+    {
+        var managerId = await UserIdAsync("PM");
+        var projectId = await CreateProjectAsync(managerId);
+        var revisionId = await WithDbAsync(async db =>
+        {
+            var revision = new ProjectScheduleRevision
+            {
+                OperationalProjectId = projectId,
+                Version = 1,
+                Status = ProjectScheduleRevisionStatus.Published,
+                CreatedByUserId = managerId,
+            };
+            db.ProjectScheduleRevisions.Add(revision);
+            await db.SaveChangesAsync();
+            return revision.Id;
+        });
+        var emailIds = await WithDbAsync(async db =>
+        {
+            var messages = new[] { 1, 2 }.Select(number => new ProjectScheduleEmail
+            {
+                OperationalProjectId = projectId,
+                RevisionId = revisionId,
+                RecipientUserId = managerId,
+                ToEmail = $"recipient{number}@example.com",
+                Subject = "Thông báo tiến độ",
+                Body = "<p>Tiến độ dự án</p>",
+                Status = ProjectScheduleEmail.NeedsReviewStatus,
+                AttemptCount = ProjectScheduleEmailService.MaxAttempts,
+            }).ToArray();
+            db.ProjectScheduleEmails.AddRange(messages);
+            await db.SaveChangesAsync();
+            return messages.Select(item => item.Id).ToArray();
+        });
+
+        await AuthenticateAsync("SALES_MANAGER");
+        (await Client.GetAsync($"/api/operational-projects/{projectId}/master-schedule/emails/needs-review"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var denied = await Client.PostAsJsonAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/emails/{emailIds[0]}/resolve",
+            new { decision = "Retry" });
+        denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthenticateAsync("PM");
+        using var listed = await Client.GetAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/emails/needs-review");
+        listed.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(listed)).GetArrayLength().Should().Be(2);
+        using var received = await Client.PostAsJsonAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/emails/{emailIds[0]}/resolve",
+            new { decision = "ConfirmReceived" });
+        received.StatusCode.Should().Be(HttpStatusCode.NoContent,
+            await received.Content.ReadAsStringAsync());
+        using var retried = await Client.PostAsJsonAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/emails/{emailIds[1]}/resolve",
+            new { decision = "Retry" });
+        retried.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        using var repeated = await Client.PostAsJsonAsync(
+            $"/api/operational-projects/{projectId}/master-schedule/emails/{emailIds[0]}/resolve",
+            new { decision = "Retry" });
+        repeated.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var rows = await WithDbAsync(db => db.ProjectScheduleEmails.AsNoTracking()
+            .Where(item => emailIds.Contains(item.Id)).OrderBy(item => item.Id)
+            .Select(item => new { item.Status, item.ReviewedByUserId, item.ReviewedAt, item.AttemptCount })
+            .ToListAsync());
+        rows[0].Status.Should().Be(ProjectScheduleEmail.ConfirmedReceivedStatus);
+        rows[0].ReviewedByUserId.Should().Be(managerId);
+        rows[0].ReviewedAt.Should().NotBeNull();
+        rows[1].Status.Should().BeOneOf(ProjectScheduleEmail.PendingStatus, ProjectScheduleEmail.SentStatus);
+        rows[1].AttemptCount.Should().BeLessThan(ProjectScheduleEmailService.MaxAttempts);
     }
 
     [Fact]

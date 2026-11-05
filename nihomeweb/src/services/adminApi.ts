@@ -339,6 +339,16 @@ export interface ProjectScheduleEmailReviewItem {
   projectCode: string;
   attemptCount: number;
   lastAttemptAt: string | null;
+  toEmail?: string | null;
+  subject?: string | null;
+  body?: string | null;
+}
+
+export interface ProjectScheduleEmailPreview {
+  recipientUserId: number;
+  toEmail: string;
+  subject: string;
+  body: string;
 }
 
 export interface WorkPackageApprovalPreview {
@@ -8128,6 +8138,28 @@ export const adminApi = {
     api.get<OperationalProjectResponse>(`/operational-projects/${id}`),
   getProjectSchedule: (projectId: number) =>
     api.get<ProjectScheduleResponse>(`/operational-projects/${projectId}/master-schedule`),
+  previewProjectScheduleForAction: (
+    projectId: number,
+    revisionId: number,
+    action: "Submit" | "Publish",
+    recipientUserId?: number,
+  ) =>
+    api.get<ProjectScheduleEmailPreview[]>(
+      `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/email-preview`,
+      { params: { action, recipientUserId } },
+    ),
+  getProjectScheduleEmailsForReview: (projectId: number) =>
+    api.get<ProjectScheduleEmailReviewItem[]>(
+      `/operational-projects/${projectId}/master-schedule/emails/needs-review`,
+    ),
+  resolveProjectScheduleEmail: (
+    projectId: number,
+    emailId: number,
+    decision: "ConfirmReceived" | "Retry",
+  ) =>
+    api.post<void>(`/operational-projects/${projectId}/master-schedule/emails/${emailId}/resolve`, {
+      decision,
+    }),
   createProjectScheduleRevision: (projectId: number, body: SaveProjectScheduleRevisionRequest) =>
     api.post<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions`,

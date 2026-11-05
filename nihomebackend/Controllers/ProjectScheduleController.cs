@@ -12,8 +12,41 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 [Route("api/operational-projects/{projectId:int}/master-schedule")]
 [Route("api/v1/operational-projects/{projectId:int}/master-schedule")]
-public sealed class ProjectScheduleController(IProjectScheduleService service) : ControllerBase
+public sealed class ProjectScheduleController(IProjectScheduleService service,
+    ProjectScheduleEmailService emails) : ControllerBase
 {
+    [HttpGet("revisions/{revisionId:int}/email-preview")]
+    public async Task<IActionResult> PreviewEmail(int projectId, int revisionId,
+        [FromQuery] string action, [FromQuery] int? recipientUserId, CancellationToken ct)
+    {
+        var userId = UserId();
+        if (userId is null) return Unauthorized();
+        try { return Ok(await service.PreviewEmailAsync(projectId, revisionId, action, recipientUserId, userId.Value, ct)); }
+        catch (ProjectScheduleOperationException exception) { return StatusCode(exception.StatusCode, new { message = exception.Message }); }
+    }
+
+    [HttpGet("emails/needs-review")]
+    public async Task<IActionResult> EmailsNeedingReview(int projectId, CancellationToken ct)
+    {
+        var userId = UserId();
+        if (userId is null) return Unauthorized();
+        try { return Ok(await emails.GetNeedsReviewAsync(projectId, userId.Value, ct)); }
+        catch (ProjectScheduleOperationException exception) { return StatusCode(exception.StatusCode, new { message = exception.Message }); }
+    }
+
+    [HttpPost("emails/{emailId:int}/resolve")]
+    public async Task<IActionResult> ResolveEmail(int projectId, int emailId,
+        [FromBody] ResolveProjectScheduleEmailRequest request, CancellationToken ct)
+    {
+        var userId = UserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            await emails.ResolveAsync(projectId, emailId, userId.Value, request.Decision, ct);
+            return NoContent();
+        }
+        catch (ProjectScheduleOperationException exception) { return StatusCode(exception.StatusCode, new { message = exception.Message }); }
+    }
     [HttpGet]
     public async Task<ActionResult<ProjectScheduleResponse>> Get(int projectId, CancellationToken ct)
     {

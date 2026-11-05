@@ -91,7 +91,7 @@ public sealed class ProjectScheduleServiceTests
             }, CallerId, default));
 
         Assert.Equal(409, error.StatusCode);
-        Assert.Contains("revision nháp", error.Message);
+        Assert.Contains("bản tiến độ khác", error.Message);
     }
 
     [Fact]
