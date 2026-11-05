@@ -131,6 +131,8 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<ContractReminderWorker>();
         services.AddScoped<WorkPackageApprovalEmailService>();
         services.AddHostedService<WorkPackageApprovalEmailWorker>();
+        services.AddScoped<ProjectScheduleEmailService>();
+        services.AddHostedService<ProjectScheduleEmailWorker>();
         services.AddScoped<ContractCareIdempotencyGuard>();
         services.AddScoped<ContinuationCreateIdempotencyGuard>();
         services.AddScoped<ContractMilestoneNotificationService>();

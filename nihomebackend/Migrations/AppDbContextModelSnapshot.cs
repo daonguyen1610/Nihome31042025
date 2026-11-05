@@ -1886,9 +1886,6 @@ namespace nihomebackend.Migrations
                     b.Property<int>("DesignProjectId")
                         .HasColumnType("int");
 
-                    b.Property<Guid?>("ProjectScheduleNodeId")
-                        .HasColumnType("uniqueidentifier");
-
                     b.Property<Guid>("DrawingLinksVersion")
                         .IsConcurrencyToken()
                         .HasColumnType("uniqueidentifier");
@@ -1909,6 +1906,9 @@ namespace nihomebackend.Migrations
 
                     b.Property<int>("ProgressPercent")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("ProjectScheduleNodeId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -1934,9 +1934,9 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("DesignProjectId");
 
-                    b.HasIndex("ProjectScheduleNodeId");
-
                     b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("ProjectScheduleNodeId");
 
                     b.HasIndex("Status");
 
@@ -3179,6 +3179,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("ProgressPercent")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ProjectScheduleNodeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("Resources")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -3226,6 +3229,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("DepartmentRoleGroupId");
 
                     b.HasIndex("ParentTaskId");
+
+                    b.HasIndex("ProjectScheduleNodeId");
 
                     b.HasIndex("VerifiedByUserId");
 
@@ -3806,6 +3811,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("ProgressPercent")
                         .HasColumnType("int");
 
+                    b.Property<Guid?>("ProjectScheduleNodeId")
+                        .HasColumnType("uniqueidentifier");
+
                     b.Property<string>("ResourceSummary")
                         .HasMaxLength(2000)
                         .HasColumnType("nvarchar(2000)");
@@ -3860,6 +3868,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ParentTaskId");
 
                     b.HasIndex("PhaseId");
+
+                    b.HasIndex("ProjectScheduleNodeId");
 
                     b.HasIndex("VendorId");
 
@@ -4107,6 +4117,12 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<bool>("DeleteDriveFilesOnWebDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("DeleteWebRecordsOnDriveDelete")
+                        .HasColumnType("bit");
+
                     b.Property<string>("DesignBasicFolder")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -4121,12 +4137,6 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
-
-                    b.Property<bool>("DeleteDriveFilesOnWebDelete")
-                        .HasColumnType("bit");
-
-                    b.Property<bool>("DeleteWebRecordsOnDriveDelete")
-                        .HasColumnType("bit");
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("bit");
@@ -7902,6 +7912,222 @@ namespace nihomebackend.Migrations
                     b.ToTable("project_drive_folders", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleEmail", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("AttemptCount")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(16000)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("LastAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("NextAttemptAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("RecipientUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("ToEmail")
+                        .IsRequired()
+                        .HasMaxLength(254)
+                        .HasColumnType("nvarchar(254)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationalProjectId");
+
+                    b.HasIndex("RevisionId");
+
+                    b.HasIndex("Status", "NextAttemptAt", "Id");
+
+                    b.ToTable("project_schedule_emails", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("NodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<Guid?>("ParentNodeId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateOnly>("PlannedEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly>("PlannedStart")
+                        .HasColumnType("date");
+
+                    b.Property<int>("RevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.Property<string>("WbsCode")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NodeId");
+
+                    b.HasIndex("ParentNodeId");
+
+                    b.HasIndex("RevisionId", "NodeId")
+                        .IsUnique();
+
+                    b.HasIndex("RevisionId", "WbsCode")
+                        .IsUnique();
+
+                    b.ToTable("project_schedule_items", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_project_schedule_items_planned_dates", "[PlannedEnd] >= [PlannedStart]");
+                        });
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleNode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationalProjectId", "Id")
+                        .IsUnique();
+
+                    b.ToTable("project_schedule_nodes", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleRevision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("ApproverUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ChangeReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SubmittedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApproverUserId");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("OperationalProjectId", "Status");
+
+                    b.HasIndex("OperationalProjectId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("project_schedule_revisions", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.PunchItem", b =>
                 {
                     b.Property<int>("Id")
@@ -9843,16 +10069,16 @@ namespace nihomebackend.Migrations
                     b.Property<string>("OtpEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ProjectScheduleEmailBodyTemplate")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ProjectScheduleEmailSubjectTemplate")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<string>("PrimaryEmail")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("PrimaryPhone")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProjectScheduleEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ProjectScheduleEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("QuoteApprovalEmailBodyTemplate")
@@ -12585,6 +12811,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("ParentTaskId")
                         .OnDelete(DeleteBehavior.NoAction);
 
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ProjectScheduleNode")
+                        .WithMany()
+                        .HasForeignKey("ProjectScheduleNodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "VerifiedByUser")
                         .WithMany()
                         .HasForeignKey("VerifiedByUserId")
@@ -12605,6 +12836,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("KpiDefinition");
 
                     b.Navigation("ParentTask");
+
+                    b.Navigation("ProjectScheduleNode");
 
                     b.Navigation("VerifiedByUser");
 
@@ -12870,6 +13103,11 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ProjectScheduleNode")
+                        .WithMany()
+                        .HasForeignKey("ProjectScheduleNodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.Vendor", "Vendor")
                         .WithMany()
                         .HasForeignKey("VendorId")
@@ -12888,6 +13126,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("ParentTask");
 
                     b.Navigation("Phase");
+
+                    b.Navigation("ProjectScheduleNode");
 
                     b.Navigation("Vendor");
                 });
@@ -13879,6 +14119,88 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("OperationalProjectId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("OperationalProject");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleEmail", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleRevision", "Revision")
+                        .WithMany()
+                        .HasForeignKey("RevisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Revision");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleItem", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "Node")
+                        .WithMany()
+                        .HasForeignKey("NodeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ParentNode")
+                        .WithMany()
+                        .HasForeignKey("ParentNodeId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleRevision", "Revision")
+                        .WithMany("Items")
+                        .HasForeignKey("RevisionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Node");
+
+                    b.Navigation("ParentNode");
+
+                    b.Navigation("Revision");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleNode", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany("ScheduleNodes")
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("OperationalProject");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleRevision", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApproverUser")
+                        .WithMany()
+                        .HasForeignKey("ApproverUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany("ScheduleRevisions")
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("ApproverUser");
 
                     b.Navigation("OperationalProject");
                 });
@@ -15187,6 +15509,10 @@ namespace nihomebackend.Migrations
 
                     b.Navigation("Quotes");
 
+                    b.Navigation("ScheduleNodes");
+
+                    b.Navigation("ScheduleRevisions");
+
                     b.Navigation("TeamAssignments");
 
                     b.Navigation("TeamMembers");
@@ -15230,6 +15556,11 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.ProjectBoqRevision", b =>
                 {
                     b.Navigation("Lines");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleRevision", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.QaQcDossier", b =>
@@ -15344,130 +15675,6 @@ namespace nihomebackend.Migrations
             modelBuilder.Entity("NihomeBackend.Models.WarehouseReceipt", b =>
                 {
                     b.Navigation("Lines");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleNode", b =>
-                {
-                    b.Property<Guid>("Id").HasColumnType("uniqueidentifier");
-                    b.Property<int>("OperationalProjectId").HasColumnType("int");
-                    b.Property<DateTime>("CreatedAt").HasColumnType("datetime2");
-                    b.HasKey("Id");
-                    b.HasIndex("OperationalProjectId", "Id").IsUnique();
-                    b.ToTable("project_schedule_nodes", (string)null);
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleRevision", b =>
-                {
-                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("int");
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-                    b.Property<int>("OperationalProjectId").HasColumnType("int");
-                    b.Property<int>("Version").HasColumnType("int");
-                    b.Property<string>("Status").IsRequired().HasMaxLength(30).HasColumnType("nvarchar(30)");
-                    b.Property<string>("ChangeReason").HasMaxLength(2000).HasColumnType("nvarchar(2000)");
-                    b.Property<int?>("ApproverUserId").HasColumnType("int");
-                    b.Property<DateTime?>("SubmittedAt").HasColumnType("datetime2");
-                    b.Property<int?>("SubmittedByUserId").HasColumnType("int");
-                    b.Property<DateTime?>("ReviewedAt").HasColumnType("datetime2");
-                    b.Property<int?>("ReviewedByUserId").HasColumnType("int");
-                    b.Property<string>("ReviewComment").HasMaxLength(2000).HasColumnType("nvarchar(2000)");
-                    b.Property<DateTime>("CreatedAt").HasColumnType("datetime2");
-                    b.Property<int>("CreatedByUserId").HasColumnType("int");
-                    b.Property<DateTime?>("PublishedAt").HasColumnType("datetime2");
-                    b.Property<byte[]>("RowVersion").IsConcurrencyToken().IsRequired().ValueGeneratedOnAddOrUpdate().HasColumnType("rowversion");
-                    b.HasKey("Id");
-                    b.HasIndex("ApproverUserId");
-                    b.HasIndex("CreatedByUserId");
-                    b.HasIndex("ReviewedByUserId");
-                    b.HasIndex("SubmittedByUserId");
-                    b.HasIndex("OperationalProjectId", "Status");
-                    b.HasIndex("OperationalProjectId", "Version").IsUnique();
-                    b.ToTable("project_schedule_revisions", (string)null);
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleItem", b =>
-                {
-                    b.Property<int>("Id").ValueGeneratedOnAdd().HasColumnType("int");
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-                    b.Property<int>("RevisionId").HasColumnType("int");
-                    b.Property<Guid>("NodeId").HasColumnType("uniqueidentifier");
-                    b.Property<Guid?>("ParentNodeId").HasColumnType("uniqueidentifier");
-                    b.Property<string>("WbsCode").IsRequired().HasMaxLength(80).HasColumnType("nvarchar(80)");
-                    b.Property<string>("Title").IsRequired().HasMaxLength(300).HasColumnType("nvarchar(300)");
-                    b.Property<DateOnly>("PlannedStart").HasColumnType("date");
-                    b.Property<DateOnly>("PlannedEnd").HasColumnType("date");
-                    b.Property<int>("SortOrder").HasColumnType("int");
-                    b.HasKey("Id");
-                    b.HasIndex("NodeId");
-                    b.HasIndex("ParentNodeId");
-                    b.HasIndex("RevisionId", "NodeId").IsUnique();
-                    b.HasIndex("RevisionId", "WbsCode").IsUnique();
-                    b.ToTable("project_schedule_items", (string)null, table =>
-                        {
-                            table.HasCheckConstraint("CK_project_schedule_items_planned_dates", "[PlannedEnd] >= [PlannedStart]");
-                        });
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleNode", b =>
-                {
-                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
-                        .WithMany("ScheduleNodes").HasForeignKey("OperationalProjectId")
-                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
-                    b.Navigation("OperationalProject");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleRevision", b =>
-                {
-                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
-                        .WithMany("ScheduleRevisions").HasForeignKey("OperationalProjectId")
-                        .OnDelete(DeleteBehavior.Restrict).IsRequired();
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApproverUser")
-                        .WithMany().HasForeignKey("ApproverUserId").OnDelete(DeleteBehavior.NoAction);
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
-                        .WithMany().HasForeignKey("CreatedByUserId").OnDelete(DeleteBehavior.Restrict).IsRequired();
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
-                        .WithMany().HasForeignKey("ReviewedByUserId").OnDelete(DeleteBehavior.NoAction);
-                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
-                        .WithMany().HasForeignKey("SubmittedByUserId").OnDelete(DeleteBehavior.NoAction);
-                    b.Navigation("ApproverUser");
-                    b.Navigation("Items");
-                    b.Navigation("OperationalProject");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleItem", b =>
-                {
-                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "Node")
-                        .WithMany().HasForeignKey("NodeId").OnDelete(DeleteBehavior.Restrict).IsRequired();
-                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ParentNode")
-                        .WithMany().HasForeignKey("ParentNodeId").OnDelete(DeleteBehavior.NoAction);
-                    b.HasOne("NihomeBackend.Models.ProjectScheduleRevision", "Revision")
-                        .WithMany("Items").HasForeignKey("RevisionId").OnDelete(DeleteBehavior.Cascade).IsRequired();
-                    b.Navigation("Node");
-                    b.Navigation("ParentNode");
-                    b.Navigation("Revision");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkTask", b =>
-                {
-                    b.Property<Guid?>("ProjectScheduleNodeId").HasColumnType("uniqueidentifier");
-                    b.HasIndex("ProjectScheduleNodeId");
-                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ProjectScheduleNode")
-                        .WithMany().HasForeignKey("ProjectScheduleNodeId").OnDelete(DeleteBehavior.Restrict);
-                    b.Navigation("ProjectScheduleNode");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.DesignScheduleTask", b =>
-                {
-                    b.Property<Guid?>("ProjectScheduleNodeId").HasColumnType("uniqueidentifier");
-                    b.HasIndex("ProjectScheduleNodeId");
-                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ProjectScheduleNode")
-                        .WithMany().HasForeignKey("ProjectScheduleNodeId").OnDelete(DeleteBehavior.Restrict);
-                    b.Navigation("ProjectScheduleNode");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.OperationalProject", b =>
-                {
-                    b.Navigation("ScheduleRevisions");
-                    b.Navigation("ScheduleNodes");
                 });
 #pragma warning restore 612, 618
         }
