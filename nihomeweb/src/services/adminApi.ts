@@ -331,6 +331,16 @@ export interface EmailTemplatesResponse {
   projectScheduleEmailBodyTemplate: string;
 }
 
+export interface ProjectScheduleEmailReviewItem {
+  id: number;
+  projectId: number;
+  revisionId: number;
+  version: number;
+  projectCode: string;
+  attemptCount: number;
+  lastAttemptAt: string | null;
+}
+
 export interface WorkPackageApprovalPreview {
   previewToken: string;
   toEmail: string;
@@ -6199,6 +6209,10 @@ export const adminApi = {
 
   // Email templates
   getEmailTemplates: () => api.get<EmailTemplatesResponse>("/site-settings/email-templates"),
+  getProjectScheduleEmailsNeedingReview: () =>
+    api.get<ProjectScheduleEmailReviewItem[]>(
+      "/site-settings/email-templates/project-schedule/needs-review",
+    ),
   previewProjectScheduleEmail: (data: { subject: string; body: string }) =>
     api.post<{ subject: string; body: string }>(
       "/site-settings/email-templates/project-schedule/preview",

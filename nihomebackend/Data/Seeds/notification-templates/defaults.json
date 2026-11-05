@@ -203,6 +203,12 @@
       "module": "operations.projects",
       "channel": "InApp",
       "adminDescription": "Tell linked department task owners when an approved master schedule changes."
+    },
+    {
+      "code": "project.schedule.email-needs-review",
+      "module": "operations.projects",
+      "channel": "InApp",
+      "adminDescription": "Alert administrators after a master schedule email exhausts delivery retries."
     }
   ]
 }

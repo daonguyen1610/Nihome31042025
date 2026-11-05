@@ -139,6 +139,25 @@ const reviewRevision = async (
   );
 
 test.describe("Master schedule — MoM one-way planning contract", () => {
+  test("administrator can inspect schedule email delivery at desktop and mobile widths", async ({
+    loginInBrowserAs,
+    page,
+  }) => {
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto("/admin/email-templates?tab=projectSchedule#schedule-delivery");
+    const delivery = page.locator("#schedule-delivery");
+    await expect(delivery).toBeVisible();
+    await expect(delivery).toContainText("Email tiến độ cần kiểm tra");
+    await expect(delivery.getByRole("button", { name: "Làm mới" })).toBeVisible();
+    for (const width of [768, 390]) {
+      await page.setViewportSize({ width, height: 844 });
+      await expect(delivery).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
+        width,
+      );
+    }
+  });
+
   test("CRM approves the master schedule, departments stay inside its frame, and a client change notifies them", async ({
     api,
     loginInBrowserAs,

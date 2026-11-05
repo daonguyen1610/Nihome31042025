@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
+using Moq;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
@@ -14,7 +15,8 @@ public sealed class ProjectScheduleEmailServiceTests
         await using var db = DbContextFactory.Create();
         var message = await SeedQueuedAsync(db);
         var sender = new FlakyEmailService(failuresBeforeSuccess: 1);
-        var service = new ProjectScheduleEmailService(db, sender, NullLogger<ProjectScheduleEmailService>.Instance);
+        var service = new ProjectScheduleEmailService(db, sender, Mock.Of<INotificationService>(),
+            NullLogger<ProjectScheduleEmailService>.Instance);
 
         Assert.Equal(0, await service.SendPendingAsync(default));
 
@@ -41,7 +43,17 @@ public sealed class ProjectScheduleEmailServiceTests
         await using var db = DbContextFactory.Create();
         var message = await SeedQueuedAsync(db);
         var sender = new FlakyEmailService(failuresBeforeSuccess: int.MaxValue);
-        var service = new ProjectScheduleEmailService(db, sender, NullLogger<ProjectScheduleEmailService>.Instance);
+        db.Users.Add(new ApplicationUser
+        {
+            Id = 85,
+            Role = UserRole.SUPER_ADMIN,
+            PhoneNumber = "0900000085",
+            Email = "operator@nihome.test",
+        });
+        await db.SaveChangesAsync();
+        var notifications = new Mock<INotificationService>();
+        var service = new ProjectScheduleEmailService(db, sender, notifications.Object,
+            NullLogger<ProjectScheduleEmailService>.Instance);
 
         for (var attempt = 0; attempt < ProjectScheduleEmailService.MaxAttempts; attempt++)
         {
@@ -53,8 +65,49 @@ public sealed class ProjectScheduleEmailServiceTests
         Assert.Equal(ProjectScheduleEmail.NeedsReviewStatus, exhausted.Status);
         Assert.Equal(ProjectScheduleEmailService.MaxAttempts, exhausted.AttemptCount);
         Assert.Equal(ProjectScheduleEmailService.MaxAttempts, sender.Attempts);
+        notifications.Verify(service => service.NotifyFromTemplateAsync(85,
+            "project.schedule.email-needs-review",
+            It.Is<IDictionary<string, string>>(data => data["emailId"] == message.Id.ToString()),
+            "ProjectScheduleEmail", message.Id,
+            "/admin/email-templates?tab=projectSchedule#schedule-delivery", "vi"), Times.Once);
 
         await MakeDueAsync(db, message.Id);
+        Assert.Equal(0, await service.SendPendingAsync(default));
+        Assert.Equal(ProjectScheduleEmailService.MaxAttempts, sender.Attempts);
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task SendPending_DoesNotRetryExhaustedEmailWhenAdministratorAlertFails()
+    {
+        await using var db = DbContextFactory.Create();
+        var message = await SeedQueuedAsync(db);
+        db.Users.Add(new ApplicationUser
+        {
+            Id = 86,
+            Role = UserRole.SUPER_ADMIN,
+            PhoneNumber = "0900000086",
+            Email = "operator@nihome.test",
+        });
+        await db.SaveChangesAsync();
+        var sender = new FlakyEmailService(failuresBeforeSuccess: int.MaxValue);
+        var notifications = new Mock<INotificationService>();
+        notifications.Setup(service => service.NotifyFromTemplateAsync(86,
+                "project.schedule.email-needs-review", It.IsAny<IDictionary<string, string>>(),
+                "ProjectScheduleEmail", message.Id,
+                "/admin/email-templates?tab=projectSchedule#schedule-delivery", "vi"))
+            .ThrowsAsync(new InvalidOperationException("notification store unavailable"));
+        var service = new ProjectScheduleEmailService(db, sender, notifications.Object,
+            NullLogger<ProjectScheduleEmailService>.Instance);
+
+        for (var attempt = 0; attempt < ProjectScheduleEmailService.MaxAttempts; attempt++)
+        {
+            await MakeDueAsync(db, message.Id);
+            await service.SendPendingAsync(default);
+        }
+
+        var exhausted = await db.ProjectScheduleEmails.AsNoTracking().SingleAsync(item => item.Id == message.Id);
+        Assert.Equal(ProjectScheduleEmail.NeedsReviewStatus, exhausted.Status);
         Assert.Equal(0, await service.SendPendingAsync(default));
         Assert.Equal(ProjectScheduleEmailService.MaxAttempts, sender.Attempts);
     }

@@ -1,5 +1,6 @@
 using System.Net;
 using Microsoft.AspNetCore.Mvc.Testing;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -87,6 +88,60 @@ public class SiteSettingsControllerTests : IntegrationTestBase
         using var invalidResponse = await Client.PostAsJsonAsync(path,
             new { request.subject, body = "<script>{{changeSummary}}</script>" });
         invalidResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ScheduleEmailReview_RequiresSettingsAccessAndListsExhaustedMessages()
+    {
+        const string path = "/api/site-settings/email-templates/project-schedule/needs-review";
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        var emailId = await WithDbAsync(async db =>
+        {
+            var project = new OperationalProject
+            {
+                Code = $"PJ-REVIEW-{Guid.NewGuid():N}"[..22],
+                Name = "Công trình kiểm tra email tiến độ",
+                Customer = new Customer { Name = "Khách hàng NICON" },
+            };
+            db.OperationalProjects.Add(project);
+            await db.SaveChangesAsync();
+            var revision = new ProjectScheduleRevision
+            {
+                OperationalProjectId = project.Id,
+                Version = 2,
+                Status = ProjectScheduleRevisionStatus.Published,
+                CreatedByUserId = 1,
+                RowVersion = [1],
+            };
+            db.ProjectScheduleRevisions.Add(revision);
+            await db.SaveChangesAsync();
+            var email = new ProjectScheduleEmail
+            {
+                OperationalProjectId = project.Id,
+                RevisionId = revision.Id,
+                ToEmail = "review@nihome.test",
+                Subject = "Cần kiểm tra tiến độ",
+                Body = "<p>Kiểm tra</p>",
+                Status = ProjectScheduleEmail.NeedsReviewStatus,
+                AttemptCount = 5,
+            };
+            db.ProjectScheduleEmails.Add(email);
+            await db.SaveChangesAsync();
+            return email.Id;
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        using var response = await Client.GetAsync(path);
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        var items = await ReadJsonAsync(response);
+        items.EnumerateArray().Should().Contain(item =>
+            item.GetProperty("id").GetInt32() == emailId &&
+            item.GetProperty("attemptCount").GetInt32() == 5 &&
+            item.GetProperty("projectCode").GetString()!.StartsWith("PJ-REVIEW-"));
     }
 
     [Fact]

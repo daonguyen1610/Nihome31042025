@@ -8,6 +8,8 @@ import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { adminApi } from "@/services/adminApi";
+import type { ProjectScheduleEmailReviewItem } from "@/services/adminApi";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -59,7 +61,16 @@ const EmailTemplateConfig = () => {
   const { toast } = useToast();
   const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
 
-  const [activeTab, setActiveTab] = useState<TabType>("application");
+  const [activeTab, setActiveTab] = useState<TabType>(
+    new URLSearchParams(window.location.search).get("tab") === "projectSchedule"
+      ? "projectSchedule"
+      : "application",
+  );
+  const [scheduleEmailsNeedingReview, setScheduleEmailsNeedingReview] = useState<
+    ProjectScheduleEmailReviewItem[]
+  >([]);
+  const [scheduleDeliveryLoading, setScheduleDeliveryLoading] = useState(false);
+  const [scheduleDeliveryError, setScheduleDeliveryError] = useState<string | null>(null);
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
   const [notificationEmail, setNotificationEmail] = useState("");
@@ -104,6 +115,23 @@ const EmailTemplateConfig = () => {
   useEffect(() => {
     loadTemplates();
   }, [loadTemplates]);
+
+  const loadScheduleDelivery = useCallback(async () => {
+    setScheduleDeliveryLoading(true);
+    setScheduleDeliveryError(null);
+    try {
+      const response = await adminApi.getProjectScheduleEmailsNeedingReview();
+      setScheduleEmailsNeedingReview(response.data);
+    } catch (error) {
+      setScheduleDeliveryError(extractApiError(error));
+    } finally {
+      setScheduleDeliveryLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (activeTab === "projectSchedule") void loadScheduleDelivery();
+  }, [activeTab, loadScheduleDelivery]);
 
   useEffect(() => {
     if (activeTab !== "projectSchedule" || loading) return;
@@ -425,6 +453,62 @@ const EmailTemplateConfig = () => {
               ) : undefined
             }
           />
+        )}
+        {activeTab === "projectSchedule" && (
+          <section id="schedule-delivery" className="space-y-3 border-t pt-5">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div>
+                <h2 className="text-lg font-semibold">
+                  {t("emailTemplate.schedule.delivery.title")}
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  {t("emailTemplate.schedule.delivery.guidance")}
+                </p>
+              </div>
+              <Button type="button" variant="outline" onClick={loadScheduleDelivery}>
+                {t("emailTemplate.schedule.delivery.refresh")}
+              </Button>
+            </div>
+            {scheduleDeliveryLoading ? (
+              <p className="text-sm text-muted-foreground">
+                {t("emailTemplate.schedule.delivery.loading")}
+              </p>
+            ) : scheduleDeliveryError ? (
+              <p role="alert" className="text-sm text-destructive">
+                {scheduleDeliveryError}
+              </p>
+            ) : scheduleEmailsNeedingReview.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                {t("emailTemplate.schedule.delivery.empty")}
+              </p>
+            ) : (
+              <div className="divide-y rounded-md border">
+                {scheduleEmailsNeedingReview.map((email) => (
+                  <div
+                    key={email.id}
+                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {email.projectCode} · v{email.version} · #{email.id}
+                      </div>
+                      <div className="text-muted-foreground">
+                        {t("emailTemplate.schedule.delivery.attempts")}: {email.attemptCount}
+                        {email.lastAttemptAt &&
+                          ` · ${new Date(email.lastAttemptAt).toLocaleString()}`}
+                      </div>
+                    </div>
+                    <Link
+                      className="font-medium text-primary underline-offset-4 hover:underline"
+                      to={`/admin/operational-projects/${email.projectId}?tab=schedule`}
+                    >
+                      {t("emailTemplate.schedule.delivery.openProject")}
+                    </Link>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
         )}
       </div>
     </AdminLayout>

@@ -77,14 +77,18 @@ public static partial class ProjectScheduleEmailTemplates
     public static ProjectScheduleEmailTemplate Render(ProjectScheduleEmailTemplate template,
         IReadOnlyDictionary<string, string> values)
     {
+        var source = string.Concat(template.Subject, template.Body);
+        var templateTokens = TokenRegex().Matches(source).Select(match => match.Groups[1].Value);
+        if (templateTokens.Any(token => !values.Keys.Contains(token, StringComparer.OrdinalIgnoreCase)) ||
+            InvalidBracesRegex().IsMatch(TokenRegex().Replace(source, string.Empty)))
+            throw new ArgumentException("Mẫu email tiến độ có biến không hỗ trợ hoặc cú pháp biến sai.");
         var tokens = values.ToDictionary(item => item.Key, item => EmailHtmlEncoder.Encode(item.Value), StringComparer.OrdinalIgnoreCase);
         var rendered = new ProjectScheduleEmailTemplate(
             EmailTemplateFormatter.ReplaceTokens(template.Subject,
                 values.ToDictionary(item => item.Key, item => item.Value, StringComparer.OrdinalIgnoreCase)),
             EmailTemplateFormatter.ReplaceTokens(template.Body, tokens));
-        if (rendered.Subject.Length > 200 || rendered.Body.Length > 16000 ||
-            rendered.Subject.Contains('\r') || rendered.Subject.Contains('\n') ||
-            rendered.Subject.Contains("{{", StringComparison.Ordinal) || rendered.Body.Contains("{{", StringComparison.Ordinal))
+        if (rendered.Subject.Length > 200 ||
+            rendered.Subject.Contains('\r') || rendered.Subject.Contains('\n'))
             throw new ArgumentException("Nội dung email tiến độ sau khi điền biến vượt quá giới hạn hoặc còn biến chưa được điền.");
         return rendered;
     }

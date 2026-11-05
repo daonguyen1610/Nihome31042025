@@ -31,7 +31,6 @@ public sealed class ProjectScheduleService(
     ILogger<ProjectScheduleService> logger) : IProjectScheduleService
 {
     private const int NotificationChangeSummaryMaxLength = 900;
-    private const int EmailChangeSummaryMaxLength = 6000;
 
     public async Task<ProjectScheduleResponse?> GetAsync(int projectId, int callerUserId, CancellationToken ct)
     {
@@ -126,6 +125,7 @@ public sealed class ProjectScheduleService(
             throw new ProjectScheduleOperationException("Người duyệt phải là PM dự án sau khi hợp đồng Upstream ký, hoặc người quản lý CRM trước khi ký.");
         if (!MatchesRowVersion(revision, request.RowVersion))
             throw new ProjectScheduleOperationException("Revision đã được cập nhật. Tải lại trước khi gửi duyệt.", 409);
+        await using var transaction = await BeginTransactionAsync(null, ct);
         revision.ApproverUserId = request.ApproverUserId;
         revision.SubmittedByUserId = callerUserId;
         revision.SubmittedAt = DateTime.UtcNow;
@@ -145,6 +145,7 @@ public sealed class ProjectScheduleService(
         }
         await QueueEmailAsync(projectId, revision, request.ApproverUserId, "Yêu cầu duyệt tiến độ tổng thể",
             await GetChangeSummaryAsync(projectId, revision, ct), ct);
+        await CommitAsync(transaction, ct);
         logger.LogInformation("Project schedule revision {RevisionId} submitted for project {ProjectId}; approver {ApproverId}.", revision.Id, projectId, request.ApproverUserId);
         return await BuildResponseAsync(projectId, ct);
     }
@@ -185,9 +186,9 @@ public sealed class ProjectScheduleService(
             revision.PublishedAt = DateTime.UtcNow;
         }
         await db.SaveChangesAsync(ct);
-        await CommitAsync(transaction, ct);
         if (revision.Status == ProjectScheduleRevisionStatus.Published)
             await NotifyAffectedDepartmentsAsync(projectId, revision, ct);
+        await CommitAsync(transaction, ct);
         logger.LogInformation("Project schedule revision {RevisionId} reviewed as {Decision} by assigned approver {UserId}.", revision.Id, request.Decision, callerUserId);
         var canManage = await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct) &&
             await permissions.HasAsync(callerUserId, "operations.projects.manage", ct);
@@ -336,7 +337,6 @@ public sealed class ProjectScheduleService(
         // Notification.Body is capped at 1.000 characters; an unbounded change
         // summary would fail SaveChanges and silently drop the notification.
         var notificationChanges = Truncate(changes, NotificationChangeSummaryMaxLength);
-        var emailChanges = Truncate(changes, EmailChangeSummaryMaxLength);
         foreach (var userId in users)
         {
             try
@@ -349,7 +349,7 @@ public sealed class ProjectScheduleService(
             {
                 logger.LogError(exception, "Failed to notify user {UserId} about schedule revision {RevisionId} for project {ProjectId}.", userId, revision.Id, projectId);
             }
-            await QueueEmailAsync(projectId, revision, userId, "Tiến độ tổng thể đã cập nhật", emailChanges, ct);
+            await QueueEmailAsync(projectId, revision, userId, "Tiến độ tổng thể đã cập nhật", changes, ct);
         }
     }
 
@@ -515,52 +515,41 @@ public sealed class ProjectScheduleService(
     private async Task QueueEmailAsync(int projectId, ProjectScheduleRevision revision, int userId,
         string eventName, string changeSummary, CancellationToken ct)
     {
-        try
-        {
-            var recipient = await db.Users.AsNoTracking().Where(user => user.Id == userId && user.IsActive)
+        var recipient = await db.Users.AsNoTracking().Where(user => user.Id == userId && user.IsActive)
                 .Select(user => new { user.Email, user.FullName }).SingleOrDefaultAsync(ct);
-            if (string.IsNullOrWhiteSpace(recipient?.Email))
-            {
-                logger.LogWarning("Project schedule email skipped: user {UserId} has no email; revision {RevisionId}.", userId, revision.Id);
-                return;
-            }
-            var project = await db.OperationalProjects.AsNoTracking().Where(item => item.Id == projectId)
+        if (string.IsNullOrWhiteSpace(recipient?.Email))
+        {
+            logger.LogWarning("Project schedule email skipped: user {UserId} has no email; revision {RevisionId}.", userId, revision.Id);
+            return;
+        }
+        var project = await db.OperationalProjects.AsNoTracking().Where(item => item.Id == projectId)
                 .Select(item => new { item.Code, item.Name }).SingleAsync(ct);
-            var template = ProjectScheduleEmailTemplates.Get(await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct));
-            var rendered = ProjectScheduleEmailTemplates.Render(template, new Dictionary<string, string>
-            {
-                ["eventName"] = eventName,
-                ["recipientName"] = recipient.FullName ?? string.Empty,
-                ["projectCode"] = project.Code,
-                ["projectName"] = project.Name,
-                ["version"] = revision.Version.ToString(),
-                ["changeReason"] = revision.ChangeReason ?? "—",
-                ["changeSummary"] = Truncate(changeSummary, EmailChangeSummaryMaxLength),
-            });
-            // Store first, send later: the worker retries a failed delivery and
-            // keeps the row for review instead of losing the message.
-            db.ProjectScheduleEmails.Add(new ProjectScheduleEmail
-            {
-                OperationalProjectId = projectId,
-                RevisionId = revision.Id,
-                RecipientUserId = userId,
-                ToEmail = recipient.Email.Trim(),
-                Subject = rendered.Subject,
-                Body = rendered.Body,
-                Status = ProjectScheduleEmail.PendingStatus,
-                CreatedAt = DateTime.UtcNow,
-                NextAttemptAt = DateTime.UtcNow,
-            });
-            await db.SaveChangesAsync(ct);
-        }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        var template = ProjectScheduleEmailTemplates.Get(await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct));
+        var rendered = ProjectScheduleEmailTemplates.Render(template, new Dictionary<string, string>
         {
-            throw;
-        }
-        catch (Exception exception)
+            ["eventName"] = eventName,
+            ["recipientName"] = recipient.FullName ?? string.Empty,
+            ["projectCode"] = project.Code,
+            ["projectName"] = project.Name,
+            ["version"] = revision.Version.ToString(),
+            ["changeReason"] = revision.ChangeReason ?? "—",
+            ["changeSummary"] = changeSummary,
+        });
+        // Store first, send later: the worker retries a failed delivery and
+        // keeps the row for review instead of losing the message.
+        db.ProjectScheduleEmails.Add(new ProjectScheduleEmail
         {
-            logger.LogError(exception, "Project schedule email could not be queued for project {ProjectId}, revision {RevisionId}, recipient {UserId}.", projectId, revision.Id, userId);
-        }
+            OperationalProjectId = projectId,
+            RevisionId = revision.Id,
+            RecipientUserId = userId,
+            ToEmail = recipient.Email.Trim(),
+            Subject = rendered.Subject,
+            Body = rendered.Body,
+            Status = ProjectScheduleEmail.PendingStatus,
+            CreatedAt = DateTime.UtcNow,
+            NextAttemptAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(ct);
     }
 
     private static string Truncate(string value, int maxLength) =>
