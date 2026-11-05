@@ -113,7 +113,8 @@ public sealed class WorkPackageApprovalEmailsTests(NihomeWebApplicationFactory f
         (await Client.PutAsJsonAsync(path, content)).StatusCode.Should().Be(HttpStatusCode.OK);
         var saved = await ReadJsonAsync(await Client.GetAsync(path));
         saved.GetProperty("subject").GetString().Should().Be(content.subject);
-        saved.GetProperty("body").GetString().Should().Be(content.body);
+        saved.GetProperty("body").GetString().Should().Contain(content.body)
+            .And.Contain("max-width:600px");
     }
 
     [Fact]
