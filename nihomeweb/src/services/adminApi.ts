@@ -329,7 +329,6 @@ export interface EmailTemplatesResponse {
   quoteEmailBodyTemplate: string | null;
   projectScheduleEmailSubjectTemplate: string;
   projectScheduleEmailBodyTemplate: string;
-  sharedBusinessEmailLayoutTemplate: string;
 }
 
 export interface ProjectScheduleEmailReviewItem {
@@ -389,7 +388,6 @@ export interface UpdateEmailTemplatesRequest {
   quoteEmailBodyTemplate?: string | null;
   projectScheduleEmailSubjectTemplate?: string | null;
   projectScheduleEmailBodyTemplate?: string | null;
-  sharedBusinessEmailLayoutTemplate?: string | null;
 }
 
 export interface OtpSettingsResponse {

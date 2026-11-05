@@ -112,10 +112,12 @@ public sealed class ProjectScheduleEmailTemplatesTests
             ProjectScheduleEmailBodyTemplate = "<p>Custom {{eventName}}</p>",
         };
 
-        Assert.Equal(ProjectScheduleEmailTemplates.DefaultBody,
-            ProjectScheduleEmailTemplates.Get(previousDefault).Body);
-        Assert.Equal(custom.ProjectScheduleEmailBodyTemplate,
-            ProjectScheduleEmailTemplates.Get(custom).Body);
+        var upgraded = ProjectScheduleEmailTemplates.Get(previousDefault).Body;
+        Assert.Contains("max-width:600px", upgraded);
+        Assert.Contains("{{changeSummary}}", upgraded);
+        var customized = ProjectScheduleEmailTemplates.Get(custom).Body;
+        Assert.Contains("max-width:600px", customized);
+        Assert.Contains(custom.ProjectScheduleEmailBodyTemplate, customized);
     }
 
     [Theory]

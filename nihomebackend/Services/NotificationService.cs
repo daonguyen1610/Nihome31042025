@@ -141,10 +141,8 @@ public class NotificationService(
                     // values may carry user-controlled text (e.g. customerName,
                     // leadName), so encode the value substitutions and turn line
                     // breaks into <br/> to prevent HTML injection.
-                    var layout = await db.SiteSettings.AsNoTracking()
-                        .Select(settings => settings.SharedBusinessEmailLayoutTemplate).FirstOrDefaultAsync();
                     await email.SendEmailAsync(user.Email, rendered.Title,
-                        NiconEmailLayout.Apply(layout, rendered.HtmlBody,
+                        EmailTemplateBaseline.Apply(rendered.HtmlBody,
                             rendered.Title, "NICON"));
                 }
                 catch (Exception ex)

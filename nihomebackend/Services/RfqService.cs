@@ -338,8 +338,6 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
     {
         var origin = configuration.GetValue<string>("Frontend:PublicBaseUrl") ??
             configuration.GetSection("Frontend:AllowedOrigins").Get<string[]>()?.FirstOrDefault();
-        var layout = await db.SiteSettings.AsNoTracking()
-            .Select(settings => settings.SharedBusinessEmailLayoutTemplate).FirstOrDefaultAsync(ct);
         foreach (var delivery in deliveries)
         {
             try
@@ -350,7 +348,7 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
                     $"<p>You are invited to quote for <strong>{WebUtility.HtmlEncode(entity.Title)}</strong>.</p>" +
                     $"<p>Deadline: {entity.DueAt:O}</p><p><a href=\"{WebUtility.HtmlEncode(link)}\">Open secure quotation form</a></p>";
                 await email.SendEmailAsync(delivery.Email, $"RFQ {entity.Code}: {entity.Title}",
-                    NiconEmailLayout.Apply(layout, body, $"RFQ {entity.Code}: {entity.Title}", "NICON"));
+                    EmailTemplateBaseline.Apply(body, $"RFQ {entity.Code}: {entity.Title}", "NICON"));
                 delivery.Invitation.InvitationSentAt = DateTime.UtcNow;
                 delivery.Invitation.InvitationDeliveryError = null;
             }

@@ -29,10 +29,9 @@ public sealed class BusinessEmailTemplateLayoutTests
     }
 
     [Fact]
-    public void SharedLayout_ChangesPresentationAndPreservesEventContent()
+    public void Baseline_WrapsEachEmailContentWithoutAnEditableLayoutSetting()
     {
-        const string layout = "<div><p>NICON · {{heading}}</p><div>{{content}}</div><p>{{footer}}</p></div>";
-        var settings = new SiteSettings { SharedBusinessEmailLayoutTemplate = layout };
+        var settings = new SiteSettings();
 
         var schedule = ProjectScheduleEmailTemplates.Get(settings);
         var quoteApproval = QuoteApprovalEmailTemplates.Get(settings);
@@ -40,19 +39,19 @@ public sealed class BusinessEmailTemplateLayoutTests
         var workPackage = WorkPackageApprovalEmailTemplates.Get(settings);
 
         Assert.All(new[] { schedule.Body, quoteApproval.Body, contract.RenewalBody,
-            contract.EndBody, workPackage.Body }, body => Assert.StartsWith("<div><p>NICON · ", body));
+            contract.EndBody, workPackage.Body }, AssertLayout);
         Assert.Contains("{{changeSummary}}", schedule.Body);
         Assert.Contains("{{quoteUrl}}", quoteApproval.Body);
         Assert.Contains("{{contractNumber}}", contract.RenewalBody);
         Assert.Contains("{{workPackageUrl}}", workPackage.Body);
 
-        var otp = EmailTemplateFormatter.BuildOtpEmail(null, null, "NICON", "123456", layoutTemplate: layout);
+        var otp = EmailTemplateFormatter.BuildOtpEmail(null, null, "NICON", "123456");
         var application = EmailTemplateFormatter.BuildNewApplicationEmail(null, null, "NICON",
             "Kỹ sư MEP", "Thiết kế", "Nguyễn Văn An", "an@example.test", null, null, null,
-            new DateTime(2026, 11, 5), layout);
-        Assert.StartsWith("<div><p>NICON · ", otp.body);
+            new DateTime(2026, 11, 5));
+        AssertLayout(otp.body);
         Assert.Contains("123456", otp.body);
-        Assert.StartsWith("<div><p>NICON · ", application.body);
+        AssertLayout(application.body);
         Assert.Contains("Kỹ sư MEP", application.body);
 
         var quote = EmailTemplateFormatter.BuildQuoteEmail(null, null,
@@ -66,8 +65,8 @@ public sealed class BusinessEmailTemplateLayoutTests
                 ["vatPercent"] = "8",
                 ["grandTotal"] = "100.000.000",
                 ["validUntil"] = "30/11/2026"
-            }, layout);
-        Assert.StartsWith("<div><p>NICON · ", quote.body);
+            });
+        AssertLayout(quote.body);
         Assert.Contains("BG-2026-01", quote.body);
         Assert.Contains("Hạng mục MEP", quote.body);
     }
@@ -136,6 +135,6 @@ public sealed class BusinessEmailTemplateLayoutTests
         var rows = table.Elements("tr").ToList();
         Assert.Contains("background:#e5394a", rows[0].Element("td")!.Attribute("style")!.Value);
         Assert.Contains("NICON", rows[0].Value);
-        Assert.Contains("NICON", rows[^1].Value);
+        Assert.False(string.IsNullOrWhiteSpace(rows[^1].Value));
     }
 }

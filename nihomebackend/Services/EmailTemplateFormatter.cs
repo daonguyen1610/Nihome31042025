@@ -43,7 +43,7 @@ public static partial class EmailTemplateFormatter
 
     public static string DefaultQuoteSubject => "Báo giá {{quoteCode}} – {{opportunityName}}";
 
-    public static string DefaultQuoteBody => NiconEmailLayout.Wrap(
+    public static string DefaultQuoteBody => EmailTemplateBaseline.Wrap(
         "BÁO GIÁ DỰ ÁN · {{quoteCode}}",
         """
         <p style="margin:0 0 16px;font-size:15px">Kính gửi <strong>{{customerName}}</strong>,</p>
@@ -60,10 +60,9 @@ public static partial class EmailTemplateFormatter
         "NICON · Đối tác phát triển của Quý khách");
 
     public static (string subject, string body) BuildQuoteEmail(
-        string? subjectTemplate, string? bodyTemplate, Dictionary<string, string> tokens,
-        string? layoutTemplate = null) =>
+        string? subjectTemplate, string? bodyTemplate, Dictionary<string, string> tokens) =>
         (ReplaceTokens(string.IsNullOrWhiteSpace(subjectTemplate) ? DefaultQuoteSubject : subjectTemplate, tokens),
-         RenderQuoteBody(NiconEmailLayout.Apply(layoutTemplate,
+         RenderQuoteBody(EmailTemplateBaseline.Apply(
              string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultQuoteBody : bodyTemplate,
              "BÁO GIÁ DỰ ÁN · {{quoteCode}}", "NICON · Đối tác phát triển của Quý khách"), tokens));
 
@@ -158,8 +157,7 @@ public static partial class EmailTemplateFormatter
         string? phone,
         int? experienceYears,
         string? coverLetter,
-        DateTime appliedAt,
-        string? layoutTemplate = null)
+        DateTime appliedAt)
     {
         var phoneValue = phone ?? "—";
         var expValue = experienceYears?.ToString() ?? "—";
@@ -199,7 +197,7 @@ public static partial class EmailTemplateFormatter
             plainTokens);
 
         var body = ReplaceTokens(
-            NiconEmailLayout.Apply(layoutTemplate,
+            EmailTemplateBaseline.Apply(
                 string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultNewApplicationBody : bodyTemplate,
                 "ĐƠN ỨNG TUYỂN MỚI", "Email tự động · vui lòng không trả lời"),
             htmlTokens);
@@ -288,8 +286,7 @@ public static partial class EmailTemplateFormatter
         string? bodyTemplate,
         string siteName,
         string otpCode,
-        string otpExpireMinutes = "5",
-        string? layoutTemplate = null)
+        string otpExpireMinutes = "5")
     {
         // OTP tokens are all system-generated, but encode for body safety
         var plainTokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
@@ -311,7 +308,7 @@ public static partial class EmailTemplateFormatter
             plainTokens);
 
         var body = ReplaceTokens(
-            NiconEmailLayout.Apply(layoutTemplate,
+            EmailTemplateBaseline.Apply(
                 string.IsNullOrWhiteSpace(bodyTemplate) ? DefaultOtpBody : bodyTemplate,
                 "XÁC THỰC TÀI KHOẢN", "Email tự động · vui lòng không trả lời"),
             htmlTokens);

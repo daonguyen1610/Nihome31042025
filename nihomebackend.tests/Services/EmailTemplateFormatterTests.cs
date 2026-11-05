@@ -195,7 +195,8 @@ public class EmailTemplateFormatterTests
             appliedAt: appliedAt);
 
         Assert.Equal("New: Trần B", subject);
-        Assert.Equal("<b>Trần B</b> applied for Designer", body);
+        Assert.Contains("<b>Trần B</b> applied for Designer", body);
+        Assert.Contains("max-width:600px", body);
     }
 
     [Fact]
@@ -218,7 +219,8 @@ public class EmailTemplateFormatterTests
 
         // Null fields should render as "—"
         Assert.Equal("X – — – —", subject);
-        Assert.Equal("Letter: —", body);
+        Assert.Contains("Letter: —", body);
+        Assert.Contains("max-width:600px", body);
     }
 
     [Fact]

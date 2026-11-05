@@ -15,7 +15,7 @@ public static class WorkPackageApprovalEmailTemplates
     private const string LinkMarkup = "<p style=\"margin:16px 0 0;font-size:14px;line-height:22px\"><a href=\"{{workPackageUrl}}\">Mở nhóm công việc trong NICON</a></p>";
     public const string DefaultSubject = "NICON – Yêu cầu duyệt {{workPackageCode}}";
     public const string LegacyDefaultBody = "<div style='font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#17233b'><p style='color:#ed1c24;font-size:20px'><strong>NICON – Yêu cầu phê duyệt</strong></p><p>Kính gửi {{recipientName}},</p><p>{{senderName}} đã gửi hồ sơ để anh/chị kiểm tra và phê duyệt.</p><p><strong>Nhóm công việc:</strong> {{workPackageCode}} · {{workPackageName}}</p><p><strong>Loại hồ sơ:</strong> {{recordType}}</p><p><strong>Hồ sơ:</strong> {{recordReference}}</p><p>Vui lòng đăng nhập hệ thống NICON và mở nhóm công việc trên để xem chi tiết. Email này chỉ thông báo; quyết định phê duyệt được thực hiện trong hệ thống.</p></div>";
-    public static string DefaultBody => NiconEmailLayout.Wrap(
+    public static string DefaultBody => EmailTemplateBaseline.Wrap(
         "YÊU CẦU PHÊ DUYỆT · {{workPackageCode}}",
         """
         <p style="margin:0 0 16px;font-size:15px;line-height:24px">Kính gửi <strong>{{recipientName}}</strong>,</p>
@@ -42,7 +42,7 @@ public static class WorkPackageApprovalEmailTemplates
         // Existing customized templates gain the required link without losing their content.
         if (!body.Contains(LinkOpenTag, StringComparison.OrdinalIgnoreCase)) body += LinkMarkup;
         return new(settings?.WorkPackageApprovalEmailSubjectTemplate ?? DefaultSubject,
-            NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate, body,
+            EmailTemplateBaseline.Apply(body,
                 "YÊU CẦU PHÊ DUYỆT · {{workPackageCode}}", "NICON · Thông báo phê duyệt hồ sơ"));
     }
 

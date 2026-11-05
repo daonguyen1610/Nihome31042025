@@ -262,12 +262,7 @@ public class NotificationServiceTests : IDisposable
         await SeedTemplateAsync("permit.expiring-soon", channel: NotificationChannel.Email);
         SeedTranslation("notification.permit.expiring-soon.title", "vi", "Permit expiring");
         SeedTranslation("notification.permit.expiring-soon.body", "vi", "Body");
-        _db.SiteSettings.Add(new SiteSettings
-        {
-            SharedBusinessEmailLayoutTemplate = "<div><p>{{heading}}</p><div>{{content}}</div><p>{{footer}}</p></div>"
-        });
         await _db.SaveChangesAsync();
-
         var result = await sut.NotifyFromTemplateAsync(user.Id, "permit.expiring-soon");
 
         Assert.Null(result); // no in-app row for Email-only
@@ -275,7 +270,8 @@ public class NotificationServiceTests : IDisposable
         Assert.Single(email.Sent);
         Assert.Equal("sales@nihome.test", email.Sent[0].To);
         Assert.Equal("Permit expiring", email.Sent[0].Subject);
-        Assert.StartsWith("<div><p>Permit expiring</p>", email.Sent[0].Body);
+        Assert.Contains("max-width:600px", email.Sent[0].Body);
+        Assert.Contains("Permit expiring", email.Sent[0].Body);
     }
 
     [Fact]
@@ -368,7 +364,8 @@ public class NotificationServiceTests : IDisposable
         await sut.NotifyFromTemplateAsync(user.Id, "contract.activated");
 
         var body = email.Sent[0].Body;
-        Assert.Equal("Line 1<br/>Line 2<br/>Line 3", body);
+        Assert.Contains("Line 1<br/>Line 2<br/>Line 3", body);
+        Assert.Contains("max-width:600px", body);
     }
 
     [Fact]
