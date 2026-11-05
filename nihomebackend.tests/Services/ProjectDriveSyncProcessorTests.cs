@@ -11,7 +11,7 @@ namespace nihomebackend.tests.Services;
 
 public sealed class ProjectDriveSyncProcessorTests : IDisposable
 {
-    private readonly NihomeBackend.Data.AppDbContext db = DbContextFactory.Create();
+    private readonly NihomeBackend.Data.AppDbContext db = DbContextFactory.CreateRelational();
     private readonly Mock<IProjectDocumentStorageService> storage = new();
     private readonly Mock<IGoogleDriveAdapter> drive = new();
     private readonly Mock<IProjectDriveClaimLease> claimLease = new();
@@ -288,7 +288,10 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
 
         Assert.True(await processor.ProcessNextOutboundAsync());
 
-        var persisted = db.ProjectDocuments.Single(item => item.Id == document.Id);
+        // The processor completes the delete with a set-based update, which does
+        // not refresh the tracked instance, so read the persisted row instead.
+        var persisted = await db.ProjectDocuments.AsNoTracking()
+            .SingleAsync(item => item.Id == document.Id);
         Assert.Equal(ProjectDocumentSyncStatus.Deleted, persisted.SyncStatus);
         Assert.Null(persisted.DriveFileId);
         drive.Verify(item => item.DeleteAsync(

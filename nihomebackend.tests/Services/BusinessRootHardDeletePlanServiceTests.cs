@@ -23,8 +23,14 @@ public sealed class BusinessRootHardDeletePlanServiceTests : IDisposable
             .Returns((string path) => path.StartsWith("/files/", StringComparison.Ordinal)
                 ? path
                 : throw new HardDeleteFileException("invalid_managed_path", "invalid"));
+        // Web-to-Drive deletion is opt-in; these plans assert the delete path,
+        // so the scenario enables the policy explicitly.
         driveSettings.Setup(item => item.GetRuntimeAsync(It.IsAny<CancellationToken>()))
-            .ReturnsAsync(new GoogleDriveOptions { InstanceId = "test-instance" });
+            .ReturnsAsync(new GoogleDriveOptions
+            {
+                InstanceId = "test-instance",
+                DeleteDriveFilesOnWebDelete = true,
+            });
         service = new BusinessRootHardDeletePlanService(db, driveSettings.Object, files.Object);
     }
 
