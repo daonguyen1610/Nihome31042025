@@ -22,7 +22,7 @@ public sealed class ProjectScheduleEmail
     public int? RecipientUserId { get; set; }
     [MaxLength(254)] public string ToEmail { get; set; } = string.Empty;
     [MaxLength(200)] public string Subject { get; set; } = string.Empty;
-    [MaxLength(16000)] public string Body { get; set; } = string.Empty;
+    public string Body { get; set; } = string.Empty;
     [MaxLength(30)] public string Status { get; set; } = PendingStatus;
     public int AttemptCount { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;

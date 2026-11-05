@@ -1596,7 +1596,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.ToTable("project_schedule_emails");
             b.Property(item => item.ToEmail).HasMaxLength(254).IsRequired();
             b.Property(item => item.Subject).HasMaxLength(200).IsRequired();
-            b.Property(item => item.Body).HasMaxLength(16000).IsRequired();
+            b.Property(item => item.Body).IsRequired();
             b.Property(item => item.Status).HasMaxLength(30).IsRequired();
             b.Property(item => item.LastError).HasMaxLength(1000);
             // The revision owns queued mail; deleting a project cascades through

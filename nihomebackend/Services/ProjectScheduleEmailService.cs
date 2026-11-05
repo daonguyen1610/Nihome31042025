@@ -11,6 +11,7 @@ namespace NihomeBackend.Services;
 /// of the message disappearing.
 /// </summary>
 public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService email,
+    INotificationService notifications,
     ILogger<ProjectScheduleEmailService> logger)
 {
     public const int MaxAttempts = 5;
@@ -78,6 +79,32 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
                 }
             }
             await db.SaveChangesAsync(ct);
+            if (message.Status == ProjectScheduleEmail.NeedsReviewStatus)
+            {
+                try
+                {
+                    var adminIds = await db.Users.AsNoTracking()
+                        .Where(user => user.IsActive &&
+                            (user.Role == UserRole.SUPER_ADMIN || user.Role == UserRole.ADMIN))
+                        .Select(user => user.Id).ToListAsync(ct);
+                    foreach (var adminId in adminIds)
+                    {
+                        await notifications.NotifyFromTemplateAsync(adminId, "project.schedule.email-needs-review",
+                            new Dictionary<string, string>
+                            {
+                                ["projectId"] = message.OperationalProjectId.ToString(),
+                                ["revisionId"] = message.RevisionId.ToString(),
+                                ["emailId"] = message.Id.ToString(),
+                            }, "ProjectScheduleEmail", message.Id,
+                            "/admin/email-templates?tab=projectSchedule#schedule-delivery");
+                    }
+                }
+                catch (Exception exception) when (exception is not OperationCanceledException)
+                {
+                    logger.LogError(exception,
+                        "Could not alert administrators for project schedule email {EmailId} requiring review.", message.Id);
+                }
+            }
         }
         return sent;
     }

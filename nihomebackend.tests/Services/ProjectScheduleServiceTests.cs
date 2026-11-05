@@ -4,7 +4,9 @@ using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
+using nihomebackend.tests.Helpers;
 
 namespace nihomebackend.tests.Services;
 
@@ -90,6 +92,50 @@ public sealed class ProjectScheduleServiceTests
 
         Assert.Equal(409, error.StatusCode);
         Assert.Contains("revision nháp", error.Message);
+    }
+
+    [Fact]
+    public async Task Submit_does_not_leave_pending_revision_when_email_cannot_be_queued()
+    {
+        await using var db = DbContextFactory.CreateRelational();
+        var (parentNode, _) = SeedProject(db);
+        var roleGroup = new RoleGroup { Code = RoleGroupCodes.Crm, LabelKey = "crm" };
+        var permission = new Permission { Module = "crm.opportunities", Action = "manage" };
+        var role = new Role { Code = RbacRoleCodes.SalesManager, Name = "Sales Manager", RoleGroup = roleGroup };
+        role.RolePermissions.Add(new RolePermission { Permission = permission });
+        db.Users.Add(new ApplicationUser
+        {
+            Id = 85,
+            RoleEntity = role,
+            PhoneNumber = "0900000085",
+            Email = "approver@nihome.test",
+        });
+        db.SiteSettings.Add(new SiteSettings { ProjectScheduleEmailSubjectTemplate = new string('X', 201) });
+        var revision = new ProjectScheduleRevision
+        {
+            OperationalProjectId = ProjectId,
+            Version = 1,
+            Status = ProjectScheduleRevisionStatus.Draft,
+            CreatedByUserId = CallerId,
+            RowVersion = [1, 2, 3],
+            Items = [Item(parentNode, null, "1", "Móng", new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 30))],
+        };
+        db.ProjectScheduleRevisions.Add(revision);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        await Assert.ThrowsAsync<ArgumentException>(() => service.SubmitAsync(ProjectId, revision.Id,
+            new SubmitProjectScheduleRevisionRequest
+            {
+                ApproverUserId = 85,
+                RowVersion = Convert.ToBase64String(revision.RowVersion),
+            }, CallerId, default));
+
+        db.ChangeTracker.Clear();
+        var persisted = await db.ProjectScheduleRevisions.AsNoTracking().SingleAsync(item => item.Id == revision.Id);
+        Assert.Equal(ProjectScheduleRevisionStatus.Draft, persisted.Status);
+        Assert.Null(persisted.SubmittedAt);
+        Assert.False(await db.ProjectScheduleEmails.AnyAsync(item => item.RevisionId == revision.Id));
     }
 
     private static (Guid Parent, Guid Child) SeedProject(AppDbContext db)

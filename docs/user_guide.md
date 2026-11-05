@@ -1002,10 +1002,12 @@ Update the project schedule email subject/body in **Admin → Email
 Templates → Project Schedule**. The preview is rendered by the server with
 sample project data; delivery uses the saved template and actual project data.
 The schedule email queue retries failed deliveries and marks a message
-`NeedsReview` after five unsuccessful attempts. **Partial:** the approval,
-framing, change notification, and contract-based approver rules are covered by
-unit and live end-to-end tests. An operator alert for `NeedsReview` is not yet
-available beyond backend logs.
+`NeedsReview` after five unsuccessful attempts. Administrators receive an
+in-app alert linking to **Admin → Email Templates → Project Schedule**, where
+the delivery section lists affected projects, revisions, and attempt counts.
+Check SMTP delivery before any manual resend because the recipient may have
+received a message even when the sender reported an error. Schedule change
+emails contain the full WBS difference.
 
 ### 3.2 Module 2: Design Management (3-Phase)
 

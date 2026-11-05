@@ -222,5 +222,61 @@
     "en": "Changes compared with the previous published revision",
     "zh": "与上一个已发布版本的变更对比",
     "ja": "前回公開版との変更内容"
+  },
+  {
+    "key": "emailTemplate.schedule.delivery.title",
+    "category": "emailTemplates",
+    "vi": "Email tiến độ cần kiểm tra",
+    "en": "Schedule emails needing review",
+    "zh": "待检查的进度邮件",
+    "ja": "確認が必要な工程メール"
+  },
+  {
+    "key": "emailTemplate.schedule.delivery.guidance",
+    "category": "emailTemplates",
+    "vi": "Kiểm tra cấu hình SMTP và xác minh trạng thái gửi trước khi xử lý lại; email có thể đã đến dù máy chủ báo lỗi.",
+    "en": "Check SMTP settings and confirm delivery before retrying; the message may have arrived despite the server error.",
+    "zh": "重试前请检查 SMTP 设置并确认送达状态；即使服务器报错，邮件也可能已经送达。",
+    "ja": "再送前に SMTP 設定と配信状態を確認してください。サーバーがエラーを返してもメールが届いている場合があります。"
+  },
+  {
+    "key": "emailTemplate.schedule.delivery.refresh",
+    "category": "emailTemplates",
+    "vi": "Làm mới",
+    "en": "Refresh",
+    "zh": "刷新",
+    "ja": "更新"
+  },
+  {
+    "key": "emailTemplate.schedule.delivery.loading",
+    "category": "emailTemplates",
+    "vi": "Đang tải email cần kiểm tra...",
+    "en": "Loading emails needing review...",
+    "zh": "正在加载待检查邮件...",
+    "ja": "確認が必要なメールを読み込み中..."
+  },
+  {
+    "key": "emailTemplate.schedule.delivery.empty",
+    "category": "emailTemplates",
+    "vi": "Không có email tiến độ cần kiểm tra.",
+    "en": "No schedule emails need review.",
+    "zh": "没有待检查的进度邮件。",
+    "ja": "確認が必要な工程メールはありません。"
+  },
+  {
+    "key": "emailTemplate.schedule.delivery.attempts",
+    "category": "emailTemplates",
+    "vi": "Lần gửi thất bại",
+    "en": "Failed attempts",
+    "zh": "失败次数",
+    "ja": "送信失敗回数"
+  },
+  {
+    "key": "emailTemplate.schedule.delivery.openProject",
+    "category": "emailTemplates",
+    "vi": "Mở dự án",
+    "en": "Open project",
+    "zh": "打开项目",
+    "ja": "プロジェクトを開く"
   }
 ]

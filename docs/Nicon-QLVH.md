@@ -101,9 +101,14 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   khung ngày, thông báo thay đổi, quy tắc người duyệt theo hợp đồng và các
   nhánh lỗi xác thực/quyền. Email thông báo dùng hàng đợi bền vững
   `project_schedule_emails`: gửi lại theo backoff, dừng ở `NeedsReview` sau năm
-  lần thất bại thay vì mất thông báo. Phần còn mở: nội dung email giới hạn độ
-  dài tóm tắt thay đổi, chưa có cơ chế báo cho người vận hành ngoài log khi một
-  bản ghi chuyển `NeedsReview`.
+  lần thất bại thay vì mất thông báo. Email giữ đầy đủ khác biệt WBS;
+  thông báo trong ứng dụng giới hạn theo dung lượng cột. Người quản trị nhận
+  cảnh báo và xem được danh sách email cần kiểm tra trong trang Mẫu email.
+  Trạng thái revision và email xếp hàng được ghi trong cùng giao dịch.
+  Còn cần NICON xác nhận ai chịu trách nhiệm xác minh trạng thái gửi SMTP và
+  khi nào được gửi lại một email `NeedsReview`; chưa có thao tác xử lý lại tự
+  động vì có thể tạo email trùng. Bản xem trước ở trang Mẫu email hiện dùng dữ
+  liệu mẫu, chưa phải bản xem trước theo dự án/người nhận trước từng lần gửi.
 
 ### 2.2.2. Nhóm công việc liên phòng ban — Partial
 

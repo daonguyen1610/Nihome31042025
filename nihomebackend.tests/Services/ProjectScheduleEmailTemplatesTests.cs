@@ -50,6 +50,46 @@ public sealed class ProjectScheduleEmailTemplatesTests
     }
 
     [Fact]
+    public void RenderPreservesEveryChangeInALargeScheduleRevision()
+    {
+        var lastChange = "WBS 500 · Hoàn thiện khu B: 2026-09-01 → 2026-10-15";
+        var changes = string.Join("; ", Enumerable.Repeat("WBS 001 · Móng: 2026-01-01 → 2026-02-01", 450)
+            .Append(lastChange));
+        var rendered = ProjectScheduleEmailTemplates.Render(ProjectScheduleEmailTemplates.Get(null),
+            new Dictionary<string, string>
+            {
+                ["eventName"] = "Đã cập nhật",
+                ["recipientName"] = "Nguyễn Văn An",
+                ["projectCode"] = "PJ-2026-001",
+                ["projectName"] = "Trung tâm dịch vụ NICON",
+                ["version"] = "2",
+                ["changeReason"] = "Khách điều chỉnh tiến độ",
+                ["changeSummary"] = changes,
+            });
+
+        Assert.Contains(lastChange, rendered.Body);
+        Assert.DoesNotContain("…", rendered.Body);
+    }
+
+    [Fact]
+    public void RenderAllowsLiteralBracesInAValidWbsTitle()
+    {
+        var rendered = ProjectScheduleEmailTemplates.Render(ProjectScheduleEmailTemplates.Get(null),
+            new Dictionary<string, string>
+            {
+                ["eventName"] = "Đã cập nhật",
+                ["recipientName"] = "Nguyễn Văn An",
+                ["projectCode"] = "PJ-2026-001",
+                ["projectName"] = "Trung tâm dịch vụ NICON",
+                ["version"] = "2",
+                ["changeReason"] = "Điều chỉnh",
+                ["changeSummary"] = "WBS 1.1 · Khu {{A}}",
+            });
+
+        Assert.Contains("Khu {{A}}", rendered.Body);
+    }
+
+    [Fact]
     public void DefaultTemplatePassesServerValidation()
     {
         var template = ProjectScheduleEmailTemplates.Validate(

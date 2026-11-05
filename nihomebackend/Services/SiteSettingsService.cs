@@ -6,6 +6,17 @@ namespace NihomeBackend.Services;
 
 public class SiteSettingsService(AppDbContext db)
 {
+    public async Task<List<ProjectScheduleEmailReviewItem>> GetScheduleEmailsNeedingReviewAsync(CancellationToken ct) =>
+        await db.ProjectScheduleEmails.AsNoTracking()
+            .Where(email => email.Status == ProjectScheduleEmail.NeedsReviewStatus)
+            .OrderByDescending(email => email.LastAttemptAt)
+            .Take(100)
+            .Select(email => new ProjectScheduleEmailReviewItem(
+                email.Id, email.OperationalProjectId, email.RevisionId,
+                email.Revision.Version, email.Revision.OperationalProject.Code,
+                email.AttemptCount, email.LastAttemptAt))
+            .ToListAsync(ct);
+
     public async Task<SiteSettings?> GetAsync()
     {
         return await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
@@ -99,3 +110,6 @@ public class SiteSettingsService(AppDbContext db)
         return settings;
     }
 }
+
+public sealed record ProjectScheduleEmailReviewItem(int Id, int ProjectId, int RevisionId,
+    int Version, string ProjectCode, int AttemptCount, DateTime? LastAttemptAt);

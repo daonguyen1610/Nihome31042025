@@ -67,6 +67,13 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         });
     }
 
+    /// <summary>List schedule emails that exhausted retries for an administrator's manual review.</summary>
+    [HttpGet("email-templates/project-schedule/needs-review")]
+    [Authorize]
+    [RequirePermission("system.settings", "view")]
+    public async Task<ActionResult<List<ProjectScheduleEmailReviewItem>>> GetProjectScheduleEmailsNeedingReview(CancellationToken ct) =>
+        Ok(await svc.GetScheduleEmailsNeedingReviewAsync(ct));
+
     /// <summary>Preview an unsaved project schedule template using the production renderer and sample data.</summary>
     [HttpPost("email-templates/project-schedule/preview")]
     [Authorize]

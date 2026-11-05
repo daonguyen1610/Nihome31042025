@@ -2569,7 +2569,6 @@ namespace nihomebackend.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasMaxLength(16000)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ContactId")

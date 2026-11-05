@@ -1869,9 +1869,13 @@ NICON layout; other saved bodies remain unchanged.
 backoff (1, 2, 4, 8 minutes, then `NeedsReview` after five attempts), and
 records `LastError` without recipient or credential details. Rows stuck in
 `Sending` for 15 minutes are reclaimed after a crash. The change summary is
-truncated to 900 characters for `Notification.Body` (column limit 1,000) and to
-6,000 characters for the email body (rendered limit 16,000), so a revision with
-many WBS changes cannot silently drop the notification. Integration coverage:
+truncated to 900 characters for `Notification.Body` (column limit 1,000), while
+the email body keeps the complete WBS difference in `nvarchar(max)`. Revision
+transitions and email queue rows commit together. After five failed attempts,
+administrators receive an in-app alert and can inspect a read-only queue at
+`GET /api/site-settings/email-templates/project-schedule/needs-review`
+(`system.settings.view`). The endpoint returns the 100 most recent exhausted
+messages without email addresses or body content. Integration coverage:
 `ProjectScheduleControllerTests`; unit coverage: `ProjectScheduleEmailServiceTests`.
 
 The pre-contract Design handoff is
