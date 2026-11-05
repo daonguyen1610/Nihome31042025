@@ -581,7 +581,8 @@ public class QuotesControllerTests : IntegrationTestBase
             new { subject = "Quote {{quoteCode}}", body });
         saved.StatusCode.Should().Be(HttpStatusCode.OK);
         var persisted = await ReadJsonAsync(await Client.GetAsync(path));
-        persisted.GetProperty("body").GetString().Should().Be(body);
+        persisted.GetProperty("body").GetString().Should().Contain(body)
+            .And.Contain("max-width:600px");
     }
 
     [Fact]

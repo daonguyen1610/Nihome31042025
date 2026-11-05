@@ -37,8 +37,7 @@ internal static class EmailTemplateBaseline
                 if (rows[0].Element("td")?.Elements("div").FirstOrDefault()?.Value == "NICON")
                     heading = rows[0].Element("td")?.Elements("div").LastOrDefault()?.Value ?? heading;
                 content = string.Concat(rows[1].Element("td")?.Nodes().Select(node => node.ToString(SaveOptions.DisableFormatting)) ?? []);
-                if (rows[0].Element("td")?.Elements("div").FirstOrDefault()?.Value == "NICON")
-                    footer = rows[2].Element("td")?.Value ?? footer;
+                footer = rows[2].Element("td")?.Value ?? footer;
             }
         }
         catch (System.Xml.XmlException)

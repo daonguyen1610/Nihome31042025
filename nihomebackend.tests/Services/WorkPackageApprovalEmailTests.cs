@@ -138,7 +138,8 @@ public sealed class WorkPackageApprovalEmailTests : IDisposable
     {
         var oldBody = "<p>{{workPackageCode}} / {{recordReference}}</p>";
         var template = WorkPackageApprovalEmailTemplates.Get(new SiteSettings { WorkPackageApprovalEmailBodyTemplate = oldBody });
-        Assert.StartsWith(oldBody, template.Body);
+        Assert.Contains(oldBody, template.Body);
+        Assert.Contains("max-width:600px", template.Body);
         Assert.Contains("<a href=\"{{workPackageUrl}}\">", template.Body);
         Assert.Equal(template.Body, WorkPackageApprovalEmailTemplates.Validate(template.Body, true));
     }
