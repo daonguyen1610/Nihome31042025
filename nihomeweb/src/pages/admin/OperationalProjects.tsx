@@ -569,6 +569,7 @@ const OperationalProjects = () => {
 
           <ProjectMasterSchedule
             projectId={detail.id}
+            projectManagerUserId={detail.projectManagerUserId}
             projectStart={detail.startDate}
             projectEnd={detail.endDate}
           />

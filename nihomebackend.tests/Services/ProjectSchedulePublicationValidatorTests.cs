@@ -32,7 +32,7 @@ public sealed class ProjectSchedulePublicationValidatorTests
 
         Assert.Equal(409, error.StatusCode);
         Assert.Contains("1.1 · Ép cọc", error.Message);
-        Assert.Contains("nằm ngoài khung WBS", error.Message);
+        Assert.Contains("nằm ngoài khung mốc", error.Message);
     }
 
     [Fact]
@@ -47,7 +47,7 @@ public sealed class ProjectSchedulePublicationValidatorTests
             () => ProjectSchedulePublicationValidator.Validate(revision, [linkedTask]));
 
         Assert.Equal(409, error.StatusCode);
-        Assert.Contains("đã bị gỡ khỏi revision", error.Message);
+        Assert.Contains("đã bị gỡ khỏi phiên bản tiến độ", error.Message);
     }
 
     private static ProjectScheduleRevision Revision(Guid nodeId, DateOnly start, DateOnly end) => new()

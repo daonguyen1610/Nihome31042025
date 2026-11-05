@@ -50,6 +50,8 @@ public sealed class ProjectScheduleEmailServiceTests
             PhoneNumber = "0900000085",
             Email = "operator@nihome.test",
         });
+        var project = await db.OperationalProjects.SingleAsync(item => item.Id == message.OperationalProjectId);
+        project.ProjectManagerUserId = 85;
         await db.SaveChangesAsync();
         var notifications = new Mock<INotificationService>();
         var service = new ProjectScheduleEmailService(db, sender, notifications.Object,
@@ -69,7 +71,7 @@ public sealed class ProjectScheduleEmailServiceTests
             "project.schedule.email-needs-review",
             It.Is<IDictionary<string, string>>(data => data["emailId"] == message.Id.ToString()),
             "ProjectScheduleEmail", message.Id,
-            "/admin/email-templates?tab=projectSchedule#schedule-delivery", "vi"), Times.Once);
+            $"/admin/operational-projects/{message.OperationalProjectId}?tab=schedule", "vi"), Times.Once);
 
         await MakeDueAsync(db, message.Id);
         Assert.Equal(0, await service.SendPendingAsync(default));
@@ -89,13 +91,15 @@ public sealed class ProjectScheduleEmailServiceTests
             PhoneNumber = "0900000086",
             Email = "operator@nihome.test",
         });
+        var project = await db.OperationalProjects.SingleAsync(item => item.Id == message.OperationalProjectId);
+        project.ProjectManagerUserId = 86;
         await db.SaveChangesAsync();
         var sender = new FlakyEmailService(failuresBeforeSuccess: int.MaxValue);
         var notifications = new Mock<INotificationService>();
         notifications.Setup(service => service.NotifyFromTemplateAsync(86,
                 "project.schedule.email-needs-review", It.IsAny<IDictionary<string, string>>(),
                 "ProjectScheduleEmail", message.Id,
-                "/admin/email-templates?tab=projectSchedule#schedule-delivery", "vi"))
+                $"/admin/operational-projects/{message.OperationalProjectId}?tab=schedule", "vi"))
             .ThrowsAsync(new InvalidOperationException("notification store unavailable"));
         var service = new ProjectScheduleEmailService(db, sender, notifications.Object,
             NullLogger<ProjectScheduleEmailService>.Instance);

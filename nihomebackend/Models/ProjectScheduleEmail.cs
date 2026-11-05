@@ -14,6 +14,7 @@ public sealed class ProjectScheduleEmail
     public const string SendingStatus = "Sending";
     public const string SentStatus = "Sent";
     public const string NeedsReviewStatus = "NeedsReview";
+    public const string ConfirmedReceivedStatus = "ConfirmedReceived";
 
     public int Id { get; set; }
     public int OperationalProjectId { get; set; }
@@ -29,5 +30,7 @@ public sealed class ProjectScheduleEmail
     public DateTime? LastAttemptAt { get; set; }
     public DateTime? NextAttemptAt { get; set; }
     public DateTime? SentAt { get; set; }
+    public int? ReviewedByUserId { get; set; }
+    public DateTime? ReviewedAt { get; set; }
     [MaxLength(1000)] public string? LastError { get; set; }
 }

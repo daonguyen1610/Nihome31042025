@@ -149,6 +149,7 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -7944,6 +7945,12 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.Property<int?>("RecipientUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
                         .HasColumnType("int");
 
                     b.Property<int>("RevisionId")

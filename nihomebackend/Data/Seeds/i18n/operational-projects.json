@@ -1186,7 +1186,7 @@
   {
     "key": "operationalProjects.schedule.approverCrm",
     "category": "operationalProjects",
-    "vi": "Trước khi ký hợp đồng Upstream: Trưởng phòng Kinh doanh (SALES_MANAGER) thuộc CRM là người duyệt.",
+    "vi": "Trước khi ký hợp đồng với chủ đầu tư: Trưởng phòng Kinh doanh duyệt tiến độ.",
     "en": "Before an upstream contract is signed: the CRM Sales Manager (SALES_MANAGER) is the approver.",
     "zh": "上游合同签署前：由 CRM 销售经理（SALES_MANAGER）审批。",
     "ja": "上流契約の署名前：CRM の営業マネージャー（SALES_MANAGER）が承認します。"
@@ -1194,7 +1194,7 @@
   {
     "key": "operationalProjects.schedule.approverPm",
     "category": "operationalProjects",
-    "vi": "Sau khi ký hợp đồng Upstream: PM dự án là người duyệt.",
+    "vi": "Sau khi ký hợp đồng với chủ đầu tư: người quản lý dự án duyệt tiến độ.",
     "en": "After an upstream contract is signed: the project manager is the approver.",
     "zh": "上游合同签署后：由项目经理审批。",
     "ja": "上流契約の署名後：プロジェクトマネージャーが承認します。"
@@ -1202,7 +1202,7 @@
   {
     "key": "operationalProjects.schedule.newRevision",
     "category": "operationalProjects",
-    "vi": "Tạo revision mới",
+    "vi": "Tạo phiên bản mới",
     "en": "Create revision",
     "zh": "创建新版本",
     "ja": "新しい改訂を作成"
@@ -1266,7 +1266,7 @@
   {
     "key": "operationalProjects.schedule.wbs",
     "category": "operationalProjects",
-    "vi": "Mã WBS",
+    "vi": "Mã mốc",
     "en": "WBS code",
     "zh": "WBS 编码",
     "ja": "WBS コード"
@@ -1402,7 +1402,7 @@
   {
     "key": "operationalProjects.schedule.validation.atLeastOneItem",
     "category": "operationalProjects",
-    "vi": "Tiến độ cần có ít nhất một mốc WBS.",
+    "vi": "Tiến độ cần có ít nhất một mốc.",
     "en": "Add at least one WBS milestone to the schedule.",
     "zh": "进度计划至少需要一个 WBS 里程碑。",
     "ja": "工程には WBS マイルストーンを1つ以上追加してください。"
@@ -1410,7 +1410,7 @@
   {
     "key": "operationalProjects.schedule.validation.tooManyItems",
     "category": "operationalProjects",
-    "vi": "Tiến độ không được có quá 500 mốc WBS.",
+    "vi": "Tiến độ không được có quá 500 mốc.",
     "en": "The schedule can contain at most 500 WBS milestones.",
     "zh": "进度计划最多可包含 500 个 WBS 里程碑。",
     "ja": "工程に登録できる WBS マイルストーンは最大500件です。"
@@ -1418,7 +1418,7 @@
   {
     "key": "operationalProjects.schedule.validation.wbsRequired",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: hãy nhập mã WBS.",
+    "vi": "Mốc {index}: hãy nhập mã mốc.",
     "en": "Milestone {index}: enter a WBS code.",
     "zh": "里程碑 {index}：请输入 WBS 编码。",
     "ja": "マイルストーン {index}：WBS コードを入力してください。"
@@ -1426,7 +1426,7 @@
   {
     "key": "operationalProjects.schedule.validation.wbsTooLong",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: mã WBS tối đa 80 ký tự.",
+    "vi": "Mốc {index}: mã mốc tối đa 80 ký tự.",
     "en": "Milestone {index}: the WBS code must be 80 characters or fewer.",
     "zh": "里程碑 {index}：WBS 编码最多 80 个字符。",
     "ja": "マイルストーン {index}：WBS コードは80文字以内で入力してください。"
@@ -1434,7 +1434,7 @@
   {
     "key": "operationalProjects.schedule.validation.wbsDuplicate",
     "category": "operationalProjects",
-    "vi": "Mã WBS “{code}” đang bị trùng. Hãy dùng mã khác.",
+    "vi": "Mã mốc “{code}” đang bị trùng. Hãy dùng mã khác.",
     "en": "WBS code “{code}” is duplicated. Enter a unique code.",
     "zh": "WBS 编码“{code}”重复，请输入唯一编码。",
     "ja": "WBS コード「{code}」が重複しています。一意のコードを入力してください。"
@@ -1482,7 +1482,7 @@
   {
     "key": "operationalProjects.schedule.validation.parentInvalid",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: hãy chọn mốc cha có trong revision.",
+    "vi": "Mốc {index}: hãy chọn mốc cha trong cùng phiên bản tiến độ.",
     "en": "Milestone {index}: choose a parent milestone in this revision.",
     "zh": "里程碑 {index}：请选择此版本中存在的父级里程碑。",
     "ja": "マイルストーン {index}：この改訂内の親マイルストーンを選択してください。"
@@ -1498,7 +1498,7 @@
   {
     "key": "operationalProjects.schedule.validation.parentCycle",
     "category": "operationalProjects",
-    "vi": "Quan hệ mốc cha tạo thành vòng lặp. Hãy kiểm tra lại cây WBS.",
+    "vi": "Quan hệ mốc cha tạo thành vòng lặp. Hãy kiểm tra lại các mốc tiến độ.",
     "en": "The parent links create a cycle. Check the WBS hierarchy.",
     "zh": "父级关系形成循环，请检查 WBS 层级。",
     "ja": "親子関係が循環しています。WBS 階層を確認してください。"
@@ -1506,7 +1506,7 @@
   {
     "key": "operationalProjects.schedule.milestone",
     "category": "operationalProjects",
-    "vi": "Mốc WBS",
+    "vi": "Mốc tiến độ",
     "en": "WBS milestone",
     "zh": "WBS 里程碑",
     "ja": "WBS マイルストーン"
@@ -1522,7 +1522,7 @@
   {
     "key": "operationalProjects.schedule.chooseMilestone",
     "category": "operationalProjects",
-    "vi": "Chọn mốc WBS đang phát hành",
+    "vi": "Chọn mốc tiến độ đang áp dụng",
     "en": "Choose a published WBS milestone",
     "zh": "选择已发布的 WBS 里程碑",
     "ja": "公開済みの WBS マイルストーンを選択"
@@ -1530,7 +1530,7 @@
   {
     "key": "operationalProjects.schedule.milestoneRequired",
     "category": "operationalProjects",
-    "vi": "Bắt buộc chọn mốc WBS đang phát hành để công việc nằm trong khung tiến độ tổng thể.",
+    "vi": "Hãy chọn mốc tiến độ đang áp dụng để ngày công việc nằm trong khung tiến độ tổng thể.",
     "en": "A published WBS milestone is required so the work stays inside the master schedule.",
     "zh": "必须选择已发布的 WBS 里程碑，以确保工作处于总体进度范围内。",
     "ja": "作業を全体工程内に保つため、公開済みの WBS マイルストーンを選択してください。"
@@ -1550,5 +1550,16 @@
     "en": "Update approver",
     "zh": "更新审批人",
     "ja": "承認者を更新"
-  }
+  },
+  {"key":"operationalProjects.schedule.email.previewTitle","category":"operationalProjects","vi":"Xem email trước khi gửi","en":"Preview email before sending","zh":"发送前预览邮件","ja":"送信前にメールを確認"},
+  {"key":"operationalProjects.schedule.email.previewGuidance","category":"operationalProjects","vi":"Kiểm tra người nhận và nội dung của từng email trước khi tiếp tục.","en":"Check each recipient and message before continuing.","zh":"继续前请检查每位收件人及邮件内容。","ja":"続行する前に宛先と内容を確認してください。"},
+  {"key":"operationalProjects.schedule.email.recipient","category":"operationalProjects","vi":"Người nhận","en":"Recipient","zh":"收件人","ja":"宛先"},
+  {"key":"operationalProjects.schedule.email.noRecipients","category":"operationalProjects","vi":"Không có người cần nhận email về thay đổi này.","en":"No one needs an email about this change.","zh":"此变更无需发送邮件。","ja":"この変更についてメールの送信先はありません。"},
+  {"key":"operationalProjects.schedule.email.continue","category":"operationalProjects","vi":"Tiếp tục","en":"Continue","zh":"继续","ja":"続行"},
+  {"key":"operationalProjects.schedule.email.reviewTitle","category":"operationalProjects","vi":"Email cần kiểm tra","en":"Emails to check","zh":"待检查的邮件","ja":"確認が必要なメール"},
+  {"key":"operationalProjects.schedule.email.checkFirst","category":"operationalProjects","vi":"Hãy kiểm tra với người nhận xem email đã đến chưa. Chỉ chọn Gửi lại khi chắc chắn cần gửi thêm, để tránh nhận trùng.","en":"Ask the recipient whether the email arrived. Retry only when another copy is needed to avoid duplicates.","zh":"请先向收件人确认是否收到邮件。仅在确需再次发送时选择重发，以免重复。","ja":"受信者に届いたか確認してください。重複を避けるため、必要な場合にのみ再送してください。"},
+  {"key":"operationalProjects.schedule.email.confirmReceived","category":"operationalProjects","vi":"Đã nhận","en":"Received","zh":"已收到","ja":"受信済み"},
+  {"key":"operationalProjects.schedule.email.retry","category":"operationalProjects","vi":"Gửi lại","en":"Send again","zh":"重新发送","ja":"再送"},
+  {"key":"operationalProjects.schedule.email.ConfirmReceivedDone","category":"operationalProjects","vi":"Đã ghi nhận email đến người nhận.","en":"Recorded that the email arrived.","zh":"已记录邮件送达。","ja":"メールの到着を記録しました。"},
+  {"key":"operationalProjects.schedule.email.RetryDone","category":"operationalProjects","vi":"Đã xếp email để gửi lại.","en":"Email queued to send again.","zh":"已安排重新发送邮件。","ja":"メールを再送待ちにしました。"}
 ]

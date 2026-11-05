@@ -3,6 +3,7 @@ import { useAppSelector } from "@/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -19,6 +20,8 @@ import {
   adminApi,
   type ProjectScheduleItemResponse,
   type ProjectScheduleResponse,
+  type ProjectScheduleEmailPreview,
+  type ProjectScheduleEmailReviewItem,
   type ProjectScheduleRevisionResponse,
   type SaveProjectScheduleItemRequest,
 } from "@/services/adminApi";
@@ -28,6 +31,7 @@ interface ProjectMasterScheduleProps {
   projectId: number;
   projectStart?: string | null;
   projectEnd?: string | null;
+  projectManagerUserId?: number | null;
 }
 
 interface DraftItem {
@@ -82,6 +86,7 @@ export const ProjectMasterSchedule = ({
   projectId,
   projectStart,
   projectEnd,
+  projectManagerUserId,
 }: ProjectMasterScheduleProps) => {
   const { t } = useI18n();
   const { has } = usePermissions();
@@ -96,6 +101,25 @@ export const ProjectMasterSchedule = ({
   const [reviewComment, setReviewComment] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [emailPreviews, setEmailPreviews] = useState<ProjectScheduleEmailPreview[] | null>(null);
+  const [previewIndex, setPreviewIndex] = useState(0);
+  const [pendingEmailAction, setPendingEmailAction] = useState<(() => Promise<void>) | null>(null);
+  const [emailsNeedingReview, setEmailsNeedingReview] = useState<ProjectScheduleEmailReviewItem[]>(
+    [],
+  );
+  const isProjectManager = currentUserId != null && currentUserId === projectManagerUserId;
+
+  const loadEmailsNeedingReview = useCallback(async () => {
+    if (!isProjectManager) return;
+    const response = await adminApi.getProjectScheduleEmailsForReview(projectId);
+    setEmailsNeedingReview(response.data);
+  }, [isProjectManager, projectId]);
+
+  useEffect(() => {
+    void loadEmailsNeedingReview().catch((reason: unknown) =>
+      setError(extractApiError(reason, t("common.error"))),
+    );
+  }, [loadEmailsNeedingReview, t]);
 
   const reload = useCallback(async () => {
     const response = await adminApi.getProjectSchedule(projectId);
@@ -281,33 +305,68 @@ export const ProjectMasterSchedule = ({
     }
   };
 
+  const showEmailPreview = async (
+    target: ProjectScheduleRevisionResponse,
+    action: "Submit" | "Publish",
+    next: () => Promise<void>,
+  ) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const response = await adminApi.previewProjectScheduleForAction(
+        projectId,
+        target.id,
+        action,
+        action === "Submit" ? Number(approverId) : undefined,
+      );
+      setEmailPreviews(response.data);
+      setPreviewIndex(0);
+      setPendingEmailAction(() => next);
+    } catch (reason) {
+      setError(extractApiError(reason, t("common.error")));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const submit = async () => {
     if (!selected || selected.status !== "Draft" || !approverId) return;
     // Do not silently drop edits made after the last save.
     const target = isDirty || revisionId == null ? await persist() : selected;
     if (!target || target.status !== "Draft") return;
-    await sendForApproval(target);
+    await showEmailPreview(target, "Submit", () => sendForApproval(target));
   };
 
   const reassign = async () => {
     if (!selected || selected.status !== "PendingApproval" || !approverId) return;
-    await sendForApproval(selected);
+    await showEmailPreview(selected, "Submit", () => sendForApproval(selected));
   };
 
   const review = async (decision: "Approve" | "Reject") => {
     if (!selected) return;
+    if (decision === "Approve") {
+      await showEmailPreview(selected, "Publish", () => performReview(selected, decision));
+      return;
+    }
+    await performReview(selected, decision);
+  };
+
+  const performReview = async (
+    target: ProjectScheduleRevisionResponse,
+    decision: "Approve" | "Reject",
+  ) => {
     setBusy(true);
     setError(null);
     try {
       const response = await adminApi.reviewProjectScheduleRevision(
         projectId,
-        selected.id,
+        target.id,
         decision,
         reviewComment,
-        selected.rowVersion,
+        target.rowVersion,
       );
       setSchedule(response.data);
-      setRevisionId(selected.id);
+      setRevisionId(target.id);
       toast({
         title: t(
           decision === "Approve"
@@ -315,6 +374,20 @@ export const ProjectMasterSchedule = ({
             : "operationalProjects.schedule.rejected",
         ),
       });
+    } catch (reason) {
+      setError(extractApiError(reason, t("common.error")));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resolveEmail = async (emailId: number, decision: "ConfirmReceived" | "Retry") => {
+    setBusy(true);
+    setError(null);
+    try {
+      await adminApi.resolveProjectScheduleEmail(projectId, emailId, decision);
+      await loadEmailsNeedingReview();
+      toast({ title: t(`operationalProjects.schedule.email.${decision}Done`) });
     } catch (reason) {
       setError(extractApiError(reason, t("common.error")));
     } finally {
@@ -342,6 +415,77 @@ export const ProjectMasterSchedule = ({
       id="project-master-schedule"
       className="space-y-4 rounded-lg border bg-card p-4 shadow-sm"
     >
+      <Dialog
+        open={emailPreviews !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEmailPreviews(null);
+            setPendingEmailAction(null);
+          }
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{t("operationalProjects.schedule.email.previewTitle")}</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            {t("operationalProjects.schedule.email.previewGuidance")}
+          </p>
+          {emailPreviews?.length ? (
+            <>
+              <Label htmlFor="schedule-email-recipient">
+                {t("operationalProjects.schedule.email.recipient")}
+              </Label>
+              <Select
+                value={String(previewIndex)}
+                onValueChange={(value) => setPreviewIndex(Number(value))}
+              >
+                <SelectTrigger id="schedule-email-recipient">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {emailPreviews.map((preview, index) => (
+                    <SelectItem key={preview.recipientUserId} value={String(index)}>
+                      {preview.toEmail}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-sm font-semibold">{emailPreviews[previewIndex]?.subject}</p>
+              <iframe
+                title={t("operationalProjects.schedule.email.previewTitle")}
+                sandbox=""
+                srcDoc={emailPreviews[previewIndex]?.body}
+                className="h-80 w-full rounded border bg-white"
+              />
+            </>
+          ) : (
+            <p className="text-sm">{t("operationalProjects.schedule.email.noRecipients")}</p>
+          )}
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEmailPreviews(null);
+                setPendingEmailAction(null);
+              }}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button
+              disabled={busy}
+              onClick={() => {
+                const action = pendingEmailAction;
+                setEmailPreviews(null);
+                setPendingEmailAction(null);
+                if (action) void action();
+              }}
+            >
+              {t("operationalProjects.schedule.email.continue")}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <header className="flex flex-row flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold">{t("operationalProjects.schedule.title")}</h2>
@@ -359,6 +503,53 @@ export const ProjectMasterSchedule = ({
           </Button>
         )}
       </header>
+      {isProjectManager && (
+        <section className="space-y-3 rounded-md border p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="font-semibold">{t("operationalProjects.schedule.email.reviewTitle")}</h3>
+            <Button variant="outline" size="sm" onClick={() => void loadEmailsNeedingReview()}>
+              {t("emailTemplate.schedule.delivery.refresh")}
+            </Button>
+          </div>
+          {emailsNeedingReview.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              {t("emailTemplate.schedule.delivery.empty")}
+            </p>
+          )}
+          {emailsNeedingReview.map((email) => (
+            <div key={email.id} className="space-y-2 rounded border p-3 text-sm">
+              <p className="font-medium">
+                {email.toEmail} · v{email.version}
+              </p>
+              <p>{email.subject}</p>
+              <iframe
+                title={`${t("operationalProjects.schedule.email.previewTitle")} ${email.id}`}
+                sandbox=""
+                srcDoc={email.body ?? ""}
+                className="h-64 w-full rounded border bg-white"
+              />
+              <p className="text-muted-foreground">
+                {t("operationalProjects.schedule.email.checkFirst")}
+              </p>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  disabled={busy}
+                  onClick={() => void resolveEmail(email.id, "ConfirmReceived")}
+                >
+                  {t("operationalProjects.schedule.email.confirmReceived")}
+                </Button>
+                <Button
+                  disabled={busy}
+                  variant="outline"
+                  onClick={() => void resolveEmail(email.id, "Retry")}
+                >
+                  {t("operationalProjects.schedule.email.retry")}
+                </Button>
+              </div>
+            </div>
+          ))}
+        </section>
+      )}
       <div className="space-y-4">
         {error && (
           <div

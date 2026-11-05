@@ -21,7 +21,10 @@ public interface IProjectScheduleService
     Task<ProjectScheduleResponse?> UpdateRevisionAsync(int projectId, int revisionId, SaveProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
     Task<ProjectScheduleResponse?> SubmitAsync(int projectId, int revisionId, SubmitProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
     Task<ProjectScheduleResponse?> ReviewAsync(int projectId, int revisionId, ReviewProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
+    Task<List<ProjectScheduleEmailPreview>> PreviewEmailAsync(int projectId, int revisionId, string action, int? recipientUserId, int callerUserId, CancellationToken ct);
 }
+
+public sealed record ProjectScheduleEmailPreview(int RecipientUserId, string ToEmail, string Subject, string Body);
 
 public sealed class ProjectScheduleService(
     AppDbContext db,
@@ -50,7 +53,7 @@ public sealed class ProjectScheduleService(
         if (await db.ProjectScheduleRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
                 (item.Status == ProjectScheduleRevisionStatus.Draft ||
                  item.Status == ProjectScheduleRevisionStatus.PendingApproval), ct))
-            throw new ProjectScheduleOperationException("Dự án đã có một revision đang soạn hoặc chờ duyệt.", 409);
+            throw new ProjectScheduleOperationException("Dự án đã có một phiên bản tiến độ đang soạn hoặc chờ duyệt.", 409);
 
         var latestVersion = await db.ProjectScheduleRevisions.AsNoTracking().Where(item => item.OperationalProjectId == projectId)
             .Select(item => (int?)item.Version).MaxAsync(ct) ?? 0;
@@ -79,12 +82,12 @@ public sealed class ProjectScheduleService(
             .SingleOrDefaultAsync(item => item.Id == revisionId && item.OperationalProjectId == projectId, ct);
         if (revision is null) return null;
         if (revision.Status is not (ProjectScheduleRevisionStatus.Draft or ProjectScheduleRevisionStatus.Rejected))
-            throw new ProjectScheduleOperationException("Chỉ revision nháp hoặc bị trả lại mới được chỉnh sửa.", 409);
+            throw new ProjectScheduleOperationException("Chỉ bản tiến độ đang soạn hoặc bị trả lại mới được chỉnh sửa.", 409);
         if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
         if (await db.ProjectScheduleRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
                 item.Id != revisionId && (item.Status == ProjectScheduleRevisionStatus.Draft ||
                     item.Status == ProjectScheduleRevisionStatus.PendingApproval), ct))
-            throw new ProjectScheduleOperationException("Dự án đang có revision nháp hoặc chờ duyệt khác.", 409);
+            throw new ProjectScheduleOperationException("Dự án đang có bản tiến độ khác đang soạn hoặc chờ duyệt.", 409);
 
         await using var transaction = await BeginTransactionAsync(null, ct);
         revision.Status = ProjectScheduleRevisionStatus.Draft;
@@ -114,17 +117,17 @@ public sealed class ProjectScheduleService(
         if (revision is null) return null;
         var reassigning = revision.Status == ProjectScheduleRevisionStatus.PendingApproval;
         if ((!reassigning && revision.Status != ProjectScheduleRevisionStatus.Draft) || revision.Items.Count == 0)
-            throw new ProjectScheduleOperationException("Chỉ revision nháp có ít nhất một mốc mới được gửi duyệt.", 409);
+            throw new ProjectScheduleOperationException("Chỉ bản tiến độ đang soạn có ít nhất một mốc mới được gửi duyệt.", 409);
         if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
         if (revision.Version > 1 && string.IsNullOrWhiteSpace(revision.ChangeReason))
-            throw new ProjectScheduleOperationException("Revision mới cần ghi rõ yêu cầu khách hàng đã thay đổi.");
+            throw new ProjectScheduleOperationException("Phiên bản tiến độ mới cần ghi rõ yêu cầu khách hàng đã thay đổi.");
         if (await db.ProjectScheduleRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
                 item.Id != revisionId && item.Status == ProjectScheduleRevisionStatus.PendingApproval, ct))
-            throw new ProjectScheduleOperationException("Dự án đang có revision khác chờ duyệt.", 409);
+            throw new ProjectScheduleOperationException("Dự án đang có bản tiến độ khác chờ duyệt.", 409);
         if (!await IsEligibleApproverAsync(projectId, request.ApproverUserId, ct))
-            throw new ProjectScheduleOperationException("Người duyệt phải là PM dự án sau khi hợp đồng Upstream ký, hoặc người quản lý CRM trước khi ký.");
+            throw new ProjectScheduleOperationException("Người duyệt phải là người quản lý dự án sau khi ký hợp đồng với chủ đầu tư, hoặc Trưởng phòng Kinh doanh trước khi ký.");
         if (!MatchesRowVersion(revision, request.RowVersion))
-            throw new ProjectScheduleOperationException("Revision đã được cập nhật. Tải lại trước khi gửi duyệt.", 409);
+            throw new ProjectScheduleOperationException("Bản tiến độ đã được cập nhật. Hãy tải lại trước khi gửi duyệt.", 409);
         await using var transaction = await BeginTransactionAsync(null, ct);
         revision.ApproverUserId = request.ApproverUserId;
         revision.SubmittedByUserId = callerUserId;
@@ -157,13 +160,13 @@ public sealed class ProjectScheduleService(
             .SingleOrDefaultAsync(item => item.Id == revisionId && item.OperationalProjectId == projectId, ct);
         if (revision is null) return null;
         if (revision.Status != ProjectScheduleRevisionStatus.PendingApproval || revision.ApproverUserId != callerUserId)
-            throw new ProjectScheduleOperationException("Chỉ người duyệt được chỉ định mới có thể quyết định revision đang chờ.", 403);
+            throw new ProjectScheduleOperationException("Chỉ người duyệt được chỉ định mới có thể quyết định bản tiến độ đang chờ.", 403);
         if (!await IsEligibleApproverAsync(projectId, callerUserId, ct))
             throw new ProjectScheduleOperationException("Người duyệt không còn phù hợp với giai đoạn hợp đồng hiện tại của dự án.", 403);
         if (!MatchesRowVersion(revision, request.RowVersion))
-            throw new ProjectScheduleOperationException("Revision đã được cập nhật. Tải lại trước khi duyệt.", 409);
+            throw new ProjectScheduleOperationException("Bản tiến độ đã được cập nhật. Hãy tải lại trước khi duyệt.", 409);
         if (request.Decision == "Reject" && string.IsNullOrWhiteSpace(request.Comment))
-            throw new ProjectScheduleOperationException("Cần nêu lý do khi trả lại revision.");
+            throw new ProjectScheduleOperationException("Cần nêu lý do khi trả lại bản tiến độ.");
 
         await using var transaction = await BeginTransactionAsync(IsolationLevel.Serializable, ct);
         if (request.Decision == "Approve")
@@ -172,7 +175,7 @@ public sealed class ProjectScheduleService(
                     item.Id != revision.Id && item.Status == ProjectScheduleRevisionStatus.Published &&
                     item.Version > revision.Version, ct))
                 throw new ProjectScheduleOperationException(
-                    "Đã có phiên bản tiến độ mới hơn được phát hành. Hãy trả lại revision này thay vì phát hành.", 409);
+                    "Đã có phiên bản tiến độ mới hơn được phát hành. Hãy trả lại bản này thay vì phát hành.", 409);
             await ValidateLinkedTasksForPublicationAsync(projectId, revision, ct);
         }
 
@@ -218,11 +221,11 @@ public sealed class ProjectScheduleService(
         IReadOnlyCollection<SaveProjectScheduleItemRequest> requested, CancellationToken ct)
     {
         var ids = requested.Select(item => item.NodeId ?? Guid.NewGuid()).ToArray();
-        if (ids.Distinct().Count() != ids.Length) throw new ProjectScheduleOperationException("Mỗi mốc WBS phải có ID duy nhất.");
+        if (ids.Distinct().Count() != ids.Length) throw new ProjectScheduleOperationException("Mỗi mốc tiến độ phải có mã nhận diện riêng.");
         var nodes = await db.ProjectScheduleNodes.Where(item => ids.Contains(item.Id))
             .Select(item => new { item.Id, item.OperationalProjectId }).ToListAsync(ct);
         if (nodes.Any(item => item.OperationalProjectId != projectId))
-            throw new ProjectScheduleOperationException("Một mốc WBS không thuộc dự án này.");
+            throw new ProjectScheduleOperationException("Một mốc tiến độ không thuộc dự án này.");
         var existingIds = nodes.Select(item => item.Id).ToHashSet();
         foreach (var nodeId in ids.Except(existingIds))
             db.ProjectScheduleNodes.Add(new ProjectScheduleNode { Id = nodeId, OperationalProjectId = projectId });
@@ -230,24 +233,24 @@ public sealed class ProjectScheduleService(
             .ToDictionary(pair => pair.nodeId, pair => pair.item);
         var wbs = requested.Select(item => item.WbsCode.Trim()).ToArray();
         if (wbs.Any(string.IsNullOrWhiteSpace) || wbs.Distinct(StringComparer.OrdinalIgnoreCase).Count() != wbs.Length)
-            throw new ProjectScheduleOperationException("Mã WBS bắt buộc và không được trùng nhau trong revision.");
+            throw new ProjectScheduleOperationException("Mã mốc bắt buộc và không được trùng nhau trong phiên bản tiến độ.");
         foreach (var (nodeId, item) in byId)
         {
             if (string.IsNullOrWhiteSpace(item.Title))
-                throw new ProjectScheduleOperationException("Tên mốc WBS không được để trống.");
+                throw new ProjectScheduleOperationException("Tên mốc tiến độ không được để trống.");
             if (item.Title.Trim().Length > 300 || item.WbsCode.Trim().Length > 80)
-                throw new ProjectScheduleOperationException("Tên mốc tối đa 300 ký tự và mã WBS tối đa 80 ký tự.");
+                throw new ProjectScheduleOperationException("Tên mốc tối đa 300 ký tự và mã mốc tối đa 80 ký tự.");
             var start = item.PlannedStart ?? throw new ProjectScheduleOperationException("Ngày bắt đầu là bắt buộc.");
             var end = item.PlannedEnd ?? throw new ProjectScheduleOperationException("Ngày kết thúc là bắt buộc.");
             if (end < start) throw new ProjectScheduleOperationException("Ngày kết thúc không được trước ngày bắt đầu.");
             if (item.ParentNodeId.HasValue)
             {
                 if (!byId.TryGetValue(item.ParentNodeId.Value, out var parent) || item.ParentNodeId == nodeId)
-                    throw new ProjectScheduleOperationException("Mốc cha phải tồn tại trong cùng revision và không thể là chính nó.");
+                    throw new ProjectScheduleOperationException("Mốc cha phải nằm trong cùng phiên bản tiến độ và không thể là chính nó.");
                 if (!parent.PlannedStart.HasValue || !parent.PlannedEnd.HasValue)
                     throw new ProjectScheduleOperationException("Mốc cha phải có đủ ngày bắt đầu và kết thúc.");
                 if (start < parent.PlannedStart.Value || end > parent.PlannedEnd.Value)
-                    throw new ProjectScheduleOperationException($"Thời gian WBS {item.WbsCode} phải nằm trong khung của mốc cha.");
+                    throw new ProjectScheduleOperationException($"Thời gian của mốc {item.WbsCode} phải nằm trong khung của mốc cha.");
             }
             revision.Items.Add(new ProjectScheduleItem
             {
@@ -260,7 +263,7 @@ public sealed class ProjectScheduleService(
                 SortOrder = item.SortOrder,
             });
         }
-        if (HasParentCycle(revision.Items)) throw new ProjectScheduleOperationException("Cấu trúc WBS không được có vòng lặp cha-con.");
+        if (HasParentCycle(revision.Items)) throw new ProjectScheduleOperationException("Các mốc tiến độ không được liên kết cha-con thành vòng lặp.");
     }
 
     private static bool HasParentCycle(IReadOnlyCollection<ProjectScheduleItem> items)
@@ -304,6 +307,27 @@ public sealed class ProjectScheduleService(
 
     private async Task NotifyAffectedDepartmentsAsync(int projectId, ProjectScheduleRevision revision, CancellationToken ct)
     {
+        var (users, changes) = await GetPublicationRecipientsAsync(projectId, revision, ct);
+        if (users.Count == 0) return;
+        var notificationChanges = Truncate(changes, NotificationChangeSummaryMaxLength);
+        foreach (var userId in users)
+        {
+            try
+            {
+                await notifications.NotifyFromTemplateAsync(userId, "project.schedule.published",
+                    new Dictionary<string, string> { ["projectId"] = projectId.ToString(), ["version"] = revision.Version.ToString(), ["changes"] = notificationChanges },
+                    "ProjectScheduleRevision", revision.Id, $"/admin/operational-projects/{projectId}?tab=schedule");
+            }
+            catch (Exception exception)
+            {
+                logger.LogError(exception, "Failed to notify user {UserId} about schedule revision {RevisionId} for project {ProjectId}.", userId, revision.Id, projectId);
+            }
+            await QueueEmailAsync(projectId, revision, userId, "Tiến độ tổng thể đã cập nhật", changes, ct);
+        }
+    }
+
+    private async Task<(List<int> Users, string Changes)> GetPublicationRecipientsAsync(int projectId, ProjectScheduleRevision revision, CancellationToken ct)
+    {
         var previousId = await db.ProjectScheduleRevisions.AsNoTracking().Where(item => item.OperationalProjectId == projectId &&
                 item.Status == ProjectScheduleRevisionStatus.Published && item.Id != revision.Id)
             .OrderByDescending(item => item.Version).Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
@@ -332,25 +356,8 @@ public sealed class ProjectScheduleService(
             .Select(task => task.OwnerUserId!.Value).Distinct().ToListAsync(ct);
         var users = departmentAssignees.Union(departmentApprovers).Union(designUserIds)
             .Union(constructionOwners).Distinct().ToList();
-        if (users.Count == 0) return;
         var changes = string.Join("; ", changed.Select(id => FormatChange(id, oldItems, currentItems)));
-        // Notification.Body is capped at 1.000 characters; an unbounded change
-        // summary would fail SaveChanges and silently drop the notification.
-        var notificationChanges = Truncate(changes, NotificationChangeSummaryMaxLength);
-        foreach (var userId in users)
-        {
-            try
-            {
-                await notifications.NotifyFromTemplateAsync(userId, "project.schedule.published",
-                    new Dictionary<string, string> { ["projectId"] = projectId.ToString(), ["version"] = revision.Version.ToString(), ["changes"] = notificationChanges },
-                    "ProjectScheduleRevision", revision.Id, $"/admin/operational-projects/{projectId}?tab=schedule");
-            }
-            catch (Exception exception)
-            {
-                logger.LogError(exception, "Failed to notify user {UserId} about schedule revision {RevisionId} for project {ProjectId}.", userId, revision.Id, projectId);
-            }
-            await QueueEmailAsync(projectId, revision, userId, "Tiến độ tổng thể đã cập nhật", changes, ct);
-        }
+        return (users, changes);
     }
 
     private async Task ValidateLinkedTasksForPublicationAsync(
@@ -515,12 +522,64 @@ public sealed class ProjectScheduleService(
     private async Task QueueEmailAsync(int projectId, ProjectScheduleRevision revision, int userId,
         string eventName, string changeSummary, CancellationToken ct)
     {
+        var preview = await RenderEmailAsync(projectId, revision, userId, eventName, changeSummary, ct);
+        if (preview is null) return;
+        db.ProjectScheduleEmails.Add(new ProjectScheduleEmail
+        {
+            OperationalProjectId = projectId,
+            RevisionId = revision.Id,
+            RecipientUserId = userId,
+            ToEmail = preview.ToEmail,
+            Subject = preview.Subject,
+            Body = preview.Body,
+            Status = ProjectScheduleEmail.PendingStatus,
+            CreatedAt = DateTime.UtcNow,
+            NextAttemptAt = DateTime.UtcNow,
+        });
+        await db.SaveChangesAsync(ct);
+    }
+
+    public async Task<List<ProjectScheduleEmailPreview>> PreviewEmailAsync(int projectId, int revisionId,
+        string action, int? recipientUserId, int callerUserId, CancellationToken ct)
+    {
+        var revision = await db.ProjectScheduleRevisions.AsNoTracking().Include(item => item.Items)
+            .SingleOrDefaultAsync(item => item.Id == revisionId && item.OperationalProjectId == projectId, ct)
+            ?? throw new ProjectScheduleOperationException("Không tìm thấy bản tiến độ.", 404);
+        if (action == "Submit")
+        {
+            if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct) ||
+                !await permissions.HasAsync(callerUserId, "operations.projects.manage", ct))
+                throw new ProjectScheduleOperationException("Bạn không có quyền gửi bản tiến độ này.", 403);
+            if (revision.Status is not (ProjectScheduleRevisionStatus.Draft or ProjectScheduleRevisionStatus.PendingApproval) ||
+                !recipientUserId.HasValue || !await IsEligibleApproverAsync(projectId, recipientUserId.Value, ct))
+                throw new ProjectScheduleOperationException("Hãy chọn người duyệt phù hợp và kiểm tra trạng thái bản tiến độ.", 409);
+            var preview = await RenderEmailAsync(projectId, revision, recipientUserId.Value,
+                "Yêu cầu duyệt tiến độ tổng thể", await GetChangeSummaryAsync(projectId, revision, ct), ct);
+            return preview is null ? [] : [preview];
+        }
+        if (action != "Publish" || revision.Status != ProjectScheduleRevisionStatus.PendingApproval ||
+            revision.ApproverUserId != callerUserId || !await IsEligibleApproverAsync(projectId, callerUserId, ct))
+            throw new ProjectScheduleOperationException("Bạn không thể xem email phát hành cho bản tiến độ này.", 403);
+        var (users, changes) = await GetPublicationRecipientsAsync(projectId, revision, ct);
+        var previews = new List<ProjectScheduleEmailPreview>();
+        foreach (var userId in users)
+        {
+            var preview = await RenderEmailAsync(projectId, revision, userId,
+                "Tiến độ tổng thể đã cập nhật", changes, ct);
+            if (preview is not null) previews.Add(preview);
+        }
+        return previews;
+    }
+
+    private async Task<ProjectScheduleEmailPreview?> RenderEmailAsync(int projectId, ProjectScheduleRevision revision,
+        int userId, string eventName, string changeSummary, CancellationToken ct)
+    {
         var recipient = await db.Users.AsNoTracking().Where(user => user.Id == userId && user.IsActive)
                 .Select(user => new { user.Email, user.FullName }).SingleOrDefaultAsync(ct);
         if (string.IsNullOrWhiteSpace(recipient?.Email))
         {
             logger.LogWarning("Project schedule email skipped: user {UserId} has no email; revision {RevisionId}.", userId, revision.Id);
-            return;
+            return null;
         }
         var project = await db.OperationalProjects.AsNoTracking().Where(item => item.Id == projectId)
                 .Select(item => new { item.Code, item.Name }).SingleAsync(ct);
@@ -535,21 +594,7 @@ public sealed class ProjectScheduleService(
             ["changeReason"] = revision.ChangeReason ?? "—",
             ["changeSummary"] = changeSummary,
         });
-        // Store first, send later: the worker retries a failed delivery and
-        // keeps the row for review instead of losing the message.
-        db.ProjectScheduleEmails.Add(new ProjectScheduleEmail
-        {
-            OperationalProjectId = projectId,
-            RevisionId = revision.Id,
-            RecipientUserId = userId,
-            ToEmail = recipient.Email.Trim(),
-            Subject = rendered.Subject,
-            Body = rendered.Body,
-            Status = ProjectScheduleEmail.PendingStatus,
-            CreatedAt = DateTime.UtcNow,
-            NextAttemptAt = DateTime.UtcNow,
-        });
-        await db.SaveChangesAsync(ct);
+        return new ProjectScheduleEmailPreview(userId, recipient.Email.Trim(), rendered.Subject, rendered.Body);
     }
 
     private static string Truncate(string value, int maxLength) =>

@@ -17,10 +17,53 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
     public const int MaxAttempts = 5;
     private static readonly TimeSpan StaleClaimAfter = TimeSpan.FromMinutes(15);
     private const string SafeError =
-        "Không thể gửi email tiến độ. Vui lòng kiểm tra cấu hình SMTP hoặc thử lại sau.";
+        "Không thể gửi email tiến độ. Người quản lý dự án cần kiểm tra với người nhận trước khi gửi lại.";
 
     public static TimeSpan Backoff(int attemptCount) =>
         TimeSpan.FromMinutes(Math.Min(60, Math.Pow(2, Math.Max(0, attemptCount - 1))));
+
+    public async Task<List<ProjectScheduleEmailReviewItem>> GetNeedsReviewAsync(int projectId, int callerUserId, CancellationToken ct)
+    {
+        if (!await IsProjectManagerAsync(projectId, callerUserId, ct))
+            throw new ProjectScheduleOperationException("Chỉ người quản lý dự án được kiểm tra email của dự án.", 403);
+        return await db.ProjectScheduleEmails.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId && item.Status == ProjectScheduleEmail.NeedsReviewStatus)
+            .OrderByDescending(item => item.LastAttemptAt)
+            .Select(item => new ProjectScheduleEmailReviewItem(item.Id, projectId, item.RevisionId,
+                item.Revision.Version, item.Revision.OperationalProject.Code, item.AttemptCount,
+                item.LastAttemptAt, item.ToEmail, item.Subject, item.Body))
+            .ToListAsync(ct);
+    }
+
+    public async Task ResolveAsync(int projectId, int emailId, int callerUserId, string decision, CancellationToken ct)
+    {
+        if (!await IsProjectManagerAsync(projectId, callerUserId, ct))
+            throw new ProjectScheduleOperationException("Chỉ người quản lý dự án được xử lý email của dự án.", 403);
+        if (decision is not ("ConfirmReceived" or "Retry"))
+            throw new ProjectScheduleOperationException("Hãy chọn Đã nhận hoặc Gửi lại.");
+        var now = DateTime.UtcNow;
+        var message = await db.ProjectScheduleEmails.SingleOrDefaultAsync(item => item.Id == emailId &&
+            item.OperationalProjectId == projectId && item.Status == ProjectScheduleEmail.NeedsReviewStatus, ct);
+        if (message is null)
+            throw new ProjectScheduleOperationException("Email đã được xử lý hoặc không thuộc dự án này. Hãy tải lại danh sách.", 409);
+        message.Status = decision == "Retry" ? ProjectScheduleEmail.PendingStatus : ProjectScheduleEmail.ConfirmedReceivedStatus;
+        message.ReviewedByUserId = callerUserId;
+        message.ReviewedAt = now;
+        message.NextAttemptAt = decision == "Retry" ? now : null;
+        if (decision == "Retry") message.AttemptCount = 0;
+        message.LastError = null;
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException)
+        {
+            throw new ProjectScheduleOperationException("Email đã được xử lý. Hãy tải lại danh sách.", 409);
+        }
+        logger.LogInformation("Project schedule email {EmailId} for project {ProjectId} reviewed by manager {UserId}: {Decision}.",
+            emailId, projectId, callerUserId, decision);
+    }
+
+    private Task<bool> IsProjectManagerAsync(int projectId, int callerUserId, CancellationToken ct) =>
+        db.OperationalProjects.AsNoTracking().AnyAsync(project =>
+            project.Id == projectId && project.ProjectManagerUserId == callerUserId, ct);
 
     public async Task<int> SendPendingAsync(CancellationToken ct)
     {
@@ -83,26 +126,25 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
             {
                 try
                 {
-                    var adminIds = await db.Users.AsNoTracking()
-                        .Where(user => user.IsActive &&
-                            (user.Role == UserRole.SUPER_ADMIN || user.Role == UserRole.ADMIN))
-                        .Select(user => user.Id).ToListAsync(ct);
-                    foreach (var adminId in adminIds)
+                    var managerId = await db.OperationalProjects.AsNoTracking()
+                        .Where(project => project.Id == message.OperationalProjectId)
+                        .Select(project => project.ProjectManagerUserId).SingleOrDefaultAsync(ct);
+                    if (managerId.HasValue)
                     {
-                        await notifications.NotifyFromTemplateAsync(adminId, "project.schedule.email-needs-review",
+                        await notifications.NotifyFromTemplateAsync(managerId.Value, "project.schedule.email-needs-review",
                             new Dictionary<string, string>
                             {
                                 ["projectId"] = message.OperationalProjectId.ToString(),
                                 ["revisionId"] = message.RevisionId.ToString(),
                                 ["emailId"] = message.Id.ToString(),
                             }, "ProjectScheduleEmail", message.Id,
-                            "/admin/email-templates?tab=projectSchedule#schedule-delivery");
+                            $"/admin/operational-projects/{message.OperationalProjectId}?tab=schedule");
                     }
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)
                 {
                     logger.LogError(exception,
-                        "Could not alert administrators for project schedule email {EmailId} requiring review.", message.Id);
+                        "Could not alert the project manager for schedule email {EmailId} requiring review.", message.Id);
                 }
             }
         }

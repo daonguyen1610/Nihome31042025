@@ -234,10 +234,10 @@
   {
     "key": "emailTemplate.schedule.delivery.guidance",
     "category": "emailTemplates",
-    "vi": "Hãy nhờ quản trị viên kiểm tra email đã đến người nhận chưa trước khi gửi lại, để tránh gửi trùng.",
-    "en": "Ask an administrator to confirm whether the email arrived before sending it again to avoid duplicates.",
-    "zh": "重新发送前，请管理员确认邮件是否已送达，以免重复发送。",
-    "ja": "重複送信を防ぐため、再送前に管理者へ受信状況の確認を依頼してください。"
+    "vi": "Người quản lý dự án kiểm tra với người nhận, sau đó chọn Đã nhận hoặc Gửi lại trong dự án.",
+    "en": "The project manager checks with the recipient, then marks Received or Send again in the project.",
+    "zh": "项目经理向收件人确认后，在项目中选择已收到或重新发送。",
+    "ja": "プロジェクト管理者が受信者に確認し、プロジェクト内で受信済みまたは再送を選びます。"
   },
   {
     "key": "emailTemplate.schedule.delivery.refresh",

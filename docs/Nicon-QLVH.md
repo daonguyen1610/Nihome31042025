@@ -76,7 +76,7 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Backend phải kiểm tra quyền, scope Dự án, trạng thái và concurrency; ẩn nút ở
   frontend không phải biện pháp bảo mật.
 
-### 2.2.1. Tiến độ tổng thể CRM — Partial
+### 2.2.1. Tiến độ tổng thể CRM — Implemented
 
 - CRM quản lý WBS/mốc gốc cho Operational Project. Lịch Design, Gantt thi công
   CM/BCH (vẫn giữ `DesignProjectId` theo ranh giới tương thích hiện tại) và công
@@ -94,7 +94,7 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
 - Khi phát hành revision mới, người nhận đầu việc liên kết với các WBS thay đổi
   được thông báo kèm khác biệt ngày/mốc. Các lịch phòng không tự đổi ngày.
   Người quản lý phải rà soát và cập nhật lịch chi tiết để đáp ứng mốc mới.
-- **Partial:** đã có persistence, API, giao diện quản lý revision và liên kết
+- **Implemented:** đã có persistence, API, giao diện quản lý revision và liên kết
   WBS cho lịch Design, Construction Task và công việc phòng ban. Unit test,
   integration test (`ProjectScheduleControllerTests`) và live E2E
   (`admin-project-master-schedule.spec.ts`) đã xác nhận luồng duyệt, giới hạn
@@ -102,13 +102,17 @@ tên sheet, màu sắc, ngày và tên khách hàng trong file không phải quy
   nhánh lỗi xác thực/quyền. Email thông báo dùng hàng đợi bền vững
   `project_schedule_emails`: gửi lại theo backoff, dừng ở `NeedsReview` sau năm
   lần thất bại thay vì mất thông báo. Email giữ đầy đủ khác biệt WBS;
-  thông báo trong ứng dụng giới hạn theo dung lượng cột. Người quản trị nhận
-  cảnh báo và xem được danh sách email cần kiểm tra trong trang Mẫu email.
+  thông báo trong ứng dụng giới hạn theo dung lượng cột. Người quản lý dự án nhận
+  cảnh báo sau năm lần lỗi, kiểm tra với người nhận rồi chọn **Đã nhận** hoặc
+  **Gửi lại** tại dự án; máy chủ kiểm tra quyền theo dự án, chống xử lý lặp và
+  lưu người cùng thời điểm quyết định. Quản trị viên vẫn xem được danh sách
+  email cần kiểm tra trong trang Mẫu email.
   Trạng thái revision và email xếp hàng được ghi trong cùng giao dịch.
-  Còn cần NICON xác nhận ai chịu trách nhiệm xác minh trạng thái gửi SMTP và
-  khi nào được gửi lại một email `NeedsReview`; chưa có thao tác xử lý lại tự
-  động vì có thể tạo email trùng. Bản xem trước ở trang Mẫu email hiện dùng dữ
-  liệu mẫu, chưa phải bản xem trước theo dự án/người nhận trước từng lần gửi.
+  Trước khi gửi duyệt hoặc phát hành, người thao tác xem bản email thực theo
+  dự án và từng người nhận. Bản xem trước ở trang Mẫu email vẫn dùng dữ liệu
+  minh họa để quản trị viên chỉnh mẫu. Việc người nhận thực sự đã thấy email
+  là xác minh thủ công của người quản lý dự án, không thể suy ra từ phản hồi
+  của máy chủ gửi email.
 
 ### 2.2.2. Nhóm công việc liên phòng ban — Partial
 

@@ -1,5 +1,6 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
+import { execSql } from "../fixtures/db";
 import type { APIRequestContext, APIResponse } from "@playwright/test";
 
 const uid = () => Math.random().toString(36).slice(2, 8);
@@ -139,6 +140,103 @@ const reviewRevision = async (
   );
 
 test.describe("Master schedule — MoM one-way planning contract", () => {
+  test("project manager resolves failed schedule email in the live browser", async ({
+    api,
+    loginInBrowserAs,
+    page,
+  }) => {
+    const adminToken = await login(api, TEST_USERS.superAdmin);
+    const adminHeaders = { Authorization: `Bearer ${adminToken}` };
+    const users = await loadUsers(api, adminHeaders);
+    const customerId = await createOwnCustomer(api, adminHeaders, "schedule-email-review");
+    const projectId = await createOperationalProject(
+      api,
+      adminHeaders,
+      customerId,
+      `Kiểm tra email tiến độ ${uid()}`,
+      users.pm.id,
+    );
+    const schedule = await saveRevision(api, adminHeaders, projectId, "Khách xác nhận tiến độ", [
+      {
+        nodeId: crypto.randomUUID(),
+        wbsCode: "1",
+        title: "Chuẩn bị mặt bằng",
+        plannedStart: "2026-06-01",
+        plannedEnd: "2026-06-05",
+        sortOrder: 0,
+      },
+    ]);
+    const revisionId = schedule.revisions[0].id;
+    const address = `schedule-review-${uid()}@nihome.test`;
+    const inserted = execSql(`SET NOCOUNT ON;
+      INSERT INTO project_schedule_emails
+      (OperationalProjectId, RevisionId, RecipientUserId, ToEmail, Subject, Body,
+       Status, AttemptCount, CreatedAt, LastAttemptAt)
+      OUTPUT INSERTED.Id
+      VALUES (${projectId}, ${revisionId}, ${users.pm.id}, '${address}',
+       N'Thông báo tiến độ cần kiểm tra', N'<p>Tiến độ công trình đã đổi.</p>',
+       'NeedsReview', 5, SYSUTCDATETIME(), SYSUTCDATETIME());`).trim();
+    const emailId = Number(inserted.split(/\s+/).find((value) => /^\d+$/.test(value)));
+    expect(emailId).toBeGreaterThan(0);
+
+    await loginInBrowserAs(page, TEST_USERS.pm);
+    await page.goto(`/admin/operational-projects/${projectId}?tab=schedule`);
+    const section = page.locator("#project-master-schedule");
+    await expect(section.getByText(address)).toBeVisible();
+    await expect(section.frameLocator("iframe").locator("body")).toContainText(
+      "Tiến độ công trình đã đổi.",
+    );
+    await section.getByRole("button", { name: "Đã nhận" }).click();
+    await expect(section.getByText(address)).toHaveCount(0);
+    const saved = execSql(`SET NOCOUNT ON; SELECT Status, ReviewedByUserId
+      FROM project_schedule_emails WHERE Id = ${emailId};`);
+    expect(saved).toContain("ConfirmedReceived");
+    expect(saved).toContain(String(users.pm.id));
+  });
+
+  test("real project email is previewed before approval request is sent", async ({
+    api,
+    loginInBrowserAs,
+    page,
+  }) => {
+    const adminToken = await login(api, TEST_USERS.superAdmin);
+    const adminHeaders = { Authorization: `Bearer ${adminToken}` };
+    const users = await loadUsers(api, adminHeaders);
+    const customerId = await createOwnCustomer(api, adminHeaders, "schedule-preview");
+    const projectId = await createOperationalProject(
+      api,
+      adminHeaders,
+      customerId,
+      `Tiến độ xem trước ${uid()}`,
+      users.pm.id,
+    );
+    await saveRevision(api, adminHeaders, projectId, "Khách xác nhận ngày khởi công", [
+      {
+        nodeId: crypto.randomUUID(),
+        wbsCode: "1",
+        title: "Khởi công",
+        plannedStart: "2026-06-01",
+        plannedEnd: "2026-06-02",
+        sortOrder: 0,
+      },
+    ]);
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto(`/admin/operational-projects/${projectId}?tab=schedule`);
+    const schedule = page.locator("#project-master-schedule");
+    await expect(schedule).toBeVisible();
+    await schedule.getByRole("combobox").last().click();
+    await page.getByRole("option", { name: users.salesManager.fullName }).click();
+    await schedule.getByRole("button", { name: "Gửi duyệt" }).click();
+    const dialog = page.getByRole("dialog", { name: "Xem email trước khi gửi" });
+    await expect(dialog).toBeVisible();
+    await expect(dialog.frameLocator("iframe").locator("body")).toContainText(
+      "Khách xác nhận ngày khởi công",
+    );
+    await expect(dialog).toContainText("Yêu cầu duyệt tiến độ tổng thể");
+    await dialog.getByRole("button", { name: "Tiếp tục" }).click();
+    await expect(schedule).toContainText("Chờ duyệt");
+  });
+
   test("administrator can inspect schedule email delivery at desktop and mobile widths", async ({
     loginInBrowserAs,
     page,
@@ -515,12 +613,22 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
     const pending2 = submitted2.revisions.find((revision) => revision.id === revision2.id)!;
     expect(pending2.status).toBe("PendingApproval");
 
-    const published2 = await reviewRevision(
-      api,
-      salesManagerHeaders,
-      projectId,
-      pending2,
-      "Approve",
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.goto(`/admin/operational-projects/${projectId}?tab=schedule`);
+    await page
+      .locator("#project-master-schedule")
+      .getByRole("button", {
+        name: "Duyệt và phát hành",
+      })
+      .click();
+    const publishPreview = page.getByRole("dialog", { name: "Xem email trước khi gửi" });
+    await expect(publishPreview).toBeVisible();
+    await expect(publishPreview.frameLocator("iframe").locator("body")).toContainText("2026-06-12");
+    await publishPreview.getByRole("button", { name: "Tiếp tục" }).click();
+    await expect(page.locator("#project-master-schedule")).toContainText("Đã phát hành");
+    const published2 = await expectJson<ScheduleResponse>(
+      await api.get(scheduleUrl(projectId), { headers: adminHeaders }),
+      "load published schedule after browser review",
     );
     expect(published2.revisions.find((revision) => revision.id === revision2.id)!.status).toBe(
       "Published",
@@ -631,7 +739,7 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
       data: { approverUserId: users.salesManager.id, rowVersion: revision.rowVersion },
     });
     expect(crmAttempt.status()).toBe(400);
-    expect(await crmAttempt.text()).toContain("PM dự án");
+    expect(await crmAttempt.text()).toContain("người quản lý dự án");
 
     const submitted = await submitRevision(api, adminHeaders, projectId, revision, users.pm.id);
     expect(submitted.revisions.find((item) => item.id === revision.id)!.status).toBe(
