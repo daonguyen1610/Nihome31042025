@@ -2483,16 +2483,11 @@ both contract templates. Switching types or tabs preserves unsaved drafts.
 Contract, quote approval, and work package approval previews keep variables visible until actual
 business data is rendered in the corresponding send/scheduling workflow.
 
-Automated email types can use one NICON layout while keeping their own subject,
-message, and supported variables. The shared layout is editable once in
-**Giao diện chung** at `/admin/email-templates`.
-It requires exactly one `{{heading}}`, `{{content}}`, and `{{footer}}` placeholder.
-Saved event bodies remain individually editable; their message content is
-placed inside the shared layout when new business emails are previewed or
-queued. Already queued emails retain their confirmed HTML snapshot.
-Startup initializes the shared layout for existing installations. Customized
-event bodies retain their content inside it, and already confirmed/queued
-message snapshots retain their original HTML.
+Automated email types use the common NICON layout defined in application code.
+At `/admin/email-templates`, each event keeps its own editable subject,
+message body, and supported variables. Preview shows the rendered message with
+the common layout. Customized event bodies retain their content; already
+queued emails retain their confirmed HTML snapshot.
 
 **OTP Template Placeholders:**
 

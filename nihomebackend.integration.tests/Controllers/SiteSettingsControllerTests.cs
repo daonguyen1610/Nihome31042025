@@ -62,75 +62,33 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task SharedLayout_RequiresAdmin_ValidatesAndUpdatesSchedulePreview()
+    public async Task EmailTemplates_ExposeCodeBaselineWithoutEditableLayout()
     {
         const string path = "/api/site-settings/email-templates";
-        const string layout = "<div><p>NICON · {{heading}}</p><div>{{content}}</div><p>{{footer}}</p></div>";
-        (await Client.PutAsJsonAsync(path, new { sharedBusinessEmailLayoutTemplate = layout }))
+        (await Client.PutAsJsonAsync(path, new { sharedBusinessEmailLayoutTemplate = "<div>invalid</div>" }))
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         await AuthTestHelper.AuthenticateAsync(Client,
             client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
-        (await Client.PutAsJsonAsync(path, new { sharedBusinessEmailLayoutTemplate = layout }))
+        (await Client.PutAsJsonAsync(path, new { sharedBusinessEmailLayoutTemplate = "<div>invalid</div>" }))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        var original = await ReadJsonAsync(await Client.GetAsync(path));
-        var originalLayout = original.GetProperty("sharedBusinessEmailLayoutTemplate").GetString();
-        var applicationSubject = original.GetProperty("newApplicationEmailSubjectTemplate").GetString();
-        var applicationBody = original.GetProperty("newApplicationEmailBodyTemplate").GetString();
-        var notificationEmail = original.GetProperty("notificationEmail").GetString();
-        var otpSubject = original.GetProperty("otpEmailSubjectTemplate").GetString();
-        var otpBody = original.GetProperty("otpEmailBodyTemplate").GetString();
-        try
+        var configured = await ReadJsonAsync(await Client.GetAsync(path));
+        configured.TryGetProperty("sharedBusinessEmailLayoutTemplate", out _).Should().BeFalse();
+        foreach (var property in new[] { "otpEmailBodyTemplate", "newApplicationEmailBodyTemplate",
+            "quoteEmailBodyTemplate", "projectScheduleEmailBodyTemplate" })
         {
-            var invalid = await Client.PutAsJsonAsync(path, new
-            {
-                sharedBusinessEmailLayoutTemplate = "<div onclick=\"alert(1)\">{{content}}</div>"
-            });
-            invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-            var missingSlot = await Client.PutAsJsonAsync(path, new
-            {
-                sharedBusinessEmailLayoutTemplate = "<div>{{heading}}{{content}}</div>"
-            });
-            missingSlot.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-            (await ReadJsonAsync(await Client.GetAsync(path)))
-                .GetProperty("sharedBusinessEmailLayoutTemplate").GetString().Should().Be(originalLayout);
+            var body = configured.GetProperty(property).GetString();
+            body.Should().Contain("font-family:Arial,sans-serif");
+            body.Should().Contain("max-width:600px");
+        }
 
-            var saved = await Client.PutAsJsonAsync(path, new
-            {
-                newApplicationEmailSubjectTemplate = applicationSubject,
-                newApplicationEmailBodyTemplate = applicationBody,
-                notificationEmail,
-                otpEmailSubjectTemplate = otpSubject,
-                otpEmailBodyTemplate = otpBody,
-                sharedBusinessEmailLayoutTemplate = layout
-            });
-            saved.StatusCode.Should().Be(HttpStatusCode.OK);
-            (await ReadJsonAsync(await Client.GetAsync(path)))
-                .GetProperty("sharedBusinessEmailLayoutTemplate").GetString().Should().Be(layout);
-            var configured = await ReadJsonAsync(await Client.GetAsync(path));
-            configured.GetProperty("otpEmailBodyTemplate").GetString().Should().StartWith("<div><p>NICON · ");
-            configured.GetProperty("newApplicationEmailBodyTemplate").GetString().Should().StartWith("<div><p>NICON · ");
-            configured.GetProperty("quoteEmailBodyTemplate").GetString().Should().StartWith("<div><p>NICON · ");
-            var preview = await Client.PostAsJsonAsync(path + "/project-schedule/preview", new
-            {
-                subject = NihomeBackend.Services.ProjectScheduleEmailTemplates.DefaultSubject,
-                body = NihomeBackend.Services.ProjectScheduleEmailTemplates.DefaultBody
-            });
-            preview.StatusCode.Should().Be(HttpStatusCode.OK);
-            (await ReadJsonAsync(preview)).GetProperty("body").GetString().Should().StartWith("<div><p>NICON · ");
-        }
-        finally
+        var preview = await Client.PostAsJsonAsync(path + "/project-schedule/preview", new
         {
-            await Client.PutAsJsonAsync(path, new
-            {
-                newApplicationEmailSubjectTemplate = applicationSubject,
-                newApplicationEmailBodyTemplate = applicationBody,
-                notificationEmail,
-                otpEmailSubjectTemplate = otpSubject,
-                otpEmailBodyTemplate = otpBody,
-                sharedBusinessEmailLayoutTemplate = originalLayout
-            });
-        }
+            subject = NihomeBackend.Services.ProjectScheduleEmailTemplates.DefaultSubject,
+            body = NihomeBackend.Services.ProjectScheduleEmailTemplates.DefaultBody
+        });
+        preview.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(preview)).GetProperty("body").GetString().Should().Contain("max-width:600px");
     }
 
     [Fact]

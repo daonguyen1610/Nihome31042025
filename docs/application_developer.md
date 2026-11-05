@@ -742,7 +742,7 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `OtpService`               | Generate, verify, and manage OTP codes                   |
 | `EmailService`             | Send emails via SMTP using MailKit                       |
 | `EmailTemplateFormatter`   | Format email templates with placeholder substitution     |
-| `NiconEmailLayout`          | Validate and apply the editable shared business email shell (`heading`, `content`, `footer`) |
+| `EmailTemplateBaseline`     | Apply the code-defined NICON email shell while preserving each event's message content |
 | `TimeService`              | Centralized UTC time provider                            |
 | `HostedImageService`       | Background service for image management                  |
 | `OrphanedManagedFileCleanupService` | Quarantines unreferenced managed images/files after 24 hours, restores newly referenced files, and purges only after another 24-hour retention window |
@@ -1265,12 +1265,12 @@ and `validUntil` tokens. The body must contain `quoteLines` and `grandTotal`;
 template updates are limited to 200 subject and 8000 body characters.
 The default uses a branded card layout. Quote HTML is restricted to basic
 structural tags and safe inline styles; dynamic values are HTML-encoded.
-`site_settings.SharedBusinessEmailLayoutTemplate` stores the common HTML shell
-for new automated emails. `GET/PUT /api/site-settings/email-templates` exposes
-it to `system.settings.view/manage`; the server requires safe HTML with exactly
-one `{{heading}}`, `{{content}}`, and `{{footer}}` slot. Each workflow retains
-its own subject, variables, and message body. Previously queued HTML snapshots
-are not rewritten when the shell changes.
+`EmailTemplateBaseline` defines the common NICON HTML shell in code for new
+automated emails. Each workflow retains its own editable subject, variables,
+and message body through `GET/PUT /api/site-settings/email-templates` and its
+specialized template endpoints. The server applies the baseline when rendering
+new messages and previews. Previously queued HTML snapshots are not rewritten
+when the code baseline changes.
 Quote email bodies must use valid safe HTML. The send dialog previews the
 rendered message in an isolated iframe, and the submitted body is validated
 before SMTP delivery.

@@ -1,61 +1,5 @@
 [
   {
-    "key": "emailTemplate.layout.tab",
-    "category": "emailTemplate",
-    "vi": "Giao diện chung",
-    "en": "Shared layout",
-    "zh": "共用版式",
-    "ja": "共通レイアウト"
-  },
-  {
-    "key": "emailTemplate.layout.label",
-    "category": "emailTemplate",
-    "vi": "HTML giao diện email chung",
-    "en": "Shared email layout HTML",
-    "zh": "共用邮件版式 HTML",
-    "ja": "共通メールのレイアウト HTML"
-  },
-  {
-    "key": "emailTemplate.layout.guidance",
-    "category": "emailTemplate",
-    "vi": "Giữ đúng một biến {{heading}}, {{content}} và {{footer}}. Thay đổi áp dụng cho email mới; email đã xếp hàng giữ nguyên bản đã xác nhận.",
-    "en": "Keep exactly one {{heading}}, {{content}}, and {{footer}}. Changes apply to new emails; queued emails retain their confirmed snapshot.",
-    "zh": "每个 {{heading}}、{{content}} 和 {{footer}} 变量须恰好出现一次。更改适用于新邮件；已排队邮件保留原快照。",
-    "ja": "{{heading}}、{{content}}、{{footer}} をそれぞれ 1 回だけ残してください。変更は新規メールに適用され、送信待ちメールは確定済み内容を保持します。"
-  },
-  {
-    "key": "emailTemplate.layout.sample.heading",
-    "category": "emailTemplate",
-    "vi": "TIẾN ĐỘ TỔNG THỂ · Yêu cầu duyệt",
-    "en": "MASTER SCHEDULE · Approval requested",
-    "zh": "项目总进度 · 审批请求",
-    "ja": "マスタースケジュール · 承認依頼"
-  },
-  {
-    "key": "emailTemplate.layout.sample.content",
-    "category": "emailTemplate",
-    "vi": "Kính gửi Nguyễn Văn An,|Dự án PJ-2026-001 · Trung tâm dịch vụ NICON",
-    "en": "Dear Nguyễn Văn An,|Project PJ-2026-001 · NICON Service Center",
-    "zh": "尊敬的 Nguyễn Văn An：|项目 PJ-2026-001 · NICON 服务中心",
-    "ja": "Nguyễn Văn An 様|プロジェクト PJ-2026-001 · NICON サービスセンター"
-  },
-  {
-    "key": "emailTemplate.layout.sample.footer",
-    "category": "emailTemplate",
-    "vi": "NICON · Thông báo tiến độ dự án",
-    "en": "NICON · Project schedule notification",
-    "zh": "NICON · 项目进度通知",
-    "ja": "NICON · プロジェクト日程通知"
-  },
-  {
-    "key": "emailTemplate.layout.preview",
-    "category": "emailTemplate",
-    "vi": "Xem trước giao diện",
-    "en": "Layout preview",
-    "zh": "版式预览",
-    "ja": "レイアウトのプレビュー"
-  },
-  {
     "key": "emailTemplate.editor.subject",
     "category": "emailTemplates",
     "vi": "Tiêu đề email",
@@ -66,18 +10,18 @@
   {
     "key": "emailTemplate.editor.body",
     "category": "emailTemplates",
-    "vi": "Nội dung HTML email",
-    "en": "Email HTML body",
-    "zh": "邮件HTML正文",
-    "ja": "メールHTML本文"
+    "vi": "Nội dung email",
+    "en": "Email content",
+    "zh": "邮件内容",
+    "ja": "メール本文"
   },
   {
     "key": "emailTemplate.editor.tokens",
     "category": "emailTemplates",
-    "vi": "Biến có sẵn (click để chèn)",
-    "en": "Available variables (click to insert)",
-    "zh": "可用变量（点击插入）",
-    "ja": "利用可能な変数（クリックして挿入）"
+    "vi": "Thông tin tự điền (chọn để chèn)",
+    "en": "Auto-filled details (select to insert)",
+    "zh": "自动填入的信息（点击插入）",
+    "ja": "自動入力項目（選択して挿入）"
   },
   {
     "key": "emailTemplate.editor.preview",
@@ -194,10 +138,10 @@
   {
     "key": "emailTemplate.editor.token.workPackageUrl",
     "category": "emailTemplates",
-    "vi": "Link mở nhóm công việc",
-    "en": "Work package link",
+    "vi": "Đường dẫn mở nhóm công việc",
+    "en": "Link to work package",
     "zh": "打开工作组的链接",
-    "ja": "業務グループを開くリンク"
+    "ja": "作業グループへのリンク"
   },
   {
     "key": "emailTemplate.schedule.tab",
@@ -210,10 +154,10 @@
   {
     "key": "emailTemplate.schedule.hint",
     "category": "emailTemplates",
-    "vi": "Email thông báo duyệt/cập nhật tiến độ. Bản xem trước được server kết xuất bằng dữ liệu mẫu; khi gửi dùng dữ liệu dự án thực tế.",
-    "en": "Approval and schedule-change emails. The server renders the preview with sample data; delivery uses actual project details.",
-    "zh": "用于进度审批和变更通知。服务器使用示例数据生成预览；发送时使用实际项目内容。",
-    "ja": "工程の承認・変更通知メールです。プレビューはサーバーがサンプルデータで生成し、送信時は実際のプロジェクト情報を使用します。"
+    "vi": "Xem trước bằng thông tin minh họa. Khi gửi, hệ thống sẽ dùng thông tin của dự án và người nhận.",
+    "en": "The preview uses sample details. Sent emails use the actual project and recipient.",
+    "zh": "预览使用示例信息。发送时会使用实际项目和收件人信息。",
+    "ja": "プレビューには例を表示します。送信時は実際の案件と受信者の情報を使います。"
   },
   {
     "key": "emailTemplate.schedule.previewLoading",
@@ -290,10 +234,10 @@
   {
     "key": "emailTemplate.schedule.delivery.guidance",
     "category": "emailTemplates",
-    "vi": "Kiểm tra cấu hình SMTP và xác minh trạng thái gửi trước khi xử lý lại; email có thể đã đến dù máy chủ báo lỗi.",
-    "en": "Check SMTP settings and confirm delivery before retrying; the message may have arrived despite the server error.",
-    "zh": "重试前请检查 SMTP 设置并确认送达状态；即使服务器报错，邮件也可能已经送达。",
-    "ja": "再送前に SMTP 設定と配信状態を確認してください。サーバーがエラーを返してもメールが届いている場合があります。"
+    "vi": "Hãy nhờ quản trị viên kiểm tra email đã đến người nhận chưa trước khi gửi lại, để tránh gửi trùng.",
+    "en": "Ask an administrator to confirm whether the email arrived before sending it again to avoid duplicates.",
+    "zh": "重新发送前，请管理员确认邮件是否已送达，以免重复发送。",
+    "ja": "重複送信を防ぐため、再送前に管理者へ受信状況の確認を依頼してください。"
   },
   {
     "key": "emailTemplate.schedule.delivery.refresh",

@@ -12,7 +12,7 @@ public static class ContractReminderTemplates
     public const string EndSubject = "NICON – Thông báo thời hạn hợp đồng {{contractNumber}}";
     public const string LegacyRenewalBody = "<div><p>Kính gửi <strong>{{customerName}}</strong>,</p><p>Hợp đồng <strong>{{contractNumber}}</strong> có ngày kết thúc dự kiến là {{endDate}}. Quý khách vui lòng liên hệ NICON để trao đổi việc gia hạn nếu có nhu cầu.</p><p>Trân trọng,<br />NICON</p></div>";
     public const string LegacyEndBody = "<div><p>Kính gửi <strong>{{customerName}}</strong>,</p><p>NICON thông báo ngày kết thúc dự kiến của hợp đồng <strong>{{contractNumber}}</strong> là {{endDate}}. Quý khách vui lòng liên hệ NICON để phối hợp các công việc liên quan.</p><p>Trân trọng,<br />NICON</p></div>";
-    public static string RenewalBody => NiconEmailLayout.Wrap(
+    public static string RenewalBody => EmailTemplateBaseline.Wrap(
         "NHẮC GIA HẠN HỢP ĐỒNG",
         """
         <p style="margin:0 0 16px;font-size:15px;line-height:24px">Kính gửi <strong>{{customerName}}</strong>,</p>
@@ -29,7 +29,7 @@ public static class ContractReminderTemplates
         <p style="margin:22px 0 0;font-size:14px;line-height:22px">Trân trọng,<br /><strong>NICON</strong></p>
         """,
         "NICON · Đối tác phát triển của Quý khách");
-    public static string EndBody => NiconEmailLayout.Wrap(
+    public static string EndBody => EmailTemplateBaseline.Wrap(
         "THÔNG BÁO THỜI HẠN HỢP ĐỒNG",
         """
         <p style="margin:0 0 16px;font-size:15px;line-height:24px">Kính gửi <strong>{{customerName}}</strong>,</p>
@@ -49,11 +49,11 @@ public static class ContractReminderTemplates
 
     public static ContractReminderTemplatesResponse Get(SiteSettings? settings) => new(
         settings?.ContractRenewalEmailSubjectTemplate ?? RenewalSubject,
-        NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate,
+        EmailTemplateBaseline.Apply(
             settings?.ContractRenewalEmailBodyTemplate ?? RenewalBody,
             "NHẮC GIA HẠN HỢP ĐỒNG", "NICON · Đối tác phát triển của Quý khách"),
         settings?.ContractEndEmailSubjectTemplate ?? EndSubject,
-        NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate,
+        EmailTemplateBaseline.Apply(
             settings?.ContractEndEmailBodyTemplate ?? EndBody,
             "THÔNG BÁO THỜI HẠN HỢP ĐỒNG", "NICON · Đối tác phát triển của Quý khách"));
 

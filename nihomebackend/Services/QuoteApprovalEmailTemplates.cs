@@ -10,7 +10,7 @@ public static class QuoteApprovalEmailTemplates
 {
     public static readonly string[] Tokens = ["recipientName", "senderName", "quoteCode", "quoteVersion", "grandTotal", "validUntil", "quoteUrl"];
     public const string DefaultSubject = "NICON – Duyệt báo giá {{quoteCode}}";
-    public static string DefaultBody => NiconEmailLayout.Wrap(
+    public static string DefaultBody => EmailTemplateBaseline.Wrap(
         "YÊU CẦU DUYỆT BÁO GIÁ · {{quoteCode}}",
         """
         <p style="margin:0 0 16px;font-size:15px;line-height:24px">Kính gửi <strong>{{recipientName}}</strong>,</p>
@@ -32,7 +32,7 @@ public static class QuoteApprovalEmailTemplates
 
     public static QuoteApprovalTemplate Get(SiteSettings? settings) => new(
         settings?.QuoteApprovalEmailSubjectTemplate ?? DefaultSubject,
-        NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate,
+        EmailTemplateBaseline.Apply(
             settings?.QuoteApprovalEmailBodyTemplate ?? DefaultBody,
             "YÊU CẦU DUYỆT BÁO GIÁ · {{quoteCode}}", "NICON · Thông báo phê duyệt báo giá"));
 

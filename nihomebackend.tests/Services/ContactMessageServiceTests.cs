@@ -10,7 +10,6 @@ namespace nihomebackend.tests.Services;
 
 public class ContactMessageServiceTests : IDisposable
 {
-    private const string SharedLayout = "<div><p>{{heading}}</p><div>{{content}}</div><p>{{footer}}</p></div>";
     private readonly AppDbContext _db;
     private readonly Mock<IEmailService> _emailServiceMock;
     private readonly Mock<INotificationService> _notificationServiceMock;
@@ -31,12 +30,11 @@ public class ContactMessageServiceTests : IDisposable
     public void Dispose() => _db.Dispose();
 
     [Fact]
-    public async Task SubmitAsync_UsesSharedLayoutForAdminEmail()
+    public async Task SubmitAsync_UsesCodeBaselineForAdminEmail()
     {
         _db.SiteSettings.Add(new SiteSettings
         {
-            NotificationEmail = "admin@nicon.test",
-            SharedBusinessEmailLayoutTemplate = SharedLayout
+            NotificationEmail = "admin@nicon.test"
         });
         await _db.SaveChangesAsync();
 
@@ -50,7 +48,7 @@ public class ContactMessageServiceTests : IDisposable
 
         _emailServiceMock.Verify(email => email.SendEmailAsync("admin@nicon.test",
             It.IsAny<string>(), It.Is<string>(body =>
-                body.StartsWith("<div><p>") && body.Contains("Nguyễn Văn An") &&
+                body.Contains("font-family:Arial,sans-serif") && body.Contains("Nguyễn Văn An") &&
                 body.Contains("Cần tư vấn thiết kế"))), Times.Once);
     }
 

@@ -11,7 +11,7 @@ public static partial class ProjectScheduleEmailTemplates
 {
     public const string DefaultSubject = "NICON · {{eventName}} · {{projectCode}} · v{{version}}";
     public const string LegacyDefaultBody = "<div style=\"font-family:Arial,sans-serif;max-width:640px;margin:auto;padding:24px;color:#17233b\"><p><strong>NICON · {{eventName}}</strong></p><p>Kính gửi {{recipientName}},</p><p>Tiến độ tổng thể dự án <strong>{{projectCode}} · {{projectName}}</strong>, phiên bản v{{version}}.</p><p><strong>Lý do cập nhật:</strong> {{changeReason}}</p><p><strong>Thay đổi so với bản đã phát hành trước:</strong><br />{{changeSummary}}</p><p>Vui lòng đăng nhập NICON để xem tiến độ và thực hiện bước được giao.</p></div>";
-    public static string DefaultBody => NiconEmailLayout.Wrap(
+    public static string DefaultBody => EmailTemplateBaseline.Wrap(
         "TIẾN ĐỘ TỔNG THỂ · {{eventName}}",
         """
         <p style="margin:0 0 16px;font-size:15px;line-height:24px">Kính gửi <strong>{{recipientName}}</strong>,</p>
@@ -43,7 +43,7 @@ public static partial class ProjectScheduleEmailTemplates
     {
         var body = settings?.ProjectScheduleEmailBodyTemplate;
         return new(settings?.ProjectScheduleEmailSubjectTemplate ?? DefaultSubject,
-            NiconEmailLayout.Apply(settings?.SharedBusinessEmailLayoutTemplate,
+            EmailTemplateBaseline.Apply(
                 body is null || string.Equals(body, LegacyDefaultBody, StringComparison.Ordinal) ? DefaultBody : body,
                 "TIẾN ĐỘ TỔNG THỂ · {{eventName}}", "NICON · Thông báo tiến độ dự án"));
     }
@@ -55,7 +55,7 @@ public static partial class ProjectScheduleEmailTemplates
         if (normalizedSubject.Length is < 1 or > 200 || normalizedSubject.Contains('\r') || normalizedSubject.Contains('\n'))
             throw new ArgumentException("Tiêu đề email tiến độ phải có từ 1 đến 200 ký tự trên một dòng.");
         if (normalizedBody.Length is < 1 or > 8000 || !EmailTemplateFormatter.IsSafeQuoteHtml(normalizedBody))
-            throw new ArgumentException("Nội dung email tiến độ phải là HTML an toàn, dài từ 1 đến 8.000 ký tự.");
+            throw new ArgumentException("Nội dung email tiến độ phải có từ 1 đến 8.000 ký tự và đúng định dạng. Vui lòng kiểm tra nội dung rồi thử lại.");
         foreach (var template in new[] { normalizedSubject, normalizedBody })
         {
             var tokens = TokenRegex().Matches(template).Select(match => match.Groups[1].Value);

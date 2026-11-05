@@ -46,8 +46,7 @@ public class OtpService
                     settings?.OtpEmailSubjectTemplate,
                     settings?.OtpEmailBodyTemplate,
                     siteName,
-                    otp,
-                    layoutTemplate: settings?.SharedBusinessEmailLayoutTemplate);
+                    otp);
 
                 await _emailService.SendEmailAsync(
                     email,
