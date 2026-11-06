@@ -148,7 +148,10 @@ public sealed class OperationalProjectTeamController(
         {
             var result = await service.UpdateAssignmentAsync(projectId, assignmentId, request, userId.Value, ct);
             if (result is null) return NotFound();
-            Audit("project-team.assignment.update", projectId, assignmentId, result);
+            if (result.Id != assignmentId)
+                Audit("project-team.assignment.reassign", projectId, assignmentId, new { previousAssignmentId = assignmentId, assignment = result });
+            else
+                Audit("project-team.assignment.update", projectId, assignmentId, result);
             CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
             return Ok(result);
         }

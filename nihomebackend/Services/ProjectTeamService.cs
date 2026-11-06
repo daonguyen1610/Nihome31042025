@@ -308,6 +308,7 @@ public sealed class ProjectTeamService(
         var status = await ValidateAssignmentAsync(projectId, assignmentId, request, ct);
         if (assignment.AssigneeMemberId != request.AssigneeMemberId)
         {
+            CrmConcurrency.EnsureMatches(assignment.RowVersion, request.RowVersion);
             if (status is not (ProjectAssignmentStatus.Planned or ProjectAssignmentStatus.InProgress))
                 throw new ProjectTeamOperationException("Hãy chọn trạng thái đang thực hiện hoặc đã lên kế hoạch khi đổi người phụ trách.");
             await using var transferTransaction = db.Database.IsRelational()
@@ -323,13 +324,23 @@ public sealed class ProjectTeamService(
             await AddHistoryAsync(projectId, "Assignment", assignment.Id, "Reassigned", oldResponse, callerUserId, ct);
             var replacement = new OperationalProjectAssignment
             {
-                OperationalProjectId = projectId, WorkKey = assignment.WorkKey, Title = request.Title.Trim(),
-                Module = request.Module.Trim(), Discipline = TrimOrNull(request.Discipline),
-                ParallelGroup = TrimOrNull(request.ParallelGroup), AssigneeMemberId = request.AssigneeMemberId,
-                ManagerMemberId = request.ManagerMemberId, Status = status,
-                PlannedStart = request.PlannedStart?.ToUniversalTime(), PlannedEnd = request.PlannedEnd?.ToUniversalTime(),
-                Note = TrimOrNull(request.Note), CreatedAt = nowTransfer, UpdatedAt = nowTransfer,
-                CreatedByUserId = callerUserId, UpdatedByUserId = callerUserId,
+                PreviousAssignmentId = assignment.Id,
+                OperationalProjectId = projectId,
+                WorkKey = assignment.WorkKey,
+                Title = request.Title.Trim(),
+                Module = request.Module.Trim(),
+                Discipline = TrimOrNull(request.Discipline),
+                ParallelGroup = TrimOrNull(request.ParallelGroup),
+                AssigneeMemberId = request.AssigneeMemberId,
+                ManagerMemberId = request.ManagerMemberId,
+                Status = status,
+                PlannedStart = request.PlannedStart?.ToUniversalTime(),
+                PlannedEnd = request.PlannedEnd?.ToUniversalTime(),
+                Note = TrimOrNull(request.Note),
+                CreatedAt = nowTransfer,
+                UpdatedAt = nowTransfer,
+                CreatedByUserId = callerUserId,
+                UpdatedByUserId = callerUserId,
             };
             db.OperationalProjectAssignments.Add(replacement);
             await db.SaveChangesAsync(ct);
@@ -464,6 +475,7 @@ public sealed class ProjectTeamService(
             item.OperationalProjectId == projectId &&
             item.WorkKey == request.WorkKey.Trim() &&
             item.AssigneeMemberId == request.AssigneeMemberId &&
+            item.Status != ProjectAssignmentStatus.Reassigned &&
             item.Id != assignmentId, ct))
             throw new ProjectTeamOperationException("Người phụ trách đã được gán cho công việc này.");
         return status;
@@ -745,8 +757,11 @@ public sealed class ProjectTeamService(
     private static OperationalProjectAssignmentResponse MapAssignment(OperationalProjectAssignment assignment) => new()
     {
         Id = assignment.Id,
+        PreviousAssignmentId = assignment.PreviousAssignmentId,
         WorkKey = assignment.WorkKey,
-        KpiIdentity = $"{assignment.OperationalProjectId}:{assignment.WorkKey}:{assignment.AssigneeMemberId}",
+        KpiIdentity = assignment.PreviousAssignmentId.HasValue
+            ? $"{assignment.OperationalProjectId}:{assignment.WorkKey}:{assignment.AssigneeMemberId}:{assignment.Id}"
+            : $"{assignment.OperationalProjectId}:{assignment.WorkKey}:{assignment.AssigneeMemberId}",
         Title = assignment.Title,
         Module = assignment.Module,
         Discipline = assignment.Discipline,

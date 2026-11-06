@@ -460,12 +460,20 @@ complete operational schema.
 | Public content | activities/categories, news/categories, public projects/categories, services, slideshow, logos, about, processes, recruitment, contacts, settings, translations |
 | CRM/pre-design | leads/activities, customers/contacts/activities/documents, opportunities/activities, quotes/items/versions/approvals/documents, material-rate catalogs/revisions/lines, tenders/checklists/estimates, surveys/media/conditions/checklists |
 | Shared project | operational projects, project members/roles/assignments/history, project documents/folders, project reports/read models |
+
 | Contracts | contracts, payment milestones/events, appendices/VOs, attachments and contract lines |
 | Design/legal | design projects, concept options, basic documents, shop drawings, drawing revisions, IFC releases/items/recipients, design schedule phases/tasks/dependencies/history, permit checklist items |
 | Construction | construction tasks/dependencies, site diaries, punch items, HSE violations/events, acceptance records, as-built categories/documents, handover records/history |
 | Procurement | vendors/uploads, BOQ revisions/lines, material requests/lines, RFQs/lines/invitations/bids/bid lines/events/awards, receipts/issues/lines, vendor ratings, material alerts/events |
 | Finance/KPI | payment requests/events/attachments, accounting periods/corrections, KPI definitions/periods/snapshots |
 | Drive integration | Google Drive credential, project document catalog, project-folder bindings and synchronization state |
+
+Assignment handover preserves the original KPI identity and records the previous
+assignment ID on the replacement. Repeated handovers to the same member get
+distinct identities. The `AllowAssignmentHandover` migration changes the unique
+assignment index; its rollback cannot recreate the old unique index if repeated
+member/work-key combinations exist. Resolve those conflicts with an approved
+data-preservation plan before attempting rollback.
 
 The coexistence of public `projects`, central `operational_projects`, and
 specialized `design_projects` is intentional. Never join them by name/code or

@@ -343,6 +343,12 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         var created = await ReadJsonAsync(createdResponse);
         var originalId = created.GetProperty("id").GetInt32();
         var originalIdentity = created.GetProperty("kpiIdentity").GetString();
+        using var missingVersion = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/team/assignments/{originalId}",
+            AssignmentPayload("DES-TRANSFER", secondMember), $"transfer-missing-version-{Guid.NewGuid():N}");
+        missingVersion.IsSuccessStatusCode.Should().BeFalse();
+        var beforeTransfer = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{projectId}/team"));
+        beforeTransfer.GetProperty("assignments").GetArrayLength().Should().Be(1);
         using var transfer = await SendJsonWithKeyAsync(HttpMethod.Put,
             $"/api/operational-projects/{projectId}/team/assignments/{originalId}",
             AssignmentPayload("DES-TRANSFER", secondMember, rowVersion: created.GetProperty("rowVersion").GetString()), $"transfer-{Guid.NewGuid():N}");
@@ -358,6 +364,13 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         old.GetProperty("completedAt").ValueKind.Should().Be(JsonValueKind.Null);
         result.GetProperty("assigneeMemberId").GetInt32().Should().Be(secondMember);
         result.GetProperty("kpiIdentity").GetString().Should().NotBe(originalIdentity);
+        using var transferBack = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/team/assignments/{result.GetProperty("id").GetInt32()}",
+            AssignmentPayload("DES-TRANSFER", firstMember, rowVersion: result.GetProperty("rowVersion").GetString()), $"transfer-back-{Guid.NewGuid():N}");
+        transferBack.StatusCode.Should().Be(HttpStatusCode.OK, await transferBack.Content.ReadAsStringAsync());
+        var returned = await ReadJsonAsync(transferBack);
+        returned.GetProperty("previousAssignmentId").GetInt32().Should().Be(result.GetProperty("id").GetInt32());
+        returned.GetProperty("kpiIdentity").GetString().Should().NotBe(originalIdentity);
     }
 
     private Task AuthenticateAsync(string roleCode) => AuthTestHelper.AuthenticateAsync(

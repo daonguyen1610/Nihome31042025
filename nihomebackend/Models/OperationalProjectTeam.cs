@@ -42,6 +42,7 @@ public class OperationalProjectMemberRole
 public class OperationalProjectAssignment : IConcurrencyTracked
 {
     public int Id { get; set; }
+    public int? PreviousAssignmentId { get; set; }
     public int OperationalProjectId { get; set; }
     public OperationalProject OperationalProject { get; set; } = null!;
     public string WorkKey { get; set; } = string.Empty;

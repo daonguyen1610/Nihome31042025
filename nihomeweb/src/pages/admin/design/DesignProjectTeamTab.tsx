@@ -482,6 +482,7 @@ export const OperationalProjectTeamPanel = ({
       team?.assignments.some(
         (assignment) =>
           assignment.id !== editingAssignment?.id &&
+          assignment.status !== "Reassigned" &&
           assignment.workKey.trim() === workKey &&
           assignment.assigneeMemberId === form.assigneeMemberId,
       )
@@ -863,7 +864,7 @@ export const OperationalProjectTeamPanel = ({
               {t("designProjects.team.assignments.title")}
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              {t("designProjects.team.assignments.description")}
+              {t("designProjects.team.assignments.overview")}
             </p>
           </div>
           {team.canManage ? (
@@ -944,12 +945,6 @@ export const OperationalProjectTeamPanel = ({
                         {t("designProjects.team.field.parallelGroup")}
                       </dt>
                       <dd>{assignment.parallelGroup ?? t("designProjects.team.value.none")}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs text-slate-500">
-                        {t("designProjects.team.field.kpiIdentity")}
-                      </dt>
-                      <dd className="break-all font-mono text-xs">{assignment.kpiIdentity}</dd>
                     </div>
                   </dl>
                   {assignment.note ? (
@@ -1287,7 +1282,7 @@ export const OperationalProjectTeamPanel = ({
               {t(`designProjects.team.dialog.assignment.${assignmentDialog ?? "add"}.title`)}
             </DialogTitle>
             <DialogDescription>
-              {t("designProjects.team.dialog.assignment.description")}
+              {t("designProjects.team.dialog.assignment.handoverDescription")}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
