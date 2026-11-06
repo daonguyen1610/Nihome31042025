@@ -23,6 +23,7 @@ import SlideshowSettings from "./settings/SlideshowSettings";
 import GoogleDriveConfigurationForm from "./settings/GoogleDriveConfigurationForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { formatVnd } from "@/lib/numberFormat";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -621,6 +622,7 @@ const ContractUploadTab = () => {
   const { has } = usePermissions();
   const [value, setValue] = useState("");
   const [savedValue, setSavedValue] = useState("");
+  const [maxAllowed, setMaxAllowed] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -631,8 +633,9 @@ const ContractUploadTab = () => {
     setError(null);
     try {
       const { data } = await adminApi.getContractUploadLimit();
-      setValue(String(data.maxFileSizeMb));
-      setSavedValue(String(data.maxFileSizeMb));
+      setValue(formatVnd(data.maxFileSizeMb));
+      setSavedValue(formatVnd(data.maxFileSizeMb));
+      setMaxAllowed(data.maxAllowedFileSizeMb);
     } catch {
       setError(t("settings.contractUploads.loadError"));
     } finally {
@@ -645,17 +648,20 @@ const ContractUploadTab = () => {
   }, [load]);
 
   const save = async () => {
-    const parsed = Number(value);
-    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
-      setError(t("settings.contractUploads.invalid"));
+    const parsed = /^(?:\d+|\d{1,3}(?:\.\d{3})+)$/.test(value)
+      ? Number(value.replace(/\./g, ""))
+      : NaN;
+    if (maxAllowed === null || !Number.isSafeInteger(parsed) || parsed < 1 || parsed > maxAllowed) {
+      setError(t("settings.contractUploads.invalidRange", { max: formatVnd(maxAllowed ?? 0) }));
       return;
     }
     setSaving(true);
     setError(null);
     try {
       const { data } = await adminApi.updateContractUploadLimit(parsed);
-      setValue(String(data.maxFileSizeMb));
-      setSavedValue(String(data.maxFileSizeMb));
+      setValue(formatVnd(data.maxFileSizeMb));
+      setSavedValue(formatVnd(data.maxFileSizeMb));
+      setMaxAllowed(data.maxAllowedFileSizeMb);
       toast({ title: t("settings.saved") });
     } catch {
       setError(t("settings.contractUploads.saveError"));
@@ -677,15 +683,22 @@ const ContractUploadTab = () => {
           <Label htmlFor="contract-upload-limit">{t("settings.contractUploads.label")}</Label>
           <Input
             id="contract-upload-limit"
-            type="number"
-            min={1}
-            max={100}
-            step={1}
+            inputMode="numeric"
             value={value}
-            disabled={!canManage || saving}
+            disabled={!canManage || saving || maxAllowed === null}
             onChange={(event) => setValue(event.target.value)}
+            onBlur={() => {
+              if (/^\d+$/.test(value) && Number.isSafeInteger(Number(value))) {
+                setValue(formatVnd(Number(value)));
+              }
+            }}
             className="max-w-40"
           />
+          {maxAllowed !== null ? (
+            <p className="text-sm text-muted-foreground">
+              {t("settings.contractUploads.maximum", { max: formatVnd(maxAllowed) })}
+            </p>
+          ) : null}
           {error ? (
             <p role="alert" className="text-sm text-destructive">
               {error}

@@ -9,6 +9,29 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     public SiteSettingsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
+    public async Task ContractUploadLimit_AcceptsFiveGigabytes_AndRejectsLargerValue()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        const string path = "/api/site-settings/contract-uploads";
+        var original = (await ReadJsonAsync(await Client.GetAsync(path)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        try
+        {
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 5120 }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(await Client.GetAsync(path)))
+                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(5120);
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 5121 }))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+        finally
+        {
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = original }))
+                .EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task ContractUploadLimit_RequiresSettingsPermission_AndPersistsValidValue()
     {
         const string path = "/api/site-settings/contract-uploads";
