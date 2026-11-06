@@ -25,7 +25,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
-import { formatVnd, parseVnd } from "@/lib/numberFormat";
+import { formatVnd, formatVndWithSymbol, parseVnd } from "@/lib/numberFormat";
 import { isOpportunityOverdue } from "@/lib/opportunityDates";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -1385,7 +1385,7 @@ const AdminOpportunities = () => {
       {/* ---------- Detail dialog ---------- */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(o) => !o && closeDetail()}>
         <DialogContent
-          className="grid h-[90dvh] w-[95vw] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:h-[min(90dvh,44rem)] sm:max-w-2xl"
+          className="grid h-[90dvh] w-[95vw] grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:h-[min(90dvh,44rem)] sm:max-w-2xl"
           data-testid="opportunity-detail-dialog"
         >
           {detailLoading && !detail ? (
@@ -1398,13 +1398,15 @@ const AdminOpportunities = () => {
           ) : (
             detail && (
               <>
-                <DialogHeader>
-                  <DialogTitle className="flex items-center gap-2 flex-wrap">
-                    {detail.name}
+                <DialogHeader className="min-w-0 space-y-3 pr-5 text-left">
+                  <div className="flex flex-col items-start gap-2 sm:flex-row sm:justify-between sm:gap-4">
+                    <DialogTitle className="min-w-0 text-lg leading-snug [overflow-wrap:anywhere]">
+                      {detail.name}
+                    </DialogTitle>
                     <Badge
                       variant="outline"
                       className={cn(
-                        "gap-1.5 whitespace-nowrap font-medium",
+                        "shrink-0 gap-1.5 whitespace-nowrap font-medium",
                         OPPORTUNITY_STAGE_STYLES[detail.stage],
                       )}
                     >
@@ -1416,11 +1418,8 @@ const AdminOpportunities = () => {
                       />
                       {t(`opportunities.stage.${detail.stage}`)}
                     </Badge>
-                    <span className="text-sm font-normal text-muted-foreground">
-                      · {formatVnd(detail.estimatedValue)} · {detail.winProbability}%
-                    </span>
-                  </DialogTitle>
-                  <DialogDescription>
+                  </div>
+                  <DialogDescription className="break-words text-sm leading-5">
                     {detail.sourceContractId && canViewContracts && (
                       <Link
                         className="mr-2 underline"
@@ -1434,6 +1433,24 @@ const AdminOpportunities = () => {
                       `#${detail.customerId}`}
                     {detail.ownerName && <> · {detail.ownerName}</>}
                   </DialogDescription>
+                  <dl className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-5 border-b pb-3 text-sm">
+                    <div className="min-w-0">
+                      <dt className="text-xs text-muted-foreground">
+                        {t("opportunities.field.estimatedValue")}
+                      </dt>
+                      <dd className="mt-1 break-words text-base font-semibold tabular-nums text-foreground">
+                        {formatVndWithSymbol(detail.estimatedValue)}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-muted-foreground">
+                        {t("opportunities.field.winProbability")}
+                      </dt>
+                      <dd className="mt-1 text-base font-semibold tabular-nums text-foreground">
+                        {detail.winProbability}%
+                      </dd>
+                    </div>
+                  </dl>
                   {/* Terminal actions remain prominent, but Contract signed is valid
                     only after the Opportunity reaches Negotiation. */}
                   {canManage && detail.stage !== "Won" && detail.stage !== "Lost" && (
@@ -1450,7 +1467,8 @@ const AdminOpportunities = () => {
                       )}
                       <Button
                         size="sm"
-                        variant="destructive"
+                        variant="outline"
+                        className="text-destructive hover:text-destructive"
                         onClick={() => openStageChange("Lost")}
                         disabled={changingStage}
                       >
@@ -1467,6 +1485,7 @@ const AdminOpportunities = () => {
                       {canCreateContract && detail.stage !== "Lost" && (
                         <Button
                           size="sm"
+                          variant={detail.stage === "Negotiation" ? "outline" : "default"}
                           data-testid="opportunity-create-contract"
                           onClick={() => {
                             const quote = contractReadyQuote(detail, opportunityQuotes);
@@ -1480,7 +1499,7 @@ const AdminOpportunities = () => {
                       {canCreateQuote && canRaiseQuote(detail) && (
                         <Button
                           size="sm"
-                          variant={detail.stage === "Won" ? "default" : "outline"}
+                          variant="outline"
                           data-testid="opportunity-create-quote"
                           onClick={() =>
                             navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)
@@ -1526,7 +1545,7 @@ const AdminOpportunities = () => {
                   )}
                 </DialogHeader>
 
-                <Tabs defaultValue="general" className="flex min-h-0 flex-col">
+                <Tabs defaultValue="general" className="flex min-h-0 min-w-0 flex-col">
                   <TabsList className="h-auto w-full shrink-0 justify-start overflow-x-auto">
                     <TabsTrigger className="h-12 shrink-0" value="general">
                       {t("opportunities.tab.general")}

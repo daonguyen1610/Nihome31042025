@@ -529,6 +529,8 @@ deleted unless another qualifying Contract remains.
 The Opportunity detail shows each linked Contract to users who can view that
 Contract. Select a Contract number to open its detail page and upload the
 signed scan or update its status.
+The detail header separates the opportunity name and status from the estimated
+value (shown with the VND symbol) and closing probability.
 
 Price the deal before signing: the opportunity detail offers **Create quote** at
 every open stage (and on Contract signed while no winning quote is set). The
