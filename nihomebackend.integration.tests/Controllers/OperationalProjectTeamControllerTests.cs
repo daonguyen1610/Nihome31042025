@@ -343,17 +343,30 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         var created = await ReadJsonAsync(createdResponse);
         var originalId = created.GetProperty("id").GetInt32();
         var originalIdentity = created.GetProperty("kpiIdentity").GetString();
+        await AuthenticateAsync("USER");
+        using var forbidden = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/team/assignments/{originalId}",
+            AssignmentPayload("DES-TRANSFER", secondMember, rowVersion: created.GetProperty("rowVersion").GetString()), $"transfer-forbidden-{Guid.NewGuid():N}");
+        forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await AuthenticateAsync("SUPER_ADMIN");
         using var missingVersion = await SendJsonWithKeyAsync(HttpMethod.Put,
             $"/api/operational-projects/{projectId}/team/assignments/{originalId}",
             AssignmentPayload("DES-TRANSFER", secondMember), $"transfer-missing-version-{Guid.NewGuid():N}");
         missingVersion.IsSuccessStatusCode.Should().BeFalse();
         var beforeTransfer = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{projectId}/team"));
         beforeTransfer.GetProperty("assignments").GetArrayLength().Should().Be(1);
+        var transferPayload = AssignmentPayload("DES-TRANSFER", secondMember, rowVersion: created.GetProperty("rowVersion").GetString());
+        var transferKey = $"transfer-{Guid.NewGuid():N}";
         using var transfer = await SendJsonWithKeyAsync(HttpMethod.Put,
             $"/api/operational-projects/{projectId}/team/assignments/{originalId}",
-            AssignmentPayload("DES-TRANSFER", secondMember, rowVersion: created.GetProperty("rowVersion").GetString()), $"transfer-{Guid.NewGuid():N}");
+            transferPayload, transferKey);
         transfer.StatusCode.Should().Be(HttpStatusCode.OK, await transfer.Content.ReadAsStringAsync());
         var result = await ReadJsonAsync(transfer);
+        using var replay = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/team/assignments/{originalId}", transferPayload, transferKey);
+        replay.StatusCode.Should().Be(HttpStatusCode.OK);
+        replay.Headers.GetValues("Idempotency-Replayed").Should().ContainSingle("true");
+        (await ReadJsonAsync(replay)).GetProperty("id").GetInt32().Should().Be(result.GetProperty("id").GetInt32());
         result.GetProperty("id").GetInt32().Should().NotBe(originalId);
         var team = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{projectId}/team"));
         var assignments = team.GetProperty("assignments").EnumerateArray().ToList();
