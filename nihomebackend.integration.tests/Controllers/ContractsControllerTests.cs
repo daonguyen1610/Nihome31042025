@@ -121,6 +121,82 @@ public class ContractsControllerTests : IntegrationTestBase
         };
 
     [Fact]
+    public async Task Create_FromQuoteWithoutOpportunity_LinksQuoteOpportunity()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var quoteId = _approvedQuoteIds[customerId];
+        var opportunityId = await WithDbAsync(db => db.Quotes.Where(q => q.Id == quoteId).Select(q => q.OpportunityId).SingleAsync());
+        var response = await Client.PostAsJsonAsync("/api/contracts", ContractBody(customerId));
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        var contract = await ReadJsonAsync(response);
+        contract.GetProperty("opportunityId").ValueKind.Should().Be(JsonValueKind.Number);
+        contract.GetProperty("opportunityId").GetInt32().Should().Be(opportunityId);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Update_FromQuoteWithoutOpportunity_LinksQuoteOpportunity(bool legacyQuoteLink)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var quoteId = _approvedQuoteIds[customerId];
+        var opportunityId = await WithDbAsync(db => db.Quotes.Where(q => q.Id == quoteId).Select(q => q.OpportunityId).SingleAsync());
+        var created = await Client.PostAsJsonAsync("/api/contracts", new { customerId, direction = "Upstream", type = "DesignAndBuild", status = "Draft", value = 100_000_000 });
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var contract = await ReadJsonAsync(created);
+        if (legacyQuoteLink)
+        {
+            await WithDbAsync(async db =>
+            {
+                var entity = await db.Contracts.SingleAsync(item => item.Id == contract.GetProperty("id").GetInt32());
+                entity.QuoteId = quoteId;
+                await db.SaveChangesAsync();
+            });
+            contract = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contract.GetProperty("id").GetInt32()}"));
+        }
+        var response = await Client.PutAsJsonAsync($"/api/contracts/{contract.GetProperty("id").GetInt32()}", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 100_000_000,
+            quoteId,
+            rowVersion = contract.GetProperty("rowVersion").GetString(),
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(response)).GetProperty("opportunityId").GetInt32().Should().Be(opportunityId);
+    }
+
+    [Fact]
+    public async Task Create_FromQuoteAndDifferentOpportunity_IsRejected()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var otherOpportunityId = await WithDbAsync(async db =>
+        {
+            var opportunity = new Opportunity { Name = "Cơ hội khác của khách hàng", CustomerId = customerId };
+            db.Opportunities.Add(opportunity);
+            await db.SaveChangesAsync();
+            return opportunity.Id;
+        });
+        var response = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "DesignAndBuild",
+            status = "Draft",
+            value = 100_000_000,
+            quoteId = _approvedQuoteIds[customerId],
+            opportunityId = otherOpportunityId,
+        });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.Contracts.CountAsync(item => item.CustomerId == customerId))).Should().Be(0);
+    }
+
+    [Fact]
     public async Task Sign_RequiresApprovedFinanceReviewOfSourceQuoteVersion()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

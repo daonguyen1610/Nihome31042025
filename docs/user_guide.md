@@ -515,6 +515,10 @@ a non-draft, non-cancelled status. The API retains the stable enum values
 data and client compatibility; the interface displays the customer terms.
 If confirmation is blocked, the dialog explains what to check and suggests
 contacting the person responsible for the contract before trying again.
+When saving a contract with a source quotation, the system also links the
+quotation's opportunity if no opportunity has been selected. A conflicting
+opportunity is rejected. Older contracts should be checked individually before
+their source references are corrected.
 Historical records are converted once during deployment: valid contract-backed
 Won rows remain Contract signed, unsupported Won rows become Negotiation, and
 Lost rows receive complete controlled reason metadata. There is no separate

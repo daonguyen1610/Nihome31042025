@@ -412,10 +412,8 @@ public class ContractService(
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
             : null;
+        await PopulateOpportunityFromQuoteAsync(req, ct);
         var continuationOpportunityId = req.OpportunityId;
-        if (!continuationOpportunityId.HasValue && req.QuoteId.HasValue)
-            continuationOpportunityId = await db.Quotes.AsNoTracking().Where(x => x.Id == req.QuoteId)
-                .Select(x => (int?)x.OpportunityId).SingleOrDefaultAsync(ct);
         if (continuationOpportunityId.HasValue)
         {
             var opportunity = await db.Opportunities.AsNoTracking().SingleOrDefaultAsync(x => x.Id == continuationOpportunityId, ct);
@@ -591,6 +589,7 @@ public class ContractService(
             await ValidateMilestoneAccountantsAsync(req.PaymentMilestones, ct);
         }
 
+        await PopulateOpportunityFromQuoteAsync(req, ct);
         await closureInvariant.EnsureContractMutationPreservesWonAsync(
             entity, req.OpportunityId, req.CustomerId, req.Status, req.SignedDate, deleting: false, ct: ct);
 
@@ -1207,6 +1206,15 @@ public class ContractService(
     }
 
     // -------- helpers --------
+
+    private async Task PopulateOpportunityFromQuoteAsync(UpsertContractRequest request, CancellationToken ct)
+    {
+        if (request.OpportunityId.HasValue || !request.QuoteId.HasValue) return;
+        request.OpportunityId = await db.Quotes.AsNoTracking()
+            .Where(quote => quote.Id == request.QuoteId.Value)
+            .Select(quote => (int?)quote.OpportunityId)
+            .SingleOrDefaultAsync(ct);
+    }
 
     private async Task<int?> ValidateReferencesAsync(UpsertContractRequest req, CancellationToken ct)
     {
