@@ -566,7 +566,8 @@ public class OperationalProjectService(
         if (await db.OperationalProjectAssignments.AsNoTracking().AnyAsync(item =>
             item.OperationalProjectId == projectId &&
             item.Status != ProjectAssignmentStatus.Completed &&
-            item.Status != ProjectAssignmentStatus.Cancelled, ct))
+            item.Status != ProjectAssignmentStatus.Cancelled &&
+            item.Status != ProjectAssignmentStatus.Reassigned, ct))
         {
             throw new OperationalProjectOperationException(
                 "Dự án còn công việc phân công chưa hoàn tất.");

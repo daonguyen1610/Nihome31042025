@@ -3938,7 +3938,8 @@ export interface DesignScheduleResponse {
   tasks: PagedDesignScheduleTasksResponse;
 }
 
-export type ProjectAssignmentStatus = "Planned" | "InProgress" | "Completed" | "Cancelled";
+export type ProjectAssignmentStatus =
+  "Planned" | "InProgress" | "Completed" | "Cancelled" | "Reassigned";
 
 export interface ProjectRoleDefinitionResponse {
   code: string;

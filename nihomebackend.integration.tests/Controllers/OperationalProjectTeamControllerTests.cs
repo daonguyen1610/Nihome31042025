@@ -328,6 +328,38 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
             item.GetProperty("snapshotJson").GetString() == originalSnapshot);
     }
 
+    [Fact]
+    public async Task Reassign_ClosesOldAssignmentAndCreatesNewOneWithoutChangingKpiHistory()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        using var firstMemberResponse = await PostMemberAsync(projectId, await UserIdAsync("ARCHITECT"), "Architect", "Architect");
+        using var secondMemberResponse = await PostMemberAsync(projectId, await UserIdAsync("MEP_ENGINEER"), "MEP Engineer", "MepEngineer");
+        var firstMember = (await ReadJsonAsync(firstMemberResponse)).GetProperty("id").GetInt32();
+        var secondMember = (await ReadJsonAsync(secondMemberResponse)).GetProperty("id").GetInt32();
+        using var createdResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments", AssignmentPayload("DES-TRANSFER", firstMember), $"create-{Guid.NewGuid():N}");
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createdResponse);
+        var originalId = created.GetProperty("id").GetInt32();
+        var originalIdentity = created.GetProperty("kpiIdentity").GetString();
+        using var transfer = await SendJsonWithKeyAsync(HttpMethod.Put,
+            $"/api/operational-projects/{projectId}/team/assignments/{originalId}",
+            AssignmentPayload("DES-TRANSFER", secondMember, rowVersion: created.GetProperty("rowVersion").GetString()), $"transfer-{Guid.NewGuid():N}");
+        transfer.StatusCode.Should().Be(HttpStatusCode.OK, await transfer.Content.ReadAsStringAsync());
+        var result = await ReadJsonAsync(transfer);
+        result.GetProperty("id").GetInt32().Should().NotBe(originalId);
+        var team = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{projectId}/team"));
+        var assignments = team.GetProperty("assignments").EnumerateArray().ToList();
+        assignments.Should().HaveCount(2);
+        var old = assignments.Single(item => item.GetProperty("id").GetInt32() == originalId);
+        old.GetProperty("status").GetString().Should().Be("Reassigned");
+        old.GetProperty("kpiIdentity").GetString().Should().Be(originalIdentity);
+        old.GetProperty("completedAt").ValueKind.Should().Be(JsonValueKind.Null);
+        result.GetProperty("assigneeMemberId").GetInt32().Should().Be(secondMember);
+        result.GetProperty("kpiIdentity").GetString().Should().NotBe(originalIdentity);
+    }
+
     private Task AuthenticateAsync(string roleCode) => AuthTestHelper.AuthenticateAsync(
         Client,
         client => AuthTestHelper.LoginAsRoleAsync(client, roleCode));
