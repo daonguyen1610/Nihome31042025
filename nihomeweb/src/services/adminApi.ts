@@ -6286,9 +6286,14 @@ export const adminApi = {
     api.put<OtpSettingsResponse>("/site-settings/otp-settings", data),
 
   getContractUploadLimit: () =>
-    api.get<{ maxFileSizeMb: number }>("/site-settings/contract-uploads"),
+    api.get<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
+      "/site-settings/contract-uploads",
+    ),
   updateContractUploadLimit: (maxFileSizeMb: number) =>
-    api.put<{ maxFileSizeMb: number }>("/site-settings/contract-uploads", { maxFileSizeMb }),
+    api.put<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
+      "/site-settings/contract-uploads",
+      { maxFileSizeMb },
+    ),
 
   // Map embed (Google Maps URL shown on Contact page)
   getMapEmbed: () => api.get<MapEmbedResponse>("/site-settings/map-embed"),

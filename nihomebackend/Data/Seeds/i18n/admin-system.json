@@ -2392,12 +2392,20 @@
     "ja": "ファイルごとの最大サイズ（MB）"
   },
   {
-    "key": "settings.contractUploads.invalid",
+    "key": "settings.contractUploads.invalidRange",
     "category": "settings",
-    "vi": "Nhập số nguyên từ 1 đến 100 MB. Ví dụ: 100.",
-    "en": "Enter a whole number from 1 to 100 MB. For example, 100.",
-    "zh": "请输入 1 至 100 MB 的整数，例如 100。",
-    "ja": "1〜100 MBの整数を入力してください。例: 100。"
+    "vi": "Nhập số nguyên từ 1 đến {max} MB. Ví dụ: 100.",
+    "en": "Enter a whole number from 1 to {max} MB. For example, 100.",
+    "zh": "请输入 1 至 {max} MB 的整数，例如 100。",
+    "ja": "1〜{max} MBの整数を入力してください。例: 100。"
+  },
+  {
+    "key": "settings.contractUploads.maximum",
+    "category": "settings",
+    "vi": "Giới hạn có thể đặt tối đa: {max} MB cho mỗi tệp.",
+    "en": "The highest limit you can set is {max} MB per file.",
+    "zh": "每个文件可设置的最高限制为 {max} MB。",
+    "ja": "ファイルごとに設定できる上限は {max} MBです。"
   },
   {
     "key": "settings.contractUploads.loadError",

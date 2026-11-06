@@ -235,9 +235,11 @@ use fresh file volumes; never expose a different dataset's uploads to cleanup.
 Administrators set the maximum size of each contract or appendix file under
 `/admin/settings?tab=contracts`. The value is persisted in `site_settings`
 (`ContractMaxFileSizeMb`), defaults to 100 MiB for existing data, and accepts
-whole numbers from 1 to 100 MiB, matching the project document storage cap.
-Each upload uses the existing 100 MiB project-document transport cap and reads
-the current administrator value before storing the file.
+whole numbers from 1 to 5,120 MiB (5 GiB). Each upload reads the current
+administrator value; the transport and managed contract-document inspection
+allow up to 5 GiB. Multipart buffering needs temporary disk space in addition
+to permanent storage. Reverse proxies must allow a request body of at least
+5,126 MiB and sufficient upload time for the deployment's connection speeds.
 Other upload endpoints retain their own limits. The settings API uses
 `GET/PUT /api/site-settings/contract-uploads` with `system.settings.view/manage`.
 

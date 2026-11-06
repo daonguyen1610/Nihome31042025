@@ -26,6 +26,9 @@ public sealed class ProjectDocumentStorageService(IWebHostEnvironment environmen
 {
     public const long MaxFileSize = 100L * 1024 * 1024;
     public const long MultipartBodyLengthLimit = 106L * 1024 * 1024;
+    public const int ContractMaxFileSizeMb = 5 * 1024;
+    public const long ContractMaxFileSize = (long)ContractMaxFileSizeMb * 1024 * 1024;
+    public const long ContractMultipartBodyLengthLimit = ContractMaxFileSize + 6L * 1024 * 1024;
     public const string ManagedPrefix = "/files/project-documents";
     private static readonly HashSet<string> BlockedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -112,9 +115,12 @@ public sealed class ProjectDocumentStorageService(IWebHostEnvironment environmen
             throw new ProjectDocumentValidationException("Không tìm thấy tệp nguồn trong vùng lưu trữ được quản lý.");
         }
         var info = new FileInfo(fullPath);
-        if (info.Length == 0 || info.Length > MaxFileSize)
+        var maxSize = sourceModule == ProjectDocumentSourceModule.Crm &&
+            localPath.StartsWith("/files/contracts/", StringComparison.OrdinalIgnoreCase)
+            ? ContractMaxFileSize : MaxFileSize;
+        if (info.Length == 0 || info.Length > maxSize)
         {
-            throw new ProjectDocumentValidationException("Tệp nguồn phải có dữ liệu và không được vượt quá 100 MiB.");
+            throw new ProjectDocumentValidationException($"Tệp nguồn phải có dữ liệu và không được vượt quá {maxSize / (1024 * 1024)} MiB.");
         }
         await using var stream = File.OpenRead(fullPath);
         return new StoredProjectDocument(localPath, ValidateFileName(originalFileName),

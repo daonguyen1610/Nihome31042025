@@ -46,6 +46,25 @@ public sealed class ProjectDocumentStorageServiceTests : IDisposable
         Assert.Equal("/files/business-documents/permits/permit.pdf", stored.LocalPath);
     }
 
+    [Fact]
+    public async Task InspectExistingAsync_ContractFile_AllowsAbove100MiBAndRejectsAboveFiveGiB()
+    {
+        var directory = Path.Combine(contentRoot, "wwwroot", "files", "contracts");
+        Directory.CreateDirectory(directory);
+        var fullPath = Path.Combine(directory, "contract.pdf");
+        await using (var file = System.IO.File.Create(fullPath))
+            file.SetLength(101L * 1024 * 1024);
+
+        var stored = await storage.InspectExistingAsync(
+            ProjectDocumentSourceModule.Crm, "/files/contracts/contract.pdf", "contract.pdf");
+        Assert.Equal(101L * 1024 * 1024, stored.Size);
+
+        await using (var file = System.IO.File.OpenWrite(fullPath))
+            file.SetLength(5L * 1024 * 1024 * 1024 + 1);
+        await Assert.ThrowsAsync<ProjectDocumentValidationException>(() => storage.InspectExistingAsync(
+            ProjectDocumentSourceModule.Crm, "/files/contracts/contract.pdf", "contract.pdf"));
+    }
+
     [Theory]
     [InlineData(ProjectDocumentSourceModule.Acceptance, "acceptance")]
     [InlineData(ProjectDocumentSourceModule.Acceptance, "as-built")]

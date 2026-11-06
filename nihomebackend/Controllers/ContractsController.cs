@@ -801,8 +801,8 @@ public class ContractsController(
     /// storage path; the FE feeds that into the VO create/update JSON call.</summary>
     [HttpPost("{id:int}/appendices/files")]
     [Consumes("multipart/form-data")]
-    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
-    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
+    [RequestSizeLimit(ProjectDocumentStorageService.ContractMultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.ContractMaxFileSize)]
     [RequirePermission("crm.contracts", "manage")]
     public async Task<IActionResult> UploadAppendixFile(int id, [FromForm] IFormFile? file, CancellationToken ct)
     {
@@ -872,8 +872,8 @@ public class ContractsController(
     /// </summary>
     [HttpPost("{id:int}/attachments")]
     [Consumes("multipart/form-data")]
-    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
-    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
+    [RequestSizeLimit(ProjectDocumentStorageService.ContractMultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.ContractMaxFileSize)]
     [RequirePermission("crm.contracts", "manage")]
     public async Task<ActionResult<ContractAttachmentResponse>> UploadAttachment(
         int id,
