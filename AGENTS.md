@@ -22,6 +22,13 @@ When repository instructions conflict, use the more specific and recent instruct
 - Prefer small, focused, reversible changes.
 - Preserve existing behavior and public contracts unless the task requires a change.
 - Reuse existing services, validators, components, and patterns. Search first, especially in 'src/lib/', 'Services/', and shared frontend utilities.
+- Avoid duplicating stable technical identifiers and shared logic. Define named
+  constants close to their owner, and reuse shared modules when multiple callers
+  need the same value or behavior. Keep configurable business values in ADMIN,
+  not constants. For API codes used across languages, prefer an existing shared
+  contract or generated types; otherwise define each value once per language and
+  verify the wire contract with tests. Do not create abstractions solely to hide
+  an independent test expectation.
 - Do not refactor unrelated code, add dependencies without justification, or invent requirements, APIs, translations, or business rules.
 - Keep frontend files formatted with the repository Prettier configuration.
   Do not compress JSX, TypeScript, CSS, JSON, or configuration into long

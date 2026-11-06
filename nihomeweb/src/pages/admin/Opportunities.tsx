@@ -73,6 +73,7 @@ import {
 } from "@/services/adminApi";
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
+const SIGNED_CONTRACT_REQUIRED_CODE = "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED";
 
 // Soft-colored pills so every stage looks equally weighted in the table + Kanban.
 // A native date input takes any year unless bounded — a hand-typed 0202 would
@@ -710,12 +711,12 @@ const AdminOpportunities = () => {
       await openDetail(data.id);
     } catch (err) {
       const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
-      const message =
-        code === "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED"
-          ? t("opportunities.stage.won.contractRequired")
-          : extractApiError(err);
+      const signedContractRequired = code === SIGNED_CONTRACT_REQUIRED_CODE;
+      const message = signedContractRequired
+        ? t("opportunities.stage.won.contractRequired")
+        : extractApiError(err);
       setStageError(message);
-      if (code !== "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED")
+      if (!signedContractRequired)
         toast({ title: t("common.error"), description: message, variant: "destructive" });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
