@@ -12,6 +12,26 @@ namespace NihomeBackend.Controllers;
 [Route("api/site-settings")]
 public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 {
+    [HttpGet("contract-uploads")]
+    [Authorize]
+    [RequirePermission("system.settings", "view")]
+    public async Task<IActionResult> GetContractUploadLimit()
+    {
+        var settings = await svc.GetAsync();
+        return Ok(new { maxFileSizeMb = settings?.ContractMaxFileSizeMb ?? SiteSettings.DefaultContractMaxFileSizeMb });
+    }
+
+    [HttpPut("contract-uploads")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public async Task<IActionResult> UpdateContractUploadLimit([FromBody] UpdateContractUploadLimitRequest req, CancellationToken ct)
+    {
+        if (req.MaxFileSizeMb is < 1 or > 100)
+            return BadRequest(new { code = "CONTRACT_UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", message = "Giới hạn tệp hợp đồng phải từ 1 đến 100 MB. Ví dụ: 100 MB." });
+        var settings = await svc.UpdateContractUploadLimitAsync(req.MaxFileSizeMb, ct);
+        return Ok(new { maxFileSizeMb = settings.ContractMaxFileSizeMb });
+    }
+
     /// <summary>Get OTP verification settings.</summary>
     [HttpGet("otp-settings")]
     [AllowAnonymous]
@@ -171,3 +191,5 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         return Ok(new { mapEmbedUrl = settings.MapEmbedUrl });
     }
 }
+
+public sealed record UpdateContractUploadLimitRequest(int MaxFileSizeMb);

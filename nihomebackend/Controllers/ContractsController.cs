@@ -45,7 +45,6 @@ public class ContractsController(
     AppDbContext db,
     IAuditLogger audit) : ControllerBase
 {
-    private const long MaxFileSizeBytes = 20L * 1024 * 1024; // 20MB per parent story
     private const string StorageSubfolder = "contracts";
 
     private static readonly HashSet<string> AllowedExtensions =
@@ -152,8 +151,12 @@ public class ContractsController(
                 [ContractDirection.Upstream.ToString()] =
                 [
                     ContractType.Design.ToString(),
+                    ContractType.Permit.ToString(),
                     ContractType.Construction.ToString(),
+                    ContractType.DesignAndPermit.ToString(),
                     ContractType.DesignAndBuild.ToString(),
+                    ContractType.PermitAndConstruction.ToString(),
+                    ContractType.DesignPermitAndConstruction.ToString(),
                 ],
                 [ContractDirection.Downstream.ToString()] =
                 [
@@ -798,6 +801,8 @@ public class ContractsController(
     /// storage path; the FE feeds that into the VO create/update JSON call.</summary>
     [HttpPost("{id:int}/appendices/files")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("crm.contracts", "manage")]
     public async Task<IActionResult> UploadAppendixFile(int id, [FromForm] IFormFile? file, CancellationToken ct)
     {
@@ -867,6 +872,8 @@ public class ContractsController(
     /// </summary>
     [HttpPost("{id:int}/attachments")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("crm.contracts", "manage")]
     public async Task<ActionResult<ContractAttachmentResponse>> UploadAttachment(
         int id,
@@ -1128,9 +1135,12 @@ public class ContractsController(
         {
             return new StoredFile { Result = BadRequest(new { message = "Chưa chọn file." }) };
         }
-        if (file.Length > MaxFileSizeBytes)
+        var maxFileSizeMb = (await db.SiteSettings.AsNoTracking()
+            .Select(settings => (int?)settings.ContractMaxFileSizeMb)
+            .FirstOrDefaultAsync(ct)) ?? SiteSettings.DefaultContractMaxFileSizeMb;
+        if (file.Length > (long)maxFileSizeMb * 1024 * 1024)
         {
-            return new StoredFile { Result = BadRequest(new { message = "File quá lớn (tối đa 20MB)." }) };
+            return new StoredFile { Result = BadRequest(new { message = $"Tệp vượt quá {maxFileSizeMb} MB. Hãy chọn tệp nhỏ hơn rồi thử lại." }) };
         }
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
         if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))

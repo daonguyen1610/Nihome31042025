@@ -9,6 +9,31 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     public SiteSettingsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
+    public async Task ContractUploadLimit_RequiresSettingsPermission_AndPersistsValidValue()
+    {
+        const string path = "/api/site-settings/contract-uploads";
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var invalid = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 0 });
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(invalid)).GetProperty("code").GetString()
+            .Should().Be("CONTRACT_UPLOAD_LIMIT_INVALID");
+
+        var updated = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 75 });
+        updated.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(await Client.GetAsync(path)))
+            .GetProperty("maxFileSizeMb").GetInt32().Should().Be(75);
+    }
+
+    [Fact]
     public async Task GetOtpSettings_IsPublic_ReturnsOk()
     {
         (await Client.GetAsync("/api/site-settings/otp-settings")).StatusCode.Should().Be(HttpStatusCode.OK);

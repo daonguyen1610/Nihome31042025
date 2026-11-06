@@ -408,6 +408,38 @@
     "ja": "設計・施工"
   },
   {
+    "key": "contracts.type.Permit",
+    "category": "contracts",
+    "vi": "Pháp lý",
+    "en": "Permits",
+    "zh": "许可办理",
+    "ja": "許認可"
+  },
+  {
+    "key": "contracts.type.DesignAndPermit",
+    "category": "contracts",
+    "vi": "Thiết kế và Pháp lý",
+    "en": "Design and permits",
+    "zh": "设计与许可办理",
+    "ja": "設計・許認可"
+  },
+  {
+    "key": "contracts.type.PermitAndConstruction",
+    "category": "contracts",
+    "vi": "Pháp lý và Thi công",
+    "en": "Permits and construction",
+    "zh": "许可办理与施工",
+    "ja": "許認可・施工"
+  },
+  {
+    "key": "contracts.type.DesignPermitAndConstruction",
+    "category": "contracts",
+    "vi": "Thiết kế, Pháp lý và Thi công",
+    "en": "Design, permits and construction",
+    "zh": "设计、许可办理与施工",
+    "ja": "設計・許認可・施工"
+  },
+  {
     "key": "contracts.type.Supply",
     "category": "contracts",
     "vi": "Cung ứng",

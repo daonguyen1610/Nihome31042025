@@ -315,8 +315,8 @@ có. Email nhắc gia hạn không tự khởi tạo luồng này.
 
 ### G3 — Pháp lý
 
-- Khi hợp đồng Upstream Design/Construction/DesignAndBuild chuyển
-  `Signed → InProgress`, mục tiêu là tự sinh danh sách thủ tục áp dụng để PM
+- Khi hợp đồng Upstream thuộc một trong bảy phạm vi Thiết kế, Pháp lý, Thi công
+  chuyển `Signed → InProgress`, mục tiêu là tự sinh danh sách thủ tục áp dụng để PM
   phân công ngay. Hiện trạng yêu cầu PM/Admin mở wizard, kiểm tra danh sách đề
   xuất và xác nhận; tạo `DesignProject` không tự sinh permit.
 - Wizard tạo hoặc tái sử dụng một package `LegalPermitting` của Operational

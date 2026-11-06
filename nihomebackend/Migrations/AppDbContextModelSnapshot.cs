@@ -10041,6 +10041,11 @@ namespace nihomebackend.Migrations
                     b.Property<string>("ContractEndEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("ContractMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(100);
+
                     b.Property<string>("ContractRenewalEmailBodyTemplate")
                         .HasColumnType("nvarchar(max)");
 

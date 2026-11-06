@@ -1749,10 +1749,15 @@ attachment before sending. The email contains the priced lines and total and
 attaches the localized Excel quotation.
 
 Every new primary contract starts as **Draft**. In **Contract registry**, use the
-explicit status actions on the detail page to sign, start, pause, complete, or
-cancel it; editing general
-information cannot skip lifecycle checks. Signed and active contracts require a
-signed date, and contract dates must follow signing → start → end order.
+seven available customer-contract scopes: Design, Permits, Construction, and
+their four combinations. Contract and appendix attachments use the per-file
+limit shown under **Settings → Contract files** (initially 100 MB); only an
+administrator can change it. A larger file is rejected with the current limit.
+The contract history tab appears after the working tabs. Use the explicit
+status actions on the detail page to sign, start, pause, complete, or cancel
+it; editing general information cannot skip lifecycle checks. Signed and active
+contracts require a signed date, and contract dates must follow signing → start
+→ end order.
 Milestone status and accounting responsibility are changed through the milestone
 action, while schedule editing preserves the milestone identity and its history.
 Processed milestones or milestones already referenced by a payment request

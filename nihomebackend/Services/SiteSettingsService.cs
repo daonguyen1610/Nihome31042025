@@ -22,6 +22,16 @@ public class SiteSettingsService(AppDbContext db)
         return await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
     }
 
+    public async Task<SiteSettings> UpdateContractUploadLimitAsync(int maxFileSizeMb, CancellationToken ct)
+    {
+        var settings = await db.SiteSettings.FirstOrDefaultAsync(ct)
+            ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
+        settings.ContractMaxFileSizeMb = maxFileSizeMb;
+        settings.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return settings;
+    }
+
     public async Task<SiteSettings> UpdateEmailTemplatesAsync(
         string? newApplicationSubject,
         string? newApplicationBody,

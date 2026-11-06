@@ -2,6 +2,8 @@ namespace NihomeBackend.Models;
 
 public class SiteSettings
 {
+    public const int DefaultContractMaxFileSizeMb = 100;
+
     public int Id { get; set; }
 
     public string SiteName { get; set; } = "Nihome";
@@ -50,6 +52,8 @@ public class SiteSettings
     public string? NotificationEmail { get; set; }
 
     public int AuditLogRetentionMinutes { get; set; } = 43200;
+
+    public int ContractMaxFileSizeMb { get; set; } = DefaultContractMaxFileSizeMb;
 
     public DateTime CreatedAt { get; set; }
 

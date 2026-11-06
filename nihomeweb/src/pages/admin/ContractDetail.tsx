@@ -2203,7 +2203,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         next === "InProgress" &&
         contract.status === "Signed" &&
         contract.direction === "Upstream" &&
-        ["Design", "Construction", "DesignAndBuild"].includes(contract.type)
+        classification?.allowedTypes.Upstream.includes(
+          contract.type as Exclude<ContractType, "Unclassified">,
+        )
       ) {
         setLegalWizardOpen(true);
         return;
@@ -2233,7 +2235,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         setTransitionBusy(null);
       }
     },
-    [contract, refreshContract, t, toast],
+    [classification, contract, refreshContract, t, toast],
   );
 
   const handleMilestoneStatus = useCallback(
@@ -2599,10 +2601,10 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                 <span className="ml-1 text-xs text-slate-400">({attachments.length})</span>
               ) : null}
             </TabsTrigger>
-            <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
             {contract.direction === "Upstream" ? (
               <TabsTrigger value="care">{t("contracts.care.title")}</TabsTrigger>
             ) : null}
+            <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
           </ScrollableTabsList>
 
           <TabsContent value="info" className="mt-4">
@@ -2725,9 +2727,6 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
               refresh={refreshContract}
             />
           </TabsContent>
-          <TabsContent value="timeline" className="mt-4">
-            <TimelineTab events={timeline} />
-          </TabsContent>
           {contract.direction === "Upstream" ? (
             <TabsContent value="care" className="mt-4">
               <ContractContinuations
@@ -2755,6 +2754,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
               />
             </TabsContent>
           ) : null}
+          <TabsContent value="timeline" className="mt-4">
+            <TimelineTab events={timeline} />
+          </TabsContent>
         </Tabs>
 
         <Dialog

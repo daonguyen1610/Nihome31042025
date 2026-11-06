@@ -32,11 +32,12 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // settings and thumbnail media settings used to live here but were
 // localStorage-only mocks; they were removed because they violated the
 // "no dead code / no hardcode" rule.
-type Tab = "security" | "slideshow" | "map" | "drive";
+type Tab = "security" | "contracts" | "slideshow" | "map" | "drive";
 type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
   { key: "security", labelKey: "settings.tab.security" },
+  { key: "contracts", labelKey: "settings.contractUploads.tab" },
   { key: "slideshow", labelKey: "set.slideshow" },
   { key: "map", labelKey: "settings.map.tab" },
   { key: "drive", labelKey: "settings.drive.tab" },
@@ -614,6 +615,100 @@ const DriveTab = () => {
 };
 
 /* ─── Settings Center ─── */
+const ContractUploadTab = () => {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const { has } = usePermissions();
+  const [value, setValue] = useState("");
+  const [savedValue, setSavedValue] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const canManage = has(ADMIN_PERMS.settingsManage);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await adminApi.getContractUploadLimit();
+      setValue(String(data.maxFileSizeMb));
+      setSavedValue(String(data.maxFileSizeMb));
+    } catch {
+      setError(t("settings.contractUploads.loadError"));
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const save = async () => {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 1 || parsed > 100) {
+      setError(t("settings.contractUploads.invalid"));
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const { data } = await adminApi.updateContractUploadLimit(parsed);
+      setValue(String(data.maxFileSizeMb));
+      setSavedValue(String(data.maxFileSizeMb));
+      toast({ title: t("settings.saved") });
+    } catch {
+      setError(t("settings.contractUploads.saveError"));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <section className="max-w-2xl rounded-lg border bg-card p-6">
+      <h2 className="text-lg font-semibold">{t("settings.contractUploads.title")}</h2>
+      <p className="mt-2 text-sm text-muted-foreground">
+        {t("settings.contractUploads.description")}
+      </p>
+      {loading ? (
+        <p className="mt-5 text-sm text-muted-foreground">{t("set.otp.loading")}</p>
+      ) : (
+        <div className="mt-5 space-y-3">
+          <Label htmlFor="contract-upload-limit">{t("settings.contractUploads.label")}</Label>
+          <Input
+            id="contract-upload-limit"
+            type="number"
+            min={1}
+            max={100}
+            step={1}
+            value={value}
+            disabled={!canManage || saving}
+            onChange={(event) => setValue(event.target.value)}
+            className="max-w-40"
+          />
+          {error ? (
+            <p role="alert" className="text-sm text-destructive">
+              {error}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {canManage ? (
+              <Button disabled={saving || value === savedValue} onClick={() => void save()}>
+                {t("common.save")}
+              </Button>
+            ) : null}
+            {error ? (
+              <Button variant="outline" onClick={() => void load()}>
+                {t("common.retry")}
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
+
 const SettingsCenter = () => {
   const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -651,6 +746,7 @@ const SettingsCenter = () => {
         </Tabs>
 
         {activeTab === "security" && <SecurityTab />}
+        {activeTab === "contracts" && <ContractUploadTab />}
         {activeTab === "slideshow" && <SlideshowSettings />}
         {activeTab === "map" && <MapTab />}
         {activeTab === "drive" && <DriveTab />}

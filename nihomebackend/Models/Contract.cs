@@ -113,4 +113,8 @@ public enum ContractType
     DesignAndBuild = 3,
     Supply = 4,
     Subcontract = 5,
+    Permit = 6,
+    DesignAndPermit = 7,
+    PermitAndConstruction = 8,
+    DesignPermitAndConstruction = 9,
 }
