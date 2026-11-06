@@ -401,21 +401,16 @@ public sealed class ProjectTeamServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAssignmentAsync_KpiIdentity_IsImmutable()
+    public async Task UpdateAssignmentAsync_WorkKey_IsImmutable()
     {
         var firstMember = await AddMemberAsync(_memberUserId, "Architect", Role("Architect"));
-        var secondMember = await AddMemberAsync(_otherUserId, "Engineer", Role("StructuralEngineer"));
         var assignment = await _service.AddAssignmentAsync(
             _projectId, Assignment("DES-STABLE", firstMember.Id), _callerId);
         var changedWorkKey = Assignment("DES-CHANGED", firstMember.Id);
         changedWorkKey.RowVersion = assignment.RowVersion;
-        var changedAssignee = Assignment("DES-STABLE", secondMember.Id);
-        changedAssignee.RowVersion = assignment.RowVersion;
 
         await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
             _service.UpdateAssignmentAsync(_projectId, assignment.Id, changedWorkKey, _callerId));
-        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
-            _service.UpdateAssignmentAsync(_projectId, assignment.Id, changedAssignee, _callerId));
 
         var persisted = await _db.OperationalProjectAssignments.FindAsync(assignment.Id);
         Assert.Equal("DES-STABLE", persisted!.WorkKey);

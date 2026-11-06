@@ -149,7 +149,6 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Status")
-                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
@@ -2570,6 +2569,7 @@ namespace nihomebackend.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
+                        .HasMaxLength(16000)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("ContactId")
@@ -6394,6 +6394,9 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime?>("PlannedStart")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("PreviousAssignmentId")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -6430,7 +6433,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ParallelGroup");
 
                     b.HasIndex("OperationalProjectId", "WorkKey", "AssigneeMemberId")
-                        .IsUnique();
+                        .IsUnique()
+                        .HasFilter("[Status] <> 'Reassigned'");
 
                     b.ToTable("operational_project_assignments", (string)null);
                 });
@@ -7925,7 +7929,6 @@ namespace nihomebackend.Migrations
 
                     b.Property<string>("Body")
                         .IsRequired()
-                        .HasMaxLength(16000)
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("CreatedAt")
@@ -7960,6 +7963,7 @@ namespace nihomebackend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<string>("Status")
+                        .IsConcurrencyToken()
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");

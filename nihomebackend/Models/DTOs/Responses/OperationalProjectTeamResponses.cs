@@ -57,6 +57,7 @@ public sealed class ProjectMemberRoleResponse
 public sealed class OperationalProjectAssignmentResponse
 {
     public int Id { get; set; }
+    public int? PreviousAssignmentId { get; set; }
     public string WorkKey { get; set; } = string.Empty;
     public string KpiIdentity { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;

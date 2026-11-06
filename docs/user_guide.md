@@ -252,6 +252,10 @@ working across modules. The list shows customer, lifecycle status, and counts
 of linked opportunities, quotations, and contracts. The detail view provides
 direct links to those records and to the design workflow.
 
+When a team manager changes the person responsible for an active work
+assignment, the previous assignment is marked as handed over and remains in
+the history. A new assignment is created for the selected team member.
+
 Users with **Change project code** permission can enter a new code and the
 reason for the change. The **Change history** at the bottom of the project shows the
 old code → new code, reason, person responsible and original change time.

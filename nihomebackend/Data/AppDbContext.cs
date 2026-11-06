@@ -2279,7 +2279,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 assignment.OperationalProjectId,
                 assignment.WorkKey,
                 assignment.AssigneeMemberId,
-            }).IsUnique();
+            }).IsUnique().HasFilter("[Status] <> 'Reassigned'");
             b.HasIndex(assignment => assignment.ParallelGroup);
         });
 
