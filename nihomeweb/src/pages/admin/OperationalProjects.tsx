@@ -24,7 +24,10 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
 import { ProjectMasterSchedule } from "@/pages/admin/ProjectMasterSchedule";
-import { OperationalProjectTeamPanel } from "@/pages/admin/design/DesignProjectTeamTab";
+import {
+  OperationalProjectTeamPanel,
+  ProjectTeamHistory,
+} from "@/pages/admin/design/DesignProjectTeamTab";
 import { PageError, PageLoading } from "@/components/PageState";
 import {
   Accordion,
@@ -67,6 +70,7 @@ import {
   type OperationalProjectResponse,
   type OperationalProjectStatus,
   type OperationalProjectTimelineItem,
+  type OperationalProjectTeamHistoryResponse,
   type PaymentMilestoneStatus,
   type CreateOperationalProjectRequest,
   type UpdateOperationalProjectRequest,
@@ -117,6 +121,8 @@ const OperationalProjects = () => {
   const canManageWorkPackages = has(ADMIN_PERMS.workPackagesManage);
   const canListUsers = has(ADMIN_PERMS.users);
   const projectId = id && /^\d+$/.test(id) ? Number(id) : null;
+  const currentProjectId = useRef(projectId);
+  currentProjectId.current = projectId;
   const customerFilter = /^\d+$/.test(searchParams.get("customerId") ?? "")
     ? Number(searchParams.get("customerId"))
     : undefined;
@@ -130,6 +136,25 @@ const OperationalProjects = () => {
   const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<OperationalProjectResponse | null>(null);
   const [timeline, setTimeline] = useState<OperationalProjectTimelineItem[]>([]);
+  const [openSections, setOpenSections] = useState([
+    "team",
+    "documents",
+    "timeline",
+    "opportunities",
+    "quotes",
+    "contracts",
+  ]);
+  const [teamHistory, setTeamHistory] = useState<{
+    projectId: number;
+    entries: OperationalProjectTeamHistoryResponse[];
+  } | null>(null);
+  const handleTeamHistoryChange = useCallback(
+    (historyProjectId: number, entries: OperationalProjectTeamHistoryResponse[]) => {
+      if (historyProjectId === currentProjectId.current)
+        setTeamHistory({ projectId: historyProjectId, entries });
+    },
+    [],
+  );
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
   const [search, setSearch] = useState("");
@@ -603,7 +628,8 @@ const OperationalProjects = () => {
 
           <Accordion
             type="multiple"
-            defaultValue={["team", "documents", "timeline", "opportunities", "quotes", "contracts"]}
+            value={openSections}
+            onValueChange={setOpenSections}
             className="space-y-3"
           >
             <AccordionItem value="team" className="rounded-lg border bg-card px-4">
@@ -613,10 +639,14 @@ const OperationalProjects = () => {
                   <span className="font-semibold">{t("designProjects.detail.tab.team")}</span>
                 </div>
               </AccordionTrigger>
-              <AccordionContent className="pb-4">
+              <AccordionContent
+                forceMount
+                className={openSections.includes("team") ? "pb-4" : "hidden"}
+              >
                 <OperationalProjectTeamPanel
                   operationalProjectId={detail.id}
                   refreshKey={detail.code}
+                  onHistoryChange={handleTeamHistoryChange}
                 />
               </AccordionContent>
             </AccordionItem>
@@ -1198,6 +1228,9 @@ const OperationalProjects = () => {
               </AccordionContent>
             </AccordionItem>
           </Accordion>
+          {teamHistory?.projectId === detail.id && (
+            <ProjectTeamHistory history={teamHistory.entries} />
+          )}
         </div>
       ) : (
         <div className="space-y-5">

@@ -58,6 +58,7 @@ interface Props {
   designProjectContext?: boolean;
   designProjectId?: number;
   designManagerUserId?: number | null;
+  onHistoryChange?: (projectId: number, history: OperationalProjectTeamHistoryResponse[]) => void;
 }
 type MemberDialogMode = "add" | "edit" | "end";
 type AssignmentDialogMode = "add" | "edit";
@@ -103,12 +104,68 @@ const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
+export const ProjectTeamHistory = ({
+  history,
+}: {
+  history: OperationalProjectTeamHistoryResponse[];
+}) => {
+  const { t, lang } = useI18n();
+  return (
+    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <h2 className="flex items-center gap-2 font-semibold text-slate-900">
+        <History className="h-4 w-4 text-slate-500" />
+        {t("designProjects.team.history.title")}
+      </h2>
+      {history.length === 0 ? (
+        <p className="mt-4 text-sm text-slate-500">{t("designProjects.team.history.empty")}</p>
+      ) : (
+        <ol className="mt-4 space-y-2">
+          {history.map((item) => (
+            <li
+              key={`${item.entityType}:${item.id}`}
+              data-testid={`project-history-${item.entityType}-${item.id}`}
+              className="flex flex-col justify-between gap-1 rounded-md border border-slate-100 bg-slate-50 p-3 text-sm sm:flex-row sm:items-center"
+            >
+              <div className="min-w-0 break-words">
+                <strong>{item.changedByName}</strong> ·{" "}
+                {t(`designProjects.team.history.entity.${item.entityType}`)} ·{" "}
+                {t(`designProjects.team.history.action.${item.action}`)}
+                {item.entityType === "ProjectCode" && (
+                  <>
+                    <p className="mt-1 font-medium">
+                      {t("designProjects.team.history.codeChange", {
+                        oldCode: item.oldCode ?? "",
+                        newCode: item.newCode ?? "",
+                      })}
+                    </p>
+                    <p className="mt-1 text-slate-600">
+                      {t("designProjects.team.history.codeChangeReason", {
+                        reason: item.reason ?? "",
+                      })}
+                    </p>
+                  </>
+                )}
+              </div>
+              <span className="shrink-0 text-xs text-slate-500">
+                {new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
+                  new Date(item.changedAt),
+                )}
+              </span>
+            </li>
+          ))}
+        </ol>
+      )}
+    </section>
+  );
+};
+
 export const OperationalProjectTeamPanel = ({
   operationalProjectId,
   refreshKey,
   designProjectContext = false,
   designProjectId,
   designManagerUserId,
+  onHistoryChange,
 }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
@@ -147,6 +204,7 @@ export const OperationalProjectTeamPanel = ({
       ]);
       setTeam(teamResponse.data);
       setHistory(historyResponse.data ?? []);
+      onHistoryChange?.(operationalProjectId, historyResponse.data ?? []);
       if (teamResponse.data.canManage) {
         const candidateResponse = await adminApi.getOperationalProjectTeamCandidates(
           operationalProjectId,
@@ -159,7 +217,7 @@ export const OperationalProjectTeamPanel = ({
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId, designProjectId]);
+  }, [operationalProjectId, designProjectId, onHistoryChange]);
 
   useEffect(() => {
     void load();
@@ -924,49 +982,7 @@ export const OperationalProjectTeamPanel = ({
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="flex items-center gap-2 font-semibold text-slate-900">
-          <History className="h-4 w-4 text-slate-500" />
-          {t("designProjects.team.history.title")}
-        </h2>
-        {history.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">{t("designProjects.team.history.empty")}</p>
-        ) : (
-          <ol className="mt-4 space-y-2">
-            {history.map((item) => (
-              <li
-                key={`${item.entityType}:${item.id}`}
-                data-testid={`project-history-${item.entityType}-${item.id}`}
-                className="flex flex-col justify-between gap-1 rounded-md border border-slate-100 bg-slate-50 p-3 text-sm sm:flex-row sm:items-center"
-              >
-                <div className="min-w-0 break-words">
-                  <strong>{item.changedByName}</strong> ·{" "}
-                  {t(`designProjects.team.history.entity.${item.entityType}`)} ·{" "}
-                  {t(`designProjects.team.history.action.${item.action}`)}
-                  {item.entityType === "ProjectCode" && (
-                    <>
-                      <p className="mt-1 font-medium">
-                        {t("designProjects.team.history.codeChange", {
-                          oldCode: item.oldCode ?? "",
-                          newCode: item.newCode ?? "",
-                        })}
-                      </p>
-                      <p className="mt-1 text-slate-600">
-                        {t("designProjects.team.history.codeChangeReason", {
-                          reason: item.reason ?? "",
-                        })}
-                      </p>
-                    </>
-                  )}
-                </div>
-                <span className="shrink-0 text-xs text-slate-500">
-                  {formatDate(item.changedAt, true)}
-                </span>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
+      {!onHistoryChange && <ProjectTeamHistory history={history} />}
 
       <Dialog open={memberDialog !== null} onOpenChange={(open) => !open && setMemberDialog(null)}>
         <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
