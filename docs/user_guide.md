@@ -253,7 +253,7 @@ of linked opportunities, quotations, and contracts. The detail view provides
 direct links to those records and to the design workflow.
 
 Users with **Change project code** permission can enter a new code and the
-reason for the change. The **Change history** in the team section shows the
+reason for the change. The **Change history** at the bottom of the project shows the
 old code → new code, reason, person responsible and original change time.
 Each successful change appears immediately; earlier saved code changes remain
 visible alongside member and assignment events, newest first.

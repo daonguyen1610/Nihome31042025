@@ -31,8 +31,20 @@ test("project code changes appear immediately in change history and survive relo
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto(`/admin/operational-projects/${projectId}`);
     await expect(page.getByRole("heading", { name: "Change history", exact: true })).toBeVisible();
+    const historyHeading = page.getByRole("heading", { name: "Change history", exact: true });
+    const contractsHeading = page.getByRole("button", { name: /^Contracts\b/ });
+    await expect(contractsHeading).toBeVisible();
+    expect(
+      await historyHeading.evaluate(
+        (history, contracts) =>
+          Boolean(contracts.compareDocumentPosition(history) & Node.DOCUMENT_POSITION_FOLLOWING),
+        await contractsHeading.elementHandle(),
+      ),
+    ).toBe(true);
     const entries = page.locator('[data-testid^="project-history-ProjectCode-"]');
     await expect(entries).toHaveCount(0);
+    await page.getByRole("button", { name: "Team", exact: true }).click();
+    await expect(historyHeading).toBeVisible();
     let oldCode = originalCode;
     for (const suffix of ["R01", "R02"]) {
       const newCode = `${originalCode}-${suffix}`;
