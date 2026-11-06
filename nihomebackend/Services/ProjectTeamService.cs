@@ -295,18 +295,49 @@ public sealed class ProjectTeamService(
             item.Id == assignmentId && item.OperationalProjectId == projectId &&
             item.AssigneeMember.DesignProjectId == request.DesignProjectId, ct);
         if (assignment is null) return null;
-        if (assignment.Status is ProjectAssignmentStatus.Completed or ProjectAssignmentStatus.Cancelled)
+        if (assignment.Status is ProjectAssignmentStatus.Completed or ProjectAssignmentStatus.Cancelled or ProjectAssignmentStatus.Reassigned)
         {
             throw new ProjectTeamOperationException(
                 "Phân công đã hoàn tất hoặc đã huỷ là dữ liệu lịch sử và không thể chỉnh sửa.");
         }
-        if (!string.Equals(assignment.WorkKey, request.WorkKey.Trim(), StringComparison.Ordinal) ||
-            assignment.AssigneeMemberId != request.AssigneeMemberId)
+        if (!string.Equals(assignment.WorkKey, request.WorkKey.Trim(), StringComparison.Ordinal))
         {
             throw new ProjectTeamOperationException(
-                "Mã công việc và người phụ trách tạo thành định danh KPI và không thể thay đổi. Hãy tạo phân công mới.");
+                "Mã công việc không thể thay đổi. Hãy tạo phân công mới.");
         }
         var status = await ValidateAssignmentAsync(projectId, assignmentId, request, ct);
+        if (assignment.AssigneeMemberId != request.AssigneeMemberId)
+        {
+            if (status is not (ProjectAssignmentStatus.Planned or ProjectAssignmentStatus.InProgress))
+                throw new ProjectTeamOperationException("Hãy chọn trạng thái đang thực hiện hoặc đã lên kế hoạch khi đổi người phụ trách.");
+            await using var transferTransaction = db.Database.IsRelational()
+                ? await db.Database.BeginTransactionAsync(ct)
+                : null;
+            CrmConcurrency.Apply(db, assignment, request.RowVersion);
+            var nowTransfer = DateTime.UtcNow;
+            assignment.Status = ProjectAssignmentStatus.Reassigned;
+            assignment.UpdatedAt = nowTransfer;
+            assignment.UpdatedByUserId = callerUserId;
+            await CrmConcurrency.SaveChangesAsync(db, ct);
+            var oldResponse = MapAssignment(await AssignmentQuery(projectId).SingleAsync(item => item.Id == assignment.Id, ct));
+            await AddHistoryAsync(projectId, "Assignment", assignment.Id, "Reassigned", oldResponse, callerUserId, ct);
+            var replacement = new OperationalProjectAssignment
+            {
+                OperationalProjectId = projectId, WorkKey = assignment.WorkKey, Title = request.Title.Trim(),
+                Module = request.Module.Trim(), Discipline = TrimOrNull(request.Discipline),
+                ParallelGroup = TrimOrNull(request.ParallelGroup), AssigneeMemberId = request.AssigneeMemberId,
+                ManagerMemberId = request.ManagerMemberId, Status = status,
+                PlannedStart = request.PlannedStart?.ToUniversalTime(), PlannedEnd = request.PlannedEnd?.ToUniversalTime(),
+                Note = TrimOrNull(request.Note), CreatedAt = nowTransfer, UpdatedAt = nowTransfer,
+                CreatedByUserId = callerUserId, UpdatedByUserId = callerUserId,
+            };
+            db.OperationalProjectAssignments.Add(replacement);
+            await db.SaveChangesAsync(ct);
+            var replacementResponse = MapAssignment(await AssignmentQuery(projectId).SingleAsync(item => item.Id == replacement.Id, ct));
+            await AddHistoryAsync(projectId, "Assignment", replacement.Id, "Created", replacementResponse, callerUserId, ct);
+            if (transferTransaction is not null) await transferTransaction.CommitAsync(ct);
+            return replacementResponse;
+        }
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
             : null;
@@ -408,7 +439,7 @@ public sealed class ProjectTeamService(
         if (request.DesignProjectId.HasValue && request.Module != "Design")
             throw new ProjectTeamOperationException("Phân công của đội Design phải thuộc phân hệ Design.");
         request.Discipline = await NormalizeDisciplineAsync(request.Discipline, ct);
-        if (!Enum.TryParse<ProjectAssignmentStatus>(request.Status, true, out var status))
+        if (!Enum.TryParse<ProjectAssignmentStatus>(request.Status, true, out var status) || status == ProjectAssignmentStatus.Reassigned)
             throw new ProjectTeamOperationException($"Trạng thái phân công '{request.Status}' không hợp lệ.");
         if (request.PlannedStart.HasValue && request.PlannedEnd.HasValue &&
             request.PlannedEnd.Value < request.PlannedStart.Value)

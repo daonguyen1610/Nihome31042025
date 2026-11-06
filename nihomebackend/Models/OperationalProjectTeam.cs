@@ -106,4 +106,5 @@ public enum ProjectAssignmentStatus
     InProgress = 1,
     Completed = 2,
     Cancelled = 3,
+    Reassigned = 4,
 }

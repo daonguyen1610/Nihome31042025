@@ -102,6 +102,7 @@ const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
   Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  Reassigned: "border-slate-200 bg-slate-50 text-slate-700",
 };
 
 export const ProjectTeamHistory = ({
@@ -880,7 +881,9 @@ export const OperationalProjectTeamPanel = ({
           <div className="mt-4 grid gap-3 xl:grid-cols-2">
             {team.assignments.map((assignment) => {
               const mutable =
-                assignment.status !== "Completed" && assignment.status !== "Cancelled";
+                assignment.status !== "Completed" &&
+                assignment.status !== "Cancelled" &&
+                assignment.status !== "Reassigned";
               return (
                 <article key={assignment.id} className="rounded-lg border border-slate-200 p-4">
                   <div className="flex items-start justify-between gap-3">
@@ -1383,7 +1386,6 @@ export const OperationalProjectTeamPanel = ({
             <div>
               <Label>{t("designProjects.team.field.assignee")} *</Label>
               <SearchableSelect
-                disabled={assignmentDialog === "edit"}
                 value={
                   assignmentForm.assigneeMemberId ? String(assignmentForm.assigneeMemberId) : ""
                 }
