@@ -22,6 +22,7 @@ public class OpportunityService(
     private const string LostReasonMasterDataCategory = "opportunity_lost_reason";
     private const string OpportunityAssignedTemplate = "opportunity.assigned";
     private const string OpportunityStageChangedTemplate = "opportunity.stage-changed";
+    private const string SignedContractRequiredCode = "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED";
 
     // -------- List / Pipeline / Get --------
 
@@ -462,7 +463,7 @@ public class OpportunityService(
             {
                 throw new OpportunityOperationException(
                     "Chưa thể xác nhận ký hợp đồng. Kiểm tra hợp đồng đã liên kết với cơ hội, có ngày ký và không ở trạng thái Nháp hoặc Đã hủy.",
-                    "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED");
+                    SignedContractRequiredCode);
             }
 
             await ValidateWinningReferencesAsync(op, request, ct);
