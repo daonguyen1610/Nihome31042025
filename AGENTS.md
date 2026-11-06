@@ -108,7 +108,20 @@ Report ambiguity, missing evidence, defects, blocked checks, and residual risk. 
 
 - Keep frontend behavior, backend behavior, DTOs, validation, and API contracts aligned. Update both sides when a contract changes.
 - Handle loading, error, empty, success, and responsive states where applicable.
-- Do not hardcode business data such as categories in React; fetch it from the backend API or an approved shared configuration source.
+- Never hardcode a value that can be configured in ADMIN. Runtime behavior must
+  read the persisted administrator setting or managed master data through the
+  backend, including limits, thresholds, options, recipients, and templates.
+  Do not keep a second fixed value in React, services, controllers,
+  `appsettings`, or environment variables that overrides an ADMIN change.
+  An ADMIN change must take effect without a code change or redeployment.
+- Put initial values in the appropriate seed or migration only to initialize
+  persisted settings. Keep technical safety ceilings distinct from business
+  settings, document them, and expose any effective limit to the ADMIN UI;
+  never silently clamp a configured value. Validate administrator changes on
+  the server, enforce management permissions, and test that a saved change
+  affects the actual business operation.
+- Fetch business data such as categories from the backend API or ADMIN-managed
+  master data; do not duplicate option lists in React.
 - Do not hardcode 'localhost' or deployment-specific media/API hosts. Store backend media as host-relative paths such as '/images/example.png', resolved through a shared helper.
 - Every number entering to the form, for example: 100000. The frontend must resolve to readable version. like 100.000. Apply for every scenarios in the system.
 - Follow 'nihomeweb/CLAUDE.md' for web UI conventions when it exists.
