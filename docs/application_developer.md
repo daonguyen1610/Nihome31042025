@@ -1601,6 +1601,27 @@ does not offer a quote already used by a non-cancelled contract.
 
 Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
 
+Contract create/update requests that include a source quote and omit
+`OpportunityId` derive the opportunity from that quote before validating the
+references and terminal-opportunity invariant. An explicitly conflicting
+opportunity is rejected. Existing records are not backfilled on reads or at
+startup; saving a contract with its source quote revalidates the relationship.
+Removing only the opportunity while retaining its source quote therefore keeps
+the quote's opportunity linked. To unlink both sources, clear both references;
+the existing rule still rejects removing the final qualifying contract from a
+Contract-signed opportunity.
+To investigate historical records, run this read-only query against the intended
+database in its backend/database container and review results before making any
+data correction. Do not infer a relationship from customer/project names.
+
+```sql
+SELECT c.Id AS ContractId, c.QuoteId, c.OpportunityId AS ContractOpportunityId,
+       q.OpportunityId AS QuoteOpportunityId
+FROM contracts AS c
+JOIN quotes AS q ON q.Id = c.QuoteId
+WHERE c.OpportunityId IS NULL OR c.OpportunityId <> q.OpportunityId;
+```
+
 `GET /api/contracts` and its `/api/v1` alias require
 `crm.contracts.view`. The list accepts `status`, `direction`, `type`,
 `vendorId`, `ownerUserId`, `customerId`, `operationalProjectId`, `search`,

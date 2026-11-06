@@ -1640,7 +1640,10 @@ public class ContractServiceTests : IDisposable
         request.Status = ContractStatus.Signed;
         switch (mutation)
         {
-            case "unlink": request.OpportunityId = null; break;
+            case "unlink":
+                request.OpportunityId = null;
+                request.QuoteId = null;
+                break;
             case "customer": request.CustomerId = _customerB; break;
             case "signed-date": request.SignedDate = null; break;
         }
@@ -1724,11 +1727,31 @@ public class ContractServiceTests : IDisposable
         await _db.SaveChangesAsync();
         firstRequest.Status = ContractStatus.Signed;
         firstRequest.OpportunityId = null;
+        firstRequest.QuoteId = null;
 
         var updated = await _sut.UpdateAsync(
             first.Id, firstRequest, 1, canSeeAll: true, canReassignOwner: true);
 
         Assert.Null(updated!.OpportunityId);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_KeepingQuotePreservesWonOpportunityWhenRequestOmitsIt()
+    {
+        var opportunity = SeedWonOpportunity();
+        var request = Req(signed: DateTime.UtcNow);
+        request.OpportunityId = opportunity.Id;
+        AlignQuoteWithOpportunity(request, opportunity);
+        var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        _db.Contracts.Find(contract.Id)!.Status = ContractStatus.Signed;
+        await _db.SaveChangesAsync();
+        request.Status = ContractStatus.Signed;
+        request.OpportunityId = null;
+
+        var updated = await _sut.UpdateAsync(contract.Id, request, 1, canSeeAll: true, canReassignOwner: true);
+
+        Assert.Equal(opportunity.Id, updated!.OpportunityId);
+        Assert.Equal(request.QuoteId, updated.QuoteId);
     }
 
     private Opportunity SeedWonOpportunity()
