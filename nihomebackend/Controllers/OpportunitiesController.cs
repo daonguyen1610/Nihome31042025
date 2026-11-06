@@ -244,7 +244,7 @@ public class OpportunitiesController(
                 Status = AuditStatus.Failure,
                 FailureReason = ex.Message,
             });
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { code = ex.Code, message = ex.Message });
         }
     }
 

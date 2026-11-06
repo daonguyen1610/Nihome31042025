@@ -513,6 +513,8 @@ Moving to **Contract signed** requires a linked Contract with a signed date and
 a non-draft, non-cancelled status. The API retains the stable enum values
 `Prospecting`, `Qualification`, `Proposal`, `Negotiation`, and `Won` for stored
 data and client compatibility; the interface displays the customer terms.
+If confirmation is blocked, the dialog explains what to check and suggests
+contacting the person responsible for the contract before trying again.
 Historical records are converted once during deployment: valid contract-backed
 Won rows remain Contract signed, unsupported Won rows become Negotiation, and
 Lost rows receive complete controlled reason metadata. There is no separate

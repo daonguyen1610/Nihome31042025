@@ -107,4 +107,7 @@ public interface IOpportunityService
 }
 
 /// <summary>Thrown when a stage transition or business rule is violated.</summary>
-public sealed class OpportunityOperationException(string message) : InvalidOperationException(message);
+public sealed class OpportunityOperationException(string message, string? code = null) : InvalidOperationException(message)
+{
+    public string? Code { get; } = code;
+}

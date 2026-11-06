@@ -462,6 +462,7 @@ const AdminOpportunities = () => {
   // stage change UX
   const [stageTarget, setStageTarget] = useState<OpportunityStage | null>(null);
   const [changingStage, setChangingStage] = useState(false);
+  const [stageError, setStageError] = useState<string | null>(null);
   const [lostReason, setLostReason] = useState<string>("");
   const [lostNote, setLostNote] = useState("");
 
@@ -685,6 +686,7 @@ const AdminOpportunities = () => {
   };
 
   const openStageChange = (target: OpportunityStage) => {
+    setStageError(null);
     setStageTarget(target);
     setLostReason("");
     setLostNote("");
@@ -693,6 +695,7 @@ const AdminOpportunities = () => {
   const handleChangeStage = async () => {
     if (!detail || !stageTarget) return;
     setChangingStage(true);
+    setStageError(null);
     try {
       const { data } = await adminApi.changeOpportunityStage(detail.id, {
         rowVersion: detail.rowVersion,
@@ -706,11 +709,14 @@ const AdminOpportunities = () => {
       await fetchList();
       await openDetail(data.id);
     } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: extractApiError(err),
-        variant: "destructive",
-      });
+      const code = (err as { response?: { data?: { code?: string } } })?.response?.data?.code;
+      const message =
+        code === "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED"
+          ? t("opportunities.stage.won.contractRequired")
+          : extractApiError(err);
+      setStageError(message);
+      if (code !== "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED")
+        toast({ title: t("common.error"), description: message, variant: "destructive" });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setChangingStage(false);
@@ -2163,6 +2169,11 @@ const AdminOpportunities = () => {
                 </div>
               </>
             </div>
+          )}
+          {stageError && (
+            <p role="alert" className="text-sm text-destructive">
+              {stageError}
+            </p>
           )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setStageTarget(null)} disabled={changingStage}>

@@ -461,7 +461,8 @@ public class OpportunityService(
             if (!hasSignedContract)
             {
                 throw new OpportunityOperationException(
-                    "Không thể chuyển sang Ký hợp đồng: cơ hội chưa có hợp đồng đã ký hợp lệ.");
+                    "Chưa thể xác nhận ký hợp đồng. Kiểm tra hợp đồng đã liên kết với cơ hội, có ngày ký và không ở trạng thái Nháp hoặc Đã hủy.",
+                    "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED");
             }
 
             await ValidateWinningReferencesAsync(op, request, ct);

@@ -49,6 +49,13 @@ test("sales follows a new lead through conversion, negotiation and a reasoned lo
     await page.goto(opportunityUrl!);
     await expect(detail).toBeVisible();
   }
+  await detail.getByRole("button", { name: "Confirm contract signed", exact: true }).click();
+  const confirmContract = page.getByRole("dialog", { name: "Confirm contract signed" });
+  await confirmContract.getByRole("button", { name: "Save changes", exact: true }).click();
+  await expect(confirmContract.getByRole("alert")).toContainText(
+    "Check that a contract is linked to this opportunity",
+  );
+  await confirmContract.getByRole("button", { name: "Cancel", exact: true }).click();
   await detail.getByRole("button", { name: "Lost", exact: true }).click();
   const decision = page.getByRole("dialog", { name: "Move to Lost", exact: true });
   await expect(decision.getByRole("button", { name: "Save changes", exact: true })).toBeDisabled();
