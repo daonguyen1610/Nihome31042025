@@ -359,6 +359,14 @@ public class OpportunitiesControllerTests : IntegrationTestBase
         {
             var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opId);
             opportunity.Stage = OpportunityStage.Negotiation;
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = UniqueSlug("HD-OP-UNLINKED"),
+                CustomerId = opportunity.CustomerId,
+                Status = ContractStatus.Signed,
+                SignedDate = DateTime.UtcNow,
+                Value = 1_000_000m,
+            });
             await db.SaveChangesAsync();
         });
 
@@ -367,6 +375,8 @@ public class OpportunitiesControllerTests : IntegrationTestBase
             targetStage = "Won",
         });
         missingContract.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var missingBody = await ReadJsonAsync(missingContract);
+        missingBody.GetProperty("code").GetString().Should().Be("OPPORTUNITY_SIGNED_CONTRACT_REQUIRED");
 
         await WithDbAsync(async db =>
         {
