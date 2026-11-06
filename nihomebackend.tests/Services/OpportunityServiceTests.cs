@@ -573,7 +573,10 @@ public class OpportunityServiceTests : IDisposable
             },
             user.Id, canManage: true, canSeeAll: true));
 
-        Assert.Contains("hợp đồng đã ký", exception.Message);
+        Assert.Equal("OPPORTUNITY_SIGNED_CONTRACT_REQUIRED", exception.Code);
+        Assert.Contains("liên kết với cơ hội", exception.Message);
+        Assert.Contains("có ngày ký", exception.Message);
+        Assert.Contains("không ở trạng thái Nháp hoặc Đã hủy", exception.Message);
         Assert.Equal(OpportunityStage.Negotiation, (await _db.Opportunities.FindAsync(op.Id))!.Stage);
     }
 
