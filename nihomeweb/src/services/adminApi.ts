@@ -2272,7 +2272,16 @@ export interface UpsertContractRequest {
 export type ContractDirection = "Upstream" | "Downstream";
 
 export type ContractType =
-  "Unclassified" | "Design" | "Construction" | "DesignAndBuild" | "Supply" | "Subcontract";
+  | "Unclassified"
+  | "Design"
+  | "Permit"
+  | "Construction"
+  | "DesignAndPermit"
+  | "DesignAndBuild"
+  | "PermitAndConstruction"
+  | "DesignPermitAndConstruction"
+  | "Supply"
+  | "Subcontract";
 
 export interface ContractClassificationOptions {
   directions: ContractDirection[];
@@ -6275,6 +6284,11 @@ export const adminApi = {
   getOtpSettings: () => api.get<OtpSettingsResponse>("/site-settings/otp-settings"),
   updateOtpSettings: (data: UpdateOtpSettingsRequest) =>
     api.put<OtpSettingsResponse>("/site-settings/otp-settings", data),
+
+  getContractUploadLimit: () =>
+    api.get<{ maxFileSizeMb: number }>("/site-settings/contract-uploads"),
+  updateContractUploadLimit: (maxFileSizeMb: number) =>
+    api.put<{ maxFileSizeMb: number }>("/site-settings/contract-uploads", { maxFileSizeMb }),
 
   // Map embed (Google Maps URL shown on Contact page)
   getMapEmbed: () => api.get<MapEmbedResponse>("/site-settings/map-embed"),

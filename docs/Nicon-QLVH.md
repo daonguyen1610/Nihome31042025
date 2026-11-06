@@ -436,11 +436,12 @@ Bảo đảm hồ sơ pháp lý đúng loại công trình, đúng hạn và đ�
 danh sách thủ tục pháp lý áp dụng và PM phân công từng thủ tục ngay từ đầu.
 Danh mục áp dụng theo loại/quy mô dự án vẫn cần NICON chốt tại Q-09.
 
-**Hiện trạng triển khai:** Hợp đồng Upstream loại Design, Construction hoặc
-DesignAndBuild chỉ chuyển từ `Signed` sang `InProgress` qua wizard Pháp lý do PM
-của Operational Project hoặc Admin xác nhận. Gói mới yêu cầu PM chọn phiên bản
-mẫu checklist đã xuất bản; mục bắt buộc không được bỏ chọn, mục tùy chọn và
-giấy phép bổ sung lấy từ `permit_type` đang hoạt động. Pháp lý/Admin soạn mẫu
+**Hiện trạng triển khai:** Bảy phạm vi hợp đồng Upstream (Thiết kế, Pháp lý,
+Thi công và bốn tổ hợp tương ứng) chỉ chuyển từ `Signed` sang `InProgress` qua
+wizard Pháp lý do PM của Operational Project hoặc Admin xác nhận. Gói mới yêu
+cầu PM chọn phiên bản mẫu checklist đã xuất bản; mục bắt buộc không được bỏ
+chọn, mục tùy chọn và giấy phép bổ sung lấy từ `permit_type` đang hoạt động.
+Pháp lý/Admin soạn mẫu
 với tên và phạm vi bốn ngôn ngữ; CM/Admin có quyền xuất bản duyệt độc lập và ghi
 nguồn phê duyệt. Người từng soạn/chỉnh sửa không tự xuất bản. Không tạo permit
 ngầm khi tạo `DesignProject`.

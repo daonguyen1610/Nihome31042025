@@ -70,8 +70,12 @@ const PAGE_SIZE = 20;
 const CONTRACT_TYPES: ContractType[] = [
   "Unclassified",
   "Design",
+  "Permit",
   "Construction",
+  "DesignAndPermit",
   "DesignAndBuild",
+  "PermitAndConstruction",
+  "DesignPermitAndConstruction",
   "Supply",
   "Subcontract",
 ];

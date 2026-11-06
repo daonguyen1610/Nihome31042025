@@ -709,6 +709,11 @@ public class ContractsControllerTests : IntegrationTestBase
             .Should().BeEquivalentTo("Upstream", "Downstream");
         body.GetProperty("types").EnumerateArray().Select(item => item.GetString())
             .Should().NotContain("Unclassified");
+        body.GetProperty("allowedTypes").GetProperty("Upstream")
+            .EnumerateArray().Select(item => item.GetString())
+            .Should().BeEquivalentTo(
+                "Design", "Permit", "Construction", "DesignAndPermit",
+                "DesignAndBuild", "PermitAndConstruction", "DesignPermitAndConstruction");
         body.GetProperty("allowedTypes").GetProperty("Downstream")
             .EnumerateArray().Select(item => item.GetString())
             .Should().BeEquivalentTo("Supply", "Subcontract");
@@ -716,6 +721,78 @@ public class ContractsControllerTests : IntegrationTestBase
         var upstream = await Client.GetAsync("/api/contracts/classification-options?direction=Upstream");
         upstream.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(upstream)).GetProperty("vendors").GetArrayLength().Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ContractAttachment_AcceptsFileAboveFormerTwentyMegabyteLimit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        using var form = new MultipartFormDataContent();
+        using var file = new ByteArrayContent(new byte[21 * 1024 * 1024]);
+        file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "contract-appendix.pdf");
+        form.Add(new StringContent("Supporting"), "kind");
+
+        var response = await Client.PostAsync($"/api/contracts/{contractId}/attachments", form);
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(response)).GetProperty("fileSize").GetInt64()
+            .Should().Be(21 * 1024 * 1024);
+
+        await WithDbAsync(async db =>
+        {
+            var settings = await db.SiteSettings.SingleAsync();
+            settings.ContractMaxFileSizeMb = 10;
+            await db.SaveChangesAsync();
+        });
+        using var rejectedForm = new MultipartFormDataContent();
+        using var rejectedFile = new ByteArrayContent(new byte[11 * 1024 * 1024]);
+        rejectedFile.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+        rejectedForm.Add(rejectedFile, "file", "over-limit.pdf");
+        rejectedForm.Add(new StringContent("Supporting"), "kind");
+        var rejected = await Client.PostAsync($"/api/contracts/{contractId}/attachments", rejectedForm);
+        rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(rejected)).GetProperty("message").GetString()
+            .Should().Contain("10 MB");
+        await WithDbAsync(async db =>
+        {
+            var settings = await db.SiteSettings.SingleAsync();
+            settings.ContractMaxFileSizeMb = SiteSettings.DefaultContractMaxFileSizeMb;
+            await db.SaveChangesAsync();
+        });
+    }
+
+    [Fact]
+    public async Task PermitAndConstructionContract_RoundTripsAndRejectsDownstreamDirection()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var payload = new
+        {
+            customerId,
+            direction = "Upstream",
+            type = "PermitAndConstruction",
+            quoteId = _approvedQuoteIds[customerId],
+            status = "Draft",
+            value = 100_000_000m,
+        };
+        var created = await Client.PostAsJsonAsync("/api/contracts", payload);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(created);
+        body.GetProperty("type").GetString().Should().Be("PermitAndConstruction");
+
+        var invalid = await Client.PostAsJsonAsync("/api/contracts", new
+        {
+            customerId,
+            direction = "Downstream",
+            type = "PermitAndConstruction",
+            status = "Draft",
+            value = 100_000_000m,
+        });
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

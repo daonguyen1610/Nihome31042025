@@ -232,6 +232,15 @@ files/images into the development volumes before startup. Database metadata
 and file storage must belong to the same dataset. A fresh project/database must
 use fresh file volumes; never expose a different dataset's uploads to cleanup.
 
+Administrators set the maximum size of each contract or appendix file under
+`/admin/settings?tab=contracts`. The value is persisted in `site_settings`
+(`ContractMaxFileSizeMb`), defaults to 100 MiB for existing data, and accepts
+whole numbers from 1 to 100 MiB, matching the project document storage cap.
+Each upload uses the existing 100 MiB project-document transport cap and reads
+the current administrator value before storing the file.
+Other upload endpoints retain their own limits. The settings API uses
+`GET/PUT /api/site-settings/contract-uploads` with `system.settings.view/manage`.
+
 ### 4.2.1 Swagger Access
 
 Swagger is enabled only when the backend runs in the `Development` environment.

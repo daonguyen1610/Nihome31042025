@@ -601,12 +601,14 @@ public sealed class LegalActivationService(
 
     private static bool IsEligibleContract(Contract contract) =>
         contract.Direction == ContractDirection.Upstream && contract.Status == ContractStatus.Signed &&
-        contract.Type is ContractType.Design or ContractType.Construction or ContractType.DesignAndBuild;
+        contract.Type is ContractType.Design or ContractType.Permit or ContractType.Construction or
+            ContractType.DesignAndPermit or ContractType.DesignAndBuild or
+            ContractType.PermitAndConstruction or ContractType.DesignPermitAndConstruction;
 
     private static void EnsureEligibleContract(Contract contract)
     {
         if (!IsEligibleContract(contract))
-            throw Error("LEGAL_CONTRACT_NOT_ELIGIBLE", "Chỉ hợp đồng Upstream loại Thiết kế, Thi công hoặc D&B ở trạng thái Đã ký mới kích hoạt Pháp lý.");
+            throw Error("LEGAL_CONTRACT_NOT_ELIGIBLE", "Chỉ hợp đồng đầu ra đã ký thuộc phạm vi Thiết kế, Pháp lý hoặc Thi công mới có thể bắt đầu công việc Pháp lý.");
     }
 
     private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -2360,6 +2360,62 @@
     "ja": "NICONシステムの全設定を管理"
   },
   {
+    "key": "settings.contractUploads.tab",
+    "category": "settings",
+    "vi": "Tệp hợp đồng",
+    "en": "Contract files",
+    "zh": "合同文件",
+    "ja": "契約書類"
+  },
+  {
+    "key": "settings.contractUploads.title",
+    "category": "settings",
+    "vi": "Giới hạn tệp hợp đồng",
+    "en": "Contract file size limit",
+    "zh": "合同文件大小限制",
+    "ja": "契約書類のサイズ制限"
+  },
+  {
+    "key": "settings.contractUploads.description",
+    "category": "settings",
+    "vi": "Áp dụng cho mỗi tệp hợp đồng và phụ lục tải lên. Thay đổi có hiệu lực ngay với lần tải lên tiếp theo.",
+    "en": "Applies to each contract and appendix file. Changes take effect on the next upload.",
+    "zh": "适用于每个合同及附件文件。更改将在下次上传时生效。",
+    "ja": "契約書と付属書類の各ファイルに適用されます。変更は次回のアップロードから有効です。"
+  },
+  {
+    "key": "settings.contractUploads.label",
+    "category": "settings",
+    "vi": "Dung lượng tối đa mỗi tệp (MB)",
+    "en": "Maximum size per file (MB)",
+    "zh": "每个文件的最大大小（MB）",
+    "ja": "ファイルごとの最大サイズ（MB）"
+  },
+  {
+    "key": "settings.contractUploads.invalid",
+    "category": "settings",
+    "vi": "Nhập số nguyên từ 1 đến 100 MB. Ví dụ: 100.",
+    "en": "Enter a whole number from 1 to 100 MB. For example, 100.",
+    "zh": "请输入 1 至 100 MB 的整数，例如 100。",
+    "ja": "1〜100 MBの整数を入力してください。例: 100。"
+  },
+  {
+    "key": "settings.contractUploads.loadError",
+    "category": "settings",
+    "vi": "Chưa tải được giới hạn tệp. Hãy thử lại.",
+    "en": "Could not load the file limit. Try again.",
+    "zh": "无法加载文件大小限制。请重试。",
+    "ja": "ファイル制限を読み込めませんでした。再試行してください。"
+  },
+  {
+    "key": "settings.contractUploads.saveError",
+    "category": "settings",
+    "vi": "Chưa lưu được giới hạn tệp. Hãy thử lại.",
+    "en": "Could not save the file limit. Try again.",
+    "zh": "无法保存文件大小限制。请重试。",
+    "ja": "ファイル制限を保存できませんでした。再試行してください。"
+  },
+  {
     "key": "settings.company",
     "category": "settings",
     "vi": "Thông tin công ty",
