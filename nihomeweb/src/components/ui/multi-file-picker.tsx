@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useId, useMemo, useRef, useState } from "react";
 import { FileText, UploadCloud, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -53,16 +53,17 @@ export function MultiFilePicker({
   hint,
 }: MultiFilePickerProps) {
   const { t } = useI18n();
+  const generatedId = useId();
+  const inputId = id ?? generatedId;
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const limitsHint = useMemo(() => {
-    const text = t("common.filePicker.hint")
+    return t("common.filePicker.hint")
       .replace("{count}", String(maxFiles))
       .replace("{size}", String(maxSizeMb));
-    return hint ?? text;
-  }, [hint, maxFiles, maxSizeMb, t]);
+  }, [maxFiles, maxSizeMb, t]);
 
   const addFiles = (selected: File[]) => {
     if (selected.length === 0) return;
@@ -109,15 +110,16 @@ export function MultiFilePicker({
   return (
     <div className="space-y-2">
       <label
+        htmlFor={inputId}
         onDragOver={(event) => {
           event.preventDefault();
-          if (!disabled) setDragOver(true);
+          if (!disabled && !inputRef.current?.matches(":disabled")) setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(event) => {
           event.preventDefault();
           setDragOver(false);
-          if (disabled) return;
+          if (disabled || inputRef.current?.matches(":disabled")) return;
           addFiles(Array.from(event.dataTransfer.files ?? []));
         }}
         className={cn(
@@ -130,7 +132,7 @@ export function MultiFilePicker({
       >
         <input
           ref={inputRef}
-          id={id}
+          id={inputId}
           type="file"
           accept={accept}
           multiple={multiple}
@@ -143,6 +145,7 @@ export function MultiFilePicker({
         <span className="text-sm font-medium text-foreground">
           {t("common.filePicker.dropHere")}
         </span>
+        {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
         <span className="text-xs text-muted-foreground">{limitsHint}</span>
       </label>
       {files.length > 0 ? (
@@ -153,9 +156,7 @@ export function MultiFilePicker({
               className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-sm"
             >
               <FileText className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
-              <span className="min-w-0 flex-1 truncate" title={file.name}>
-                {file.name}
-              </span>
+              <span className="min-w-0 flex-1 break-all">{file.name}</span>
               <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                 {formatBytes(file.size)}
               </span>
@@ -164,7 +165,7 @@ export function MultiFilePicker({
                 disabled={disabled}
                 onClick={() => removeAt(index)}
                 aria-label={`${t("common.filePicker.remove")}: ${file.name}`}
-                className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-50"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
               >
                 <X className="h-4 w-4" />
               </button>

@@ -4,8 +4,10 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
+import { extractApiError } from "@/lib/apiError";
 import { calculateRfqCommercialPreview } from "@/lib/rfqCommercial";
 import type {
   RfqBatchAwardDraft,
@@ -248,7 +250,7 @@ export function RfqBidForm({
   references: RfqReferences;
   busy: boolean;
   onSave: (draft: RfqBidDraft) => void;
-  onUpload: (files: File[]) => Promise<void>;
+  onUpload: (files: File[]) => Promise<File[]>;
 }) {
   const { t, lang } = useI18n();
   const [vendorId, setVendorId] = useState(0);
@@ -259,6 +261,7 @@ export function RfqBidForm({
   const [prices, setPrices] = useState<Record<number, string>>({});
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
+  const [uploadError, setUploadError] = useState("");
   const [currency, setCurrency] = useState("VND");
   const [exchangeRateToVnd, setExchangeRateToVnd] = useState("1");
   const [freightAmount, setFreightAmount] = useState("0");
@@ -496,16 +499,47 @@ export function RfqBidForm({
               {file.name}
             </label>
           ))}
-          <RfqField label={t("rfq.upload")}>
+          <div className="grid min-w-0 gap-1.5">
+            <Label htmlFor="rfq-form-files">{t("rfq.upload")}</Label>
             <MultiFilePicker
+              id="rfq-form-files"
               files={uploadFiles}
+              disabled={busy}
               onChange={(files) => {
+                const added = files.filter((file) => !uploadFiles.includes(file));
                 setUploadFiles(files);
-                void onUpload(files).finally(() => setUploadFiles([]));
+                setUploadError("");
+                if (added.length === 0) return;
+                void onUpload(added).then(
+                  (failed) =>
+                    setUploadFiles((current) =>
+                      current.filter((file) => !added.includes(file) || failed.includes(file)),
+                    ),
+                  (error) => setUploadError(extractApiError(error)),
+                );
               }}
               testId="rfq-form-files"
             />
-          </RfqField>
+            {uploadError && (
+              <p role="alert" className="text-sm text-destructive">
+                {uploadError}
+              </p>
+            )}
+            {uploadFiles.length > 0 && !busy && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  setUploadError("");
+                  void onUpload(uploadFiles).then(setUploadFiles, (error) =>
+                    setUploadError(extractApiError(error)),
+                  );
+                }}
+              >
+                {t("common.retry")}
+              </Button>
+            )}
+          </div>
           <p className="mt-2 text-xs text-muted-foreground">{t("rfq.uploadHelp")}</p>
         </fieldset>
         <Button type="submit" disabled={busy}>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { adminApi } from "@/services/adminApi";
+import { adminApi, type QuoteApprovalTemplates } from "@/services/adminApi";
 import { useI18n } from "@/lib/i18n";
 import { usePermissions } from "@/hooks/usePermissions";
 import { extractApiError } from "@/lib/apiError";
@@ -42,7 +42,7 @@ const TOKENS: Record<ApprovalTemplateKind, { name: string; descKey: string }[]> 
   ],
 };
 
-function pickTemplate(kind: ApprovalTemplateKind, templates: adminApi.QuoteApprovalTemplates) {
+function pickTemplate(kind: ApprovalTemplateKind, templates: QuoteApprovalTemplates) {
   return kind === "quoteDecision"
     ? { subject: templates.decisionSubject, body: templates.decisionBody }
     : { subject: templates.subject, body: templates.body };
@@ -97,15 +97,17 @@ export default function WorkPackageApprovalTemplateConfig({
     setError("");
     setSaved(false);
     try {
-      const result =
-        kind === "quote" || kind === "quoteDecision"
-          ? await adminApi.updateQuoteApprovalTemplate(
-              kind === "quoteDecision"
-                ? { decisionSubject: data.subject, decisionBody: data.body }
-                : { subject: data.subject, body: data.body },
-            )
-          : await adminApi.updateWorkPackageApprovalTemplate(data);
-      setData(pickTemplate(kind, result.data));
+      if (kind === "quote" || kind === "quoteDecision") {
+        const result = await adminApi.updateQuoteApprovalTemplate(
+          kind === "quoteDecision"
+            ? { decisionSubject: data.subject, decisionBody: data.body }
+            : { subject: data.subject, body: data.body },
+        );
+        setData(pickTemplate(kind, result.data));
+      } else {
+        const result = await adminApi.updateWorkPackageApprovalTemplate(data);
+        setData(result.data);
+      }
       setSaved(true);
     } catch (cause) {
       setError(extractApiError(cause));
