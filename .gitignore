@@ -10,6 +10,7 @@ nihomebackend.tests/bin/**
 nihomebackend.tests/obj/**
 .amazonq
 .agents
+/.codex/
 skills-lock.json
 # Graphify outputs are generated locally.
 /graphify-out/
