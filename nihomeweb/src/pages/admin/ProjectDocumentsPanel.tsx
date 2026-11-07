@@ -522,7 +522,7 @@ export default function ProjectDocumentsPanel({
               </SelectContent>
             </Select>
           </div>
-          <Button onClick={() => void upload()} disabled={uploading}>
+          <Button onClick={() => void upload()} disabled={uploading || files.length === 0}>
             {uploading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (

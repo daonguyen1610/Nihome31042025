@@ -6,6 +6,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -259,16 +260,18 @@ function RfqWorkspace({
       if (mounted.current) setBusy(false);
     }
   }
-  async function upload(files: File[]) {
-    if (busy || files.length === 0) return;
+  async function upload(files: File[]): Promise<File[]> {
+    if (busy || files.length === 0) return files;
     setBusy(true);
     setActionError("");
     const failed: string[] = [];
+    const failedFiles: File[] = [];
     try {
       for (const file of files) {
         try {
           await rfqApi.upload(projectId, file);
         } catch (e) {
+          failedFiles.push(file);
           failed.push(`${file.name}: ${extractApiError(e)}`);
         }
       }
@@ -280,6 +283,7 @@ function RfqWorkspace({
       if (mounted.current) setBusy(false);
     }
     if (failed.length > 0 && mounted.current) setActionError(failed.join(" · "));
+    return failedFiles;
   }
   async function openAward(event: MouseEvent<HTMLButtonElement>) {
     if (!detail || busy) return;
@@ -917,17 +921,42 @@ function RfqWorkspace({
                   >
                     {t("rfq.attach")}
                   </Button>
-                  <RfqField label={t("rfq.upload")}>
+                  <div className="grid min-w-0 gap-1.5">
+                    <Label htmlFor="rfq-files">{t("rfq.upload")}</Label>
                     <MultiFilePicker
+                      id="rfq-files"
                       files={uploadFiles}
                       onChange={(files) => {
+                        const added = files.filter((file) => !uploadFiles.includes(file));
                         setUploadFiles(files);
-                        void upload(files).finally(() => setUploadFiles([]));
+                        if (added.length === 0) return;
+                        void upload(added).then(
+                          (failed) =>
+                            setUploadFiles((current) =>
+                              current.filter(
+                                (file) => !added.includes(file) || failed.includes(file),
+                              ),
+                            ),
+                          (error) => setActionError(extractApiError(error)),
+                        );
                       }}
                       disabled={busy}
                       testId="rfq-files"
                     />
-                  </RfqField>
+                    {uploadFiles.length > 0 && !busy && (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          void upload(uploadFiles).then(setUploadFiles, (error) =>
+                            setActionError(extractApiError(error)),
+                          )
+                        }
+                      >
+                        {t("common.retry")}
+                      </Button>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{t("rfq.uploadHelp")}</p>
                 </div>
               )}

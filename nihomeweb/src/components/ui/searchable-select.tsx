@@ -34,6 +34,8 @@ export interface SearchableSelectProps {
   searchPlaceholder?: string;
   emptyText?: string;
   ariaLabel?: string;
+  "aria-invalid"?: React.AriaAttributes["aria-invalid"];
+  "aria-describedby"?: string;
   disabled?: boolean;
   className?: string;
   searchValue?: string;
@@ -62,6 +64,8 @@ export function SearchableSelect({
   searchPlaceholder,
   emptyText,
   ariaLabel,
+  "aria-invalid": ariaInvalid,
+  "aria-describedby": ariaDescribedBy,
   disabled,
   className,
   searchValue,
@@ -114,6 +118,8 @@ export function SearchableSelect({
           role="combobox"
           id={id}
           data-testid={testId}
+          aria-invalid={ariaInvalid}
+          aria-describedby={ariaDescribedBy}
           aria-required={required}
           aria-label={ariaLabel ?? placeholder}
           aria-expanded={open}

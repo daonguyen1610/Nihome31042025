@@ -162,5 +162,12 @@
   {"key": "workPackages.filters.allProjects", "category": "work-packages", "vi": "Tất cả dự án", "en": "All projects", "zh": "所有项目", "ja": "すべてのプロジェクト"},
   {"key": "workPackages.filters.allPurposes", "category": "work-packages", "vi": "Tất cả nghiệp vụ", "en": "All purposes", "zh": "所有业务", "ja": "すべての業務"},
   {"key": "workPackages.filters.clear", "category": "work-packages", "vi": "Xóa bộ lọc", "en": "Clear filters", "zh": "清除筛选", "ja": "絞り込みを解除"},
-  {"key":"workPackages.action.reopen","category":"work-packages","vi":"Mở lại: Đang thực hiện","en":"Reopen: In progress","zh":"重新打开：进行中","ja":"再開：進行中"}
+  {"key":"workPackages.action.reopen","category":"work-packages","vi":"Mở lại: Đang thực hiện","en":"Reopen: In progress","zh":"重新打开：进行中","ja":"再開：進行中"},
+  {"key":"workPackages.validation.name","category":"work-packages","vi":"Tên nhóm công việc: nhập từ 2 đến 300 ký tự.","en":"Package name: enter between 2 and 300 characters.","zh":"工作包名称：请输入 2 到 300 个字符。","ja":"作業パッケージ名: 2〜300 文字で入力してください。"},
+  {"key":"workPackages.validation.projectRequired","category":"work-packages","vi":"Dự án vận hành: chọn dự án cho nhóm công việc.","en":"Operational project: select a project for this work package.","zh":"运营项目：请选择此工作包所属的项目。","ja":"運用プロジェクト: 作業パッケージのプロジェクトを選択してください。"},
+  {"key":"workPackages.validation.departmentRequired","category":"work-packages","vi":"Phòng ban nhận việc: chọn phòng ban phụ trách.","en":"Receiving department: select the responsible department.","zh":"接收部门：请选择负责的部门。","ja":"受入部門: 担当部門を選択してください。"},
+  {"key":"workPackages.validation.leadRequired","category":"work-packages","vi":"Người chủ trì phòng: chọn người chủ trì thuộc phòng ban nhận việc.","en":"Department lead: select a lead from the receiving department.","zh":"部门负责人：请选择接收部门的负责人。","ja":"部門責任者: 受入部門の責任者を選択してください。"},
+  {"key":"workPackages.validation.datesRequired","category":"work-packages","vi":"Kế hoạch đấu thầu: chọn cả ngày bắt đầu và ngày kết thúc.","en":"Tender plan: select both a start date and an end date.","zh":"投标计划：请选择开始日期和结束日期。","ja":"入札計画: 開始日と終了日を選択してください。"},
+  {"key":"workPackages.validation.dateOrder","category":"work-packages","vi":"Ngày kết thúc: chọn ngày bằng hoặc sau ngày bắt đầu.","en":"End date: select a date on or after the start date.","zh":"结束日期：请选择开始日期当天或之后的日期。","ja":"終了日: 開始日以降の日付を選択してください。"},
+  {"key":"workPackages.validation.description","category":"work-packages","vi":"Mô tả: nhập tối đa 4.000 ký tự.","en":"Description: enter no more than 4,000 characters.","zh":"描述：请输入不超过 4,000 个字符。","ja":"説明: 4,000 文字以内で入力してください。"}
 ]

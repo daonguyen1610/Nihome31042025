@@ -54,7 +54,7 @@ import { useToast } from "@/hooks/use-toast";
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { useI18n } from "@/lib/i18n";
+import { translateError, useI18n } from "@/lib/i18n";
 import { isValidEmail } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import {
@@ -180,6 +180,14 @@ const DepartmentWorkPackages = () => {
   const [rows, setRows] = useState<DepartmentWorkPackageResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<DepartmentWorkPackageResponse | null>(null);
+  const originListPath = (location.state as { workPackageListPath?: string } | null)
+    ?.workPackageListPath;
+  const detailListPath =
+    originListPath &&
+    ["/admin/work-packages", ...subPages.map((page) => page.path)].includes(originListPath)
+      ? originListPath
+      : (subPages.find((page) => page.kind === detail?.kind)?.path ?? activeSubPage.path);
+  const detailBackTarget = `${detailListPath}${location.search}`;
   const [options, setOptions] = useState(emptyOptions);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
@@ -221,6 +229,14 @@ const DepartmentWorkPackages = () => {
   const [error, setError] = useState<string | null>(null);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [packageOpen, setPackageOpen] = useState(false);
+  const [packageTouched, setPackageTouched] = useState<Record<string, boolean>>({});
+  const [packageSaveError, setPackageSaveError] = useState<string | null>(null);
+  useEffect(() => {
+    if (!packageOpen) {
+      setPackageTouched({});
+      setPackageSaveError(null);
+    }
+  }, [packageOpen]);
   const [packageEditOpen, setPackageEditOpen] = useState(false);
   const [packageEditForm, setPackageEditForm] = useState<UpdateDepartmentWorkPackageRequest | null>(
     null,
@@ -631,24 +647,48 @@ const DepartmentWorkPackages = () => {
     setPackageOpen(true);
   };
 
+  const packageErrors: Record<string, string> = {};
+  if (packageForm.kind !== "Internal" && !packageForm.operationalProjectId)
+    packageErrors.project = t("workPackages.validation.projectRequired");
+  if (packageForm.kind === "Contract" && !packageForm.contractId)
+    packageErrors.contract = t("workPackages.validation.contractRequired");
+  if (packageForm.name.trim().length < 2 || packageForm.name.length > 300)
+    packageErrors.name = t("workPackages.validation.name");
+  if (!packageForm.departmentRoleGroupId)
+    packageErrors.department = t("workPackages.validation.departmentRequired");
+  if (!packageForm.leadUserId) packageErrors.lead = t("workPackages.validation.leadRequired");
+  if (packageForm.purpose === "TenderPlanning") {
+    if (!packageForm.plannedStart) packageErrors.start = t("workPackages.validation.datesRequired");
+    if (!packageForm.plannedEnd) packageErrors.end = t("workPackages.validation.datesRequired");
+  }
+  if (
+    packageForm.plannedStart &&
+    packageForm.plannedEnd &&
+    packageForm.plannedEnd < packageForm.plannedStart
+  )
+    packageErrors.end = t("workPackages.validation.dateOrder");
+  if ((packageForm.description?.length ?? 0) > 4000)
+    packageErrors.description = t("workPackages.validation.description");
+  const packageFieldProps = (field: string, required = false) => ({
+    htmlFor: `create-package-${field}`,
+    required,
+    error: packageTouched[field] ? packageErrors[field] : undefined,
+    onBlur: () => setPackageTouched((current) => ({ ...current, [field]: true })),
+  });
+  const packageControlProps = (field: string, required = false) => ({
+    id: `create-package-${field}`,
+    "aria-required": required || undefined,
+    "aria-invalid": (packageTouched[field] && Boolean(packageErrors[field])) || undefined,
+    "aria-describedby":
+      packageTouched[field] && packageErrors[field] ? `create-package-${field}-error` : undefined,
+  });
+
   const savePackage = async () => {
-    if (packageForm.kind === "Contract" && !packageForm.contractId) {
-      toast({ variant: "destructive", title: t("workPackages.validation.contractRequired") });
-      return;
-    }
-    if (
-      packageForm.name.trim().length < 2 ||
-      packageForm.name.length > 300 ||
-      !packageForm.departmentRoleGroupId ||
-      !packageForm.leadUserId ||
-      (packageForm.kind !== "Internal" && !packageForm.operationalProjectId) ||
-      (packageForm.purpose === "TenderPlanning" &&
-        (!packageForm.plannedStart || !packageForm.plannedEnd)) ||
-      (packageForm.plannedStart &&
-        packageForm.plannedEnd &&
-        packageForm.plannedEnd < packageForm.plannedStart)
-    ) {
-      toast({ variant: "destructive", title: t("workPackages.validation.package") });
+    setPackageSaveError(null);
+    const invalidFields = Object.keys(packageErrors);
+    if (invalidFields.length > 0) {
+      setPackageTouched(Object.fromEntries(invalidFields.map((field) => [field, true])));
+      document.getElementById(`create-package-${invalidFields[0]}`)?.focus();
       return;
     }
     setSaving(true);
@@ -658,10 +698,7 @@ const DepartmentWorkPackages = () => {
       toast({ title: t("workPackages.toast.created") });
       navigate(`/admin/work-packages/${response.data.id}`);
     } catch (cause) {
-      toast({
-        variant: "destructive",
-        title: extractApiError(cause, t("workPackages.error.save")),
-      });
+      setPackageSaveError(translateError(t, extractApiError(cause, t("workPackages.error.save"))));
     } finally {
       setSaving(false);
     }
@@ -1327,7 +1364,7 @@ const DepartmentWorkPackages = () => {
         onConfirm={confirmDelete}
         onCompleted={() => {
           setDeleteOpen(false);
-          navigate("/admin/work-packages");
+          navigate(detailBackTarget);
         }}
       />
       <div className="space-y-6" data-testid="work-packages-page">
@@ -1346,7 +1383,7 @@ const DepartmentWorkPackages = () => {
             <div className="flex min-w-0 flex-col gap-4" data-testid="work-package-detail-header">
               <div className="min-w-0 w-full space-y-2">
                 <Button variant="ghost" asChild className="-ml-3">
-                  <Link data-testid="work-package-back" to="/admin/work-packages">
+                  <Link data-testid="work-package-back" to={detailBackTarget}>
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     {t("workPackages.back")}
                   </Link>
@@ -2024,16 +2061,19 @@ const DepartmentWorkPackages = () => {
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {!loading &&
                 rows.map((item) => (
-                  <button
+                  <Link
                     key={item.id}
                     data-testid="work-package-card"
-                    type="button"
-                    className="rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm"
-                    onClick={() => navigate(`/admin/work-packages/${item.id}`)}
+                    to={`/admin/work-packages/${item.id}${location.search}`}
+                    state={{ workPackageListPath: location.pathname }}
+                    className="min-w-0 rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
                     <div className="flex items-start justify-between gap-2">
                       <Badge variant="outline">{item.code}</Badge>
-                      <Badge className={statusTone[item.status]} variant="outline">
+                      <Badge
+                        className={cn("shrink-0 whitespace-nowrap", statusTone[item.status])}
+                        variant="outline"
+                      >
                         {t(`workPackages.status.${item.status}`)}
                       </Badge>
                     </div>
@@ -2052,7 +2092,7 @@ const DepartmentWorkPackages = () => {
                       <strong>{item.progressPercent}%</strong>
                     </div>
                     <Progress value={item.progressPercent} className="mt-2" />
-                  </button>
+                  </Link>
                 ))}
               {!loading && rows.length === 0 && (
                 <div className="col-span-full rounded-xl border border-dashed p-12 text-center text-muted-foreground">
@@ -2089,7 +2129,7 @@ const DepartmentWorkPackages = () => {
 
       <Dialog open={packageOpen} onOpenChange={setPackageOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
-          <DialogHeader>
+          <DialogHeader className="pr-6">
             <DialogTitle>
               {packageForm.sourceQuoteId && packageForm.purpose === "ProcurementInputPricing"
                 ? t("workPackages.create.inputPriceForQuote", { quote: packageForm.sourceQuoteId })
@@ -2106,7 +2146,7 @@ const DepartmentWorkPackages = () => {
             </p>
           )}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t("workPackages.field.type")}>
+            <Field label={t("workPackages.field.type")} {...packageFieldProps("type")}>
               <Select
                 value={packageForm.kind}
                 onValueChange={(value: WorkPackageKind) =>
@@ -2125,7 +2165,7 @@ const DepartmentWorkPackages = () => {
                   }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger {...packageControlProps("type")}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -2138,7 +2178,7 @@ const DepartmentWorkPackages = () => {
               </Select>
             </Field>
             {packageForm.kind === "Project" && (
-              <Field label={t("workPackages.field.purpose")}>
+              <Field label={t("workPackages.field.purpose")} {...packageFieldProps("purpose")}>
                 <Select
                   disabled={packageForm.sourceTenderId != null || packageForm.sourceQuoteId != null}
                   value={packageForm.purpose}
@@ -2159,7 +2199,10 @@ const DepartmentWorkPackages = () => {
                     }));
                   }}
                 >
-                  <SelectTrigger data-testid="work-package-purpose">
+                  <SelectTrigger
+                    {...packageControlProps("purpose")}
+                    data-testid="work-package-purpose"
+                  >
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -2183,7 +2226,10 @@ const DepartmentWorkPackages = () => {
               </Field>
             )}
             {packageForm.kind !== "Internal" && (
-              <Field label={t("workPackages.field.project")}>
+              <Field
+                label={t("workPackages.field.project")}
+                {...packageFieldProps("project", true)}
+              >
                 <Select
                   disabled={packageForm.sourceTenderId != null || packageForm.sourceQuoteId != null}
                   value={packageForm.operationalProjectId?.toString() ?? ""}
@@ -2195,7 +2241,10 @@ const DepartmentWorkPackages = () => {
                     }))
                   }
                 >
-                  <SelectTrigger data-testid="work-package-project">
+                  <SelectTrigger
+                    {...packageControlProps("project", true)}
+                    data-testid="work-package-project"
+                  >
                     <SelectValue placeholder={t("workPackages.placeholder.project")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -2209,7 +2258,10 @@ const DepartmentWorkPackages = () => {
               </Field>
             )}
             {packageForm.kind === "Contract" && (
-              <Field label={t("workPackages.field.requiredContract")}>
+              <Field
+                label={t("workPackages.field.requiredContract")}
+                {...packageFieldProps("contract", true)}
+              >
                 <Select
                   value={packageForm.contractId?.toString() ?? ""}
                   onValueChange={(value) =>
@@ -2219,7 +2271,7 @@ const DepartmentWorkPackages = () => {
                     }))
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger {...packageControlProps("contract", true)}>
                     <SelectValue placeholder={t("workPackages.placeholder.contract")} />
                   </SelectTrigger>
                   <SelectContent>
@@ -2232,8 +2284,13 @@ const DepartmentWorkPackages = () => {
                 </Select>
               </Field>
             )}
-            <Field label={t("workPackages.field.name")} className="sm:col-span-2">
+            <Field
+              label={t("workPackages.field.name")}
+              {...packageFieldProps("name", true)}
+              className="sm:col-span-2"
+            >
               <Input
+                {...packageControlProps("name", true)}
                 data-testid="work-package-name"
                 maxLength={300}
                 value={packageForm.name}
@@ -2242,7 +2299,10 @@ const DepartmentWorkPackages = () => {
                 }
               />
             </Field>
-            <Field label={t("workPackages.field.department")}>
+            <Field
+              label={t("workPackages.field.department")}
+              {...packageFieldProps("department", true)}
+            >
               <Select
                 disabled={
                   packageForm.purpose !== "General" && packageForm.purpose !== "TenderPlanning"
@@ -2262,7 +2322,10 @@ const DepartmentWorkPackages = () => {
                   }))
                 }
               >
-                <SelectTrigger data-testid="work-package-department">
+                <SelectTrigger
+                  {...packageControlProps("department", true)}
+                  data-testid="work-package-department"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -2274,9 +2337,11 @@ const DepartmentWorkPackages = () => {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label={t("workPackages.field.lead")}>
+            <Field label={t("workPackages.field.lead")} {...packageFieldProps("lead", true)}>
               <div data-testid="work-package-lead">
                 <SearchableSelect
+                  {...packageControlProps("lead", true)}
+                  required
                   value={packageForm.leadUserId ? String(packageForm.leadUserId) : ""}
                   onChange={(value) =>
                     setPackageForm((current) => ({ ...current, leadUserId: Number(value) }))
@@ -2300,8 +2365,12 @@ const DepartmentWorkPackages = () => {
                 />
               </Field>
             )}
-            <Field label={t("workPackages.field.start")}>
+            <Field
+              label={t("workPackages.field.start")}
+              {...packageFieldProps("start", packageForm.purpose === "TenderPlanning")}
+            >
               <Input
+                {...packageControlProps("start", packageForm.purpose === "TenderPlanning")}
                 data-testid="work-package-start"
                 type="date"
                 value={dateValue(packageForm.plannedStart)}
@@ -2313,8 +2382,12 @@ const DepartmentWorkPackages = () => {
                 }
               />
             </Field>
-            <Field label={t("workPackages.field.end")}>
+            <Field
+              label={t("workPackages.field.end")}
+              {...packageFieldProps("end", packageForm.purpose === "TenderPlanning")}
+            >
               <Input
+                {...packageControlProps("end", packageForm.purpose === "TenderPlanning")}
                 data-testid="work-package-end"
                 type="date"
                 value={dateValue(packageForm.plannedEnd)}
@@ -2326,8 +2399,13 @@ const DepartmentWorkPackages = () => {
                 }
               />
             </Field>
-            <Field label={t("workPackages.field.description")} className="sm:col-span-2">
+            <Field
+              label={t("workPackages.field.description")}
+              {...packageFieldProps("description")}
+              className="sm:col-span-2"
+            >
               <Textarea
+                {...packageControlProps("description")}
                 maxLength={4000}
                 value={packageForm.description ?? ""}
                 onChange={(event) =>
@@ -2336,6 +2414,11 @@ const DepartmentWorkPackages = () => {
               />
             </Field>
           </div>
+          {packageSaveError && (
+            <p role="alert" className="text-sm text-destructive">
+              {packageSaveError}
+            </p>
+          )}
           <DialogFooter>
             <Button variant="outline" onClick={() => setPackageOpen(false)}>
               {t("common.cancel")}
@@ -3014,15 +3097,33 @@ const Field = ({
   children,
   className = "",
   htmlFor,
+  required = false,
+  error,
+  onBlur,
 }: {
   label: string;
   children: React.ReactNode;
   className?: string;
   htmlFor?: string;
+  required?: boolean;
+  error?: string;
+  onBlur?: () => void;
 }) => (
-  <div className={`min-w-0 space-y-2 ${className}`}>
-    <Label htmlFor={htmlFor}>{label}</Label>
+  <div className={`min-w-0 space-y-2 ${className}`} onBlur={onBlur}>
+    <Label htmlFor={htmlFor}>
+      {label}
+      {required && (
+        <span aria-hidden="true" className="ml-1 text-destructive">
+          *
+        </span>
+      )}
+    </Label>
     {children}
+    {error && (
+      <p id={`${htmlFor}-error`} role="alert" className="text-sm text-destructive">
+        {error}
+      </p>
+    )}
   </div>
 );
 const ChoiceGrid = ({

@@ -330,6 +330,11 @@ specialist screens; a general package can coordinate work for those departments.
 The Project and Opportunity screens also provide **Assign department work** shortcuts.
 Contract work also requires a contract from that project. Linking a contract
 later moves the package to the Contract tab without creating or moving the Project.
+Creation marks required fields and shows validation beside each field. On
+submission, focus moves to the first invalid field; correct it and retry without
+re-entering the draft. Opening a package from a list preserves that section,
+search and filters for **Back** and the return after deletion. Direct detail
+links return to the package's Project, Contract or Internal section.
 On the package detail page, **Edit** changes the name, description and planned
 dates. General Project packages may also change the optional same-project
 contract. The shared Project and receiving department stay fixed.
@@ -1046,6 +1051,10 @@ Design project. New roles use the Design module automatically; no RACI scope
 selection is needed. Existing shared-project roles remain visible and unchanged
 when editing from this tab. The Operational Project team screen retains its
 broader scope controls.
+Assignment comments preserve unsent text when sending fails and show connection
+guidance in the selected language. **Delete comment** opens a confirmation with
+the comment text; cancel leaves it unchanged, and a failed deletion stays open
+for retry.
 Each Design flow has at most one active Design Manager and one active Design
 Lead. Assigning or removing either role in **Team** updates the names in the
 Design overview and edit form. Editing those people in the Design project form
@@ -1591,6 +1600,10 @@ currency, manual exchange rate to VND, freight, discount, VAT and immutable
 revision history. Missing prices differ from zero and inactive vendors receive
 no lowest-price highlight. Vendors can download attached RFQ package documents;
 partial quotations can participate only for the lines they actually quote.
+Upload controls show both file-count and size limits, keep filenames readable
+on narrow screens and pause selection while an upload is in progress. Failed
+RFQ uploads remain selected for **Retry** or removal; successful files are not
+uploaded again when a failed selection is removed or retried.
 
 During evaluation, Procurement records the commercial score and evidence. The
 matrix combines it with price, delivery time and approved vendor-rating weights.

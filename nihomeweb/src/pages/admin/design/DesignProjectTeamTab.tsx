@@ -25,6 +25,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -356,6 +366,12 @@ const AssignmentComments = ({
   const [body, setBody] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] =
+    useState<OperationalProjectAssignmentCommentResponse | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const deleteTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const commentsToggleRef = useRef<HTMLButtonElement>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -397,14 +413,16 @@ const AssignmentComments = ({
       setBody("");
       await load();
     } catch (submitError) {
-      setError(extractApiError(submitError));
+      setError(translateError(t, extractApiError(submitError, t("common.error"))));
     } finally {
       setSaving(false);
     }
   };
 
   const remove = async (comment: OperationalProjectAssignmentCommentResponse) => {
-    if (!window.confirm(t("designProjects.team.comments.confirmDelete"))) return;
+    if (deleting) return;
+    setDeleting(true);
+    setDeleteError(null);
     try {
       await adminApi.deleteOperationalProjectAssignmentComment(
         operationalProjectId,
@@ -413,9 +431,12 @@ const AssignmentComments = ({
         designProjectId,
       );
       toast({ title: t("designProjects.team.comments.deleted") });
+      setPendingDelete(null);
       await load();
     } catch (deleteError) {
-      setError(extractApiError(deleteError));
+      setDeleteError(translateError(t, extractApiError(deleteError, t("common.error"))));
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -426,7 +447,51 @@ const AssignmentComments = ({
 
   return (
     <div className="mt-2">
+      <AlertDialog
+        open={pendingDelete !== null}
+        onOpenChange={(open) => {
+          if (!open && !deleting) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent
+          className="max-h-[90vh] overflow-y-auto"
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+            const target = deleteTriggerRef.current?.isConnected
+              ? deleteTriggerRef.current
+              : commentsToggleRef.current;
+            target?.focus();
+          }}
+        >
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("designProjects.team.comments.delete")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("designProjects.team.comments.confirmDelete")}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <p className="whitespace-pre-wrap break-words text-sm">{pendingDelete?.body}</p>
+          {deleteError && (
+            <p role="alert" className="text-sm text-destructive">
+              {deleteError}
+            </p>
+          )}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={(event) => {
+                event.preventDefault();
+                if (pendingDelete) void remove(pendingDelete);
+              }}
+            >
+              {deleting ? t("common.loading") : t("common.delete")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <Button
+        ref={commentsToggleRef}
         type="button"
         variant="ghost"
         size="sm"
@@ -449,7 +514,7 @@ const AssignmentComments = ({
           ) : loadError ? (
             <div className="space-y-2">
               <p role="alert" className="text-sm text-rose-600">
-                {loadError}
+                {translateError(t, loadError)}
               </p>
               <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
                 {t("common.retry")}
@@ -486,7 +551,11 @@ const AssignmentComments = ({
                       size="icon"
                       className="h-8 w-8 shrink-0"
                       aria-label={t("designProjects.team.comments.delete")}
-                      onClick={() => void remove(comment)}
+                      onClick={(event) => {
+                        deleteTriggerRef.current = event.currentTarget;
+                        setDeleteError(null);
+                        setPendingDelete(comment);
+                      }}
                     >
                       <Trash2 className="h-4 w-4 text-rose-600" />
                     </Button>
@@ -505,14 +574,12 @@ const AssignmentComments = ({
               disabled={saving}
               aria-label={t("designProjects.team.comments.placeholder")}
             />
-            <div className="flex items-center justify-between gap-2">
-              {error ? (
-                <p role="alert" className="text-sm text-rose-600">
-                  {error}
-                </p>
-              ) : (
-                <span />
-              )}
+            {error && (
+              <p role="alert" className="text-sm text-rose-600">
+                {error}
+              </p>
+            )}
+            <div className="flex justify-end">
               <Button type="submit" size="sm" disabled={saving || !body.trim()}>
                 {saving ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />
