@@ -50,20 +50,21 @@ public class IfcReleasesController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.View, ct)) return NotFound();
 
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
 
     [HttpPost]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> Create(
         [FromBody] CreateIfcReleaseRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, request.DesignProjectId, ct))
+        if (!await projectAccess.HasDesignProjectPermissionAsync(
+            userId.Value, request.DesignProjectId, DesignProjectAction.Create, ct))
             return NotFound();
         try
         {
@@ -85,13 +86,13 @@ public class IfcReleasesController(
     }
 
     [HttpPut("{id:int}")]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> Update(
         int id, [FromBody] UpdateIfcReleaseRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -113,24 +114,24 @@ public class IfcReleasesController(
     }
 
     [HttpGet("{id:int}/deletion-impact")]
-    [RequirePermission("design.records", "hard-delete")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
         var impact = await deletion.GetImpactAsync(DesignProjectResourceType.IfcRelease, id, ct);
         return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpDelete("{id:int}")]
-    [RequirePermission("design.records", "hard-delete")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<IActionResult> Delete(
         int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
 
         try
         {
@@ -161,7 +162,7 @@ public class IfcReleasesController(
     }
 
     [HttpPost("{id:int}/items")]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> AddItems(
         int id, [FromBody] AddIfcReleaseItemsRequest request, CancellationToken ct)
     {
@@ -195,7 +196,7 @@ public class IfcReleasesController(
     }
 
     [HttpDelete("{id:int}/items/{itemId:int}")]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> RemoveItem(
         int id, int itemId, CancellationToken ct)
     {
@@ -217,13 +218,13 @@ public class IfcReleasesController(
     }
 
     [HttpPost("{id:int}/recipients")]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> AddRecipient(
         int id, [FromBody] AddIfcReleaseRecipientRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
         try
         {
             var response = await svc.AddRecipientAsync(id, request, userId.Value, ct);
@@ -236,7 +237,7 @@ public class IfcReleasesController(
     }
 
     [HttpDelete("{id:int}/recipients/{recipientId:int}")]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> RemoveRecipient(
         int id, int recipientId, CancellationToken ct)
     {
@@ -258,7 +259,7 @@ public class IfcReleasesController(
     }
 
     [HttpPost("{id:int}/recipients/{recipientId:int}/acknowledge")]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> AcknowledgeRecipient(
         int id, int recipientId,
         [FromBody] AcknowledgeIfcReleaseRecipientRequest request, CancellationToken ct)
@@ -323,7 +324,7 @@ public class IfcReleasesController(
     }
 
     [HttpPost("{id:int}/cancel")]
-    [RequirePermission("design.ifc", "manage")]
+    [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseResponse>> Cancel(int id, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -356,16 +357,17 @@ public class IfcReleasesController(
         return int.TryParse(raw, out var id) ? id : null;
     }
 
-    private async Task<bool> CanAccessAsync(int userId, int id, bool manage, CancellationToken ct)
+    private async Task<bool> CanAccessAsync(
+        int userId, int id, DesignProjectAction action, CancellationToken ct)
     {
         var projectId = await projectAccess.ResolveDesignProjectIdAsync(
             DesignProjectResourceType.IfcRelease, id, ct);
         if (!projectId.HasValue) return false;
-
-        return manage
-            ? await projectAccess.CanManageDesignProjectAsync(userId, projectId.Value, ct)
-            : await projectAccess.CanViewDesignResourceAsync(
-                userId, DesignProjectResourceType.IfcRelease, id, ct);
+        return action == DesignProjectAction.View
+            ? await projectAccess.CanViewDesignResourceAsync(
+                userId, DesignProjectResourceType.IfcRelease, id, ct)
+            : await projectAccess.CanWriteDesignResourceAsync(
+                userId, DesignProjectResourceType.IfcRelease, id, action, ct);
     }
 
     private async Task<int?> GetManagedProjectIdAsync(int userId, int id, CancellationToken ct)
@@ -373,7 +375,8 @@ public class IfcReleasesController(
         var projectId = await projectAccess.ResolveDesignProjectIdAsync(
             DesignProjectResourceType.IfcRelease, id, ct);
         return projectId.HasValue &&
-            await projectAccess.CanManageDesignProjectAsync(userId, projectId.Value, ct)
+            await projectAccess.HasDesignProjectPermissionAsync(
+                userId, projectId.Value, DesignProjectAction.Update, ct)
             ? projectId
             : null;
     }

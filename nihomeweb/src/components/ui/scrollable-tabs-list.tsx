@@ -47,13 +47,13 @@ export function ScrollableTabsList({
   };
 
   return (
-    <div className="relative flex min-w-0 items-center">
+    <div className="flex min-w-0 items-center gap-1">
       {canScrollLeft ? (
         <Button
           type="button"
           variant="secondary"
           size="icon"
-          className="absolute left-1 z-10 h-8 w-8 rounded-full shadow"
+          className="h-8 w-8 shrink-0 rounded-full shadow"
           aria-label={previousLabel}
           data-testid="scrollable-tabs-previous"
           onClick={() => scroll(-1)}
@@ -78,7 +78,7 @@ export function ScrollableTabsList({
           type="button"
           variant="secondary"
           size="icon"
-          className="absolute right-1 z-10 h-8 w-8 rounded-full shadow"
+          className="h-8 w-8 shrink-0 rounded-full shadow"
           aria-label={nextLabel}
           data-testid="scrollable-tabs-next"
           onClick={() => scroll(1)}

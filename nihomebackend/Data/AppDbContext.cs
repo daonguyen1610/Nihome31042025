@@ -104,6 +104,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProject> OperationalProjects => Set<OperationalProject>();
     public DbSet<OperationalProjectMember> OperationalProjectMembers => Set<OperationalProjectMember>();
     public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
+    public DbSet<DesignProjectMemberPermission> DesignProjectMemberPermissions => Set<DesignProjectMemberPermission>();
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
     public DbSet<OperationalProjectAssignmentAttachment> OperationalProjectAssignmentAttachments => Set<OperationalProjectAssignmentAttachment>();
     public DbSet<OperationalProjectAssignmentComment> OperationalProjectAssignmentComments => Set<OperationalProjectAssignmentComment>();
@@ -2259,6 +2260,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(role => role.MemberId).OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(role => new { role.MemberId, role.RoleCode, role.Scope, role.ScopeValue })
                 .IsUnique().HasFilter("[EndedAt] IS NULL");
+        });
+
+        modelBuilder.Entity<DesignProjectMemberPermission>(b =>
+        {
+            b.ToTable("design_project_member_permissions");
+            b.HasKey(permission => permission.Id);
+            b.HasOne(permission => permission.Member).WithOne(member => member.DesignPermission)
+                .HasForeignKey<DesignProjectMemberPermission>(permission => permission.MemberId)
+                .OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(permission => permission.MemberId).IsUnique();
         });
 
         modelBuilder.Entity<OperationalProjectAssignment>(b =>

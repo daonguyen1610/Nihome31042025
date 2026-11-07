@@ -115,9 +115,10 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
-  const canManage = has(ADMIN_PERMS.designBasicManage);
-  const canApprove = has(ADMIN_PERMS.designBasicApprove);
-  const canUnlock = has(ADMIN_PERMS.designProjectsManage);
+  const effective = project.effectivePermissions;
+  const canManage = effective?.canUpdate ?? has(ADMIN_PERMS.designBasicManage);
+  const canApprove = canManage && has(ADMIN_PERMS.designBasicApprove);
+  const canUnlock = canManage && has(ADMIN_PERMS.designBasicApprove);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = canManage;
   const {
@@ -125,13 +126,14 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
     error: ownersError,
     loading: ownersLoading,
   } = useDesignTeamOwners(project, canPickOwner);
-  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
+  const canDeleteAction = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
+  const canHardDelete = canDeleteAction;
   const [searchParams] = useSearchParams();
   const focusedDocumentId = Number(searchParams.get("documentId"));
 
   const isConceptStage = project.currentStage === "Concept";
   const isBasicStage = project.currentStage === "BasicDesign";
-  const canDelete = canManage && !isConceptStage;
+  const canDelete = canDeleteAction && !isConceptStage;
   const isLocked = !isBasicStage; // read-only when Concept (locked before) or Shop/Completed (locked after)
 
   const [rows, setRows] = useState<BasicDesignDocResponse[]>([]);

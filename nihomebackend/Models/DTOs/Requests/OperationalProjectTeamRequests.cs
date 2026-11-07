@@ -36,6 +36,14 @@ public sealed class ProjectMemberRoleRequest
     public string? ScopeValue { get; set; }
 }
 
+public sealed class UpdateDesignProjectMemberPermissionsRequest
+{
+    public bool CanView { get; set; }
+    public bool CanCreate { get; set; }
+    public bool CanUpdate { get; set; }
+    public bool CanDelete { get; set; }
+}
+
 public sealed class UpsertOperationalProjectAssignmentRequest : IConcurrencyRequest
 {
     [Range(1, int.MaxValue)]

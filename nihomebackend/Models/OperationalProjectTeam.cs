@@ -23,6 +23,28 @@ public class OperationalProjectMember : IConcurrencyTracked
     public byte[] RowVersion { get; set; } = [];
     public List<OperationalProjectMemberRole> Roles { get; set; } = new();
     public List<OperationalProjectAssignment> Assignments { get; set; } = new();
+    public DesignProjectMemberPermission? DesignPermission { get; set; }
+}
+
+/// <summary>
+/// Per-member View/Create/Update/Delete rights for a design dossier. The design
+/// lead/manager edits these from the Members tab so dossier rights no longer
+/// depend on an administrator granting global permission codes. Approvals and
+/// IFC release stay role-based.
+/// </summary>
+public class DesignProjectMemberPermission
+{
+    public int Id { get; set; }
+    public int MemberId { get; set; }
+    public OperationalProjectMember Member { get; set; } = null!;
+    public bool CanView { get; set; }
+    public bool CanCreate { get; set; }
+    public bool CanUpdate { get; set; }
+    public bool CanDelete { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public int CreatedByUserId { get; set; }
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public int UpdatedByUserId { get; set; }
 }
 
 public class OperationalProjectMemberRole

@@ -38,6 +38,7 @@ export interface DesignProjectResponse {
   note?: string | null;
   createdAt: string;
   updatedAt: string;
+  effectivePermissions?: DesignProjectMemberPermissionsResponse | null;
 }
 
 export interface DesignProjectListItemResponse {
@@ -382,8 +383,18 @@ export interface OperationalProjectMemberResponse {
   source: string;
   sourceReference?: string | null;
   roles: ProjectMemberRoleResponse[];
+  designPermissions?: DesignProjectMemberPermissionsResponse | null;
   rowVersion: string;
 }
+
+export interface DesignProjectMemberPermissionsResponse {
+  canView: boolean;
+  canCreate: boolean;
+  canUpdate: boolean;
+  canDelete: boolean;
+}
+
+export type UpdateDesignProjectMemberPermissionsRequest = DesignProjectMemberPermissionsResponse;
 
 export interface OperationalProjectAssignmentResponse {
   id: number;

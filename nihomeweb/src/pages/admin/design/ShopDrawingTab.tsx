@@ -126,8 +126,9 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
-  const canManage = has(ADMIN_PERMS.designShopManage);
-  const canApprove = has(ADMIN_PERMS.designShopApprove);
+  const effective = project.effectivePermissions;
+  const canManage = effective?.canUpdate ?? has(ADMIN_PERMS.designShopManage);
+  const canApprove = canManage && has(ADMIN_PERMS.designShopApprove);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
   const canPickOwner = canManage;
   const {
@@ -135,13 +136,14 @@ export const ShopDrawingTab = ({ project }: Props) => {
     error: ownersError,
     loading: ownersLoading,
   } = useDesignTeamOwners(project, canPickOwner);
-  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
+  const canDeleteAction = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
+  const canHardDelete = canDeleteAction;
   const [searchParams] = useSearchParams();
   const focusedDocumentId = Number(searchParams.get("documentId"));
 
   const isShopStage = project.currentStage === "ShopDrawing";
   const isBeforeShop = project.currentStage === "Concept" || project.currentStage === "BasicDesign";
-  const canDelete = canManage && !isBeforeShop;
+  const canDelete = canDeleteAction && !isBeforeShop;
 
   const [rows, setRows] = useState<ShopDrawingResponse[]>([]);
   const [statusCounts, setStatusCounts] = useState<Partial<Record<ShopDrawingStatus, number>>>({});

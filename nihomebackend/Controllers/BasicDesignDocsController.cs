@@ -55,7 +55,7 @@ public class BasicDesignDocsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await projectAccess.CanViewDesignResourceAsync(userId.Value, DesignProjectResourceType.BasicDesignDoc, id, ct)) return NotFound();
 
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
@@ -67,7 +67,7 @@ public class BasicDesignDocsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await projectAccess.CanViewDesignResourceAsync(userId.Value, DesignProjectResourceType.BasicDesignDoc, id, ct)) return NotFound();
 
         var content = await svc.GetContentAsync(id, ct);
         return content is null
@@ -76,14 +76,14 @@ public class BasicDesignDocsController(
     }
 
     [HttpPost]
-    [RequirePermission("design.basic", "manage")]
+    [RequirePermission("design.basic", "view")]
     public async Task<ActionResult<BasicDesignDocResponse>> Create(
         [FromBody] CreateBasicDesignDocRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.CanManageDesignProjectAsync(
-            userId.Value, request.DesignProjectId, ct, request.DisciplineCode))
+        if (!await projectAccess.HasDesignProjectPermissionAsync(
+            userId.Value, request.DesignProjectId, DesignProjectAction.Create, ct, request.DisciplineCode))
             return NotFound();
         try
         {
@@ -105,13 +105,13 @@ public class BasicDesignDocsController(
     }
 
     [HttpPut("{id:int}")]
-    [RequirePermission("design.basic", "manage")]
+    [RequirePermission("design.basic", "view")]
     public async Task<ActionResult<BasicDesignDocResponse>> Update(
         int id, [FromBody] UpdateBasicDesignDocRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -133,24 +133,24 @@ public class BasicDesignDocsController(
     }
 
     [HttpGet("{id:int}/deletion-impact")]
-    [RequirePermission("design.records", "hard-delete")]
+    [RequirePermission("design.basic", "view")]
     public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
         var impact = await deletion.GetImpactAsync(DesignProjectResourceType.BasicDesignDoc, id, ct);
         return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpDelete("{id:int}")]
-    [RequirePermission("design.records", "hard-delete")]
+    [RequirePermission("design.basic", "view")]
     public async Task<IActionResult> Delete(
         int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
 
         try
         {
@@ -186,7 +186,7 @@ public class BasicDesignDocsController(
     /// <c>design.basic.approve</c> permission.
     /// </summary>
     [HttpPost("{id:int}/status")]
-    [RequirePermission("design.basic", "manage")]
+    [RequirePermission("design.basic", "view")]
     public async Task<ActionResult<BasicDesignDocResponse>> Transition(
         int id, [FromBody] TransitionBasicDesignDocStatusRequest request, CancellationToken ct)
     {
@@ -195,8 +195,8 @@ public class BasicDesignDocsController(
         var projectId = await projectAccess.ResolveDesignProjectIdAsync(
             DesignProjectResourceType.BasicDesignDoc, id, ct);
         if (!projectId.HasValue ||
-            !await projectAccess.CanManageDesignResourceAsync(
-                userId.Value, DesignProjectResourceType.BasicDesignDoc, id, ct))
+            !await projectAccess.CanWriteDesignResourceAsync(
+                userId.Value, DesignProjectResourceType.BasicDesignDoc, id, DesignProjectAction.Update, ct))
             return NotFound();
 
         if (string.Equals(request.Status, "InternallyApproved", StringComparison.OrdinalIgnoreCase) &&
@@ -236,13 +236,13 @@ public class BasicDesignDocsController(
     /// </summary>
     [HttpPost("{id:int}/upload")]
     [Consumes("multipart/form-data")]
-    [RequirePermission("design.basic", "manage")]
+    [RequirePermission("design.basic", "view")]
     public async Task<ActionResult<BasicDesignDocResponse>> UploadFile(
         int id, [FromForm] IFormFile file, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
 
         if (file.Length == 0 || file.Length > MaxFileSizeBytes)
             return BadRequest(new { message = "File size must be between 1 byte and 20 MB." });
@@ -275,7 +275,7 @@ public class BasicDesignDocsController(
     /// Blocked when the 3-discipline readiness gate is not met.
     /// </summary>
     [HttpPost("design-project/{projectId:int}/unlock-shop-drawing")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     public async Task<ActionResult<DesignProjectResponse>> UnlockShopDrawing(int projectId, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -308,16 +308,13 @@ public class BasicDesignDocsController(
         return int.TryParse(raw, out var id) ? id : null;
     }
 
-    private async Task<bool> CanAccessAsync(int userId, int id, bool manage, CancellationToken ct)
+    private async Task<bool> CanAccessAsync(
+        int userId, int id, DesignProjectAction action, CancellationToken ct)
     {
         var projectId = await projectAccess.ResolveDesignProjectIdAsync(
             DesignProjectResourceType.BasicDesignDoc, id, ct);
         if (!projectId.HasValue) return false;
-
-        return manage
-            ? await projectAccess.CanManageDesignResourceAsync(
-                userId, DesignProjectResourceType.BasicDesignDoc, id, ct)
-            : await projectAccess.CanViewDesignResourceAsync(
-                userId, DesignProjectResourceType.BasicDesignDoc, id, ct);
+        return await projectAccess.CanWriteDesignResourceAsync(
+            userId, DesignProjectResourceType.BasicDesignDoc, id, action, ct);
     }
 }

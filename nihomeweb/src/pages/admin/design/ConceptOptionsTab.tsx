@@ -109,9 +109,12 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
-  const canManage = has(ADMIN_PERMS.designConceptsManage);
-  const canFinalize = has(ADMIN_PERMS.designConceptsFinalize);
-  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
+  const effective = project.effectivePermissions;
+  const canCreate = effective?.canCreate ?? has(ADMIN_PERMS.designConceptsManage);
+  const canUpdate = effective?.canUpdate ?? has(ADMIN_PERMS.designConceptsManage);
+  const canManage = canUpdate;
+  const canFinalize = canUpdate && has(ADMIN_PERMS.designConceptsFinalize);
+  const canHardDelete = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
   const canPickOwner = canManage;
   const {
     options: userOptions,
@@ -381,7 +384,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
           <Button variant="outline" className="min-h-11" onClick={onOpenReviews}>
             {t("designProjects.detail.tab.reviews")}
           </Button>
-          {canManage && !isLocked ? (
+          {canCreate && !isLocked ? (
             <Button className="min-h-11" onClick={openCreate}>
               <Plus className="mr-1 h-4 w-4" />
               {t("concepts.new")}

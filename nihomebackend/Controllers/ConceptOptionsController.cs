@@ -30,66 +30,66 @@ public class ConceptOptionsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.View, ct)) return NotFound();
         return Ok(await dossier.ListAsync(id, ct));
     }
 
     [HttpPost("{id:int}/revisions")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     [Idempotency("design.concept.revision", requireKey: true)]
     public Task<ActionResult<ConceptRevisionResponse>> CreateRevision(int id, CancellationToken ct) =>
-        ChangeDossier(id, (userId) => dossier.CreateRevisionAsync(id, userId, ct), ct);
+        ChangeDossier(id, DesignProjectAction.Create, (userId) => dossier.CreateRevisionAsync(id, userId, ct), ct);
 
     [HttpPost("{id:int}/revisions/{revisionId:int}/artifacts")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     [Idempotency("design.concept.artifact", requireKey: true)]
     public Task<ActionResult<ConceptRevisionResponse>> AddArtifact(
         int id, int revisionId, [FromBody] AddConceptArtifactRequest request, CancellationToken ct) =>
-        ChangeDossier(id, (userId) => dossier.AddArtifactAsync(id, revisionId, request, userId, ct), ct);
+        ChangeDossier(id, DesignProjectAction.Create, (userId) => dossier.AddArtifactAsync(id, revisionId, request, userId, ct), ct);
 
     [HttpDelete("{id:int}/revisions/{revisionId:int}/artifacts/{artifactId:int}")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     public Task<ActionResult<ConceptRevisionResponse>> RemoveArtifact(
         int id, int revisionId, int artifactId, CancellationToken ct) =>
-        ChangeDossier(id, (userId) => dossier.RemoveArtifactAsync(id, revisionId, artifactId, userId, ct), ct);
+        ChangeDossier(id, DesignProjectAction.Delete, (userId) => dossier.RemoveArtifactAsync(id, revisionId, artifactId, userId, ct), ct);
 
     [HttpPost("{id:int}/revisions/{revisionId:int}/waivers")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     [Idempotency("design.concept.waiver", requireKey: true)]
     public Task<ActionResult<ConceptRevisionResponse>> Waive(
         int id, int revisionId, [FromBody] WaiveConceptChecklistRequest request, CancellationToken ct) =>
-        ChangeDossier(id, (userId) => dossier.WaiveAsync(id, revisionId, request, userId, ct), ct);
+        ChangeDossier(id, DesignProjectAction.Update, (userId) => dossier.WaiveAsync(id, revisionId, request, userId, ct), ct);
 
     [HttpDelete("{id:int}/revisions/{revisionId:int}/waivers/{kind}")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     public Task<ActionResult<ConceptRevisionResponse>> RemoveWaiver(
         int id, int revisionId, string kind, CancellationToken ct)
     {
         if (!Enum.TryParse<ConceptArtifactKind>(kind, true, out var parsed) || !Enum.IsDefined(parsed))
             return Task.FromResult<ActionResult<ConceptRevisionResponse>>(BadRequest(new { message = "Hạng mục checklist không hợp lệ." }));
-        return ChangeDossier(id, (userId) => dossier.RemoveWaiverAsync(id, revisionId, parsed, userId, ct), ct);
+        return ChangeDossier(id, DesignProjectAction.Delete, (userId) => dossier.RemoveWaiverAsync(id, revisionId, parsed, userId, ct), ct);
     }
 
     [HttpPost("{id:int}/revisions/{revisionId:int}/feedback")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     [Idempotency("design.concept.feedback", requireKey: true)]
     public Task<ActionResult<ConceptRevisionResponse>> Feedback(
         int id, int revisionId, [FromBody] AddConceptFeedbackRequest request, CancellationToken ct) =>
-        ChangeDossier(id, (userId) => dossier.AddFeedbackAsync(id, revisionId, request, userId, ct), ct);
+        ChangeDossier(id, DesignProjectAction.Update, (userId) => dossier.AddFeedbackAsync(id, revisionId, request, userId, ct), ct);
 
     [HttpPost("{id:int}/revisions/{revisionId:int}/feedback/{feedbackId:int}/response")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     [Idempotency("design.concept.feedback-response", requireKey: true)]
     public Task<ActionResult<ConceptRevisionResponse>> Respond(
         int id, int revisionId, int feedbackId, [FromBody] RespondConceptFeedbackRequest request, CancellationToken ct) =>
-        ChangeDossier(id, (userId) => dossier.RespondAsync(id, revisionId, feedbackId, request, userId, ct), ct);
+        ChangeDossier(id, DesignProjectAction.Update, (userId) => dossier.RespondAsync(id, revisionId, feedbackId, request, userId, ct), ct);
 
     private async Task<ActionResult<ConceptRevisionResponse>> ChangeDossier(
-        int id, Func<int, Task<ConceptRevisionResponse>> action, CancellationToken ct)
+        int id, DesignProjectAction requiredAction, Func<int, Task<ConceptRevisionResponse>> action, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, requiredAction, ct)) return NotFound();
         try
         {
             var result = await action(userId.Value);
@@ -130,20 +130,21 @@ public class ConceptOptionsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.View, ct)) return NotFound();
 
         var found = await svc.GetAsync(id, ct);
         return found is null ? NotFound() : Ok(found);
     }
 
     [HttpPost]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     public async Task<ActionResult<ConceptOptionResponse>> Create(
         [FromBody] CreateConceptOptionRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, request.DesignProjectId, ct))
+        if (!await projectAccess.HasDesignProjectPermissionAsync(
+            userId.Value, request.DesignProjectId, DesignProjectAction.Create, ct))
             return NotFound();
         try
         {
@@ -165,13 +166,13 @@ public class ConceptOptionsController(
     }
 
     [HttpPut("{id:int}")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     public async Task<ActionResult<ConceptOptionResponse>> Update(
         int id, [FromBody] UpdateConceptOptionRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: true, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -193,24 +194,24 @@ public class ConceptOptionsController(
     }
 
     [HttpGet("{id:int}/deletion-impact")]
-    [RequirePermission("design.records", "hard-delete")]
+    [RequirePermission("design.concepts", "view")]
     public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
         var impact = await deletion.GetImpactAsync(DesignProjectResourceType.ConceptOption, id, ct);
         return impact is null ? NotFound() : Ok(impact);
     }
 
     [HttpDelete("{id:int}")]
-    [RequirePermission("design.records", "hard-delete")]
+    [RequirePermission("design.concepts", "view")]
     public async Task<IActionResult> Delete(
         int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await CanAccessAsync(userId.Value, id, manage: false, ct)) return NotFound();
+        if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
 
         try
         {
@@ -248,7 +249,7 @@ public class ConceptOptionsController(
     /// Baseline <c>manage</c> gate keeps the route out of read-only roles.
     /// </summary>
     [HttpPost("{id:int}/status")]
-    [RequirePermission("design.concepts", "manage")]
+    [RequirePermission("design.concepts", "view")]
     public async Task<ActionResult<ConceptOptionResponse>> Transition(
         int id, [FromBody] TransitionConceptOptionStatusRequest request, CancellationToken ct)
     {
@@ -257,7 +258,8 @@ public class ConceptOptionsController(
         var projectId = await projectAccess.ResolveDesignProjectIdAsync(
             DesignProjectResourceType.ConceptOption, id, ct);
         if (!projectId.HasValue ||
-            !await projectAccess.CanManageDesignProjectAsync(userId.Value, projectId.Value, ct))
+            !await projectAccess.HasDesignProjectPermissionAsync(
+                userId.Value, projectId.Value, DesignProjectAction.Update, ct))
             return NotFound();
 
         // Finalize is a stricter permission on top of manage.
@@ -298,14 +300,14 @@ public class ConceptOptionsController(
         return int.TryParse(raw, out var id) ? id : null;
     }
 
-    private async Task<bool> CanAccessAsync(int userId, int id, bool manage, CancellationToken ct)
+    private async Task<bool> CanAccessAsync(
+        int userId, int id, DesignProjectAction action, CancellationToken ct)
     {
         var projectId = await projectAccess.ResolveDesignProjectIdAsync(
             DesignProjectResourceType.ConceptOption, id, ct);
         if (!projectId.HasValue) return false;
-
-        return manage
-            ? await projectAccess.CanManageDesignProjectAsync(userId, projectId.Value, ct)
-            : await projectAccess.CanViewDesignProjectAsync(userId, projectId.Value, ct);
+        return action == DesignProjectAction.View
+            ? await projectAccess.CanViewDesignProjectAsync(userId, projectId.Value, ct)
+            : await projectAccess.HasDesignProjectPermissionAsync(userId, projectId.Value, action, ct);
     }
 }

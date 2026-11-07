@@ -207,7 +207,8 @@ public class DesignProjectsControllerTests : IntegrationTestBase
 
         var response = await Client.GetAsync($"/api/design-projects/{id}/deletion-impact");
 
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        // Deletion is project-scoped now; a non-member is masked as 404.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
         (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.Id == id)))
             .Should().BeTrue();
     }

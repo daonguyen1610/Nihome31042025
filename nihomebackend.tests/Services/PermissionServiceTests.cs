@@ -41,6 +41,71 @@ public class PermissionServiceTests : IDisposable
         return user;
     }
 
+    private OperationalProject AddOperationalProject(int? projectManagerUserId = null)
+    {
+        var customer = new Customer { Name = "Membership customer", Type = CustomerType.Company };
+        _db.Customers.Add(customer);
+        _db.SaveChanges();
+        var project = new OperationalProject
+        {
+            Code = $"OP-{Guid.NewGuid():N}"[..12],
+            Name = "Membership project",
+            CustomerId = customer.Id,
+            ProjectManagerUserId = projectManagerUserId,
+        };
+        _db.OperationalProjects.Add(project);
+        _db.SaveChanges();
+        return project;
+    }
+
+    private DesignProject AddDesignProject(OperationalProject project)
+    {
+        var design = new DesignProject
+        {
+            OperationalProjectId = project.Id,
+            ProjectCode = $"DP-{Guid.NewGuid():N}"[..12],
+            Name = "Membership design project",
+            CustomerId = project.CustomerId,
+        };
+        _db.DesignProjects.Add(design);
+        _db.SaveChanges();
+        return design;
+    }
+
+    private void AddMember(
+        OperationalProject project,
+        ApplicationUser user,
+        int? designProjectId,
+        DateTime? endedAt = null,
+        ProjectTeamRoleCode? roleCode = null,
+        ProjectRoleScope scope = ProjectRoleScope.Project,
+        string? scopeValue = null)
+    {
+        var member = new OperationalProjectMember
+        {
+            OperationalProjectId = project.Id,
+            DesignProjectId = designProjectId,
+            UserId = user.Id,
+            Position = "Site Engineer",
+            StartedAt = DateTime.UtcNow.AddDays(-1),
+            EndedAt = endedAt,
+            CreatedByUserId = user.Id,
+            UpdatedByUserId = user.Id,
+        };
+        if (roleCode.HasValue)
+        {
+            member.Roles.Add(new OperationalProjectMemberRole
+            {
+                RoleCode = roleCode.Value,
+                Scope = scope,
+                ScopeValue = scopeValue,
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+            });
+        }
+        _db.OperationalProjectMembers.Add(member);
+        _db.SaveChanges();
+    }
+
     [Fact]
     public async Task SuperAdmin_ResolvesToFullCatalog()
     {
@@ -222,6 +287,92 @@ public class PermissionServiceTests : IDisposable
         var perms = await _svc.GetForUserAsync(user.Id);
 
         Assert.Contains("rbac.roles.manage", perms);
+    }
+
+    [Fact]
+    public async Task OperationalProjectMember_GainsOperationalProjectViewOnly()
+    {
+        var userRole = _db.Roles.Single(r => r.Code == SystemRoleCodes.User);
+        var user = AddUser("0900000014", UserRole.USER, userRole.Id);
+        var project = AddOperationalProject();
+        AddMember(project, user, designProjectId: null);
+
+        var perms = await _svc.GetForUserAsync(user.Id);
+
+        Assert.Contains("operations.projects.view", perms);
+        Assert.DoesNotContain("design.projects.view", perms);
+        Assert.Contains("profile.me.view", perms);
+    }
+
+    [Fact]
+    public async Task DesignProjectMember_GainsDesignViewPermissions()
+    {
+        var userRole = _db.Roles.Single(r => r.Code == SystemRoleCodes.User);
+        var user = AddUser("0900000015", UserRole.USER, userRole.Id);
+        var project = AddOperationalProject();
+        var design = AddDesignProject(project);
+        AddMember(project, user, design.Id);
+
+        var perms = await _svc.GetForUserAsync(user.Id);
+
+        Assert.Contains("design.projects.view", perms);
+        Assert.Contains("design.concepts.view", perms);
+        Assert.Contains("design.basic.view", perms);
+        Assert.Contains("design.shop.view", perms);
+        Assert.Contains("design.revisions.view", perms);
+        Assert.Contains("design.ifc.view", perms);
+        // Membership derives read access only.
+        Assert.DoesNotContain("design.projects.manage", perms);
+        Assert.DoesNotContain("design.basic.manage", perms);
+    }
+
+    [Fact]
+    public async Task RootProjectManager_GainsDesignViewPermissions()
+    {
+        var userRole = _db.Roles.Single(r => r.Code == SystemRoleCodes.User);
+        var user = AddUser("0900000016", UserRole.USER, userRole.Id);
+        var project = AddOperationalProject(projectManagerUserId: user.Id);
+        AddDesignProject(project);
+
+        var perms = await _svc.GetForUserAsync(user.Id);
+
+        Assert.Contains("operations.projects.view", perms);
+        Assert.Contains("design.projects.view", perms);
+        // Root project management does not imply design-dossier write access.
+        Assert.DoesNotContain("design.projects.manage", perms);
+    }
+
+    [Theory]
+    [InlineData(ProjectTeamRoleCode.SiteEngineer)]
+    [InlineData(ProjectTeamRoleCode.QuantitySurveyor)]
+    [InlineData(ProjectTeamRoleCode.Observer)]
+    public async Task NonDesignRoleMember_DoesNotGainManagePermissions(ProjectTeamRoleCode roleCode)
+    {
+        var userRole = _db.Roles.Single(r => r.Code == SystemRoleCodes.User);
+        var user = AddUser("0900000019", UserRole.USER, userRole.Id);
+        var project = AddOperationalProject();
+        var design = AddDesignProject(project);
+        AddMember(project, user, design.Id, roleCode: roleCode);
+
+        var perms = await _svc.GetForUserAsync(user.Id);
+
+        Assert.Contains("design.projects.view", perms);
+        Assert.DoesNotContain("design.projects.manage", perms);
+        Assert.DoesNotContain("design.basic.manage", perms);
+    }
+
+    [Fact]
+    public async Task EndedMembership_DoesNotGrantViewPermissions()
+    {
+        var userRole = _db.Roles.Single(r => r.Code == SystemRoleCodes.User);
+        var user = AddUser("0900000017", UserRole.USER, userRole.Id);
+        var project = AddOperationalProject();
+        var design = AddDesignProject(project);
+        AddMember(project, user, design.Id, endedAt: DateTime.UtcNow);
+
+        var perms = await _svc.GetForUserAsync(user.Id);
+
+        Assert.Equal(new HashSet<string> { "profile.me.view", "profile.me.update" }, perms);
     }
 
     [Fact]

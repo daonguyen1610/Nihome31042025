@@ -30,7 +30,8 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
         using var response = await Client.GetAsync("/api/concept-options/2147483647/deletion-impact");
-        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        // Deletion is project-scoped now; denied/missing rows are masked as 404.
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Theory]

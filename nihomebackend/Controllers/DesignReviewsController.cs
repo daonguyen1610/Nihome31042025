@@ -19,7 +19,7 @@ public sealed class DesignReviewsController(
     IAuditLogger audit) : ControllerBase
 {
     [HttpGet("recipient-candidates")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     public async Task<ActionResult<IReadOnlyList<DesignReviewRecipientResponse>>> RecipientCandidates(
         int projectId, CancellationToken ct)
     {
@@ -74,7 +74,7 @@ public sealed class DesignReviewsController(
     }
 
     [HttpPost]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     [Idempotency("design.reviews.create", requireKey: true)]
     public async Task<ActionResult<DesignReviewResponse>> Create(
         int projectId, [FromBody] CreateDesignReviewRequest request, CancellationToken ct)
@@ -91,7 +91,7 @@ public sealed class DesignReviewsController(
     }
 
     [HttpPost("{reviewId:int}/submit-internal")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     [Idempotency("design.reviews.submit-internal", requireKey: true)]
     public Task<ActionResult<DesignReviewResponse>> SubmitInternal(
         int projectId, int reviewId, [FromBody] SubmitDesignReviewRequest request, CancellationToken ct) =>
@@ -117,7 +117,7 @@ public sealed class DesignReviewsController(
     }
 
     [HttpPost("{reviewId:int}/consolidate")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     [Idempotency("design.reviews.consolidate", requireKey: true)]
     public async Task<ActionResult<DesignReviewResponse>> Consolidate(
         int projectId, int reviewId, [FromBody] ConsolidateDesignReviewRequest request, CancellationToken ct)
@@ -137,7 +137,7 @@ public sealed class DesignReviewsController(
     }
 
     [HttpPost("{reviewId:int}/submit-client")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     [Idempotency("design.reviews.submit-client", requireKey: true)]
     public Task<ActionResult<DesignReviewResponse>> SubmitClient(
         int projectId, int reviewId, [FromBody] SubmitDesignReviewRequest request, CancellationToken ct) =>
@@ -146,7 +146,7 @@ public sealed class DesignReviewsController(
             "design-review.submit-client");
 
     [HttpPost("{reviewId:int}/client-decision")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     [Idempotency("design.reviews.client-decision", requireKey: true)]
     public async Task<ActionResult<DesignReviewResponse>> ClientDecision(
         int projectId, int reviewId, [FromBody] RecordDesignClientDecisionRequest request, CancellationToken ct)
