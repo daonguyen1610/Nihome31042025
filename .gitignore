@@ -11,6 +11,8 @@ nihomebackend.tests/obj/**
 .amazonq
 .agents
 skills-lock.json
+# Graphify outputs are generated locally.
+/graphify-out/
 # Deployment config
 deployment-config/output
 deployment-config/output/publish-release/
