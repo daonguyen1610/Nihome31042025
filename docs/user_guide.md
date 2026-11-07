@@ -1156,6 +1156,13 @@ may serve together. Concept, Basic Design and Shop Drawing owner pickers show
 only active team members. The member picker scrolls within the visible screen
 on a short viewport. **Nhóm công việc** is a top-level admin navigation item
 directly below **Thông báo**.
+In **Đội ngũ**, dossier leaders can open a member's permission dialog to grant
+View, Create, Update and Delete independently. Keep View enabled when granting
+any write action. Save and refresh the member's dossier page to use the new
+rights. Assigned Design Manager and primary Design Lead rows show their full,
+locked rights. Delete does not grant permanent deletion of failed design
+records without the separate administrative capability, and it does not grant
+approval or IFC release authority.
 Design circulation notifications open the specific assigned review, including
 for recipients outside the project team. Read its submitted files and add
 general or file-specific comments while internal review is open. This page

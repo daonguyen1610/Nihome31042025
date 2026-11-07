@@ -266,6 +266,12 @@ public sealed class ProjectTeamService(
         if (!await access.CanManageDesignProjectTeamAsync(callerUserId, member.DesignProjectId.Value, ct))
             throw new ProjectTeamOperationException(
                 "Bạn không có quyền phân quyền hồ sơ thiết kế của Dự án này.");
+        var isDesignOwner = await db.DesignProjects.AsNoTracking().AnyAsync(project =>
+            project.Id == member.DesignProjectId &&
+            (project.DesignLeadUserId == member.UserId || project.ProjectManagerUserId == member.UserId), ct);
+        if (isDesignOwner)
+            throw new ProjectTeamOperationException(
+                "Chủ nhiệm và chủ trì thiết kế luôn có toàn quyền trong hồ sơ; không thể giới hạn quyền của họ.");
         if (!request.CanView && (request.CanCreate || request.CanUpdate || request.CanDelete))
             throw new ProjectTeamOperationException(
                 "Muốn cấp quyền tạo/sửa/xóa thì phải bật quyền xem.");

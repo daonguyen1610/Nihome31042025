@@ -153,29 +153,9 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
         int designProjectId,
         CancellationToken ct = default)
     {
-        var project = await db.DesignProjects.AsNoTracking()
-            .Where(item => item.Id == designProjectId)
-            .Select(item => new
-            {
-                item.OperationalProjectId,
-                item.ProjectManagerUserId,
-                item.DesignLeadUserId,
-            })
-            .SingleOrDefaultAsync(ct);
-        if (project is null) return false;
-        if (project.ProjectManagerUserId == userId || project.DesignLeadUserId == userId) return true;
-        if (project.OperationalProjectId.HasValue)
-        {
-            return await db.OperationalProjects.AnyAsync(root => root.Id == project.OperationalProjectId.Value &&
-                (root.ProjectManagerUserId == userId || root.CreatedByUserId == userId ||
-                 root.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
-                     (member.DesignProjectId == designProjectId || member.DesignProjectId == null &&
-                         member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)) &&
-                     (member.DesignPermission == null || member.DesignPermission.CanView))), ct) ||
-                await HasAdministrativeBypassAsync(userId, ct);
-        }
-
-        return await HasAdministrativeBypassAsync(userId, ct);
+        if (await HasAdministrativeBypassAsync(userId, ct))
+            return await db.DesignProjects.AsNoTracking().AnyAsync(project => project.Id == designProjectId, ct);
+        return await AccessibleDesignProjects(userId).AnyAsync(project => project.Id == designProjectId, ct);
     }
 
     public async Task<DesignProjectPermissions> GetDesignProjectPermissionsAsync(
@@ -387,24 +367,26 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                 .ToHashSet();
         }
 
-        var operationalProjectIds = await db.OperationalProjects.Where(root =>
-            root.ProjectManagerUserId == userId || root.CreatedByUserId == userId ||
-            root.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
-                member.DesignProjectId == null && member.Roles.Any(role => role.EndedAt == null &&
-                    role.Scope == ProjectRoleScope.Project))).Select(root => root.Id).ToListAsync(ct);
-        return (await db.DesignProjects.AsNoTracking()
-            .Where(project =>
-                project.ProjectManagerUserId == userId ||
-                project.DesignLeadUserId == userId ||
-                db.OperationalProjectMembers.Any(member => member.UserId == userId &&
-                    member.EndedAt == null && member.DesignProjectId == project.Id &&
-                    (member.DesignPermission == null || member.DesignPermission.CanView)) ||
-                project.OperationalProjectId.HasValue &&
-                    operationalProjectIds.Contains(project.OperationalProjectId.Value))
-            .Select(project => project.Id)
-            .ToListAsync(ct))
+        return (await AccessibleDesignProjects(userId).Select(project => project.Id).ToListAsync(ct))
             .ToHashSet();
     }
+
+    private IQueryable<DesignProject> AccessibleDesignProjects(int userId) =>
+        db.DesignProjects.AsNoTracking().Where(project =>
+            project.ProjectManagerUserId == userId || project.DesignLeadUserId == userId ||
+            project.OperationalProject != null &&
+            // A dossier-specific revocation takes precedence over root access.
+            !project.OperationalProject.TeamMembers.Any(member =>
+                member.UserId == userId && member.EndedAt == null &&
+                member.DesignProjectId == project.Id && member.DesignPermission != null &&
+                !member.DesignPermission.CanView) &&
+            (project.OperationalProject.ProjectManagerUserId == userId ||
+             project.OperationalProject.CreatedByUserId == userId ||
+             project.OperationalProject.TeamMembers.Any(member =>
+                 member.UserId == userId && member.EndedAt == null &&
+                 (member.DesignProjectId == project.Id || member.DesignProjectId == null &&
+                     member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)) &&
+                 (member.DesignPermission == null || member.DesignPermission.CanView))));
 
     public async Task<int?> ResolveDesignCreateOperationalProjectIdAsync(
         int? operationalProjectId,

@@ -2210,11 +2210,11 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
-                    b.Property<string>("FilesJson")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<long?>("FileSize")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("FilesJson")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("OriginalFileName")
                         .HasMaxLength(300)
@@ -3427,6 +3427,49 @@ namespace nihomebackend.Migrations
                     b.HasIndex("Status");
 
                     b.ToTable("design_projects", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DesignProjectMemberPermission", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("CanCreate")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanDelete")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanUpdate")
+                        .HasColumnType("bit");
+
+                    b.Property<bool>("CanView")
+                        .HasColumnType("bit");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("MemberId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UpdatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MemberId")
+                        .IsUnique();
+
+                    b.ToTable("design_project_member_permissions", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DesignReview", b =>
@@ -6453,6 +6496,88 @@ namespace nihomebackend.Migrations
                     b.ToTable("operational_project_assignments", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentAttachment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AssignmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("StorageDeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId", "DeletedAt");
+
+                    b.ToTable("operational_project_assignment_attachments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_operational_project_assignment_attachments_size", "[FileSize] > 0");
+                        });
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentComment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AssignmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("AssignmentId", "CreatedAt");
+
+                    b.ToTable("operational_project_assignment_comments", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectCodeChange", b =>
                 {
                     b.Property<long>("Id")
@@ -8670,9 +8795,9 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status", "Kind");
-
                     b.HasIndex("QuoteId", "CreatedAt");
+
+                    b.HasIndex("Status", "Kind");
 
                     b.ToTable("quote_approval_emails", (string)null);
                 });
@@ -12981,6 +13106,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("ProjectManager");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DesignProjectMemberPermission", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProjectMember", "Member")
+                        .WithOne("DesignPermission")
+                        .HasForeignKey("NihomeBackend.Models.DesignProjectMemberPermission", "MemberId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Member");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DesignReview", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ProjectDocument", "ClientAcceptanceDocument")
@@ -13722,15 +13858,11 @@ namespace nihomebackend.Migrations
 
                     b.Navigation("AssigneeMember");
 
-                    b.Navigation("Children");
-
                     b.Navigation("ManagerMember");
 
                     b.Navigation("OperationalProject");
 
                     b.Navigation("ParentAssignment");
-
-                    b.Navigation("Comments");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentAttachment", b =>
@@ -13742,57 +13874,6 @@ namespace nihomebackend.Migrations
                         .IsRequired();
 
                     b.Navigation("Assignment");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentAttachment", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("AssignmentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("ContentType")
-                        .IsRequired()
-                        .HasMaxLength(150)
-                        .HasColumnType("nvarchar(150)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.Property<DateTime?>("DeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<long>("FileSize")
-                        .HasColumnType("bigint");
-
-                    b.Property<string>("OriginalFileName")
-                        .IsRequired()
-                        .HasMaxLength(255)
-                        .HasColumnType("nvarchar(255)");
-
-                    b.Property<string>("Path")
-                        .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("nvarchar(500)");
-
-                    b.Property<DateTime?>("StorageDeletedAt")
-                        .HasColumnType("datetime2");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AssignmentId", "DeletedAt");
-
-                    b.ToTable("operational_project_assignment_attachments", null, t =>
-                        {
-                            t.HasCheckConstraint("CK_operational_project_assignment_attachments_size", "[FileSize] > 0");
-                        });
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentComment", b =>
@@ -13812,37 +13893,6 @@ namespace nihomebackend.Migrations
                     b.Navigation("Assignment");
 
                     b.Navigation("CreatedByUser");
-                });
-
-            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentComment", b =>
-                {
-                    b.Property<long>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("bigint");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
-
-                    b.Property<int>("AssignmentId")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Body")
-                        .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("datetime2");
-
-                    b.Property<int>("CreatedByUserId")
-                        .HasColumnType("int");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("AssignmentId", "CreatedAt");
-
-                    b.HasIndex("CreatedByUserId");
-
-                    b.ToTable("operational_project_assignment_comments", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectCodeChange", b =>
@@ -15696,9 +15746,20 @@ namespace nihomebackend.Migrations
                     b.Navigation("WarehouseReceipts");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignment", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Children");
+
+                    b.Navigation("Comments");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectMember", b =>
                 {
                     b.Navigation("Assignments");
+
+                    b.Navigation("DesignPermission");
 
                     b.Navigation("Roles");
                 });

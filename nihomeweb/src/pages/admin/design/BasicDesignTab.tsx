@@ -116,17 +116,19 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
   const { toast } = useToast();
   const { has } = usePermissions();
   const effective = project.effectivePermissions;
+  const canCreate = effective?.canCreate ?? has(ADMIN_PERMS.designBasicManage);
   const canManage = effective?.canUpdate ?? has(ADMIN_PERMS.designBasicManage);
   const canApprove = canManage && has(ADMIN_PERMS.designBasicApprove);
   const canUnlock = canManage && has(ADMIN_PERMS.designBasicApprove);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
-  const canPickOwner = canManage;
+  const canPickOwner = canCreate || canManage;
   const {
     options: userOptions,
     error: ownersError,
     loading: ownersLoading,
   } = useDesignTeamOwners(project, canPickOwner);
-  const canDeleteAction = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
+  const canDeleteAction =
+    (effective?.canDelete ?? true) && has(ADMIN_PERMS.designRecordsHardDelete);
   const canHardDelete = canDeleteAction;
   const [searchParams] = useSearchParams();
   const focusedDocumentId = Number(searchParams.get("documentId"));
@@ -549,7 +551,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
 
       <header className="flex items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-foreground">{t("basicDesign.title")}</h2>
-        {canManage && isBasicStage ? (
+        {canCreate && isBasicStage ? (
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1 h-4 w-4" />
             {t("basicDesign.new")}

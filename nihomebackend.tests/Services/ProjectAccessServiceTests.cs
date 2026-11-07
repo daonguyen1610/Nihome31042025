@@ -286,6 +286,46 @@ public sealed class ProjectAccessServiceTests : IDisposable
         Assert.True(await service.CanManageDesignProjectTeamAsync(userId, designProjectId));
     }
 
+    [Theory]
+    [InlineData("member")]
+    [InlineData("manager")]
+    [InlineData("creator")]
+    public async Task RevokedDossierView_OverridesRootProjectAccess(string rootAccess)
+    {
+        var (userId, projectId, designProjectId) = AddProjectMember(
+            ProjectTeamRoleCode.Architect, ProjectRoleScope.Module, "Design");
+        var member = _db.OperationalProjectMembers.Single(item => item.UserId == userId);
+        member.DesignPermission = new DesignProjectMemberPermission
+        {
+            CanView = false,
+            CreatedByUserId = userId,
+            UpdatedByUserId = userId,
+        };
+        var root = _db.OperationalProjects.Single(item => item.Id == projectId);
+        if (rootAccess == "manager") root.ProjectManagerUserId = userId;
+        else if (rootAccess == "creator") root.CreatedByUserId = userId;
+        else _db.OperationalProjectMembers.Add(new OperationalProjectMember
+        {
+            OperationalProjectId = projectId,
+            UserId = userId,
+            Position = "Project observer",
+            CreatedByUserId = userId,
+            UpdatedByUserId = userId,
+            Roles = [new OperationalProjectMemberRole
+            {
+                RoleCode = ProjectTeamRoleCode.Observer,
+                Scope = ProjectRoleScope.Project,
+            }],
+        });
+        await _db.SaveChangesAsync();
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        Assert.False((await service.GetDesignProjectPermissionsAsync(userId, designProjectId)).CanView);
+        Assert.False(await service.CanViewDesignProjectAsync(userId, designProjectId));
+        Assert.DoesNotContain(designProjectId, await service.GetAccessibleDesignProjectIdsAsync(userId));
+        Assert.True(await service.CanViewOperationalProjectAsync(userId, projectId));
+    }
+
     [Fact]
     public async Task CanManageDesignProjectTeamAsync_ContributorWithUpdate_IsDenied()
     {

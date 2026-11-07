@@ -2299,6 +2299,20 @@ active holder of either role and serialize leadership changes per flow. Form
 changes end superseded Design leadership roles while preserving other roles and
 role history. The Operational Project Manager remains a separate root role.
 
+Dossier member permissions are persisted in
+`design_project_member_permissions` (one row per team member), introduced by
+`20261108140000_AddDesignProjectMemberPermissions`. The scoped team endpoint
+`PUT /api/operational-projects/{id}/team/members/{memberId}/design-permissions`
+accepts `canView`, `canCreate`, `canUpdate`, and `canDelete`. Only dossier team
+managers may change them; create/update/delete require view, and assigned
+Design Manager/primary Design Lead rights cannot be restricted through this
+endpoint. Detail responses expose `effectivePermissions`; lists and resource
+reads honor scoped View revocation before root membership. Approval/finalize/
+release permissions and the dedicated hard-delete capability remain additional
+server gates. The EF model snapshot includes the member-permission relationship
+and declares assignment collection navigations after their relationships; the
+focused `QuoteDecisionRecipientMigrationTests` check detects snapshot drift.
+
 Personnel-option DTOs carry organizational role code/name/translation key and
 department ID/translation key from the same authorized query. The shared
 frontend `personOption`, `SearchableSelect` and `PeopleChecklist` render and

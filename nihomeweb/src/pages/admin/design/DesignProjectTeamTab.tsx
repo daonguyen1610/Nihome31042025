@@ -85,6 +85,7 @@ interface Props {
   designProjectContext?: boolean;
   designProjectId?: number;
   designManagerUserId?: number | null;
+  designLeadUserId?: number | null;
   onHistoryChange?: (projectId: number, history: OperationalProjectTeamHistoryResponse[]) => void;
   onProjectMayHaveChanged?: () => void;
 }
@@ -618,6 +619,7 @@ export const OperationalProjectTeamPanel = ({
   designProjectContext = false,
   designProjectId,
   designManagerUserId,
+  designLeadUserId,
   onHistoryChange,
   onProjectMayHaveChanged,
 }: Props) => {
@@ -702,6 +704,17 @@ export const OperationalProjectTeamPanel = ({
           !role.endedAt,
       ),
     )?.userId;
+  // Assigned dossier owners always have full rights on the server.
+  const isDesignOwner = (userId: number) =>
+    designProjectContext &&
+    (userId === currentDesignManagerUserId ||
+      (designLeadUserId != null && userId === designLeadUserId));
+  const ownerPermissions: DesignProjectMemberPermissionsResponse = {
+    canView: true,
+    canCreate: true,
+    canUpdate: true,
+    canDelete: true,
+  };
   const endedMembers = useMemo(
     () => team?.members.filter((member) => !member.isActive) ?? [],
     [team],
@@ -1278,14 +1291,26 @@ export const OperationalProjectTeamPanel = ({
                           <Pencil className="h-4 w-4" />
                         </Button>
                         {designProjectContext ? (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            aria-label={t("designProjects.team.action.permissions")}
-                            onClick={() => openPermissions(member)}
-                          >
-                            <ShieldCheck className="h-4 w-4" />
-                          </Button>
+                          isDesignOwner(member.userId) ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled
+                              aria-label={t("designProjects.team.permissions.ownerLocked")}
+                              title={t("designProjects.team.permissions.ownerLocked")}
+                            >
+                              <ShieldCheck className="h-4 w-4 text-muted-foreground/60" />
+                            </Button>
+                          ) : (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              aria-label={t("designProjects.team.action.permissions")}
+                              onClick={() => openPermissions(member)}
+                            >
+                              <ShieldCheck className="h-4 w-4" />
+                            </Button>
+                          )
                         ) : null}
                         {(!designProjectContext ||
                           (member.roles.length > 0 && member.roles.every(isDesignRole))) && (
@@ -1322,7 +1347,9 @@ export const OperationalProjectTeamPanel = ({
                       );
                     })}
                   </div>
-                  {renderPermissions(member.designPermissions)}
+                  {renderPermissions(
+                    isDesignOwner(member.userId) ? ownerPermissions : member.designPermissions,
+                  )}
                   <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div>
                       <dt className="text-xs text-muted-foreground">
@@ -1392,7 +1419,11 @@ export const OperationalProjectTeamPanel = ({
                             );
                           })}
                         </div>
-                        {renderPermissions(member.designPermissions)}
+                        {renderPermissions(
+                          isDesignOwner(member.userId)
+                            ? ownerPermissions
+                            : member.designPermissions,
+                        )}
                       </td>
                       <td className="px-3 py-3 text-foreground">
                         {member.reportsToName ?? t("designProjects.team.value.none")}
@@ -1412,14 +1443,26 @@ export const OperationalProjectTeamPanel = ({
                               <Pencil className="h-4 w-4" />
                             </Button>
                             {designProjectContext ? (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                aria-label={t("designProjects.team.action.permissions")}
-                                onClick={() => openPermissions(member)}
-                              >
-                                <ShieldCheck className="h-4 w-4" />
-                              </Button>
+                              isDesignOwner(member.userId) ? (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  disabled
+                                  aria-label={t("designProjects.team.permissions.ownerLocked")}
+                                  title={t("designProjects.team.permissions.ownerLocked")}
+                                >
+                                  <ShieldCheck className="h-4 w-4 text-muted-foreground/60" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  aria-label={t("designProjects.team.action.permissions")}
+                                  onClick={() => openPermissions(member)}
+                                >
+                                  <ShieldCheck className="h-4 w-4" />
+                                </Button>
+                              )
                             ) : null}
                             {(!designProjectContext ||
                               (member.roles.length > 0 && member.roles.every(isDesignRole))) && (

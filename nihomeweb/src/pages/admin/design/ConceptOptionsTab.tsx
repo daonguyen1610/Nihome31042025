@@ -114,8 +114,8 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
   const canUpdate = effective?.canUpdate ?? has(ADMIN_PERMS.designConceptsManage);
   const canManage = canUpdate;
   const canFinalize = canUpdate && has(ADMIN_PERMS.designConceptsFinalize);
-  const canHardDelete = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
-  const canPickOwner = canManage;
+  const canHardDelete = (effective?.canDelete ?? true) && has(ADMIN_PERMS.designRecordsHardDelete);
+  const canPickOwner = canCreate || canManage;
   const {
     options: userOptions,
     error: ownersError,

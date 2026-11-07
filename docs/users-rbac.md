@@ -146,12 +146,23 @@ negotiation/export, and downstream-contract visibility. The legacy `DESIGN`
 role remains a general design role.
 The team API accepts `design.projects.view` for a scoped Design Project even
 when the actor lacks `operations.projects.view`; root project team reads still
-require the operational-project permission. Writes also require the matching
-manage permission and project-level access. Each design workspace has one
+require the operational-project permission. Scoped team writes require dossier
+leadership; root team writes retain their global manage permission and project
+access checks. Each design workspace has one
 active Chủ Nhiệm Thiết Kế and may have multiple active Chủ Trì Thiết Kế.
 The legacy `DesignLeadUserId` stores the primary lead while the scoped team
 stores all leads. Owner assignments in Concept, Basic Design and Shop Drawing
 require an active member of the same scoped team.
+The Team permission dialog saves a per-member View/Create/Update/Delete matrix
+for that dossier. Create and Update are independent; either requires View.
+A scoped matrix takes precedence over root-project membership, including a
+revoked View grant in both dossier lists and detail/resource endpoints. The
+assigned Design Manager and primary Design Lead keep full dossier rights and
+their permission controls are locked; administrative portfolio access remains
+unchanged. Matrix rights do not grant task approval, client decisions, Concept
+finalization, IFC release, or `design.records.hard-delete`. Permanent deletion
+of Concept, Basic, Shop and IFC records requires both the effective Delete
+right and the dedicated hard-delete capability.
 Task approval is not implied by either role: the API compares the current user
 to the task's single assigned approver. Internal review recipients
 receive record-scoped view/comment access only when explicitly listed.

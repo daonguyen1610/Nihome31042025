@@ -7,6 +7,76 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 public sealed class DesignRecordDeletionControllerTests(NihomeWebApplicationFactory factory)
     : IntegrationTestBase(factory)
 {
+    [Theory]
+    [InlineData("concept-options")]
+    [InlineData("basic-design-docs")]
+    [InlineData("shop-drawings")]
+    [InlineData("ifc-releases")]
+    public async Task DossierOwner_WithoutHardDeleteCapability_CannotPreviewOrDeleteFailedRecord(string resource)
+    {
+        var fixture = await CreateDiscardedConceptAsync();
+        var resourceId = await WithDbAsync(async db =>
+        {
+            var manager = await db.Users.SingleAsync(user =>
+                user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["DESIGN_MANAGER"]);
+            var concept = await db.ConceptOptions.Include(item => item.DesignProject)
+                .SingleAsync(item => item.Id == fixture.ConceptId);
+            concept.DesignProject.ProjectManagerUserId = manager.Id;
+            var basic = new BasicDesignDoc
+            {
+                DesignProjectId = concept.DesignProjectId,
+                DisciplineCode = "architecture",
+                DocumentCode = UniqueSlug("BD"),
+                Title = "Hồ sơ kiến trúc không đạt",
+                Status = BasicDesignDocStatus.Rejected,
+            };
+            var shop = new ShopDrawing
+            {
+                DesignProjectId = concept.DesignProjectId,
+                DisciplineCode = "architecture",
+                DrawingCode = UniqueSlug("SD"),
+                Title = "Chi tiết kiến trúc không đạt",
+                ConstructionItem = "Kiến trúc",
+                Status = ShopDrawingStatus.Rejected,
+            };
+            var release = new IfcRelease
+            {
+                DesignProjectId = concept.DesignProjectId,
+                ReleaseNumber = UniqueSlug("IFC"),
+                Title = "Gói phát hành đã hủy",
+                Status = IfcReleaseStatus.Cancelled,
+            };
+            db.AddRange(basic, shop, release);
+            await db.SaveChangesAsync();
+            return resource switch
+            {
+                "basic-design-docs" => basic.Id,
+                "shop-drawings" => shop.Id,
+                "ifc-releases" => release.Id,
+                _ => fixture.ConceptId,
+            };
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var root = $"/api/{resource}/{resourceId}";
+        var impact = await ReadJsonAsync(await Client.GetAsync($"{root}/deletion-impact"));
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN_MANAGER"));
+
+        (await Client.GetAsync($"{root}/deletion-impact")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        using var deleted = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, root)
+        {
+            Content = JsonContent.Create(new
+            {
+                planToken = impact.GetProperty("planToken").GetString(),
+                confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            }),
+        });
+        deleted.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.ConceptOptions.AnyAsync(item => item.Id == fixture.ConceptId)))
+            .Should().BeTrue();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        (await Client.GetAsync(root)).StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     [Fact]
     public async Task ConceptDelete_RequiresTypedConfirmationAndLeavesStateUnchangedOnRejection()
     {
