@@ -109,6 +109,28 @@ public sealed class OperationalProjectTeamController(
         }
     }
 
+    [HttpPut("members/{memberId:int}/design-permissions")]
+    public async Task<ActionResult<OperationalProjectMemberResponse>> UpdateMemberDesignPermissions(
+        int projectId,
+        int memberId,
+        [FromBody] UpdateDesignProjectMemberPermissionsRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var result = await service.UpdateMemberPermissionsAsync(projectId, memberId, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("project-team.member.permissions", projectId, memberId, result);
+            return Ok(result);
+        }
+        catch (ProjectTeamOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
     [HttpPost("assignments")]
     [Idempotency("operations.projects.team.assignments.create", requestGuardType: typeof(ProjectTeamIdempotencyGuard))]
     public async Task<ActionResult<OperationalProjectAssignmentResponse>> AddAssignment(
@@ -320,12 +342,10 @@ public sealed class OperationalProjectTeamController(
 
     private async Task<bool> CanWriteTeamAsync(int userId, int projectId, int? designProjectId, CancellationToken ct)
     {
-        var manageOperations = await permissions.HasAsync(userId, "operations.projects.manage", ct);
         if (!designProjectId.HasValue)
-            return manageOperations && await access.CanManageTeamAsync(userId, projectId, ct);
-        return (manageOperations || await permissions.HasAsync(userId, "design.projects.manage", ct)) &&
-            (await access.CanManageTeamAsync(userId, projectId, ct) ||
-             await access.CanManageDesignProjectAsync(userId, designProjectId.Value, ct));
+            return await access.CanManageTeamAsync(userId, projectId, ct);
+        return await access.CanManageDesignProjectTeamAsync(userId, designProjectId.Value, ct) ||
+            await access.CanManageTeamAsync(userId, projectId, ct);
     }
 
     private async Task<bool> CanViewTeamAsync(int userId, int? designProjectId, CancellationToken ct) =>

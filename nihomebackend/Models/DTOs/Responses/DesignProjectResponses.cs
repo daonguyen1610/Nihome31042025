@@ -34,6 +34,12 @@ public class DesignProjectResponse
 
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
+
+    /// <summary>
+    /// Effective dossier rights of the caller on this project (per-member
+    /// matrix). Only populated on the detail endpoint.
+    /// </summary>
+    public DesignProjectMemberPermissionsResponse? EffectivePermissions { get; set; }
 }
 
 /// <summary>Slimmed-down row used by the NIH-113 list view.</summary>

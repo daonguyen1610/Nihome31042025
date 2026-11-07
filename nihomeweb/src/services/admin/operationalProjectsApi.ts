@@ -75,6 +75,7 @@ import type {
   ProjectMemberCandidateResponse,
   UpsertOperationalProjectMemberRequest,
   OperationalProjectMemberResponse,
+  UpdateDesignProjectMemberPermissionsRequest,
   UpsertOperationalProjectAssignmentRequest,
   OperationalProjectAssignmentResponse,
   OperationalProjectAssignmentAttachmentResponse,
@@ -665,6 +666,15 @@ export const operationalProjectsApi = {
       `/operational-projects/${projectId}/team/members`,
       body,
       withIdempotencyKey(idempotencyKey),
+    ),
+  updateOperationalProjectMemberDesignPermissions: (
+    projectId: number,
+    memberId: number,
+    body: UpdateDesignProjectMemberPermissionsRequest,
+  ) =>
+    api.put<OperationalProjectMemberResponse>(
+      `/operational-projects/${projectId}/team/members/${memberId}/design-permissions`,
+      body,
     ),
   updateOperationalProjectMember: (
     projectId: number,

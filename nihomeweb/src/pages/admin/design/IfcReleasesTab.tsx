@@ -88,9 +88,11 @@ export const IfcReleasesTab = ({ project }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
-  const canManage = has(ADMIN_PERMS.designIfcManage);
-  const canRelease = has(ADMIN_PERMS.designIfcRelease);
-  const canHardDelete = has(ADMIN_PERMS.designRecordsHardDelete);
+  const effective = project.effectivePermissions;
+  const canCreate = effective?.canCreate ?? has(ADMIN_PERMS.designIfcManage);
+  const canManage = effective?.canUpdate ?? has(ADMIN_PERMS.designIfcManage);
+  const canRelease = canManage && has(ADMIN_PERMS.designIfcRelease);
+  const canHardDelete = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
 
   const isShopStage =
     project.currentStage === "ShopDrawing" || project.currentStage === "Completed";
@@ -450,7 +452,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
 
       <header className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-base font-semibold text-foreground">{t("ifcRelease.title")}</h2>
-        {canManage && isShopStage ? (
+        {canCreate && isShopStage ? (
           <Button size="sm" onClick={openCreate} data-testid="ifc-new">
             <Plus className="mr-1 h-4 w-4" />
             {t("ifcRelease.new")}

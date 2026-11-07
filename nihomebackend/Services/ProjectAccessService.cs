@@ -80,19 +80,19 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
     public async Task<bool> CanManageDesignDocumentsAsync(
         int userId, int operationalProjectId, CancellationToken ct = default)
     {
-        if (!await permissions.HasAsync(userId, "design.projects.manage", ct)) return false;
         if (await HasAdministrativeBypassAsync(userId, ct))
             return await db.OperationalProjects.AsNoTracking()
                 .AnyAsync(project => project.Id == operationalProjectId, ct);
-        return await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
-            project.Id == operationalProjectId && project.DesignProjects.Any() &&
-            (project.DesignProjects.Any(design =>
-                design.ProjectManagerUserId == userId || design.DesignLeadUserId == userId) ||
-             project.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
-                 member.Roles.Any(role => role.EndedAt == null &&
-                     role.RoleCode == ProjectTeamRoleCode.DesignLead &&
-                     (role.Scope == ProjectRoleScope.Project ||
-                      role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")))), ct);
+        var designProjectIds = await db.DesignProjects.AsNoTracking()
+            .Where(project => project.OperationalProjectId == operationalProjectId)
+            .Select(project => project.Id)
+            .ToListAsync(ct);
+        foreach (var designProjectId in designProjectIds)
+        {
+            if (await HasDesignProjectPermissionAsync(
+                userId, designProjectId, DesignProjectAction.Update, ct)) return true;
+        }
+        return false;
     }
 
     public async Task<bool> CanManageDesignDocumentAsync(int userId, int operationalProjectId,
@@ -108,8 +108,7 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
     public async Task<bool> CanManageDesignDocumentSourceAsync(int userId, int operationalProjectId,
         string? sourceType, long? sourceId, CancellationToken ct = default)
     {
-        if (!await permissions.HasAsync(userId, "design.projects.manage", ct) ||
-            sourceId is null or <= 0 or > int.MaxValue) return false;
+        if (sourceId is null or <= 0 or > int.MaxValue) return false;
         var resourceType = sourceType switch
         {
             nameof(ConceptOption) => (DesignProjectResourceType?)DesignProjectResourceType.ConceptOption,
@@ -171,11 +170,120 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                 (root.ProjectManagerUserId == userId || root.CreatedByUserId == userId ||
                  root.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null &&
                      (member.DesignProjectId == designProjectId || member.DesignProjectId == null &&
-                         member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)))), ct) ||
+                         member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)) &&
+                     (member.DesignPermission == null || member.DesignPermission.CanView))), ct) ||
                 await HasAdministrativeBypassAsync(userId, ct);
         }
 
         return await HasAdministrativeBypassAsync(userId, ct);
+    }
+
+    public async Task<DesignProjectPermissions> GetDesignProjectPermissionsAsync(
+        int userId,
+        int designProjectId,
+        CancellationToken ct = default)
+    {
+        var project = await db.DesignProjects.AsNoTracking()
+            .Where(item => item.Id == designProjectId)
+            .Select(item => new
+            {
+                item.OperationalProjectId,
+                item.ProjectManagerUserId,
+                item.DesignLeadUserId,
+                RootManagerUserId = item.OperationalProject != null
+                    ? item.OperationalProject.ProjectManagerUserId
+                    : null,
+                RootCreatedByUserId = item.OperationalProject != null
+                    ? item.OperationalProject.CreatedByUserId
+                    : null,
+            })
+            .SingleOrDefaultAsync(ct);
+        if (project is null) return DesignProjectPermissions.None;
+        if (await HasAdministrativeBypassAsync(userId, ct)) return DesignProjectPermissions.Full;
+        if (project.DesignLeadUserId == userId || project.ProjectManagerUserId == userId)
+            return DesignProjectPermissions.Full;
+        if (!project.OperationalProjectId.HasValue) return DesignProjectPermissions.None;
+
+        var members = await db.OperationalProjectMembers.AsNoTracking()
+            .Include(member => member.Roles)
+            .Include(member => member.DesignPermission)
+            .Where(member => member.OperationalProjectId == project.OperationalProjectId.Value &&
+                member.UserId == userId && member.EndedAt == null &&
+                (member.DesignProjectId == designProjectId ||
+                 member.DesignProjectId == null &&
+                 member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)))
+            .ToListAsync(ct);
+        if (members.Count == 0)
+        {
+            // The root project manager/creator may read the dossier but does
+            // not automatically write in it.
+            return project.RootManagerUserId == userId || project.RootCreatedByUserId == userId
+                ? DesignProjectPermissions.ViewOnly
+                : DesignProjectPermissions.None;
+        }
+
+        // A member scoped to this design project wins over a root-scope member.
+        var member = members.FirstOrDefault(item => item.DesignProjectId == designProjectId) ?? members[0];
+        return member.DesignPermission is { } permission
+            ? new DesignProjectPermissions(
+                permission.CanView, permission.CanCreate, permission.CanUpdate, permission.CanDelete)
+            : DesignProjectPermissions.FromRoles(member.Roles);
+    }
+
+    public async Task<bool> HasDesignProjectPermissionAsync(
+        int userId,
+        int designProjectId,
+        DesignProjectAction action,
+        CancellationToken ct = default,
+        string? disciplineCode = null)
+    {
+        var permissions = await GetDesignProjectPermissionsAsync(userId, designProjectId, ct);
+        var allowed = action switch
+        {
+            DesignProjectAction.View => permissions.CanView,
+            DesignProjectAction.Create => permissions.CanCreate,
+            DesignProjectAction.Update => permissions.CanUpdate,
+            DesignProjectAction.Delete => permissions.CanDelete,
+            _ => false,
+        };
+        if (!allowed) return false;
+        if (action == DesignProjectAction.View) return true;
+
+        var disciplines = await GetAccessibleDesignDisciplinesAsync(userId, designProjectId, ct);
+        return disciplines is null ||
+            disciplineCode is not null && disciplines.Contains(disciplineCode);
+    }
+
+    public async Task<bool> CanManageDesignProjectTeamAsync(
+        int userId,
+        int designProjectId,
+        CancellationToken ct = default)
+    {
+        var project = await db.DesignProjects.AsNoTracking()
+            .Where(item => item.Id == designProjectId)
+            .Select(item => new
+            {
+                item.OperationalProjectId,
+                item.ProjectManagerUserId,
+                item.DesignLeadUserId,
+            })
+            .SingleOrDefaultAsync(ct);
+        if (project is null) return false;
+        if (await HasAdministrativeBypassAsync(userId, ct)) return true;
+        if (project.DesignLeadUserId == userId || project.ProjectManagerUserId == userId) return true;
+        if (!project.OperationalProjectId.HasValue) return false;
+
+        return await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
+            member.OperationalProjectId == project.OperationalProjectId.Value &&
+            (member.DesignProjectId == designProjectId ||
+             member.DesignProjectId == null &&
+             member.Roles.Any(role => role.EndedAt == null && role.Scope == ProjectRoleScope.Project)) &&
+            member.UserId == userId && member.EndedAt == null &&
+            member.Roles.Any(role => role.EndedAt == null &&
+                (role.RoleCode == ProjectTeamRoleCode.DesignLead ||
+                 role.RoleCode == ProjectTeamRoleCode.ProjectManager) &&
+                (role.Scope == ProjectRoleScope.Project ||
+                 role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design")), ct);
     }
 
     public Task<bool> CanManageDesignProjectAsync(
@@ -183,7 +291,7 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
         int designProjectId,
         CancellationToken ct = default,
         string? disciplineCode = null) =>
-        HasDesignRoleAsync(userId, designProjectId, disciplineCode, approvalOnly: false, ct);
+        HasDesignProjectPermissionAsync(userId, designProjectId, DesignProjectAction.Update, ct, disciplineCode);
 
     public Task<bool> CanApproveDesignProjectAsync(
         int userId,
@@ -214,7 +322,21 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
         var projectId = await ResolveDesignProjectIdAsync(resourceType, resourceId, ct);
         if (!projectId.HasValue) return false;
         var disciplineCode = await ResolveDesignDisciplineAsync(resourceType, resourceId, ct);
-        return await CanManageDesignProjectAsync(userId, projectId.Value, ct, disciplineCode);
+        return await HasDesignProjectPermissionAsync(
+            userId, projectId.Value, DesignProjectAction.Update, ct, disciplineCode);
+    }
+
+    public async Task<bool> CanWriteDesignResourceAsync(
+        int userId,
+        DesignProjectResourceType resourceType,
+        int resourceId,
+        DesignProjectAction action,
+        CancellationToken ct = default)
+    {
+        var projectId = await ResolveDesignProjectIdAsync(resourceType, resourceId, ct);
+        if (!projectId.HasValue) return false;
+        var disciplineCode = await ResolveDesignDisciplineAsync(resourceType, resourceId, ct);
+        return await HasDesignProjectPermissionAsync(userId, projectId.Value, action, ct, disciplineCode);
     }
 
     public async Task<bool> CanApproveDesignResourceAsync(
@@ -275,7 +397,8 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
                 project.ProjectManagerUserId == userId ||
                 project.DesignLeadUserId == userId ||
                 db.OperationalProjectMembers.Any(member => member.UserId == userId &&
-                    member.EndedAt == null && member.DesignProjectId == project.Id) ||
+                    member.EndedAt == null && member.DesignProjectId == project.Id &&
+                    (member.DesignPermission == null || member.DesignPermission.CanView)) ||
                 project.OperationalProjectId.HasValue &&
                     operationalProjectIds.Contains(project.OperationalProjectId.Value))
             .Select(project => project.Id)

@@ -65,6 +65,8 @@ public sealed class ProjectTeamService(
             .Where(item => item.OperationalProjectId == projectId &&
                 (item.EntityType == "Member" && db.OperationalProjectMembers.Any(member =>
                     member.Id == item.EntityId && member.DesignProjectId == designProjectId) ||
+                 item.EntityType == "MemberPermissions" && db.OperationalProjectMembers.Any(member =>
+                    member.Id == item.EntityId && member.DesignProjectId == designProjectId) ||
                  item.EntityType == "Assignment" && db.OperationalProjectAssignments.Any(assignment =>
                     assignment.Id == item.EntityId && assignment.AssigneeMember.DesignProjectId == designProjectId) ||
                  !designProjectId.HasValue && item.EntityType != "Member" && item.EntityType != "Assignment"))
@@ -159,6 +161,21 @@ public sealed class ProjectTeamService(
             UpdatedByUserId = callerUserId,
         };
         member.Roles.AddRange(ParseRoles(request.Roles, member.StartedAt, member.EndedAt));
+        if (member.DesignProjectId.HasValue)
+        {
+            var defaults = DesignProjectPermissions.FromRoles(member.Roles);
+            member.DesignPermission = new DesignProjectMemberPermission
+            {
+                CanView = defaults.CanView,
+                CanCreate = defaults.CanCreate,
+                CanUpdate = defaults.CanUpdate,
+                CanDelete = defaults.CanDelete,
+                CreatedAt = now,
+                CreatedByUserId = callerUserId,
+                UpdatedAt = now,
+                UpdatedByUserId = callerUserId,
+            };
+        }
         db.OperationalProjectMembers.Add(member);
         try
         {
@@ -228,6 +245,54 @@ public sealed class ProjectTeamService(
         await AddHistoryAsync(projectId, "Member", member.Id,
             member.EndedAt.HasValue ? "Ended" : "Updated", response, callerUserId, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        return response;
+    }
+
+    public async Task<OperationalProjectMemberResponse?> UpdateMemberPermissionsAsync(
+        int projectId,
+        int memberId,
+        UpdateDesignProjectMemberPermissionsRequest request,
+        int callerUserId,
+        CancellationToken ct = default)
+    {
+        var member = await db.OperationalProjectMembers
+            .Include(item => item.Roles)
+            .Include(item => item.DesignPermission)
+            .SingleOrDefaultAsync(item => item.Id == memberId && item.OperationalProjectId == projectId, ct);
+        if (member is null) return null;
+        if (!member.DesignProjectId.HasValue)
+            throw new ProjectTeamOperationException(
+                "Chỉ có thể phân quyền hồ sơ cho thành viên thuộc luồng Thiết kế.");
+        if (!await access.CanManageDesignProjectTeamAsync(callerUserId, member.DesignProjectId.Value, ct))
+            throw new ProjectTeamOperationException(
+                "Bạn không có quyền phân quyền hồ sơ thiết kế của Dự án này.");
+        if (!request.CanView && (request.CanCreate || request.CanUpdate || request.CanDelete))
+            throw new ProjectTeamOperationException(
+                "Muốn cấp quyền tạo/sửa/xóa thì phải bật quyền xem.");
+
+        var now = DateTime.UtcNow;
+        var permission = member.DesignPermission;
+        if (permission is null)
+        {
+            permission = new DesignProjectMemberPermission
+            {
+                MemberId = member.Id,
+                CreatedAt = now,
+                CreatedByUserId = callerUserId,
+            };
+            db.DesignProjectMemberPermissions.Add(permission);
+            member.DesignPermission = permission;
+        }
+        permission.CanView = request.CanView;
+        permission.CanCreate = request.CanCreate;
+        permission.CanUpdate = request.CanUpdate;
+        permission.CanDelete = request.CanDelete;
+        permission.UpdatedAt = now;
+        permission.UpdatedByUserId = callerUserId;
+        await db.SaveChangesAsync(ct);
+
+        var response = MapMember(await MemberQuery(projectId).SingleAsync(item => item.Id == member.Id, ct));
+        await AddHistoryAsync(projectId, "MemberPermissions", member.Id, "Updated", response, callerUserId, ct);
         return response;
     }
 
@@ -686,7 +751,7 @@ public sealed class ProjectTeamService(
         return await db.DesignProjects.AnyAsync(design => design.Id == designProjectId &&
             design.OperationalProjectId == projectId, ct) &&
             (await access.CanManageTeamAsync(userId, projectId, ct) ||
-             await access.CanManageDesignProjectAsync(userId, designProjectId.Value, ct));
+             await access.CanManageDesignProjectTeamAsync(userId, designProjectId.Value, ct));
     }
 
     private async Task EnsureCanManageAsync(int projectId, int callerUserId, CancellationToken ct, int? designProjectId = null)
@@ -724,6 +789,7 @@ public sealed class ProjectTeamService(
             .Include(item => item.ReportsToMember)!
                 .ThenInclude(item => item!.User)
             .Include(item => item.Roles)
+            .Include(item => item.DesignPermission)
             .Where(item => item.OperationalProjectId == projectId)
             .OrderBy(item => item.EndedAt.HasValue)
             .ThenBy(item => item.User.FullName ?? item.User.Email);
@@ -801,8 +867,31 @@ public sealed class ProjectTeamService(
             StartedAt = role.StartedAt,
             EndedAt = role.EndedAt,
         }).ToList(),
+        DesignPermissions = member.DesignProjectId.HasValue
+            ? member.DesignPermission is { } permission
+                ? MapDesignPermissions(permission)
+                : MapDesignPermissions(DesignProjectPermissions.FromRoles(member.Roles))
+            : null,
         RowVersion = Convert.ToBase64String(member.RowVersion),
     };
+
+    private static DesignProjectMemberPermissionsResponse MapDesignPermissions(
+        DesignProjectMemberPermission permission) => new()
+        {
+            CanView = permission.CanView,
+            CanCreate = permission.CanCreate,
+            CanUpdate = permission.CanUpdate,
+            CanDelete = permission.CanDelete,
+        };
+
+    private static DesignProjectMemberPermissionsResponse MapDesignPermissions(
+        DesignProjectPermissions permissions) => new()
+        {
+            CanView = permissions.CanView,
+            CanCreate = permissions.CanCreate,
+            CanUpdate = permissions.CanUpdate,
+            CanDelete = permissions.CanDelete,
+        };
 
     private static OperationalProjectAssignmentResponse MapAssignment(OperationalProjectAssignment assignment) => new()
     {

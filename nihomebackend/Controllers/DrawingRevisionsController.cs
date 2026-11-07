@@ -70,7 +70,7 @@ public class DrawingRevisionsController(
     /// PUT / DELETE endpoint (revision history is audit-safe per spec).
     /// </summary>
     [HttpPost]
-    [RequirePermission("design.revisions", "manage")]
+    [RequirePermission("design.revisions", "view")]
     public async Task<ActionResult<DrawingRevisionResponse>> Create(
         [FromBody] CreateDrawingRevisionRequest request, CancellationToken ct)
     {
@@ -86,8 +86,8 @@ public class DrawingRevisionsController(
                 : DesignProjectResourceType.ShopDrawing;
             var projectId = await projectAccess.ResolveDesignProjectIdAsync(resourceType, request.TargetId, ct);
             if (!projectId.HasValue ||
-                !await projectAccess.CanManageDesignResourceAsync(
-                    userId.Value, resourceType, request.TargetId, ct))
+                !await projectAccess.CanWriteDesignResourceAsync(
+                    userId.Value, resourceType, request.TargetId, DesignProjectAction.Create, ct))
                 return NotFound();
 
             var response = await svc.CreateAsync(request, userId.Value, ct);

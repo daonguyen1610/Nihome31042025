@@ -573,6 +573,28 @@ public sealed class ProjectTeamServiceTests : IDisposable
         Assert.Equal(_otherUserId, await DesignLeadUserIdAsync(designId));
     }
 
+    [Fact]
+    public async Task GetAsync_DesignMemberWithoutExplicitRow_FallsBackToRoleDefaults()
+    {
+        var designId = await AddDesignProjectAsync("DP-DEFAULT-MATRIX");
+        var added = await AddDesignMemberAsync(designId, _memberUserId, "Kiến trúc sư");
+
+        var row = await _db.DesignProjectMemberPermissions.SingleAsync(item => item.MemberId == added.Id);
+        _db.DesignProjectMemberPermissions.Remove(row);
+        await _db.SaveChangesAsync();
+        _access.Setup(value => value.CanViewDesignProjectAsync(
+                _callerId, designId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        var team = await _service.GetAsync(_projectId, _callerId, designProjectId: designId);
+        var member = Assert.Single(team!.Members, item => item.Id == added.Id);
+        Assert.NotNull(member.DesignPermissions);
+        Assert.True(member.DesignPermissions!.CanView);
+        Assert.True(member.DesignPermissions.CanCreate);
+        Assert.True(member.DesignPermissions.CanUpdate);
+        Assert.False(member.DesignPermissions.CanDelete);
+    }
+
     private async Task<int> AddDesignProjectAsync(string code)
     {
         var operational = await _db.OperationalProjects.FindAsync(_projectId);

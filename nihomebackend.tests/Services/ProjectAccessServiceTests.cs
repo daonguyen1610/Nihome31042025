@@ -242,6 +242,65 @@ public sealed class ProjectAccessServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetDesignProjectPermissionsAsync_ExplicitMatrixOverridesRoleDefaults()
+    {
+        var (userId, _, designProjectId) = AddProjectMember(
+            ProjectTeamRoleCode.Architect,
+            ProjectRoleScope.Module,
+            "Design");
+        var member = _db.OperationalProjectMembers.Single(item =>
+            item.UserId == userId && item.DesignProjectId == designProjectId);
+        member.DesignPermission = new DesignProjectMemberPermission
+        {
+            CanView = true,
+            CanCreate = false,
+            CanUpdate = true,
+            CanDelete = true,
+            CreatedByUserId = userId,
+            UpdatedByUserId = userId,
+        };
+        _db.SaveChanges();
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        var permissions = await service.GetDesignProjectPermissionsAsync(userId, designProjectId);
+
+        Assert.True(permissions.CanView);
+        Assert.False(permissions.CanCreate);
+        Assert.True(permissions.CanUpdate);
+        Assert.True(permissions.CanDelete);
+        Assert.True(await service.HasDesignProjectPermissionAsync(
+            userId, designProjectId, DesignProjectAction.Update));
+        Assert.False(await service.HasDesignProjectPermissionAsync(
+            userId, designProjectId, DesignProjectAction.Create));
+    }
+
+    [Fact]
+    public async Task CanManageDesignProjectTeamAsync_DesignLeadMember_IsAllowed()
+    {
+        var (userId, _, designProjectId) = AddProjectMember(
+            ProjectTeamRoleCode.DesignLead,
+            ProjectRoleScope.Module,
+            "Design");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        Assert.True(await service.CanManageDesignProjectTeamAsync(userId, designProjectId));
+    }
+
+    [Fact]
+    public async Task CanManageDesignProjectTeamAsync_ContributorWithUpdate_IsDenied()
+    {
+        var (userId, _, designProjectId) = AddProjectMember(
+            ProjectTeamRoleCode.Architect,
+            ProjectRoleScope.Module,
+            "Design");
+        var service = new ProjectAccessService(_db, _permissions.Object);
+
+        Assert.True(await service.HasDesignProjectPermissionAsync(
+            userId, designProjectId, DesignProjectAction.Update));
+        Assert.False(await service.CanManageDesignProjectTeamAsync(userId, designProjectId));
+    }
+
+    [Fact]
     public async Task CanViewDesignResourceAsync_DisciplineScope_HidesOtherDisciplines()
     {
         var (userId, _, designProjectId) = AddProjectMember(

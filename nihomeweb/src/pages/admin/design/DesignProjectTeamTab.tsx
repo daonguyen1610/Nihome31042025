@@ -19,6 +19,7 @@ import {
   Plus,
   RefreshCw,
   Send,
+  ShieldCheck,
   Trash2,
   UserRound,
   UserRoundX,
@@ -47,6 +48,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -63,6 +65,7 @@ import { translateError, useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
 import {
   adminApi,
+  type DesignProjectMemberPermissionsResponse,
   type OperationalProjectAssignmentAttachmentResponse,
   type OperationalProjectAssignmentCommentResponse,
   type OperationalProjectAssignmentResponse,
@@ -628,6 +631,16 @@ export const OperationalProjectTeamPanel = ({
   const [error, setError] = useState<string | null>(null);
   const [memberDialog, setMemberDialog] = useState<MemberDialogMode | null>(null);
   const [editingMember, setEditingMember] = useState<OperationalProjectMemberResponse | null>(null);
+  const [permissionMember, setPermissionMember] = useState<OperationalProjectMemberResponse | null>(
+    null,
+  );
+  const [permissionForm, setPermissionForm] = useState<DesignProjectMemberPermissionsResponse>({
+    canView: true,
+    canCreate: false,
+    canUpdate: false,
+    canDelete: false,
+  });
+  const [permissionSaving, setPermissionSaving] = useState(false);
   const [memberForm, setMemberForm] = useState<MemberForm>(emptyMemberForm());
   const [assignmentDialog, setAssignmentDialog] = useState<AssignmentDialogMode | null>(null);
   const [editingAssignment, setEditingAssignment] =
@@ -724,6 +737,32 @@ export const OperationalProjectTeamPanel = ({
   };
   const isDesignRole = (role: ProjectMemberRoleRequest) =>
     role.scope === "Module" && role.scopeValue === "Design";
+  const renderPermissions = (permissions?: DesignProjectMemberPermissionsResponse | null) => {
+    if (!permissions) return null;
+    const items = [
+      ["view", permissions.canView],
+      ["create", permissions.canCreate],
+      ["update", permissions.canUpdate],
+      ["delete", permissions.canDelete],
+    ] as const;
+    return (
+      <div className="mt-1.5 flex flex-wrap gap-1">
+        {items.map(([key, enabled]) => (
+          <Badge
+            key={key}
+            variant="outline"
+            className={
+              enabled
+                ? "whitespace-nowrap border-emerald-200 bg-emerald-50 text-emerald-700"
+                : "whitespace-nowrap text-muted-foreground opacity-50"
+            }
+          >
+            {t(`designProjects.team.permissions.${key}`)}
+          </Badge>
+        ))}
+      </div>
+    );
+  };
 
   const createsReportingCycle = (memberId: number, managerId: number | null | undefined) => {
     let current = managerId ?? null;
@@ -776,6 +815,49 @@ export const OperationalProjectTeamPanel = ({
     setFormError(null);
     memberIdempotencyKey.current = newIdempotencyKey();
     setMemberDialog(mode);
+  };
+  const openPermissions = (member: OperationalProjectMemberResponse) => {
+    setFormError(null);
+    setPermissionMember(member);
+    setPermissionForm(
+      member.designPermissions ?? {
+        canView: true,
+        canCreate: false,
+        canUpdate: false,
+        canDelete: false,
+      },
+    );
+  };
+  const savePermissions = async () => {
+    if (!permissionMember || !operationalProjectId) return;
+    if (
+      !permissionForm.canView &&
+      (permissionForm.canCreate || permissionForm.canUpdate || permissionForm.canDelete)
+    ) {
+      setFormError(t("designProjects.team.permissions.viewRequired"));
+      return;
+    }
+    setPermissionSaving(true);
+    setFormError(null);
+    try {
+      await adminApi.updateOperationalProjectMemberDesignPermissions(
+        operationalProjectId,
+        permissionMember.id,
+        permissionForm,
+      );
+      toast({ title: t("designProjects.team.toast.permissionsSaved") });
+      setPermissionMember(null);
+      await load();
+      onProjectMayHaveChanged?.();
+    } catch (saveError) {
+      toast({
+        variant: "destructive",
+        title: t("common.error"),
+        description: translateError(t, uiError(saveError)),
+      });
+    } finally {
+      setPermissionSaving(false);
+    }
   };
   const updateRole = (index: number, patch: Partial<ProjectMemberRoleRequest>) =>
     setMemberForm((current) => ({
@@ -1139,7 +1221,7 @@ export const OperationalProjectTeamPanel = ({
           </div>
         ) : (
           <>
-            <ul className="mt-4 grid grid-cols-1 gap-3 lg:hidden">
+            <ul className="mt-4 grid grid-cols-1 gap-3 xl:hidden">
               {activeMembers.map((member) => (
                 <li key={member.id} className="rounded-lg border border-border p-4">
                   <div
@@ -1195,6 +1277,16 @@ export const OperationalProjectTeamPanel = ({
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        {designProjectContext ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            aria-label={t("designProjects.team.action.permissions")}
+                            onClick={() => openPermissions(member)}
+                          >
+                            <ShieldCheck className="h-4 w-4" />
+                          </Button>
+                        ) : null}
                         {(!designProjectContext ||
                           (member.roles.length > 0 && member.roles.every(isDesignRole))) && (
                           <Button
@@ -1218,7 +1310,7 @@ export const OperationalProjectTeamPanel = ({
                         <Badge
                           key={`${role.roleCode}-${role.scope}-${role.scopeValue ?? index}`}
                           variant="outline"
-                          className="whitespace-normal bg-muted/30"
+                          className="h-auto whitespace-normal rounded-md bg-muted/30 px-2 py-1 text-left leading-snug"
                         >
                           {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                           {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
@@ -1230,6 +1322,7 @@ export const OperationalProjectTeamPanel = ({
                       );
                     })}
                   </div>
+                  {renderPermissions(member.designPermissions)}
                   <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div>
                       <dt className="text-xs text-muted-foreground">
@@ -1247,7 +1340,7 @@ export const OperationalProjectTeamPanel = ({
                 </li>
               ))}
             </ul>
-            <div className="mt-4 hidden overflow-x-auto rounded-lg border border-border lg:block">
+            <div className="mt-4 hidden overflow-x-auto rounded-lg border border-border xl:block">
               <table className="min-w-full text-sm">
                 <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -1277,7 +1370,7 @@ export const OperationalProjectTeamPanel = ({
                       <td className="px-3 py-3 text-foreground">
                         {projectPositionLabel(member.position, t)}
                       </td>
-                      <td className="max-w-md px-3 py-3">
+                      <td className="min-w-[18rem] px-3 py-3">
                         <div className="flex flex-wrap gap-1.5">
                           {member.roles.map((role, index) => {
                             const definition = team.roleDefinitions.find(
@@ -1287,7 +1380,7 @@ export const OperationalProjectTeamPanel = ({
                               <Badge
                                 key={`${role.roleCode}-${role.scope}-${role.scopeValue ?? index}`}
                                 variant="outline"
-                                className="whitespace-normal bg-muted/30"
+                                className="h-auto whitespace-normal rounded-md bg-muted/30 px-2 py-1 text-left leading-snug"
                               >
                                 {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                                 {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
@@ -1299,6 +1392,7 @@ export const OperationalProjectTeamPanel = ({
                             );
                           })}
                         </div>
+                        {renderPermissions(member.designPermissions)}
                       </td>
                       <td className="px-3 py-3 text-foreground">
                         {member.reportsToName ?? t("designProjects.team.value.none")}
@@ -1317,6 +1411,16 @@ export const OperationalProjectTeamPanel = ({
                             >
                               <Pencil className="h-4 w-4" />
                             </Button>
+                            {designProjectContext ? (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                aria-label={t("designProjects.team.action.permissions")}
+                                onClick={() => openPermissions(member)}
+                              >
+                                <ShieldCheck className="h-4 w-4" />
+                              </Button>
+                            ) : null}
                             {(!designProjectContext ||
                               (member.roles.length > 0 && member.roles.every(isDesignRole))) && (
                               <Button
@@ -1809,6 +1913,59 @@ export const OperationalProjectTeamPanel = ({
                   ? "designProjects.team.action.confirmEndMember"
                   : "common.save",
               )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={permissionMember !== null}
+        onOpenChange={(open) => !open && setPermissionMember(null)}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>{t("designProjects.team.dialog.permissions.title")}</DialogTitle>
+            <DialogDescription>
+              {permissionMember
+                ? `${permissionMember.userName} · ${t("designProjects.team.dialog.permissions.description")}`
+                : t("designProjects.team.dialog.permissions.description")}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-3 py-2">
+            {(
+              [
+                ["view", permissionForm.canView, "canView"],
+                ["create", permissionForm.canCreate, "canCreate"],
+                ["update", permissionForm.canUpdate, "canUpdate"],
+                ["delete", permissionForm.canDelete, "canDelete"],
+              ] as const
+            ).map(([key, checked, field]) => (
+              <label
+                key={key}
+                className="flex items-center gap-3 rounded-md border border-border px-3 py-2 text-sm"
+              >
+                <Checkbox
+                  checked={checked}
+                  onCheckedChange={(value) =>
+                    setPermissionForm((current) => ({ ...current, [field]: value === true }))
+                  }
+                />
+                <span>{t(`designProjects.team.permissions.${key}`)}</span>
+              </label>
+            ))}
+          </div>
+          {formError ? <p className="text-sm font-medium text-rose-600">{formError}</p> : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              disabled={permissionSaving}
+              onClick={() => setPermissionMember(null)}
+            >
+              {t("common.cancel")}
+            </Button>
+            <Button disabled={permissionSaving} onClick={() => void savePermissions()}>
+              {permissionSaving && <Loader2 className="mr-1 h-4 w-4 animate-spin" />}
+              {t("designProjects.team.action.savePermissions")}
             </Button>
           </DialogFooter>
         </DialogContent>

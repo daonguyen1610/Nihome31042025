@@ -42,7 +42,16 @@ public sealed class OperationalProjectMemberResponse
     public string Source { get; set; } = string.Empty;
     public string? SourceReference { get; set; }
     public List<ProjectMemberRoleResponse> Roles { get; set; } = new();
+    public DesignProjectMemberPermissionsResponse? DesignPermissions { get; set; }
     public string RowVersion { get; set; } = string.Empty;
+}
+
+public sealed class DesignProjectMemberPermissionsResponse
+{
+    public bool CanView { get; set; }
+    public bool CanCreate { get; set; }
+    public bool CanUpdate { get; set; }
+    public bool CanDelete { get; set; }
 }
 
 public sealed class ProjectMemberRoleResponse

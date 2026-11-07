@@ -44,7 +44,16 @@ public class DesignProjectsController(
         if (userId is null) return Unauthorized();
         if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, id, ct)) return NotFound();
         var found = await svc.GetAsync(id, ct);
-        return found is null ? NotFound() : Ok(found);
+        if (found is null) return NotFound();
+        var permissions = await projectAccess.GetDesignProjectPermissionsAsync(userId.Value, id, ct);
+        found.EffectivePermissions = new DesignProjectMemberPermissionsResponse
+        {
+            CanView = permissions.CanView,
+            CanCreate = permissions.CanCreate,
+            CanUpdate = permissions.CanUpdate,
+            CanDelete = permissions.CanDelete,
+        };
+        return Ok(found);
     }
 
     [HttpPost]
@@ -110,12 +119,12 @@ public class DesignProjectsController(
     }
 
     [HttpPut("{id:int}")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     public async Task<ActionResult<DesignProjectResponse>> Update(int id, [FromBody] UpdateDesignProjectRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
+        if (!await projectAccess.HasDesignProjectPermissionAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
         try
         {
             var response = await svc.UpdateAsync(id, request, userId.Value, ct);
@@ -146,7 +155,7 @@ public class DesignProjectsController(
     }
 
     [HttpDelete("{id:int}")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     public async Task<IActionResult> Delete(
         int id,
         [FromBody] ConfirmDeletionRequest request,
@@ -154,7 +163,7 @@ public class DesignProjectsController(
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
+        if (!await projectAccess.HasDesignProjectPermissionAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
         try
         {
             var result = await svc.DeleteAsync(id, request, userId.Value, ct);
@@ -176,14 +185,14 @@ public class DesignProjectsController(
     }
 
     [HttpGet("{id:int}/deletion-impact")]
-    [RequirePermission("design.projects", "manage")]
+    [RequirePermission("design.projects", "view")]
     public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(
         int id,
         CancellationToken ct)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
-        if (!await projectAccess.CanManageDesignProjectAsync(userId.Value, id, ct)) return NotFound();
+        if (!await projectAccess.HasDesignProjectPermissionAsync(userId.Value, id, DesignProjectAction.Delete, ct)) return NotFound();
         var impact = await svc.GetDeletionImpactAsync(id, ct);
         return impact is null ? NotFound() : Ok(impact);
     }
