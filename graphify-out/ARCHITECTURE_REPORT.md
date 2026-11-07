@@ -2,7 +2,7 @@
 
 This is a static structural analysis of the working tree, including existing uncommitted edits. It is not a runtime trace, security audit, test execution, business-delivery assessment, or proof of complete call resolution.
 
-Generated at 2026-11-07T04:13:05.125063+00:00.
+Generated at 2026-11-07T04:28:11.069198+00:00.
 
 ## Scope
 

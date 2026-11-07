@@ -4131,6 +4131,11 @@ Unit tests cover isolated service logic, validation, branching, helpers, and map
 
 Frontend behavior is validated through Playwright against the integrated Docker stack. Pure service logic and HTTP contracts belong in backend unit and integration tests respectively.
 
+The mobile BOQ version-history test uses a 90-second workflow timeout because
+approval waits for the request email and cleanup waits for the decision email
+before deleting the quote and its parents. These are separate outbox worker
+ticks; the suite default remains 30 seconds.
+
 The focused `admin-navigation.spec.ts` checks client-side navigation from Roles,
 browser Back/Forward and unsaved permission drafts across refetches. Verify
 rendered destination content as well as the URL: a changed URL alone does not
