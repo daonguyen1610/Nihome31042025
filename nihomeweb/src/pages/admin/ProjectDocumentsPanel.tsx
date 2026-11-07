@@ -451,9 +451,7 @@ export default function ProjectDocumentsPanel({
           data-testid="project-documents-upload"
         >
           <div>
-            <Label htmlFor="project-document-file">
-              {t("operationalProjects.documents.file")}
-            </Label>
+            <Label htmlFor="project-document-file">{t("operationalProjects.documents.file")}</Label>
             <MultiFilePicker
               id="project-document-file"
               files={files}

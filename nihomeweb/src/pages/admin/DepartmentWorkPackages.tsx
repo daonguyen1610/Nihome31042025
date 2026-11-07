@@ -190,12 +190,9 @@ const DepartmentWorkPackages = () => {
   const purposeFilter = params.get("purpose") ?? "";
   const projectFilter = kind !== "Internal" ? (params.get("projectId") ?? "") : "";
   const page = Math.max(1, Number(params.get("page")) || 1);
-  const activeFilterCount = [
-    departmentFilter,
-    statusFilter,
-    purposeFilter,
-    projectFilter,
-  ].filter(Boolean).length;
+  const activeFilterCount = [departmentFilter, statusFilter, purposeFilter, projectFilter].filter(
+    Boolean,
+  ).length;
   const setPage = (next: number) => {
     setParams(
       (current) => {

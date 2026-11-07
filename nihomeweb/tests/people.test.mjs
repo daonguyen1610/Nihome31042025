@@ -7,13 +7,8 @@ const source = await readFile(new URL("../src/lib/people.ts", import.meta.url), 
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const {
-  personOption,
-  projectMemberOption,
-  mergePeople,
-  collectPeoplePages,
-  projectPositionLabel,
-} = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
+const { personOption, projectMemberOption, mergePeople, collectPeoplePages, projectPositionLabel } =
+  await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
 const t = (key) =>
   ({
     "role.architect": "Architect",

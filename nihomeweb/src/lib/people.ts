@@ -81,7 +81,9 @@ export function projectMemberRole(
     return label === key ? role.roleCode : label;
   });
   return [
-    ...new Set([personRole(person, t), projectPositionLabel(person.position, t), ...roles].filter(Boolean)),
+    ...new Set(
+      [personRole(person, t), projectPositionLabel(person.position, t), ...roles].filter(Boolean),
+    ),
   ].join(" · ");
 }
 
