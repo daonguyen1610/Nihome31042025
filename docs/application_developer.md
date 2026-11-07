@@ -4051,7 +4051,45 @@ cases.
 
 ### 8.2 API Service Modules
 
-API calls are organized into typed modules under `src/services/`. `authApi.ts` owns authentication, `contentApi.ts` owns public content, `adminApi.ts` owns shared administration and several operational contracts, and focused modules such as `rbacApi.ts`, `crmApi.ts`, `designApi.ts`, `permitsApi.ts`, and construction service modules own their respective domains. Extend an existing domain module before introducing a parallel client.
+API calls are organized into typed modules under `src/services/`. `authApi.ts`
+owns authentication and `contentApi.ts` owns public content. `adminApi.ts` is a
+compatibility facade over feature clients in `services/admin/*Api.ts` and their
+contracts in `services/admin/types/`; existing callers retain their imports.
+Extend the owning feature client instead of growing the facade. Existing
+focused clients such as `rbacApi.ts` remain authoritative for their domains.
+
+Contract detail tabs live under `pages/admin/contracts/`; work-package controls
+and orchestration under `pages/admin/work-packages/`; procurement forms and
+panels under `pages/admin/procurement/components/`. Keep business operations in
+their owning hook/client and presentation in the corresponding feature view.
+
+The supported UI theme is **light**, as confirmed by the product owner. Use
+semantic foreground, surface, border and primary tokens instead of fixed slate
+or white classes. Dark token scaffolding is not a delivered theme or a promise
+of dark-mode support. Toasts and native form controls use the light scheme.
+
+For a single labelled control, use `FieldScope` with `Label` and the existing
+Input, Textarea, SelectTrigger or SearchableSelect. The scope supplies a unique
+React ID without changing the surrounding div, handlers or refs. Use explicit
+`htmlFor`/`id` when the control already has an identifier; keep the pair aligned.
+Use `FieldControl` only as an adapter for a native/custom control. Put a separate
+scope around each repeated row; group headings are text or legends, not orphan
+labels. Do not derive accessible names from placeholders.
+
+Use `useConfirm` for simple application confirmations; it localizes buttons,
+returns focus on cancellation and cancels pending requests on navigation. Keep
+aggregate deletion in `DeletionImpactDialog` with its existing server contract.
+Use `useUiError` at UI boundaries to preserve safe server validation/conflict
+reasons while localizing transport failures and hiding unexpected internals.
+Its stable callback does not reload a draft merely because the language changes.
+
+Visible record lists must render page controls using their actual returned
+totals. `ListPagination` and `useListPage` reset/clamp pages after filter or total
+changes; `useDebouncedValue` settles search input and `useRequestGuard` rejects
+obsolete responses. Use `collectLookupPages` for reference options, not visible
+business lists: it follows server pagination, handles `total`/`totalCount` and
+rejects incomplete responses instead of returning a silently truncated set.
+Design-document deep links locate their record within the current scoped query.
 
 ### 8.3 Build Commands
 
@@ -4061,6 +4099,8 @@ API calls are organized into typed modules under `src/services/`. `authApi.ts` o
 | `npm run build`      | Production build                   |
 | `npm run build:dev`  | Development build                  |
 | `npm run lint`       | Run ESLint                         |
+| `npm run check:a11y` | Check source label associations    |
+| `npm run test:unit`  | Run focused frontend helper checks |
 | `npm run test:e2e`   | Run Playwright browser tests       |
 | `npm run preview`    | Preview production build locally   |
 

@@ -200,7 +200,7 @@ export default function EmailTemplateEditor({
             {t(fullscreen ? "emailTemplate.editor.minimize" : "emailTemplate.editor.fullscreen")}
           </Button>
         </div>
-        <div className="overflow-hidden rounded-lg border bg-white">
+        <div className="overflow-hidden rounded-lg border bg-card">
           {previewError && (
             <p
               role="alert"
@@ -220,7 +220,7 @@ export default function EmailTemplateEditor({
           <iframe
             title={previewTitle}
             srcDoc={previewError || previewLoading ? "" : previewBody}
-            className="w-full border-0 bg-white"
+            className="w-full border-0 bg-card"
             style={{ height: fullscreen ? "calc(100dvh - 140px)" : "500px" }}
             sandbox=""
           />

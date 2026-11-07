@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -50,6 +53,7 @@ const QuoteRateFields = ({
   onChange,
   onEffectiveRevisionChange,
 }: QuoteRateFieldsProps) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [catalogs, setCatalogs] = useState<MaterialRateCatalogResponse[]>([]);
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
@@ -75,12 +79,12 @@ const QuoteRateFields = ({
         setCatalogsLoaded(true);
       })
       .catch((err) => {
-        if (!cancelled) setError(extractApiError(err));
+        if (!cancelled) setError(uiError(err));
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [uiError]);
 
   useEffect(() => {
     if (!catalogId || !pricingDate) {
@@ -116,7 +120,7 @@ const QuoteRateFields = ({
         setError(t("quotes.validation.noEffectiveRate"));
         if (!canOverride) onChangeRef.current({ unitPricePerSqm: null, rateOverrideReason: null });
         if ((err as { response?: { status?: number } }).response?.status !== 404) {
-          setError(extractApiError(err));
+          setError(uiError(err));
         }
       })
       .finally(() => {
@@ -125,7 +129,7 @@ const QuoteRateFields = ({
     return () => {
       cancelled = true;
     };
-  }, [canOverride, catalogId, pricingDate, rateSource, t, unitPrice]);
+  }, [canOverride, catalogId, pricingDate, rateSource, t, uiError, unitPrice]);
 
   const isOverride = Boolean(
     revision &&
@@ -148,7 +152,7 @@ const QuoteRateFields = ({
         <QuoteCatalogEmptyState catalogType="InvestmentRate" />
       )}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div>
+        <FieldScope>
           <Label>{t("quotes.field.materialRateCatalog")} *</Label>
           <Select
             disabled={disabled}
@@ -174,8 +178,8 @@ const QuoteRateFields = ({
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div>
+        </FieldScope>
+        <FieldScope>
           <Label>{t("quotes.field.pricingEffectiveDate")} *</Label>
           <Input
             type="date"
@@ -192,7 +196,7 @@ const QuoteRateFields = ({
               });
             }}
           />
-        </div>
+        </FieldScope>
       </div>
 
       {loading && (
@@ -230,7 +234,7 @@ const QuoteRateFields = ({
         </dl>
       )}
 
-      <div>
+      <FieldScope>
         <Label>{t("quotes.field.appliedRate")} *</Label>
         <Input
           type="number"
@@ -247,10 +251,10 @@ const QuoteRateFields = ({
         {!canOverride && (
           <p className="mt-1 text-xs text-muted-foreground">{t("quotes.rate.catalogLocked")}</p>
         )}
-      </div>
+      </FieldScope>
 
       {canOverride && isOverride && (
-        <div>
+        <FieldScope>
           <Label>{t("quotes.field.rateOverrideReason")} *</Label>
           <Textarea
             disabled={disabled}
@@ -260,7 +264,7 @@ const QuoteRateFields = ({
             onChange={(event) => onChange({ rateOverrideReason: event.target.value })}
             placeholder={t("quotes.rate.overrideReasonHint")}
           />
-        </div>
+        </FieldScope>
       )}
     </div>
   );

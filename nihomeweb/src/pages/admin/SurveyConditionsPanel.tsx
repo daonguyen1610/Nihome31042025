@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useRef, useState } from "react";
 import { Braces, Download, Loader2, Plus, Save, Trash2, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -63,6 +66,7 @@ const responseErrors = (error: unknown): CsvImportError[] => {
 };
 
 export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: Props) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -141,7 +145,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
       toast({ title: t("surveys.conditions.saved") });
       await onRefresh();
     } catch (error) {
-      setFormError(extractApiError(error));
+      setFormError(uiError(error));
     } finally {
       setBusy(false);
     }
@@ -168,7 +172,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -187,7 +191,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
     } catch (error) {
       const nextErrors = responseErrors(error);
       setErrors(nextErrors);
-      if (nextErrors.length === 0) setFormError(extractApiError(error));
+      if (nextErrors.length === 0) setFormError(uiError(error));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";
@@ -202,7 +206,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
 
   return (
     <div className="space-y-4" data-testid="survey-conditions">
-      <section className="rounded-lg border bg-white p-4 shadow-sm">
+      <section className="rounded-lg border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold">{t("surveys.conditions.title")}</h2>
@@ -269,7 +273,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
             {rows.map((row, index) => (
               <div key={index} className="rounded-md border p-3">
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-                  <div>
+                  <FieldScope>
                     <Label>{t("surveys.conditions.field.category")}</Label>
                     <Select
                       disabled={!canManage}
@@ -289,8 +293,8 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("surveys.conditions.field.code")} *</Label>
                     <Input
                       disabled={!canManage}
@@ -298,8 +302,8 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                       value={row.code}
                       onChange={(event) => update(index, { code: event.target.value })}
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("surveys.conditions.field.status")}</Label>
                     <Select
                       disabled={!canManage}
@@ -319,8 +323,8 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("surveys.conditions.field.numericValue")}</Label>
                     <Input
                       disabled={!canManage}
@@ -333,8 +337,8 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                         })
                       }
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("surveys.conditions.field.unit")}</Label>
                     <Input
                       disabled={!canManage}
@@ -342,8 +346,8 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                       value={row.unitCode ?? ""}
                       onChange={(event) => update(index, { unitCode: event.target.value })}
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("surveys.conditions.field.reference")}</Label>
                     <Input
                       disabled={!canManage}
@@ -351,8 +355,8 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                       value={row.referenceCode ?? ""}
                       onChange={(event) => update(index, { referenceCode: event.target.value })}
                     />
-                  </div>
-                  <div className="sm:col-span-2">
+                  </FieldScope>
+                  <FieldScope className="sm:col-span-2">
                     <Label>{t("surveys.conditions.field.description")}</Label>
                     <Input
                       disabled={!canManage}
@@ -360,8 +364,8 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                       value={row.description ?? ""}
                       onChange={(event) => update(index, { description: event.target.value })}
                     />
-                  </div>
-                  <div className="sm:col-span-2 lg:col-span-4">
+                  </FieldScope>
+                  <FieldScope className="sm:col-span-2 lg:col-span-4">
                     <Label>{t("surveys.conditions.field.note")}</Label>
                     <Textarea
                       disabled={!canManage}
@@ -369,7 +373,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
                       value={row.note ?? ""}
                       onChange={(event) => update(index, { note: event.target.value })}
                     />
-                  </div>
+                  </FieldScope>
                 </div>
                 {canManage && (
                   <div className="mt-2 flex justify-end">

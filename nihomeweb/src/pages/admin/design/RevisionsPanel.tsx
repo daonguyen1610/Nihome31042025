@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CheckCircle2, GitCompareArrows, History, Loader2, Plus, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -71,6 +75,7 @@ export const RevisionsPanel = ({
   targetCode,
   targetTitle,
 }: Props) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -86,19 +91,22 @@ export const RevisionsPanel = ({
     setLoading(true);
     setError(null);
     try {
-      const { data } = await adminApi.listDrawingRevisions({
-        designProjectId,
-        targetType,
-        targetId,
-        pageSize: 200,
-      });
+      const { data } = await collectLookupPages((page) =>
+        adminApi.listDrawingRevisions({
+          designProjectId,
+          targetType,
+          targetId,
+          pageSize: 200,
+          page,
+        }),
+      );
       setRows(data.items ?? []);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [open, designProjectId, targetType, targetId]);
+  }, [open, designProjectId, targetType, targetId, uiError]);
 
   useEffect(() => {
     void fetchRows();
@@ -161,7 +169,7 @@ export const RevisionsPanel = ({
       resetForm();
       await fetchRows();
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -183,7 +191,7 @@ export const RevisionsPanel = ({
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -201,13 +209,15 @@ export const RevisionsPanel = ({
           </DialogTitle>
           <DialogDescription>
             <span className="font-mono">{targetCode}</span>
-            {targetTitle ? <span className="ml-2 text-slate-600">— {targetTitle}</span> : null}
+            {targetTitle ? (
+              <span className="ml-2 text-muted-foreground">— {targetTitle}</span>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
 
         {loading ? (
           <div className="flex items-center justify-center py-6">
-            <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
           <p className="rounded-md border border-rose-200 bg-rose-50/60 p-3 text-sm text-rose-700">
@@ -216,7 +226,7 @@ export const RevisionsPanel = ({
         ) : (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-muted-foreground">
                 {rows.length === 0
                   ? t("drawingRevision.empty")
                   : `${rows.length} × ${t("drawingRevision.field.number")}`}
@@ -245,13 +255,13 @@ export const RevisionsPanel = ({
                       "rounded-md border p-3",
                       row.isCurrent
                         ? "border-emerald-200 bg-emerald-50/60"
-                        : "border-slate-200 bg-white",
+                        : "border-border bg-card",
                     )}
                     data-testid={`revision-row-${row.id}`}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="flex items-center gap-2 text-sm font-semibold text-slate-900">
+                        <p className="flex items-center gap-2 text-sm font-semibold text-foreground">
                           <span className="font-mono">{row.revisionLabel}</span>
                           {row.isCurrent ? (
                             <Badge
@@ -264,21 +274,21 @@ export const RevisionsPanel = ({
                           ) : (
                             <Badge
                               variant="outline"
-                              className="border-slate-200 bg-slate-50 text-slate-500"
+                              className="border-border bg-muted/30 text-muted-foreground"
                             >
                               {t("drawingRevision.badge.superseded")}
                             </Badge>
                           )}
                         </p>
-                        <p className="mt-0.5 text-xs text-slate-600">
-                          <Sparkles className="mr-1 inline h-3 w-3 text-slate-400" />
+                        <p className="mt-0.5 text-xs text-muted-foreground">
+                          <Sparkles className="mr-1 inline h-3 w-3 text-muted-foreground" />
                           {row.reasonLabel ?? row.reasonCode}
                         </p>
-                        <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">
+                        <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">
                           {row.note}
                         </p>
                       </div>
-                      <div className="text-right text-[11px] text-slate-500">
+                      <div className="text-right text-[11px] text-muted-foreground">
                         <p>{formatDate(row.createdAt, lang)}</p>
                         {row.createdByName ? <p>{row.createdByName}</p> : null}
                       </div>
@@ -290,8 +300,8 @@ export const RevisionsPanel = ({
 
             {/* Diff picker — only useful when there are ≥2 revisions */}
             {rows.length >= 2 ? (
-              <section className="rounded-md border border-slate-200 bg-slate-50/40 p-3">
-                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-slate-600">
+              <section className="rounded-md border border-border bg-muted/40 p-3">
+                <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   <GitCompareArrows className="h-3.5 w-3.5" />
                   {t("drawingRevision.diff.title")}
                 </p>
@@ -300,7 +310,11 @@ export const RevisionsPanel = ({
                     value={diffFrom != null ? String(diffFrom) : ""}
                     onValueChange={(v) => setDiffFrom(v ? Number(v) : null)}
                   >
-                    <SelectTrigger className="h-9 w-[140px]" data-testid="revisions-diff-from">
+                    <SelectTrigger
+                      aria-label={t("drawingRevision.diff.from")}
+                      className="h-9 w-[140px]"
+                      data-testid="revisions-diff-from"
+                    >
                       <SelectValue placeholder={t("drawingRevision.diff.from")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -311,12 +325,16 @@ export const RevisionsPanel = ({
                       ))}
                     </SelectContent>
                   </Select>
-                  <span className="text-xs text-slate-400">→</span>
+                  <span className="text-xs text-muted-foreground">→</span>
                   <Select
                     value={diffTo != null ? String(diffTo) : ""}
                     onValueChange={(v) => setDiffTo(v ? Number(v) : null)}
                   >
-                    <SelectTrigger className="h-9 w-[140px]" data-testid="revisions-diff-to">
+                    <SelectTrigger
+                      aria-label={t("drawingRevision.diff.to")}
+                      className="h-9 w-[140px]"
+                      data-testid="revisions-diff-to"
+                    >
                       <SelectValue placeholder={t("drawingRevision.diff.to")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -345,7 +363,7 @@ export const RevisionsPanel = ({
                 </div>
                 {diff ? (
                   <ul
-                    className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-slate-700"
+                    className="mt-2 list-disc space-y-0.5 pl-4 text-xs text-foreground"
                     data-testid="revisions-diff-output"
                   >
                     {diff.changes.map((line, i) => (
@@ -366,7 +384,7 @@ export const RevisionsPanel = ({
               <DialogDescription>{t("drawingRevision.form.hint")}</DialogDescription>
             </DialogHeader>
             <div className="grid gap-3">
-              <div>
+              <FieldScope>
                 <Label>{t("drawingRevision.field.reason")}</Label>
                 <Select value={reasonCode} onValueChange={setReasonCode}>
                   <SelectTrigger className="mt-1 h-9" data-testid="revisions-form-reason">
@@ -380,8 +398,8 @@ export const RevisionsPanel = ({
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("drawingRevision.field.note")}</Label>
                 <Textarea
                   rows={4}
@@ -390,7 +408,7 @@ export const RevisionsPanel = ({
                   placeholder={t("drawingRevision.form.notePlaceholder")}
                   data-testid="revisions-form-note"
                 />
-              </div>
+              </FieldScope>
             </div>
             {formError ? (
               <p className="text-sm text-rose-600" data-testid="revisions-form-error">

@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
 import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -31,6 +34,7 @@ export function ConstructionWorkspaceShell({
   children,
   testId,
 }: ConstructionWorkspaceShellProps) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const requestedProjectId = Number(searchParams.get("projectId"));
@@ -43,8 +47,7 @@ export function ConstructionWorkspaceShell({
     let active = true;
     setLoading(true);
     setError(null);
-    void adminApi
-      .listOperationalProjects({ pageSize: 200 })
+    void collectLookupPages((page) => adminApi.listOperationalProjects({ pageSize: 200, page }))
       .then(async ({ data }) => {
         if (!active) return;
         const items = [...data.items];
@@ -60,7 +63,7 @@ export function ConstructionWorkspaceShell({
         }
       })
       .catch((cause) => {
-        if (active) setError(extractApiError(cause, t("construction.common.projectsLoadError")));
+        if (active) setError(uiError(cause, t("construction.common.projectsLoadError")));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -68,7 +71,7 @@ export function ConstructionWorkspaceShell({
     return () => {
       active = false;
     };
-  }, [onProjectChange, projectId, reloadKey, requestedProjectId, t]);
+  }, [onProjectChange, projectId, reloadKey, requestedProjectId, t, uiError]);
 
   return (
     <AdminLayout>

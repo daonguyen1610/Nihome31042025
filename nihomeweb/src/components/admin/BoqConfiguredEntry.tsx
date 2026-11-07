@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useState } from "react";
 import { Download, FileSpreadsheet, UploadCloud, Plus, Info, FileCheck2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -69,6 +71,7 @@ const download = (blob: Blob, filename: string) => {
 };
 
 function BoqTemplateDownload({ catalog }: { catalog: MaterialRateCatalogResponse }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -89,7 +92,7 @@ function BoqTemplateDownload({ catalog }: { catalog: MaterialRateCatalogResponse
             );
             download(data, `${catalog.code}.xlsx`);
           } catch (error) {
-            setError(extractApiError(error));
+            setError(uiError(error));
           } finally {
             setBusy(false);
           }
@@ -118,6 +121,7 @@ export function BoqCategorySetup({
   canManage: boolean;
   onSaved: () => void;
 }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [open, setOpen] = useState(false);
   const [activeSheet, setActiveSheet] = useState(0);
@@ -131,8 +135,8 @@ export function BoqCategorySetup({
           params: { catalogType: "Boq" },
         })
         .then(({ data }) => setSources(data))
-        .catch((error) => setError(extractApiError(error)));
-  }, [open]);
+        .catch((error) => setError(uiError(error)));
+  }, [open, uiError]);
   const [error, setError] = useState<string | null>(null);
   const label = (item: BoqEntrySheet | BoqEntryField) =>
     item[lang === "vi" ? "nameVi" : lang === "zh" ? "nameZh" : lang === "ja" ? "nameJa" : "name"];
@@ -167,7 +171,7 @@ export function BoqCategorySetup({
       setOpen(false);
       onSaved();
     } catch (error) {
-      setError(messageKey(error) ? t(messageKey(error)!) + detail(error) : extractApiError(error));
+      setError(messageKey(error) ? t(messageKey(error)!) + detail(error) : uiError(error));
     } finally {
       setBusy(false);
     }
@@ -496,6 +500,7 @@ export function BoqConfiguredRows({
   canManage: boolean;
   onSaved: (revision: MaterialRateRevisionResponse) => void;
 }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const config = catalog.boqConfiguration!;
   const [sheetKey, setSheetKey] = useState(config.sheets[0].key);
@@ -523,7 +528,7 @@ export function BoqConfiguredRows({
     try {
       await action();
     } catch (error) {
-      setError(messageKey(error) ? t(messageKey(error)!) + detail(error) : extractApiError(error));
+      setError(messageKey(error) ? t(messageKey(error)!) + detail(error) : uiError(error));
     } finally {
       setBusy(false);
     }

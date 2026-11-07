@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useState } from "react";
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -34,6 +37,7 @@ const BoqCatalogFields = ({
   disabled = false,
   onApply,
 }: BoqCatalogFieldsProps) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [catalogs, setCatalogs] = useState<MaterialRateCatalogResponse[]>([]);
   const [catalogsLoaded, setCatalogsLoaded] = useState(false);
@@ -58,12 +62,12 @@ const BoqCatalogFields = ({
         setCatalogsLoaded(true);
       })
       .catch((err) => {
-        if (!cancelled) setError(extractApiError(err));
+        if (!cancelled) setError(uiError(err));
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [uiError]);
 
   useEffect(() => {
     if (!selectedCatalogId || !selectedDate) {
@@ -91,7 +95,7 @@ const BoqCatalogFields = ({
         setError(
           (err as { response?: { status?: number } }).response?.status === 404
             ? t("quotes.boqCatalog.noEffectiveRevision")
-            : extractApiError(err),
+            : uiError(err),
         );
       })
       .finally(() => {
@@ -100,7 +104,7 @@ const BoqCatalogFields = ({
     return () => {
       cancelled = true;
     };
-  }, [selectedCatalogId, selectedDate, t]);
+  }, [selectedCatalogId, selectedDate, t, uiError]);
 
   return (
     <section
@@ -118,7 +122,7 @@ const BoqCatalogFields = ({
       </p>
       {catalogsLoaded && catalogs.length === 0 && <QuoteCatalogEmptyState catalogType="Boq" />}
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="min-w-0">
+        <FieldScope className="min-w-0">
           <Label>{t("quotes.field.materialRateCatalog")}</Label>
           <Select
             disabled={disabled}
@@ -140,8 +144,8 @@ const BoqCatalogFields = ({
               ))}
             </SelectContent>
           </Select>
-        </div>
-        <div className="min-w-0">
+        </FieldScope>
+        <FieldScope className="min-w-0">
           <Label>{t("quotes.field.pricingEffectiveDate")}</Label>
           <Input
             type="date"
@@ -154,7 +158,7 @@ const BoqCatalogFields = ({
               setSelectedDate(event.target.value);
             }}
           />
-        </div>
+        </FieldScope>
       </div>
       {loading && (
         <p className="flex items-center gap-2 text-xs text-muted-foreground">

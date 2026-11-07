@@ -82,6 +82,7 @@ const News = () => {
           <div className="flex items-center gap-2 bg-secondary rounded-full px-5 py-2.5 w-full lg:w-80 border border-border">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />
             <input
+              aria-label={t("common.search")}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t("newsPage.searchPh")}
@@ -153,7 +154,7 @@ const News = () => {
                         loading="lazy"
                         className="w-full h-full object-cover"
                       />
-                      <span className="absolute top-5 left-5 chip chip-primary bg-white/95">
+                      <span className="absolute top-5 left-5 chip chip-primary bg-card/95">
                         {resolveCategoryLabel(n.newsCategoryId, n.category, categoriesById, lang)}
                       </span>
                     </div>

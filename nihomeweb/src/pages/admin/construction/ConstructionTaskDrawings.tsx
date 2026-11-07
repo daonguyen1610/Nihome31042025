@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { Button } from "@/components/ui/button";
@@ -13,6 +15,7 @@ export default function ConstructionTaskDrawings({
   taskId: number;
   canManage: boolean;
 }) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [data, setData] = useState<ConstructionTaskDrawingsResponse | null>(null);
   const [selected, setSelected] = useState<number[]>([]);
@@ -36,7 +39,7 @@ export default function ConstructionTaskDrawings({
         setSelected(response.linked.map((x) => x.ifcReleaseItemId));
       })
       .catch((err) => {
-        if (active) setError(extractApiError(err));
+        if (active) setError(uiError(err));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -44,7 +47,7 @@ export default function ConstructionTaskDrawings({
     return () => {
       active = false;
     };
-  }, [taskId, reload]);
+  }, [taskId, reload, uiError]);
 
   const save = async () => {
     if (!data || selected.length > 200) return;
@@ -60,7 +63,7 @@ export default function ConstructionTaskDrawings({
       setSelected(response.linked.map((x) => x.ifcReleaseItemId));
       setSaved(true);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setSaving(false);
     }

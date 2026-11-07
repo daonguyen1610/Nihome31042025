@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, PenTool } from "lucide-react";
@@ -36,7 +38,7 @@ const STAGE_BADGE: Record<DesignProjectStage, string> = {
 const STATUS_BADGE: Record<DesignProjectStatus, string> = {
   Active: "border-emerald-200 bg-emerald-50 text-emerald-700",
   OnHold: "border-amber-200 bg-amber-50 text-amber-700",
-  Completed: "border-slate-200 bg-slate-50 text-slate-700",
+  Completed: "border-border bg-muted/30 text-foreground",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
@@ -62,6 +64,7 @@ const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
 };
 
 const AdminDesignProjectDetail = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { has } = usePermissions();
   const { id: idParam } = useParams<{ id: string }>();
@@ -113,12 +116,12 @@ const AdminDesignProjectDetail = () => {
       } else if (status === 404) {
         setProject(null);
       } else {
-        setError(extractApiError(err));
+        setError(uiError(err));
       }
     } finally {
       setLoading(false);
     }
-  }, [isValidId, numericId, requestedTab]);
+  }, [isValidId, numericId, requestedTab, uiError]);
 
   useEffect(() => {
     void fetchProject();
@@ -218,22 +221,22 @@ const AdminDesignProjectDetail = () => {
         <div>
           <Link
             to="/admin/design-projects"
-            className="inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-800"
+            className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
           >
             <ArrowLeft className="h-4 w-4" />
             {t("designProjects.detail.back")}
           </Link>
         </div>
 
-        <header className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <header className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="flex min-w-0 items-center gap-3">
-              <PenTool className="h-6 w-6 text-slate-500" />
+              <PenTool className="h-6 w-6 text-muted-foreground" />
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-slate-900 md:text-2xl">
+                <h1 className="text-lg font-bold text-foreground md:text-2xl">
                   {project.projectCode}
                 </h1>
-                <p className="text-sm text-slate-600">{project.name}</p>
+                <p className="text-sm text-muted-foreground">{project.name}</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -254,7 +257,7 @@ const AdminDesignProjectDetail = () => {
 
           {/* 3-stage progress strip */}
           <div className="mt-4">
-            <p className="mb-2 text-xs uppercase tracking-wide text-slate-500">
+            <p className="mb-2 text-xs uppercase tracking-wide text-muted-foreground">
               {t("designProjects.detail.progress")}
             </p>
             <div className="grid grid-cols-3 gap-2">
@@ -266,8 +269,8 @@ const AdminDesignProjectDetail = () => {
                     className={cn(
                       "rounded-md border px-2 py-1.5 text-center text-xs font-medium",
                       active
-                        ? "border-slate-800 bg-slate-800 text-white"
-                        : "border-slate-200 bg-slate-50 text-slate-500",
+                        ? "border-foreground bg-foreground text-background"
+                        : "border-border bg-muted/30 text-muted-foreground",
                     )}
                   >
                     {t(`designProjects.stage.${s}`)}
@@ -297,12 +300,14 @@ const AdminDesignProjectDetail = () => {
           </ScrollableTabsList>
 
           <TabsContent value="overview">
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {infoRows.map((r) => (
                   <div key={r.label}>
-                    <dt className="text-xs uppercase tracking-wide text-slate-500">{r.label}</dt>
-                    <dd className="mt-0.5 break-words text-sm text-slate-900">
+                    <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                      {r.label}
+                    </dt>
+                    <dd className="mt-0.5 break-words text-sm text-foreground">
                       {r.href ? (
                         <Link className="text-primary underline underline-offset-4" to={r.href}>
                           {r.value}
@@ -316,10 +321,10 @@ const AdminDesignProjectDetail = () => {
               </dl>
               {project.note ? (
                 <div className="mt-4">
-                  <p className="text-xs uppercase tracking-wide text-slate-500">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
                     {t("designProjects.field.note")}
                   </p>
-                  <p className="mt-1 whitespace-pre-wrap text-sm text-slate-800">{project.note}</p>
+                  <p className="mt-1 whitespace-pre-wrap text-sm text-foreground">{project.note}</p>
                 </div>
               ) : null}
             </div>

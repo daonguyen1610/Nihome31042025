@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useConfirm } from "@/components/ui/confirmation";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { Plus, Search, Trash2, ArrowRight, RefreshCw, Pencil, Save } from "lucide-react";
@@ -61,7 +65,7 @@ const LEAD_STATUS_STYLES: Record<LeadStatus, string> = {
   New: "border-sky-200 bg-sky-50 text-sky-700",
   Contacted: "border-amber-200 bg-amber-50 text-amber-700",
   Interested: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  NotInterested: "border-slate-200 bg-slate-100 text-slate-600",
+  NotInterested: "border-border bg-muted text-muted-foreground",
   Converted: "border-green-300 bg-green-100 text-green-800",
   Junk: "border-rose-200 bg-rose-50 text-rose-700",
 };
@@ -70,7 +74,7 @@ const LEAD_STATUS_DOT: Record<LeadStatus, string> = {
   New: "bg-sky-500",
   Contacted: "bg-amber-500",
   Interested: "bg-emerald-500",
-  NotInterested: "bg-slate-400",
+  NotInterested: "bg-muted-foreground",
   Converted: "bg-green-600",
   Junk: "bg-rose-500",
 };
@@ -99,6 +103,8 @@ const toLeadEditForm = (lead: LeadResponse): UpdateLeadRequest => ({
 });
 
 const AdminLeads = () => {
+  const uiError = useUiError();
+  const confirmAction = useConfirm();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -174,11 +180,11 @@ const AdminLeads = () => {
       setLeads(data.items);
       setTotal(data.total);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, sourceFilter, segmentFilter, search]);
+  }, [page, statusFilter, sourceFilter, segmentFilter, search, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -216,7 +222,7 @@ const AdminLeads = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -277,7 +283,7 @@ const AdminLeads = () => {
       setCreateForm(emptyCreate);
       await fetchList();
     } catch (err) {
-      setCreateError(extractApiError(err));
+      setCreateError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -317,7 +323,7 @@ const AdminLeads = () => {
       toast({ title: t("leads.updated") });
       await fetchList();
     } catch (err) {
-      setEditError(extractApiError(err));
+      setEditError(uiError(err));
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
     } finally {
       setEditSaving(false);
@@ -341,7 +347,7 @@ const AdminLeads = () => {
       const response = await adminApi.getLeadDeletionImpact(id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -359,7 +365,7 @@ const AdminLeads = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setDeleteBusy(false);
@@ -388,7 +394,7 @@ const AdminLeads = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -424,7 +430,7 @@ const AdminLeads = () => {
       }
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
@@ -435,7 +441,7 @@ const AdminLeads = () => {
 
   const handleUnconvert = async () => {
     if (!detail) return;
-    if (!window.confirm(t("leads.unconvert.confirm"))) return;
+    if (!(await confirmAction(t("leads.unconvert.confirm"), { destructive: false }))) return;
     setUnconverting(true);
     try {
       const { data } = await adminApi.unconvertLead(detail.id, detail.rowVersion);
@@ -445,7 +451,7 @@ const AdminLeads = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       if (isConcurrencyConflict(err)) await openDetail(detail.id);
@@ -522,7 +528,7 @@ const AdminLeads = () => {
             </div>
           </div>
 
-          <div>
+          <FieldScope>
             <Label className="text-xs">{t("leads.filter.status")}</Label>
             <Select
               value={statusFilter || "__all"}
@@ -543,9 +549,9 @@ const AdminLeads = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
 
-          <div>
+          <FieldScope>
             <Label className="text-xs">{t("leads.filter.source")}</Label>
             <Select
               value={sourceFilter || "__all"}
@@ -566,9 +572,9 @@ const AdminLeads = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
 
-          <div>
+          <FieldScope>
             <Label className="text-xs">{t("leads.filter.segment")}</Label>
             <Select
               value={segmentFilter || "__all"}
@@ -589,7 +595,7 @@ const AdminLeads = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
         </section>
 
         {loading ? (
@@ -840,39 +846,39 @@ const AdminLeads = () => {
             <DialogDescription>{t("leads.field.contactRequired")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
+            <FieldScope>
               <Label>{t("leads.field.name")} *</Label>
               <Input
                 value={createForm.name}
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                 autoFocus
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("leads.field.company")}</Label>
               <Input
                 value={createForm.companyName ?? ""}
                 onChange={(e) => setCreateForm({ ...createForm, companyName: e.target.value })}
               />
-            </div>
+            </FieldScope>
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <FieldScope>
                 <Label>{t("leads.field.phone")}</Label>
                 <Input
                   value={createForm.phone ?? ""}
                   onChange={(e) => setCreateForm({ ...createForm, phone: e.target.value })}
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("leads.field.email")}</Label>
                 <Input
                   type="email"
                   value={createForm.email ?? ""}
                   onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                 />
-              </div>
+              </FieldScope>
             </div>
-            <div>
+            <FieldScope>
               <Label>{t("leads.field.source")} *</Label>
               <Select
                 value={createForm.sourceCode || undefined}
@@ -889,8 +895,8 @@ const AdminLeads = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("leads.field.segment")} *</Label>
               <Select
                 value={createForm.segmentCode}
@@ -907,15 +913,15 @@ const AdminLeads = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("leads.field.note")}</Label>
               <Textarea
                 value={createForm.note ?? ""}
                 onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
                 rows={3}
               />
-            </div>
+            </FieldScope>
             {createError && (
               <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 {createError}
@@ -971,14 +977,14 @@ const AdminLeads = () => {
               {editing && editForm ? (
                 <div className="space-y-3 rounded-lg border bg-muted/20 p-3">
                   <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
+                    <FieldScope>
                       <Label>{t("leads.field.name")} *</Label>
                       <Input
                         value={editForm.name}
                         onChange={(event) => setEditForm({ ...editForm, name: event.target.value })}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("leads.field.company")}</Label>
                       <Input
                         value={editForm.companyName ?? ""}
@@ -986,8 +992,8 @@ const AdminLeads = () => {
                           setEditForm({ ...editForm, companyName: event.target.value })
                         }
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("leads.field.phone")}</Label>
                       <Input
                         value={editForm.phone ?? ""}
@@ -995,8 +1001,8 @@ const AdminLeads = () => {
                           setEditForm({ ...editForm, phone: event.target.value })
                         }
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("leads.field.email")}</Label>
                       <Input
                         type="email"
@@ -1005,8 +1011,8 @@ const AdminLeads = () => {
                           setEditForm({ ...editForm, email: event.target.value })
                         }
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("leads.field.source")} *</Label>
                       <Select
                         value={editForm.sourceCode}
@@ -1023,8 +1029,8 @@ const AdminLeads = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("leads.field.segment")} *</Label>
                       <Select
                         value={editForm.segmentCode}
@@ -1041,8 +1047,8 @@ const AdminLeads = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("leads.field.status")}</Label>
                       <Select
                         value={editForm.status}
@@ -1061,15 +1067,15 @@ const AdminLeads = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="sm:col-span-2">
+                    </FieldScope>
+                    <FieldScope className="sm:col-span-2">
                       <Label>{t("leads.field.note")}</Label>
                       <Textarea
                         rows={3}
                         value={editForm.note ?? ""}
                         onChange={(event) => setEditForm({ ...editForm, note: event.target.value })}
                       />
-                    </div>
+                    </FieldScope>
                   </div>
                   {editError && <p className="text-sm text-destructive">{editError}</p>}
                 </div>
@@ -1173,7 +1179,10 @@ const AdminLeads = () => {
                         value={activityType}
                         onValueChange={(v) => setActivityType(v as LeadActivityType)}
                       >
-                        <SelectTrigger className="w-full sm:w-[140px]">
+                        <SelectTrigger
+                          aria-label={t("a11yUi.activityType")}
+                          className="w-full sm:w-[140px]"
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1185,6 +1194,7 @@ const AdminLeads = () => {
                         </SelectContent>
                       </Select>
                       <Textarea
+                        aria-label={t("a11yUi.activityContent")}
                         value={activityContent}
                         onChange={(e) => setActivityContent(e.target.value)}
                         placeholder={t("leads.detail.activityContent")}

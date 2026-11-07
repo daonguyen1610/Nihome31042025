@@ -1,3 +1,4 @@
+import { FieldControl } from "@/components/ui/field-scope";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   CheckCircle2,
@@ -462,6 +463,7 @@ const SortOrderField = ({
           <Minus className="w-4 h-4" />
         </button>
         <input
+          aria-label={label}
           className="about-sort-input"
           type="number"
           min={0}
@@ -636,6 +638,7 @@ const StatListCard = ({
             {item.isActive !== false ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
           </span>
           <button
+            aria-label={t("common.edit")}
             type="button"
             onClick={onEdit}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
@@ -644,6 +647,7 @@ const StatListCard = ({
             <Pencil className="w-4 h-4" />
           </button>
           <button
+            aria-label={t("common.delete")}
             type="button"
             onClick={onDelete}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
@@ -713,6 +717,7 @@ const IconTextListCard = ({
             {item.isActive !== false ? t("aboutAdmin.statusActive") : t("aboutAdmin.statusHidden")}
           </span>
           <button
+            aria-label={t("common.edit")}
             type="button"
             onClick={onEdit}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
@@ -721,6 +726,7 @@ const IconTextListCard = ({
             <Pencil className="w-4 h-4" />
           </button>
           <button
+            aria-label={t("common.delete")}
             type="button"
             onClick={onDelete}
             className="w-11 h-11 rounded-xl border inline-flex items-center justify-center hover:bg-muted/40"
@@ -1268,26 +1274,30 @@ const AboutContent = () => {
                     }}
                   />
                   <Field label={t("aboutAdmin.fieldRole")}>
-                    <input
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      value={item.role}
-                      onChange={(e) => {
-                        const next = [...organizationItems[group]];
-                        next[index] = { ...item, role: e.target.value };
-                        updateGroup(group, next);
-                      }}
-                    />
+                    <FieldControl>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={item.role}
+                        onChange={(e) => {
+                          const next = [...organizationItems[group]];
+                          next[index] = { ...item, role: e.target.value };
+                          updateGroup(group, next);
+                        }}
+                      />
+                    </FieldControl>
                   </Field>
                   <Field label={t("aboutAdmin.fieldName")}>
-                    <input
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      value={item.name}
-                      onChange={(e) => {
-                        const next = [...organizationItems[group]];
-                        next[index] = { ...item, name: e.target.value };
-                        updateGroup(group, next);
-                      }}
-                    />
+                    <FieldControl>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={item.name}
+                        onChange={(e) => {
+                          const next = [...organizationItems[group]];
+                          next[index] = { ...item, name: e.target.value };
+                          updateGroup(group, next);
+                        }}
+                      />
+                    </FieldControl>
                   </Field>
                   <VisibilityField
                     label={t("aboutAdmin.fieldVisible")}
@@ -1410,50 +1420,58 @@ const AboutContent = () => {
               <RowCard key={item.id ?? `timeline-${index}`}>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <Field label={t("aboutAdmin.fieldSortOrder")}>
-                    <input
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      type="number"
-                      value={normalizeSortOrder(item.sortOrder, index)}
-                      onChange={(e) => {
-                        const next = [...timelineItems];
-                        next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
-                        updateItemsJson(sortItemsBySortOrder(next));
-                      }}
-                    />
+                    <FieldControl>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        type="number"
+                        value={normalizeSortOrder(item.sortOrder, index)}
+                        onChange={(e) => {
+                          const next = [...timelineItems];
+                          next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
+                          updateItemsJson(sortItemsBySortOrder(next));
+                        }}
+                      />
+                    </FieldControl>
                   </Field>
                   <Field label={t("aboutAdmin.fieldYear")}>
-                    <input
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      value={item.year}
-                      onChange={(e) => {
-                        const next = [...timelineItems];
-                        next[index] = { ...item, year: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
+                    <FieldControl>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={item.year}
+                        onChange={(e) => {
+                          const next = [...timelineItems];
+                          next[index] = { ...item, year: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                      />
+                    </FieldControl>
                   </Field>
                   <Field label={t("aboutAdmin.fieldTitle")}>
-                    <input
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                      value={item.title}
-                      onChange={(e) => {
-                        const next = [...timelineItems];
-                        next[index] = { ...item, title: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
+                    <FieldControl>
+                      <input
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                        value={item.title}
+                        onChange={(e) => {
+                          const next = [...timelineItems];
+                          next[index] = { ...item, title: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                      />
+                    </FieldControl>
                   </Field>
                 </div>
                 <Field label={t("aboutAdmin.fieldDesc")}>
-                  <textarea
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
-                    value={item.desc}
-                    onChange={(e) => {
-                      const next = [...timelineItems];
-                      next[index] = { ...item, desc: e.target.value };
-                      updateItemsJson(next);
-                    }}
-                  />
+                  <FieldControl>
+                    <textarea
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                      value={item.desc}
+                      onChange={(e) => {
+                        const next = [...timelineItems];
+                        next[index] = { ...item, desc: e.target.value };
+                        updateItemsJson(next);
+                      }}
+                    />
+                  </FieldControl>
                 </Field>
                 <button
                   type="button"
@@ -1496,39 +1514,45 @@ const AboutContent = () => {
                 <RowCard key={certId}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Field label={t("aboutAdmin.fieldSortOrder")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        type="number"
-                        value={normalizeSortOrder(item.sortOrder, index)}
-                        onChange={(e) => {
-                          const next = [...certItems];
-                          next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
-                          updateItemsJson(sortItemsBySortOrder(next));
-                        }}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          type="number"
+                          value={normalizeSortOrder(item.sortOrder, index)}
+                          onChange={(e) => {
+                            const next = [...certItems];
+                            next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
+                            updateItemsJson(sortItemsBySortOrder(next));
+                          }}
+                        />
+                      </FieldControl>
                     </Field>
                     <Field label={t("aboutAdmin.fieldCertName")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={item.name}
-                        onChange={(e) => {
-                          const next = [...certItems];
-                          next[index] = { ...item, name: e.target.value };
-                          updateItemsJson(next);
-                        }}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={item.name}
+                          onChange={(e) => {
+                            const next = [...certItems];
+                            next[index] = { ...item, name: e.target.value };
+                            updateItemsJson(next);
+                          }}
+                        />
+                      </FieldControl>
                     </Field>
                   </div>
                   <Field label={t("aboutAdmin.fieldDesc")}>
-                    <textarea
-                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
-                      value={item.desc}
-                      onChange={(e) => {
-                        const next = [...certItems];
-                        next[index] = { ...item, desc: e.target.value };
-                        updateItemsJson(next);
-                      }}
-                    />
+                    <FieldControl>
+                      <textarea
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                        value={item.desc}
+                        onChange={(e) => {
+                          const next = [...certItems];
+                          next[index] = { ...item, desc: e.target.value };
+                          updateItemsJson(next);
+                        }}
+                      />
+                    </FieldControl>
                   </Field>
                   <Field label={t("aboutAdmin.fieldCertImage")}>
                     <div className="flex items-center gap-2">
@@ -1615,51 +1639,59 @@ const AboutContent = () => {
                 <RowCard key={dlId}>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <Field label={t("aboutAdmin.fieldSortOrder")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        type="number"
-                        value={normalizeSortOrder(item.sortOrder, index)}
-                        onChange={(e) => {
-                          const next = [...downloadItems];
-                          next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
-                          updateItemsJson(sortItemsBySortOrder(next));
-                        }}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          type="number"
+                          value={normalizeSortOrder(item.sortOrder, index)}
+                          onChange={(e) => {
+                            const next = [...downloadItems];
+                            next[index] = { ...item, sortOrder: Number(e.target.value) || 0 };
+                            updateItemsJson(sortItemsBySortOrder(next));
+                          }}
+                        />
+                      </FieldControl>
                     </Field>
                     <Field label={t("aboutAdmin.fieldDocName")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={item.name}
-                        onChange={(e) => {
-                          const next = [...downloadItems];
-                          next[index] = { ...item, name: e.target.value };
-                          updateItemsJson(next);
-                        }}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={item.name}
+                          onChange={(e) => {
+                            const next = [...downloadItems];
+                            next[index] = { ...item, name: e.target.value };
+                            updateItemsJson(next);
+                          }}
+                        />
+                      </FieldControl>
                     </Field>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <Field label={t("aboutAdmin.fieldFileSize")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={item.size}
-                        onChange={(e) => {
-                          const next = [...downloadItems];
-                          next[index] = { ...item, size: e.target.value };
-                          updateItemsJson(next);
-                        }}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={item.size}
+                          onChange={(e) => {
+                            const next = [...downloadItems];
+                            next[index] = { ...item, size: e.target.value };
+                            updateItemsJson(next);
+                          }}
+                        />
+                      </FieldControl>
                     </Field>
                     <Field label={t("aboutAdmin.fieldFileType")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={item.type}
-                        onChange={(e) => {
-                          const next = [...downloadItems];
-                          next[index] = { ...item, type: e.target.value };
-                          updateItemsJson(next);
-                        }}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={item.type}
+                          onChange={(e) => {
+                            const next = [...downloadItems];
+                            next[index] = { ...item, type: e.target.value };
+                            updateItemsJson(next);
+                          }}
+                        />
+                      </FieldControl>
                     </Field>
                     <Field label={t("aboutAdmin.fieldUrl")}>
                       <div className="flex items-center gap-2">
@@ -1785,12 +1817,14 @@ const AboutContent = () => {
 
               <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,1fr)_minmax(280px,0.7fr)] gap-4 items-start">
                 <Field label={t("aboutAdmin.fieldSlug")}>
-                  <input
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.slug}
-                    onChange={(e) => updateForm("slug", e.target.value)}
-                    placeholder={t("aboutAdmin.placeholderSlug")}
-                  />
+                  <FieldControl>
+                    <input
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      value={form.slug}
+                      onChange={(e) => updateForm("slug", e.target.value)}
+                      placeholder={t("aboutAdmin.placeholderSlug")}
+                    />
+                  </FieldControl>
                 </Field>
                 <SortOrderField
                   label={t("aboutAdmin.fieldSortOrder")}
@@ -1809,12 +1843,14 @@ const AboutContent = () => {
 
               {activeTab.showEyebrow && (
                 <Field label={t("aboutAdmin.fieldEyebrow")}>
-                  <input
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                    value={form.eyebrow}
-                    onChange={(e) => updateForm("eyebrow", e.target.value)}
-                    placeholder={t("aboutAdmin.placeholderEyebrow")}
-                  />
+                  <FieldControl>
+                    <input
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                      value={form.eyebrow}
+                      onChange={(e) => updateForm("eyebrow", e.target.value)}
+                      placeholder={t("aboutAdmin.placeholderEyebrow")}
+                    />
+                  </FieldControl>
                 </Field>
               )}
 
@@ -1822,22 +1858,26 @@ const AboutContent = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   {activeTab.showTitleA && (
                     <Field label={t("aboutAdmin.fieldTitleA")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={form.titleA}
-                        onChange={(e) => updateForm("titleA", e.target.value)}
-                        placeholder={t("aboutAdmin.placeholderTitleA")}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={form.titleA}
+                          onChange={(e) => updateForm("titleA", e.target.value)}
+                          placeholder={t("aboutAdmin.placeholderTitleA")}
+                        />
+                      </FieldControl>
                     </Field>
                   )}
                   {activeTab.showTitleB && (
                     <Field label={t("aboutAdmin.fieldTitleB")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={form.titleB}
-                        onChange={(e) => updateForm("titleB", e.target.value)}
-                        placeholder={t("aboutAdmin.placeholderTitleB")}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={form.titleB}
+                          onChange={(e) => updateForm("titleB", e.target.value)}
+                          placeholder={t("aboutAdmin.placeholderTitleB")}
+                        />
+                      </FieldControl>
                     </Field>
                   )}
                 </div>
@@ -1845,23 +1885,27 @@ const AboutContent = () => {
 
               {activeTab.showParagraph1 && (
                 <Field label={t("aboutAdmin.fieldParagraph1")}>
-                  <textarea
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
-                    value={form.paragraph1}
-                    onChange={(e) => updateForm("paragraph1", e.target.value)}
-                    placeholder={t("aboutAdmin.placeholderParagraph1")}
-                  />
+                  <FieldControl>
+                    <textarea
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                      value={form.paragraph1}
+                      onChange={(e) => updateForm("paragraph1", e.target.value)}
+                      placeholder={t("aboutAdmin.placeholderParagraph1")}
+                    />
+                  </FieldControl>
                 </Field>
               )}
 
               {activeTab.showParagraph2 && (
                 <Field label={t("aboutAdmin.fieldParagraph2")}>
-                  <textarea
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
-                    value={form.paragraph2}
-                    onChange={(e) => updateForm("paragraph2", e.target.value)}
-                    placeholder={t("aboutAdmin.placeholderParagraph2")}
-                  />
+                  <FieldControl>
+                    <textarea
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                      value={form.paragraph2}
+                      onChange={(e) => updateForm("paragraph2", e.target.value)}
+                      placeholder={t("aboutAdmin.placeholderParagraph2")}
+                    />
+                  </FieldControl>
                 </Field>
               )}
 
@@ -1974,44 +2018,54 @@ const AboutContent = () => {
                     </div>
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.statValue")}>
-                        <input
-                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-xl font-extrabold"
-                          value={statDraft.num}
-                          onChange={(e) =>
-                            setStatDraft((prev) => (prev ? { ...prev, num: e.target.value } : prev))
-                          }
-                          placeholder={t("aboutAdmin.placeholderStatValue")}
-                        />
+                        <FieldControl>
+                          <input
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 text-xl font-extrabold"
+                            value={statDraft.num}
+                            onChange={(e) =>
+                              setStatDraft((prev) =>
+                                prev ? { ...prev, num: e.target.value } : prev,
+                              )
+                            }
+                            placeholder={t("aboutAdmin.placeholderStatValue")}
+                          />
+                        </FieldControl>
                       </Field>
                     </div>
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.fieldStatus")}>
-                        <select
-                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          value={statDraft.isActive ? "true" : "false"}
-                          onChange={(e) =>
-                            setStatDraft((prev) =>
-                              prev ? { ...prev, isActive: e.target.value === "true" } : prev,
-                            )
-                          }
-                        >
-                          <option value="true">{t("aboutAdmin.statusActive")}</option>
-                          <option value="false">{t("aboutAdmin.statusHidden")}</option>
-                        </select>
+                        <FieldControl>
+                          <select
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            value={statDraft.isActive ? "true" : "false"}
+                            onChange={(e) =>
+                              setStatDraft((prev) =>
+                                prev ? { ...prev, isActive: e.target.value === "true" } : prev,
+                              )
+                            }
+                          >
+                            <option value="true">{t("aboutAdmin.statusActive")}</option>
+                            <option value="false">{t("aboutAdmin.statusHidden")}</option>
+                          </select>
+                        </FieldControl>
                       </Field>
                     </div>
                   </div>
 
                   <div className="about-form-card about-form-card-accent">
                     <Field label={t("aboutAdmin.statLabel")}>
-                      <input
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                        value={statDraft.label}
-                        onChange={(e) =>
-                          setStatDraft((prev) => (prev ? { ...prev, label: e.target.value } : prev))
-                        }
-                        placeholder={t("aboutAdmin.placeholderStatLabel")}
-                      />
+                      <FieldControl>
+                        <input
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                          value={statDraft.label}
+                          onChange={(e) =>
+                            setStatDraft((prev) =>
+                              prev ? { ...prev, label: e.target.value } : prev,
+                            )
+                          }
+                          placeholder={t("aboutAdmin.placeholderStatLabel")}
+                        />
+                      </FieldControl>
                     </Field>
                   </div>
 
@@ -2057,7 +2111,7 @@ const AboutContent = () => {
                       background: "linear-gradient(135deg, hsl(var(--primary)), hsl(22 95% 58%))",
                     }}
                   >
-                    <div className="w-14 h-14 rounded-2xl bg-white/15 backdrop-blur-sm flex items-center justify-center mb-6">
+                    <div className="w-14 h-14 rounded-2xl bg-card/15 backdrop-blur-sm flex items-center justify-center mb-6">
                       <PreviewIconProxy iconKey={statDraft.iconKey} />
                     </div>
                     <div className="space-y-2">
@@ -2188,44 +2242,52 @@ const AboutContent = () => {
                     </div>
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.fieldStatus")}>
-                        <select
-                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          value={iconDraft.isActive ? "true" : "false"}
-                          onChange={(e) =>
-                            setIconDraft((prev) =>
-                              prev ? { ...prev, isActive: e.target.value === "true" } : prev,
-                            )
-                          }
-                        >
-                          <option value="true">{t("aboutAdmin.statusActive")}</option>
-                          <option value="false">{t("aboutAdmin.statusHidden")}</option>
-                        </select>
+                        <FieldControl>
+                          <select
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            value={iconDraft.isActive ? "true" : "false"}
+                            onChange={(e) =>
+                              setIconDraft((prev) =>
+                                prev ? { ...prev, isActive: e.target.value === "true" } : prev,
+                              )
+                            }
+                          >
+                            <option value="true">{t("aboutAdmin.statusActive")}</option>
+                            <option value="false">{t("aboutAdmin.statusHidden")}</option>
+                          </select>
+                        </FieldControl>
                       </Field>
                     </div>
                     <div className="about-form-card">
                       <Field label={t("aboutAdmin.fieldTitle")}>
-                        <input
-                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
-                          value={iconDraft.title}
-                          onChange={(e) =>
-                            setIconDraft((prev) =>
-                              prev ? { ...prev, title: e.target.value } : prev,
-                            )
-                          }
-                        />
+                        <FieldControl>
+                          <input
+                            className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                            value={iconDraft.title}
+                            onChange={(e) =>
+                              setIconDraft((prev) =>
+                                prev ? { ...prev, title: e.target.value } : prev,
+                              )
+                            }
+                          />
+                        </FieldControl>
                       </Field>
                     </div>
                   </div>
 
                   <div className="about-form-card about-form-card-accent">
                     <Field label={t("aboutAdmin.fieldDesc")}>
-                      <textarea
-                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-28"
-                        value={iconDraft.desc}
-                        onChange={(e) =>
-                          setIconDraft((prev) => (prev ? { ...prev, desc: e.target.value } : prev))
-                        }
-                      />
+                      <FieldControl>
+                        <textarea
+                          className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50 min-h-28"
+                          value={iconDraft.desc}
+                          onChange={(e) =>
+                            setIconDraft((prev) =>
+                              prev ? { ...prev, desc: e.target.value } : prev,
+                            )
+                          }
+                        />
+                      </FieldControl>
                     </Field>
                   </div>
 

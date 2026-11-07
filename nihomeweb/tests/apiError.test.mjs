@@ -94,3 +94,37 @@ test("ordinary API errors and network failures keep existing extraction", async 
   assert.equal(await extractDownloadError(new Error("Offline")), "Offline");
   assert.equal(await extractDownloadError(null, "Please retry"), "Please retry");
 });
+
+test("UI failures localize transport errors and hide unexpected implementation details", async () => {
+  const { getUiError } = await import(
+    "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
+  );
+  const translate = (key) =>
+    ({
+      "auth.err.networkError": "Check your connection and retry.",
+      "auth.err.unexpected": "The operation did not complete. Try again later.",
+    })[key] ?? key;
+  assert.equal(
+    getUiError(new Error("Network Error"), translate),
+    "Check your connection and retry.",
+  );
+  assert.equal(
+    getUiError(new Error("TypeError: hidden path /app/secrets.cs"), translate),
+    "The operation did not complete. Try again later.",
+  );
+  assert.equal(
+    getUiError(
+      { response: { status: 500, data: { detail: "SqlException at /app/Data.cs" } } },
+      translate,
+    ),
+    "The operation did not complete. Try again later.",
+  );
+  assert.equal(
+    getUiError(failure({ message: "Refresh the latest record before retrying." }), translate),
+    "Refresh the latest record before retrying.",
+  );
+  assert.equal(
+    getUiError(failure({ errors: { Phone: ["Enter a valid phone number."] } }), translate),
+    "Phone: Enter a valid phone number.",
+  );
+});

@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useState } from "react";
 import { Save, RotateCcw, Mail, ShieldCheck, FileText } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -29,21 +31,21 @@ const CUSTOM_TEMPLATE_TABS = ["contract", "approval", "quoteApproval", "quoteDec
 const usesCustomEditor = (tab: TabType) => CUSTOM_TEMPLATE_TABS.includes(tab);
 
 const APPLICATION_TOKENS = [
-  { token: "{{siteName}}", desc: "Tên website" },
-  { token: "{{positionTitle}}", desc: "Vị trí ứng tuyển" },
-  { token: "{{department}}", desc: "Phòng ban" },
-  { token: "{{candidateName}}", desc: "Tên ứng viên" },
-  { token: "{{email}}", desc: "Email ứng viên" },
-  { token: "{{phone}}", desc: "SĐT ứng viên" },
-  { token: "{{experienceYears}}", desc: "Số năm kinh nghiệm" },
-  { token: "{{coverLetter}}", desc: "Lời giới thiệu" },
-  { token: "{{appliedAt}}", desc: "Ngày ứng tuyển" },
+  { token: "{{siteName}}", desc: "a11yUi.siteName" },
+  { token: "{{positionTitle}}", desc: "a11yUi.positionTitle" },
+  { token: "{{department}}", desc: "a11yUi.department" },
+  { token: "{{candidateName}}", desc: "a11yUi.candidateName" },
+  { token: "{{email}}", desc: "a11yUi.email" },
+  { token: "{{phone}}", desc: "a11yUi.phone" },
+  { token: "{{experienceYears}}", desc: "a11yUi.experienceYears" },
+  { token: "{{coverLetter}}", desc: "a11yUi.coverLetter" },
+  { token: "{{appliedAt}}", desc: "a11yUi.appliedAt" },
 ];
 
 const OTP_TOKENS = [
-  { token: "{{siteName}}", desc: "Tên website" },
-  { token: "{{otpCode}}", desc: "Mã OTP" },
-  { token: "{{otpExpireMinutes}}", desc: "Thời gian hết hạn (phút)" },
+  { token: "{{siteName}}", desc: "a11yUi.siteName" },
+  { token: "{{otpCode}}", desc: "a11yUi.otpCode" },
+  { token: "{{otpExpireMinutes}}", desc: "a11yUi.otpExpireMinutes" },
 ];
 
 const QUOTE_TOKENS = [
@@ -67,6 +69,7 @@ const PROJECT_SCHEDULE_TOKENS = [
 ];
 
 const EmailTemplateConfig = () => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { toast } = useToast();
   const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
@@ -133,11 +136,11 @@ const EmailTemplateConfig = () => {
       const response = await adminApi.getProjectScheduleEmailsNeedingReview();
       setScheduleEmailsNeedingReview(response.data);
     } catch (error) {
-      setScheduleDeliveryError(extractApiError(error));
+      setScheduleDeliveryError(uiError(error));
     } finally {
       setScheduleDeliveryLoading(false);
     }
-  }, []);
+  }, [uiError]);
 
   useEffect(() => {
     if (activeTab === "projectSchedule") void loadScheduleDelivery();
@@ -157,7 +160,7 @@ const EmailTemplateConfig = () => {
         });
         if (!stale) setSchedulePreview(response.data);
       } catch (error) {
-        if (!stale) setSchedulePreviewError(extractApiError(error));
+        if (!stale) setSchedulePreviewError(uiError(error));
       } finally {
         if (!stale) setSchedulePreviewLoading(false);
       }
@@ -166,7 +169,7 @@ const EmailTemplateConfig = () => {
       stale = true;
       window.clearTimeout(timer);
     };
-  }, [activeTab, loading, projectScheduleSubject, projectScheduleBody]);
+  }, [activeTab, loading, projectScheduleSubject, projectScheduleBody, t, uiError]);
 
   const activeBody =
     activeTab === "application"
@@ -234,11 +237,11 @@ const EmailTemplateConfig = () => {
         projectScheduleEmailSubjectTemplate: projectScheduleSubject,
         projectScheduleEmailBodyTemplate: projectScheduleBody,
       });
-      toast({ title: "Đã lưu", description: "Các mẫu email đã được cập nhật." });
+      toast({ title: t("form.saved"), description: t("a11yUi.templatesUpdated") });
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -248,14 +251,14 @@ const EmailTemplateConfig = () => {
 
   const handleReset = async () => {
     await loadTemplates();
-    toast({ title: "Đã khôi phục", description: "Đã tải lại các mẫu email đã lưu." });
+    toast({ title: t("a11yUi.restored"), description: t("a11yUi.templatesReloaded") });
   };
 
   const currentTokens =
     activeTab === "application"
-      ? APPLICATION_TOKENS
+      ? APPLICATION_TOKENS.map((item) => ({ ...item, desc: t(item.desc) }))
       : activeTab === "otp"
-        ? OTP_TOKENS
+        ? OTP_TOKENS.map((item) => ({ ...item, desc: t(item.desc) }))
         : activeTab === "projectSchedule"
           ? PROJECT_SCHEDULE_TOKENS.map((name) => ({
               token: `{{${name}}}`,
@@ -270,8 +273,8 @@ const EmailTemplateConfig = () => {
     return (
       <AdminLayout>
         <div className="p-4 sm:p-6">
-          <h1 className="text-2xl font-semibold">Mẫu email</h1>
-          <div className="p-8 text-center text-sm text-muted-foreground">Đang tải...</div>
+          <h1 className="text-2xl font-semibold">{t("a11yUi.emailTitle")}</h1>
+          <div className="p-8 text-center text-sm text-muted-foreground">{t("common.loading")}</div>
         </div>
       </AdminLayout>
     );
@@ -281,13 +284,13 @@ const EmailTemplateConfig = () => {
     <AdminLayout>
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h1 className="text-2xl font-semibold">Mẫu email</h1>
+          <h1 className="text-2xl font-semibold">{t("a11yUi.emailTitle")}</h1>
           <div className={cn("flex items-center gap-2", usesCustomEditor(activeTab) && "hidden")}>
             <Button type="button" variant="outline" onClick={handleReset} disabled={saving}>
-              <RotateCcw className="mr-1.5 h-4 w-4" /> Khôi phục
+              <RotateCcw className="mr-1.5 h-4 w-4" /> {t("emailTemplate.editor.reset")}
             </Button>
             <Button type="button" onClick={handleSave} disabled={saving}>
-              <Save className="mr-1.5 h-4 w-4" /> {saving ? "Đang lưu..." : "Lưu thay đổi"}
+              <Save className="mr-1.5 h-4 w-4" /> {saving ? t("common.saving") : t("common.save")}
             </Button>
           </div>
           <div
@@ -307,7 +310,7 @@ const EmailTemplateConfig = () => {
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
-            <Mail className="h-4 w-4" /> Thông báo ứng tuyển
+            <Mail className="h-4 w-4" /> {t("a11yUi.applicationTab")}
           </button>
           <button
             type="button"
@@ -319,7 +322,7 @@ const EmailTemplateConfig = () => {
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
-            <ShieldCheck className="h-4 w-4" /> OTP xác thực
+            <ShieldCheck className="h-4 w-4" /> {t("a11yUi.otpTab")}
           </button>
           <button
             type="button"
@@ -442,7 +445,7 @@ const EmailTemplateConfig = () => {
               activeTab === "application" ? (
                 <div className="space-y-1.5">
                   <Label className="text-xs" htmlFor="notification-email">
-                    Email nhận thông báo
+                    {t("a11yUi.notificationEmail")}
                   </Label>
                   <Input
                     id="notification-email"
@@ -452,7 +455,7 @@ const EmailTemplateConfig = () => {
                     placeholder="hr@nihome.vn"
                   />
                   <p className="text-xs text-muted-foreground">
-                    Email sẽ nhận thông báo khi có đơn ứng tuyển mới.
+                    {t("a11yUi.notificationEmailHelp")}
                   </p>
                 </div>
               ) : undefined

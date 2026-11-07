@@ -185,14 +185,14 @@ const Index = () => {
         <button
           onClick={prev}
           aria-label={t("home.hero.prevAlt")}
-          className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 lg:w-14 lg:h-14 items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white hover:text-foreground transition-all hover:scale-110"
+          className="hidden md:flex absolute left-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 lg:w-14 lg:h-14 items-center justify-center rounded-full bg-card/15 backdrop-blur-md border border-white/25 text-white hover:bg-card hover:text-foreground transition-all hover:scale-110"
         >
           <ChevronLeft className="w-6 h-6" />
         </button>
         <button
           onClick={next}
           aria-label={t("home.hero.nextAlt")}
-          className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 lg:w-14 lg:h-14 items-center justify-center rounded-full bg-white/15 backdrop-blur-md border border-white/25 text-white hover:bg-white hover:text-foreground transition-all hover:scale-110"
+          className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 z-20 w-12 h-12 lg:w-14 lg:h-14 items-center justify-center rounded-full bg-card/15 backdrop-blur-md border border-white/25 text-white hover:bg-card hover:text-foreground transition-all hover:scale-110"
         >
           <ChevronRight className="w-6 h-6" />
         </button>
@@ -203,7 +203,7 @@ const Index = () => {
               key={i}
               onClick={() => goTo(i)}
               aria-label={`Slide ${i + 1}`}
-              className={`h-1.5 rounded-full transition-all duration-500 ${i === slide ? "w-10 bg-primary" : "w-5 bg-white/40 hover:bg-white/70"}`}
+              className={`h-1.5 rounded-full transition-all duration-500 ${i === slide ? "w-10 bg-primary" : "w-5 bg-card/40 hover:bg-card/70"}`}
             />
           ))}
         </div>
@@ -213,7 +213,7 @@ const Index = () => {
         <div className="relative z-10 min-h-screen flex flex-col justify-center pt-32 pb-32">
           <div className="container-custom">
             <div className="max-w-4xl">
-              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/20 text-xs uppercase tracking-[0.22em] text-white font-bold fade-in-up">
+              <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-card/10 backdrop-blur-md border border-white/20 text-xs uppercase tracking-[0.22em] text-white font-bold fade-in-up">
                 <Sparkles className="w-3.5 h-3.5 text-primary-glow" /> {t("home.hero.tag")}
               </span>
               {currentSlide?.title ? (
@@ -257,7 +257,7 @@ const Index = () => {
                     )}
                     <Link
                       to="/contact"
-                      className="btn-pill bg-white/10 backdrop-blur-md border border-white/25 text-white px-8 py-4 text-sm uppercase tracking-wider hover:bg-white hover:text-foreground transition-all"
+                      className="btn-pill bg-card/10 backdrop-blur-md border border-white/25 text-white px-8 py-4 text-sm uppercase tracking-wider hover:bg-card hover:text-foreground transition-all"
                     >
                       {t("home.hero.cta2")}
                     </Link>
@@ -294,7 +294,7 @@ const Index = () => {
                     </Link>
                     <Link
                       to="/contact"
-                      className="btn-pill bg-white/10 backdrop-blur-md border border-white/25 text-white px-8 py-4 text-sm uppercase tracking-wider hover:bg-white hover:text-foreground transition-all"
+                      className="btn-pill bg-card/10 backdrop-blur-md border border-white/25 text-white px-8 py-4 text-sm uppercase tracking-wider hover:bg-card hover:text-foreground transition-all"
                     >
                       {t("home.hero.cta2")}
                     </Link>
@@ -314,7 +314,7 @@ const Index = () => {
                   });
                   navigate("/projects?" + params.toString());
                 }}
-                className="bg-white/95 backdrop-blur-xl rounded-3xl p-3 shadow-elegant grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]"
+                className="bg-card/95 backdrop-blur-xl rounded-3xl p-3 shadow-elegant grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]"
               >
                 <label className="min-w-0 px-3 py-2 text-xs font-bold text-foreground">
                   <span>{t("home.search.type")}</span>
@@ -406,8 +406,8 @@ const Index = () => {
                   </p>
                   <p className="text-sm text-white/85 font-medium">{s.label}</p>
                 </div>
-                <div className="absolute -top-8 -right-8 w-32 h-32 bg-white/10 rounded-full" />
-                <div className="absolute -bottom-12 -right-4 w-24 h-24 bg-white/5 rounded-full" />
+                <div className="absolute -top-8 -right-8 w-32 h-32 bg-card/10 rounded-full" />
+                <div className="absolute -bottom-12 -right-4 w-24 h-24 bg-card/5 rounded-full" />
               </div>
             ))}
           </div>
@@ -481,7 +481,7 @@ const Index = () => {
                     loading="lazy"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-5 left-5 chip chip-primary bg-white/95 backdrop-blur">
+                  <div className="absolute top-5 left-5 chip chip-primary bg-card/95 backdrop-blur">
                     {p.category}
                   </div>
                 </div>
@@ -539,10 +539,10 @@ const Index = () => {
                     loading="lazy"
                     className="w-full h-full object-cover"
                   />
-                  <div className="absolute top-4 left-4 chip chip-success bg-white/95 backdrop-blur text-[10px]">
+                  <div className="absolute top-4 left-4 chip chip-success bg-card/95 backdrop-blur text-[10px]">
                     {t("home.completed.statusDone")}
                   </div>
-                  <div className="absolute bottom-4 right-4 bg-white/95 backdrop-blur rounded-full px-3 py-1 text-[10px] font-extrabold text-foreground">
+                  <div className="absolute bottom-4 right-4 bg-card/95 backdrop-blur rounded-full px-3 py-1 text-[10px] font-extrabold text-foreground">
                     {p.year}
                   </div>
                 </div>
@@ -622,7 +622,7 @@ const Index = () => {
               >
                 <div className="image-zoom relative aspect-[4/3] overflow-hidden bg-muted">
                   <img src={it.img} alt="" loading="lazy" className="w-full h-full object-cover" />
-                  <div className="absolute top-5 left-5 chip chip-orange bg-white/95 backdrop-blur">
+                  <div className="absolute top-5 left-5 chip chip-orange bg-card/95 backdrop-blur">
                     {it.cat}
                   </div>
                 </div>
@@ -657,7 +657,7 @@ const Index = () => {
               </p>
             </div>
             <div className="text-center">
-              <div className="inline-flex flex-col items-center px-8 py-6 rounded-3xl bg-white shadow-soft border border-border">
+              <div className="inline-flex flex-col items-center px-8 py-6 rounded-3xl bg-card shadow-soft border border-border">
                 <div className="font-display text-2xl font-extrabold tracking-tight">
                   QUACERT × JAS-ANZ
                 </div>

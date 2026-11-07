@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { projectMemberOption, projectMemberRole } from "@/lib/people";
 import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -138,6 +141,7 @@ export const DesignScheduleTaskDialog = ({
   onSaved,
   onReload,
 }: Props) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [form, setForm] = useState<TaskForm>(emptyForm(initialPhaseId ?? phases[0]?.id ?? 0));
   const [saving, setSaving] = useState(false);
@@ -171,8 +175,8 @@ export const DesignScheduleTaskDialog = ({
     void adminApi
       .getDesignScheduleOutsourceOptions(operationalProjectId)
       .then((response) => setOutsourceOptions(response.data ?? []))
-      .catch((reason) => setError(extractApiError(reason)));
-  }, [open, operationalProjectId]);
+      .catch((reason) => setError(uiError(reason)));
+  }, [open, operationalProjectId, uiError]);
 
   const createsCycle = () => {
     if (!task) return false;
@@ -303,7 +307,7 @@ export const DesignScheduleTaskDialog = ({
       if (status === 409) {
         setConflict(true);
         setError(t("designProjects.schedule.conflict"));
-      } else setError(extractApiError(saveError));
+      } else setError(uiError(saveError));
     } finally {
       setSaving(false);
     }
@@ -346,7 +350,7 @@ export const DesignScheduleTaskDialog = ({
           </DialogDescription>
         </DialogHeader>
         <div className="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2 [&>div]:min-w-0">
-          <div>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.phase")}</Label>
             <Select
               disabled={Boolean(task)}
@@ -364,8 +368,8 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.type")}</Label>
             <Select
               value={form.isMilestone ? "milestone" : "task"}
@@ -387,7 +391,7 @@ export const DesignScheduleTaskDialog = ({
                 </SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
           <div>
             <Label htmlFor="schedule-task-code">{t("designProjects.schedule.field.code")}</Label>
             <Input
@@ -420,7 +424,7 @@ export const DesignScheduleTaskDialog = ({
               onChange={(event) => setForm({ ...form, description: event.target.value || null })}
             />
           </div>
-          <div>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.vendor")}</Label>
             <Select
               value={form.vendorId ? String(form.vendorId) : "none"}
@@ -448,8 +452,8 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.downstreamContract")}</Label>
             <Select
               disabled={!form.vendorId}
@@ -475,8 +479,8 @@ export const DesignScheduleTaskDialog = ({
                   ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.department")}</Label>
             <Select
               value={form.departmentCode}
@@ -493,8 +497,8 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.discipline")}</Label>
             <Select
               value={form.disciplineCode ?? "none"}
@@ -516,8 +520,8 @@ export const DesignScheduleTaskDialog = ({
                   ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.assignee")}</Label>
             <SearchableSelect
               value={form.assigneeMemberId ? String(form.assigneeMemberId) : ""}
@@ -535,8 +539,8 @@ export const DesignScheduleTaskDialog = ({
               placeholder={t("designProjects.schedule.field.assignee")}
               options={[...activeMembers.map((member) => projectMemberOption(member, t))]}
             />
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.approver")}</Label>
             <SearchableSelect
               value={form.approverMemberId ? String(form.approverMemberId) : ""}
@@ -556,8 +560,8 @@ export const DesignScheduleTaskDialog = ({
                   .map((member) => projectMemberOption(member, t)),
               ]}
             />
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.parentTask")}</Label>
             <Select
               value={form.parentTaskId ? String(form.parentTaskId) : "none"}
@@ -577,7 +581,7 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
           <div className="sm:col-span-2">
             <Label htmlFor="schedule-task-resources">
               {t("designProjects.schedule.field.resources")}
@@ -679,7 +683,7 @@ export const DesignScheduleTaskDialog = ({
             />
           </div>
           <div>
-            <Label>{t("designProjects.schedule.field.status")}</Label>
+            <Label htmlFor="task-status">{t("designProjects.schedule.field.status")}</Label>
             <Select
               value={form.status}
               onValueChange={(value) => setForm({ ...form, status: value as DesignScheduleStatus })}
@@ -730,7 +734,7 @@ export const DesignScheduleTaskDialog = ({
             {t("designProjects.schedule.field.critical")}
           </label>
           <fieldset className="min-w-0 space-y-2 sm:col-span-2">
-            <legend className="text-sm font-medium text-slate-800">
+            <legend className="text-sm font-medium text-foreground">
               {t("designProjects.schedule.field.predecessors")}
             </legend>
             {availablePredecessors.length ? (
@@ -738,27 +742,27 @@ export const DesignScheduleTaskDialog = ({
                 {availablePredecessors.map((item) => (
                   <label
                     key={item.id}
-                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded px-2 hover:bg-slate-50"
+                    className="flex min-h-11 cursor-pointer items-center gap-3 rounded px-2 hover:bg-muted/30"
                   >
                     <Checkbox
                       checked={form.predecessorTaskIds.includes(item.id)}
                       onCheckedChange={(checked) => togglePredecessor(item.id, checked === true)}
                     />
                     <span className="text-sm">
-                      <span className="font-mono text-xs text-slate-500">{item.code}</span> ·{" "}
+                      <span className="font-mono text-xs text-muted-foreground">{item.code}</span> ·{" "}
                       {item.name}
                     </span>
                   </label>
                 ))}
               </div>
             ) : (
-              <p className="text-sm text-slate-500">
+              <p className="text-sm text-muted-foreground">
                 {t("designProjects.schedule.predecessors.empty")}
               </p>
             )}
           </fieldset>
           <fieldset className="min-w-0 space-y-2 sm:col-span-2">
-            <legend className="text-sm font-medium text-slate-800">
+            <legend className="text-sm font-medium text-foreground">
               {t("designProjects.schedule.field.cc")}
             </legend>
             <PeopleChecklist

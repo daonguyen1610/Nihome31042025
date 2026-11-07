@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -93,7 +97,7 @@ import {
 } from "@/services/adminApi";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   PendingApproval: "border-amber-200 bg-amber-50 text-amber-700",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   SentToCustomer: "border-sky-200 bg-sky-50 text-sky-700",
@@ -169,6 +173,8 @@ function computePreview(
 // -------- Component --------
 
 const AdminQuoteDetail = () => {
+  const uiError = useUiError();
+  const confirmAction = useConfirm();
   const { id } = useParams();
   const quoteId = Number(id);
   const navigate = useNavigate();
@@ -305,11 +311,11 @@ const AdminQuoteDetail = () => {
         setFinanceReviewPackages([]);
       }
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [canViewWorkPackages, quoteId]);
+  }, [canViewWorkPackages, quoteId, uiError]);
 
   useEffect(() => {
     void load();
@@ -324,13 +330,13 @@ const AdminQuoteDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
       setVersionsLoading(false);
     }
-  }, [quoteId, toast, t]);
+  }, [quoteId, toast, t, uiError]);
 
   const loadDocuments = useCallback(async () => {
     if (!Number.isFinite(quoteId)) return;
@@ -340,11 +346,11 @@ const AdminQuoteDetail = () => {
       const { data } = await adminApi.listQuoteDocuments(quoteId);
       setDocuments(data);
     } catch (err) {
-      setDocumentsError(extractApiError(err));
+      setDocumentsError(uiError(err));
     } finally {
       setDocumentsLoading(false);
     }
-  }, [quoteId]);
+  }, [quoteId, uiError]);
 
   // ---------- BOQ helpers ----------
 
@@ -381,9 +387,12 @@ const AdminQuoteDetail = () => {
     toast({ title: t("quotes.bulk.ok"), description: `+${newItems.length}` });
   };
 
-  const applyBoqCatalog = (revision: MaterialRateRevisionResponse, pricingDate: string) => {
+  const applyBoqCatalog = async (revision: MaterialRateRevisionResponse, pricingDate: string) => {
     if (!form) return;
-    if ((form.items?.length ?? 0) > 0 && !window.confirm(t("quotes.boqCatalog.replaceConfirm")))
+    if (
+      (form.items?.length ?? 0) > 0 &&
+      !(await confirmAction(t("quotes.boqCatalog.replaceConfirm"), { destructive: false }))
+    )
       return;
     setForm({
       ...form,
@@ -483,7 +492,7 @@ const AdminQuoteDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       if (isConcurrencyConflict(err)) await load();
@@ -506,7 +515,7 @@ const AdminQuoteDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -553,7 +562,7 @@ const AdminQuoteDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       if (isConcurrencyConflict(err)) await load();
@@ -579,7 +588,7 @@ const AdminQuoteDetail = () => {
       } catch (err) {
         toast({
           title: t("common.error"),
-          description: extractApiError(err),
+          description: uiError(err),
           variant: "destructive",
         });
       } finally {
@@ -598,7 +607,7 @@ const AdminQuoteDetail = () => {
       } catch (err) {
         toast({
           title: t("common.error"),
-          description: extractApiError(err),
+          description: uiError(err),
           variant: "destructive",
         });
       } finally {
@@ -626,7 +635,7 @@ const AdminQuoteDetail = () => {
       });
       setApprovalPreview(data);
     } catch (err) {
-      setApprovalError(extractApiError(err));
+      setApprovalError(uiError(err));
     } finally {
       setWorkflowBusy(false);
     }
@@ -642,7 +651,7 @@ const AdminQuoteDetail = () => {
       const response = await adminApi.getQuoteDeletionImpact(quote.id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -660,7 +669,7 @@ const AdminQuoteDetail = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setDeleteBusy(false);
@@ -683,7 +692,7 @@ const AdminQuoteDetail = () => {
           await adminApi.uploadQuoteDocument(quote.id, file, documentLabel);
           uploaded += 1;
         } catch (err) {
-          failed.push(`${file.name}: ${extractApiError(err)}`);
+          failed.push(`${file.name}: ${uiError(err)}`);
         }
       }
     } finally {
@@ -705,7 +714,7 @@ const AdminQuoteDetail = () => {
   };
 
   const handleDeleteDocument = async (documentId: number) => {
-    if (!quote || !window.confirm(t("quotes.document.deleteConfirm"))) return;
+    if (!quote || !(await confirmAction(t("quotes.document.deleteConfirm")))) return;
     setDeletingDocumentId(documentId);
     try {
       await adminApi.deleteQuoteDocument(quote.id, documentId);
@@ -714,7 +723,7 @@ const AdminQuoteDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -1615,7 +1624,7 @@ const AdminQuoteDetail = () => {
                     title={t("quotes.approval.preview")}
                     srcDoc={approvalPreview.body}
                     sandbox=""
-                    className="h-64 w-full rounded-md border bg-white"
+                    className="h-64 w-full rounded-md border bg-card"
                   />
                   <p className="text-xs text-muted-foreground">{t("quotes.approval.queuedHint")}</p>
                 </div>
@@ -1670,12 +1679,12 @@ const AdminQuoteDetail = () => {
                 )}
               </div>
               <div className="space-y-1">
-                <Label>{t("quotes.email.renderedPreview")}</Label>
+                <span>{t("quotes.email.renderedPreview")}</span>
                 <iframe
                   title={t("quotes.email.renderedPreview")}
                   srcDoc={sendDraft.body}
                   sandbox=""
-                  className="h-72 w-full rounded-md border bg-white"
+                  className="h-72 w-full rounded-md border bg-card"
                 />
               </div>
               <div
@@ -1689,6 +1698,7 @@ const AdminQuoteDetail = () => {
           )}
           {workflow !== "send" && (
             <Textarea
+              aria-label={t("a11yUi.reason")}
               rows={4}
               value={workflowNote}
               onChange={(e) => setWorkflowNote(e.target.value)}
@@ -1847,10 +1857,10 @@ function workflowIcon(k: WorkflowKind) {
 }
 
 const FormField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div>
+  <FieldScope>
     <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 const QuoteVersionDetails = ({
@@ -2111,6 +2121,7 @@ const BoqTable = ({
                 <tr key={idx}>
                   <td className="hidden px-2 py-1 lg:table-cell">
                     <Input
+                      aria-label={t("quotes.boq.code")}
                       className="h-8"
                       value={row.itemCode ?? ""}
                       disabled={!editing}
@@ -2119,6 +2130,7 @@ const BoqTable = ({
                   </td>
                   <td className="px-2 py-1">
                     <Input
+                      aria-label={t("quotes.boq.name")}
                       className="h-8"
                       value={row.name}
                       disabled={!editing}
@@ -2127,6 +2139,7 @@ const BoqTable = ({
                   </td>
                   <td className="px-2 py-1">
                     <Input
+                      aria-label={t("quotes.boq.unit")}
                       className="h-8"
                       value={row.unit}
                       disabled={!editing}
@@ -2135,6 +2148,7 @@ const BoqTable = ({
                   </td>
                   <td className="px-2 py-1">
                     <Input
+                      aria-label={t("quotes.boq.qty")}
                       className="h-8 text-right"
                       inputMode="decimal"
                       value={row.quantity}
@@ -2144,6 +2158,7 @@ const BoqTable = ({
                   </td>
                   <td className="px-2 py-1">
                     <Input
+                      aria-label={t("quotes.boq.unitPrice")}
                       className="h-8 text-right"
                       type="number"
                       inputMode="decimal"
@@ -2158,6 +2173,7 @@ const BoqTable = ({
                   {editing && (
                     <td className="px-2 py-1 text-right">
                       <Button
+                        aria-label={t("common.delete")}
                         variant="ghost"
                         size="sm"
                         data-testid={`boq-remove-desktop-${idx}`}
@@ -2202,6 +2218,7 @@ const BoqTable = ({
                 <>
                   <div className="grid grid-cols-[1fr,auto] items-start gap-2">
                     <Input
+                      aria-label={t("quotes.boq.name")}
                       className="h-9 text-sm font-medium"
                       placeholder={t("quotes.boq.name")}
                       value={row.name}
@@ -2219,18 +2236,21 @@ const BoqTable = ({
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <Input
+                      aria-label={t("quotes.boq.code")}
                       className="h-9"
                       placeholder={t("quotes.boq.code")}
                       value={row.itemCode ?? ""}
                       onChange={(e) => onChange(idx, { itemCode: e.target.value || null })}
                     />
                     <Input
+                      aria-label={t("quotes.boq.unit")}
                       className="h-9"
                       placeholder={t("quotes.boq.unit")}
                       value={row.unit}
                       onChange={(e) => onChange(idx, { unit: e.target.value })}
                     />
                     <Input
+                      aria-label={t("quotes.boq.qty")}
                       className="h-9 text-right"
                       inputMode="decimal"
                       placeholder={t("quotes.boq.qty")}
@@ -2238,6 +2258,7 @@ const BoqTable = ({
                       onChange={(e) => onChange(idx, { quantity: Number(e.target.value) || 0 })}
                     />
                     <Input
+                      aria-label={t("quotes.boq.unitPrice")}
                       className="h-9 text-right"
                       type="number"
                       inputMode="decimal"

@@ -1,3 +1,9 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -61,7 +67,7 @@ import { contentApi } from "@/services/contentApi";
 // ------------------------------- helpers -------------------------------
 
 const DRIVE_STATUS_BADGE: Record<SurveyDriveSyncStatus, string> = {
-  NotSynced: "border-slate-200 bg-slate-50 text-slate-700",
+  NotSynced: "border-border bg-muted/30 text-foreground",
   Syncing: "border-amber-200 bg-amber-50 text-amber-700",
   Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Failed: "border-rose-200 bg-rose-50 text-rose-700",
@@ -156,6 +162,7 @@ const DriveStatusBadge = ({
 // -------------------------------- page ---------------------------------
 
 const AdminSurveys = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -171,6 +178,7 @@ const AdminSurveys = () => {
 
   // filters
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [constructionType, setConstructionType] = useState<string>("");
   const [surveyorUserId, setSurveyorUserId] = useState<number | null>(null);
   const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null);
@@ -196,12 +204,16 @@ const AdminSurveys = () => {
         const [ctResp, projResp, operationalResp, oppResp] = await Promise.all([
           adminApi.getMasterDataOptions("construction_type", lang),
           contentApi.getProjects().catch(() => ({ data: [] })),
-          adminApi.listOperationalProjects({ pageSize: 100 }).catch(() => ({
+          collectLookupPages((page) =>
+            adminApi.listOperationalProjects({ pageSize: 100, page }),
+          ).catch(() => ({
             data: { total: 0, page: 1, pageSize: 100, items: [] },
           })),
-          adminApi.listOpportunities({ pageSize: 200 }).catch(() => ({
-            data: { total: 0, page: 1, pageSize: 200, items: [] },
-          })),
+          collectLookupPages((page) => adminApi.listOpportunities({ pageSize: 200, page })).catch(
+            () => ({
+              data: { total: 0, page: 1, pageSize: 200, items: [] },
+            }),
+          ),
         ]);
         if (cancelled) return;
         setConstructionTypes((ctResp.data ?? []).filter((o) => o.isActive));
@@ -240,7 +252,9 @@ const AdminSurveys = () => {
     };
   }, [canPickSurveyor, lang]);
 
+  const startListRequest = useRequestGuard();
   const fetchList = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
@@ -248,7 +262,7 @@ const AdminSurveys = () => {
         page,
         pageSize,
       };
-      if (search.trim()) params.search = search.trim();
+      if (settledSearch.trim()) params.search = settledSearch.trim();
       if (constructionType) params.constructionTypeCode = constructionType;
       if (surveyorUserId != null) params.surveyorUserId = surveyorUserId;
       if (linkedProjectId != null) params.linkedProjectId = linkedProjectId;
@@ -256,30 +270,33 @@ const AdminSurveys = () => {
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
       const { data } = await adminApi.listSurveys(params);
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
     } catch (err) {
-      setError(extractApiError(err));
+      if (!isCurrent()) return;
+      setError(uiError(err));
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [
+    startListRequest,
     page,
-    pageSize,
-    search,
+    settledSearch,
     constructionType,
     surveyorUserId,
     linkedProjectId,
     driveStatus,
     dateFrom,
     dateTo,
-    t,
+    uiError,
     toast,
+    t,
   ]);
 
   useEffect(() => {
@@ -361,7 +378,7 @@ const AdminSurveys = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -414,7 +431,7 @@ const AdminSurveys = () => {
       setEditingDetail(null);
       await fetchList();
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -435,7 +452,7 @@ const AdminSurveys = () => {
       const response = await adminApi.getSurveyDeletionImpact(row.id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -451,7 +468,7 @@ const AdminSurveys = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setBusyDelete(false);
@@ -471,8 +488,8 @@ const AdminSurveys = () => {
       <div className="space-y-4 p-3 md:p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">{t("surveys.title")}</h1>
-            <p className="text-sm text-slate-600">{t("surveys.subtitle")}</p>
+            <h1 className="text-xl font-bold text-foreground md:text-2xl">{t("surveys.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("surveys.subtitle")}</p>
           </div>
           {canManage ? (
             <Button size="sm" onClick={openCreate}>
@@ -482,12 +499,12 @@ const AdminSurveys = () => {
           ) : null}
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <div className="lg:col-span-2">
+            <FieldScope className="lg:col-span-2">
               <Label className="text-xs">{t("surveys.filter.search")}</Label>
               <div className="relative mt-1">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
                   value={search}
@@ -498,8 +515,8 @@ const AdminSurveys = () => {
                   placeholder={t("surveys.filter.search")}
                 />
               </div>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label className="text-xs">{t("surveys.field.constructionType")}</Label>
               <Select
                 value={constructionType}
@@ -522,8 +539,8 @@ const AdminSurveys = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label className="text-xs">{t("surveys.field.driveStatus")}</Label>
               <Select
                 value={driveStatus}
@@ -544,9 +561,9 @@ const AdminSurveys = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldScope>
             {canPickSurveyor && surveyorOptions.length > 0 ? (
-              <div>
+              <FieldScope>
                 <Label className="text-xs">{t("surveys.field.surveyor")}</Label>
                 <SearchableSelect
                   className="mt-1"
@@ -561,10 +578,10 @@ const AdminSurveys = () => {
                   ]}
                   placeholder={t("surveys.filter.allSurveyors")}
                 />
-              </div>
+              </FieldScope>
             ) : null}
             {projectOptions.length > 0 ? (
-              <div>
+              <FieldScope>
                 <Label className="text-xs">{t("surveys.field.linkedProject")}</Label>
                 <SearchableSelect
                   className="mt-1"
@@ -579,9 +596,9 @@ const AdminSurveys = () => {
                   ]}
                   placeholder={t("surveys.filter.allProjects")}
                 />
-              </div>
+              </FieldScope>
             ) : null}
-            <div>
+            <FieldScope>
               <Label className="text-xs">{t("surveys.filter.dateFrom")}</Label>
               <Input
                 type="date"
@@ -592,8 +609,8 @@ const AdminSurveys = () => {
                   setPage(1);
                 }}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label className="text-xs">{t("surveys.filter.dateTo")}</Label>
               <Input
                 type="date"
@@ -604,7 +621,7 @@ const AdminSurveys = () => {
                   setPage(1);
                 }}
               />
-            </div>
+            </FieldScope>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()} disabled={loading}>
@@ -614,7 +631,7 @@ const AdminSurveys = () => {
             <Button variant="ghost" size="sm" onClick={resetFilters} disabled={loading}>
               {t("common.reset")}
             </Button>
-            <span className="ml-auto text-xs text-slate-500">
+            <span className="ml-auto text-xs text-muted-foreground">
               {t("surveys.total").replace("{count}", String(total))}
             </span>
           </div>
@@ -642,7 +659,7 @@ const AdminSurveys = () => {
                 return (
                   <article
                     key={r.id}
-                    className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
+                    className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/70"
                     onClick={() => openDetail(r.id)}
                   >
                     <header className="flex items-start justify-between gap-2">
@@ -705,9 +722,9 @@ const AdminSurveys = () => {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm lg:block">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2">{t("surveys.field.code")}</th>
                     <th className="px-3 py-2">{t("surveys.field.location")}</th>
@@ -727,7 +744,7 @@ const AdminSurveys = () => {
                     return (
                       <tr
                         key={r.id}
-                        className="cursor-pointer border-t align-top hover:bg-slate-50/60"
+                        className="cursor-pointer border-t align-top hover:bg-muted/60"
                         onClick={() => openDetail(r.id)}
                       >
                         <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{r.code}</td>
@@ -752,11 +769,17 @@ const AdminSurveys = () => {
                             className="whitespace-nowrap px-3 py-2 text-right"
                             onClick={(e) => e.stopPropagation()}
                           >
-                            <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
+                            <Button
+                              aria-label={t("common.edit")}
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => void openEdit(r.id)}
+                            >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>
                             {canDelete ? (
                               <Button
+                                aria-label={t("common.delete")}
                                 variant="ghost"
                                 size="sm"
                                 className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
@@ -776,7 +799,7 @@ const AdminSurveys = () => {
 
             {totalPages > 1 ? (
               <div className="flex flex-wrap items-center justify-end gap-2 text-sm">
-                <span className="text-xs text-slate-500">
+                <span className="text-xs text-muted-foreground">
                   {t("surveys.paginationLabel")
                     .replace("{page}", String(page))
                     .replace("{totalPages}", String(totalPages))}
@@ -821,17 +844,17 @@ const AdminSurveys = () => {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("surveys.field.location")} *</Label>
               <Input
                 value={form.location}
                 onChange={(e) => setForm({ ...form, location: e.target.value })}
                 placeholder={t("surveys.form.locationPlaceholder")}
               />
-            </div>
+            </FieldScope>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("surveys.field.surveyDate")} *</Label>
                 <Input
                   type="date"
@@ -845,8 +868,8 @@ const AdminSurveys = () => {
                     })
                   }
                 />
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("surveys.field.constructionType")}</Label>
                 <Select
                   value={form.constructionTypeCode ?? ""}
@@ -868,11 +891,11 @@ const AdminSurveys = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
             </div>
 
             {canPickSurveyor && surveyorOptions.length > 0 ? (
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("surveys.field.surveyor")}</Label>
                 <SearchableSelect
                   value={form.surveyorUserId != null ? String(form.surveyorUserId) : ""}
@@ -883,11 +906,11 @@ const AdminSurveys = () => {
                   ]}
                   placeholder={t("surveys.form.surveyorNone")}
                 />
-              </div>
+              </FieldScope>
             ) : null}
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("surveys.field.operationalProject")} *</Label>
                 <SearchableSelect
                   value={form.operationalProjectId != null ? String(form.operationalProjectId) : ""}
@@ -898,8 +921,8 @@ const AdminSurveys = () => {
                   ]}
                   placeholder={t("surveys.form.operationalProjectPlaceholder")}
                 />
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("surveys.field.linkedOpportunity")}</Label>
                 <SearchableSelect
                   value={form.linkedOpportunityId != null ? String(form.linkedOpportunityId) : ""}
@@ -920,17 +943,17 @@ const AdminSurveys = () => {
                   ]}
                   placeholder={t("surveys.form.linkedOpportunityNone")}
                 />
-              </div>
+              </FieldScope>
             </div>
 
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("surveys.field.note")}</Label>
               <Textarea
                 rows={3}
                 value={form.note ?? ""}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
               />
-            </div>
+            </FieldScope>
 
             {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
           </div>

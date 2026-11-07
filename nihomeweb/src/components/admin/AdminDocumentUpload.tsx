@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useId, useRef, useState } from "react";
 import { Loader2, UploadCloud } from "lucide-react";
 import { extractApiError } from "@/lib/apiError";
@@ -23,6 +25,7 @@ export default function AdminDocumentUpload({
   disabled = false,
   testId,
 }: AdminDocumentUploadProps) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -48,7 +51,7 @@ export default function AdminDocumentUpload({
           uploadedPaths.push(await uploadFile(file));
         } catch (uploadError) {
           failedFiles.push(
-            `${file.name}: ${extractApiError(uploadError) || t("common.documentUpload.error")}`,
+            `${file.name}: ${uiError(uploadError) || t("common.documentUpload.error")}`,
           );
         }
       }

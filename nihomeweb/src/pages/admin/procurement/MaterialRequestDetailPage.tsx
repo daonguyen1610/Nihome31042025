@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption, mergePeople, type PersonIdentity } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -45,13 +48,13 @@ type RequestLineDraft = MaterialRequestUpsertRequest["lines"][number] & { draftI
 type Decision = { approved: boolean } | null;
 
 const statusClass: Record<string, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Rejected: "border-rose-200 bg-rose-50 text-rose-700",
   PartiallyFulfilled: "border-amber-200 bg-amber-50 text-amber-800",
   Fulfilled: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Cancelled: "border-slate-200 bg-slate-50 text-slate-500",
+  Cancelled: "border-border bg-muted/30 text-muted-foreground",
 };
 
 const toLocalDateTime = (value: string) => {
@@ -61,6 +64,7 @@ const toLocalDateTime = (value: string) => {
 };
 
 const MaterialRequestDetailPage = () => {
+  const uiError = useUiError();
   const { projectId: projectIdParam, requestId: requestIdParam } = useParams();
   const projectId = Number(projectIdParam);
   const requestId = Number(requestIdParam);
@@ -159,11 +163,11 @@ const MaterialRequestDetailPage = () => {
         procurementCandidates.push({ userId: currentUser.userId, userName: currentUser.fullName });
       setProcurementUsers(mergePeople(procurementCandidates));
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setLoading(false);
     }
-  }, [currentUser, projectId, requestId, t]);
+  }, [currentUser, projectId, requestId, t, uiError]);
 
   useEffect(() => {
     void load();
@@ -254,7 +258,7 @@ const MaterialRequestDetailPage = () => {
       setReason("");
       toast({ title: t(successKey) });
     } catch (actionError) {
-      const message = extractApiError(actionError);
+      const message = uiError(actionError);
       setFormError(message);
       toast({ title: t("common.error"), description: message, variant: "destructive" });
     } finally {
@@ -877,7 +881,7 @@ const RequestEditForm = ({
     </div>
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label>{t("procurement.field.lines")}</Label>
+        <span>{t("procurement.field.lines")}</span>
         <Button
           type="button"
           variant="outline"
@@ -895,7 +899,7 @@ const RequestEditForm = ({
       </div>
       {lines.map((line, index) => (
         <div className="grid gap-3 border-t pt-3 sm:grid-cols-[2fr_1fr_auto]" key={line.draftId}>
-          <div className="space-y-2">
+          <FieldScope className="space-y-2">
             <Label>{t("procurement.field.item")}</Label>
             <Select
               value={line.projectBoqLineId ? String(line.projectBoqLineId) : ""}
@@ -907,7 +911,7 @@ const RequestEditForm = ({
                 )
               }
             >
-              <SelectTrigger aria-label={t("procurement.field.item")}>
+              <SelectTrigger>
                 <SelectValue placeholder={t("procurement.lookup.boqLinePlaceholder")} />
               </SelectTrigger>
               <SelectContent>
@@ -919,7 +923,7 @@ const RequestEditForm = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
           <div className="space-y-2">
             <Label htmlFor={`request-detail-quantity-${index}`}>
               {t("procurement.field.requestedQuantity")}

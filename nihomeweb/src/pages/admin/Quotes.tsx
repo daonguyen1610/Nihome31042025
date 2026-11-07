@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import {
@@ -59,7 +62,7 @@ import {
 // -------- Static styling --------
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   PendingApproval: "border-amber-200 bg-amber-50 text-amber-700",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   SentToCustomer: "border-sky-200 bg-sky-50 text-sky-700",
@@ -96,6 +99,7 @@ const canRaiseQuote = (opportunity: OpportunityResponse) =>
 // -------- Component --------
 
 const AdminQuotes = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -147,11 +151,11 @@ const AdminQuotes = () => {
       setRows(data.items);
       setTotal(data.total);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, minValue, maxValue, search, customerIdFilter]);
+  }, [page, customerIdFilter, statusFilter, minValue, maxValue, search, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -246,7 +250,7 @@ const AdminQuotes = () => {
       setCreating(false);
       navigate(`/admin/quotes/${data.id}`);
     } catch (err) {
-      setCreateError(extractApiError(err));
+      setCreateError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -263,7 +267,7 @@ const AdminQuotes = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -302,7 +306,7 @@ const AdminQuotes = () => {
       const response = await adminApi.getQuoteDeletionImpact(id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -320,7 +324,7 @@ const AdminQuotes = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setDeleteBusy(false);
@@ -345,7 +349,12 @@ const AdminQuotes = () => {
           <p className="text-sm text-muted-foreground">{t("quotes.subtitle")}</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => void fetchList()} disabled={loading}>
+          <Button
+            aria-label={t("common.refresh")}
+            variant="outline"
+            onClick={() => void fetchList()}
+            disabled={loading}
+          >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
           {canManage && (
@@ -362,6 +371,7 @@ const AdminQuotes = () => {
         <div className="relative flex-1 min-w-[220px]">
           <Search className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
+            aria-label={t("common.search")}
             className="pl-8"
             placeholder={t("quotes.filter.search")}
             value={searchInput}
@@ -376,7 +386,7 @@ const AdminQuotes = () => {
               setPage(1);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label={t("quotes.field.status")}>
               <SelectValue placeholder={t("quotes.filter.status")} />
             </SelectTrigger>
             <SelectContent>
@@ -391,6 +401,7 @@ const AdminQuotes = () => {
         </div>
         <div className="w-[160px]">
           <Input
+            aria-label={t("quotes.filter.minValue")}
             inputMode="numeric"
             placeholder={t("quotes.filter.minValue")}
             value={minValue ? formatVnd(Number(minValue)) : ""}
@@ -399,6 +410,7 @@ const AdminQuotes = () => {
         </div>
         <div className="w-[160px]">
           <Input
+            aria-label={t("quotes.filter.maxValue")}
             inputMode="numeric"
             placeholder={t("quotes.filter.maxValue")}
             value={maxValue ? formatVnd(Number(maxValue)) : ""}
@@ -599,7 +611,7 @@ const AdminQuotes = () => {
             <DialogDescription>{t("quotes.createBasicHint")}</DialogDescription>
           </DialogHeader>
           <div className="min-w-0 space-y-4">
-            <div className="min-w-0">
+            <FieldScope className="min-w-0">
               <Label>{t("quotes.field.opportunity")}</Label>
               <SearchableSelect
                 className="min-w-0"
@@ -629,8 +641,8 @@ const AdminQuotes = () => {
               <p className="mt-1 text-xs text-muted-foreground">
                 {t("quotes.opportunityPicker.hint")}
               </p>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("quotes.field.note")}</Label>
               <Textarea
                 rows={3}
@@ -638,7 +650,7 @@ const AdminQuotes = () => {
                 value={createForm.note ?? ""}
                 onChange={(event) => setCreateForm({ ...createForm, note: event.target.value })}
               />
-            </div>
+            </FieldScope>
             {createError && <p className="text-sm text-destructive">{createError}</p>}
           </div>
           <DialogFooter>

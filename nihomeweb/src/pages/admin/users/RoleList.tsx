@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import { isAxiosError } from "axios";
@@ -76,6 +79,7 @@ function setsEqual(a: Set<string>, b: Set<string>) {
 }
 
 export default function RoleList() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -413,7 +417,7 @@ export default function RoleList() {
     try {
       setGroupDeleteImpact((await rbacApi.getRoleGroupDeletionImpact(group.id)).data);
     } catch (error) {
-      setGroupDeleteError(error instanceof Error ? error.message : t("common.error"));
+      setGroupDeleteError(uiError(error));
     } finally {
       setGroupDeleteLoading(false);
     }
@@ -446,7 +450,7 @@ export default function RoleList() {
           <PageLoading />
         ) : error ? (
           <PageError
-            message={error instanceof Error ? error.message : t("common.error")}
+            message={uiError(error)}
             onRetry={() => {
               void rolesQuery.refetch();
               void permsQuery.refetch();
@@ -1026,22 +1030,24 @@ export default function RoleList() {
                       ))}
                     </select>
                   </div>
-                  <div className="space-y-1 sm:col-span-2 lg:col-span-2">
+                  <FieldScope className="space-y-1 sm:col-span-2 lg:col-span-2">
                     <Label className="text-xs">{t("adminRbac.filter.roles")}</Label>
                     <div className="flex flex-wrap gap-x-4 gap-y-1.5">
                       {roles.map((role) => (
                         <label key={role.id} className="flex items-center gap-1.5 text-xs">
-                          <input
-                            type="checkbox"
-                            className="h-3.5 w-3.5"
-                            checked={!hiddenRoleIds.has(role.id)}
-                            onChange={() => toggleRoleVisible(role.id)}
-                          />
+                          <FieldControl>
+                            <input
+                              type="checkbox"
+                              className="h-3.5 w-3.5"
+                              checked={!hiddenRoleIds.has(role.id)}
+                              onChange={() => toggleRoleVisible(role.id)}
+                            />
+                          </FieldControl>
                           <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
                         </label>
                       ))}
                     </div>
-                  </div>
+                  </FieldScope>
                   <p className="text-xs text-muted-foreground sm:col-span-2 lg:col-span-2">
                     {t("adminRbac.filter.showing")
                       .replace("{shown}", String(perms.length))
@@ -1075,7 +1081,7 @@ export default function RoleList() {
                             {role.isSystem ? (
                               <Badge
                                 variant="outline"
-                                className="mt-1 border-slate-200 bg-slate-100 text-slate-600 normal-case"
+                                className="mt-1 border-border bg-muted text-muted-foreground normal-case"
                               >
                                 {t("adminRbac.systemRoleBadge")}
                               </Badge>
@@ -1185,7 +1191,7 @@ export default function RoleList() {
                           {role.isSystem ? (
                             <Badge
                               variant="outline"
-                              className="border-slate-200 bg-slate-100 text-slate-600"
+                              className="border-border bg-muted text-muted-foreground"
                             >
                               {t("adminRbac.systemRoleBadge")}
                             </Badge>

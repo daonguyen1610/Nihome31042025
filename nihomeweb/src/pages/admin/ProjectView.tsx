@@ -37,7 +37,7 @@ const ProjectView = () => {
     return (
       <AdminLayout>
         <div className="rounded-lg border bg-card p-10 text-center">
-          <p className="text-sm text-muted-foreground">Không tìm thấy dự án.</p>
+          <p className="text-sm text-muted-foreground">{t("a11yUi.projectNotFound")}</p>
           <Button asChild className="mt-4">
             <Link to="/admin/projects">
               <ArrowLeft className="mr-1.5 h-4 w-4" /> {t("form.back")}

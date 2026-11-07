@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -13,6 +15,7 @@ import { Button } from "@/components/ui/button";
 
 /** Reuse the quotation's existing commercial review; never create another approval cycle. */
 export default function ContractFinanceReviewLink({ quoteId }: { quoteId?: number | null }) {
+  const uiError = useUiError();
   const { has } = usePermissions();
   const { t } = useI18n();
   const canView = has("work.packages.view");
@@ -59,11 +62,11 @@ export default function ContractFinanceReviewLink({ quoteId }: { quoteId?: numbe
         setQuote(response.data);
       }
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setLoading(false);
     }
-  }, [canRequest, canView, canViewQuote, quoteId]);
+  }, [canRequest, canView, canViewQuote, quoteId, uiError]);
   useEffect(() => {
     void load();
   }, [load]);

@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useEffect, useState } from "react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
@@ -29,6 +32,7 @@ interface Props {
 }
 
 export default function TenderStatistics({ onInspect, refreshToken }: Props) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [draft, setDraft] = useState({
     fromDate: `${currentYear()}-01-01`,
@@ -81,14 +85,14 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
           if (!controller.signal.aborted) setData(result);
         },
         (err: unknown) => {
-          if (!controller.signal.aborted) setError(extractApiError(err));
+          if (!controller.signal.aborted) setError(uiError(err));
         },
       )
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [filters, revision, refreshToken]);
+  }, [filters, revision, refreshToken, uiError]);
 
   const invalidDates = !draft.fromDate || !draft.toDate || draft.fromDate > draft.toDate;
   const dirty =
@@ -173,7 +177,7 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
             onChange={(e) => setDraft({ ...draft, toDate: e.target.value })}
           />
         </div>
-        <div className="space-y-2">
+        <FieldScope className="space-y-2">
           <Label>{t("tenders.field.customer")}</Label>
           <SearchableSelect
             ariaLabel={t("tenders.field.customer")}
@@ -185,8 +189,8 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
             ]}
             placeholder={t("tenders.filter.allCustomers")}
           />
-        </div>
-        <div className="space-y-2">
+        </FieldScope>
+        <FieldScope className="space-y-2">
           <Label>{t("tenders.field.preparer")}</Label>
           <SearchableSelect
             ariaLabel={t("tenders.field.preparer")}
@@ -198,7 +202,7 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
             ]}
             placeholder={t("tenders.stats.allPreparers")}
           />
-        </div>
+        </FieldScope>
         <Button type="submit" disabled={invalidDates || loading}>
           {t("tenders.stats.apply")}
         </Button>

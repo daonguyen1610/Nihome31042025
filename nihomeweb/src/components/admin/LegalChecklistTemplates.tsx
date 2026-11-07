@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import { adminApi, type MasterDataOption } from "@/services/adminApi";
 import type {
@@ -34,6 +36,7 @@ const languages = [
 ] as const;
 
 export default function LegalChecklistTemplates() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { has } = usePermissions();
   const userId = useAppSelector((state) => state.auth.user?.userId);
@@ -59,9 +62,9 @@ export default function LegalChecklistTemplates() {
   };
   useEffect(() => {
     void load()
-      .catch((err) => setError(extractApiError(err)))
+      .catch((err) => setError(uiError(err)))
       .finally(() => setLoading(false));
-  }, []);
+  }, [uiError]);
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
     setError("");
@@ -72,7 +75,7 @@ export default function LegalChecklistTemplates() {
       setSelected(null);
       setApproval("");
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setBusy(false);
     }
@@ -94,13 +97,13 @@ export default function LegalChecklistTemplates() {
     try {
       await load();
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setBusy(false);
     }
   };
   return (
-    <details className="rounded-lg border bg-white p-3" data-testid="legal-templates">
+    <details className="rounded-lg border bg-card p-3" data-testid="legal-templates">
       <summary className="cursor-pointer font-semibold">{t("legalTemplates.title")}</summary>
       <div className="mt-3 space-y-3">
         {error ? (

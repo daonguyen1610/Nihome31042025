@@ -1,4 +1,5 @@
 using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs;
 
 namespace NihomeBackend.Models.DTOs.Responses;
 
@@ -15,6 +16,7 @@ public class ContractAppendixResponse
     public string? OriginalFileName { get; set; }
     public long? FileSize { get; set; }
     public string? ContentType { get; set; }
+    public List<ContractAppendixFileInfo> Files { get; set; } = new();
 
     public ContractAppendixStatus Status { get; set; }
 

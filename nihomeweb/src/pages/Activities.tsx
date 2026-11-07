@@ -85,6 +85,7 @@ const Activities = () => {
           <div className="flex items-center gap-2 bg-secondary rounded-full px-5 py-2.5 w-full lg:w-80 border border-border">
             <Search className="w-4 h-4 text-muted-foreground shrink-0" />
             <input
+              aria-label={t("common.search")}
               value={q}
               onChange={(e) => setQ(e.target.value)}
               placeholder={t("newsPage.searchPh")}
@@ -157,7 +158,7 @@ const Activities = () => {
                         loading="lazy"
                         className="w-full h-full object-cover"
                       />
-                      <span className="absolute top-5 left-5 chip chip-orange bg-white/95">
+                      <span className="absolute top-5 left-5 chip chip-orange bg-card/95">
                         {resolveCategoryLabel(a.categoryId, a.category, categoriesById, lang)}
                       </span>
                     </div>

@@ -1,3 +1,5 @@
+import { getUiError } from "@/lib/apiError";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Edit, Plus, RefreshCw, Search, Trash2, UserRound } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -63,10 +65,11 @@ const getErrorMessage = (error: unknown, t: (key: string) => string) => {
     if (typeof data.message === "string") return data.message;
   }
 
-  return translateError(t, extractApiError(error, t("common.error")));
+  return translateError(t, getUiError(error, t, t("common.error")));
 };
 
 export default function UserList() {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const [items, setItems] = useState<UserListItemResponse[]>([]);
@@ -209,7 +212,7 @@ export default function UserList() {
   };
 
   const deleteUser = async (user: UserListItemResponse) => {
-    if (!window.confirm(t("adminUsers.confirmHardDelete"))) return;
+    if (!(await confirmAction(t("adminUsers.confirmHardDelete")))) return;
 
     setBusyUserId(user.id);
     try {

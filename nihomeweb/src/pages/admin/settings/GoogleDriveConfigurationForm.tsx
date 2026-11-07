@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import { BookOpen, Save, Trash2 } from "lucide-react";
 import {
@@ -156,6 +158,7 @@ type Props = {
 };
 
 export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onSaved }: Props) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { toast } = useToast();
   const [form, setForm] = useState<GoogleDriveAdminConfigurationResponse | null>(null);
@@ -250,7 +253,7 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error) || t("settings.drive.configuration.saveError"),
+        description: uiError(error) || t("settings.drive.configuration.saveError"),
         variant: "destructive",
       });
     } finally {

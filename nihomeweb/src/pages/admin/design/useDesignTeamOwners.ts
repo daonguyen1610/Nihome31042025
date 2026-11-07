@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import type { SearchableSelectOption } from "@/components/ui/searchable-select";
 import { extractApiError } from "@/lib/apiError";
@@ -6,6 +8,7 @@ import { projectPositionLabel } from "@/lib/people";
 import { adminApi, type DesignProjectResponse } from "@/services/adminApi";
 
 export function useDesignTeamOwners(project: DesignProjectResponse, enabled: boolean) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [options, setOptions] = useState<SearchableSelectOption[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -39,7 +42,7 @@ export function useDesignTeamOwners(project: DesignProjectResponse, enabled: boo
       .catch((reason: unknown) => {
         if (!cancelled) {
           setOptions([]);
-          setError(extractApiError(reason));
+          setError(uiError(reason));
           setLoadedFor(project.id);
         }
       })
@@ -49,7 +52,7 @@ export function useDesignTeamOwners(project: DesignProjectResponse, enabled: boo
     return () => {
       cancelled = true;
     };
-  }, [enabled, project.id, project.operationalProjectId, t]);
+  }, [enabled, project.id, project.operationalProjectId, t, uiError]);
 
   return {
     options: enabled && loadedFor === project.id ? options : [],

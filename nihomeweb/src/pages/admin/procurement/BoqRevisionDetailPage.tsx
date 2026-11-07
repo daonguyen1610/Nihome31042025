@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useState } from "react";
 import { ArrowLeft, Check, Edit3, Plus, Send, Trash2, X } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -48,13 +52,14 @@ const emptyLine = (): BoqLineDraft => ({
 });
 
 const statusClass: Record<string, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Rejected: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
 const BoqRevisionDetailPage = () => {
+  const uiError = useUiError();
   const { projectId: projectIdParam, boqId: boqIdParam } = useParams();
   const projectId = Number(projectIdParam);
   const boqId = Number(boqIdParam);
@@ -89,7 +94,9 @@ const BoqRevisionDetailPage = () => {
       const [projectResponse, boqResponse, contractsResponse] = await Promise.all([
         adminApi.getOperationalProject(projectId),
         adminApi.getProjectBoqRevision(projectId, boqId),
-        adminApi.listContracts({ operationalProjectId: projectId, pageSize: 200 }),
+        collectLookupPages((page) =>
+          adminApi.listContracts({ operationalProjectId: projectId, pageSize: 200, page }),
+        ),
       ]);
       setProject(projectResponse.data);
       setBoq(boqResponse.data);
@@ -102,7 +109,7 @@ const BoqRevisionDetailPage = () => {
         ),
       );
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setLoading(false);
     }
@@ -180,7 +187,7 @@ const BoqRevisionDetailPage = () => {
       setEditOpen(false);
       toast({ title: t("procurement.success.boqUpdated") });
     } catch (reason) {
-      const message = extractApiError(reason);
+      const message = uiError(reason);
       setFormError(message);
       toast({ title: t("common.error"), description: message, variant: "destructive" });
     } finally {
@@ -198,7 +205,7 @@ const BoqRevisionDetailPage = () => {
     } catch (reason) {
       toast({
         title: t("common.error"),
-        description: extractApiError(reason),
+        description: uiError(reason),
         variant: "destructive",
       });
     } finally {
@@ -229,7 +236,7 @@ const BoqRevisionDetailPage = () => {
         title: t(decision ? "procurement.success.approved" : "procurement.success.rejected"),
       });
     } catch (reason) {
-      const message = extractApiError(reason);
+      const message = uiError(reason);
       setFormError(message);
       toast({ title: t("common.error"), description: message, variant: "destructive" });
     } finally {
@@ -676,7 +683,7 @@ const BoqForm = ({
 }) => (
   <div className="space-y-4">
     <div className="grid gap-3 sm:grid-cols-2">
-      <div className="space-y-2">
+      <FieldScope className="space-y-2">
         <Label>{t("procurement.field.upstreamContract")}</Label>
         <Select
           value={upstreamContractId ? String(upstreamContractId) : ""}
@@ -693,7 +700,7 @@ const BoqForm = ({
             ))}
           </SelectContent>
         </Select>
-      </div>
+      </FieldScope>
       <div className="space-y-2">
         <Label htmlFor="boq-edit-currency">{t("procurement.field.currency")}</Label>
         <Input
@@ -706,7 +713,7 @@ const BoqForm = ({
     </div>
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <Label>{t("procurement.field.lines")}</Label>
+        <span>{t("procurement.field.lines")}</span>
         <Button
           type="button"
           variant="outline"

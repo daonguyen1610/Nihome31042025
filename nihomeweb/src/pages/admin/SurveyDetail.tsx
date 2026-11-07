@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -35,7 +37,7 @@ import SurveyConditionsPanel from "./SurveyConditionsPanel";
 // ---------------------------- shared ----------------------------
 
 const DRIVE_STATUS_BADGE: Record<SurveyDriveSyncStatus, string> = {
-  NotSynced: "border-slate-200 bg-slate-50 text-slate-700",
+  NotSynced: "border-border bg-muted/30 text-foreground",
   Syncing: "border-amber-200 bg-amber-50 text-amber-700",
   Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Failed: "border-rose-200 bg-rose-50 text-rose-700",
@@ -87,6 +89,7 @@ const DriveStatusBadge = ({
 // ---------------------------- page ----------------------------
 
 const AdminSurveyDetail = () => {
+  const uiError = useUiError();
   const { id } = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const surveyId = Number(id);
@@ -141,12 +144,12 @@ const AdminSurveyDetail = () => {
       // errors surface through PageError.
       const status = (err as { response?: { status?: number } })?.response?.status;
       if (status !== 404) {
-        setError(extractApiError(err));
+        setError(uiError(err));
       }
     } finally {
       setLoading(false);
     }
-  }, [isValidId, surveyId]);
+  }, [isValidId, surveyId, uiError]);
 
   const fetchTimeline = useCallback(async () => {
     if (!isValidId) return;
@@ -221,7 +224,7 @@ const AdminSurveyDetail = () => {
       <div className="space-y-4 p-3 md:p-4">
         <Link
           to="/admin/surveys"
-          className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-slate-800"
+          className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           {t("surveys.detail.back")}
@@ -239,25 +242,27 @@ const AdminSurveyDetail = () => {
         ) : (
           <>
             {/* Header */}
-            <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <ClipboardList className="h-5 w-5 shrink-0 text-slate-500" />
-                    <h1 className="text-xl font-bold text-slate-900 md:text-2xl">{survey.code}</h1>
+                    <ClipboardList className="h-5 w-5 shrink-0 text-muted-foreground" />
+                    <h1 className="text-xl font-bold text-foreground md:text-2xl">{survey.code}</h1>
                     <DriveStatusBadge
                       status={survey.driveSyncStatus}
                       error={survey.driveSyncError}
                     />
                   </div>
-                  <p className="mt-1 break-words text-sm text-slate-600">{survey.location}</p>
+                  <p className="mt-1 break-words text-sm text-muted-foreground">
+                    {survey.location}
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-              <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap rounded-lg bg-slate-100 p-1">
+              <TabsList className="w-full justify-start overflow-x-auto whitespace-nowrap rounded-lg bg-muted p-1">
                 <TabsTrigger value="info">
                   <Info className="mr-1 h-4 w-4" />
                   {t("surveys.detail.tab.info")}
@@ -277,23 +282,23 @@ const AdminSurveyDetail = () => {
               </TabsList>
 
               <TabsContent value="info" className="mt-3">
-                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
                   <dl className="grid gap-3 sm:grid-cols-2">
                     {infoRows.map(([label, value]) => (
                       <div key={label}>
-                        <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                        <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                           {label}
                         </dt>
-                        <dd className="mt-0.5 break-words text-sm text-slate-800">{value}</dd>
+                        <dd className="mt-0.5 break-words text-sm text-foreground">{value}</dd>
                       </div>
                     ))}
                   </dl>
                   {survey.note ? (
-                    <div className="mt-4 border-t border-slate-100 pt-3">
-                      <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                    <div className="mt-4 border-t border-border pt-3">
+                      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         {t("surveys.field.note")}
                       </div>
-                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-800">
+                      <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
                         {survey.note}
                       </p>
                     </div>
@@ -320,21 +325,23 @@ const AdminSurveyDetail = () => {
               </TabsContent>
 
               <TabsContent value="timeline" className="mt-3">
-                <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+                <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
                   {timelineLoading ? (
                     <div className="flex items-center gap-2 text-sm text-muted-foreground">
                       <Loader2 className="h-4 w-4 animate-spin" />
                       {t("common.loading")}
                     </div>
                   ) : !timeline || timeline.length === 0 ? (
-                    <p className="text-sm text-slate-500">{t("surveys.detail.timelineEmpty")}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {t("surveys.detail.timelineEmpty")}
+                    </p>
                   ) : (
                     <ol className="space-y-2">
                       {timeline.map((ev) => (
                         <li key={ev.id} className="flex items-start gap-2 text-sm">
-                          <div className="mt-1 h-2 w-2 rounded-full bg-slate-300" />
+                          <div className="mt-1 h-2 w-2 rounded-full bg-border" />
                           <div className="min-w-0 flex-1">
-                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                               <Calendar className="h-3 w-3" />
                               <span>{formatDateTime(ev.occurredAt)}</span>
                               {ev.userName ? (
@@ -343,12 +350,12 @@ const AdminSurveyDetail = () => {
                                   {ev.userName}
                                 </span>
                               ) : null}
-                              <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono">
+                              <span className="rounded bg-muted px-1.5 py-0.5 font-mono">
                                 {ev.action}
                               </span>
                             </div>
                             {ev.message ? (
-                              <div className="mt-0.5 break-words text-sm text-slate-700">
+                              <div className="mt-0.5 break-words text-sm text-foreground">
                                 {ev.message}
                               </div>
                             ) : null}

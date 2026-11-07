@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { FileCheck2, Plus, Send } from "lucide-react";
 import { ConstructionWorkspaceShell } from "./ConstructionWorkspaceShell";
@@ -43,6 +46,7 @@ const evidenceTypes: QaQcEvidenceType[] = [
 ];
 
 export default function QaQcWorkspacePage() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -77,14 +81,12 @@ export default function QaQcWorkspacePage() {
         setTemplates(templateResponse.data);
         setRows(dossierResponse.data);
       })
-      .catch(
-        (cause) => active && setError(extractApiError(cause, t("construction.qaQc.loadError"))),
-      )
+      .catch((cause) => active && setError(uiError(cause, t("construction.qaQc.loadError"))))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [projectId, reload, t]);
+  }, [projectId, reload, t, uiError]);
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
@@ -131,7 +133,7 @@ export default function QaQcWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.qaQc.saveError")),
+        title: uiError(cause, t("construction.qaQc.saveError")),
       });
     } finally {
       setSaving(false);
@@ -147,7 +149,7 @@ export default function QaQcWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     }
   };
@@ -261,7 +263,7 @@ export default function QaQcWorkspacePage() {
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
+              <FieldScope className="space-y-1.5 sm:col-span-2">
                 <Label>{t("construction.qaQc.template")}</Label>
                 <Select
                   required
@@ -279,7 +281,7 @@ export default function QaQcWorkspacePage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
               <div className="space-y-1.5">
                 <Label htmlFor="qa-wbs">{t("construction.common.wbs")}</Label>
                 <Input
@@ -321,7 +323,7 @@ export default function QaQcWorkspacePage() {
                 />
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label>{t("construction.qaQc.evidence")}</Label>
+                <span>{t("construction.qaQc.evidence")}</span>
                 {evidence.map((item, index) => (
                   <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                     <Input

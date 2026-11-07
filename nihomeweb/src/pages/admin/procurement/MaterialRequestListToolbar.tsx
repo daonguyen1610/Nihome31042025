@@ -81,6 +81,7 @@ export default function MaterialRequestListToolbar({
         <div className="relative">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
           <Input
+            aria-label={t("common.search")}
             value={search}
             onChange={(event) => onSearch(event.target.value)}
             placeholder={t("procurement.request.searchPlaceholder")}

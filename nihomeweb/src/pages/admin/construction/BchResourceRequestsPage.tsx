@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -40,6 +43,7 @@ type UserOption = PersonIdentity & { userId: number; userName: string };
 type BoqLineOption = ConstructionResourceReferenceDataResponse["boqLines"][number];
 
 export default function BchResourceRequestsPage() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -82,14 +86,12 @@ export default function BchResourceRequestsPage() {
         setProcurementUsers(references.data.procurementUsers);
         setBoqLines(references.data.boqLines);
       })
-      .catch(
-        (cause) => active && setError(extractApiError(cause, t("construction.resource.loadError"))),
-      )
+      .catch((cause) => active && setError(uiError(cause, t("construction.resource.loadError"))))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [projectId, reload, t]);
+  }, [projectId, reload, t, uiError]);
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
@@ -138,7 +140,7 @@ export default function BchResourceRequestsPage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.resource.saveError")),
+        title: uiError(cause, t("construction.resource.saveError")),
       });
     } finally {
       setSaving(false);
@@ -154,7 +156,7 @@ export default function BchResourceRequestsPage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     }
   };
@@ -250,7 +252,7 @@ export default function BchResourceRequestsPage() {
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
+              <FieldScope className="space-y-1.5">
                 <Label>{t("construction.resource.type")}</Label>
                 <Select
                   value={form.type}
@@ -269,7 +271,7 @@ export default function BchResourceRequestsPage() {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
               <div className="space-y-1.5">
                 <Label htmlFor="resource-wbs">{t("construction.common.wbs")}</Label>
                 <Input

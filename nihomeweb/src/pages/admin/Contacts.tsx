@@ -382,6 +382,7 @@ const AdminContacts = () => {
                 {!active.isReplied && (
                   <>
                     <Textarea
+                      aria-label={t("contacts.replyContent")}
                       rows={4}
                       value={replyText}
                       onChange={(e) => setReplyText(e.target.value)}

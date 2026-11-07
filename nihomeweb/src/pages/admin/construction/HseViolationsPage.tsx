@@ -1,4 +1,11 @@
-import { useDeferredValue, useEffect, useState } from "react";
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useListPage } from "@/hooks/useListPage";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { FieldScope } from "@/components/ui/field-scope";
+import { useEffect, useState } from "react";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useSearchParams } from "react-router-dom";
@@ -143,6 +150,7 @@ const dateTime = (value: string | null | undefined, lang: string) =>
   value ? new Date(value).toLocaleString(lang) : "-";
 
 const HseViolationsPage = () => {
+  const uiError = useUiError();
   const [searchParams] = useSearchParams();
   const sourceProjectId = Number(searchParams.get("projectId"));
   const sourceViolationId = Number(searchParams.get("violationId"));
@@ -163,7 +171,7 @@ const HseViolationsPage = () => {
   const [statusCounts, setStatusCounts] = useState<Partial<Record<HseViolationStatus, number>>>({});
   const [status, setStatus] = useState<HseViolationStatus | "all">("all");
   const [search, setSearch] = useState("");
-  const deferredSearch = useDeferredValue(search.trim());
+  const deferredSearch = useDebouncedValue(search.trim());
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [detail, setDetail] = useState<HseViolationResponse | null>(null);
@@ -180,12 +188,12 @@ const HseViolationsPage = () => {
         if (active) setDetail(data);
       })
       .catch((cause) => {
-        if (active) setError(extractApiError(cause));
+        if (active) setError(uiError(cause));
       });
     return () => {
       active = false;
     };
-  }, [projectId, sourceProjectId, sourceViolationId]);
+  }, [projectId, sourceProjectId, sourceViolationId, uiError]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
@@ -202,8 +210,7 @@ const HseViolationsPage = () => {
 
   useEffect(() => {
     let active = true;
-    void adminApi
-      .listOperationalProjects({ pageSize: 200 })
+    void collectLookupPages((page) => adminApi.listOperationalProjects({ pageSize: 200, page }))
       .then(async ({ data }) => {
         if (!active) return;
         const available = data.items ?? [];
@@ -218,13 +225,15 @@ const HseViolationsPage = () => {
         );
       })
       .catch((requestError) => {
-        if (active) setError(extractApiError(requestError));
+        if (active) setError(uiError(requestError));
       });
     return () => {
       active = false;
     };
-  }, [sourceProjectId]);
+  }, [sourceProjectId, uiError]);
 
+  const [page, setPage] = useListPage(JSON.stringify([projectId, deferredSearch, status]));
+  const [total, setTotal] = useState(0);
   useEffect(() => {
     if (!projectId) {
       setRows([]);
@@ -238,13 +247,15 @@ const HseViolationsPage = () => {
       adminApi.listHseViolations(projectId, {
         status: status === "all" ? undefined : status,
         search: deferredSearch || undefined,
-        pageSize: 200,
+        page,
+        pageSize: 50,
       }),
       adminApi.getOperationalProjectTeam(projectId),
     ])
       .then(([listResponse, teamResponse]) => {
         if (!active) return;
         setRows(listResponse.data.items ?? []);
+        setTotal(listResponse.data.total);
         setStatusCounts(listResponse.data.statusCounts ?? {});
         const project = projects.find((item) => item.id === projectId);
         const options = new Map<number, UserOption>();
@@ -261,7 +272,7 @@ const HseViolationsPage = () => {
         setUsers(Array.from(options.values()));
       })
       .catch((requestError) => {
-        if (active) setError(extractApiError(requestError));
+        if (active) setError(uiError(requestError));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -269,16 +280,18 @@ const HseViolationsPage = () => {
     return () => {
       active = false;
     };
-  }, [deferredSearch, projectId, projects, status]);
+  }, [deferredSearch, projectId, projects, status, page, uiError]);
 
   const refresh = async (focusId?: number) => {
     if (!projectId) return;
     const { data } = await adminApi.listHseViolations(projectId, {
       status: status === "all" ? undefined : status,
       search: deferredSearch || undefined,
-      pageSize: 200,
+      page,
+      pageSize: 50,
     });
     setRows(data.items ?? []);
+    setTotal(data.total);
     setStatusCounts(data.statusCounts ?? {});
     if (focusId) {
       const focused = await adminApi.getHseViolation(projectId, focusId);
@@ -367,7 +380,7 @@ const HseViolationsPage = () => {
       await refresh(saved.id);
       toast({ title: t("hse.saved") });
     } catch (requestError) {
-      toast({ title: extractApiError(requestError), variant: "destructive" });
+      toast({ title: uiError(requestError), variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -393,7 +406,7 @@ const HseViolationsPage = () => {
       await refresh(data.id);
       toast({ title: t("hse.transitioned") });
     } catch (requestError) {
-      toast({ title: extractApiError(requestError), variant: "destructive" });
+      toast({ title: uiError(requestError), variant: "destructive" });
     } finally {
       setActing(false);
     }
@@ -499,7 +512,7 @@ const HseViolationsPage = () => {
         </header>
 
         <section className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_minmax(260px,1fr)_220px]">
-          <div className="space-y-1.5">
+          <FieldScope className="space-y-1.5">
             <Label>{t("hse.project")}</Label>
             <Select
               value={projectId ? String(projectId) : ""}
@@ -516,7 +529,7 @@ const HseViolationsPage = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
           <div className="space-y-1.5">
             <Label htmlFor="hse-search">{t("hse.search")}</Label>
             <div className="relative">
@@ -529,7 +542,7 @@ const HseViolationsPage = () => {
               />
             </div>
           </div>
-          <div className="space-y-1.5">
+          <FieldScope className="space-y-1.5">
             <Label>{t("hse.allStatuses")}</Label>
             <Select
               value={status}
@@ -547,9 +560,16 @@ const HseViolationsPage = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
         </section>
 
+        <ListPagination
+          page={page}
+          pageSize={50}
+          total={total}
+          onPageChange={setPage}
+          disabled={loading}
+        />
         <div className="flex gap-2 overflow-x-auto pb-1">
           {STATUSES.map((item) => (
             <button
@@ -584,7 +604,7 @@ const HseViolationsPage = () => {
                   key={row.id}
                   type="button"
                   onClick={() => setDetail(row)}
-                  className="w-full border border-zinc-200 bg-white p-4 text-left shadow-sm"
+                  className="w-full border border-zinc-200 bg-card p-4 text-left shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
@@ -624,7 +644,7 @@ const HseViolationsPage = () => {
                     <tr
                       key={row.id}
                       onClick={() => setDetail(row)}
-                      className="cursor-pointer bg-white hover:bg-zinc-50"
+                      className="cursor-pointer bg-card hover:bg-zinc-50"
                     >
                       <td className="max-w-md px-4 py-3">
                         <p className="font-semibold text-zinc-950">{row.code}</p>
@@ -926,10 +946,10 @@ const HseViolationsPage = () => {
 };
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
+  <FieldScope className="space-y-1.5">
     <Label>{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 const UserSelect = ({

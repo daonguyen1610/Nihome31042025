@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, FileSpreadsheet, Loader2, Save, Settings2, UploadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,6 +55,7 @@ export default function BoqCatalogWorkbookDialog({
   revisionId,
   onImported,
 }: Props) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<BoqWorkbookPreviewResponse | null>(null);
@@ -137,7 +141,7 @@ export default function BoqCatalogWorkbookDialog({
       const firstDetail = sheets.findIndex((sheet) => sheet.include);
       setActiveIndex(firstDetail >= 0 ? firstDetail : 0);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setBusy(false);
     }
@@ -159,7 +163,7 @@ export default function BoqCatalogWorkbookDialog({
       setTemplates((items) => [...items, data]);
       setTemplateName("");
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setBusy(false);
     }
@@ -179,7 +183,7 @@ export default function BoqCatalogWorkbookDialog({
       onImported(data);
       onOpenChange(false);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setBusy(false);
     }
@@ -290,6 +294,7 @@ export default function BoqCatalogWorkbookDialog({
                       </div>
                       <Select onValueChange={(value) => applyTemplate(activeIndex, value)}>
                         <SelectTrigger
+                          aria-label={t("materialRates.boqWorkbook.templateName")}
                           className="w-full shrink-0 sm:w-56"
                           data-testid={`boq-workbook-template-${activeIndex}`}
                         >
@@ -316,7 +321,7 @@ export default function BoqCatalogWorkbookDialog({
                     ))}
                     <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
                       {mappingFields.map((field) => (
-                        <div key={field}>
+                        <FieldScope key={field}>
                           <Label>{t(`materialRates.boqWorkbook.${field}`)}</Label>
                           <Select
                             value={activeSheet[field] == null ? "none" : String(activeSheet[field])}
@@ -342,7 +347,7 @@ export default function BoqCatalogWorkbookDialog({
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
+                        </FieldScope>
                       ))}
                     </div>
                     <div
@@ -384,7 +389,7 @@ export default function BoqCatalogWorkbookDialog({
                         {t("materialRates.boqWorkbook.advanced")}
                       </summary>
                       <div className="mt-3 space-y-3">
-                        <div className="max-w-48">
+                        <FieldScope className="max-w-48">
                           <Label>{t("materialRates.boqWorkbook.headerRow")}</Label>
                           <Input
                             data-testid={`boq-workbook-headerRow-${activeIndex}`}
@@ -395,8 +400,8 @@ export default function BoqCatalogWorkbookDialog({
                               update(activeIndex, { headerRow: Number(event.target.value) || null })
                             }
                           />
-                        </div>
-                        <div>
+                        </FieldScope>
+                        <FieldScope>
                           <Label>{t("materialRates.boqWorkbook.saveTemplate")}</Label>
                           <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                             <Input
@@ -424,7 +429,7 @@ export default function BoqCatalogWorkbookDialog({
                           <p className="mt-1 text-xs text-muted-foreground">
                             {t("materialRates.boqWorkbook.saveTemplateHint")}
                           </p>
-                        </div>
+                        </FieldScope>
                       </div>
                     </details>
                   </div>

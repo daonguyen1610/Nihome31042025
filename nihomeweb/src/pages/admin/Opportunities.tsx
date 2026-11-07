@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContinuationFields } from "@/components/admin/ContractContinuations";
@@ -152,6 +156,7 @@ const emptyCreate = (): CreateOpportunityRequest => ({
 });
 
 const AdminOpportunities = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -224,11 +229,11 @@ const AdminOpportunities = () => {
       setRows(data.items);
       setTotal(data.total);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [page, stageFilter, customerFilter, minValue, maxValue, search]);
+  }, [page, stageFilter, customerFilter, minValue, maxValue, search, uiError]);
 
   const fetchPipeline = useCallback(async () => {
     setPipelineLoading(true);
@@ -242,13 +247,13 @@ const AdminOpportunities = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
       setPipelineLoading(false);
     }
-  }, [customerFilter, minValue, maxValue, toast, t]);
+  }, [customerFilter, minValue, maxValue, toast, t, uiError]);
 
   useEffect(() => {
     if (view === "table") void fetchList();
@@ -259,7 +264,9 @@ const AdminOpportunities = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.listCustomers({ pageSize: 100 });
+        const { data } = await collectLookupPages((page) =>
+          adminApi.listCustomers({ pageSize: 100, page }),
+        );
         if (!cancelled) setCustomers(data.items);
       } catch {
         /* non-fatal — dropdown will just be empty */
@@ -387,7 +394,7 @@ const AdminOpportunities = () => {
       setCreating(false);
       await fetchList();
     } catch (err) {
-      setCreateError(extractApiError(err));
+      setCreateError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -442,7 +449,7 @@ const AdminOpportunities = () => {
       } catch (reason) {
         if (!cancelled) {
           setProjects([]);
-          setProjectLoadError(extractApiError(reason));
+          setProjectLoadError(uiError(reason));
         }
       } finally {
         if (!cancelled) setProjectLoading(false);
@@ -451,7 +458,7 @@ const AdminOpportunities = () => {
     return () => {
       cancelled = true;
     };
-  }, [projectCustomerId, canManage]);
+  }, [projectCustomerId, canManage, uiError]);
 
   const projectOptions = projects
     .filter((project) => project.customerId === projectCustomerId)
@@ -536,14 +543,14 @@ const AdminOpportunities = () => {
       } catch (err) {
         toast({
           title: t("common.error"),
-          description: extractApiError(err),
+          description: uiError(err),
           variant: "destructive",
         });
       } finally {
         setDetailLoading(false);
       }
     },
-    [canManage, loadAuditForOpportunity, loadQuotesForOpportunity, t, toast],
+    [canManage, loadAuditForOpportunity, loadQuotesForOpportunity, t, toast, uiError],
   );
 
   // Two ways in: the /admin/opportunities/:id route that notifications link to
@@ -610,7 +617,7 @@ const AdminOpportunities = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       if (isConcurrencyConflict(err)) await openDetail(detail.id, { startEditing: true });
@@ -630,7 +637,7 @@ const AdminOpportunities = () => {
       const response = await adminApi.getOpportunityDeletionImpact(id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -648,7 +655,7 @@ const AdminOpportunities = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setDeleteBusy(false);
@@ -678,7 +685,7 @@ const AdminOpportunities = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -714,7 +721,7 @@ const AdminOpportunities = () => {
       const signedContractRequired = code === SIGNED_CONTRACT_REQUIRED_CODE;
       const message = signedContractRequired
         ? t("opportunities.stage.won.contractRequired")
-        : extractApiError(err);
+        : uiError(err);
       setStageError(message);
       if (!signedContractRequired)
         toast({ title: t("common.error"), description: message, variant: "destructive" });
@@ -789,7 +796,7 @@ const AdminOpportunities = () => {
               />
             </div>
           </div>
-          <div>
+          <FieldScope>
             <Label className="text-xs">{t("opportunities.filter.stage")}</Label>
             <Select
               value={stageFilter || "all"}
@@ -810,8 +817,8 @@ const AdminOpportunities = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label className="text-xs">{t("opportunities.filter.customer")}</Label>
             <Select
               value={customerFilter ? String(customerFilter) : "all"}
@@ -832,8 +839,8 @@ const AdminOpportunities = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label className="text-xs">{t("opportunities.filter.minValue")}</Label>
             <Input
               type="number"
@@ -845,8 +852,8 @@ const AdminOpportunities = () => {
               }}
               className="h-9"
             />
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label className="text-xs">{t("opportunities.filter.maxValue")}</Label>
             <Input
               type="number"
@@ -858,7 +865,7 @@ const AdminOpportunities = () => {
               }}
               className="h-9"
             />
-          </div>
+          </FieldScope>
         </section>
 
         {view === "table" ? (
@@ -1242,14 +1249,14 @@ const AdminOpportunities = () => {
               </p>
             )}
             <ContinuationFields context={continuation} />
-            <div>
+            <FieldScope>
               <Label>{t("opportunities.field.name")}</Label>
               <Input
                 value={createForm.name}
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("opportunities.field.customer")}</Label>
               <Select
                 disabled={!!continuation.source}
@@ -1273,8 +1280,8 @@ const AdminOpportunities = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("opportunities.field.operationalProject")}</Label>
               <SearchableSelect
                 value={
@@ -1293,9 +1300,9 @@ const AdminOpportunities = () => {
                   {projectLoadError}
                 </p>
               )}
-            </div>
+            </FieldScope>
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <FieldScope>
                 <Label>{t("opportunities.field.estimatedValue")}</Label>
                 <Input
                   inputMode="numeric"
@@ -1305,8 +1312,8 @@ const AdminOpportunities = () => {
                   }
                   placeholder="0"
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("opportunities.field.winProbability")}</Label>
                 <div className="flex items-center gap-2">
                   <Slider
@@ -1318,7 +1325,6 @@ const AdminOpportunities = () => {
                       setCreateForm({ ...createForm, winProbability: next })
                     }
                     className="flex-1"
-                    aria-label={t("opportunities.field.winProbability")}
                   />
                   <Input
                     type="number"
@@ -1331,10 +1337,10 @@ const AdminOpportunities = () => {
                     className="w-16"
                   />
                 </div>
-              </div>
+              </FieldScope>
             </div>
             {canSeeAll && (
-              <div>
+              <FieldScope>
                 <Label>{t("opportunities.field.owner")}</Label>
                 <SearchableSelect
                   value={createForm.ownerUserId ? String(createForm.ownerUserId) : ""}
@@ -1342,10 +1348,10 @@ const AdminOpportunities = () => {
                   ariaLabel={t("people.select")}
                   options={[...salesUsers.map((person) => personOption(person, t))]}
                 />
-              </div>
+              </FieldScope>
             )}
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <FieldScope>
                 <Label>{t("opportunities.field.expectedCloseDate")}</Label>
                 <Input
                   type="date"
@@ -1356,20 +1362,20 @@ const AdminOpportunities = () => {
                     setCreateForm({ ...createForm, expectedCloseDate: e.target.value || null })
                   }
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("opportunities.field.stage")}</Label>
                 <Input value={t("opportunities.stage.Prospecting")} disabled />
-              </div>
+              </FieldScope>
             </div>
-            <div>
+            <FieldScope>
               <Label>{t("opportunities.field.note")}</Label>
               <Textarea
                 rows={3}
                 value={createForm.note ?? ""}
                 onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
               />
-            </div>
+            </FieldScope>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={closeCreate} disabled={saving}>
@@ -1746,14 +1752,14 @@ const AdminOpportunities = () => {
                     ) : (
                       editForm && (
                         <div className="space-y-3">
-                          <div>
+                          <FieldScope>
                             <Label>{t("opportunities.field.name")}</Label>
                             <Input
                               value={editForm.name}
                               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                             />
-                          </div>
-                          <div>
+                          </FieldScope>
+                          <FieldScope>
                             <Label>{t("opportunities.field.customer")}</Label>
                             <Select
                               value={String(editForm.customerId)}
@@ -1776,8 +1782,8 @@ const AdminOpportunities = () => {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
-                          <div>
+                          </FieldScope>
+                          <FieldScope>
                             <Label>{t("opportunities.field.operationalProject")}</Label>
                             <SearchableSelect
                               value={
@@ -1809,9 +1815,9 @@ const AdminOpportunities = () => {
                                 </Link>
                               </Button>
                             )}
-                          </div>
+                          </FieldScope>
                           <div className="grid grid-cols-2 gap-3">
-                            <div>
+                            <FieldScope>
                               <Label>{t("opportunities.field.estimatedValue")}</Label>
                               <Input
                                 inputMode="numeric"
@@ -1826,8 +1832,8 @@ const AdminOpportunities = () => {
                                 }
                                 placeholder="0"
                               />
-                            </div>
-                            <div>
+                            </FieldScope>
+                            <FieldScope>
                               <Label>{t("opportunities.field.winProbability")}</Label>
                               <div className="flex items-center gap-2">
                                 <Slider
@@ -1839,7 +1845,6 @@ const AdminOpportunities = () => {
                                     setEditForm({ ...editForm, winProbability: next })
                                   }
                                   className="flex-1"
-                                  aria-label={t("opportunities.field.winProbability")}
                                 />
                                 <Input
                                   type="number"
@@ -1855,7 +1860,7 @@ const AdminOpportunities = () => {
                                   className="w-16"
                                 />
                               </div>
-                            </div>
+                            </FieldScope>
                           </div>
                           {/* Owner and close date share a row, the way the create
                           form already lays them out. A full-width date field
@@ -1863,7 +1868,7 @@ const AdminOpportunities = () => {
                           value. */}
                           <div className="grid gap-3 sm:grid-cols-2">
                             {canSeeAll && (
-                              <div>
+                              <FieldScope>
                                 <Label>{t("opportunities.field.owner")}</Label>
                                 <SearchableSelect
                                   value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
@@ -1873,9 +1878,9 @@ const AdminOpportunities = () => {
                                   ariaLabel={t("people.select")}
                                   options={[...salesUsers.map((person) => personOption(person, t))]}
                                 />
-                              </div>
+                              </FieldScope>
                             )}
-                            <div>
+                            <FieldScope>
                               <Label>{t("opportunities.field.expectedCloseDate")}</Label>
                               <Input
                                 type="date"
@@ -1889,16 +1894,16 @@ const AdminOpportunities = () => {
                                   })
                                 }
                               />
-                            </div>
+                            </FieldScope>
                           </div>
-                          <div>
+                          <FieldScope>
                             <Label>{t("opportunities.field.note")}</Label>
                             <Textarea
                               rows={3}
                               value={editForm.note ?? ""}
                               onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
                             />
-                          </div>
+                          </FieldScope>
                           <div className="flex gap-2">
                             <Button onClick={() => void handleSaveEdit()} disabled={savingEdit}>
                               {t("common.save")}
@@ -1950,7 +1955,7 @@ const AdminOpportunities = () => {
                                       } catch (err) {
                                         toast({
                                           title: t("common.error"),
-                                          description: extractApiError(err),
+                                          description: uiError(err),
                                           variant: "destructive",
                                         });
                                       } finally {
@@ -2044,7 +2049,7 @@ const AdminOpportunities = () => {
                             value={activityType}
                             onValueChange={(v) => setActivityType(v as OpportunityActivityType)}
                           >
-                            <SelectTrigger>
+                            <SelectTrigger aria-label={t("a11yUi.activityType")}>
                               <SelectValue />
                             </SelectTrigger>
                             <SelectContent>
@@ -2056,6 +2061,7 @@ const AdminOpportunities = () => {
                             </SelectContent>
                           </Select>
                           <Textarea
+                            aria-label={t("a11yUi.activityContent")}
                             rows={2}
                             value={activityContent}
                             onChange={(e) => setActivityContent(e.target.value)}
@@ -2164,7 +2170,7 @@ const AdminOpportunities = () => {
           {stageTarget === "Lost" && (
             <div className="space-y-3">
               <>
-                <div>
+                <FieldScope>
                   <Label>{t("opportunities.field.lostReason")}</Label>
                   <Select value={lostReason} onValueChange={setLostReason}>
                     <SelectTrigger>
@@ -2178,15 +2184,15 @@ const AdminOpportunities = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("opportunities.field.lostNote")}</Label>
                   <Textarea
                     rows={3}
                     value={lostNote}
                     onChange={(e) => setLostNote(e.target.value)}
                   />
-                </div>
+                </FieldScope>
               </>
             </div>
           )}

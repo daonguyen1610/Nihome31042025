@@ -274,7 +274,7 @@ function PdfPreview({ blob, testId }: { blob: Blob; testId?: string }) {
         ) : null}
         <canvas
           ref={canvasRef}
-          className="h-max max-w-full bg-white shadow"
+          className="h-max max-w-full bg-card shadow"
           data-testid={testId ? `${testId}-pdf` : undefined}
         />
       </div>

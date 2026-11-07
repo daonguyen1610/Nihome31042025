@@ -1,3 +1,9 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { useListPage } from "@/hooks/useListPage";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { personOption } from "@/lib/people";
@@ -81,7 +87,7 @@ const statusClass: Record<OperationalProjectStatus, string> = {
   Planning: "border-sky-200 bg-sky-50 text-sky-700",
   Active: "border-emerald-200 bg-emerald-50 text-emerald-700",
   OnHold: "border-amber-200 bg-amber-50 text-amber-700",
-  Completed: "border-slate-200 bg-slate-50 text-slate-700",
+  Completed: "border-border bg-muted/30 text-foreground",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
@@ -108,6 +114,7 @@ const dateInput = (value?: string | null) => value?.slice(0, 10) ?? "";
 const apiDate = (value: string) => (value ? `${value}T00:00:00.000Z` : null);
 
 const OperationalProjects = () => {
+  const uiError = useUiError();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -185,7 +192,7 @@ const OperationalProjects = () => {
   useEffect(() => {
     let cancelled = false;
     void Promise.all([
-      adminApi.listCustomers({ pageSize: 200 }),
+      collectLookupPages((page) => adminApi.listCustomers({ pageSize: 200, page })),
       canListUsers
         ? adminApi.getPeopleDirectory()
         : Promise.resolve({ data: { items: [], total: 0 } }),
@@ -208,6 +215,7 @@ const OperationalProjects = () => {
     return () => window.clearTimeout(timer);
   }, [search]);
 
+  const [page, setPage] = useListPage(JSON.stringify([customerFilter, debouncedSearch, status]));
   const load = useCallback(async () => {
     const request = ++requestSequence.current;
     setLoading(true);
@@ -228,7 +236,7 @@ const OperationalProjects = () => {
           customerId: customerFilter,
           search: debouncedSearch.trim() || undefined,
           status: status || undefined,
-          page: 1,
+          page,
           pageSize: 100,
         });
         if (request !== requestSequence.current) return;
@@ -236,11 +244,11 @@ const OperationalProjects = () => {
         setTotal(response.data.total ?? 0);
       }
     } catch (reason) {
-      if (request === requestSequence.current) setError(extractApiError(reason));
+      if (request === requestSequence.current) setError(uiError(reason));
     } finally {
       if (request === requestSequence.current) setLoading(false);
     }
-  }, [customerFilter, projectId, debouncedSearch, status]);
+  }, [projectId, customerFilter, debouncedSearch, status, page, uiError]);
 
   useEffect(() => {
     const sequence = requestSequence;
@@ -269,9 +277,9 @@ const OperationalProjects = () => {
       const response = await adminApi.suggestOperationalProjectCode();
       setForm((current) => (current.code ? current : { ...current, code: response.data.code }));
     } catch (reason) {
-      setFormError(extractApiError(reason));
+      setFormError(uiError(reason));
     }
-  }, [customerFilter]);
+  }, [customerFilter, uiError]);
 
   useEffect(() => {
     if (openedFromQuery.current || searchParams.get("create") !== "1" || !canCreate) return;
@@ -346,7 +354,7 @@ const OperationalProjects = () => {
           : `/admin/operational-projects/${response.data.id}`,
       );
     } catch (reason) {
-      setFormError(extractApiError(reason));
+      setFormError(uiError(reason));
     } finally {
       setSaving(false);
     }
@@ -362,7 +370,7 @@ const OperationalProjects = () => {
       const response = await adminApi.getOperationalProjectDeletionImpact(detail.id);
       setDeleteImpact(response.data);
     } catch (reason) {
-      setDeleteError(extractApiError(reason));
+      setDeleteError(uiError(reason));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -380,7 +388,7 @@ const OperationalProjects = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (reason) {
-      setDeleteError(extractApiError(reason));
+      setDeleteError(uiError(reason));
       throw reason;
     } finally {
       setDeleting(false);
@@ -415,7 +423,7 @@ const OperationalProjects = () => {
       setReopenReason("");
       toast({ title: t("operationalProjects.reopen.success") });
     } catch (reason) {
-      setReopenError(extractApiError(reason));
+      setReopenError(uiError(reason));
     } finally {
       setReopening(false);
     }
@@ -456,7 +464,7 @@ const OperationalProjects = () => {
       setRenameOpen(false);
       toast({ title: t("operationalProjects.rename.success") });
     } catch (reason) {
-      setRenameError(extractApiError(reason));
+      setRenameError(uiError(reason));
     } finally {
       setRenaming(false);
     }
@@ -472,7 +480,7 @@ const OperationalProjects = () => {
       setDetail(response.data);
       toast({ title: t("operationalProjects.rename.retryQueued") });
     } catch (reason) {
-      toast({ title: extractApiError(reason), variant: "destructive" });
+      toast({ title: uiError(reason), variant: "destructive" });
     }
   };
 
@@ -1262,7 +1270,7 @@ const OperationalProjects = () => {
                 />
               </div>
             </div>
-            <div className="sm:w-56">
+            <FieldScope className="sm:w-56">
               <Label>{t("operationalProjects.field.status")}</Label>
               <Select
                 value={status || "all"}
@@ -1282,13 +1290,20 @@ const OperationalProjects = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldScope>
             <Button variant="outline" onClick={() => void load()}>
               <RefreshCcw className="mr-2 h-4 w-4" />
               {t("common.refresh")}
             </Button>
           </div>
 
+          <ListPagination
+            page={page}
+            pageSize={100}
+            total={total}
+            onPageChange={setPage}
+            disabled={loading}
+          />
           <p className="text-sm text-muted-foreground">
             {t("operationalProjects.total", { count: total })}
           </p>
@@ -1382,7 +1397,7 @@ const OperationalProjects = () => {
                 }
               />
             </div>
-            <div>
+            <FieldScope>
               <Label>{t("operationalProjects.field.customer")}</Label>
               <Select
                 value={form.customerId ? String(form.customerId) : ""}
@@ -1401,8 +1416,8 @@ const OperationalProjects = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("operationalProjects.field.manager")}</Label>
               <SearchableSelect
                 ariaLabel={t("operationalProjects.field.manager")}
@@ -1418,9 +1433,9 @@ const OperationalProjects = () => {
                   ...users.map((user) => personOption(user, t)),
                 ]}
               />
-            </div>
+            </FieldScope>
             {detail && (
-              <div className="sm:col-span-2">
+              <FieldScope className="sm:col-span-2">
                 <Label>{t("operationalProjects.field.status")}</Label>
                 <Select
                   value={form.status}
@@ -1442,7 +1457,7 @@ const OperationalProjects = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
             )}
             <div>
               <Label htmlFor="project-start">{t("operationalProjects.field.startDate")}</Label>

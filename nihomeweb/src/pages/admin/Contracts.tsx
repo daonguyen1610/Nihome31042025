@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/ui/confirmation";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -90,7 +91,7 @@ type ContractsProps = {
 };
 
 const STATUS_VARIANT: Record<ContractStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Signed: "border-blue-200 bg-blue-50 text-blue-700",
   InProgress: "border-emerald-200 bg-emerald-50 text-emerald-700",
   OnHold: "border-amber-200 bg-amber-50 text-amber-700",
@@ -226,6 +227,7 @@ const getErrorMessage = (error: unknown): string | undefined => {
 };
 
 const Contracts = ({ mode = "all" }: ContractsProps) => {
+  const confirmAction = useConfirm();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -752,11 +754,15 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       return { ...prev, milestones: next.map((m, i) => ({ ...m, order: i + 1 })) };
     });
   };
-  const applyPreset30_30_30_10 = () => {
+  const applyPreset30_30_30_10 = async () => {
     // Guard against accidental overwrite — users who already spent time
     // filling in the schedule should be asked before wiping it.
     const hasWork = form.milestones.some((m) => m.name.trim() !== "" || m.percentValue > 0);
-    if (hasWork && !window.confirm(t("contracts.milestonePresetConfirm"))) return;
+    if (
+      hasWork &&
+      !(await confirmAction(t("contracts.milestonePresetConfirm"), { destructive: false }))
+    )
+      return;
     const percentages = [30, 30, 30, 10];
     setForm((prev) => ({
       ...prev,
@@ -1098,7 +1104,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
           <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
             <p>{t("contracts.finance.masterManagedElsewhere")}</p>
             {has(ADMIN_PERMS.contracts) && (
-              <Button asChild variant="outline" size="sm" className="shrink-0 bg-white">
+              <Button asChild variant="outline" size="sm" className="shrink-0 bg-card">
                 <Link to={`/admin/contracts?direction=${fixedDirection}`}>
                   {t("contracts.finance.openRegistry")}
                 </Link>
@@ -1275,7 +1281,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             />
           </div>
           <div className="min-w-0 space-y-1 sm:col-span-2">
-            <Label className="text-xs">{t("contracts.filter.endRange")}</Label>
+            <span className="text-xs">{t("contracts.filter.endRange")}</span>
             <div className="flex gap-1">
               <Input
                 id="c-end-from"
@@ -1403,7 +1409,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 </div>
               )}
               <div className="min-w-0 space-y-1">
-                <Label className="text-xs">{t("contracts.filter.signedRange")}</Label>
+                <span className="text-xs">{t("contracts.filter.signedRange")}</span>
                 <div className="flex gap-1">
                   <Input
                     aria-label={t("contracts.filter.signedFrom")}
@@ -1432,7 +1438,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 </div>
               </div>
               <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
-                <Label className="text-xs">{t("contracts.filter.valueRange")}</Label>
+                <span className="text-xs">{t("contracts.filter.valueRange")}</span>
                 <div className="flex gap-1">
                   <Input
                     type="number"
@@ -1993,7 +1999,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label className="text-xs">{t("contracts.field.status")}</Label>
+                <span className="text-xs">{t("contracts.field.status")}</span>
                 <div className="flex h-9 items-center">
                   <Badge variant="outline">{t("contracts.status.Draft")}</Badge>
                 </div>
@@ -2161,7 +2167,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 </div>
               ) : (
                 <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2">
-                  <Label className="text-xs">{t("contracts.field.direction")}</Label>
+                  <span className="text-xs">{t("contracts.field.direction")}</span>
                   <p className="text-sm font-medium">
                     {t(`contracts.direction.${fixedDirection}`)}
                   </p>
@@ -2227,7 +2233,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
 
             {form.direction === "Upstream" && (
               <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5 text-sm">
-                <Label>{t("contracts.field.sourceQuote")}</Label>
+                <span>{t("contracts.field.sourceQuote")}</span>
                 <p>
                   {form.quoteId == null
                     ? t("contracts.validation.quoteOptional")
@@ -2246,7 +2252,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             )}
 
             <div className="space-y-1.5 rounded-md border bg-muted/30 px-3 py-2.5">
-              <Label className="text-xs">{t("contracts.field.owner")}</Label>
+              <span className="text-xs">{t("contracts.field.owner")}</span>
               <p className="text-sm font-medium">
                 {form.ownerName ||
                   (form.ownerUserId
@@ -2457,7 +2463,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             />
                           </div>
                           <div className="min-w-0 space-y-1">
-                            <Label className="text-xs">{t("contracts.milestone.status")}</Label>
+                            <span className="text-xs">{t("contracts.milestone.status")}</span>
                             <div className="flex h-8 items-center">
                               <Badge variant="outline">
                                 {t("contracts.milestoneStatus.Pending")}

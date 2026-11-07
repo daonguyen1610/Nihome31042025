@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { formatVnd, parseVnd, parseVndDecimal } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
@@ -12,6 +12,7 @@ type MoneyInputProps = {
   decimalScale?: number;
   formatValue?: (value: number) => string;
   preferDecimalComma?: boolean;
+  "aria-label"?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
   "data-testid"?: string;
@@ -35,13 +36,17 @@ export const MoneyInput = ({
   decimalScale = 0,
   formatValue = formatVnd,
   preferDecimalComma = false,
+  "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
   "data-testid": testId,
 }: MoneyInputProps) => {
   // formatVnd renders an em dash for null/NaN, which suits a display but not a
   // field — nobody can backspace a dash away. Empty stays empty here.
-  const display = (amount: number) => (amount ? formatValue(amount) : "");
+  const display = useCallback(
+    (amount: number) => (amount ? formatValue(amount) : ""),
+    [formatValue],
+  );
 
   const [text, setText] = useState(() => display(value));
   const [focused, setFocused] = useState(false);
@@ -49,7 +54,7 @@ export const MoneyInput = ({
   useEffect(() => {
     if (focused) return;
     setText(display(value));
-  }, [value, focused, formatValue]);
+  }, [value, focused, display]);
 
   // Existing integer-currency fields retain their established 0 fallback.
   // Decimal-aware fields preserve NaN so the quote validator can reject an
@@ -63,6 +68,7 @@ export const MoneyInput = ({
   return (
     <Input
       id={id}
+      aria-label={ariaLabel}
       aria-invalid={ariaInvalid}
       aria-describedby={ariaDescribedBy}
       disabled={disabled}

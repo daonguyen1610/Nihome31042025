@@ -1,3 +1,10 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import ConstructionStatTile from "./ConstructionStatTile";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -84,7 +91,7 @@ const ACCEPTANCE_STATUSES: AcceptanceStatus[] = [
 ];
 
 const STATUS_BADGE: Record<AcceptanceStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Rejected: "border-rose-200 bg-rose-50 text-rose-700",
@@ -119,7 +126,7 @@ interface StatTile {
   key: string;
   label: string;
   value: number;
-  gradient: string;
+
   icon: typeof ClipboardCheck;
 }
 
@@ -138,6 +145,7 @@ const formatDateTime = (iso: string | null | undefined) => {
 };
 
 export default function AcceptanceRecordsPage() {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -159,6 +167,7 @@ export default function AcceptanceRecordsPage() {
   const [openOnly, setOpenOnly] = useState(false);
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [sortBy, setSortBy] = useState<NonNullable<AcceptanceRecordListParams["sortBy"]>>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -214,7 +223,9 @@ export default function AcceptanceRecordsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await adminApi.listDesignProjects({ pageSize: 200 });
+        const res = await collectLookupPages((page) =>
+          adminApi.listDesignProjects({ pageSize: 200, page }),
+        );
         if (!cancelled) setProjects(res.data.items ?? []);
       } catch {
         // Project dropdown is optional — the list still loads without it.
@@ -229,10 +240,9 @@ export default function AcceptanceRecordsPage() {
     let cancelled = false;
     (async () => {
       try {
-        const res = await adminApi.listConstructionTasks({
-          designProjectId: projectId,
-          pageSize: 200,
-        });
+        const res = await collectLookupPages((page) =>
+          adminApi.listConstructionTasks({ designProjectId: projectId, pageSize: 200, page }),
+        );
         if (!cancelled) setTasks(res.data.items ?? []);
       } catch {
         if (!cancelled) setTasks([]);
@@ -257,7 +267,9 @@ export default function AcceptanceRecordsPage() {
     return Array.from(options, ([value, label]) => ({ value: String(value), label }));
   }, [projects, tasks]);
 
+  const startListRequest = useRequestGuard();
   const load = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
@@ -268,7 +280,7 @@ export default function AcceptanceRecordsPage() {
         acceptanceFrom: acceptanceFrom || undefined,
         acceptanceTo: acceptanceTo || undefined,
         status: status || undefined,
-        search: search.trim() || undefined,
+        search: settledSearch.trim() || undefined,
         openOnly: openOnly || undefined,
         overdueOnly: overdueOnly || undefined,
         sortBy,
@@ -277,30 +289,34 @@ export default function AcceptanceRecordsPage() {
         pageSize,
       };
       const res = await adminApi.listAcceptanceRecords(params);
+      if (!isCurrent()) return;
       setRows(res.data.items ?? []);
       setTotal(res.data.total ?? 0);
       setStatusCounts(res.data.statusCounts ?? {});
       setOverdueCount(res.data.overdueCount ?? 0);
       setSelected(new Set());
     } catch (e) {
-      setError(extractApiError(e) || t("acceptance.error"));
+      if (!isCurrent()) return;
+      setError(uiError(e) || t("acceptance.error"));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [
+    startListRequest,
     projectId,
     taskId,
     responsibleUserId,
     acceptanceFrom,
     acceptanceTo,
     status,
-    search,
+    settledSearch,
     openOnly,
     overdueOnly,
     sortBy,
     sortDirection,
     page,
     pageSize,
+    uiError,
     t,
   ]);
 
@@ -326,12 +342,12 @@ export default function AcceptanceRecordsPage() {
         const response = await adminApi.getAcceptanceRecord(id);
         setDetail(response.data);
       } catch (error) {
-        setDetailError(extractApiError(error) || t("acceptance.detail.error"));
+        setDetailError(uiError(error) || t("acceptance.detail.error"));
       } finally {
         setDetailLoading(false);
       }
     },
-    [t],
+    [t, uiError],
   );
 
   const openCreate = () => {
@@ -417,7 +433,7 @@ export default function AcceptanceRecordsPage() {
       setFormOpen(false);
       await load();
     } catch (e) {
-      setFormError(extractApiError(e) || t("acceptance.error"));
+      setFormError(uiError(e) || t("acceptance.error"));
     } finally {
       setSaving(false);
     }
@@ -441,7 +457,7 @@ export default function AcceptanceRecordsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e) || t("acceptance.error"),
+        title: uiError(e) || t("acceptance.error"),
       });
     }
   };
@@ -471,7 +487,7 @@ export default function AcceptanceRecordsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e) || t("acceptance.error"),
+        title: uiError(e) || t("acceptance.error"),
       });
     }
   };
@@ -494,7 +510,7 @@ export default function AcceptanceRecordsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e) || t("acceptance.error"),
+        title: uiError(e) || t("acceptance.error"),
       });
     }
   };
@@ -590,7 +606,7 @@ export default function AcceptanceRecordsPage() {
       key: "total",
       label: t("acceptance.stats.total"),
       value: total,
-      gradient: "from-indigo-500 to-violet-500",
+
       icon: ClipboardList,
     },
     {
@@ -598,21 +614,21 @@ export default function AcceptanceRecordsPage() {
       label: t("acceptance.stats.open"),
       value:
         (statusCounts.Draft ?? 0) + (statusCounts.Submitted ?? 0) + (statusCounts.Rejected ?? 0),
-      gradient: "from-slate-500 to-slate-700",
+
       icon: ClipboardCheck,
     },
     {
       key: "submitted",
       label: t("acceptance.stats.submitted"),
       value: statusCounts.Submitted ?? 0,
-      gradient: "from-sky-500 to-cyan-500",
+
       icon: FileCheck,
     },
     {
       key: "overdue",
       label: t("acceptance.stats.overdue"),
       value: overdueCount,
-      gradient: "from-amber-500 to-orange-500",
+
       icon: AlertTriangle,
     },
   ];
@@ -675,29 +691,20 @@ export default function AcceptanceRecordsPage() {
           {stats.map((s) => {
             const Icon = s.icon;
             return (
-              <div
+              <ConstructionStatTile
                 key={s.key}
-                className={cn(
-                  "relative overflow-hidden rounded-xl p-4 text-white shadow-md",
-                  `bg-gradient-to-br ${s.gradient}`,
-                )}
-                data-testid={`acceptance-stat-${s.key}`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wider opacity-90">
-                    {s.label}
-                  </span>
-                  <Icon className="h-5 w-5 opacity-80" />
-                </div>
-                <div className="mt-2 text-3xl font-bold">{s.value}</div>
-              </div>
+                label={s.label}
+                value={s.value}
+                icon={<Icon />}
+                testId={`acceptance-stat-${s.key}`}
+              />
             );
           })}
         </div>
 
         <div className="rounded-lg border bg-card p-3 md:p-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4 [&>div]:min-w-0">
-            <div>
+            <FieldScope>
               <Label>{t("acceptance.field.project")}</Label>
               <SearchableSelect
                 options={[
@@ -712,8 +719,8 @@ export default function AcceptanceRecordsPage() {
                 }}
                 placeholder={t("acceptance.filter.project.all")}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.field.task")}</Label>
               <SearchableSelect
                 options={[
@@ -730,8 +737,8 @@ export default function AcceptanceRecordsPage() {
                 }}
                 placeholder={t("acceptance.filter.task.all")}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.filter.responsible")}</Label>
               <SearchableSelect
                 options={[
@@ -745,8 +752,8 @@ export default function AcceptanceRecordsPage() {
                 }}
                 placeholder={t("acceptance.filter.responsible.all")}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.field.status")}</Label>
               <Select
                 value={status || "__all__"}
@@ -767,8 +774,8 @@ export default function AcceptanceRecordsPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.filter.search")}</Label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -783,7 +790,7 @@ export default function AcceptanceRecordsPage() {
                   data-testid="acceptance-search"
                 />
               </div>
-            </div>
+            </FieldScope>
             <div className="flex items-end gap-4">
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
@@ -806,7 +813,7 @@ export default function AcceptanceRecordsPage() {
                 {t("acceptance.filter.overdueOnly")}
               </label>
             </div>
-            <div>
+            <FieldScope>
               <Label>{t("acceptance.filter.from")}</Label>
               <Input
                 type="date"
@@ -816,8 +823,8 @@ export default function AcceptanceRecordsPage() {
                   setPage(1);
                 }}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.filter.to")}</Label>
               <Input
                 type="date"
@@ -827,8 +834,8 @@ export default function AcceptanceRecordsPage() {
                   setPage(1);
                 }}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.filter.sort")}</Label>
               <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
                 <SelectTrigger>
@@ -843,8 +850,8 @@ export default function AcceptanceRecordsPage() {
                   <SelectItem value="updatedAt">{t("acceptance.field.updatedAt")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.filter.direction")}</Label>
               <Select
                 value={sortDirection}
@@ -858,7 +865,7 @@ export default function AcceptanceRecordsPage() {
                   <SelectItem value="desc">{t("acceptance.filter.desc")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </FieldScope>
           </div>
         </div>
 
@@ -1298,16 +1305,16 @@ export default function AcceptanceRecordsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
+            <FieldScope>
               <Label>{t("acceptance.field.title")}</Label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 data-testid="acceptance-form-title"
               />
-            </div>
+            </FieldScope>
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <FieldScope>
                 <Label>{t("acceptance.field.date")}</Label>
                 <Input
                   type="date"
@@ -1315,16 +1322,16 @@ export default function AcceptanceRecordsPage() {
                   onChange={(e) => setForm({ ...form, acceptanceDate: e.target.value })}
                   data-testid="acceptance-form-date"
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("acceptance.field.location")}</Label>
                 <Input
                   value={form.location}
                   onChange={(e) => setForm({ ...form, location: e.target.value })}
                 />
-              </div>
+              </FieldScope>
             </div>
-            <div data-testid="acceptance-form-task">
+            <FieldScope data-testid="acceptance-form-task">
               <Label>{t("acceptance.field.task")}</Label>
               <SearchableSelect
                 options={[
@@ -1338,30 +1345,30 @@ export default function AcceptanceRecordsPage() {
                 onChange={(value) => setForm({ ...form, constructionTaskId: value })}
                 placeholder={t("acceptance.filter.task.none")}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.field.participants")}</Label>
               <Input
                 value={form.participants}
                 onChange={(e) => setForm({ ...form, participants: e.target.value })}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.field.findings")}</Label>
               <Textarea
                 rows={3}
                 value={form.findings}
                 onChange={(e) => setForm({ ...form, findings: e.target.value })}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("acceptance.field.description")}</Label>
               <Textarea
                 rows={2}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
-            </div>
+            </FieldScope>
             <div>
               <Label htmlFor="acceptance-form-documents">{t("acceptance.field.documents")}</Label>
               <AdminDocumentUpload
@@ -1458,6 +1465,7 @@ export default function AcceptanceRecordsPage() {
           </AlertDialogHeader>
           <div>
             <Textarea
+              aria-label={t("a11yUi.reason")}
               rows={2}
               placeholder={t("acceptance.confirm.reasonPlaceholder")}
               value={transitionNote}

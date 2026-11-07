@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertCircle,
@@ -68,6 +71,7 @@ const sourceTypeByStage: Record<DesignReviewStage, string> = {
 };
 
 export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId }: Props) => {
+  const uiError = useUiError();
   const projectId = project?.id ?? recipientProjectId ?? 0;
   const operationalProjectId = project?.operationalProjectId;
   const { t, lang } = useI18n();
@@ -133,9 +137,9 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       if (status === 404) return t("designProjects.reviews.error.notFound");
       if (status === 409) return t("designProjects.reviews.error.conflict");
       if (status && status >= 500) return t("designProjects.reviews.error.server");
-      return extractApiError(reason, t("designProjects.reviews.error.generic"));
+      return uiError(reason, t("designProjects.reviews.error.generic"));
     },
-    [t],
+    [t, uiError],
   );
 
   const load = useCallback(async () => {
@@ -159,7 +163,9 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
         setRecipientCandidates(teamResponse.data);
         setDocuments(documentResponse.data);
         const options = (
-          await adminApi.listConceptOptions({ designProjectId: projectId, pageSize: 100 })
+          await collectLookupPages((page) =>
+            adminApi.listConceptOptions({ designProjectId: projectId, pageSize: 100, page }),
+          )
         ).data.items;
         setConceptOptions(options);
         const revisionResults = await Promise.all(
@@ -347,17 +353,19 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
 
   if (loading && reviews.length === 0)
     return (
-      <div className="flex justify-center rounded-lg border bg-white py-16">
+      <div className="flex justify-center rounded-lg border bg-card py-16">
         <Loader2 className="h-6 w-6 animate-spin" />
       </div>
     );
   return (
     <section className="space-y-4" data-testid="design-reviews-tab">
-      <div className="rounded-lg border bg-white p-4 shadow-sm">
+      <div className="rounded-lg border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold text-slate-900">{t("designProjects.reviews.title")}</h2>
-            <p className="mt-1 text-sm text-slate-500">{t("designProjects.reviews.description")}</p>
+            <h2 className="font-semibold text-foreground">{t("designProjects.reviews.title")}</h2>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("designProjects.reviews.description")}
+            </p>
           </div>
           <div className="flex flex-wrap gap-2">
             <Button
@@ -393,9 +401,9 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
         <div
           id="design-review-role-guide"
           data-testid="design-review-role-guide"
-          className="mt-4 rounded-lg bg-slate-50 p-3 text-sm text-slate-700"
+          className="mt-4 rounded-lg bg-muted/30 p-3 text-sm text-foreground"
         >
-          <p className="font-medium text-slate-900">{t("designProjects.reviews.guide.title")}</p>
+          <p className="font-medium text-foreground">{t("designProjects.reviews.guide.title")}</p>
           <ol className="mt-2 grid gap-3 md:grid-cols-3">
             <li className="flex gap-2">
               <UserCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
@@ -431,8 +439,8 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
         ) : null}
       </div>
       {reviews.length === 0 ? (
-        <div className="rounded-lg border border-dashed bg-white p-10 text-center text-sm text-slate-500">
-          <p className="font-medium text-slate-700">{t("designProjects.reviews.emptyTitle")}</p>
+        <div className="rounded-lg border border-dashed bg-card p-10 text-center text-sm text-muted-foreground">
+          <p className="font-medium text-foreground">{t("designProjects.reviews.emptyTitle")}</p>
           <p className="mx-auto mt-1 max-w-xl">
             {t(
               isDesignManager
@@ -447,18 +455,18 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
             key={review.id}
             id={`design-review-${review.id}`}
             tabIndex={-1}
-            className="overflow-hidden rounded-lg border bg-white p-4 shadow-sm"
+            className="overflow-hidden rounded-lg border bg-card p-4 shadow-sm"
           >
             <div className="flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
                 <h3 className="break-words font-semibold">{review.title}</h3>
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {t(`designProjects.stage.${review.stage}`)} · {t("concepts.dossier.reviewRound")}{" "}
                   {review.revisionNumber.toLocaleString(lang)}
                 </p>
                 {review.conceptRevisionId &&
                 conceptRevisions.some((item) => item.id === review.conceptRevisionId) ? (
-                  <p className="mt-1 text-sm text-slate-600">
+                  <p className="mt-1 text-sm text-muted-foreground">
                     {conceptOptions.find((item) => item.id === review.conceptOptionId)?.name} · R
                     {String(
                       conceptRevisions.find((item) => item.id === review.conceptRevisionId)?.number,
@@ -468,7 +476,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               </div>
               <Badge variant="outline">{t(`designProjects.reviews.status.${review.status}`)}</Badge>
             </div>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 text-xs text-muted-foreground">
               {t("designProjects.reviews.recipients")}:{" "}
               {review.recipients.map((item) => `${item.name} · ${personRole(item, t)}`).join(", ")}
             </p>
@@ -493,7 +501,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               ))}
             </div>
             {review.internalSummary ? (
-              <p className="mt-2 whitespace-pre-wrap break-words rounded bg-slate-50 p-3 text-sm">
+              <p className="mt-2 whitespace-pre-wrap break-words rounded bg-muted/30 p-3 text-sm">
                 {review.internalSummary}
               </p>
             ) : null}
@@ -501,11 +509,11 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               <div className="mt-3 space-y-2">
                 {review.comments.map((comment) => (
                   <div key={comment.id} className="rounded-md border p-3 text-sm">
-                    <div className="flex flex-wrap justify-between gap-2 text-xs text-slate-500">
+                    <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
                       <span>{comment.authorName}</span>
                       <time>{new Date(comment.createdAt).toLocaleString(lang)}</time>
                     </div>
-                    <p className="mt-1 text-xs font-medium text-slate-600">
+                    <p className="mt-1 text-xs font-medium text-muted-foreground">
                       {comment.projectDocumentId
                         ? review.documents.find(
                             (document) => document.projectDocumentId === comment.projectDocumentId,
@@ -518,7 +526,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               </div>
             ) : null}
             {review.clientDecisionNote ? (
-              <p className="mt-3 break-words text-sm text-slate-700">
+              <p className="mt-3 break-words text-sm text-foreground">
                 {t("designProjects.reviews.clientNote")}: {review.clientDecisionNote}
               </p>
             ) : null}
@@ -898,7 +906,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                 <legend className="text-sm font-medium">
                   {t("designProjects.reviews.departments")}
                 </legend>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("designProjects.reviews.departmentsHelp")}
                 </p>
                 <div className="mt-1 max-h-36 overflow-y-auto rounded-md border p-2">
@@ -944,7 +952,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                 {t("designProjects.reviews.documents")}
               </legend>
               <div className="mt-1 flex flex-wrap items-center justify-between gap-2">
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-muted-foreground">
                   {t("designProjects.reviews.documentsHelp")}
                 </p>
                 <Button
@@ -977,10 +985,10 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                       }
                     />
                     <span className="min-w-0 space-y-0.5 text-sm">
-                      <span className="block break-all text-slate-900">
+                      <span className="block break-all text-foreground">
                         {document.originalFileName}
                       </span>
-                      <span className="block text-xs text-slate-500">
+                      <span className="block text-xs text-muted-foreground">
                         {t(`operationalProjects.documents.syncStatus.${document.syncStatus}`)}
                       </span>
                       {document.syncStatus !== "Synced" ? (
@@ -996,7 +1004,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                   </label>
                 ))}
                 {stageDocuments.length === 0 ? (
-                  <p className="p-3 text-sm text-slate-500">
+                  <p className="p-3 text-sm text-muted-foreground">
                     {t(
                       stage === "Concept" && !conceptRevisionId
                         ? "concepts.dossier.selectRevision"

@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
@@ -137,6 +138,37 @@ public class ContractAppendixServiceTests : IDisposable
         Assert.Equal(ContractAppendixStatus.Draft, edited!.Status);
         Assert.Null(edited.SubmittedAt);
         Assert.Null(edited.DecidedAt);
+    }
+
+    [Fact]
+    public async Task CreateAndUpdate_KeepMultipleFiles()
+    {
+        var first = CreateManagedFile("first.pdf");
+        var second = CreateManagedFile("second.pdf");
+        var request = Req();
+        request.Files =
+        [
+            new() { FilePath = first, OriginalFileName = "first.pdf", FileSize = 10, ContentType = "application/pdf" },
+            new() { FilePath = second, OriginalFileName = "second.pdf", FileSize = 20, ContentType = "application/pdf" },
+        ];
+
+        var created = await _sut.CreateAsync(_contract.Id, request, 100, true);
+
+        Assert.Equal(2, created!.Files.Count);
+        Assert.Equal(first, created.FilePath);
+        _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
+            _projectId, ProjectDocumentCategory.FinanceContracts, ProjectDocumentSourceModule.Crm,
+            nameof(ContractAppendix), "file", created.Id, It.IsAny<string>(), It.IsAny<string>(),
+            _contract.CustomerId, _contract.Id, 100, It.IsAny<CancellationToken>()), Times.Exactly(2));
+
+        var update = Req(title: "Updated");
+        update.Files = [request.Files[1]];
+        var updated = await _sut.UpdateAsync(_contract.Id, created.Id, update, 100, true);
+
+        Assert.Single(updated!.Files);
+        Assert.Equal(second, updated.Files[0].FilePath);
+        Assert.False(File.Exists(FullPath(first)));
+        Assert.True(File.Exists(FullPath(second)));
     }
 
     [Fact]

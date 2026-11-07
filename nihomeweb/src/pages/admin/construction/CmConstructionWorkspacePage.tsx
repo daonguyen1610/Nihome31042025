@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { Check, ClipboardCheck, FilePlus2, Play, RefreshCcw, Save, X } from "lucide-react";
@@ -63,6 +65,7 @@ const baselineDocumentFields = [
 ] as const;
 
 export default function CmConstructionWorkspacePage() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -166,12 +169,12 @@ export default function CmConstructionWorkspacePage() {
           ),
         );
       })
-      .catch((cause) => active && setError(extractApiError(cause, t("construction.cm.loadError"))))
+      .catch((cause) => active && setError(uiError(cause, t("construction.cm.loadError"))))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [canViewPreparation, canViewQaQc, canViewQs, canViewResources, projectId, reload, t]);
+  }, [canViewPreparation, canViewQaQc, canViewQs, canViewResources, projectId, reload, t, uiError]);
 
   const patchPreparation = (patch: Partial<ConstructionPreparationResponse>) =>
     setPreparation((current) => (current ? { ...current, ...patch } : current));
@@ -209,7 +212,7 @@ export default function CmConstructionWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     } finally {
       setActing(false);
@@ -227,7 +230,7 @@ export default function CmConstructionWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     } finally {
       setActing(false);
@@ -268,7 +271,7 @@ export default function CmConstructionWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     } finally {
       setActing(false);
@@ -292,7 +295,7 @@ export default function CmConstructionWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     } finally {
       setActing(false);
@@ -307,7 +310,7 @@ export default function CmConstructionWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     }
   };
@@ -641,6 +644,7 @@ export default function CmConstructionWorkspacePage() {
             </DialogHeader>
             <div className="grid gap-3 sm:grid-cols-2">
               <Input
+                aria-label={t("construction.qaQc.templateCode")}
                 required
                 maxLength={60}
                 placeholder={t("construction.qaQc.templateCode")}
@@ -648,6 +652,7 @@ export default function CmConstructionWorkspacePage() {
                 onChange={(e) => setTemplateForm({ ...templateForm, code: e.target.value })}
               />
               <Input
+                aria-label={t("construction.qaQc.nameVi")}
                 required
                 maxLength={200}
                 placeholder={t("construction.qaQc.nameVi")}
@@ -655,6 +660,7 @@ export default function CmConstructionWorkspacePage() {
                 onChange={(e) => setTemplateForm({ ...templateForm, nameVi: e.target.value })}
               />
               <Input
+                aria-label={t("construction.qaQc.nameEn")}
                 required
                 maxLength={200}
                 placeholder={t("construction.qaQc.nameEn")}
@@ -662,6 +668,7 @@ export default function CmConstructionWorkspacePage() {
                 onChange={(e) => setTemplateForm({ ...templateForm, name: e.target.value })}
               />
               <Input
+                aria-label={t("construction.qaQc.nameZh")}
                 required
                 maxLength={200}
                 placeholder={t("construction.qaQc.nameZh")}
@@ -669,6 +676,7 @@ export default function CmConstructionWorkspacePage() {
                 onChange={(e) => setTemplateForm({ ...templateForm, nameZh: e.target.value })}
               />
               <Input
+                aria-label={t("construction.qaQc.nameJa")}
                 required
                 maxLength={200}
                 placeholder={t("construction.qaQc.nameJa")}
@@ -676,6 +684,7 @@ export default function CmConstructionWorkspacePage() {
                 onChange={(e) => setTemplateForm({ ...templateForm, nameJa: e.target.value })}
               />
               <Textarea
+                aria-label={t("a11yUi.checklistSchema")}
                 required
                 maxLength={20000}
                 className="min-h-36 font-mono text-xs sm:col-span-2"

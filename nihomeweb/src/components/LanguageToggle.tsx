@@ -29,7 +29,7 @@ const LanguageToggle = ({ variant = "light" }: Props) => {
           className={cn(
             "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all select-none",
             variant === "dark"
-              ? "bg-white/10 border border-white/15 text-white hover:bg-white/15"
+              ? "bg-card/10 border border-white/15 text-white hover:bg-card/15"
               : "bg-secondary border border-border text-foreground/80 hover:text-foreground",
           )}
         >

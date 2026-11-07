@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 import { personOption } from "@/lib/people";
 import { SearchableSelect, type SearchableSelectOption } from "@/components/ui/searchable-select";
@@ -112,16 +116,16 @@ const emptyCorrection = () => ({
 });
 
 const statusClass: Record<string, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   UnderValidation: "border-sky-200 bg-sky-50 text-sky-700",
   ReadyForApproval: "border-amber-200 bg-amber-50 text-amber-800",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Paid: "border-emerald-300 bg-emerald-100 text-emerald-800",
   Rejected: "border-rose-200 bg-rose-50 text-rose-700",
-  Cancelled: "border-slate-200 bg-slate-50 text-slate-500",
+  Cancelled: "border-border bg-muted/30 text-muted-foreground",
   Open: "border-sky-200 bg-sky-50 text-sky-700",
   Closing: "border-amber-200 bg-amber-50 text-amber-800",
-  Closed: "border-slate-300 bg-slate-100 text-slate-800",
+  Closed: "border-input bg-muted text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Reversed: "border-rose-200 bg-rose-50 text-rose-700",
 };
@@ -134,6 +138,7 @@ const hostRelativePath = (value: string) =>
   !value.includes("://");
 
 const FinanceControlPage = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { has } = usePermissions();
   const { toast } = useToast();
@@ -207,11 +212,11 @@ const FinanceControlPage = () => {
       setPeriods(periodResult.data);
       setCorrections(correctionResult.data);
     } catch (reasonValue) {
-      setError(extractApiError(reasonValue));
+      setError(uiError(reasonValue));
     } finally {
       setLoading(false);
     }
-  }, [canViewCorrections, canViewPayments, canViewPeriods]);
+  }, [canViewCorrections, canViewPayments, canViewPeriods, uiError]);
 
   useEffect(() => {
     void loadFinance();
@@ -220,12 +225,10 @@ const FinanceControlPage = () => {
   useEffect(() => {
     let cancelled = false;
     Promise.all([
-      adminApi
-        .listContracts({ page: 1, pageSize: 200 })
+      collectLookupPages((page) => adminApi.listContracts({ pageSize: 200, page }))
         .then((response) => response.data.items)
         .catch(() => null),
-      adminApi
-        .listOperationalProjects({ page: 1, pageSize: 200 })
+      collectLookupPages((page) => adminApi.listOperationalProjects({ pageSize: 200, page }))
         .then((response) => response.data.items)
         .catch(() => null),
       adminApi
@@ -265,12 +268,12 @@ const FinanceControlPage = () => {
         if (!cancelled) setPaymentReferences(response.data);
       })
       .catch((reasonValue) => {
-        if (!cancelled) setPaymentReferencesError(extractApiError(reasonValue));
+        if (!cancelled) setPaymentReferencesError(uiError(reasonValue));
       });
     return () => {
       cancelled = true;
     };
-  }, [dialog, canManagePayments, paymentReferencesRetry]);
+  }, [dialog, canManagePayments, paymentReferencesRetry, uiError]);
 
   const status = (value: string) => (
     <Badge variant="outline" className={statusClass[value] ?? ""}>
@@ -294,7 +297,7 @@ const FinanceControlPage = () => {
       toast({ title: t(successKey) });
       await loadFinance();
     } catch (reasonValue) {
-      const message = extractApiError(reasonValue);
+      const message = uiError(reasonValue);
       setFormError(message);
       toast({ title: t("common.error"), description: message, variant: "destructive" });
     } finally {
@@ -870,7 +873,7 @@ const PaymentsPanel = ({
                       className="text-sm text-primary underline-offset-4 hover:underline"
                       href={item.filePath}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noreferrer noopener"
                       key={item.id}
                     >
                       {item.fileName}
@@ -904,7 +907,7 @@ const PaymentsPanel = ({
                           key={attachment.id}
                           href={attachment.filePath}
                           target="_blank"
-                          rel="noreferrer"
+                          rel="noreferrer noopener"
                           className="mr-3 text-primary underline-offset-4 hover:underline"
                         >
                           {attachment.fileName}
@@ -1099,7 +1102,7 @@ const PeriodsPanel = ({
               <Data label={t("finance.field.closedAt")}>{formatDate(row.closedAt)}</Data>
             </dl>
             {row.closeReason && (
-              <p className="mt-3 border-l-2 border-slate-400 pl-3 text-sm">{row.closeReason}</p>
+              <p className="mt-3 border-l-2 border-input pl-3 text-sm">{row.closeReason}</p>
             )}
             <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
               {canClose && row.status === "Open" && (
@@ -1549,7 +1552,7 @@ const PaymentForm = ({
       <div className="space-y-3">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <Label>{t("finance.field.attachments")}</Label>
+            <span>{t("finance.field.attachments")}</span>
             <p className="text-xs text-muted-foreground">{t("finance.attachment.help")}</p>
           </div>
           <Button
@@ -1570,7 +1573,7 @@ const PaymentForm = ({
         </div>
         {form.attachments.map((attachment, index) => (
           <div className="grid gap-3 border-t pt-3 sm:grid-cols-[1fr_2fr_auto]" key={index}>
-            <div className="space-y-2">
+            <FieldScope className="space-y-2">
               <Label>{t("finance.field.fileName")}</Label>
               <Input
                 maxLength={260}
@@ -1584,8 +1587,8 @@ const PaymentForm = ({
                   }))
                 }
               />
-            </div>
-            <div className="space-y-2">
+            </FieldScope>
+            <FieldScope className="space-y-2">
               <Label>{t("finance.field.filePath")}</Label>
               <Input
                 maxLength={500}
@@ -1600,7 +1603,7 @@ const PaymentForm = ({
                   }))
                 }
               />
-            </div>
+            </FieldScope>
             <Button
               className="self-end"
               type="button"

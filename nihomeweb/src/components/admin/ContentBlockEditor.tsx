@@ -147,6 +147,7 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
                       <div className="flex items-center gap-1.5">
                         <button
                           {...dragHandleProps}
+                          aria-label={t("a11yUi.moveBlock")}
                           className="cursor-grab rounded p-1 hover:bg-muted active:cursor-grabbing"
                         >
                           <GripVertical className="h-3.5 w-3.5 text-muted-foreground" />
@@ -184,6 +185,7 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
 
                     {block.type === "text" ? (
                       <Textarea
+                        aria-label={t("contentBlocks.text")}
                         className="min-h-28"
                         value={block.value}
                         onChange={(event) =>
@@ -193,6 +195,7 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
                     ) : block.type === "youtube" ? (
                       <div className="space-y-2">
                         <Input
+                          aria-label={t("a11yUi.mediaUrl")}
                           className="h-9"
                           value={block.url}
                           onChange={(event) =>
@@ -228,6 +231,7 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
                         )}
                         <div className="flex items-center gap-2">
                           <Input
+                            aria-label={t("a11yUi.mediaUrl")}
                             className="h-9 flex-1"
                             value={block.url}
                             onChange={(event) =>
@@ -247,6 +251,7 @@ const ContentBlockEditor = ({ value, onChange, folder }: ContentBlockEditorProps
                           </Button>
                         </div>
                         <Input
+                          aria-label={t("a11yUi.caption")}
                           className="h-9"
                           value={block.caption ?? ""}
                           onChange={(event) =>

@@ -94,19 +94,19 @@ const ProjectDetail = () => {
           </Link>
           <div className="flex flex-wrap items-center gap-2 mb-6">
             <span
-              className={`chip ${project.status === "ongoing" ? "chip-orange" : "chip-success"} bg-white/95`}
+              className={`chip ${project.status === "ongoing" ? "chip-orange" : "chip-success"} bg-card/95`}
             >
               {project.status === "ongoing"
                 ? t("projDetail.statusOngoing")
                 : t("projDetail.statusDone")}
             </span>
             {resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang) && (
-              <span className="chip chip-primary bg-white/95">
+              <span className="chip chip-primary bg-card/95">
                 {resolveCategoryLabel(project.categoryId, project.category, categoriesById, lang)}
               </span>
             )}
             {project.scope && (
-              <span className="chip bg-white/90 text-foreground/80 border border-white/50">
+              <span className="chip bg-card/90 text-foreground/80 border border-white/50">
                 {project.scope}
               </span>
             )}

@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import { adminApi, type ContractReminderTemplates } from "@/services/adminApi";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +15,7 @@ export default function ContractReminderTemplateConfig({
   active: boolean;
   actionsContainer: HTMLDivElement | null;
 }) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { has } = usePermissions();
   const [data, setData] = useState<ContractReminderTemplates | null>(null);
@@ -35,7 +38,7 @@ export default function ContractReminderTemplateConfig({
         }
       })
       .catch((reason) => {
-        if (active) setError(extractApiError(reason));
+        if (active) setError(uiError(reason));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -43,7 +46,7 @@ export default function ContractReminderTemplateConfig({
     return () => {
       active = false;
     };
-  }, [reload]);
+  }, [reload, uiError]);
 
   const save = async () => {
     if (!data) return;
@@ -66,7 +69,7 @@ export default function ContractReminderTemplateConfig({
       setData(result.data);
       setSaved(true);
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setBusy(false);
     }

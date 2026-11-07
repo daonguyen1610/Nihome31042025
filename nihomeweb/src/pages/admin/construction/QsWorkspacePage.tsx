@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
 import { CircleDollarSign, Plus, Send, Trash2 } from "lucide-react";
@@ -46,6 +49,7 @@ const emptyLine = (): ConstructionQsBatchLineRequest => ({
 });
 
 export default function QsWorkspacePage() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -108,12 +112,12 @@ export default function QsWorkspacePage() {
     void adminApi
       .listConstructionQsBatches(projectId)
       .then(({ data }) => active && setRows(data))
-      .catch((cause) => active && setError(extractApiError(cause, t("construction.qs.loadError"))))
+      .catch((cause) => active && setError(uiError(cause, t("construction.qs.loadError"))))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [projectId, reload, t]);
+  }, [projectId, reload, t, uiError]);
 
   useEffect(() => {
     if (projectId == null) return;
@@ -129,14 +133,14 @@ export default function QsWorkspacePage() {
         if (active)
           toast({
             variant: "destructive",
-            title: extractApiError(cause, t("construction.qs.loadError")),
+            title: uiError(cause, t("construction.qs.loadError")),
           });
       })
       .finally(() => active && setLookupsLoading(false));
     return () => {
       active = false;
     };
-  }, [projectId, t, toast]);
+  }, [projectId, t, toast, uiError]);
 
   const updateLine = (index: number, patch: Partial<ConstructionQsBatchLineRequest>) =>
     setForm((current) => ({
@@ -192,7 +196,7 @@ export default function QsWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.qs.saveError")),
+        title: uiError(cause, t("construction.qs.saveError")),
       });
     } finally {
       setSaving(false);
@@ -207,7 +211,7 @@ export default function QsWorkspacePage() {
     } catch (cause) {
       toast({
         variant: "destructive",
-        title: extractApiError(cause, t("construction.common.actionError")),
+        title: uiError(cause, t("construction.common.actionError")),
       });
     }
   };
@@ -317,7 +321,7 @@ export default function QsWorkspacePage() {
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <div className="space-y-1.5">
+              <FieldScope className="space-y-1.5">
                 <Label>{t("construction.qs.direction")}</Label>
                 <Select
                   value={form.direction}
@@ -345,7 +349,7 @@ export default function QsWorkspacePage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
               <div className="space-y-1.5">
                 <Label htmlFor="qs-adjustment">{t("construction.qs.adjustmentMode")}</Label>
                 <Select
@@ -572,6 +576,7 @@ export default function QsWorkspacePage() {
                   className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-6"
                 >
                   <Input
+                    aria-label={t("construction.qs.itemCode")}
                     required
                     maxLength={80}
                     placeholder={t("construction.qs.itemCode")}
@@ -579,6 +584,7 @@ export default function QsWorkspacePage() {
                     onChange={(e) => updateLine(index, { itemCode: e.target.value })}
                   />
                   <Input
+                    aria-label={t("construction.qs.lineDescription")}
                     required
                     maxLength={500}
                     className="lg:col-span-2"
@@ -587,6 +593,7 @@ export default function QsWorkspacePage() {
                     onChange={(e) => updateLine(index, { description: e.target.value })}
                   />
                   <Input
+                    aria-label={t("construction.resource.unit")}
                     required
                     maxLength={50}
                     placeholder={t("construction.resource.unit")}
@@ -594,12 +601,14 @@ export default function QsWorkspacePage() {
                     onChange={(e) => updateLine(index, { unit: e.target.value })}
                   />
                   <MoneyInput
+                    aria-label={t("quotes.boq.qty")}
                     decimalScale={6}
                     value={line.quantity}
                     onChange={(value) => updateLine(index, { quantity: value })}
                   />
                   <div className="flex gap-2">
                     <MoneyInput
+                      aria-label={t("quotes.boq.unitPrice")}
                       decimalScale={4}
                       value={line.unitPrice}
                       onChange={(value) => updateLine(index, { unitPrice: value })}

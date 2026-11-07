@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { RefreshCcw } from "lucide-react";
@@ -19,6 +21,7 @@ export default function ContractExecutionProgress({
   contract: ContractResponse;
   onPayment: () => void;
 }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [data, setData] = useState<ContractExecutionProgressResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -37,14 +40,14 @@ export default function ContractExecutionProgress({
           if (!controller.signal.aborted) setData(result);
         },
         (cause: unknown) => {
-          if (!controller.signal.aborted) setError(extractApiError(cause));
+          if (!controller.signal.aborted) setError(uiError(cause));
         },
       )
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [contract, revision]);
+  }, [contract, revision, uiError]);
   const metric = (label: string, value: number, money = false) => (
     <div key={label} className="flex items-start justify-between gap-3 py-1.5">
       <dt className="text-sm text-muted-foreground">{key(label)}</dt>

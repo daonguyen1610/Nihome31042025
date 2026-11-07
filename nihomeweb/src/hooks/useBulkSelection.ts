@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useMemo, useState } from "react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -39,6 +40,7 @@ export function useBulkSelection<TId extends string | number>({
   confirmMessage,
   onAfter,
 }: UseBulkSelectionOptions<TId>) {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
 
@@ -84,7 +86,7 @@ export function useBulkSelection<TId extends string | number>({
       "{count}",
       ids.length.toString(),
     );
-    if (!window.confirm(resolvedConfirmMessage)) return;
+    if (!(await confirmAction(resolvedConfirmMessage))) return;
     setBulkDeleting(true);
     try {
       const results = await Promise.allSettled(ids.map((id) => deleteOne(id)));
@@ -110,7 +112,7 @@ export function useBulkSelection<TId extends string | number>({
     } finally {
       setBulkDeleting(false);
     }
-  }, [selectedIds, deleteOne, confirmMessage, onAfter, t, toast]);
+  }, [selectedIds, deleteOne, confirmMessage, onAfter, t, toast, confirmAction]);
 
   return {
     selectedIds,

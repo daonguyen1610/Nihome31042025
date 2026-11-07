@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -57,7 +60,7 @@ import {
 const ALL_VALUE = "__all__";
 
 const EXPIRY_BADGE_STYLES: Record<CapabilityDocumentExpiryState, string> = {
-  none: "border-slate-200 bg-slate-50 text-slate-600",
+  none: "border-border bg-muted/30 text-muted-foreground",
   ok: "border-emerald-200 bg-emerald-50 text-emerald-700",
   warning: "border-amber-200 bg-amber-50 text-amber-800",
   critical: "border-orange-300 bg-orange-100 text-orange-800",
@@ -86,6 +89,7 @@ const formatDate = (iso?: string | null, lang: string = "vi") => {
 };
 
 const CapabilityDocuments = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
@@ -135,11 +139,11 @@ const CapabilityDocuments = () => {
         return next;
       });
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [page, tagFilter, expiryFilter, search]);
+  }, [page, tagFilter, expiryFilter, search, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -217,7 +221,7 @@ const CapabilityDocuments = () => {
       setCreateOpen(false);
       await fetchList();
     } catch (err) {
-      setCreateError(extractApiError(err));
+      setCreateError(uiError(err));
     } finally {
       setSavingCreate(false);
     }
@@ -258,7 +262,7 @@ const CapabilityDocuments = () => {
         } catch (err) {
           toast({
             title: t("common.error"),
-            description: t("capDocs.form.uploadFailed").replace("{message}", extractApiError(err)),
+            description: t("capDocs.form.uploadFailed").replace("{message}", uiError(err)),
             variant: "destructive",
           });
         }
@@ -271,7 +275,7 @@ const CapabilityDocuments = () => {
         await fetchList();
       }
     },
-    [canManage, uploadTag, toast, t, fetchList],
+    [canManage, uploadTag, toast, t, uiError, fetchList],
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -302,12 +306,12 @@ const CapabilityDocuments = () => {
       } catch (err) {
         toast({
           title: t("common.error"),
-          description: extractApiError(err),
+          description: uiError(err),
           variant: "destructive",
         });
       }
     },
-    [t, toast],
+    [t, toast, uiError],
   );
 
   useEffect(() => {
@@ -345,7 +349,7 @@ const CapabilityDocuments = () => {
       setEditForm(null);
       await fetchList();
     } catch (err) {
-      setEditError(extractApiError(err));
+      setEditError(uiError(err));
     } finally {
       setSavingEdit(false);
     }
@@ -368,7 +372,7 @@ const CapabilityDocuments = () => {
       setEditing(detail.data);
       await fetchList();
     } catch (err) {
-      setEditError(extractApiError(err));
+      setEditError(uiError(err));
     } finally {
       setSavingEdit(false);
     }
@@ -388,7 +392,7 @@ const CapabilityDocuments = () => {
       const response = await adminApi.getCapabilityDocumentDeletionImpact(row.id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -404,7 +408,7 @@ const CapabilityDocuments = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setBusy(false);
@@ -440,7 +444,7 @@ const CapabilityDocuments = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -558,7 +562,7 @@ const CapabilityDocuments = () => {
           <div
             className={cn(
               "rounded-lg border-2 border-dashed p-3 transition-colors md:p-4",
-              dragging ? "border-primary bg-primary/5" : "border-slate-200",
+              dragging ? "border-primary bg-primary/5" : "border-border",
             )}
             onDragOver={(e) => {
               e.preventDefault();
@@ -572,7 +576,7 @@ const CapabilityDocuments = () => {
                 <Upload className="mt-0.5 h-5 w-5 shrink-0 md:mt-0" />
                 <span className="text-left">{t("capDocs.form.dropHint")}</span>
               </div>
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center md:shrink-0">
+              <FieldScope className="flex flex-col gap-2 sm:flex-row sm:items-center md:shrink-0">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t("capDocs.field.tag")}
                 </Label>
@@ -599,7 +603,7 @@ const CapabilityDocuments = () => {
                   <Upload className="mr-2 h-4 w-4" />
                   {t("capDocs.create.selectFile")}
                 </Button>
-              </div>
+              </FieldScope>
             </div>
             {busy && (
               <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
@@ -615,6 +619,7 @@ const CapabilityDocuments = () => {
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              aria-label={t("common.search")}
               className="pl-9"
               placeholder={t("capDocs.filter.search")}
               value={searchInput}
@@ -628,7 +633,7 @@ const CapabilityDocuments = () => {
               setPage(1);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label={t("capDocs.field.tag")}>
               <SelectValue placeholder={t("capDocs.filter.allTags")} />
             </SelectTrigger>
             <SelectContent>
@@ -647,7 +652,7 @@ const CapabilityDocuments = () => {
               setPage(1);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label={t("a11yUi.expiryState")}>
               <SelectValue placeholder={t("capDocs.filter.allExpiry")} />
             </SelectTrigger>
             <SelectContent>
@@ -663,7 +668,7 @@ const CapabilityDocuments = () => {
 
         {/* Bulk actions */}
         {selectedIds.size > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-slate-50 px-3 py-2 text-sm">
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
             <span className="text-muted-foreground">
               {selectedIds.size} / {rows.length}
             </span>
@@ -690,13 +695,13 @@ const CapabilityDocuments = () => {
             {/* Mobile / tablet card view (<lg) */}
             <div className="grid gap-3 lg:hidden">
               {rows.length > 1 && (
-                <label className="flex items-center gap-2 rounded-md border bg-white px-3 py-2 text-sm text-muted-foreground">
+                <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
                   <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(Boolean(v))} />
                   <span>{allSelected ? t("capDocs.deselectAll") : t("capDocs.selectAll")}</span>
                 </label>
               )}
               {rows.map((r) => (
-                <article key={r.id} className="rounded-lg border bg-white p-3 shadow-sm">
+                <article key={r.id} className="rounded-lg border bg-card p-3 shadow-sm">
                   <header className="flex items-start gap-2">
                     <span onClick={(e) => e.stopPropagation()} className="mt-1 shrink-0">
                       <Checkbox
@@ -762,7 +767,7 @@ const CapabilityDocuments = () => {
             {/* Desktop table view (lg+) */}
             <div className="hidden overflow-x-auto rounded-md border lg:block">
               <table className="w-full min-w-[1000px] text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
+                <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="w-10 px-3 py-2">
                       <Checkbox
@@ -782,7 +787,7 @@ const CapabilityDocuments = () => {
                 </thead>
                 <tbody>
                   {rows.map((r) => (
-                    <tr key={r.id} className="border-t align-top hover:bg-slate-50/50">
+                    <tr key={r.id} className="border-t align-top hover:bg-muted/50">
                       <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                         <Checkbox
                           checked={selectedIds.has(r.id)}
@@ -878,14 +883,14 @@ const CapabilityDocuments = () => {
           {editForm && (
             <div className="space-y-3">
               <div className="grid gap-3 md:grid-cols-2">
-                <div className="space-y-1">
+                <FieldScope className="space-y-1">
                   <Label>{t("capDocs.field.name")}</Label>
                   <Input
                     value={editForm.name}
                     onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                   />
-                </div>
-                <div className="space-y-1">
+                </FieldScope>
+                <FieldScope className="space-y-1">
                   <Label>{t("capDocs.field.tag")}</Label>
                   <Select
                     value={editForm.tagCode}
@@ -902,8 +907,8 @@ const CapabilityDocuments = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div className="space-y-1">
+                </FieldScope>
+                <FieldScope className="space-y-1">
                   <Label>{t("capDocs.field.issuedDate")}</Label>
                   <Input
                     type="date"
@@ -912,8 +917,8 @@ const CapabilityDocuments = () => {
                       setEditForm({ ...editForm, issuedDate: e.target.value || null })
                     }
                   />
-                </div>
-                <div className="space-y-1">
+                </FieldScope>
+                <FieldScope className="space-y-1">
                   <Label>{t("capDocs.field.expiryDate")}</Label>
                   <Input
                     type="date"
@@ -922,20 +927,20 @@ const CapabilityDocuments = () => {
                       setEditForm({ ...editForm, expiryDate: e.target.value || null })
                     }
                   />
-                </div>
+                </FieldScope>
               </div>
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("capDocs.field.description")}</Label>
                 <Textarea
                   value={editForm.description ?? ""}
                   onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
                   rows={2}
                 />
-              </div>
+              </FieldScope>
 
               {/* Replace file */}
               {canManage && (
-                <div className="rounded-md border bg-slate-50 p-3">
+                <FieldScope className="rounded-md border bg-muted/30 p-3">
                   <Label className="text-xs uppercase tracking-wide text-muted-foreground">
                     {t("capDocs.action.replace")}
                   </Label>
@@ -949,14 +954,14 @@ const CapabilityDocuments = () => {
                       e.target.value = "";
                     }}
                   />
-                </div>
+                </FieldScope>
               )}
 
               {/* Version history */}
               <div>
-                <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
                   {t("capDocs.versions.title")}
-                </Label>
+                </span>
                 {editing && editing.versions.length === 0 ? (
                   <p className="mt-1 text-xs text-muted-foreground">
                     {t("capDocs.versions.empty")}
@@ -1155,15 +1160,15 @@ const CapabilityDocuments = () => {
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("capDocs.field.name")} *</Label>
                 <Input
                   value={createForm.name}
                   onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                   placeholder={t("capDocs.placeholder.name")}
                 />
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("capDocs.field.tag")} *</Label>
                 <Select
                   value={createForm.tagCode}
@@ -1180,27 +1185,27 @@ const CapabilityDocuments = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
             </div>
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("capDocs.field.issuedDate")}</Label>
                 <Input
                   type="date"
                   value={createForm.issuedDate}
                   onChange={(e) => setCreateForm({ ...createForm, issuedDate: e.target.value })}
                 />
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("capDocs.field.expiryDate")}</Label>
                 <Input
                   type="date"
                   value={createForm.expiryDate}
                   onChange={(e) => setCreateForm({ ...createForm, expiryDate: e.target.value })}
                 />
-              </div>
+              </FieldScope>
             </div>
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("capDocs.field.description")}</Label>
               <Textarea
                 value={createForm.description}
@@ -1208,8 +1213,8 @@ const CapabilityDocuments = () => {
                 rows={3}
                 placeholder={t("capDocs.placeholder.description")}
               />
-            </div>
-            <div className="space-y-1">
+            </FieldScope>
+            <FieldScope className="space-y-1">
               <Label>{t("capDocs.field.file")} *</Label>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                 <Button
@@ -1222,23 +1227,25 @@ const CapabilityDocuments = () => {
                   <Upload className="mr-2 h-4 w-4" />
                   {t("capDocs.create.selectFile")}
                 </Button>
-                <input
-                  ref={createFileInputRef}
-                  type="file"
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                  className="hidden"
-                  onChange={(e) => {
-                    handleCreateFileChange(e.target.files?.[0] ?? null);
-                    if (createFileInputRef.current) createFileInputRef.current.value = "";
-                  }}
-                />
+                <FieldControl>
+                  <input
+                    ref={createFileInputRef}
+                    type="file"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                    className="hidden"
+                    onChange={(e) => {
+                      handleCreateFileChange(e.target.files?.[0] ?? null);
+                      if (createFileInputRef.current) createFileInputRef.current.value = "";
+                    }}
+                  />
+                </FieldControl>
                 {createFile && (
                   <span className="min-w-0 truncate text-sm text-muted-foreground">
                     {createFile.name} ({formatBytes(createFile.size)})
                   </span>
                 )}
               </div>
-            </div>
+            </FieldScope>
             {createError && <p className="text-sm text-rose-600">{createError}</p>}
           </div>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">

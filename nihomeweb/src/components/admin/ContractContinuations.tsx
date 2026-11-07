@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { adminApi, type ContractResponse } from "@/services/adminApi";
@@ -72,6 +74,7 @@ export default function ContractContinuations({
   contract: ContractResponse;
   canManage: boolean;
 }) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { has } = usePermissions();
   const [data, setData] = useState<
@@ -89,12 +92,12 @@ export default function ContractContinuations({
         if (active) setData(r.data);
       })
       .catch((e) => {
-        if (active) setError(extractApiError(e));
+        if (active) setError(uiError(e));
       });
     return () => {
       active = false;
     };
-  }, [contract.id, reload]);
+  }, [contract.id, reload, uiError]);
   const canCreateOpportunity = has("crm.opportunities.manage");
   const eligible = !!contract.signedDate && !["Draft", "Cancelled"].includes(contract.status);
   return (

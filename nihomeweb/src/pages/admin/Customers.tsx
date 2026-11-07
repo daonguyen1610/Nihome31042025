@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useConfirm } from "@/components/ui/confirmation";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -82,14 +86,14 @@ const CUSTOMER_STATUS_STYLES: Record<CustomerRelationshipStatus, string> = {
   Prospect: "border-sky-200 bg-sky-50 text-sky-700",
   InProgress: "border-amber-200 bg-amber-50 text-amber-700",
   Signed: "border-green-300 bg-green-100 text-green-800",
-  Suspended: "border-slate-200 bg-slate-100 text-slate-600",
+  Suspended: "border-border bg-muted text-muted-foreground",
 };
 
 const CUSTOMER_STATUS_DOT: Record<CustomerRelationshipStatus, string> = {
   Prospect: "bg-sky-500",
   InProgress: "bg-amber-500",
   Signed: "bg-green-600",
-  Suspended: "bg-slate-400",
+  Suspended: "bg-muted-foreground",
 };
 
 // Type badge is decorative — keeps Individual vs Company visually distinct without shouting.
@@ -121,6 +125,8 @@ const formatFileSize = (bytes: number) => {
 };
 
 const AdminCustomers = () => {
+  const uiError = useUiError();
+  const confirmAction = useConfirm();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -216,11 +222,11 @@ const AdminCustomers = () => {
       setRows(data.items);
       setTotal(data.total);
     } catch (err) {
-      setError((err as Error).message);
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [page, typeFilter, statusFilter, sourceFilter, search]);
+  }, [page, typeFilter, statusFilter, sourceFilter, search, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -254,7 +260,7 @@ const AdminCustomers = () => {
       const { data } = await adminApi.listCustomerDocuments(customerId);
       setDocuments(data);
     } catch (err) {
-      setDocumentsError(extractApiError(err));
+      setDocumentsError(uiError(err));
     } finally {
       setDocumentsLoading(false);
     }
@@ -273,7 +279,7 @@ const AdminCustomers = () => {
               setRelatedTotals((current) => ({ ...current, projects: data.total }));
             })
             .catch((error) =>
-              setRelatedErrors((current) => ({ ...current, projects: extractApiError(error) })),
+              setRelatedErrors((current) => ({ ...current, projects: uiError(error) })),
             )
         : Promise.resolve(),
       canViewOpportunities
@@ -286,7 +292,7 @@ const AdminCustomers = () => {
             .catch((error) =>
               setRelatedErrors((current) => ({
                 ...current,
-                opportunities: extractApiError(error),
+                opportunities: uiError(error),
               })),
             )
         : Promise.resolve(),
@@ -298,7 +304,7 @@ const AdminCustomers = () => {
               setRelatedTotals((current) => ({ ...current, quotes: data.total }));
             })
             .catch((error) =>
-              setRelatedErrors((current) => ({ ...current, quotes: extractApiError(error) })),
+              setRelatedErrors((current) => ({ ...current, quotes: uiError(error) })),
             )
         : Promise.resolve(),
       canViewContracts
@@ -309,7 +315,7 @@ const AdminCustomers = () => {
               setRelatedTotals((current) => ({ ...current, contracts: data.total }));
             })
             .catch((error) =>
-              setRelatedErrors((current) => ({ ...current, contracts: extractApiError(error) })),
+              setRelatedErrors((current) => ({ ...current, contracts: uiError(error) })),
             )
         : Promise.resolve(),
     ]);
@@ -361,7 +367,7 @@ const AdminCustomers = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -463,7 +469,7 @@ const AdminCustomers = () => {
       ) {
         setDuplicate(anyErr.response.data);
       } else {
-        setCreateError(extractApiError(err));
+        setCreateError(uiError(err));
       }
     } finally {
       setSaving(false);
@@ -492,7 +498,7 @@ const AdminCustomers = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       if (isConcurrencyConflict(err)) await openDetail(detail.id, { startEditing: true });
@@ -512,7 +518,7 @@ const AdminCustomers = () => {
       const response = await adminApi.getCustomerDeletionImpact(id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -530,7 +536,7 @@ const AdminCustomers = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setDeleteBusy(false);
@@ -582,7 +588,7 @@ const AdminCustomers = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -610,7 +616,7 @@ const AdminCustomers = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     }
@@ -630,7 +636,7 @@ const AdminCustomers = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -650,7 +656,7 @@ const AdminCustomers = () => {
           await adminApi.uploadCustomerDocument(customerId, file, documentLabel);
           uploaded += 1;
         } catch (err) {
-          failed.push(`${file.name}: ${extractApiError(err)}`);
+          failed.push(`${file.name}: ${uiError(err)}`);
         }
       }
     } finally {
@@ -672,7 +678,7 @@ const AdminCustomers = () => {
   };
 
   const handleDeleteDocument = async (documentId: number) => {
-    if (!detail || !window.confirm(t("customers.document.deleteConfirm"))) return;
+    if (!detail || !(await confirmAction(t("customers.document.deleteConfirm")))) return;
     setDeletingDocumentId(documentId);
     try {
       await adminApi.deleteCustomerDocument(detail.id, documentId);
@@ -681,7 +687,7 @@ const AdminCustomers = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -734,7 +740,7 @@ const AdminCustomers = () => {
               />
             </div>
           </div>
-          <div>
+          <FieldScope>
             <Label className="text-xs">{t("customers.filter.type")}</Label>
             <Select
               value={typeFilter || "__all"}
@@ -755,8 +761,8 @@ const AdminCustomers = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label className="text-xs">{t("customers.filter.status")}</Label>
             <Select
               value={statusFilter || "__all"}
@@ -777,8 +783,8 @@ const AdminCustomers = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label className="text-xs">{t("customers.filter.source")}</Label>
             <Select
               value={sourceFilter || "__all"}
@@ -799,7 +805,7 @@ const AdminCustomers = () => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
         </section>
 
         {loading ? (
@@ -1122,7 +1128,7 @@ const AdminCustomers = () => {
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <FieldScope>
                 <Label>{t("customers.field.type")} *</Label>
                 <Select
                   value={createForm.type}
@@ -1139,8 +1145,8 @@ const AdminCustomers = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("customers.field.source")} *</Label>
                 <Select
                   value={createForm.sourceCode || undefined}
@@ -1157,27 +1163,27 @@ const AdminCustomers = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
             </div>
-            <div>
+            <FieldScope>
               <Label>{t("customers.field.name")} *</Label>
               <Input
                 value={createForm.name}
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
                 autoFocus
               />
-            </div>
+            </FieldScope>
             {createForm.type === "Company" && (
               <>
                 <div className="grid grid-cols-2 gap-3">
-                  <div>
+                  <FieldScope>
                     <Label>{t("customers.field.taxId")} *</Label>
                     <Input
                       value={createForm.taxId ?? ""}
                       onChange={(e) => setCreateForm({ ...createForm, taxId: e.target.value })}
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("customers.field.representativeName")} *</Label>
                     <Input
                       value={createForm.representativeName ?? ""}
@@ -1185,23 +1191,23 @@ const AdminCustomers = () => {
                         setCreateForm({ ...createForm, representativeName: e.target.value })
                       }
                     />
-                  </div>
+                  </FieldScope>
                 </div>
-                <div>
+                <FieldScope>
                   <Label>{t("customers.field.address")} *</Label>
                   <Textarea
                     rows={2}
                     value={createForm.address ?? ""}
                     onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
                   />
-                </div>
+                </FieldScope>
               </>
             )}
             <div className="rounded border p-3 space-y-3">
               <h4 className="text-sm font-medium">{t("customers.field.primaryContact")} *</h4>
               <p className="text-xs text-muted-foreground">{t("customers.contact.nameDerived")}</p>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("customers.contact.phone")}</Label>
                   <Input
                     value={createForm.primaryContact.phone ?? ""}
@@ -1212,8 +1218,8 @@ const AdminCustomers = () => {
                       })
                     }
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("customers.contact.email")}</Label>
                   <Input
                     type="email"
@@ -1225,17 +1231,17 @@ const AdminCustomers = () => {
                       })
                     }
                   />
-                </div>
+                </FieldScope>
               </div>
             </div>
-            <div>
+            <FieldScope>
               <Label>{t("customers.field.note")}</Label>
               <Textarea
                 rows={2}
                 value={createForm.note ?? ""}
                 onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
               />
-            </div>
+            </FieldScope>
             {createError && (
               <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">
                 {createError}
@@ -1277,6 +1283,7 @@ const AdminCustomers = () => {
             </DialogDescription>
           </DialogHeader>
           <Textarea
+            aria-label={t("a11yUi.reason")}
             value={overrideReason}
             onChange={(e) => setOverrideReason(e.target.value)}
             placeholder={t("customers.duplicate.reasonPlaceholder")}
@@ -1507,7 +1514,10 @@ const AdminCustomers = () => {
                                 value={activityType}
                                 onValueChange={(v) => setActivityType(v as CustomerActivityType)}
                               >
-                                <SelectTrigger className="w-full sm:w-[140px]">
+                                <SelectTrigger
+                                  aria-label={t("a11yUi.activityType")}
+                                  className="w-full sm:w-[140px]"
+                                >
                                   <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -1519,6 +1529,7 @@ const AdminCustomers = () => {
                                 </SelectContent>
                               </Select>
                               <Textarea
+                                aria-label={t("a11yUi.activityContent")}
                                 value={activityContent}
                                 onChange={(e) => setActivityContent(e.target.value)}
                                 placeholder={t("customers.activity.title")}
@@ -1541,7 +1552,7 @@ const AdminCustomers = () => {
                     editForm && (
                       <div className="space-y-3">
                         <div className="grid grid-cols-2 gap-3">
-                          <div>
+                          <FieldScope>
                             <Label>{t("customers.field.type")}</Label>
                             <Select
                               value={editForm.type}
@@ -1560,8 +1571,8 @@ const AdminCustomers = () => {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
-                          <div>
+                          </FieldScope>
+                          <FieldScope>
                             <Label>{t("customers.field.status")}</Label>
                             <Select
                               value={editForm.relationshipStatus}
@@ -1583,19 +1594,19 @@ const AdminCustomers = () => {
                                 ))}
                               </SelectContent>
                             </Select>
-                          </div>
+                          </FieldScope>
                         </div>
-                        <div>
+                        <FieldScope>
                           <Label>{t("customers.field.name")}</Label>
                           <Input
                             value={editForm.name}
                             onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                           />
-                        </div>
+                        </FieldScope>
                         {editForm.type === "Company" && (
                           <>
                             <div className="grid grid-cols-2 gap-3">
-                              <div>
+                              <FieldScope>
                                 <Label>{t("customers.field.taxId")}</Label>
                                 <Input
                                   value={editForm.taxId ?? ""}
@@ -1603,8 +1614,8 @@ const AdminCustomers = () => {
                                     setEditForm({ ...editForm, taxId: e.target.value })
                                   }
                                 />
-                              </div>
-                              <div>
+                              </FieldScope>
+                              <FieldScope>
                                 <Label>{t("customers.field.representativeName")}</Label>
                                 <Input
                                   value={editForm.representativeName ?? ""}
@@ -1612,9 +1623,9 @@ const AdminCustomers = () => {
                                     setEditForm({ ...editForm, representativeName: e.target.value })
                                   }
                                 />
-                              </div>
+                              </FieldScope>
                             </div>
-                            <div>
+                            <FieldScope>
                               <Label>{t("customers.field.address")}</Label>
                               <Textarea
                                 rows={2}
@@ -1623,10 +1634,10 @@ const AdminCustomers = () => {
                                   setEditForm({ ...editForm, address: e.target.value })
                                 }
                               />
-                            </div>
+                            </FieldScope>
                           </>
                         )}
-                        <div>
+                        <FieldScope>
                           <Label>{t("customers.field.source")}</Label>
                           <Select
                             value={editForm.sourceCode}
@@ -1643,15 +1654,15 @@ const AdminCustomers = () => {
                               ))}
                             </SelectContent>
                           </Select>
-                        </div>
-                        <div>
+                        </FieldScope>
+                        <FieldScope>
                           <Label>{t("customers.field.note")}</Label>
                           <Textarea
                             rows={2}
                             value={editForm.note ?? ""}
                             onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
                           />
-                        </div>
+                        </FieldScope>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
@@ -1767,7 +1778,7 @@ const AdminCustomers = () => {
                         </Button>
                       </div>
                       <div className="grid grid-cols-2 gap-2">
-                        <div className="col-span-2">
+                        <FieldScope className="col-span-2">
                           <Label className="text-xs">{t("customers.contact.fullName")} *</Label>
                           <Input
                             value={contactForm.fullName}
@@ -1775,8 +1786,8 @@ const AdminCustomers = () => {
                               setContactForm({ ...contactForm, fullName: e.target.value })
                             }
                           />
-                        </div>
-                        <div>
+                        </FieldScope>
+                        <FieldScope>
                           <Label className="text-xs">{t("customers.contact.phone")}</Label>
                           <Input
                             value={contactForm.phone ?? ""}
@@ -1784,8 +1795,8 @@ const AdminCustomers = () => {
                               setContactForm({ ...contactForm, phone: e.target.value })
                             }
                           />
-                        </div>
-                        <div>
+                        </FieldScope>
+                        <FieldScope>
                           <Label className="text-xs">{t("customers.contact.email")}</Label>
                           <Input
                             type="email"
@@ -1794,7 +1805,7 @@ const AdminCustomers = () => {
                               setContactForm({ ...contactForm, email: e.target.value })
                             }
                           />
-                        </div>
+                        </FieldScope>
                       </div>
                       <label className="flex items-center gap-2 text-xs">
                         <Checkbox

@@ -1,0 +1,402 @@
+[
+  {
+    "key": "a11yUi.highlightLabel",
+    "category": "a11yUi",
+    "vi": "Nhãn điểm nổi bật",
+    "en": "Highlight label",
+    "zh": "亮点标签",
+    "ja": "特徴のラベル"
+  },
+  {
+    "key": "a11yUi.highlightValue",
+    "category": "a11yUi",
+    "vi": "Giá trị điểm nổi bật",
+    "en": "Highlight value",
+    "zh": "亮点值",
+    "ja": "特徴の値"
+  },
+  {
+    "key": "a11yUi.highlightLabelHint",
+    "category": "a11yUi",
+    "vi": "Nhãn (ví dụ: Diện tích)",
+    "en": "Label (e.g. Area)",
+    "zh": "标签（例如：面积）",
+    "ja": "ラベル（例：面積）"
+  },
+  {
+    "key": "a11yUi.highlightValueHint",
+    "category": "a11yUi",
+    "vi": "Giá trị (ví dụ: 250.000 m²)",
+    "en": "Value (e.g. 250,000 m²)",
+    "zh": "值（例如：250,000 平方米）",
+    "ja": "値（例：250,000 m²）"
+  },
+  {
+    "key": "a11yUi.addHighlight",
+    "category": "a11yUi",
+    "vi": "Thêm điểm nổi bật",
+    "en": "Add highlight",
+    "zh": "添加亮点",
+    "ja": "特徴を追加"
+  },
+  {
+    "key": "a11yUi.chooseCategory",
+    "category": "a11yUi",
+    "vi": "Chọn danh mục",
+    "en": "Choose a category",
+    "zh": "选择类别",
+    "ja": "カテゴリーを選択"
+  },
+  {
+    "key": "a11yUi.moveBlock",
+    "category": "a11yUi",
+    "vi": "Di chuyển khối nội dung",
+    "en": "Move content block",
+    "zh": "移动内容块",
+    "ja": "コンテンツブロックを移動"
+  },
+  {
+    "key": "a11yUi.emailTitle",
+    "category": "a11yUi",
+    "vi": "Mẫu email",
+    "en": "Email templates",
+    "zh": "电子邮件模板",
+    "ja": "メールテンプレート"
+  },
+  {
+    "key": "a11yUi.restored",
+    "category": "a11yUi",
+    "vi": "Đã khôi phục",
+    "en": "Restored",
+    "zh": "已恢复",
+    "ja": "復元しました"
+  },
+  {
+    "key": "a11yUi.templatesUpdated",
+    "category": "a11yUi",
+    "vi": "Các mẫu email đã được cập nhật.",
+    "en": "Email templates have been updated.",
+    "zh": "电子邮件模板已更新。",
+    "ja": "メールテンプレートを更新しました。"
+  },
+  {
+    "key": "a11yUi.templatesReloaded",
+    "category": "a11yUi",
+    "vi": "Đã tải lại các mẫu email đã lưu.",
+    "en": "Saved email templates have been reloaded.",
+    "zh": "已重新加载保存的电子邮件模板。",
+    "ja": "保存済みのメールテンプレートを再読み込みしました。"
+  },
+  {
+    "key": "a11yUi.applicationTab",
+    "category": "a11yUi",
+    "vi": "Thông báo ứng tuyển",
+    "en": "Application notifications",
+    "zh": "应聘通知",
+    "ja": "応募通知"
+  },
+  {
+    "key": "a11yUi.otpTab",
+    "category": "a11yUi",
+    "vi": "OTP xác thực",
+    "en": "OTP verification",
+    "zh": "一次性密码验证",
+    "ja": "ワンタイムパスワード認証"
+  },
+  {
+    "key": "a11yUi.notificationEmail",
+    "category": "a11yUi",
+    "vi": "Email nhận thông báo",
+    "en": "Notification email",
+    "zh": "通知邮箱",
+    "ja": "通知先メールアドレス"
+  },
+  {
+    "key": "a11yUi.notificationEmailHelp",
+    "category": "a11yUi",
+    "vi": "Email sẽ nhận thông báo khi có đơn ứng tuyển mới.",
+    "en": "This email receives notifications for new applications.",
+    "zh": "此邮箱将接收新应聘通知。",
+    "ja": "新しい応募の通知を受信するメールアドレスです。"
+  },
+  {
+    "key": "a11yUi.projectNotFound",
+    "category": "a11yUi",
+    "vi": "Không tìm thấy dự án.",
+    "en": "Project not found.",
+    "zh": "未找到项目。",
+    "ja": "プロジェクトが見つかりません。"
+  },
+  {
+    "key": "a11yUi.siteName",
+    "category": "a11yUi",
+    "vi": "Tên website",
+    "en": "Website name",
+    "zh": "网站名称",
+    "ja": "サイト名"
+  },
+  {
+    "key": "a11yUi.positionTitle",
+    "category": "a11yUi",
+    "vi": "Vị trí ứng tuyển",
+    "en": "Applied position",
+    "zh": "应聘职位",
+    "ja": "応募職種"
+  },
+  {
+    "key": "a11yUi.department",
+    "category": "a11yUi",
+    "vi": "Phòng ban",
+    "en": "Department",
+    "zh": "部门",
+    "ja": "部門"
+  },
+  {
+    "key": "a11yUi.candidateName",
+    "category": "a11yUi",
+    "vi": "Tên ứng viên",
+    "en": "Candidate name",
+    "zh": "应聘者姓名",
+    "ja": "応募者名"
+  },
+  {
+    "key": "a11yUi.email",
+    "category": "a11yUi",
+    "vi": "Email ứng viên",
+    "en": "Candidate email",
+    "zh": "应聘者邮箱",
+    "ja": "応募者メールアドレス"
+  },
+  {
+    "key": "a11yUi.phone",
+    "category": "a11yUi",
+    "vi": "SĐT ứng viên",
+    "en": "Candidate phone",
+    "zh": "应聘者电话",
+    "ja": "応募者電話番号"
+  },
+  {
+    "key": "a11yUi.experienceYears",
+    "category": "a11yUi",
+    "vi": "Số năm kinh nghiệm",
+    "en": "Years of experience",
+    "zh": "经验年数",
+    "ja": "経験年数"
+  },
+  {
+    "key": "a11yUi.coverLetter",
+    "category": "a11yUi",
+    "vi": "Lời giới thiệu",
+    "en": "Cover letter",
+    "zh": "求职信",
+    "ja": "志望動機"
+  },
+  {
+    "key": "a11yUi.appliedAt",
+    "category": "a11yUi",
+    "vi": "Ngày ứng tuyển",
+    "en": "Application date",
+    "zh": "应聘日期",
+    "ja": "応募日"
+  },
+  {
+    "key": "a11yUi.otpCode",
+    "category": "a11yUi",
+    "vi": "Mã OTP",
+    "en": "OTP code",
+    "zh": "一次性密码",
+    "ja": "ワンタイムパスワード"
+  },
+  {
+    "key": "a11yUi.otpExpireMinutes",
+    "category": "a11yUi",
+    "vi": "Thời gian hết hạn (phút)",
+    "en": "Expiry time (minutes)",
+    "zh": "有效期（分钟）",
+    "ja": "有効期限（分）"
+  },
+  {
+    "key": "a11yUi.addItem",
+    "category": "a11yUi",
+    "vi": "Thêm mục",
+    "en": "Add item",
+    "zh": "添加项目",
+    "ja": "項目を追加"
+  },
+  {
+    "key": "a11yUi.reason",
+    "category": "a11yUi",
+    "vi": "Lý do",
+    "en": "Reason",
+    "zh": "原因",
+    "ja": "理由"
+  },
+  {
+    "key": "a11yUi.mediaUrl",
+    "category": "a11yUi",
+    "vi": "Đường dẫn nội dung",
+    "en": "Media URL",
+    "zh": "媒体网址",
+    "ja": "メディアURL"
+  },
+  {
+    "key": "a11yUi.caption",
+    "category": "a11yUi",
+    "vi": "Chú thích",
+    "en": "Caption",
+    "zh": "说明",
+    "ja": "キャプション"
+  },
+  {
+    "key": "a11yUi.issuingAgency",
+    "category": "a11yUi",
+    "vi": "Cơ quan cấp phép",
+    "en": "Issuing authority",
+    "zh": "签发机构",
+    "ja": "発行機関"
+  },
+  {
+    "key": "a11yUi.pageSize",
+    "category": "a11yUi",
+    "vi": "Số dòng mỗi trang",
+    "en": "Rows per page",
+    "zh": "每页行数",
+    "ja": "ページあたりの行数"
+  },
+  {
+    "key": "a11yUi.activityContent",
+    "category": "a11yUi",
+    "vi": "Nội dung hoạt động",
+    "en": "Activity content",
+    "zh": "活动内容",
+    "ja": "活動内容"
+  },
+  {
+    "key": "a11yUi.activityType",
+    "category": "a11yUi",
+    "vi": "Loại hoạt động",
+    "en": "Activity type",
+    "zh": "活动类型",
+    "ja": "活動種別"
+  },
+  {
+    "key": "a11yUi.expiryState",
+    "category": "a11yUi",
+    "vi": "Tình trạng hiệu lực",
+    "en": "Expiry state",
+    "zh": "有效状态",
+    "ja": "有効期限の状態"
+  },
+  {
+    "key": "a11yUi.sectionHeading",
+    "category": "a11yUi",
+    "vi": "Tiêu đề phần",
+    "en": "Section heading",
+    "zh": "章节标题",
+    "ja": "セクション見出し"
+  },
+  {
+    "key": "a11yUi.bullet",
+    "category": "a11yUi",
+    "vi": "Nội dung danh sách",
+    "en": "List item text",
+    "zh": "列表项内容",
+    "ja": "リスト項目の内容"
+  },
+  {
+    "key": "a11yUi.content",
+    "category": "a11yUi",
+    "vi": "Nội dung",
+    "en": "Content",
+    "zh": "内容",
+    "ja": "内容"
+  },
+  {
+    "key": "a11yUi.shortTitle",
+    "category": "a11yUi",
+    "vi": "Tiêu đề ngắn",
+    "en": "Short title",
+    "zh": "短标题",
+    "ja": "短いタイトル"
+  },
+  {
+    "key": "a11yUi.slug",
+    "category": "a11yUi",
+    "vi": "Đường dẫn",
+    "en": "URL slug",
+    "zh": "网址标识",
+    "ja": "URLスラッグ"
+  },
+  {
+    "key": "a11yUi.tagline",
+    "category": "a11yUi",
+    "vi": "Khẩu hiệu",
+    "en": "Tagline",
+    "zh": "标语",
+    "ja": "タグライン"
+  },
+  {
+    "key": "a11yUi.introduction",
+    "category": "a11yUi",
+    "vi": "Giới thiệu",
+    "en": "Introduction",
+    "zh": "简介",
+    "ja": "紹介"
+  },
+  {
+    "key": "a11yUi.note",
+    "category": "a11yUi",
+    "vi": "Ghi chú",
+    "en": "Note",
+    "zh": "备注",
+    "ja": "備考"
+  },
+  {
+    "key": "a11yUi.checklistSchema",
+    "category": "a11yUi",
+    "vi": "Cấu trúc checklist JSON",
+    "en": "Checklist JSON schema",
+    "zh": "检查清单 JSON 结构",
+    "ja": "チェックリストのJSON構造"
+  },
+  {
+    "key": "a11yUi.recipientName",
+    "category": "a11yUi",
+    "vi": "Tên người nhận",
+    "en": "Recipient name",
+    "zh": "接收人姓名",
+    "ja": "受信者名"
+  },
+  {
+    "key": "a11yUi.recipientType",
+    "category": "a11yUi",
+    "vi": "Loại người nhận",
+    "en": "Recipient type",
+    "zh": "接收人类型",
+    "ja": "受信者種別"
+  },
+  {
+    "key": "a11yUi.role",
+    "category": "a11yUi",
+    "vi": "Vai trò",
+    "en": "Role",
+    "zh": "角色",
+    "ja": "役割"
+  },
+  {
+    "key": "a11yUi.scope",
+    "category": "a11yUi",
+    "vi": "Phạm vi",
+    "en": "Scope",
+    "zh": "范围",
+    "ja": "範囲"
+  },
+  {
+    "key": "a11yUi.scopeValue",
+    "category": "a11yUi",
+    "vi": "Giá trị phạm vi",
+    "en": "Scope value",
+    "zh": "范围值",
+    "ja": "範囲の値"
+  }
+]

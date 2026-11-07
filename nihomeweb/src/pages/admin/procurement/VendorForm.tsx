@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
@@ -57,6 +60,7 @@ const initialValue = (vendor?: VendorResponse): VendorFormValue => ({
 const optional = (value?: string) => value?.trim() || undefined;
 
 export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormProps) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [form, setForm] = useState<VendorFormValue>(() => initialValue(vendor));
   const [saving, setSaving] = useState(false);
@@ -118,7 +122,7 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
       pendingUploadRef.current = null;
       setPendingUpload(null);
     } catch (submitError) {
-      setError(extractApiError(submitError));
+      setError(uiError(submitError));
     } finally {
       setSaving(false);
     }
@@ -172,7 +176,7 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
       <div className="grid gap-4 sm:grid-cols-2">
         {field("vendorCode", "proc.vendors.field.code", { required: true, maxLength: 50 })}
         {field("companyName", "proc.vendors.field.companyName", { required: true, maxLength: 300 })}
-        <div className="space-y-2">
+        <FieldScope className="space-y-2">
           <Label>{t("proc.vendors.field.type")}</Label>
           <Select
             value={form.vendorType}
@@ -190,7 +194,7 @@ export default function VendorForm({ vendor, onSubmit, onCancel }: VendorFormPro
               ))}
             </SelectContent>
           </Select>
-        </div>
+        </FieldScope>
         {field("taxCode", "proc.vendors.field.taxCode", { maxLength: 20 })}
         {field("contactPerson", "proc.vendors.field.contactPerson", { maxLength: 150 })}
         {field("phone", "proc.vendors.field.phone", { maxLength: 20 })}

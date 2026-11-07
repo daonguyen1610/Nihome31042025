@@ -1,3 +1,10 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import StatTile from "./ConstructionStatTile";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -82,7 +89,7 @@ const CONSTRUCTION_STATUSES: ConstructionTaskStatus[] = [
 ];
 
 const STATUS_BADGE: Record<ConstructionTaskStatus, string> = {
-  Planned: "border-slate-200 bg-slate-50 text-slate-700",
+  Planned: "border-border bg-muted/30 text-foreground",
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
   Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
@@ -200,6 +207,7 @@ const buildGantt = (tasks: ConstructionTaskResponse[]) => {
 // ------------------------------- page ---------------------------------
 
 const AdminConstructionTasks = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -230,6 +238,7 @@ const AdminConstructionTasks = () => {
   const [status, setStatus] = useState<ConstructionTaskStatus | "">("");
   const [ownerUserId, setOwnerUserId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 50;
@@ -274,7 +283,9 @@ const AdminConstructionTasks = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.listDesignProjects({ pageSize: 200 });
+        const { data } = await collectLookupPages((page) =>
+          adminApi.listDesignProjects({ pageSize: 200, page }),
+        );
         if (cancelled) return;
         setProjects(data.items ?? []);
       } catch {
@@ -377,7 +388,9 @@ const AdminConstructionTasks = () => {
     };
   }, [detail?.designProjectId, projects]);
 
+  const startListRequest = useRequestGuard();
   const fetchList = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
@@ -385,9 +398,10 @@ const AdminConstructionTasks = () => {
       if (projectId != null) params.designProjectId = projectId;
       if (status) params.status = status;
       if (ownerUserId != null) params.ownerUserId = ownerUserId;
-      if (search.trim()) params.search = search.trim();
+      if (settledSearch.trim()) params.search = settledSearch.trim();
       if (overdueOnly) params.overdueOnly = true;
       const { data } = await adminApi.listConstructionTasks(params);
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
       setStatusCounts(data.statusCounts ?? {});
@@ -403,16 +417,28 @@ const AdminConstructionTasks = () => {
         return next;
       });
     } catch (err) {
-      setError(extractApiError(err));
+      if (!isCurrent()) return;
+      setError(uiError(err));
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [page, pageSize, projectId, status, ownerUserId, search, overdueOnly, t, toast]);
+  }, [
+    startListRequest,
+    page,
+    projectId,
+    status,
+    ownerUserId,
+    settledSearch,
+    overdueOnly,
+    uiError,
+    toast,
+    t,
+  ]);
 
   useEffect(() => {
     void fetchList();
@@ -501,7 +527,7 @@ const AdminConstructionTasks = () => {
       setCreating(false);
       await fetchList();
     } catch (err) {
-      setCreateError(extractApiError(err));
+      setCreateError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -517,10 +543,13 @@ const AdminConstructionTasks = () => {
     // (independent of the current filter/pagination). Fire-and-forget
     // — the picker falls back to the visible rows while it loads.
     try {
-      const { data } = await adminApi.listConstructionTasks({
-        designProjectId: row.designProjectId,
-        pageSize: 200,
-      });
+      const { data } = await collectLookupPages((page) =>
+        adminApi.listConstructionTasks({
+          designProjectId: row.designProjectId,
+          pageSize: 200,
+          page,
+        }),
+      );
       setDetailSiblings(data.items ?? []);
     } catch {
       setDetailSiblings([]);
@@ -536,11 +565,11 @@ const AdminConstructionTasks = () => {
       .catch((err) =>
         toast({
           title: t("common.error"),
-          description: extractApiError(err),
+          description: uiError(err),
           variant: "destructive",
         }),
       );
-  }, [openDetail, requestedTaskId, t, toast]);
+  }, [openDetail, requestedTaskId, t, toast, uiError]);
   const closeDetail = () => {
     setDetail(null);
     setDetailForm(null);
@@ -621,7 +650,7 @@ const AdminConstructionTasks = () => {
       setDetailPreds(latest.predecessors.map((p) => p.predecessorTaskId));
       await fetchList();
     } catch (err) {
-      setDetailError(extractApiError(err));
+      setDetailError(uiError(err));
     } finally {
       setDetailSaving(false);
     }
@@ -640,7 +669,7 @@ const AdminConstructionTasks = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -694,7 +723,7 @@ const AdminConstructionTasks = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -745,10 +774,10 @@ const AdminConstructionTasks = () => {
         {/* header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">
+            <h1 className="text-2xl font-semibold text-foreground">
               {t("constructionTasks.title")}
             </h1>
-            <p className="text-sm text-slate-500">{t("constructionTasks.subtitle")}</p>
+            <p className="text-sm text-muted-foreground">{t("constructionTasks.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -780,36 +809,32 @@ const AdminConstructionTasks = () => {
             icon={<HardHat className="h-6 w-6" />}
             label={t("constructionTasks.stat.total")}
             value={total}
-            gradient="from-indigo-500 to-violet-600"
           />
           <StatTile
             icon={<CircleDot className="h-6 w-6" />}
             label={t("constructionTasks.stat.inProgress")}
             value={statusPillCount("InProgress")}
-            gradient="from-sky-500 to-blue-600"
           />
           <StatTile
             icon={<CheckCircle2 className="h-6 w-6" />}
             label={t("constructionTasks.stat.completed")}
             value={statusPillCount("Completed")}
-            gradient="from-emerald-500 to-teal-600"
           />
           <StatTile
             icon={<AlertTriangle className="h-6 w-6" />}
             label={t("constructionTasks.stat.overdue")}
             value={overdueCount}
-            gradient="from-amber-500 to-orange-600"
           />
         </div>
 
         {/* filters */}
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           {/* `min-w-0` on every grid item so long option labels (project
               codes + names) truncate via SearchableSelect's own `truncate`
               instead of blowing past the viewport on narrow screens. */}
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
-            <div>
-              <Label className="text-xs text-slate-500">
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
                 {t("constructionTasks.field.project")}
               </Label>
               <SearchableSelect
@@ -821,9 +846,9 @@ const AdminConstructionTasks = () => {
                 options={projectOptions}
                 placeholder={t("constructionTasks.filter.allProjects")}
               />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
                 {t("constructionTasks.field.status")}
               </Label>
               <Select
@@ -847,9 +872,11 @@ const AdminConstructionTasks = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("constructionTasks.field.owner")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
+                {t("constructionTasks.field.owner")}
+              </Label>
               {canListUsers ? (
                 <SearchableSelect
                   ariaLabel={t("constructionTasks.field.owner")}
@@ -864,13 +891,13 @@ const AdminConstructionTasks = () => {
               ) : (
                 <Input value="—" disabled />
               )}
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
                 {t("constructionTasks.filter.search")}
               </Label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
                   value={search}
@@ -882,10 +909,10 @@ const AdminConstructionTasks = () => {
                   data-testid="construction-search"
                 />
               </div>
-            </div>
+            </FieldScope>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <Checkbox
                 checked={overdueOnly}
                 onCheckedChange={(v) => {
@@ -922,7 +949,7 @@ const AdminConstructionTasks = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
             {t("constructionTasks.empty")}
           </div>
         ) : view === "list" ? (
@@ -948,21 +975,23 @@ const AdminConstructionTasks = () => {
                     }
                   }}
                   className={cn(
-                    "relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-slate-300 hover:shadow-md focus:outline-none focus:ring-2 focus:ring-slate-300",
+                    "relative rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-input hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring",
                     row.isOverdue && "border-amber-300 bg-amber-50/40",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-mono text-xs text-slate-500">{row.taskCode}</span>
+                        <span className="font-mono text-xs text-muted-foreground">
+                          {row.taskCode}
+                        </span>
                         {row.wbs && (
-                          <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-500">
+                          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] text-muted-foreground">
                             WBS {row.wbs}
                           </span>
                         )}
                       </div>
-                      <div className="mt-1 line-clamp-2 text-base font-semibold text-slate-900">
+                      <div className="mt-1 line-clamp-2 text-base font-semibold text-foreground">
                         {row.name}
                       </div>
                     </div>
@@ -979,38 +1008,38 @@ const AdminConstructionTasks = () => {
                   </div>
                   <div className="mt-2">{renderStatusBadge(row)}</div>
                   {row.predecessors.length > 0 && (
-                    <div className="mt-2 text-[11px] text-slate-500">
+                    <div className="mt-2 text-[11px] text-muted-foreground">
                       ← {row.predecessors.map((p) => p.predecessorTaskCode).join(", ")}
                     </div>
                   )}
                   <div className="mt-3 flex items-center gap-2">
                     <Progress value={row.progressPercent} className="h-2 flex-1" />
-                    <span className="w-10 text-right text-xs font-medium tabular-nums text-slate-700">
+                    <span className="w-10 text-right text-xs font-medium tabular-nums text-foreground">
                       {row.progressPercent}%
                     </span>
                   </div>
-                  <div className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-600">
+                  <div className="mt-3 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {t("constructionTasks.field.plannedStart")}
                       </div>
                       <div>{formatDate(row.plannedStart, lang)}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {t("constructionTasks.field.plannedEnd")}
                       </div>
                       <div>{formatDate(row.plannedEnd, lang)}</div>
                     </div>
                     <div className="col-span-2">
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {t("constructionTasks.field.owner")}
                       </div>
                       <div>{row.ownerName ?? "—"}</div>
                     </div>
                   </div>
                   {canManage && (
-                    <div className="mt-3 flex items-center justify-end border-t border-slate-100 pt-3">
+                    <div className="mt-3 flex items-center justify-end border-t border-border pt-3">
                       <Button
                         size="sm"
                         variant="ghost"
@@ -1027,7 +1056,7 @@ const AdminConstructionTasks = () => {
                   )}
                 </div>
               ))}
-              <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
+              <div className="flex items-center justify-between px-1 pt-1 text-xs text-muted-foreground">
                 <span>
                   {t("common.showing")} {rows.length} / {total}
                 </span>
@@ -1057,10 +1086,10 @@ const AdminConstructionTasks = () => {
 
             {/* Desktop table (md+) — table has too many columns to fit
                 on a phone; hidden below `md` in favour of the cards. */}
-            <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm md:block">
+            <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-sm md:block">
               <div className="max-h-[70vh] overflow-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       {canManage && (
                         <th className="w-8 px-3 py-2">
@@ -1082,12 +1111,12 @@ const AdminConstructionTasks = () => {
                       <th className="px-3 py-2" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border">
                     {rows.map((row) => (
                       <tr
                         key={row.id}
                         className={cn(
-                          "cursor-pointer hover:bg-slate-50",
+                          "cursor-pointer hover:bg-muted/30",
                           row.isOverdue && "bg-amber-50/40",
                         )}
                         onClick={() => void openDetail(row)}
@@ -1102,21 +1131,21 @@ const AdminConstructionTasks = () => {
                             />
                           </td>
                         )}
-                        <td className="px-3 py-2 font-mono text-xs text-slate-600">
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                           {row.taskCode}
                           {row.wbs && (
-                            <div className="text-[10px] text-slate-400">WBS {row.wbs}</div>
+                            <div className="text-[10px] text-muted-foreground">WBS {row.wbs}</div>
                           )}
                         </td>
                         <td className="px-3 py-2">
                           <span
-                            className="font-medium text-slate-900"
+                            className="font-medium text-foreground"
                             data-testid={`construction-detail-${row.id}`}
                           >
                             {row.name}
                           </span>
                           {row.predecessors.length > 0 && (
-                            <div className="mt-0.5 text-[11px] text-slate-400">
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">
                               ← {row.predecessors.map((p) => p.predecessorTaskCode).join(", ")}
                             </div>
                           )}
@@ -1125,18 +1154,20 @@ const AdminConstructionTasks = () => {
                         <td className="px-3 py-2">
                           <div className="flex items-center gap-2">
                             <Progress value={row.progressPercent} className="h-2 w-20" />
-                            <span className="text-xs tabular-nums text-slate-600">
+                            <span className="text-xs tabular-nums text-muted-foreground">
                               {row.progressPercent}%
                             </span>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
                           {formatDate(row.plannedStart, lang)}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
                           {formatDate(row.plannedEnd, lang)}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">{row.ownerName ?? "—"}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                          {row.ownerName ?? "—"}
+                        </td>
                         <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                           {canManage && (
                             <Button
@@ -1156,7 +1187,7 @@ const AdminConstructionTasks = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                 <span>
                   {t("common.showing")} {rows.length} / {total}
                 </span>
@@ -1196,7 +1227,7 @@ const AdminConstructionTasks = () => {
               <DialogDescription>{t("constructionTasks.form.hint")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
-              <div>
+              <FieldScope>
                 <Label>{t("constructionTasks.field.project")}</Label>
                 <SearchableSelect
                   value={
@@ -1208,61 +1239,61 @@ const AdminConstructionTasks = () => {
                   options={projectOptions.filter((o) => o.value !== "")}
                   placeholder={t("constructionTasks.selectProject")}
                 />
-              </div>
+              </FieldScope>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("constructionTasks.field.taskCode")}</Label>
                   <Input
                     value={createForm.taskCode}
                     onChange={(e) => setCreateForm((f) => ({ ...f, taskCode: e.target.value }))}
                     placeholder="T-005"
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("constructionTasks.field.wbs")}</Label>
                   <Input
                     value={createForm.wbs}
                     onChange={(e) => setCreateForm((f) => ({ ...f, wbs: e.target.value }))}
                     placeholder="1.2.3"
                   />
-                </div>
+                </FieldScope>
               </div>
-              <div>
+              <FieldScope>
                 <Label>{t("constructionTasks.field.name")}</Label>
                 <Input
                   value={createForm.name}
                   onChange={(e) => setCreateForm((f) => ({ ...f, name: e.target.value }))}
                   data-testid="construction-new-name"
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("constructionTasks.field.description")}</Label>
                 <Textarea
                   rows={2}
                   value={createForm.description}
                   onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
                 />
-              </div>
+              </FieldScope>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("constructionTasks.field.plannedStart")}</Label>
                   <Input
                     type="date"
                     value={createForm.plannedStart}
                     onChange={(e) => setCreateForm((f) => ({ ...f, plannedStart: e.target.value }))}
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("constructionTasks.field.plannedEnd")}</Label>
                   <Input
                     type="date"
                     value={createForm.plannedEnd}
                     onChange={(e) => setCreateForm((f) => ({ ...f, plannedEnd: e.target.value }))}
                   />
-                </div>
+                </FieldScope>
               </div>
               {createScheduleItems.length > 0 && (
-                <div>
+                <FieldScope>
                   <Label>{t("constructionTasks.field.masterWbs")}</Label>
                   <Select
                     value={createForm.projectScheduleNodeId}
@@ -1284,14 +1315,14 @@ const AdminConstructionTasks = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FieldScope>
               )}
               {createScheduleFailed && (
                 <p className="text-sm text-rose-600">
                   {t("constructionTasks.form.masterWbsLoadFailed")}
                 </p>
               )}
-              <div>
+              <FieldScope>
                 <Label>{t("constructionTasks.field.owner")}</Label>
                 {canListUsers ? (
                   <SearchableSelect
@@ -1306,7 +1337,7 @@ const AdminConstructionTasks = () => {
                 ) : (
                   <Input value="—" disabled />
                 )}
-              </div>
+              </FieldScope>
               {createError && <div className="text-sm text-rose-600">{createError}</div>}
             </div>
             <DialogFooter>
@@ -1334,7 +1365,7 @@ const AdminConstructionTasks = () => {
                   <SheetTitle>
                     {detail.taskCode} — {detail.name}
                   </SheetTitle>
-                  <SheetDescription className="text-xs text-slate-500">
+                  <SheetDescription className="text-xs text-muted-foreground">
                     {detail.designProjectCode} · {detail.designProjectName}
                   </SheetDescription>
                 </SheetHeader>
@@ -1342,24 +1373,24 @@ const AdminConstructionTasks = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     {renderStatusBadge(detail)}
                   </div>
-                  <div>
+                  <FieldScope>
                     <Label>{t("constructionTasks.field.name")}</Label>
                     <Input
                       value={detailForm.name}
                       onChange={(e) => setDetailForm((f) => f && { ...f, name: e.target.value })}
                       disabled={!canManage}
                     />
-                  </div>
+                  </FieldScope>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <FieldScope>
                       <Label>{t("constructionTasks.field.wbs")}</Label>
                       <Input
                         value={detailForm.wbs}
                         onChange={(e) => setDetailForm((f) => f && { ...f, wbs: e.target.value })}
                         disabled={!canManage}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("constructionTasks.field.status")}</Label>
                       <Select
                         value={detailForm.status}
@@ -1379,10 +1410,10 @@ const AdminConstructionTasks = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
+                    </FieldScope>
                   </div>
                   {detailScheduleItems.length > 0 && (
-                    <div>
+                    <FieldScope>
                       <Label>{t("constructionTasks.field.masterWbs")}</Label>
                       <Select
                         value={detailForm.projectScheduleNodeId}
@@ -1408,14 +1439,14 @@ const AdminConstructionTasks = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
+                    </FieldScope>
                   )}
                   {detailScheduleFailed && (
                     <p className="text-sm text-rose-600">
                       {t("constructionTasks.form.masterWbsLoadFailed")}
                     </p>
                   )}
-                  <div>
+                  <FieldScope>
                     <Label>{t("constructionTasks.field.description")}</Label>
                     <Textarea
                       rows={2}
@@ -1425,9 +1456,9 @@ const AdminConstructionTasks = () => {
                       }
                       disabled={!canManage}
                     />
-                  </div>
+                  </FieldScope>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <FieldScope>
                       <Label>{t("constructionTasks.field.plannedStart")}</Label>
                       <Input
                         type="date"
@@ -1437,8 +1468,8 @@ const AdminConstructionTasks = () => {
                         }
                         disabled={!canManage}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("constructionTasks.field.plannedEnd")}</Label>
                       <Input
                         type="date"
@@ -1448,8 +1479,8 @@ const AdminConstructionTasks = () => {
                         }
                         disabled={!canManage}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("constructionTasks.field.actualStart")}</Label>
                       <Input
                         type="date"
@@ -1459,8 +1490,8 @@ const AdminConstructionTasks = () => {
                         }
                         disabled={!canManage}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("constructionTasks.field.actualEnd")}</Label>
                       <Input
                         type="date"
@@ -1470,9 +1501,9 @@ const AdminConstructionTasks = () => {
                         }
                         disabled={!canManage}
                       />
-                    </div>
+                    </FieldScope>
                   </div>
-                  <div>
+                  <FieldScope>
                     <Label>
                       {t("constructionTasks.field.progress")}: {detailForm.progressPercent}%
                     </Label>
@@ -1488,8 +1519,8 @@ const AdminConstructionTasks = () => {
                       disabled={!canManage}
                       data-testid="construction-progress-slider"
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("constructionTasks.field.owner")}</Label>
                     {canListUsers ? (
                       <SearchableSelect
@@ -1504,15 +1535,15 @@ const AdminConstructionTasks = () => {
                     ) : (
                       <Input value={detail.ownerName ?? "—"} disabled />
                     )}
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("constructionTasks.field.predecessors")}</Label>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-muted-foreground">
                       {t("constructionTasks.detail.selectPredecessors")}
                     </p>
-                    <div className="mt-2 max-h-40 overflow-auto rounded-md border border-slate-200 p-2">
+                    <div className="mt-2 max-h-40 overflow-auto rounded-md border border-border p-2">
                       {predecessorOptions.length === 0 ? (
-                        <div className="text-xs text-slate-400">
+                        <div className="text-xs text-muted-foreground">
                           {t("constructionTasks.detail.noPredecessors")}
                         </div>
                       ) : (
@@ -1524,23 +1555,25 @@ const AdminConstructionTasks = () => {
                               key={opt.value}
                               className="flex cursor-pointer items-center gap-2 py-1 text-sm"
                             >
-                              <Checkbox
-                                checked={checked}
-                                onCheckedChange={(v) => {
-                                  if (!canManage) return;
-                                  setDetailPreds((prev) =>
-                                    v ? [...prev, id] : prev.filter((x) => x !== id),
-                                  );
-                                }}
-                                disabled={!canManage}
-                              />
+                              <FieldControl>
+                                <Checkbox
+                                  checked={checked}
+                                  onCheckedChange={(v) => {
+                                    if (!canManage) return;
+                                    setDetailPreds((prev) =>
+                                      v ? [...prev, id] : prev.filter((x) => x !== id),
+                                    );
+                                  }}
+                                  disabled={!canManage}
+                                />
+                              </FieldControl>
                               {opt.label}
                             </label>
                           );
                         })
                       )}
                     </div>
-                  </div>
+                  </FieldScope>
                   <ConstructionTaskDrawings
                     key={detail.id}
                     taskId={detail.id}
@@ -1631,46 +1664,6 @@ const AdminConstructionTasks = () => {
   );
 };
 
-// -------------------- small building blocks --------------------
-
-interface StatTileProps {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  /** Tailwind `from-…` `to-…` classes; drives the card background. */
-  gradient: string;
-}
-
-/**
- * Bold gradient stat card — matches the marketing dashboard styling
- * (icon in a translucent square on the right, big white number). Kept
- * responsive: the label stays legible when the card halves at
- * `grid-cols-2` on mobile.
- */
-const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
-  <div
-    className={cn(
-      "relative overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-sm",
-      gradient,
-    )}
-  >
-    <div className="relative z-10 flex items-start justify-between gap-2">
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-white/85">{label}</div>
-        <div className="mt-1 text-3xl font-bold tabular-nums leading-none">{value}</div>
-      </div>
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/20 backdrop-blur-sm">
-        {icon}
-      </div>
-    </div>
-    {/* Decorative background bubble — pure CSS, non-interactive. */}
-    <div
-      aria-hidden
-      className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"
-    />
-  </div>
-);
-
 interface GanttChartProps {
   data: { rows: GanttRow[]; totalDays: number; startIso: string };
   lang: string;
@@ -1683,7 +1676,7 @@ const DAY_WIDTH = 14; // px per day — keeps a 3-month window under ~1300px
 const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
   if (data.rows.length === 0) {
     return (
-      <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+      <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
         {t("constructionTasks.empty")}
       </div>
     );
@@ -1691,10 +1684,10 @@ const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
   const totalWidth = Math.max(600, data.totalDays * DAY_WIDTH);
   return (
     <div
-      className="overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm"
+      className="overflow-hidden rounded-lg border border-border bg-card shadow-sm"
       data-testid="construction-gantt"
     >
-      <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+      <div className="flex items-center justify-between border-b border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
         <span>
           {formatDate(data.startIso, lang)} — {data.totalDays} {t("common.days")}
         </span>
@@ -1702,29 +1695,29 @@ const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
       <div className="max-h-[70vh] overflow-auto">
         <div className="min-w-[720px]">
           <div className="grid" style={{ gridTemplateColumns: "240px 1fr" }}>
-            <div className="border-b border-r border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase text-slate-500">
+            <div className="border-b border-r border-border bg-muted/30 px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
               {t("constructionTasks.field.name")}
             </div>
-            <div className="border-b border-slate-100 bg-slate-50 px-3 py-2 text-xs font-semibold uppercase text-slate-500">
+            <div className="border-b border-border bg-muted/30 px-3 py-2 text-xs font-semibold uppercase text-muted-foreground">
               {t("constructionTasks.gantt.timeline")}
             </div>
             {data.rows.map(({ task, offsetDays, spanDays }) => (
               <Fragment key={task.id}>
                 <button
                   type="button"
-                  className="border-b border-r border-slate-100 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                  className="border-b border-r border-border px-3 py-2 text-left text-sm hover:bg-muted/30"
                   onClick={() => onOpen(task)}
                 >
-                  <div className="font-mono text-xs text-slate-500">{task.taskCode}</div>
-                  <div className="line-clamp-1 text-slate-900">{task.name}</div>
+                  <div className="font-mono text-xs text-muted-foreground">{task.taskCode}</div>
+                  <div className="line-clamp-1 text-foreground">{task.name}</div>
                 </button>
                 <div
-                  className="relative border-b border-slate-100 px-3 py-3"
+                  className="relative border-b border-border px-3 py-3"
                   style={{ minWidth: totalWidth }}
                 >
                   <div
                     className={cn(
-                      "absolute top-2 h-6 rounded-md border text-[10px] font-semibold text-slate-900",
+                      "absolute top-2 h-6 rounded-md border text-[10px] font-semibold text-foreground",
                       STATUS_BADGE[task.status],
                       task.isOverdue && "ring-2 ring-amber-400",
                     )}
@@ -1736,7 +1729,7 @@ const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
                     data-testid={`construction-gantt-bar-${task.id}`}
                   >
                     <div
-                      className="h-full rounded-md bg-slate-900/10"
+                      className="h-full rounded-md bg-foreground/10"
                       style={{ width: `${task.progressPercent}%` }}
                     />
                     <div className="absolute inset-0 flex items-center px-2">

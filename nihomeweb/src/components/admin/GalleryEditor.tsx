@@ -79,6 +79,7 @@ const GalleryEditor = ({ items, onChange, folder }: GalleryEditorProps) => {
         </summary>
         <div className="mt-2 flex items-center gap-1">
           <Input
+            aria-label={t("a11yUi.mediaUrl")}
             className="h-9 flex-1"
             value={manualUrl}
             onChange={(e) => setManualUrl(e.target.value)}
@@ -122,7 +123,7 @@ const GalleryEditor = ({ items, onChange, folder }: GalleryEditorProps) => {
                 type="button"
                 size="icon"
                 variant="secondary"
-                className="absolute right-1 top-1 h-7 w-7 bg-white/90 text-destructive opacity-0 shadow transition group-hover:opacity-100 hover:bg-white hover:text-destructive"
+                className="absolute right-1 top-1 h-7 w-7 bg-card/90 text-destructive opacity-0 shadow transition group-hover:opacity-100 hover:bg-card hover:text-destructive"
                 onClick={() => remove(idx)}
                 aria-label={t("media.gallery.delete")}
               >

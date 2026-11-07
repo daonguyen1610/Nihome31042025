@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useState } from "react";
 import { ArrowLeft, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -29,6 +31,7 @@ import {
 import VendorForm from "./VendorForm";
 
 export default function VendorDetail() {
+  const uiError = useUiError();
   const { id } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -58,11 +61,11 @@ export default function VendorDetail() {
       const { data } = await adminApi.getVendor(vendorId);
       setVendor(data);
     } catch (loadError) {
-      setError(extractApiError(loadError) || t("common.error"));
+      setError(uiError(loadError) || t("common.error"));
     } finally {
       setLoading(false);
     }
-  }, [id, t]);
+  }, [id, t, uiError]);
 
   useEffect(() => {
     void load();
@@ -85,7 +88,7 @@ export default function VendorDetail() {
     try {
       setDeleteImpact((await adminApi.getVendorDeletionImpact(vendor.id)).data);
     } catch (impactError) {
-      setDeleteError(extractApiError(impactError) || t("common.error"));
+      setDeleteError(uiError(impactError) || t("common.error"));
     } finally {
       setLoadingImpact(false);
     }
@@ -104,7 +107,7 @@ export default function VendorDetail() {
         })
       ).data;
     } catch (deleteFailure) {
-      setDeleteError(extractApiError(deleteFailure) || t("common.error"));
+      setDeleteError(uiError(deleteFailure) || t("common.error"));
       throw deleteFailure;
     } finally {
       setDeleting(false);
