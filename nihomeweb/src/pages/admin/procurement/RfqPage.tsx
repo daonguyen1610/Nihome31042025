@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useEffect, useRef, useState, type MouseEvent } from "react";
 import { personOption } from "@/lib/people";
 import { MoveHorizontal } from "lucide-react";
@@ -51,6 +55,7 @@ const statuses: RfqStatus[] = [
 const emptyReferences: RfqReferences = { revisions: [], vendors: [], owners: [], documents: [] };
 
 export default function RfqPage() {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [params, setParams] = useSearchParams();
   const projectId = Number(params.get("projectId")) || 0;
@@ -64,14 +69,16 @@ export default function RfqPage() {
     setLoading(true);
     setError("");
     (async () => {
-      const first = (await adminApi.listOperationalProjects({ page: 1, pageSize: 100 })).data;
-      const rows = [...first.items];
-      for (let page = 2; page <= Math.ceil(first.total / 100); page++)
-        rows.push(...(await adminApi.listOperationalProjects({ page, pageSize: 100 })).data.items);
+      const first = (
+        await collectLookupPages((page) =>
+          adminApi.listOperationalProjects({ pageSize: 100, page }),
+        )
+      ).data;
+      const rows = first.items;
       if (!cancelled) setProjects(rows);
     })()
       .catch((e) => {
-        if (!cancelled) setError(extractApiError(e));
+        if (!cancelled) setError(uiError(e));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -79,7 +86,7 @@ export default function RfqPage() {
     return () => {
       cancelled = true;
     };
-  }, [retry]);
+  }, [retry, uiError]);
   const project = projects.find((x) => x.id === projectId);
   return (
     <AdminLayout>
@@ -144,6 +151,7 @@ function RfqWorkspace({
   rfqId: number;
   onSelect: (id: number) => void;
 }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { has } = usePermissions();
   const projectId = project.id;
@@ -184,7 +192,8 @@ function RfqWorkspace({
   const [reason, setReason] = useState("");
   const [documentId, setDocumentId] = useState(0);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
-  const filterJson = JSON.stringify(filter);
+  const settledSearch = useDebouncedValue(filter.search);
+  const filterJson = JSON.stringify({ ...filter, search: settledSearch });
   const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 4 });
   const quantity = new Intl.NumberFormat(lang, { maximumFractionDigits: 6 });
   const date = (value: string | null) => (value ? new Date(value).toLocaleString(lang) : "—");
@@ -207,7 +216,7 @@ function RfqWorkspace({
         setDetail(item?.data ?? null);
       })
       .catch((e) => {
-        if (!cancelled) setError(extractApiError(e));
+        if (!cancelled) setError(uiError(e));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -215,7 +224,7 @@ function RfqWorkspace({
     return () => {
       cancelled = true;
     };
-  }, [projectId, rfqId, filterJson, refresh]);
+  }, [projectId, rfqId, filterJson, refresh, uiError]);
   useEffect(() => {
     setReason("");
     setDocumentId(0);
@@ -255,7 +264,7 @@ function RfqWorkspace({
       onSelect(result.data.header.id);
       setRefresh((x) => x + 1);
     } catch (e) {
-      if (mounted.current) setActionError(extractApiError(e));
+      if (mounted.current) setActionError(uiError(e));
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -272,13 +281,13 @@ function RfqWorkspace({
           await rfqApi.upload(projectId, file);
         } catch (e) {
           failedFiles.push(file);
-          failed.push(`${file.name}: ${extractApiError(e)}`);
+          failed.push(`${file.name}: ${uiError(e)}`);
         }
       }
       const refs = (await rfqApi.references(projectId)).data;
       if (mounted.current) setReferences(refs);
     } catch (e) {
-      if (mounted.current) setActionError(extractApiError(e));
+      if (mounted.current) setActionError(uiError(e));
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -297,7 +306,7 @@ function RfqWorkspace({
       setDetail(fresh);
       setDialog("award");
     } catch (reason) {
-      if (mounted.current) setActionError(extractApiError(reason));
+      if (mounted.current) setActionError(uiError(reason));
     } finally {
       if (mounted.current) setBusy(false);
     }
@@ -308,7 +317,7 @@ function RfqWorkspace({
     try {
       saveRfqDownload((await operation()).data, filename);
     } catch (e) {
-      setActionError(extractApiError(e));
+      setActionError(uiError(e));
     } finally {
       setBusy(false);
     }
@@ -937,7 +946,7 @@ function RfqWorkspace({
                                 (file) => !added.includes(file) || failed.includes(file),
                               ),
                             ),
-                          (error) => setActionError(extractApiError(error)),
+                          (error) => setActionError(uiError(error)),
                         );
                       }}
                       disabled={busy}
@@ -949,7 +958,7 @@ function RfqWorkspace({
                         variant="outline"
                         onClick={() =>
                           void upload(uploadFiles).then(setUploadFiles, (error) =>
-                            setActionError(extractApiError(error)),
+                            setActionError(uiError(error)),
                           )
                         }
                       >

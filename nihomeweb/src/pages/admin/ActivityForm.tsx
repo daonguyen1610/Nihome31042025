@@ -1,3 +1,4 @@
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save } from "lucide-react";
@@ -331,10 +332,10 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
 };
 
 const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
+  <FieldScope className="space-y-1.5">
     <Label className="text-xs">{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 export default ActivityForm;

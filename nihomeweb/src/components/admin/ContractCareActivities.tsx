@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useRef, useState } from "react";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { Button } from "@/components/ui/button";
@@ -28,6 +30,7 @@ export default function ContractCareActivities({
   contractId: number;
   canManage: boolean;
 }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const [page, setPage] = useState(1);
@@ -52,7 +55,7 @@ export default function ContractCareActivities({
         if (active) setData(result);
       })
       .catch((reason) => {
-        if (active) setError(extractApiError(reason));
+        if (active) setError(uiError(reason));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -60,7 +63,7 @@ export default function ContractCareActivities({
     return () => {
       active = false;
     };
-  }, [contractId, page, refresh]);
+  }, [contractId, page, refresh, uiError]);
 
   const save = async () => {
     if (submitting.current) return;
@@ -88,7 +91,7 @@ export default function ContractCareActivities({
       setRefresh((value) => value + 1);
       toast({ title: t("contracts.care.saved") });
     } catch (reason) {
-      setSaveError(extractApiError(reason));
+      setSaveError(uiError(reason));
     } finally {
       submitting.current = false;
       setSaving(false);

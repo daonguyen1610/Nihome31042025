@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { ArrowLeft, Plus } from "lucide-react";
@@ -18,6 +21,7 @@ import {
 } from "@/services/adminApi";
 
 const OpportunityDesignCreate = () => {
+  const uiError = useUiError();
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
@@ -74,7 +78,7 @@ const OpportunityDesignCreate = () => {
               : null),
         );
       } catch (reason) {
-        if (!cancelled) setError(extractApiError(reason));
+        if (!cancelled) setError(uiError(reason));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -82,7 +86,7 @@ const OpportunityDesignCreate = () => {
     return () => {
       cancelled = true;
     };
-  }, [opportunityId, requestedProjectId, invalidOpportunity]);
+  }, [opportunityId, requestedProjectId, invalidOpportunity, uiError]);
 
   const createProjectPath = opportunity
     ? `/admin/operational-projects?create=1&customerId=${opportunity.customerId}&returnOpportunity=${opportunity.id}`
@@ -133,7 +137,7 @@ const OpportunityDesignCreate = () => {
       });
       navigate(backPath);
     } catch (reason) {
-      setFormError(extractApiError(reason));
+      setFormError(uiError(reason));
     } finally {
       setSaving(false);
     }
@@ -178,13 +182,13 @@ const OpportunityDesignCreate = () => {
                   {t("opportunities.designProject.alreadyExists")}
                 </p>
               )}
-              <div>
+              <FieldScope>
                 <Label>{t("opportunities.field.customer")}</Label>
                 <Input
                   value={opportunity.customerName ?? String(opportunity.customerId)}
                   disabled
                 />
-              </div>
+              </FieldScope>
               <div>
                 <Label htmlFor="design-project-name">{t("designProjects.field.name")}</Label>
                 <Input
@@ -194,7 +198,7 @@ const OpportunityDesignCreate = () => {
                   onChange={(event) => setName(event.target.value)}
                 />
               </div>
-              <div className="space-y-2">
+              <FieldScope className="space-y-2">
                 <Label>{t("opportunities.field.operationalProject")}</Label>
                 <SearchableSelect
                   value={projectId ? String(projectId) : null}
@@ -215,7 +219,7 @@ const OpportunityDesignCreate = () => {
                     </Link>
                   </Button>
                 )}
-              </div>
+              </FieldScope>
               <div>
                 <Label htmlFor="design-project-note">{t("designProjects.field.note")}</Label>
                 <Textarea

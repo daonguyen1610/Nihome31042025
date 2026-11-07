@@ -1,3 +1,5 @@
+import { FieldScope } from "@/components/ui/field-scope";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -97,6 +99,7 @@ function getErrorMessage(error: unknown) {
 }
 
 const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -147,8 +150,8 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
     ? "rounded-lg border bg-card p-4 transition hover:shadow-md"
     : "rounded-lg border bg-card p-3 transition hover:shadow-md";
   const imageFrameClassName = isAwards
-    ? "aspect-[4/3] rounded-md border bg-white flex items-center justify-center overflow-hidden mb-3"
-    : "aspect-[16/10] rounded-md border bg-white flex items-center justify-center overflow-hidden mb-2.5";
+    ? "aspect-[4/3] rounded-md border bg-card flex items-center justify-center overflow-hidden mb-3"
+    : "aspect-[16/10] rounded-md border bg-card flex items-center justify-center overflow-hidden mb-2.5";
 
   const updateForm = <K extends keyof LogoFormData>(key: K, value: LogoFormData[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -251,7 +254,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   };
 
   const remove = async (item: LogoResponse) => {
-    if (!window.confirm(`${t("logoAdmin.confirmDelete")} "${item.name}"?`)) return;
+    if (!(await confirmAction(`${t("logoAdmin.confirmDelete")} "${item.name}"?`))) return;
 
     try {
       await adminApi.deleteLogo(item.id);
@@ -396,7 +399,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
               {items.map((item) => (
                 <div key={item.id} className={`${cardClassName} relative`}>
                   <div
-                    className="absolute top-2 right-2 z-10 rounded bg-white/90 p-1 shadow"
+                    className="absolute top-2 right-2 z-10 rounded bg-card/90 p-1 shadow"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -563,10 +566,10 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
 };
 
 const Field = ({ label, children }: { label: string; children: ReactNode }) => (
-  <div className="space-y-1.5">
+  <FieldScope className="space-y-1.5">
     <Label className="text-xs">{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 const LogoPreview = ({

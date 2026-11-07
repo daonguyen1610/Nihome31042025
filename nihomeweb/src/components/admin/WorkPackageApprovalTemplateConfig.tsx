@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import { adminApi, type QuoteApprovalTemplates } from "@/services/adminApi";
 import { useI18n } from "@/lib/i18n";
@@ -57,6 +59,7 @@ export default function WorkPackageApprovalTemplateConfig({
   actionsContainer: HTMLDivElement | null;
   kind?: ApprovalTemplateKind;
 }) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { has } = usePermissions();
   const [data, setData] = useState<{ subject: string; body: string } | null>(null);
@@ -82,7 +85,7 @@ export default function WorkPackageApprovalTemplateConfig({
         }
       })
       .catch((cause) => {
-        if (active) setError(extractApiError(cause));
+        if (active) setError(uiError(cause));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -90,7 +93,7 @@ export default function WorkPackageApprovalTemplateConfig({
     return () => {
       active = false;
     };
-  }, [reload, kind]);
+  }, [reload, kind, uiError]);
   const save = async () => {
     if (!data) return;
     setBusy(true);
@@ -110,7 +113,7 @@ export default function WorkPackageApprovalTemplateConfig({
       }
       setSaved(true);
     } catch (cause) {
-      setError(extractApiError(cause));
+      setError(uiError(cause));
     } finally {
       setBusy(false);
     }

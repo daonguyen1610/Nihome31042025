@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -626,6 +628,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
 }
 
 export default function ProjectReports() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -704,7 +707,7 @@ export default function ProjectReports() {
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -830,7 +833,7 @@ export default function ProjectReports() {
           <PageLoading label={t("projectReports.loading")} />
         ) : activeQuery.isError ? (
           <PageError
-            message={extractApiError(activeQuery.error)}
+            message={uiError(activeQuery.error)}
             onRetry={() => void activeQuery.refetch()}
           />
         ) : projects.length === 0 ? (

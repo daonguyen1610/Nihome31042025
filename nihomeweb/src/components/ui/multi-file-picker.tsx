@@ -1,3 +1,4 @@
+import { useFieldId } from "@/components/ui/field-scope";
 import { useId, useMemo, useRef, useState } from "react";
 import { FileText, UploadCloud, X } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -54,7 +55,7 @@ export function MultiFilePicker({
 }: MultiFilePickerProps) {
   const { t } = useI18n();
   const generatedId = useId();
-  const inputId = id ?? generatedId;
+  const inputId = useFieldId(id) ?? generatedId;
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const [error, setError] = useState<string | null>(null);

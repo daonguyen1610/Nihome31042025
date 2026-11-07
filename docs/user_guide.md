@@ -94,6 +94,14 @@ Reports. Permissions hide items that the current user cannot access.
 | 7. Digital Assets | Automated project folder structure, Google Drive integration, document digitization | Organize, secure, and provide rapid access to project files |
 | 8. Dashboard and Analytics | Progress reports, acceptance reports, financial dashboards, procurement reports, risk alerts | Provide management oversight and early risk detection |
 
+The application supports a light interface. Field labels focus their associated
+controls, and confirmation buttons use the selected language. Cancelling a
+confirmation leaves the record unchanged and restores focus to the action.
+Search settles briefly after typing; paginated lists provide Previous/Next
+controls and the total number of matching records. Changing filters returns to
+the first page. If a selection list cannot load completely, reload before
+continuing rather than relying on a partial list.
+
 Within a Design project, the design-specific manager is labelled **Design
 Manager** (**Chủ nhiệm thiết kế**). This role is distinct from the Project
 Manager of the shared Operational Project. The assigned Design Manager and

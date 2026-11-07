@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useConfirm } from "@/components/ui/confirmation";
+import { FieldScope } from "@/components/ui/field-scope";
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { personOption, projectMemberOption, projectPositionLabel } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -120,11 +124,11 @@ const emptyAssignmentForm = (): AssignmentForm => ({
   note: null,
 });
 const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
-  Planned: "border-slate-200 bg-slate-50 text-slate-700",
+  Planned: "border-border bg-muted/30 text-foreground",
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
   Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
-  Reassigned: "border-slate-200 bg-slate-50 text-slate-700",
+  Reassigned: "border-border bg-muted/30 text-foreground",
 };
 
 export const ProjectTeamHistory = ({
@@ -134,20 +138,22 @@ export const ProjectTeamHistory = ({
 }) => {
   const { t, lang } = useI18n();
   return (
-    <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-      <h2 className="flex items-center gap-2 font-semibold text-slate-900">
-        <History className="h-4 w-4 text-slate-500" />
+    <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
+      <h2 className="flex items-center gap-2 font-semibold text-foreground">
+        <History className="h-4 w-4 text-muted-foreground" />
         {t("designProjects.team.history.title")}
       </h2>
       {history.length === 0 ? (
-        <p className="mt-4 text-sm text-slate-500">{t("designProjects.team.history.empty")}</p>
+        <p className="mt-4 text-sm text-muted-foreground">
+          {t("designProjects.team.history.empty")}
+        </p>
       ) : (
         <ol className="mt-4 space-y-2">
           {history.map((item) => (
             <li
               key={`${item.entityType}:${item.id}`}
               data-testid={`project-history-${item.entityType}-${item.id}`}
-              className="flex flex-col justify-between gap-1 rounded-md border border-slate-100 bg-slate-50 p-3 text-sm sm:flex-row sm:items-center"
+              className="flex flex-col justify-between gap-1 rounded-md border border-border bg-muted/30 p-3 text-sm sm:flex-row sm:items-center"
             >
               <div className="min-w-0 break-words">
                 <strong>{item.changedByName}</strong> ·{" "}
@@ -161,7 +167,7 @@ export const ProjectTeamHistory = ({
                         newCode: item.newCode ?? "",
                       })}
                     </p>
-                    <p className="mt-1 text-slate-600">
+                    <p className="mt-1 text-muted-foreground">
                       {t("designProjects.team.history.codeChangeReason", {
                         reason: item.reason ?? "",
                       })}
@@ -169,7 +175,7 @@ export const ProjectTeamHistory = ({
                   </>
                 )}
               </div>
-              <span className="shrink-0 text-xs text-slate-500">
+              <span className="shrink-0 text-xs text-muted-foreground">
                 {new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
                   new Date(item.changedAt),
                 )}
@@ -198,6 +204,8 @@ const AssignmentAttachments = ({
   designProjectId?: number;
   canManage: boolean;
 }) => {
+  const uiError = useUiError();
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
@@ -217,11 +225,11 @@ const AssignmentAttachments = ({
       );
       setItems(data);
     } catch (loadError) {
-      setError(extractApiError(loadError));
+      setError(uiError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId, assignment.id, designProjectId]);
+  }, [operationalProjectId, assignment.id, designProjectId, uiError]);
 
   useEffect(() => {
     if (open) void load();
@@ -243,12 +251,12 @@ const AssignmentAttachments = ({
       // Some browsers start the download on a later tick; release the blob later.
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (downloadError) {
-      setError(extractApiError(downloadError));
+      setError(uiError(downloadError));
     }
   };
 
   const remove = async (attachment: OperationalProjectAssignmentAttachmentResponse) => {
-    if (!window.confirm(t("designProjects.team.attachments.confirmDelete"))) return;
+    if (!(await confirmAction(t("designProjects.team.attachments.confirmDelete")))) return;
     try {
       await adminApi.deleteOperationalProjectAssignmentAttachment(
         operationalProjectId,
@@ -259,7 +267,7 @@ const AssignmentAttachments = ({
       toast({ title: t("designProjects.team.attachments.deleted") });
       await load();
     } catch (deleteError) {
-      setError(extractApiError(deleteError));
+      setError(uiError(deleteError));
     }
   };
 
@@ -278,17 +286,19 @@ const AssignmentAttachments = ({
         {items.length > 0 ? ` (${items.length})` : ""}
       </Button>
       {open ? (
-        <div className="mt-2 space-y-3 rounded-md bg-slate-50 p-3">
+        <div className="mt-2 space-y-3 rounded-md bg-muted/30 p-3">
           {loading ? (
-            <p className="text-sm text-slate-500">{t("common.loading")}</p>
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : items.length === 0 ? (
-            <p className="text-sm text-slate-500">{t("designProjects.team.attachments.empty")}</p>
+            <p className="text-sm text-muted-foreground">
+              {t("designProjects.team.attachments.empty")}
+            </p>
           ) : (
             <ul className="space-y-2">
               {items.map((attachment) => (
                 <li
                   key={attachment.id}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-white px-3 py-2 text-sm"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-card px-3 py-2 text-sm"
                 >
                   <span className="min-w-0 break-all">{attachment.originalFileName}</span>
                   <div className="flex shrink-0 gap-1">
@@ -356,6 +366,7 @@ const AssignmentComments = ({
   designProjectId?: number;
   canManage: boolean;
 }) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
@@ -384,11 +395,11 @@ const AssignmentComments = ({
       );
       setItems(data);
     } catch (loadError) {
-      setLoadError(extractApiError(loadError));
+      setLoadError(uiError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId, assignment.id, designProjectId]);
+  }, [operationalProjectId, assignment.id, designProjectId, uiError]);
 
   useEffect(() => {
     void load();
@@ -413,7 +424,7 @@ const AssignmentComments = ({
       setBody("");
       await load();
     } catch (submitError) {
-      setError(translateError(t, extractApiError(submitError, t("common.error"))));
+      setError(translateError(t, uiError(submitError, t("common.error"))));
     } finally {
       setSaving(false);
     }
@@ -434,7 +445,7 @@ const AssignmentComments = ({
       setPendingDelete(null);
       await load();
     } catch (deleteError) {
-      setDeleteError(translateError(t, extractApiError(deleteError, t("common.error"))));
+      setDeleteError(translateError(t, uiError(deleteError, t("common.error"))));
     } finally {
       setDeleting(false);
     }
@@ -607,6 +618,7 @@ export const OperationalProjectTeamPanel = ({
   onHistoryChange,
   onProjectMayHaveChanged,
 }: Props) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const [team, setTeam] = useState<OperationalProjectTeamResponse | null>(null);
@@ -653,11 +665,11 @@ export const OperationalProjectTeamPanel = ({
         setCandidates(candidateResponse.data ?? []);
       } else setCandidates([]);
     } catch (loadError) {
-      setError(extractApiError(loadError));
+      setError(uiError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId, designProjectId, onHistoryChange]);
+  }, [operationalProjectId, designProjectId, onHistoryChange, uiError]);
 
   useEffect(() => {
     void load();
@@ -874,7 +886,7 @@ export const OperationalProjectTeamPanel = ({
       await load();
       onProjectMayHaveChanged?.();
     } catch (saveError) {
-      setFormError(translateError(t, extractApiError(saveError)));
+      setFormError(translateError(t, uiError(saveError)));
     } finally {
       setSaving(false);
     }
@@ -999,7 +1011,7 @@ export const OperationalProjectTeamPanel = ({
       await load();
       onProjectMayHaveChanged?.();
     } catch (saveError) {
-      setFormError(extractApiError(saveError));
+      setFormError(uiError(saveError));
     } finally {
       setSaving(false);
     }
@@ -1042,7 +1054,7 @@ export const OperationalProjectTeamPanel = ({
       await load();
       onProjectMayHaveChanged?.();
     } catch (actionError) {
-      setFormError(extractApiError(actionError));
+      setFormError(uiError(actionError));
     } finally {
       setSaving(false);
     }
@@ -1068,19 +1080,19 @@ export const OperationalProjectTeamPanel = ({
 
   if (loading)
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border bg-white py-16 text-sm text-slate-500">
-        <Loader2 className="h-7 w-7 animate-spin text-slate-400" />
+      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border bg-card py-16 text-sm text-muted-foreground">
+        <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
         <span>{t("designProjects.team.loading")}</span>
       </div>
     );
   if (!operationalProjectId)
     return (
-      <section className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
-        <Users className="mx-auto h-8 w-8 text-slate-400" />
-        <h2 className="mt-3 font-semibold text-slate-900">
+      <section className="rounded-lg border border-dashed border-input bg-card p-8 text-center">
+        <Users className="mx-auto h-8 w-8 text-muted-foreground" />
+        <h2 className="mt-3 font-semibold text-foreground">
           {t("designProjects.team.unlinkedTitle")}
         </h2>
-        <p className="mt-1 text-sm text-slate-500">
+        <p className="mt-1 text-sm text-muted-foreground">
           {t("designProjects.team.unlinkedDescription")}
         </p>
       </section>
@@ -1098,14 +1110,16 @@ export const OperationalProjectTeamPanel = ({
 
   return (
     <div className="space-y-4" data-testid="design-project-team-tab">
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
-              <Users className="h-4 w-4 text-slate-500" />
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <Users className="h-4 w-4 text-muted-foreground" />
               {t("designProjects.team.title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">{t("designProjects.team.description")}</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {t("designProjects.team.description")}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline">
@@ -1120,14 +1134,14 @@ export const OperationalProjectTeamPanel = ({
           </div>
         </div>
         {activeMembers.length === 0 ? (
-          <div className="mt-4 rounded-md border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+          <div className="mt-4 rounded-md border border-dashed border-input p-8 text-center text-sm text-muted-foreground">
             {t("designProjects.team.empty")}
           </div>
         ) : (
           <>
             <ul className="mt-4 grid grid-cols-1 gap-3 lg:hidden">
               {activeMembers.map((member) => (
-                <li key={member.id} className="rounded-lg border border-slate-200 p-4">
+                <li key={member.id} className="rounded-lg border border-border p-4">
                   <div
                     className={
                       designProjectContext
@@ -1136,28 +1150,30 @@ export const OperationalProjectTeamPanel = ({
                     }
                   >
                     <div className="flex min-w-0 items-start gap-3">
-                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-600">
+                      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
                         <UserRound className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
                         <p
                           className={
                             designProjectContext
-                              ? "break-words font-semibold text-slate-900"
-                              : "truncate font-semibold text-slate-900"
+                              ? "break-words font-semibold text-foreground"
+                              : "truncate font-semibold text-foreground"
                           }
                         >
                           {member.userName}
                         </p>
                         {designProjectContext ? (
                           <>
-                            <p className="break-words text-sm text-slate-500">
+                            <p className="break-words text-sm text-muted-foreground">
                               {projectPositionLabel(member.position, t)}
                             </p>
-                            <p className="break-all text-xs text-slate-500">{member.email}</p>
+                            <p className="break-all text-xs text-muted-foreground">
+                              {member.email}
+                            </p>
                           </>
                         ) : (
-                          <p className="truncate text-sm text-slate-500">
+                          <p className="truncate text-sm text-muted-foreground">
                             {projectPositionLabel(member.position, t)} · {member.email}
                           </p>
                         )}
@@ -1202,7 +1218,7 @@ export const OperationalProjectTeamPanel = ({
                         <Badge
                           key={`${role.roleCode}-${role.scope}-${role.scopeValue ?? index}`}
                           variant="outline"
-                          className="whitespace-normal bg-slate-50"
+                          className="whitespace-normal bg-muted/30"
                         >
                           {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                           {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
@@ -1216,13 +1232,13 @@ export const OperationalProjectTeamPanel = ({
                   </div>
                   <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.team.field.reportsTo")}
                       </dt>
                       <dd>{member.reportsToName ?? t("designProjects.team.value.none")}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.team.field.memberDates")}
                       </dt>
                       <dd>{formatDate(member.startedAt)}</dd>
@@ -1231,9 +1247,9 @@ export const OperationalProjectTeamPanel = ({
                 </li>
               ))}
             </ul>
-            <div className="mt-4 hidden overflow-x-auto rounded-lg border border-slate-200 lg:block">
+            <div className="mt-4 hidden overflow-x-auto rounded-lg border border-border lg:block">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2">{t("designProjects.team.field.user")}</th>
                     <th className="px-3 py-2">{t("designProjects.team.field.position")}</th>
@@ -1251,14 +1267,14 @@ export const OperationalProjectTeamPanel = ({
                     ) : null}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {activeMembers.map((member) => (
                     <tr key={member.id}>
                       <td className="px-3 py-3">
-                        <div className="font-medium text-slate-900">{member.userName}</div>
-                        <div className="text-xs text-slate-500">{member.email}</div>
+                        <div className="font-medium text-foreground">{member.userName}</div>
+                        <div className="text-xs text-muted-foreground">{member.email}</div>
                       </td>
-                      <td className="px-3 py-3 text-slate-700">
+                      <td className="px-3 py-3 text-foreground">
                         {projectPositionLabel(member.position, t)}
                       </td>
                       <td className="max-w-md px-3 py-3">
@@ -1271,7 +1287,7 @@ export const OperationalProjectTeamPanel = ({
                               <Badge
                                 key={`${role.roleCode}-${role.scope}-${role.scopeValue ?? index}`}
                                 variant="outline"
-                                className="whitespace-normal bg-slate-50"
+                                className="whitespace-normal bg-muted/30"
                               >
                                 {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                                 {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
@@ -1284,10 +1300,10 @@ export const OperationalProjectTeamPanel = ({
                           })}
                         </div>
                       </td>
-                      <td className="px-3 py-3 text-slate-700">
+                      <td className="px-3 py-3 text-foreground">
                         {member.reportsToName ?? t("designProjects.team.value.none")}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-slate-700">
+                      <td className="whitespace-nowrap px-3 py-3 text-foreground">
                         {formatDate(member.startedAt)}
                       </td>
                       {team.canManage ? (
@@ -1324,17 +1340,17 @@ export const OperationalProjectTeamPanel = ({
         )}
         {endedMembers.length ? (
           <div className="mt-5 border-t pt-4">
-            <h3 className="text-sm font-semibold text-slate-700">
+            <h3 className="text-sm font-semibold text-foreground">
               {t("designProjects.team.endedMembers")}
             </h3>
             <div className="mt-2 grid gap-2 md:grid-cols-2">
               {endedMembers.map((member) => (
                 <div
                   key={member.id}
-                  className="flex items-center justify-between rounded-md bg-slate-50 p-3 text-sm text-slate-600"
+                  className="flex items-center justify-between rounded-md bg-muted/30 p-3 text-sm text-muted-foreground"
                 >
                   <span>
-                    <strong className="text-slate-800">{member.userName}</strong> ·{" "}
+                    <strong className="text-foreground">{member.userName}</strong> ·{" "}
                     {projectPositionLabel(member.position, t)}
                   </span>
                   <span>{formatDate(member.endedAt)}</span>
@@ -1345,14 +1361,14 @@ export const OperationalProjectTeamPanel = ({
         ) : null}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 font-semibold text-slate-900">
-              <ClipboardList className="h-4 w-4 text-slate-500" />
+            <h2 className="flex items-center gap-2 font-semibold text-foreground">
+              <ClipboardList className="h-4 w-4 text-muted-foreground" />
               {t("designProjects.team.assignments.title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {t("designProjects.team.assignments.overview")}
             </p>
           </div>
@@ -1364,7 +1380,7 @@ export const OperationalProjectTeamPanel = ({
           ) : null}
         </div>
         {team.assignments.length === 0 ? (
-          <div className="mt-4 rounded-md border border-dashed p-8 text-center text-sm text-slate-500">
+          <div className="mt-4 rounded-md border border-dashed p-8 text-center text-sm text-muted-foreground">
             {t("designProjects.team.assignments.empty")}
           </div>
         ) : (
@@ -1377,8 +1393,8 @@ export const OperationalProjectTeamPanel = ({
                   key={assignment.id}
                   className={
                     isSubtask
-                      ? "rounded-lg border border-l-4 border-slate-200 border-l-slate-300 p-4"
-                      : "rounded-lg border border-slate-200 p-4"
+                      ? "rounded-lg border border-l-4 border-border border-l-slate-300 p-4"
+                      : "rounded-lg border border-border p-4"
                   }
                   data-subtask={isSubtask ? "true" : undefined}
                 >
@@ -1386,14 +1402,14 @@ export const OperationalProjectTeamPanel = ({
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         {isSubtask ? (
-                          <CornerDownRight className="h-4 w-4 text-slate-400" aria-hidden />
+                          <CornerDownRight className="h-4 w-4 text-muted-foreground" aria-hidden />
                         ) : null}
-                        <strong className="text-slate-900">{assignment.title}</strong>
+                        <strong className="text-foreground">{assignment.title}</strong>
                         <Badge variant="outline" className={assignmentBadge[assignment.status]}>
                           {t(`designProjects.team.assignmentStatus.${assignment.status}`)}
                         </Badge>
                       </div>
-                      <p className="mt-1 break-all font-mono text-xs text-slate-500">
+                      <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
                         {assignment.workKey}
                       </p>
                     </div>
@@ -1410,19 +1426,19 @@ export const OperationalProjectTeamPanel = ({
                   </div>
                   <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.team.field.assignee")}
                       </dt>
                       <dd>{assignment.assigneeName}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.team.field.assignmentManager")}
                       </dt>
                       <dd>{assignment.managerName ?? t("designProjects.team.value.none")}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.team.field.moduleDiscipline")}
                       </dt>
                       <dd>
@@ -1433,7 +1449,7 @@ export const OperationalProjectTeamPanel = ({
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.team.field.plannedDates")}
                       </dt>
                       <dd>
@@ -1441,14 +1457,14 @@ export const OperationalProjectTeamPanel = ({
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.team.field.parallelGroup")}
                       </dt>
                       <dd>{assignment.parallelGroup ?? t("designProjects.team.value.none")}</dd>
                     </div>
                   </dl>
                   {assignment.note ? (
-                    <p className="mt-3 whitespace-pre-wrap rounded-md bg-slate-50 p-2 text-sm text-slate-600">
+                    <p className="mt-3 whitespace-pre-wrap rounded-md bg-muted/30 p-2 text-sm text-muted-foreground">
                       {assignment.note}
                     </p>
                   ) : null}
@@ -1523,7 +1539,7 @@ export const OperationalProjectTeamPanel = ({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
+            <FieldScope className="sm:col-span-2">
               <Label>{t("designProjects.team.field.user")} *</Label>
               <SearchableSelect
                 ariaLabel={t("designProjects.team.field.user")}
@@ -1539,8 +1555,8 @@ export const OperationalProjectTeamPanel = ({
                     : availableCandidates.map((candidate) => personOption(candidate, t))
                 }
               />
-            </div>
-            <div className="sm:col-span-2">
+            </FieldScope>
+            <FieldScope className="sm:col-span-2">
               <Label>{t("designProjects.team.field.position")} *</Label>
               <Input
                 className="mt-1"
@@ -1551,8 +1567,8 @@ export const OperationalProjectTeamPanel = ({
                   setMemberForm((current) => ({ ...current, position: event.target.value }))
                 }
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.startedAt")} *</Label>
               <Input
                 className="mt-1"
@@ -1563,9 +1579,9 @@ export const OperationalProjectTeamPanel = ({
                   setMemberForm((current) => ({ ...current, startedAt: event.target.value }))
                 }
               />
-            </div>
+            </FieldScope>
             {(!designProjectContext || memberDialog === "end") && (
-              <div>
+              <FieldScope>
                 <Label>
                   {t("designProjects.team.field.endedAt")}
                   {memberDialog === "end" ? " *" : ""}
@@ -1583,9 +1599,9 @@ export const OperationalProjectTeamPanel = ({
                     }))
                   }
                 />
-              </div>
+              </FieldScope>
             )}
-            <div className="sm:col-span-2">
+            <FieldScope className="sm:col-span-2">
               <Label>{t("designProjects.team.field.reportsTo")}</Label>
               <SearchableSelect
                 disabled={memberDialog === "end"}
@@ -1605,7 +1621,7 @@ export const OperationalProjectTeamPanel = ({
                     .map((member) => projectMemberOption(member, t)),
                 ]}
               />
-            </div>
+            </FieldScope>
             <div className="space-y-3 sm:col-span-2">
               <div
                 className={
@@ -1614,14 +1630,14 @@ export const OperationalProjectTeamPanel = ({
                     : "flex items-center justify-between"
                 }
               >
-                <Label>
+                <span>
                   {t(
                     designProjectContext
                       ? "designProjects.team.field.designRoles"
                       : "designProjects.team.field.roles",
                   )}{" "}
                   *
-                </Label>
+                </span>
                 {memberDialog !== "end" ? (
                   <Button
                     type="button"
@@ -1680,7 +1696,7 @@ export const OperationalProjectTeamPanel = ({
                           });
                         }}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label={t("a11yUi.role")}>
                           <SelectValue
                             placeholder={
                               designProjectContext
@@ -1719,7 +1735,7 @@ export const OperationalProjectTeamPanel = ({
                           updateRole(index, { scope: value, scopeValue: null })
                         }
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label={t("a11yUi.scope")}>
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1737,7 +1753,7 @@ export const OperationalProjectTeamPanel = ({
                         value={role.scopeValue ?? ""}
                         onValueChange={(value) => updateRole(index, { scopeValue: value })}
                       >
-                        <SelectTrigger>
+                        <SelectTrigger aria-label={t("a11yUi.scopeValue")}>
                           <SelectValue
                             placeholder={t("designProjects.team.placeholder.scopeValue")}
                           />
@@ -1812,7 +1828,7 @@ export const OperationalProjectTeamPanel = ({
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div>
+            <FieldScope>
               <Label>{t("designProjects.team.field.workKey")} *</Label>
               <Input
                 className="mt-1"
@@ -1823,8 +1839,8 @@ export const OperationalProjectTeamPanel = ({
                   setAssignmentForm((current) => ({ ...current, workKey: event.target.value }))
                 }
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.assignmentStatus")} *</Label>
               <Select
                 value={assignmentForm.status}
@@ -1846,8 +1862,8 @@ export const OperationalProjectTeamPanel = ({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="sm:col-span-2">
+            </FieldScope>
+            <FieldScope className="sm:col-span-2">
               <Label>{t("designProjects.team.field.assignmentTitle")} *</Label>
               <Input
                 className="mt-1"
@@ -1857,8 +1873,8 @@ export const OperationalProjectTeamPanel = ({
                   setAssignmentForm((current) => ({ ...current, title: event.target.value }))
                 }
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.module")} *</Label>
               <Select
                 value={assignmentForm.module}
@@ -1879,8 +1895,8 @@ export const OperationalProjectTeamPanel = ({
                     ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.discipline")}</Label>
               <Select
                 value={assignmentForm.discipline ?? "none"}
@@ -1903,8 +1919,8 @@ export const OperationalProjectTeamPanel = ({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.assignee")} *</Label>
               <SearchableSelect
                 value={
@@ -1927,8 +1943,8 @@ export const OperationalProjectTeamPanel = ({
                 placeholder={t("designProjects.team.field.assignee")}
                 options={[...activeMembers.map((member) => projectMemberOption(member, t))]}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.assignmentManager")}</Label>
               <SearchableSelect
                 value={
@@ -1949,8 +1965,8 @@ export const OperationalProjectTeamPanel = ({
                     .map((member) => projectMemberOption(member, t)),
                 ]}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.plannedStart")}</Label>
               <Input
                 className="mt-1"
@@ -1963,8 +1979,8 @@ export const OperationalProjectTeamPanel = ({
                   }))
                 }
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.team.field.plannedEnd")}</Label>
               <Input
                 className="mt-1"
@@ -1978,8 +1994,8 @@ export const OperationalProjectTeamPanel = ({
                   }))
                 }
               />
-            </div>
-            <div className="sm:col-span-2">
+            </FieldScope>
+            <FieldScope className="sm:col-span-2">
               <Label>{t("designProjects.team.field.parallelGroup")}</Label>
               <Input
                 className="mt-1"
@@ -1992,8 +2008,8 @@ export const OperationalProjectTeamPanel = ({
                   }))
                 }
               />
-            </div>
-            <div className="sm:col-span-2">
+            </FieldScope>
+            <FieldScope className="sm:col-span-2">
               <Label>{t("designProjects.team.field.note")}</Label>
               <Textarea
                 className="mt-1"
@@ -2003,7 +2019,7 @@ export const OperationalProjectTeamPanel = ({
                   setAssignmentForm((current) => ({ ...current, note: event.target.value }))
                 }
               />
-            </div>
+            </FieldScope>
           </div>
           {formError ? <p className="text-sm font-medium text-rose-600">{formError}</p> : null}
           <DialogFooter>

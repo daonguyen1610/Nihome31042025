@@ -1,3 +1,4 @@
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save, Plus, Trash2 } from "lucide-react";
@@ -220,88 +221,104 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
               <h2 className="font-bold mb-4">{t("form.basicInfo")}</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <Field label={t("proj.field.name") + " *"} className="md:col-span-2">
-                  <input
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.name}
-                    onChange={(e) => update("name", e.target.value)}
-                    placeholder="Dự án nhà máy ABC..."
-                    required
-                  />
+                  <FieldControl>
+                    <input
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.name}
+                      onChange={(e) => update("name", e.target.value)}
+                      placeholder="Dự án nhà máy ABC..."
+                      required
+                    />
+                  </FieldControl>
                 </Field>
                 <Field label={t("proj.field.client")}>
-                  <input
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.client}
-                    onChange={(e) => update("client", e.target.value)}
-                    placeholder="Tên chủ đầu tư"
-                  />
+                  <FieldControl>
+                    <input
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.client}
+                      onChange={(e) => update("client", e.target.value)}
+                      placeholder="Tên chủ đầu tư"
+                    />
+                  </FieldControl>
                 </Field>
                 <Field label={t("proj.field.location")}>
-                  <input
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.location}
-                    onChange={(e) => update("location", e.target.value)}
-                    placeholder="Tỉnh / thành phố"
-                  />
+                  <FieldControl>
+                    <input
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.location}
+                      onChange={(e) => update("location", e.target.value)}
+                      placeholder="Tỉnh / thành phố"
+                    />
+                  </FieldControl>
                 </Field>
                 <Field label={t("proj.scale")}>
-                  <input
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.scale}
-                    onChange={(e) => update("scale", e.target.value)}
-                    placeholder="15.000 m²"
-                  />
+                  <FieldControl>
+                    <input
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.scale}
+                      onChange={(e) => update("scale", e.target.value)}
+                      placeholder="15.000 m²"
+                    />
+                  </FieldControl>
                 </Field>
                 <Field label={t("proj.field.year")}>
-                  <input
-                    type="number"
-                    min="1990"
-                    max="2100"
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.year ?? ""}
-                    onChange={(e) => update("year", e.target.value)}
-                    placeholder={String(new Date().getFullYear())}
-                  />
+                  <FieldControl>
+                    <input
+                      type="number"
+                      min="1990"
+                      max="2100"
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.year ?? ""}
+                      onChange={(e) => update("year", e.target.value)}
+                      placeholder={String(new Date().getFullYear())}
+                    />
+                  </FieldControl>
                 </Field>
                 <Field label={t("proj.field.category")}>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.categoryId != null ? String(data.categoryId) : ""}
-                    onChange={(e) => {
-                      const v = e.target.value;
-                      const found = categoryOptions.find((opt) => String(opt.id) === v);
-                      setData((d) => ({
-                        ...d,
-                        categoryId: found?.id ?? null,
-                        category: found?.name ?? "",
-                      }));
-                    }}
-                  >
-                    <option value="">-- Chọn danh mục --</option>
-                    {categoryOptions.map((opt) => (
-                      <option key={opt.id} value={opt.id}>
-                        {opt.label}
-                      </option>
-                    ))}
-                  </select>
+                  <FieldControl>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.categoryId != null ? String(data.categoryId) : ""}
+                      onChange={(e) => {
+                        const v = e.target.value;
+                        const found = categoryOptions.find((opt) => String(opt.id) === v);
+                        setData((d) => ({
+                          ...d,
+                          categoryId: found?.id ?? null,
+                          category: found?.name ?? "",
+                        }));
+                      }}
+                    >
+                      <option value="">{t("a11yUi.chooseCategory")}</option>
+                      {categoryOptions.map((opt) => (
+                        <option key={opt.id} value={opt.id}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldControl>
                 </Field>
                 <Field label={t("proj.field.status")}>
-                  <select
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.status}
-                    onChange={(e) => update("status", e.target.value)}
-                  >
-                    <option value="ongoing">{t("proj.ongoing")}</option>
-                    <option value="completed">{t("proj.completed")}</option>
-                  </select>
+                  <FieldControl>
+                    <select
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.status}
+                      onChange={(e) => update("status", e.target.value)}
+                    >
+                      <option value="ongoing">{t("proj.ongoing")}</option>
+                      <option value="completed">{t("proj.completed")}</option>
+                    </select>
+                  </FieldControl>
                 </Field>
                 <Field label={t("proj.field.scope")} className="md:col-span-2">
-                  <input
-                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    value={data.scope}
-                    onChange={(e) => update("scope", e.target.value)}
-                    placeholder="Thiết kế, thi công, hoàn thiện..."
-                  />
+                  <FieldControl>
+                    <input
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      value={data.scope}
+                      onChange={(e) => update("scope", e.target.value)}
+                      placeholder="Thiết kế, thi công, hoàn thiện..."
+                    />
+                  </FieldControl>
                 </Field>
               </div>
             </div>
@@ -310,12 +327,14 @@ const ProjectForm = ({ mode }: { mode: "create" | "edit" }) => {
             <div className="rounded-lg border bg-card p-6">
               <h2 className="font-bold mb-4">{t("form.content")}</h2>
               <Field label={t("proj.field.description")}>
-                <textarea
-                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
-                  value={data.description ?? ""}
-                  onChange={(e) => update("description", e.target.value)}
-                  placeholder="Mô tả tổng quan về dự án..."
-                />
+                <FieldControl>
+                  <textarea
+                    className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 min-h-24"
+                    value={data.description ?? ""}
+                    onChange={(e) => update("description", e.target.value)}
+                    placeholder="Mô tả tổng quan về dự án..."
+                  />
+                </FieldControl>
               </Field>
             </div>
 
@@ -409,10 +428,10 @@ const Field = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={["space-y-1.5", className].filter(Boolean).join(" ")}>
+  <FieldScope className={["space-y-1.5", className].filter(Boolean).join(" ")}>
     <Label className="text-xs">{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 const ListEditor = ({
@@ -426,6 +445,7 @@ const ListEditor = ({
   onChange: (items: string[]) => void;
   placeholder?: string;
 }) => {
+  const { t } = useI18n();
   const addItem = () => onChange([...items, ""]);
   const updateItem = (i: number, val: string) => {
     const next = [...items];
@@ -444,11 +464,13 @@ const ListEditor = ({
           <div key={i} className="flex gap-2">
             <input
               className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 flex-1"
+              aria-label={`${label} ${i + 1}`}
               value={item}
               onChange={(e) => updateItem(i, e.target.value)}
               placeholder={placeholder}
             />
             <button
+              aria-label={t("common.delete")}
               type="button"
               onClick={() => removeItem(i)}
               className="flex h-9 w-9 items-center justify-center rounded-md border text-destructive transition hover:bg-destructive/10"
@@ -463,7 +485,7 @@ const ListEditor = ({
           className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-2 text-sm text-muted-foreground transition hover:bg-muted"
         >
           <Plus className="h-3.5 w-3.5" />
-          {placeholder ? `+ ${placeholder}` : "+ Thêm"}
+          {placeholder ? `+ ${placeholder}` : t("a11yUi.addItem")}
         </button>
       </div>
     </div>
@@ -477,6 +499,7 @@ const HighlightsEditor = ({
   items: { label: string; value: string }[];
   onChange: (items: { label: string; value: string }[]) => void;
 }) => {
+  const { t } = useI18n();
   const addItem = () => onChange([...items, { label: "", value: "" }]);
   const updateItem = (index: number, key: "label" | "value", value: string) => {
     const next = [...items];
@@ -494,17 +517,20 @@ const HighlightsEditor = ({
         >
           <input
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={`${t("a11yUi.highlightLabel")} ${index + 1}`}
             value={item.label}
             onChange={(e) => updateItem(index, "label", e.target.value)}
-            placeholder="Nhãn (ví dụ: Diện tích)"
+            placeholder={t("a11yUi.highlightLabelHint")}
           />
           <input
             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            aria-label={`${t("a11yUi.highlightValue")} ${index + 1}`}
             value={item.value}
             onChange={(e) => updateItem(index, "value", e.target.value)}
-            placeholder="Giá trị (ví dụ: 250.000 m²)"
+            placeholder={t("a11yUi.highlightValueHint")}
           />
           <button
+            aria-label={t("common.delete")}
             type="button"
             onClick={() => removeItem(index)}
             className="flex h-9 w-9 items-center justify-center rounded-md border text-destructive transition hover:bg-destructive/10"
@@ -518,7 +544,8 @@ const HighlightsEditor = ({
         onClick={addItem}
         className="flex w-full items-center justify-center gap-1.5 rounded-md border border-dashed py-2 text-sm text-muted-foreground transition hover:bg-muted"
       >
-        <Plus className="h-3.5 w-3.5" />+ Thêm điểm nổi bật
+        <Plus className="h-3.5 w-3.5" />
+        {t("a11yUi.addHighlight")}
       </button>
     </div>
   );

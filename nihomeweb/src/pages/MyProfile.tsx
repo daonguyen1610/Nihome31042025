@@ -1,3 +1,4 @@
+import { FieldControl } from "@/components/ui/field-scope";
 import { useEffect, useRef, useState } from "react";
 import {
   Eye,
@@ -127,7 +128,7 @@ const MyProfile = () => {
         <div className="container-custom pt-28 pb-16">
           <div className="flex items-center gap-3 mb-6">
             <div
-              className="w-10 h-10 rounded-full bg-white border flex items-center justify-center"
+              className="w-10 h-10 rounded-full bg-card border flex items-center justify-center"
               style={{ borderColor: "hsl(var(--admin-border))" }}
             >
               <UserIcon className="w-4 h-4" />
@@ -157,24 +158,35 @@ const MyProfile = () => {
                       label={`${t("profile.fullName") || "Họ và tên"} *`}
                       className="md:col-span-2"
                     >
-                      <input
-                        className="admin-input"
-                        value={data.fullName}
-                        onChange={(e) => update("fullName", e.target.value)}
-                        required
-                      />
+                      <FieldControl>
+                        <input
+                          className="admin-input"
+                          value={data.fullName}
+                          onChange={(e) => update("fullName", e.target.value)}
+                          required
+                        />
+                      </FieldControl>
                     </Field>
                     <Field label={t("profile.email") || "Email"}>
-                      <input
-                        type="email"
-                        className="admin-input"
-                        value={data.email}
-                        onChange={(e) => update("email", e.target.value)}
-                        required
-                      />
+                      <FieldControl>
+                        <input
+                          type="email"
+                          className="admin-input"
+                          value={data.email}
+                          onChange={(e) => update("email", e.target.value)}
+                          required
+                        />
+                      </FieldControl>
                     </Field>
                     <Field label={t("profile.phone") || "Số điện thoại"}>
-                      <input type="tel" className="admin-input" value={data.phoneNumber} disabled />
+                      <FieldControl>
+                        <input
+                          type="tel"
+                          className="admin-input"
+                          value={data.phoneNumber}
+                          disabled
+                        />
+                      </FieldControl>
                     </Field>
                   </div>
                   <p className="text-xs mt-3" style={{ color: "hsl(var(--admin-muted))" }}>
@@ -368,7 +380,7 @@ const DocumentsCard = () => {
                 className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-colors ${
                   docType === type.value
                     ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-white text-foreground hover:bg-secondary"
+                    : "bg-card text-foreground hover:bg-secondary"
                 }`}
                 style={
                   docType !== type.value ? { borderColor: "hsl(var(--admin-border))" } : undefined
@@ -434,7 +446,7 @@ const DocumentsCard = () => {
               {docs.map((doc) => (
                 <li
                   key={doc.id}
-                  className="flex items-center gap-3 p-3 rounded-lg border bg-white"
+                  className="flex items-center gap-3 p-3 rounded-lg border bg-card"
                   style={{ borderColor: "hsl(var(--admin-border))" }}
                 >
                   <a

@@ -1,3 +1,5 @@
+import { useConfirm } from "@/components/ui/confirmation";
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   Plus,
@@ -98,6 +100,7 @@ const getErrorMessage = (error: unknown): string | undefined => {
 };
 
 const Workflows = () => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -276,7 +279,7 @@ const Workflows = () => {
   };
 
   const remove = async (wf: WorkflowConfig) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteWorkflow(wf.id);
       toast({ title: t("form.deleted") });
@@ -520,7 +523,7 @@ const Workflows = () => {
                         ) : (
                           <Badge
                             variant="outline"
-                            className="border-slate-200 bg-slate-50 text-slate-600"
+                            className="border-border bg-muted/30 text-muted-foreground"
                           >
                             <X className="mr-1 h-3 w-3" />
                             {t("common.off")}
@@ -706,15 +709,15 @@ const Workflows = () => {
                     </div>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="space-y-1">
+                    <FieldScope className="space-y-1">
                       <Label className="text-xs">{t("workflow.field.stepName")} *</Label>
                       <Input
                         value={step.name}
                         onChange={(e) => patchStep(idx, { name: e.target.value })}
                         className="h-8"
                       />
-                    </div>
-                    <div className="space-y-1">
+                    </FieldScope>
+                    <FieldScope className="space-y-1">
                       <Label className="text-xs">{t("workflow.field.approverRole")} *</Label>
                       <Select
                         value={step.approverRoleCode}
@@ -731,8 +734,8 @@ const Workflows = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div className="space-y-1">
+                    </FieldScope>
+                    <FieldScope className="space-y-1">
                       <Label className="text-xs">{t("workflow.field.slaHours")}</Label>
                       <Input
                         type="number"
@@ -741,15 +744,16 @@ const Workflows = () => {
                         onChange={(e) => patchStep(idx, { slaHours: Number(e.target.value) || 0 })}
                         className="h-8"
                       />
-                    </div>
-                    <div className="flex items-end gap-2">
-                      <Switch
-                        checked={step.requireAllApprovers}
-                        onCheckedChange={(v) => patchStep(idx, { requireAllApprovers: v })}
-                        aria-label={t("workflow.field.requireAll")}
-                      />
+                    </FieldScope>
+                    <FieldScope className="flex items-end gap-2">
+                      <FieldControl>
+                        <Switch
+                          checked={step.requireAllApprovers}
+                          onCheckedChange={(v) => patchStep(idx, { requireAllApprovers: v })}
+                        />
+                      </FieldControl>
                       <Label className="mb-2 text-xs">{t("workflow.field.requireAll")}</Label>
-                    </div>
+                    </FieldScope>
                   </div>
                 </div>
               ))}

@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState, type FormEvent } from "react";
 import axios from "axios";
 import { CheckCircle2, Download, FileText } from "lucide-react";
@@ -11,6 +13,7 @@ import { calculateRfqCommercialPreview } from "@/lib/rfqCommercial";
 import { rfqApi, saveRfqDownload, type VendorPortalRfq } from "@/services/rfqApi";
 
 export default function VendorRfqPortal() {
+  const uiError = useUiError();
   const token = new URLSearchParams(window.location.hash.slice(1)).get("token") ?? "";
   const { t, lang } = useI18n();
   const [rfq, setRfq] = useState<VendorPortalRfq | null>(null);
@@ -48,7 +51,7 @@ export default function VendorRfqPortal() {
       .catch((reason) => {
         if (!cancelled) {
           setLoadStatus(axios.isAxiosError(reason) ? (reason.response?.status ?? 0) : 0);
-          setError(extractApiError(reason));
+          setError(uiError(reason));
         }
       })
       .finally(() => {
@@ -57,7 +60,7 @@ export default function VendorRfqPortal() {
     return () => {
       cancelled = true;
     };
-  }, [token]);
+  }, [token, uiError]);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
@@ -113,7 +116,7 @@ export default function VendorRfqPortal() {
         validUntil: new Date(validUntil).toISOString(),
       });
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setBusy(false);
     }
@@ -191,7 +194,7 @@ export default function VendorRfqPortal() {
   return (
     <main className="min-h-screen bg-[linear-gradient(135deg,#f8fafc_0%,#fff7ed_100%)] px-4 py-8 text-foreground sm:px-6">
       <div className="mx-auto max-w-5xl">
-        <header className="border-b border-slate-300 pb-6">
+        <header className="border-b border-input pb-6">
           <div className="flex items-center gap-3 text-amber-700">
             <FileText className="h-7 w-7" />
             <span className="text-sm font-semibold uppercase">{rfq.code}</span>
@@ -226,7 +229,7 @@ export default function VendorRfqPortal() {
                           document.name,
                         );
                       } catch (reason) {
-                        setError(extractApiError(reason));
+                        setError(uiError(reason));
                       } finally {
                         setBusy(false);
                       }

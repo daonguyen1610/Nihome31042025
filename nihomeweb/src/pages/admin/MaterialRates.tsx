@@ -1,3 +1,8 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { BoqCategorySetup, BoqConfiguredRows } from "@/components/admin/BoqConfiguredEntry";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -61,7 +66,7 @@ import {
 } from "@/services/adminApi";
 
 const STATUS_STYLES: Record<MaterialRateRevisionStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Rejected: "border-rose-200 bg-rose-50 text-rose-700",
   Retired: "border-zinc-200 bg-zinc-100 text-zinc-600",
@@ -133,6 +138,7 @@ const emptyLine: LineForm = {
 };
 
 const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRatesProps) => {
+  const uiError = useUiError();
   const { lang, t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -147,6 +153,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     null,
   );
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [includeInactive, setIncludeInactive] = useState(false);
   const [loading, setLoading] = useState(true);
   const [revisionLoading, setRevisionLoading] = useState(false);
@@ -166,9 +173,9 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     (err: unknown) => {
       const responseData = (err as { response?: { data?: { messageKey?: string } } }).response
         ?.data;
-      return responseData?.messageKey ? t(responseData.messageKey) : extractApiError(err);
+      return responseData?.messageKey ? t(responseData.messageKey) : uiError(err);
     },
-    [t],
+    [t, uiError],
   );
 
   const selectedCatalog = useMemo(
@@ -183,26 +190,30 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   activeCatalog.current = selectedCatalogId;
   activeRevision.current = selectedRevision?.id;
 
+  const startListRequest = useRequestGuard();
   const loadCatalogs = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
       const { data } = await adminApi.listMaterialRateCatalogs(
-        search,
+        settledSearch,
         includeInactive,
         catalogType,
       );
+      if (!isCurrent()) return;
       setCatalogs(data);
       setSelectedCatalogId((current) => {
         if (current && data.some((catalog) => catalog.id === current)) return current;
         return data[0]?.id ?? null;
       });
     } catch (err) {
-      setError(extractApiError(err));
+      if (!isCurrent()) return;
+      setError(uiError(err));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [catalogType, includeInactive, search]);
+  }, [catalogType, includeInactive, settledSearch, startListRequest, uiError]);
 
   const loadRevisions = useCallback(
     async (catalogId: number) => {
@@ -220,14 +231,14 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       } catch (err) {
         toast({
           title: t("common.error"),
-          description: extractApiError(err),
+          description: uiError(err),
           variant: "destructive",
         });
       } finally {
         if (request === revisionLoad.current) setRevisionLoading(false);
       }
     },
-    [t, toast],
+    [t, toast, uiError],
   );
 
   const deleteCatalogRequest = useCallback(
@@ -275,7 +286,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   useEffect(() => {
     clearSelection();
     setBulkDeleteFailures([]);
-  }, [catalogType, clearSelection, includeInactive, search]);
+  }, [catalogType, clearSelection, includeInactive, settledSearch]);
 
   const [catalogOpen, setCatalogOpen] = useState(false);
   const [catalogForm, setCatalogForm] = useState<UpsertMaterialRateCatalogRequest>(
@@ -360,7 +371,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       });
       await loadCatalogs();
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setCatalogSaving(false);
     }
@@ -398,7 +409,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       toast({ title: t("materialRates.revision.created") });
       await loadRevisions(selectedCatalogId);
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setRevisionSaving(false);
     }
@@ -444,7 +455,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       const responseData = (err as { response?: { data?: { errors?: CsvImportError[] } } }).response
         ?.data;
       if (responseData?.errors?.length) setImportErrors(responseData.errors);
-      else setImportErrors([{ message: extractApiError(err) }]);
+      else setImportErrors([{ message: uiError(err) }]);
     } finally {
       setImporting(false);
     }
@@ -465,7 +476,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     }
@@ -527,7 +538,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
       setDecisionNote("");
       await loadRevisions(selectedCatalogId);
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setDecisionBusy(false);
     }
@@ -954,6 +965,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
               <div className="relative">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  aria-label={t("common.search")}
                   data-testid="material-rates-search"
                   value={search}
                   onChange={(event) => setSearch(event.target.value)}
@@ -1760,7 +1772,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
             <DialogDescription>{t("materialRates.catalog.formHint")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div>
+            <FieldScope>
               <Label>{t("materialRates.catalog.code")} *</Label>
               <Input
                 data-testid="material-rates-catalog-code"
@@ -1768,8 +1780,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                 value={catalogForm.code}
                 onChange={(event) => setCatalogForm({ ...catalogForm, code: event.target.value })}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("materialRates.catalog.name")} *</Label>
               <Input
                 data-testid="material-rates-catalog-name"
@@ -1777,8 +1789,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                 value={catalogForm.name}
                 onChange={(event) => setCatalogForm({ ...catalogForm, name: event.target.value })}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("materialRates.catalog.currency")} *</Label>
               <Input
                 data-testid="material-rates-catalog-currency"
@@ -1788,8 +1800,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                   setCatalogForm({ ...catalogForm, currency: event.target.value })
                 }
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("materialRates.catalog.description")}</Label>
               <Textarea
                 data-testid="material-rates-catalog-description"
@@ -1799,7 +1811,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                   setCatalogForm({ ...catalogForm, description: event.target.value })
                 }
               />
-            </div>
+            </FieldScope>
             <Label className="flex items-center gap-2">
               <Checkbox
                 data-testid="material-rates-catalog-active"
@@ -1836,7 +1848,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
-              <div>
+              <FieldScope>
                 <Label>{t("materialRates.revision.effectiveFrom")} *</Label>
                 <Input
                   data-testid="material-rates-effective-from"
@@ -1844,8 +1856,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                   value={effectiveFrom}
                   onChange={(event) => setEffectiveFrom(event.target.value)}
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("materialRates.revision.effectiveTo")}</Label>
                 <Input
                   data-testid="material-rates-effective-to"
@@ -1854,9 +1866,9 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                   min={effectiveFrom}
                   onChange={(event) => setEffectiveTo(event.target.value)}
                 />
-              </div>
+              </FieldScope>
             </div>
-            <div>
+            <FieldScope>
               <Label>{t("materialRates.revision.note")}</Label>
               <Textarea
                 data-testid="material-rates-revision-note"
@@ -1864,7 +1876,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                 value={revisionNote}
                 onChange={(event) => setRevisionNote(event.target.value)}
               />
-            </div>
+            </FieldScope>
             {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
           <DialogFooter>
@@ -2211,7 +2223,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
             <DialogTitle>{decision && t(`materialRates.action.${decision}`)}</DialogTitle>
             <DialogDescription>{t("materialRates.action.decisionHint")}</DialogDescription>
           </DialogHeader>
-          <div>
+          <FieldScope>
             <Label>
               {t("materialRates.revision.decisionNote")}
               {decision === "reject" ? " *" : ""}
@@ -2221,7 +2233,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
               value={decisionNote}
               onChange={(event) => setDecisionNote(event.target.value)}
             />
-          </div>
+          </FieldScope>
           {formError && <p className="text-sm text-destructive">{formError}</p>}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDecision(null)}>

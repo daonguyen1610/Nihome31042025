@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
@@ -84,6 +85,7 @@ const categoryLabel = (t: (key: string) => string, category: string): string => 
 };
 
 const MasterData = () => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -257,7 +259,7 @@ const MasterData = () => {
   };
 
   const remove = async (option: MasterDataOption) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteMasterDataOption(option.id);
       toast({ title: t("form.deleted") });
@@ -539,7 +541,7 @@ const MasterData = () => {
                         ) : (
                           <Badge
                             variant="outline"
-                            className="border-slate-200 bg-slate-50 text-slate-600"
+                            className="border-border bg-muted/30 text-muted-foreground"
                           >
                             <X className="mr-1 h-3 w-3" />
                             {t("common.off")}

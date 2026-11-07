@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
@@ -28,6 +30,7 @@ type ContractOption = { id: number; contractNumber: string; status: string };
 type SupplyDocument = { id: number; originalFileName: string };
 
 function DraftContract({ projectId, onCreated }: { projectId: number; onCreated: () => void }) {
+  const uiError = useUiError();
   const attempt = useRef<{ payload: string; key: string } | null>(null);
   const { t } = useI18n();
   const [options, setOptions] = useState<ContractClassificationOptions | null>(null);
@@ -48,12 +51,12 @@ function DraftContract({ projectId, onCreated }: { projectId: number; onCreated:
         if (active) setOptions(data);
       })
       .catch((cause) => {
-        if (active) setError(extractApiError(cause));
+        if (active) setError(uiError(cause));
       });
     return () => {
       active = false;
     };
-  }, [revision]);
+  }, [revision, uiError]);
   async function save() {
     const amount = parseVndDecimal(value);
     if (
@@ -84,7 +87,7 @@ function DraftContract({ projectId, onCreated }: { projectId: number; onCreated:
     } catch (cause) {
       const status = (cause as { response?: { status?: number } }).response?.status;
       if (status && status < 500) attempt.current = null;
-      setError(extractApiError(cause));
+      setError(uiError(cause));
     } finally {
       setBusy(false);
     }
@@ -175,6 +178,7 @@ function DraftContract({ projectId, onCreated }: { projectId: number; onCreated:
 }
 
 export default function ConstructionResourcesWorkspace({ projectId }: { projectId: number }) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.procurementResourcesManage);
@@ -206,7 +210,7 @@ export default function ConstructionResourcesWorkspace({ projectId }: { projectI
         setDocuments(documentList?.data ?? []);
       })
       .catch((cause) => {
-        if (active) setError(extractApiError(cause));
+        if (active) setError(uiError(cause));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -214,7 +218,7 @@ export default function ConstructionResourcesWorkspace({ projectId }: { projectI
     return () => {
       active = false;
     };
-  }, [projectId, type, state, revision, canManage]);
+  }, [projectId, type, state, revision, canManage, uiError]);
   const refresh = useCallback(() => setRevision((value) => value + 1), []);
   return (
     <section className="space-y-4" data-testid="construction-procurement">
@@ -313,6 +317,7 @@ function ResourceCard({
   canManage: boolean;
   refresh: () => void;
 }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [contractId, setContractId] = useState(row.contractId ? String(row.contractId) : "");
   const [documentId, setDocumentId] = useState("");
@@ -338,7 +343,7 @@ function ResourceCard({
         );
       refresh();
     } catch (cause) {
-      setError(extractApiError(cause));
+      setError(uiError(cause));
     } finally {
       setBusy(false);
     }

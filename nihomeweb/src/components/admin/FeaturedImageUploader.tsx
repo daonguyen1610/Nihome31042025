@@ -65,7 +65,7 @@ const FeaturedImageUploader = ({
               type="button"
               onClick={handleClick}
               disabled={disabled}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md bg-white text-black hover:bg-white/90 disabled:opacity-50"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-md bg-card text-black hover:bg-card/90 disabled:opacity-50"
             >
               <Upload className="w-3.5 h-3.5" />
               {pendingPreview ? t("media.featured.changeAnother") : t("media.featured.change")}
@@ -75,7 +75,7 @@ const FeaturedImageUploader = ({
                 type="button"
                 onClick={onClearPending}
                 disabled={disabled}
-                className="inline-flex items-center justify-center px-2 py-1.5 text-xs font-bold rounded-md bg-white/90 text-red-600 hover:bg-white"
+                className="inline-flex items-center justify-center px-2 py-1.5 text-xs font-bold rounded-md bg-card/90 text-red-600 hover:bg-card"
                 aria-label={t("media.featured.cancelPending")}
               >
                 <X className="w-3.5 h-3.5" />
@@ -107,6 +107,7 @@ const FeaturedImageUploader = ({
           {t("media.url.toggle")}
         </summary>
         <Input
+          aria-label={t("a11yUi.mediaUrl")}
           className="mt-2 h-9"
           value={imageUrl}
           onChange={(e) => onUrlChange(e.target.value)}

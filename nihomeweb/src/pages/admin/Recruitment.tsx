@@ -393,7 +393,7 @@ const AdminRecruitment = () => {
                     className="relative flex flex-col rounded-lg border bg-card p-5 transition hover:shadow-md"
                   >
                     <div
-                      className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
+                      className="absolute top-3 right-3 z-10 rounded bg-card/90 p-1 shadow"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <Checkbox
@@ -412,13 +412,13 @@ const AdminRecruitment = () => {
                           "gap-1.5 whitespace-nowrap font-medium",
                           p.isActive
                             ? "border-green-300 bg-green-100 text-green-800"
-                            : "border-slate-200 bg-slate-100 text-slate-600",
+                            : "border-border bg-muted text-muted-foreground",
                         )}
                       >
                         <span
                           className={cn(
                             "h-1.5 w-1.5 rounded-full",
-                            p.isActive ? "bg-green-600" : "bg-slate-400",
+                            p.isActive ? "bg-green-600" : "bg-muted-foreground",
                           )}
                         />
                         {p.isActive ? t("recruit.hiring") : t("recruit.closed")}
@@ -603,6 +603,7 @@ const AdminRecruitment = () => {
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-2">
                         <Select value={a.status} onValueChange={(v) => updateAppStatus(a.id, v)}>
                           <SelectTrigger
+                            aria-label={t("common.status")}
                             className={cn(
                               "h-7 gap-1.5 rounded-full border px-2.5 text-xs font-medium w-auto min-w-[110px]",
                               APP_STATUS_STYLES[a.status] ?? APP_STATUS_STYLES.new,
@@ -729,6 +730,7 @@ const AdminRecruitment = () => {
                               onValueChange={(v) => updateAppStatus(a.id, v)}
                             >
                               <SelectTrigger
+                                aria-label={t("common.status")}
                                 className={cn(
                                   "h-7 gap-1.5 rounded-full border px-2.5 text-xs font-medium w-auto min-w-[110px]",
                                   APP_STATUS_STYLES[a.status] ?? APP_STATUS_STYLES.new,

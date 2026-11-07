@@ -69,7 +69,7 @@ const ActivityDetail = () => {
           >
             <ArrowLeft className="w-4 h-4" /> {t("actPage.backToList")}
           </Link>
-          <span className="chip chip-orange bg-white/95 mb-5 w-fit">
+          <span className="chip chip-orange bg-card/95 mb-5 w-fit">
             {resolveCategoryLabel(a.categoryId, a.category, categoriesById, lang)}
           </span>
           <h1 className="font-display text-3xl md:text-5xl lg:text-6xl font-extrabold text-white leading-[1.05] tracking-tight max-w-4xl text-balance">

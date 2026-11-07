@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useState } from "react";
 import {
   ArrowDownAZ,
@@ -51,6 +53,7 @@ import VendorForm from "./VendorForm";
 const TYPES: VendorType[] = ["Supplier", "SubContractor", "Both"];
 
 export default function VendorPage() {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { has } = usePermissions();
   const { toast } = useToast();
@@ -97,11 +100,11 @@ export default function VendorPage() {
       setRows(data.items);
       setTotal(data.total);
     } catch (loadError) {
-      setError((loadError as Error).message);
+      setError(uiError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [page, search, sortDirection, status, type]);
+  }, [page, search, sortDirection, status, type, uiError]);
 
   useEffect(() => {
     void load();
@@ -130,7 +133,7 @@ export default function VendorPage() {
     try {
       setDeleteImpact((await adminApi.getVendorDeletionImpact(vendor.id)).data);
     } catch (impactError) {
-      setDeleteError(extractApiError(impactError) || t("common.error"));
+      setDeleteError(uiError(impactError) || t("common.error"));
     } finally {
       setLoadingImpact(false);
     }
@@ -149,7 +152,7 @@ export default function VendorPage() {
         })
       ).data;
     } catch (deleteError) {
-      setDeleteError(extractApiError(deleteError) || t("common.error"));
+      setDeleteError(uiError(deleteError) || t("common.error"));
       throw deleteError;
     } finally {
       setDeleting(false);
@@ -207,7 +210,7 @@ export default function VendorPage() {
         ],
       });
     } catch (exportError) {
-      toast({ variant: "destructive", title: extractApiError(exportError) || t("common.error") });
+      toast({ variant: "destructive", title: uiError(exportError) || t("common.error") });
     } finally {
       setExporting(false);
     }
@@ -247,6 +250,7 @@ export default function VendorPage() {
           <div className="relative sm:col-span-2 xl:col-span-1">
             <Search className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
             <Input
+              aria-label={t("common.search")}
               value={searchInput}
               onChange={(event) => setSearchInput(event.target.value)}
               placeholder={t("proc.vendors.searchPlaceholder")}
@@ -260,7 +264,10 @@ export default function VendorPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="min-h-11 sm:min-h-10">
+            <SelectTrigger
+              aria-label={t("proc.vendors.field.type")}
+              className="min-h-11 sm:min-h-10"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -279,7 +286,10 @@ export default function VendorPage() {
               setPage(1);
             }}
           >
-            <SelectTrigger className="min-h-11 sm:min-h-10">
+            <SelectTrigger
+              aria-label={t("proc.vendors.field.status")}
+              className="min-h-11 sm:min-h-10"
+            >
               <SelectValue />
             </SelectTrigger>
             <SelectContent>

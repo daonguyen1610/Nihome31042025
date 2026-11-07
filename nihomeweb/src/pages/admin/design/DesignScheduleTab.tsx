@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { projectMemberOption } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -79,7 +82,7 @@ const loadAllScheduleTasks = async (projectId: number, designProjectId: number) 
 };
 
 const statusClass: Record<string, string> = {
-  NotStarted: "border-slate-200 bg-slate-50 text-slate-700",
+  NotStarted: "border-border bg-muted/30 text-foreground",
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
   Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
   OnHold: "border-amber-200 bg-amber-50 text-amber-700",
@@ -87,6 +90,7 @@ const statusClass: Record<string, string> = {
 };
 
 export const DesignScheduleTab = ({ project }: Props) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const operationalProjectId = project.operationalProjectId;
@@ -143,11 +147,11 @@ export const DesignScheduleTab = ({ project }: Props) => {
         setMasterScheduleItems([]);
       }
     } catch (loadError) {
-      setError(extractApiError(loadError));
+      setError(uiError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId, query, project.id, lang]);
+  }, [operationalProjectId, query, project.id, lang, uiError]);
 
   useEffect(() => {
     void load();
@@ -208,7 +212,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
       initializeKey.current = newIdempotencyKey();
       await load();
     } catch (initializeError) {
-      setError(extractApiError(initializeError));
+      setError(uiError(initializeError));
     } finally {
       setInitializing(false);
     }
@@ -268,7 +272,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
         );
       await load();
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setBusyTaskId(null);
     }
@@ -276,19 +280,19 @@ export const DesignScheduleTab = ({ project }: Props) => {
 
   if (!operationalProjectId)
     return (
-      <section className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
-        <CalendarClock className="mx-auto h-9 w-9 text-slate-400" />
-        <h2 className="mt-3 font-semibold text-slate-900">
+      <section className="rounded-lg border border-dashed border-input bg-card p-8 text-center">
+        <CalendarClock className="mx-auto h-9 w-9 text-muted-foreground" />
+        <h2 className="mt-3 font-semibold text-foreground">
           {t("designProjects.schedule.unlinkedTitle")}
         </h2>
-        <p className="mx-auto mt-1 max-w-xl text-sm text-slate-500">
+        <p className="mx-auto mt-1 max-w-xl text-sm text-muted-foreground">
           {t("designProjects.schedule.unlinkedDescription")}
         </p>
       </section>
     );
   if (loading && !schedule)
     return (
-      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border bg-white py-16 text-sm text-slate-500">
+      <div className="flex flex-col items-center justify-center gap-3 rounded-lg border bg-card py-16 text-sm text-muted-foreground">
         <Loader2 className="h-7 w-7 animate-spin" />
         <span>{t("designProjects.schedule.loading")}</span>
       </div>
@@ -307,12 +311,12 @@ export const DesignScheduleTab = ({ project }: Props) => {
 
   if (!schedule.phases.length)
     return (
-      <section className="rounded-lg border border-dashed border-slate-300 bg-white p-8 text-center">
-        <CalendarClock className="mx-auto h-9 w-9 text-slate-400" />
-        <h2 className="mt-3 font-semibold text-slate-900">
+      <section className="rounded-lg border border-dashed border-input bg-card p-8 text-center">
+        <CalendarClock className="mx-auto h-9 w-9 text-muted-foreground" />
+        <h2 className="mt-3 font-semibold text-foreground">
           {t("designProjects.schedule.emptyTitle")}
         </h2>
-        <p className="mx-auto mt-1 max-w-xl text-sm text-slate-500">
+        <p className="mx-auto mt-1 max-w-xl text-sm text-muted-foreground">
           {t("designProjects.schedule.emptyDescription")}
         </p>
         {schedule.canManage ? (
@@ -329,7 +333,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
             {t("designProjects.schedule.action.initialize")}
           </Button>
         ) : (
-          <p className="mt-4 text-sm font-medium text-slate-600">
+          <p className="mt-4 text-sm font-medium text-muted-foreground">
             {t("designProjects.schedule.readOnly")}
           </p>
         )}
@@ -343,14 +347,14 @@ export const DesignScheduleTab = ({ project }: Props) => {
 
   return (
     <div className="space-y-4" data-testid="design-schedule-tab">
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
-              <CalendarClock className="h-5 w-5 text-slate-500" />
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <CalendarClock className="h-5 w-5 text-muted-foreground" />
               {t("designProjects.schedule.title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {t("designProjects.schedule.description")}
             </p>
           </div>
@@ -364,12 +368,12 @@ export const DesignScheduleTab = ({ project }: Props) => {
           )}
         </div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
+          <div className="rounded-lg bg-muted/30 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {t("designProjects.schedule.rollup.project")}
             </p>
             <div className="mt-2 flex items-end justify-between gap-3">
-              <strong className="text-2xl text-slate-900">
+              <strong className="text-2xl text-foreground">
                 {schedule.progressPercent == null ? "—" : `${schedule.progressPercent}%`}
               </strong>
               <Badge
@@ -389,12 +393,12 @@ export const DesignScheduleTab = ({ project }: Props) => {
             </div>
             <Progress className="mt-3 h-2" value={schedule.progressPercent ?? 0} />
           </div>
-          <div className="rounded-lg bg-slate-50 p-4">
-            <p className="text-xs uppercase tracking-wide text-slate-500">
+          <div className="rounded-lg bg-muted/30 p-4">
+            <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {t("designProjects.schedule.rollup.policy")}
             </p>
-            <p className="mt-2 font-mono text-sm text-slate-700">{schedule.rollupPolicyVersion}</p>
-            <p className="mt-2 text-xs text-slate-500">
+            <p className="mt-2 font-mono text-sm text-foreground">{schedule.rollupPolicyVersion}</p>
+            <p className="mt-2 text-xs text-muted-foreground">
               {t("designProjects.schedule.rollup.explanation")}
             </p>
           </div>
@@ -403,13 +407,10 @@ export const DesignScheduleTab = ({ project }: Props) => {
 
       <section className="grid gap-3 lg:grid-cols-3">
         {schedule.phases.map((phase) => (
-          <article
-            key={phase.id}
-            className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-          >
+          <article key={phase.id} className="rounded-lg border border-border bg-card p-4 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div>
-                <h3 className="font-semibold text-slate-900">
+                <h3 className="font-semibold text-foreground">
                   {t(`designProjects.stage.${phase.code}`)}
                 </h3>
                 <Badge variant="outline" className={`mt-2 ${statusClass[phase.status]}`}>
@@ -438,7 +439,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
               <div>
-                <dt className="text-xs text-slate-500">
+                <dt className="text-xs text-muted-foreground">
                   {t("designProjects.schedule.field.plannedDates")}
                 </dt>
                 <dd>
@@ -446,7 +447,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">
+                <dt className="text-xs text-muted-foreground">
                   {t("designProjects.schedule.field.actualDates")}
                 </dt>
                 <dd>
@@ -454,13 +455,13 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">
+                <dt className="text-xs text-muted-foreground">
                   {t("designProjects.schedule.field.weight")}
                 </dt>
                 <dd>{phase.weight}%</dd>
               </div>
               <div>
-                <dt className="text-xs text-slate-500">
+                <dt className="text-xs text-muted-foreground">
                   {t("designProjects.schedule.rollup.phase")}
                 </dt>
                 <dd>
@@ -472,7 +473,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
             </dl>
             <Progress className="mt-3 h-2" value={phase.rolledUpProgressPercent ?? 0} />
             <div className="mt-3 flex items-center justify-between">
-              <span className="text-xs text-slate-500">
+              <span className="text-xs text-muted-foreground">
                 {t(
                   phase.baselineReady
                     ? "designProjects.schedule.baseline.ready"
@@ -497,10 +498,10 @@ export const DesignScheduleTab = ({ project }: Props) => {
 
       <DesignScheduleTimeline tasks={dependencyTasks} members={team?.members ?? []} />
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="flex items-center gap-2 font-semibold text-slate-900">
-            <Filter className="h-4 w-4 text-slate-500" />
+          <h3 className="flex items-center gap-2 font-semibold text-foreground">
+            <Filter className="h-4 w-4 text-muted-foreground" />
             {t("designProjects.schedule.filters.title")}
           </h3>
           {hasFilters ? (
@@ -510,7 +511,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
           ) : null}
         </div>
         <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-          <div>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.phase")}</Label>
             <Select
               value={query.phase ?? "all"}
@@ -532,8 +533,8 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.assignee")}</Label>
             <SearchableSelect
               value={query.assigneeMemberId ? String(query.assigneeMemberId) : "all"}
@@ -547,8 +548,8 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 ...activeMembers.map((member) => projectMemberOption(member, t)),
               ]}
             />
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.department")}</Label>
             <Select
               value={query.departmentCode ?? "all"}
@@ -570,8 +571,8 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.discipline")}</Label>
             <Select
               value={query.disciplineCode ?? "all"}
@@ -595,8 +596,8 @@ export const DesignScheduleTab = ({ project }: Props) => {
                   ))}
               </SelectContent>
             </Select>
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.status")}</Label>
             <Select
               value={query.status ?? "all"}
@@ -620,7 +621,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
           <div>
             <Label htmlFor="schedule-planned-from">
               {t("designProjects.schedule.filter.plannedFrom")}
@@ -658,20 +659,20 @@ export const DesignScheduleTab = ({ project }: Props) => {
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <section className="rounded-lg border border-border bg-card shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-2 border-b p-4">
           <div>
-            <h3 className="font-semibold text-slate-900">
+            <h3 className="font-semibold text-foreground">
               {t("designProjects.schedule.tasks.title")}
             </h3>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-muted-foreground">
               {t("designProjects.schedule.tasks.total", { count: schedule.tasks.totalCount })}
             </p>
-            <p className="mt-1 max-w-3xl text-sm text-slate-600">
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
               {t("designProjects.schedule.tasks.approvalGuide")}
             </p>
           </div>
-          {loading ? <Loader2 className="h-5 w-5 animate-spin text-slate-400" /> : null}
+          {loading ? <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" /> : null}
         </div>
         {error ? (
           <div
@@ -691,7 +692,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
           </div>
         ) : null}
         {!schedule.tasks.items.length ? (
-          <div className="p-10 text-center text-sm text-slate-500">
+          <div className="p-10 text-center text-sm text-muted-foreground">
             {t(
               hasFilters
                 ? "designProjects.schedule.tasks.emptyFiltered"
@@ -711,7 +712,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                         {task.isMilestone ? (
                           <Diamond className="h-4 w-4 fill-amber-400 text-amber-600" />
                         ) : null}
-                        <strong className="break-words text-slate-900">{task.name}</strong>
+                        <strong className="break-words text-foreground">{task.name}</strong>
                         <Badge variant="outline" className={statusClass[task.status]}>
                           {t(`designProjects.schedule.status.${task.status}`)}
                         </Badge>
@@ -724,7 +725,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                           </Badge>
                         ) : null}
                       </div>
-                      <p className="mt-1 break-all font-mono text-xs text-slate-500">
+                      <p className="mt-1 break-all font-mono text-xs text-muted-foreground">
                         {task.code} / {t(`designProjects.stage.${task.phaseCode}`)}
                       </p>
                     </div>
@@ -743,35 +744,37 @@ export const DesignScheduleTab = ({ project }: Props) => {
                     ) : null}
                   </div>
                   {task.description ? (
-                    <p className="mt-2 break-words text-sm text-slate-600">{task.description}</p>
+                    <p className="mt-2 break-words text-sm text-muted-foreground">
+                      {task.description}
+                    </p>
                   ) : null}
                   <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.schedule.field.assignee")}
                       </dt>
                       <dd>{memberLabel(task.assigneeMemberId)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.schedule.field.approver")}
                       </dt>
                       <dd>{memberLabel(task.approverMemberId)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.schedule.field.department")}
                       </dt>
                       <dd>{departmentLabel(task.departmentCode)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.schedule.field.discipline")}
                       </dt>
                       <dd>{disciplineLabel(task.disciplineCode)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.schedule.field.plannedDates")}
                       </dt>
                       <dd>
@@ -779,7 +782,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.schedule.field.actualDates")}
                       </dt>
                       <dd>
@@ -787,7 +790,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                       </dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500">
+                      <dt className="text-xs text-muted-foreground">
                         {t("designProjects.schedule.field.progressWeight")}
                       </dt>
                       <dd>
@@ -796,12 +799,12 @@ export const DesignScheduleTab = ({ project }: Props) => {
                     </div>
                   </dl>
                   {task.resourceSummary ? (
-                    <p className="mt-2 break-words text-xs text-slate-500">
+                    <p className="mt-2 break-words text-xs text-muted-foreground">
                       {t("designProjects.schedule.field.resources")}: {task.resourceSummary}
                     </p>
                   ) : null}
                   {task.predecessorTaskIds.length ? (
-                    <p className="mt-2 break-words text-xs text-slate-500">
+                    <p className="mt-2 break-words text-xs text-muted-foreground">
                       {t("designProjects.schedule.field.predecessors")}:{" "}
                       {task.predecessorTaskIds
                         .map(
@@ -811,7 +814,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                     </p>
                   ) : null}
                   {task.successorTaskIds.length ? (
-                    <p className="mt-1 break-words text-xs text-slate-500">
+                    <p className="mt-1 break-words text-xs text-muted-foreground">
                       {t("designProjects.schedule.field.successors")}:{" "}
                       {task.successorTaskIds
                         .map(
@@ -834,11 +837,11 @@ export const DesignScheduleTab = ({ project }: Props) => {
                     </Button>
                   ) : null}
                   {isApprover && task.approvalStatus === "Pending" ? (
-                    <div className="mt-3 space-y-2 rounded-md border bg-slate-50 p-3">
-                      <p className="font-medium text-slate-900">
+                    <div className="mt-3 space-y-2 rounded-md border bg-muted/30 p-3">
+                      <p className="font-medium text-foreground">
                         {t("designProjects.schedule.review.title")}
                       </p>
-                      <p className="text-sm text-slate-600">
+                      <p className="text-sm text-muted-foreground">
                         {t("designProjects.schedule.review.help")}
                       </p>
                       <Label htmlFor={`task-${task.id}-review-reason`}>
@@ -886,7 +889,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
           </div>
         )}
         <div className="flex items-center justify-between border-t p-4">
-          <span className="text-sm text-slate-500">
+          <span className="text-sm text-muted-foreground">
             {t("designProjects.schedule.pagination", { page: schedule.tasks.page, totalPages })}
           </span>
           <div className="flex gap-2">
@@ -914,7 +917,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
         </div>
       </section>
 
-      <div className="flex items-center gap-2 text-xs text-slate-500">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
         <CheckCircle2 className="h-4 w-4" />
         <span>{t("designProjects.schedule.rollup.audit")}</span>
       </div>

@@ -1,0 +1,18 @@
+[
+  {
+    "key": "common.confirmAction",
+    "category": "common",
+    "vi": "Xác nhận thao tác",
+    "en": "Confirm action",
+    "zh": "确认操作",
+    "ja": "操作を確認"
+  },
+  {
+    "key": "common.lookupIncomplete",
+    "category": "common",
+    "vi": "Chưa tải đủ danh sách lựa chọn. Hãy tải lại trang trước khi tiếp tục.",
+    "en": "The selection list could not be fully loaded. Reload the page before continuing.",
+    "zh": "未能完整加载选项列表。请刷新页面后再继续。",
+    "ja": "選択肢をすべて読み込めませんでした。ページを再読み込みしてから続行してください。"
+  }
+]

@@ -1,3 +1,10 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import ConstructionStatTile from "./ConstructionStatTile";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -86,7 +93,7 @@ const ASBUILT_STATUSES: AsBuiltStatus[] = [
 const EDITABLE_STATUSES = new Set<AsBuiltStatus>(["Draft", "Submitted"]);
 
 const STATUS_BADGE: Record<AsBuiltStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Archived: "border-indigo-200 bg-indigo-50 text-indigo-700",
@@ -102,6 +109,7 @@ const formatDateTime = (iso: string | null | undefined) => {
 };
 
 export default function AsBuiltDocumentsPage() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -118,6 +126,7 @@ export default function AsBuiltDocumentsPage() {
   const [status, setStatus] = useState<AsBuiltStatus | "">("");
   const [openOnly, setOpenOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [sort, setSort] = useState("category-asc");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(20);
@@ -172,7 +181,7 @@ export default function AsBuiltDocumentsPage() {
     (async () => {
       try {
         const [projectsRes, categoriesRes] = await Promise.all([
-          adminApi.listDesignProjects({ pageSize: 200 }),
+          collectLookupPages((page) => adminApi.listDesignProjects({ pageSize: 200, page })),
           adminApi.getAsBuiltDocumentCategories(true),
         ]);
         if (!cancelled) {
@@ -188,7 +197,9 @@ export default function AsBuiltDocumentsPage() {
     };
   }, []);
 
+  const startListRequest = useRequestGuard();
   const load = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
@@ -196,7 +207,7 @@ export default function AsBuiltDocumentsPage() {
         designProjectId: projectId,
         category: category || undefined,
         status: status || undefined,
-        search: search.trim() || undefined,
+        search: settledSearch.trim() || undefined,
         openOnly: openOnly || undefined,
         sortBy: sort.split("-")[0] as AsBuiltDocumentListParams["sortBy"],
         sortDirection: sort.split("-")[1] as AsBuiltDocumentListParams["sortDirection"],
@@ -204,6 +215,7 @@ export default function AsBuiltDocumentsPage() {
         pageSize,
       };
       const res = await adminApi.listAsBuiltDocuments(params);
+      if (!isCurrent()) return;
       setRows(res.data.items ?? []);
       setTotal(res.data.total ?? 0);
       setStatusCounts(res.data.statusCounts ?? {});
@@ -211,11 +223,24 @@ export default function AsBuiltDocumentsPage() {
       setTotalRequired(res.data.totalRequiredCategories ?? 0);
       setSelected(new Set());
     } catch (e) {
-      setError(extractApiError(e) || t("asbuilt.error"));
+      if (!isCurrent()) return;
+      setError(uiError(e) || t("asbuilt.error"));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [projectId, category, status, search, openOnly, sort, page, pageSize, t]);
+  }, [
+    startListRequest,
+    projectId,
+    category,
+    status,
+    settledSearch,
+    openOnly,
+    sort,
+    page,
+    pageSize,
+    uiError,
+    t,
+  ]);
 
   useEffect(() => {
     load();
@@ -300,7 +325,7 @@ export default function AsBuiltDocumentsPage() {
       setFormOpen(false);
       await load();
     } catch (e) {
-      setFormError(extractApiError(e) || t("asbuilt.error"));
+      setFormError(uiError(e) || t("asbuilt.error"));
     } finally {
       setSaving(false);
     }
@@ -318,7 +343,7 @@ export default function AsBuiltDocumentsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e) || t("asbuilt.error"),
+        title: uiError(e) || t("asbuilt.error"),
       });
     }
   };
@@ -347,7 +372,7 @@ export default function AsBuiltDocumentsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e) || t("asbuilt.error"),
+        title: uiError(e) || t("asbuilt.error"),
       });
     }
   };
@@ -370,7 +395,7 @@ export default function AsBuiltDocumentsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e) || t("asbuilt.error"),
+        title: uiError(e) || t("asbuilt.error"),
       });
     }
   };
@@ -383,7 +408,7 @@ export default function AsBuiltDocumentsPage() {
         designProjectId: projectId,
         category: category || undefined,
         status: status || undefined,
-        search: search.trim() || undefined,
+        search: settledSearch.trim() || undefined,
         openOnly: openOnly || undefined,
         sortBy: sortBy as AsBuiltDocumentListParams["sortBy"],
         sortDirection: sortDirection as AsBuiltDocumentListParams["sortDirection"],
@@ -400,7 +425,7 @@ export default function AsBuiltDocumentsPage() {
     } catch (e) {
       toast({
         variant: "destructive",
-        title: extractApiError(e) || t("asbuilt.error"),
+        title: uiError(e) || t("asbuilt.error"),
       });
     } finally {
       setExporting(false);
@@ -476,21 +501,21 @@ export default function AsBuiltDocumentsPage() {
         key: "total",
         label: t("asbuilt.stats.total"),
         value: total,
-        gradient: "from-indigo-500 to-violet-500",
+
         icon: FolderArchive,
       },
       {
         key: "submitted",
         label: t("asbuilt.stats.submitted"),
         value: statusCounts.Submitted ?? 0,
-        gradient: "from-sky-500 to-cyan-500",
+
         icon: FileCheck,
       },
       {
         key: "approved",
         label: t("asbuilt.stats.approved"),
         value: (statusCounts.Approved ?? 0) + (statusCounts.Archived ?? 0),
-        gradient: "from-emerald-500 to-teal-500",
+
         icon: CheckCircle2,
       },
       {
@@ -570,30 +595,21 @@ export default function AsBuiltDocumentsPage() {
                     .replace("{total}", String(totalRequired))
                 : null;
             return (
-              <div
+              <ConstructionStatTile
                 key={s.key}
-                className={cn(
-                  "relative overflow-hidden rounded-xl p-4 text-white shadow-md",
-                  `bg-gradient-to-br ${s.gradient}`,
-                )}
-                data-testid={`asbuilt-stat-${s.key}`}
-              >
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-medium uppercase tracking-wider opacity-90">
-                    {s.label}
-                  </span>
-                  <Icon className="h-5 w-5 opacity-80" />
-                </div>
-                <div className="mt-2 text-3xl font-bold">{s.value}</div>
-                {subLabel && <div className="mt-1 text-[10px] opacity-90">{subLabel}</div>}
-              </div>
+                label={s.label}
+                value={s.value}
+                icon={<Icon />}
+                testId={`asbuilt-stat-${s.key}`}
+                note={subLabel}
+              />
             );
           })}
         </div>
 
         <div className="rounded-lg border bg-card p-3 md:p-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-5 [&>div]:min-w-0">
-            <div>
+            <FieldScope>
               <Label>{t("asbuilt.field.project")}</Label>
               <SearchableSelect
                 options={[
@@ -607,8 +623,8 @@ export default function AsBuiltDocumentsPage() {
                 }}
                 placeholder={t("asbuilt.filter.project.all")}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.field.category")}</Label>
               <Select
                 value={category || "__all__"}
@@ -631,8 +647,8 @@ export default function AsBuiltDocumentsPage() {
                     ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.field.status")}</Label>
               <Select
                 value={status || "__all__"}
@@ -653,8 +669,8 @@ export default function AsBuiltDocumentsPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.filter.search")}</Label>
               <div className="relative">
                 <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -669,8 +685,8 @@ export default function AsBuiltDocumentsPage() {
                   data-testid="asbuilt-search"
                 />
               </div>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.filter.sort")}</Label>
               <Select
                 value={sort}
@@ -694,7 +710,7 @@ export default function AsBuiltDocumentsPage() {
                   <SelectItem value="updatedAt-asc">{t("asbuilt.sort.updatedAsc")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
+            </FieldScope>
           </div>
           <div className="mt-2 flex items-center gap-4">
             <label className="flex items-center gap-2 text-sm">
@@ -1127,7 +1143,7 @@ export default function AsBuiltDocumentsPage() {
           <div className="space-y-3">
             {/* Project selector - only show when creating new document */}
             {!editingId && (
-              <div>
+              <FieldScope>
                 <Label>{t("asbuilt.field.project")} *</Label>
                 <SearchableSelect
                   options={projects.map((p) => ({ value: String(p.id), label: p.name }))}
@@ -1136,17 +1152,17 @@ export default function AsBuiltDocumentsPage() {
                   placeholder={t("asbuilt.form.selectProject")}
                   data-testid="asbuilt-form-project"
                 />
-              </div>
+              </FieldScope>
             )}
-            <div>
+            <FieldScope>
               <Label>{t("asbuilt.field.title")} *</Label>
               <Input
                 value={form.title}
                 onChange={(e) => setForm({ ...form, title: e.target.value })}
                 data-testid="asbuilt-form-title"
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.field.category")} *</Label>
               <Select
                 value={form.category}
@@ -1164,8 +1180,8 @@ export default function AsBuiltDocumentsPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.field.fileUrl")}</Label>
               <AdminDocumentUpload
                 uploadFile={async (file) =>
@@ -1195,22 +1211,22 @@ export default function AsBuiltDocumentsPage() {
                     />
                   )}
               </div>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.field.description")}</Label>
               <Textarea
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm({ ...form, description: e.target.value })}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("asbuilt.field.note")}</Label>
               <Input
                 value={form.note}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
               />
-            </div>
+            </FieldScope>
             {formError && <div className="text-sm text-rose-600">{formError}</div>}
           </div>
           <DialogFooter>
@@ -1245,6 +1261,7 @@ export default function AsBuiltDocumentsPage() {
           </AlertDialogHeader>
           <div>
             <Textarea
+              aria-label={t("a11yUi.reason")}
               rows={2}
               placeholder={t("asbuilt.confirm.reasonPlaceholder")}
               value={transitionNote}

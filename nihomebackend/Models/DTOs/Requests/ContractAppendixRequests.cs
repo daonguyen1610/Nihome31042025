@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using NihomeBackend.Models.DTOs;
 
 namespace NihomeBackend.Models.DTOs.Requests;
 
@@ -16,8 +17,12 @@ public class UpsertContractAppendixRequest
     [Range(-1_000_000_000_000d, 1_000_000_000_000d)]
     public decimal ValueDelta { get; set; }
 
-    /// <summary>Optional attachment metadata; upload first via
-    /// <c>POST /api/contracts/{id}/appendices/upload</c>.</summary>
+    /// <summary>Every attachment for this appendix; upload each file first via
+    /// <c>POST /api/contracts/{id}/appendices/files</c>.</summary>
+    public List<ContractAppendixFileInfo>? Files { get; set; }
+
+    /// <summary>Legacy single attachment. Ignored when <see cref="Files"/> has
+    /// entries; kept so older clients keep working.</summary>
     [StringLength(500)]
     public string? FilePath { get; set; }
     [StringLength(300)]

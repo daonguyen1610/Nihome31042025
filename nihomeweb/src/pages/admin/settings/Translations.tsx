@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -255,6 +258,7 @@ const contentFieldKey = (field: string) => `translations.contentField.${field}`;
 /* ─── Component ──────────────────────────────────── */
 
 const TranslationsPage = () => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -322,13 +326,13 @@ const TranslationsPage = () => {
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, [filterCat, searchQ, t, toast]);
+  }, [filterCat, searchQ, t, toast, uiError]);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -546,7 +550,7 @@ const TranslationsPage = () => {
       setEntityModalOpen(false);
       fetchEntities();
     } catch (error) {
-      toast({ title: extractApiError(error), variant: "destructive" });
+      toast({ title: uiError(error), variant: "destructive" });
     } finally {
       setEntitySaving(false);
     }
@@ -626,6 +630,7 @@ const TranslationsPage = () => {
               <div className="relative min-w-[200px] max-w-md flex-1">
                 <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
+                  aria-label={t("common.search")}
                   value={searchQ}
                   onChange={(e) => {
                     setSearchQ(e.target.value);
@@ -642,7 +647,10 @@ const TranslationsPage = () => {
                   setPage(1);
                 }}
               >
-                <SelectTrigger className="h-9 w-[200px]">
+                <SelectTrigger
+                  aria-label={t("translations.field.category")}
+                  className="h-9 w-[200px]"
+                >
                   <SelectValue placeholder={t("translations.allCategories")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -866,7 +874,9 @@ const TranslationsPage = () => {
         {tab === "entity" && (
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
-              <Label className="text-sm">{t("translations.contentType")}:</Label>
+              <Label htmlFor="content-translation-type" className="text-sm">
+                {t("translations.contentType")}:
+              </Label>
               <Select
                 value={selectedType}
                 onValueChange={(value) => {
@@ -874,7 +884,7 @@ const TranslationsPage = () => {
                   setEntitySearch("");
                 }}
               >
-                <SelectTrigger className="h-9 w-[220px]">
+                <SelectTrigger id="content-translation-type" className="h-9 w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -1090,7 +1100,7 @@ const TranslationsPage = () => {
                   const hintKey = fieldHintKey(field);
                   return (
                     <div key={field} className="grid grid-cols-2 gap-4">
-                      <div className="space-y-1.5">
+                      <FieldScope className="space-y-1.5">
                         <Label className="text-xs">
                           🇻🇳 {t(contentFieldKey(field))} ({t("translations.source")})
                         </Label>
@@ -1100,8 +1110,8 @@ const TranslationsPage = () => {
                           rows={rows}
                           className="resize-y bg-muted/50 font-mono"
                         />
-                      </div>
-                      <div className="space-y-1.5">
+                      </FieldScope>
+                      <FieldScope className="space-y-1.5">
                         <Label className="text-xs">
                           {LANG_LABELS[entityModalLang]} {t(contentFieldKey(field))}
                         </Label>
@@ -1120,7 +1130,7 @@ const TranslationsPage = () => {
                             {t(hintKey)}
                           </p>
                         )}
-                      </div>
+                      </FieldScope>
                     </div>
                   );
                 })}

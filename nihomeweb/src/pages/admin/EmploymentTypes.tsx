@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
@@ -44,6 +45,7 @@ function getErrorMessage(error: unknown) {
 }
 
 const EmploymentTypes = () => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -178,7 +180,7 @@ const EmploymentTypes = () => {
     }
   };
   const removeEmp = async (item: EmploymentTypeResponse) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteEmploymentType(item.id);
       setEmpItems((prev) => prev.filter((i) => i.id !== item.id));
@@ -246,7 +248,7 @@ const EmploymentTypes = () => {
     }
   };
   const removeDrop = async (item: RecruitmentDropdownOptionResponse) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteRecruitmentDropdownOption(item.id);
       setDropItems((prev) => prev.filter((i) => i.id !== item.id));
@@ -411,18 +413,21 @@ const EmploymentTypes = () => {
           {isEmp ? (
             <form onSubmit={submitEmp} className="grid grid-cols-1 gap-3 lg:grid-cols-5">
               <Input
+                aria-label={t("empTypes.code")}
                 value={empForm.code}
                 onChange={(e) => setEmpForm((p) => ({ ...p, code: e.target.value }))}
                 placeholder={t("empTypes.codePlaceholder")}
                 required
               />
               <Input
+                aria-label={t("empTypes.displayName")}
                 value={empForm.name}
                 onChange={(e) => setEmpForm((p) => ({ ...p, name: e.target.value }))}
                 placeholder={t("empTypes.namePlaceholder")}
                 required
               />
               <Input
+                aria-label={t("empTypes.sortOrder")}
                 type="number"
                 value={empForm.sortOrder}
                 onChange={(e) => setEmpForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))}
@@ -456,18 +461,21 @@ const EmploymentTypes = () => {
           ) : (
             <form onSubmit={submitDrop} className="grid grid-cols-1 gap-3 lg:grid-cols-5">
               <Input
+                aria-label={t("empTypes.code")}
                 value={dropForm.code}
                 onChange={(e) => setDropForm((p) => ({ ...p, code: e.target.value }))}
                 placeholder={t("empTypes.codePlaceholder")}
                 required
               />
               <Input
+                aria-label={t("empTypes.displayName")}
                 value={dropForm.name}
                 onChange={(e) => setDropForm((p) => ({ ...p, name: e.target.value }))}
                 placeholder={t("empTypes.namePlaceholder")}
                 required
               />
               <Input
+                aria-label={t("empTypes.sortOrder")}
                 type="number"
                 value={dropForm.sortOrder}
                 onChange={(e) => setDropForm((p) => ({ ...p, sortOrder: Number(e.target.value) }))}

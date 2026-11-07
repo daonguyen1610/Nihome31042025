@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   DraftingCompass,
@@ -56,6 +59,7 @@ const EMPTY_STATE: DocumentsState = {
 };
 
 export const DesignProjectDocumentsTab = ({ project }: Props) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { has } = usePermissions();
   const [data, setData] = useState<DocumentsState>(EMPTY_STATE);
@@ -67,11 +71,21 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
     setError(null);
     try {
       const [concepts, basicDocs, shopDrawings, revisions, ifcReleases] = await Promise.all([
-        adminApi.listConceptOptions({ designProjectId: project.id, pageSize: 200 }),
-        adminApi.listBasicDesignDocs({ designProjectId: project.id, pageSize: 200 }),
-        adminApi.listShopDrawings({ designProjectId: project.id, pageSize: 200 }),
-        adminApi.listDrawingRevisions({ designProjectId: project.id, pageSize: 200 }),
-        adminApi.listIfcReleases({ designProjectId: project.id, pageSize: 200 }),
+        collectLookupPages((page) =>
+          adminApi.listConceptOptions({ designProjectId: project.id, pageSize: 200, page }),
+        ),
+        collectLookupPages((page) =>
+          adminApi.listBasicDesignDocs({ designProjectId: project.id, pageSize: 200, page }),
+        ),
+        collectLookupPages((page) =>
+          adminApi.listShopDrawings({ designProjectId: project.id, pageSize: 200, page }),
+        ),
+        collectLookupPages((page) =>
+          adminApi.listDrawingRevisions({ designProjectId: project.id, pageSize: 200, page }),
+        ),
+        collectLookupPages((page) =>
+          adminApi.listIfcReleases({ designProjectId: project.id, pageSize: 200, page }),
+        ),
       ]);
       setData({
         concepts: concepts.data.items,
@@ -81,11 +95,11 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
         ifcReleases: ifcReleases.data.items,
       });
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [project.id]);
+  }, [project.id, uiError]);
 
   useEffect(() => {
     void load();
@@ -197,19 +211,19 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
           sourceOptions={sourceOptions}
         />
       ) : null}
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="flex items-center gap-2 text-base font-semibold text-slate-900">
-              <FileText className="h-4 w-4 text-slate-500" />
+            <h2 className="flex items-center gap-2 text-base font-semibold text-foreground">
+              <FileText className="h-4 w-4 text-muted-foreground" />
               {t("designProjects.documents.title")}
             </h2>
-            <p className="mt-1 text-sm text-slate-500">
+            <p className="mt-1 text-sm text-muted-foreground">
               {t("designProjects.documents.description")}
             </p>
           </div>
           {!loading && !error ? (
-            <Badge variant="outline" className="border-slate-200 bg-slate-50 text-slate-700">
+            <Badge variant="outline" className="border-border bg-muted/30 text-foreground">
               {total} {t("designProjects.documents.recordCount")}
             </Badge>
           ) : null}
@@ -217,7 +231,7 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
 
         {loading ? (
           <div className="flex justify-center py-12">
-            <Loader2 className="h-6 w-6 animate-spin text-slate-400" />
+            <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
           <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
@@ -228,7 +242,7 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
             </Button>
           </div>
         ) : total === 0 ? (
-          <div className="mt-4 rounded-md border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
+          <div className="mt-4 rounded-md border border-dashed border-input p-8 text-center text-sm text-muted-foreground">
             {t("designProjects.documents.empty")}
           </div>
         ) : null}
@@ -237,36 +251,33 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
       {!loading && !error && total > 0 ? (
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           {groups.map(({ key, title, icon: Icon, rows }) => (
-            <section
-              key={key}
-              className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
-            >
+            <section key={key} className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <div className="flex items-center justify-between gap-2">
-                <h3 className="flex items-center gap-2 text-sm font-semibold text-slate-900">
-                  <Icon className="h-4 w-4 text-slate-500" />
+                <h3 className="flex items-center gap-2 text-sm font-semibold text-foreground">
+                  <Icon className="h-4 w-4 text-muted-foreground" />
                   {title}
                 </h3>
                 <Badge variant="secondary">{rows.length}</Badge>
               </div>
               {rows.length === 0 ? (
-                <p className="py-6 text-center text-sm text-slate-400">
+                <p className="py-6 text-center text-sm text-muted-foreground">
                   {t("designProjects.documents.groupEmpty")}
                 </p>
               ) : (
-                <ul className="mt-3 divide-y divide-slate-100">
+                <ul className="mt-3 divide-y divide-border">
                   {rows.map((row) => (
                     <li
                       key={row.id}
                       className="flex flex-wrap items-start justify-between gap-2 py-2.5 first:pt-0 last:pb-0"
                     >
                       <div className="min-w-0">
-                        <p className="font-mono text-xs text-slate-500">{row.code}</p>
-                        <p className="truncate text-sm font-medium text-slate-900">{row.title}</p>
+                        <p className="font-mono text-xs text-muted-foreground">{row.code}</p>
+                        <p className="truncate text-sm font-medium text-foreground">{row.title}</p>
                       </div>
                       <div className="flex items-center gap-1">
                         <Badge
                           variant="outline"
-                          className="max-w-full whitespace-normal text-right text-xs font-normal text-slate-600"
+                          className="max-w-full whitespace-normal text-right text-xs font-normal text-muted-foreground"
                         >
                           {row.status}
                         </Badge>

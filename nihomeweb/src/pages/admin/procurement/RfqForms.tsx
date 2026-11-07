@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { personOption } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -252,6 +254,7 @@ export function RfqBidForm({
   onSave: (draft: RfqBidDraft) => void;
   onUpload: (files: File[]) => Promise<File[]>;
 }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [vendorId, setVendorId] = useState(0);
   const [leadTimeDays, setLeadTimeDays] = useState("0");
@@ -515,7 +518,7 @@ export function RfqBidForm({
                     setUploadFiles((current) =>
                       current.filter((file) => !added.includes(file) || failed.includes(file)),
                     ),
-                  (error) => setUploadError(extractApiError(error)),
+                  (error) => setUploadError(uiError(error)),
                 );
               }}
               testId="rfq-form-files"
@@ -532,7 +535,7 @@ export function RfqBidForm({
                 onClick={() => {
                   setUploadError("");
                   void onUpload(uploadFiles).then(setUploadFiles, (error) =>
-                    setUploadError(extractApiError(error)),
+                    setUploadError(uiError(error)),
                   );
                 }}
               >

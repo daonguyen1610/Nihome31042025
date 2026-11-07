@@ -1,3 +1,10 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import ConstructionStatTile from "./ConstructionStatTile";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { personOption } from "@/lib/people";
 import type { SearchableSelectOption } from "@/components/ui/searchable-select";
@@ -83,7 +90,7 @@ const HANDOVER_STATUSES: HandoverStatus[] = [
 const EDITABLE_STATUSES = new Set<HandoverStatus>(["Draft", "Reopened"]);
 
 const STATUS_BADGE: Record<HandoverStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   ReadyForHandover: "border-sky-200 bg-sky-50 text-sky-700",
   HandedOver: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Reopened: "border-amber-200 bg-amber-50 text-amber-800",
@@ -131,6 +138,7 @@ const formatDateTime = (value: string | null | undefined, fallback: string) => {
 };
 
 export default function HandoverRecordsPage() {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -151,6 +159,7 @@ export default function HandoverRecordsPage() {
   const [plannedTo, setPlannedTo] = useState("");
   const [readyOnly, setReadyOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [sort, setSort] = useState("date-desc");
   const [page, setPage] = useState(1);
   const pageSize = 20;
@@ -186,7 +195,7 @@ export default function HandoverRecordsPage() {
   useEffect(() => {
     let cancelled = false;
     void Promise.allSettled([
-      adminApi.listDesignProjects({ pageSize: 200 }),
+      collectLookupPages((page) => adminApi.listDesignProjects({ pageSize: 200, page })),
       adminApi.getPeopleDirectory(),
     ]).then(([projectResult, userResult]) => {
       if (cancelled) return;
@@ -264,7 +273,7 @@ export default function HandoverRecordsPage() {
         status: status || undefined,
         plannedFrom: plannedFrom || undefined,
         plannedTo: plannedTo || undefined,
-        search: search.trim() || undefined,
+        search: settledSearch.trim() || undefined,
         readyOnly: readyOnly || undefined,
         sortBy,
         sortDirection,
@@ -272,24 +281,38 @@ export default function HandoverRecordsPage() {
         pageSize: includePage ? pageSize : undefined,
       };
     },
-    [page, plannedFrom, plannedTo, projectId, readyOnly, responsibleUserId, search, sort, status],
+    [
+      page,
+      plannedFrom,
+      plannedTo,
+      projectId,
+      readyOnly,
+      responsibleUserId,
+      settledSearch,
+      sort,
+      status,
+    ],
   );
 
+  const startListRequest = useRequestGuard();
   const load = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
       const response = await adminApi.listHandoverRecords(currentParams());
+      if (!isCurrent()) return;
       setRows(response.data.items ?? []);
       setTotal(response.data.total ?? 0);
       setReadyCount(response.data.readyCount ?? 0);
       setStatusCounts(response.data.statusCounts ?? {});
     } catch (loadError) {
-      setError(extractApiError(loadError) || t("handover.error"));
+      if (!isCurrent()) return;
+      setError(uiError(loadError) || t("handover.error"));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [currentParams, t]);
+  }, [startListRequest, currentParams, uiError, t]);
 
   useEffect(() => {
     void load();
@@ -305,12 +328,12 @@ export default function HandoverRecordsPage() {
         const response = await adminApi.getHandoverRecord(id);
         setDetail(response.data);
       } catch (loadError) {
-        setDetailError(extractApiError(loadError) || t("handover.detail.error"));
+        setDetailError(uiError(loadError) || t("handover.detail.error"));
       } finally {
         setDetailLoading(false);
       }
     },
-    [t],
+    [t, uiError],
   );
 
   const openCreate = () => {
@@ -432,7 +455,7 @@ export default function HandoverRecordsPage() {
       await load();
       if (detail?.id === editingId && editingId) await openDetail(editingId);
     } catch (saveError) {
-      setFormError(extractApiError(saveError) || t("handover.error"));
+      setFormError(uiError(saveError) || t("handover.error"));
     } finally {
       setSaving(false);
     }
@@ -489,7 +512,7 @@ export default function HandoverRecordsPage() {
     } catch (transitionError) {
       toast({
         variant: "destructive",
-        title: extractApiError(transitionError) || t("handover.error"),
+        title: uiError(transitionError) || t("handover.error"),
       });
     } finally {
       setActing(false);
@@ -507,7 +530,7 @@ export default function HandoverRecordsPage() {
       if (detail?.id === id) setDetailOpen(false);
       await load();
     } catch (deleteError) {
-      toast({ variant: "destructive", title: extractApiError(deleteError) || t("handover.error") });
+      toast({ variant: "destructive", title: uiError(deleteError) || t("handover.error") });
     } finally {
       setActing(false);
     }
@@ -527,7 +550,7 @@ export default function HandoverRecordsPage() {
       URL.revokeObjectURL(url);
       toast({ title: t("handover.toast.exported") });
     } catch (exportError) {
-      toast({ variant: "destructive", title: extractApiError(exportError) || t("handover.error") });
+      toast({ variant: "destructive", title: uiError(exportError) || t("handover.error") });
     } finally {
       setExporting(false);
     }
@@ -538,25 +561,21 @@ export default function HandoverRecordsPage() {
       label: t("handover.stats.total"),
       value: total,
       icon: PackageCheck,
-      color: "from-indigo-500 to-violet-500",
     },
     {
       label: t("handover.stats.ready"),
       value: readyCount,
       icon: ClipboardCheck,
-      color: "from-sky-500 to-cyan-500",
     },
     {
       label: t("handover.stats.pending"),
       value: (statusCounts.Draft ?? 0) + (statusCounts.Reopened ?? 0),
       icon: CalendarDays,
-      color: "from-amber-500 to-orange-500",
     },
     {
       label: t("handover.stats.completed"),
       value: statusCounts.HandedOver ?? 0,
       icon: CheckCircle2,
-      color: "from-emerald-500 to-teal-500",
     },
   ];
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
@@ -664,22 +683,18 @@ export default function HandoverRecordsPage() {
 
         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           {stats.map((stat) => (
-            <div key={stat.label} className="overflow-hidden rounded-xl border bg-card shadow-sm">
-              <div className={cn("h-1 bg-gradient-to-r", stat.color)} />
-              <div className="flex items-center gap-3 p-4">
-                <stat.icon className="h-8 w-8 text-muted-foreground" />
-                <div>
-                  <p className="text-2xl font-bold">{stat.value}</p>
-                  <p className="text-xs text-muted-foreground">{stat.label}</p>
-                </div>
-              </div>
-            </div>
+            <ConstructionStatTile
+              key={stat.label}
+              label={stat.label}
+              value={stat.value}
+              icon={<stat.icon />}
+            />
           ))}
         </section>
 
         <section className="space-y-4 rounded-xl border bg-card p-4 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <div className="space-y-1.5">
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.project")}</Label>
               <SearchableSelect
                 value={projectId ? String(projectId) : null}
@@ -694,8 +709,8 @@ export default function HandoverRecordsPage() {
                 placeholder={t("handover.filter.allProjects")}
                 searchPlaceholder={t("handover.filter.searchProject")}
               />
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.responsible")}</Label>
               <SearchableSelect
                 ariaLabel={t("handover.field.responsible")}
@@ -711,8 +726,8 @@ export default function HandoverRecordsPage() {
                 placeholder={t("handover.filter.allResponsible")}
                 searchPlaceholder={t("handover.filter.searchResponsible")}
               />
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.status")}</Label>
               <Select
                 value={status || "all"}
@@ -733,8 +748,8 @@ export default function HandoverRecordsPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.filter.sort")}</Label>
               <Select
                 value={sort}
@@ -755,8 +770,8 @@ export default function HandoverRecordsPage() {
                   <SelectItem value="updatedAt-desc">{t("handover.sort.updatedDesc")}</SelectItem>
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.filter.plannedFrom")}</Label>
               <LocalizedDateInput
                 value={plannedFrom}
@@ -765,8 +780,8 @@ export default function HandoverRecordsPage() {
                   setPage(1);
                 }}
               />
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.filter.plannedTo")}</Label>
               <LocalizedDateInput
                 value={plannedTo}
@@ -775,8 +790,8 @@ export default function HandoverRecordsPage() {
                   setPage(1);
                 }}
               />
-            </div>
-            <div className="space-y-1.5 md:col-span-2">
+            </FieldScope>
+            <FieldScope className="space-y-1.5 md:col-span-2">
               <Label>{t("handover.filter.search")}</Label>
               <div className="relative">
                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -791,7 +806,7 @@ export default function HandoverRecordsPage() {
                   data-testid="handover-search"
                 />
               </div>
-            </div>
+            </FieldScope>
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-sm">
             <Checkbox
@@ -1269,7 +1284,7 @@ export default function HandoverRecordsPage() {
             <DialogDescription>{t("handover.form.description")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.project")}</Label>
               <SearchableSelect
                 disabled={Boolean(editingId)}
@@ -1279,8 +1294,8 @@ export default function HandoverRecordsPage() {
                 placeholder={t("handover.form.selectProject")}
                 searchPlaceholder={t("handover.filter.searchProject")}
               />
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.responsible")}</Label>
               <SearchableSelect
                 ariaLabel={t("handover.field.responsible")}
@@ -1292,8 +1307,8 @@ export default function HandoverRecordsPage() {
                 placeholder={t("handover.form.selectResponsible")}
                 searchPlaceholder={t("handover.filter.searchResponsible")}
               />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
+            </FieldScope>
+            <FieldScope className="space-y-1.5 sm:col-span-2">
               <Label>{t("handover.field.title")}</Label>
               <Input
                 maxLength={300}
@@ -1303,8 +1318,8 @@ export default function HandoverRecordsPage() {
                 }
                 data-testid="handover-form-title"
               />
-            </div>
-            <div className="space-y-1.5 sm:col-span-2">
+            </FieldScope>
+            <FieldScope className="space-y-1.5 sm:col-span-2">
               <Label>{t("handover.field.description")}</Label>
               <Textarea
                 maxLength={4000}
@@ -1313,8 +1328,8 @@ export default function HandoverRecordsPage() {
                   setForm((current) => ({ ...current, description: event.target.value }))
                 }
               />
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.plannedDate")}</Label>
               <LocalizedDateInput
                 value={form.plannedHandoverDate}
@@ -1322,8 +1337,8 @@ export default function HandoverRecordsPage() {
                   setForm((current) => ({ ...current, plannedHandoverDate: event.target.value }))
                 }
               />
-            </div>
-            <div className="space-y-1.5">
+            </FieldScope>
+            <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.location")}</Label>
               <Input
                 maxLength={300}
@@ -1332,7 +1347,7 @@ export default function HandoverRecordsPage() {
                   setForm((current) => ({ ...current, location: event.target.value }))
                 }
               />
-            </div>
+            </FieldScope>
             <label className="flex items-center gap-2 sm:col-span-2">
               <Checkbox
                 checked={form.commissioningCompleted}
@@ -1342,7 +1357,7 @@ export default function HandoverRecordsPage() {
               />
               {t("handover.field.commissioningCompleted")}
             </label>
-            <div className="space-y-1.5 sm:col-span-2">
+            <FieldScope className="space-y-1.5 sm:col-span-2">
               <Label>{t("handover.field.commissioningNotes")}</Label>
               <Textarea
                 maxLength={4000}
@@ -1351,11 +1366,11 @@ export default function HandoverRecordsPage() {
                   setForm((current) => ({ ...current, commissioningNotes: event.target.value }))
                 }
               />
-            </div>
+            </FieldScope>
           </div>
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>{t("handover.field.checklist")}</Label>
+              <span>{t("handover.field.checklist")}</span>
               <Button
                 type="button"
                 size="sm"
@@ -1389,12 +1404,14 @@ export default function HandoverRecordsPage() {
                   aria-label={t("handover.form.checklistCompleted")}
                 />
                 <Input
+                  aria-label={t("handover.form.checklistName")}
                   maxLength={300}
                   value={item.name}
                   onChange={(event) => updateChecklistItem(index, { name: event.target.value })}
                   placeholder={t("handover.form.checklistName")}
                 />
                 <Input
+                  aria-label={t("handover.form.checklistNote")}
                   maxLength={1000}
                   value={item.note ?? ""}
                   onChange={(event) => updateChecklistItem(index, { note: event.target.value })}
@@ -1414,7 +1431,7 @@ export default function HandoverRecordsPage() {
           </section>
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>{t("handover.field.documents")}</Label>
+              <span>{t("handover.field.documents")}</span>
               <Button
                 type="button"
                 size="sm"
@@ -1441,6 +1458,7 @@ export default function HandoverRecordsPage() {
             {form.documents.map((item, index) => (
               <div key={index} className="flex gap-2">
                 <Input
+                  aria-label={t("handover.field.documents")}
                   maxLength={500}
                   value={item}
                   onChange={(event) => updateStringRow("documents", index, event.target.value)}
@@ -1474,7 +1492,7 @@ export default function HandoverRecordsPage() {
           </section>
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <Label>{t("handover.field.signatories")}</Label>
+              <span>{t("handover.field.signatories")}</span>
               <Button
                 type="button"
                 size="sm"
@@ -1491,6 +1509,7 @@ export default function HandoverRecordsPage() {
             {form.signatories.map((item, index) => (
               <div key={index} className="flex gap-2">
                 <Input
+                  aria-label={t("handover.field.signatories")}
                   maxLength={200}
                   value={item}
                   onChange={(event) => updateStringRow("signatories", index, event.target.value)}
@@ -1541,6 +1560,7 @@ export default function HandoverRecordsPage() {
             </DialogDescription>
           </DialogHeader>
           <Textarea
+            aria-label={t("a11yUi.reason")}
             value={transitionNote}
             onChange={(event) => setTransitionNote(event.target.value)}
             placeholder={t("handover.confirm.notePlaceholder")}

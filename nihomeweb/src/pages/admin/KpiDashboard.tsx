@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -62,6 +65,7 @@ export interface KpiDashboardProps {
 }
 
 const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { has } = usePermissions();
   const { toast } = useToast();
@@ -121,7 +125,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
         const response = await adminApi.listKpiDefinitions();
         setDefinitions(response.data);
       } catch (reason) {
-        setError(extractApiError(reason));
+        setError(uiError(reason));
       } finally {
         setLoading(false);
       }
@@ -148,11 +152,11 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
         setUserId(usersResponse.data[0].userId);
       }
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setLoading(false);
     }
-  }, [canViewAll, mode, month, userId, year]);
+  }, [canViewAll, mode, month, uiError, userId, year]);
 
   useEffect(() => {
     void load();
@@ -167,7 +171,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
     } catch (reason) {
       toast({
         title: t("common.error"),
-        description: extractApiError(reason),
+        description: uiError(reason),
         variant: "destructive",
       });
     } finally {
@@ -193,7 +197,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
     } catch (reason) {
       toast({
         title: t("common.error"),
-        description: extractApiError(reason),
+        description: uiError(reason),
         variant: "destructive",
       });
     } finally {
@@ -219,7 +223,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
     } catch (reason) {
       toast({
         title: t("common.error"),
-        description: extractApiError(reason),
+        description: uiError(reason),
         variant: "destructive",
       });
     } finally {
@@ -285,7 +289,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
         {mode === "evaluation" && (
           <>
             <section className="grid gap-3 border-y py-4 sm:grid-cols-2 lg:grid-cols-4">
-              <div>
+              <FieldScope>
                 <Label>{t("kpi.period.year")}</Label>
                 <Input
                   type="number"
@@ -294,8 +298,8 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                   value={year}
                   onChange={(event) => setYear(Number(event.target.value))}
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("kpi.period.month")}</Label>
                 <Select value={String(month)} onValueChange={(value) => setMonth(Number(value))}>
                   <SelectTrigger>
@@ -309,9 +313,9 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
               {canViewAll && (
-                <div className="sm:col-span-2">
+                <FieldScope className="sm:col-span-2">
                   <Label>{t("kpi.user")}</Label>
                   <SearchableSelect
                     value={String(userId)}
@@ -319,7 +323,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                     ariaLabel={t("people.select")}
                     options={[...users.map((user) => personOption(user, t))]}
                   />
-                </div>
+                </FieldScope>
               )}
             </section>
 
@@ -354,7 +358,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                 </section>
 
                 {dashboard.periodStatus === "Locked" && (
-                  <section className="border-l-2 border-slate-400 px-4 py-2 text-sm">
+                  <section className="border-l-2 border-input px-4 py-2 text-sm">
                     <p className="font-medium">
                       {t("kpi.lock.lockedBy", { name: dashboard.lockedByName ?? "—" })}
                     </p>
@@ -435,7 +439,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
               <h2 className="text-lg font-semibold">{t("kpi.definition.listTitle")}</h2>
               <p className="text-sm text-muted-foreground">{t("kpi.definition.description")}</p>
             </div>
-            <div className="grid gap-3 border-y border-slate-200 py-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+            <div className="grid gap-3 border-y border-border py-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               {definitionReadiness.map((item) => (
                 <div
                   key={item.roleCode}
@@ -469,7 +473,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                       missing: item.missingTargets,
                     })}
                   </p>
-                  <div className="mb-3 mt-2 h-1.5 overflow-hidden rounded-full bg-white/80">
+                  <div className="mb-3 mt-2 h-1.5 overflow-hidden rounded-full bg-card/80">
                     <div
                       className={`h-full rounded-full ${item.ready ? "bg-emerald-500" : "bg-amber-500"}`}
                       style={{ width: `${Math.min(Math.max(item.weight * 100, 0), 100)}%` }}
@@ -479,8 +483,8 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                     variant="outline"
                     className={
                       item.ready
-                        ? "mt-auto w-fit border-emerald-200 bg-white text-emerald-700"
-                        : "mt-auto w-fit border-amber-200 bg-white text-amber-800"
+                        ? "mt-auto w-fit border-emerald-200 bg-card text-emerald-700"
+                        : "mt-auto w-fit border-amber-200 bg-card text-amber-800"
                     }
                   >
                     {t(item.ready ? "kpi.guide.config.ready" : "kpi.guide.config.needsAttention")}
@@ -717,7 +721,7 @@ const KpiUsageGuide = ({ mode }: { mode: "evaluation" | "configuration" }) => {
       type="single"
       collapsible
       defaultValue="usage"
-      className="border-y border-slate-200 bg-slate-50/70 px-4 sm:px-5"
+      className="border-y border-border bg-muted/70 px-4 sm:px-5"
     >
       <AccordionItem value="usage" className="border-0">
         <AccordionTrigger className="py-4 text-left hover:no-underline">
@@ -744,13 +748,13 @@ const KpiUsageGuide = ({ mode }: { mode: "evaluation" | "configuration" }) => {
             {steps.map(({ key, icon: StepIcon }, index) => (
               <div
                 key={key}
-                className="min-h-36 rounded-md border border-slate-200 bg-background p-4 shadow-sm"
+                className="min-h-36 rounded-md border border-border bg-background p-4 shadow-sm"
               >
                 <div className="flex items-center justify-between gap-3">
                   <span className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
                     <StepIcon className="h-4 w-4" />
                   </span>
-                  <span className="text-xs font-semibold text-slate-400">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                 </div>
@@ -764,7 +768,7 @@ const KpiUsageGuide = ({ mode }: { mode: "evaluation" | "configuration" }) => {
             ))}
           </div>
           {isEvaluation && (
-            <div className="mt-4 border-t border-slate-200 pt-4">
+            <div className="mt-4 border-t border-border pt-4">
               <div className="grid gap-3 md:grid-cols-3">
                 {(["Available", "MissingData", "MissingConfiguration"] as KpiScoreStatus[]).map(
                   (status) => {
@@ -772,9 +776,9 @@ const KpiUsageGuide = ({ mode }: { mode: "evaluation" | "configuration" }) => {
                     return (
                       <div
                         key={status}
-                        className="flex min-w-0 items-start gap-3 rounded-md border border-slate-200 bg-background p-3"
+                        className="flex min-w-0 items-start gap-3 rounded-md border border-border bg-background p-3"
                       >
-                        <StatusIcon className="mt-0.5 h-4 w-4 shrink-0 text-slate-500" />
+                        <StatusIcon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                         <div className="min-w-0">
                           <Badge variant="outline" className={statusStyle[status]}>
                             {t(`kpi.scoreStatus.${status}`)}
@@ -788,8 +792,8 @@ const KpiUsageGuide = ({ mode }: { mode: "evaluation" | "configuration" }) => {
                   },
                 )}
               </div>
-              <div className="mt-3 flex items-start gap-3 border-l-2 border-slate-400 bg-slate-100/80 px-3 py-2.5 text-xs leading-5 text-muted-foreground">
-                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-slate-600" />
+              <div className="mt-3 flex items-start gap-3 border-l-2 border-input bg-muted/80 px-3 py-2.5 text-xs leading-5 text-muted-foreground">
+                <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
                 <p>
                   <strong className="text-foreground">{t("kpi.guide.lock.title")}:</strong>{" "}
                   {t("kpi.guide.lock.body")}

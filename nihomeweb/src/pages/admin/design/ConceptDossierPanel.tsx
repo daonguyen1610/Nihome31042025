@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, Loader2, RefreshCw } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
@@ -55,6 +57,7 @@ export const ConceptDossierPanel = ({
   locked,
   onChanged,
 }: Props) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const prefix = `concept-${optionId}`;
   const fileInput = useRef<HTMLInputElement>(null);
@@ -102,12 +105,12 @@ export const ConceptDossierPanel = ({
       setError(null);
       return true;
     } catch (reason) {
-      if (request === loadRequest.current) setError(translateError(t, extractApiError(reason)));
+      if (request === loadRequest.current) setError(translateError(t, uiError(reason)));
       return false;
     } finally {
       if (request === loadRequest.current) setLoading(false);
     }
-  }, [optionId, projectId, t]);
+  }, [optionId, projectId, t, uiError]);
 
   useEffect(() => {
     void load();
@@ -181,7 +184,7 @@ export const ConceptDossierPanel = ({
     } catch (reason) {
       // Refresh bindings so a successful upload can be reused if attachment failed.
       await load();
-      setError(translateError(t, extractApiError(reason)));
+      setError(translateError(t, uiError(reason)));
     } finally {
       setBusy(false);
     }
@@ -325,7 +328,7 @@ export const ConceptDossierPanel = ({
               {revision.feedback.length ? ` (${revision.feedback.length})` : ""}
             </button>
           </div>
-          <p className="rounded-md bg-slate-50 p-3 text-slate-600">
+          <p className="rounded-md bg-muted/30 p-3 text-muted-foreground">
             {revision.frozenAt ? t("concepts.dossier.frozen") : t("concepts.dossier.draftHint")}
           </p>
           {canManage && !locked && revision.frozenAt && !canCreateRevision ? (
@@ -352,7 +355,7 @@ export const ConceptDossierPanel = ({
                         artifacts.length
                           ? "mt-1 text-emerald-800"
                           : waiver
-                            ? "mt-1 text-slate-600"
+                            ? "mt-1 text-muted-foreground"
                             : "mt-1 text-amber-800"
                       }
                     >
@@ -366,7 +369,7 @@ export const ConceptDossierPanel = ({
                     </p>
                     {waiver ? (
                       <>
-                        <p className="mt-1 whitespace-pre-wrap break-words text-slate-600">
+                        <p className="mt-1 whitespace-pre-wrap break-words text-muted-foreground">
                           {waiver.reason}
                         </p>
                         {editable ? (
@@ -405,11 +408,11 @@ export const ConceptDossierPanel = ({
                   >
                     <div className="min-w-0 flex-1 basis-52">
                       <p className="break-words font-medium">{artifact.fileName}</p>
-                      <p className="mt-1 text-slate-600">
+                      <p className="mt-1 text-muted-foreground">
                         {t(`concepts.dossier.kind.${artifact.kind}`)}
                         {artifact.floorLabel ? ` · ${artifact.floorLabel}` : ""}
                       </p>
-                      <p className="mt-1 text-slate-500">
+                      <p className="mt-1 text-muted-foreground">
                         {t(`operationalProjects.documents.syncStatus.${artifact.syncStatus}`)}
                       </p>
                     </div>
@@ -611,7 +614,7 @@ export const ConceptDossierPanel = ({
             <h4 id={`${prefix}-feedback`} className="font-semibold">
               {t("concepts.dossier.feedback")}
             </h4>
-            <p className="text-slate-600">{t("concepts.dossier.feedbackHint")}</p>
+            <p className="text-muted-foreground">{t("concepts.dossier.feedbackHint")}</p>
             {!revision.feedback.length ? (
               <p className="rounded-md border border-dashed p-4 text-muted-foreground">
                 {t("concepts.dossier.noFeedback")}
@@ -622,7 +625,7 @@ export const ConceptDossierPanel = ({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0">
                     <h5 className="break-words font-medium">{item.customerName}</h5>
-                    <p className="mt-1 break-words text-slate-500">
+                    <p className="mt-1 break-words text-muted-foreground">
                       {item.channel} ·{" "}
                       <time dateTime={item.occurredAt}>
                         {new Date(item.occurredAt).toLocaleString(lang)}
@@ -641,7 +644,9 @@ export const ConceptDossierPanel = ({
                 <dl className="grid gap-3 sm:grid-cols-2">
                   {item.evidenceSource ? (
                     <div className="min-w-0">
-                      <dt className="text-slate-500">{t("concepts.dossier.evidenceLabel")}</dt>
+                      <dt className="text-muted-foreground">
+                        {t("concepts.dossier.evidenceLabel")}
+                      </dt>
                       <dd className="mt-1 whitespace-pre-wrap break-words">
                         {item.evidenceSource}
                       </dd>
@@ -649,7 +654,7 @@ export const ConceptDossierPanel = ({
                   ) : null}
                   {item.projectDocumentId ? (
                     <div className="min-w-0">
-                      <dt className="text-slate-500">
+                      <dt className="text-muted-foreground">
                         {t("designProjects.reviews.commentTarget")}
                       </dt>
                       <dd className="mt-1 break-words">
@@ -661,13 +666,13 @@ export const ConceptDossierPanel = ({
                   ) : null}
                   {item.response ? (
                     <div className="min-w-0">
-                      <dt className="text-slate-500">{t("concepts.dossier.response")}</dt>
+                      <dt className="text-muted-foreground">{t("concepts.dossier.response")}</dt>
                       <dd className="mt-1 whitespace-pre-wrap break-words">{item.response}</dd>
                     </div>
                   ) : null}
                   {item.outcome ? (
                     <div className="min-w-0">
-                      <dt className="text-slate-500">{t("concepts.dossier.outcome")}</dt>
+                      <dt className="text-muted-foreground">{t("concepts.dossier.outcome")}</dt>
                       <dd className="mt-1 whitespace-pre-wrap break-words">{item.outcome}</dd>
                     </div>
                   ) : null}
@@ -736,7 +741,7 @@ export const ConceptDossierPanel = ({
             {canManage && hasClientSubmission ? (
               <fieldset disabled={working} className="space-y-4 rounded-md border p-4">
                 <legend className="px-1 font-medium">{t("concepts.dossier.recordFeedback")}</legend>
-                <p className="text-slate-500">{t("concepts.dossier.requiredFields")}</p>
+                <p className="text-muted-foreground">{t("concepts.dossier.requiredFields")}</p>
                 <div className="grid gap-4 md:grid-cols-2">
                   <div className="space-y-1.5">
                     <Label htmlFor={`${prefix}-customer`}>
@@ -808,7 +813,7 @@ export const ConceptDossierPanel = ({
                       aria-describedby={`${prefix}-evidence-hint`}
                       onChange={(event) => setEvidenceSource(event.target.value)}
                     />
-                    <p id={`${prefix}-evidence-hint`} className="text-slate-500">
+                    <p id={`${prefix}-evidence-hint`} className="text-muted-foreground">
                       {t("concepts.dossier.evidenceSource")}
                     </p>
                   </div>
@@ -852,12 +857,12 @@ export const ConceptDossierPanel = ({
                 </Button>
               </fieldset>
             ) : canManage && !hasClientSubmission ? (
-              <p className="text-slate-500">{t("concepts.dossier.feedbackUnavailable")}</p>
+              <p className="text-muted-foreground">{t("concepts.dossier.feedbackUnavailable")}</p>
             ) : null}
           </section>
         </>
       ) : !loading && !error ? (
-        <p className="py-4 text-slate-500">{t("concepts.dossier.empty")}</p>
+        <p className="py-4 text-muted-foreground">{t("concepts.dossier.empty")}</p>
       ) : null}
     </section>
   );

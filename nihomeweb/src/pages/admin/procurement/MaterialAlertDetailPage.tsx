@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, CheckCircle2, ExternalLink, History, TriangleAlert } from "lucide-react";
 import { Link, useParams } from "react-router-dom";
@@ -40,6 +42,7 @@ const severityClass: Record<MaterialAlertSeverity, string> = {
 };
 
 const MaterialAlertDetailPage = () => {
+  const uiError = useUiError();
   const { projectId: projectIdParam, alertId: alertIdParam } = useParams();
   const projectId = Number(projectIdParam);
   const alertId = Number(alertIdParam);
@@ -72,11 +75,11 @@ const MaterialAlertDetailPage = () => {
     try {
       setAlert((await adminApi.getMaterialAlert(projectId, alertId)).data);
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setLoading(false);
     }
-  }, [alertId, projectId, t]);
+  }, [alertId, projectId, t, uiError]);
 
   useEffect(() => {
     void load();
@@ -111,7 +114,7 @@ const MaterialAlertDetailPage = () => {
       setNote("");
       toast({ title: t("procurement.alerts.acknowledge.success") });
     } catch (reason) {
-      const message = extractApiError(reason);
+      const message = uiError(reason);
       setFormError(message);
       toast({ title: t("common.error"), description: message, variant: "destructive" });
     } finally {

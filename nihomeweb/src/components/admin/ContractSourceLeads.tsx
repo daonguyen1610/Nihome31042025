@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, Loader2 } from "lucide-react";
@@ -11,6 +13,7 @@ import {
 } from "@/services/adminApi";
 
 export default function ContractSourceLeads({ contract }: { contract: ContractResponse }) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [leads, setLeads] = useState<ContractSourceLeadResponse[]>([]);
   const [loading, setLoading] = useState(true);
@@ -33,14 +36,14 @@ export default function ContractSourceLeads({ contract }: { contract: ContractRe
           if (!controller.signal.aborted) setLeads(data);
         },
         (err: unknown) => {
-          if (!controller.signal.aborted) setError(extractApiError(err));
+          if (!controller.signal.aborted) setError(uiError(err));
         },
       )
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [contract, revision]);
+  }, [contract, revision, uiError]);
 
   return (
     <section

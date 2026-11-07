@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Download,
@@ -50,11 +53,11 @@ const BLOCKED_EXTENSIONS = new Set([
 ]);
 
 const statusClass: Record<ProjectDocumentSyncStatus, string> = {
-  Pending: "border-slate-200 bg-slate-50 text-slate-700",
+  Pending: "border-border bg-muted/30 text-foreground",
   Processing: "border-amber-200 bg-amber-50 text-amber-700",
   Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Failed: "border-rose-200 bg-rose-50 text-rose-700",
-  Deleted: "border-slate-200 bg-slate-50 text-slate-500",
+  Deleted: "border-border bg-muted/30 text-muted-foreground",
   Conflict: "border-orange-200 bg-orange-50 text-orange-700",
 };
 
@@ -75,6 +78,8 @@ export default function ProjectDocumentsPanel({
   onCountChange,
   sourceOptions,
 }: Props) {
+  const uiError = useUiError();
+  const confirmAction = useConfirm();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const uploadIdempotencyKeysRef = useRef(new Map<File, string>());
@@ -126,11 +131,11 @@ export default function ProjectDocumentsPanel({
       setCategories(categoryResponse.data ?? []);
       onCountChange?.(nextDocuments.length);
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setLoading(false);
     }
-  }, [onCountChange, projectId, designProjectId]);
+  }, [projectId, designProjectId, onCountChange, uiError]);
 
   useEffect(() => {
     void load();
@@ -217,7 +222,7 @@ export default function ProjectDocumentsPanel({
         uploaded += 1;
       } catch (reason) {
         failed.push(file);
-        firstError ??= `${file.name}: ${extractApiError(reason)}`;
+        firstError ??= `${file.name}: ${uiError(reason)}`;
       }
     }
     setFiles(failed);
@@ -241,16 +246,17 @@ export default function ProjectDocumentsPanel({
   ) => {
     if (
       action === "delete" &&
-      !window.confirm(
+      !(await confirmAction(
         t("operationalProjects.documents.deleteConfirm", { name: document.originalFileName }),
-      )
+      ))
     )
       return;
     if (
       action === "resolve" &&
-      !window.confirm(
+      !(await confirmAction(
         t("operationalProjects.documents.keepBothConfirm", { name: document.originalFileName }),
-      )
+        { destructive: false },
+      ))
     )
       return;
     const selectedCategory = classifications[document.id];
@@ -281,7 +287,7 @@ export default function ProjectDocumentsPanel({
     } catch (reason) {
       toast({
         title: t("common.error"),
-        description: extractApiError(reason),
+        description: uiError(reason),
         variant: "destructive",
       });
     } finally {
@@ -302,7 +308,7 @@ export default function ProjectDocumentsPanel({
     } catch (reason) {
       toast({
         title: t("common.error"),
-        description: extractApiError(reason),
+        description: uiError(reason),
         variant: "destructive",
       });
     } finally {
@@ -389,7 +395,7 @@ export default function ProjectDocumentsPanel({
           <a
             href={document.driveWebViewLink}
             target="_blank"
-            rel="noreferrer"
+            rel="noreferrer noopener"
             aria-label={t("operationalProjects.documents.openDriveAria", {
               name: document.originalFileName,
             })}
@@ -535,7 +541,7 @@ export default function ProjectDocumentsPanel({
 
       {syncError ? (
         <p role="status" className="break-words text-sm text-destructive">
-          {t("operationalProjects.documents.loadError")}: {extractApiError(syncError)}
+          {t("operationalProjects.documents.loadError")}: {uiError(syncError)}
         </p>
       ) : null}
       {loading ? (

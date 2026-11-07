@@ -263,7 +263,7 @@ const AdminProjects = () => {
                   className="group relative overflow-hidden rounded-lg border bg-card transition hover:shadow-md"
                 >
                   <div
-                    className="absolute top-3 right-3 z-10 rounded bg-white/90 p-1 shadow"
+                    className="absolute top-3 right-3 z-10 rounded bg-card/90 p-1 shadow"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <Checkbox
@@ -284,7 +284,7 @@ const AdminProjects = () => {
                     <Badge
                       variant="outline"
                       className={cn(
-                        "absolute top-3 left-3 gap-1.5 whitespace-nowrap bg-white/95 font-medium shadow-sm",
+                        "absolute top-3 left-3 gap-1.5 whitespace-nowrap bg-card/95 font-medium shadow-sm",
                         PROJECT_STATUS_STYLES[p.status],
                       )}
                     >

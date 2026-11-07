@@ -1,3 +1,10 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import StatTile from "./ConstructionStatTile";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
@@ -93,7 +100,7 @@ const DESIGN_TEAM_ROLES = new Set([
 ]);
 
 const STATUS_BADGE: Record<PunchStatus, string> = {
-  Open: "border-slate-200 bg-slate-50 text-slate-700",
+  Open: "border-border bg-muted/30 text-foreground",
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
   Fixed: "border-amber-200 bg-amber-50 text-amber-800",
   Verified: "border-emerald-200 bg-emerald-50 text-emerald-800",
@@ -101,7 +108,7 @@ const STATUS_BADGE: Record<PunchStatus, string> = {
 };
 
 const SEVERITY_BADGE: Record<PunchSeverity, string> = {
-  Low: "border-slate-200 bg-slate-100 text-slate-700",
+  Low: "border-border bg-muted text-foreground",
   Medium: "border-sky-200 bg-sky-50 text-sky-700",
   High: "border-orange-200 bg-orange-50 text-orange-800",
   Critical: "border-rose-300 bg-rose-100 text-rose-800",
@@ -159,6 +166,7 @@ const formFromRow = (row: PunchItemResponse): PunchForm => ({
 });
 
 const AdminPunchList = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -182,6 +190,7 @@ const AdminPunchList = () => {
   const [openOnly, setOpenOnly] = useState(false);
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
@@ -224,7 +233,9 @@ const AdminPunchList = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.listDesignProjects({ pageSize: 200 });
+        const { data } = await collectLookupPages((page) =>
+          adminApi.listDesignProjects({ pageSize: 200, page }),
+        );
         if (cancelled) return;
         setProjects(data.items ?? []);
       } catch {
@@ -252,7 +263,9 @@ const AdminPunchList = () => {
     };
   }, [canListUsers]);
 
+  const startListRequest = useRequestGuard();
   const fetchList = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
@@ -263,8 +276,9 @@ const AdminPunchList = () => {
       if (assigneeUserId != null) params.assigneeUserId = assigneeUserId;
       if (openOnly) params.openOnly = true;
       if (overdueOnly) params.overdueOnly = true;
-      if (search.trim()) params.search = search.trim();
+      if (settledSearch.trim()) params.search = settledSearch.trim();
       const { data } = await adminApi.listPunchItems(params);
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
       setStatusCounts(data.statusCounts ?? {});
@@ -278,27 +292,29 @@ const AdminPunchList = () => {
         return next;
       });
     } catch (err) {
-      setError(extractApiError(err));
+      if (!isCurrent()) return;
+      setError(uiError(err));
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [
+    startListRequest,
     page,
-    pageSize,
     projectId,
     status,
     severity,
     assigneeUserId,
     openOnly,
     overdueOnly,
-    search,
-    t,
+    settledSearch,
+    uiError,
     toast,
+    t,
   ]);
 
   useEffect(() => {
@@ -382,7 +398,7 @@ const AdminPunchList = () => {
       setCreating(false);
       await fetchList();
     } catch (err) {
-      setCreateError(extractApiError(err));
+      setCreateError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -437,7 +453,7 @@ const AdminPunchList = () => {
       setDetail(updated);
       await fetchList();
     } catch (err) {
-      setDetailError(extractApiError(err));
+      setDetailError(uiError(err));
     } finally {
       setDetailSaving(false);
     }
@@ -453,7 +469,7 @@ const AdminPunchList = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     }
@@ -505,7 +521,7 @@ const AdminPunchList = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err, undefined, t),
+        description: uiError(err, undefined),
         variant: "destructive",
       });
     } finally {
@@ -583,7 +599,7 @@ const AdminPunchList = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -642,8 +658,8 @@ const AdminPunchList = () => {
         {/* header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">{t("punch.title")}</h1>
-            <p className="text-sm text-slate-500">{t("punch.subtitle")}</p>
+            <h1 className="text-2xl font-semibold text-foreground">{t("punch.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("punch.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()}>
@@ -665,33 +681,29 @@ const AdminPunchList = () => {
             icon={<ShieldAlert className="h-6 w-6" />}
             label={t("punch.stat.total")}
             value={total}
-            gradient="from-indigo-500 to-violet-600"
           />
           <StatTile
             icon={<CircleDot className="h-6 w-6" />}
             label={t("punch.stat.open")}
             value={statusPill("Open")}
-            gradient="from-slate-500 to-slate-700"
           />
           <StatTile
             icon={<Wrench className="h-6 w-6" />}
             label={t("punch.stat.inProgress")}
             value={statusPill("InProgress")}
-            gradient="from-sky-500 to-blue-600"
           />
           <StatTile
             icon={<AlertTriangle className="h-6 w-6" />}
             label={t("punch.stat.overdue")}
             value={overdueCount}
-            gradient="from-amber-500 to-orange-600"
           />
         </div>
 
         {/* filters */}
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
-            <div>
-              <Label className="text-xs text-slate-500">{t("punch.field.project")}</Label>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">{t("punch.field.project")}</Label>
               <SearchableSelect
                 value={projectId == null ? "" : String(projectId)}
                 onChange={(v) => {
@@ -701,9 +713,9 @@ const AdminPunchList = () => {
                 options={projectOptions}
                 placeholder={t("punch.filter.allProjects")}
               />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("punch.field.status")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">{t("punch.field.status")}</Label>
               <Select
                 value={status || "__all__"}
                 onValueChange={(v) => {
@@ -723,9 +735,9 @@ const AdminPunchList = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("punch.field.severity")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">{t("punch.field.severity")}</Label>
               <Select
                 value={severity || "__all__"}
                 onValueChange={(v) => {
@@ -745,9 +757,9 @@ const AdminPunchList = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("punch.field.assignee")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">{t("punch.field.assignee")}</Label>
               {canListUsers ? (
                 <SearchableSelect
                   value={assigneeUserId == null ? "" : String(assigneeUserId)}
@@ -761,13 +773,13 @@ const AdminPunchList = () => {
               ) : (
                 <Input value="—" disabled />
               )}
-            </div>
+            </FieldScope>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 [&>div]:min-w-0">
-            <div>
-              <Label className="text-xs text-slate-500">{t("punch.filter.search")}</Label>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">{t("punch.filter.search")}</Label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
                   value={search}
@@ -779,10 +791,10 @@ const AdminPunchList = () => {
                   data-testid="punch-search"
                 />
               </div>
-            </div>
+            </FieldScope>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <Checkbox
                 checked={openOnly}
                 onCheckedChange={(v) => {
@@ -792,7 +804,7 @@ const AdminPunchList = () => {
               />
               {t("punch.filter.openOnly")}
             </label>
-            <label className="flex cursor-pointer items-center gap-2 text-sm text-slate-600">
+            <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
               <Checkbox
                 checked={overdueOnly}
                 onCheckedChange={(v) => {
@@ -828,7 +840,7 @@ const AdminPunchList = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
             {t("punch.empty")}
           </div>
         ) : (
@@ -839,14 +851,14 @@ const AdminPunchList = () => {
                 <article
                   key={`m-${row.id}`}
                   className={cn(
-                    "relative rounded-xl border border-slate-200 bg-white p-4 text-left shadow-sm",
+                    "relative rounded-xl border border-border bg-card p-4 text-left shadow-sm",
                     row.isOverdue && "border-amber-300 bg-amber-50/40",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="font-mono text-xs text-slate-500">{row.punchCode}</div>
-                      <div className="mt-1 line-clamp-2 text-base font-semibold text-slate-900">
+                      <div className="font-mono text-xs text-muted-foreground">{row.punchCode}</div>
+                      <div className="mt-1 line-clamp-2 text-base font-semibold text-foreground">
                         {row.title}
                       </div>
                     </div>
@@ -863,19 +875,19 @@ const AdminPunchList = () => {
                   </div>
                   <div className="mt-2">{renderBadges(row)}</div>
                   {row.location && (
-                    <div className="mt-2 inline-flex items-center gap-1 text-xs text-slate-600">
+                    <div className="mt-2 inline-flex items-center gap-1 text-xs text-muted-foreground">
                       <MapPin className="h-3 w-3" /> {row.location}
                     </div>
                   )}
-                  <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-slate-600">
+                  <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {t("punch.field.assignee")}
                       </div>
                       <div>{row.assigneeName ?? "—"}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-slate-400">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
                         {t("punch.field.deadline")}
                       </div>
                       <div>{formatDate(row.deadline, lang)}</div>
@@ -918,7 +930,7 @@ const AdminPunchList = () => {
                   </div>
                 </article>
               ))}
-              <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
+              <div className="flex items-center justify-between px-1 pt-1 text-xs text-muted-foreground">
                 <span>
                   {t("common.showing")} {rows.length} / {total}
                 </span>
@@ -947,10 +959,10 @@ const AdminPunchList = () => {
             </div>
 
             {/* Desktop table (md+) */}
-            <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm md:block">
+            <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-sm md:block">
               <div className="max-h-[70vh] overflow-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       {canManage && (
                         <th className="w-8 px-3 py-2">
@@ -971,12 +983,12 @@ const AdminPunchList = () => {
                       <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border">
                     {rows.map((row) => (
                       <tr
                         key={row.id}
                         className={cn(
-                          "cursor-pointer hover:bg-slate-50",
+                          "cursor-pointer hover:bg-muted/30",
                           row.isOverdue && "bg-amber-50/40",
                         )}
                         onClick={() => openDetail(row)}
@@ -991,13 +1003,13 @@ const AdminPunchList = () => {
                             />
                           </td>
                         )}
-                        <td className="px-3 py-2 font-mono text-xs text-slate-600">
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                           {row.punchCode}
                         </td>
                         <td className="px-3 py-2">
-                          <div className="font-medium text-slate-900">{row.title}</div>
+                          <div className="font-medium text-foreground">{row.title}</div>
                           {row.location && (
-                            <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-slate-500">
+                            <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
                               <MapPin className="h-3 w-3" /> {row.location}
                             </div>
                           )}
@@ -1019,10 +1031,10 @@ const AdminPunchList = () => {
                             )}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
                           {row.assigneeName ?? "—"}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
                           {formatDate(row.deadline, lang)}
                         </td>
                         <td className="px-3 py-2" onClick={(event) => event.stopPropagation()}>
@@ -1070,7 +1082,7 @@ const AdminPunchList = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                 <span>
                   {t("common.showing")} {rows.length} / {total}
                 </span>
@@ -1108,7 +1120,7 @@ const AdminPunchList = () => {
               <DialogDescription>{t("punch.form.hint")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
-              <div>
+              <FieldScope>
                 <Label>{t("punch.field.project")}</Label>
                 <SearchableSelect
                   value={createProjectId == null ? "" : String(createProjectId)}
@@ -1116,32 +1128,32 @@ const AdminPunchList = () => {
                   options={projectOptionsForCreate}
                   placeholder="—"
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("punch.field.title")}</Label>
                 <Input
                   value={createForm.title}
                   onChange={(e) => setCreateForm((f) => ({ ...f, title: e.target.value }))}
                   data-testid="punch-new-title"
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("punch.field.description")}</Label>
                 <Textarea
                   rows={2}
                   value={createForm.description}
                   onChange={(e) => setCreateForm((f) => ({ ...f, description: e.target.value }))}
                 />
-              </div>
+              </FieldScope>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("punch.field.location")}</Label>
                   <Input
                     value={createForm.location}
                     onChange={(e) => setCreateForm((f) => ({ ...f, location: e.target.value }))}
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("punch.field.severity")}</Label>
                   <Select
                     value={createForm.severity}
@@ -1160,10 +1172,10 @@ const AdminPunchList = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FieldScope>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("punch.field.assignee")}</Label>
                   {canListUsers ? (
                     <SearchableSelect
@@ -1179,24 +1191,24 @@ const AdminPunchList = () => {
                   ) : (
                     <Input value="—" disabled />
                   )}
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("punch.field.deadline")}</Label>
                   <Input
                     type="date"
                     value={createForm.deadline}
                     onChange={(e) => setCreateForm((f) => ({ ...f, deadline: e.target.value }))}
                   />
-                </div>
+                </FieldScope>
               </div>
-              <div>
+              <FieldScope>
                 <Label>{t("punch.field.note")}</Label>
                 <Textarea
                   rows={2}
                   value={createForm.note}
                   onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))}
                 />
-              </div>
+              </FieldScope>
               {createError && <div className="text-sm text-rose-600">{createError}</div>}
             </div>
             <DialogFooter>
@@ -1225,20 +1237,20 @@ const AdminPunchList = () => {
                     {t(detailMode === "edit" ? "common.edit" : "common.view")} · {detail.punchCode}{" "}
                     — {detail.title}
                   </SheetTitle>
-                  <SheetDescription className="text-xs text-slate-500">
+                  <SheetDescription className="text-xs text-muted-foreground">
                     {detail.designProjectCode} · {detail.designProjectName}
                   </SheetDescription>
                 </SheetHeader>
                 <div className="mt-4 space-y-4">
                   <div className="flex flex-wrap items-center gap-2">{renderBadges(detail)}</div>
                   {detail.reopenCount > 0 && (
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-muted-foreground">
                       {t("punch.field.reopenCount")}:{" "}
                       <span className="font-semibold">{detail.reopenCount}</span>
                     </div>
                   )}
 
-                  <div>
+                  <FieldScope>
                     <Label>{t("punch.field.title")}</Label>
                     <Input
                       value={detailForm.title}
@@ -1246,8 +1258,8 @@ const AdminPunchList = () => {
                       disabled={!canEditDetail}
                       data-testid="punch-detail-title"
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("punch.field.description")}</Label>
                     <Textarea
                       rows={3}
@@ -1257,9 +1269,9 @@ const AdminPunchList = () => {
                       }
                       disabled={!canEditDetail}
                     />
-                  </div>
+                  </FieldScope>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <FieldScope>
                       <Label>{t("punch.field.location")}</Label>
                       <Input
                         value={detailForm.location}
@@ -1268,8 +1280,8 @@ const AdminPunchList = () => {
                         }
                         disabled={!canEditDetail}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("punch.field.severity")}</Label>
                       <Select
                         value={detailForm.severity}
@@ -1289,8 +1301,8 @@ const AdminPunchList = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("punch.field.assignee")}</Label>
                       {canListUsers ? (
                         <SearchableSelect
@@ -1311,8 +1323,8 @@ const AdminPunchList = () => {
                       ) : (
                         <Input value={detail.assigneeName ?? "—"} disabled />
                       )}
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("punch.field.deadline")}</Label>
                       <Input
                         type="date"
@@ -1322,9 +1334,9 @@ const AdminPunchList = () => {
                         }
                         disabled={!canEditDetail}
                       />
-                    </div>
+                    </FieldScope>
                   </div>
-                  <div>
+                  <FieldScope>
                     <Label>{t("punch.field.resolutionNote")}</Label>
                     <Textarea
                       rows={2}
@@ -1334,8 +1346,8 @@ const AdminPunchList = () => {
                       }
                       disabled={!canEditDetail}
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("punch.field.note")}</Label>
                     <Textarea
                       rows={2}
@@ -1343,7 +1355,7 @@ const AdminPunchList = () => {
                       onChange={(e) => setDetailForm((f) => f && { ...f, note: e.target.value })}
                       disabled={!canEditDetail}
                     />
-                  </div>
+                  </FieldScope>
 
                   {detail.verifiedByName && (
                     <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
@@ -1357,7 +1369,7 @@ const AdminPunchList = () => {
                     </div>
                   )}
                   {detail.rootCause !== "Unclassified" && (
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-700">
+                    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-foreground">
                       <div className="font-semibold">
                         {t("punch.field.rootCause")}: {t(`punch.rootCause.${detail.rootCause}`)}
                       </div>
@@ -1490,7 +1502,7 @@ const AdminPunchList = () => {
             </AlertDialogHeader>
             {confirmAction.kind === "verify" && (
               <div className="space-y-3">
-                <div>
+                <FieldScope>
                   <Label>{t("punch.field.rootCause")}</Label>
                   <Select
                     value={verifyRootCause}
@@ -1510,9 +1522,9 @@ const AdminPunchList = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FieldScope>
                 {verifyRootCause === "Design" && (
-                  <div>
+                  <FieldScope>
                     <Label>{t("punch.field.responsibleDesigner")}</Label>
                     <SearchableSelect
                       value={verifyResponsibleUserId == null ? "" : String(verifyResponsibleUserId)}
@@ -1521,17 +1533,17 @@ const AdminPunchList = () => {
                       options={verifyCandidates.map((candidate) => personOption(candidate, t))}
                       placeholder="—"
                     />
-                  </div>
+                  </FieldScope>
                 )}
                 {(verifyRootCause === "Design" || verifyRootCause === "Other") && (
-                  <div>
+                  <FieldScope>
                     <Label>{t("punch.field.rootCauseNote")}</Label>
                     <Textarea
                       value={verifyRootCauseNote}
                       onChange={(event) => setVerifyRootCauseNote(event.target.value)}
                       rows={2}
                     />
-                  </div>
+                  </FieldScope>
                 )}
               </div>
             )}
@@ -1576,37 +1588,5 @@ const AdminPunchList = () => {
     </AdminLayout>
   );
 };
-
-// ------------------ small building blocks ------------------
-
-interface StatTileProps {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  gradient: string;
-}
-
-const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
-  <div
-    className={cn(
-      "relative overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-sm",
-      gradient,
-    )}
-  >
-    <div className="relative z-10 flex items-start justify-between gap-2">
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-white/85">{label}</div>
-        <div className="mt-1 text-3xl font-bold tabular-nums leading-none">{value}</div>
-      </div>
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/20 backdrop-blur-sm">
-        {icon}
-      </div>
-    </div>
-    <div
-      aria-hidden
-      className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"
-    />
-  </div>
-);
 
 export default AdminPunchList;

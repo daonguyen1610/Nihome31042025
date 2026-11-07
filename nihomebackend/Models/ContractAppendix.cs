@@ -32,11 +32,18 @@ public class ContractAppendix
     /// </summary>
     public decimal ValueDelta { get; set; }
 
-    /// <summary>Optional attached document (uploaded file, host-relative path).</summary>
+    /// <summary>Primary attached document (uploaded file, host-relative path).</summary>
     public string? FilePath { get; set; }
     public string? OriginalFileName { get; set; }
     public long? FileSize { get; set; }
     public string? ContentType { get; set; }
+
+    /// <summary>
+    /// JSON array with every file attached to this appendix. The four columns
+    /// above mirror the first entry so older readers keep working; new code
+    /// reads this list.
+    /// </summary>
+    public string? FilesJson { get; set; }
 
     public ContractAppendixStatus Status { get; set; } = ContractAppendixStatus.Draft;
 

@@ -1,6 +1,8 @@
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Models.DTOs;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 
@@ -90,25 +92,26 @@ public class ContractAppendixService(
             Title = req.Title.Trim(),
             Reason = req.Reason.Trim(),
             ValueDelta = req.ValueDelta,
-            FilePath = string.IsNullOrWhiteSpace(req.FilePath) ? null : req.FilePath.Trim(),
-            OriginalFileName = string.IsNullOrWhiteSpace(req.OriginalFileName) ? null : req.OriginalFileName.Trim(),
-            FileSize = req.FileSize,
-            ContentType = string.IsNullOrWhiteSpace(req.ContentType) ? null : req.ContentType.Trim(),
             Status = ContractAppendixStatus.Draft,
             CreatedByUserId = callerUserId,
             UpdatedByUserId = callerUserId,
         };
+        var files = ResolveFiles(req);
+        ApplyFiles(entity, files);
         db.ContractAppendices.Add(entity);
         try
         {
             await db.SaveChangesAsync(ct);
-            if (contract.OperationalProjectId.HasValue && !string.IsNullOrWhiteSpace(entity.FilePath))
+            if (contract.OperationalProjectId.HasValue && files.Count > 0)
             {
-                await projectDocuments.StageExistingManagedFileAsync(
-                    contract.OperationalProjectId.Value, ProjectDocumentCategory.FinanceContracts,
-                    ProjectDocumentSourceModule.Crm, nameof(ContractAppendix), "file", entity.Id,
-                    entity.FilePath, entity.OriginalFileName ?? Path.GetFileName(entity.FilePath),
-                    contract.CustomerId, contract.Id, callerUserId, ct);
+                foreach (var file in files)
+                {
+                    await projectDocuments.StageExistingManagedFileAsync(
+                        contract.OperationalProjectId.Value, ProjectDocumentCategory.FinanceContracts,
+                        ProjectDocumentSourceModule.Crm, nameof(ContractAppendix), "file", entity.Id,
+                        file.FilePath, file.OriginalFileName ?? Path.GetFileName(file.FilePath),
+                        contract.CustomerId, contract.Id, callerUserId, ct);
+                }
                 await db.SaveChangesAsync(ct);
             }
             if (transaction is not null) await transaction.CommitAsync(ct);
@@ -121,7 +124,7 @@ public class ContractAppendixService(
                 db.ContractAppendices.Remove(entity);
                 await db.SaveChangesAsync(CancellationToken.None);
             }
-            DeleteManagedFile(entity.FilePath);
+            DeleteManagedFiles(files);
             throw;
         }
         logger.LogInformation("Created VO {VoNumber} on contract {ContractId}", entity.VoNumber, contractId);
@@ -149,14 +152,12 @@ public class ContractAppendixService(
 
         ValidatePayload(req);
 
-        var previousFilePath = vo.FilePath;
+        var previousFiles = StoredFiles(vo);
+        var files = ResolveFiles(req);
         vo.Title = req.Title.Trim();
         vo.Reason = req.Reason.Trim();
         vo.ValueDelta = req.ValueDelta;
-        vo.FilePath = string.IsNullOrWhiteSpace(req.FilePath) ? null : req.FilePath.Trim();
-        vo.OriginalFileName = string.IsNullOrWhiteSpace(req.OriginalFileName) ? null : req.OriginalFileName.Trim();
-        vo.FileSize = req.FileSize;
-        vo.ContentType = string.IsNullOrWhiteSpace(req.ContentType) ? null : req.ContentType.Trim();
+        ApplyFiles(vo, files);
         vo.UpdatedAt = DateTime.UtcNow;
         vo.UpdatedByUserId = callerUserId;
 
@@ -172,32 +173,37 @@ public class ContractAppendixService(
             vo.SubmittedByUserId = null;
         }
 
+        var previousPaths = previousFiles.Select(file => file.FilePath).ToHashSet(StringComparer.Ordinal);
+        var currentPaths = files.Select(file => file.FilePath).ToHashSet(StringComparer.Ordinal);
+        var removedFiles = previousFiles.Where(file => !currentPaths.Contains(file.FilePath)).ToList();
+        var addedFiles = files.Where(file => !previousPaths.Contains(file.FilePath)).ToList();
         try
         {
-            if (contract.OperationalProjectId.HasValue &&
-                !string.Equals(previousFilePath, vo.FilePath, StringComparison.Ordinal))
+            if (contract.OperationalProjectId.HasValue)
             {
-                if (!string.IsNullOrWhiteSpace(previousFilePath))
+                foreach (var file in removedFiles)
+                {
                     await projectDocuments.StageExistingManagedFileDeleteAsync(
                         contract.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
-                        nameof(ContractAppendix), "file", vo.Id, previousFilePath, callerUserId, ct);
-                if (!string.IsNullOrWhiteSpace(vo.FilePath))
+                        nameof(ContractAppendix), "file", vo.Id, file.FilePath, callerUserId, ct);
+                }
+                foreach (var file in addedFiles)
+                {
                     await projectDocuments.StageExistingManagedFileAsync(
                         contract.OperationalProjectId.Value, ProjectDocumentCategory.FinanceContracts,
                         ProjectDocumentSourceModule.Crm, nameof(ContractAppendix), "file", vo.Id,
-                        vo.FilePath, vo.OriginalFileName ?? Path.GetFileName(vo.FilePath),
+                        file.FilePath, file.OriginalFileName ?? Path.GetFileName(file.FilePath),
                         contract.CustomerId, contract.Id, callerUserId, ct);
+                }
             }
             await db.SaveChangesAsync(ct);
         }
         catch
         {
-            if (!string.Equals(previousFilePath, vo.FilePath, StringComparison.Ordinal))
-                DeleteManagedFile(vo.FilePath);
+            DeleteManagedFiles(addedFiles);
             throw;
         }
-        if (!string.Equals(previousFilePath, vo.FilePath, StringComparison.Ordinal))
-            DeleteManagedFile(previousFilePath);
+        DeleteManagedFiles(removedFiles);
         return await GetAsync(contractId, voId, callerUserId, canSeeAll: true, ct);
     }
 
@@ -284,20 +290,107 @@ public class ContractAppendixService(
             .FirstOrDefaultAsync(v => v.Id == voId && v.ContractId == contractId, ct);
         if (vo == null) return false;
 
-        var filePath = vo.FilePath;
-        if (contract.OperationalProjectId.HasValue && !string.IsNullOrWhiteSpace(filePath))
+        var files = StoredFiles(vo);
+        if (contract.OperationalProjectId.HasValue)
         {
-            await projectDocuments.StageExistingManagedFileDeleteAsync(
-                contract.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
-                nameof(ContractAppendix), "file", vo.Id, filePath, callerUserId, ct);
+            foreach (var file in files)
+            {
+                await projectDocuments.StageExistingManagedFileDeleteAsync(
+                    contract.OperationalProjectId.Value, ProjectDocumentSourceModule.Crm,
+                    nameof(ContractAppendix), "file", vo.Id, file.FilePath, callerUserId, ct);
+            }
         }
         db.ContractAppendices.Remove(vo);
         await db.SaveChangesAsync(ct);
-        DeleteManagedFile(filePath);
+        DeleteManagedFiles(files);
         return true;
     }
 
     // -------- helpers --------
+
+    private static List<ContractAppendixFileInfo> ResolveFiles(UpsertContractAppendixRequest req)
+    {
+        var files = (req.Files ?? new List<ContractAppendixFileInfo>())
+            .Where(file => !string.IsNullOrWhiteSpace(file.FilePath))
+            .Select(file => new ContractAppendixFileInfo
+            {
+                FilePath = file.FilePath.Trim(),
+                OriginalFileName = string.IsNullOrWhiteSpace(file.OriginalFileName)
+                    ? null : file.OriginalFileName.Trim(),
+                FileSize = file.FileSize,
+                ContentType = string.IsNullOrWhiteSpace(file.ContentType)
+                    ? null : file.ContentType.Trim(),
+            })
+            .ToList();
+
+        // Older clients still post the single-file columns.
+        if (files.Count == 0 && !string.IsNullOrWhiteSpace(req.FilePath))
+        {
+            files.Add(new ContractAppendixFileInfo
+            {
+                FilePath = req.FilePath.Trim(),
+                OriginalFileName = string.IsNullOrWhiteSpace(req.OriginalFileName)
+                    ? null : req.OriginalFileName.Trim(),
+                FileSize = req.FileSize,
+                ContentType = string.IsNullOrWhiteSpace(req.ContentType)
+                    ? null : req.ContentType.Trim(),
+            });
+        }
+
+        return files
+            .GroupBy(file => file.FilePath, StringComparer.Ordinal)
+            .Select(group => group.First())
+            .ToList();
+    }
+
+    private static List<ContractAppendixFileInfo> StoredFiles(ContractAppendix vo)
+    {
+        if (!string.IsNullOrWhiteSpace(vo.FilesJson))
+        {
+            try
+            {
+                var parsed = JsonSerializer.Deserialize<List<ContractAppendixFileInfo>>(vo.FilesJson);
+                if (parsed is { Count: > 0 })
+                {
+                    return parsed
+                        .Where(file => !string.IsNullOrWhiteSpace(file.FilePath))
+                        .ToList();
+                }
+            }
+            catch (JsonException)
+            {
+                // Fall back to the legacy single-file columns below.
+            }
+        }
+
+        return string.IsNullOrWhiteSpace(vo.FilePath)
+            ? new List<ContractAppendixFileInfo>()
+            : new List<ContractAppendixFileInfo>
+            {
+                new()
+                {
+                    FilePath = vo.FilePath,
+                    OriginalFileName = vo.OriginalFileName,
+                    FileSize = vo.FileSize,
+                    ContentType = vo.ContentType,
+                },
+            };
+    }
+
+    private static void ApplyFiles(ContractAppendix vo, List<ContractAppendixFileInfo> files)
+    {
+        vo.FilesJson = files.Count == 0 ? null : JsonSerializer.Serialize(files);
+        var primary = files.FirstOrDefault();
+        vo.FilePath = primary?.FilePath;
+        vo.OriginalFileName = primary?.OriginalFileName;
+        vo.FileSize = primary?.FileSize;
+        vo.ContentType = primary?.ContentType;
+    }
+
+    private void DeleteManagedFiles(IEnumerable<ContractAppendixFileInfo> files)
+    {
+        foreach (var file in files) DeleteManagedFile(file.FilePath);
+    }
 
     private void DeleteManagedFile(string? filePath)
     {
@@ -373,6 +466,7 @@ public class ContractAppendixService(
             OriginalFileName = vo.OriginalFileName,
             FileSize = vo.FileSize,
             ContentType = vo.ContentType,
+            Files = StoredFiles(vo),
             Status = vo.Status,
             SubmittedAt = vo.SubmittedAt,
             SubmittedByUserId = vo.SubmittedByUserId,

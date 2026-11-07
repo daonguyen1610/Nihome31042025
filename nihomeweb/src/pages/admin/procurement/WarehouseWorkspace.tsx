@@ -68,7 +68,7 @@ interface WarehouseWorkspaceProps {
 }
 
 const statusClass: Record<string, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Posted: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Reversed: "border-rose-200 bg-rose-50 text-rose-700",
 };

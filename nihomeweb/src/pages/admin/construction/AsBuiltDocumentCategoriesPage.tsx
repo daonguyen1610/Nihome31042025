@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
@@ -74,6 +76,7 @@ const emptyForm: FormData = {
 };
 
 export default function AsBuiltDocumentCategoriesPage() {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -101,13 +104,13 @@ export default function AsBuiltDocumentCategoriesPage() {
       const res = await adminApi.getAsBuiltDocumentCategories(true);
       setItems(res.data ?? []);
     } catch (error) {
-      const message = extractApiError(error) || t("asbuiltCat.error.load");
+      const message = uiError(error) || t("asbuiltCat.error.load");
       setLoadError(message);
       toast({ title: t("common.error"), description: message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
-  }, [t, toast]);
+  }, [t, toast, uiError]);
 
   useEffect(() => {
     loadData();
@@ -214,7 +217,7 @@ export default function AsBuiltDocumentCategoriesPage() {
       closeDialog();
       await loadData();
     } catch (err) {
-      setFormError(extractApiError(err) || t("common.error"));
+      setFormError(uiError(err) || t("common.error"));
     } finally {
       setSubmitting(false);
     }
@@ -230,7 +233,7 @@ export default function AsBuiltDocumentCategoriesPage() {
       await loadData();
     } catch (err) {
       toast({
-        title: extractApiError(err) || t("common.error"),
+        title: uiError(err) || t("common.error"),
         variant: "destructive",
       });
     }

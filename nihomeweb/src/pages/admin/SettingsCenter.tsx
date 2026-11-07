@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -313,6 +314,7 @@ const MapTab = () => {
 };
 
 const DriveTab = () => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -408,16 +410,30 @@ const DriveTab = () => {
 
   const connect = async () => {
     const switchingAccount = status?.hasStoredCredential === true;
-    if (switchingAccount && !window.confirm(t("settings.drive.switchConfirm"))) return;
     const width = 560;
     const height = 720;
     const left = Math.max(0, window.screenX + (window.outerWidth - width) / 2);
     const top = Math.max(0, window.screenY + (window.outerHeight - height) / 2);
-    const popup = window.open(
-      "about:blank",
-      "nicon-google-drive-oauth",
-      `popup=yes,width=${width},height=${height},left=${left},top=${top}`,
-    );
+    const openPopup = () =>
+      window.open(
+        "about:blank",
+        "nicon-google-drive-oauth",
+        `popup=yes,width=${width},height=${height},left=${left},top=${top}`,
+      );
+    // Open in the confirmation button's click event so popup blockers retain
+    // the user's activation even though the continuation awaits the dialog.
+    const confirmedPopup: { value: Window | null } = { value: null };
+    if (
+      switchingAccount &&
+      !(await confirmAction(t("settings.drive.switchConfirm"), {
+        destructive: false,
+        onConfirm: () => {
+          confirmedPopup.value = openPopup();
+        },
+      }))
+    )
+      return;
+    const popup = switchingAccount ? confirmedPopup.value : openPopup();
     if (!popup) {
       toast({
         title: t("common.error"),
@@ -472,7 +488,8 @@ const DriveTab = () => {
   };
 
   const disconnect = async () => {
-    if (!window.confirm(t("settings.drive.disconnectConfirm"))) return;
+    if (!(await confirmAction(t("settings.drive.disconnectConfirm"), { destructive: false })))
+      return;
     setDisconnecting(true);
     try {
       const { data } = await adminApi.disconnectGoogleDriveOAuth();
@@ -559,7 +576,7 @@ const DriveTab = () => {
                 </div>
                 {status.rootFolderLink && (
                   <Button asChild variant="ghost" size="sm">
-                    <a href={status.rootFolderLink} target="_blank" rel="noreferrer">
+                    <a href={status.rootFolderLink} target="_blank" rel="noreferrer noopener">
                       <ExternalLink className="mr-1.5 h-4 w-4" />
                       {t("settings.drive.openFolder")}
                     </a>

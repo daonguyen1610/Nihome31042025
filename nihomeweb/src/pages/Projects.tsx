@@ -161,7 +161,7 @@ const Projects = () => {
                         className={cn(
                           "chip",
                           p.status === "ongoing" ? "chip-orange" : "chip-success",
-                          "bg-white/95 backdrop-blur",
+                          "bg-card/95 backdrop-blur",
                         )}
                       >
                         {p.status === "ongoing"
@@ -170,7 +170,7 @@ const Projects = () => {
                       </span>
                     </div>
                     {p.year && (
-                      <div className="absolute bottom-5 right-5 bg-white/95 backdrop-blur rounded-full px-4 py-1.5 text-xs font-extrabold text-foreground">
+                      <div className="absolute bottom-5 right-5 bg-card/95 backdrop-blur rounded-full px-4 py-1.5 text-xs font-extrabold text-foreground">
                         {p.year}
                       </div>
                     )}

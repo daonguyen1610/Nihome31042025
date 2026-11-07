@@ -1,3 +1,9 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { useListPage } from "@/hooks/useListPage";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Check,
@@ -58,7 +64,7 @@ const STATUS_BADGE: Record<ConceptOptionStatus, string> = {
   PresentedToClient: "border-violet-200 bg-violet-50 text-violet-700",
   ClientRequestedChanges: "border-amber-200 bg-amber-50 text-amber-700",
   Finalized: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Discarded: "border-slate-200 bg-slate-50 text-slate-500",
+  Discarded: "border-border bg-muted/30 text-muted-foreground",
 };
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
@@ -99,6 +105,7 @@ interface Props {
  * inside its "Concept" tab.
  */
 export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenReviews }: Props) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -125,27 +132,35 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     }
   };
 
+  const [page, setPage] = useListPage(String(project.id));
+  const [total, setTotal] = useState(0);
+  const startRequest = useRequestGuard();
   const fetchRows = useCallback(
     async (refresh = false) => {
+      const isCurrent = startRequest();
       if (!refresh) setLoading(true);
       setError(null);
       try {
         const [options, reviewResult] = await Promise.allSettled([
-          adminApi.listConceptOptions({ designProjectId: project.id, pageSize: 100 }),
+          adminApi.listConceptOptions({ designProjectId: project.id, page, pageSize: 20 }),
           adminApi.listDesignReviews(project.id),
         ]);
-        if (options.status === "fulfilled") setRows(options.value.data.items ?? []);
+        if (!isCurrent()) return;
+        if (options.status === "fulfilled") {
+          setRows(options.value.data.items ?? []);
+          setTotal(options.value.data.total);
+        }
         if (reviewResult.status === "fulfilled") setReviews(reviewResult.value.data);
         else setReviews([]);
-        if (options.status === "rejected") setError(extractApiError(options.reason));
-        else if (reviewResult.status === "rejected") setError(extractApiError(reviewResult.reason));
+        if (options.status === "rejected") setError(uiError(options.reason));
+        else if (reviewResult.status === "rejected") setError(uiError(reviewResult.reason));
       } catch (err) {
-        setError(extractApiError(err));
+        if (isCurrent()) setError(uiError(err));
       } finally {
-        setLoading(false);
+        if (isCurrent()) setLoading(false);
       }
     },
-    [project.id],
+    [startRequest, project.id, page, uiError],
   );
 
   const refreshRows = useCallback(() => fetchRows(true), [fetchRows]);
@@ -229,7 +244,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       setEditing(null);
       await fetchRows();
     } catch (err) {
-      setFormError(translateError(t, extractApiError(err)));
+      setFormError(translateError(t, uiError(err)));
     } finally {
       setSaving(false);
     }
@@ -257,7 +272,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
         if (active) setDeleteImpact(data);
       })
       .catch((err) => {
-        if (active) setDeleteError(extractApiError(err));
+        if (active) setDeleteError(uiError(err));
       })
       .finally(() => {
         if (active) setLoadingDeleteImpact(false);
@@ -265,7 +280,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     return () => {
       active = false;
     };
-  }, [deleting]);
+  }, [deleting, uiError]);
 
   const confirmDelete = async (confirmation: string) => {
     if (!deleting || !deleteImpact) return null;
@@ -279,7 +294,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       toast({ title: t("concepts.deleted") });
       return null;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setBusyDelete(false);
@@ -300,7 +315,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -321,7 +336,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       return false;
@@ -334,7 +349,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
     return (
       <div
         role="status"
-        className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500"
+        className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground"
       >
         <Loader2 aria-hidden="true" className="mx-auto mb-2 h-5 w-5 animate-spin" />
         {t("common.loading")}
@@ -361,7 +376,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       ) : null}
 
       <header className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-base font-semibold text-slate-900">{t("concepts.title")}</h2>
+        <h2 className="text-base font-semibold text-foreground">{t("concepts.title")}</h2>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" className="min-h-11" onClick={onOpenReviews}>
             {t("designProjects.detail.tab.reviews")}
@@ -375,6 +390,13 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
         </div>
       </header>
 
+      <ListPagination
+        page={page}
+        pageSize={20}
+        total={total}
+        onPageChange={setPage}
+        disabled={loading}
+      />
       {rows.length === 0 && !error ? (
         <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
           {t("concepts.empty")}
@@ -386,9 +408,9 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
             <article
               key={row.id}
               className={cn(
-                "min-w-0 rounded-lg border bg-white p-4 shadow-sm",
+                "min-w-0 rounded-lg border bg-card p-4 shadow-sm",
                 row.status === "Finalized" && "border-emerald-300 ring-1 ring-emerald-200",
-                row.status === "Discarded" && "border-slate-200 bg-slate-50/40",
+                row.status === "Discarded" && "border-border bg-muted/40",
               )}
             >
               <header className="flex items-start justify-between gap-2">
@@ -406,11 +428,11 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
                 </Badge>
               </header>
               {row.description ? (
-                <p className="mt-2 whitespace-pre-wrap break-words text-xs text-slate-700">
+                <p className="mt-2 whitespace-pre-wrap break-words text-xs text-foreground">
                   {row.description}
                 </p>
               ) : null}
-              <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-600">
+              <dl className="mt-2 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                 <div>
                   <dt className="text-muted-foreground">{t("concepts.field.presentedAt")}</dt>
                   <dd className="font-medium">{formatDate(row.presentedAt, lang)}</dd>
@@ -481,7 +503,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       ) : null}
 
       {expandedRow && project.operationalProjectId ? (
-        <div className="min-w-0 rounded-lg border bg-white p-4 sm:p-6">
+        <div className="min-w-0 rounded-lg border bg-card p-4 sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3 border-b pb-4">
             <div>
               <h3 className="text-base font-semibold">{expandedRow.name}</h3>
@@ -543,7 +565,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
               />
             </div>
             {canPickOwner ? (
-              <div>
+              <FieldScope>
                 <Label>{t("concepts.field.owner")}</Label>
                 <SearchableSelect
                   ariaLabel={t("concepts.field.owner")}
@@ -565,7 +587,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
                           : "designProjects.team.ownerPickerEmpty",
                   )}
                 </p>
-              </div>
+              </FieldScope>
             ) : null}
           </div>
           {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
@@ -695,7 +717,7 @@ const RowActions = ({
       )}
       {s === "PendingInternalReview" && (
         <>
-          <span className="text-xs text-slate-500">{t("concepts.dossier.frozen")}</span>
+          <span className="text-xs text-muted-foreground">{t("concepts.dossier.frozen")}</span>
         </>
       )}
       {s === "PresentedToClient" && (

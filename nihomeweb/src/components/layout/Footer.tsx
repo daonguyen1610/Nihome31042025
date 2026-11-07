@@ -67,7 +67,7 @@ const Footer = () => {
                   key={label}
                   href="#"
                   aria-label={label}
-                  className="w-14 h-14 rounded-2xl border-2 border-white/20 bg-white/10 flex items-center justify-center hover:bg-gradient-primary hover:border-transparent hover:scale-110 hover:shadow-glow transition-all"
+                  className="w-14 h-14 rounded-2xl border-2 border-white/20 bg-card/10 flex items-center justify-center hover:bg-gradient-primary hover:border-transparent hover:scale-110 hover:shadow-glow transition-all"
                 >
                   <Icon className="w-6 h-6" strokeWidth={2} />
                 </a>

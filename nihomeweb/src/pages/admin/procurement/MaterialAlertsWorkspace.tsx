@@ -1,3 +1,4 @@
+import { getUiError } from "@/lib/apiError";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useState } from "react";
@@ -117,11 +118,11 @@ const MaterialAlertsWorkspace = ({
       setTotal(data.total);
       onTotalChange((data.statusCounts.Open ?? 0) + (data.statusCounts.Acknowledged ?? 0));
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(getUiError(reason, t));
     } finally {
       setLoading(false);
     }
-  }, [onTotalChange, parameters, projectId]);
+  }, [onTotalChange, parameters, projectId, t]);
 
   useEffect(() => {
     void load();
@@ -167,7 +168,7 @@ const MaterialAlertsWorkspace = ({
         ],
       });
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(getUiError(reason, t));
     } finally {
       setExporting(false);
     }
@@ -180,7 +181,7 @@ const MaterialAlertsWorkspace = ({
       await adminApi.evaluateMaterialAlerts(projectId);
       await load();
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(getUiError(reason, t));
     } finally {
       setEvaluating(false);
     }

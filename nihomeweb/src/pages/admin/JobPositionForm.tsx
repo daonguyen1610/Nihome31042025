@@ -1,3 +1,4 @@
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { ArrowLeft, Save, Plus, Trash2, Loader2 } from "lucide-react";
@@ -260,23 +261,25 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   />
                 </Field>
                 <Field label={t("recruit.jobForm.department")}>
-                  <select
-                    className={selectClasses}
-                    value={data.department}
-                    onChange={(e) => update("department", e.target.value)}
-                    required
-                  >
-                    <option value="">{t("recruit.jobForm.departmentPlaceholder")}</option>
-                    {data.department &&
-                      !departmentOptions.some((option) => option.code === data.department) && (
-                        <option value={data.department}>{data.department}</option>
-                      )}
-                    {departmentOptions.map((option) => (
-                      <option key={option.id} value={option.code}>
-                        {t(option.labelKey)}
-                      </option>
-                    ))}
-                  </select>
+                  <FieldControl>
+                    <select
+                      className={selectClasses}
+                      value={data.department}
+                      onChange={(e) => update("department", e.target.value)}
+                      required
+                    >
+                      <option value="">{t("recruit.jobForm.departmentPlaceholder")}</option>
+                      {data.department &&
+                        !departmentOptions.some((option) => option.code === data.department) && (
+                          <option value={data.department}>{data.department}</option>
+                        )}
+                      {departmentOptions.map((option) => (
+                        <option key={option.id} value={option.code}>
+                          {t(option.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldControl>
                 </Field>
                 <Field label={t("recruit.jobForm.location")}>
                   <Input
@@ -288,22 +291,24 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   />
                 </Field>
                 <Field label={t("recruit.jobForm.employmentType")}>
-                  <select
-                    className={selectClasses}
-                    value={data.employmentType}
-                    onChange={(e) => update("employmentType", e.target.value)}
-                    required
-                    disabled={employmentTypes.length === 0}
-                  >
-                    {employmentTypes.length === 0 && (
-                      <option value="">{t("recruit.jobForm.noOptions")}</option>
-                    )}
-                    {employmentTypes.map((type) => (
-                      <option key={type.id} value={type.code}>
-                        {type.name}
-                      </option>
-                    ))}
-                  </select>
+                  <FieldControl>
+                    <select
+                      className={selectClasses}
+                      value={data.employmentType}
+                      onChange={(e) => update("employmentType", e.target.value)}
+                      required
+                      disabled={employmentTypes.length === 0}
+                    >
+                      {employmentTypes.length === 0 && (
+                        <option value="">{t("recruit.jobForm.noOptions")}</option>
+                      )}
+                      {employmentTypes.map((type) => (
+                        <option key={type.id} value={type.code}>
+                          {type.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldControl>
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     {t("recruit.jobForm.manageAt")}{" "}
                     <Link to="/admin/recruitment/employment-types" className="underline">
@@ -313,21 +318,23 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   </p>
                 </Field>
                 <Field label={t("recruit.jobForm.experienceLevel")}>
-                  <select
-                    className={selectClasses}
-                    value={data.experienceLevel}
-                    onChange={(e) => update("experienceLevel", e.target.value)}
-                    disabled={experienceLevels.length === 0}
-                  >
-                    {experienceLevels.length === 0 && (
-                      <option value="">{t("recruit.jobForm.noOptions")}</option>
-                    )}
-                    {experienceLevels.map((lvl) => (
-                      <option key={lvl.id} value={lvl.code}>
-                        {lvl.name}
-                      </option>
-                    ))}
-                  </select>
+                  <FieldControl>
+                    <select
+                      className={selectClasses}
+                      value={data.experienceLevel}
+                      onChange={(e) => update("experienceLevel", e.target.value)}
+                      disabled={experienceLevels.length === 0}
+                    >
+                      {experienceLevels.length === 0 && (
+                        <option value="">{t("recruit.jobForm.noOptions")}</option>
+                      )}
+                      {experienceLevels.map((lvl) => (
+                        <option key={lvl.id} value={lvl.code}>
+                          {lvl.name}
+                        </option>
+                      ))}
+                    </select>
+                  </FieldControl>
                 </Field>
               </div>
             </section>
@@ -336,6 +343,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
             <section className="rounded-lg border bg-card p-6">
               <h2 className="mb-4 text-base font-semibold">{t("recruit.jobForm.description")}</h2>
               <Textarea
+                aria-label={t("recruit.jobForm.description")}
                 className="min-h-28"
                 value={data.description}
                 onChange={(e) => update("description", e.target.value)}
@@ -350,6 +358,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                 {data.requirements.map((req, i) => (
                   <div key={i} className="flex gap-2">
                     <Input
+                      aria-label={t("recruit.jobForm.requirements")}
                       className="h-9 flex-1"
                       value={req}
                       onChange={(e) => updateRequirement(i, e.target.value)}
@@ -449,10 +458,10 @@ const Field = ({
   children: React.ReactNode;
   className?: string;
 }) => (
-  <div className={cn("space-y-1.5", className)}>
+  <FieldScope className={cn("space-y-1.5", className)}>
     <Label className="text-xs">{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 export default JobPositionForm;

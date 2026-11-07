@@ -1,3 +1,4 @@
+import { useFieldId } from "@/components/ui/field-scope";
 import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
@@ -78,6 +79,8 @@ export function SearchableSelect({
   required,
   "data-testid": testId,
 }: SearchableSelectProps) {
+  const scopedFieldId = useFieldId();
+  const fieldId = id ?? scopedFieldId;
   const { t } = useI18n();
   const [open, setOpen] = React.useState(false);
   const [department, setDepartment] = React.useState("all");
@@ -116,12 +119,12 @@ export function SearchableSelect({
           type="button"
           variant="outline"
           role="combobox"
-          id={id}
+          id={fieldId}
           data-testid={testId}
           aria-invalid={ariaInvalid}
           aria-describedby={ariaDescribedBy}
           aria-required={required}
-          aria-label={ariaLabel ?? placeholder}
+          aria-label={ariaLabel ?? (scopedFieldId ? undefined : placeholder)}
           aria-expanded={open}
           disabled={disabled}
           className={cn(

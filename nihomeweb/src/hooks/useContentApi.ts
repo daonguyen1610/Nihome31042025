@@ -1,3 +1,4 @@
+import { useUiError } from "@/hooks/useUiError";
 import { useState, useEffect, useCallback } from "react";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -18,6 +19,7 @@ import {
   type JobPositionResponse,
 } from "@/services/contentApi";
 import { adminApi } from "@/services/adminApi";
+import { getUiError } from "@/lib/apiError";
 
 /* ------------------------------------------------------------------ */
 /*  Generic fetch hook with loading / error / data pattern            */
@@ -31,6 +33,8 @@ interface FetchState<T> {
 }
 
 function useFetch<T>(fetcher: () => Promise<{ data: T }>, deps: unknown[] = []): FetchState<T> {
+  const uiError = useUiError();
+  const { t } = useI18n();
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,17 +44,10 @@ function useFetch<T>(fetcher: () => Promise<{ data: T }>, deps: unknown[] = []):
     setError(null);
     fetcher()
       .then((res) => setData(res.data))
-      .catch((err) =>
-        setError(
-          err?.response?.data?.detail ??
-            err?.response?.data?.message ??
-            err.message ??
-            "Unknown error",
-        ),
-      )
+      .catch((err) => setError(uiError(err)))
       .finally(() => setLoading(false));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
+  }, [...deps, uiError]);
 
   useEffect(() => {
     fetch();

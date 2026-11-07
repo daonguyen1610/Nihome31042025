@@ -80,7 +80,7 @@ const Header = () => {
             className={cn(
               "hidden 2xl:flex items-center gap-0.5 rounded-full transition-all duration-500 px-1.5 min-w-0 flex-shrink",
               transparent
-                ? "bg-white/10 backdrop-blur-md border border-white/15"
+                ? "bg-card/10 backdrop-blur-md border border-white/15"
                 : "bg-secondary border border-border",
             )}
           >
@@ -95,7 +95,7 @@ const Header = () => {
                     isActive
                       ? "bg-primary text-primary-foreground shadow-glow"
                       : transparent
-                        ? "text-white/85 hover:text-white hover:bg-white/10"
+                        ? "text-white/85 hover:text-white hover:bg-card/10"
                         : "text-foreground/75 hover:text-foreground hover:bg-background",
                   )
                 }
@@ -112,7 +112,7 @@ const Header = () => {
               className={cn(
                 "hidden 2xl:flex w-9 h-9 rounded-full items-center justify-center transition-colors",
                 transparent
-                  ? "text-white/85 hover:text-white hover:bg-white/10"
+                  ? "text-white/85 hover:text-white hover:bg-card/10"
                   : "text-foreground/70 hover:text-foreground hover:bg-secondary",
               )}
             >
@@ -125,7 +125,7 @@ const Header = () => {
                   className={cn(
                     "flex items-center gap-1.5 pl-2.5 pr-3 2xl:pl-3 2xl:pr-4 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap outline-none focus-visible:ring-2 focus-visible:ring-primary",
                     transparent
-                      ? "bg-white text-foreground hover:shadow-glow"
+                      ? "bg-card text-foreground hover:shadow-glow"
                       : "bg-foreground text-background hover:bg-primary",
                   )}
                 >
@@ -177,7 +177,7 @@ const Header = () => {
                 className={cn(
                   "px-3 2xl:px-5 py-2 rounded-full text-[11px] 2xl:text-xs uppercase tracking-wider font-bold transition-all whitespace-nowrap",
                   transparent
-                    ? "bg-white text-foreground hover:shadow-glow"
+                    ? "bg-card text-foreground hover:shadow-glow"
                     : "btn-gradient text-white",
                 )}
               >
@@ -191,7 +191,7 @@ const Header = () => {
             onClick={() => setOpen(!open)}
             className={cn(
               "2xl:hidden w-10 h-10 rounded-full flex items-center justify-center transition-colors",
-              transparent ? "bg-white/10 text-white" : "bg-secondary text-foreground",
+              transparent ? "bg-card/10 text-white" : "bg-secondary text-foreground",
             )}
             aria-label="Menu"
           >

@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useRef, useState } from "react";
 import { Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -64,6 +67,7 @@ export const DesignSchedulePhaseDialog = ({
   onSaved,
   onReload,
 }: Props) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [form, setForm] = useState<UpsertDesignSchedulePhaseRequest | null>(null);
   const [saving, setSaving] = useState(false);
@@ -137,7 +141,7 @@ export const DesignSchedulePhaseDialog = ({
       if (status === 409) {
         setConflict(true);
         setError(t("designProjects.schedule.conflict"));
-      } else setError(extractApiError(saveError));
+      } else setError(uiError(saveError));
     } finally {
       setSaving(false);
     }
@@ -217,7 +221,7 @@ export const DesignSchedulePhaseDialog = ({
               onChange={(event) => setForm({ ...form, actualEnd: event.target.value || null })}
             />
           </div>
-          <div>
+          <FieldScope>
             <Label>{t("designProjects.schedule.field.status")}</Label>
             <Select
               value={form.status}
@@ -234,7 +238,7 @@ export const DesignSchedulePhaseDialog = ({
                 ))}
               </SelectContent>
             </Select>
-          </div>
+          </FieldScope>
           <div>
             <Label htmlFor="phase-progress">{t("designProjects.schedule.field.progress")}</Label>
             <Input
@@ -259,7 +263,7 @@ export const DesignSchedulePhaseDialog = ({
               readOnly
               aria-describedby="phase-weight-help"
             />
-            <p id="phase-weight-help" className="mt-1 text-xs text-slate-500">
+            <p id="phase-weight-help" className="mt-1 text-xs text-muted-foreground">
               {t("designProjects.schedule.phaseDialog.weightReadOnly")}
             </p>
           </div>

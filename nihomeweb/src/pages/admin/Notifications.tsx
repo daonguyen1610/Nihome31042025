@@ -121,7 +121,7 @@ const Notifications = () => {
           </div>
         </div>
 
-        <section className="overflow-hidden rounded-lg border bg-white">
+        <section className="overflow-hidden rounded-lg border bg-card">
           {loading && items.length === 0 ? (
             <div className="flex items-center justify-center gap-2 px-4 py-20 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />

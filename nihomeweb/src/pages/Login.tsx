@@ -62,6 +62,7 @@ const Login = () => {
               <div className="relative">
                 <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
+                  aria-label={t("auth.phoneWithEmail")}
                   required
                   type="text"
                   autoComplete="username"
@@ -74,6 +75,7 @@ const Login = () => {
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
+                  aria-label={t("auth.password")}
                   required
                   type="password"
                   value={password}

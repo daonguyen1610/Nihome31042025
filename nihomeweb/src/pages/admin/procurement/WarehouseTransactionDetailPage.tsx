@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { personOption, mergePeople, type PersonIdentity } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -48,7 +50,7 @@ type ReceiptLineDraft = WarehouseReceiptUpsertRequest["lines"][number];
 type IssueLineDraft = WarehouseIssueUpsertRequest["lines"][number];
 
 const statusClass: Record<string, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Posted: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Reversed: "border-rose-200 bg-rose-50 text-rose-700",
 };
@@ -60,6 +62,7 @@ const toLocalDateTime = (value: string) => {
 };
 
 const WarehouseTransactionDetailPage = () => {
+  const uiError = useUiError();
   const {
     projectId: projectIdParam,
     transactionType,
@@ -140,11 +143,11 @@ const WarehouseTransactionDetailPage = () => {
           : [];
       setUsers(mergePeople([...teamUsers, ...fallbackUsers, ...detailUsers]));
     } catch (loadError) {
-      setError(extractApiError(loadError));
+      setError(uiError(loadError));
     } finally {
       setLoading(false);
     }
-  }, [canReadKpiUsers, kind, projectId, transactionId, t]);
+  }, [projectId, transactionId, kind, t, canReadKpiUsers, uiError]);
 
   useEffect(() => {
     void load();
@@ -245,7 +248,7 @@ const WarehouseTransactionDetailPage = () => {
       toast({ title: t("procurement.warehouse.success.updated") });
       await load();
     } catch (saveError) {
-      setFormError(extractApiError(saveError));
+      setFormError(uiError(saveError));
     } finally {
       setBusy(false);
     }
@@ -261,7 +264,7 @@ const WarehouseTransactionDetailPage = () => {
       toast({ title: t("procurement.warehouse.success.posted") });
       await load();
     } catch (postError) {
-      setFormError(extractApiError(postError));
+      setFormError(uiError(postError));
     } finally {
       setBusy(false);
     }
@@ -294,7 +297,7 @@ const WarehouseTransactionDetailPage = () => {
       toast({ title: t("procurement.warehouse.success.reversed") });
       await load();
     } catch (reverseError) {
-      setFormError(extractApiError(reverseError));
+      setFormError(uiError(reverseError));
     } finally {
       setBusy(false);
     }

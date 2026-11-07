@@ -1,3 +1,11 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { findRecordPage } from "@/lib/pagination";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useListPage } from "@/hooks/useListPage";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useDesignTeamOwners } from "./useDesignTeamOwners";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -114,6 +122,7 @@ interface Props {
  * ShopDrawing stage — the Basic Design tab handles unlocking.
  */
 export const ShopDrawingTab = ({ project }: Props) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -145,25 +154,69 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const [filterDiscipline, setFilterDiscipline] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+  const settledSearch = useDebouncedValue(search);
 
+  const [page, setPage] = useListPage(
+    JSON.stringify([project.id, filterDiscipline, filterStatus, settledSearch]),
+  );
+  const [total, setTotal] = useState(0);
+  const startRequest = useRequestGuard();
   const fetchRows = useCallback(async () => {
+    const isCurrent = startRequest();
     setError(null);
     try {
       const { data } = await adminApi.listShopDrawings({
         designProjectId: project.id,
         disciplineCode: filterDiscipline || undefined,
         status: filterStatus || undefined,
-        search: search.trim() || undefined,
-        pageSize: 200,
+        search: settledSearch.trim() || undefined,
+        page,
+        pageSize: 20,
       });
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
+      setTotal(data.total);
       setStatusCounts(data.statusCounts ?? {});
     } catch (err) {
-      setError(extractApiError(err));
+      if (isCurrent()) setError(uiError(err));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [project.id, filterDiscipline, filterStatus, search]);
+  }, [startRequest, project.id, filterDiscipline, filterStatus, settledSearch, page, uiError]);
+
+  useEffect(() => {
+    if (!Number.isInteger(focusedDocumentId) || focusedDocumentId <= 0) return;
+    let active = true;
+    void findRecordPage(
+      (page) =>
+        adminApi.listShopDrawings({
+          designProjectId: project.id,
+          page,
+          pageSize: 20,
+          disciplineCode: filterDiscipline || undefined,
+          status: filterStatus || undefined,
+          search: settledSearch.trim() || undefined,
+        }),
+      focusedDocumentId,
+    )
+      .then((locatedPage) => {
+        if (active && locatedPage !== null) setPage(locatedPage);
+      })
+      .catch((cause) => {
+        if (active) setError(uiError(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    focusedDocumentId,
+    project.id,
+    setPage,
+    filterDiscipline,
+    filterStatus,
+    settledSearch,
+    uiError,
+  ]);
 
   useEffect(() => {
     if (!Number.isInteger(focusedDocumentId) || focusedDocumentId <= 0 || loading) return;
@@ -234,7 +287,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -313,7 +366,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
       setEditing(null);
       await fetchRows();
     } catch (err) {
-      setFormError(translateError(t, extractApiError(err)));
+      setFormError(translateError(t, uiError(err)));
     } finally {
       setSaving(false);
     }
@@ -341,7 +394,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
         if (active) setDeleteImpact(data);
       })
       .catch((err) => {
-        if (active) setDeleteError(extractApiError(err));
+        if (active) setDeleteError(uiError(err));
       })
       .finally(() => {
         if (active) setLoadingDeleteImpact(false);
@@ -349,7 +402,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
     return () => {
       active = false;
     };
-  }, [deleting]);
+  }, [deleting, uiError]);
 
   const confirmDelete = async (confirmation: string) => {
     if (!deleting || !deleteImpact) return null;
@@ -363,7 +416,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
       toast({ title: t("shopDrawing.deleted") });
       return null;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setBusyDelete(false);
@@ -381,7 +434,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -391,7 +444,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+      <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
         <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
       </div>
     );
@@ -414,7 +467,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
           {t("shopDrawing.lockedBefore")}
         </p>
       ) : !isShopStage ? (
-        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+        <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-foreground">
           {t("shopDrawing.lockedAfter")}
         </p>
       ) : null}
@@ -423,7 +476,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
       <section className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <StatPill
           label={t("shopDrawing.stats.total")}
-          value={rows.length}
+          value={total}
           icon={<ShieldCheck className="h-3.5 w-3.5" />}
           tone="slate"
         />
@@ -448,9 +501,10 @@ export const ShopDrawingTab = ({ project }: Props) => {
       </section>
 
       {/* Toolbar: filters + create + bulk actions */}
-      <section className="flex flex-wrap items-center gap-2 rounded-lg border border-slate-200 bg-white p-2 shadow-sm">
+      <section className="flex flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2 shadow-sm">
         <div className="flex-1 min-w-[180px]">
           <Input
+            aria-label={t("common.search")}
             placeholder={t("shopDrawing.filter.search")}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -462,7 +516,11 @@ export const ShopDrawingTab = ({ project }: Props) => {
           value={filterDiscipline || "__all__"}
           onValueChange={(v) => setFilterDiscipline(v === "__all__" ? "" : v)}
         >
-          <SelectTrigger className="h-9 w-[170px]" data-testid="shop-drawing-filter-discipline">
+          <SelectTrigger
+            aria-label={t("shopDrawing.field.discipline")}
+            className="h-9 w-[170px]"
+            data-testid="shop-drawing-filter-discipline"
+          >
             <SelectValue placeholder={t("shopDrawing.filter.allDisciplines")} />
           </SelectTrigger>
           <SelectContent>
@@ -478,7 +536,11 @@ export const ShopDrawingTab = ({ project }: Props) => {
           value={filterStatus || "__all__"}
           onValueChange={(v) => setFilterStatus(v === "__all__" ? "" : v)}
         >
-          <SelectTrigger className="h-9 w-[170px]" data-testid="shop-drawing-filter-status">
+          <SelectTrigger
+            aria-label={t("common.status")}
+            className="h-9 w-[170px]"
+            data-testid="shop-drawing-filter-status"
+          >
             <SelectValue placeholder={t("shopDrawing.filter.allStatuses")} />
           </SelectTrigger>
           <SelectContent>
@@ -500,6 +562,13 @@ export const ShopDrawingTab = ({ project }: Props) => {
         </div>
       </section>
 
+      <ListPagination
+        page={page}
+        pageSize={20}
+        total={total}
+        onPageChange={setPage}
+        disabled={loading}
+      />
       {rows.length === 0 ? (
         <div
           className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground"
@@ -556,7 +625,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
             <DialogDescription>{t("shopDrawing.form.hint")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
-            <div>
+            <FieldScope>
               <Label>{t("shopDrawing.field.discipline")}</Label>
               <Select
                 value={form.disciplineCode}
@@ -574,8 +643,8 @@ export const ShopDrawingTab = ({ project }: Props) => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("shopDrawing.field.constructionItem")}</Label>
               <Input
                 value={form.constructionItem}
@@ -584,8 +653,8 @@ export const ShopDrawingTab = ({ project }: Props) => {
                 disabled={isEdit && editing?.status !== "Drafting"}
                 data-testid="shop-drawing-form-item"
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("shopDrawing.field.title")}</Label>
               <Input
                 autoFocus
@@ -593,17 +662,17 @@ export const ShopDrawingTab = ({ project }: Props) => {
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 data-testid="shop-drawing-form-title"
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("shopDrawing.field.description")}</Label>
               <Textarea
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
-            </div>
+            </FieldScope>
             {canPickOwner ? (
-              <div>
+              <FieldScope>
                 <Label>{t("shopDrawing.field.owner")}</Label>
                 <SearchableSelect
                   ariaLabel={t("shopDrawing.field.owner")}
@@ -625,16 +694,16 @@ export const ShopDrawingTab = ({ project }: Props) => {
                           : "designProjects.team.ownerPickerEmpty",
                   )}
                 </p>
-              </div>
+              </FieldScope>
             ) : null}
-            <div>
+            <FieldScope>
               <Label>{t("shopDrawing.field.note")}</Label>
               <Textarea
                 rows={2}
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               />
-            </div>
+            </FieldScope>
           </div>
           {formError ? (
             <p className="text-sm text-rose-600" data-testid="shop-drawing-form-error">
@@ -678,7 +747,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
 // ------------------------------ stat pill ------------------------------
 
 const TONE_BG: Record<string, string> = {
-  slate: "border-slate-200 bg-slate-50 text-slate-700",
+  slate: "border-border bg-muted/30 text-foreground",
   sky: "border-sky-200 bg-sky-50 text-sky-700",
   amber: "border-amber-200 bg-amber-50 text-amber-700",
   emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -752,31 +821,33 @@ const DisciplineSection = ({
   const total = Array.from(itemMap.values()).reduce((n, arr) => n + arr.length, 0);
   return (
     <section
-      className="rounded-lg border border-slate-200 bg-white shadow-sm"
+      className="rounded-lg border border-border bg-card shadow-sm"
       data-testid={`shop-drawing-discipline-${disciplineCode}`}
     >
-      <header className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
+      <header className="flex items-center justify-between border-b border-border px-3 py-2">
         <button
           type="button"
           className="flex items-center gap-1.5 text-left"
           onClick={() => setCollapsed((v) => !v)}
         >
           {collapsed ? (
-            <ChevronDown className="h-4 w-4 text-slate-400" />
+            <ChevronDown className="h-4 w-4 text-muted-foreground" />
           ) : (
-            <ChevronUp className="h-4 w-4 text-slate-400" />
+            <ChevronUp className="h-4 w-4 text-muted-foreground" />
           )}
-          <p className="text-sm font-semibold text-slate-800">{disciplineLabel}</p>
+          <p className="text-sm font-semibold text-foreground">{disciplineLabel}</p>
         </button>
-        <span className="text-xs text-slate-500">{total}</span>
+        <span className="text-xs text-muted-foreground">{total}</span>
       </header>
       {!collapsed ? (
-        <div className="divide-y divide-slate-100">
+        <div className="divide-y divide-border">
           {Array.from(itemMap.entries()).map(([itemName, docs]) => (
             <div key={itemName} className="p-3">
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {itemName}
-                <span className="ml-1 text-[10px] font-normal text-slate-400">· {docs.length}</span>
+                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                  · {docs.length}
+                </span>
               </p>
               <ul className="space-y-2">
                 {docs.map((row) => (
@@ -784,17 +855,19 @@ const DisciplineSection = ({
                     id={`shop-drawing-${row.id}`}
                     key={row.id}
                     className={cn(
-                      "rounded-md border bg-slate-50/40 p-2",
+                      "rounded-md border bg-muted/40 p-2",
                       focusedDocumentId === row.id
                         ? "border-amber-400 ring-2 ring-amber-200"
-                        : "border-slate-100",
+                        : "border-border",
                     )}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="flex min-w-0 items-start gap-2">
                         <div className="min-w-0">
-                          <p className="font-mono text-xs text-slate-500">{row.drawingCode}</p>
-                          <p className="mt-0.5 break-words text-sm font-medium text-slate-900">
+                          <p className="font-mono text-xs text-muted-foreground">
+                            {row.drawingCode}
+                          </p>
+                          <p className="mt-0.5 break-words text-sm font-medium text-foreground">
                             {row.title}
                           </p>
                           {row.ownerName ? (
@@ -846,7 +919,7 @@ const DisciplineSection = ({
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 gap-1 px-1.5 text-[11px] text-slate-600 hover:text-slate-900"
+                            className="h-6 gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
                             onClick={() => onOpenRevisions(row)}
                             data-testid={`shop-drawing-revisions-${row.id}`}
                           >

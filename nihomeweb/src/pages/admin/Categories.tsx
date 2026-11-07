@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
@@ -81,6 +82,7 @@ const parseTab = (raw: string | null): CategoryKind => {
 };
 
 const Categories = () => {
+  const confirmAction = useConfirm();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -218,7 +220,7 @@ const Categories = () => {
   };
 
   const remove = async (item: CategoryItem) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
 
     try {
       if (kind === "projects") {

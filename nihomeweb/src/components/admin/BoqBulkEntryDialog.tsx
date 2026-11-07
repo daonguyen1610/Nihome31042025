@@ -89,6 +89,7 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
                   <td className="px-2 py-2 text-center text-muted-foreground">{index + 1}</td>
                   <td className="p-1.5">
                     <Input
+                      aria-label={t("quotes.boq.code")}
                       data-testid={`boq-bulk-code-${index}`}
                       maxLength={60}
                       value={row.itemCode ?? ""}
@@ -97,6 +98,7 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
                   </td>
                   <td className="p-1.5">
                     <Input
+                      aria-label={t("quotes.boq.name")}
                       data-testid={`boq-bulk-name-${index}`}
                       maxLength={300}
                       value={row.name}
@@ -105,6 +107,7 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
                   </td>
                   <td className="p-1.5">
                     <Input
+                      aria-label={t("quotes.boq.unit")}
                       data-testid={`boq-bulk-unit-${index}`}
                       maxLength={30}
                       value={row.unit}
@@ -113,6 +116,7 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
                   </td>
                   <td className="p-1.5">
                     <Input
+                      aria-label={t("quotes.boq.qty")}
                       data-testid={`boq-bulk-quantity-${index}`}
                       className="text-right tabular-nums"
                       type="number"
@@ -125,6 +129,7 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
                   </td>
                   <td className="p-1.5">
                     <MoneyInput
+                      aria-label={t("quotes.boq.unitPrice")}
                       data-testid={`boq-bulk-price-${index}`}
                       decimalScale={2}
                       value={Number(row.unitPrice)}
@@ -133,6 +138,7 @@ export default function BoqBulkEntryDialog({ open, onOpenChange, onConfirm }: Pr
                   </td>
                   <td className="p-1.5">
                     <Button
+                      aria-label={t("common.delete")}
                       data-testid={`boq-bulk-remove-${index}`}
                       type="button"
                       size="icon"

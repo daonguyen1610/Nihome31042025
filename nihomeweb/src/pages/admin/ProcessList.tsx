@@ -1,3 +1,4 @@
+import { useConfirm } from "@/components/ui/confirmation";
 import { useEffect, useMemo, useState, useRef } from "react";
 import {
   Search as SearchIcon,
@@ -136,14 +137,14 @@ function ImageLightbox({
             <button
               disabled={idx === 0}
               onClick={() => setIdx((i) => i - 1)}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 text-sm font-bold"
+              className="px-4 py-2 rounded-lg bg-card/10 hover:bg-card/20 text-white disabled:opacity-30 text-sm font-bold"
             >
               ← {t("common.prev")}
             </button>
             <button
               disabled={idx === images.length - 1}
               onClick={() => setIdx((i) => i + 1)}
-              className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 text-white disabled:opacity-30 text-sm font-bold"
+              className="px-4 py-2 rounded-lg bg-card/10 hover:bg-card/20 text-white disabled:opacity-30 text-sm font-bold"
             >
               {t("common.next")} →
             </button>
@@ -369,6 +370,7 @@ function ProcessCard({
 }
 
 const ProcessList = ({ groupKey, titleKey }: Props) => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const [q, setQ] = useState("");
@@ -423,7 +425,11 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
   };
 
   const remove = async (p: ProcessResponse) => {
-    if (!window.confirm(`${t("proc.confirmDelete")}\n\n${p.code ? `${p.code} — ` : ""}${p.title}`))
+    if (
+      !(await confirmAction(
+        `${t("proc.confirmDelete")}\n\n${p.code ? `${p.code} — ` : ""}${p.title}`,
+      ))
+    )
       return;
     try {
       await adminApi.deleteProcess(p.id);
@@ -627,7 +633,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
             {/* Gradient header */}
             <DialogHeader className="relative px-6 py-5 text-left space-y-1 bg-gradient-to-br from-rose-500 via-rose-500 to-orange-500 text-white">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-card/15 backdrop-blur flex items-center justify-center shrink-0">
                   {isEditing ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                 </div>
                 <div className="min-w-0">
@@ -641,52 +647,55 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
               </div>
             </DialogHeader>
 
-            <form onSubmit={save} className="flex flex-col flex-1 overflow-hidden bg-slate-50">
+            <form onSubmit={save} className="flex flex-col flex-1 overflow-hidden bg-muted/30">
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
                 {/* Basic info */}
-                <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 rounded-full bg-rose-500" />
                     {t("proc.basicInfo")}
                   </h3>
                   <div className="space-y-4">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                      <label className="block text-sm font-semibold text-foreground mb-1.5">
                         {t("proc.fieldTitle")} <span className="text-rose-500">*</span>
                       </label>
                       <input
+                        aria-label={t("proc.fieldTitle")}
                         value={form.title}
                         onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                         placeholder={t("proc.titlePh")}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
                         required
                         autoFocus
                       />
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="col-span-2">
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        <label className="block text-sm font-semibold text-foreground mb-1.5">
                           {t("proc.fieldCode")}
                         </label>
                         <input
+                          aria-label={t("proc.fieldCode")}
                           value={form.code}
                           onChange={(e) => setForm((f) => ({ ...f, code: e.target.value }))}
                           placeholder={t("proc.codePh")}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 placeholder:text-slate-400 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
                           maxLength={40}
                         />
                       </div>
                       <div>
-                        <label className="block text-sm font-semibold text-slate-700 mb-1.5">
+                        <label className="block text-sm font-semibold text-foreground mb-1.5">
                           {t("proc.fieldSortOrder")}
                         </label>
                         <input
+                          aria-label={t("proc.fieldSortOrder")}
                           type="number"
                           value={form.sortOrder}
                           onChange={(e) =>
                             setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))
                           }
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm text-slate-800 outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
                         />
                       </div>
                     </div>
@@ -694,8 +703,8 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                 </section>
 
                 {/* Assets */}
-                <section className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 mb-4 flex items-center gap-2">
+                <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
+                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 rounded-full bg-rose-500" />
                     {t("proc.assets")}
                   </h3>
@@ -703,10 +712,10 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                   {/* Images */}
                   <div className="mb-5">
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                      <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                         <ImageIcon className="w-4 h-4 text-rose-500" />
                         {t("proc.images")}
-                        <span className="text-xs font-bold text-slate-400 ml-1">
+                        <span className="text-xs font-bold text-muted-foreground ml-1">
                           ({form.images.length})
                         </span>
                       </label>
@@ -715,7 +724,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                           type="button"
                           onClick={() => imageInputRef.current?.click()}
                           disabled={uploadingImages}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-rose-300 disabled:opacity-50 transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:bg-muted/30 hover:border-rose-300 disabled:opacity-50 transition"
                         >
                           {uploadingImages ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -742,7 +751,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                         type="button"
                         onClick={() => !uploadingImages && imageInputRef.current?.click()}
                         disabled={uploadingImages}
-                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
+                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-border bg-muted/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
                       >
                         <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center group-hover:scale-110 transition">
                           {uploadingImages ? (
@@ -751,17 +760,17 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                             <Upload className="w-5 h-5" />
                           )}
                         </div>
-                        <div className="text-sm font-semibold text-slate-700">
+                        <div className="text-sm font-semibold text-foreground">
                           {uploadingImages ? t("proc.uploading") : t("proc.addImages")}
                         </div>
-                        <div className="text-xs text-slate-500">{t("proc.uploadHint")}</div>
+                        <div className="text-xs text-muted-foreground">{t("proc.uploadHint")}</div>
                       </button>
                     ) : (
                       <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                         {form.images.map((img, i) => (
                           <div
                             key={i}
-                            className="relative group rounded-xl overflow-hidden border border-slate-200 bg-white"
+                            className="relative group rounded-xl overflow-hidden border border-border bg-card"
                           >
                             <img
                               src={resolveAssetUrl(img.url)}
@@ -778,7 +787,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                               <X className="w-3.5 h-3.5" />
                             </button>
                             <div
-                              className="px-2 py-1 text-[10px] truncate text-slate-600 bg-slate-50 border-t border-slate-100"
+                              className="px-2 py-1 text-[10px] truncate text-muted-foreground bg-muted/30 border-t border-border"
                               title={img.displayName}
                             >
                               {img.displayName}
@@ -792,10 +801,10 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                   {/* Files */}
                   <div>
                     <div className="flex items-center justify-between mb-2">
-                      <label className="text-sm font-semibold text-slate-700 flex items-center gap-1.5">
+                      <label className="text-sm font-semibold text-foreground flex items-center gap-1.5">
                         <FileText className="w-4 h-4 text-rose-500" />
                         {t("proc.files")}
-                        <span className="text-xs font-bold text-slate-400 ml-1">
+                        <span className="text-xs font-bold text-muted-foreground ml-1">
                           ({form.files.length})
                         </span>
                       </label>
@@ -804,7 +813,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                           type="button"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={uploadingFiles}
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 hover:border-rose-300 disabled:opacity-50 transition"
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-border bg-card text-foreground hover:bg-muted/30 hover:border-rose-300 disabled:opacity-50 transition"
                         >
                           {uploadingFiles ? (
                             <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -831,7 +840,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                         type="button"
                         onClick={() => !uploadingFiles && fileInputRef.current?.click()}
                         disabled={uploadingFiles}
-                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
+                        className="w-full flex flex-col items-center justify-center gap-2 py-7 rounded-xl border-2 border-dashed border-border bg-muted/50 hover:bg-rose-50/40 hover:border-rose-300 transition group disabled:opacity-50"
                       >
                         <div className="w-10 h-10 rounded-full bg-rose-100 text-rose-500 flex items-center justify-center group-hover:scale-110 transition">
                           {uploadingFiles ? (
@@ -840,36 +849,36 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                             <Upload className="w-5 h-5" />
                           )}
                         </div>
-                        <div className="text-sm font-semibold text-slate-700">
+                        <div className="text-sm font-semibold text-foreground">
                           {uploadingFiles ? t("proc.uploading") : t("proc.addFiles")}
                         </div>
-                        <div className="text-xs text-slate-500">{t("proc.uploadHint")}</div>
+                        <div className="text-xs text-muted-foreground">{t("proc.uploadHint")}</div>
                       </button>
                     ) : (
                       <div className="space-y-1.5">
                         {form.files.map((file, i) => (
                           <div
                             key={i}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:border-rose-200 transition"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-rose-200 transition"
                           >
                             <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
                               <FileText className="w-4 h-4" />
                             </div>
                             <div className="min-w-0 flex-1">
                               <div
-                                className="text-sm font-semibold text-slate-800 truncate"
+                                className="text-sm font-semibold text-foreground truncate"
                                 title={file.originalFileName}
                               >
                                 {file.displayName}
                               </div>
-                              <div className="text-xs text-slate-500">
+                              <div className="text-xs text-muted-foreground">
                                 {formatBytes(file.fileSizeBytes)}
                               </div>
                             </div>
                             <button
                               type="button"
                               onClick={() => removeAsset("files", i)}
-                              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:bg-rose-50 hover:text-rose-600 transition"
+                              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition"
                               title={t("proc.removeAsset")}
                               aria-label={t("proc.removeAsset")}
                             >
@@ -883,12 +892,12 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                 </section>
               </div>
 
-              <div className="px-6 py-4 border-t border-slate-200 bg-white flex items-center justify-end gap-2">
+              <div className="px-6 py-4 border-t border-border bg-card flex items-center justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => setOpenModal(false)}
                   disabled={submitting}
-                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition"
+                  className="inline-flex items-center gap-1.5 px-5 py-2.5 rounded-xl font-semibold text-sm border border-border bg-card text-foreground hover:bg-muted/30 disabled:opacity-50 transition"
                 >
                   <X className="w-4 h-4" />
                   {t("common.cancel")}

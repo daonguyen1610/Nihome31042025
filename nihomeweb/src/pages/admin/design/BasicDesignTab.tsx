@@ -1,3 +1,10 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { findRecordPage } from "@/lib/pagination";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { useListPage } from "@/hooks/useListPage";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useDesignTeamOwners } from "./useDesignTeamOwners";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
@@ -104,6 +111,7 @@ interface Props {
  * client-review gates before enabling the Detail Design transition.
  */
 export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews }: Props) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -147,25 +155,50 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
 
   const [disciplines, setDisciplines] = useState<MasterDataOption[]>([]);
 
+  const [page, setPage] = useListPage(String(project.id));
+  const [total, setTotal] = useState(0);
+  const startRequest = useRequestGuard();
   const fetchRows = useCallback(async () => {
+    const isCurrent = startRequest();
     setError(null);
     try {
       const { data } = await adminApi.listBasicDesignDocs({
         designProjectId: project.id,
-        pageSize: 200,
+        page,
+        pageSize: 20,
       });
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
+      setTotal(data.total);
       setReadiness(data.readiness);
     } catch (err) {
-      setError(extractApiError(err));
+      if (isCurrent()) setError(uiError(err));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [project.id]);
+  }, [startRequest, project.id, page, uiError]);
 
   useEffect(() => {
     void fetchRows();
   }, [fetchRows]);
+
+  useEffect(() => {
+    if (!Number.isInteger(focusedDocumentId) || focusedDocumentId <= 0) return;
+    let active = true;
+    void findRecordPage(
+      (page) => adminApi.listBasicDesignDocs({ designProjectId: project.id, page, pageSize: 20 }),
+      focusedDocumentId,
+    )
+      .then((locatedPage) => {
+        if (active && locatedPage !== null) setPage(locatedPage);
+      })
+      .catch((cause) => {
+        if (active) setError(uiError(cause));
+      });
+    return () => {
+      active = false;
+    };
+  }, [focusedDocumentId, project.id, setPage, uiError]);
 
   useEffect(() => {
     if (!Number.isInteger(focusedDocumentId) || focusedDocumentId <= 0 || loading) return;
@@ -226,7 +259,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -298,7 +331,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       setEditing(null);
       await fetchRows();
     } catch (err) {
-      setFormError(translateError(t, extractApiError(err)));
+      setFormError(translateError(t, uiError(err)));
     } finally {
       setSaving(false);
     }
@@ -326,7 +359,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
         if (active) setDeleteImpact(data);
       })
       .catch((err) => {
-        if (active) setDeleteError(extractApiError(err));
+        if (active) setDeleteError(uiError(err));
       })
       .finally(() => {
         if (active) setLoadingDeleteImpact(false);
@@ -334,7 +367,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
     return () => {
       active = false;
     };
-  }, [deleting]);
+  }, [deleting, uiError]);
 
   const confirmDelete = async (confirmation: string) => {
     if (!deleting || !deleteImpact) return null;
@@ -348,7 +381,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       toast({ title: t("basicDesign.deleted") });
       return null;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setBusyDelete(false);
@@ -366,7 +399,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -385,7 +418,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
     } catch (err) {
       toast({
         title: t("basicDesign.readiness.unlockFailed"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -395,7 +428,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
 
   if (loading) {
     return (
-      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">
+      <div className="rounded-lg border border-border bg-card p-8 text-center text-sm text-muted-foreground">
         <Loader2 className="mx-auto mb-2 h-5 w-5 animate-spin" />
       </div>
     );
@@ -415,7 +448,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
           {t("basicDesign.locked")}
         </p>
       ) : project.currentStage !== "BasicDesign" ? (
-        <p className="rounded-md border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+        <p className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs text-foreground">
           {t("basicDesign.lockedShop")}
         </p>
       ) : null}
@@ -427,18 +460,20 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
             "rounded-lg border p-3 shadow-sm",
             readiness.readyForDetailDesign
               ? "border-emerald-200 bg-emerald-50/60"
-              : "border-slate-200 bg-slate-50",
+              : "border-border bg-muted/30",
           )}
         >
           <div className="flex flex-wrap items-start justify-between gap-2">
             <div>
-              <p className="flex items-center gap-1.5 text-sm font-semibold text-slate-900">
+              <p className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
                 <ShieldCheck className="h-4 w-4" />
                 {readiness.readyForDetailDesign
                   ? t("basicDesign.readiness.readyTitle")
                   : t("basicDesign.readiness.title")}
               </p>
-              <p className="mt-0.5 text-xs text-slate-600">{t("basicDesign.readiness.hint")}</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                {t("basicDesign.readiness.hint")}
+              </p>
               <div className="mt-2 flex flex-wrap gap-1.5">
                 {readiness.requiredDisciplineCodes.map((code) => {
                   const ok = readiness.internallyApprovedDisciplineCodes
@@ -452,7 +487,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                         "gap-1 whitespace-nowrap",
                         ok
                           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                          : "border-slate-300 bg-white text-slate-500",
+                          : "border-input bg-card text-muted-foreground",
                       )}
                     >
                       {ok ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
@@ -483,18 +518,18 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
               </Button>
             ) : null}
           </div>
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 pt-3">
+          <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border-t border-border pt-3">
             <div className="flex min-w-0 items-start gap-2">
               {clientReviewReady ? (
                 <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600" />
               ) : (
-                <Circle className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
               )}
               <div>
-                <p className="text-xs font-medium text-slate-800">
+                <p className="text-xs font-medium text-foreground">
                   {t("basicDesign.readiness.clientTitle")}
                 </p>
-                <p className="mt-0.5 max-w-3xl text-xs text-slate-600">
+                <p className="mt-0.5 max-w-3xl text-xs text-muted-foreground">
                   {clientReviewReady
                     ? t("basicDesign.readiness.clientApproved")
                     : t("basicDesign.readiness.clientMissing")}
@@ -511,7 +546,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       ) : null}
 
       <header className="flex items-center justify-between gap-2">
-        <h2 className="text-base font-semibold text-slate-900">{t("basicDesign.title")}</h2>
+        <h2 className="text-base font-semibold text-foreground">{t("basicDesign.title")}</h2>
         {canManage && isBasicStage ? (
           <Button size="sm" onClick={openCreate}>
             <Plus className="mr-1 h-4 w-4" />
@@ -520,6 +555,13 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
         ) : null}
       </header>
 
+      <ListPagination
+        page={page}
+        pageSize={20}
+        total={total}
+        onPageChange={setPage}
+        disabled={loading}
+      />
       {rows.length === 0 ? (
         <div className="rounded-md border border-dashed p-10 text-center text-sm text-muted-foreground">
           {t("basicDesign.empty")}
@@ -527,14 +569,14 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       ) : (
         <div className="space-y-4">
           {Array.from(rowsByDiscipline.entries()).map(([code, docs]) => (
-            <section key={code} className="rounded-lg border border-slate-200 bg-white shadow-sm">
-              <header className="flex items-center justify-between border-b border-slate-100 px-3 py-2">
-                <p className="text-sm font-semibold text-slate-800">
+            <section key={code} className="rounded-lg border border-border bg-card shadow-sm">
+              <header className="flex items-center justify-between border-b border-border px-3 py-2">
+                <p className="text-sm font-semibold text-foreground">
                   {disciplineLabelByCode.get(code) ?? code}
                 </p>
-                <span className="text-xs text-slate-500">{docs.length}</span>
+                <span className="text-xs text-muted-foreground">{docs.length}</span>
               </header>
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-border">
                 {docs.map((row) => (
                   <li
                     id={`basic-design-doc-${row.id}`}
@@ -547,8 +589,10 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
                       <div className="min-w-0">
-                        <p className="font-mono text-xs text-slate-500">{row.documentCode}</p>
-                        <p className="mt-0.5 break-words text-sm font-medium text-slate-900">
+                        <p className="font-mono text-xs text-muted-foreground">
+                          {row.documentCode}
+                        </p>
+                        <p className="mt-0.5 break-words text-sm font-medium text-foreground">
                           {row.title}
                         </p>
                         {row.ownerName ? (
@@ -598,7 +642,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 gap-1 px-1.5 text-[11px] text-slate-600 hover:text-slate-900"
+                            className="h-6 gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
                             onClick={() => setRevisionsFor(row)}
                             data-testid={`basic-design-revisions-${row.id}`}
                           >
@@ -662,7 +706,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
             <DialogDescription>{t("basicDesign.form.hint")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
-            <div>
+            <FieldScope>
               <Label>{t("basicDesign.field.discipline")}</Label>
               <Select
                 value={form.disciplineCode}
@@ -680,25 +724,25 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("basicDesign.field.title")}</Label>
               <Input
                 autoFocus
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("basicDesign.field.description")}</Label>
               <Textarea
                 rows={3}
                 value={form.description}
                 onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
               />
-            </div>
+            </FieldScope>
             {canPickOwner ? (
-              <div>
+              <FieldScope>
                 <Label>{t("basicDesign.field.owner")}</Label>
                 <SearchableSelect
                   ariaLabel={t("basicDesign.field.owner")}
@@ -720,16 +764,16 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                           : "designProjects.team.ownerPickerEmpty",
                   )}
                 </p>
-              </div>
+              </FieldScope>
             ) : null}
-            <div>
+            <FieldScope>
               <Label>{t("basicDesign.field.note")}</Label>
               <Textarea
                 rows={2}
                 value={form.note}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               />
-            </div>
+            </FieldScope>
           </div>
           {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
           <DialogFooter>

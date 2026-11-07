@@ -531,7 +531,7 @@ const Profile = () => {
           />
           <button
             aria-label={t("common.close")}
-            className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/20 text-white flex items-center justify-center hover:bg-white/30 transition-colors"
+            className="absolute top-4 right-4 w-11 h-11 rounded-full bg-card/20 text-white flex items-center justify-center hover:bg-card/30 transition-colors"
             onClick={() => setCertLightbox(null)}
           >
             <X className="w-5 h-5" />

@@ -1,3 +1,9 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -61,7 +67,7 @@ const STAGE_BADGE: Record<DesignProjectStage, string> = {
 const STATUS_BADGE: Record<DesignProjectStatus, string> = {
   Active: "border-emerald-200 bg-emerald-50 text-emerald-700",
   OnHold: "border-amber-200 bg-amber-50 text-amber-700",
-  Completed: "border-slate-200 bg-slate-50 text-slate-700",
+  Completed: "border-border bg-muted/30 text-foreground",
   Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
@@ -101,6 +107,7 @@ interface UserOption extends PersonIdentity {
 // -------------------------------- page ---------------------------------
 
 const AdminDesignProjects = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -119,6 +126,7 @@ const AdminDesignProjects = () => {
 
   // filters
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [customerId, setCustomerId] = useState<number | null>(() => {
     const value = Number(searchParams.get("customerId"));
     return Number.isInteger(value) && value > 0 ? value : null;
@@ -142,18 +150,24 @@ const AdminDesignProjects = () => {
     (async () => {
       try {
         const [custResp, ctrResp] = await Promise.all([
-          adminApi.listCustomers({ pageSize: 200 }).catch(() => ({
-            data: { total: 0, page: 1, pageSize: 200, items: [] },
-          })),
-          adminApi.listContracts({ pageSize: 200 }).catch(() => ({
-            data: { total: 0, page: 1, pageSize: 200, items: [] },
-          })),
+          collectLookupPages((page) => adminApi.listCustomers({ pageSize: 200, page })).catch(
+            () => ({
+              data: { total: 0, page: 1, pageSize: 200, items: [] },
+            }),
+          ),
+          collectLookupPages((page) => adminApi.listContracts({ pageSize: 200, page })).catch(
+            () => ({
+              data: { total: 0, page: 1, pageSize: 200, items: [] },
+            }),
+          ),
         ]);
         if (cancelled) return;
         setCustomers(custResp.data.items ?? []);
         setContracts(ctrResp.data.items ?? []);
         try {
-          const { data } = await adminApi.listOperationalProjects({ pageSize: 100 });
+          const { data } = await collectLookupPages((page) =>
+            adminApi.listOperationalProjects({ pageSize: 100, page }),
+          );
           if (!cancelled) setProjects(data.items ?? []);
         } catch {
           // no project access — the server explains the requirement on save
@@ -183,31 +197,47 @@ const AdminDesignProjects = () => {
     };
   }, [canPickUser]);
 
+  const startListRequest = useRequestGuard();
   const fetchList = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
       const params: DesignProjectListParams = { page, pageSize };
-      if (search.trim()) params.search = search.trim();
+      if (settledSearch.trim()) params.search = settledSearch.trim();
       if (customerId != null) params.customerId = customerId;
       if (pmId != null) params.projectManagerUserId = pmId;
       if (leadId != null) params.designLeadUserId = leadId;
       if (stage) params.stage = stage;
       if (status) params.status = status;
       const { data } = await adminApi.listDesignProjects(params);
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
     } catch (err) {
-      setError(extractApiError(err));
+      if (!isCurrent()) return;
+      setError(uiError(err));
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [page, pageSize, search, customerId, pmId, leadId, stage, status, t, toast]);
+  }, [
+    startListRequest,
+    page,
+    settledSearch,
+    customerId,
+    pmId,
+    leadId,
+    stage,
+    status,
+    uiError,
+    toast,
+    t,
+  ]);
 
   useEffect(() => {
     void fetchList();
@@ -322,7 +352,7 @@ const AdminDesignProjects = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -399,7 +429,7 @@ const AdminDesignProjects = () => {
         }
         return;
       }
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -421,7 +451,7 @@ const AdminDesignProjects = () => {
       const response = await adminApi.getDesignProjectDeletionImpact(project.id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -438,7 +468,7 @@ const AdminDesignProjects = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setBusyDelete(false);
@@ -459,10 +489,10 @@ const AdminDesignProjects = () => {
       <div className="space-y-4 p-3 md:p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">
+            <h1 className="text-xl font-bold text-foreground md:text-2xl">
               {t("designProjects.title")}
             </h1>
-            <p className="text-sm text-slate-600">{t("designProjects.subtitle")}</p>
+            <p className="text-sm text-muted-foreground">{t("designProjects.subtitle")}</p>
           </div>
           {canCreate ? (
             <Button size="sm" onClick={openCreate}>
@@ -472,12 +502,12 @@ const AdminDesignProjects = () => {
           ) : null}
         </header>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <div className="lg:col-span-2">
+            <FieldScope className="lg:col-span-2">
               <Label className="text-xs">{t("designProjects.filter.search")}</Label>
               <div className="relative mt-1">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
                   value={search}
@@ -488,8 +518,8 @@ const AdminDesignProjects = () => {
                   placeholder={t("designProjects.filter.search")}
                 />
               </div>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label className="text-xs">{t("designProjects.field.stage")}</Label>
               <Select
                 value={stage}
@@ -510,8 +540,8 @@ const AdminDesignProjects = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label className="text-xs">{t("designProjects.field.status")}</Label>
               <Select
                 value={status}
@@ -532,9 +562,9 @@ const AdminDesignProjects = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldScope>
             {customerOptions.length > 0 ? (
-              <div>
+              <FieldScope>
                 <Label className="text-xs">{t("designProjects.field.customer")}</Label>
                 <SearchableSelect
                   className="mt-1"
@@ -549,11 +579,11 @@ const AdminDesignProjects = () => {
                   ]}
                   placeholder={t("designProjects.filter.allCustomers")}
                 />
-              </div>
+              </FieldScope>
             ) : null}
             {canPickUser && userOptions.length > 0 ? (
               <>
-                <div>
+                <FieldScope>
                   <Label className="text-xs">{t("designProjects.field.pm")}</Label>
                   <SearchableSelect
                     ariaLabel={t("designProjects.field.pm")}
@@ -569,8 +599,8 @@ const AdminDesignProjects = () => {
                     ]}
                     placeholder={t("designProjects.filter.allPms")}
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label className="text-xs">{t("designProjects.field.designLead")}</Label>
                   <SearchableSelect
                     ariaLabel={t("designProjects.field.designLead")}
@@ -586,7 +616,7 @@ const AdminDesignProjects = () => {
                     ]}
                     placeholder={t("designProjects.filter.allLeads")}
                   />
-                </div>
+                </FieldScope>
               </>
             ) : null}
           </div>
@@ -598,7 +628,7 @@ const AdminDesignProjects = () => {
             <Button variant="ghost" size="sm" onClick={resetFilters} disabled={loading}>
               {t("common.reset")}
             </Button>
-            <span className="ml-auto text-xs text-slate-500">
+            <span className="ml-auto text-xs text-muted-foreground">
               {t("designProjects.total").replace("{count}", String(total))}
             </span>
           </div>
@@ -626,7 +656,7 @@ const AdminDesignProjects = () => {
                 return (
                   <article
                     key={r.id}
-                    className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
+                    className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/70"
                     onClick={() => openDetail(r.id)}
                   >
                     <header className="flex items-start justify-between gap-2">
@@ -709,9 +739,9 @@ const AdminDesignProjects = () => {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm lg:block">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2">{t("designProjects.field.code")}</th>
                     <th className="px-3 py-2">{t("designProjects.field.name")}</th>
@@ -723,26 +753,26 @@ const AdminDesignProjects = () => {
                     <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {rows.map((r) => {
                     const canDelete = canManage;
                     return (
                       <tr
                         key={r.id}
-                        className="cursor-pointer transition-colors hover:bg-slate-50/70"
+                        className="cursor-pointer transition-colors hover:bg-muted/70"
                         onClick={() => openDetail(r.id)}
                       >
-                        <td className="px-3 py-2 font-mono text-xs text-slate-600">
+                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                           {r.projectCode}
                         </td>
-                        <td className="px-3 py-2 font-medium text-slate-900">
+                        <td className="px-3 py-2 font-medium text-foreground">
                           <div className="flex items-center gap-2">
-                            <PenTool className="h-3.5 w-3.5 text-slate-400" />
+                            <PenTool className="h-3.5 w-3.5 text-muted-foreground" />
                             <span className="break-words">{r.name}</span>
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-slate-700">{r.customerName ?? "—"}</td>
-                        <td className="px-3 py-2 text-slate-700">{r.projectManagerName ?? "—"}</td>
+                        <td className="px-3 py-2 text-foreground">{r.customerName ?? "—"}</td>
+                        <td className="px-3 py-2 text-foreground">{r.projectManagerName ?? "—"}</td>
                         <td className="px-3 py-2">
                           <Badge
                             variant="outline"
@@ -759,13 +789,18 @@ const AdminDesignProjects = () => {
                             {t(`designProjects.status.${r.status}`)}
                           </Badge>
                         </td>
-                        <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                        <td className="px-3 py-2 whitespace-nowrap text-foreground">
                           {formatDate(r.deadline, lang)}
                         </td>
                         <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
                           {canManage ? (
                             <div className="flex justify-end gap-1">
-                              <Button variant="ghost" size="sm" onClick={() => void openEdit(r.id)}>
+                              <Button
+                                aria-label={t("common.edit")}
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => void openEdit(r.id)}
+                              >
                                 <Pencil className="h-4 w-4" />
                               </Button>
                               <span>
@@ -791,7 +826,7 @@ const AdminDesignProjects = () => {
             </div>
 
             {totalPages > 1 ? (
-              <div className="flex items-center justify-between text-sm text-slate-600">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
                   {t("designProjects.paginationLabel")
                     .replace("{page}", String(page))
@@ -829,15 +864,15 @@ const AdminDesignProjects = () => {
             <DialogDescription>{t("designProjects.form.createHint")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3 md:grid-cols-2">
-            <div className="md:col-span-2">
+            <FieldScope className="md:col-span-2">
               <Label>{t("designProjects.field.name")}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                 autoFocus
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.field.customer")}</Label>
               <SearchableSelect
                 className="mt-1"
@@ -846,8 +881,8 @@ const AdminDesignProjects = () => {
                 options={customerOptions}
                 placeholder={t("designProjects.field.customer")}
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.field.contract")}</Label>
               <SearchableSelect
                 className="mt-1"
@@ -865,9 +900,12 @@ const AdminDesignProjects = () => {
                 ]}
                 placeholder={t("designProjects.form.contractNone")}
               />
-            </div>
+            </FieldScope>
             {!isEdit && (
-              <div className="md:col-span-2" data-testid="design-project-operational-project">
+              <FieldScope
+                className="md:col-span-2"
+                data-testid="design-project-operational-project"
+              >
                 <Label>{t("designProjects.field.operationalProject")} *</Label>
                 {projectFromContract ? (
                   <p className="mt-1 text-sm text-muted-foreground">
@@ -903,11 +941,11 @@ const AdminDesignProjects = () => {
                     </p>
                   </>
                 )}
-              </div>
+              </FieldScope>
             )}
             {canPickUser ? (
               <>
-                <div>
+                <FieldScope>
                   <Label>{t("designProjects.field.pm")}</Label>
                   <SearchableSelect
                     ariaLabel={t("designProjects.field.pm")}
@@ -924,8 +962,8 @@ const AdminDesignProjects = () => {
                     ]}
                     placeholder={t("designProjects.form.pmNone")}
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("designProjects.field.designLead")}</Label>
                   <SearchableSelect
                     ariaLabel={t("designProjects.field.designLead")}
@@ -940,10 +978,10 @@ const AdminDesignProjects = () => {
                     ]}
                     placeholder={t("designProjects.form.leadNone")}
                   />
-                </div>
+                </FieldScope>
               </>
             ) : null}
-            <div>
+            <FieldScope>
               <Label>{t("designProjects.field.startDate")}</Label>
               <Input
                 type="date"
@@ -952,8 +990,8 @@ const AdminDesignProjects = () => {
                   setForm((f) => ({ ...f, startDate: toUtcMidnight(e.target.value) || null }))
                 }
               />
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label>{t("designProjects.field.deadline")}</Label>
               <Input
                 type="date"
@@ -962,9 +1000,9 @@ const AdminDesignProjects = () => {
                   setForm((f) => ({ ...f, deadline: toUtcMidnight(e.target.value) || null }))
                 }
               />
-            </div>
+            </FieldScope>
             {isEdit ? (
-              <div>
+              <FieldScope>
                 <Label>{t("designProjects.field.status")}</Label>
                 <Select
                   value={form.status ?? "Active"}
@@ -983,16 +1021,16 @@ const AdminDesignProjects = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
+              </FieldScope>
             ) : null}
-            <div className="md:col-span-2">
+            <FieldScope className="md:col-span-2">
               <Label>{t("designProjects.field.note")}</Label>
               <Textarea
                 rows={3}
                 value={form.note ?? ""}
                 onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))}
               />
-            </div>
+            </FieldScope>
           </div>
           {formError ? (
             <p

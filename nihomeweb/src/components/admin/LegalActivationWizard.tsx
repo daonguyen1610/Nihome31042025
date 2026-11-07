@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { AlertTriangle, Check, ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { adminApi, type ContractResponse, type LegalActivationPreview } from "@/services/adminApi";
@@ -57,6 +60,7 @@ export default function LegalActivationWizard({
   onOpenChange,
   onActivated,
 }: Props) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [preview, setPreview] = useState<LegalActivationPreview | null>(null);
   const [step, setStep] = useState(0);
@@ -133,14 +137,14 @@ export default function LegalActivationWizard({
           })),
         );
       })
-      .catch((reason) => setError(extractApiError(reason)))
+      .catch((reason) => setError(uiError(reason)))
       .finally(() => {
         if (!cancelled) setLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, [contract, operationalProjectId, open]);
+  }, [contract, operationalProjectId, open, uiError]);
 
   const selected = useMemo(
     () =>
@@ -249,7 +253,7 @@ export default function LegalActivationWizard({
       setError(null);
       setStep(1);
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setLoading(false);
     }
@@ -292,7 +296,7 @@ export default function LegalActivationWizard({
       onOpenChange(false);
     } catch (reason) {
       setConcurrency(isConcurrencyConflict(reason));
-      setError(extractApiError(reason, undefined, t));
+      setError(uiError(reason, undefined));
     } finally {
       setSaving(false);
     }
@@ -623,10 +627,10 @@ function Summary({ label, value }: { label: string; value: string }) {
 }
 function Field({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="space-y-1">
+    <FieldScope className="space-y-1">
       <Label>{label}</Label>
       {children}
-    </div>
+    </FieldScope>
   );
 }
 function MemberSelect({
@@ -715,6 +719,7 @@ function PermitRow({
       </td>
       <td className="p-2">
         <Input
+          aria-label={t("a11yUi.issuingAgency")}
           value={permit.issuingAgency}
           maxLength={200}
           onChange={(event) => update(permit.code, { issuingAgency: event.target.value })}
@@ -746,11 +751,13 @@ function PermitRow({
       </td>
       <td className="p-2 space-y-1">
         <Input
+          aria-label={t("workPackages.field.start")}
           type="date"
           value={permit.plannedStart}
           onChange={(event) => update(permit.code, { plannedStart: event.target.value })}
         />
         <Input
+          aria-label={t("workPackages.field.end")}
           type="date"
           value={permit.plannedEnd}
           onChange={(event) => update(permit.code, { plannedEnd: event.target.value })}
@@ -791,6 +798,7 @@ function PermitCard({
       ) : null}
       <Field label={t("contracts.legal.agency")}>
         <Input
+          aria-label={t("a11yUi.issuingAgency")}
           value={permit.issuingAgency}
           maxLength={200}
           onChange={(event) => update(permit.code, { issuingAgency: event.target.value })}

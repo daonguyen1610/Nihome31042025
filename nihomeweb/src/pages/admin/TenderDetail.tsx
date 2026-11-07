@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -73,7 +77,7 @@ import {
 // ---------------------------- shared helpers ----------------------------
 
 const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
-  Preparing: "border-slate-200 bg-slate-50 text-slate-700",
+  Preparing: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Won: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Lost: "border-rose-200 bg-rose-50 text-rose-700",
@@ -81,7 +85,7 @@ const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
 };
 
 const CHECKLIST_STATUS_STYLES: Record<TenderChecklistItemStatus, string> = {
-  NotStarted: "border-slate-200 bg-slate-50 text-slate-700",
+  NotStarted: "border-border bg-muted/30 text-foreground",
   Preparing: "border-amber-200 bg-amber-50 text-amber-700",
   Done: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
@@ -146,32 +150,32 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
     tender.status === "Won" || tender.status === "Lost" || tender.status === "Cancelled";
 
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
       <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0 flex-1">
-          <div className="text-sm text-slate-500">
+          <div className="text-sm text-muted-foreground">
             <Link
               to="/admin/tenders"
-              className="inline-flex items-center gap-1 hover:text-slate-800"
+              className="inline-flex items-center gap-1 hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" />
               {t("tenders.detail.back")}
             </Link>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 break-words text-xl font-bold text-slate-900 md:text-2xl xl:truncate">
+            <h1 className="min-w-0 break-words text-xl font-bold text-foreground md:text-2xl xl:truncate">
               {tender.name}
             </h1>
             <Badge className={cn("border", STATUS_BADGE_STYLES[tender.status])} variant="outline">
               {t(`tenders.status.${tender.status}`)}
             </Badge>
           </div>
-          <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5 break-words text-sm text-slate-600">
-            <span className="font-mono text-slate-500">{tender.code}</span>
+          <p className="mt-1 flex min-w-0 flex-wrap items-baseline gap-x-1.5 gap-y-0.5 break-words text-sm text-muted-foreground">
+            <span className="font-mono text-muted-foreground">{tender.code}</span>
             <span>·</span>
             <span className="font-medium">{tender.customerName}</span>
             {tender.preparerName ? (
-              <span className="text-xs text-slate-400">• {tender.preparerName}</span>
+              <span className="text-xs text-muted-foreground">• {tender.preparerName}</span>
             ) : null}
           </p>
         </div>
@@ -196,16 +200,16 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
           className={cn(
             "rounded-lg p-3",
             isTerminal
-              ? "bg-slate-50"
+              ? "bg-muted/30"
               : days < 0
                 ? "bg-rose-50"
                 : days <= DEADLINE_ALERT_DAYS
                   ? "bg-amber-50"
-                  : "bg-slate-50",
+                  : "bg-muted/30",
           )}
         >
-          <div className="text-xs text-slate-500">{t("tenders.field.deadline")}</div>
-          <div className="mt-0.5 text-sm font-semibold text-slate-800">
+          <div className="text-xs text-muted-foreground">{t("tenders.field.deadline")}</div>
+          <div className="mt-0.5 text-sm font-semibold text-foreground">
             {formatDate(tender.submissionDeadline)}
           </div>
           {!isTerminal ? (
@@ -216,7 +220,7 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
                   ? "text-rose-700"
                   : days <= DEADLINE_ALERT_DAYS
                     ? "text-amber-700"
-                    : "text-slate-500",
+                    : "text-muted-foreground",
               )}
             >
               <Clock className="h-3.5 w-3.5" />
@@ -226,30 +230,30 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
             </div>
           ) : null}
         </div>
-        <div className="rounded-lg bg-slate-50 p-3">
-          <div className="text-xs text-slate-500">
+        <div className="rounded-lg bg-muted/30 p-3">
+          <div className="text-xs text-muted-foreground">
             {t("tenders.detail.header.checklistProgress")}
           </div>
           <div className="mt-1 flex items-center gap-2">
             <Progress value={tender.checklistCompletionPercent} className="h-2 flex-1" />
-            <span className="text-sm font-semibold tabular-nums text-slate-700">
+            <span className="text-sm font-semibold tabular-nums text-foreground">
               {tender.checklistCompletionPercent}%
             </span>
           </div>
-          <div className="mt-1 text-xs text-slate-500">
+          <div className="mt-1 text-xs text-muted-foreground">
             {t("tenders.detail.checklist.percentDone").replace(
               "{percent}",
               String(tender.checklistCompletionPercent),
             )}
           </div>
         </div>
-        <div className="rounded-lg bg-slate-50 p-3">
-          <div className="text-xs text-slate-500">{t("tenders.field.openingDate")}</div>
-          <div className="mt-0.5 text-sm font-semibold text-slate-800">
+        <div className="rounded-lg bg-muted/30 p-3">
+          <div className="text-xs text-muted-foreground">{t("tenders.field.openingDate")}</div>
+          <div className="mt-0.5 text-sm font-semibold text-foreground">
             {formatDate(tender.openingDate)}
           </div>
           {tender.infoSource ? (
-            <div className="mt-1 text-xs text-slate-500 break-words">
+            <div className="mt-1 text-xs text-muted-foreground break-words">
               {t("tenders.field.infoSource")}: {tender.infoSource}
             </div>
           ) : null}
@@ -294,25 +298,25 @@ const InfoTab = ({
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <dl className="grid gap-3 sm:grid-cols-2">
           {rows.map(([label, value]) => (
             <div key={label}>
-              <dt className="text-xs font-medium uppercase tracking-wide text-slate-500">
+              <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {label}
               </dt>
-              <dd className="mt-0.5 break-words text-sm text-slate-800">{value}</dd>
+              <dd className="mt-0.5 break-words text-sm text-foreground">{value}</dd>
             </div>
           ))}
         </dl>
       </div>
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-slate-800">
+            <h3 className="text-sm font-semibold text-foreground">
               {t("tenders.invitationDocuments.title")}
             </h3>
-            <p className="text-xs text-slate-500">{t("tenders.invitationDocuments.hint")}</p>
+            <p className="text-xs text-muted-foreground">{t("tenders.invitationDocuments.hint")}</p>
           </div>
           {canManage ? (
             <>
@@ -340,15 +344,17 @@ const InfoTab = ({
           ) : null}
         </div>
         {tender.invitationDocuments.length === 0 ? (
-          <p className="mt-3 text-sm text-slate-500">{t("tenders.invitationDocuments.empty")}</p>
+          <p className="mt-3 text-sm text-muted-foreground">
+            {t("tenders.invitationDocuments.empty")}
+          </p>
         ) : (
           <ul className="mt-3 space-y-2">
             {tender.invitationDocuments.map((document) => (
-              <li key={document.id} className="rounded border bg-slate-50 px-3 py-2 text-sm">
+              <li key={document.id} className="rounded border bg-muted/30 px-3 py-2 text-sm">
                 <span className="break-all font-medium">
                   {document.originalFileName ?? document.externalUrl}
                 </span>
-                <span className="ml-2 text-xs text-slate-500">
+                <span className="ml-2 text-xs text-muted-foreground">
                   {formatDateTime(document.createdAt, lang)}
                 </span>
               </li>
@@ -357,11 +363,11 @@ const InfoTab = ({
         )}
       </div>
       {tender.note ? (
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="text-xs font-medium uppercase tracking-wide text-slate-500">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+          <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t("tenders.field.note")}
           </div>
-          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-slate-800">
+          <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
             {tender.note}
           </p>
         </div>
@@ -558,10 +564,10 @@ const ChecklistTab = ({
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h2 className="text-base font-semibold text-slate-800">
+          <h2 className="text-base font-semibold text-foreground">
             {t("tenders.detail.checklist.title")}
           </h2>
-          <div className="mt-0.5 text-xs text-slate-500">
+          <div className="mt-0.5 text-xs text-muted-foreground">
             {t("tenders.detail.checklist.percentDone").replace(
               "{percent}",
               String(tender.checklistCompletionPercent),
@@ -590,9 +596,9 @@ const ChecklistTab = ({
       />
 
       {/* Desktop table */}
-      <div className="hidden max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm xl:block">
+      <div className="hidden max-w-full overflow-x-auto rounded-lg border border-border bg-card shadow-sm xl:block">
         <table className="min-w-full text-sm">
-          <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+          <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
             <tr>
               <th className="px-3 py-2">{t("tenders.detail.checklist.header.title")}</th>
               <th className="px-3 py-2">{t("tenders.detail.checklist.header.status")}</th>
@@ -611,9 +617,9 @@ const ChecklistTab = ({
                 className="border-t align-top"
                 data-testid={`tender-checklist-row-${item.templateCode ?? item.id}-desktop`}
               >
-                <td className="px-3 py-2 font-medium text-slate-800">
+                <td className="px-3 py-2 font-medium text-foreground">
                   <div>{item.title}</div>
-                  <label className="mt-1 flex items-center gap-1 text-[11px] font-normal text-slate-500">
+                  <label className="mt-1 flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
                     <input
                       type="checkbox"
                       checked={item.isRequired}
@@ -641,6 +647,7 @@ const ChecklistTab = ({
                     onValueChange={(v) => void handleStatus(item, v as TenderChecklistItemStatus)}
                   >
                     <SelectTrigger
+                      aria-label={t("tenders.detail.checklist.header.status")}
                       className={cn("h-8 w-40 text-xs", CHECKLIST_STATUS_STYLES[item.status])}
                     >
                       <SelectValue />
@@ -656,7 +663,7 @@ const ChecklistTab = ({
                     </SelectContent>
                   </Select>
                 </td>
-                <td className="px-3 py-2 text-xs text-slate-700">
+                <td className="px-3 py-2 text-xs text-foreground">
                   {!disabled && assignees ? (
                     <SearchableSelect
                       value={item.ownerUserId == null ? "unassigned" : String(item.ownerUserId)}
@@ -670,7 +677,7 @@ const ChecklistTab = ({
                       ]}
                     />
                   ) : (
-                    (item.ownerName ?? <span className="text-slate-400">—</span>)
+                    (item.ownerName ?? <span className="text-muted-foreground">—</span>)
                   )}
                   <Select
                     value={item.workTaskId == null ? "unlinked" : String(item.workTaskId)}
@@ -721,7 +728,7 @@ const ChecklistTab = ({
                       }
                     />
                   ) : (
-                    <span className="text-xs text-slate-400">
+                    <span className="text-xs text-muted-foreground">
                       {t("tenders.detail.checklist.noFile")}
                     </span>
                   )}
@@ -788,13 +795,13 @@ const ChecklistTab = ({
         {tender.checklistItems.map((item) => (
           <div
             key={item.id}
-            className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm"
+            className="rounded-lg border border-border bg-card p-3 shadow-sm"
             data-testid={`tender-checklist-row-${item.templateCode ?? item.id}-mobile`}
           >
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="break-words text-sm font-medium text-slate-800">{item.title}</div>
-                <label className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                <div className="break-words text-sm font-medium text-foreground">{item.title}</div>
+                <label className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                   <input
                     type="checkbox"
                     checked={item.isRequired}
@@ -827,7 +834,9 @@ const ChecklistTab = ({
                     ]}
                   />
                 ) : (
-                  <div className="mt-0.5 text-xs text-slate-500">{item.ownerName ?? "—"}</div>
+                  <div className="mt-0.5 text-xs text-muted-foreground">
+                    {item.ownerName ?? "—"}
+                  </div>
                 )}
                 <Select
                   value={item.workTaskId == null ? "unlinked" : String(item.workTaskId)}
@@ -868,7 +877,10 @@ const ChecklistTab = ({
                 disabled={disabled || savingId === item.id}
                 onValueChange={(v) => void handleStatus(item, v as TenderChecklistItemStatus)}
               >
-                <SelectTrigger className="h-8 text-xs">
+                <SelectTrigger
+                  aria-label={t("tenders.detail.checklist.header.status")}
+                  className="h-8 text-xs"
+                >
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -906,7 +918,9 @@ const ChecklistTab = ({
                   }
                 />
               ) : (
-                <span className="text-slate-400">{t("tenders.detail.checklist.noFile")}</span>
+                <span className="text-muted-foreground">
+                  {t("tenders.detail.checklist.noFile")}
+                </span>
               )}
               {!disabled ? (
                 <div className="mt-2 grid grid-cols-1 gap-2">
@@ -971,9 +985,9 @@ const ChecklistTab = ({
             <p className="text-xs text-sky-800">{t("tenders.detail.checklist.snapshotHint")}</p>
           </div>
           {tender.submissions.map((submission) => (
-            <div key={submission.id} className="rounded-md border border-sky-100 bg-white p-3">
-              <div className="flex flex-col gap-1 text-xs text-slate-600 sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
-                <span className="font-semibold text-slate-800">#{submission.sequence}</span>
+            <div key={submission.id} className="rounded-md border border-sky-100 bg-card p-3">
+              <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
+                <span className="font-semibold text-foreground">#{submission.sequence}</span>
                 <span>{formatDateTime(submission.submittedAt, lang)}</span>
                 <span className="break-words">
                   {submission.submittedByName ?? `#${submission.submittedByUserId}`}
@@ -988,10 +1002,10 @@ const ChecklistTab = ({
                 {submission.items.map((item) => (
                   <li
                     key={item.checklistItemId}
-                    className="min-w-0 rounded bg-slate-50 px-2 py-1.5 text-xs text-slate-700"
+                    className="min-w-0 rounded bg-muted/30 px-2 py-1.5 text-xs text-foreground"
                   >
                     <div className="break-words font-medium">{item.title}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-slate-500">
+                    <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
                       <span>{t(`tenders.detail.checklist.itemStatus.${item.status}`)}</span>
                       <span>
                         {item.isRequired
@@ -1016,7 +1030,7 @@ const ChecklistTab = ({
             <DialogTitle>{t("tenders.detail.checklist.add")}</DialogTitle>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.detail.checklist.customTitle")}</Label>
               <Input
                 data-testid="tender-checklist-custom-title"
@@ -1024,8 +1038,8 @@ const ChecklistTab = ({
                 onChange={(event) => setNewTitle(event.target.value)}
                 maxLength={300}
               />
-            </div>
-            <div className="space-y-1">
+            </FieldScope>
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.detail.checklist.documentKind")}</Label>
               <Select value={newDocumentKind} onValueChange={setNewDocumentKind}>
                 <SelectTrigger>
@@ -1047,8 +1061,8 @@ const ChecklistTab = ({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-1">
+            </FieldScope>
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.detail.checklist.workTask")}</Label>
               <Select value={newWorkTaskId} onValueChange={setNewWorkTaskId}>
                 <SelectTrigger>
@@ -1065,7 +1079,7 @@ const ChecklistTab = ({
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldScope>
             <label className="flex items-center gap-2 text-sm">
               <input
                 data-testid="tender-checklist-custom-required"
@@ -1100,7 +1114,7 @@ const ChecklistTab = ({
             <DialogTitle>{t("tenders.detail.checklist.notApplicableTitle")}</DialogTitle>
             <DialogDescription>{notApplicableItem?.title}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-1">
+          <FieldScope className="space-y-1">
             <Label>{t("tenders.detail.checklist.notApplicableReason")}</Label>
             <Textarea
               data-testid="tender-checklist-na-reason"
@@ -1108,7 +1122,7 @@ const ChecklistTab = ({
               onChange={(event) => setNotApplicableReason(event.target.value)}
               maxLength={500}
             />
-          </div>
+          </FieldScope>
           <DialogFooter>
             <Button variant="outline" onClick={() => setNotApplicableItem(null)}>
               {t("common.cancel")}
@@ -1190,7 +1204,7 @@ const TenderPlanTab = ({
                 "rounded-lg border px-3 py-2 text-xs",
                 stage.done && "border-emerald-200 bg-emerald-50 text-emerald-800",
                 stage.active && !stage.done && "border-primary/30 bg-primary/5 text-primary",
-                !stage.done && !stage.active && "border-slate-200 bg-slate-50 text-slate-500",
+                !stage.done && !stage.active && "border-border bg-muted/30 text-muted-foreground",
               )}
             >
               <div className="mb-1 font-semibold">{index + 1}</div>
@@ -1201,7 +1215,7 @@ const TenderPlanTab = ({
       </div>
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div className="min-w-0">
-          <h2 className="text-base font-semibold text-slate-800">{t("tenders.plan.title")}</h2>
+          <h2 className="text-base font-semibold text-foreground">{t("tenders.plan.title")}</h2>
           <p className="text-sm text-muted-foreground">{t("tenders.plan.help")}</p>
         </div>
         {canManage && tender.status === "Preparing" && tender.operationalProjectId ? (
@@ -1246,7 +1260,7 @@ const TenderPlanTab = ({
           <Link
             key={item.id}
             to={`/admin/work-packages/${item.id}`}
-            className="min-w-0 rounded-lg border bg-white p-4 shadow-sm transition hover:border-primary/40"
+            className="min-w-0 rounded-lg border bg-card p-4 shadow-sm transition hover:border-primary/40"
           >
             <div className="flex min-w-0 items-start justify-between gap-2">
               <div className="min-w-0">
@@ -1291,6 +1305,7 @@ interface LibraryPickerProps {
 }
 
 const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: LibraryPickerProps) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { toast } = useToast();
   const [docs, setDocs] = useState<CapabilityDocumentResponse[]>([]);
@@ -1307,10 +1322,12 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
     setError(null);
     (async () => {
       try {
-        const { data } = await adminApi.listCapabilityDocuments({ pageSize: 100 });
+        const { data } = await collectLookupPages((page) =>
+          adminApi.listCapabilityDocuments({ pageSize: 100, page }),
+        );
         if (!cancelled) setDocs(data.items ?? []);
       } catch (err) {
-        if (!cancelled) setError(extractApiError(err));
+        if (!cancelled) setError(uiError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1318,7 +1335,7 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, uiError]);
 
   useEffect(() => {
     if (open) {
@@ -1336,7 +1353,7 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -1354,7 +1371,7 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
 
         <div className="mt-2 space-y-3">
           <div>
-            <Label className="text-xs">{t("tenders.detail.library.pickTarget")}</Label>
+            <span className="text-xs">{t("tenders.detail.library.pickTarget")}</span>
             <div
               className="mt-1 rounded-md border bg-muted/30 px-3 py-2 text-sm font-medium"
               data-testid="tender-library-target"
@@ -1371,7 +1388,7 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
           ) : error ? (
             <p className="text-sm text-rose-600">{error}</p>
           ) : docs.length === 0 ? (
-            <p className="text-sm text-slate-500">{t("tenders.detail.library.empty")}</p>
+            <p className="text-sm text-muted-foreground">{t("tenders.detail.library.empty")}</p>
           ) : (
             <RadioGroup
               className="grid max-h-80 gap-2 overflow-y-auto"
@@ -1382,14 +1399,14 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
                 <label
                   key={d.id}
                   className={cn(
-                    "flex cursor-pointer items-start gap-3 rounded-md border p-2.5 text-sm hover:bg-slate-50",
+                    "flex cursor-pointer items-start gap-3 rounded-md border p-2.5 text-sm hover:bg-muted/30",
                     selectedDocId === d.id && "border-sky-200 bg-sky-50",
                   )}
                 >
                   <RadioGroupItem value={String(d.id)} className="mt-0.5" />
                   <div className="min-w-0 flex-1">
-                    <div className="break-words font-medium text-slate-800">{d.name}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-slate-500">
+                    <div className="break-words font-medium text-foreground">{d.name}</div>
+                    <div className="mt-0.5 flex flex-wrap gap-2 text-xs text-muted-foreground">
                       <span>{d.tagLabel ?? d.tagCode}</span>
                       {d.originalFileName ? <span>· {d.originalFileName}</span> : null}
                     </div>
@@ -1433,6 +1450,7 @@ interface MarkWonDialogProps {
 }
 
 const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [opps, setOpps] = useState<OpportunityResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1454,10 +1472,13 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
     setNote("");
     (async () => {
       try {
-        const { data } = await adminApi.listOpportunities({
-          customerId: tender.customerId,
-          pageSize: 100,
-        });
+        const { data } = await collectLookupPages((page) =>
+          adminApi.listOpportunities({
+            customerId: tender.customerId,
+            pageSize: 100,
+            page,
+          }),
+        );
         if (!cancelled)
           setOpps(
             (data.items ?? []).filter(
@@ -1468,7 +1489,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
             ),
           );
       } catch (err) {
-        if (!cancelled) setError(extractApiError(err));
+        if (!cancelled) setError(uiError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1476,7 +1497,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
     return () => {
       cancelled = true;
     };
-  }, [open, tender.customerId, tender.operationalProjectId]);
+  }, [open, tender.customerId, tender.operationalProjectId, uiError]);
 
   const confirm = async () => {
     if (mode === "existing" && oppId == null) {
@@ -1492,7 +1513,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
       );
       onClose();
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setSubmitting(false);
     }
@@ -1536,7 +1557,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
             ))}
           </div>
           {mode === "existing" && (
-            <div>
+            <FieldScope>
               <Label className="text-xs">{t("tenders.detail.result.pickOpportunity")}</Label>
               {loading ? (
                 <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
@@ -1564,9 +1585,9 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
                   </SelectContent>
                 </Select>
               )}
-            </div>
+            </FieldScope>
           )}
-          <div>
+          <FieldScope>
             <Label className="text-xs">{t("tenders.detail.result.note")}</Label>
             <Textarea
               className="mt-1"
@@ -1576,7 +1597,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
               placeholder={t("tenders.detail.result.notePlaceholder")}
               disabled={submitting}
             />
-          </div>
+          </FieldScope>
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
         </div>
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
@@ -1608,6 +1629,7 @@ interface MarkLostDialogProps {
 }
 
 const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [reasons, setReasons] = useState<MasterDataOption[]>([]);
   const [loading, setLoading] = useState(false);
@@ -1628,7 +1650,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
         const { data } = await adminApi.getMasterDataOptions("opportunity_lost_reason", lang);
         if (!cancelled) setReasons((data ?? []).filter((r) => r.isActive));
       } catch (err) {
-        if (!cancelled) setError(extractApiError(err));
+        if (!cancelled) setError(uiError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -1636,7 +1658,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
     return () => {
       cancelled = true;
     };
-  }, [open, lang]);
+  }, [open, lang, uiError]);
 
   const confirm = async () => {
     if (!reasonCode) {
@@ -1649,7 +1671,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
       await onSubmit(reasonCode, note.trim() || null);
       onClose();
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setSubmitting(false);
     }
@@ -1663,7 +1685,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
           <DialogDescription>{t("tenders.detail.result.reason")}</DialogDescription>
         </DialogHeader>
         <div className="space-y-3">
-          <div>
+          <FieldScope>
             <Label className="text-xs">{t("tenders.detail.result.reason")}</Label>
             {loading ? (
               <div className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
@@ -1684,8 +1706,8 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
                 </SelectContent>
               </Select>
             )}
-          </div>
-          <div>
+          </FieldScope>
+          <FieldScope>
             <Label className="text-xs">{t("tenders.detail.result.note")}</Label>
             <Textarea
               className="mt-1"
@@ -1695,7 +1717,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
               placeholder={t("tenders.detail.result.notePlaceholder")}
               disabled={submitting}
             />
-          </div>
+          </FieldScope>
           {error ? <p className="text-sm text-rose-600">{error}</p> : null}
         </div>
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
@@ -1743,8 +1765,10 @@ const ResultTab = ({
   return (
     <div className="space-y-4">
       {/* Result card */}
-      <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
-        <h2 className="text-base font-semibold text-slate-800">{t("tenders.detail.tab.result")}</h2>
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
+        <h2 className="text-base font-semibold text-foreground">
+          {t("tenders.detail.tab.result")}
+        </h2>
 
         {tender.status === "Won" ? (
           <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
@@ -1828,7 +1852,9 @@ const ResultTab = ({
             </div>
           </div>
         ) : (
-          <p className="mt-2 text-sm text-slate-500">{t("tenders.detail.result.summaryOpen")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            {t("tenders.detail.result.summaryOpen")}
+          </p>
         )}
 
         {!isTerminal && tender.status === "Submitted" && canMarkResult ? (
@@ -1848,7 +1874,7 @@ const ResultTab = ({
             </Button>
           </div>
         ) : !isTerminal ? (
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-muted-foreground">
             {tender.status === "Preparing"
               ? t("tenders.lifecycle.resultRequiresSubmitted")
               : t("tenders.detail.markResultForbidden")}
@@ -1857,13 +1883,13 @@ const ResultTab = ({
       </div>
 
       {/* History (collapsed) */}
-      <div className="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <div className="rounded-lg border border-border bg-card shadow-sm">
         <button
           type="button"
           className="flex w-full items-center justify-between px-4 py-3 text-left"
           onClick={() => setHistoryOpen((v) => !v)}
         >
-          <span className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <span className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
             <History className="h-4 w-4" />
             {t("tenders.detail.history.title")}
           </span>
@@ -1872,21 +1898,21 @@ const ResultTab = ({
           />
         </button>
         {historyOpen ? (
-          <div className="border-t border-slate-100 p-4">
+          <div className="border-t border-border p-4">
             {timelineLoading ? (
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 {t("common.loading")}
               </div>
             ) : !timeline || timeline.length === 0 ? (
-              <p className="text-sm text-slate-500">{t("tenders.detail.history.empty")}</p>
+              <p className="text-sm text-muted-foreground">{t("tenders.detail.history.empty")}</p>
             ) : (
               <ol className="space-y-2">
                 {timeline.map((ev) => (
                   <li key={ev.id} className="flex items-start gap-2 text-sm">
-                    <div className="mt-1 h-2 w-2 rounded-full bg-slate-300" />
+                    <div className="mt-1 h-2 w-2 rounded-full bg-border" />
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                      <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                         <Calendar className="h-3 w-3" />
                         <span>{formatDateTime(ev.occurredAt, lang)}</span>
                         {ev.userName ? (
@@ -1895,12 +1921,12 @@ const ResultTab = ({
                             {ev.userName}
                           </span>
                         ) : null}
-                        <span className="rounded bg-slate-100 px-1.5 py-0.5 font-mono">
+                        <span className="rounded bg-muted px-1.5 py-0.5 font-mono">
                           {ev.action}
                         </span>
                       </div>
                       {ev.message ? (
-                        <div className="mt-0.5 break-words text-sm text-slate-700">
+                        <div className="mt-0.5 break-words text-sm text-foreground">
                           {ev.message}
                         </div>
                       ) : null}
@@ -1919,6 +1945,7 @@ const ResultTab = ({
 // ---------------------------- page shell ----------------------------
 
 const AdminTenderDetail = () => {
+  const uiError = useUiError();
   const { id } = useParams<{ id: string }>();
   const tenderId = Number(id);
   const { t } = useI18n();
@@ -1952,11 +1979,11 @@ const AdminTenderDetail = () => {
       const { data } = await adminApi.getTender(tenderId);
       setTender(data);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [tenderId]);
+  }, [tenderId, uiError]);
 
   const fetchTimeline = useCallback(async () => {
     if (!Number.isFinite(tenderId)) return;
@@ -1975,7 +2002,9 @@ const AdminTenderDetail = () => {
     if (!Number.isFinite(tenderId)) return;
     setPlanError(null);
     try {
-      const { data } = await adminApi.listWorkPackages({ sourceTenderId: tenderId, pageSize: 100 });
+      const { data } = await collectLookupPages((page) =>
+        adminApi.listWorkPackages({ sourceTenderId: tenderId, pageSize: 100, page }),
+      );
       setPlanPackages(
         data.items.filter(
           (item) => item.purpose === "TenderPlanning" || item.purpose === "General",
@@ -1985,9 +2014,9 @@ const AdminTenderDetail = () => {
     } catch (cause) {
       setPlanPackages([]);
       setFinancePackages([]);
-      setPlanError(extractApiError(cause, t("tenders.plan.loadError")));
+      setPlanError(uiError(cause, t("tenders.plan.loadError")));
     }
-  }, [t, tenderId]);
+  }, [t, tenderId, uiError]);
 
   useEffect(() => {
     void fetchTender();
@@ -2056,7 +2085,7 @@ const AdminTenderDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       throw err;
@@ -2072,7 +2101,7 @@ const AdminTenderDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err) ?? t("tenders.detail.uploadFailed"),
+        description: uiError(err) ?? t("tenders.detail.uploadFailed"),
         variant: "destructive",
       });
       throw err;
@@ -2088,7 +2117,7 @@ const AdminTenderDetail = () => {
         setTender(data);
         uploaded += 1;
       } catch (err) {
-        failed.push(`${file.name}: ${extractApiError(err)}`);
+        failed.push(`${file.name}: ${uiError(err)}`);
       }
     }
     if (uploaded > 0) toast({ title: t("tenders.detail.saved") });
@@ -2111,7 +2140,7 @@ const AdminTenderDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       throw err;
@@ -2126,7 +2155,7 @@ const AdminTenderDetail = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
       throw err;
@@ -2200,7 +2229,7 @@ const AdminTenderDetail = () => {
             <Tabs defaultValue="checklist" className="min-w-0 w-full">
               <TabsList
                 data-testid="tender-detail-tabs"
-                className="grid h-auto w-full grid-cols-2 gap-1 rounded-lg bg-slate-100 p-1 sm:grid-cols-3 xl:grid-cols-5"
+                className="grid h-auto w-full grid-cols-2 gap-1 rounded-lg bg-muted p-1 sm:grid-cols-3 xl:grid-cols-5"
               >
                 <TabsTrigger
                   value="info"

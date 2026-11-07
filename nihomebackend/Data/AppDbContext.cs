@@ -1112,6 +1112,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(v => v.FilePath).HasMaxLength(500);
             b.Property(v => v.OriginalFileName).HasMaxLength(300);
             b.Property(v => v.ContentType).HasMaxLength(150);
+            b.Property(v => v.FilesJson).HasColumnType("nvarchar(max)");
             b.Property(v => v.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(v => v.DecisionNote).HasMaxLength(1000);
             b.HasOne(v => v.Contract)

@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useState } from "react";
 import { Link2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -51,6 +54,7 @@ interface Candidate {
  * opportunity when one is set, no source quote yet, and an approved quote.
  */
 const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
+  const uiError = useUiError();
   const { open, onOpenChange, onLinked } = props;
   const { t } = useI18n();
   const { toast } = useToast();
@@ -114,7 +118,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
           );
         }
       } catch (err) {
-        if (!cancelled) setError(extractApiError(err));
+        if (!cancelled) setError(uiError(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -122,7 +126,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
     return () => {
       cancelled = true;
     };
-  }, [open, mode, customerId, opportunityId, t]);
+  }, [open, mode, customerId, opportunityId, t, uiError]);
 
   const confirm = async () => {
     if (selectedId == null) {
@@ -153,7 +157,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
       onLinked(data);
       onOpenChange(false);
     } catch (err) {
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -174,7 +178,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
             )}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-2">
+        <FieldScope className="space-y-2">
           <Label>{t(mode === "fromQuote" ? "quoteLink.contract" : "quoteLink.quote")}</Label>
           {loading ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -218,7 +222,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
               {error}
             </p>
           )}
-        </div>
+        </FieldScope>
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             {t("common.cancel")}

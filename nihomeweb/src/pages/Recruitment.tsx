@@ -344,6 +344,7 @@ const Recruitment = () => {
                       {t("rec.form.nameLabel")}
                     </label>
                     <input
+                      aria-label={t("rec.form.nameLabel")}
                       className="admin-input w-full"
                       value={form.candidateName}
                       onChange={(e) => updateForm("candidateName", e.target.value)}
@@ -355,6 +356,7 @@ const Recruitment = () => {
                       {t("rec.form.emailLabel")}
                     </label>
                     <input
+                      aria-label={t("rec.form.emailLabel")}
                       type="email"
                       className="admin-input w-full"
                       value={form.email}
@@ -368,6 +370,7 @@ const Recruitment = () => {
                         {t("rec.form.phoneLabel")}
                       </label>
                       <input
+                        aria-label={t("rec.form.phoneLabel")}
                         className="admin-input w-full"
                         value={form.phone}
                         onChange={(e) => updateForm("phone", e.target.value)}
@@ -379,6 +382,7 @@ const Recruitment = () => {
                         {t("rec.form.expLabel")}
                       </label>
                       <input
+                        aria-label={t("rec.form.expLabel")}
                         type="number"
                         min="0"
                         className="admin-input w-full"
@@ -393,6 +397,7 @@ const Recruitment = () => {
                       {t("rec.form.coverLabel")}
                     </label>
                     <textarea
+                      aria-label={t("rec.form.coverLabel")}
                       className="admin-input w-full min-h-28"
                       value={form.coverLetter}
                       onChange={(e) => updateForm("coverLetter", e.target.value)}

@@ -139,6 +139,7 @@ const ForgotPassword = () => {
                 <div className="relative">
                   <Lock className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
+                    aria-label={t("auth.forgot.newPwd")}
                     required
                     type="password"
                     value={newPassword}
@@ -176,6 +177,7 @@ const ForgotPassword = () => {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
+                    aria-label={t("a11yUi.otpCode")}
                     required
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
@@ -217,6 +219,7 @@ const ForgotPassword = () => {
                 <div className="relative">
                   <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
+                    aria-label={t("auth.phoneWithEmail")}
                     required
                     type="text"
                     autoComplete="username"

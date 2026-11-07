@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useAppSelector } from "@/store";
 import { Button } from "@/components/ui/button";
@@ -88,6 +91,7 @@ export const ProjectMasterSchedule = ({
   projectEnd,
   projectManagerUserId,
 }: ProjectMasterScheduleProps) => {
+  const uiError = useUiError();
   const { t } = useI18n();
   const { has } = usePermissions();
   const { toast } = useToast();
@@ -121,9 +125,9 @@ export const ProjectMasterSchedule = ({
 
   useEffect(() => {
     void loadEmailsNeedingReview().catch((reason: unknown) =>
-      setError(extractApiError(reason, t("common.error"))),
+      setError(uiError(reason, t("common.error"))),
     );
-  }, [loadEmailsNeedingReview, t]);
+  }, [loadEmailsNeedingReview, t, uiError]);
 
   const reload = useCallback(async () => {
     const response = await adminApi.getProjectSchedule(projectId);
@@ -141,8 +145,8 @@ export const ProjectMasterSchedule = ({
   }, [projectEnd, projectId, projectStart]);
 
   useEffect(() => {
-    void reload().catch((reason: unknown) => setError(extractApiError(reason, t("common.error"))));
-  }, [reload, t]);
+    void reload().catch((reason: unknown) => setError(uiError(reason, t("common.error"))));
+  }, [reload, t, uiError]);
 
   const selected = useMemo(
     () => schedule?.revisions.find((item) => item.id === revisionId) ?? null,
@@ -277,7 +281,7 @@ export const ProjectMasterSchedule = ({
       setApproverId(saved?.approverUserId?.toString() ?? "");
       return saved;
     } catch (reason) {
-      setError(extractApiError(reason, t("common.error")));
+      setError(uiError(reason, t("common.error")));
       return null;
     } finally {
       setBusy(false);
@@ -304,7 +308,7 @@ export const ProjectMasterSchedule = ({
       setRevisionId(target.id);
       toast({ title: t("operationalProjects.schedule.submitted") });
     } catch (reason) {
-      setError(extractApiError(reason, t("common.error")));
+      setError(uiError(reason, t("common.error")));
     } finally {
       setBusy(false);
     }
@@ -328,7 +332,7 @@ export const ProjectMasterSchedule = ({
       setPreviewIndex(0);
       setPendingEmailAction(() => next);
     } catch (reason) {
-      setError(extractApiError(reason, t("common.error")));
+      setError(uiError(reason, t("common.error")));
     } finally {
       setBusy(false);
     }
@@ -384,7 +388,7 @@ export const ProjectMasterSchedule = ({
         ),
       });
     } catch (reason) {
-      setError(extractApiError(reason, t("common.error")));
+      setError(uiError(reason, t("common.error")));
     } finally {
       setBusy(false);
     }
@@ -398,7 +402,7 @@ export const ProjectMasterSchedule = ({
       await loadEmailsNeedingReview();
       toast({ title: t(`operationalProjects.schedule.email.${decision}Done`) });
     } catch (reason) {
-      setError(extractApiError(reason, t("common.error")));
+      setError(uiError(reason, t("common.error")));
     } finally {
       setBusy(false);
     }
@@ -465,7 +469,7 @@ export const ProjectMasterSchedule = ({
                 title={t("operationalProjects.schedule.email.previewTitle")}
                 sandbox=""
                 srcDoc={emailPreview.emails[previewIndex]?.body}
-                className="h-80 w-full rounded border bg-white"
+                className="h-80 w-full rounded border bg-card"
               />
             </>
           ) : (
@@ -536,7 +540,7 @@ export const ProjectMasterSchedule = ({
                 title={`${t("operationalProjects.schedule.email.previewTitle")} ${email.id}`}
                 sandbox=""
                 srcDoc={email.body ?? ""}
-                className="h-64 w-full rounded border bg-white"
+                className="h-64 w-full rounded border bg-card"
               />
               <p className="text-muted-foreground">
                 {t("operationalProjects.schedule.email.checkFirst")}
@@ -575,7 +579,7 @@ export const ProjectMasterSchedule = ({
           <>
             {schedule.revisions.length > 0 && (
               <div className="flex flex-wrap items-end gap-3">
-                <div className="min-w-56 flex-1 space-y-2">
+                <FieldScope className="min-w-56 flex-1 space-y-2">
                   <Label>{t("operationalProjects.schedule.revision")}</Label>
                   <Select
                     value={revisionId?.toString() ?? ""}
@@ -601,7 +605,7 @@ export const ProjectMasterSchedule = ({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FieldScope>
                 {selected?.status === "PendingApproval" && (
                   <p className="text-sm text-muted-foreground">
                     {t("operationalProjects.schedule.assignedApprover", {
@@ -618,7 +622,7 @@ export const ProjectMasterSchedule = ({
               selected?.status === "Draft" ||
               selected?.status === "Rejected") && (
               <div className="space-y-4">
-                <div className="space-y-2">
+                <FieldScope className="space-y-2">
                   <Label>{t("operationalProjects.schedule.changeReason")}</Label>
                   <Textarea
                     value={changeReason}
@@ -626,14 +630,14 @@ export const ProjectMasterSchedule = ({
                     maxLength={2000}
                     disabled={!editable}
                   />
-                </div>
+                </FieldScope>
                 <div className="space-y-3">
                   {items.map((item, index) => (
                     <div
                       key={item.nodeId || `new-${index}`}
                       className="grid gap-3 rounded-md border p-3 md:grid-cols-12"
                     >
-                      <div className="space-y-2 md:col-span-1">
+                      <FieldScope className="space-y-2 md:col-span-1">
                         <Label>{t("operationalProjects.schedule.wbs")}</Label>
                         <Input
                           value={item.wbsCode}
@@ -641,8 +645,8 @@ export const ProjectMasterSchedule = ({
                           maxLength={80}
                           disabled={!editable}
                         />
-                      </div>
-                      <div className="space-y-2 md:col-span-3">
+                      </FieldScope>
+                      <FieldScope className="space-y-2 md:col-span-3">
                         <Label>{t("operationalProjects.schedule.item")}</Label>
                         <Input
                           value={item.title}
@@ -650,8 +654,8 @@ export const ProjectMasterSchedule = ({
                           maxLength={300}
                           disabled={!editable}
                         />
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
+                      </FieldScope>
+                      <FieldScope className="space-y-2 md:col-span-2">
                         <Label>{t("operationalProjects.schedule.parent")}</Label>
                         <Select
                           value={item.parentNodeId || "none"}
@@ -678,8 +682,8 @@ export const ProjectMasterSchedule = ({
                               ))}
                           </SelectContent>
                         </Select>
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
+                      </FieldScope>
+                      <FieldScope className="space-y-2 md:col-span-2">
                         <Label>{t("operationalProjects.schedule.start")}</Label>
                         <Input
                           type="date"
@@ -689,8 +693,8 @@ export const ProjectMasterSchedule = ({
                           }
                           disabled={!editable}
                         />
-                      </div>
-                      <div className="space-y-2 md:col-span-2">
+                      </FieldScope>
+                      <FieldScope className="space-y-2 md:col-span-2">
                         <Label>{t("operationalProjects.schedule.end")}</Label>
                         <Input
                           type="date"
@@ -698,7 +702,7 @@ export const ProjectMasterSchedule = ({
                           onChange={(event) => patchItem(index, { plannedEnd: event.target.value })}
                           disabled={!editable}
                         />
-                      </div>
+                      </FieldScope>
                       {editable && (
                         <div className="flex items-end md:col-span-2">
                           <Button
@@ -737,7 +741,7 @@ export const ProjectMasterSchedule = ({
                   </div>
                 )}
                 {selected?.status === "Draft" && editable && (
-                  <div className="grid gap-2 sm:max-w-lg">
+                  <FieldScope className="grid gap-2 sm:max-w-lg">
                     <Label>{t("operationalProjects.schedule.approver")}</Label>
                     <Select value={approverId} onValueChange={setApproverId}>
                       <SelectTrigger>
@@ -760,12 +764,12 @@ export const ProjectMasterSchedule = ({
                     >
                       {t("operationalProjects.schedule.submit")}
                     </Button>
-                  </div>
+                  </FieldScope>
                 )}
               </div>
             )}
             {selected?.status === "PendingApproval" && canManage && (
-              <div className="grid gap-2 sm:max-w-lg">
+              <FieldScope className="grid gap-2 sm:max-w-lg">
                 <Label>{t("operationalProjects.schedule.reassignApprover")}</Label>
                 <Select value={approverId} onValueChange={setApproverId}>
                   <SelectTrigger>
@@ -786,10 +790,10 @@ export const ProjectMasterSchedule = ({
                 >
                   {t("operationalProjects.schedule.reassign")}
                 </Button>
-              </div>
+              </FieldScope>
             )}
             {selected?.status === "PendingApproval" && isApprover && (
-              <div className="grid gap-3 sm:max-w-lg">
+              <FieldScope className="grid gap-3 sm:max-w-lg">
                 <Label>{t("operationalProjects.schedule.reviewComment")}</Label>
                 <Textarea
                   value={reviewComment}
@@ -808,7 +812,7 @@ export const ProjectMasterSchedule = ({
                     {t("operationalProjects.schedule.reject")}
                   </Button>
                 </div>
-              </div>
+              </FieldScope>
             )}
             {selected && (
               <div className="overflow-x-auto">

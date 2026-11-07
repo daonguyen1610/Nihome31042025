@@ -1,3 +1,5 @@
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
@@ -73,6 +75,7 @@ const getErrorMessage = (error: unknown, fallback: string) => {
 };
 
 const SlideshowSettings = () => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
   const [slides, setSlides] = useState<SlideshowAdminResponse[]>([]);
@@ -189,7 +192,7 @@ const SlideshowSettings = () => {
   };
 
   const removeSlide = async (slide: SlideshowAdminResponse) => {
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteSlideshow(slide.id);
       toast({ title: t("form.deleted") });
@@ -353,16 +356,18 @@ const SlideshowSettings = () => {
 
             <div className="grid grid-cols-2 gap-3">
               <FieldRow label={t("set.slideshow.fieldMediaType")}>
-                <select
-                  className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  value={draft.mediaKind}
-                  onChange={(e) =>
-                    setDraft((prev) => ({ ...prev, mediaKind: e.target.value as MediaKind }))
-                  }
-                >
-                  <option value="image">{t("set.slideshow.mediaTypeImage")}</option>
-                  <option value="video">{t("set.slideshow.mediaTypeVideo")}</option>
-                </select>
+                <FieldControl>
+                  <select
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    value={draft.mediaKind}
+                    onChange={(e) =>
+                      setDraft((prev) => ({ ...prev, mediaKind: e.target.value as MediaKind }))
+                    }
+                  >
+                    <option value="image">{t("set.slideshow.mediaTypeImage")}</option>
+                    <option value="video">{t("set.slideshow.mediaTypeVideo")}</option>
+                  </select>
+                </FieldControl>
               </FieldRow>
               <FieldRow label={t("set.slideshow.fieldSortOrder")}>
                 <Input
@@ -426,6 +431,7 @@ const SlideshowSettings = () => {
                   {t("media.url.toggleWithVideo")}
                 </summary>
                 <Input
+                  aria-label={t("set.slideshow.fieldMediaUrl")}
                   className="mt-2"
                   value={draft.imageUrl}
                   onChange={(e) =>
@@ -477,10 +483,10 @@ const SlideshowSettings = () => {
 };
 
 const FieldRow = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
+  <FieldScope className="space-y-1.5">
     <Label className="text-xs">{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 export default SlideshowSettings;

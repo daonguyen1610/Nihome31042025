@@ -1,3 +1,7 @@
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { FieldScope, FieldControl } from "@/components/ui/field-scope";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
@@ -61,7 +65,7 @@ const StatusBadge = ({ status }: { status: string }) => (
     variant="outline"
     className={cn(
       "text-[10px] font-medium uppercase tracking-wide",
-      statusStyles[status] ?? "border-slate-200 bg-slate-50 text-slate-700",
+      statusStyles[status] ?? "border-border bg-muted/30 text-foreground",
     )}
   >
     {status}
@@ -87,10 +91,10 @@ const Field = ({ label, value, mono }: { label: string; value: string; mono?: bo
 );
 
 const FilterField = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="space-y-1.5">
+  <FieldScope className="space-y-1.5">
     <Label className="text-xs">{label}</Label>
     {children}
-  </div>
+  </FieldScope>
 );
 
 const selectClasses =
@@ -152,6 +156,7 @@ const DetailDrawer = ({ item, onClose }: { item: AuditLogItem | null; onClose: (
 };
 
 const ActivityLog = () => {
+  const confirmAction = useConfirm();
   const { t } = useI18n();
   const { has: hasPermission } = usePermissions();
   const canManageAudit = hasPermission("system.audit.manage");
@@ -165,6 +170,7 @@ const ActivityLog = () => {
   const [resourceType, setResourceType] = useState("");
   const [correlationId, setCorrelationId] = useState("");
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
@@ -177,7 +183,9 @@ const ActivityLog = () => {
   const [retentionUnit, setRetentionUnit] = useState<RetentionUnit>("days");
   const [savingConfig, setSavingConfig] = useState(false);
 
+  const startListRequest = useRequestGuard();
   const fetchLogs = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     try {
       const res = await adminApi.listAuditLogs({
@@ -191,13 +199,15 @@ const ActivityLog = () => {
         status: statusFilter || undefined,
         resourceType: resourceType || undefined,
         correlationId: correlationId || undefined,
-        search: search.trim() || undefined,
+        search: settledSearch.trim() || undefined,
       });
+      if (!isCurrent()) return;
       setData(res.data);
     } catch {
+      if (!isCurrent()) return;
       toast.error(t("form.error"));
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [
     page,
@@ -210,8 +220,9 @@ const ActivityLog = () => {
     statusFilter,
     resourceType,
     correlationId,
-    search,
+    settledSearch,
     t,
+    startListRequest,
   ]);
 
   const fetchConfig = useCallback(async () => {
@@ -256,7 +267,7 @@ const ActivityLog = () => {
 
   const onDeleteOne = async (id: number) => {
     if (!canManageAudit) return;
-    if (!window.confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteAuditLog(id);
       toast.success(t("form.deleted"));
@@ -296,7 +307,7 @@ const ActivityLog = () => {
     statusFilter,
     resourceType,
     correlationId,
-    search,
+    settledSearch,
     clearSelection,
   ]);
 
@@ -306,7 +317,7 @@ const ActivityLog = () => {
       toast.error(t("log.selectBefore"));
       return;
     }
-    if (!window.confirm(t("log.confirmClearBefore"))) return;
+    if (!(await confirmAction(t("log.confirmClearBefore")))) return;
     try {
       const res = await adminApi.deleteAuditLogRange({ before: from });
       toast.success(`${t("form.deleted")} (${res.data.deleted})`);
@@ -388,15 +399,17 @@ const ActivityLog = () => {
                 />
               </FilterField>
               <FilterField label={t("log.retentionUnit")}>
-                <select
-                  value={retentionUnit}
-                  onChange={(e) => setRetentionUnit(e.target.value as RetentionUnit)}
-                  className={selectClasses}
-                >
-                  <option value="minutes">{t("log.unit.minutes")}</option>
-                  <option value="hours">{t("log.unit.hours")}</option>
-                  <option value="days">{t("log.unit.days")}</option>
-                </select>
+                <FieldControl>
+                  <select
+                    value={retentionUnit}
+                    onChange={(e) => setRetentionUnit(e.target.value as RetentionUnit)}
+                    className={selectClasses}
+                  >
+                    <option value="minutes">{t("log.unit.minutes")}</option>
+                    <option value="hours">{t("log.unit.hours")}</option>
+                    <option value="days">{t("log.unit.days")}</option>
+                  </select>
+                </FieldControl>
               </FilterField>
               <div className="flex items-center justify-end gap-3 md:col-span-2">
                 <p className="text-xs text-muted-foreground">
@@ -454,36 +467,40 @@ const ActivityLog = () => {
               />
             </FilterField>
             <FilterField label={t("log.action")}>
-              <select
-                value={actionFilter}
-                onChange={(e) => {
-                  setActionFilter(e.target.value);
-                  setPage(1);
-                }}
-                className={selectClasses}
-              >
-                <option value="">{t("common.all")}</option>
-                {actions.map((a) => (
-                  <option key={a} value={a}>
-                    {a}
-                  </option>
-                ))}
-              </select>
+              <FieldControl>
+                <select
+                  value={actionFilter}
+                  onChange={(e) => {
+                    setActionFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className={selectClasses}
+                >
+                  <option value="">{t("common.all")}</option>
+                  {actions.map((a) => (
+                    <option key={a} value={a}>
+                      {a}
+                    </option>
+                  ))}
+                </select>
+              </FieldControl>
             </FilterField>
             <FilterField label={t("log.detail.status")}>
-              <select
-                value={statusFilter}
-                onChange={(e) => {
-                  setStatusFilter(e.target.value);
-                  setPage(1);
-                }}
-                className={selectClasses}
-              >
-                <option value="">{t("common.all")}</option>
-                <option value="success">success</option>
-                <option value="failure">failure</option>
-                <option value="denied">denied</option>
-              </select>
+              <FieldControl>
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className={selectClasses}
+                >
+                  <option value="">{t("common.all")}</option>
+                  <option value="success">success</option>
+                  <option value="failure">failure</option>
+                  <option value="denied">denied</option>
+                </select>
+              </FieldControl>
             </FilterField>
             <FilterField label={t("log.actor")}>
               <Input
@@ -754,6 +771,7 @@ const ActivityLog = () => {
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
               <span>{t("common.rowsPerPage")}</span>
               <select
+                aria-label={t("a11yUi.pageSize")}
                 value={pageSize}
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));

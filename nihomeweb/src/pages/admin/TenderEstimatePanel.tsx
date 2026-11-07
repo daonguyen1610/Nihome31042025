@@ -1,3 +1,6 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CheckCircle2,
@@ -69,6 +72,7 @@ export default function TenderEstimatePanel({
   financeReady,
   onTenderChanged,
 }: Props) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -100,13 +104,13 @@ export default function TenderEstimatePanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
       setLoading(false);
     }
-  }, [tender.id, t, toast]);
+  }, [tender.id, toast, t, uiError]);
 
   useEffect(() => {
     void load();
@@ -140,7 +144,7 @@ export default function TenderEstimatePanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -162,7 +166,7 @@ export default function TenderEstimatePanel({
       if (errors.length === 0) {
         toast({
           title: t("common.error"),
-          description: extractApiError(error),
+          description: uiError(error),
           variant: "destructive",
         });
       }
@@ -188,7 +192,7 @@ export default function TenderEstimatePanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -209,7 +213,7 @@ export default function TenderEstimatePanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -241,7 +245,7 @@ export default function TenderEstimatePanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -251,7 +255,7 @@ export default function TenderEstimatePanel({
 
   return (
     <div className="space-y-4">
-      <section className="rounded-lg border bg-white p-4 shadow-sm" data-testid="tender-lifecycle">
+      <section className="rounded-lg border bg-card p-4 shadow-sm" data-testid="tender-lifecycle">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="font-semibold">{t("tenders.lifecycle.title")}</h2>
@@ -367,22 +371,22 @@ export default function TenderEstimatePanel({
             <DialogDescription>{t("tenders.lifecycle.submitDialogHint")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.lifecycle.submissionChannel")}</Label>
               <Input
                 value={submissionChannel}
                 onChange={(event) => setSubmissionChannel(event.target.value)}
                 maxLength={80}
               />
-            </div>
-            <div className="space-y-1">
+            </FieldScope>
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.lifecycle.receiptReference")}</Label>
               <Input
                 value={receiptReference}
                 onChange={(event) => setReceiptReference(event.target.value)}
                 maxLength={200}
               />
-            </div>
+            </FieldScope>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSubmitOpen(false)} disabled={busy}>
@@ -401,7 +405,7 @@ export default function TenderEstimatePanel({
       </Dialog>
 
       <section
-        className="min-w-0 rounded-lg border bg-white p-3 shadow-sm sm:p-4"
+        className="min-w-0 rounded-lg border bg-card p-3 shadow-sm sm:p-4"
         data-testid="tender-estimates"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -553,6 +557,7 @@ export default function TenderEstimatePanel({
                   (canApprove && selected.status === "Submitted")) && (
                   <div className="rounded-md border p-3">
                     <Textarea
+                      aria-label={t("a11yUi.reason")}
                       value={decisionNote}
                       onChange={(event) => setDecisionNote(event.target.value)}
                       maxLength={2000}

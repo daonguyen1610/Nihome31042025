@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useEffect, useRef, useState } from "react";
 import { adminApi, type ContractReminder, type ContractReminderPreview } from "@/services/adminApi";
 import { useI18n } from "@/lib/i18n";
@@ -13,6 +15,7 @@ export default function ContractReminders({
   contractId: number;
   canManage: boolean;
 }) {
+  const uiError = useUiError();
   const { t } = useI18n();
   const [rows, setRows] = useState<ContractReminder[]>([]);
   const [kind, setKind] = useState<"Renewal" | "End">("Renewal");
@@ -43,7 +46,7 @@ export default function ContractReminders({
         }
       })
       .catch((reason) => {
-        if (active) setError(extractApiError(reason));
+        if (active) setError(uiError(reason));
       })
       .finally(() => {
         if (active) setLoading(false);
@@ -52,7 +55,7 @@ export default function ContractReminders({
       active = false;
       previewVersion.current += 1;
     };
-  }, [contractId, reload]);
+  }, [contractId, reload, uiError]);
   const run = async (action: () => Promise<unknown>) => {
     if (busy) return;
     setBusy(true);
@@ -60,7 +63,7 @@ export default function ContractReminders({
     try {
       await action();
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     } finally {
       setBusy(false);
     }
@@ -160,7 +163,7 @@ export default function ContractReminders({
                 title={t("contractReminder.preview")}
                 srcDoc={preview.body}
                 sandbox=""
-                className="h-64 w-full rounded border bg-white"
+                className="h-64 w-full rounded border bg-card"
               />
               <Button
                 disabled={busy}

@@ -1,3 +1,9 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -79,7 +85,7 @@ import {
 // ------------------------------- helpers -------------------------------
 
 const STATUS_BADGE: Record<PermitStatus, string> = {
-  NotStarted: "border-slate-200 bg-slate-50 text-slate-700",
+  NotStarted: "border-border bg-muted/30 text-foreground",
   Preparing: "border-sky-200 bg-sky-50 text-sky-700",
   Submitted: "border-indigo-200 bg-indigo-50 text-indigo-700",
   UnderReview: "border-amber-200 bg-amber-50 text-amber-700",
@@ -151,6 +157,7 @@ const formFrom = (row: PermitChecklistItemResponse): PermitForm => ({
 // -------------------------------- page ---------------------------------
 
 const AdminPermits = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
@@ -172,6 +179,7 @@ const AdminPermits = () => {
 
   // filters
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [projectId, setProjectId] = useState<number | null>(() => {
     const value = Number(searchParams.get("operationalProjectId"));
     return Number.isInteger(value) && value > 0 ? value : null;
@@ -194,7 +202,9 @@ const AdminPermits = () => {
     (async () => {
       try {
         const [projResp, typesResp] = await Promise.all([
-          adminApi.listOperationalProjects({ pageSize: 200 }).catch(() => ({
+          collectLookupPages((page) =>
+            adminApi.listOperationalProjects({ pageSize: 200, page }),
+          ).catch(() => ({
             data: { total: 0, page: 1, pageSize: 200, items: [] },
           })),
           adminApi.getMasterDataOptions("permit_type", lang).catch(() => ({ data: [] })),
@@ -228,12 +238,14 @@ const AdminPermits = () => {
     };
   }, [canPickUser, lang]);
 
+  const startListRequest = useRequestGuard();
   const fetchList = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
       const params: PermitChecklistListParams = { page, pageSize };
-      if (search.trim()) params.search = search.trim();
+      if (settledSearch.trim()) params.search = settledSearch.trim();
       if (projectId != null) params.operationalProjectId = projectId;
       if (permitTypeCode) params.permitTypeCode = permitTypeCode;
       if (status) params.status = status;
@@ -243,31 +255,34 @@ const AdminPermits = () => {
       if (flag === "dueSoon") params.dueSoon = true;
       if (flag === "expiringSoon") params.expiringSoon = true;
       const { data } = await adminApi.listPermits(params);
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
       setRisk(data.risk);
     } catch (err) {
-      setError(extractApiError(err));
+      if (!isCurrent()) return;
+      setError(uiError(err));
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
   }, [
+    startListRequest,
     page,
-    pageSize,
-    search,
+    settledSearch,
     projectId,
     permitTypeCode,
     status,
     ownerUserId,
     approverUserId,
     flag,
-    t,
+    uiError,
     toast,
+    t,
   ]);
 
   useEffect(() => {
@@ -334,11 +349,11 @@ const AdminPermits = () => {
       .catch((err) =>
         toast({
           title: t("common.error"),
-          description: extractApiError(err),
+          description: uiError(err),
           variant: "destructive",
         }),
       );
-  }, [searchParams, t, toast]);
+  }, [searchParams, t, toast, uiError]);
 
   useEffect(() => {
     if (!viewing) {
@@ -404,7 +419,7 @@ const AdminPermits = () => {
     } catch (cause) {
       toast({
         title: t("common.error"),
-        description: extractApiError(cause),
+        description: uiError(cause),
         variant: "destructive",
       });
     } finally {
@@ -439,7 +454,7 @@ const AdminPermits = () => {
     } catch (cause) {
       toast({
         title: t("common.error"),
-        description: extractApiError(cause),
+        description: uiError(cause),
         variant: "destructive",
       });
     } finally {
@@ -525,7 +540,7 @@ const AdminPermits = () => {
       closeForm();
       await fetchList();
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -543,7 +558,7 @@ const AdminPermits = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -596,8 +611,8 @@ const AdminPermits = () => {
       <div className="space-y-4 p-3 md:p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-slate-900 md:text-2xl">{t("permits.title")}</h1>
-            <p className="text-sm text-slate-600">{t("permits.subtitle")}</p>
+            <h1 className="text-xl font-bold text-foreground md:text-2xl">{t("permits.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("permits.subtitle")}</p>
           </div>
           {canManage ? (
             <Button
@@ -655,12 +670,12 @@ const AdminPermits = () => {
           />
         </section>
 
-        <section className="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+        <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
           <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-            <div className="lg:col-span-2">
+            <FieldScope className="lg:col-span-2">
               <Label className="text-xs">{t("permits.filter.search")}</Label>
               <div className="relative mt-1">
-                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
                   value={search}
@@ -671,8 +686,8 @@ const AdminPermits = () => {
                   placeholder={t("permits.filter.search")}
                 />
               </div>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label className="text-xs">{t("permits.field.status")}</Label>
               <Select
                 value={status}
@@ -693,8 +708,8 @@ const AdminPermits = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
+            </FieldScope>
+            <FieldScope>
               <Label className="text-xs">{t("permits.field.permitType")}</Label>
               <Select
                 value={permitTypeCode}
@@ -715,9 +730,9 @@ const AdminPermits = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
+            </FieldScope>
             {projectOptions.length > 0 ? (
-              <div>
+              <FieldScope>
                 <Label className="text-xs">{t("permits.field.project")}</Label>
                 <SearchableSelect
                   className="mt-1"
@@ -732,10 +747,10 @@ const AdminPermits = () => {
                   ]}
                   placeholder={t("permits.filter.allProjects")}
                 />
-              </div>
+              </FieldScope>
             ) : null}
             {canPickUser && userOptions.length > 0 ? (
-              <div>
+              <FieldScope>
                 <Label className="text-xs">{t("permits.field.owner")}</Label>
                 <SearchableSelect
                   ariaLabel={t("permits.field.owner")}
@@ -748,10 +763,10 @@ const AdminPermits = () => {
                   options={[{ value: "", label: t("permits.filter.allOwners") }, ...userOptions]}
                   placeholder={t("permits.filter.allOwners")}
                 />
-              </div>
+              </FieldScope>
             ) : null}
             {canPickUser && userOptions.length > 0 ? (
-              <div>
+              <FieldScope>
                 <Label className="text-xs">{t("permits.field.approver")}</Label>
                 <SearchableSelect
                   ariaLabel={t("permits.field.approver")}
@@ -764,7 +779,7 @@ const AdminPermits = () => {
                   options={[{ value: "", label: t("permits.filter.allApprovers") }, ...userOptions]}
                   placeholder={t("permits.filter.allApprovers")}
                 />
-              </div>
+              </FieldScope>
             ) : null}
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -776,7 +791,7 @@ const AdminPermits = () => {
               <Filter className="mr-1 h-4 w-4" />
               {t("common.reset")}
             </Button>
-            <span className="ml-auto text-xs text-slate-500">
+            <span className="ml-auto text-xs text-muted-foreground">
               {t("permits.total").replace("{count}", String(total))}
             </span>
           </div>
@@ -800,7 +815,7 @@ const AdminPermits = () => {
             {/* Mobile / tablet card view */}
             <div className="grid gap-3 lg:hidden">
               {rows.map((r) => (
-                <article key={r.id} className="rounded-lg border bg-white p-3 shadow-sm">
+                <article key={r.id} className="rounded-lg border bg-card p-3 shadow-sm">
                   <header className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <h3 className="break-words text-sm font-semibold leading-tight">
@@ -871,9 +886,9 @@ const AdminPermits = () => {
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-lg border border-slate-200 bg-white shadow-sm lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm lg:block">
               <table className="min-w-full text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2">{t("permits.field.project")}</th>
                     <th className="px-3 py-2">{t("permits.field.permitType")}</th>
@@ -887,16 +902,16 @@ const AdminPermits = () => {
                     <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100">
+                <tbody className="divide-y divide-border">
                   {rows.map((r) => (
-                    <tr key={r.id} className="transition-colors hover:bg-slate-50/70">
-                      <td className="px-3 py-2 text-slate-700">
-                        <div className="font-mono text-xs text-slate-500">
+                    <tr key={r.id} className="transition-colors hover:bg-muted/70">
+                      <td className="px-3 py-2 text-foreground">
+                        <div className="font-mono text-xs text-muted-foreground">
                           {r.operationalProjectCode ?? "—"}
                         </div>
-                        <div className="text-slate-800">{r.operationalProjectName ?? "—"}</div>
+                        <div className="text-foreground">{r.operationalProjectName ?? "—"}</div>
                       </td>
-                      <td className="px-3 py-2 font-medium text-slate-900">
+                      <td className="px-3 py-2 font-medium text-foreground">
                         {r.permitTypeLabel ?? r.permitTypeCode}
                         {r.isRequired ? (
                           <Badge variant="outline" className="ml-2">
@@ -904,16 +919,16 @@ const AdminPermits = () => {
                           </Badge>
                         ) : null}
                       </td>
-                      <td className="px-3 py-2 text-slate-700">{r.issuingAgency ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-700">{r.ownerName ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-700">{r.approverName ?? "—"}</td>
-                      <td className="px-3 py-2 text-slate-700">
+                      <td className="px-3 py-2 text-foreground">{r.issuingAgency ?? "—"}</td>
+                      <td className="px-3 py-2 text-foreground">{r.ownerName ?? "—"}</td>
+                      <td className="px-3 py-2 text-foreground">{r.approverName ?? "—"}</td>
+                      <td className="px-3 py-2 text-foreground">
                         <div className="min-w-24">
                           <div className="mb-1 flex justify-between text-xs">
                             <span>{r.workTaskStatus ?? "—"}</span>
                             <span>{r.progressPercent}%</span>
                           </div>
-                          <div className="h-1.5 overflow-hidden rounded bg-slate-100">
+                          <div className="h-1.5 overflow-hidden rounded bg-muted">
                             <div
                               className="h-full bg-primary"
                               style={{ width: `${r.progressPercent}%` }}
@@ -932,10 +947,10 @@ const AdminPermits = () => {
                           <RiskPills row={r} t={t} />
                         </div>
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                      <td className="px-3 py-2 whitespace-nowrap text-foreground">
                         {formatDate(r.targetDeadline, lang)}
                       </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-slate-700">
+                      <td className="px-3 py-2 whitespace-nowrap text-foreground">
                         {formatDate(r.expiresAt, lang)}
                       </td>
                       <td className="px-3 py-2">
@@ -969,7 +984,7 @@ const AdminPermits = () => {
             </div>
 
             {totalPages > 1 ? (
-              <div className="flex items-center justify-between text-sm text-slate-600">
+              <div className="flex items-center justify-between text-sm text-muted-foreground">
                 <span>
                   {t("designProjects.paginationLabel")
                     .replace("{page}", String(page))
@@ -1011,7 +1026,7 @@ const AdminPermits = () => {
             </DialogTitle>
             <DialogDescription>
               {dialogMode === "edit" && editing ? (
-                <span className="text-xs text-slate-600">
+                <span className="text-xs text-muted-foreground">
                   {(editing.designProjectCode ?? "") +
                     " — " +
                     (editing.permitTypeLabel ?? editing.permitTypeCode)}
@@ -1024,7 +1039,7 @@ const AdminPermits = () => {
             <div className="grid min-h-0 min-w-0 gap-3 overflow-y-auto overscroll-contain md:grid-cols-2 [&>*]:min-w-0">
               {dialogMode === "create" ? (
                 <>
-                  <div>
+                  <FieldScope>
                     <Label>{t("permits.field.project")}</Label>
                     <SearchableSelect
                       className="mt-1"
@@ -1039,8 +1054,8 @@ const AdminPermits = () => {
                       options={projectOptions}
                       placeholder={t("permits.form.selectProject")}
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("permits.field.permitType")}</Label>
                     <Select
                       value={form.permitTypeCode}
@@ -1061,10 +1076,10 @@ const AdminPermits = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
+                  </FieldScope>
                 </>
               ) : null}
-              <div>
+              <FieldScope>
                 <Label>{t("permits.field.status")}</Label>
                 <Select
                   value={form.status}
@@ -1083,8 +1098,8 @@ const AdminPermits = () => {
                     ))}
                   </SelectContent>
                 </Select>
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("permits.field.agency")}</Label>
                 <Input
                   value={form.issuingAgency}
@@ -1092,9 +1107,9 @@ const AdminPermits = () => {
                     setForm((f) => (f ? { ...f, issuingAgency: e.target.value } : f))
                   }
                 />
-              </div>
+              </FieldScope>
               {canPickUser ? (
-                <div className="md:col-span-2">
+                <FieldScope className="md:col-span-2">
                   <Label>{t("permits.field.owner")}</Label>
                   <SearchableSelect
                     ariaLabel={t("permits.field.owner")}
@@ -1107,9 +1122,9 @@ const AdminPermits = () => {
                     placeholder={t("permits.form.ownerNone")}
                     disabled={Boolean(editing?.workTaskId)}
                   />
-                </div>
+                </FieldScope>
               ) : null}
-              <div>
+              <FieldScope>
                 <Label>{t("permits.field.targetDeadline")}</Label>
                 <Input
                   type="date"
@@ -1119,39 +1134,39 @@ const AdminPermits = () => {
                     setForm((f) => (f ? { ...f, targetDeadline: e.target.value } : f))
                   }
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("permits.field.submittedAt")}</Label>
                 <Input
                   type="date"
                   value={form.submittedAt}
                   onChange={(e) => setForm((f) => (f ? { ...f, submittedAt: e.target.value } : f))}
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("permits.field.issuedAt")}</Label>
                 <Input
                   type="date"
                   value={form.issuedAt}
                   onChange={(e) => setForm((f) => (f ? { ...f, issuedAt: e.target.value } : f))}
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("permits.field.expiresAt")}</Label>
                 <Input
                   type="date"
                   value={form.expiresAt}
                   onChange={(e) => setForm((f) => (f ? { ...f, expiresAt: e.target.value } : f))}
                 />
-              </div>
-              <div className="md:col-span-2">
+              </FieldScope>
+              <FieldScope className="md:col-span-2">
                 <Label>{t("permits.field.note")}</Label>
                 <Textarea
                   rows={3}
                   value={form.note}
                   onChange={(e) => setForm((f) => (f ? { ...f, note: e.target.value } : f))}
                 />
-              </div>
+              </FieldScope>
               {dialogMode === "edit" && editing ? (
                 <div className="space-y-4 md:col-span-2">
                   <PermitDocumentField
@@ -1484,7 +1499,7 @@ const PermitDocumentField = ({
 }) => (
   <div className="space-y-2 rounded-md border p-3">
     <div className="flex items-center justify-between gap-2">
-      <Label>{label}</Label>
+      <span className="text-sm font-medium">{label}</span>
       {path ? (
         <AdminFilePreview
           url={path}
@@ -1528,7 +1543,7 @@ const RiskCard = ({
     rose: "border-rose-200 bg-rose-50/60 text-rose-800",
     amber: "border-amber-200 bg-amber-50/60 text-amber-800",
     orange: "border-orange-200 bg-orange-50/60 text-orange-800",
-    slate: "border-slate-200 bg-slate-50 text-slate-800",
+    slate: "border-border bg-muted/30 text-foreground",
   };
   return (
     <button
@@ -1543,7 +1558,7 @@ const RiskCard = ({
       )}
     >
       <div className="flex items-center gap-2">
-        <span className="rounded-md bg-white/70 p-1">{icon}</span>
+        <span className="rounded-md bg-card/70 p-1">{icon}</span>
         <span className="text-xs font-medium">{title}</span>
       </div>
       <span className="text-lg font-bold">{value}</span>

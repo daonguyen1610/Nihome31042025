@@ -75,3 +75,35 @@ export function isConcurrencyConflict(err: unknown): boolean {
   }
   return (response.data as { code?: unknown }).code === "crm_concurrency_conflict";
 }
+
+/** Localized UI boundary: preserve safe API reasons; never expose runtime failures. */
+export function getUiError(err: unknown, t: (key: string) => string, fallback?: string): string {
+  const failure = err as {
+    code?: string;
+    message?: string;
+    response?: { status?: number; data?: unknown };
+  } | null;
+  if (failure?.code === "LOOKUP_INCOMPLETE") return t("common.lookupIncomplete");
+  if (!failure?.response) {
+    const network =
+      failure?.message === "Network Error" ||
+      ["ERR_NETWORK", "ECONNABORTED", "ETIMEDOUT"].includes(failure?.code ?? "");
+    return network ? t("auth.err.networkError") : (fallback ?? t("auth.err.unexpected"));
+  }
+  if ((failure.response.status ?? 500) >= 500) return t("auth.err.unexpected");
+  const data = failure.response.data;
+  if (!data || typeof data !== "object") return t("auth.err.unexpected");
+  const hasReason =
+    ("message" in data && typeof data.message === "string") ||
+    ("detail" in data && typeof data.detail === "string") ||
+    ("errors" in data && typeof data.errors === "object" && data.errors !== null);
+  if (!hasReason) return t("auth.err.unexpected");
+  const message = extractApiError(err, t("auth.err.unexpected"), t);
+  if (
+    /\bat\s+\S+\([^)]*:\d+|\b(?:SqlException|System\.[A-Z]\w*Exception|TypeError|ReferenceError)\b|(?:\/app\/|[A-Z]:\\)/.test(
+      message,
+    )
+  )
+    return t("auth.err.unexpected");
+  return message;
+}

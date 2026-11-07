@@ -208,7 +208,7 @@ const Contact = () => {
             ))}
 
             <div className="bg-gradient-primary text-white rounded-3xl p-7 relative overflow-hidden">
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full" />
+              <div className="absolute -top-10 -right-10 w-40 h-40 bg-card/10 rounded-full" />
               <Clock className="w-7 h-7 mb-4" strokeWidth={1.5} />
               <h3 className="font-display text-xl font-extrabold mb-2">
                 {t("contact.hours.title")}
@@ -220,7 +220,7 @@ const Contact = () => {
                   <a
                     key={i}
                     href="#"
-                    className="w-10 h-10 rounded-full bg-white/15 backdrop-blur hover:bg-white hover:text-primary flex items-center justify-center transition"
+                    className="w-10 h-10 rounded-full bg-card/15 backdrop-blur hover:bg-card hover:text-primary flex items-center justify-center transition"
                   >
                     <Icon className="w-4 h-4" />
                   </a>

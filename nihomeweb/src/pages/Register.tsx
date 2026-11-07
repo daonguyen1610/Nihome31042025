@@ -115,6 +115,7 @@ const Register = () => {
                 <div className="relative">
                   <KeyRound className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                   <input
+                    aria-label={t("a11yUi.otpCode")}
                     required
                     value={otpCode}
                     onChange={(e) => setOtpCode(e.target.value)}
@@ -169,6 +170,7 @@ const Register = () => {
               <div className="relative">
                 <User className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
+                  aria-label={t("auth.reg.fullName")}
                   required
                   value={form.fullName}
                   onChange={(e) => setForm({ ...form, fullName: e.target.value })}
@@ -179,6 +181,7 @@ const Register = () => {
               <div className="relative">
                 <Phone className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
+                  aria-label={t("auth.phone")}
                   required
                   type="tel"
                   value={form.phone}
@@ -190,6 +193,7 @@ const Register = () => {
               <div className="relative">
                 <Mail className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
+                  aria-label={t("auth.email")}
                   required
                   type="email"
                   value={form.email}
@@ -201,6 +205,7 @@ const Register = () => {
               <div className="relative">
                 <Lock className="w-4 h-4 absolute left-5 top-1/2 -translate-y-1/2 text-muted-foreground" />
                 <input
+                  aria-label={t("auth.password")}
                   required
                   type="password"
                   value={form.password}

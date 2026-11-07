@@ -1,3 +1,7 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { collectLookupPages } from "@/lib/pagination";
+import { FieldScope } from "@/components/ui/field-scope";
 import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -52,7 +56,7 @@ import {
 const ALL_VALUE = "__all__";
 
 const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
-  Preparing: "border-slate-200 bg-slate-50 text-slate-700",
+  Preparing: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Won: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Lost: "border-rose-200 bg-rose-50 text-rose-700",
@@ -87,6 +91,7 @@ const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 const toDateTimeInputValue = (iso?: string | null) => (iso ? iso.slice(0, 16) : "");
 
 const AdminTenders = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -158,11 +163,11 @@ const AdminTenders = () => {
       setTotal(data.total);
     } catch (err) {
       if (requestId !== listRequest.current) return;
-      setError(extractApiError(err));
+      setError(uiError(err));
     } finally {
       if (requestId === listRequest.current) setLoading(false);
     }
-  }, [page, statusFilter, customerFilter, search, reportScope]);
+  }, [page, reportScope, statusFilter, customerFilter, search, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -181,8 +186,8 @@ const AdminTenders = () => {
     (async () => {
       try {
         const [customerResponse, projectResponse] = await Promise.all([
-          adminApi.listCustomers({ pageSize: 200 }),
-          adminApi.listOperationalProjects({ pageSize: 200 }),
+          collectLookupPages((page) => adminApi.listCustomers({ pageSize: 200, page })),
+          collectLookupPages((page) => adminApi.listOperationalProjects({ pageSize: 200, page })),
         ]);
         if (!cancelled) {
           setCustomers(customerResponse.data.items);
@@ -254,7 +259,7 @@ const AdminTenders = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -333,7 +338,7 @@ const AdminTenders = () => {
       setStatisticsRevision((value) => value + 1);
       await fetchList();
     } catch (err) {
-      setFormError(extractApiError(err));
+      setFormError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -355,7 +360,7 @@ const AdminTenders = () => {
       const response = await adminApi.getTenderDeletionImpact(tender.id);
       setDeleteImpact(response.data);
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
     } finally {
       setDeleteImpactLoading(false);
     }
@@ -372,7 +377,7 @@ const AdminTenders = () => {
       });
       return response.status === 204 ? null : response.data;
     } catch (err) {
-      setDeleteError(extractApiError(err));
+      setDeleteError(uiError(err));
       throw err;
     } finally {
       setBusyDelete(false);
@@ -475,6 +480,7 @@ const AdminTenders = () => {
           <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
+              aria-label={t("common.search")}
               className="pl-9"
               placeholder={t("tenders.filter.search")}
               value={searchInput}
@@ -488,7 +494,7 @@ const AdminTenders = () => {
               setPage(1);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label={t("tenders.field.status")}>
               <SelectValue placeholder={t("tenders.filter.allStatus")} />
             </SelectTrigger>
             <SelectContent>
@@ -508,7 +514,7 @@ const AdminTenders = () => {
               setPage(1);
             }}
           >
-            <SelectTrigger>
+            <SelectTrigger aria-label={t("tenders.field.customer")}>
               <SelectValue placeholder={t("tenders.filter.allCustomers")} />
             </SelectTrigger>
             <SelectContent className="max-h-64">
@@ -545,7 +551,7 @@ const AdminTenders = () => {
                 return (
                   <article
                     key={r.id}
-                    className="cursor-pointer rounded-lg border bg-white p-3 shadow-sm hover:bg-slate-50/70"
+                    className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/70"
                     onClick={() => openDetail(r.id)}
                   >
                     <header className="flex items-start justify-between gap-2">
@@ -622,7 +628,7 @@ const AdminTenders = () => {
               data-testid="tender-list-table"
             >
               <table className="w-full min-w-[960px] text-sm">
-                <thead className="bg-slate-50 text-left text-xs uppercase text-muted-foreground">
+                <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
                   <tr>
                     <th className="min-w-[220px] px-3 py-2">{t("tenders.field.name")}</th>
                     <th className="min-w-[160px] px-3 py-2">{t("tenders.field.customer")}</th>
@@ -639,7 +645,7 @@ const AdminTenders = () => {
                     return (
                       <tr
                         key={r.id}
-                        className="cursor-pointer border-t align-top hover:bg-slate-50/50"
+                        className="cursor-pointer border-t align-top hover:bg-muted/50"
                         onClick={() => openDetail(r.id)}
                       >
                         <td className="min-w-[220px] px-3 py-2">
@@ -744,16 +750,16 @@ const AdminTenders = () => {
           </DialogHeader>
 
           <div className="space-y-3">
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.field.name")}</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 disabled={editLocked}
               />
-            </div>
+            </FieldScope>
 
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.field.customer")}</Label>
               {isEdit ? (
                 <Input value={editingDetail!.customerName} disabled />
@@ -767,9 +773,9 @@ const AdminTenders = () => {
                   placeholder={t("tenders.form.customerPlaceholder")}
                 />
               )}
-            </div>
+            </FieldScope>
 
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.field.operationalProject")}</Label>
               <Select
                 value={form.operationalProjectId ? String(form.operationalProjectId) : ""}
@@ -790,10 +796,10 @@ const AdminTenders = () => {
               {form.customerId > 0 && customerProjects.length === 0 && (
                 <p className="text-xs text-muted-foreground">{t("tenders.form.noProject")}</p>
               )}
-            </div>
+            </FieldScope>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.invitationReceivedAt")}</Label>
                 <Input
                   type="datetime-local"
@@ -802,8 +808,8 @@ const AdminTenders = () => {
                   disabled={editLocked}
                   max={toDateTimeInputValue(new Date().toISOString())}
                 />
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.invitationReference")}</Label>
                 <Input
                   value={form.invitationReference ?? ""}
@@ -811,11 +817,11 @@ const AdminTenders = () => {
                   disabled={editLocked}
                   maxLength={120}
                 />
-              </div>
+              </FieldScope>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.invitationSource")}</Label>
                 <Input
                   value={form.invitationSource}
@@ -824,8 +830,8 @@ const AdminTenders = () => {
                   maxLength={200}
                   placeholder={t("tenders.form.invitationSourcePlaceholder")}
                 />
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.invitationPortalUrl")}</Label>
                 <Input
                   type="url"
@@ -835,11 +841,11 @@ const AdminTenders = () => {
                   maxLength={1000}
                   placeholder="https://..."
                 />
-              </div>
+              </FieldScope>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.openingDate")}</Label>
                 <Input
                   type="date"
@@ -847,8 +853,8 @@ const AdminTenders = () => {
                   onChange={(e) => setForm({ ...form, openingDate: e.target.value || null })}
                   disabled={editLocked}
                 />
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.deadline")}</Label>
                 <Input
                   type="datetime-local"
@@ -856,11 +862,11 @@ const AdminTenders = () => {
                   onChange={(e) => setForm({ ...form, submissionDeadline: e.target.value })}
                   disabled={editLocked}
                 />
-              </div>
+              </FieldScope>
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <div className="space-y-1">
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.preparer")}</Label>
                 {canPickPreparer ? (
                   <SearchableSelect
@@ -876,25 +882,25 @@ const AdminTenders = () => {
                     disabled
                   />
                 )}
-              </div>
-              <div className="space-y-1">
+              </FieldScope>
+              <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.infoSource")}</Label>
                 <Input
                   value={form.infoSource ?? ""}
                   onChange={(e) => setForm({ ...form, infoSource: e.target.value })}
                   disabled={editLocked}
                 />
-              </div>
+              </FieldScope>
             </div>
 
-            <div className="space-y-1">
+            <FieldScope className="space-y-1">
               <Label>{t("tenders.field.note")}</Label>
               <Textarea
                 value={form.note ?? ""}
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
                 rows={2}
               />
-            </div>
+            </FieldScope>
 
             {formError && <p className="text-sm text-rose-600">{formError}</p>}
           </div>

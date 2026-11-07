@@ -120,7 +120,7 @@ jobs:
           retention-days: 2
 
   nihomeweb-lint:
-    name: nihomeweb (format, lint)
+    name: nihomeweb (format, lint, unit)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -135,6 +135,8 @@ jobs:
       - run: npm ci
       - run: npm run format:check
       - run: npm run lint
+      - run: npm run test:unit
+      - run: npm run check:a11y
 
   translation-keys:
     name: translations (missing keys)

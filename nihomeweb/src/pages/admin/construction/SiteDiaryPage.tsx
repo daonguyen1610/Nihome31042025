@@ -1,3 +1,10 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
+import { useRequestGuard } from "@/hooks/useRequestGuard";
+import { collectLookupPages } from "@/lib/pagination";
+import StatTile from "./ConstructionStatTile";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
@@ -74,7 +81,7 @@ import {
 const DIARY_STATUSES: SiteDiaryStatus[] = ["Draft", "Submitted", "Confirmed"];
 
 const STATUS_BADGE: Record<SiteDiaryStatus, string> = {
-  Draft: "border-slate-200 bg-slate-50 text-slate-700",
+  Draft: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Confirmed: "border-emerald-200 bg-emerald-50 text-emerald-800",
 };
@@ -147,6 +154,7 @@ const formFromRow = (row: SiteDiaryResponse): DiaryForm => ({
 });
 
 const AdminSiteDiary = () => {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -167,6 +175,7 @@ const AdminSiteDiary = () => {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [search, setSearch] = useState("");
+  const settledSearch = useDebouncedValue(search);
   const [page, setPage] = useState(1);
   const pageSize = 50;
 
@@ -206,9 +215,11 @@ const AdminSiteDiary = () => {
     (async () => {
       try {
         const [projResp, wxResp] = await Promise.all([
-          adminApi.listDesignProjects({ pageSize: 200 }).catch(() => ({
-            data: { total: 0, page: 1, pageSize: 200, items: [] },
-          })),
+          collectLookupPages((page) => adminApi.listDesignProjects({ pageSize: 200, page })).catch(
+            () => ({
+              data: { total: 0, page: 1, pageSize: 200, items: [] },
+            }),
+          ),
           adminApi.getMasterDataOptions("diary_weather", lang).catch(() => ({ data: [] })),
         ]);
         if (cancelled) return;
@@ -223,7 +234,9 @@ const AdminSiteDiary = () => {
     };
   }, [lang]);
 
+  const startListRequest = useRequestGuard();
   const fetchList = useCallback(async () => {
+    const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
@@ -233,8 +246,9 @@ const AdminSiteDiary = () => {
       if (weatherCode) params.weatherCode = weatherCode;
       if (dateFrom) params.dateFrom = dateFrom;
       if (dateTo) params.dateTo = dateTo;
-      if (search.trim()) params.search = search.trim();
+      if (settledSearch.trim()) params.search = settledSearch.trim();
       const { data } = await adminApi.listSiteDiaries(params);
+      if (!isCurrent()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
       setStatusCounts(data.statusCounts ?? {});
@@ -247,16 +261,29 @@ const AdminSiteDiary = () => {
         return next;
       });
     } catch (err) {
-      setError(extractApiError(err));
+      if (!isCurrent()) return;
+      setError(uiError(err));
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
-      setLoading(false);
+      if (isCurrent()) setLoading(false);
     }
-  }, [page, pageSize, projectId, status, weatherCode, dateFrom, dateTo, search, t, toast]);
+  }, [
+    startListRequest,
+    page,
+    projectId,
+    status,
+    weatherCode,
+    dateFrom,
+    dateTo,
+    settledSearch,
+    uiError,
+    toast,
+    t,
+  ]);
 
   useEffect(() => {
     void fetchList();
@@ -345,7 +372,7 @@ const AdminSiteDiary = () => {
       setCreating(false);
       await fetchList();
     } catch (err) {
-      setCreateError(extractApiError(err));
+      setCreateError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -403,7 +430,7 @@ const AdminSiteDiary = () => {
       setDetail(updated);
       await fetchList();
     } catch (err) {
-      setDetailError(extractApiError(err));
+      setDetailError(uiError(err));
     } finally {
       setDetailSaving(false);
     }
@@ -439,7 +466,7 @@ const AdminSiteDiary = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -489,7 +516,7 @@ const AdminSiteDiary = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: uiError(err),
         variant: "destructive",
       });
     } finally {
@@ -542,8 +569,8 @@ const AdminSiteDiary = () => {
         {/* header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold text-slate-900">{t("siteDiary.title")}</h1>
-            <p className="text-sm text-slate-500">{t("siteDiary.subtitle")}</p>
+            <h1 className="text-2xl font-semibold text-foreground">{t("siteDiary.title")}</h1>
+            <p className="text-sm text-muted-foreground">{t("siteDiary.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()}>
@@ -565,33 +592,31 @@ const AdminSiteDiary = () => {
             icon={<ClipboardList className="h-6 w-6" />}
             label={t("siteDiary.stat.total")}
             value={total}
-            gradient="from-indigo-500 to-violet-600"
           />
           <StatTile
             icon={<CircleDot className="h-6 w-6" />}
             label={t("siteDiary.stat.draft")}
             value={statusPill("Draft")}
-            gradient="from-slate-500 to-slate-700"
           />
           <StatTile
             icon={<Send className="h-6 w-6" />}
             label={t("siteDiary.stat.submitted")}
             value={statusPill("Submitted")}
-            gradient="from-sky-500 to-blue-600"
           />
           <StatTile
             icon={<CheckCircle2 className="h-6 w-6" />}
             label={t("siteDiary.stat.confirmed")}
             value={statusPill("Confirmed")}
-            gradient="from-emerald-500 to-teal-600"
           />
         </div>
 
         {/* filters */}
-        <div className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
-            <div>
-              <Label className="text-xs text-slate-500">{t("siteDiary.field.project")}</Label>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
+                {t("siteDiary.field.project")}
+              </Label>
               <SearchableSelect
                 value={projectId == null ? "" : String(projectId)}
                 onChange={(v) => {
@@ -601,9 +626,9 @@ const AdminSiteDiary = () => {
                 options={projectOptions}
                 placeholder={t("siteDiary.filter.allProjects")}
               />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("siteDiary.field.status")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">{t("siteDiary.field.status")}</Label>
               <Select
                 value={status || "__all__"}
                 onValueChange={(v) => {
@@ -623,9 +648,11 @@ const AdminSiteDiary = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("siteDiary.field.weather")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
+                {t("siteDiary.field.weather")}
+              </Label>
               <Select
                 value={weatherCode || "__all__"}
                 onValueChange={(v) => {
@@ -644,11 +671,13 @@ const AdminSiteDiary = () => {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("siteDiary.filter.search")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
+                {t("siteDiary.filter.search")}
+              </Label>
               <div className="relative">
-                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-slate-400" />
+                <Search className="pointer-events-none absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   className="pl-8"
                   value={search}
@@ -660,11 +689,13 @@ const AdminSiteDiary = () => {
                   data-testid="diary-search"
                 />
               </div>
-            </div>
+            </FieldScope>
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
-            <div>
-              <Label className="text-xs text-slate-500">{t("siteDiary.filter.dateFrom")}</Label>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
+                {t("siteDiary.filter.dateFrom")}
+              </Label>
               <Input
                 type="date"
                 value={dateFrom}
@@ -673,9 +704,11 @@ const AdminSiteDiary = () => {
                   setPage(1);
                 }}
               />
-            </div>
-            <div>
-              <Label className="text-xs text-slate-500">{t("siteDiary.filter.dateTo")}</Label>
+            </FieldScope>
+            <FieldScope>
+              <Label className="text-xs text-muted-foreground">
+                {t("siteDiary.filter.dateTo")}
+              </Label>
               <Input
                 type="date"
                 value={dateTo}
@@ -684,7 +717,7 @@ const AdminSiteDiary = () => {
                   setPage(1);
                 }}
               />
-            </div>
+            </FieldScope>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
             {hasActiveFilter && (
@@ -713,7 +746,7 @@ const AdminSiteDiary = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
+          <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
             {t("siteDiary.empty")}
           </div>
         ) : (
@@ -723,12 +756,12 @@ const AdminSiteDiary = () => {
               {rows.map((row) => (
                 <article
                   key={`m-${row.id}`}
-                  className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
+                  className="rounded-xl border border-border bg-card p-4 shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs text-slate-500">{row.designProjectCode}</div>
-                      <div className="text-base font-semibold text-slate-900">
+                      <div className="text-xs text-muted-foreground">{row.designProjectCode}</div>
+                      <div className="text-base font-semibold text-foreground">
                         {formatDate(row.diaryDate, lang)}
                       </div>
                     </div>
@@ -754,7 +787,7 @@ const AdminSiteDiary = () => {
                       {row.headcountTotal}
                     </span>
                   </div>
-                  <div className="mt-2 line-clamp-3 text-sm text-slate-700">
+                  <div className="mt-2 line-clamp-3 text-sm text-foreground">
                     {row.workPerformed}
                   </div>
                   {row.incidents && (
@@ -804,7 +837,7 @@ const AdminSiteDiary = () => {
                   </div>
                 </article>
               ))}
-              <div className="flex items-center justify-between px-1 pt-1 text-xs text-slate-500">
+              <div className="flex items-center justify-between px-1 pt-1 text-xs text-muted-foreground">
                 <span>
                   {t("common.showing")} {rows.length} / {total}
                 </span>
@@ -833,10 +866,10 @@ const AdminSiteDiary = () => {
             </div>
 
             {/* Desktop table (md+) */}
-            <div className="hidden overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm md:block">
+            <div className="hidden overflow-hidden rounded-lg border border-border bg-card shadow-sm md:block">
               <div className="max-h-[70vh] overflow-auto">
-                <table className="min-w-full divide-y divide-slate-200 text-sm">
-                  <thead className="sticky top-0 z-10 bg-slate-50 text-left text-xs uppercase tracking-wide text-slate-500">
+                <table className="min-w-full divide-y divide-border text-sm">
+                  <thead className="sticky top-0 z-10 bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>
                       {canManage && (
                         <th className="w-8 px-3 py-2">
@@ -857,11 +890,11 @@ const AdminSiteDiary = () => {
                       <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100">
+                  <tbody className="divide-y divide-border">
                     {rows.map((row) => (
                       <tr
                         key={row.id}
-                        className="hover:bg-slate-50"
+                        className="hover:bg-muted/30"
                         data-testid={`diary-row-${row.id}`}
                       >
                         {canManage && (
@@ -873,29 +906,31 @@ const AdminSiteDiary = () => {
                             />
                           </td>
                         )}
-                        <td className="px-3 py-2 whitespace-nowrap font-medium text-slate-900">
+                        <td className="px-3 py-2 whitespace-nowrap font-medium text-foreground">
                           {formatDate(row.diaryDate, lang)}
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-600">
+                        <td className="px-3 py-2 text-xs text-muted-foreground">
                           <div className="font-mono">{row.designProjectCode}</div>
-                          <div className="truncate max-w-[220px] text-slate-500">
+                          <div className="truncate max-w-[220px] text-muted-foreground">
                             {row.designProjectName}
                           </div>
                         </td>
-                        <td className="px-3 py-2 text-xs text-slate-700">
+                        <td className="px-3 py-2 text-xs text-foreground">
                           <div className="inline-flex items-center gap-1">
                             <CloudSun className="h-3.5 w-3.5 text-sky-600" />
                             {row.weatherLabel ?? row.weatherCode}
                           </div>
                           {row.weatherNote && (
-                            <div className="text-[11px] text-slate-500">{row.weatherNote}</div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {row.weatherNote}
+                            </div>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-sm tabular-nums text-slate-800">
+                        <td className="px-3 py-2 text-sm tabular-nums text-foreground">
                           {row.headcountTotal}
                         </td>
                         <td className="px-3 py-2">
-                          <div className="line-clamp-2 max-w-[420px] text-sm text-slate-700">
+                          <div className="line-clamp-2 max-w-[420px] text-sm text-foreground">
                             {row.workPerformed}
                           </div>
                           {row.incidents && (
@@ -960,7 +995,7 @@ const AdminSiteDiary = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-3 py-2 text-xs text-slate-500">
+              <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
                 <span>
                   {t("common.showing")} {rows.length} / {total}
                 </span>
@@ -999,7 +1034,7 @@ const AdminSiteDiary = () => {
             </DialogHeader>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("siteDiary.field.project")}</Label>
                   <SearchableSelect
                     value={createProjectId == null ? "" : String(createProjectId)}
@@ -1007,18 +1042,18 @@ const AdminSiteDiary = () => {
                     options={projectOptionsForCreate}
                     placeholder="—"
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("siteDiary.field.date")}</Label>
                   <Input
                     type="date"
                     value={createForm.diaryDate}
                     onChange={(e) => setCreateForm((f) => ({ ...f, diaryDate: e.target.value }))}
                   />
-                </div>
+                </FieldScope>
               </div>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("siteDiary.field.weather")}</Label>
                   <Select
                     value={createForm.weatherCode}
@@ -1035,14 +1070,14 @@ const AdminSiteDiary = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("siteDiary.field.weatherNote")}</Label>
                   <Input
                     value={createForm.weatherNote}
                     onChange={(e) => setCreateForm((f) => ({ ...f, weatherNote: e.target.value }))}
                   />
-                </div>
+                </FieldScope>
               </div>
               <div className="grid grid-cols-4 gap-2">
                 <HeadcountField
@@ -1066,7 +1101,7 @@ const AdminSiteDiary = () => {
                   onChange={(n) => setCreateForm((f) => ({ ...f, headcountSubcontractors: n }))}
                 />
               </div>
-              <div>
+              <FieldScope>
                 <Label>{t("siteDiary.field.workPerformed")}</Label>
                 <Textarea
                   rows={3}
@@ -1074,9 +1109,9 @@ const AdminSiteDiary = () => {
                   onChange={(e) => setCreateForm((f) => ({ ...f, workPerformed: e.target.value }))}
                   data-testid="diary-new-work"
                 />
-              </div>
+              </FieldScope>
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <FieldScope>
                   <Label>{t("siteDiary.field.machines")}</Label>
                   <Textarea
                     rows={2}
@@ -1085,8 +1120,8 @@ const AdminSiteDiary = () => {
                       setCreateForm((f) => ({ ...f, machinesSummary: e.target.value }))
                     }
                   />
-                </div>
-                <div>
+                </FieldScope>
+                <FieldScope>
                   <Label>{t("siteDiary.field.materials")}</Label>
                   <Textarea
                     rows={2}
@@ -1095,24 +1130,24 @@ const AdminSiteDiary = () => {
                       setCreateForm((f) => ({ ...f, materialsReceived: e.target.value }))
                     }
                   />
-                </div>
+                </FieldScope>
               </div>
-              <div>
+              <FieldScope>
                 <Label>{t("siteDiary.field.incidents")}</Label>
                 <Textarea
                   rows={2}
                   value={createForm.incidents}
                   onChange={(e) => setCreateForm((f) => ({ ...f, incidents: e.target.value }))}
                 />
-              </div>
-              <div>
+              </FieldScope>
+              <FieldScope>
                 <Label>{t("siteDiary.field.note")}</Label>
                 <Textarea
                   rows={2}
                   value={createForm.note}
                   onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))}
                 />
-              </div>
+              </FieldScope>
               {createError && <div className="text-sm text-rose-600">{createError}</div>}
             </div>
             <DialogFooter>
@@ -1141,7 +1176,7 @@ const AdminSiteDiary = () => {
                     {t(detailMode === "edit" ? "siteDiary.edit" : "siteDiary.view")} ·{" "}
                     {formatDate(detail.diaryDate, lang)} — {detail.designProjectCode}
                   </SheetTitle>
-                  <SheetDescription className="text-xs text-slate-500">
+                  <SheetDescription className="text-xs text-muted-foreground">
                     {detail.designProjectName}
                   </SheetDescription>
                 </SheetHeader>
@@ -1151,7 +1186,7 @@ const AdminSiteDiary = () => {
                   </div>
 
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <FieldScope>
                       <Label>{t("siteDiary.field.date")}</Label>
                       <Input
                         type="date"
@@ -1161,8 +1196,8 @@ const AdminSiteDiary = () => {
                         }
                         disabled={!canEditDetail}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("siteDiary.field.weather")}</Label>
                       <Select
                         value={detailForm.weatherCode}
@@ -1180,9 +1215,9 @@ const AdminSiteDiary = () => {
                           ))}
                         </SelectContent>
                       </Select>
-                    </div>
+                    </FieldScope>
                   </div>
-                  <div>
+                  <FieldScope>
                     <Label>{t("siteDiary.field.weatherNote")}</Label>
                     <Input
                       value={detailForm.weatherNote}
@@ -1191,7 +1226,7 @@ const AdminSiteDiary = () => {
                       }
                       disabled={!canEditDetail}
                     />
-                  </div>
+                  </FieldScope>
                   <div className="grid grid-cols-4 gap-2">
                     <HeadcountField
                       label={t("siteDiary.field.headcountLabor")}
@@ -1220,7 +1255,7 @@ const AdminSiteDiary = () => {
                       disabled={!canEditDetail}
                     />
                   </div>
-                  <div>
+                  <FieldScope>
                     <Label>{t("siteDiary.field.workPerformed")}</Label>
                     <Textarea
                       rows={4}
@@ -1230,9 +1265,9 @@ const AdminSiteDiary = () => {
                       }
                       disabled={!canEditDetail}
                     />
-                  </div>
+                  </FieldScope>
                   <div className="grid grid-cols-2 gap-3">
-                    <div>
+                    <FieldScope>
                       <Label>{t("siteDiary.field.machines")}</Label>
                       <Textarea
                         rows={2}
@@ -1242,8 +1277,8 @@ const AdminSiteDiary = () => {
                         }
                         disabled={!canEditDetail}
                       />
-                    </div>
-                    <div>
+                    </FieldScope>
+                    <FieldScope>
                       <Label>{t("siteDiary.field.materials")}</Label>
                       <Textarea
                         rows={2}
@@ -1253,9 +1288,9 @@ const AdminSiteDiary = () => {
                         }
                         disabled={!canEditDetail}
                       />
-                    </div>
+                    </FieldScope>
                   </div>
-                  <div>
+                  <FieldScope>
                     <Label>{t("siteDiary.field.incidents")}</Label>
                     <Textarea
                       rows={2}
@@ -1265,8 +1300,8 @@ const AdminSiteDiary = () => {
                       }
                       disabled={!canEditDetail}
                     />
-                  </div>
-                  <div>
+                  </FieldScope>
+                  <FieldScope>
                     <Label>{t("siteDiary.field.note")}</Label>
                     <Textarea
                       rows={2}
@@ -1274,11 +1309,11 @@ const AdminSiteDiary = () => {
                       onChange={(e) => setDetailForm((f) => f && { ...f, note: e.target.value })}
                       disabled={!canEditDetail}
                     />
-                  </div>
+                  </FieldScope>
 
                   {detail.status !== "Draft" && (
-                    <div className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
-                      <p className="mb-2 font-medium text-slate-700">
+                    <div className="rounded-md border border-border bg-muted/30 p-3 text-xs text-muted-foreground">
+                      <p className="mb-2 font-medium text-foreground">
                         {t("siteDiary.action.draftOnly")}
                       </p>
                       {detail.submittedByName && (
@@ -1438,38 +1473,6 @@ const AdminSiteDiary = () => {
   );
 };
 
-// ------------------ small building blocks ------------------
-
-interface StatTileProps {
-  icon: React.ReactNode;
-  label: string;
-  value: number;
-  gradient: string;
-}
-
-const StatTile = ({ icon, label, value, gradient }: StatTileProps) => (
-  <div
-    className={cn(
-      "relative overflow-hidden rounded-xl bg-gradient-to-br p-4 text-white shadow-sm",
-      gradient,
-    )}
-  >
-    <div className="relative z-10 flex items-start justify-between gap-2">
-      <div className="min-w-0">
-        <div className="text-sm font-medium text-white/85">{label}</div>
-        <div className="mt-1 text-3xl font-bold tabular-nums leading-none">{value}</div>
-      </div>
-      <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg bg-white/20 backdrop-blur-sm">
-        {icon}
-      </div>
-    </div>
-    <div
-      aria-hidden
-      className="pointer-events-none absolute -right-6 -top-6 h-24 w-24 rounded-full bg-white/10"
-    />
-  </div>
-);
-
 interface HeadcountFieldProps {
   label: string;
   value: number;
@@ -1478,8 +1481,8 @@ interface HeadcountFieldProps {
 }
 
 const HeadcountField = ({ label, value, onChange, disabled }: HeadcountFieldProps) => (
-  <div>
-    <Label className="text-xs text-slate-500">{label}</Label>
+  <FieldScope>
+    <Label className="text-xs text-muted-foreground">{label}</Label>
     <Input
       type="number"
       min={0}
@@ -1488,7 +1491,7 @@ const HeadcountField = ({ label, value, onChange, disabled }: HeadcountFieldProp
       disabled={disabled}
       className="tabular-nums"
     />
-  </div>
+  </FieldScope>
 );
 
 export default AdminSiteDiary;

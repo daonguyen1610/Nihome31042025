@@ -479,6 +479,12 @@ for (const width of [390, 1440]) {
     await page.setViewportSize({ width, height: 900 });
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto("/admin/work-packages");
+    const openFilters = async () => {
+      if (width >= 640) return;
+      const toggle = page.locator('button[aria-controls="wp-filters-more"]');
+      if ((await toggle.getAttribute("aria-expanded")) === "false") await toggle.click();
+    };
+    await openFilters();
     const expectFiltered = async (action: () => Promise<unknown>, key: string, value: string) => {
       const loaded = page.waitForResponse((res) => {
         const url = new URL(res.url());
@@ -525,6 +531,7 @@ for (const width of [390, 1440]) {
     );
     await expect(page.getByTestId("work-package-card")).toHaveCount(1);
     await page.reload();
+    await openFilters();
     await expect(page.locator("#wp-department")).toHaveValue(String(fixture.departmentRoleGroupId));
     await expect(page.locator("#wp-status")).toHaveValue(fixture.status);
     await expect(page.locator("#wp-purpose")).toHaveValue(fixture.purpose);
@@ -541,6 +548,7 @@ for (const width of [390, 1440]) {
     );
     await expect(page.getByText("Chưa có nhóm công việc phù hợp.")).toBeVisible();
     await page.getByRole("link", { name: /Công việc nội bộ|Internal work/i }).click();
+    await openFilters();
     await expect(page.locator("#wp-project")).toHaveCount(0);
     await expect(page.locator("#wp-department")).toHaveValue(String(fixture.departmentRoleGroupId));
     await expect(page).not.toHaveURL(/projectId=/);

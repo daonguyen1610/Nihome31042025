@@ -2210,6 +2210,9 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<string>("FilesJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<long?>("FileSize")
                         .HasColumnType("bigint");
 

@@ -81,7 +81,7 @@ const ServiceDetail = () => {
               </p>
               <div className="flex flex-wrap gap-2.5 mt-7">
                 {svc.highlights.map((h) => (
-                  <span key={h} className="chip chip-primary bg-white/90 border border-primary/20">
+                  <span key={h} className="chip chip-primary bg-card/90 border border-primary/20">
                     {h}
                   </span>
                 ))}

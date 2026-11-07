@@ -1,3 +1,5 @@
+import { useUiError } from "@/hooks/useUiError";
+import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
@@ -16,6 +18,7 @@ import {
   RotateCcw,
   Trash2,
   Upload,
+  X,
   XCircle,
 } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
@@ -70,7 +73,7 @@ const ALLOWED_EXTENSIONS = new Set([
 const ACTIVE_SYNC_STATUSES = new Set<SurveyMediaSyncStatus>(["Pending", "Processing"]);
 
 const SYNC_BADGE: Record<SurveyMediaSyncStatus, string> = {
-  Pending: "border-slate-200 bg-slate-50 text-slate-700",
+  Pending: "border-border bg-muted/30 text-foreground",
   Processing: "border-amber-200 bg-amber-50 text-amber-700",
   Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
   Failed: "border-rose-200 bg-rose-50 text-rose-700",
@@ -99,13 +102,13 @@ type Props = {
 };
 
 type UploadDraft = {
-  file: File | null;
+  files: File[];
   note: string;
   latitude: string;
   longitude: string;
 };
 
-const emptyUpload = (): UploadDraft => ({ file: null, note: "", latitude: "", longitude: "" });
+const emptyUpload = (): UploadDraft => ({ files: [], note: "", latitude: "", longitude: "" });
 
 const extensionOf = (fileName: string) => fileName.split(".").pop()?.toLowerCase() ?? "";
 
@@ -166,6 +169,7 @@ export default function SurveyMediaPanel({
   formatDateTime,
   targetMediaId,
 }: Props) {
+  const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -197,12 +201,12 @@ export default function SurveyMediaPanel({
       setDriveConnection({
         status: "Unavailable",
         syncMode: "PushOnly",
-        error: extractApiError(error),
+        error: uiError(error),
       });
     } finally {
       setDriveConnectionLoading(false);
     }
-  }, []);
+  }, [uiError]);
 
   useEffect(() => {
     void checkDriveConnection();
@@ -244,25 +248,44 @@ export default function SurveyMediaPanel({
     return `${new Intl.NumberFormat(lang, { maximumFractionDigits: 1 }).format(bytes / 1024 / 1024)} MB`;
   };
 
-  const selectFile = (file?: File) => {
-    if (!file) return;
-    if (!ALLOWED_EXTENSIONS.has(extensionOf(file.name))) {
-      toast({
-        title: t("common.error"),
-        description: t("surveys.media.validation.format"),
-        variant: "destructive",
-      });
-      return;
+  const addFiles = (selected: File[]) => {
+    if (selected.length === 0) return;
+    const accepted: File[] = [];
+    for (const file of selected) {
+      if (!ALLOWED_EXTENSIONS.has(extensionOf(file.name))) {
+        toast({
+          title: t("common.error"),
+          description: t("surveys.media.validation.format"),
+          variant: "destructive",
+        });
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        toast({
+          title: t("common.error"),
+          description: t("surveys.media.validation.size"),
+          variant: "destructive",
+        });
+        continue;
+      }
+      accepted.push(file);
     }
-    if (file.size > MAX_FILE_SIZE) {
-      toast({
-        title: t("common.error"),
-        description: t("surveys.media.validation.size"),
-        variant: "destructive",
-      });
-      return;
-    }
-    setUpload((current) => ({ ...current, file }));
+    if (accepted.length === 0) return;
+    setUpload((current) => ({
+      ...current,
+      files: [
+        ...current.files,
+        ...accepted.filter(
+          (file) =>
+            !current.files.some(
+              (existing) =>
+                existing.name === file.name &&
+                existing.size === file.size &&
+                existing.lastModified === file.lastModified,
+            ),
+        ),
+      ],
+    }));
   };
 
   const requestLocation = () => {
@@ -297,7 +320,7 @@ export default function SurveyMediaPanel({
   };
 
   const submitUpload = async () => {
-    if (!upload.file) {
+    if (upload.files.length === 0) {
       toast({
         title: t("common.error"),
         description: t("surveys.media.validation.fileRequired"),
@@ -322,22 +345,42 @@ export default function SurveyMediaPanel({
 
     setUploading(true);
     try {
-      await adminApi.uploadSurveyMedia(survey.id, {
-        file: upload.file,
-        note: upload.note.trim() || undefined,
-        capturedAt: new Date(upload.file.lastModified).toISOString(),
-        latitude,
-        longitude,
-      });
-      setUpload(emptyUpload());
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      if (cameraInputRef.current) cameraInputRef.current.value = "";
-      toast({ title: t("surveys.media.uploaded") });
-      await onRefresh();
+      const failedFiles: File[] = [];
+      let uploadedCount = 0;
+      for (const file of upload.files) {
+        try {
+          await adminApi.uploadSurveyMedia(survey.id, {
+            file,
+            note: upload.note.trim() || undefined,
+            capturedAt: new Date(file.lastModified).toISOString(),
+            latitude,
+            longitude,
+          });
+          uploadedCount += 1;
+        } catch {
+          failedFiles.push(file);
+        }
+      }
+      if (failedFiles.length === 0) {
+        setUpload(emptyUpload());
+        if (fileInputRef.current) fileInputRef.current.value = "";
+        if (cameraInputRef.current) cameraInputRef.current.value = "";
+        toast({ title: t("surveys.media.uploaded") });
+      } else {
+        setUpload((current) => ({ ...current, files: failedFiles }));
+        toast({
+          title: t("common.error"),
+          description: t("surveys.media.validation.uploadFailed")
+            .replace("{failed}", String(failedFiles.length))
+            .replace("{total}", String(upload.files.length)),
+          variant: "destructive",
+        });
+      }
+      if (uploadedCount > 0) await onRefresh();
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -356,7 +399,7 @@ export default function SurveyMediaPanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -373,7 +416,7 @@ export default function SurveyMediaPanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -388,7 +431,7 @@ export default function SurveyMediaPanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -422,7 +465,7 @@ export default function SurveyMediaPanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -444,7 +487,7 @@ export default function SurveyMediaPanel({
     } catch (error) {
       toast({
         title: t("common.error"),
-        description: extractApiError(error),
+        description: uiError(error),
         variant: "destructive",
       });
     } finally {
@@ -454,18 +497,18 @@ export default function SurveyMediaPanel({
 
   return (
     <div className="space-y-4" data-testid="survey-media-panel">
-      <section className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm">
+      <section className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <h2 className="font-semibold text-slate-900">{t("surveys.media.title")}</h2>
-            <p className="mt-1 text-xs text-slate-500">
+            <h2 className="font-semibold text-foreground">{t("surveys.media.title")}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">
               {survey.media.length} · {formatSize(totalSize)} / 2 GB
             </p>
           </div>
           <div className="flex flex-wrap gap-2">
             {survey.driveFolderLink ? (
               <Button asChild size="sm" variant="outline">
-                <a href={survey.driveFolderLink} target="_blank" rel="noreferrer">
+                <a href={survey.driveFolderLink} target="_blank" rel="noreferrer noopener">
                   <Cloud className="mr-1.5 h-4 w-4" />
                   {t("surveys.media.openDrive")}
                 </a>
@@ -488,13 +531,13 @@ export default function SurveyMediaPanel({
         </div>
 
         <div
-          className="mt-4 rounded-lg border border-slate-200 bg-slate-50/70 p-3"
+          className="mt-4 rounded-lg border border-border bg-muted/70 p-3"
           data-testid="survey-drive-connection"
         >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <p className="text-sm font-medium text-slate-900">
+                <p className="text-sm font-medium text-foreground">
                   {t("surveys.driveConnection.title")}
                 </p>
                 {driveConnection ? (
@@ -509,25 +552,25 @@ export default function SurveyMediaPanel({
                 ) : null}
                 <Badge variant="outline">{t("surveys.driveConnection.pushOnly")}</Badge>
               </div>
-              <p className="mt-1 text-xs text-slate-600">
+              <p className="mt-1 text-xs text-muted-foreground">
                 {driveConnection
                   ? t(`surveys.driveConnection.description.${driveConnection.status}`)
                   : t("surveys.driveConnection.checking")}
               </p>
               {driveConnection?.accountEmail ? (
-                <p className="mt-1 break-all text-xs text-slate-500">
+                <p className="mt-1 break-all text-xs text-muted-foreground">
                   {t("surveys.driveConnection.authenticatedAccount")}:{" "}
                   {driveConnection.accountEmail}
                 </p>
               ) : null}
               {driveConnection?.storageType ? (
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("surveys.driveConnection.storageType")}:{" "}
                   {t(`surveys.driveConnection.storage.${driveConnection.storageType}`)}
                 </p>
               ) : null}
               {driveConnection?.rootFolderName ? (
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-xs text-muted-foreground">
                   {t("surveys.driveConnection.folder")}: {driveConnection.rootFolderName}
                 </p>
               ) : null}
@@ -540,7 +583,11 @@ export default function SurveyMediaPanel({
             <div className="flex flex-wrap gap-2">
               {driveConnection?.rootFolderLink ? (
                 <Button asChild size="sm" variant="outline">
-                  <a href={driveConnection.rootFolderLink} target="_blank" rel="noreferrer">
+                  <a
+                    href={driveConnection.rootFolderLink}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                  >
                     <ExternalLink className="mr-1.5 h-4 w-4" />
                     {t("surveys.driveConnection.openRoot")}
                   </a>
@@ -564,7 +611,7 @@ export default function SurveyMediaPanel({
         </div>
 
         {canManage ? (
-          <div className="mt-4 rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-3">
+          <div className="mt-4 rounded-lg border border-dashed border-input bg-muted/60 p-3">
             <div className="flex flex-wrap gap-2">
               <Button
                 type="button"
@@ -604,8 +651,12 @@ export default function SurveyMediaPanel({
                 ref={fileInputRef}
                 type="file"
                 className="hidden"
+                multiple
                 accept=".jpg,.jpeg,.png,.heic,.mp4,.mov,.pdf,.dwg,.rvt"
-                onChange={(event) => selectFile(event.target.files?.[0])}
+                onChange={(event) => {
+                  addFiles(Array.from(event.target.files ?? []));
+                  event.target.value = "";
+                }}
               />
               <input
                 ref={cameraInputRef}
@@ -613,16 +664,45 @@ export default function SurveyMediaPanel({
                 className="hidden"
                 accept="image/*"
                 capture="environment"
-                onChange={(event) => selectFile(event.target.files?.[0])}
+                onChange={(event) => {
+                  addFiles(Array.from(event.target.files ?? []));
+                  event.target.value = "";
+                }}
               />
             </div>
-            {upload.file ? (
-              <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto] lg:items-end">
-                <div>
-                  <p className="mb-1 truncate text-xs font-medium text-slate-700">
-                    {upload.file.name} · {formatSize(upload.file.size)}
-                  </p>
+            {upload.files.length > 0 ? (
+              <div className="mt-3 space-y-3">
+                <ul className="space-y-1.5">
+                  {upload.files.map((file, index) => (
+                    <li
+                      key={`${file.name}-${file.lastModified}-${index}`}
+                      className="flex items-center gap-2 rounded-md border bg-background px-2.5 py-1.5 text-sm"
+                    >
+                      <File className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      <span className="min-w-0 flex-1 break-all">{file.name}</span>
+                      <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                        {formatSize(file.size)}
+                      </span>
+                      <button
+                        type="button"
+                        disabled={uploading}
+                        onClick={() =>
+                          setUpload((current) => ({
+                            ...current,
+                            files: current.files.filter((_, i) => i !== index),
+                          }))
+                        }
+                        aria-label={`${t("common.filePicker.remove")}: ${file.name}`}
+                        className="flex h-8 w-8 shrink-0 items-center justify-center rounded text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+                <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_180px_auto] lg:items-end">
                   <Textarea
+                    aria-label={t("a11yUi.note")}
                     value={upload.note}
                     maxLength={2000}
                     rows={2}
@@ -631,47 +711,47 @@ export default function SurveyMediaPanel({
                       setUpload((current) => ({ ...current, note: event.target.value }))
                     }
                   />
+                  <Input
+                    inputMode="decimal"
+                    value={upload.latitude}
+                    placeholder={t("surveys.media.latitude")}
+                    aria-label={t("surveys.media.latitude")}
+                    onChange={(event) =>
+                      setUpload((current) => ({ ...current, latitude: event.target.value }))
+                    }
+                  />
+                  <Input
+                    inputMode="decimal"
+                    value={upload.longitude}
+                    placeholder={t("surveys.media.longitude")}
+                    aria-label={t("surveys.media.longitude")}
+                    onChange={(event) =>
+                      setUpload((current) => ({ ...current, longitude: event.target.value }))
+                    }
+                  />
+                  <Button
+                    onClick={() => void submitUpload()}
+                    disabled={uploading}
+                    data-testid="survey-media-upload"
+                  >
+                    {uploading ? (
+                      <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Upload className="mr-1.5 h-4 w-4" />
+                    )}
+                    {t("surveys.media.upload")}
+                  </Button>
                 </div>
-                <Input
-                  inputMode="decimal"
-                  value={upload.latitude}
-                  placeholder={t("surveys.media.latitude")}
-                  aria-label={t("surveys.media.latitude")}
-                  onChange={(event) =>
-                    setUpload((current) => ({ ...current, latitude: event.target.value }))
-                  }
-                />
-                <Input
-                  inputMode="decimal"
-                  value={upload.longitude}
-                  placeholder={t("surveys.media.longitude")}
-                  aria-label={t("surveys.media.longitude")}
-                  onChange={(event) =>
-                    setUpload((current) => ({ ...current, longitude: event.target.value }))
-                  }
-                />
-                <Button
-                  onClick={() => void submitUpload()}
-                  disabled={uploading}
-                  data-testid="survey-media-upload"
-                >
-                  {uploading ? (
-                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
-                  ) : (
-                    <Upload className="mr-1.5 h-4 w-4" />
-                  )}
-                  {t("surveys.media.upload")}
-                </Button>
               </div>
             ) : (
-              <p className="mt-2 text-xs text-slate-500">{t("surveys.media.uploadHint")}</p>
+              <p className="mt-2 text-xs text-muted-foreground">{t("surveys.media.uploadHint")}</p>
             )}
           </div>
         ) : null}
 
         {survey.media.length === 0 ? (
-          <div className="mt-4 rounded-lg border border-dashed p-8 text-center text-sm text-slate-500">
-            <ImageIcon className="mx-auto mb-2 h-7 w-7 text-slate-400" />
+          <div className="mt-4 rounded-lg border border-dashed p-8 text-center text-sm text-muted-foreground">
+            <ImageIcon className="mx-auto mb-2 h-7 w-7 text-muted-foreground" />
             {t("surveys.media.empty")}
           </div>
         ) : (
@@ -681,25 +761,25 @@ export default function SurveyMediaPanel({
                 key={media.id}
                 id={`survey-media-${media.id}`}
                 className={cn(
-                  "overflow-hidden rounded-lg border border-slate-200 bg-white transition-shadow duration-300",
+                  "overflow-hidden rounded-lg border border-border bg-card transition-shadow duration-300",
                   highlightedMediaId === media.id && "ring-2 ring-sky-500 ring-offset-2",
                 )}
                 data-testid="survey-media-card"
                 data-highlighted={highlightedMediaId === media.id ? "true" : undefined}
               >
-                <div className="flex h-36 items-center justify-center bg-slate-100 text-slate-400">
+                <div className="flex h-36 items-center justify-center bg-muted text-muted-foreground">
                   <SurveyMediaThumbnail surveyId={survey.id} media={media} />
                 </div>
                 <div className="p-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p
-                        className="truncate text-sm font-medium text-slate-900"
+                        className="truncate text-sm font-medium text-foreground"
                         title={media.originalFileName}
                       >
                         {media.originalFileName}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         {formatSize(media.size)} ·{" "}
                         {formatDateTime(media.capturedAt ?? media.createdAt)}
                       </p>
@@ -715,14 +795,14 @@ export default function SurveyMediaPanel({
                     </Badge>
                   </div>
                   {media.note ? (
-                    <p className="mt-2 line-clamp-2 text-xs text-slate-600">{media.note}</p>
+                    <p className="mt-2 line-clamp-2 text-xs text-muted-foreground">{media.note}</p>
                   ) : null}
                   {media.latitude != null && media.longitude != null ? (
                     <a
                       className="mt-2 inline-flex items-center gap-1 text-xs text-sky-700 hover:underline"
                       href={`https://www.openstreetmap.org/?mlat=${media.latitude}&mlon=${media.longitude}#map=18/${media.latitude}/${media.longitude}`}
                       target="_blank"
-                      rel="noreferrer"
+                      rel="noreferrer noopener"
                     >
                       <MapPin className="h-3 w-3" />
                       {t("surveys.media.viewMap")} <ExternalLink className="h-3 w-3" />
@@ -772,7 +852,7 @@ export default function SurveyMediaPanel({
                       </Button>
                     ) : null}
                   </div>
-                  <p className="mt-2 text-[11px] text-slate-400">
+                  <p className="mt-2 text-[11px] text-muted-foreground">
                     {t("surveys.media.attempts")}: {media.syncAttemptCount}/{media.maxSyncAttempts}
                   </p>
                 </div>
@@ -783,18 +863,18 @@ export default function SurveyMediaPanel({
       </section>
 
       <section
-        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+        className="rounded-lg border border-border bg-card p-4 shadow-sm"
         data-testid="survey-checklist"
       >
         <div className="flex items-center justify-between gap-2">
           <div>
-            <h2 className="font-semibold text-slate-900">{t("surveys.checklist.title")}</h2>
-            <p className="mt-1 text-xs text-slate-500">{t("surveys.checklist.hint")}</p>
+            <h2 className="font-semibold text-foreground">{t("surveys.checklist.title")}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t("surveys.checklist.hint")}</p>
           </div>
           <ClipboardStatus checklist={survey.checklistResults} />
         </div>
         {survey.checklistResults.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">{t("surveys.checklist.empty")}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{t("surveys.checklist.empty")}</p>
         ) : (
           <div className="mt-4 space-y-2">
             {survey.checklistResults.map((item) => {
@@ -802,9 +882,9 @@ export default function SurveyMediaPanel({
               return (
                 <div
                   key={item.id}
-                  className="grid gap-2 rounded-lg border border-slate-200 p-3 md:grid-cols-[minmax(160px,1fr)_180px_minmax(220px,1fr)_auto] md:items-center"
+                  className="grid gap-2 rounded-lg border border-border p-3 md:grid-cols-[minmax(160px,1fr)_180px_minmax(220px,1fr)_auto] md:items-center"
                 >
-                  <p className="text-sm font-medium text-slate-800">
+                  <p className="text-sm font-medium text-foreground">
                     {localizedChecklistTitle(item, t)}
                   </p>
                   <Select
@@ -814,7 +894,7 @@ export default function SurveyMediaPanel({
                       updateChecklistDraft(item.id, { status: value as SurveyChecklistStatus })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger aria-label={t("common.status")}>
                       <SelectValue placeholder={t("surveys.checklist.selectStatus")} />
                     </SelectTrigger>
                     <SelectContent>
@@ -826,6 +906,7 @@ export default function SurveyMediaPanel({
                     </SelectContent>
                   </Select>
                   <Input
+                    aria-label={t("a11yUi.note")}
                     value={draft.note ?? ""}
                     disabled={!canManage}
                     maxLength={2000}
@@ -854,13 +935,13 @@ export default function SurveyMediaPanel({
       </section>
 
       <section
-        className="rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+        className="rounded-lg border border-border bg-card p-4 shadow-sm"
         data-testid="survey-sync-log"
       >
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div>
-            <h2 className="font-semibold text-slate-900">{t("surveys.syncLog.title")}</h2>
-            <p className="mt-1 text-xs text-slate-500">{t("surveys.syncLog.hint")}</p>
+            <h2 className="font-semibold text-foreground">{t("surveys.syncLog.title")}</h2>
+            <p className="mt-1 text-xs text-muted-foreground">{t("surveys.syncLog.hint")}</p>
           </div>
           <Button
             size="sm"
@@ -877,11 +958,11 @@ export default function SurveyMediaPanel({
           </Button>
         </div>
         {syncLog.length === 0 ? (
-          <p className="mt-4 text-sm text-slate-500">{t("surveys.syncLog.empty")}</p>
+          <p className="mt-4 text-sm text-muted-foreground">{t("surveys.syncLog.empty")}</p>
         ) : (
           <div className="mt-3 overflow-x-auto">
             <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="border-b text-xs uppercase text-slate-500">
+              <thead className="border-b text-xs uppercase text-muted-foreground">
                 <tr>
                   <th className="py-2 pr-3">{t("surveys.syncLog.file")}</th>
                   <th className="py-2 pr-3">{t("surveys.syncLog.status")}</th>

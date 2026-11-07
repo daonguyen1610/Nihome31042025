@@ -184,7 +184,7 @@ const Dashboard = () => {
               style={{ background: s.bg }}
             >
               <div className="relative z-10 mb-6 flex items-start justify-between">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/15 backdrop-blur">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-card/15 backdrop-blur">
                   <s.icon className="h-5 w-5" strokeWidth={1.75} />
                 </div>
                 <ArrowUpRight className="h-4 w-4 opacity-60" />
@@ -277,7 +277,7 @@ const Dashboard = () => {
             className="relative overflow-hidden rounded-lg p-6 text-white shadow-sm"
             style={{ background: "linear-gradient(135deg, hsl(244 75% 64%), hsl(255 80% 72%))" }}
           >
-            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-white/10" />
+            <div className="absolute -right-10 -top-10 h-40 w-40 rounded-full bg-card/10" />
             <p className="text-xs font-medium uppercase tracking-wider opacity-80">
               {t("dash.quickAction")}
             </p>
@@ -287,7 +287,7 @@ const Dashboard = () => {
               asChild
               size="sm"
               variant="secondary"
-              className="relative z-10 bg-white text-primary hover:bg-white/90"
+              className="relative z-10 bg-card text-primary hover:bg-card/90"
             >
               <Link to="/admin/activities/new">
                 <Plus className="mr-1.5 h-4 w-4" /> {t("activities.create")}
