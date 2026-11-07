@@ -197,7 +197,7 @@ const AdminPermits = () => {
           adminApi.listOperationalProjects({ pageSize: 200 }).catch(() => ({
             data: { total: 0, page: 1, pageSize: 200, items: [] },
           })),
-          adminApi.getMasterDataOptions("permit_type").catch(() => ({ data: [] })),
+          adminApi.getMasterDataOptions("permit_type", lang).catch(() => ({ data: [] })),
         ]);
         if (cancelled) return;
         setProjects(projResp.data.items ?? []);
@@ -226,7 +226,7 @@ const AdminPermits = () => {
     return () => {
       cancelled = true;
     };
-  }, [canPickUser]);
+  }, [canPickUser, lang]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);

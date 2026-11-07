@@ -152,7 +152,7 @@ const emptyCreate = (): CreateOpportunityRequest => ({
 });
 
 const AdminOpportunities = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const navigate = useNavigate();
@@ -265,7 +265,7 @@ const AdminOpportunities = () => {
         /* non-fatal — dropdown will just be empty */
       }
       try {
-        const { data } = await adminApi.getMasterDataOptions("opportunity_lost_reason");
+        const { data } = await adminApi.getMasterDataOptions("opportunity_lost_reason", lang);
         if (!cancelled) setLostReasons(data);
       } catch {
         /* non-fatal */
@@ -284,7 +284,7 @@ const AdminOpportunities = () => {
     return () => {
       cancelled = true;
     };
-  }, [canSeeAll]);
+  }, [canSeeAll, lang]);
 
   const customerLabel = useMemo(() => {
     const map = new Map<number, string>();

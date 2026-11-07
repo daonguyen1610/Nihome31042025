@@ -30,8 +30,9 @@ public class MasterDataController(IMasterDataService svc, IAuditLogger audit) : 
     public async Task<ActionResult<List<MasterDataOptionResponse>>> GetByCategory(
         string category,
         [FromQuery] bool includeInactive = false,
+        [FromQuery] string lang = "vi",
         CancellationToken ct = default)
-        => Ok(await svc.GetByCategoryAsync(category, includeInactive, ct));
+        => Ok(await svc.GetByCategoryAsync(category, includeInactive, lang, ct));
 
     [HttpGet("options/{id:int}")]
     [RequirePermission("master-data", "view")]

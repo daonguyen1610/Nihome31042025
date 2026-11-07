@@ -17,7 +17,11 @@ import culture1 from "@/assets/recruit-culture-1.jpg";
 import culture2 from "@/assets/recruit-culture-2.jpg";
 import culture3 from "@/assets/recruit-culture-3.jpg";
 import { useToast } from "@/hooks/use-toast";
-import { useEmploymentTypes, useJobPositions } from "@/hooks/useContentApi";
+import {
+  useEmploymentTypes,
+  useExperienceLevelOptions,
+  useJobPositions,
+} from "@/hooks/useContentApi";
 import { contentApi } from "@/services/contentApi";
 import { useI18n } from "@/lib/i18n";
 
@@ -37,31 +41,29 @@ const emptyForm: ApplicationForm = {
   coverLetter: "",
 };
 
-function getExperienceLabel(value: string, t: (key: string) => string) {
-  switch (value) {
-    case "student":
-      return t("rec.exp.student");
-    case "junior":
-      return t("rec.exp.junior");
-    case "mid":
-      return t("rec.exp.mid");
-    case "senior":
-      return t("rec.exp.senior");
-    default:
-      return value;
-  }
-}
-
 const EMP_TYPE_KEY_MAP: Record<string, string> = {
   "full-time": "rec.empType.fullTime",
   "part-time": "rec.empType.partTime",
   intern: "rec.empType.intern",
 };
 
-function getEmploymentTypeLabel(code: string, fallback: string, t: (key: string) => string) {
-  const key = EMP_TYPE_KEY_MAP[code];
-  if (key) return t(key);
-  return fallback || code;
+const EXPERIENCE_KEY_MAP: Record<string, string> = {
+  student: "rec.exp.student",
+  junior: "rec.exp.junior",
+  mid: "rec.exp.mid",
+  senior: "rec.exp.senior",
+};
+
+function getEmploymentTypeLabel(
+  code: string,
+  names: Map<string, string>,
+  t: (key: string) => string,
+) {
+  return names.get(code) ?? (EMP_TYPE_KEY_MAP[code] ? t(EMP_TYPE_KEY_MAP[code]) : code);
+}
+
+function getExperienceLabel(code: string, names: Map<string, string>, t: (key: string) => string) {
+  return names.get(code) ?? (EXPERIENCE_KEY_MAP[code] ? t(EXPERIENCE_KEY_MAP[code]) : code);
 }
 
 const Recruitment = () => {
@@ -69,10 +71,15 @@ const Recruitment = () => {
   const { toast } = useToast();
   const { data, loading, error, refetch } = useJobPositions();
   const { data: employmentTypeData } = useEmploymentTypes();
+  const { data: experienceLevelData } = useExperienceLevelOptions();
   const positions = useMemo(() => data ?? [], [data]);
   const employmentTypeMap = useMemo(
     () => new Map((employmentTypeData ?? []).map((item) => [item.code, item.name])),
     [employmentTypeData],
+  );
+  const experienceLevelMap = useMemo(
+    () => new Map((experienceLevelData ?? []).map((item) => [item.code, item.name])),
+    [experienceLevelData],
   );
   const [selectedPositionId, setSelectedPositionId] = useState<number | null>(null);
   const [form, setForm] = useState<ApplicationForm>(emptyForm);
@@ -296,15 +303,11 @@ const Recruitment = () => {
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5" />{" "}
-                        {getEmploymentTypeLabel(
-                          position.employmentType,
-                          employmentTypeMap.get(position.employmentType) ?? position.employmentType,
-                          t,
-                        )}
+                        {getEmploymentTypeLabel(position.employmentType, employmentTypeMap, t)}
                       </span>
                       <span className="flex items-center gap-1.5">
                         <Briefcase className="w-3.5 h-3.5" />{" "}
-                        {getExperienceLabel(position.experienceLevel, t)}
+                        {getExperienceLabel(position.experienceLevel, experienceLevelMap, t)}
                       </span>
                     </div>
                     {position.requirements.length > 0 && (

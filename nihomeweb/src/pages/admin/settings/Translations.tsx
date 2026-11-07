@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   Search,
@@ -12,7 +12,7 @@ import {
   Loader2,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { useI18n } from "@/lib/i18n";
+import { TRANSLATIONS_CHANGED_EVENT, useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -290,6 +290,14 @@ const TranslationsPage = () => {
   const [selectedType, setSelectedType] = useState(searchParams.get("type") ?? "");
   const [entityItems, setEntityItems] = useState<EntityItem[]>([]);
   const [entityLoading, setEntityLoading] = useState(false);
+  const [entitySearch, setEntitySearch] = useState("");
+  const filteredEntityItems = useMemo(() => {
+    const query = entitySearch.trim().toLowerCase();
+    if (!query) return entityItems;
+    return entityItems.filter((item) =>
+      `${item.title} ${item.description ?? ""}`.toLowerCase().includes(query),
+    );
+  }, [entityItems, entitySearch]);
 
   /* ── Entity translate modal ── */
   const [entityModalOpen, setEntityModalOpen] = useState(false);
@@ -531,6 +539,9 @@ const TranslationsPage = () => {
         languageCode: entityModalLang,
         translations: fields,
       });
+      if (entityModalType.type === "RoleGroup") {
+        window.dispatchEvent(new Event(TRANSLATIONS_CHANGED_EVENT));
+      }
       toast({ title: t("form.updated") });
       setEntityModalOpen(false);
       fetchEntities();
@@ -547,6 +558,9 @@ const TranslationsPage = () => {
     setEntitySaving(true);
     try {
       await api.delete(`/translations/entity/${entityModalType.type}/${entityModalItem.id}`);
+      if (entityModalType.type === "RoleGroup") {
+        window.dispatchEvent(new Event(TRANSLATIONS_CHANGED_EVENT));
+      }
       toast({ title: t("translations.resetSuccess") });
       setEntityModalOpen(false);
       fetchEntities();
@@ -853,7 +867,13 @@ const TranslationsPage = () => {
           <div className="space-y-4">
             <div className="flex flex-wrap items-center gap-3">
               <Label className="text-sm">{t("translations.contentType")}:</Label>
-              <Select value={selectedType} onValueChange={setSelectedType}>
+              <Select
+                value={selectedType}
+                onValueChange={(value) => {
+                  setSelectedType(value);
+                  setEntitySearch("");
+                }}
+              >
                 <SelectTrigger className="h-9 w-[220px]">
                   <SelectValue />
                 </SelectTrigger>
@@ -865,19 +885,29 @@ const TranslationsPage = () => {
                   ))}
                 </SelectContent>
               </Select>
+              <div className="relative min-w-[200px] flex-1 sm:max-w-xs">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <Input
+                  value={entitySearch}
+                  onChange={(event) => setEntitySearch(event.target.value)}
+                  placeholder={t("common.search")}
+                  className="h-9 pl-9"
+                  aria-label={t("common.search")}
+                />
+              </div>
             </div>
 
             {entityLoading ? (
               <div className="flex items-center justify-center py-16">
                 <Loader2 className="h-6 w-6 animate-spin text-primary" />
               </div>
-            ) : entityItems.length === 0 ? (
+            ) : filteredEntityItems.length === 0 ? (
               <div className="rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
-                {t("translations.entityEmpty")}
+                {entityItems.length === 0 ? t("translations.entityEmpty") : t("common.noResults")}
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-                {entityItems.map((item) => (
+                {filteredEntityItems.map((item) => (
                   <div key={item.id} className="flex flex-col gap-3 rounded-lg border bg-card p-5">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">

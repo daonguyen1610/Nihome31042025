@@ -22,6 +22,7 @@ import type {
   JobPositionResponse,
   JobApplicationResponse,
   EmploymentTypeResponse,
+  RecruitmentDropdownOptionResponse,
 } from "@/services/adminApi";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
@@ -47,25 +48,23 @@ const EMP_TYPE_KEY_MAP: Record<string, string> = {
   intern: "rec.empType.intern",
 };
 
-function getEmploymentTypeLabel(code: string, fallback: string, t: (key: string) => string) {
-  const key = EMP_TYPE_KEY_MAP[code];
-  if (key) return t(key);
-  return fallback || code;
+const EXPERIENCE_KEY_MAP: Record<string, string> = {
+  student: "rec.exp.student",
+  junior: "rec.exp.junior",
+  mid: "rec.exp.mid",
+  senior: "rec.exp.senior",
+};
+
+function getEmploymentTypeLabel(
+  code: string,
+  names: Map<string, string>,
+  t: (key: string) => string,
+) {
+  return names.get(code) ?? (EMP_TYPE_KEY_MAP[code] ? t(EMP_TYPE_KEY_MAP[code]) : code);
 }
 
-function getExperienceLabel(code: string, t: (key: string) => string) {
-  switch (code) {
-    case "student":
-      return t("rec.exp.student");
-    case "junior":
-      return t("rec.exp.junior");
-    case "mid":
-      return t("rec.exp.mid");
-    case "senior":
-      return t("rec.exp.senior");
-    default:
-      return code;
-  }
+function getExperienceLabel(code: string, names: Map<string, string>, t: (key: string) => string) {
+  return names.get(code) ?? (EXPERIENCE_KEY_MAP[code] ? t(EXPERIENCE_KEY_MAP[code]) : code);
 }
 
 const APP_STATUS_STYLES: Record<string, string> = {
@@ -92,7 +91,7 @@ function getErrorMessage(error: unknown) {
 }
 
 const AdminRecruitment = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
 
   const [positions, setPositions] = useState<JobPositionResponse[]>([]);
@@ -101,6 +100,7 @@ const AdminRecruitment = () => {
   const [loadingApps, setLoadingApps] = useState(true);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [employmentTypes, setEmploymentTypes] = useState<EmploymentTypeResponse[]>([]);
+  const [experienceLevels, setExperienceLevels] = useState<RecruitmentDropdownOptionResponse[]>([]);
   const [filterPosition, setFilterPosition] = useState<number | "">("");
   const [filterStatus, setFilterStatus] = useState<string>("");
   const [positionQuery, setPositionQuery] = useState("");
@@ -141,14 +141,23 @@ const AdminRecruitment = () => {
   }, [loadApplications]);
   useEffect(() => {
     adminApi
-      .getEmploymentTypes(true)
+      .getEmploymentTypes(true, lang)
       .then((res) => setEmploymentTypes(res.data))
       .catch(() => setEmploymentTypes([]));
-  }, []);
+  }, [lang]);
+  useEffect(() => {
+    adminApi
+      .getRecruitmentDropdownOptions("experience-level", true, lang)
+      .then((res) => setExperienceLevels(res.data))
+      .catch(() => setExperienceLevels([]));
+  }, [lang]);
 
   const employmentTypeMap = useMemo(() => {
     return new Map(employmentTypes.map((item) => [item.code, item.name]));
   }, [employmentTypes]);
+  const experienceLevelMap = useMemo(() => {
+    return new Map(experienceLevels.map((item) => [item.code, item.name]));
+  }, [experienceLevels]);
 
   const filteredPositions = useMemo(() => {
     if (!positionQuery.trim()) return positions;
@@ -419,14 +428,10 @@ const AdminRecruitment = () => {
                     <p className="text-xs text-muted-foreground">{p.department}</p>
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       <Badge variant="outline" className="whitespace-nowrap text-xs">
-                        {getEmploymentTypeLabel(
-                          p.employmentType,
-                          employmentTypeMap.get(p.employmentType) ?? p.employmentType,
-                          t,
-                        )}
+                        {getEmploymentTypeLabel(p.employmentType, employmentTypeMap, t)}
                       </Badge>
                       <Badge variant="outline" className="whitespace-nowrap text-xs">
-                        {getExperienceLabel(p.experienceLevel, t)}
+                        {getExperienceLabel(p.experienceLevel, experienceLevelMap, t)}
                       </Badge>
                     </div>
                     <div className="mt-auto flex items-center justify-between pt-4 border-t">

@@ -3168,6 +3168,78 @@
     "ja": "竣工資料カテゴリ"
   },
   {
+    "key": "adminRbac.groups.codeLabel",
+    "category": "rbac",
+    "vi": "Mã nhóm",
+    "en": "Group code",
+    "zh": "组代码",
+    "ja": "グループコード"
+  },
+  {
+    "key": "adminRbac.groups.translationHelp",
+    "category": "rbac",
+    "vi": "Quản lý các bản dịch trong Dịch nội dung",
+    "en": "Manage translations in Content translations",
+    "zh": "在内容翻译中管理译文",
+    "ja": "コンテンツ翻訳で翻訳を管理"
+  },
+  {
+    "key": "adminRbac.groups.translationHelpNoAccess",
+    "category": "rbac",
+    "vi": "Nhờ người có quyền quản lý bản dịch cập nhật trong Dịch nội dung.",
+    "en": "Ask someone with translation access to update this in Content translations.",
+    "zh": "请有翻译权限的人员在内容翻译中更新。",
+    "ja": "翻訳権限を持つ担当者にコンテンツ翻訳での更新を依頼してください。"
+  },
+  {
+    "key": "translations.entityType.roleGroup",
+    "category": "translations",
+    "vi": "Nhóm vai trò",
+    "en": "Role groups",
+    "zh": "角色组",
+    "ja": "ロールグループ"
+  },
+  {
+    "key": "translations.entityType.employmentType",
+    "category": "translations",
+    "vi": "Hình thức làm việc",
+    "en": "Employment types",
+    "zh": "工作类型",
+    "ja": "雇用形態"
+  },
+  {
+    "key": "translations.entityType.recruitmentDropdownOption",
+    "category": "translations",
+    "vi": "Tùy chọn tuyển dụng",
+    "en": "Recruitment options",
+    "zh": "招聘选项",
+    "ja": "採用オプション"
+  },
+  {
+    "key": "translations.entityType.masterDataOption",
+    "category": "translations",
+    "vi": "Danh mục dùng chung",
+    "en": "Master data options",
+    "zh": "通用主数据",
+    "ja": "マスターデータ"
+  },
+  {
+    "key": "translations.entityType.clientLogo",
+    "category": "translations",
+    "vi": "Logo đối tác",
+    "en": "Client logos",
+    "zh": "客户标志",
+    "ja": "クライアントロゴ"
+  },
+  {
+    "key": "translations.action.openContent",
+    "category": "translations",
+    "vi": "Mở Dịch nội dung",
+    "en": "Open content translations",
+    "zh": "打开内容翻译",
+    "ja": "コンテンツ翻訳を開く"
+  },
+  {
     "key": "translations.contentField.Title",
     "category": "translations",
     "vi": "Tiêu đề",

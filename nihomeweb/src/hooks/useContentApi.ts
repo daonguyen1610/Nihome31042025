@@ -95,23 +95,26 @@ export function useNewsCategories(includeInactive = false) {
 }
 
 export function useEmploymentTypes(includeInactive = false) {
+  const { lang } = useI18n();
   return useFetch<EmploymentTypeResponse[]>(
-    () => contentApi.getEmploymentTypes(includeInactive),
-    [includeInactive],
+    () => contentApi.getEmploymentTypes(includeInactive, lang),
+    [includeInactive, lang],
   );
 }
 
 export function useExperienceLevelOptions() {
+  const { lang } = useI18n();
   return useFetch<RecruitmentDropdownOptionResponse[]>(
-    () => contentApi.getRecruitmentDropdownOptions("experience-level"),
-    [],
+    () => contentApi.getRecruitmentDropdownOptions("experience-level", lang),
+    [lang],
   );
 }
 
 export function useBenefitOptions() {
+  const { lang } = useI18n();
   return useFetch<RecruitmentDropdownOptionResponse[]>(
-    () => contentApi.getRecruitmentDropdownOptions("benefit"),
-    [],
+    () => contentApi.getRecruitmentDropdownOptions("benefit", lang),
+    [lang],
   );
 }
 
@@ -145,8 +148,10 @@ export function useService(slug: string) {
   return useFetch<ServiceResponse>(() => contentApi.getService(slug, lang), [slug, lang]);
 }
 
-export function useLogos() {
-  return useFetch<LogosGroupedResponse>(() => contentApi.getLogos(), []);
+export function useLogos(langOverride?: string) {
+  const { lang } = useI18n();
+  const resolvedLang = langOverride ?? lang;
+  return useFetch<LogosGroupedResponse>(() => contentApi.getLogos(resolvedLang), [resolvedLang]);
 }
 
 export function useProcesses() {

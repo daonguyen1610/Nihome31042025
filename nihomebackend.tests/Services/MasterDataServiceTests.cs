@@ -18,7 +18,7 @@ public class MasterDataServiceTests : IDisposable
     {
         _db = DbContextFactory.Create();
         _cache = new MemoryCache(new MemoryCacheOptions());
-        _sut = new MasterDataService(_db, _cache, NullLogger<MasterDataService>.Instance);
+        _sut = new MasterDataService(_db, _cache, new EntityTranslationService(_db, _cache), NullLogger<MasterDataService>.Instance);
     }
 
     public void Dispose()

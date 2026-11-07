@@ -17,7 +17,7 @@ public class JobPositionServiceTests : IDisposable
     public JobPositionServiceTests()
     {
         _db = DbContextFactory.Create();
-        var employmentTypeService = new EmploymentTypeService(_db, NullLogger<EmploymentTypeService>.Instance);
+        var employmentTypeService = new EmploymentTypeService(_db, new EntityTranslationService(_db, Mock.Of<IMemoryCache>()), NullLogger<EmploymentTypeService>.Instance);
         var translationSvc = new EntityTranslationService(_db, Mock.Of<IMemoryCache>());
         _sut = new JobPositionService(_db, employmentTypeService, translationSvc);
     }

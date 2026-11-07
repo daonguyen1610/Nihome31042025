@@ -28,7 +28,8 @@ public class TranslationService(AppDbContext db, IMemoryCache cache)
     /// <summary>Get paginated translation pairs for admin (vi + target side-by-side).</summary>
     public async Task<List<TranslationPairDto>> GetPairsAsync(string? category = null, string? search = null)
     {
-        var viQuery = db.Translations.AsNoTracking().Where(t => t.LanguageCode == "vi");
+        var viQuery = db.Translations.AsNoTracking().Where(t => t.LanguageCode == "vi" &&
+            !db.RoleGroups.Any(group => group.LabelKey == t.Key));
         if (!string.IsNullOrEmpty(category))
             viQuery = viQuery.Where(t => t.Category == category);
         if (!string.IsNullOrEmpty(search))

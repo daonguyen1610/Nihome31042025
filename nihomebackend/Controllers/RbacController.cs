@@ -44,6 +44,8 @@ public class RbacController(
         [FromBody] CreateRoleGroupRequest req, CancellationToken ct)
     {
         if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        if ((req.Names.En != null || req.Names.Zh != null || req.Names.Ja != null) &&
+            !await RequirePermissionAsync("content.translations.manage", ct)) return Forbid();
         var actorId = GetCurrentUserId();
         if (actorId <= 0) return Unauthorized();
         var result = await roles.CreateRoleGroupAsync(req, actorId, ct);
@@ -57,6 +59,8 @@ public class RbacController(
         int id, [FromBody] UpdateRoleGroupRequest req, CancellationToken ct)
     {
         if (!await RequirePermissionAsync(PermManage, ct)) return Forbid();
+        if ((req.Names.En != null || req.Names.Zh != null || req.Names.Ja != null) &&
+            !await RequirePermissionAsync("content.translations.manage", ct)) return Forbid();
         var actorId = GetCurrentUserId();
         if (actorId <= 0) return Unauthorized();
         return MapGroupWrite(await roles.UpdateRoleGroupAsync(id, req, actorId, ct));

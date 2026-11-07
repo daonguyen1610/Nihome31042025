@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Caching.Memory;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -15,7 +16,7 @@ public class EmploymentTypeServiceTests : IDisposable
     public EmploymentTypeServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new EmploymentTypeService(_db, NullLogger<EmploymentTypeService>.Instance);
+        _sut = new EmploymentTypeService(_db, new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions())), NullLogger<EmploymentTypeService>.Instance);
     }
 
     public void Dispose() => _db.Dispose();

@@ -124,7 +124,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
         }),
         loadAllScheduleTasks(operationalProjectId, project.id),
         adminApi.getOperationalProjectTeam(operationalProjectId, project.id),
-        adminApi.getMasterDataOptions("design_discipline"),
+        adminApi.getMasterDataOptions("design_discipline", lang),
       ]);
       setSchedule(scheduleResponse.data);
       setDependencyTasks(allTasks);
@@ -147,7 +147,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
     } finally {
       setLoading(false);
     }
-  }, [operationalProjectId, query, project.id]);
+  }, [operationalProjectId, query, project.id, lang]);
 
   useEffect(() => {
     void load();

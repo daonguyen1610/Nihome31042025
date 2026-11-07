@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -6,10 +7,13 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeService> logger)
+public class EmploymentTypeService(
+    AppDbContext db,
+    EntityTranslationService entityTranslations,
+    ILogger<EmploymentTypeService> logger)
 {
 
-    public async Task<List<EmploymentTypeResponse>> GetAllAsync(bool includeInactive = false)
+    public async Task<List<EmploymentTypeResponse>> GetAllAsync(bool includeInactive = false, string lang = "vi")
     {
         var query = db.EmploymentTypes.AsNoTracking();
         if (!includeInactive)
@@ -22,7 +26,10 @@ public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeServic
             .ThenBy(x => x.Name)
             .ToListAsync();
 
-        return items.Select(MapToResponse).ToList();
+        var translations = await entityTranslations.GetBatchTranslationsAsync(
+            EntityTypes.EmploymentType, items.Select(x => x.Id), lang);
+
+        return items.Select(x => MapToResponse(x, translations.GetValueOrDefault(x.Id))).ToList();
     }
 
     public async Task<EmploymentTypeResponse> CreateAsync(UpsertEmploymentTypeRequest req)
@@ -90,6 +97,7 @@ public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeServic
 
         db.EmploymentTypes.Remove(entity);
         await db.SaveChangesAsync();
+        await entityTranslations.DeleteEntityTranslationsAsync(EntityTypes.EmploymentType, entity.Id);
         logger.LogInformation("Deleted employment type {EmploymentTypeId} ({EmploymentTypeCode})", entity.Id, entity.Code);
         return true;
     }
@@ -160,12 +168,15 @@ public class EmploymentTypeService(AppDbContext db, ILogger<EmploymentTypeServic
         return normalized;
     }
 
-    private static EmploymentTypeResponse MapToResponse(EmploymentType item) => new()
-    {
-        Id = item.Id,
-        Code = item.Code,
-        Name = item.Name,
-        IsActive = item.IsActive,
-        SortOrder = item.SortOrder,
-    };
+    private static EmploymentTypeResponse MapToResponse(
+        EmploymentType item, Dictionary<string, string>? translations = null) => new()
+        {
+            Id = item.Id,
+            Code = item.Code,
+            Name = translations != null && translations.TryGetValue("Name", out var name) && !string.IsNullOrWhiteSpace(name)
+                ? name
+                : item.Name,
+            IsActive = item.IsActive,
+            SortOrder = item.SortOrder,
+        };
 }

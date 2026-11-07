@@ -6,6 +6,7 @@ using NihomeBackend.Authorization;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
+using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Controllers;
@@ -36,6 +37,11 @@ public class TranslationsController(
             [EntityTypes.NewsCategory] = new("translations.entityType.newsCategory", Fields(("Name", "text"))),
             [EntityTypes.ProjectCategory] = new("translations.entityType.projectCategory", Fields(("Name", "text"))),
             [EntityTypes.AsBuiltDocumentCategory] = new("translations.entityType.asBuiltCategory", Fields(("Name", "text"))),
+            [EntityTypes.RoleGroup] = new("translations.entityType.roleGroup", Fields(("Name", "text"))),
+            [EntityTypes.EmploymentType] = new("translations.entityType.employmentType", Fields(("Name", "text"))),
+            [EntityTypes.RecruitmentDropdownOption] = new("translations.entityType.recruitmentDropdownOption", Fields(("Name", "text"))),
+            [EntityTypes.MasterDataOption] = new("translations.entityType.masterDataOption", Fields(("Name", "text"))),
+            [EntityTypes.ClientLogo] = new("translations.entityType.clientLogo", Fields(("Name", "text"))),
         };
 
     private static Dictionary<string, string> Fields(params (string Name, string Format)[] fields) =>
@@ -75,6 +81,8 @@ public class TranslationsController(
     [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> UpsertPair([FromBody] UpsertTranslationPairRequest req)
     {
+        if (await db.RoleGroups.AnyAsync(group => group.LabelKey == req.Key))
+            return Conflict(new { error = "role_group_translation_use_content", message = "Hãy quản lý bản dịch nhóm vai trò trong Dịch nội dung." });
         await translationSvc.UpsertPairAsync(req.Key, req.VietnameseValue, req.Translations, req.Category);
         return Ok();
     }
@@ -84,6 +92,9 @@ public class TranslationsController(
     [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> BulkUpsert([FromBody] List<BulkTranslationItem> items)
     {
+        var keys = items.Select(item => item.Key).Distinct().ToArray();
+        if (await db.RoleGroups.AnyAsync(group => keys.Contains(group.LabelKey)))
+            return Conflict(new { error = "role_group_translation_use_content", message = "Hãy quản lý bản dịch nhóm vai trò trong Dịch nội dung." });
         await translationSvc.BulkUpsertAsync(items);
         return Ok();
     }
@@ -93,6 +104,8 @@ public class TranslationsController(
     [RequirePermission("content.translations", "manage")]
     public async Task<IActionResult> DeleteKey(string key)
     {
+        if (await db.RoleGroups.AnyAsync(group => group.LabelKey == key))
+            return Conflict(new { error = "role_group_translation_use_content", message = "Hãy quản lý bản dịch nhóm vai trò trong Dịch nội dung." });
         await translationSvc.DeleteKeyAsync(key);
         return NoContent();
     }
@@ -146,6 +159,26 @@ public class TranslationsController(
                 group => group.Key,
                 group => group.Select(t => (t.LanguageCode, t.FieldName)).Distinct().Count());
         var expectedFields = definition.Fields.Count * supportedLanguages.Length;
+
+        if (entityType == EntityTypes.RoleGroup)
+        {
+            var groups = await db.RoleGroups.AsNoTracking().Where(g => g.IsActive).OrderBy(g => g.SortOrder).ThenBy(g => g.Code).ToListAsync();
+            var keys = groups.Select(g => g.LabelKey).ToArray();
+            var labels = await db.Translations.AsNoTracking().Where(t => keys.Contains(t.Key)).ToListAsync();
+            var placeholders = (await db.EntityTranslations.AsNoTracking()
+                .Where(t => t.EntityType == EntityTypes.RoleGroup && t.FieldName == RoleGroup.TranslationPlaceholderField)
+                .Select(t => new { t.EntityId, t.LanguageCode }).ToListAsync())
+                .Select(t => (t.EntityId, t.LanguageCode)).ToHashSet();
+            var groupItems = groups.Select(g =>
+            {
+                var rows = labels.Where(t => t.Key == g.LabelKey).ToDictionary(t => t.LanguageCode, t => t.Value);
+                var source = rows.GetValueOrDefault("vi", g.Code);
+                var count = supportedLanguages.Count(language => !placeholders.Contains((g.Id, language)) &&
+                    !string.IsNullOrWhiteSpace(rows.GetValueOrDefault(language)));
+                return new { id = g.Id, title = source, description = g.Code, hasTranslation = count > 0, translationCount = count, expectedFields = 3 };
+            });
+            return Ok(new { entityType, items = groupItems });
+        }
 
         object? items = entityType switch
         {
@@ -259,6 +292,46 @@ public class TranslationsController(
                     translationCount = CountCategoryTranslations(c.NameVi, c.Id, explicitlySavedCategoryLanguages, c.NameEn, c.NameZh, c.NameJa),
                     expectedFields = 3
                 }),
+            EntityTypes.EmploymentType => (await db.EmploymentTypes.AsNoTracking().OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync())
+                .Select(c => new
+                {
+                    id = c.Id,
+                    title = c.Name,
+                    description = c.Code,
+                    hasTranslation = translationCounts.GetValueOrDefault(c.Id, 0) > 0,
+                    translationCount = translationCounts.GetValueOrDefault(c.Id, 0),
+                    expectedFields
+                }),
+            EntityTypes.RecruitmentDropdownOption => (await db.RecruitmentDropdownOptions.AsNoTracking().OrderBy(c => c.Type).ThenBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync())
+                .Select(c => new
+                {
+                    id = c.Id,
+                    title = c.Name,
+                    description = $"{c.Type} · {c.Code}",
+                    hasTranslation = translationCounts.GetValueOrDefault(c.Id, 0) > 0,
+                    translationCount = translationCounts.GetValueOrDefault(c.Id, 0),
+                    expectedFields
+                }),
+            EntityTypes.MasterDataOption => (await db.MasterDataOptions.AsNoTracking().OrderBy(c => c.Category).ThenBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync())
+                .Select(c => new
+                {
+                    id = c.Id,
+                    title = c.Name,
+                    description = $"{c.Category} · {c.Code}",
+                    hasTranslation = translationCounts.GetValueOrDefault(c.Id, 0) > 0,
+                    translationCount = translationCounts.GetValueOrDefault(c.Id, 0),
+                    expectedFields
+                }),
+            EntityTypes.ClientLogo => (await db.ClientLogos.AsNoTracking().OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync())
+                .Select(c => new
+                {
+                    id = c.Id,
+                    title = c.Name,
+                    description = c.Kind.ToString(),
+                    hasTranslation = translationCounts.GetValueOrDefault(c.Id, 0) > 0,
+                    translationCount = translationCounts.GetValueOrDefault(c.Id, 0),
+                    expectedFields
+                }),
             _ => null
         };
 
@@ -287,6 +360,21 @@ public class TranslationsController(
 
         switch (entityType)
         {
+            case EntityTypes.RoleGroup:
+                var group = await db.RoleGroups.AsNoTracking().FirstOrDefaultAsync(g => g.Id == entityId && g.IsActive);
+                if (group != null)
+                {
+                    var rows = await db.Translations.AsNoTracking().Where(t => t.Key == group.LabelKey).ToDictionaryAsync(t => t.LanguageCode, t => t.Value);
+                    var source = rows.GetValueOrDefault("vi", group.Code);
+                    var placeholders = await db.EntityTranslations.AsNoTracking()
+                        .Where(t => t.EntityType == EntityTypes.RoleGroup && t.EntityId == entityId && t.FieldName == RoleGroup.TranslationPlaceholderField)
+                        .Select(t => t.LanguageCode).ToListAsync();
+                    original = new() { ["Name"] = source };
+                    categoryTranslations = new();
+                    foreach (var language in new[] { "en", "zh", "ja" })
+                        categoryTranslations[language] = new() { ["Name"] = placeholders.Contains(language) ? "" : rows.GetValueOrDefault(language, "") };
+                }
+                break;
             case EntityTypes.Activity:
                 var act = await db.Activities.AsNoTracking().FirstOrDefaultAsync(a => a.Id == entityId);
                 if (act != null) original = new() { ["Title"] = act.Title, ["Excerpt"] = act.Excerpt ?? "", ["Content"] = act.ContentJson ?? "" };
@@ -396,6 +484,22 @@ public class TranslationsController(
                     };
                 }
                 break;
+            case EntityTypes.EmploymentType:
+                var employmentType = await db.EmploymentTypes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == entityId);
+                if (employmentType != null) original = new() { ["Name"] = employmentType.Name };
+                break;
+            case EntityTypes.RecruitmentDropdownOption:
+                var dropdownOption = await db.RecruitmentDropdownOptions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == entityId);
+                if (dropdownOption != null) original = new() { ["Name"] = dropdownOption.Name };
+                break;
+            case EntityTypes.MasterDataOption:
+                var masterDataOption = await db.MasterDataOptions.AsNoTracking().FirstOrDefaultAsync(c => c.Id == entityId);
+                if (masterDataOption != null) original = new() { ["Name"] = masterDataOption.Name };
+                break;
+            case EntityTypes.ClientLogo:
+                var clientLogo = await db.ClientLogos.AsNoTracking().FirstOrDefaultAsync(c => c.Id == entityId);
+                if (clientLogo != null) original = new() { ["Name"] = clientLogo.Name };
+                break;
         }
 
         if (!EntityDefinitions.ContainsKey(entityType))
@@ -443,6 +547,24 @@ public class TranslationsController(
                 return BadRequest(new { message = $"Bản dịch cho trường {field} không đúng cấu trúc {format}." });
         }
 
+        if (entityType == EntityTypes.RoleGroup)
+        {
+            var value = req.Translations["Name"].Trim();
+            if (value.Length is < 2 or > 100)
+                return BadRequest(new { message = "Tên bản dịch phải có từ 2 đến 100 ký tự." });
+            var group = await db.RoleGroups.SingleAsync(g => g.Id == entityId && g.IsActive);
+            var source = await db.Translations.Where(t => t.Key == group.LabelKey && t.LanguageCode == "vi").Select(t => t.Value).FirstOrDefaultAsync() ?? group.Code;
+            await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync() : null;
+            var placeholders = await db.EntityTranslations.Where(t => t.EntityType == EntityTypes.RoleGroup && t.EntityId == entityId &&
+                t.FieldName == RoleGroup.TranslationPlaceholderField && t.LanguageCode == req.LanguageCode).ToListAsync();
+            db.EntityTranslations.RemoveRange(placeholders);
+            await translationSvc.UpsertPairAsync(group.LabelKey, source, new() { [req.LanguageCode] = value }, "rbac");
+            await entitySvc.SetTranslationsAsync(entityType, entityId, req.LanguageCode, new() { ["Name"] = value });
+            if (transaction != null) await transaction.CommitAsync();
+            translationSvc.InvalidateAllCaches();
+            return Ok();
+        }
+
         if (entityType is EntityTypes.ActivityCategory or EntityTypes.NewsCategory
             or EntityTypes.ProjectCategory or EntityTypes.AsBuiltDocumentCategory)
         {
@@ -482,6 +604,16 @@ public class TranslationsController(
                 entityId,
                 req.LanguageCode,
                 new Dictionary<string, string> { ["Name"] = value });
+            return Ok();
+        }
+
+        if (entityType is EntityTypes.EmploymentType or EntityTypes.RecruitmentDropdownOption
+            or EntityTypes.MasterDataOption or EntityTypes.ClientLogo)
+        {
+            var value = req.Translations["Name"].Trim();
+            if (value.Length is < 2 or > 200)
+                return BadRequest(new { message = "Tên bản dịch phải có từ 2 đến 200 ký tự." });
+            await entitySvc.SetTranslationsAsync(entityType, entityId, req.LanguageCode, new() { ["Name"] = value });
             return Ok();
         }
 
@@ -542,6 +674,29 @@ public class TranslationsController(
 
         switch (entityType)
         {
+            case EntityTypes.RoleGroup:
+                var group = await db.RoleGroups.SingleAsync(g => g.Id == entityId && g.IsActive);
+                var source = await db.Translations.Where(t => t.Key == group.LabelKey && t.LanguageCode == "vi").Select(t => t.Value).FirstOrDefaultAsync() ?? group.Code;
+                await using (var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync() : null)
+                {
+                    await translationSvc.UpsertPairAsync(group.LabelKey, source, new() { ["en"] = source, ["zh"] = source, ["ja"] = source }, "rbac");
+                    await entitySvc.DeleteEntityTranslationsAsync(entityType, entityId);
+                    foreach (var language in new[] { "en", "zh", "ja" })
+                        db.EntityTranslations.Add(new EntityTranslation
+                        {
+                            EntityType = EntityTypes.RoleGroup,
+                            EntityId = entityId,
+                            FieldName = RoleGroup.TranslationPlaceholderField,
+                            LanguageCode = language,
+                            Value = source,
+                            CreatedAt = DateTime.UtcNow,
+                            UpdatedAt = DateTime.UtcNow
+                        });
+                    await db.SaveChangesAsync();
+                    if (transaction != null) await transaction.CommitAsync();
+                }
+                translationSvc.InvalidateAllCaches();
+                return NoContent();
             case EntityTypes.ActivityCategory:
                 var actCat = await db.ActivityCategories.FindAsync(entityId);
                 if (actCat == null) return NotFound();
@@ -598,6 +753,11 @@ public class TranslationsController(
         EntityTypes.NewsCategory => await db.NewsCategories.AsNoTracking().AnyAsync(item => item.Id == entityId),
         EntityTypes.ProjectCategory => await db.ProjectCategories.AsNoTracking().AnyAsync(item => item.Id == entityId),
         EntityTypes.AsBuiltDocumentCategory => await db.AsBuiltDocumentCategories.AsNoTracking().AnyAsync(item => item.Id == entityId),
+        EntityTypes.RoleGroup => await db.RoleGroups.AsNoTracking().AnyAsync(item => item.Id == entityId && item.IsActive),
+        EntityTypes.EmploymentType => await db.EmploymentTypes.AsNoTracking().AnyAsync(item => item.Id == entityId),
+        EntityTypes.RecruitmentDropdownOption => await db.RecruitmentDropdownOptions.AsNoTracking().AnyAsync(item => item.Id == entityId),
+        EntityTypes.MasterDataOption => await db.MasterDataOptions.AsNoTracking().AnyAsync(item => item.Id == entityId),
+        EntityTypes.ClientLogo => await db.ClientLogos.AsNoTracking().AnyAsync(item => item.Id == entityId),
         _ => false,
     };
 

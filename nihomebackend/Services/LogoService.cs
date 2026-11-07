@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -6,19 +7,29 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class LogoService(AppDbContext db, HostedImageService hostedImageService, ILogger<LogoService> logger)
+public class LogoService(
+    AppDbContext db,
+    HostedImageService hostedImageService,
+    EntityTranslationService entityTranslations,
+    ILogger<LogoService> logger)
 {
 
-    public async Task<LogosGroupedResponse> GetAllGroupedAsync()
+    public async Task<LogosGroupedResponse> GetAllGroupedAsync(string lang = "vi")
     {
         var all = await db.ClientLogos.AsNoTracking().OrderBy(l => l.SortOrder).ToListAsync();
         logger.LogDebug("Fetched {Count} logos", all.Count);
+        var translations = await entityTranslations.GetBatchTranslationsAsync(
+            EntityTypes.ClientLogo, all.Select(l => l.Id), lang);
+        LogoResponse[] Map(LogoKind kind) => all
+            .Where(l => l.Kind == kind)
+            .Select(l => MapToResponse(l, translations.GetValueOrDefault(l.Id)))
+            .ToArray();
         return new LogosGroupedResponse
         {
-            Clients = all.Where(l => l.Kind == LogoKind.Client).Select(MapToResponse).ToArray(),
-            Partners = all.Where(l => l.Kind == LogoKind.Partner).Select(MapToResponse).ToArray(),
-            Suppliers = all.Where(l => l.Kind == LogoKind.Supplier).Select(MapToResponse).ToArray(),
-            Awards = all.Where(l => l.Kind == LogoKind.Award).Select(MapToResponse).ToArray(),
+            Clients = Map(LogoKind.Client),
+            Partners = Map(LogoKind.Partner),
+            Suppliers = Map(LogoKind.Supplier),
+            Awards = Map(LogoKind.Award),
         };
     }
 
@@ -78,18 +89,22 @@ public class LogoService(AppDbContext db, HostedImageService hostedImageService,
         var imageUrl = entity.ImageUrl;
         db.ClientLogos.Remove(entity);
         await db.SaveChangesAsync();
+        await entityTranslations.DeleteEntityTranslationsAsync(EntityTypes.ClientLogo, entity.Id);
         hostedImageService.DeleteIfManagedUpload(imageUrl);
         logger.LogInformation("Deleted logo {LogoId}", id);
         return true;
     }
 
-    private static LogoResponse MapToResponse(ClientLogo l) => new()
-    {
-        Id = l.Id,
-        Name = l.Name,
-        ImageUrl = l.ImageUrl,
-        Href = l.Href,
-        Kind = l.Kind.ToString(),
-        SortOrder = l.SortOrder,
-    };
+    private static LogoResponse MapToResponse(
+        ClientLogo l, Dictionary<string, string>? translations = null) => new()
+        {
+            Id = l.Id,
+            Name = translations != null && translations.TryGetValue("Name", out var name) && !string.IsNullOrWhiteSpace(name)
+                ? name
+                : l.Name,
+            ImageUrl = l.ImageUrl,
+            Href = l.Href,
+            Kind = l.Kind.ToString(),
+            SortOrder = l.SortOrder,
+        };
 }

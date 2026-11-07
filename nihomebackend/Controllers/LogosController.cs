@@ -15,7 +15,8 @@ public class LogosController(LogoService svc) : ControllerBase
 {
     [HttpGet]
     [AllowAnonymous]
-    public async Task<IActionResult> GetAll() => Ok(await svc.GetAllGroupedAsync());
+    public async Task<IActionResult> GetAll([FromQuery] string lang = "vi")
+        => Ok(await svc.GetAllGroupedAsync(lang));
 
     [HttpPost]
     [RequirePermission("content.logos", "manage")]

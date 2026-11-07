@@ -132,9 +132,19 @@ Nihome31042025/
 - DTOs are used for all API communication; entity models are never exposed directly.
 - Content entities use slug-based routing for SEO-friendly URLs.
 - Complex nested data (content paragraphs, gallery images, requirements) is stored as JSON columns.
-- Entity translations are restricted by the metadata registry in `TranslationsController`; only registered entity fields and the `en`, `zh`, and `ja` target languages are writable.
+- Entity translations are restricted by the metadata registry in `TranslationsController`; only registered entity fields and the `en`, `zh`, and `ja` target languages are writable. Besides long-form content, the registry covers user-managed name-only catalogs — employment types, recruitment dropdown options, master-data options, and client logos — whose `Name` is translated while the CRUD screens keep editing the Vietnamese source.
 - Structured entity translations are validated recursively against their Vietnamese source JSON shape before persistence.
 - Localized categories retain direct language columns for public-query compatibility. Source-copy fallback values are not completion evidence; an `entity_translations` marker records explicit source-identical translations.
+- Role-group labels retain their existing translation keys for runtime and legacy
+  API compatibility. Content translation management updates those same keys.
+  New source-copy placeholders are marked in `entity_translations`, so source
+  edits preserve existing translations, even those identical to the source, and
+  update only explicitly marked placeholders.
+  Legacy group writes containing target-language names require translation
+  management permission in addition to role management permission. Group keys
+  are excluded from the UI-translation list; generic pair, bulk and key-delete
+  APIs reject them with `role_group_translation_use_content` so callers use the
+  content-translation API instead.
 - SOLID principles are followed where practical.
 
 ---

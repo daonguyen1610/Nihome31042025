@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Controllers;
+using Microsoft.Extensions.Caching.Memory;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -19,7 +20,7 @@ public class EmploymentTypesControllerTests : IDisposable
     public EmploymentTypesControllerTests()
     {
         _db = DbContextFactory.Create();
-        _service = new EmploymentTypeService(_db, NullLogger<EmploymentTypeService>.Instance);
+        _service = new EmploymentTypeService(_db, new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions())), NullLogger<EmploymentTypeService>.Instance);
         _sut = new EmploymentTypesController(_service);
     }
 

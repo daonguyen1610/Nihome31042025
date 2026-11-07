@@ -10,6 +10,7 @@ public interface IMasterDataService
     Task<List<MasterDataOptionResponse>> GetByCategoryAsync(
         string category,
         bool includeInactive = false,
+        string lang = "vi",
         CancellationToken ct = default);
 
     Task<MasterDataOptionResponse?> GetByIdAsync(int id, CancellationToken ct = default);

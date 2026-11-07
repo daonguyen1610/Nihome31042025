@@ -109,7 +109,7 @@ export const RevisionsPanel = ({
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("drawing_revision_reason");
+        const { data } = await adminApi.getMasterDataOptions("drawing_revision_reason", lang);
         if (!cancelled) setReasons((data ?? []).filter((o) => o.isActive));
       } catch {
         // non-fatal — form validation will catch it server-side
@@ -118,7 +118,7 @@ export const RevisionsPanel = ({
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, lang]);
 
   const reasonOptions = useMemo(
     () => reasons.map((r) => ({ value: r.code, label: r.name })),

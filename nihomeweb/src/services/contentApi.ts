@@ -357,12 +357,14 @@ export const contentApi = {
   getNewsCategories: (includeInactive = false) =>
     api.get<NewsCategoryResponse[]>(`/news-categories?includeInactive=${includeInactive}`),
 
-  getEmploymentTypes: (includeInactive = false) =>
-    api.get<EmploymentTypeResponse[]>(`/employment-types?includeInactive=${includeInactive}`),
+  getEmploymentTypes: (includeInactive = false, lang = "vi") =>
+    api.get<EmploymentTypeResponse[]>(
+      `/employment-types?includeInactive=${includeInactive}&lang=${lang}`,
+    ),
 
-  getRecruitmentDropdownOptions: (type: string) =>
+  getRecruitmentDropdownOptions: (type: string, lang = "vi") =>
     api.get<RecruitmentDropdownOptionResponse[]>(
-      `/recruitment-dropdown-options?type=${encodeURIComponent(type)}`,
+      `/recruitment-dropdown-options?type=${encodeURIComponent(type)}&lang=${lang}`,
     ),
 
   // News
@@ -398,9 +400,9 @@ export const contentApi = {
       .then((res) => ({ ...res, data: mapService(res.data) })),
 
   // Logos
-  getLogos: () =>
+  getLogos: (lang = "vi") =>
     api
-      .get<LogosGroupedResponse>("/logos")
+      .get<LogosGroupedResponse>(`/logos?lang=${lang}`)
       .then((res) => ({ ...res, data: mapLogosGrouped(res.data) })),
 
   // Processes

@@ -6162,8 +6162,10 @@ export const adminApi = {
   deleteAsBuiltDocumentCategory: (id: number) => api.delete(`/asbuilt-categories/${id}`),
 
   // Employment types
-  getEmploymentTypes: (includeInactive = false) =>
-    api.get<EmploymentTypeResponse[]>(`/employment-types?includeInactive=${includeInactive}`),
+  getEmploymentTypes: (includeInactive = false, lang = "vi") =>
+    api.get<EmploymentTypeResponse[]>(
+      `/employment-types?includeInactive=${includeInactive}&lang=${lang}`,
+    ),
   createEmploymentType: (data: UpsertEmploymentTypeRequest) =>
     api.post<EmploymentTypeResponse>("/employment-types", data),
   updateEmploymentType: (id: number, data: UpsertEmploymentTypeRequest) =>
@@ -6171,9 +6173,9 @@ export const adminApi = {
   deleteEmploymentType: (id: number) => api.delete(`/employment-types/${id}`),
 
   // Recruitment dropdown options (experience-level, benefit)
-  getRecruitmentDropdownOptions: (type: string, includeInactive = false) =>
+  getRecruitmentDropdownOptions: (type: string, includeInactive = false, lang = "vi") =>
     api.get<RecruitmentDropdownOptionResponse[]>(
-      `/recruitment-dropdown-options?type=${encodeURIComponent(type)}&includeInactive=${includeInactive}`,
+      `/recruitment-dropdown-options?type=${encodeURIComponent(type)}&includeInactive=${includeInactive}&lang=${lang}`,
     ),
   createRecruitmentDropdownOption: (data: UpsertRecruitmentDropdownOptionRequest) =>
     api.post<RecruitmentDropdownOptionResponse>("/recruitment-dropdown-options", data),
@@ -7946,8 +7948,10 @@ export const adminApi = {
   deleteHandoverRecord: (id: number) => api.delete(`/handover-records/${id}`),
 
   // Master data (read-only helper — full CRUD lives in NIH-379 admin page)
-  getMasterDataOptions: (category: string) =>
-    api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`),
+  getMasterDataOptions: (category: string, lang = "vi") =>
+    api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`, {
+      params: { lang },
+    }),
 
   // Master data admin (NIH-230)
   listMasterDataCategories: () => api.get<MasterDataCategory[]>("/master-data/categories"),

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -16,6 +17,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { usePermissions } from "@/hooks/usePermissions";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 
 type Tab = "employment" | "experience" | "benefit";
@@ -44,6 +46,7 @@ function getErrorMessage(error: unknown) {
 const EmploymentTypes = () => {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { has } = usePermissions();
   const [activeTab, setActiveTab] = useState<Tab>("employment");
 
   // --- Employment types state ---
@@ -366,6 +369,17 @@ const EmploymentTypes = () => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {has("content.translations.view") && (
+              <Button asChild type="button" variant="outline" size="sm">
+                <Link
+                  to={`/admin/translations?tab=entity&type=${
+                    isEmp ? "EmploymentType" : "RecruitmentDropdownOption"
+                  }`}
+                >
+                  {t("translations.action.openContent")}
+                </Link>
+              </Button>
+            )}
             <AdminExportButton onClick={handleExport} disabled={loading || filtered.length === 0} />
             <Button type="button" onClick={isEmp ? startEmpCreate : startDropCreate}>
               <Plus className="mr-1.5 h-4 w-4" /> {addLabel}

@@ -2,6 +2,7 @@ namespace NihomeBackend.Constants;
 
 public static class EntityTypes
 {
+    public const string RoleGroup = "RoleGroup";
     public const string Activity = "Activity";
     public const string News = "News";
     public const string Project = "Project";
@@ -64,4 +65,6 @@ public static class EntityTypes
     public const string AsBuiltDocumentCategory = "AsBuiltDocumentCategory";
     public const string HandoverRecord = "HandoverRecord";
     public const string MasterDataOption = "MasterDataOption";
+    public const string EmploymentType = "EmploymentType";
+    public const string RecruitmentDropdownOption = "RecruitmentDropdownOption";
 }

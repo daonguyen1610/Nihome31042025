@@ -25,9 +25,7 @@ test("administrator manages a role group across mobile and tablet views", async 
     await page.getByTestId("role-group-create").click();
     await page.getByTestId("role-group-code").fill(code);
     await page.getByTestId("role-group-name-vi").fill("Ban Điều phối dự án");
-    await page.getByTestId("role-group-name-en").fill("Project Coordination");
-    await page.getByTestId("role-group-name-zh").fill("项目协调团队");
-    await page.getByTestId("role-group-name-ja").fill("プロジェクト調整チーム");
+    await expect(page.getByTestId("role-group-name-en")).toHaveCount(0);
     await page.getByTestId("role-group-order").fill("10000");
     await expect(page.getByTestId("role-group-order")).toHaveValue("10.000");
     await page.getByTestId("role-group-save").click();
@@ -39,11 +37,32 @@ test("administrator manages a role group across mobile and tablet views", async 
     await page.getByTestId(`rbac-group-${code}`).click();
     await page.getByTestId("role-group-edit").click();
     await expect(page.getByTestId("role-group-order")).toHaveValue("10.000");
-    await page.getByTestId("role-group-name-en").fill("Project Delivery Coordination");
+    await page.getByTestId("role-group-name-vi").fill("Ban Điều phối dự án đã sửa");
     await page.getByTestId("role-group-save").click();
-    await expect(page.getByTestId(`rbac-group-${code}`)).toContainText("Ban Điều phối dự án");
+    await expect(page.getByTestId(`rbac-group-${code}`)).toContainText(
+      "Ban Điều phối dự án đã sửa",
+    );
     await expect(page.getByRole("dialog")).toHaveCount(0);
     await page.screenshot({ path: testInfo.outputPath("role-group-tablet.png"), fullPage: true });
+
+    await page.goto("/admin/translations?tab=entity&type=RoleGroup");
+    const card = page.locator("div.flex.flex-col.gap-3").filter({
+      has: page.getByRole("heading", { name: "Ban Điều phối dự án đã sửa", exact: true }),
+    });
+    await card.getByRole("button").click();
+    const translationDialog = page.getByRole("dialog");
+    await translationDialog.locator("textarea").nth(1).fill("Project coordination team");
+    await translationDialog.getByRole("button", { name: /lưu/i }).click();
+    await expect(translationDialog).toHaveCount(0);
+    const translatedGroups = await (
+      await api.get("/api/admin/rbac/role-groups", { headers })
+    ).json();
+    expect(translatedGroups.find((item: { code: string }) => item.code === code).names.en).toBe(
+      "Project coordination team",
+    );
+    await page.goto("/admin/roles");
+    await page.getByTestId("rbac-view-groups").click();
+    await page.getByTestId(`rbac-group-${code}`).click();
 
     await page.getByTestId("role-group-delete").click();
     await page.locator("#deletion-confirmation").fill(code);
