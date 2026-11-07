@@ -133,7 +133,7 @@ public class BasicDesignDocsController(
     }
 
     [HttpGet("{id:int}/deletion-impact")]
-    [RequirePermission("design.basic", "view")]
+    [RequirePermission("design.records", "hard-delete")]
     public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -144,7 +144,7 @@ public class BasicDesignDocsController(
     }
 
     [HttpDelete("{id:int}")]
-    [RequirePermission("design.basic", "view")]
+    [RequirePermission("design.records", "hard-delete")]
     public async Task<IActionResult> Delete(
         int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
     {

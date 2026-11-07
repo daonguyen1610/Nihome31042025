@@ -355,6 +355,7 @@ const AdminDesignProjectDetail = () => {
                   operationalProjectId={project.operationalProjectId}
                   designProjectId={project.id}
                   designManagerUserId={project.projectManagerUserId}
+                  designLeadUserId={project.designLeadUserId}
                   designProjectContext
                   onProjectMayHaveChanged={fetchProject}
                 />

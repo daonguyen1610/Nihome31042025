@@ -595,6 +595,26 @@ public sealed class ProjectTeamServiceTests : IDisposable
         Assert.False(member.DesignPermissions.CanDelete);
     }
 
+    [Fact]
+    public async Task UpdateMemberPermissionsAsync_DesignOwner_IsRejected()
+    {
+        var designId = await AddDesignProjectAsync("DP-OWNER-LOCK");
+        var added = await AddDesignMemberAsync(designId, _memberUserId, "Kiến trúc sư");
+        var designProject = await _db.DesignProjects.SingleAsync(item => item.Id == designId);
+        designProject.DesignLeadUserId = _memberUserId;
+        await _db.SaveChangesAsync();
+        _access.Setup(value => value.CanManageDesignProjectTeamAsync(
+                _callerId, designId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+
+        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
+            _service.UpdateMemberPermissionsAsync(
+                _projectId,
+                added.Id,
+                new UpdateDesignProjectMemberPermissionsRequest { CanView = true },
+                _callerId));
+    }
+
     private async Task<int> AddDesignProjectAsync(string code)
     {
         var operational = await _db.OperationalProjects.FindAsync(_projectId);

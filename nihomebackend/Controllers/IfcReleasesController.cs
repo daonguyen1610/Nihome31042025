@@ -114,7 +114,7 @@ public class IfcReleasesController(
     }
 
     [HttpGet("{id:int}/deletion-impact")]
-    [RequirePermission("design.ifc", "view")]
+    [RequirePermission("design.records", "hard-delete")]
     public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int id, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -125,7 +125,7 @@ public class IfcReleasesController(
     }
 
     [HttpDelete("{id:int}")]
-    [RequirePermission("design.ifc", "view")]
+    [RequirePermission("design.records", "hard-delete")]
     public async Task<IActionResult> Delete(
         int id, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
     {

@@ -127,16 +127,18 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const effective = project.effectivePermissions;
+  const canCreate = effective?.canCreate ?? has(ADMIN_PERMS.designShopManage);
   const canManage = effective?.canUpdate ?? has(ADMIN_PERMS.designShopManage);
   const canApprove = canManage && has(ADMIN_PERMS.designShopApprove);
   const canViewRevisions = has(ADMIN_PERMS.designRevisions);
-  const canPickOwner = canManage;
+  const canPickOwner = canCreate || canManage;
   const {
     options: userOptions,
     error: ownersError,
     loading: ownersLoading,
   } = useDesignTeamOwners(project, canPickOwner);
-  const canDeleteAction = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
+  const canDeleteAction =
+    (effective?.canDelete ?? true) && has(ADMIN_PERMS.designRecordsHardDelete);
   const canHardDelete = canDeleteAction;
   const [searchParams] = useSearchParams();
   const focusedDocumentId = Number(searchParams.get("documentId"));
@@ -555,7 +557,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
           </SelectContent>
         </Select>
         <div className="ml-auto flex flex-wrap items-center gap-2">
-          {canManage && isShopStage ? (
+          {canCreate && isShopStage ? (
             <Button size="sm" onClick={openCreate} data-testid="shop-drawing-new">
               <Plus className="mr-1 h-4 w-4" />
               {t("shopDrawing.new")}

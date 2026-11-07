@@ -92,7 +92,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
   const canCreate = effective?.canCreate ?? has(ADMIN_PERMS.designIfcManage);
   const canManage = effective?.canUpdate ?? has(ADMIN_PERMS.designIfcManage);
   const canRelease = canManage && has(ADMIN_PERMS.designIfcRelease);
-  const canHardDelete = effective?.canDelete ?? has(ADMIN_PERMS.designRecordsHardDelete);
+  const canHardDelete = (effective?.canDelete ?? true) && has(ADMIN_PERMS.designRecordsHardDelete);
 
   const isShopStage =
     project.currentStage === "ShopDrawing" || project.currentStage === "Completed";
