@@ -34,9 +34,13 @@ internal static class DeletionImpactPlanner
             db.RoleGroupPermissions.Where(item => item.RoleGroupId == id),
             item => item.Id, item => item.Permission.Module + "." + item.Permission.Action, ct);
         if (group.LabelKey.StartsWith("rbac.group.custom.", StringComparison.Ordinal))
+        {
             await AddAsync(items, "roleGroups.translations", DeletionImpactActions.Delete,
                 db.Translations.Where(item => item.Key == group.LabelKey),
                 item => item.TranslationId, item => item.LanguageCode, ct);
+            await AddTranslationsAsync(items, db, EntityTypes.RoleGroup,
+                db.RoleGroups.Where(item => item.Id == id).Select(item => item.Id), ct, "roleGroups.translations");
+        }
         var impact = Build("rbac.roleGroup", id, group.Code, group.Code, items);
         var translations = await db.Translations.AsNoTracking()
             .Where(item => item.Key == group.LabelKey)

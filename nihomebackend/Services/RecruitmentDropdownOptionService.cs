@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -6,12 +7,16 @@ using NihomeBackend.Models.DTOs.Responses;
 
 namespace NihomeBackend.Services;
 
-public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<RecruitmentDropdownOptionService> logger)
+public class RecruitmentDropdownOptionService(
+    AppDbContext db,
+    EntityTranslationService entityTranslations,
+    ILogger<RecruitmentDropdownOptionService> logger)
 {
     public const string TypeExperienceLevel = "experience-level";
     public const string TypeBenefit = "benefit";
 
-    public async Task<List<RecruitmentDropdownOptionResponse>> GetByTypeAsync(string type, bool includeInactive = false)
+    public async Task<List<RecruitmentDropdownOptionResponse>> GetByTypeAsync(
+        string type, bool includeInactive = false, string lang = "vi")
     {
         var query = db.RecruitmentDropdownOptions
             .AsNoTracking()
@@ -25,7 +30,10 @@ public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<Recruitme
             .ThenBy(x => x.Name)
             .ToListAsync();
 
-        return items.Select(MapToResponse).ToList();
+        var translations = await entityTranslations.GetBatchTranslationsAsync(
+            EntityTypes.RecruitmentDropdownOption, items.Select(x => x.Id), lang);
+
+        return items.Select(x => MapToResponse(x, translations.GetValueOrDefault(x.Id))).ToList();
     }
 
     public async Task<List<RoleGroupOptionResponse>> GetRoleGroupOptionsAsync(
@@ -96,6 +104,7 @@ public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<Recruitme
 
         db.RecruitmentDropdownOptions.Remove(entity);
         await db.SaveChangesAsync();
+        await entityTranslations.DeleteEntityTranslationsAsync(EntityTypes.RecruitmentDropdownOption, entity.Id);
         logger.LogInformation("Deleted recruitment dropdown option {Id} ({Type}/{Code})", entity.Id, entity.Type, entity.Code);
         return true;
     }
@@ -135,13 +144,16 @@ public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<Recruitme
         return normalized;
     }
 
-    private static RecruitmentDropdownOptionResponse MapToResponse(RecruitmentDropdownOption item) => new()
-    {
-        Id = item.Id,
-        Type = item.Type,
-        Code = item.Code,
-        Name = item.Name,
-        IsActive = item.IsActive,
-        SortOrder = item.SortOrder,
-    };
+    private static RecruitmentDropdownOptionResponse MapToResponse(
+        RecruitmentDropdownOption item, Dictionary<string, string>? translations = null) => new()
+        {
+            Id = item.Id,
+            Type = item.Type,
+            Code = item.Code,
+            Name = translations != null && translations.TryGetValue("Name", out var name) && !string.IsNullOrWhiteSpace(name)
+                ? name
+                : item.Name,
+            IsActive = item.IsActive,
+            SortOrder = item.SortOrder,
+        };
 }

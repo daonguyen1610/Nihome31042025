@@ -45,6 +45,11 @@ const entityTypes = [
   { type: "NewsCategory", label: "News categories", fields: ["Name"] },
   { type: "ProjectCategory", label: "Project categories", fields: ["Name"] },
   { type: "AsBuiltDocumentCategory", label: "As-built document categories", fields: ["Name"] },
+  { type: "EmploymentType", label: "Employment types", fields: ["Name"] },
+  { type: "RecruitmentDropdownOption", label: "Recruitment options", fields: ["Name"] },
+  { type: "MasterDataOption", label: "Master data options", fields: ["Name"] },
+  { type: "ClientLogo", label: "Client logos", fields: ["Name"] },
+  { type: "RoleGroup", label: "Role groups", fields: ["Name"] },
 ] as const;
 
 const authorizationHeaders = (token: string) => ({ Authorization: `Bearer ${token}` });
@@ -105,34 +110,57 @@ function translatedField(editor: ReturnType<Page["getByRole"]>, label: string) {
 
 test.describe("Content translations — browser coverage", () => {
   test("renders all supported domains and their registered fields", async ({
+    api,
     page,
+    loginAs,
     loginInBrowserAs,
   }) => {
     test.slow();
-    await useEnglish(page);
-    await loginInBrowserAs(page, TEST_USERS.admin);
-    const registry = await loadEntityRegistry(page);
-    expect(registry.map((entry) => entry.type).sort()).toEqual(
-      entityTypes.map((entry) => entry.type).sort(),
-    );
+    const token = await loginAs(TEST_USERS.admin);
+    const suffix = crypto.randomUUID().slice(0, 8);
+    const dropdown = await api.post("/api/recruitment-dropdown-options", {
+      headers: authorizationHeaders(token),
+      data: {
+        type: "experience-level",
+        code: `e2e-${suffix}`,
+        name: `E2E recruitment option ${suffix}`,
+        isActive: true,
+        sortOrder: 999,
+      },
+    });
+    expect(dropdown.status(), "seed recruitment option for translation registry").toBe(201);
+    const dropdownId = ((await dropdown.json()) as { id: number }).id;
 
-    for (const entityType of entityTypes) {
-      const items = await openEntityType(page, entityType.type);
-      expect(items.length, `${entityType.label} needs seeded showcase data`).toBeGreaterThan(0);
+    try {
+      await useEnglish(page);
+      await loginInBrowserAs(page, TEST_USERS.admin);
+      const registry = await loadEntityRegistry(page);
+      expect(registry.map((entry) => entry.type).sort()).toEqual(
+        entityTypes.map((entry) => entry.type).sort(),
+      );
 
-      const editor = await openEntityEditor(page, entityType.type, items[0].id);
-      await expect(
-        editor.getByText(`${entityType.label} #${items[0].id}`, { exact: true }),
-      ).toBeVisible();
-      await expect(editor.locator("textarea")).toHaveCount(entityType.fields.length * 2);
+      for (const entityType of entityTypes) {
+        const items = await openEntityType(page, entityType.type);
+        expect(items.length, `${entityType.label} needs seeded showcase data`).toBeGreaterThan(0);
 
-      for (const field of entityType.fields) {
-        await expect(editor.getByText(`🇻🇳 ${field} (Source)`, { exact: true })).toBeVisible();
-        await expect(editor.getByText(`🇺🇸 English ${field}`, { exact: true })).toBeVisible();
+        const editor = await openEntityEditor(page, entityType.type, items[0].id);
+        await expect(
+          editor.getByText(`${entityType.label} #${items[0].id}`, { exact: true }),
+        ).toBeVisible();
+        await expect(editor.locator("textarea")).toHaveCount(entityType.fields.length * 2);
+
+        for (const field of entityType.fields) {
+          await expect(editor.getByText(`🇻🇳 ${field} (Source)`, { exact: true })).toBeVisible();
+          await expect(editor.getByText(`🇺🇸 English ${field}`, { exact: true })).toBeVisible();
+        }
+
+        await page.keyboard.press("Escape");
+        await expect(editor).toBeHidden();
       }
-
-      await page.keyboard.press("Escape");
-      await expect(editor).toBeHidden();
+    } finally {
+      await api.delete(`/api/recruitment-dropdown-options/${dropdownId}`, {
+        headers: authorizationHeaders(token),
+      });
     }
   });
 

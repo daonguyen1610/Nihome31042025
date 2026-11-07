@@ -149,7 +149,7 @@ const CapabilityDocuments = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("capability_document_tag");
+        const { data } = await adminApi.getMasterDataOptions("capability_document_tag", lang);
         if (!cancelled) setTags(data);
       } catch {
         /* non-fatal — filters will just be empty */
@@ -158,7 +158,7 @@ const CapabilityDocuments = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lang]);
 
   // -------- create dialog flow --------
   const [createOpen, setCreateOpen] = useState(false);

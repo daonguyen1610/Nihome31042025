@@ -53,7 +53,7 @@ const selectClasses =
 const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const { id: idParam } = useParams();
   const navigate = useNavigate();
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const [data, setData] = useState<FormData>(empty);
   const [loading, setLoading] = useState(mode === "edit");
@@ -67,18 +67,18 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   useEffect(() => {
     setEmploymentTypesLoading(true);
     adminApi
-      .getEmploymentTypes(true)
+      .getEmploymentTypes(true, lang)
       .then((res) => setEmploymentTypes(res.data))
       .catch(() => setEmploymentTypes([]))
       .finally(() => setEmploymentTypesLoading(false));
 
     adminApi
-      .getRecruitmentDropdownOptions("experience-level", true)
+      .getRecruitmentDropdownOptions("experience-level", true, lang)
       .then((res) => setExperienceLevels(res.data))
       .catch(() => setExperienceLevels([]));
 
     adminApi
-      .getRecruitmentDropdownOptions("benefit", true)
+      .getRecruitmentDropdownOptions("benefit", true, lang)
       .then((res) => setBenefitOptions(res.data))
       .catch(() => setBenefitOptions([]));
 
@@ -86,7 +86,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
       .getRoleGroupOptions()
       .then((res) => setDepartmentOptions(res.data ?? []))
       .catch(() => setDepartmentOptions([]));
-  }, []);
+  }, [lang]);
 
   useEffect(() => {
     if (mode !== "create") return;

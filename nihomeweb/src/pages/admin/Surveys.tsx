@@ -194,7 +194,7 @@ const AdminSurveys = () => {
     (async () => {
       try {
         const [ctResp, projResp, operationalResp, oppResp] = await Promise.all([
-          adminApi.getMasterDataOptions("construction_type"),
+          adminApi.getMasterDataOptions("construction_type", lang),
           contentApi.getProjects().catch(() => ({ data: [] })),
           adminApi.listOperationalProjects({ pageSize: 100 }).catch(() => ({
             data: { total: 0, page: 1, pageSize: 100, items: [] },
@@ -238,7 +238,7 @@ const AdminSurveys = () => {
     return () => {
       cancelled = true;
     };
-  }, [canPickSurveyor]);
+  }, [canPickSurveyor, lang]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);

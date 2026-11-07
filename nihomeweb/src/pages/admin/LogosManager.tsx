@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Link } from "react-router-dom";
 import {
   ImageIcon,
   Plus,
@@ -16,6 +17,7 @@ import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import { useLogos } from "@/hooks/useContentApi";
 import { useBulkSelection } from "@/hooks/useBulkSelection";
+import { usePermissions } from "@/hooks/usePermissions";
 import { adminApi, type UpsertLogoRequest } from "@/services/adminApi";
 import type { LogoResponse } from "@/services/contentApi";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -97,7 +99,8 @@ function getErrorMessage(error: unknown) {
 const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
   const { t } = useI18n();
   const { toast } = useToast();
-  const { data: logos, loading, error, refetch } = useLogos();
+  const { has } = usePermissions();
+  const { data: logos, loading, error, refetch } = useLogos("vi");
   const [form, setForm] = useState<LogoFormData>(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -327,6 +330,13 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {has("content.translations.view") && (
+              <Button asChild type="button" variant="outline" size="sm">
+                <Link to="/admin/translations?tab=entity&type=ClientLogo">
+                  {t("translations.action.openContent")}
+                </Link>
+              </Button>
+            )}
             <AdminExportButton onClick={handleExport} disabled={items.length === 0} />
             <Button type="button" onClick={startCreate}>
               <Plus className="mr-1.5 h-4 w-4" /> {t("logoAdmin.add")}

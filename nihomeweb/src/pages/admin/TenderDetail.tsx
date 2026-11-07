@@ -1608,7 +1608,7 @@ interface MarkLostDialogProps {
 }
 
 const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const [reasons, setReasons] = useState<MasterDataOption[]>([]);
   const [loading, setLoading] = useState(false);
   const [reasonCode, setReasonCode] = useState<string>("");
@@ -1625,7 +1625,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
     setNote("");
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("opportunity_lost_reason");
+        const { data } = await adminApi.getMasterDataOptions("opportunity_lost_reason", lang);
         if (!cancelled) setReasons((data ?? []).filter((r) => r.isActive));
       } catch (err) {
         if (!cancelled) setError(extractApiError(err));
@@ -1636,7 +1636,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
     return () => {
       cancelled = true;
     };
-  }, [open]);
+  }, [open, lang]);
 
   const confirm = async () => {
     if (!reasonCode) {

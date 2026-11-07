@@ -12,12 +12,15 @@ namespace NihomeBackend.Controllers;
 public class RecruitmentDropdownOptionsController(RecruitmentDropdownOptionService svc) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetByType([FromQuery] string type, [FromQuery] bool includeInactive = false)
+    public async Task<IActionResult> GetByType(
+        [FromQuery] string type,
+        [FromQuery] bool includeInactive = false,
+        [FromQuery] string lang = "vi")
     {
         if (string.IsNullOrWhiteSpace(type))
             return BadRequest(new { message = "type is required" });
 
-        return Ok(await svc.GetByTypeAsync(type, includeInactive));
+        return Ok(await svc.GetByTypeAsync(type, includeInactive, lang));
     }
 
     [HttpGet("role-group-options")]

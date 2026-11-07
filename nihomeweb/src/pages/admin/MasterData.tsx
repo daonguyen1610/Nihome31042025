@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Plus, Search as SearchIcon, Pencil, Trash2, Check, X } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -301,11 +301,20 @@ const MasterData = () => {
             <h1 className="text-2xl font-semibold">{t("masterData.title")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t("masterData.subtitle")}</p>
           </div>
-          {canManage && activeCategory && (
-            <Button onClick={openCreate}>
-              <Plus className="mr-1.5 h-4 w-4" /> {t("masterData.newOption")}
-            </Button>
-          )}
+          <div className="flex flex-wrap items-center gap-2">
+            {has("content.translations.view") && (
+              <Button asChild type="button" variant="outline" size="sm">
+                <Link to="/admin/translations?tab=entity&type=MasterDataOption">
+                  {t("translations.action.openContent")}
+                </Link>
+              </Button>
+            )}
+            {canManage && activeCategory && (
+              <Button onClick={openCreate}>
+                <Plus className="mr-1.5 h-4 w-4" /> {t("masterData.newOption")}
+              </Button>
+            )}
+          </div>
         </header>
 
         {/* Category picker + search + count */}

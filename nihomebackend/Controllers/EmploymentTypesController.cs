@@ -12,8 +12,10 @@ namespace NihomeBackend.Controllers;
 public class EmploymentTypesController(EmploymentTypeService svc) : ControllerBase
 {
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] bool includeInactive = false)
-        => Ok(await svc.GetAllAsync(includeInactive));
+    public async Task<IActionResult> GetAll(
+        [FromQuery] bool includeInactive = false,
+        [FromQuery] string lang = "vi")
+        => Ok(await svc.GetAllAsync(includeInactive, lang));
 
     [HttpPost]
     [Authorize]

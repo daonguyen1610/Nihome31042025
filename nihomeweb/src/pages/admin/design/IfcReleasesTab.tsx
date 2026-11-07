@@ -117,7 +117,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("ifc_recipient_type");
+        const { data } = await adminApi.getMasterDataOptions("ifc_recipient_type", lang);
         if (!cancelled) setRecipientTypes((data ?? []).filter((o) => o.isActive));
       } catch {
         // non-fatal — form validation will catch it server-side
@@ -139,7 +139,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, [project.id, isShopStage]);
+  }, [project.id, isShopStage, lang]);
 
   // -------- create dialog --------
   const [createOpen, setCreateOpen] = useState(false);

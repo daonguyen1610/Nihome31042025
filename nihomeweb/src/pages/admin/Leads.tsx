@@ -189,8 +189,8 @@ const AdminLeads = () => {
     (async () => {
       try {
         const [sourceResponse, segmentResponse] = await Promise.all([
-          adminApi.getMasterDataOptions("customer_source"),
-          adminApi.getMasterDataOptions("lead_segment"),
+          adminApi.getMasterDataOptions("customer_source", lang),
+          adminApi.getMasterDataOptions("lead_segment", lang),
         ]);
         if (!cancelled) {
           setSources(sourceResponse.data);
@@ -203,7 +203,7 @@ const AdminLeads = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lang]);
 
   const openDetail = async (id: number) => {
     setDetailLoading(true);

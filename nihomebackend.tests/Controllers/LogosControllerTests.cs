@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc;
 using Moq;
 using NihomeBackend.Controllers;
+using Microsoft.Extensions.Caching.Memory;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -23,7 +24,7 @@ public class LogosControllerTests : IDisposable
         _db = DbContextFactory.Create();
         var hostedImageService = new HostedImageService(
             Mock.Of<IWebHostEnvironment>(env => env.ContentRootPath == "/tmp"));
-        var service = new LogoService(_db, hostedImageService, NullLogger<LogoService>.Instance);
+        var service = new LogoService(_db, hostedImageService, new EntityTranslationService(_db, new MemoryCache(new MemoryCacheOptions())), NullLogger<LogoService>.Instance);
         _sut = new LogosController(service);
     }
 

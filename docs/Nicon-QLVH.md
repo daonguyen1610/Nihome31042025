@@ -456,6 +456,9 @@ ngầm khi tạo `DesignProject`.
 
 Mẫu đã xuất bản bất biến, chỉnh sửa bằng phiên bản nháp mới. Dự án giữ snapshot,
 người và thời điểm áp dụng; mẫu ngừng sử dụng không thay đổi dự án đã áp dụng.
+**Target — quyết định người dùng 07/11/2026:** Bản dịch cập nhật của mẫu
+checklist pháp lý và QA/QC cũng áp dụng khi hiển thị hồ sơ đã tạo từ mẫu đó;
+nội dung nghiệp vụ và snapshot lịch sử vẫn được bảo toàn.
 PM chọn thủ công theo phạm vi mô tả, chưa tự khớp loại/quy mô. Dự án cũ chưa có
 mẫu tiếp tục vận hành; PM/Admin áp dụng chủ động qua preview, giữ hồ sơ, tiến độ
 và lịch gói hiện có, thêm permit/task thiếu. Bản đầu không đổi mẫu đã áp dụng,

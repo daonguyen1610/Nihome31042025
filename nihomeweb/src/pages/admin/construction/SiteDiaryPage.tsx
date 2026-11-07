@@ -209,7 +209,7 @@ const AdminSiteDiary = () => {
           adminApi.listDesignProjects({ pageSize: 200 }).catch(() => ({
             data: { total: 0, page: 1, pageSize: 200, items: [] },
           })),
-          adminApi.getMasterDataOptions("diary_weather").catch(() => ({ data: [] })),
+          adminApi.getMasterDataOptions("diary_weather", lang).catch(() => ({ data: [] })),
         ]);
         if (cancelled) return;
         setProjects(projResp.data.items ?? []);
@@ -221,7 +221,7 @@ const AdminSiteDiary = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lang]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);

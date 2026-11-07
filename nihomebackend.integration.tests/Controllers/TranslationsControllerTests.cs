@@ -10,6 +10,112 @@ public class TranslationsControllerTests : IntegrationTestBase
     public TranslationsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
+    public async Task RoleGroup_ContentTranslationUpdatesLabelsAndSurvivesSourceEdit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var code = "TRANS_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var create = await Client.PostAsJsonAsync("/api/admin/rbac/role-groups", new
+        {
+            code,
+            names = new { vi = "Nhóm dự án" },
+            sortOrder = 1,
+        });
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
+        var group = await ReadJsonAsync(create);
+        var id = group.GetProperty("id").GetInt32();
+        var key = group.GetProperty("labelKey").GetString()!;
+        var uiPairs = await ReadJsonAsync(await Client.GetAsync($"/api/translations/admin?search={key}"));
+        uiPairs.GetArrayLength().Should().Be(0);
+        var staticWrite = await Client.PostAsJsonAsync("/api/translations/pair", new
+        {
+            key,
+            vietnameseValue = "Thay đổi sai chỗ",
+            translations = new Dictionary<string, string> { ["en"] = "Wrong place" },
+            category = "rbac",
+        });
+        staticWrite.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(staticWrite)).GetProperty("error").GetString().Should().Be("role_group_translation_use_content");
+        var bulkWrite = await Client.PostAsJsonAsync("/api/translations/bulk", new[]
+        {
+            new { key, languageCode = "en", value = "Wrong place", category = "rbac" },
+        });
+        bulkWrite.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await Client.DeleteAsync($"/api/translations/key/{key}")).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        var types = await ReadJsonAsync(await Client.GetAsync("/api/translations/entity/types"));
+        types.EnumerateArray().Select(item => item.GetProperty("type").GetString()).Should().Contain("RoleGroup");
+        var invalid = await Client.PostAsJsonAsync($"/api/translations/entity/RoleGroup/{id}", new
+        {
+            languageCode = "en",
+            translations = new Dictionary<string, string> { ["Name"] = "x" },
+        });
+        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var save = await Client.PostAsJsonAsync($"/api/translations/entity/RoleGroup/{id}", new
+        {
+            languageCode = "en",
+            translations = new Dictionary<string, string> { ["Name"] = "Project team" },
+        });
+        save.StatusCode.Should().Be(HttpStatusCode.OK);
+        var update = await Client.PutAsJsonAsync($"/api/admin/rbac/role-groups/{id}", new
+        {
+            names = new { vi = "Ban dự án" },
+            sortOrder = 2,
+        });
+        update.StatusCode.Should().Be(HttpStatusCode.OK);
+        var map = await ReadJsonAsync(await Client.GetAsync("/api/translations/en"));
+        map.GetProperty("translations").GetProperty(key).GetString().Should().Be("Project team");
+        var chinese = await ReadJsonAsync(await Client.GetAsync("/api/translations/zh"));
+        chinese.GetProperty("translations").GetProperty(key).GetString().Should().Be("Ban dự án");
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/translations/entity/RoleGroup/{id}"));
+        detail.GetProperty("original").GetProperty("Name").GetString().Should().Be("Ban dự án");
+        detail.GetProperty("translations").GetProperty("en").GetProperty("Name").GetString().Should().Be("Project team");
+        var list = await ReadJsonAsync(await Client.GetAsync("/api/translations/entity/RoleGroup"));
+        var item = list.GetProperty("items").EnumerateArray().Single(row => row.GetProperty("id").GetInt32() == id);
+        item.GetProperty("translationCount").GetInt32().Should().Be(1);
+        foreach (var (language, name) in new[] { ("zh", "项目团队"), ("ja", "プロジェクトチーム") })
+        {
+            var translated = await Client.PostAsJsonAsync($"/api/translations/entity/RoleGroup/{id}", new
+            {
+                languageCode = language,
+                translations = new Dictionary<string, string> { ["Name"] = name },
+            });
+            translated.StatusCode.Should().Be(HttpStatusCode.OK);
+            var translatedMap = await ReadJsonAsync(await Client.GetAsync($"/api/translations/{language}"));
+            translatedMap.GetProperty("translations").GetProperty(key).GetString().Should().Be(name);
+        }
+        var complete = await ReadJsonAsync(await Client.GetAsync("/api/translations/entity/RoleGroup"));
+        complete.GetProperty("items").EnumerateArray().Single(row => row.GetProperty("id").GetInt32() == id)
+            .GetProperty("translationCount").GetInt32().Should().Be(3);
+        (await Client.DeleteAsync($"/api/translations/entity/RoleGroup/{id}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var reset = await ReadJsonAsync(await Client.GetAsync("/api/translations/en"));
+        reset.GetProperty("translations").GetProperty(key).GetString().Should().Be("Ban dự án");
+    }
+
+    [Fact]
+    public async Task RoleGroup_LegacySourceIdenticalTranslationSurvivesSourceEdit()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var code = "LEGACY_" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
+        var created = await Client.PostAsJsonAsync("/api/admin/rbac/role-groups", new
+        {
+            code,
+            names = new { vi = "Studio", en = "Studio", zh = "Studio", ja = "Studio" },
+            sortOrder = 1,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var group = await ReadJsonAsync(created);
+        var id = group.GetProperty("id").GetInt32();
+        var key = group.GetProperty("labelKey").GetString()!;
+        (await Client.PutAsJsonAsync($"/api/admin/rbac/role-groups/{id}", new
+        {
+            names = new { vi = "Studio mới" },
+            sortOrder = 1,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+        var map = await ReadJsonAsync(await Client.GetAsync("/api/translations/en"));
+        map.GetProperty("translations").GetProperty(key).GetString().Should().Be("Studio");
+    }
+
+    [Fact]
     public async Task GetByLang_IsPublic_ReturnsOk()
     {
         (await Client.GetAsync("/api/translations/en")).StatusCode.Should().Be(HttpStatusCode.OK);
@@ -54,7 +160,7 @@ public class TranslationsControllerTests : IntegrationTestBase
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var types = await ReadJsonAsync(response);
-        types.GetArrayLength().Should().Be(11);
+        types.GetArrayLength().Should().Be(16);
         var slideshow = types.EnumerateArray().Single(item =>
             item.GetProperty("type").GetString() == "Slideshow");
         slideshow.GetProperty("displayKey").GetString().Should().Be("translations.entityType.slideshow");
@@ -63,6 +169,137 @@ public class TranslationsControllerTests : IntegrationTestBase
         var project = types.EnumerateArray().Single(item =>
             item.GetProperty("type").GetString() == "Project");
         project.GetProperty("fieldFormats").GetProperty("Highlights").GetString().Should().Be("json");
+    }
+
+    [Fact]
+    public async Task SimpleNameEntities_TranslationRoundTrip_ReturnsLocalizedNames()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var suffix = Guid.NewGuid().ToString("N")[..8];
+        var category = $"test_{suffix}";
+        var (employmentTypeId, dropdownId, masterDataId, logoId) = await WithDbAsync(async db =>
+        {
+            var employmentType = new EmploymentType { Code = $"et-{suffix}", Name = "Toàn thời gian" };
+            var dropdown = new RecruitmentDropdownOption
+            {
+                Type = "experience-level",
+                Code = $"exp-{suffix}",
+                Name = "Mới tốt nghiệp",
+            };
+            var masterData = new MasterDataOption
+            {
+                Category = category,
+                Code = $"md-{suffix}",
+                Name = "Nguồn khách hàng",
+            };
+            var logo = new ClientLogo
+            {
+                Name = "Đối tác chiến lược",
+                ImageUrl = "/images/logo-translation.png",
+                Kind = LogoKind.Client,
+            };
+            db.AddRange(employmentType, dropdown, masterData, logo);
+            await db.SaveChangesAsync();
+            return (employmentType.Id, dropdown.Id, masterData.Id, logo.Id);
+        });
+
+        try
+        {
+            var types = await ReadJsonAsync(await Client.GetAsync("/api/translations/entity/types"));
+            var typeNames = types.EnumerateArray()
+                .Select(item => item.GetProperty("type").GetString()).ToArray();
+            typeNames.Should().Contain(new[]
+            {
+                EntityTypes.EmploymentType,
+                EntityTypes.RecruitmentDropdownOption,
+                EntityTypes.MasterDataOption,
+                EntityTypes.ClientLogo,
+            });
+
+            var invalid = await Client.PostAsJsonAsync(
+                $"/api/translations/entity/EmploymentType/{employmentTypeId}",
+                new
+                {
+                    languageCode = "en",
+                    translations = new Dictionary<string, string> { ["Name"] = "x" },
+                });
+            invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+            var entries = new[]
+            {
+                (Type: EntityTypes.EmploymentType, Id: employmentTypeId, Name: "Full time"),
+                (Type: EntityTypes.RecruitmentDropdownOption, Id: dropdownId, Name: "Fresh graduate"),
+                (Type: EntityTypes.MasterDataOption, Id: masterDataId, Name: "Customer source"),
+                (Type: EntityTypes.ClientLogo, Id: logoId, Name: "Strategic partner"),
+            };
+            foreach (var entry in entries)
+            {
+                var save = await Client.PostAsJsonAsync(
+                    $"/api/translations/entity/{entry.Type}/{entry.Id}",
+                    new
+                    {
+                        languageCode = "en",
+                        translations = new Dictionary<string, string> { ["Name"] = entry.Name },
+                    });
+                save.StatusCode.Should().Be(HttpStatusCode.OK, await save.Content.ReadAsStringAsync());
+            }
+
+            var labourTypes = await ReadJsonAsync(await Client.GetAsync("/api/employment-types?includeInactive=true&lang=en"));
+            labourTypes.EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == employmentTypeId)
+                .GetProperty("name").GetString().Should().Be("Full time");
+
+            var dropdowns = await ReadJsonAsync(await Client.GetAsync(
+                "/api/recruitment-dropdown-options?type=experience-level&includeInactive=true&lang=en"));
+            dropdowns.EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == dropdownId)
+                .GetProperty("name").GetString().Should().Be("Fresh graduate");
+
+            var masterData = await ReadJsonAsync(await Client.GetAsync($"/api/master-data/{category}?includeInactive=true&lang=en"));
+            masterData.EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == masterDataId)
+                .GetProperty("name").GetString().Should().Be("Customer source");
+
+            var logos = await ReadJsonAsync(await Client.GetAsync("/api/logos?lang=en"));
+            logos.GetProperty("clients").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetInt32() == logoId)
+                .GetProperty("name").GetString().Should().Be("Strategic partner");
+
+            foreach (var (type, id, _) in entries)
+            {
+                var list = await ReadJsonAsync(await Client.GetAsync($"/api/translations/entity/{type}"));
+                list.GetProperty("items").EnumerateArray()
+                    .Single(item => item.GetProperty("id").GetInt32() == id)
+                    .GetProperty("translationCount").GetInt32().Should().Be(1);
+            }
+
+            foreach (var (type, id, _) in entries)
+            {
+                (await Client.DeleteAsync($"/api/translations/entity/{type}/{id}"))
+                    .StatusCode.Should().Be(HttpStatusCode.NoContent);
+            }
+
+            var resetlabourTypes = await ReadJsonAsync(await Client.GetAsync("/api/employment-types?includeInactive=true&lang=en"));
+            resetlabourTypes.EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == employmentTypeId)
+                .GetProperty("name").GetString().Should().Be("Toàn thời gian");
+            var resetLogos = await ReadJsonAsync(await Client.GetAsync("/api/logos?lang=en"));
+            resetLogos.GetProperty("clients").EnumerateArray()
+                .Single(item => item.GetProperty("id").GetInt32() == logoId)
+                .GetProperty("name").GetString().Should().Be("Đối tác chiến lược");
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                db.EntityTranslations.RemoveRange(db.EntityTranslations.Where(translation =>
+                    (translation.EntityType == EntityTypes.EmploymentType && translation.EntityId == employmentTypeId)
+                    || (translation.EntityType == EntityTypes.RecruitmentDropdownOption && translation.EntityId == dropdownId)
+                    || (translation.EntityType == EntityTypes.MasterDataOption && translation.EntityId == masterDataId)
+                    || (translation.EntityType == EntityTypes.ClientLogo && translation.EntityId == logoId)));
+                db.EmploymentTypes.RemoveRange(db.EmploymentTypes.Where(item => item.Id == employmentTypeId));
+                db.RecruitmentDropdownOptions.RemoveRange(db.RecruitmentDropdownOptions.Where(item => item.Id == dropdownId));
+                db.MasterDataOptions.RemoveRange(db.MasterDataOptions.Where(item => item.Id == masterDataId));
+                db.ClientLogos.RemoveRange(db.ClientLogos.Where(item => item.Id == logoId));
+                await db.SaveChangesAsync();
+            });
+        }
     }
 
     [Fact]

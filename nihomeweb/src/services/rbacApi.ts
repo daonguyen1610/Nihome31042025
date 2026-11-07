@@ -39,9 +39,9 @@ export interface RoleGroupResponse {
 
 export interface RoleGroupNames {
   vi: string;
-  en: string;
-  zh: string;
-  ja: string;
+  en?: string;
+  zh?: string;
+  ja?: string;
 }
 
 export interface CreateRoleGroupRequest {

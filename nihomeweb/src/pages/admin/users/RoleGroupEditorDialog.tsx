@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { isAxiosError } from "axios";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,12 +13,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { TRANSLATIONS_CHANGED_EVENT, useI18n } from "@/lib/i18n";
 import { rbacApi, type RoleGroupNames, type RoleGroupResponse } from "@/services/rbacApi";
 
 const CODE_RE = /^[A-Z][A-Z0-9_]{1,49}$/;
-const LANGUAGES = ["vi", "en", "zh", "ja"] as const;
-const EMPTY_NAMES: RoleGroupNames = { vi: "", en: "", zh: "", ja: "" };
+const EMPTY_NAMES: RoleGroupNames = { vi: "" };
 
 interface Props {
   open: boolean;
@@ -29,6 +30,7 @@ interface Props {
 export default function RoleGroupEditorDialog({ open, group, onOpenChange, onSaved }: Props) {
   const { t } = useI18n();
   const { toast } = useToast();
+  const { has } = usePermissions();
   const [code, setCode] = useState("");
   const [names, setNames] = useState<RoleGroupNames>(EMPTY_NAMES);
   const [sortOrder, setSortOrder] = useState("0");
@@ -38,9 +40,6 @@ export default function RoleGroupEditorDialog({ open, group, onOpenChange, onSav
     setCode(group?.code ?? "");
     setNames({
       vi: group?.names?.vi ?? "",
-      en: group?.names?.en ?? "",
-      zh: group?.names?.zh ?? "",
-      ja: group?.names?.ja ?? "",
     });
     setSortOrder((group?.sortOrder ?? 0).toLocaleString("vi-VN"));
   }, [open, group]);
@@ -48,10 +47,8 @@ export default function RoleGroupEditorDialog({ open, group, onOpenChange, onSav
   const parsedOrder = Number(sortOrder.replace(/\./g, ""));
   const valid =
     CODE_RE.test(code) &&
-    LANGUAGES.every((language) => {
-      const length = names[language].trim().length;
-      return length >= 2 && length <= 100;
-    }) &&
+    names.vi.trim().length >= 2 &&
+    names.vi.trim().length <= 100 &&
     sortOrder.trim().length > 0 &&
     Number.isInteger(parsedOrder) &&
     parsedOrder >= 0 &&
@@ -96,7 +93,7 @@ export default function RoleGroupEditorDialog({ open, group, onOpenChange, onSav
           }}
         >
           <div className="space-y-1.5">
-            <Label htmlFor="role-group-code">{t("adminRbac.codeLabel")}</Label>
+            <Label htmlFor="role-group-code">{t("adminRbac.groups.codeLabel")}</Label>
             <Input
               id="role-group-code"
               value={code}
@@ -108,26 +105,30 @@ export default function RoleGroupEditorDialog({ open, group, onOpenChange, onSav
             />
             <p className="text-xs text-muted-foreground">{t("adminRbac.groups.codeHelp")}</p>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            {LANGUAGES.map((language) => (
-              <div key={language} className="space-y-1.5">
-                <Label htmlFor={`role-group-name-${language}`}>
-                  {t(`adminRbac.groups.language.${language}`)}
-                </Label>
-                <Input
-                  id={`role-group-name-${language}`}
-                  value={names[language]}
-                  onChange={(event) =>
-                    setNames((current) => ({ ...current, [language]: event.target.value }))
-                  }
-                  minLength={2}
-                  maxLength={100}
-                  required
-                  aria-invalid={names[language].length > 0 && names[language].trim().length < 2}
-                  data-testid={`role-group-name-${language}`}
-                />
-              </div>
-            ))}
+          <div className="space-y-1.5">
+            <Label htmlFor="role-group-name-vi">{t("adminRbac.groups.language.vi")}</Label>
+            <Input
+              id="role-group-name-vi"
+              value={names.vi}
+              onChange={(event) => setNames({ vi: event.target.value })}
+              minLength={2}
+              maxLength={100}
+              required
+              aria-invalid={names.vi.length > 0 && names.vi.trim().length < 2}
+              data-testid="role-group-name-vi"
+            />
+            <p className="text-xs text-muted-foreground">
+              {has("content.translations.view") ? (
+                <Link
+                  to="/admin/translations?tab=entity&type=RoleGroup"
+                  className="underline underline-offset-2"
+                >
+                  {t("adminRbac.groups.translationHelp")}
+                </Link>
+              ) : (
+                t("adminRbac.groups.translationHelpNoAccess")
+              )}
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="role-group-order">{t("adminRbac.groups.sortOrder")}</Label>

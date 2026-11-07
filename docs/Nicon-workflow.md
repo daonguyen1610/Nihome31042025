@@ -559,6 +559,8 @@ tự do cho BOQ của Quote.
    trước; hệ thống hiển thị các dòng hợp lệ và cảnh báo **thay toàn bộ Draft**.
    Xác nhận mới lưu atomic; sai field/category/hash hoặc revision stale bị từ
    chối và không ghi đè. File trống không được import để xóa dữ liệu.
+   **Target — quyết định người dùng 07/11/2026:** Khi bản dịch nhãn thay đổi,
+   workbook đã tải trước đó vẫn phải nhập được theo nhãn và cấu hình lúc tải.
 4. Dòng có giá tạo canonical code theo sheet + mã nguồn, quantity, unit price
    và amount để luồng duyệt/Quote hiện tại sử dụng. Cùng STT ở sheet khác không
    trùng nhau; trùng code trong cùng sheet bị chặn. Dòng tham khảo chỉ lưu cùng

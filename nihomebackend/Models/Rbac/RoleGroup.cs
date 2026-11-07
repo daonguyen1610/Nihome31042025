@@ -9,6 +9,7 @@ namespace NihomeBackend.Models.Rbac;
 /// </summary>
 public class RoleGroup
 {
+    public const string TranslationPlaceholderField = "NamePlaceholder";
     public int Id { get; set; }
 
     [Required, MaxLength(50)]

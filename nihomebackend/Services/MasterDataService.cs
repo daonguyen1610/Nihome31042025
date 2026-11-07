@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Memory;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -17,6 +18,7 @@ namespace NihomeBackend.Services;
 public class MasterDataService(
     AppDbContext db,
     IMemoryCache cache,
+    EntityTranslationService entityTranslations,
     ILogger<MasterDataService> logger) : IMasterDataService
 {
     private static readonly TimeSpan CacheTtl = TimeSpan.FromMinutes(5);
@@ -48,11 +50,15 @@ public class MasterDataService(
     public async Task<List<MasterDataOptionResponse>> GetByCategoryAsync(
         string category,
         bool includeInactive = false,
+        string lang = "vi",
         CancellationToken ct = default)
     {
         var normalized = NormalizeCategory(category);
-        var cacheKey = BuildCategoryCacheKey(normalized, includeInactive);
-        if (cache.TryGetValue(cacheKey, out List<MasterDataOptionResponse>? cached) && cached != null)
+        // Only the source language is cached: entity translations bypass this
+        // service's cache, so caching localized names would delay edits.
+        var cacheKey = BuildCategoryCacheKey(normalized, includeInactive, lang);
+        var useCache = lang == "vi";
+        if (useCache && cache.TryGetValue(cacheKey, out List<MasterDataOptionResponse>? cached) && cached != null)
         {
             return cached;
         }
@@ -66,13 +72,23 @@ public class MasterDataService(
             query = query.Where(o => o.IsActive);
         }
 
-        var items = await query
+        var entities = await query
             .OrderBy(o => o.SortOrder)
             .ThenBy(o => o.Name)
-            .Select(o => MapToResponse(o))
             .ToListAsync(ct);
 
-        cache.Set(cacheKey, items, CacheTtl);
+        var translations = await entityTranslations.GetBatchTranslationsAsync(
+            EntityTypes.MasterDataOption, entities.Select(o => o.Id), lang);
+
+        var items = entities
+            .Select(o => MapToResponse(o, translations.GetValueOrDefault(o.Id)))
+            .ToList();
+
+        if (useCache)
+        {
+            cache.Set(cacheKey, items, CacheTtl);
+        }
+
         return items;
     }
 
@@ -165,6 +181,7 @@ public class MasterDataService(
 
         db.MasterDataOptions.Remove(entity);
         await db.SaveChangesAsync(ct);
+        await entityTranslations.DeleteEntityTranslationsAsync(EntityTypes.MasterDataOption, entity.Id);
         InvalidateCache(entity.Category);
         logger.LogInformation(
             "Deleted master-data option {Id} ({Category}/{Code})", entity.Id, entity.Category, entity.Code);
@@ -181,12 +198,15 @@ public class MasterDataService(
     private void InvalidateCache(string category)
     {
         cache.Remove(CategoriesCacheKey);
-        cache.Remove(BuildCategoryCacheKey(category, includeInactive: true));
-        cache.Remove(BuildCategoryCacheKey(category, includeInactive: false));
+        foreach (var lang in new[] { "vi", "en", "zh", "ja" })
+        {
+            cache.Remove(BuildCategoryCacheKey(category, includeInactive: true, lang));
+            cache.Remove(BuildCategoryCacheKey(category, includeInactive: false, lang));
+        }
     }
 
-    private static string BuildCategoryCacheKey(string category, bool includeInactive) =>
-        $"master-data:category:{category}:{(includeInactive ? "all" : "active")}";
+    private static string BuildCategoryCacheKey(string category, bool includeInactive, string lang) =>
+        $"master-data:category:{category}:{(includeInactive ? "all" : "active")}:{lang}";
 
     private static string NormalizeCategory(string value) =>
         (value ?? string.Empty).Trim().ToLowerInvariant();
@@ -194,17 +214,20 @@ public class MasterDataService(
     private static string NormalizeCode(string value) =>
         (value ?? string.Empty).Trim().ToLowerInvariant();
 
-    private static MasterDataOptionResponse MapToResponse(MasterDataOption entity) => new()
-    {
-        Id = entity.Id,
-        Category = entity.Category,
-        Code = entity.Code,
-        Name = entity.Name,
-        LabelKey = entity.LabelKey,
-        Description = entity.Description,
-        IsActive = entity.IsActive,
-        SortOrder = entity.SortOrder,
-        CreatedAt = entity.CreatedAt,
-        UpdatedAt = entity.UpdatedAt,
-    };
+    private static MasterDataOptionResponse MapToResponse(
+        MasterDataOption entity, Dictionary<string, string>? translations = null) => new()
+        {
+            Id = entity.Id,
+            Category = entity.Category,
+            Code = entity.Code,
+            Name = translations != null && translations.TryGetValue("Name", out var name) && !string.IsNullOrWhiteSpace(name)
+                ? name
+                : entity.Name,
+            LabelKey = entity.LabelKey,
+            Description = entity.Description,
+            IsActive = entity.IsActive,
+            SortOrder = entity.SortOrder,
+            CreatedAt = entity.CreatedAt,
+            UpdatedAt = entity.UpdatedAt,
+        };
 }

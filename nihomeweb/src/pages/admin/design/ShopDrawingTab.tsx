@@ -181,7 +181,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("design_discipline");
+        const { data } = await adminApi.getMasterDataOptions("design_discipline", lang);
         if (!cancelled) setDisciplines((data ?? []).filter((o) => o.isActive));
       } catch {
         // non-fatal
@@ -190,7 +190,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lang]);
 
   const disciplineOptions = useMemo(
     () => disciplines.map((d) => ({ value: d.code, label: d.name })),

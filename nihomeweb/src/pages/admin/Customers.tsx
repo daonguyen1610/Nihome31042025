@@ -230,7 +230,7 @@ const AdminCustomers = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("customer_source");
+        const { data } = await adminApi.getMasterDataOptions("customer_source", lang);
         if (!cancelled) setSources(data);
       } catch {
         // best-effort — dropdown may just be empty
@@ -239,7 +239,7 @@ const AdminCustomers = () => {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [lang]);
 
   const sourceLabelByCode = useMemo(() => {
     const map = new Map<string, string>();

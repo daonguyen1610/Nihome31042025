@@ -2459,7 +2459,7 @@ Translations are managed through the admin panel at `/admin/translations`. Admin
 
 ### 11.3 Entity Translations
 
-The **Content translations** tab centralizes field-level translations for activities, news, projects, services, homepage slideshow items, job positions, about sections, and the activity, news, project, and as-built document category catalogs. Category CRUD screens only maintain the Vietnamese source name; English, Chinese, and Japanese values are edited here.
+The **Content translations** tab centralizes field-level translations for activities, news, projects, services, homepage slideshow items, job positions, about sections, role groups, employment types, recruitment dropdown options (experience level and benefits), master-data options, client/partner/supplier/award logos, and the activity, news, project, and as-built document category catalogs. Category, role-group, employment-type, recruitment-option, master-data, and logo CRUD screens maintain the Vietnamese source name; English, Chinese, and Japanese values are edited here. Editing the source name preserves explicit translations and updates untranslated placeholder values.
 
 Each translation record specifies:
 - Entity type (for example, `Activity` or `Project`)
@@ -2470,7 +2470,7 @@ Each translation record specifies:
 
 The list shows translation progress across all three target languages. Reset removes the entity's translations and restores source-content fallback. Structured fields must contain valid JSON with the same keys, value types, array lengths, and ordering as the Vietnamese source; this prevents translated content from changing the public data contract.
 
-Users need `content.translations.view` to open this module and `content.translations.manage` to save or reset translations. Category API payloads containing `nameEn`, `nameZh`, or `nameJa` also require translation-manage permission.
+Users need `content.translations.view` to open this module and `content.translations.manage` to save or reset translations. Category API payloads containing `nameEn`, `nameZh`, or `nameJa`, and legacy role-group payloads containing target-language names, also require translation-manage permission.
 
 ### 11.4 Translation Categories
 

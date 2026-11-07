@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using System.Data;
 using NihomeBackend.Data;
+using NihomeBackend.Constants;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Models.Rbac;
@@ -627,8 +628,9 @@ public sealed class RoleService(
             ? await db.Database.BeginTransactionAsync(ct) : null;
         db.RoleGroups.Add(group);
         await db.SaveChangesAsync(ct);
-        await WriteGroupNamesAsync(group.LabelKey, req.Names, ct);
+        await WriteGroupNamesAsync(group, req.Names, ct, create: true);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        translations.InvalidateAllCaches();
         audit.Log(new AuditEvent
         {
             Action = "rbac.roleGroup.create",
@@ -653,8 +655,9 @@ public sealed class RoleService(
         group.SortOrder = req.SortOrder;
         group.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        await WriteGroupNamesAsync(group.LabelKey, req.Names, ct);
+        await WriteGroupNamesAsync(group, req.Names, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        translations.InvalidateAllCaches();
         audit.Log(new AuditEvent
         {
             Action = "rbac.roleGroup.update",
@@ -687,6 +690,8 @@ public sealed class RoleService(
         var response = (await ListRoleGroupsAsync(ct)).Single(item => item.Id == id);
         var rows = await db.Translations.Where(item => item.Key == group.LabelKey).ToListAsync(ct);
         db.Translations.RemoveRange(rows);
+        var entityRows = await db.EntityTranslations.Where(item => item.EntityType == EntityTypes.RoleGroup && item.EntityId == id).ToListAsync(ct);
+        db.EntityTranslations.RemoveRange(entityRows);
         var baseline = await db.RoleGroupPermissions.Where(item => item.RoleGroupId == id).ToListAsync(ct);
         db.RoleGroupPermissions.RemoveRange(baseline);
         db.RoleGroups.Remove(group);
@@ -706,21 +711,48 @@ public sealed class RoleService(
 
     private static string? ValidateGroupNames(RoleGroupNamesRequest? names)
     {
-        if (names is null) return "Group names are required in vi, en, zh and ja.";
+        if (names is null || string.IsNullOrWhiteSpace(names.Vi)) return "A Vietnamese group name is required.";
         foreach (var (language, value) in new[] { ("vi", names.Vi), ("en", names.En), ("zh", names.Zh), ("ja", names.Ja) })
-            if (string.IsNullOrWhiteSpace(value) || value.Trim().Length is < 2 or > 100)
+            if (value is not null && (string.IsNullOrWhiteSpace(value) || value.Trim().Length is < 2 or > 100))
                 return $"Group name {language} must contain 2-100 characters (example: Design).";
         return null;
     }
 
-    private async Task WriteGroupNamesAsync(string key, RoleGroupNamesRequest names, CancellationToken ct)
+    private async Task WriteGroupNamesAsync(RoleGroup group, RoleGroupNamesRequest names, CancellationToken ct, bool create = false)
     {
         ct.ThrowIfCancellationRequested();
-        await translations.UpsertPairAsync(key, names.Vi.Trim(), new Dictionary<string, string>
+        var targetNames = new Dictionary<string, string>();
+        var placeholders = await db.EntityTranslations.Where(row => row.EntityType == EntityTypes.RoleGroup &&
+            row.EntityId == group.Id && row.FieldName == RoleGroup.TranslationPlaceholderField).ToListAsync(ct);
+        foreach (var (language, value) in new[] { ("en", names.En), ("zh", names.Zh), ("ja", names.Ja) })
         {
-            ["en"] = names.En.Trim(),
-            ["zh"] = names.Zh.Trim(),
-            ["ja"] = names.Ja.Trim(),
-        }, "rbac");
+            var placeholder = placeholders.FirstOrDefault(row => row.LanguageCode == language);
+            if (value is not null)
+            {
+                targetNames[language] = value.Trim();
+                if (placeholder != null) db.EntityTranslations.Remove(placeholder);
+            }
+            else if (create)
+            {
+                targetNames[language] = names.Vi.Trim();
+                db.EntityTranslations.Add(new NihomeBackend.Models.EntityTranslation
+                {
+                    EntityType = EntityTypes.RoleGroup,
+                    EntityId = group.Id,
+                    FieldName = RoleGroup.TranslationPlaceholderField,
+                    LanguageCode = language,
+                    Value = names.Vi.Trim(),
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow,
+                });
+            }
+            else if (placeholder != null)
+            {
+                targetNames[language] = names.Vi.Trim();
+                placeholder.Value = names.Vi.Trim();
+                placeholder.UpdatedAt = DateTime.UtcNow;
+            }
+        }
+        await translations.UpsertPairAsync(group.LabelKey, names.Vi.Trim(), targetNames, "rbac");
     }
 }
