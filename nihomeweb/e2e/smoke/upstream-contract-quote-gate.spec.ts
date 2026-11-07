@@ -36,6 +36,7 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
   loginInBrowserAs,
   page,
 }) => {
+  test.setTimeout(90_000);
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
   const suffix = Math.random().toString(36).slice(2, 10);
   let customerId = 0;

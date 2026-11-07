@@ -711,6 +711,11 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
       users.pm.id,
     );
 
+    // Signing stamps the signing date and the server requires the start date to
+    // be on or after it, so anchor the fixture dates to the run instead of a
+    // fixed calendar day.
+    const startDate = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+    const endDate = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString();
     const contract = await expectJson<{ id: number; rowVersion: string }>(
       await api.post("/api/contracts", {
         headers: { ...adminHeaders, "Idempotency-Key": `schedule-contract-${suffix}` },
@@ -722,8 +727,8 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
           status: "Draft",
           value: 50_000_000_000,
           scopeOfWork: "Thi công xây dựng công trình theo tiến độ tổng thể.",
-          startDate: "2026-11-06T00:00:00Z",
-          endDate: "2027-12-31T00:00:00Z",
+          startDate,
+          endDate,
         },
       }),
       "create upstream contract",
