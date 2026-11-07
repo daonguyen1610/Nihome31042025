@@ -38,6 +38,7 @@ import {
   DESIGN_SCHEDULE_PHASE_CODES,
   DESIGN_SCHEDULE_STATUSES,
   type DesignProjectResponse,
+  type DesignScheduleDepartmentResponse,
   type DesignSchedulePhaseResponse,
   type DesignScheduleQuery,
   type DesignScheduleResponse,
@@ -92,7 +93,8 @@ export const DesignScheduleTab = ({ project }: Props) => {
   const [schedule, setSchedule] = useState<DesignScheduleResponse | null>(null);
   const [dependencyTasks, setDependencyTasks] = useState<DesignScheduleTaskResponse[]>([]);
   const [team, setTeam] = useState<OperationalProjectTeamResponse | null>(null);
-  const [departments, setDepartments] = useState<MasterDataOption[]>([]);
+  const [departments, setDepartments] = useState<DesignScheduleDepartmentResponse[]>([]);
+  const [disciplines, setDisciplines] = useState<MasterDataOption[]>([]);
   const [masterScheduleItems, setMasterScheduleItems] = useState<ProjectScheduleItemResponse[]>([]);
   const [query, setQuery] = useState<DesignScheduleQuery>({ page: 1, pageSize: PAGE_SIZE });
   const [loading, setLoading] = useState(Boolean(operationalProjectId));
@@ -115,19 +117,20 @@ export const DesignScheduleTab = ({ project }: Props) => {
     setError(null);
     setMasterScheduleItems([]);
     try {
-      const [scheduleResponse, allTasks, teamResponse, departmentResponse] = await Promise.all([
+      const [scheduleResponse, allTasks, teamResponse, disciplineResponse] = await Promise.all([
         adminApi.getDesignSchedule(operationalProjectId, {
           ...query,
           designProjectId: project.id,
         }),
         loadAllScheduleTasks(operationalProjectId, project.id),
         adminApi.getOperationalProjectTeam(operationalProjectId, project.id),
-        adminApi.getMasterDataOptions("project-department"),
+        adminApi.getMasterDataOptions("design_discipline"),
       ]);
       setSchedule(scheduleResponse.data);
       setDependencyTasks(allTasks);
       setTeam(teamResponse.data);
-      setDepartments(departmentResponse.data ?? []);
+      setDepartments(scheduleResponse.data.departments ?? []);
+      setDisciplines(disciplineResponse.data ?? []);
       // The master schedule only powers the optional WBS link picker; a
       // failure or missing schedule must not blank the design schedule.
       try {
@@ -157,7 +160,12 @@ export const DesignScheduleTab = ({ project }: Props) => {
     );
   };
   const departmentLabel = (code: string) => {
-    const option = departments.find((item) => item.code === code);
+    const option = departments.find((item) => item.code.toLowerCase() === code.toLowerCase());
+    return option?.labelKey ? t(option.labelKey) : code;
+  };
+  const disciplineLabel = (code?: string | null) => {
+    if (!code) return t("designProjects.schedule.value.none");
+    const option = disciplines.find((item) => item.code === code);
     return option?.labelKey ? t(option.labelKey) : (option?.name ?? code);
   };
   const memberLabel = (id: number) =>
@@ -169,6 +177,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
     query.phase ||
     query.assigneeMemberId ||
     query.departmentCode ||
+    query.disciplineCode ||
     query.status ||
     query.plannedFrom ||
     query.plannedTo ||
@@ -554,7 +563,30 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 <SelectItem value="all">
                   {t("designProjects.schedule.filter.allDepartments")}
                 </SelectItem>
-                {departments
+                {departments.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {t(item.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{t("designProjects.schedule.field.discipline")}</Label>
+            <Select
+              value={query.disciplineCode ?? "all"}
+              onValueChange={(value) =>
+                updateQuery({ disciplineCode: value === "all" ? undefined : value })
+              }
+            >
+              <SelectTrigger className="mt-1 min-h-11">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">
+                  {t("designProjects.schedule.filter.allDisciplines")}
+                </SelectItem>
+                {disciplines
                   .filter((item) => item.isActive)
                   .map((item) => (
                     <SelectItem key={item.id} value={item.code}>
@@ -734,6 +766,12 @@ export const DesignScheduleTab = ({ project }: Props) => {
                     </div>
                     <div>
                       <dt className="text-xs text-slate-500">
+                        {t("designProjects.schedule.field.discipline")}
+                      </dt>
+                      <dd>{disciplineLabel(task.disciplineCode)}</dd>
+                    </div>
+                    <div>
+                      <dt className="text-xs text-slate-500">
                         {t("designProjects.schedule.field.plannedDates")}
                       </dt>
                       <dd>
@@ -894,6 +932,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
         masterScheduleItems={masterScheduleItems}
         tasks={dependencyTasks}
         departments={departments}
+        disciplines={disciplines}
         members={team?.members ?? []}
         initialPhaseId={initialPhaseId}
         task={editingTask}

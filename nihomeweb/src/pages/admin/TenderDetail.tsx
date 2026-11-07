@@ -268,7 +268,7 @@ const InfoTab = ({
 }: {
   tender: TenderResponse;
   canManage: boolean;
-  onUploadInvitation: (file: File) => Promise<void>;
+  onUploadInvitation: (files: File[]) => Promise<void>;
 }) => {
   const { t, lang } = useI18n();
   const invitationFileRef = useRef<HTMLInputElement>(null);
@@ -321,10 +321,11 @@ const InfoTab = ({
                 type="file"
                 className="hidden"
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                multiple
                 onChange={(event) => {
-                  const file = event.target.files?.[0];
+                  const files = Array.from(event.target.files ?? []);
                   event.target.value = "";
-                  if (file) void onUploadInvitation(file);
+                  if (files.length > 0) void onUploadInvitation(files);
                 }}
               />
               <Button
@@ -2078,18 +2079,25 @@ const AdminTenderDetail = () => {
     }
   };
 
-  const handleInvitationUpload = async (file: File) => {
-    try {
-      const { data } = await adminApi.uploadTenderInvitationDocument(tenderId, file);
-      setTender(data);
-      toast({ title: t("tenders.detail.saved") });
-    } catch (err) {
+  const handleInvitationUpload = async (files: File[]) => {
+    const failed: string[] = [];
+    let uploaded = 0;
+    for (const file of files) {
+      try {
+        const { data } = await adminApi.uploadTenderInvitationDocument(tenderId, file);
+        setTender(data);
+        uploaded += 1;
+      } catch (err) {
+        failed.push(`${file.name}: ${extractApiError(err)}`);
+      }
+    }
+    if (uploaded > 0) toast({ title: t("tenders.detail.saved") });
+    if (failed.length > 0) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: failed.join(" · "),
         variant: "destructive",
       });
-      throw err;
     }
   };
 

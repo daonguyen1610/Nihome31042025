@@ -295,6 +295,12 @@ export interface RecruitmentDropdownOptionResponse {
   sortOrder: number;
 }
 
+export interface RoleGroupOptionResponse {
+  id: number;
+  code: string;
+  labelKey: string;
+}
+
 export interface JobApplicationResponse {
   id: number;
   jobPositionId: number;
@@ -362,6 +368,12 @@ export interface WorkPackageApprovalPreview {
   subject: string;
   body: string;
   ccEmails: string[];
+}
+export interface QuoteApprovalTemplates {
+  subject: string;
+  body: string;
+  decisionSubject: string;
+  decisionBody: string;
 }
 export interface ContractReminderTemplates {
   renewalSubject: string;
@@ -3755,6 +3767,7 @@ export interface UpsertDesignScheduleTaskRequest extends UpsertDesignSchedulePha
   name: string;
   description?: string | null;
   departmentCode: string;
+  disciplineCode?: string | null;
   assigneeMemberId: number;
   approverMemberId: number;
   parentTaskId?: number | null;
@@ -3773,6 +3786,7 @@ export interface DesignScheduleQuery {
   phase?: DesignSchedulePhaseCode;
   assigneeMemberId?: number;
   departmentCode?: string;
+  disciplineCode?: string;
   status?: DesignScheduleStatus;
   plannedFrom?: string;
   plannedTo?: string;
@@ -3805,6 +3819,7 @@ export interface DesignScheduleTaskResponse {
   name: string;
   description?: string | null;
   departmentCode: string;
+  disciplineCode?: string | null;
   assigneeMemberId: number;
   approverMemberId: number;
   parentTaskId?: number | null;
@@ -3926,6 +3941,11 @@ export interface PagedDesignScheduleTasksResponse {
   items: DesignScheduleTaskResponse[];
 }
 
+export interface DesignScheduleDepartmentResponse {
+  code: string;
+  labelKey: string;
+}
+
 export interface DesignScheduleResponse {
   operationalProjectId: number;
   designProjectId: number;
@@ -3934,6 +3954,7 @@ export interface DesignScheduleResponse {
   progressPercent?: number | null;
   rollupPolicyVersion: string;
   phases: DesignSchedulePhaseResponse[];
+  departments: DesignScheduleDepartmentResponse[];
   rollupSources: DesignSchedulePhaseRollupResponse[];
   tasks: PagedDesignScheduleTasksResponse;
 }
@@ -3983,6 +4004,8 @@ export interface OperationalProjectMemberResponse {
 
 export interface OperationalProjectAssignmentResponse {
   id: number;
+  previousAssignmentId?: number | null;
+  parentAssignmentId?: number | null;
   workKey: string;
   kpiIdentity: string;
   title: string;
@@ -3999,6 +4022,14 @@ export interface OperationalProjectAssignmentResponse {
   completedAt?: string | null;
   note?: string | null;
   rowVersion: string;
+}
+
+export interface OperationalProjectAssignmentAttachmentResponse {
+  id: number;
+  assignmentId: number;
+  originalFileName: string;
+  fileSize: number;
+  createdAt: string;
 }
 
 export interface OperationalProjectTeamResponse {
@@ -4055,6 +4086,7 @@ export interface UpsertOperationalProjectMemberRequest {
 
 export interface UpsertOperationalProjectAssignmentRequest {
   designProjectId?: number | null;
+  parentAssignmentId?: number | null;
   workKey: string;
   title: string;
   module: string;
@@ -6149,6 +6181,8 @@ export const adminApi = {
     api.put<RecruitmentDropdownOptionResponse>(`/recruitment-dropdown-options/${id}`, data),
   deleteRecruitmentDropdownOption: (id: number) =>
     api.delete(`/recruitment-dropdown-options/${id}`),
+  getRoleGroupOptions: () =>
+    api.get<RoleGroupOptionResponse[]>("/recruitment-dropdown-options/role-group-options"),
 
   // News
   createNews: (data: UpsertNewsRequest) => api.post("/news", data),
@@ -6251,9 +6285,13 @@ export const adminApi = {
       data,
     ),
   getQuoteApprovalTemplate: () =>
-    api.get<{ subject: string; body: string }>("/site-settings/quote-approval-template"),
-  updateQuoteApprovalTemplate: (data: { subject: string; body: string }) =>
-    api.put<{ subject: string; body: string }>("/site-settings/quote-approval-template", data),
+    api.get<QuoteApprovalTemplates>("/site-settings/quote-approval-template"),
+  updateQuoteApprovalTemplate: (data: {
+    subject?: string;
+    body?: string;
+    decisionSubject?: string;
+    decisionBody?: string;
+  }) => api.put<QuoteApprovalTemplates>("/site-settings/quote-approval-template", data),
   previewWorkPackageApprovalEmail: (
     packageId: number,
     offerId?: number,
@@ -7076,6 +7114,7 @@ export const adminApi = {
       stage: DesignReviewStage;
       title: string;
       recipientUserIds: number[];
+      recipientDepartmentRoleGroupIds: number[];
       projectDocumentIds: number[];
       conceptRevisionId?: number | null;
     },
@@ -8557,6 +8596,53 @@ export const adminApi = {
           ...withIfMatch(body.rowVersion).headers,
         },
       },
+    ),
+  listOperationalProjectAssignmentAttachments: (
+    projectId: number,
+    assignmentId: number,
+    designProjectId?: number | null,
+  ) =>
+    api.get<OperationalProjectAssignmentAttachmentResponse[]>(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}/attachments`,
+      { params: designProjectId ? { designProjectId } : undefined },
+    ),
+  uploadOperationalProjectAssignmentAttachment: (
+    projectId: number,
+    assignmentId: number,
+    file: File,
+    key: string,
+    designProjectId?: number | null,
+  ) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<OperationalProjectAssignmentAttachmentResponse>(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}/attachments`,
+      formData,
+      {
+        ...withIdempotencyKey(key),
+        params: designProjectId ? { designProjectId } : undefined,
+      },
+    );
+  },
+  downloadOperationalProjectAssignmentAttachment: (
+    projectId: number,
+    assignmentId: number,
+    attachmentId: number,
+    designProjectId?: number | null,
+  ) =>
+    api.get<Blob>(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}/attachments/${attachmentId}/content`,
+      { responseType: "blob", params: designProjectId ? { designProjectId } : undefined },
+    ),
+  deleteOperationalProjectAssignmentAttachment: (
+    projectId: number,
+    assignmentId: number,
+    attachmentId: number,
+    designProjectId?: number | null,
+  ) =>
+    api.delete(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}/attachments/${attachmentId}`,
+      { params: designProjectId ? { designProjectId } : undefined },
     ),
   createOperationalProject: (body: CreateOperationalProjectRequest) =>
     api.post<OperationalProjectResponse>("/operational-projects", body),

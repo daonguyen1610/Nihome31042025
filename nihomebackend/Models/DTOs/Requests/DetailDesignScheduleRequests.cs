@@ -54,6 +54,9 @@ public sealed class UpsertDesignScheduleTaskRequest
     [Required, MaxLength(60)]
     public string DepartmentCode { get; set; } = string.Empty;
 
+    [MaxLength(50)]
+    public string? DisciplineCode { get; set; }
+
     [Range(1, int.MaxValue)]
     public int AssigneeMemberId { get; set; }
 
@@ -127,6 +130,7 @@ public sealed class DesignScheduleQuery
     public string? Phase { get; set; }
     public int? AssigneeMemberId { get; set; }
     public string? DepartmentCode { get; set; }
+    public string? DisciplineCode { get; set; }
     public string? Status { get; set; }
     public DateOnly? PlannedFrom { get; set; }
     public DateOnly? PlannedTo { get; set; }

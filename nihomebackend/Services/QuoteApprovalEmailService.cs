@@ -16,6 +16,13 @@ public interface IQuoteApprovalEmailService
 {
     Task QueueAsync(int quoteId, int approverId, string? rowVersion, string? previewToken,
         int callerId, bool canSeeAll, CancellationToken ct);
+
+    /// <summary>
+    /// Queues the outcome email for the person who submitted the quote, with the
+    /// same project-team CC list as the request. It must be called before the
+    /// workflow transition because rejecting clears the submitter fields.
+    /// </summary>
+    Task QueueDecisionAsync(int quoteId, int callerId, bool approved, string? note, CancellationToken ct);
 }
 
 public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionProvider protection,
@@ -145,6 +152,66 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         });
     }
 
+    public async Task QueueDecisionAsync(int quoteId, int callerId, bool approved, string? note,
+        CancellationToken ct)
+    {
+        var quote = await db.Quotes.SingleOrDefaultAsync(q => q.Id == quoteId, ct)
+            ?? throw new QuoteOperationException("Không tìm thấy báo giá.");
+        if (quote.Status != QuoteStatus.PendingApproval ||
+            quote.ApprovalApproverUserId != callerId ||
+            quote.SubmittedByUserId is not int authorId || authorId == callerId)
+        {
+            throw new QuoteOperationException(
+                "Chỉ người được chọn duyệt, khác người gửi, mới ghi nhận kết quả báo giá.");
+        }
+        var author = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == authorId, ct);
+        if (author is null || !author.IsActive || !ContactValidation.IsValidEmail(author.Email))
+        {
+            throw new QuoteOperationException(
+                "Người lập báo giá không còn email hợp lệ để nhận kết quả duyệt. Hãy cập nhật tài khoản trước khi duyệt.");
+        }
+        var approver = await db.Users.AsNoTracking().SingleAsync(u => u.Id == callerId, ct);
+        var ccEmails = await GetCcEmailsAsync(quote, callerId, ct);
+        var toEmail = author.Email.Trim();
+        var origin = GetPublicOrigin();
+        var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["recipientName"] = author.FullName ?? author.Email,
+            ["approverName"] = approver.FullName ?? approver.Email,
+            ["quoteCode"] = quote.Code,
+            ["quoteVersion"] = quote.Version.ToString(CultureInfo.InvariantCulture),
+            ["grandTotal"] = quote.GrandTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")),
+            ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+            ["decisionLabel"] = approved ? "Đã phê duyệt" : "Từ chối",
+            ["decisionNote"] = string.IsNullOrWhiteSpace(note) ? "—" : note.Trim(),
+            ["quoteUrl"] = $"{origin}/admin/quotes/{quote.Id}",
+        };
+        QuoteApprovalTemplate message;
+        try
+        {
+            message = QuoteApprovalDecisionEmailTemplates.Render(
+                QuoteApprovalDecisionEmailTemplates.Get(
+                    await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct)),
+                tokens);
+        }
+        catch (ArgumentException error)
+        {
+            throw new QuoteOperationException(error.Message);
+        }
+        db.QuoteApprovalEmails.Add(new()
+        {
+            QuoteId = quoteId,
+            ApproverUserId = callerId,
+            Kind = "Decision",
+            Decision = approved ? "Approved" : "Rejected",
+            ToEmail = toEmail,
+            CcEmailsJson = JsonSerializer.Serialize(ccEmails.Where(address =>
+                !string.Equals(address, toEmail, StringComparison.OrdinalIgnoreCase))),
+            Subject = message.Subject,
+            Body = message.Body,
+        });
+    }
+
     public async Task SendPendingAsync(CancellationToken ct)
     {
         var ids = await db.QuoteApprovalEmails.AsNoTracking().Where(e => e.Status == "Pending")
@@ -159,21 +226,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
                 message = await db.QuoteApprovalEmails.Include(e => e.Quote).SingleAsync(e => e.Id == id, ct);
                 await db.Entry(message).ReloadAsync(ct);
                 if (message.Status != "Pending") continue;
-                var approver = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == message.ApproverUserId, ct);
-                var currentCc = await GetCcEmailsAsync(message.Quote, message.ApproverUserId, ct);
-                string[] queuedCc;
-                var validCc = true;
-                try { queuedCc = JsonSerializer.Deserialize<string[]>(message.CcEmailsJson) ?? []; }
-                catch (JsonException) { queuedCc = []; validCc = false; }
-                message.Status = message.Quote.Status == QuoteStatus.PendingApproval &&
-                    message.Quote.ApprovalApproverUserId == message.ApproverUserId &&
-                    message.Quote.SubmittedByUserId != message.ApproverUserId &&
-                    approver is { IsActive: true } && approver.Email.Trim() == message.ToEmail &&
-                    ContactValidation.IsValidEmail(approver.Email) &&
-                    await IsProcurementManagerAsync(message.ApproverUserId, ct) &&
-                    await HasQuoteApproverAccessAsync(message.ApproverUserId, ct) &&
-                    validCc && queuedCc.SequenceEqual(currentCc, StringComparer.OrdinalIgnoreCase)
-                    ? "Sending" : "NeedsReview";
+                message.Status = await IsDeliverableAsync(message, ct) ? "Sending" : "NeedsReview";
                 message.AttemptedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync(ct);
                 if (tx is not null) await tx.CommitAsync(ct);
@@ -193,6 +246,47 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             }
             await db.SaveChangesAsync(ct);
         }
+    }
+
+    /// <summary>
+    /// Re-checks a queued message against the quote as it stands now, so a stale
+    /// delivery is flagged for review instead of being sent. Request emails need
+    /// the approval still pending for the same approver; decision emails need the
+    /// quote to have reached the decision's target state.
+    /// </summary>
+    private async Task<bool> IsDeliverableAsync(QuoteApprovalEmail message, CancellationToken ct)
+    {
+        string[] queuedCc;
+        try { queuedCc = JsonSerializer.Deserialize<string[]>(message.CcEmailsJson) ?? []; }
+        catch (JsonException) { return false; }
+        // Decision emails exclude the author from the stored CC list because the
+        // author is the recipient; reapply that filter before comparing.
+        var currentCc = (await GetCcEmailsAsync(message.Quote, message.ApproverUserId, ct))
+            .Where(address => !string.Equals(address, message.ToEmail, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        if (!queuedCc.SequenceEqual(currentCc, StringComparer.OrdinalIgnoreCase)) return false;
+        if (!ContactValidation.IsValidEmail(message.ToEmail)) return false;
+
+        if (message.Kind == "Decision")
+        {
+            var expected = message.Decision switch
+            {
+                "Approved" => QuoteStatus.Approved,
+                "Rejected" => QuoteStatus.Draft,
+                _ => (QuoteStatus?)null,
+            };
+            return expected.HasValue && message.Quote.Status == expected.Value &&
+                await db.Users.AsNoTracking().AnyAsync(user => user.IsActive && user.Email == message.ToEmail, ct);
+        }
+
+        var approver = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == message.ApproverUserId, ct);
+        return message.Quote.Status == QuoteStatus.PendingApproval &&
+            message.Quote.ApprovalApproverUserId == message.ApproverUserId &&
+            message.Quote.SubmittedByUserId != message.ApproverUserId &&
+            approver is { IsActive: true } && approver.Email.Trim() == message.ToEmail &&
+            ContactValidation.IsValidEmail(approver.Email) &&
+            await IsProcurementManagerAsync(message.ApproverUserId, ct) &&
+            await HasQuoteApproverAccessAsync(message.ApproverUserId, ct);
     }
 
     private Task<bool> IsProcurementManagerAsync(int userId, CancellationToken ct) =>

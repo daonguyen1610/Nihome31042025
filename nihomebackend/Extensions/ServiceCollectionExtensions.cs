@@ -180,6 +180,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDepartmentWorkPackageService, DepartmentWorkPackageService>();
         services.AddScoped<WorkTaskAttachmentService>();
         services.AddScoped<WorkTaskAttachmentIdempotencyGuard>();
+        services.AddScoped<ProjectAssignmentAttachmentService>();
+        services.AddScoped<ProjectAssignmentAttachmentIdempotencyGuard>();
         services.AddScoped<IKpiService, KpiService>();
         services.AddHostedService<KpiCalculationBackgroundService>();
         services.AddScoped<IDetailDesignScheduleService, DetailDesignScheduleService>();

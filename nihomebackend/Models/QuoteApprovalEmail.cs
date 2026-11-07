@@ -12,6 +12,10 @@ public sealed class QuoteApprovalEmail
     [MaxLength(20000)] public string CcEmailsJson { get; set; } = "[]";
     [MaxLength(200)] public string Subject { get; set; } = "";
     [MaxLength(16000)] public string Body { get; set; } = "";
+    /// <summary>Request (sent to the approver) or Decision (the outcome for the author).</summary>
+    [MaxLength(20)] public string Kind { get; set; } = "Request";
+    /// <summary>Approved or Rejected; null for a request email.</summary>
+    [MaxLength(20)] public string? Decision { get; set; }
     [MaxLength(30)] public string Status { get; set; } = "Pending";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? AttemptedAt { get; set; }

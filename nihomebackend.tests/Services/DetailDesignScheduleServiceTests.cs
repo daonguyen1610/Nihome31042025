@@ -4,6 +4,7 @@ using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 
@@ -115,6 +116,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     private readonly DetailDesignScheduleService service;
     private readonly int callerId;
     private readonly int projectId;
+    private readonly int designProjectId;
     private readonly int phaseId;
     private readonly int activeMemberId;
     private readonly int approverMemberId;
@@ -150,9 +152,15 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         db.AddRange(member, approver, inactiveMember, otherMember);
         db.MasterDataOptions.Add(new MasterDataOption
         {
-            Category = "project-department",
-            Code = "design",
-            Name = "Design",
+            Category = "design_discipline",
+            Code = "architecture",
+            Name = "Architecture",
+            IsActive = true,
+        });
+        db.RoleGroups.Add(new RoleGroup
+        {
+            Code = "DESIGN",
+            LabelKey = "rbac.group.design",
             IsActive = true,
         });
         db.SaveChanges();
@@ -166,14 +174,19 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
 
         callerId = caller.Id;
         projectId = project.Id;
+        designProjectId = design.Id;
         phaseId = phase.Id;
         activeMemberId = member.Id;
         approverMemberId = approver.Id;
         otherProjectTaskId = otherTask.Id;
         var access = new Mock<IProjectAccessService>();
+        access.Setup(item => item.CanViewOperationalProjectAsync(callerId, projectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        access.Setup(item => item.CanViewDesignProjectAsync(callerId, designProjectId, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         access.Setup(item => item.CanManageDesignScheduleAsync(callerId, projectId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
-        access.Setup(item => item.CanManageDesignProjectAsync(callerId, design.Id, It.IsAny<CancellationToken>(), null))
+        access.Setup(item => item.CanManageDesignProjectAsync(callerId, designProjectId, It.IsAny<CancellationToken>(), null))
             .ReturnsAsync(true);
         service = new DetailDesignScheduleService(
             db, access.Object, new Mock<INotificationService>().Object,
@@ -193,6 +206,72 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
             service.CreateTaskAsync(projectId, phaseId, Request(inactiveMember.Id, approverMemberId), callerId, default));
         Assert.Empty(db.DesignScheduleTasks.Where(item => item.OperationalProjectId == projectId));
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_AcceptsActiveRoleGroupAndNormalizesDiscipline()
+    {
+        var request = Request(activeMemberId, approverMemberId);
+        request.DepartmentCode = "design";
+        request.DisciplineCode = " Architecture ";
+
+        var result = await service.CreateTaskAsync(projectId, phaseId, request, callerId, default);
+
+        Assert.NotNull(result);
+        Assert.Equal("DESIGN", result.DepartmentCode);
+        Assert.Equal("architecture", result.DisciplineCode);
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_RejectsInactiveRoleGroupDepartment()
+    {
+        db.RoleGroups.Add(new RoleGroup
+        {
+            Code = "OLD_UNIT",
+            LabelKey = "rbac.group.old-unit",
+            IsActive = false,
+        });
+        await db.SaveChangesAsync();
+        var request = Request(activeMemberId, approverMemberId);
+        request.DepartmentCode = "old_unit";
+
+        await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
+            service.CreateTaskAsync(projectId, phaseId, request, callerId, default));
+
+        Assert.Empty(db.DesignScheduleTasks.Where(item => item.OperationalProjectId == projectId));
+    }
+
+    [Fact]
+    public async Task CreateTaskAsync_RejectsUnknownDiscipline()
+    {
+        var request = Request(activeMemberId, approverMemberId);
+        request.DisciplineCode = "unknown";
+
+        await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
+            service.CreateTaskAsync(projectId, phaseId, request, callerId, default));
+
+        Assert.Empty(db.DesignScheduleTasks.Where(item => item.OperationalProjectId == projectId));
+    }
+
+    [Fact]
+    public async Task GetAsync_FiltersTasksByDisciplineCode()
+    {
+        var architectureTask = Task(projectId, designProjectId, phaseId,
+            activeMemberId, approverMemberId, "DIS-ARCH");
+        architectureTask.DisciplineCode = "architecture";
+        var structureTask = Task(projectId, designProjectId, phaseId,
+            activeMemberId, approverMemberId, "DIS-STRUCT");
+        structureTask.DisciplineCode = "structure";
+        db.DesignScheduleTasks.AddRange(architectureTask, structureTask);
+        await db.SaveChangesAsync();
+
+        var response = await service.GetAsync(projectId,
+            new DesignScheduleQuery { DisciplineCode = "architecture" }, callerId, default);
+
+        Assert.NotNull(response);
+        var item = Assert.Single(response.Tasks.Items);
+        Assert.Equal("DIS-ARCH", item.Code);
+        Assert.Equal("architecture", item.DisciplineCode);
     }
 
     [Fact]

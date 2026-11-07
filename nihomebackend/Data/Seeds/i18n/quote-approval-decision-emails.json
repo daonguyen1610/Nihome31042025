@@ -1,0 +1,8 @@
+[
+  {"key":"quotes.approval.decisionTemplateTab","category":"quotes","vi":"Kết quả duyệt Báo giá","en":"Quote decision email","zh":"报价审批结果邮件","ja":"見積承認結果メール"},
+  {"key":"quotes.approval.decisionTemplateHint","category":"quotes","vi":"Mẫu gửi người lập báo giá sau khi duyệt hoặc từ chối. Phải có mã báo giá và liên kết đến báo giá; đội ngũ dự án có quyền xem báo giá được CC như email gửi duyệt.","en":"Sent to the quote author after approval or rejection. Include the quote code and link; project members allowed to view the quote are CC'd as on the request email.","zh":"审批或驳回后发送给报价编制人。须包含报价编号和链接；有报价查看权限的项目成员与审批邮件一样抄送。","ja":"承認または却下後に見積作成者へ送信します。見積番号とリンクを含め、見積閲覧権限のあるプロジェクトメンバーを承認依頼メールと同様にCCします。"},
+  {"key":"quotes.approval.token.authorName","category":"quotes","vi":"Người lập báo giá","en":"Quote author","zh":"报价编制人","ja":"見積作成者"},
+  {"key":"emailTemplate.editor.token.approverName","category":"emailTemplates","vi":"Người duyệt","en":"Approver","zh":"审批人","ja":"承認者"},
+  {"key":"emailTemplate.editor.token.decisionLabel","category":"emailTemplates","vi":"Kết quả duyệt","en":"Decision","zh":"审批结果","ja":"承認結果"},
+  {"key":"emailTemplate.editor.token.decisionNote","category":"emailTemplates","vi":"Ý kiến người duyệt","en":"Approver note","zh":"审批意见","ja":"承認者のコメント"}
+]

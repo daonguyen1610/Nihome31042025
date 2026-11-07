@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { personOption, projectMemberOption } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import {
   CheckCircle2,
   ClipboardList,
+  CornerDownRight,
+  Download,
   History,
   Loader2,
+  Paperclip,
   Pencil,
   Plus,
   RefreshCw,
+  Trash2,
   UserRound,
   UserRoundX,
   Users,
@@ -41,6 +46,7 @@ import { extractApiError } from "@/lib/apiError";
 import { translateError, useI18n } from "@/lib/i18n";
 import {
   adminApi,
+  type OperationalProjectAssignmentAttachmentResponse,
   type OperationalProjectAssignmentResponse,
   type OperationalProjectMemberResponse,
   type OperationalProjectTeamHistoryResponse,
@@ -59,6 +65,7 @@ interface Props {
   designProjectId?: number;
   designManagerUserId?: number | null;
   onHistoryChange?: (projectId: number, history: OperationalProjectTeamHistoryResponse[]) => void;
+  onProjectMayHaveChanged?: () => void;
 }
 type MemberDialogMode = "add" | "edit" | "end";
 type AssignmentDialogMode = "add" | "edit";
@@ -90,6 +97,7 @@ const emptyAssignmentForm = (): AssignmentForm => ({
   module: "",
   discipline: null,
   parallelGroup: null,
+  parentAssignmentId: null,
   assigneeMemberId: 0,
   managerMemberId: null,
   status: "Planned",
@@ -160,6 +168,169 @@ export const ProjectTeamHistory = ({
   );
 };
 
+const assignmentIsMutable = (assignment: OperationalProjectAssignmentResponse) =>
+  assignment.status !== "Completed" &&
+  assignment.status !== "Cancelled" &&
+  assignment.status !== "Reassigned";
+
+const AssignmentAttachments = ({
+  operationalProjectId,
+  assignment,
+  designProjectId,
+  canManage,
+}: {
+  operationalProjectId: number;
+  assignment: OperationalProjectAssignmentResponse;
+  designProjectId?: number;
+  canManage: boolean;
+}) => {
+  const { t } = useI18n();
+  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<OperationalProjectAssignmentAttachmentResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const mutable = assignmentIsMutable(assignment);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const { data } = await adminApi.listOperationalProjectAssignmentAttachments(
+        operationalProjectId,
+        assignment.id,
+        designProjectId,
+      );
+      setItems(data);
+    } catch (loadError) {
+      setError(extractApiError(loadError));
+    } finally {
+      setLoading(false);
+    }
+  }, [operationalProjectId, assignment.id, designProjectId]);
+
+  useEffect(() => {
+    if (open) void load();
+  }, [open, load]);
+
+  const download = async (attachment: OperationalProjectAssignmentAttachmentResponse) => {
+    try {
+      const response = await adminApi.downloadOperationalProjectAssignmentAttachment(
+        operationalProjectId,
+        assignment.id,
+        attachment.id,
+        designProjectId,
+      );
+      const url = URL.createObjectURL(response.data);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = attachment.originalFileName;
+      link.click();
+      // Some browsers start the download on a later tick; release the blob later.
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    } catch (downloadError) {
+      setError(extractApiError(downloadError));
+    }
+  };
+
+  const remove = async (attachment: OperationalProjectAssignmentAttachmentResponse) => {
+    if (!window.confirm(t("designProjects.team.attachments.confirmDelete"))) return;
+    try {
+      await adminApi.deleteOperationalProjectAssignmentAttachment(
+        operationalProjectId,
+        assignment.id,
+        attachment.id,
+        designProjectId,
+      );
+      toast({ title: t("designProjects.team.attachments.deleted") });
+      await load();
+    } catch (deleteError) {
+      setError(extractApiError(deleteError));
+    }
+  };
+
+  return (
+    <div className="mt-3 border-t pt-3">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="px-2"
+        aria-expanded={open}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <Paperclip className="mr-1.5 h-4 w-4" />
+        {t("designProjects.team.attachments.title")}
+        {items.length > 0 ? ` (${items.length})` : ""}
+      </Button>
+      {open ? (
+        <div className="mt-2 space-y-3 rounded-md bg-slate-50 p-3">
+          {loading ? (
+            <p className="text-sm text-slate-500">{t("common.loading")}</p>
+          ) : items.length === 0 ? (
+            <p className="text-sm text-slate-500">{t("designProjects.team.attachments.empty")}</p>
+          ) : (
+            <ul className="space-y-2">
+              {items.map((attachment) => (
+                <li
+                  key={attachment.id}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-white px-3 py-2 text-sm"
+                >
+                  <span className="min-w-0 break-all">{attachment.originalFileName}</span>
+                  <div className="flex shrink-0 gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={t("designProjects.team.attachments.download")}
+                      onClick={() => void download(attachment)}
+                    >
+                      <Download className="h-4 w-4" />
+                    </Button>
+                    {canManage && mutable ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        aria-label={t("designProjects.team.attachments.delete")}
+                        onClick={() => void remove(attachment)}
+                      >
+                        <Trash2 className="h-4 w-4 text-rose-600" />
+                      </Button>
+                    ) : null}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          {canManage && mutable ? (
+            <AdminDocumentUpload
+              multiple
+              testId={`assignment-${assignment.id}-attachment`}
+              uploadFile={async (file) => {
+                const { data } = await adminApi.uploadOperationalProjectAssignmentAttachment(
+                  operationalProjectId,
+                  assignment.id,
+                  file,
+                  newIdempotencyKey(),
+                  designProjectId,
+                );
+                return String(data.id);
+              }}
+              onUploaded={() => load()}
+            />
+          ) : null}
+          {error ? (
+            <p role="alert" className="text-sm text-rose-600">
+              {error}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export const OperationalProjectTeamPanel = ({
   operationalProjectId,
   refreshKey,
@@ -167,6 +338,7 @@ export const OperationalProjectTeamPanel = ({
   designProjectId,
   designManagerUserId,
   onHistoryChange,
+  onProjectMayHaveChanged,
 }: Props) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
@@ -420,6 +592,7 @@ export const OperationalProjectTeamPanel = ({
       });
       setMemberDialog(null);
       await load();
+      onProjectMayHaveChanged?.();
     } catch (saveError) {
       setFormError(translateError(t, extractApiError(saveError)));
     } finally {
@@ -434,6 +607,20 @@ export const OperationalProjectTeamPanel = ({
     assignmentIdempotencyKey.current = newIdempotencyKey();
     setAssignmentDialog("add");
   };
+  const openAddSubtask = (parent: OperationalProjectAssignmentResponse) => {
+    setEditingAssignment(null);
+    setAssignmentForm({
+      ...emptyAssignmentForm(),
+      module: parent.module,
+      discipline: parent.discipline ?? null,
+      parallelGroup: parent.parallelGroup ?? null,
+      assigneeMemberId: parent.assigneeMemberId,
+      parentAssignmentId: parent.id,
+    });
+    setFormError(null);
+    assignmentIdempotencyKey.current = newIdempotencyKey();
+    setAssignmentDialog("add");
+  };
   const openEditAssignment = (assignment: OperationalProjectAssignmentResponse) => {
     setEditingAssignment(assignment);
     setAssignmentForm({
@@ -442,6 +629,7 @@ export const OperationalProjectTeamPanel = ({
       module: assignment.module,
       discipline: assignment.discipline ?? null,
       parallelGroup: assignment.parallelGroup ?? null,
+      parentAssignmentId: assignment.parentAssignmentId ?? null,
       assigneeMemberId: assignment.assigneeMemberId,
       managerMemberId: assignment.managerMemberId ?? null,
       status: assignment.status,
@@ -529,6 +717,7 @@ export const OperationalProjectTeamPanel = ({
       toast({ title: t("designProjects.team.toast.assignmentSaved") });
       setAssignmentDialog(null);
       await load();
+      onProjectMayHaveChanged?.();
     } catch (saveError) {
       setFormError(extractApiError(saveError));
     } finally {
@@ -547,6 +736,7 @@ export const OperationalProjectTeamPanel = ({
         module: assignment.module,
         discipline: assignment.discipline ?? null,
         parallelGroup: assignment.parallelGroup ?? null,
+        parentAssignmentId: assignment.parentAssignmentId ?? null,
         assigneeMemberId: assignment.assigneeMemberId,
         managerMemberId: assignment.managerMemberId ?? null,
         status,
@@ -570,6 +760,7 @@ export const OperationalProjectTeamPanel = ({
       });
       setTerminalAction(null);
       await load();
+      onProjectMayHaveChanged?.();
     } catch (actionError) {
       setFormError(extractApiError(actionError));
     } finally {
@@ -584,6 +775,16 @@ export const OperationalProjectTeamPanel = ({
     setFormError(null);
     setTerminalAction({ assignment, status });
   };
+  const assignmentIds = new Set(team?.assignments.map((assignment) => assignment.id) ?? []);
+  const rootAssignments =
+    team?.assignments.filter(
+      (assignment) =>
+        !assignment.parentAssignmentId || !assignmentIds.has(assignment.parentAssignmentId),
+    ) ?? [];
+  const orderedAssignments = rootAssignments.flatMap((root) => [
+    root,
+    ...(team?.assignments.filter((item) => item.parentAssignmentId === root.id) ?? []),
+  ]);
 
   if (loading)
     return (
@@ -880,16 +1081,25 @@ export const OperationalProjectTeamPanel = ({
           </div>
         ) : (
           <div className="mt-4 grid gap-3 xl:grid-cols-2">
-            {team.assignments.map((assignment) => {
-              const mutable =
-                assignment.status !== "Completed" &&
-                assignment.status !== "Cancelled" &&
-                assignment.status !== "Reassigned";
+            {orderedAssignments.map((assignment) => {
+              const mutable = assignmentIsMutable(assignment);
+              const isSubtask = !!assignment.parentAssignmentId;
               return (
-                <article key={assignment.id} className="rounded-lg border border-slate-200 p-4">
+                <article
+                  key={assignment.id}
+                  className={
+                    isSubtask
+                      ? "rounded-lg border border-l-4 border-slate-200 border-l-slate-300 p-4"
+                      : "rounded-lg border border-slate-200 p-4"
+                  }
+                  data-subtask={isSubtask ? "true" : undefined}
+                >
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
+                        {isSubtask ? (
+                          <CornerDownRight className="h-4 w-4 text-slate-400" aria-hidden />
+                        ) : null}
                         <strong className="text-slate-900">{assignment.title}</strong>
                         <Badge variant="outline" className={assignmentBadge[assignment.status]}>
                           {t(`designProjects.team.assignmentStatus.${assignment.status}`)}
@@ -954,6 +1164,16 @@ export const OperationalProjectTeamPanel = ({
                   ) : null}
                   {team.canManage && mutable ? (
                     <div className="mt-3 flex flex-wrap gap-2 border-t pt-3">
+                      {!isSubtask ? (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => openAddSubtask(assignment)}
+                        >
+                          <CornerDownRight className="mr-1 h-4 w-4" />
+                          {t("designProjects.team.action.addSubtask")}
+                        </Button>
+                      ) : null}
                       <Button
                         size="sm"
                         variant="outline"
@@ -972,6 +1192,14 @@ export const OperationalProjectTeamPanel = ({
                         {t("designProjects.team.action.cancelAssignment")}
                       </Button>
                     </div>
+                  ) : null}
+                  {operationalProjectId ? (
+                    <AssignmentAttachments
+                      operationalProjectId={operationalProjectId}
+                      assignment={assignment}
+                      designProjectId={designProjectId}
+                      canManage={team.canManage}
+                    />
                   ) : null}
                 </article>
               );

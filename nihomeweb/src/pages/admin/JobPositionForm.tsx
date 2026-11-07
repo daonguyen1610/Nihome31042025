@@ -10,6 +10,7 @@ import type {
   JobPositionResponse,
   EmploymentTypeResponse,
   RecruitmentDropdownOptionResponse,
+  RoleGroupOptionResponse,
 } from "@/services/adminApi";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -61,6 +62,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
   const [employmentTypesLoading, setEmploymentTypesLoading] = useState(true);
   const [experienceLevels, setExperienceLevels] = useState<RecruitmentDropdownOptionResponse[]>([]);
   const [benefitOptions, setBenefitOptions] = useState<RecruitmentDropdownOptionResponse[]>([]);
+  const [departmentOptions, setDepartmentOptions] = useState<RoleGroupOptionResponse[]>([]);
 
   useEffect(() => {
     setEmploymentTypesLoading(true);
@@ -79,6 +81,11 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
       .getRecruitmentDropdownOptions("benefit", true)
       .then((res) => setBenefitOptions(res.data))
       .catch(() => setBenefitOptions([]));
+
+    adminApi
+      .getRoleGroupOptions()
+      .then((res) => setDepartmentOptions(res.data ?? []))
+      .catch(() => setDepartmentOptions([]));
   }, []);
 
   useEffect(() => {
@@ -253,13 +260,23 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
                   />
                 </Field>
                 <Field label={t("recruit.jobForm.department")}>
-                  <Input
-                    className="h-9"
+                  <select
+                    className={selectClasses}
                     value={data.department}
                     onChange={(e) => update("department", e.target.value)}
-                    placeholder={t("recruit.jobForm.departmentPlaceholder")}
                     required
-                  />
+                  >
+                    <option value="">{t("recruit.jobForm.departmentPlaceholder")}</option>
+                    {data.department &&
+                      !departmentOptions.some((option) => option.code === data.department) && (
+                        <option value={data.department}>{data.department}</option>
+                      )}
+                    {departmentOptions.map((option) => (
+                      <option key={option.id} value={option.code}>
+                        {t(option.labelKey)}
+                      </option>
+                    ))}
+                  </select>
                 </Field>
                 <Field label={t("recruit.jobForm.location")}>
                   <Input

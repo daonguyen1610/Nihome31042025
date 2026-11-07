@@ -211,7 +211,7 @@ const AdminQuoteDetail = () => {
   const [documents, setDocuments] = useState<QuoteDocumentResponse[] | null>(null);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState<string | null>(null);
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [documentLabel, setDocumentLabel] = useState("");
   const [documentInputKey, setDocumentInputKey] = useState(0);
   const [uploadingDocument, setUploadingDocument] = useState(false);
@@ -673,23 +673,35 @@ const AdminQuoteDetail = () => {
   };
 
   const handleUploadDocument = async () => {
-    if (!quote || !documentFile) return;
+    if (!quote || documentFiles.length === 0) return;
     setUploadingDocument(true);
+    const failed: string[] = [];
+    let uploaded = 0;
     try {
-      await adminApi.uploadQuoteDocument(quote.id, documentFile, documentLabel);
-      setDocumentFile(null);
-      setDocumentLabel("");
+      for (const file of documentFiles) {
+        try {
+          await adminApi.uploadQuoteDocument(quote.id, file, documentLabel);
+          uploaded += 1;
+        } catch (err) {
+          failed.push(`${file.name}: ${extractApiError(err)}`);
+        }
+      }
+    } finally {
+      setDocumentFiles([]);
       setDocumentInputKey((value) => value + 1);
+      setUploadingDocument(false);
+    }
+    if (uploaded > 0) {
+      setDocumentLabel("");
       await loadDocuments();
       toast({ title: t("quotes.document.uploaded") });
-    } catch (err) {
+    }
+    if (failed.length > 0) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: failed.join(" · "),
         variant: "destructive",
       });
-    } finally {
-      setUploadingDocument(false);
     }
   };
 
@@ -1341,7 +1353,8 @@ const AdminQuoteDetail = () => {
                   id="quote-document-file"
                   type="file"
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                  onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
+                  multiple
+                  onChange={(event) => setDocumentFiles(Array.from(event.target.files ?? []))}
                 />
                 <p className="text-xs text-muted-foreground">{t("quotes.document.fileHint")}</p>
               </div>
@@ -1358,7 +1371,7 @@ const AdminQuoteDetail = () => {
               <Button
                 type="button"
                 onClick={() => void handleUploadDocument()}
-                disabled={!documentFile || uploadingDocument}
+                disabled={documentFiles.length === 0 || uploadingDocument}
               >
                 {uploadingDocument ? (
                   <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />

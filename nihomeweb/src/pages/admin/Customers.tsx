@@ -167,7 +167,7 @@ const AdminCustomers = () => {
   const [documents, setDocuments] = useState<CustomerDocumentResponse[]>([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState<string | null>(null);
-  const [documentFile, setDocumentFile] = useState<File | null>(null);
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [documentLabel, setDocumentLabel] = useState("");
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
@@ -334,7 +334,7 @@ const AdminCustomers = () => {
     setOperationalProjects([]);
     setRelatedTotals({ projects: 0, opportunities: 0, quotes: 0, contracts: 0 });
     setRelatedErrors({});
-    setDocumentFile(null);
+    setDocumentFiles([]);
     setDocumentLabel("");
     try {
       const [{ data }] = await Promise.all([
@@ -394,7 +394,7 @@ const AdminCustomers = () => {
     setOperationalProjects([]);
     setRelatedTotals({ projects: 0, opportunities: 0, quotes: 0, contracts: 0 });
     setRelatedErrors({});
-    setDocumentFile(null);
+    setDocumentFiles([]);
     setDocumentLabel("");
   };
 
@@ -639,23 +639,36 @@ const AdminCustomers = () => {
   };
 
   const handleUploadDocument = async () => {
-    if (!detail || !documentFile) return;
+    if (!detail || documentFiles.length === 0) return;
     setUploadingDocument(true);
+    const customerId = detail.id;
+    const failed: string[] = [];
+    let uploaded = 0;
     try {
-      await adminApi.uploadCustomerDocument(detail.id, documentFile, documentLabel);
-      setDocumentFile(null);
-      setDocumentLabel("");
+      for (const file of documentFiles) {
+        try {
+          await adminApi.uploadCustomerDocument(customerId, file, documentLabel);
+          uploaded += 1;
+        } catch (err) {
+          failed.push(`${file.name}: ${extractApiError(err)}`);
+        }
+      }
+    } finally {
+      setDocumentFiles([]);
       setDocumentInputKey((value) => value + 1);
-      await fetchDocuments(detail.id);
+      setUploadingDocument(false);
+    }
+    if (uploaded > 0) {
+      setDocumentLabel("");
+      await fetchDocuments(customerId);
       toast({ title: t("customers.document.uploaded") });
-    } catch (err) {
+    }
+    if (failed.length > 0) {
       toast({
         title: t("common.error"),
-        description: extractApiError(err),
+        description: failed.join(" · "),
         variant: "destructive",
       });
-    } finally {
-      setUploadingDocument(false);
     }
   };
 
@@ -1957,7 +1970,10 @@ const AdminCustomers = () => {
                           id="customer-document-file"
                           type="file"
                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                          onChange={(event) => setDocumentFile(event.target.files?.[0] ?? null)}
+                          multiple
+                          onChange={(event) =>
+                            setDocumentFiles(Array.from(event.target.files ?? []))
+                          }
                         />
                         <p className="text-xs text-muted-foreground">
                           {t("customers.document.fileHint")}
@@ -1978,7 +1994,7 @@ const AdminCustomers = () => {
                       <Button
                         type="button"
                         onClick={() => void handleUploadDocument()}
-                        disabled={!documentFile || uploadingDocument}
+                        disabled={documentFiles.length === 0 || uploadingDocument}
                       >
                         <Upload className="mr-1.5 h-4 w-4" />
                         {uploadingDocument

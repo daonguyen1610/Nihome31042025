@@ -3779,6 +3779,10 @@ namespace nihomebackend.Migrations
                     b.Property<int>("DesignProjectId")
                         .HasColumnType("int");
 
+                    b.Property<string>("DisciplineCode")
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
                     b.Property<int?>("DownstreamContractId")
                         .HasColumnType("int");
 
@@ -3881,6 +3885,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("OperationalProjectId", "Code");
 
                     b.HasIndex("OperationalProjectId", "DepartmentCode");
+
+                    b.HasIndex("OperationalProjectId", "DisciplineCode");
 
                     b.HasIndex("OperationalProjectId", "Status");
 
@@ -6388,6 +6394,9 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
 
+                    b.Property<int?>("ParentAssignmentId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("PlannedEnd")
                         .HasColumnType("datetime2");
 
@@ -6431,6 +6440,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ManagerMemberId");
 
                     b.HasIndex("ParallelGroup");
+
+                    b.HasIndex("ParentAssignmentId");
 
                     b.HasIndex("OperationalProjectId", "WorkKey", "AssigneeMemberId")
                         .IsUnique()
@@ -8619,6 +8630,17 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("Decision")
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Request");
+
                     b.Property<int>("QuoteId")
                         .HasColumnType("int");
 
@@ -8642,7 +8664,7 @@ namespace nihomebackend.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("Status");
+                    b.HasIndex("Status", "Kind");
 
                     b.HasIndex("QuoteId", "CreatedAt");
 
@@ -10094,6 +10116,12 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("ProjectScheduleEmailSubjectTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QuoteApprovalDecisionEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("QuoteApprovalDecisionEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("QuoteApprovalEmailBodyTemplate")
@@ -13681,11 +13709,82 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.OperationalProjectAssignment", "ParentAssignment")
+                        .WithMany("Children")
+                        .HasForeignKey("ParentAssignmentId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("AssigneeMember");
+
+                    b.Navigation("Children");
 
                     b.Navigation("ManagerMember");
 
                     b.Navigation("OperationalProject");
+
+                    b.Navigation("ParentAssignment");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentAttachment", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProjectAssignment", "Assignment")
+                        .WithMany("Attachments")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentAttachment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AssignmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("nvarchar(150)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("DeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("Path")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<DateTime?>("StorageDeletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId", "DeletedAt");
+
+                    b.ToTable("operational_project_assignment_attachments", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_operational_project_assignment_attachments_size", "[FileSize] > 0");
+                        });
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectCodeChange", b =>

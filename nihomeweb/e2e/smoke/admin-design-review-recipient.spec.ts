@@ -170,6 +170,90 @@ test("design evidence becomes selectable automatically after Drive sync without 
   }
 });
 
+test("design review can be created by choosing a recipient department only", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const managerHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.designManager)}` };
+  const projects = await api.get("/api/design-projects?search=DP-SAMPLE-003&pageSize=10", {
+    headers: managerHeaders,
+  });
+  expect(projects.ok(), await projects.text()).toBeTruthy();
+  const project = (await projects.json()).items.find(
+    (item: { projectCode: string }) => item.projectCode === "DP-SAMPLE-003",
+  ) as { id: number; operationalProjectId: number } | undefined;
+  expect(project).toBeTruthy();
+  const detailResponse = await api.get(`/api/design-projects/${project!.id}`, {
+    headers: managerHeaders,
+  });
+  expect(detailResponse.ok(), await detailResponse.text()).toBeTruthy();
+  const detail = (await detailResponse.json()) as { operationalProjectId: number };
+  const basicDocumentsResponse = await api.get(
+    `/api/basic-design-docs?designProjectId=${project!.id}&pageSize=1`,
+    { headers: managerHeaders },
+  );
+  expect(basicDocumentsResponse.ok(), await basicDocumentsResponse.text()).toBeTruthy();
+  const source = ((await basicDocumentsResponse.json()) as { items: Array<{ id: number }> })
+    .items[0];
+  expect(source).toBeTruthy();
+
+  const unique = Date.now().toString(36);
+  const title = `Review theo phòng ban ${unique}`;
+  const fileName = `basic-design-department-${unique}.pdf`;
+  const inserted = execSql(`SET NOCOUNT ON; SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+    INSERT INTO project_documents
+      (OperationalProjectId, Category, SourceModule, SourceType, SourceEntityType, SourceRecordId,
+       LocalPath, OriginalFileName, ContentType, Size, Sha256, Origin, Generation, DesiredOperation,
+       SyncStatus, SyncAttemptCount, NextSyncAttemptAt, IsDownloadable, ConflictState, CreatedAt, UpdatedAt)
+    OUTPUT INSERTED.Id
+    VALUES (${detail.operationalProjectId}, 'DesignBasic', 'Design', 'ManualUpload',
+      'BasicDesignDoc', ${source.id}, '/files/project-documents/${detail.operationalProjectId}/${fileName}',
+      '${fileName}', 'application/pdf', 20,
+      'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 'Nicon', 1, 'Upsert',
+      'Pending', 0, '2099-01-01', 1, 'None', SYSUTCDATETIME(), SYSUTCDATETIME());`);
+  const documentId = Number(inserted.trim());
+  execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+    UPDATE project_documents SET SyncStatus='Synced', DesiredOperation='None',
+      NextSyncAttemptAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE Id=${documentId};`);
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.designManager);
+    await page.goto(`/admin/design-projects/${project!.id}?tab=reviews`);
+    await page.getByTestId("create-design-review").click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog.locator('[data-testid^="review-department-"]').first()).toBeVisible();
+    await dialog.getByLabel(/Giai đoạn|Stage/i).click();
+    await page.getByRole("option", { name: /Thiết kế cơ sở|Basic design/i }).click();
+    await dialog.locator("input").first().fill(title);
+    await dialog.getByTestId(`review-document-${documentId}`).getByRole("checkbox").check();
+    await dialog
+      .locator('[data-testid^="review-department-"]')
+      .first()
+      .getByRole("checkbox")
+      .check();
+
+    const createResponse = page.waitForResponse(
+      (response) =>
+        response.url().endsWith(`/design-projects/${project!.id}/reviews`) &&
+        response.request().method() === "POST",
+    );
+    await dialog.getByRole("button", { name: /Tạo hồ sơ nháp|Create draft dossier/i }).click();
+    const created = await createResponse;
+    expect(created.status(), await created.text()).toBe(201);
+    const body = (await created.json()) as { id: number; recipients: Array<{ userId: number }> };
+    expect(body.recipients.length).toBeGreaterThan(0);
+    await expect(page.locator(`#design-review-${body.id}`)).toBeVisible();
+  } finally {
+    execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
+      DELETE FROM design_review_documents WHERE DesignReviewId IN
+        (SELECT Id FROM design_reviews WHERE DesignProjectId=${project!.id} AND Title=N'${title}');
+      DELETE FROM design_reviews WHERE DesignProjectId=${project!.id} AND Title=N'${title}';
+      DELETE FROM project_documents WHERE Id=${documentId};`);
+  }
+});
+
 test("design notification opens recipient evidence and comments without project-wide access", async ({
   page,
   api,

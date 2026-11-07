@@ -393,6 +393,64 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await expect(financeLink).toHaveAttribute("href", `/admin/work-packages/${financePackageId}`);
     await financeLink.click();
     await expect(page).toHaveURL(new RegExp(`/admin/work-packages/${financePackageId}$`));
+
+    // A revised quotation has no review for its current version. The contract must
+    // then start the same Finance action the quote page starts, with the quote,
+    // project and opportunity already filled in.
+    execSql(`SET QUOTED_IDENTIFIER ON;
+      UPDATE department_work_packages SET Status='Cancelled'
+        WHERE SourceQuoteId=${quoteId} AND Purpose='FinanceCommercialReview';`);
+    const usersResponse = await api.get("/api/users?take=200", {
+      headers: { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+    });
+    expect(usersResponse.status(), await usersResponse.text()).toBe(200);
+    const qualitySurveyor = (
+      (await usersResponse.json()) as { items: { id: number; phoneNumber: string }[] }
+    ).items.find((user) => user.phoneNumber === TEST_USERS.qs.phoneNumber);
+    expect(qualitySurveyor, "the QS test account must exist").toBeTruthy();
+    // The contract owner is the only caller with crm.contracts.view but without
+    // work.packages.manage in this fixture, so the view-only branch is reachable.
+    execSql(`SET QUOTED_IDENTIFIER ON;
+      UPDATE contracts SET OwnerUserId=${qualitySurveyor!.id} WHERE Id=${contractId};`);
+    await loginInBrowserAs(page, TEST_USERS.qs);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.goto(`/admin/contracts/${contractId}`);
+    await expect(page.getByTestId("contract-finance-review-link")).toHaveAttribute(
+      "href",
+      `/admin/quotes/${quoteId}`,
+    );
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.goto(`/admin/contracts/${contractId}`);
+    const createLink = page.getByTestId("contract-finance-review-link");
+    await expect(createLink).toHaveAttribute(
+      "href",
+      `/admin/work-packages?create=1&purpose=FinanceCommercialReview&projectId=${projectId}&opportunityId=${opportunityId}&quoteId=${quoteId}`,
+    );
+    await createLink.click();
+    await expect(page).toHaveURL(/purpose=FinanceCommercialReview/);
+    const createDialog = page.getByRole("dialog");
+    await expect(createDialog).toContainText(`#${quoteId}`);
+    await createDialog
+      .getByTestId("work-package-name")
+      .fill(`Rà soát lại thương mại ${quote.code}`);
+    await createDialog.getByTestId("work-package-lead").getByRole("combobox").click();
+    await page.getByRole("option", { name: accountant.name }).click();
+    const createdPackageResponse = page.waitForResponse(
+      (response) =>
+        /\/api\/work-packages(?:\?.*)?$/.test(response.url()) &&
+        response.request().method() === "POST",
+    );
+    await createDialog.getByRole("button", { name: /Lưu/ }).click();
+    const createdPackage = await createdPackageResponse;
+    expect(createdPackage.status(), await createdPackage.text()).toBe(201);
+    const createdPackageBody = (await createdPackage.json()) as {
+      purpose: string;
+      sourceQuoteId: number | null;
+    };
+    expect(createdPackageBody.purpose).toBe("FinanceCommercialReview");
+    expect(createdPackageBody.sourceQuoteId).toBe(quoteId);
   } finally {
     if (contractId) await hardDeleteBusinessRoot(api, headers, `/api/contracts/${contractId}`);
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);

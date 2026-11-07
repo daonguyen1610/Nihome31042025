@@ -269,3 +269,79 @@ test("design team saves a role scoped to its current design project", async ({
     await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
 });
+
+for (const width of [390, 768]) {
+  test(`design leadership changes refresh the overview without reloading at ${width}px`, async ({
+    api,
+    page,
+    loginAs,
+    loginInBrowserAs,
+  }, testInfo) => {
+    const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+    const customerId = await createOwnCustomer(api, headers, "NICON design leadership refresh");
+    let designProjectId: number | undefined;
+    let operationalProjectId: number | undefined;
+    try {
+      designProjectId = await createDesignProject(api, {
+        headers,
+        name: `NICON – Design leadership refresh ${Date.now()}`,
+        customerId,
+      });
+      const response = await api.get(`/api/design-projects/${designProjectId}`, { headers });
+      expect(response.ok(), await response.text()).toBeTruthy();
+      const project = await response.json();
+      operationalProjectId = project.operationalProjectId;
+      expect(project.designLeadName).toBeTruthy();
+      await loginInBrowserAs(page, TEST_USERS.superAdmin);
+      await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
+      await page.setViewportSize({ width, height: 900 });
+      await page.goto(`/admin/design-projects/${designProjectId}?tab=team`);
+      const member = page
+        .locator("li")
+        .filter({ hasText: project.designLeadName })
+        .filter({
+          has: page.getByRole("button", { name: "Edit member", exact: true }),
+        });
+      await member.getByRole("button", { name: "Edit member", exact: true }).click();
+      const dialog = page.getByRole("dialog");
+      const leadRole = dialog
+        .getByTestId("design-team-role-row")
+        .filter({ hasText: "Design Lead" });
+      await leadRole.getByRole("combobox").click();
+      await page.getByRole("option").filter({ hasText: "Architect · R" }).click();
+      await dialog.getByRole("button", { name: "Save changes" }).click();
+      await expect(dialog).toHaveCount(0);
+      const persisted = await api.get(`/api/design-projects/${designProjectId}`, { headers });
+      expect(persisted.ok(), await persisted.text()).toBeTruthy();
+      expect((await persisted.json()).designLeadUserId).toBeNull();
+      await page.getByRole("tab", { name: "Overview", exact: true }).click();
+      const overview = page.getByRole("tabpanel");
+      await expect(
+        overview
+          .locator("dl > div")
+          .filter({
+            has: page.locator("dt").filter({ hasText: /^Design lead$/i }),
+          })
+          .locator("dd"),
+      ).toHaveText("—");
+      await page.screenshot({ path: testInfo.outputPath(`leadership-overview-${width}.png`) });
+      await expect
+        .poll(() =>
+          page.evaluate(
+            () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+          ),
+        )
+        .toBe(true);
+    } finally {
+      if (designProjectId)
+        await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designProjectId}`);
+      if (operationalProjectId)
+        await hardDeleteBusinessRoot(
+          api,
+          headers,
+          `/api/operational-projects/${operationalProjectId}`,
+        );
+      await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
+    }
+  });
+}

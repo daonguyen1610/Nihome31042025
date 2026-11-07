@@ -25,6 +25,13 @@ public class RoleResponse
     public string? RoleGroupLabelKey { get; set; }
 }
 
+public class RoleGroupOptionResponse
+{
+    public int Id { get; set; }
+    public string Code { get; set; } = string.Empty;
+    public string LabelKey { get; set; } = string.Empty;
+}
+
 public class RoleGroupResponse
 {
     public int Id { get; set; }

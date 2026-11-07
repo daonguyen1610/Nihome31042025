@@ -350,6 +350,14 @@ Drawing, chỉ chọn nhân sự đang hiệu lực trong Đội ngũ của chí
 nhân sự vào Đội ngũ trước khi phân công. Quyền xem và quản lý Đội ngũ theo
 luồng Thiết kế được kiểm tra riêng với quyền Dự án vận hành.
 
+Tab Đội ngũ và phần chủ nhiệm/chủ trì ở Tổng quan đọc chung một nguồn vai trò,
+nên lưu ở tab này cập nhật ngay tab kia. Lưu hồ sơ thiết kế ở Tổng quan chỉ kết
+thúc vai trò chủ trì do hệ thống tạo; vai trò do người dùng thêm tay ở tab Đội
+ngũ được giữ nguyên. Hệ thống chặn thêm Chủ Nhiệm Thiết Kế thứ hai. Khi Chủ Trì
+đang giữ vai trò chính bị gỡ, hệ thống tự chọn một Chủ Trì còn hiệu lực thay
+thế và để trống nếu không còn ai. Mỗi phân công trong tab Đội ngũ có thể có công
+việc con một cấp và tệp đính kèm; phân công đã kết thúc không nhận thêm tệp.
+
 Concept quản lý từng phương án với revision
 R00, R01... và bộ tài liệu phân loại: mô hình 3D gốc, phối cảnh, mặt bằng
 tổng thể/mái, mặt bằng từng tầng có tên tầng, mặt cắt và PDF trình bày. File gốc

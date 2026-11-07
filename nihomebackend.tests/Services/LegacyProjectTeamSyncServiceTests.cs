@@ -159,6 +159,97 @@ public sealed class LegacyProjectTeamSyncServiceTests : IDisposable
             role => role.RoleCode == ProjectTeamRoleCode.DesignLead && role.EndedAt == null);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    [InlineData(null)]
+    public async Task SyncDesignProjectRolesAsync_DossierSave_PreservesAdditionalManualLead(bool? replacePrimary)
+    {
+        var primary = AddUser("0900200021", "Chủ trì kiến trúc");
+        var additional = AddUser("0900200022", "Chủ trì cơ điện");
+        var replacement = AddUser("0900200023", "Chủ trì kiến trúc mới");
+        var design = new DesignProject
+        {
+            OperationalProjectId = _projectId,
+            CustomerId = (await _db.OperationalProjects.FindAsync(_projectId))!.CustomerId,
+            ProjectCode = "DP-NICON-MULTI-LEAD",
+            Name = "NICON – Hồ sơ thiết kế nhà máy An Phú",
+            DesignLeadUserId = primary.Id,
+        };
+        _db.DesignProjects.Add(design);
+        await _db.SaveChangesAsync();
+        foreach (var user in new[] { primary, additional })
+        {
+            var member = AddManualMember(user.Id, ProjectTeamRoleCode.DesignLead, ProjectRoleScope.Module);
+            member.DesignProjectId = design.Id;
+            member.Roles.Single().ScopeValue = "Design";
+        }
+        await _db.SaveChangesAsync();
+
+        design.Name = "NICON – Hồ sơ thiết kế nhà máy An Phú, hiệu chỉnh tên";
+        design.DesignLeadUserId = replacePrimary.HasValue
+            ? replacePrimary.Value ? replacement.Id : primary.Id
+            : null;
+        await _sut.SyncDesignProjectRolesAsync(_projectId, null, design.DesignLeadUserId,
+            _actorUserId, designProjectId: design.Id);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var members = await _db.OperationalProjectMembers.Include(item => item.Roles)
+            .Where(item => item.DesignProjectId == design.Id).ToListAsync();
+        var additionalMember = members.Single(item => item.UserId == additional.Id);
+        Assert.Null(additionalMember.EndedAt);
+        Assert.Contains(additionalMember.Roles, role => role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+            role.EndedAt == null && role.Source == LegacyProjectTeamSyncService.ManualSource);
+        if (design.DesignLeadUserId.HasValue)
+            Assert.Contains(members.Single(item => item.UserId == design.DesignLeadUserId).Roles,
+                role => role.RoleCode == ProjectTeamRoleCode.DesignLead && role.EndedAt == null);
+        Assert.Equal(replacePrimary != false, members.Single(item => item.UserId == primary.Id).Roles
+            .Single(role => role.RoleCode == ProjectTeamRoleCode.DesignLead).EndedAt.HasValue);
+    }
+
+    [Fact]
+    public async Task SyncDesignProjectRolesAsync_ReplacingLead_KeepsTheirOtherManualDesignRole()
+    {
+        var primary = AddUser("0900200031", "Chủ trì cũ");
+        var replacement = AddUser("0900200032", "Chủ trì mới");
+        var design = new DesignProject
+        {
+            OperationalProjectId = _projectId,
+            CustomerId = (await _db.OperationalProjects.FindAsync(_projectId))!.CustomerId,
+            ProjectCode = "DP-NICON-LEAD-SWAP",
+            Name = "NICON – Đổi chủ trì nhưng giữ vai trò khác",
+            DesignLeadUserId = primary.Id,
+        };
+        _db.DesignProjects.Add(design);
+        await _db.SaveChangesAsync();
+        var member = AddManualMember(primary.Id, ProjectTeamRoleCode.DesignLead, ProjectRoleScope.Module);
+        member.DesignProjectId = design.Id;
+        member.Roles.Single().ScopeValue = "Design";
+        member.Roles.Add(new OperationalProjectMemberRole
+        {
+            RoleCode = ProjectTeamRoleCode.Architect,
+            Scope = ProjectRoleScope.Module,
+            ScopeValue = "Design",
+            Source = LegacyProjectTeamSyncService.ManualSource,
+            StartedAt = DateTime.UtcNow,
+        });
+        await _db.SaveChangesAsync();
+
+        design.DesignLeadUserId = replacement.Id;
+        await _sut.SyncDesignProjectRolesAsync(_projectId, null, replacement.Id, _actorUserId,
+            designProjectId: design.Id);
+        await _db.SaveChangesAsync();
+        _db.ChangeTracker.Clear();
+
+        var reloaded = await _db.OperationalProjectMembers.Include(item => item.Roles)
+            .SingleAsync(item => item.UserId == primary.Id && item.DesignProjectId == design.Id);
+        Assert.Contains(reloaded.Roles, role =>
+            role.RoleCode == ProjectTeamRoleCode.DesignLead && role.EndedAt != null);
+        Assert.Contains(reloaded.Roles, role =>
+            role.RoleCode == ProjectTeamRoleCode.Architect && role.EndedAt == null);
+    }
+
     [Fact]
     public async Task SyncDesignProjectRolesAsync_RemovingDerivedRole_PreservesOtherSource()
     {

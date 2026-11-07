@@ -92,6 +92,79 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ProjectManager_AssignsQuoteLinkedPackageOwnedBySales()
+    {
+        var opportunity = new Opportunity
+        {
+            Name = "Cơ hội nhà máy NICON do Kinh doanh phụ trách",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Stage = OpportunityStage.Proposal,
+        };
+        var quote = new Quote
+        {
+            Code = "QT-2026-PM-INPUT-01",
+            Opportunity = opportunity,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Status = QuoteStatus.Draft,
+            CreatedByUserId = _sales.Id,
+            UpdatedByUserId = _sales.Id,
+        };
+        _db.Quotes.Add(quote);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "ProcurementInputPricing";
+        request.Name = "Yêu cầu giá đầu vào cho báo giá nhà máy NICON";
+        request.SourceOpportunityId = opportunity.Id;
+        request.SourceQuoteId = quote.Id;
+
+        // The project manager may hand work to a department even when the source
+        // opportunity belongs to the salesperson who owns the deal.
+        var result = await _service.CreateAsync(request, _pm.Id);
+
+        Assert.Equal(quote.Id, result.SourceQuoteId);
+        Assert.Equal(opportunity.Id, result.SourceOpportunityId);
+        Assert.Equal(_procurementGroup.Id, result.DepartmentRoleGroupId);
+    }
+
+    [Fact]
+    public async Task UnrelatedUser_CannotAssignQuoteLinkedPackage()
+    {
+        var opportunity = new Opportunity
+        {
+            Name = "Cơ hội nhà máy NICON do Kinh doanh phụ trách",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Stage = OpportunityStage.Proposal,
+        };
+        var quote = new Quote
+        {
+            Code = "QT-2026-UNRELATED-01",
+            Opportunity = opportunity,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Status = QuoteStatus.Draft,
+            CreatedByUserId = _sales.Id,
+            UpdatedByUserId = _sales.Id,
+        };
+        _db.Quotes.Add(quote);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "ProcurementInputPricing";
+        request.SourceOpportunityId = opportunity.Id;
+        request.SourceQuoteId = quote.Id;
+
+        var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.CreateAsync(request, _warehouseStaff.Id));
+
+        Assert.Contains("Chỉ PM Dự án", error.Message);
+        Assert.False(await _db.DepartmentWorkPackages.AnyAsync(item => item.SourceQuoteId == quote.Id));
+    }
+
+    [Fact]
     public async Task UnrelatedUser_CannotCreateProjectPackage()
     {
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>

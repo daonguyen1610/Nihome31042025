@@ -259,6 +259,110 @@ public sealed class DesignReviewServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_ExpandsDepartmentIntoActiveRecipientsWithReceivePermission()
+    {
+        var (department, role) = CreateDepartment("DESIGN_DEPT");
+        var first = User("dept.architect.one@example.test", "Kiến trúc sư 1", role);
+        var second = User("dept.architect.two@example.test", "Kiến trúc sư 2", role);
+        var inactive = User("dept.architect.inactive@example.test", "Kiến trúc sư nghỉ việc", role);
+        inactive.IsActive = false;
+        var manager = await db.Users.SingleAsync(item => item.Id == managerId);
+        manager.RoleEntity = role;
+        await db.SaveChangesAsync();
+
+        var created = await service.CreateAsync(projectId, new CreateDesignReviewRequest
+        {
+            Stage = "Concept",
+            Title = "Phương án gửi theo phòng ban",
+            RecipientDepartmentRoleGroupIds = [department.Id],
+            ProjectDocumentIds = [documentId, perspectiveDocumentId],
+            ConceptRevisionId = conceptRevisionId,
+        }, managerId, default);
+
+        Assert.Equal(
+            new[] { first.Id, second.Id }.OrderBy(id => id),
+            created.Recipients.Select(item => item.UserId).OrderBy(id => id));
+    }
+
+    [Fact]
+    public async Task Create_DeduplicatesRecipientChosenDirectlyAndThroughDepartment()
+    {
+        var (department, role) = CreateDepartment("DESIGN_DEPT");
+        var direct = User("dept.direct@example.test", "Người nhận trực tiếp", role);
+
+        var created = await service.CreateAsync(projectId, new CreateDesignReviewRequest
+        {
+            Stage = "Concept",
+            Title = "Phương án chọn cả người và phòng ban",
+            RecipientUserIds = [direct.Id],
+            RecipientDepartmentRoleGroupIds = [department.Id],
+            ProjectDocumentIds = [documentId, perspectiveDocumentId],
+            ConceptRevisionId = conceptRevisionId,
+        }, managerId, default);
+
+        Assert.Equal([direct.Id], created.Recipients.Select(item => item.UserId));
+    }
+
+    [Fact]
+    public async Task Create_RejectsDepartmentWithoutEligibleRecipients()
+    {
+        var department = new RoleGroup { Code = "NO_REVIEW_DEPT", LabelKey = "rbac.group.none", IsActive = true };
+        var role = new Role { Code = "NO_REVIEW_ROLE", Name = "Không nhận hồ sơ", IsActive = true, RoleGroup = department };
+        db.AddRange(department, role);
+        db.SaveChanges();
+        User("no.permission@example.test", "Không có quyền nhận", role);
+
+        var error = await Assert.ThrowsAsync<DesignReviewOperationException>(() => service.CreateAsync(projectId,
+            new CreateDesignReviewRequest
+            {
+                Stage = "Concept",
+                Title = "Phương án phòng ban rỗng",
+                RecipientDepartmentRoleGroupIds = [department.Id],
+                ProjectDocumentIds = [documentId, perspectiveDocumentId],
+                ConceptRevisionId = conceptRevisionId,
+            }, managerId, default));
+
+        Assert.Contains("Phòng ban", error.Message);
+        Assert.Empty(db.DesignReviews);
+    }
+
+    [Fact]
+    public async Task Create_RejectsInactiveDepartment()
+    {
+        var department = new RoleGroup { Code = "INACTIVE_DEPT", LabelKey = "rbac.group.inactive", IsActive = false };
+        db.Add(department);
+        db.SaveChanges();
+
+        var error = await Assert.ThrowsAsync<DesignReviewOperationException>(() => service.CreateAsync(projectId,
+            new CreateDesignReviewRequest
+            {
+                Stage = "Concept",
+                Title = "Phương án phòng ban ngừng hoạt động",
+                RecipientDepartmentRoleGroupIds = [department.Id],
+                ProjectDocumentIds = [documentId, perspectiveDocumentId],
+                ConceptRevisionId = conceptRevisionId,
+            }, managerId, default));
+
+        Assert.Contains("Phòng ban", error.Message);
+        Assert.Empty(db.DesignReviews);
+    }
+
+    [Fact]
+    public async Task Create_RejectsEmptyRecipientSelection()
+    {
+        var error = await Assert.ThrowsAsync<DesignReviewOperationException>(() => service.CreateAsync(projectId,
+            new CreateDesignReviewRequest
+            {
+                Stage = "Concept",
+                Title = "Phương án không có người nhận",
+                ProjectDocumentIds = [documentId, perspectiveDocumentId],
+                ConceptRevisionId = conceptRevisionId,
+            }, managerId, default));
+
+        Assert.Contains("người nhận hoặc một phòng ban", error.Message);
+    }
+
+    [Fact]
     public async Task SubmitInternal_RejectsUntilEveryStageTaskIsApproved()
     {
         var created = await CreateReviewAsync();
@@ -317,6 +421,30 @@ public sealed class DesignReviewServiceTests : IDisposable
             ProjectDocumentIds = [documentId, perspectiveDocumentId],
             ConceptRevisionId = conceptRevisionId,
         }, managerId, default);
+
+    private (RoleGroup Department, Role Role) CreateDepartment(string code)
+    {
+        var department = new RoleGroup
+        {
+            Code = code,
+            LabelKey = $"rbac.group.{code.ToLowerInvariant()}",
+            IsActive = true,
+        };
+        var role = new Role
+        {
+            Code = $"{code}_ARCHITECT",
+            Name = "Architect",
+            IsActive = true,
+            RoleGroup = department,
+        };
+        role.RolePermissions.Add(new RolePermission
+        {
+            Permission = new Permission { Module = "design.reviews", Action = "receive", IsActive = true },
+        });
+        db.AddRange(department, role);
+        db.SaveChanges();
+        return (department, role);
+    }
 
     private ApplicationUser User(string email, string name, Role? role = null)
     {

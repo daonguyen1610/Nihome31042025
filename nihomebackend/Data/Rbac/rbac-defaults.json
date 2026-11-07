@@ -295,7 +295,8 @@
         "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
         "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
         "design.projects.view", "design.concepts.view", "design.basic.view", "design.shop.view",
-        "design.revisions.view", "design.ifc.view", "construction.tasks.view",
+        "design.revisions.view", "design.ifc.view", "design.reviews.receive",
+        "construction.tasks.view",
         "construction.diary.view", "construction.punch.view", "construction.acceptance.view",
         "construction.asbuilt.view", "construction.handover.view"
       ]
@@ -397,6 +398,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.**",
         "design.ifc.view", "design.ifc.manage", "design.ifc.release",
+        "design.reviews.receive",
         "proc.vendors.view", "proc.vendors.manage", "proc.rfqs.view", "proc.rfqs.manage",
         "crm.contracts.view", "crm.contracts.view.downstream.all",
         "construction.tasks.view",
@@ -411,7 +413,7 @@
       ]
     },
     "DESIGN_LEAD": {
-      "deny": ["design.records.hard-delete", "design.reviews.receive"],
+      "deny": ["design.records.hard-delete"],
       "patterns": [
         "dashboard.view",
         "content.**",
@@ -435,7 +437,7 @@
       ]
     },
     "DESIGN_MANAGER": {
-      "deny": ["design.records.hard-delete", "design.reviews.receive"],
+      "deny": ["design.records.hard-delete"],
       "patterns": [
         "dashboard.view",
         "content.**",
@@ -476,6 +478,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
+        "design.reviews.receive",
         "construction.tasks.view",
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
@@ -500,6 +503,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
+        "design.reviews.receive",
         "construction.tasks.view",
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",
@@ -524,6 +528,7 @@
         "design.shop.view", "design.shop.manage",
         "design.revisions.view", "design.revisions.manage",
         "design.ifc.view",
+        "design.reviews.receive",
         "construction.tasks.view",
         "construction.diary.view", "construction.diary.manage",
         "construction.punch.view", "construction.punch.manage",

@@ -247,7 +247,7 @@ export function RfqBidForm({
   references: RfqReferences;
   busy: boolean;
   onSave: (draft: RfqBidDraft) => void;
-  onUpload: (file: File) => Promise<void>;
+  onUpload: (files: File[]) => Promise<void>;
 }) {
   const { t, lang } = useI18n();
   const [vendorId, setVendorId] = useState(0);
@@ -497,10 +497,11 @@ export function RfqBidForm({
           <RfqField label={t("rfq.upload")}>
             <Input
               type="file"
+              multiple
               onChange={(e) => {
-                const file = e.target.files?.[0];
-                if (file) void onUpload(file);
+                const files = Array.from(e.target.files ?? []);
                 e.target.value = "";
+                if (files.length > 0) void onUpload(files);
               }}
             />
           </RfqField>

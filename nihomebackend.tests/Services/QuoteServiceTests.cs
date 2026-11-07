@@ -722,6 +722,60 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Approve_MissingQuote_ReturnsNullWithoutQueueingDecisionEmail()
+    {
+        var (user, _) = await SeedApprovedReadyQuoteAsync();
+
+        var result = await _sut.ApproveAsync(999_999, new(), user.Id + 1, canApprove: true);
+
+        Assert.Null(result);
+        _approvalEmails.Verify(service => service.QueueDecisionAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string?>(),
+            It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Approve_QueuesDecisionEmailBeforeTheQuoteLeavesPendingApproval()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        string? statusWhenQueued = null;
+        _approvalEmails.Setup(service => service.QueueDecisionAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<int, int, bool, string?, CancellationToken>((id, _, _, _, _) =>
+                statusWhenQueued = _db.Quotes.Single(item => item.Id == id).Status.ToString())
+            .Returns(Task.CompletedTask);
+
+        await _sut.ApproveAsync(quote.Id, new() { Note = "Đồng ý" }, user.Id + 1, canApprove: true);
+
+        Assert.Equal("PendingApproval", statusWhenQueued);
+        _approvalEmails.Verify(service => service.QueueDecisionAsync(
+            quote.Id, user.Id + 1, true, "Đồng ý", It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task Reject_QueuesDecisionEmailWhileSubmitterIsStillRecorded()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        int? submitterWhenQueued = null;
+        _approvalEmails.Setup(service => service.QueueDecisionAsync(
+                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<string?>(),
+                It.IsAny<CancellationToken>()))
+            .Callback<int, int, bool, string?, CancellationToken>((id, _, _, _, _) =>
+                submitterWhenQueued = _db.Quotes.Single(item => item.Id == id).SubmittedByUserId)
+            .Returns(Task.CompletedTask);
+
+        await _sut.RejectInternalAsync(quote.Id, new() { Note = "Thiếu giá" }, user.Id + 1, canApprove: true);
+
+        Assert.Equal(user.Id, submitterWhenQueued);
+        _approvalEmails.Verify(service => service.QueueDecisionAsync(
+            quote.Id, user.Id + 1, false, "Thiếu giá", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal(QuoteStatus.Draft, (await _db.Quotes.SingleAsync(item => item.Id == quote.Id)).Status);
+    }
+
+    [Fact]
     public async Task FullHappyPath_DraftToCustomerApproved()
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();

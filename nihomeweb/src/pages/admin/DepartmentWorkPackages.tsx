@@ -420,50 +420,58 @@ const DepartmentWorkPackages = () => {
       .then((response) => setProjectSchedule(response.data))
       .catch(() => setProjectSchedule(null));
   }, [detail?.operationalProjectId]);
+  const autoOpenedCreateRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!packageId && params.get("create") === "1" && canManage) {
-      const project = Number(params.get("projectId"));
-      const opportunity = Number(params.get("opportunityId"));
-      const quote = Number(params.get("quoteId"));
-      const tender = Number(params.get("tenderId"));
-      const requestedPurpose = params.get("purpose") as WorkPackagePurpose | null;
-      if (requestedPurpose === "LegalPermitting") {
-        navigate(
-          project > 0 ? `/admin/permits?operationalProjectId=${project}` : "/admin/permits",
-          { replace: true },
-        );
-        return;
-      }
-      const purpose: WorkPackagePurpose = [
-        "ProcurementInputPricing",
-        "FinanceCommercialReview",
-        "FinanceTenderReview",
-        "TenderPlanning",
-      ].includes(requestedPurpose ?? "")
-        ? requestedPurpose!
-        : tender > 0
-          ? "TenderPlanning"
-          : "General";
-      const expectedCode =
-        purpose === "ProcurementInputPricing"
-          ? "PROCUREMENT"
-          : purpose.startsWith("Finance")
-            ? "FINANCE"
-            : "";
-      const expectedDepartment = options.departments.find((group) => group.code === expectedCode);
-      setPackageForm((current) => ({
-        ...current,
-        kind: "Project",
-        purpose,
-        operationalProjectId: Number.isFinite(project) && project > 0 ? project : null,
-        sourceOpportunityId: Number.isFinite(opportunity) && opportunity > 0 ? opportunity : null,
-        sourceQuoteId: Number.isFinite(quote) && quote > 0 ? quote : null,
-        sourceTenderId: Number.isFinite(tender) && tender > 0 ? tender : null,
-        departmentRoleGroupId: expectedDepartment?.id ?? current.departmentRoleGroupId,
-        leadUserId: 0,
-      }));
-      setPackageOpen(true);
+    if (packageId || params.get("create") !== "1" || !canManage) return;
+    const requestKey = ["projectId", "opportunityId", "quoteId", "tenderId", "purpose"]
+      .map((key) => params.get(key) ?? "")
+      .join("|");
+    if (autoOpenedCreateRef.current === requestKey) return;
+    const project = Number(params.get("projectId"));
+    const opportunity = Number(params.get("opportunityId"));
+    const quote = Number(params.get("quoteId"));
+    const tender = Number(params.get("tenderId"));
+    const requestedPurpose = params.get("purpose") as WorkPackagePurpose | null;
+    if (requestedPurpose === "LegalPermitting") {
+      autoOpenedCreateRef.current = requestKey;
+      navigate(project > 0 ? `/admin/permits?operationalProjectId=${project}` : "/admin/permits", {
+        replace: true,
+      });
+      return;
     }
+    // Departments arrive in a separate request. Opening before they load would
+    // leave the receiving department unset, so wait for them instead of
+    // re-opening the form on every options refresh.
+    if (options.departments.length === 0) return;
+    const purpose: WorkPackagePurpose = [
+      "ProcurementInputPricing",
+      "FinanceCommercialReview",
+      "FinanceTenderReview",
+      "TenderPlanning",
+    ].includes(requestedPurpose ?? "")
+      ? requestedPurpose!
+      : tender > 0
+        ? "TenderPlanning"
+        : "General";
+    const expectedCode =
+      purpose === "ProcurementInputPricing"
+        ? "PROCUREMENT"
+        : purpose.startsWith("Finance")
+          ? "FINANCE"
+          : "";
+    const expectedDepartment = options.departments.find((group) => group.code === expectedCode);
+    autoOpenedCreateRef.current = requestKey;
+    setPackageForm((current) => ({
+      ...current,
+      kind: "Project",
+      purpose,
+      operationalProjectId: Number.isFinite(project) && project > 0 ? project : null,
+      sourceOpportunityId: Number.isFinite(opportunity) && opportunity > 0 ? opportunity : null,
+      sourceQuoteId: Number.isFinite(quote) && quote > 0 ? quote : null,
+      sourceTenderId: Number.isFinite(tender) && tender > 0 ? tender : null,
+      departmentRoleGroupId: expectedDepartment?.id ?? current.departmentRoleGroupId,
+    }));
+    setPackageOpen(true);
   }, [canManage, navigate, options.departments, packageId, params]);
   useEffect(() => {
     if (!detail?.financeReview) return;

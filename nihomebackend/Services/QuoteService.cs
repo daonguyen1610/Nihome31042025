@@ -513,6 +513,10 @@ public class QuoteService(
     public async Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default)
     {
         await EnsureProcurementManagerAsync(caller, ct);
+        if (!await db.Quotes.AsNoTracking().AnyAsync(q => q.Id == id, ct)) return null;
+        // Queued before the transition: the outbox row is saved together with it,
+        // and the author's address must be read while the workflow still holds it.
+        await approvalEmails.QueueDecisionAsync(id, caller, approved: true, req.Note, ct);
         return await TransitionAsync(id, caller, canSeeAll: true,
             allowedFrom: [QuoteStatus.PendingApproval],
             to: QuoteStatus.Approved,
@@ -533,6 +537,10 @@ public class QuoteService(
     public async Task<QuoteResponse?> RejectInternalAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default)
     {
         await EnsureProcurementManagerAsync(caller, ct);
+        if (!await db.Quotes.AsNoTracking().AnyAsync(q => q.Id == id, ct)) return null;
+        // Rejecting clears SubmittedByUserId/ApprovalApproverUserId in beforeSave,
+        // so the outcome email has to be queued while those fields still exist.
+        await approvalEmails.QueueDecisionAsync(id, caller, approved: false, req.Note, ct);
         return await TransitionAsync(id, caller, canSeeAll: true,
             allowedFrom: [QuoteStatus.PendingApproval],
             to: QuoteStatus.Draft,

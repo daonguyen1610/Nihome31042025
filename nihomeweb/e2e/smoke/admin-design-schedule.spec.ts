@@ -187,12 +187,14 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
 
     const selectTriggers = dialog.locator('button[role="combobox"]');
     await selectTriggers.nth(4).click();
-    await page.getByRole("option", { name: /Kiến trúc|Architecture/i }).click();
+    await page.getByRole("option", { name: /^Thiết kế$|^Design$/i }).click();
     await selectTriggers.nth(5).click();
+    await page.getByRole("option", { name: /^Kiến trúc$|^Architecture$/i }).click();
+    await selectTriggers.nth(6).click();
     await page
       .getByRole("option", { name: /Kiến trúc sư chủ trì phương án|Architecture lead/i })
       .click();
-    await selectTriggers.nth(6).click();
+    await selectTriggers.nth(7).click();
     await page
       .locator('[data-people-picker="true"][data-state="open"]')
       .getByRole("option", { name: designLead!.fullName })
@@ -230,8 +232,14 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await expect(taskRow).toContainText(/Đang thực hiện|In progress/i);
 
     const filters = schedule.locator("section").filter({ hasText: /Bộ lọc|Filters/i });
-    await filters.locator('button[role="combobox"]').nth(3).click();
+    await filters.locator('button[role="combobox"]').nth(4).click();
     await page.getByRole("option", { name: /Hoàn thành|Completed/i }).click();
+    await expect(schedule.getByText(/Không có công việc nào khớp|No tasks match/i)).toBeVisible();
+    await filters.getByRole("button", { name: /Xóa bộ lọc|Clear filters/i }).click();
+    await expect(taskRow).toBeVisible();
+
+    await filters.locator('button[role="combobox"]').nth(3).click();
+    await page.getByRole("option", { name: /^MEP$/i }).click();
     await expect(schedule.getByText(/Không có công việc nào khớp|No tasks match/i)).toBeVisible();
     await filters.getByRole("button", { name: /Xóa bộ lọc|Clear filters/i }).click();
     await expect(taskRow).toBeVisible();
