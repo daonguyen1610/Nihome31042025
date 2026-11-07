@@ -106,6 +106,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
     public DbSet<OperationalProjectAssignmentAttachment> OperationalProjectAssignmentAttachments => Set<OperationalProjectAssignmentAttachment>();
+    public DbSet<OperationalProjectAssignmentComment> OperationalProjectAssignmentComments => Set<OperationalProjectAssignmentComment>();
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
     public DbSet<OperationalProjectCodeChange> OperationalProjectCodeChanges => Set<OperationalProjectCodeChange>();
     public DbSet<DepartmentWorkPackage> DepartmentWorkPackages => Set<DepartmentWorkPackage>();
@@ -2301,6 +2302,18 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(item => new { item.AssignmentId, item.DeletedAt });
             b.ToTable(table => table.HasCheckConstraint(
                 "CK_operational_project_assignment_attachments_size", "[FileSize] > 0"));
+        });
+
+        modelBuilder.Entity<OperationalProjectAssignmentComment>(b =>
+        {
+            b.ToTable("operational_project_assignment_comments");
+            b.HasKey(comment => comment.Id);
+            b.Property(comment => comment.Body).HasMaxLength(2000).IsRequired();
+            b.HasOne(comment => comment.Assignment).WithMany(assignment => assignment.Comments)
+                .HasForeignKey(comment => comment.AssignmentId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(comment => comment.CreatedByUser).WithMany()
+                .HasForeignKey(comment => comment.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(comment => new { comment.AssignmentId, comment.CreatedAt });
         });
 
         modelBuilder.Entity<OperationalProjectTeamHistory>(b =>

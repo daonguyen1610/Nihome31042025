@@ -409,6 +409,18 @@ const App = () => (
                   </Route>
                   <Route element={<RequirePermission code={ADMIN_PERMS.workPackages} />}>
                     <Route path="/admin/work-packages" element={<DepartmentWorkPackages />} />
+                    <Route
+                      path="/admin/work-packages/projects"
+                      element={<DepartmentWorkPackages />}
+                    />
+                    <Route
+                      path="/admin/work-packages/contracts"
+                      element={<DepartmentWorkPackages />}
+                    />
+                    <Route
+                      path="/admin/work-packages/internal"
+                      element={<DepartmentWorkPackages />}
+                    />
                     <Route path="/admin/work-packages/:id" element={<DepartmentWorkPackages />} />
                   </Route>
                   <Route element={<RequirePermission code={ADMIN_PERMS.kpi} />}>

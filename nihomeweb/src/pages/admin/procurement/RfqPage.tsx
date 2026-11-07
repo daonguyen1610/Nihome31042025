@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import {
   Dialog,
   DialogContent,
@@ -181,6 +182,7 @@ function RfqWorkspace({
   );
   const [reason, setReason] = useState("");
   const [documentId, setDocumentId] = useState(0);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const filterJson = JSON.stringify(filter);
   const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 4 });
   const quantity = new Intl.NumberFormat(lang, { maximumFractionDigits: 6 });
@@ -916,15 +918,14 @@ function RfqWorkspace({
                     {t("rfq.attach")}
                   </Button>
                   <RfqField label={t("rfq.upload")}>
-                    <Input
-                      disabled={busy}
-                      type="file"
-                      multiple
-                      onChange={(e) => {
-                        const files = Array.from(e.target.files ?? []);
-                        e.target.value = "";
-                        if (files.length > 0) void upload(files);
+                    <MultiFilePicker
+                      files={uploadFiles}
+                      onChange={(files) => {
+                        setUploadFiles(files);
+                        void upload(files).finally(() => setUploadFiles([]));
                       }}
+                      disabled={busy}
+                      testId="rfq-files"
                     />
                   </RfqField>
                   <p className="text-xs text-muted-foreground">{t("rfq.uploadHelp")}</p>

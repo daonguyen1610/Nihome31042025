@@ -19,6 +19,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -171,7 +172,6 @@ const AdminCustomers = () => {
   const [documentLabel, setDocumentLabel] = useState("");
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
-  const [documentInputKey, setDocumentInputKey] = useState(0);
 
   const [opportunities, setOpportunities] = useState<OpportunityResponse[]>([]);
   const [quotes, setQuotes] = useState<QuoteListItemResponse[]>([]);
@@ -655,7 +655,6 @@ const AdminCustomers = () => {
       }
     } finally {
       setDocumentFiles([]);
-      setDocumentInputKey((value) => value + 1);
       setUploadingDocument(false);
     }
     if (uploaded > 0) {
@@ -1965,19 +1964,14 @@ const AdminCustomers = () => {
                         <Label htmlFor="customer-document-file">
                           {t("customers.document.file")}
                         </Label>
-                        <Input
-                          key={documentInputKey}
+                        <MultiFilePicker
                           id="customer-document-file"
-                          type="file"
+                          files={documentFiles}
+                          onChange={setDocumentFiles}
                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                          multiple
-                          onChange={(event) =>
-                            setDocumentFiles(Array.from(event.target.files ?? []))
-                          }
+                          hint={t("customers.document.fileHint")}
+                          testId="customer-document-file"
                         />
-                        <p className="text-xs text-muted-foreground">
-                          {t("customers.document.fileHint")}
-                        </p>
                       </div>
                       <div className="space-y-1.5">
                         <Label htmlFor="customer-document-label">

@@ -2,17 +2,19 @@ import { personOption } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   BriefcaseBusiness,
   CheckCircle2,
+  ChevronDown,
   ClipboardList,
   Download,
   Loader2,
   Paperclip,
   Plus,
   Search,
+  SlidersHorizontal,
   RotateCcw,
   Trash2,
   Upload,
@@ -35,6 +37,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { MoneyInput } from "@/components/ui/money-input";
+import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { Label } from "@/components/ui/label";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -44,7 +47,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSelector } from "@/store";
@@ -120,7 +122,9 @@ const statusTone: Record<WorkPackageStatus, string> = {
 };
 
 const DepartmentWorkPackages = () => {
+  const LIST_PAGE_SIZE = 20;
   const { id } = useParams();
+  const location = useLocation();
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const { t } = useI18n();
@@ -128,12 +132,44 @@ const DepartmentWorkPackages = () => {
   const { toast } = useToast();
   const { has } = usePermissions();
   const packageId = id && /^\d+$/.test(id) ? Number(id) : null;
+  const kindFromPath: WorkPackageKind | null = location.pathname.endsWith("/contracts")
+    ? "Contract"
+    : location.pathname.endsWith("/internal")
+      ? "Internal"
+      : location.pathname.endsWith("/projects")
+        ? "Project"
+        : null;
   const kind: WorkPackageKind =
-    params.get("kind") === "Internal"
+    kindFromPath ??
+    (params.get("kind") === "Internal"
       ? "Internal"
       : params.get("kind") === "Contract"
         ? "Contract"
-        : "Project";
+        : "Project");
+  const subPages = [
+    {
+      kind: "Project" as WorkPackageKind,
+      path: "/admin/work-packages/projects",
+      tabKey: "workPackages.tab.project",
+      titleKey: "workPackages.subpage.projectsTitle",
+      descriptionKey: "workPackages.subpage.projectsDescription",
+    },
+    {
+      kind: "Contract" as WorkPackageKind,
+      path: "/admin/work-packages/contracts",
+      tabKey: "workPackages.tab.contract",
+      titleKey: "workPackages.subpage.contractsTitle",
+      descriptionKey: "workPackages.subpage.contractsDescription",
+    },
+    {
+      kind: "Internal" as WorkPackageKind,
+      path: "/admin/work-packages/internal",
+      tabKey: "workPackages.tab.internal",
+      titleKey: "workPackages.subpage.internalTitle",
+      descriptionKey: "workPackages.subpage.internalDescription",
+    },
+  ];
+  const activeSubPage = subPages.find((page) => page.kind === kind) ?? subPages[0];
   const canViewProjects = has(ADMIN_PERMS.operationalProjects);
   const canManage = has(ADMIN_PERMS.workPackagesManage);
   const canAssign = has(ADMIN_PERMS.workPackagesAssign);
@@ -142,6 +178,7 @@ const DepartmentWorkPackages = () => {
   const canCreate = canManage && (kind !== "Internal" || canAssign);
 
   const [rows, setRows] = useState<DepartmentWorkPackageResponse[]>([]);
+  const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<DepartmentWorkPackageResponse | null>(null);
   const [options, setOptions] = useState(emptyOptions);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
@@ -152,12 +189,31 @@ const DepartmentWorkPackages = () => {
   const statusFilter = params.get("status") ?? "";
   const purposeFilter = params.get("purpose") ?? "";
   const projectFilter = kind !== "Internal" ? (params.get("projectId") ?? "") : "";
+  const page = Math.max(1, Number(params.get("page")) || 1);
+  const activeFilterCount = [
+    departmentFilter,
+    statusFilter,
+    purposeFilter,
+    projectFilter,
+  ].filter(Boolean).length;
+  const setPage = (next: number) => {
+    setParams(
+      (current) => {
+        const params = new URLSearchParams(current);
+        if (next > 1) params.set("page", String(next));
+        else params.delete("page");
+        return params;
+      },
+      { replace: true },
+    );
+  };
   const updateFilter = (key: string, value: string) => {
     setParams(
       (current) => {
         const next = new URLSearchParams(current);
         if (value) next.set(key, value);
         else next.delete(key);
+        next.delete("page");
         return next;
       },
       { replace: true },
@@ -166,6 +222,7 @@ const DepartmentWorkPackages = () => {
   const requestSequence = useRef(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [packageOpen, setPackageOpen] = useState(false);
   const [packageEditOpen, setPackageEditOpen] = useState(false);
   const [packageEditForm, setPackageEditForm] = useState<UpdateDepartmentWorkPackageRequest | null>(
@@ -311,10 +368,12 @@ const DepartmentWorkPackages = () => {
             Number(departmentFilter) > 0 ? Number(departmentFilter) : undefined,
           status: (statusFilter || undefined) as WorkPackageStatus | undefined,
           purpose: (purposeFilter || undefined) as WorkPackagePurpose | undefined,
-          pageSize: 100,
+          page,
+          pageSize: LIST_PAGE_SIZE,
         });
         if (request !== requestSequence.current) return;
         setRows(response.data.items);
+        setTotal(response.data.totalCount);
       }
     } catch (cause) {
       if (request === requestSequence.current)
@@ -322,11 +381,32 @@ const DepartmentWorkPackages = () => {
     } finally {
       if (request === requestSequence.current) setLoading(false);
     }
-  }, [kind, packageId, projectFilter, departmentFilter, statusFilter, purposeFilter, search, t]);
+  }, [
+    kind,
+    packageId,
+    projectFilter,
+    departmentFilter,
+    statusFilter,
+    purposeFilter,
+    search,
+    page,
+    t,
+  ]);
 
   useEffect(() => {
     void load();
   }, [load]);
+  useEffect(() => {
+    if (loading || packageId || page <= 1 || rows.length > 0 || total <= 0) return;
+    setParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.delete("page");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [loading, packageId, page, rows.length, total, setParams]);
   useEffect(() => {
     setApprovalTracking(null);
     setApprovalFeedback(null);
@@ -694,8 +774,7 @@ const DepartmentWorkPackages = () => {
     setTaskOpen(true);
   };
 
-  const selectTaskFiles = (selected: FileList | null, target: "form" | "attachments") => {
-    const files = Array.from(selected ?? []);
+  const selectTaskFiles = (files: File[], target: "form" | "attachments") => {
     if (
       files.length > 10 ||
       files.some(
@@ -1772,8 +1851,8 @@ const DepartmentWorkPackages = () => {
           <>
             <div className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <h1 className="text-3xl font-bold">{t("workPackages.title")}</h1>
-                <p className="mt-1 text-muted-foreground">{t("workPackages.subtitle")}</p>
+                <h1 className="text-3xl font-bold">{t(activeSubPage.titleKey)}</h1>
+                <p className="mt-1 text-muted-foreground">{t(activeSubPage.descriptionKey)}</p>
               </div>
               {canCreate && (
                 <Button onClick={openCreatePackage}>
@@ -1782,26 +1861,38 @@ const DepartmentWorkPackages = () => {
                 </Button>
               )}
             </div>
-            <Tabs
-              value={kind}
-              onValueChange={(value) => {
-                const next = new URLSearchParams(params);
-                next.set("kind", value);
-                next.delete("projectId");
-                setParams(next);
-              }}
+            <nav
+              className="grid grid-cols-3 gap-1 rounded-lg bg-muted p-1 sm:inline-flex sm:flex-wrap"
+              aria-label={t("workPackages.subpage.navLabel")}
             >
-              <TabsList>
-                <TabsTrigger value="Project">{t("workPackages.tab.project")}</TabsTrigger>
-                <TabsTrigger value="Contract">{t("workPackages.tab.contract")}</TabsTrigger>
-                <TabsTrigger value="Internal">{t("workPackages.tab.internal")}</TabsTrigger>
-              </TabsList>
-            </Tabs>
+              {subPages.map((page) => {
+                const next = new URLSearchParams(params);
+                next.delete("kind");
+                next.delete("projectId");
+                const query = next.toString();
+                const active = page.kind === kind;
+                return (
+                  <Link
+                    key={page.kind}
+                    to={query ? `${page.path}?${query}` : page.path}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex items-center justify-center whitespace-nowrap rounded-md px-1.5 py-2 text-center text-[11px] font-medium transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+                      active
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground",
+                    )}
+                  >
+                    {t(page.tabKey)}
+                  </Link>
+                );
+              })}
+            </nav>
             <section
-              className="grid gap-3 rounded-xl border bg-card p-4 sm:grid-cols-2 xl:grid-cols-4"
+              className="space-y-3 rounded-xl border bg-card p-4"
               aria-label={t("workPackages.filters.title")}
             >
-              <div className="space-y-1 sm:col-span-2">
+              <div className="space-y-1">
                 <Label htmlFor="wp-search">{t("workPackages.filters.search")}</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
@@ -1814,96 +1905,122 @@ const DepartmentWorkPackages = () => {
                   />
                 </div>
               </div>
-              <div className="min-w-0 space-y-1">
-                <Label htmlFor="wp-department">{t("workPackages.field.department")}</Label>
-                <select
-                  id="wp-department"
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                  value={departmentFilter}
-                  onChange={(event) => updateFilter("departmentId", event.target.value)}
-                >
-                  <option value="">{t("workPackages.filters.allDepartments")}</option>
-                  {options.departments.map((department) => (
-                    <option key={department.id} value={department.id}>
-                      {t(department.labelKey)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="min-w-0 space-y-1">
-                <Label htmlFor="wp-status">{t("workPackages.filters.status")}</Label>
-                <select
-                  id="wp-status"
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                  value={statusFilter}
-                  onChange={(event) => updateFilter("status", event.target.value)}
-                >
-                  <option value="">{t("workPackages.filters.allStatuses")}</option>
-                  {(Object.keys(statusTone) as WorkPackageStatus[]).map((status) => (
-                    <option key={status} value={status}>
-                      {t(`workPackages.status.${status}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              {kind !== "Internal" && canViewProjects && (
-                <div className="min-w-0 space-y-1 sm:col-span-2">
-                  <Label htmlFor="wp-project">{t("workPackages.field.project")}</Label>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:hidden"
+                aria-expanded={filtersOpen}
+                aria-controls="wp-filters-more"
+                onClick={() => setFiltersOpen((open) => !open)}
+              >
+                <SlidersHorizontal className="mr-2 h-4 w-4" />
+                {t("workPackages.filters.title")}
+                {activeFilterCount > 0 ? ` (${activeFilterCount})` : ""}
+                <ChevronDown
+                  className={cn(
+                    "ml-auto h-4 w-4 transition-transform",
+                    filtersOpen && "rotate-180",
+                  )}
+                />
+              </Button>
+              <div
+                id="wp-filters-more"
+                className={cn(
+                  "grid gap-3 sm:grid-cols-2 xl:grid-cols-4",
+                  !filtersOpen && "hidden sm:grid",
+                )}
+              >
+                <div className="min-w-0 space-y-1">
+                  <Label htmlFor="wp-department">{t("workPackages.field.department")}</Label>
                   <select
-                    id="wp-project"
+                    id="wp-department"
                     className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                    value={projectFilter}
-                    onChange={(event) => updateFilter("projectId", event.target.value)}
+                    value={departmentFilter}
+                    onChange={(event) => updateFilter("departmentId", event.target.value)}
                   >
-                    <option value="">{t("workPackages.filters.allProjects")}</option>
-                    {projects.map((project) => (
-                      <option key={project.id} value={project.id}>
-                        {project.code} · {project.name}
+                    <option value="">{t("workPackages.filters.allDepartments")}</option>
+                    {options.departments.map((department) => (
+                      <option key={department.id} value={department.id}>
+                        {t(department.labelKey)}
                       </option>
                     ))}
                   </select>
                 </div>
-              )}
-              <div className="min-w-0 space-y-1">
-                <Label htmlFor="wp-purpose">{t("workPackages.field.purpose")}</Label>
-                <select
-                  id="wp-purpose"
-                  className="h-10 w-full rounded-md border bg-background px-3 text-sm"
-                  value={purposeFilter}
-                  onChange={(event) => updateFilter("purpose", event.target.value)}
-                >
-                  <option value="">{t("workPackages.filters.allPurposes")}</option>
-                  {(
-                    [
-                      "General",
-                      "ProcurementInputPricing",
-                      "FinanceCommercialReview",
-                      "FinanceTenderReview",
-                      "TenderPlanning",
-                      "LegalPermitting",
-                    ] as WorkPackagePurpose[]
-                  ).map((purpose) => (
-                    <option key={purpose} value={purpose}>
-                      {t(`workPackages.purpose.${purpose}`)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-end">
-                <Button
-                  variant="outline"
-                  className="w-full"
-                  disabled={
-                    !search &&
-                    !departmentFilter &&
-                    !statusFilter &&
-                    !purposeFilter &&
-                    !projectFilter
-                  }
-                  onClick={() => setParams(kind === "Project" ? {} : { kind })}
-                >
-                  {t("workPackages.filters.clear")}
-                </Button>
+                <div className="min-w-0 space-y-1">
+                  <Label htmlFor="wp-status">{t("workPackages.filters.status")}</Label>
+                  <select
+                    id="wp-status"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={statusFilter}
+                    onChange={(event) => updateFilter("status", event.target.value)}
+                  >
+                    <option value="">{t("workPackages.filters.allStatuses")}</option>
+                    {(Object.keys(statusTone) as WorkPackageStatus[]).map((status) => (
+                      <option key={status} value={status}>
+                        {t(`workPackages.status.${status}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {kind !== "Internal" && canViewProjects && (
+                  <div className="min-w-0 space-y-1 sm:col-span-2">
+                    <Label htmlFor="wp-project">{t("workPackages.field.project")}</Label>
+                    <select
+                      id="wp-project"
+                      className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                      value={projectFilter}
+                      onChange={(event) => updateFilter("projectId", event.target.value)}
+                    >
+                      <option value="">{t("workPackages.filters.allProjects")}</option>
+                      {projects.map((project) => (
+                        <option key={project.id} value={project.id}>
+                          {project.code} · {project.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+                <div className="min-w-0 space-y-1">
+                  <Label htmlFor="wp-purpose">{t("workPackages.field.purpose")}</Label>
+                  <select
+                    id="wp-purpose"
+                    className="h-10 w-full rounded-md border bg-background px-3 text-sm"
+                    value={purposeFilter}
+                    onChange={(event) => updateFilter("purpose", event.target.value)}
+                  >
+                    <option value="">{t("workPackages.filters.allPurposes")}</option>
+                    {(
+                      [
+                        "General",
+                        "ProcurementInputPricing",
+                        "FinanceCommercialReview",
+                        "FinanceTenderReview",
+                        "TenderPlanning",
+                        "LegalPermitting",
+                      ] as WorkPackagePurpose[]
+                    ).map((purpose) => (
+                      <option key={purpose} value={purpose}>
+                        {t(`workPackages.purpose.${purpose}`)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div className="flex items-end">
+                  <Button
+                    variant="outline"
+                    className="w-full"
+                    disabled={
+                      !search &&
+                      !departmentFilter &&
+                      !statusFilter &&
+                      !purposeFilter &&
+                      !projectFilter
+                    }
+                    onClick={() => setParams(kindFromPath || kind === "Project" ? {} : { kind })}
+                  >
+                    {t("workPackages.filters.clear")}
+                  </Button>
+                </div>
               </div>
             </section>
             {loading && <PageLoading />}
@@ -1946,6 +2063,29 @@ const DepartmentWorkPackages = () => {
                 </div>
               )}
             </div>
+            {!loading && total > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+                <div>{t("common.pagination.total").replace("{total}", String(total))}</div>
+                <div className="flex gap-1">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page <= 1}
+                    onClick={() => setPage(page - 1)}
+                  >
+                    {t("common.pagination.prev")}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={page * LIST_PAGE_SIZE >= total}
+                    onClick={() => setPage(page + 1)}
+                  >
+                    {t("common.pagination.next")}
+                  </Button>
+                </div>
+              </div>
+            )}
           </>
         )}
       </div>
@@ -2675,22 +2815,21 @@ const DepartmentWorkPackages = () => {
                 }
               />
             </Field>
-            <Field label={t("workPackages.attachments.addFiles")} className="sm:col-span-2">
-              <Input
-                type="file"
-                multiple
+            <Field
+              label={t("workPackages.attachments.addFiles")}
+              htmlFor="work-task-files"
+              className="sm:col-span-2"
+            >
+              <MultiFilePicker
+                id="work-task-files"
+                files={taskFiles}
+                onChange={(files) => selectTaskFiles(files, "form")}
                 accept={TASK_FILE_EXTENSIONS.join(",")}
+                maxFiles={10}
+                hint={t("workPackages.attachments.help")}
                 disabled={saving}
-                onChange={(event) => {
-                  selectTaskFiles(event.target.files, "form");
-                  event.target.value = "";
-                }}
+                testId="work-task-files"
               />
-              <p className="mt-1 break-words text-xs text-muted-foreground">
-                {taskFiles.length > 0
-                  ? taskFiles.map((file) => file.name).join(", ")
-                  : t("workPackages.attachments.help")}
-              </p>
             </Field>
           </div>
           <DialogFooter>
@@ -2771,25 +2910,19 @@ const DepartmentWorkPackages = () => {
             attachmentTask.status !== "Cancelled" &&
             (detail.canAssignTasks || attachmentTask.assigneeUserId === currentUserId) && (
               <div className="space-y-2">
-                <Label htmlFor="work-task-attachment-upload">
+                <Label htmlFor="work-task-attachments">
                   {t("workPackages.attachments.addFiles")}
                 </Label>
-                <Input
-                  id="work-task-attachment-upload"
-                  type="file"
-                  multiple
+                <MultiFilePicker
+                  id="work-task-attachments"
+                  files={attachmentFiles}
+                  onChange={(files) => selectTaskFiles(files, "attachments")}
                   accept={TASK_FILE_EXTENSIONS.join(",")}
+                  maxFiles={10}
+                  hint={t("workPackages.attachments.help")}
                   disabled={attachmentBusy}
-                  onChange={(event) => {
-                    selectTaskFiles(event.target.files, "attachments");
-                    event.target.value = "";
-                  }}
+                  testId="work-task-attachments"
                 />
-                <p className="break-words text-xs text-muted-foreground">
-                  {attachmentFiles.length > 0
-                    ? attachmentFiles.map((file) => file.name).join(", ")
-                    : t("workPackages.attachments.help")}
-                </p>
                 <Button
                   disabled={attachmentBusy || attachmentFiles.length === 0}
                   onClick={() => void addAttachments()}

@@ -10,6 +10,27 @@ export interface PersonIdentity {
   departmentLabelKey?: string | null;
 }
 
+const PROJECT_POSITION_KEYS: Record<string, string> = {
+  "project manager": "projectManager",
+  "design project manager": "designProjectManager",
+  "design lead": "designLead",
+  "design contributor": "designContributor",
+  procurement: "procurement",
+};
+
+export function projectPositionLabel(
+  position: string | null | undefined,
+  t: (key: string) => string,
+): string {
+  const value = position?.trim() ?? "";
+  if (!value) return "";
+  const slug = PROJECT_POSITION_KEYS[value.toLowerCase()];
+  if (!slug) return value;
+  const key = `designProjects.team.position.${slug}`;
+  const label = t(key);
+  return label === key ? value : label;
+}
+
 export async function collectPeoplePages<T extends { id: number }>(
   first: { items: T[]; total: number },
   loadPage: (skip: number, take: number) => Promise<{ items: T[]; total: number }>,
@@ -59,9 +80,9 @@ export function projectMemberRole(
     const label = t(key);
     return label === key ? role.roleCode : label;
   });
-  return [...new Set([personRole(person, t), person.position, ...roles].filter(Boolean))].join(
-    " · ",
-  );
+  return [
+    ...new Set([personRole(person, t), projectPositionLabel(person.position, t), ...roles].filter(Boolean)),
+  ].join(" · ");
 }
 
 export function mergePeople<T extends { userId: number }>(people: T[]): T[] {

@@ -1,4 +1,5 @@
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
@@ -1704,7 +1705,7 @@ const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTa
   const [label, setLabel] = useState("");
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
 
   const visibleIds = useMemo(() => rows.map((a) => a.id), [rows]);
   const bulk = useBulkSelection<number>({
@@ -1742,7 +1743,7 @@ const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTa
       toast({ variant: "destructive", title: getErrorMessage(err) ?? String(err) });
     } finally {
       if (uploadedCount === files.length) setLabel("");
-      if (fileInputRef.current) fileInputRef.current.value = "";
+      setPendingFiles([]);
       setUploading(false);
     }
   };
@@ -1788,23 +1789,19 @@ const DocumentsTab = ({ contract, rows, canManage, error, refresh }: DocumentsTa
               <Label>{t("contracts.documents.label")}</Label>
               <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="..." />
             </div>
-            <div className="flex items-end">
-              <input
-                ref={fileInputRef}
-                id="contract-attachment-files"
-                type="file"
-                multiple
+            <div className="space-y-2 sm:col-span-2">
+              <MultiFilePicker
+                files={pendingFiles}
+                onChange={setPendingFiles}
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                className="hidden"
-                onChange={(e) => {
-                  const files = Array.from(e.target.files ?? []);
-                  if (files.length > 0) void handleFiles(files);
-                }}
+                hint={t("contracts.documents.uploadHint")}
+                disabled={uploading}
+                testId="contract-attachment-files"
               />
               <Button
-                className="w-full"
-                disabled={uploading}
-                onClick={() => fileInputRef.current?.click()}
+                className="w-full sm:w-auto"
+                disabled={uploading || pendingFiles.length === 0}
+                onClick={() => void handleFiles(pendingFiles)}
               >
                 {uploading ? (
                   <Loader2 className="mr-1 h-4 w-4 animate-spin" />

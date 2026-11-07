@@ -17,6 +17,7 @@ namespace NihomeBackend.Controllers;
 public sealed class OperationalProjectTeamController(
     IProjectTeamService service,
     ProjectAssignmentAttachmentService attachments,
+    ProjectAssignmentCommentService comments,
     IProjectAccessService access,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
@@ -254,6 +255,67 @@ public sealed class OperationalProjectTeamController(
         {
             return Conflict(new { message = exception.Message });
         }
+    }
+
+    [HttpGet("assignments/{assignmentId:int}/comments")]
+    public async Task<ActionResult<IReadOnlyList<OperationalProjectAssignmentCommentResponse>>> ListAssignmentComments(
+        int projectId,
+        int assignmentId,
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
+        if (!await CanViewTeamScopeAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
+        var result = await comments.ListAsync(projectId, assignmentId, designProjectId, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("assignments/{assignmentId:int}/comments")]
+    public async Task<ActionResult<OperationalProjectAssignmentCommentResponse>> AddAssignmentComment(
+        int projectId,
+        int assignmentId,
+        [FromBody] CreateOperationalProjectAssignmentCommentRequest request,
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
+        if (!await CanViewTeamScopeAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
+        try
+        {
+            var result = await comments.AddAsync(
+                projectId, assignmentId, designProjectId, request.Body, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("project-team.assignment.comment.create", projectId, assignmentId, result);
+            return StatusCode(StatusCodes.Status201Created, result);
+        }
+        catch (ProjectTeamOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpDelete("assignments/{assignmentId:int}/comments/{commentId:long}")]
+    public async Task<IActionResult> DeleteAssignmentComment(
+        int projectId,
+        int assignmentId,
+        long commentId,
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
+        if (!await CanViewTeamScopeAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
+        var canManage = await CanWriteTeamAsync(userId.Value, projectId, designProjectId, ct);
+        var deleted = await comments.DeleteAsync(
+            projectId, assignmentId, designProjectId, commentId, userId.Value, canManage, ct);
+        if (deleted != true) return NotFound();
+        Audit("project-team.assignment.comment.delete", projectId, assignmentId, new { commentId });
+        return NoContent();
     }
 
     private async Task<bool> CanWriteTeamAsync(int userId, int projectId, int? designProjectId, CancellationToken ct)

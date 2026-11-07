@@ -13726,6 +13726,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("OperationalProject");
 
                     b.Navigation("ParentAssignment");
+
+                    b.Navigation("Comments");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentAttachment", b =>
@@ -13788,6 +13790,56 @@ namespace nihomebackend.Migrations
                         {
                             t.HasCheckConstraint("CK_operational_project_assignment_attachments_size", "[FileSize] > 0");
                         });
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentComment", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProjectAssignment", "Assignment")
+                        .WithMany("Comments")
+                        .HasForeignKey("AssignmentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "CreatedByUser")
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Assignment");
+
+                    b.Navigation("CreatedByUser");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.OperationalProjectAssignmentComment", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<int>("AssignmentId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssignmentId", "CreatedAt");
+
+                    b.HasIndex("CreatedByUserId");
+
+                    b.ToTable("operational_project_assignment_comments", (string)null);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.OperationalProjectCodeChange", b =>

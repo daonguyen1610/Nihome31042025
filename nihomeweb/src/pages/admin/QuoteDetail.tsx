@@ -26,6 +26,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { personOption } from "@/lib/people";
 import { selectQuoteFinanceReview } from "@/lib/financeReview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
@@ -213,7 +214,6 @@ const AdminQuoteDetail = () => {
   const [documentsError, setDocumentsError] = useState<string | null>(null);
   const [documentFiles, setDocumentFiles] = useState<File[]>([]);
   const [documentLabel, setDocumentLabel] = useState("");
-  const [documentInputKey, setDocumentInputKey] = useState(0);
   const [uploadingDocument, setUploadingDocument] = useState(false);
   const [deletingDocumentId, setDeletingDocumentId] = useState<number | null>(null);
 
@@ -688,7 +688,6 @@ const AdminQuoteDetail = () => {
       }
     } finally {
       setDocumentFiles([]);
-      setDocumentInputKey((value) => value + 1);
       setUploadingDocument(false);
     }
     if (uploaded > 0) {
@@ -1348,15 +1347,15 @@ const AdminQuoteDetail = () => {
             <div className="grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] md:items-end">
               <div className="space-y-1.5">
                 <Label htmlFor="quote-document-file">{t("quotes.document.file")}</Label>
-                <Input
-                  key={documentInputKey}
+                <MultiFilePicker
                   id="quote-document-file"
-                  type="file"
+                  files={documentFiles}
+                  onChange={setDocumentFiles}
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                  multiple
-                  onChange={(event) => setDocumentFiles(Array.from(event.target.files ?? []))}
+                  hint={t("quotes.document.fileHint")}
+                  disabled={uploadingDocument}
+                  testId="quote-document-file"
                 />
-                <p className="text-xs text-muted-foreground">{t("quotes.document.fileHint")}</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="quote-document-label">{t("quotes.document.label")}</Label>

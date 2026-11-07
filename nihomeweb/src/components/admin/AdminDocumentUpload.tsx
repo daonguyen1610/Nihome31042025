@@ -1,8 +1,5 @@
 import { useRef, useState } from "react";
-import { Loader2, Upload } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { Loader2, UploadCloud } from "lucide-react";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 
@@ -30,13 +27,12 @@ export default function AdminDocumentUpload({
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFiles = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const selected = Array.from(event.target.files ?? []);
+  const uploadFiles = async (selected: File[]) => {
     if (selected.length === 0) return;
     setError(null);
     if (selected.length > maxFiles) {
       setError(t("common.documentUpload.maxFiles").replace("{count}", String(maxFiles)));
-      event.target.value = "";
+      if (inputRef.current) inputRef.current.value = "";
       return;
     }
 
@@ -64,37 +60,41 @@ export default function AdminDocumentUpload({
   const inputId = `business-document-${testId ?? "upload"}`;
   return (
     <div className="space-y-2">
-      <Label htmlFor={inputId} className="sr-only">
-        {t("common.documentUpload.select")}
-      </Label>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
+      <label
+        htmlFor={inputId}
+        onDragOver={(event) => event.preventDefault()}
+        onDrop={(event) => {
+          event.preventDefault();
+          if (disabled || uploading) return;
+          const files = Array.from(event.dataTransfer.files ?? []);
+          if (files.length > 0) void uploadFiles(files);
+        }}
+        className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-5 text-center transition-colors hover:border-primary/60 hover:bg-muted/60"
+      >
+        <input
           ref={inputRef}
           id={inputId}
           type="file"
           accept={BUSINESS_DOCUMENT_ACCEPT}
           multiple={multiple}
           disabled={disabled || uploading || maxFiles < 1}
-          onChange={(event) => void handleFiles(event)}
-          className="min-w-0 flex-1"
+          onChange={(event) => {
+            const files = Array.from(event.target.files ?? []);
+            if (files.length > 0) void uploadFiles(files);
+          }}
+          className="sr-only"
           data-testid={testId}
         />
-        <Button
-          type="button"
-          variant="outline"
-          disabled={disabled || uploading || maxFiles < 1}
-          onClick={() => inputRef.current?.click()}
-          className="shrink-0"
-        >
-          {uploading ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Upload className="mr-2 h-4 w-4" />
-          )}
+        {uploading ? (
+          <Loader2 className="h-6 w-6 animate-spin text-primary" aria-hidden />
+        ) : (
+          <UploadCloud className="h-6 w-6 text-primary" aria-hidden />
+        )}
+        <span className="text-sm font-medium text-foreground">
           {uploading ? t("common.documentUpload.uploading") : t("common.documentUpload.select")}
-        </Button>
-      </div>
-      <p className="text-xs text-muted-foreground">{t("common.documentUpload.help")}</p>
+        </span>
+        <span className="text-xs text-muted-foreground">{t("common.documentUpload.help")}</span>
+      </label>
       {error && (
         <p role="alert" className="text-sm text-destructive">
           {error}

@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { personOption, projectMemberOption } from "@/lib/people";
+import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { personOption, projectMemberOption, projectPositionLabel } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import {
@@ -9,10 +9,12 @@ import {
   Download,
   History,
   Loader2,
+  MessageSquare,
   Paperclip,
   Pencil,
   Plus,
   RefreshCw,
+  Send,
   Trash2,
   UserRound,
   UserRoundX,
@@ -44,9 +46,11 @@ import { useToast } from "@/hooks/use-toast";
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { translateError, useI18n } from "@/lib/i18n";
+import { useAppSelector } from "@/store";
 import {
   adminApi,
   type OperationalProjectAssignmentAttachmentResponse,
+  type OperationalProjectAssignmentCommentResponse,
   type OperationalProjectAssignmentResponse,
   type OperationalProjectMemberResponse,
   type OperationalProjectTeamHistoryResponse,
@@ -331,6 +335,202 @@ const AssignmentAttachments = ({
   );
 };
 
+const AssignmentComments = ({
+  operationalProjectId,
+  assignment,
+  designProjectId,
+  canManage,
+}: {
+  operationalProjectId: number;
+  assignment: OperationalProjectAssignmentResponse;
+  designProjectId?: number;
+  canManage: boolean;
+}) => {
+  const { t, lang } = useI18n();
+  const { toast } = useToast();
+  const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
+  const [open, setOpen] = useState(false);
+  const [items, setItems] = useState<OperationalProjectAssignmentCommentResponse[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [body, setBody] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setLoadError(null);
+    try {
+      const { data } = await adminApi.listOperationalProjectAssignmentComments(
+        operationalProjectId,
+        assignment.id,
+        designProjectId,
+      );
+      setItems(data);
+    } catch (loadError) {
+      setLoadError(extractApiError(loadError));
+    } finally {
+      setLoading(false);
+    }
+  }, [operationalProjectId, assignment.id, designProjectId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  const submit = async (event: FormEvent) => {
+    event.preventDefault();
+    const trimmed = body.trim();
+    if (!trimmed) {
+      setError(t("designProjects.team.comments.required"));
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      await adminApi.addOperationalProjectAssignmentComment(
+        operationalProjectId,
+        assignment.id,
+        trimmed,
+        designProjectId,
+      );
+      setBody("");
+      await load();
+    } catch (submitError) {
+      setError(extractApiError(submitError));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const remove = async (comment: OperationalProjectAssignmentCommentResponse) => {
+    if (!window.confirm(t("designProjects.team.comments.confirmDelete"))) return;
+    try {
+      await adminApi.deleteOperationalProjectAssignmentComment(
+        operationalProjectId,
+        assignment.id,
+        comment.id,
+        designProjectId,
+      );
+      toast({ title: t("designProjects.team.comments.deleted") });
+      await load();
+    } catch (deleteError) {
+      setError(extractApiError(deleteError));
+    }
+  };
+
+  const formatWhen = (value: string) =>
+    new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
+      new Date(value),
+    );
+
+  return (
+    <div className="mt-2">
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        className="px-2"
+        aria-expanded={open}
+        aria-controls={open ? `assignment-comments-${assignment.id}` : undefined}
+        onClick={() => setOpen((current) => !current)}
+      >
+        <MessageSquare className="mr-1.5 h-4 w-4" />
+        {t("designProjects.team.comments.title")}
+        {items.length > 0 ? ` (${items.length})` : ""}
+      </Button>
+      {open ? (
+        <div
+          id={`assignment-comments-${assignment.id}`}
+          className="mt-2 space-y-3 rounded-md bg-muted/50 p-3"
+        >
+          {loading ? (
+            <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
+          ) : loadError ? (
+            <div className="space-y-2">
+              <p role="alert" className="text-sm text-rose-600">
+                {loadError}
+              </p>
+              <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
+                {t("common.retry")}
+              </Button>
+            </div>
+          ) : items.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {t("designProjects.team.comments.empty")}
+            </p>
+          ) : (
+            <ul className="space-y-3">
+              {items.map((comment) => (
+                <li key={comment.id} className="flex gap-2">
+                  <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-semibold text-muted-foreground">
+                    {comment.createdByName.trim().charAt(0).toUpperCase() || "?"}
+                  </div>
+                  <div className="min-w-0 flex-1 rounded-md border bg-card px-3 py-2">
+                    <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                      <span className="text-sm font-medium text-foreground">
+                        {comment.createdByName}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        {formatWhen(comment.createdAt)}
+                      </span>
+                    </div>
+                    <p className="mt-1 whitespace-pre-wrap break-words text-sm text-foreground">
+                      {comment.body}
+                    </p>
+                  </div>
+                  {canManage || comment.createdByUserId === currentUserId ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                      aria-label={t("designProjects.team.comments.delete")}
+                      onClick={() => void remove(comment)}
+                    >
+                      <Trash2 className="h-4 w-4 text-rose-600" />
+                    </Button>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+          <form onSubmit={submit} className="space-y-2">
+            <Textarea
+              value={body}
+              onChange={(event) => setBody(event.target.value)}
+              placeholder={t("designProjects.team.comments.placeholder")}
+              maxLength={2000}
+              rows={2}
+              disabled={saving}
+              aria-label={t("designProjects.team.comments.placeholder")}
+            />
+            <div className="flex items-center justify-between gap-2">
+              {error ? (
+                <p role="alert" className="text-sm text-rose-600">
+                  {error}
+                </p>
+              ) : (
+                <span />
+              )}
+              <Button type="submit" size="sm" disabled={saving || !body.trim()}>
+                {saving ? (
+                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-1 h-4 w-4" />
+                )}
+                {saving
+                  ? t("designProjects.team.comments.submitting")
+                  : t("designProjects.team.comments.submit")}
+              </Button>
+            </div>
+          </form>
+        </div>
+      ) : null}
+    </div>
+  );
+};
+
 export const OperationalProjectTeamPanel = ({
   operationalProjectId,
   refreshKey,
@@ -430,6 +630,19 @@ export const OperationalProjectTeamPanel = ({
       ? t("designProjects.team.role.DesignManager")
       : t(`designProjects.team.role.${code}`);
   const scopeLabel = (scope: string) => t(`designProjects.team.scope.${scope}`);
+  const scopeValueLabel = (scope: string, value: string | null | undefined) => {
+    const raw = value?.trim() ?? "";
+    if (!raw) return "";
+    const key =
+      scope === "Module"
+        ? `designProjects.team.module.${raw}`
+        : scope === "Discipline"
+          ? `masterData.design_discipline.${raw}.label`
+          : "";
+    if (!key) return raw;
+    const label = t(key);
+    return label === key ? raw : label;
+  };
   const isDesignRole = (role: ProjectMemberRoleRequest) =>
     role.scope === "Module" && role.scopeValue === "Design";
 
@@ -871,12 +1084,14 @@ export const OperationalProjectTeamPanel = ({
                         </p>
                         {designProjectContext ? (
                           <>
-                            <p className="break-words text-sm text-slate-500">{member.position}</p>
+                            <p className="break-words text-sm text-slate-500">
+                              {projectPositionLabel(member.position, t)}
+                            </p>
                             <p className="break-all text-xs text-slate-500">{member.email}</p>
                           </>
                         ) : (
                           <p className="truncate text-sm text-slate-500">
-                            {member.position} · {member.email}
+                            {projectPositionLabel(member.position, t)} · {member.email}
                           </p>
                         )}
                       </div>
@@ -925,7 +1140,7 @@ export const OperationalProjectTeamPanel = ({
                           {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                           {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
                           {scopeLabel(role.scope)}
-                          {role.scopeValue ? `: ${role.scopeValue}` : ""}
+                          {role.scopeValue ? `: ${scopeValueLabel(role.scope, role.scopeValue)}` : ""}
                         </Badge>
                       );
                     })}
@@ -974,7 +1189,9 @@ export const OperationalProjectTeamPanel = ({
                         <div className="font-medium text-slate-900">{member.userName}</div>
                         <div className="text-xs text-slate-500">{member.email}</div>
                       </td>
-                      <td className="px-3 py-3 text-slate-700">{member.position}</td>
+                      <td className="px-3 py-3 text-slate-700">
+                        {projectPositionLabel(member.position, t)}
+                      </td>
                       <td className="max-w-md px-3 py-3">
                         <div className="flex flex-wrap gap-1.5">
                           {member.roles.map((role, index) => {
@@ -990,7 +1207,7 @@ export const OperationalProjectTeamPanel = ({
                                 {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                                 {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
                                 {scopeLabel(role.scope)}
-                                {role.scopeValue ? `: ${role.scopeValue}` : ""}
+                                {role.scopeValue ? `: ${scopeValueLabel(role.scope, role.scopeValue)}` : ""}
                               </Badge>
                             );
                           })}
@@ -1047,7 +1264,7 @@ export const OperationalProjectTeamPanel = ({
                 >
                   <span>
                     <strong className="text-slate-800">{member.userName}</strong> ·{" "}
-                    {member.position}
+                    {projectPositionLabel(member.position, t)}
                   </span>
                   <span>{formatDate(member.endedAt)}</span>
                 </div>
@@ -1138,8 +1355,10 @@ export const OperationalProjectTeamPanel = ({
                         {t("designProjects.team.field.moduleDiscipline")}
                       </dt>
                       <dd>
-                        {assignment.module}
-                        {assignment.discipline ? ` · ${assignment.discipline}` : ""}
+                        {scopeValueLabel("Module", assignment.module)}
+                        {assignment.discipline
+                          ? ` · ${scopeValueLabel("Discipline", assignment.discipline)}`
+                          : ""}
                       </dd>
                     </div>
                     <div>
@@ -1195,6 +1414,14 @@ export const OperationalProjectTeamPanel = ({
                   ) : null}
                   {operationalProjectId ? (
                     <AssignmentAttachments
+                      operationalProjectId={operationalProjectId}
+                      assignment={assignment}
+                      designProjectId={designProjectId}
+                      canManage={team.canManage}
+                    />
+                  ) : null}
+                  {operationalProjectId ? (
+                    <AssignmentComments
                       operationalProjectId={operationalProjectId}
                       assignment={assignment}
                       designProjectId={designProjectId}
@@ -1367,7 +1594,7 @@ export const OperationalProjectTeamPanel = ({
                       <div className="text-sm">
                         {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                         {scopeLabel(role.scope)}
-                        {role.scopeValue ? `: ${role.scopeValue}` : ""}
+                        {role.scopeValue ? `: ${scopeValueLabel(role.scope, role.scopeValue)}` : ""}
                       </div>
                     ) : (
                       <Select
@@ -1447,7 +1674,7 @@ export const OperationalProjectTeamPanel = ({
                         <SelectContent>
                           {scopeOptions.map((option) => (
                             <SelectItem key={option} value={option}>
-                              {option}
+                              {scopeValueLabel(role.scope, option)}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1576,7 +1803,7 @@ export const OperationalProjectTeamPanel = ({
                     .filter((option) => !designProjectId || option === "Design")
                     .map((option) => (
                       <SelectItem key={option} value={option}>
-                        {option}
+                        {scopeValueLabel("Module", option)}
                       </SelectItem>
                     ))}
                 </SelectContent>
@@ -1600,7 +1827,7 @@ export const OperationalProjectTeamPanel = ({
                   <SelectItem value="none">{t("designProjects.team.value.none")}</SelectItem>
                   {team.disciplineOptions.map((option) => (
                     <SelectItem key={option} value={option}>
-                      {option}
+                      {scopeValueLabel("Discipline", option)}
                     </SelectItem>
                   ))}
                 </SelectContent>
