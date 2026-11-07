@@ -85,6 +85,23 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
             .ToListAsync(ct))
             .ToHashSet();
         var changed = false;
+        // Only the lead the scalar is moving away from loses the role; leads the team tab
+        // added by hand stay untouched so a dossier save never deletes manual members.
+        var previousDesignLeadUserId = await PreviousDesignLeadUserIdAsync(designProjectId, ct);
+        if (!previousDesignLeadUserId.HasValue && designProjectId.HasValue)
+        {
+            // Legacy data may predate the scalar sync: a single hand-added lead is the
+            // implicit primary and is replaced when the dossier form names another lead.
+            var manualLeadUserIds = members
+                .Where(member => member.Roles.Any(role => role.EndedAt == null &&
+                    role.Source == ManualSource &&
+                    role.RoleCode == ProjectTeamRoleCode.DesignLead &&
+                    role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design"))
+                .Select(member => member.UserId)
+                .Distinct()
+                .ToList();
+            if (manualLeadUserIds.Count == 1) previousDesignLeadUserId = manualLeadUserIds[0];
+        }
 
         foreach (var role in members.SelectMany(member => member.Roles).Where(role =>
                      role.EndedAt == null &&
@@ -92,7 +109,10 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
                       role.Source is RuntimeSource or BackfillSource ||
                       designProjectId.HasValue && role.Source == ManualSource &&
                       role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design" &&
-                      role.RoleCode is ProjectTeamRoleCode.ProjectManager or ProjectTeamRoleCode.DesignLead)))
+                      (role.RoleCode == ProjectTeamRoleCode.ProjectManager ||
+                       previousDesignLeadUserId.HasValue &&
+                       role.Member.UserId == previousDesignLeadUserId.Value &&
+                       role.RoleCode == ProjectTeamRoleCode.DesignLead))))
         {
             if (!desiredRoles.Any(desired =>
                 (desired.SourceReference == role.SourceReference ||
@@ -179,6 +199,18 @@ public sealed class LegacyProjectTeamSyncService(AppDbContext db) : ILegacyProje
                 ChangedByUserId = actorUserId,
             });
         }
+    }
+
+    private async Task<int?> PreviousDesignLeadUserIdAsync(int? designProjectId, CancellationToken ct)
+    {
+        if (!designProjectId.HasValue) return null;
+        var design = await db.DesignProjects.FirstOrDefaultAsync(item => item.Id == designProjectId.Value, ct);
+        if (design is null) return null;
+        var entry = db.Entry(design);
+        // A design project created in this unit of work has no previous lead yet.
+        return entry.State == EntityState.Added
+            ? null
+            : entry.Property(item => item.DesignLeadUserId).OriginalValue;
     }
 
     private static bool Matches(OperationalProjectMemberRole role, LegacyRole desired) =>

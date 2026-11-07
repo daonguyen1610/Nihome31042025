@@ -6,7 +6,8 @@ public sealed class CreateDesignReviewRequest
 {
     [Required, MaxLength(30)] public string Stage { get; set; } = string.Empty;
     [Required, MaxLength(300)] public string Title { get; set; } = string.Empty;
-    [MinLength(1)] public List<int> RecipientUserIds { get; set; } = new();
+    public List<int> RecipientUserIds { get; set; } = new();
+    public List<int> RecipientDepartmentRoleGroupIds { get; set; } = new();
     [MinLength(1)] public List<long> ProjectDocumentIds { get; set; } = new();
     public int? ConceptRevisionId { get; set; }
 }

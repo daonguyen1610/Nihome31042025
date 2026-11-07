@@ -16,6 +16,7 @@ namespace NihomeBackend.Controllers;
 [Authorize]
 public sealed class OperationalProjectTeamController(
     IProjectTeamService service,
+    ProjectAssignmentAttachmentService attachments,
     IProjectAccessService access,
     IPermissionService permissions,
     IAuditLogger audit) : ControllerBase
@@ -161,6 +162,100 @@ public sealed class OperationalProjectTeamController(
         }
     }
 
+    [HttpGet("assignments/{assignmentId:int}/attachments")]
+    public async Task<ActionResult<IReadOnlyList<OperationalProjectAssignmentAttachmentResponse>>> ListAssignmentAttachments(
+        int projectId,
+        int assignmentId,
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
+        if (!await CanViewTeamScopeAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
+        var result = await attachments.ListAsync(projectId, assignmentId, designProjectId, ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("assignments/{assignmentId:int}/attachments")]
+    [Consumes("multipart/form-data")]
+    [Idempotency("operations.projects.team.assignments.attachments.upload",
+        requestGuardType: typeof(ProjectAssignmentAttachmentIdempotencyGuard), requireKey: true)]
+    [RequestFormLimits(MultipartBodyLengthLimit = 21 * 1024 * 1024)]
+    public async Task<ActionResult<OperationalProjectAssignmentAttachmentResponse>> UploadAssignmentAttachment(
+        int projectId,
+        int assignmentId,
+        IFormFile? file,
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
+        if (!await CanWriteTeamAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
+        try
+        {
+            var result = await attachments.UploadAsync(
+                projectId, assignmentId, designProjectId, file, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("project-team.assignment.attachment.upload", projectId, result.Id, result);
+            return StatusCode(StatusCodes.Status201Created, result);
+        }
+        catch (ProjectTeamOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+        catch (BusinessDocumentStorageException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
+    [HttpGet("assignments/{assignmentId:int}/attachments/{attachmentId:long}/content")]
+    public async Task<IActionResult> DownloadAssignmentAttachment(
+        int projectId,
+        int assignmentId,
+        long attachmentId,
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
+        if (!await CanViewTeamScopeAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
+        var content = await attachments.DownloadAsync(
+            projectId, assignmentId, attachmentId, designProjectId, ct);
+        return content is null
+            ? NotFound()
+            : PhysicalFile(content.FullPath, content.ContentType, content.OriginalFileName,
+                enableRangeProcessing: true);
+    }
+
+    [HttpDelete("assignments/{assignmentId:int}/attachments/{attachmentId:long}")]
+    public async Task<IActionResult> DeleteAssignmentAttachment(
+        int projectId,
+        int assignmentId,
+        long attachmentId,
+        CancellationToken ct,
+        [FromQuery] int? designProjectId = null)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await CanViewTeamAsync(userId.Value, designProjectId, ct)) return Forbid();
+        if (!await CanWriteTeamAsync(userId.Value, projectId, designProjectId, ct)) return NotFound();
+        try
+        {
+            if (!await attachments.DeleteAsync(
+                    projectId, assignmentId, attachmentId, designProjectId, ct)) return NotFound();
+            Audit("project-team.assignment.attachment.delete", projectId, attachmentId, new { attachmentId });
+            return NoContent();
+        }
+        catch (ProjectTeamOperationException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+    }
+
     private async Task<bool> CanWriteTeamAsync(int userId, int projectId, int? designProjectId, CancellationToken ct)
     {
         var manageOperations = await permissions.HasAsync(userId, "operations.projects.manage", ct);
@@ -175,7 +270,17 @@ public sealed class OperationalProjectTeamController(
         await permissions.HasAsync(userId, "operations.projects.view", ct) ||
         designProjectId.HasValue && await permissions.HasAsync(userId, "design.projects.view", ct);
 
-    private void Audit(string action, int projectId, int entityId, object value) => audit.Log(new AuditEvent
+    /// <summary>
+    /// Read-only team endpoints that do not go through the team service need the
+    /// same project-scope check the service applies, otherwise any holder of the
+    /// view permission could read another project's records.
+    /// </summary>
+    private async Task<bool> CanViewTeamScopeAsync(int userId, int projectId, int? designProjectId, CancellationToken ct) =>
+        designProjectId.HasValue
+            ? await access.CanViewDesignProjectAsync(userId, designProjectId.Value, ct)
+            : await access.CanViewOperationalProjectAsync(userId, projectId, ct);
+
+    private void Audit(string action, int projectId, long entityId, object value) => audit.Log(new AuditEvent
     {
         Action = action,
         ResourceType = EntityTypes.OperationalProjectTeam,

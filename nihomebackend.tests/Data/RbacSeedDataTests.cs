@@ -214,7 +214,8 @@ public class RbacSeedDataTests
         Assert.Contains("proc.rfqs.manage", manager);
         Assert.Contains("crm.contracts.view.downstream.all", manager);
         Assert.DoesNotContain("design.records.hard-delete", manager);
-        Assert.DoesNotContain("design.reviews.receive", manager);
+        Assert.Contains("design.reviews.receive", manager);
+        Assert.Contains("design.reviews.receive", lead);
     }
 
     [Fact]

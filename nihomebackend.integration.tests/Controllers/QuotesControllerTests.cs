@@ -586,6 +586,33 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DecisionTemplate_RoundTripsWithoutTouchingTheRequestTemplate()
+    {
+        const string path = "/api/site-settings/quote-approval-template";
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsSuperAdminAsync);
+        var original = await ReadJsonAsync(await Client.GetAsync(path));
+        original.GetProperty("decisionSubject").GetString().Should().Contain("{{quoteCode}}");
+        var originalRequestSubject = original.GetProperty("subject").GetString();
+
+        var decisionBody = "<p>Kết quả {{quoteCode}}: {{decisionLabel}}</p>"
+            + "<a href=\"{{quoteUrl}}\">Mở báo giá</a> {{decisionNote}}";
+        var saved = await Client.PutAsJsonAsync(path,
+            new { decisionSubject = "Kết quả {{quoteCode}}", decisionBody });
+        saved.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var persisted = await ReadJsonAsync(await Client.GetAsync(path));
+        persisted.GetProperty("decisionBody").GetString().Should().Contain(decisionBody)
+            .And.Contain("max-width:600px");
+        persisted.GetProperty("subject").GetString().Should().Be(originalRequestSubject);
+
+        (await Client.PutAsJsonAsync(path, new { decisionSubject = "Thiếu nội dung" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.PutAsJsonAsync(path,
+                new { decisionBody = "<p>{{quoteCode}}</p><a href=\"https://evil.example\">x</a>" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Submit_Approve_Send_HappyPath()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -593,8 +620,14 @@ public class QuotesControllerTests : IntegrationTestBase
 
         (await SubmitWithApprovalAsync(quoteId))
             .StatusCode.Should().Be(HttpStatusCode.OK);
-        var approved = await ApproveAsSuperAdminAsync(quoteId, new { });
+        var approved = await ApproveAsSuperAdminAsync(quoteId, new { note = "Đồng ý" });
         approved.StatusCode.Should().Be(HttpStatusCode.OK);
+        var decision = await WithDbAsync(db => db.QuoteApprovalEmails
+            .SingleAsync(email => email.QuoteId == quoteId && email.Kind == "Decision"));
+        decision.Decision.Should().Be("Approved");
+        var authorEmail = await WithDbAsync(db => db.Quotes
+            .Where(q => q.Id == quoteId).Select(q => q.Owner!.Email).SingleAsync());
+        decision.ToEmail.Should().Be(authorEmail);
         var approvedQuote = await ReadJsonAsync(approved);
         await CreateApprovedFinanceReviewAsync(
             await AttachSharedProjectAsync(quoteId), "FinanceCommercialReview", quoteId: quoteId);

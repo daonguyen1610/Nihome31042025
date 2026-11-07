@@ -76,6 +76,15 @@ hiển thị email thực theo dự án và từng người nhận. Nếu nội 
 chưa được xác nhận. Việc xác minh email đã đến
 là trách nhiệm thủ công của người quản lý dự án.
 
+Phòng ban của lịch thiết kế chi tiết lấy trực tiếp từ nhóm vai trò RBAC đang
+hoạt động: `DepartmentCode` lưu mã nhóm (ví dụ `DESIGN`), còn `DisciplineCode`
+(không bắt buộc) lấy từ danh mục `design_discipline`. Phản hồi lịch trả kèm danh
+sách nhóm đang hoạt động nên màn hình không còn phụ thuộc danh mục cũ
+`project-department`. Dữ liệu cũ được migration một lần: `design` → `DESIGN`;
+`architecture`, `structural`, `mep`, `interior` → `DESIGN` kèm bộ môn tương ứng
+(`structural` đổi thành `structure`). Vị trí tuyển dụng cũng chọn phòng ban từ
+cùng danh sách nhóm vai trò.
+
 ### 2.1. Nhóm công việc của phòng ban — Hiện có
 
 ```text
@@ -289,6 +298,11 @@ có. Email nhắc gia hạn không tự khởi tạo luồng này.
 - Design Manager chọn hồ sơ Project Documents và người nhận Kinh doanh/CM/lãnh
   đạo → người được chỉ định chỉ xem, bình luận → Design Manager tổng hợp → ghi
   nhận đã trình khách → ghi nhận quyết định khách hàng.
+- Người nhận nội bộ có thể chọn theo từng người, theo phòng ban (nhóm vai trò
+  RBAC đang hoạt động) hoặc cả hai. Phòng ban được mở rộng phía máy chủ thành
+  các thành viên đang hoạt động có quyền `design.reviews.receive`; Chủ nhiệm
+  thiết kế đang lập hồ sơ không nằm trong danh sách nhận. Phòng ban không còn
+  người đủ điều kiện sẽ bị từ chối kèm thông báo rõ ràng.
 - Công việc thiết kế thuê ngoài phải liên kết đồng thời Vendor và Hợp đồng
   Downstream cùng Dự án, đúng loại Design/Subcontract và đúng nhà cung cấp; NICON
   vẫn chỉ định một người phụ trách nội bộ.
@@ -587,6 +601,14 @@ kiểm kê folder/file, xử lý xung đột và khả năng rollback; không đ
 Drive chỉ là nơi lưu binary. Nicon giữ metadata, nguồn, quyền, version, checksum,
 trạng thái đồng bộ, conflict và audit. Trạng thái `Synced` chỉ được đặt sau khi
 external write thành công; lỗi phải retry được và không tạo thành công giả.
+
+Hai chiều xoá là hai công tắc độc lập và mặc định an toàn:
+`DeleteDriveFilesOnWebDelete` mặc định tắt, nên xoá bản ghi trên web chỉ gỡ liên
+kết chứ không xoá tệp trên Drive; `DeleteWebRecordsOnDriveDelete` mặc định bật,
+nên tệp bị xoá trên Drive được phản chiếu thành bản ghi web đã xoá (soft-delete)
+ở lần đối chiếu kế tiếp. Chỉ người có `system.settings.manage` được đổi hai công
+tắc này, và mỗi lần bật chiều web → Drive phải được ghi nhận vận hành vì tệp đã
+xoá không khôi phục được.
 
 ## 8. Dashboard và KPI
 

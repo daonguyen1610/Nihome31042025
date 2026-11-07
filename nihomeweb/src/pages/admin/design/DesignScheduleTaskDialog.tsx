@@ -29,6 +29,7 @@ import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
   DESIGN_SCHEDULE_STATUSES,
+  type DesignScheduleDepartmentResponse,
   type DesignSchedulePhaseResponse,
   type DesignScheduleStatus,
   type DesignScheduleTaskResponse,
@@ -44,7 +45,8 @@ interface Props {
   phases: DesignSchedulePhaseResponse[];
   masterScheduleItems: ProjectScheduleItemResponse[];
   tasks: DesignScheduleTaskResponse[];
-  departments: MasterDataOption[];
+  departments: DesignScheduleDepartmentResponse[];
+  disciplines: MasterDataOption[];
   members: OperationalProjectMemberResponse[];
   initialPhaseId?: number;
   task: DesignScheduleTaskResponse | null;
@@ -72,6 +74,7 @@ const emptyForm = (phaseId: number): TaskForm => ({
   name: "",
   description: null,
   departmentCode: "",
+  disciplineCode: null,
   assigneeMemberId: 0,
   approverMemberId: 0,
   parentTaskId: null,
@@ -98,6 +101,7 @@ const taskForm = (task: DesignScheduleTaskResponse): TaskForm => ({
   name: task.name,
   description: task.description ?? null,
   departmentCode: task.departmentCode,
+  disciplineCode: task.disciplineCode ?? null,
   assigneeMemberId: task.assigneeMemberId,
   approverMemberId: task.approverMemberId,
   parentTaskId: task.parentTaskId ?? null,
@@ -125,6 +129,7 @@ export const DesignScheduleTaskDialog = ({
   masterScheduleItems,
   tasks,
   departments,
+  disciplines,
   members,
   initialPhaseId,
   task,
@@ -194,10 +199,17 @@ export const DesignScheduleTaskDialog = ({
     if (!name || name.length > 300) return t("designProjects.schedule.validation.name");
     if (
       !departments.some(
-        (department) => department.code === form.departmentCode && department.isActive,
+        (department) => department.code.toLowerCase() === form.departmentCode.toLowerCase(),
       )
     )
       return t("designProjects.schedule.validation.department");
+    if (
+      form.disciplineCode &&
+      !disciplines.some(
+        (discipline) => discipline.code === form.disciplineCode && discipline.isActive,
+      )
+    )
+      return t("designProjects.schedule.validation.discipline");
     if (!activeMembers.some((member) => member.id === form.assigneeMemberId))
       return t("designProjects.schedule.validation.assignee");
     if (
@@ -474,7 +486,28 @@ export const DesignScheduleTaskDialog = ({
                 <SelectValue placeholder={t("designProjects.schedule.placeholder.department")} />
               </SelectTrigger>
               <SelectContent>
-                {departments
+                {departments.map((item) => (
+                  <SelectItem key={item.code} value={item.code}>
+                    {t(item.labelKey)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label>{t("designProjects.schedule.field.discipline")}</Label>
+            <Select
+              value={form.disciplineCode ?? "none"}
+              onValueChange={(value) =>
+                setForm({ ...form, disciplineCode: value === "none" ? null : value })
+              }
+            >
+              <SelectTrigger className="mt-1 min-h-11">
+                <SelectValue placeholder={t("designProjects.schedule.placeholder.discipline")} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">{t("designProjects.schedule.value.none")}</SelectItem>
+                {disciplines
                   .filter((item) => item.isActive)
                   .map((item) => (
                     <SelectItem key={item.id} value={item.code}>

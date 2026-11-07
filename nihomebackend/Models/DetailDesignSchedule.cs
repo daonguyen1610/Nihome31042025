@@ -60,6 +60,7 @@ public class DesignScheduleTask : IConcurrencyTracked
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string DepartmentCode { get; set; } = string.Empty;
+    public string? DisciplineCode { get; set; }
     public int AssigneeMemberId { get; set; }
     public OperationalProjectMember AssigneeMember { get; set; } = null!;
     public int ApproverMemberId { get; set; }

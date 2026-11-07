@@ -241,6 +241,34 @@ public sealed class DesignReviewsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Create_WithDepartmentOnlyRecipients_ExpandsToDepartmentMembers()
+    {
+        var fixture = await CreateFixtureAsync();
+        var departmentId = await WithDbAsync(db => db.Users
+            .Where(user => user.Id == fixture.RecipientUserId)
+            .Select(user => user.RoleEntity!.RoleGroupId)
+            .SingleAsync());
+        departmentId.Should().NotBeNull("business roles are grouped by department");
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "DESIGN"));
+
+        using var create = await SendWithKeyAsync(HttpMethod.Post,
+            $"/api/design-projects/{fixture.DesignProjectId}/reviews", new
+            {
+                stage = "Concept",
+                title = "Phương án Concept gửi theo phòng ban",
+                recipientDepartmentRoleGroupIds = new[] { departmentId!.Value },
+                projectDocumentIds = new[] { fixture.DocumentId, fixture.PerspectiveDocumentId },
+                conceptRevisionId = fixture.ConceptRevisionId,
+            });
+
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
+        var recipients = (await ReadJsonAsync(create)).GetProperty("recipients").EnumerateArray()
+            .Select(item => item.GetProperty("userId").GetInt32())
+            .ToList();
+        recipients.Should().Contain(fixture.RecipientUserId);
+    }
+
+    [Fact]
     public async Task SubmitInternal_WhenEvidenceHashChanged_ReturnsBadRequestAndKeepsDraft()
     {
         var fixture = await CreateFixtureAsync();

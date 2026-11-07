@@ -28,6 +28,21 @@ public class RecruitmentDropdownOptionService(AppDbContext db, ILogger<Recruitme
         return items.Select(MapToResponse).ToList();
     }
 
+    public async Task<List<RoleGroupOptionResponse>> GetRoleGroupOptionsAsync(
+        CancellationToken ct = default)
+    {
+        return await db.RoleGroups.AsNoTracking()
+            .Where(group => group.IsActive)
+            .OrderBy(group => group.SortOrder).ThenBy(group => group.Code)
+            .Select(group => new RoleGroupOptionResponse
+            {
+                Id = group.Id,
+                Code = group.Code,
+                LabelKey = group.LabelKey,
+            })
+            .ToListAsync(ct);
+    }
+
     public async Task<RecruitmentDropdownOptionResponse> CreateAsync(UpsertRecruitmentDropdownOptionRequest req)
     {
         var type = NormalizeType(req.Type);

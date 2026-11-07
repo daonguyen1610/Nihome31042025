@@ -1,4 +1,5 @@
 using System.Net;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -386,6 +387,132 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         returned.GetProperty("kpiIdentity").GetString().Should().NotBe(originalIdentity);
     }
 
+    [Fact]
+    public async Task Assignments_AllowOneSubtaskLevelOnly()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        using var memberResponse = await PostMemberAsync(
+            projectId, await UserIdAsync("ARCHITECT"), "Architect", "Architect");
+        var memberId = (await ReadJsonAsync(memberResponse)).GetProperty("id").GetInt32();
+        using var rootResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments",
+            AssignmentPayload("DES-SUBTASK-ROOT", memberId), $"root-{Guid.NewGuid():N}");
+        rootResponse.StatusCode.Should().Be(HttpStatusCode.Created, await rootResponse.Content.ReadAsStringAsync());
+        var rootId = (await ReadJsonAsync(rootResponse)).GetProperty("id").GetInt32();
+
+        using var childResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments",
+            AssignmentPayload("DES-SUBTASK-CHILD", memberId, parentAssignmentId: rootId), $"child-{Guid.NewGuid():N}");
+        childResponse.StatusCode.Should().Be(HttpStatusCode.Created, await childResponse.Content.ReadAsStringAsync());
+        var child = await ReadJsonAsync(childResponse);
+        child.GetProperty("parentAssignmentId").GetInt32().Should().Be(rootId);
+        var childId = child.GetProperty("id").GetInt32();
+
+        using var grandChildResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments",
+            AssignmentPayload("DES-SUBTASK-GRANDCHILD", memberId, parentAssignmentId: childId), $"grandchild-{Guid.NewGuid():N}");
+        grandChildResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task AssignmentAttachments_UploadListDownloadDelete_RoundTrip()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        using var memberResponse = await PostMemberAsync(
+            projectId, await UserIdAsync("ARCHITECT"), "Architect", "Architect");
+        var memberId = (await ReadJsonAsync(memberResponse)).GetProperty("id").GetInt32();
+        using var assignmentResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments",
+            AssignmentPayload("DES-ATTACHMENT", memberId), $"attach-assignment-{Guid.NewGuid():N}");
+        var assignmentId = (await ReadJsonAsync(assignmentResponse)).GetProperty("id").GetInt32();
+        var baseUri = $"/api/operational-projects/{projectId}/team/assignments/{assignmentId}/attachments";
+        var bytes = "attachment payload"u8.ToArray();
+        using var form = new MultipartFormDataContent();
+        form.Add(
+            new ByteArrayContent(bytes) { Headers = { ContentType = new MediaTypeHeaderValue("application/pdf") } },
+            "file",
+            "spec.pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, baseUri) { Content = form };
+        request.Headers.Add("Idempotency-Key", $"attach-upload-{Guid.NewGuid():N}");
+        using var upload = await Client.SendAsync(request);
+
+        upload.StatusCode.Should().Be(HttpStatusCode.Created, await upload.Content.ReadAsStringAsync());
+        var attachment = await ReadJsonAsync(upload);
+        attachment.GetProperty("originalFileName").GetString().Should().Be("spec.pdf");
+        var attachmentId = attachment.GetProperty("id").GetInt64();
+
+        var list = await ReadJsonAsync(await Client.GetAsync(baseUri));
+        list.EnumerateArray().Should().ContainSingle(item =>
+            item.GetProperty("id").GetInt64() == attachmentId);
+
+        using var download = await Client.GetAsync($"{baseUri}/{attachmentId}/content");
+        download.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await download.Content.ReadAsByteArrayAsync()).Should().Equal(bytes);
+
+        (await Client.DeleteAsync($"{baseUri}/{attachmentId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"{baseUri}/{attachmentId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task AssignmentAttachments_CannotBeUploadedToAnotherProject()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        var otherProjectId = await CreateProjectAsync();
+        using var memberResponse = await PostMemberAsync(
+            projectId, await UserIdAsync("ARCHITECT"), "Architect", "Architect");
+        var memberId = (await ReadJsonAsync(memberResponse)).GetProperty("id").GetInt32();
+        using var assignmentResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments",
+            AssignmentPayload("DES-ATTACH-CROSS", memberId), $"attach-cross-{Guid.NewGuid():N}");
+        var assignmentId = (await ReadJsonAsync(assignmentResponse)).GetProperty("id").GetInt32();
+        using var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent([1, 2, 3]), "file", "spec.pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post,
+            $"/api/operational-projects/{otherProjectId}/team/assignments/{assignmentId}/attachments")
+        {
+            Content = form,
+        };
+        request.Headers.Add("Idempotency-Key", $"attach-cross-upload-{Guid.NewGuid():N}");
+
+        using var upload = await Client.SendAsync(request);
+
+        upload.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task AssignmentAttachments_ListAndDownload_RequireProjectScope()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        using var memberResponse = await PostMemberAsync(
+            projectId, await UserIdAsync("ARCHITECT"), "Architect", "Architect");
+        var memberId = (await ReadJsonAsync(memberResponse)).GetProperty("id").GetInt32();
+        using var assignmentResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments",
+            AssignmentPayload("DES-ATTACH-SCOPE", memberId), $"attach-scope-{Guid.NewGuid():N}");
+        var assignmentId = (await ReadJsonAsync(assignmentResponse)).GetProperty("id").GetInt32();
+        var baseUri = $"/api/operational-projects/{projectId}/team/assignments/{assignmentId}/attachments";
+        using var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent([1, 2, 3]), "file", "scope.pdf");
+        using var request = new HttpRequestMessage(HttpMethod.Post, baseUri) { Content = form };
+        request.Headers.Add("Idempotency-Key", $"attach-scope-upload-{Guid.NewGuid():N}");
+        using var upload = await Client.SendAsync(request);
+        upload.StatusCode.Should().Be(HttpStatusCode.Created, await upload.Content.ReadAsStringAsync());
+        var attachmentId = (await ReadJsonAsync(upload)).GetProperty("id").GetInt64();
+
+        // SALE holds operations.projects.view but has no relationship to this project.
+        await AuthenticateAsync("SALE");
+
+        (await Client.GetAsync(baseUri)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync($"{baseUri}/{attachmentId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     private Task AuthenticateAsync(string roleCode) => AuthTestHelper.AuthenticateAsync(
         Client,
         client => AuthTestHelper.LoginAsRoleAsync(client, roleCode));
@@ -477,7 +604,8 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
         string workKey,
         int memberId,
         string status = "Planned",
-        string? rowVersion = null) => new
+        string? rowVersion = null,
+        int? parentAssignmentId = null) => new
         {
             workKey,
             title = "Architectural design package",
@@ -488,6 +616,7 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
             status,
             plannedStart = DateTime.UtcNow,
             plannedEnd = DateTime.UtcNow.AddDays(7),
+            parentAssignmentId,
             rowVersion,
         };
 

@@ -94,10 +94,13 @@ public sealed class DesignReviewService(
             throw new DesignReviewOperationException("Giai đoạn trình duyệt không hợp lệ.");
         var title = request.Title?.Trim() ?? string.Empty;
         if (title.Length == 0) throw new DesignReviewOperationException("Tiêu đề hồ sơ trình là bắt buộc.");
-        var recipientIds = request.RecipientUserIds.Distinct().ToList();
+        var departmentIds = request.RecipientDepartmentRoleGroupIds.Distinct().ToList();
         var documentIds = request.ProjectDocumentIds.Distinct().ToList();
-        if (recipientIds.Count == 0) throw new DesignReviewOperationException("Phải chỉ định ít nhất một người nhận nội bộ.");
+        if (request.RecipientUserIds.Count == 0 && departmentIds.Count == 0)
+            throw new DesignReviewOperationException("Phải chỉ định ít nhất một người nhận hoặc một phòng ban.");
         if (documentIds.Count == 0) throw new DesignReviewOperationException("Phải đính kèm ít nhất một tài liệu dự án.");
+        var recipientIds = await ExpandRecipientsAsync(
+            request.RecipientUserIds.Distinct().ToList(), departmentIds, callerUserId, ct);
         await ValidateRecipientsAsync(recipientIds, callerUserId, ct);
         var documents = await ValidateDocumentsAsync(project, stage, documentIds, ct);
         if (stage == DesignReviewStage.Concept)
@@ -349,6 +352,39 @@ public sealed class DesignReviewService(
         await access.CanViewDesignProjectAsync(callerUserId, projectId, ct) ||
         await db.DesignReviewRecipients.AsNoTracking().AnyAsync(item =>
             item.DesignReview.DesignProjectId == projectId && item.UserId == callerUserId, ct);
+
+    private async Task<List<int>> ExpandRecipientsAsync(
+        IReadOnlyCollection<int> directIds, IReadOnlyCollection<int> departmentIds, int managerId, CancellationToken ct)
+    {
+        var recipients = directIds.ToList();
+        if (departmentIds.Count == 0) return recipients;
+
+        var activeDepartmentIds = await db.RoleGroups.AsNoTracking()
+            .Where(group => group.IsActive && departmentIds.Contains(group.Id))
+            .Select(group => group.Id)
+            .ToListAsync(ct);
+        if (activeDepartmentIds.Count != departmentIds.Count)
+            throw new DesignReviewOperationException("Phòng ban nhận hồ sơ không tồn tại hoặc đã ngừng hoạt động.");
+
+        var departmentRecipients = await db.Users.AsNoTracking()
+            .Where(user => user.IsActive && user.Id != managerId &&
+                user.RoleEntity != null && user.RoleEntity.IsActive && user.RoleEntity.RoleGroupId != null &&
+                activeDepartmentIds.Contains(user.RoleEntity.RoleGroupId.Value) &&
+                user.RoleEntity.RolePermissions.Any(grant => grant.Permission.IsActive &&
+                    grant.Permission.Module == RecipientPermissionModule && grant.Permission.Action == "receive"))
+            .Select(user => new { user.Id, RoleGroupId = user.RoleEntity!.RoleGroupId!.Value })
+            .ToListAsync(ct);
+
+        foreach (var departmentId in departmentIds)
+        {
+            if (!departmentRecipients.Any(user => user.RoleGroupId == departmentId))
+                throw new DesignReviewOperationException(
+                    "Phòng ban đã chọn không có người nhận khả dụng cho hồ sơ trình nội bộ Thiết kế.");
+        }
+
+        recipients.AddRange(departmentRecipients.Select(user => user.Id));
+        return recipients.Distinct().ToList();
+    }
 
     private async Task ValidateRecipientsAsync(IReadOnlyCollection<int> ids, int managerId, CancellationToken ct)
     {

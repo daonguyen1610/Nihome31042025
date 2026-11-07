@@ -428,6 +428,190 @@ public sealed class ProjectTeamServiceTests : IDisposable
             _service.UpdateMemberAsync(_projectId, member.Id, request, _callerId));
     }
 
+    [Fact]
+    public async Task AddAssignmentAsync_SubtaskUnderRootAssignment_IsPersistedWithParent()
+    {
+        var designId = await AddDesignProjectAsync("DP-SUBTASK");
+        var member = await AddDesignMemberAsync(designId, _memberUserId, "Architect");
+        var root = await _service.AddAssignmentAsync(
+            _projectId, DesignAssignment("DES-ROOT", member.Id, designId), _callerId);
+
+        var childRequest = DesignAssignment("DES-CHILD", member.Id, designId);
+        childRequest.ParentAssignmentId = root.Id;
+        var child = await _service.AddAssignmentAsync(_projectId, childRequest, _callerId);
+
+        Assert.Equal(root.Id, child.ParentAssignmentId);
+        var persisted = await _db.OperationalProjectAssignments.AsNoTracking()
+            .SingleAsync(item => item.Id == child.Id);
+        Assert.Equal(root.Id, persisted.ParentAssignmentId);
+    }
+
+    [Fact]
+    public async Task AddAssignmentAsync_Subtask_RejectsSelfSecondLevelTerminalAndForeignParent()
+    {
+        var designId = await AddDesignProjectAsync("DP-SUBTASK-GUARD");
+        var member = await AddDesignMemberAsync(designId, _memberUserId, "Architect");
+        var root = await _service.AddAssignmentAsync(
+            _projectId, DesignAssignment("DES-ROOT-GUARD", member.Id, designId), _callerId);
+
+        var selfParent = DesignAssignment("DES-ROOT-GUARD", member.Id, designId);
+        selfParent.RowVersion = root.RowVersion;
+        selfParent.ParentAssignmentId = root.Id;
+        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
+            _service.UpdateAssignmentAsync(_projectId, root.Id, selfParent, _callerId));
+
+        var childRequest = DesignAssignment("DES-CHILD-GUARD", member.Id, designId);
+        childRequest.ParentAssignmentId = root.Id;
+        var child = await _service.AddAssignmentAsync(_projectId, childRequest, _callerId);
+
+        var grandChildRequest = DesignAssignment("DES-GRANDCHILD-GUARD", member.Id, designId);
+        grandChildRequest.ParentAssignmentId = child.Id;
+        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
+            _service.AddAssignmentAsync(_projectId, grandChildRequest, _callerId));
+
+        var secondRoot = await _service.AddAssignmentAsync(
+            _projectId, DesignAssignment("DES-ROOT-2-GUARD", member.Id, designId), _callerId);
+        var promoteParent = DesignAssignment("DES-ROOT-GUARD", member.Id, designId);
+        promoteParent.RowVersion = root.RowVersion;
+        promoteParent.ParentAssignmentId = secondRoot.Id;
+        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
+            _service.UpdateAssignmentAsync(_projectId, root.Id, promoteParent, _callerId));
+
+        var completedRequest = DesignAssignment("DES-ROOT-DONE", member.Id, designId);
+        completedRequest.Status = "Completed";
+        var completedRoot = await _service.AddAssignmentAsync(_projectId, completedRequest, _callerId);
+        var lateChild = DesignAssignment("DES-LATE-CHILD", member.Id, designId);
+        lateChild.ParentAssignmentId = completedRoot.Id;
+        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
+            _service.AddAssignmentAsync(_projectId, lateChild, _callerId));
+
+        var foreignMember = await AddMemberAsync(
+            _memberUserId, "Architect", Role("Architect"), projectId: _otherProjectId);
+        var foreignRoot = await _service.AddAssignmentAsync(
+            _otherProjectId, Assignment("DES-FOREIGN-ROOT", foreignMember.Id), _callerId);
+        var crossProjectChild = DesignAssignment("DES-CROSS-CHILD", member.Id, designId);
+        crossProjectChild.ParentAssignmentId = foreignRoot.Id;
+        await Assert.ThrowsAsync<ProjectTeamOperationException>(() =>
+            _service.AddAssignmentAsync(_projectId, crossProjectChild, _callerId));
+    }
+
+    [Fact]
+    public async Task UpdateAssignmentAsync_Reassign_PreservesParentAssignmentId()
+    {
+        var designId = await AddDesignProjectAsync("DP-SUBTASK-REASSIGN");
+        var member = await AddDesignMemberAsync(designId, _memberUserId, "Architect");
+        var replacementMember = await AddDesignMemberAsync(designId, _otherUserId, "Architect");
+        var root = await _service.AddAssignmentAsync(
+            _projectId, DesignAssignment("DES-ROOT-REASSIGN", member.Id, designId), _callerId);
+        var childRequest = DesignAssignment("DES-CHILD-REASSIGN", member.Id, designId);
+        childRequest.ParentAssignmentId = root.Id;
+        var child = await _service.AddAssignmentAsync(_projectId, childRequest, _callerId);
+        // The in-memory provider does not generate rowversion values; seed one so the
+        // transfer path can validate the concurrency token like SQL Server does.
+        var childEntity = await _db.OperationalProjectAssignments.SingleAsync(item => item.Id == child.Id);
+        childEntity.RowVersion = [1, 2, 3, 4, 5, 6, 7, 8];
+        await _db.SaveChangesAsync();
+
+        var reassign = DesignAssignment("DES-CHILD-REASSIGN", replacementMember.Id, designId);
+        reassign.RowVersion = Convert.ToBase64String(childEntity.RowVersion);
+        var replacement = await _service.UpdateAssignmentAsync(
+            _projectId, child.Id, reassign, _callerId);
+
+        Assert.NotNull(replacement);
+        Assert.Equal(child.Id, replacement!.PreviousAssignmentId);
+        Assert.Equal(root.Id, replacement.ParentAssignmentId);
+    }
+
+    [Fact]
+    public async Task UpdateAssignmentAsync_ReassignRoot_RepointsSubtasksToReplacement()
+    {
+        var designId = await AddDesignProjectAsync("DP-SUBTASK-REASSIGN-ROOT");
+        var member = await AddDesignMemberAsync(designId, _memberUserId, "Architect");
+        var replacementMember = await AddDesignMemberAsync(designId, _otherUserId, "Architect");
+        var root = await _service.AddAssignmentAsync(
+            _projectId, DesignAssignment("DES-ROOT-MOVED", member.Id, designId), _callerId);
+        var childRequest = DesignAssignment("DES-CHILD-MOVED", member.Id, designId);
+        childRequest.ParentAssignmentId = root.Id;
+        var child = await _service.AddAssignmentAsync(_projectId, childRequest, _callerId);
+        var rootEntity = await _db.OperationalProjectAssignments.SingleAsync(item => item.Id == root.Id);
+        rootEntity.RowVersion = [1, 2, 3, 4, 5, 6, 7, 8];
+        await _db.SaveChangesAsync();
+
+        var reassign = DesignAssignment("DES-ROOT-MOVED", replacementMember.Id, designId);
+        reassign.RowVersion = Convert.ToBase64String(rootEntity.RowVersion);
+        var replacement = await _service.UpdateAssignmentAsync(
+            _projectId, root.Id, reassign, _callerId);
+
+        var persistedChild = await _db.OperationalProjectAssignments.AsNoTracking()
+            .SingleAsync(item => item.Id == child.Id);
+        Assert.Equal(replacement!.Id, persistedChild.ParentAssignmentId);
+    }
+
+    [Fact]
+    public async Task DesignLeads_KeepPrimaryUntilRetired_ThenPromoteNextActiveLead()
+    {
+        var designId = await AddDesignProjectAsync("DP-MULTI-LEAD");
+        var primaryRequest = Member(_memberUserId, "Chủ trì kiến trúc",
+            Role("DesignLead", "Module", "Design"));
+        primaryRequest.DesignProjectId = designId;
+        var primary = await _service.AddMemberAsync(_projectId, primaryRequest, _callerId);
+        Assert.Equal(_memberUserId, await DesignLeadUserIdAsync(designId));
+
+        var additionalRequest = Member(_otherUserId, "Chủ trì cơ điện",
+            Role("DesignLead", "Module", "Design"));
+        additionalRequest.DesignProjectId = designId;
+        await _service.AddMemberAsync(_projectId, additionalRequest, _callerId);
+        Assert.Equal(_memberUserId, await DesignLeadUserIdAsync(designId));
+
+        var retirePrimary = Member(_memberUserId, "Chủ trì kiến trúc",
+            Role("DesignLead", "Module", "Design"));
+        retirePrimary.DesignProjectId = designId;
+        retirePrimary.RowVersion = primary.RowVersion;
+        retirePrimary.EndedAt = DateTime.UtcNow;
+        await _service.UpdateMemberAsync(_projectId, primary.Id, retirePrimary, _callerId);
+
+        Assert.Equal(_otherUserId, await DesignLeadUserIdAsync(designId));
+    }
+
+    private async Task<int> AddDesignProjectAsync(string code)
+    {
+        var operational = await _db.OperationalProjects.FindAsync(_projectId);
+        var design = new DesignProject
+        {
+            OperationalProjectId = _projectId,
+            CustomerId = operational!.CustomerId,
+            ProjectCode = code,
+            Name = $"Design project {code}",
+        };
+        _db.DesignProjects.Add(design);
+        await _db.SaveChangesAsync();
+        return design.Id;
+    }
+
+    private async Task<NihomeBackend.Models.DTOs.Responses.OperationalProjectMemberResponse>
+        AddDesignMemberAsync(int designProjectId, int userId, string position)
+    {
+        var request = Member(userId, position, Role("Architect", "Module", "Design"));
+        request.DesignProjectId = designProjectId;
+        return await _service.AddMemberAsync(_projectId, request, _callerId);
+    }
+
+    private async Task<int?> DesignLeadUserIdAsync(int designProjectId) =>
+        await _db.DesignProjects.AsNoTracking()
+            .Where(item => item.Id == designProjectId)
+            .Select(item => item.DesignLeadUserId)
+            .SingleAsync();
+
+    private static UpsertOperationalProjectAssignmentRequest DesignAssignment(
+        string workKey,
+        int assigneeMemberId,
+        int designProjectId)
+    {
+        var request = Assignment(workKey, assigneeMemberId);
+        request.DesignProjectId = designProjectId;
+        return request;
+    }
+
     private async Task<NihomeBackend.Models.DTOs.Responses.OperationalProjectMemberResponse> AddMemberAsync(
         int userId,
         string position,

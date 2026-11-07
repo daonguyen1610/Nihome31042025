@@ -351,6 +351,7 @@ const AdminDesignProjectDetail = () => {
                   designProjectId={project.id}
                   designManagerUserId={project.projectManagerUserId}
                   designProjectContext
+                  onProjectMayHaveChanged={fetchProject}
                 />
               ) : tab === "schedule" ? (
                 <DesignScheduleTab project={project} />

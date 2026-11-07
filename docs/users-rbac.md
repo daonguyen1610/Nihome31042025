@@ -120,6 +120,18 @@ preview. The API routes are `POST /api/admin/rbac/role-groups`,
 `GET /api/admin/rbac/role-groups/{id}/deletion-impact`, and
 `DELETE /api/admin/rbac/role-groups/{id}` with `{planToken, confirmation}`.
 
+Role groups are also the single source of department values on operational
+screens. The detail design schedule stores an active role-group `Code` in
+`DepartmentCode` (for example `DESIGN`) plus an optional `DisciplineCode`
+validated against the `design_discipline` master data; it no longer reads the
+legacy `project-department` catalogue. The schedule response returns the active
+groups so the picker stays in sync with RBAC, and recruitment job positions use
+the same list. Migration `20261107103000_AddDesignScheduleDisciplineCode` maps
+existing rows once: `design` → `DESIGN`; `architecture` → `DESIGN`/`architecture`;
+`structural` → `DESIGN`/`structure`; `mep` → `DESIGN`/`mep`; `interior` →
+`DESIGN`/`interior`. The old `project-department` rows remain in master data for
+historical references but are not offered by these pickers.
+
 These 18 role codes are access-control bundles, not the NICON 11-position KPI
 framework. The current KPI service maps several roles into six broad scorecards;
 that does not prove distinct PM CM, BCH, Field/QA-QC or Site QS responsibilities.
@@ -144,10 +156,18 @@ Task approval is not implied by either role: the API compares the current user
 to the task's single assigned approver. Internal review recipients
 receive record-scoped view/comment access only when explicitly listed.
 Recipient candidates require the active capability `design.reviews.receive`,
-not a fixed role code. Defaults grant it to SALE, SALES_MANAGER, PM and BGD;
-new CRM/Construction group baselines include it. A custom role can receive the
-same capability without gaining project-wide view or approval. Existing edited
-group baselines are preserved and must be configured explicitly if required.
+not a fixed role code. Defaults grant it to SALE, SALES_MANAGER, PM, BGD and
+every design role (DESIGN, DESIGN_LEAD, DESIGN_MANAGER, ARCHITECT,
+MEP_ENGINEER, STRUCT_ENGINEER); the CRM, Construction and Design group
+baselines include it. A custom role can receive the same capability without
+gaining project-wide view or approval. The review dialog accepts individual
+users, departments (active RBAC role groups) or both: a chosen department is
+expanded on the server into its active members holding
+`design.reviews.receive`, excluding the Design Manager, and a department with
+no eligible member is rejected. Directly selected users are never duplicated.
+Existing edited group baselines are preserved; migration
+`20261107102000_GrantDesignReviewRecipientPermission` adds the missing grant
+once for already-seeded DESIGN groups and design roles.
 
 Permanent deletion of failed design records is separated into
 `design.records.hard-delete`. It is seeded only to `BGD` and the full

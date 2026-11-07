@@ -79,7 +79,14 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       has("operations.projects.view.all"));
   const [reviews, setReviews] = useState<DesignReviewResponse[]>([]);
   const [recipientCandidates, setRecipientCandidates] = useState<
-    Array<PersonIdentity & { userId: number; name: string }>
+    Array<
+      PersonIdentity & {
+        userId: number;
+        name: string;
+        departmentId?: number | null;
+        departmentLabelKey?: string | null;
+      }
+    >
   >([]);
   const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [conceptOptions, setConceptOptions] = useState<ConceptOptionResponse[]>([]);
@@ -98,6 +105,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
   const [stage, setStage] = useState<DesignReviewStage>("Concept");
   const [title, setTitle] = useState("");
   const [recipientIds, setRecipientIds] = useState<number[]>([]);
+  const [departmentIds, setDepartmentIds] = useState<number[]>([]);
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [notes, setNotes] = useState<Record<number, string>>({});
   const [commentDocumentIds, setCommentDocumentIds] = useState<Record<number, string>>({});
@@ -205,6 +213,16 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
     );
   }, [stageDocuments]);
   const recipients = recipientCandidates;
+  const departments = useMemo(() => {
+    const byId = new Map<number, string>();
+    recipientCandidates.forEach((person) => {
+      if (person.departmentId && person.departmentLabelKey)
+        byId.set(person.departmentId, person.departmentLabelKey);
+    });
+    return [...byId.entries()]
+      .map(([id, labelKey]) => ({ id, labelKey }))
+      .sort((left, right) => t(left.labelKey).localeCompare(t(right.labelKey)));
+  }, [recipientCandidates, t]);
   const toggle = <T extends number>(items: T[], value: T, checked: boolean) =>
     checked ? [...items, value] : items.filter((item) => item !== value);
 
@@ -231,13 +249,12 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
   };
 
   const create = async () => {
-    if (
-      !title.trim() ||
-      recipientIds.length === 0 ||
-      documentIds.length === 0 ||
-      (stage === "Concept" && !conceptRevisionId)
-    ) {
+    if (!title.trim() || documentIds.length === 0 || (stage === "Concept" && !conceptRevisionId)) {
       setError(t("designProjects.reviews.validation.create"));
+      return;
+    }
+    if (recipientIds.length === 0 && departmentIds.length === 0) {
+      setError(t("designProjects.reviews.validation.recipients"));
       return;
     }
     setBusy(0);
@@ -249,6 +266,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
           stage,
           title: title.trim(),
           recipientUserIds: recipientIds,
+          recipientDepartmentRoleGroupIds: departmentIds,
           projectDocumentIds: documentIds,
           conceptRevisionId: stage === "Concept" ? Number(conceptRevisionId) : null,
         },
@@ -258,6 +276,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       setOpen(false);
       setTitle("");
       setRecipientIds([]);
+      setDepartmentIds([]);
       setDocumentIds([]);
       setConceptRevisionId("");
       await load();
@@ -874,6 +893,35 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                 </Select>
               </div>
             ) : null}
+            {departments.length > 0 ? (
+              <fieldset>
+                <legend className="text-sm font-medium">
+                  {t("designProjects.reviews.departments")}
+                </legend>
+                <p className="mt-1 text-xs text-slate-500">
+                  {t("designProjects.reviews.departmentsHelp")}
+                </p>
+                <div className="mt-1 max-h-36 overflow-y-auto rounded-md border p-2">
+                  {departments.map((department) => (
+                    <label
+                      key={department.id}
+                      data-testid={`review-department-${department.id}`}
+                      className="flex min-h-11 items-center gap-3 rounded px-2 py-2"
+                    >
+                      <Checkbox
+                        checked={departmentIds.includes(department.id)}
+                        onCheckedChange={(checked) =>
+                          setDepartmentIds((items) =>
+                            toggle(items, department.id, checked === true),
+                          )
+                        }
+                      />
+                      <span className="text-sm">{t(department.labelKey)}</span>
+                    </label>
+                  ))}
+                </div>
+              </fieldset>
+            ) : null}
             <fieldset>
               <legend className="text-sm font-medium">
                 {t("designProjects.reviews.recipients")}
@@ -972,7 +1020,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               disabled={
                 busy === 0 ||
                 !title.trim() ||
-                !recipientIds.length ||
+                (!recipientIds.length && !departmentIds.length) ||
                 !documentIds.length ||
                 (stage === "Concept" && !conceptRevisionId)
               }

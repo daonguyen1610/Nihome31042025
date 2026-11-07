@@ -16,7 +16,17 @@ import { Label } from "@/components/ui/label";
 import EmailTemplateEditor from "@/components/admin/EmailTemplateEditor";
 
 type TabType =
-  "application" | "otp" | "quote" | "projectSchedule" | "quoteApproval" | "contract" | "approval";
+  | "application"
+  | "otp"
+  | "quote"
+  | "projectSchedule"
+  | "quoteApproval"
+  | "quoteDecision"
+  | "contract"
+  | "approval";
+
+const CUSTOM_TEMPLATE_TABS = ["contract", "approval", "quoteApproval", "quoteDecision"];
+const usesCustomEditor = (tab: TabType) => CUSTOM_TEMPLATE_TABS.includes(tab);
 
 const APPLICATION_TOKENS = [
   { token: "{{siteName}}", desc: "Tên website" },
@@ -272,15 +282,7 @@ const EmailTemplateConfig = () => {
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <h1 className="text-2xl font-semibold">Mẫu email</h1>
-          <div
-            className={cn(
-              "flex items-center gap-2",
-              (activeTab === "contract" ||
-                activeTab === "approval" ||
-                activeTab === "quoteApproval") &&
-                "hidden",
-            )}
-          >
+          <div className={cn("flex items-center gap-2", usesCustomEditor(activeTab) && "hidden")}>
             <Button type="button" variant="outline" onClick={handleReset} disabled={saving}>
               <RotateCcw className="mr-1.5 h-4 w-4" /> Khôi phục
             </Button>
@@ -290,13 +292,7 @@ const EmailTemplateConfig = () => {
           </div>
           <div
             ref={setActionsContainer}
-            className={cn(
-              "flex items-center gap-2",
-              activeTab !== "contract" &&
-                activeTab !== "approval" &&
-                activeTab !== "quoteApproval" &&
-                "hidden",
-            )}
+            className={cn("flex items-center gap-2", !usesCustomEditor(activeTab) && "hidden")}
           />
         </header>
 
@@ -350,7 +346,7 @@ const EmailTemplateConfig = () => {
           >
             <FileText className="h-4 w-4" /> {t("emailTemplate.schedule.tab")}
           </button>
-          {(["contract", "approval", "quoteApproval"] as const).map((tab) => (
+          {(["contract", "approval", "quoteApproval", "quoteDecision"] as const).map((tab) => (
             <button
               key={tab}
               type="button"
@@ -369,7 +365,9 @@ const EmailTemplateConfig = () => {
                   ? "contractReminder.templates"
                   : tab === "approval"
                     ? "approvalEmail.tab"
-                    : "quotes.approval.templateTab",
+                    : tab === "quoteApproval"
+                      ? "quotes.approval.templateTab"
+                      : "quotes.approval.decisionTemplateTab",
               )}
             </button>
           ))}
@@ -394,7 +392,14 @@ const EmailTemplateConfig = () => {
             actionsContainer={actionsContainer}
           />
         </div>
-        {activeTab !== "contract" && activeTab !== "approval" && activeTab !== "quoteApproval" && (
+        <div hidden={activeTab !== "quoteDecision"}>
+          <WorkPackageApprovalTemplateConfig
+            kind="quoteDecision"
+            active={activeTab === "quoteDecision"}
+            actionsContainer={actionsContainer}
+          />
+        </div>
+        {!usesCustomEditor(activeTab) && (
           <EmailTemplateEditor
             key={activeTab}
             id="email"

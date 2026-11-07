@@ -40,6 +40,9 @@ public sealed class UpsertOperationalProjectAssignmentRequest : IConcurrencyRequ
 {
     [Range(1, int.MaxValue)]
     public int? DesignProjectId { get; set; }
+
+    [Range(1, int.MaxValue)]
+    public int? ParentAssignmentId { get; set; }
     [Required, StringLength(120, MinimumLength = 2)]
     public string WorkKey { get; set; } = string.Empty;
 

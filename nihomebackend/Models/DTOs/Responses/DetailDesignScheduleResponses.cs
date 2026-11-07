@@ -9,8 +9,15 @@ public sealed class DesignScheduleResponse
     public decimal? ProgressPercent { get; set; }
     public string RollupPolicyVersion { get; set; } = "design-schedule-weighted-v1";
     public List<DesignSchedulePhaseResponse> Phases { get; set; } = new();
+    public List<DesignScheduleDepartmentResponse> Departments { get; set; } = new();
     public List<DesignSchedulePhaseRollupResponse> RollupSources { get; set; } = new();
     public PagedDesignScheduleTasksResponse Tasks { get; set; } = new();
+}
+
+public sealed class DesignScheduleDepartmentResponse
+{
+    public string Code { get; set; } = string.Empty;
+    public string LabelKey { get; set; } = string.Empty;
 }
 
 public sealed class DesignSchedulePhaseResponse
@@ -39,6 +46,7 @@ public sealed class DesignScheduleTaskResponse
     public string Name { get; set; } = string.Empty;
     public string? Description { get; set; }
     public string DepartmentCode { get; set; } = string.Empty;
+    public string? DisciplineCode { get; set; }
     public int AssigneeMemberId { get; set; }
     public int ApproverMemberId { get; set; }
     public int? ParentTaskId { get; set; }

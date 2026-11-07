@@ -163,7 +163,7 @@ public sealed class ProjectTeamService(
         try
         {
             await db.SaveChangesAsync(ct);
-            await SyncDesignLeadershipAsync(member, callerUserId, false, false, ct);
+            await SyncDesignLeadershipAsync(member, callerUserId, false, ct);
             await db.SaveChangesAsync(ct);
         }
         catch (DbUpdateException)
@@ -205,8 +205,6 @@ public sealed class ProjectTeamService(
         var now = DateTime.UtcNow;
         var wasManager = member.EndedAt == null && member.Roles.Any(role =>
             role.EndedAt == null && IsDesignLeadershipRole(role, ProjectTeamRoleCode.ProjectManager));
-        var wasLead = member.EndedAt == null && member.Roles.Any(role =>
-            role.EndedAt == null && IsDesignLeadershipRole(role, ProjectTeamRoleCode.DesignLead));
         var requestedRoles = ParseRoles(request.Roles, now, request.EndedAt);
         foreach (var role in member.Roles.Where(role => role.EndedAt == null))
         {
@@ -224,7 +222,7 @@ public sealed class ProjectTeamService(
         member.UpdatedAt = now;
         member.UpdatedByUserId = callerUserId;
         if (!request.EndedAt.HasValue) member.Roles.AddRange(requestedRoles);
-        await SyncDesignLeadershipAsync(member, callerUserId, wasManager, wasLead, ct);
+        await SyncDesignLeadershipAsync(member, callerUserId, wasManager, ct);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = MapMember(await MemberQuery(projectId).SingleAsync(item => item.Id == member.Id, ct));
         await AddHistoryAsync(projectId, "Member", member.Id,
@@ -249,6 +247,7 @@ public sealed class ProjectTeamService(
         var assignment = new OperationalProjectAssignment
         {
             OperationalProjectId = projectId,
+            ParentAssignmentId = request.ParentAssignmentId,
             WorkKey = request.WorkKey.Trim(),
             Title = request.Title.Trim(),
             Module = request.Module.Trim(),
@@ -325,6 +324,7 @@ public sealed class ProjectTeamService(
             var replacement = new OperationalProjectAssignment
             {
                 PreviousAssignmentId = assignment.Id,
+                ParentAssignmentId = request.ParentAssignmentId ?? assignment.ParentAssignmentId,
                 OperationalProjectId = projectId,
                 WorkKey = assignment.WorkKey,
                 Title = request.Title.Trim(),
@@ -344,6 +344,16 @@ public sealed class ProjectTeamService(
             };
             db.OperationalProjectAssignments.Add(replacement);
             await db.SaveChangesAsync(ct);
+            // Subtasks follow the work, not the person: point them at the replacement
+            // so they stay editable instead of referencing a reassigned parent.
+            var children = await db.OperationalProjectAssignments
+                .Where(item => item.ParentAssignmentId == assignment.Id)
+                .ToListAsync(ct);
+            if (children.Count > 0)
+            {
+                foreach (var child in children) child.ParentAssignmentId = replacement.Id;
+                await db.SaveChangesAsync(ct);
+            }
             var replacementResponse = MapAssignment(await AssignmentQuery(projectId).SingleAsync(item => item.Id == replacement.Id, ct));
             await AddHistoryAsync(projectId, "Assignment", replacement.Id, "Created", replacementResponse, callerUserId, ct);
             if (transferTransaction is not null) await transferTransaction.CommitAsync(ct);
@@ -358,6 +368,7 @@ public sealed class ProjectTeamService(
         assignment.Module = request.Module.Trim();
         assignment.Discipline = TrimOrNull(request.Discipline);
         assignment.ParallelGroup = TrimOrNull(request.ParallelGroup);
+        assignment.ParentAssignmentId = request.ParentAssignmentId;
         assignment.ManagerMemberId = request.ManagerMemberId;
         assignment.Status = status;
         assignment.PlannedStart = request.PlannedStart?.ToUniversalTime();
@@ -455,6 +466,7 @@ public sealed class ProjectTeamService(
         if (request.PlannedStart.HasValue && request.PlannedEnd.HasValue &&
             request.PlannedEnd.Value < request.PlannedStart.Value)
             throw new ProjectTeamOperationException("Ngày kết thúc dự kiến không được trước ngày bắt đầu.");
+        await ValidateParentAssignmentAsync(projectId, assignmentId, request, ct);
         var memberIds = new[] { request.AssigneeMemberId, request.ManagerMemberId ?? 0 }
             .Where(id => id > 0)
             .Distinct()
@@ -479,6 +491,34 @@ public sealed class ProjectTeamService(
             item.Id != assignmentId, ct))
             throw new ProjectTeamOperationException("Người phụ trách đã được gán cho công việc này.");
         return status;
+    }
+
+    private async Task ValidateParentAssignmentAsync(
+        int projectId,
+        int? assignmentId,
+        UpsertOperationalProjectAssignmentRequest request,
+        CancellationToken ct)
+    {
+        if (!request.ParentAssignmentId.HasValue) return;
+        if (request.ParentAssignmentId == assignmentId)
+            throw new ProjectTeamOperationException("Công việc không thể là công việc con của chính nó.");
+        var parent = await db.OperationalProjectAssignments.AsNoTracking()
+            .Where(item => item.Id == request.ParentAssignmentId.Value &&
+                item.OperationalProjectId == projectId &&
+                item.AssigneeMember.DesignProjectId == request.DesignProjectId)
+            .Select(item => new { item.ParentAssignmentId, item.Status })
+            .SingleOrDefaultAsync(ct)
+            ?? throw new ProjectTeamOperationException(
+                "Công việc cha không tồn tại trong cùng dự án và luồng Thiết kế.");
+        if (parent.ParentAssignmentId.HasValue)
+            throw new ProjectTeamOperationException("Chỉ hỗ trợ công việc con một cấp.");
+        if (parent.Status is ProjectAssignmentStatus.Completed or ProjectAssignmentStatus.Cancelled or ProjectAssignmentStatus.Reassigned)
+            throw new ProjectTeamOperationException(
+                "Không thể thêm công việc con vào công việc đã hoàn tất, đã huỷ hoặc đã chuyển giao.");
+        if (assignmentId.HasValue && await db.OperationalProjectAssignments.AsNoTracking()
+                .AnyAsync(item => item.ParentAssignmentId == assignmentId, ct))
+            throw new ProjectTeamOperationException(
+                "Công việc đang có công việc con nên không thể trở thành công việc con.");
     }
 
     private async Task NormalizeRoleScopeValuesAsync(
@@ -538,7 +578,6 @@ public sealed class ProjectTeamService(
         OperationalProjectMember member,
         int callerUserId,
         bool wasManager,
-        bool wasLead,
         CancellationToken ct)
     {
         if (!member.DesignProjectId.HasValue) return;
@@ -547,7 +586,6 @@ public sealed class ProjectTeamService(
             ? []
             : member.Roles.Where(role => role.EndedAt == null).ToArray();
         var manager = activeRoles.Any(role => IsDesignLeadershipRole(role, ProjectTeamRoleCode.ProjectManager));
-        var lead = activeRoles.Any(role => IsDesignLeadershipRole(role, ProjectTeamRoleCode.DesignLead));
         var changed = false;
         if (manager && design.ProjectManagerUserId != member.UserId)
         {
@@ -559,23 +597,18 @@ public sealed class ProjectTeamService(
             design.ProjectManagerUserId = null;
             changed = true;
         }
-        // The legacy scalar identifies the primary lead; additional active leads
-        // stay in the scoped team without replacing that primary reference.
-        if (lead && design.DesignLeadUserId is null)
+        // The legacy scalar identifies the primary lead; additional active leads stay in
+        // the scoped team without replacing that primary reference. Heal drift: when the
+        // scalar no longer points at an active lead, fall back to the longest-standing
+        // active lead (lowest member id) or clear it when nobody holds the role.
+        var activeLeadUserIds = await ActiveDesignLeadUserIdsAsync(member.DesignProjectId.Value, ct);
+        int? primaryLeadUserId = design.DesignLeadUserId.HasValue &&
+            activeLeadUserIds.Contains(design.DesignLeadUserId.Value)
+            ? design.DesignLeadUserId
+            : activeLeadUserIds.Count > 0 ? activeLeadUserIds[0] : null;
+        if (design.DesignLeadUserId != primaryLeadUserId)
         {
-            design.DesignLeadUserId = member.UserId;
-            changed = true;
-        }
-        else if (wasLead && !lead && design.DesignLeadUserId == member.UserId)
-        {
-            design.DesignLeadUserId = await db.OperationalProjectMembers.AsNoTracking()
-                .Where(other => other.DesignProjectId == member.DesignProjectId &&
-                    other.Id != member.Id && other.EndedAt == null &&
-                    other.Roles.Any(role => role.EndedAt == null &&
-                        role.RoleCode == ProjectTeamRoleCode.DesignLead &&
-                        role.Scope == ProjectRoleScope.Module && role.ScopeValue == "Design"))
-                .OrderBy(other => other.Id).Select(other => (int?)other.UserId)
-                .FirstOrDefaultAsync(ct);
+            design.DesignLeadUserId = primaryLeadUserId;
             changed = true;
         }
         if (changed)
@@ -583,6 +616,23 @@ public sealed class ProjectTeamService(
             design.UpdatedAt = DateTime.UtcNow;
             design.UpdatedByUserId = callerUserId;
         }
+    }
+
+    private async Task<List<int>> ActiveDesignLeadUserIdsAsync(int designProjectId, CancellationToken ct)
+    {
+        // Tracked query on purpose: callers mutate roles in memory before saving, and the
+        // healed scalar must reflect those pending changes.
+        var members = await db.OperationalProjectMembers
+            .Include(item => item.Roles)
+            .Where(item => item.DesignProjectId == designProjectId)
+            .ToListAsync(ct);
+        return members
+            .Where(item => item.EndedAt == null &&
+                item.Roles.Any(role => role.EndedAt == null &&
+                    IsDesignLeadershipRole(role, ProjectTeamRoleCode.DesignLead)))
+            .OrderBy(item => item.Id)
+            .Select(item => item.UserId)
+            .ToList();
     }
 
     private static bool IsDesignLeadershipRole(OperationalProjectMemberRole role, ProjectTeamRoleCode code) =>
@@ -758,6 +808,7 @@ public sealed class ProjectTeamService(
     {
         Id = assignment.Id,
         PreviousAssignmentId = assignment.PreviousAssignmentId,
+        ParentAssignmentId = assignment.ParentAssignmentId,
         WorkKey = assignment.WorkKey,
         KpiIdentity = assignment.PreviousAssignmentId.HasValue
             ? $"{assignment.OperationalProjectId}:{assignment.WorkKey}:{assignment.AssigneeMemberId}:{assignment.Id}"

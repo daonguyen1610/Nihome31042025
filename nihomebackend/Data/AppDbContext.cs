@@ -105,6 +105,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<OperationalProjectMember> OperationalProjectMembers => Set<OperationalProjectMember>();
     public DbSet<OperationalProjectMemberRole> OperationalProjectMemberRoles => Set<OperationalProjectMemberRole>();
     public DbSet<OperationalProjectAssignment> OperationalProjectAssignments => Set<OperationalProjectAssignment>();
+    public DbSet<OperationalProjectAssignmentAttachment> OperationalProjectAssignmentAttachments => Set<OperationalProjectAssignmentAttachment>();
     public DbSet<OperationalProjectTeamHistory> OperationalProjectTeamHistory => Set<OperationalProjectTeamHistory>();
     public DbSet<OperationalProjectCodeChange> OperationalProjectCodeChanges => Set<OperationalProjectCodeChange>();
     public DbSet<DepartmentWorkPackage> DepartmentWorkPackages => Set<DepartmentWorkPackage>();
@@ -968,7 +969,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(e => e.Quote).WithMany(q => q.ApprovalEmails)
                 .HasForeignKey(e => e.QuoteId).OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(e => new { e.QuoteId, e.CreatedAt });
-            b.HasIndex(e => e.Status);
+            b.HasIndex(e => new { e.Status, e.Kind });
+            b.Property(e => e.Kind).HasMaxLength(20).HasDefaultValue("Request");
+            b.Property(e => e.Decision).HasMaxLength(20);
         });
 
         modelBuilder.Entity<QuoteVersionSnapshot>(b =>
@@ -2274,6 +2277,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(assignment => assignment.AssigneeMemberId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(assignment => assignment.ManagerMember).WithMany()
                 .HasForeignKey(assignment => assignment.ManagerMemberId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(assignment => assignment.ParentAssignment).WithMany(parent => parent.Children)
+                .HasForeignKey(assignment => assignment.ParentAssignmentId).OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(assignment => assignment.ParentAssignmentId);
             b.HasIndex(assignment => new
             {
                 assignment.OperationalProjectId,
@@ -2281,6 +2287,20 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 assignment.AssigneeMemberId,
             }).IsUnique().HasFilter("[Status] <> 'Reassigned'");
             b.HasIndex(assignment => assignment.ParallelGroup);
+        });
+
+        modelBuilder.Entity<OperationalProjectAssignmentAttachment>(b =>
+        {
+            b.ToTable("operational_project_assignment_attachments");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Path).HasMaxLength(500).IsRequired();
+            b.Property(item => item.OriginalFileName).HasMaxLength(255).IsRequired();
+            b.Property(item => item.ContentType).HasMaxLength(150).IsRequired();
+            b.HasOne(item => item.Assignment).WithMany(assignment => assignment.Attachments)
+                .HasForeignKey(item => item.AssignmentId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(item => new { item.AssignmentId, item.DeletedAt });
+            b.ToTable(table => table.HasCheckConstraint(
+                "CK_operational_project_assignment_attachments_size", "[FileSize] > 0"));
         });
 
         modelBuilder.Entity<OperationalProjectTeamHistory>(b =>
@@ -2527,6 +2547,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(task => task.Name).HasMaxLength(300).IsRequired();
             b.Property(task => task.Description).HasMaxLength(4000);
             b.Property(task => task.DepartmentCode).HasMaxLength(60).IsRequired();
+            b.Property(task => task.DisciplineCode).HasMaxLength(50);
             b.Property(task => task.ResourceSummary).HasMaxLength(2000);
             b.Property(task => task.Status).HasConversion<string>().HasMaxLength(40).IsRequired();
             b.Property(task => task.ApprovalStatus).HasConversion<string>().HasMaxLength(30).IsRequired();
@@ -2557,6 +2578,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(task => new { task.OperationalProjectId, task.ApproverMemberId, task.ApprovalStatus });
             b.HasIndex(task => task.ParentTaskId);
             b.HasIndex(task => new { task.OperationalProjectId, task.DepartmentCode });
+            b.HasIndex(task => new { task.OperationalProjectId, task.DisciplineCode });
             b.HasIndex(task => new { task.OperationalProjectId, task.Status });
             b.HasIndex(task => task.VendorId);
             b.HasIndex(task => task.DownstreamContractId);

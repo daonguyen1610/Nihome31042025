@@ -716,8 +716,6 @@ public sealed partial class DepartmentWorkPackageService(
                 opportunity.Stage == OpportunityStage.Lost)
                 throw Error("Cơ hội phải đang hoạt động và gắn đúng Dự án vận hành.");
             isOpportunityOwner = opportunity.OwnerUserId == callerUserId;
-            if (!isOpportunityOwner && !admin)
-                throw Error("Cơ hội không thuộc phạm vi của người dùng hoặc không gắn đúng Dự án.");
         }
         if (request.SourceTenderId.HasValue)
         {

@@ -257,12 +257,19 @@ function RfqWorkspace({
       if (mounted.current) setBusy(false);
     }
   }
-  async function upload(file: File) {
-    if (busy) return;
+  async function upload(files: File[]) {
+    if (busy || files.length === 0) return;
     setBusy(true);
     setActionError("");
+    const failed: string[] = [];
     try {
-      await rfqApi.upload(projectId, file);
+      for (const file of files) {
+        try {
+          await rfqApi.upload(projectId, file);
+        } catch (e) {
+          failed.push(`${file.name}: ${extractApiError(e)}`);
+        }
+      }
       const refs = (await rfqApi.references(projectId)).data;
       if (mounted.current) setReferences(refs);
     } catch (e) {
@@ -270,6 +277,7 @@ function RfqWorkspace({
     } finally {
       if (mounted.current) setBusy(false);
     }
+    if (failed.length > 0 && mounted.current) setActionError(failed.join(" · "));
   }
   async function openAward(event: MouseEvent<HTMLButtonElement>) {
     if (!detail || busy) return;
@@ -911,10 +919,11 @@ function RfqWorkspace({
                     <Input
                       disabled={busy}
                       type="file"
+                      multiple
                       onChange={(e) => {
-                        const file = e.target.files?.[0];
-                        if (file) void upload(file);
+                        const files = Array.from(e.target.files ?? []);
                         e.target.value = "";
+                        if (files.length > 0) void upload(files);
                       }}
                     />
                   </RfqField>

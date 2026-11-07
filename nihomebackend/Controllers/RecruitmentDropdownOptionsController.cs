@@ -20,6 +20,11 @@ public class RecruitmentDropdownOptionsController(RecruitmentDropdownOptionServi
         return Ok(await svc.GetByTypeAsync(type, includeInactive));
     }
 
+    [HttpGet("role-group-options")]
+    [Authorize]
+    public async Task<IActionResult> GetRoleGroupOptions(CancellationToken ct)
+        => Ok(await svc.GetRoleGroupOptionsAsync(ct));
+
     [HttpPost]
     [Authorize]
     [RequirePermission("recruitment.options", "manage")]

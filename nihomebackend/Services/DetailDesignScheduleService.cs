@@ -127,7 +127,7 @@ public sealed class DetailDesignScheduleService(
     ILogger<DetailDesignScheduleService> logger)
     : IDetailDesignScheduleService
 {
-    private const string DepartmentCategory = "project-department";
+    private const string DisciplineCategory = "design_discipline";
 
     public async Task<DesignScheduleResponse?> GetAsync(
         int projectId,
@@ -330,7 +330,8 @@ public sealed class DetailDesignScheduleService(
             Code = request.Code.Trim(),
             Name = request.Name.Trim(),
             Description = NormalizeOptional(request.Description),
-            DepartmentCode = request.DepartmentCode.Trim().ToLowerInvariant(),
+            DepartmentCode = NormalizeDepartmentCode(request.DepartmentCode),
+            DisciplineCode = NormalizeDisciplineCode(request.DisciplineCode),
             AssigneeMemberId = request.AssigneeMemberId,
             ApproverMemberId = request.ApproverMemberId,
             ParentTaskId = request.ParentTaskId,
@@ -390,7 +391,8 @@ public sealed class DetailDesignScheduleService(
         task.Code = request.Code.Trim();
         task.Name = request.Name.Trim();
         task.Description = NormalizeOptional(request.Description);
-        task.DepartmentCode = request.DepartmentCode.Trim().ToLowerInvariant();
+        task.DepartmentCode = NormalizeDepartmentCode(request.DepartmentCode);
+        task.DisciplineCode = NormalizeDisciplineCode(request.DisciplineCode);
         task.AssigneeMemberId = request.AssigneeMemberId;
         task.ApproverMemberId = request.ApproverMemberId;
         task.ParentTaskId = request.ParentTaskId;
@@ -570,11 +572,16 @@ public sealed class DetailDesignScheduleService(
             request.ActualStart, request.ActualEnd, status, request.ProgressPercent, request.Weight,
             request.IsMilestone);
         await ValidateProjectScheduleNodeAsync(projectId, request.ProjectScheduleNodeId, plannedStart, plannedEnd, ct);
-        var department = request.DepartmentCode.Trim().ToLowerInvariant();
-        if (!await db.MasterDataOptions.AsNoTracking().AnyAsync(option =>
-                option.Category == DepartmentCategory && option.Code == department && option.IsActive, ct))
+        var department = NormalizeDepartmentCode(request.DepartmentCode);
+        if (!await db.RoleGroups.AsNoTracking().AnyAsync(group =>
+                group.IsActive && group.Code.ToUpper() == department, ct))
             throw new DesignScheduleOperationException(
-                "Phòng ban không hợp lệ hoặc đã ngừng hoạt động. Ví dụ hợp lệ: design.");
+                "Phòng ban không hợp lệ hoặc đã ngừng hoạt động. Phòng ban phải là nhóm vai trò đang hoạt động.");
+        var discipline = NormalizeDisciplineCode(request.DisciplineCode);
+        if (discipline is not null && !await db.MasterDataOptions.AsNoTracking().AnyAsync(option =>
+                option.Category == DisciplineCategory && option.Code == discipline && option.IsActive, ct))
+            throw new DesignScheduleOperationException(
+                "Bộ môn không hợp lệ hoặc đã ngừng hoạt động.");
         if (request.VendorId.HasValue != request.DownstreamContractId.HasValue)
             throw new DesignScheduleOperationException(
                 "Công việc thiết kế thuê ngoài phải chọn đồng thời nhà cung cấp và hợp đồng đầu vào.");
@@ -772,6 +779,11 @@ public sealed class DetailDesignScheduleService(
     private static string? NormalizeOptional(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
+    private static string NormalizeDepartmentCode(string value) => value.Trim().ToUpperInvariant();
+
+    private static string? NormalizeDisciplineCode(string? value) =>
+        string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
+
     private async Task NotifyTaskAsync(
         IEnumerable<int> userIds,
         string templateCode,
@@ -870,6 +882,9 @@ public sealed class DetailDesignScheduleService(
         if (!string.IsNullOrWhiteSpace(query.DepartmentCode))
             filtered = filtered.Where(item => string.Equals(item.DepartmentCode,
                 query.DepartmentCode.Trim(), StringComparison.OrdinalIgnoreCase));
+        if (!string.IsNullOrWhiteSpace(query.DisciplineCode))
+            filtered = filtered.Where(item => string.Equals(item.DisciplineCode,
+                query.DisciplineCode.Trim(), StringComparison.OrdinalIgnoreCase));
         if (!string.IsNullOrWhiteSpace(query.Status))
         {
             var status = DesignScheduleRules.ParseStatus(query.Status);
@@ -909,6 +924,15 @@ public sealed class DetailDesignScheduleService(
         var projectReady = phases.Count == 3 && phases.Sum(item => item.Weight) == 100 &&
             rollupSources.All(item => item.BaselineReady);
 
+        var departments = await db.RoleGroups.AsNoTracking()
+            .Where(group => group.IsActive)
+            .OrderBy(group => group.SortOrder).ThenBy(group => group.Code)
+            .Select(group => new DesignScheduleDepartmentResponse
+            {
+                Code = group.Code,
+                LabelKey = group.LabelKey,
+            })
+            .ToListAsync(ct);
         return new DesignScheduleResponse
         {
             OperationalProjectId = projectId,
@@ -918,6 +942,7 @@ public sealed class DetailDesignScheduleService(
             ProgressPercent = projectReady ? rollupSources.Sum(item => item.WeightedValue!.Value) : null,
             Phases = phases.Select(phase => MapPhase(phase, rollupSources.Single(item =>
                 item.PhaseId == phase.Id), today)).ToList(),
+            Departments = departments,
             RollupSources = rollupSources,
             Tasks = new PagedDesignScheduleTasksResponse
             {
@@ -983,6 +1008,7 @@ public sealed class DetailDesignScheduleService(
         Name = task.Name,
         Description = task.Description,
         DepartmentCode = task.DepartmentCode,
+        DisciplineCode = task.DisciplineCode,
         AssigneeMemberId = task.AssigneeMemberId,
         ApproverMemberId = task.ApproverMemberId,
         ParentTaskId = task.ParentTaskId,
@@ -1108,6 +1134,7 @@ public sealed class DetailDesignScheduleService(
                 task.Name,
                 task.Description,
                 task.DepartmentCode,
+                task.DisciplineCode,
                 task.AssigneeMemberId,
                 task.ApproverMemberId,
                 task.ParentTaskId,

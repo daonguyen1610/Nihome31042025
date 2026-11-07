@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 
@@ -319,6 +320,45 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
                 item.Code == "EXT-DES-001"));
         task.VendorId.Should().Be(external.VendorId);
         task.DownstreamContractId.Should().Be(external.ContractId);
+    }
+
+    [Fact]
+    public async Task CreateTask_WithRoleGroupDepartmentAndDiscipline_PersistsAndFilters()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phaseId = await PhaseIdAsync(fixture.ProjectId, "Concept");
+        var withDiscipline = TaskPayload("DISC-ARCH", fixture.MemberId, 0) with
+        {
+            DepartmentCode = "design",
+            DisciplineCode = "architecture",
+        };
+        var legacyPayload = TaskPayload("DISC-NONE", fixture.MemberId, 0) with
+        {
+            DepartmentCode = "DESIGN",
+        };
+
+        using var disciplineResponse = await CreateTaskAsync(fixture, phaseId, withDiscipline);
+        using var legacyResponse = await CreateTaskAsync(fixture, phaseId, legacyPayload);
+
+        disciplineResponse.StatusCode.Should().Be(HttpStatusCode.Created,
+            await disciplineResponse.Content.ReadAsStringAsync());
+        legacyResponse.StatusCode.Should().Be(HttpStatusCode.Created,
+            await legacyResponse.Content.ReadAsStringAsync());
+        var disciplineBody = await ReadJsonAsync(disciplineResponse);
+        disciplineBody.GetProperty("departmentCode").GetString().Should().Be("DESIGN");
+        disciplineBody.GetProperty("disciplineCode").GetString().Should().Be("architecture");
+        (await ReadJsonAsync(legacyResponse)).GetProperty("disciplineCode").ValueKind
+            .Should().Be(JsonValueKind.Null);
+
+        using var filteredResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/design-schedule?disciplineCode=architecture");
+        filteredResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            await filteredResponse.Content.ReadAsStringAsync());
+        var items = (await ReadJsonAsync(filteredResponse)).GetProperty("tasks").GetProperty("items");
+        var filtered = items.EnumerateArray().Single();
+        filtered.GetProperty("code").GetString().Should().Be("DISC-ARCH");
+        filtered.GetProperty("disciplineCode").GetString().Should().Be("architecture");
     }
 
     [Fact]
@@ -1040,6 +1080,7 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         public string Code { get; init; } = string.Empty;
         public string Name { get; init; } = string.Empty;
         public string DepartmentCode { get; init; } = string.Empty;
+        public string? DisciplineCode { get; init; }
         public int AssigneeMemberId { get; init; }
         public int ApproverMemberId { get; init; }
         public bool IsMilestone { get; init; }
