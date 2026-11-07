@@ -11,6 +11,24 @@
         ],
         "createdAt": "2026-10-31T12:06:36.284Z",
         "reason": "Agent: existing nested-navigation guide since 2026-08-17 (git blame 61e2294d5); not a card accent"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx"
+        ],
+        "createdAt": "2026-11-07T15:25:36.042Z",
+        "reason": "Agent review: pre-existing subtask hierarchy indicator paired with CornerDownRight and data-subtask; git blame d97443f7f, unchanged by the UI recovery fix."
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "nihomeweb/src/pages/admin/procurement/RfqForms.tsx"
+        ],
+        "createdAt": "2026-11-07T15:25:36.054Z",
+        "reason": "Agent review: pre-existing needsOverride warning requires an award override reason; semantic amber warning, not decoration; git blame 93297cab6."
       }
     ]
   }
