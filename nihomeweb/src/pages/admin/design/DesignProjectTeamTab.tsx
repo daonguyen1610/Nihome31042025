@@ -1140,7 +1140,9 @@ export const OperationalProjectTeamPanel = ({
                           {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                           {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
                           {scopeLabel(role.scope)}
-                          {role.scopeValue ? `: ${scopeValueLabel(role.scope, role.scopeValue)}` : ""}
+                          {role.scopeValue
+                            ? `: ${scopeValueLabel(role.scope, role.scopeValue)}`
+                            : ""}
                         </Badge>
                       );
                     })}
@@ -1207,7 +1209,9 @@ export const OperationalProjectTeamPanel = ({
                                 {roleLabel(role.roleCode, role.scope, role.scopeValue)} ·{" "}
                                 {definition?.raci ?? t("designProjects.team.value.none")} ·{" "}
                                 {scopeLabel(role.scope)}
-                                {role.scopeValue ? `: ${scopeValueLabel(role.scope, role.scopeValue)}` : ""}
+                                {role.scopeValue
+                                  ? `: ${scopeValueLabel(role.scope, role.scopeValue)}`
+                                  : ""}
                               </Badge>
                             );
                           })}
