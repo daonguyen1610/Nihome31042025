@@ -186,6 +186,8 @@ internal static class AggregateDeletionService
             .Where(member => member.DesignProjectId.HasValue && foundIds.Contains(member.DesignProjectId.Value))
             .ToListAsync(ct);
         var flowMemberIds = flowMembers.Select(member => member.Id).ToList();
+        db.OperationalProjectAssignmentAttachments.RemoveRange(await db.OperationalProjectAssignmentAttachments
+            .Where(item => flowMemberIds.Contains(item.Assignment.AssigneeMemberId)).ToListAsync(ct));
         db.OperationalProjectAssignments.RemoveRange(await db.OperationalProjectAssignments
             .Where(assignment => flowMemberIds.Contains(assignment.AssigneeMemberId)).ToListAsync(ct));
         foreach (var member in flowMembers) member.ReportsToMemberId = null;
@@ -263,6 +265,8 @@ internal static class AggregateDeletionService
         var assignments = await db.OperationalProjectAssignments
             .Where(item => item.OperationalProjectId == projectId)
             .ToListAsync(ct);
+        db.OperationalProjectAssignmentAttachments.RemoveRange(await db.OperationalProjectAssignmentAttachments
+            .Where(item => item.Assignment.OperationalProjectId == projectId).ToListAsync(ct));
         db.OperationalProjectAssignments.RemoveRange(assignments);
 
         var members = await db.OperationalProjectMembers

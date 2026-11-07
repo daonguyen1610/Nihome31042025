@@ -783,6 +783,13 @@ Controller (thin) --> Service (business logic) --> DbContext (data access)
 | `EntityTranslationService` | Manage dynamic content translations (polymorphic)        |
 | `HandoverRecordService`    | Project handover scoping, validation, readiness derivation, lifecycle, and optimistic concurrency |
 
+Project assignment attachments remain referenced until `StorageDeletedAt` is set,
+including soft-deleted metadata awaiting storage cleanup. Design/Operational
+Project deletion includes their metadata and paths in the impact token and
+quarantines owned assignment files through the durable deletion operation before
+removing the aggregate. Invalid or externally shared attachment paths block the
+plan. A stale plan leaves both metadata and binary files unchanged.
+
 The orphan cleanup worker runs every six hours. It scans managed local paths
 under `/images/upload`, `/images/processes`, and `/files`, while excluding the
 hard-delete workflow's own quarantine. An unreferenced file must be at least
@@ -1293,6 +1300,17 @@ when the code baseline changes.
 Quote email bodies must use valid safe HTML. The send dialog previews the
 rendered message in an isolated iframe, and the submitted body is validated
 before SMTP delivery.
+
+Decision emails pin the submitting account in `QuoteApprovalEmail.RecipientUserId`
+and recheck that account, its current email, and its
+record-level quote visibility immediately before delivery. If identity or access
+changes while queued, the existing `NeedsReview` state prevents delivery.
+
+Migration `20261107113000_PinQuoteDecisionRecipient` adds a nullable recipient ID.
+Drain pending decision notifications before deploying when possible. Pending
+legacy decisions without a verifiable identity move to `NeedsReview`; request
+emails and sent history remain unchanged. Rollback drops the ID column and does
+not automatically requeue messages held for review.
 
 Internal quote approval is one step with one selected Head of Procurement
 (`PROCUREMENT_MANAGER`; updated per the 30 October 2026 note and 31 October

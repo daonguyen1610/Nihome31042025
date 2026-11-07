@@ -12,8 +12,15 @@ public static class QuoteApprovalDecisionEmailTemplates
 {
     public static readonly string[] Tokens =
     [
-        "recipientName", "approverName", "quoteCode", "quoteVersion", "grandTotal",
-        "validUntil", "decisionLabel", "decisionNote", "quoteUrl"
+        "recipientName",
+        "approverName",
+        "quoteCode",
+        "quoteVersion",
+        "grandTotal",
+        "validUntil",
+        "decisionLabel",
+        "decisionNote",
+        "quoteUrl"
     ];
 
     public const string DefaultSubject = "NICON – Kết quả duyệt báo giá {{quoteCode}}: {{decisionLabel}}";

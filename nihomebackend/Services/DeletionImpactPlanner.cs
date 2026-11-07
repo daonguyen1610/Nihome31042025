@@ -181,6 +181,9 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "operations.assignments", DeletionImpactActions.Delete,
             db.OperationalProjectAssignments.Where(assignment => scopedMemberIds.Contains(assignment.AssigneeMemberId)),
             assignment => assignment.Id, assignment => assignment.Title, ct);
+        await AddAsync(items, "operations.assignmentAttachments", DeletionImpactActions.Delete,
+            db.OperationalProjectAssignmentAttachments.Where(item => scopedMemberIds.Contains(item.Assignment.AssigneeMemberId)),
+            item => item.Id, item => item.OriginalFileName, ct);
         await AddAsync(items, "design.otherTeamReferences", DeletionImpactActions.Block,
             db.OperationalProjectAssignments.Where(assignment => !scopedMemberIds.Contains(assignment.AssigneeMemberId) &&
                 assignment.ManagerMemberId.HasValue && scopedMemberIds.Contains(assignment.ManagerMemberId.Value)),
@@ -430,6 +433,9 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "operations.assignments", DeletionImpactActions.Delete,
             db.OperationalProjectAssignments.Where(item => item.OperationalProjectId == projectId), item => item.Id,
             item => item.Title, ct);
+        await AddAsync(items, "operations.assignmentAttachments", DeletionImpactActions.Delete,
+            db.OperationalProjectAssignmentAttachments.Where(item => item.Assignment.OperationalProjectId == projectId),
+            item => item.Id, item => item.OriginalFileName, ct);
         await AddAsync(items, "operations.teamHistory", DeletionImpactActions.Delete,
             db.OperationalProjectTeamHistory.Where(item => item.OperationalProjectId == projectId), item => item.Id,
             item => item.Action, ct);

@@ -457,6 +457,94 @@ public sealed class OperationalProjectTeamControllerTests : IntegrationTestBase
             .StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AssignmentFiles_AggregateDeleteRejectsStalePlanAndCleansStorage(bool designScope)
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        using var memberResponse = await PostMemberAsync(
+            projectId, await UserIdAsync("ARCHITECT"), "NICON – Điều phối thiết kế", "Architect");
+        var memberId = (await ReadJsonAsync(memberResponse)).GetProperty("id").GetInt32();
+        using var created = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/team/assignments",
+            AssignmentPayload("NICON-FILE-CLEANUP", memberId), $"file-cleanup-{Guid.NewGuid():N}");
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var assignmentId = (await ReadJsonAsync(created)).GetProperty("id").GetInt32();
+        var designId = designScope ? await WithDbAsync(async db =>
+        {
+            var project = await db.OperationalProjects.FindAsync(projectId);
+            var design = new DesignProject
+            {
+                OperationalProjectId = projectId,
+                CustomerId = project!.CustomerId,
+                ProjectCode = $"DP-FILES-{Guid.NewGuid():N}"[..30],
+                Name = "NICON – Hồ sơ thiết kế nhà xưởng",
+            };
+            db.DesignProjects.Add(design);
+            await db.SaveChangesAsync();
+            (await db.OperationalProjectMembers.FindAsync(memberId))!.DesignProjectId = design.Id;
+            await db.SaveChangesAsync();
+            return design.Id;
+        }) : (int?)null;
+        var root = designScope ? $"/api/design-projects/{designId}" : $"/api/operational-projects/{projectId}";
+        var attachmentPath = $"/api/operational-projects/{projectId}/team/assignments/{assignmentId}/attachments";
+        var suffix = designId.HasValue ? $"?designProjectId={designId}" : "";
+        var stale = await ReadJsonAsync(await Client.GetAsync($"{root}/deletion-impact"));
+        using var form = new MultipartFormDataContent();
+        form.Add(new ByteArrayContent("NICON design evidence"u8.ToArray())
+        { Headers = { ContentType = new MediaTypeHeaderValue("application/pdf") } }, "file", "ban-ve.pdf");
+        using var uploadRequest = new HttpRequestMessage(HttpMethod.Post, attachmentPath + suffix) { Content = form };
+        uploadRequest.Headers.Add("Idempotency-Key", $"upload-{Guid.NewGuid():N}");
+        using var uploaded = await Client.SendAsync(uploadRequest);
+        uploaded.StatusCode.Should().Be(HttpStatusCode.Created, await uploaded.Content.ReadAsStringAsync());
+        var attachmentId = (await ReadJsonAsync(uploaded)).GetProperty("id").GetInt64();
+        var storedPath = await WithDbAsync(db => db.OperationalProjectAssignmentAttachments
+            .Where(item => item.Id == attachmentId).Select(item => item.Path).SingleAsync());
+        var environment = Microsoft.Extensions.DependencyInjection.ServiceProviderServiceExtensions
+            .GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>(Factory.Services);
+        var physicalPath = Path.Combine(environment.ContentRootPath, "wwwroot", storedPath.TrimStart('/'));
+        File.Exists(physicalPath).Should().BeTrue();
+        try
+        {
+            var detail = await ReadJsonAsync(await Client.GetAsync(root));
+            using var rejected = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, root)
+            {
+                Content = JsonContent.Create(new
+                {
+                    planToken = stale.GetProperty("planToken").GetString(),
+                    confirmation = stale.GetProperty("requiredConfirmation").GetString(),
+                    rowVersion = detail.TryGetProperty("rowVersion", out var version) ? version.GetString() : null,
+                }),
+            });
+            rejected.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await Client.GetAsync($"{attachmentPath}/{attachmentId}/content{suffix}"))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            File.Exists(physicalPath).Should().BeTrue();
+            var freshImpact = await ReadJsonAsync(await Client.GetAsync($"{root}/deletion-impact"));
+            using var deleted = await Client.SendAsync(new HttpRequestMessage(HttpMethod.Delete, root)
+            {
+                Content = JsonContent.Create(new
+                {
+                    planToken = freshImpact.GetProperty("planToken").GetString(),
+                    confirmation = freshImpact.GetProperty("requiredConfirmation").GetString(),
+                    rowVersion = detail.TryGetProperty("rowVersion", out var currentVersion) ? currentVersion.GetString() : null,
+                }),
+            });
+            deleted.StatusCode.Should().Be(HttpStatusCode.NoContent, await deleted.Content.ReadAsStringAsync());
+            File.Exists(physicalPath).Should().BeFalse();
+            (await WithDbAsync(db => db.OperationalProjectAssignmentAttachments.AnyAsync(item => item.Id == attachmentId)))
+                .Should().BeFalse();
+            if (designScope)
+                (await Client.GetAsync($"/api/operational-projects/{projectId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            if (File.Exists(physicalPath)) File.Delete(physicalPath);
+        }
+    }
+
     [Fact]
     public async Task AssignmentAttachments_CannotBeUploadedToAnotherProject()
     {

@@ -203,6 +203,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             QuoteId = quoteId,
             ApproverUserId = callerId,
             Kind = "Decision",
+            RecipientUserId = authorId,
             Decision = approved ? "Approved" : "Rejected",
             ToEmail = toEmail,
             CcEmailsJson = JsonSerializer.Serialize(ccEmails.Where(address =>
@@ -275,8 +276,14 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
                 "Rejected" => QuoteStatus.Draft,
                 _ => (QuoteStatus?)null,
             };
+            var submitter = await db.Users.AsNoTracking()
+                .SingleOrDefaultAsync(user => user.Id == message.RecipientUserId, ct);
             return expected.HasValue && message.Quote.Status == expected.Value &&
-                await db.Users.AsNoTracking().AnyAsync(user => user.IsActive && user.Email == message.ToEmail, ct);
+                submitter is { IsActive: true } &&
+                string.Equals(submitter.Email.Trim(), message.ToEmail, StringComparison.OrdinalIgnoreCase) &&
+                await permissions.HasAsync(submitter.Id, "crm.quotes.view", ct) &&
+                (submitter.Id == message.Quote.OwnerUserId ||
+                 await permissions.HasAsync(submitter.Id, "crm.quotes.view.all", ct));
         }
 
         var approver = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == message.ApproverUserId, ct);

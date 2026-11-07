@@ -169,5 +169,6 @@
   {"key":"deletionImpact.item.workPackages.submittedPlanning","category":"deletionImpact","vi":"Hồ sơ nộp thầu dùng kế hoạch nhóm","en":"Tender submissions using package planning","zh":"使用工作包计划的投标文件","ja":"作業計画を使用する入札提出書類"},
   {"key":"deletionImpact.item.operations.projectScheduleRevisions","category":"deletionImpact","vi":"Các phiên bản tiến độ tổng thể","en":"Master schedule revisions","zh":"总体进度版本","ja":"全体工程の改訂"},
   {"key":"deletionImpact.item.operations.projectScheduleItems","category":"deletionImpact","vi":"Các mốc WBS tiến độ tổng thể","en":"Master schedule WBS items","zh":"总体进度 WBS 项","ja":"全体工程 WBS 項目"},
-  {"key":"deletionImpact.item.operations.projectScheduleNodes","category":"deletionImpact","vi":"Danh tính liên kết các mốc WBS","en":"Master schedule WBS link identities","zh":"总体进度 WBS 关联标识","ja":"全体工程 WBS リンク ID"}
+  {"key":"deletionImpact.item.operations.projectScheduleNodes","category":"deletionImpact","vi":"Danh tính liên kết các mốc WBS","en":"Master schedule WBS link identities","zh":"总体进度 WBS 关联标识","ja":"全体工程 WBS リンク ID"},
+  {"key":"deletionImpact.item.operations.assignmentAttachments","category":"deletionImpact","vi":"Tệp đính kèm phân công công việc","en":"Project assignment attachments","zh":"项目任务附件","ja":"プロジェクト作業割当の添付ファイル"}
 ]

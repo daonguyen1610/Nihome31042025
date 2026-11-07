@@ -203,9 +203,13 @@ public class QuoteServiceTests : IDisposable
             [
                 new ProcurementInputPriceLine
                 {
-                    ItemCode = "THEP-01", Description = "Thép kết cấu",
-                    Unit = "kg", Quantity = 100, UnitPrice = 25_000,
-                    Amount = 2_500_000, SortOrder = 1,
+                    ItemCode = "THEP-01",
+                    Description = "Thép kết cấu",
+                    Unit = "kg",
+                    Quantity = 100,
+                    UnitPrice = 25_000,
+                    Amount = 2_500_000,
+                    SortOrder = 1,
                 },
             ],
         };
@@ -244,8 +248,11 @@ public class QuoteServiceTests : IDisposable
             [
                 new QuoteItemInput
                 {
-                    ItemCode = "THEP-01", Name = "Thép kết cấu", Unit = "kg",
-                    Quantity = 100, UnitPrice = 30_000,
+                    ItemCode = "THEP-01",
+                    Name = "Thép kết cấu",
+                    Unit = "kg",
+                    Quantity = 100,
+                    UnitPrice = 30_000,
                 },
             ],
         }, owner.Id, canManage: true, canSeeAll: true);

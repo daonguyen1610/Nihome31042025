@@ -8,6 +8,8 @@ public sealed class QuoteApprovalEmail
     public int QuoteId { get; set; }
     public Quote Quote { get; set; } = null!;
     public int ApproverUserId { get; set; }
+    /// <summary>Pinned decision recipient; request messages continue to use ApproverUserId.</summary>
+    public int? RecipientUserId { get; set; }
     [MaxLength(254)] public string ToEmail { get; set; } = "";
     [MaxLength(20000)] public string CcEmailsJson { get; set; } = "[]";
     [MaxLength(200)] public string Subject { get; set; } = "";

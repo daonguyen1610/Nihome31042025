@@ -103,8 +103,10 @@ public class ConceptOptionsControllerTests : IntegrationTestBase
                 [
                     new OperationalProjectMemberRole
                     {
-                        RoleCode = ProjectTeamRoleCode.Observer, Scope = ProjectRoleScope.Module,
-                        ScopeValue = "Design", StartedAt = DateTime.UtcNow.AddDays(-1),
+                        RoleCode = ProjectTeamRoleCode.Observer,
+                        Scope = ProjectRoleScope.Module,
+                        ScopeValue = "Design",
+                        StartedAt = DateTime.UtcNow.AddDays(-1),
                     },
                 ],
             });

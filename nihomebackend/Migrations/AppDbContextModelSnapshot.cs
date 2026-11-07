@@ -8644,6 +8644,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("QuoteId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("RecipientUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("SentAt")
                         .HasColumnType("datetime2");
 

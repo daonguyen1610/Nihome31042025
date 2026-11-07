@@ -144,7 +144,7 @@ public sealed class ProjectDriveDeletionPlannerTests
         };
         var drive = new Mock<IGoogleDriveAdapter>();
         var plans = new ProjectHardDeletePlanService(
-            db, drive.Object, new TestGoogleDriveSettingsStore(preservingOptions));
+            db, drive.Object, new TestGoogleDriveSettingsStore(preservingOptions), Mock.Of<IHardDeleteFileService>());
 
         var plan = (await plans.ForOperationalProjectAsync(project.Id))!;
 
@@ -209,7 +209,7 @@ public sealed class ProjectDriveDeletionPlannerTests
                 remote.Remove(request.FileId);
                 return Task.CompletedTask;
             });
-        var plans = new ProjectHardDeletePlanService(db, drive.Object, new TestGoogleDriveSettingsStore(options));
+        var plans = new ProjectHardDeletePlanService(db, drive.Object, new TestGoogleDriveSettingsStore(options), Mock.Of<IHardDeleteFileService>());
         var plan = (await plans.ForOperationalProjectAsync(project.Id))!;
         Assert.True(plan.Impact.CanDelete);
         var permissions = new Mock<IPermissionService>();

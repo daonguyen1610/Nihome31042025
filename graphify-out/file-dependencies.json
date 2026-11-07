@@ -1530,12 +1530,182 @@
     "nihomeweb/vite.config.ts",
     "tools/scrape_legacy_data/fixup_projects.py",
     "tools/scrape_legacy_data/run.py",
-    "tools/sqlserver_business_data_purge.sql",
     "tools/translation_keys/check_translation_keys.py",
     "tools/translation_keys/test_check_translation_keys.py",
-    "tools/trivy_report/trivy_report.py"
+    "tools/trivy_report/trivy_report.py",
+    "tools/sqlserver_business_data_purge.sql",
+    "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+    "nihomebackend.tests/Services/QuoteApprovalDecisionEmailTemplatesTests.cs",
+    "nihomebackend.tests/Services/QuoteDecisionRecipientMigrationTests.cs",
+    "nihomebackend/Data/Seeds/i18n/quote-approval-decision-emails.json",
+    "nihomebackend/Migrations/20261107100000_AddQuoteApprovalDecisionEmail.cs",
+    "nihomebackend/Migrations/20261107101000_AddProjectTeamSubtasksAndAttachments.cs",
+    "nihomebackend/Migrations/20261107102000_GrantDesignReviewRecipientPermission.cs",
+    "nihomebackend/Migrations/20261107103000_AddDesignScheduleDisciplineCode.cs",
+    "nihomebackend/Migrations/20261107113000_PinQuoteDecisionRecipient.cs",
+    "nihomebackend/Models/DTOs/Responses/OperationalProjectAssignmentAttachmentResponse.cs",
+    "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+    "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+    "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+    "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+    "nihomeweb/e2e/smoke/admin-design-team-subtask-attachments.spec.ts",
+    "nihomeweb/e2e/smoke/admin-multi-file-upload.spec.ts",
+    "nihomeweb/e2e/smoke/work-package-deeplink-create.spec.ts",
+    ".github/skills/architecture-design/SKILL.md",
+    ".github/skills/business-functional-qa/SKILL.md",
+    ".github/skills/senior-business-analyst/SKILL.md",
+    ".github/skills/senior-designer/SKILL.md",
+    "AGENTS.md",
+    "CLAUDE.md",
+    "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+    "README.md",
+    "docs/Nicon-QLVH.md",
+    "docs/Nicon-workflow.md",
+    "docs/Nicon/MoMs/2026-10-06/NICON_Cap-nhat-BA_2026-10-06.md",
+    "docs/Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md",
+    "docs/Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tong-hop-ke-hoach.md",
+    "docs/Nicon/MoMs/2026-10-06/NICON_Tong-quan-du-an_sau-cap-nhat-quy-trinh_2026-10-06.md",
+    "docs/Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md",
+    "docs/Nicon/MoMs/2026-10-31/NICON_Meeting_2026-10-31_Tom-tat-yeu-cau-moi.md",
+    "docs/application_developer.md",
+    "docs/user_guide.md",
+    "docs/users-rbac.md",
+    "nihomebackend/Data/Seeds/README.md",
+    "nihomeweb/README.md",
+    "nihomeweb/e2e/README.md",
+    "nihomeweb/index.html",
+    "tools/scrape_legacy_data/README.md",
+    "tools/trivy_report/README.md",
+    "docs/Nicon/BMA - B\u1ea2NG TI\u1ebeN \u0110\u1ed8-n\u00f4i b\u1ed9 thi\u1ebft k\u1ebf-DA DB, ph\u00e1p l\u00fd.pdf",
+    "docs/Nicon/ISO/D.Quy tr\u00ecnh chi ti\u1ebft/D.9. Quy trinh QLNS 1-Tuy\u1ec3n d\u1ee5ng v\u00e0 \u0111\u00e0o t\u1ea1o nh\u00e2n s\u1ef1/NS1-M04-HDLD BTT.pdf",
+    "docs/Nicon/MMV-Master Schedule-2024.08.03-ph\u00e1p l\u00fd.pdf",
+    "docs/Nicon/Tokuyama_Master Schedule_d\u1ef1 \u00e1n DB v\u00e0 ph\u00e1p l\u00fd.pdf",
+    "docs/Nicon/K\u1ebf ho\u1ea1ch Kinh Doanh Nicon Group.jpg",
+    "docs/Nicon/S\u01a1 \u0111\u1ed3 t\u1ed5 ch\u1ee9c Nicon.jpg",
+    "nihomeweb/public/favicon.svg",
+    "nihomeweb/src/assets/logo-nicon.png",
+    "nihomeweb/src/assets/profile-activities.jpg",
+    "nihomeweb/src/assets/profile-leadership.jpg",
+    "nihomeweb/src/assets/recruit-culture-1.jpg",
+    "nihomeweb/src/assets/recruit-culture-2.jpg",
+    "nihomeweb/src/assets/recruit-culture-3.jpg",
+    "nihomeweb/src/assets/recruit-hero.jpg"
   ],
   "edges": [
+    {
+      "source": "AGENTS.md",
+      "target": "nihomebackend/Models/OperationalProject.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "AGENTS.md",
+      "target": "nihomebackend/Models/Survey.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.integration.tests/Controllers/ConstructionOperationsControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.integration.tests/Controllers/DepartmentWorkPackagesControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.integration.tests/Controllers/RbacControllerTests.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.tests/Data/RbacSeederTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.tests/Services/ConstructionOperationsServiceTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.tests/Services/OperationalProjectServiceTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend.tests/Services/RoleServiceTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Controllers/RbacController.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Models/DepartmentWorkPackage.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Models/MaterialRateCatalog.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Models/OperationalProject.cs",
+      "relation": "references",
+      "occurrences": 3
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Models/Procurement.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Services/BoqCatalogWorkbookService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Services/MaterialRateService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomebackend/Services/RoleService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "NICON_BUSINESS_REQUIREMENTS_CODE_REVIEW_2026-10-16.md",
+      "target": "nihomeweb/src/pages/admin/LogosManager.tsx",
+      "relation": "references",
+      "occurrences": 1
+    },
     {
       "source": "Nihome31042025.sln",
       "target": "nihomebackend.integration.tests/nihomebackend.integration.tests.csproj",
@@ -1552,6 +1722,960 @@
       "source": "Nihome31042025.sln",
       "target": "nihomebackend/nihomebackend.csproj",
       "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "README.md",
+      "target": "docs/application_developer.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "README.md",
+      "target": "docs/user_guide.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "README.md",
+      "target": "docs/users-rbac.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "README.md",
+      "target": "nihomebackend/Models/Survey.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "README.md",
+      "target": "nihomeweb/e2e/README.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-QLVH.md",
+      "target": "docs/Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-QLVH.md",
+      "target": "nihomebackend.integration.tests/Controllers/ProjectScheduleControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-QLVH.md",
+      "target": "nihomebackend/Models/ConstructionOperations.cs",
+      "relation": "references",
+      "occurrences": 4
+    },
+    {
+      "source": "docs/Nicon-QLVH.md",
+      "target": "nihomebackend/Models/DepartmentWorkPackage.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-QLVH.md",
+      "target": "nihomebackend/Models/DesignProject.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-QLVH.md",
+      "target": "nihomebackend/Models/Finance.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-workflow.md",
+      "target": "nihomebackend.integration.tests/Controllers/ProjectScheduleControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-workflow.md",
+      "target": "nihomebackend/Models/DepartmentWorkPackage.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-workflow.md",
+      "target": "nihomebackend/Models/DesignProject.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon-workflow.md",
+      "target": "nihomebackend/Models/PermitChecklistItem.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md",
+      "target": "docs/Nicon-QLVH.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md",
+      "target": "docs/Nicon-workflow.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "docs/Nicon-QLVH.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "docs/Nicon-workflow.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "docs/Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "docs/Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ConstructionHandoverPipelineTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ContractCareActivitiesTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ContractContinuationsTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ContractExecutionProgressTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ContractQuoteLinkTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ContractRemindersTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ContractSourceLeadsTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ContractsControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/CrmBusinessPipelineTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/DesignPermitIfcPipelineTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/DetailDesignScheduleControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/OpportunitiesControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ProcurementBusinessPipelineTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/ProjectScheduleControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/RfqProcurementPipelineTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/RfqsControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Controllers/TenderStatisticsControllerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Infrastructure/ConceptDossierConcurrencyTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Infrastructure/ConstructionDrawingConcurrencyTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.integration.tests/Infrastructure/TestDataSeeder.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.tests/Data/SampleContractSeederTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.tests/Data/SampleCrmDataSeederTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.tests/Services/BusinessRootHardDeleteHandlerTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.tests/Services/ContractReminderServiceTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend.tests/Services/ProjectScheduleEmailServiceTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Controllers/TranslationsController.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Data/DbSeeder.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Data/TranslationSeeder.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260810140951_AddHandoverRecords.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260810154436_AddHandoverConcurrency.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260827132138_AddOperationalProjects.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260902133000_NormalizeBoqCatalogReferenceSource.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260905083900_AddDetailDesignSchedule.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260906125237_AddPunchRootCauseAttribution.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260906131721_AddReceivableAccountability.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260906132908_AddHseViolations.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260906135934_AddProcurementControlChain.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20260906150351_AddFinanceControlWorkflows.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261010152214_AddDepartmentWorkPackages.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261011150000_AddPrecontractDepartmentControls.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261011160000_AddFinanceReviewQuoteVersion.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261013024816_AddDesignApprovalWorkflow.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261013030355_AddDesignReviewWorkflow.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261013043000_EnsureDesignReviewEvidenceSnapshot.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261015092519_AddProjectCodeAuditAndDesignVendors.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261020160000_LinkDesignReviewCommentsToDocuments.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261020183000_AddPaymentRequestRevisions.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261020200000_AddContractCareActivities.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261021010000_AddConceptDossierRevisions.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261021111519_AddConceptFeedbackEvidence.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261022110322_AddConstructionTaskDrawingLinks.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261029163625_AllowMultipleDesignFlows.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261029170147_ScopeDesignFlowTeamsAndSchedules.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261031055844_AddWorkTaskSubtasks.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261031180001_AddWorkTaskAttachments.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Migrations/20261106130953_AllowAssignmentHandover.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/ConstructionTask.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/Contract.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/ContractAppendix.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/ContractAttachment.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/ContractPaymentMilestone.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/DTOs/Requests/DepartmentWorkPackageRequests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/DepartmentWorkPackage.cs",
+      "relation": "references",
+      "occurrences": 5
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/DesignProject.cs",
+      "relation": "references",
+      "occurrences": 3
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/Finance.cs",
+      "relation": "references",
+      "occurrences": 3
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/MaterialAlert.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/OperationalProject.cs",
+      "relation": "references",
+      "occurrences": 3
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/OperationalProjectTeam.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/Opportunity.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/Procurement.cs",
+      "relation": "references",
+      "occurrences": 4
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/ProjectDocument.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/Quote.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/QuoteDocument.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/ShopDrawing.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/SurveyMedia.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/TenderEstimateRevision.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Models/TenderSubmission.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/AboutSectionService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ActivityCategoryService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ActivityService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ContactMessageService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ContactValidation.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ContractReminderWorker.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ContractService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/DepartmentWorkPackageBusinessService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/DetailDesignScheduleService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/EmailService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/EmailTemplateBaseline.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/EmailTemplateFormatter.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/EntityTranslationService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/HandoverRecordService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/HostedImageService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/IEmailService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/IProcurementService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/IProjectTeamService.cs",
+      "relation": "references",
+      "occurrences": 5
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/JobApplicationService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/JobPositionService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/JwtService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/LogoService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/NewsService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/OperationalProjectCodeAllocator.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/OperationalProjectService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/OrphanedManagedFileCleanupService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/OtpService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/PasswordService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ProcessService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ProcurementService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ProjectAccessService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ProjectDocumentService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ProjectScheduleEmailService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ProjectScheduleEmailWorker.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ProjectService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/QuoteService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/RefreshTokenService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/SequentialCodes.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/ServiceItemService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/SiteSettingsService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/SlideshowService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/TenderReporting.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/TenderService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/TimeService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomebackend/Services/TranslationService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomeweb/e2e/smoke/admin-precontract-department-controls.spec.ts",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomeweb/src/components/admin/PeopleChecklist.tsx",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomeweb/src/components/ui/money-input.tsx",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomeweb/src/components/ui/searchable-select.tsx",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/application_developer.md",
+      "target": "nihomeweb/src/lib/financeReview.ts",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/user_guide.md",
+      "target": "docs/application_developer.md",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/user_guide.md",
+      "target": "nihomebackend/Models/Activity.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend.integration.tests/Controllers/UnauthorizedMutationProbeTests.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend.integration.tests/Infrastructure/ProtectedEndpointInventory.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend.integration.tests/Infrastructure/TestDataSeeder.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend/Authorization/PermissionAuthorizationFilter.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend/Data/DbSeeder.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend/Data/RbacSeeder.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend/Migrations/20260827132138_AddOperationalProjects.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "docs/users-rbac.md",
+      "target": "nihomebackend/Services/PermissionService.cs",
+      "relation": "references",
       "occurrences": 1
     },
     {
@@ -3592,13 +4716,13 @@
       "source": "nihomebackend.integration.tests/Controllers/DesignReviewsControllerTests.cs",
       "target": "nihomebackend.integration.tests/Infrastructure/AuthTestHelper.cs",
       "relation": "calls",
-      "occurrences": 27
+      "occurrences": 29
     },
     {
       "source": "nihomebackend.integration.tests/Controllers/DesignReviewsControllerTests.cs",
       "target": "nihomebackend.integration.tests/Infrastructure/IntegrationTestBase.cs",
       "relation": "calls",
-      "occurrences": 21
+      "occurrences": 23
     },
     {
       "source": "nihomebackend.integration.tests/Controllers/DesignReviewsControllerTests.cs",
@@ -3712,7 +4836,7 @@
       "source": "nihomebackend.integration.tests/Controllers/DetailDesignScheduleControllerTests.cs",
       "target": "nihomebackend.integration.tests/Infrastructure/IntegrationTestBase.cs",
       "relation": "calls",
-      "occurrences": 25
+      "occurrences": 26
     },
     {
       "source": "nihomebackend.integration.tests/Controllers/DetailDesignScheduleControllerTests.cs",
@@ -5008,7 +6132,7 @@
       "source": "nihomebackend.integration.tests/Controllers/OperationalProjectTeamControllerTests.cs",
       "target": "nihomebackend.integration.tests/Infrastructure/IntegrationTestBase.cs",
       "relation": "calls",
-      "occurrences": 17
+      "occurrences": 23
     },
     {
       "source": "nihomebackend.integration.tests/Controllers/OperationalProjectTeamControllerTests.cs",
@@ -5019,6 +6143,12 @@
     {
       "source": "nihomebackend.integration.tests/Controllers/OperationalProjectTeamControllerTests.cs",
       "target": "nihomebackend/Models/Customer.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.integration.tests/Controllers/OperationalProjectTeamControllerTests.cs",
+      "target": "nihomebackend/Models/DesignProject.cs",
       "relation": "calls",
       "occurrences": 1
     },
@@ -5878,13 +7008,13 @@
       "source": "nihomebackend.integration.tests/Controllers/QuotesControllerTests.cs",
       "target": "nihomebackend.integration.tests/Infrastructure/AuthTestHelper.cs",
       "relation": "calls",
-      "occurrences": 84
+      "occurrences": 85
     },
     {
       "source": "nihomebackend.integration.tests/Controllers/QuotesControllerTests.cs",
       "target": "nihomebackend.integration.tests/Infrastructure/IntegrationTestBase.cs",
       "relation": "calls",
-      "occurrences": 48
+      "occurrences": 50
     },
     {
       "source": "nihomebackend.integration.tests/Controllers/QuotesControllerTests.cs",
@@ -14284,7 +15414,7 @@
       "source": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
       "target": "nihomebackend/Models/Opportunity.cs",
       "relation": "calls",
-      "occurrences": 2
+      "occurrences": 4
     },
     {
       "source": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
@@ -14296,7 +15426,7 @@
       "source": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
       "target": "nihomebackend/Models/Quote.cs",
       "relation": "calls",
-      "occurrences": 2
+      "occurrences": 4
     },
     {
       "source": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
@@ -14368,13 +15498,13 @@
       "source": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
       "target": "nihomebackend/Services/DepartmentWorkPackageService.cs",
       "relation": "calls",
-      "occurrences": 50
+      "occurrences": 52
     },
     {
       "source": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
       "target": "nihomebackend/Services/IDepartmentWorkPackageService.cs",
       "relation": "references",
-      "occurrences": 25
+      "occurrences": 26
     },
     {
       "source": "nihomebackend.tests/Services/DepartmentWorkPackageServiceTests.cs",
@@ -14872,7 +16002,7 @@
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
       "target": "nihomebackend/Models/DTOs/Requests/DesignReviewRequests.cs",
       "relation": "calls",
-      "occurrences": 7
+      "occurrences": 12
     },
     {
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
@@ -14920,7 +16050,7 @@
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
       "target": "nihomebackend/Models/Rbac/Permission.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
@@ -14932,11 +16062,23 @@
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
       "target": "nihomebackend/Models/Rbac/Role.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
       "target": "nihomebackend/Models/Rbac/Role.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
+      "target": "nihomebackend/Models/Rbac/RoleGroup.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
+      "target": "nihomebackend/Models/Rbac/RoleGroup.cs",
       "relation": "references",
       "occurrences": 1
     },
@@ -14944,7 +16086,7 @@
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
       "target": "nihomebackend/Models/Rbac/RolePermission.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
@@ -14962,13 +16104,13 @@
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
       "target": "nihomebackend/Services/DesignReviewService.cs",
       "relation": "calls",
-      "occurrences": 13
+      "occurrences": 18
     },
     {
       "source": "nihomebackend.tests/Services/DesignReviewServiceTests.cs",
       "target": "nihomebackend/Services/DesignReviewService.cs",
       "relation": "references",
-      "occurrences": 6
+      "occurrences": 9
     },
     {
       "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
@@ -15027,6 +16169,12 @@
     {
       "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
       "target": "nihomebackend/Models/DTOs/Requests/DetailDesignScheduleRequests.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
+      "target": "nihomebackend/Models/DTOs/Requests/DetailDesignScheduleRequests.cs",
       "relation": "references",
       "occurrences": 1
     },
@@ -15062,6 +16210,18 @@
     },
     {
       "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
+      "target": "nihomebackend/Models/Rbac/Permission.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
+      "target": "nihomebackend/Models/Rbac/RoleGroup.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
       "target": "nihomebackend/Models/Vendor.cs",
       "relation": "calls",
       "occurrences": 2
@@ -15076,13 +16236,13 @@
       "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
       "target": "nihomebackend/Services/DetailDesignScheduleService.cs",
       "relation": "calls",
-      "occurrences": 9
+      "occurrences": 13
     },
     {
       "source": "nihomebackend.tests/Services/DetailDesignScheduleServiceTests.cs",
       "target": "nihomebackend/Services/DetailDesignScheduleService.cs",
       "relation": "references",
-      "occurrences": 13
+      "occurrences": 15
     },
     {
       "source": "nihomebackend.tests/Services/DrawingRevisionServiceTests.cs",
@@ -16744,7 +17904,7 @@
       "source": "nihomebackend.tests/Services/LegacyProjectTeamSyncServiceTests.cs",
       "target": "nihomebackend/Models/DesignProject.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 3
     },
     {
       "source": "nihomebackend.tests/Services/LegacyProjectTeamSyncServiceTests.cs",
@@ -16756,7 +17916,7 @@
       "source": "nihomebackend.tests/Services/LegacyProjectTeamSyncServiceTests.cs",
       "target": "nihomebackend/Models/OperationalProjectTeam.cs",
       "relation": "calls",
-      "occurrences": 3
+      "occurrences": 4
     },
     {
       "source": "nihomebackend.tests/Services/LegacyProjectTeamSyncServiceTests.cs",
@@ -16774,7 +17934,7 @@
       "source": "nihomebackend.tests/Services/LegacyProjectTeamSyncServiceTests.cs",
       "target": "nihomebackend/Services/LegacyProjectTeamSyncService.cs",
       "relation": "calls",
-      "occurrences": 8
+      "occurrences": 10
     },
     {
       "source": "nihomebackend.tests/Services/LegacyProjectTeamSyncServiceTests.cs",
@@ -18020,6 +19180,12 @@
     },
     {
       "source": "nihomebackend.tests/Services/OrphanedManagedFileCleanupServiceTests.cs",
+      "target": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/OrphanedManagedFileCleanupServiceTests.cs",
       "target": "nihomebackend/Services/AboutSectionService.cs",
       "relation": "imports",
       "occurrences": 1
@@ -18034,6 +19200,12 @@
       "source": "nihomebackend.tests/Services/OrphanedManagedFileCleanupServiceTests.cs",
       "target": "nihomebackend/Services/OrphanedManagedFileCleanupService.cs",
       "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/OrphanedManagedFileCleanupServiceTests.cs",
+      "target": "nihomebackend/Services/ReferencedManagedFiles.cs",
+      "relation": "calls",
       "occurrences": 1
     },
     {
@@ -18535,6 +19707,144 @@
       "occurrences": 26
     },
     {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend.tests/Helpers/DbContextFactory.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend.tests/Services/AboutSectionServiceTests.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend.tests/Services/TestGoogleDriveSettingsStore.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/AboutSectionContent.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/Customer.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/DTOs/Responses/AboutSectionResponse.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/DTOs/Responses/BusinessDocumentUploadResponse.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/DesignProject.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/OperationalProject.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "relation": "calls",
+      "occurrences": 3
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/OperationalProjectTeam.cs",
+      "relation": "calls",
+      "occurrences": 3
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Models/OperationalProjectTeam.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/AboutSectionService.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/BusinessDocumentStorageService.cs",
+      "relation": "references",
+      "occurrences": 4
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/GoogleDrive/GoogleDriveAdapter.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/GoogleDrive/GoogleDriveOptions.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/HardDelete/ProjectHardDeletePlanService.cs",
+      "relation": "calls",
+      "occurrences": 5
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/IProjectTeamService.cs",
+      "relation": "references",
+      "occurrences": 4
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/ManagedDocumentContent.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "relation": "calls",
+      "occurrences": 11
+    },
+    {
+      "source": "nihomebackend.tests/Services/ProjectAssignmentAttachmentServiceTests.cs",
+      "target": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
       "source": "nihomebackend.tests/Services/ProjectCategoryServiceTests.cs",
       "target": "nihomebackend.tests/Helpers/DbContextFactory.cs",
       "relation": "calls",
@@ -18964,7 +20274,7 @@
       "source": "nihomebackend.tests/Services/ProjectDriveDeletionPlannerTests.cs",
       "target": "nihomebackend/Services/HardDelete/HardDeleteFileService.cs",
       "relation": "references",
-      "occurrences": 1
+      "occurrences": 3
     },
     {
       "source": "nihomebackend.tests/Services/ProjectDriveDeletionPlannerTests.cs",
@@ -19762,19 +21072,19 @@
       "source": "nihomebackend.tests/Services/ProjectTeamServiceTests.cs",
       "target": "nihomebackend/Models/DTOs/Requests/OperationalProjectTeamRequests.cs",
       "relation": "references",
-      "occurrences": 4
+      "occurrences": 5
     },
     {
       "source": "nihomebackend.tests/Services/ProjectTeamServiceTests.cs",
       "target": "nihomebackend/Models/DTOs/Responses/OperationalProjectTeamResponses.cs",
       "relation": "references",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomebackend.tests/Services/ProjectTeamServiceTests.cs",
       "target": "nihomebackend/Models/DesignProject.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomebackend.tests/Services/ProjectTeamServiceTests.cs",
@@ -19804,13 +21114,13 @@
       "source": "nihomebackend.tests/Services/ProjectTeamServiceTests.cs",
       "target": "nihomebackend/Services/IProjectTeamService.cs",
       "relation": "references",
-      "occurrences": 21
+      "occurrences": 26
     },
     {
       "source": "nihomebackend.tests/Services/ProjectTeamServiceTests.cs",
       "target": "nihomebackend/Services/ProjectTeamService.cs",
       "relation": "calls",
-      "occurrences": 25
+      "occurrences": 35
     },
     {
       "source": "nihomebackend.tests/Services/ProjectTeamServiceTests.cs",
@@ -19915,6 +21225,30 @@
       "occurrences": 1
     },
     {
+      "source": "nihomebackend.tests/Services/QuoteApprovalDecisionEmailTemplatesTests.cs",
+      "target": "nihomebackend.tests/Services/AboutSectionServiceTests.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteApprovalDecisionEmailTemplatesTests.cs",
+      "target": "nihomebackend/Models/SiteSettings.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteApprovalDecisionEmailTemplatesTests.cs",
+      "target": "nihomebackend/Services/AboutSectionService.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteApprovalDecisionEmailTemplatesTests.cs",
+      "target": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "relation": "calls",
+      "occurrences": 4
+    },
+    {
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend.tests/Helpers/DbContextFactory.cs",
       "relation": "imports",
@@ -19948,30 +21282,42 @@
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend/Models/ApplicationUser.cs",
       "relation": "calls",
+      "occurrences": 3
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
+      "target": "nihomebackend/Models/ApplicationUser.cs",
+      "relation": "references",
       "occurrences": 1
     },
     {
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend/Models/OperationalProject.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend/Models/OperationalProjectTeam.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 3
     },
     {
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend/Models/Opportunity.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
+      "target": "nihomebackend/Models/Quote.cs",
       "relation": "calls",
       "occurrences": 1
     },
     {
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend/Models/Quote.cs",
-      "relation": "calls",
+      "relation": "references",
       "occurrences": 1
     },
     {
@@ -19990,7 +21336,7 @@
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend/Models/Rbac/Role.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
@@ -20014,7 +21360,19 @@
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
       "target": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "relation": "calls",
-      "occurrences": 2
+      "occurrences": 12
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
+      "target": "nihomebackend/Services/QuoteApprovalEmailService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteApprovalEmailServiceTests.cs",
+      "target": "nihomebackend/Services/QuoteService.cs",
+      "relation": "references",
+      "occurrences": 1
     },
     {
       "source": "nihomebackend.tests/Services/QuoteApprovalEmailTemplatesTests.cs",
@@ -20033,6 +21391,24 @@
       "target": "nihomebackend/Services/QuoteApprovalEmailTemplates.cs",
       "relation": "calls",
       "occurrences": 3
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteDecisionRecipientMigrationTests.cs",
+      "target": "nihomebackend.tests/Services/AboutSectionServiceTests.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteDecisionRecipientMigrationTests.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend.tests/Services/QuoteDecisionRecipientMigrationTests.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
     },
     {
       "source": "nihomebackend.tests/Services/QuoteDocumentServiceTests.cs",
@@ -20404,7 +21780,7 @@
       "source": "nihomebackend.tests/Services/QuoteServiceTests.cs",
       "target": "nihomebackend/Services/QuoteService.cs",
       "relation": "calls",
-      "occurrences": 95
+      "occurrences": 100
     },
     {
       "source": "nihomebackend.tests/Services/QuoteServiceTests.cs",
@@ -27242,6 +28618,12 @@
     },
     {
       "source": "nihomebackend/Controllers/OperationalProjectTeamController.cs",
+      "target": "nihomebackend/Models/DTOs/Responses/OperationalProjectAssignmentAttachmentResponse.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend/Controllers/OperationalProjectTeamController.cs",
       "target": "nihomebackend/Models/DTOs/Responses/OperationalProjectTeamResponses.cs",
       "relation": "references",
       "occurrences": 7
@@ -27292,7 +28674,7 @@
       "source": "nihomebackend/Controllers/OperationalProjectTeamController.cs",
       "target": "nihomebackend/Services/IProjectTeamService.cs",
       "relation": "calls",
-      "occurrences": 9
+      "occurrences": 11
     },
     {
       "source": "nihomebackend/Controllers/OperationalProjectTeamController.cs",
@@ -27304,7 +28686,19 @@
       "source": "nihomebackend/Controllers/OperationalProjectTeamController.cs",
       "target": "nihomebackend/Services/IRoleService.cs",
       "relation": "calls",
-      "occurrences": 12
+      "occurrences": 18
+    },
+    {
+      "source": "nihomebackend/Controllers/OperationalProjectTeamController.cs",
+      "target": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "relation": "calls",
+      "occurrences": 4
+    },
+    {
+      "source": "nihomebackend/Controllers/OperationalProjectTeamController.cs",
+      "target": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "relation": "references",
+      "occurrences": 1
     },
     {
       "source": "nihomebackend/Controllers/OperationalProjectsController.cs",
@@ -28406,6 +29800,12 @@
     },
     {
       "source": "nihomebackend/Controllers/QuoteApprovalTemplatesController.cs",
+      "target": "nihomebackend/Models/SiteSettings.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Controllers/QuoteApprovalTemplatesController.cs",
       "target": "nihomebackend/Services/AboutSectionService.cs",
       "relation": "imports",
       "occurrences": 1
@@ -28418,9 +29818,15 @@
     },
     {
       "source": "nihomebackend/Controllers/QuoteApprovalTemplatesController.cs",
+      "target": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend/Controllers/QuoteApprovalTemplatesController.cs",
       "target": "nihomebackend/Services/QuoteApprovalEmailTemplates.cs",
       "relation": "calls",
-      "occurrences": 3
+      "occurrences": 2
     },
     {
       "source": "nihomebackend/Controllers/QuotesController.cs",
@@ -28696,13 +30102,13 @@
       "source": "nihomebackend/Controllers/RecruitmentDropdownOptionsController.cs",
       "target": "nihomebackend/Services/IRoleService.cs",
       "relation": "calls",
-      "occurrences": 4
+      "occurrences": 5
     },
     {
       "source": "nihomebackend/Controllers/RecruitmentDropdownOptionsController.cs",
       "target": "nihomebackend/Services/RecruitmentDropdownOptionService.cs",
       "relation": "calls",
-      "occurrences": 4
+      "occurrences": 5
     },
     {
       "source": "nihomebackend/Controllers/RecruitmentDropdownOptionsController.cs",
@@ -30518,6 +31924,12 @@
     },
     {
       "source": "nihomebackend/Data/AppDbContext.cs",
+      "target": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend/Data/AppDbContext.cs",
       "target": "nihomebackend/Models/OperationalProjectSchedule.cs",
       "relation": "references",
       "occurrences": 6
@@ -31723,6 +33135,18 @@
       "occurrences": 2
     },
     {
+      "source": "nihomebackend/Data/Seeds/README.md",
+      "target": "nihomebackend/Data/ContentSeeder.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Data/Seeds/README.md",
+      "target": "nihomebackend/Data/TranslationSeeder.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
       "source": "nihomebackend/Data/TranslationSeeder.cs",
       "target": "nihomebackend/Data/AppDbContext.cs",
       "relation": "contains",
@@ -32703,6 +34127,18 @@
     {
       "source": "nihomebackend/Extensions/ServiceCollectionExtensions.cs",
       "target": "nihomebackend/Services/ProjectAccessService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Extensions/ServiceCollectionExtensions.cs",
+      "target": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Extensions/ServiceCollectionExtensions.cs",
+      "target": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
       "relation": "references",
       "occurrences": 1
     },
@@ -34202,6 +35638,66 @@
     },
     {
       "source": "nihomebackend/Migrations/20261106130953_AllowAssignmentHandover.cs",
+      "target": "nihomebackend/Migrations/20260425105110_AddContentAndTranslationTables.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107100000_AddQuoteApprovalDecisionEmail.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107100000_AddQuoteApprovalDecisionEmail.cs",
+      "target": "nihomebackend/Migrations/20260425105110_AddContentAndTranslationTables.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107101000_AddProjectTeamSubtasksAndAttachments.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107101000_AddProjectTeamSubtasksAndAttachments.cs",
+      "target": "nihomebackend/Migrations/20260425105110_AddContentAndTranslationTables.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107102000_GrantDesignReviewRecipientPermission.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107102000_GrantDesignReviewRecipientPermission.cs",
+      "target": "nihomebackend/Migrations/20260425105110_AddContentAndTranslationTables.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107103000_AddDesignScheduleDisciplineCode.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107103000_AddDesignScheduleDisciplineCode.cs",
+      "target": "nihomebackend/Migrations/20260425105110_AddContentAndTranslationTables.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107113000_PinQuoteDecisionRecipient.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Migrations/20261107113000_PinQuoteDecisionRecipient.cs",
       "target": "nihomebackend/Migrations/20260425105110_AddContentAndTranslationTables.cs",
       "relation": "contains",
       "occurrences": 1
@@ -36079,6 +37575,12 @@
       "occurrences": 1
     },
     {
+      "source": "nihomebackend/Models/DTOs/Responses/OperationalProjectAssignmentAttachmentResponse.cs",
+      "target": "nihomebackend/Models/DTOs/Responses/AboutSectionResponse.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
       "source": "nihomebackend/Models/DTOs/Responses/OperationalProjectResponses.cs",
       "target": "nihomebackend/Models/Contract.cs",
       "relation": "references",
@@ -37009,6 +38511,18 @@
       "occurrences": 1
     },
     {
+      "source": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "target": "nihomebackend/Models/AboutSectionContent.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "target": "nihomebackend/Models/OperationalProjectTeam.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
       "source": "nihomebackend/Models/OperationalProjectSchedule.cs",
       "target": "nihomebackend/Models/AboutSectionContent.cs",
       "relation": "contains",
@@ -37061,6 +38575,12 @@
       "target": "nihomebackend/Models/OperationalProject.cs",
       "relation": "references",
       "occurrences": 3
+    },
+    {
+      "source": "nihomebackend/Models/OperationalProjectTeam.cs",
+      "target": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "relation": "references",
+      "occurrences": 1
     },
     {
       "source": "nihomebackend/Models/Opportunity.cs",
@@ -41782,7 +43302,7 @@
       "source": "nihomebackend/Services/DetailDesignScheduleService.cs",
       "target": "nihomebackend/Models/DTOs/Responses/DetailDesignScheduleResponses.cs",
       "relation": "calls",
-      "occurrences": 4
+      "occurrences": 5
     },
     {
       "source": "nihomebackend/Services/DetailDesignScheduleService.cs",
@@ -43424,6 +44944,18 @@
     },
     {
       "source": "nihomebackend/Services/HardDelete/ProjectHardDeletePlanService.cs",
+      "target": "nihomebackend/Services/HardDelete/HardDeleteFileService.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend/Services/HardDelete/ProjectHardDeletePlanService.cs",
+      "target": "nihomebackend/Services/HardDelete/HardDeleteFileService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/HardDelete/ProjectHardDeletePlanService.cs",
       "target": "nihomebackend/Services/HardDelete/ProjectDriveDeletionPlanner.cs",
       "relation": "calls",
       "occurrences": 1
@@ -44385,6 +45917,12 @@
     {
       "source": "nihomebackend/Services/IIdempotencyRequestGuard.cs",
       "target": "nihomebackend/Services/OperationalProjectIdempotencyGuard.cs",
+      "relation": "dispatches_to",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/IIdempotencyRequestGuard.cs",
+      "target": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
       "relation": "dispatches_to",
       "occurrences": 1
     },
@@ -48355,6 +49893,132 @@
       "occurrences": 6
     },
     {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Services/AboutSectionService.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Services/IIdempotencyRequestGuard.cs",
+      "relation": "implements",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Services/IPermissionService.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Services/IPermissionService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Services/IProjectTeamService.cs",
+      "relation": "calls",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentIdempotencyGuard.cs",
+      "target": "nihomebackend/Services/IProjectTeamService.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Data/AppDbContext.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Models/AboutSectionContent.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Models/DTOs/Responses/AboutSectionResponse.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Models/DTOs/Responses/OperationalProjectAssignmentAttachmentResponse.cs",
+      "relation": "references",
+      "occurrences": 3
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Models/OperationalProjectAssignmentAttachment.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Models/OperationalProjectTeam.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Services/AboutSectionService.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Services/BusinessDocumentStorageService.cs",
+      "relation": "calls",
+      "occurrences": 5
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Services/BusinessDocumentStorageService.cs",
+      "relation": "references",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Services/IProjectTeamService.cs",
+      "relation": "calls",
+      "occurrences": 3
+    },
+    {
+      "source": "nihomebackend/Services/ProjectAssignmentAttachmentService.cs",
+      "target": "nihomebackend/Services/ManagedDocumentContent.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
       "source": "nihomebackend/Services/ProjectCategoryService.cs",
       "target": "nihomebackend/Constants/EntityTypes.cs",
       "relation": "imports",
@@ -49222,7 +50886,7 @@
       "source": "nihomebackend/Services/ProjectTeamService.cs",
       "target": "nihomebackend/Models/DTOs/Requests/OperationalProjectTeamRequests.cs",
       "relation": "references",
-      "occurrences": 8
+      "occurrences": 9
     },
     {
       "source": "nihomebackend/Services/ProjectTeamService.cs",
@@ -49270,7 +50934,7 @@
       "source": "nihomebackend/Services/ProjectTeamService.cs",
       "target": "nihomebackend/Services/IProjectTeamService.cs",
       "relation": "calls",
-      "occurrences": 15
+      "occurrences": 16
     },
     {
       "source": "nihomebackend/Services/ProjectTeamService.cs",
@@ -49369,6 +51033,48 @@
       "occurrences": 1
     },
     {
+      "source": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "target": "nihomebackend/Models/AboutSectionContent.cs",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "target": "nihomebackend/Models/SiteSettings.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "target": "nihomebackend/Services/AboutSectionService.cs",
+      "relation": "contains",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "target": "nihomebackend/Services/EmailTemplateBaseline.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "target": "nihomebackend/Services/EmailTemplateFormatter.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "target": "nihomebackend/Services/QuoteApprovalEmailTemplates.cs",
+      "relation": "references",
+      "occurrences": 3
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "target": "nihomebackend/Services/WorkPackageApprovalEmailTemplates.cs",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "target": "nihomebackend/Data/AppDbContext.cs",
       "relation": "imports",
@@ -49412,6 +51118,12 @@
     },
     {
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
+      "target": "nihomebackend/Models/QuoteApprovalEmail.cs",
+      "relation": "references",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "target": "nihomebackend/Models/Rbac/Permission.cs",
       "relation": "imports",
       "occurrences": 1
@@ -49426,7 +51138,7 @@
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "target": "nihomebackend/Services/ContactValidation.cs",
       "relation": "calls",
-      "occurrences": 4
+      "occurrences": 5
     },
     {
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
@@ -49450,13 +51162,19 @@
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "target": "nihomebackend/Services/IPermissionService.cs",
       "relation": "calls",
-      "occurrences": 2
+      "occurrences": 3
     },
     {
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "target": "nihomebackend/Services/IPermissionService.cs",
       "relation": "references",
       "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
+      "target": "nihomebackend/Services/QuoteApprovalDecisionEmailTemplates.cs",
+      "relation": "calls",
+      "occurrences": 2
     },
     {
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
@@ -49474,7 +51192,7 @@
       "source": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "target": "nihomebackend/Services/QuoteService.cs",
       "relation": "calls",
-      "occurrences": 3
+      "occurrences": 4
     },
     {
       "source": "nihomebackend/Services/QuoteApprovalEmailTemplates.cs",
@@ -49804,7 +51522,7 @@
       "source": "nihomebackend/Services/QuoteService.cs",
       "target": "nihomebackend/Services/QuoteApprovalEmailService.cs",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 3
     },
     {
       "source": "nihomebackend/Services/QuoteService.cs",
@@ -49900,6 +51618,12 @@
       "source": "nihomebackend/Services/RecruitmentDropdownOptionService.cs",
       "target": "nihomebackend/Models/DTOs/Responses/AboutSectionResponse.cs",
       "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomebackend/Services/RecruitmentDropdownOptionService.cs",
+      "target": "nihomebackend/Models/DTOs/Responses/RbacResponses.cs",
+      "relation": "references",
       "occurrences": 1
     },
     {
@@ -52741,6 +54465,42 @@
       "occurrences": 1
     },
     {
+      "source": "nihomeweb/e2e/smoke/admin-design-team-subtask-attachments.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/auth.ts",
+      "relation": "imports",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-design-team-subtask-attachments.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/auth.ts",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-design-team-subtask-attachments.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/designProjects.ts",
+      "relation": "imports",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-design-team-subtask-attachments.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/designProjects.ts",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-design-team-subtask-attachments.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/hardDelete.ts",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-design-team-subtask-attachments.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/hardDelete.ts",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
       "source": "nihomeweb/e2e/smoke/admin-drawing-revisions.spec.ts",
       "target": "nihomeweb/e2e/fixtures/auth.ts",
       "relation": "imports",
@@ -52947,6 +54707,30 @@
     {
       "source": "nihomeweb/e2e/smoke/admin-material-requests.spec.ts",
       "target": "nihomeweb/e2e/fixtures/people.ts",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-multi-file-upload.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/auth.ts",
+      "relation": "imports",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-multi-file-upload.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/auth.ts",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-multi-file-upload.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/hardDelete.ts",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/admin-multi-file-upload.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/hardDelete.ts",
       "relation": "imports_from",
       "occurrences": 1
     },
@@ -54697,6 +56481,30 @@
       "occurrences": 1
     },
     {
+      "source": "nihomeweb/e2e/smoke/work-package-deeplink-create.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/auth.ts",
+      "relation": "imports",
+      "occurrences": 2
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/work-package-deeplink-create.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/auth.ts",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/work-package-deeplink-create.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/hardDelete.ts",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/e2e/smoke/work-package-deeplink-create.spec.ts",
+      "target": "nihomeweb/e2e/fixtures/hardDelete.ts",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
       "source": "nihomeweb/e2e/smoke/work-package-reopen-delete-live.spec.ts",
       "target": "nihomeweb/e2e/fixtures/auth.ts",
       "relation": "imports",
@@ -56348,9 +58156,9 @@
     },
     {
       "source": "nihomeweb/src/components/admin/AdminFilePreview.tsx",
-      "target": "docx-preview",
+      "target": "nihomeweb/package.json",
       "relation": "dynamic_import",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomeweb/src/components/admin/AdminFilePreview.tsx",
@@ -56446,12 +58254,6 @@
       "source": "nihomeweb/src/components/admin/AdminFilePreview.tsx",
       "target": "nihomeweb/src/lib/utils.ts",
       "relation": "imports_from",
-      "occurrences": 1
-    },
-    {
-      "source": "nihomeweb/src/components/admin/AdminFilePreview.tsx",
-      "target": "pdfjs-dist",
-      "relation": "dynamic_import",
       "occurrences": 1
     },
     {
@@ -57754,7 +59556,7 @@
       "source": "nihomeweb/src/components/admin/ContractFinanceReviewLink.tsx",
       "target": "nihomeweb/src/services/adminApi.ts",
       "relation": "imports",
-      "occurrences": 2
+      "occurrences": 3
     },
     {
       "source": "nihomeweb/src/components/admin/ContractFinanceReviewLink.tsx",
@@ -63500,6 +65302,12 @@
     },
     {
       "source": "nihomeweb/src/pages/VendorRfqPortal.tsx",
+      "target": "nihomeweb/src/components/admin/WorkPackageApprovalTemplateConfig.tsx",
+      "relation": "indirect_call",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/src/pages/VendorRfqPortal.tsx",
       "target": "nihomeweb/src/components/ui/button.tsx",
       "relation": "calls",
       "occurrences": 1
@@ -69082,7 +70890,7 @@
       "source": "nihomeweb/src/pages/admin/JobPositionForm.tsx",
       "target": "nihomeweb/src/services/adminApi.ts",
       "relation": "imports",
-      "occurrences": 5
+      "occurrences": 6
     },
     {
       "source": "nihomeweb/src/pages/admin/JobPositionForm.tsx",
@@ -84764,6 +86572,24 @@
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
+      "target": "nihomeweb/src/components/admin/AdminDocumentUpload.tsx",
+      "relation": "calls",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
+      "target": "nihomeweb/src/components/admin/AdminDocumentUpload.tsx",
+      "relation": "imports",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
+      "target": "nihomeweb/src/components/admin/AdminDocumentUpload.tsx",
+      "relation": "imports_from",
+      "occurrences": 1
+    },
+    {
+      "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
       "target": "nihomeweb/src/components/ui/badge.tsx",
       "relation": "calls",
       "occurrences": 1
@@ -84784,7 +86610,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
       "target": "nihomeweb/src/components/ui/button.tsx",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
@@ -84910,7 +86736,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
       "target": "nihomeweb/src/hooks/use-toast.ts",
       "relation": "calls",
-      "occurrences": 2
+      "occurrences": 4
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
@@ -84928,7 +86754,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
       "target": "nihomeweb/src/lib/api.ts",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
@@ -84946,7 +86772,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
       "target": "nihomeweb/src/lib/apiError.ts",
       "relation": "calls",
-      "occurrences": 1
+      "occurrences": 2
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
@@ -84964,7 +86790,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
       "target": "nihomeweb/src/lib/i18n.tsx",
       "relation": "calls",
-      "occurrences": 3
+      "occurrences": 4
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
@@ -85000,7 +86826,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
       "target": "nihomeweb/src/services/adminApi.ts",
       "relation": "imports",
-      "occurrences": 10
+      "occurrences": 11
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignProjectTeamTab.tsx",
@@ -85792,7 +87618,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignScheduleTab.tsx",
       "target": "nihomeweb/src/services/adminApi.ts",
       "relation": "imports",
-      "occurrences": 11
+      "occurrences": 12
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignScheduleTab.tsx",
@@ -86068,7 +87894,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignScheduleTaskDialog.tsx",
       "target": "nihomeweb/src/services/adminApi.ts",
       "relation": "imports",
-      "occurrences": 10
+      "occurrences": 11
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignScheduleTaskDialog.tsx",
@@ -86086,7 +87912,7 @@
       "source": "nihomeweb/src/pages/admin/design/DesignScheduleTaskDialog.tsx",
       "target": "nihomeweb/src/services/adminApi.ts",
       "relation": "references",
-      "occurrences": 6
+      "occurrences": 7
     },
     {
       "source": "nihomeweb/src/pages/admin/design/DesignScheduleTimeline.tsx",

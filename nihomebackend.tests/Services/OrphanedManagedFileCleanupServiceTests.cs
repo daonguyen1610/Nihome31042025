@@ -17,6 +17,34 @@ public sealed class OrphanedManagedFileCleanupServiceTests : IDisposable
         if (Directory.Exists(contentRoot)) Directory.Delete(contentRoot, recursive: true);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task CleanupAsync_PreservesAssignmentAttachmentUntilStorageCleanup(bool softDeleted)
+    {
+        using var db = Helpers.DbContextFactory.Create();
+        var now = DateTime.UtcNow;
+        const string path = "/files/business-documents/project-team/nicon-design.pdf";
+        var file = CreateFile(path.TrimStart('/'), now.AddDays(-3));
+        db.OperationalProjectAssignmentAttachments.Add(new NihomeBackend.Models.OperationalProjectAssignmentAttachment
+        {
+            AssignmentId = 1,
+            Path = path,
+            OriginalFileName = "NICON – Bản vẽ thiết kế.pdf",
+            DeletedAt = softDeleted ? now.AddDays(-2) : null,
+        });
+        await db.SaveChangesAsync();
+        var references = new Mock<IManagedFileReferenceProvider>();
+        references.Setup(item => item.GetAsync(It.IsAny<CancellationToken>()))
+            .Returns((CancellationToken ct) => ReferencedManagedFiles.GetAsync(db, ct));
+
+        var result = await CreateService(references.Object).CleanupAsync(now);
+
+        Assert.True(File.Exists(file));
+        Assert.Equal(1, result.ReferencedFiles);
+        Assert.Equal(0, result.QuarantinedFiles);
+    }
+
     [Fact]
     public async Task CleanupAsync_QuarantinesOnlyOldUnreferencedManagedFiles()
     {

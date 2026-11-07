@@ -66,6 +66,118 @@ public sealed class ProjectAssignmentAttachmentServiceTests : IDisposable
             _db, _storage.Object, NullLogger<ProjectAssignmentAttachmentService>.Instance);
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AggregatePlan_DisclosesAndQuarantinesAssignmentFiles(bool designScope)
+    {
+        var member = await _db.OperationalProjectMembers.FindAsync(_assignment.AssigneeMemberId);
+        var design = new DesignProject
+        {
+            OperationalProjectId = _projectId,
+            CustomerId = _db.Customers.Single().Id,
+            ProjectCode = "DP-NICON-FILES",
+            Name = "NICON – Hồ sơ thiết kế cơ điện",
+        };
+        if (designScope)
+        {
+            _db.DesignProjects.Add(design);
+            await _db.SaveChangesAsync();
+            member!.DesignProjectId = design.Id;
+            await _db.SaveChangesAsync();
+        }
+        var attachment = new OperationalProjectAssignmentAttachment
+        {
+            AssignmentId = _assignment.Id,
+            Path = StoredPath,
+            OriginalFileName = "NICON – Biên bản khảo sát.pdf",
+        };
+        _db.OperationalProjectAssignmentAttachments.Add(attachment);
+        await _db.SaveChangesAsync();
+        var files = new Mock<NihomeBackend.Services.HardDelete.IHardDeleteFileService>();
+        files.Setup(item => item.ValidateManagedPath(It.IsAny<string>())).Returns((string path) => path);
+        var plans = new NihomeBackend.Services.HardDelete.ProjectHardDeletePlanService(_db,
+            Mock.Of<NihomeBackend.Services.GoogleDrive.IGoogleDriveAdapter>(),
+            new TestGoogleDriveSettingsStore(new NihomeBackend.Services.GoogleDrive.GoogleDriveOptions()), files.Object);
+        var plan = designScope
+            ? (await plans.ForDesignProjectAsync(design.Id))!
+            : (await plans.ForOperationalProjectAsync(_projectId))!;
+
+        Assert.Contains(plan.Impact.Items, item => item.Key == "operations.assignmentAttachments" &&
+            item.Action == "Delete" && item.Count == 1);
+        Assert.Contains(plan.Items, item => item.Kind == HardDeleteItemKind.LocalFile && item.ActionIdentifier == StoredPath);
+        Assert.True(plan.Items.Single(item => item.Kind == HardDeleteItemKind.LocalFile).Sequence <
+            plan.Items.Single(item => item.Kind == HardDeleteItemKind.DatabaseAggregate).Sequence);
+        _db.OperationalProjectAssignmentAttachments.Add(new OperationalProjectAssignmentAttachment
+        {
+            AssignmentId = _assignment.Id,
+            Path = "/files/business-documents/project-team/second.pdf",
+            OriginalFileName = "NICON – Phụ lục.pdf",
+        });
+        await _db.SaveChangesAsync();
+        var changed = designScope
+            ? (await plans.ForDesignProjectAsync(design.Id))!
+            : (await plans.ForOperationalProjectAsync(_projectId))!;
+        Assert.NotEqual(plan.Impact.PlanToken, changed.Impact.PlanToken);
+        Assert.Equal(2, await _db.OperationalProjectAssignmentAttachments.CountAsync());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task AggregatePlan_UnsafeOrSharedPath_BlocksWithoutChangingReferences(bool shared)
+    {
+        var path = shared ? StoredPath : "/files/contracts/not-owned.pdf";
+        _db.OperationalProjectAssignmentAttachments.Add(new OperationalProjectAssignmentAttachment
+        {
+            AssignmentId = _assignment.Id,
+            Path = path,
+            OriginalFileName = "NICON – Tệp cần kiểm tra.pdf",
+        });
+        if (shared)
+        {
+            var member = new OperationalProjectMember
+            {
+                OperationalProjectId = _otherProjectId,
+                UserId = 1,
+                Position = "Điều phối dự án khác",
+                StartedAt = DateTime.UtcNow,
+            };
+            _db.OperationalProjectMembers.Add(member);
+            await _db.SaveChangesAsync();
+            var other = new OperationalProjectAssignment
+            {
+                OperationalProjectId = _otherProjectId,
+                AssigneeMemberId = member.Id,
+                WorkKey = "OTHER-DESIGN",
+                Title = "Thiết kế dự án khác",
+                Module = "Design",
+            };
+            _db.OperationalProjectAssignments.Add(other);
+            await _db.SaveChangesAsync();
+            _db.OperationalProjectAssignmentAttachments.Add(new OperationalProjectAssignmentAttachment
+            {
+                AssignmentId = other.Id,
+                Path = path,
+                OriginalFileName = "NICON – Tệp dùng chung.pdf",
+            });
+        }
+        await _db.SaveChangesAsync();
+        var files = new Mock<NihomeBackend.Services.HardDelete.IHardDeleteFileService>();
+        files.Setup(item => item.ValidateManagedPath(It.IsAny<string>())).Returns((string value) => value);
+        var plans = new NihomeBackend.Services.HardDelete.ProjectHardDeletePlanService(_db,
+            Mock.Of<NihomeBackend.Services.GoogleDrive.IGoogleDriveAdapter>(),
+            new TestGoogleDriveSettingsStore(new NihomeBackend.Services.GoogleDrive.GoogleDriveOptions()), files.Object);
+
+        var plan = (await plans.ForOperationalProjectAsync(_projectId))!;
+
+        Assert.False(plan.Impact.CanDelete);
+        Assert.DoesNotContain(plan.Items, item => item.Kind == HardDeleteItemKind.LocalFile);
+        Assert.Equal(shared ? 2 : 1, await _db.OperationalProjectAssignmentAttachments.CountAsync());
+        Assert.True(await _db.OperationalProjectAssignments.AnyAsync(item => item.Id == _assignment.Id));
+        files.Verify(item => item.QuarantineAsync(It.IsAny<Guid>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task UploadListDownloadDelete_RoundTrip()
     {

@@ -134,6 +134,7 @@ public sealed class QuoteApprovalEmailServiceTests : IDisposable
         Assert.Equal("Decision", message.Kind);
         Assert.Equal("Approved", message.Decision);
         Assert.Equal(owner.Email, message.ToEmail);
+        Assert.Equal(owner.Id, message.RecipientUserId);
         Assert.Equal(approver.Id, message.ApproverUserId);
         foreach (var cc in JsonSerializer.Deserialize<string[]>(message.CcEmailsJson)!)
             Assert.NotEqual(owner.Email, cc, StringComparer.OrdinalIgnoreCase);
@@ -176,6 +177,8 @@ public sealed class QuoteApprovalEmailServiceTests : IDisposable
         var service = CreateService();
         await service.QueueDecisionAsync(quote.Id, approver.Id, approved: false, null, default);
 
+        permissions.Setup(item => item.HasAsync(owner.Id, "crm.quotes.view", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         // Rejecting a quote clears the submitter and approver columns in the same save.
         quote.Status = QuoteStatus.Draft;
         quote.SubmittedByUserId = null;
@@ -204,6 +207,42 @@ public sealed class QuoteApprovalEmailServiceTests : IDisposable
         quote.SubmittedByUserId = null;
         quote.ApprovalApproverUserId = null;
         await db.SaveChangesAsync();
+
+        await service.SendPendingAsync(default);
+
+        Assert.Equal("NeedsReview", (await db.QuoteApprovalEmails.SingleAsync()).Status);
+        email.Verify(item => item.SendEmailWithCcAsync(It.IsAny<string>(), It.IsAny<IReadOnlyCollection<string>>(),
+            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task DecisionWorker_RevalidatesSubmitterIdentityAndQuoteAccess(bool emailReassigned)
+    {
+        var (quote, owner, approver) = await SeedPendingQuoteAsync();
+        permissions.Setup(item => item.HasAsync(owner.Id, "crm.quotes.view", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var service = CreateService();
+        await service.QueueDecisionAsync(quote.Id, approver.Id, true, null, default);
+        quote.Status = QuoteStatus.Approved;
+        await db.SaveChangesAsync();
+        if (emailReassigned)
+        {
+            var previousEmail = owner.Email;
+            owner.Email = "changed@example.test";
+            db.Users.Add(new ApplicationUser
+            {
+                Email = previousEmail,
+                PhoneNumber = "0901234999",
+                FullName = "NICON – Người dùng khác",
+                IsActive = true,
+            });
+            await db.SaveChangesAsync();
+        }
+        else
+            permissions.Setup(item => item.HasAsync(owner.Id, "crm.quotes.view", It.IsAny<CancellationToken>()))
+                .ReturnsAsync(false);
 
         await service.SendPendingAsync(default);
 

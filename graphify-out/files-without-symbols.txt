@@ -1,3 +1,9 @@
+docs/Nicon/BMA - BẢNG TIẾN ĐỘ-nôi bộ thiết kế-DA DB, pháp lý.pdf
+docs/Nicon/ISO/D.Quy trình chi tiết/D.9. Quy trinh QLNS 1-Tuyển dụng và đào tạo nhân sự/NS1-M04-HDLD BTT.pdf
+docs/Nicon/Kế hoạch Kinh Doanh Nicon Group.jpg
+docs/Nicon/MMV-Master Schedule-2024.08.03-pháp lý.pdf
+docs/Nicon/Sơ đồ tổ chức Nicon.jpg
+docs/Nicon/Tokuyama_Master Schedule_dự án DB và pháp lý.pdf
 nihomebackend.integration.tests/appsettings.IntegrationTests.json
 nihomebackend/Data/Rbac/rbac-defaults.json
 nihomebackend/Data/Seeds/boq-categories.json
@@ -57,6 +63,7 @@ nihomebackend/Data/Seeds/i18n/profile.json
 nihomebackend/Data/Seeds/i18n/project-reports.json
 nihomebackend/Data/Seeds/i18n/projects.json
 nihomebackend/Data/Seeds/i18n/punch.json
+nihomebackend/Data/Seeds/i18n/quote-approval-decision-emails.json
 nihomebackend/Data/Seeds/i18n/quote-approval-emails.json
 nihomebackend/Data/Seeds/i18n/quotes.json
 nihomebackend/Data/Seeds/i18n/rbac.json
@@ -77,4 +84,13 @@ nihomebackend/Data/Seeds/notification-templates/defaults.json
 nihomebackend/Data/Seeds/workflows/defaults.json
 nihomebackend/appsettings.Development.json
 nihomebackend/appsettings.json
+nihomeweb/index.html
+nihomeweb/public/favicon.svg
+nihomeweb/src/assets/logo-nicon.png
+nihomeweb/src/assets/profile-activities.jpg
+nihomeweb/src/assets/profile-leadership.jpg
+nihomeweb/src/assets/recruit-culture-1.jpg
+nihomeweb/src/assets/recruit-culture-2.jpg
+nihomeweb/src/assets/recruit-culture-3.jpg
+nihomeweb/src/assets/recruit-hero.jpg
 tools/sqlserver_business_data_purge.sql

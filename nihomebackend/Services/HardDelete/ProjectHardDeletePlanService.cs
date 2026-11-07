@@ -19,7 +19,9 @@ public interface IProjectHardDeletePlanService
     Task<ProjectHardDeletePlan?> ForOperationalProjectAsync(int projectId, CancellationToken ct = default);
 }
 
-public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAdapter drive, IGoogleDriveSettingsStore settingsStore) : IProjectHardDeletePlanService
+public sealed class ProjectHardDeletePlanService(
+    AppDbContext db, IGoogleDriveAdapter drive, IGoogleDriveSettingsStore settingsStore,
+    IHardDeleteFileService files) : IProjectHardDeletePlanService
 {
     public async Task<ProjectHardDeletePlan?> ForDesignProjectAsync(
         int projectId, CancellationToken ct = default)
@@ -195,15 +197,44 @@ public sealed class ProjectHardDeletePlanService(AppDbContext db, IGoogleDriveAd
             SetResolutionLinks(impact, "operations.surveyDriveFolders", surveyLinks);
         }
 
-        DeletionImpactPlanner.ApplyDurableFileEvidence(impact, identities, blockers, folderDeletes);
+        var attachments = await db.OperationalProjectAssignmentAttachments.AsNoTracking()
+            .Where(item => includeFolders
+                ? item.Assignment.OperationalProjectId == impact.ResourceId
+                : item.Assignment.AssigneeMember.DesignProjectId == impact.ResourceId)
+            .OrderBy(item => item.Id).ToListAsync(ct);
+        var attachmentIds = attachments.Select(item => item.Id).ToList();
+        var localDeletes = new List<HardDeleteItemDefinition>();
+        foreach (var attachment in attachments)
+        {
+            identities.Add($"assignment-file:{attachment.Id}:{attachment.AssignmentId}:{attachment.Path}:" +
+                $"{attachment.DeletedAt?.Ticks}:{attachment.StorageDeletedAt?.Ticks}");
+            if (attachment.StorageDeletedAt.HasValue) continue;
+            try
+            {
+                var path = files.ValidateManagedPath(attachment.Path);
+                if (!path.StartsWith("/files/business-documents/project-team/", StringComparison.Ordinal) ||
+                    await db.OperationalProjectAssignmentAttachments.AsNoTracking().AnyAsync(item =>
+                        !attachmentIds.Contains(item.Id) && item.StorageDeletedAt == null && item.Path == path, ct))
+                    throw new HardDeleteFileException("shared_or_invalid_assignment_file", "Tệp công việc không thuộc riêng phạm vi đang xóa.");
+                if (localDeletes.All(item => item.ActionIdentifier != path))
+                    localDeletes.Add(new HardDeleteItemDefinition(HardDeleteItemKind.LocalFile, path, localDeletes.Count));
+            }
+            catch (HardDeleteFileException)
+            {
+                blockers.Add($"assignment-file:{attachment.Id}");
+            }
+        }
+        var definitions = localDeletes.Concat(folderDeletes.Select(item =>
+            item with { Sequence = item.Sequence + localDeletes.Count })).ToList();
+        DeletionImpactPlanner.ApplyDurableFileEvidence(impact, identities, blockers, definitions);
         var blocker = impact.Items.SingleOrDefault(item => item.Key is
             "design.filesPendingCleanup" or "operations.pendingDocuments");
         if (blocker is not null)
             blocker.ResolutionLinks = resolutionLinks;
-        return new ProjectHardDeletePlan(impact, folderDeletes.Concat(
+        return new ProjectHardDeletePlan(impact, definitions.Concat(
         [
             new HardDeleteItemDefinition(
-                HardDeleteItemKind.DatabaseAggregate, "delete-database-aggregate", folderDeletes.Count),
+                HardDeleteItemKind.DatabaseAggregate, "delete-database-aggregate", definitions.Count),
         ]).ToList());
     }
 

@@ -215,9 +215,12 @@ public class RbacControllerTests : IntegrationTestBase
                 ParticipantGroups = [new NihomeBackend.Models.DepartmentWorkPackageParticipantGroup { RoleGroupId = groupId }],
                 Tasks = [new NihomeBackend.Models.DepartmentWorkTask
                 {
-                    WbsCode = "LEGAL-01", Title = "Kiểm tra hồ sơ cấp phép",
-                    DepartmentRoleGroupId = groupId, AssigneeUserId = adminId,
-                    CreatedByUserId = adminId, UpdatedByUserId = adminId,
+                    WbsCode = "LEGAL-01",
+                    Title = "Kiểm tra hồ sơ cấp phép",
+                    DepartmentRoleGroupId = groupId,
+                    AssigneeUserId = adminId,
+                    CreatedByUserId = adminId,
+                    UpdatedByUserId = adminId,
                 }],
             };
             db.DepartmentWorkPackages.Add(package);
