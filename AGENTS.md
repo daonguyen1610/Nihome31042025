@@ -133,6 +133,19 @@ Report ambiguity, missing evidence, defects, blocked checks, and residual risk. 
 - Every number entering to the form, for example: 100000. The frontend must resolve to readable version. like 100.000. Apply for every scenarios in the system.
 - Follow 'nihomeweb/CLAUDE.md' for web UI conventions when it exists.
 - Centralize content translations in '/admin/translations'. Add i18n keys rather than embedding display text.
+- Manage translations of user-managed content, including role-group names, in
+  the Dịch nội dung section of '/admin/translations'. Create/edit dialogs collect
+  only the source-language content; they must not require or edit translations
+  for other languages. Preserve existing translations when source content changes.
+- Throughout development, updates, refactors and bug fixes, identify every new
+  or changed translatable content type and field. In the same change, register
+  and maintain it in Dịch nội dung, including existing records, permissions,
+  validation, translation progress, reset/deletion and runtime language reads.
+  Keep source and translated values intact across edits and migrations; clearly
+  distinguish an untranslated placeholder from a completed translation. Cover
+  the management and displayed result with appropriate tests in every supported
+  language. Do not treat a translation key or persisted placeholder alone as
+  evidence that a content translation is complete.
 - Keep translation keys and seeded content aligned in all supported languages.
 - Every application email must have an editable template in `/admin/email-templates` (subject and body), a preview of the actual rendered message before sending, and a documented set of supported variables. Do not hardcode a send-only email body in a service or controller. Render variables server-side with appropriate HTML encoding, validate edited templates/content on the server, enforce template-management and send/edit permissions, and cover the rendered email in tests. Keep existing templates working when adding a new email type.
 - For entities with fields such as 'NameVi', 'Name', 'NameZh', and 'NameJa', populate every required language field on every write path: create, seed, migration, and legacy-data auto-create. Do not rely on read-time fallback.
