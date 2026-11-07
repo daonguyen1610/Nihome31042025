@@ -353711,7 +353711,7 @@
       "node_kind": "heading",
       "norm_label": "9.3 manual as-built smoke test",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4166"
+      "source_location": "L4171"
     },
     {
       "id": "docs_application_developer_9_4_manual_project_handover_smoke_test",
@@ -353723,7 +353723,7 @@
       "node_kind": "heading",
       "norm_label": "9.4 manual project handover smoke test",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4189"
+      "source_location": "L4194"
     },
     {
       "id": "docs_application_developer_9_5_linting",
@@ -353735,7 +353735,7 @@
       "node_kind": "heading",
       "norm_label": "9.5 linting",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4207"
+      "source_location": "L4212"
     },
     {
       "id": "docs_application_developer_9_6_quality_check_summary",
@@ -353747,7 +353747,7 @@
       "node_kind": "heading",
       "norm_label": "9.6 quality check summary",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4244"
+      "source_location": "L4249"
     },
     {
       "id": "docs_application_developer_9_7_business_pipeline_validation",
@@ -353759,7 +353759,7 @@
       "node_kind": "heading",
       "norm_label": "9.7 business pipeline validation",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4260"
+      "source_location": "L4265"
     },
     {
       "id": "docs_application_developer_9_testing",
@@ -402751,7 +402751,7 @@
       "node_kind": "heading",
       "norm_label": "12.1 pham vi va nguyen tac trien khai",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4570"
+      "source_location": "L4575"
     },
     {
       "id": "docs_application_developer_12_2_quyết_định_nghiệp_vụ_và_đầu_vào_bắt_buộc",
@@ -402763,7 +402763,7 @@
       "node_kind": "heading",
       "norm_label": "12.2 quyet đinh nghiep vu va đau vao bat buoc",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4605"
+      "source_location": "L4610"
     },
     {
       "id": "docs_application_developer_12_3_thứ_tự_phụ_thuộc_và_mốc_bàn_giao",
@@ -402775,7 +402775,7 @@
       "node_kind": "heading",
       "norm_label": "12.3 thu tu, phu thuoc va moc ban giao",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4637"
+      "source_location": "L4642"
     },
     {
       "id": "docs_application_developer_12_4_backlog_tính_năng_và_tiêu_chí_hoàn_thành",
@@ -402787,7 +402787,7 @@
       "node_kind": "heading",
       "norm_label": "12.4 backlog tinh nang va tieu chi hoan thanh",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4659"
+      "source_location": "L4664"
     },
     {
       "id": "docs_application_developer_12_5_kiến_trúc_hợp_đồng_và_thay_đổi_dữ_liệu",
@@ -402799,7 +402799,7 @@
       "node_kind": "heading",
       "norm_label": "12.5 kien truc, hop đong va thay đoi du lieu",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4705"
+      "source_location": "L4710"
     },
     {
       "id": "docs_application_developer_12_6_ma_trận_kiểm_thử_và_điều_kiện_nghiệm_thu_từng_gói",
@@ -402811,7 +402811,7 @@
       "node_kind": "heading",
       "norm_label": "12.6 ma tran kiem thu va đieu kien nghiem thu tung goi",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4740"
+      "source_location": "L4745"
     },
     {
       "id": "docs_application_developer_12_7_migration_rollout_rollback_và_tài_liệu",
@@ -402823,7 +402823,7 @@
       "node_kind": "heading",
       "norm_label": "12.7 migration, rollout, rollback va tai lieu",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4771"
+      "source_location": "L4776"
     },
     {
       "id": "docs_application_developer_12_8_bao_phủ_toàn_bộ_baseline_và_trách_nhiệm",
@@ -402835,7 +402835,7 @@
       "node_kind": "heading",
       "norm_label": "12.8 bao phu toan bo baseline va trach nhiem",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4805"
+      "source_location": "L4810"
     },
     {
       "id": "docs_application_developer_12_kế_hoạch_hoàn_thiện_theo_yêu_cầu_nicon",
@@ -402847,7 +402847,7 @@
       "node_kind": "heading",
       "norm_label": "12. ke hoach hoan thien theo yeu cau nicon",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4568"
+      "source_location": "L4573"
     },
     {
       "id": "docs_application_developer_1_overview",
@@ -462185,7 +462185,7 @@
       "node_kind": "heading",
       "norm_label": "11.1 database connection failures",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4495"
+      "source_location": "L4500"
     },
     {
       "id": "docs_application_developer_11_2_migration_errors",
@@ -462197,7 +462197,7 @@
       "node_kind": "heading",
       "norm_label": "11.2 migration errors",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4505"
+      "source_location": "L4510"
     },
     {
       "id": "docs_application_developer_11_3_cors_errors",
@@ -462209,7 +462209,7 @@
       "node_kind": "heading",
       "norm_label": "11.3 cors errors",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4516"
+      "source_location": "L4521"
     },
     {
       "id": "docs_application_developer_11_4_email_sending_failures",
@@ -462221,7 +462221,7 @@
       "node_kind": "heading",
       "norm_label": "11.4 email sending failures",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4524"
+      "source_location": "L4529"
     },
     {
       "id": "docs_application_developer_11_5_jwt_token_issues",
@@ -462233,7 +462233,7 @@
       "node_kind": "heading",
       "norm_label": "11.5 jwt token issues",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4533"
+      "source_location": "L4538"
     },
     {
       "id": "docs_application_developer_11_6_docker_volume_issues",
@@ -462245,7 +462245,7 @@
       "node_kind": "heading",
       "norm_label": "11.6 docker volume issues",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4548"
+      "source_location": "L4553"
     },
     {
       "id": "docs_application_developer_11_7_running_an_old_binary",
@@ -462257,7 +462257,7 @@
       "node_kind": "heading",
       "norm_label": "11.7 running an old binary",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4557"
+      "source_location": "L4562"
     },
     {
       "id": "docs_application_developer_11_troubleshooting",
@@ -462269,7 +462269,7 @@
       "node_kind": "heading",
       "norm_label": "11. troubleshooting",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4493"
+      "source_location": "L4498"
     },
     {
       "id": "docs_application_developer_8_1_technology_stack",
@@ -466278,7 +466278,7 @@
       "node_kind": "heading",
       "norm_label": "10.1 docker compose development",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4311"
+      "source_location": "L4316"
     },
     {
       "id": "docs_application_developer_10_2_production_checklist",
@@ -466290,7 +466290,7 @@
       "node_kind": "heading",
       "norm_label": "10.2 production checklist",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4326"
+      "source_location": "L4331"
     },
     {
       "id": "docs_application_developer_10_3_google_drive_credentials_on_iis",
@@ -466302,7 +466302,7 @@
       "node_kind": "heading",
       "norm_label": "10.3 google drive credentials on iis",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4345"
+      "source_location": "L4350"
     },
     {
       "id": "docs_application_developer_10_4_deterministic_demonstration_data",
@@ -466314,7 +466314,7 @@
       "node_kind": "heading",
       "norm_label": "10.4 deterministic demonstration data",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4460"
+      "source_location": "L4465"
     },
     {
       "id": "docs_application_developer_10_deployment",
@@ -466326,7 +466326,7 @@
       "node_kind": "heading",
       "norm_label": "10. deployment",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4309"
+      "source_location": "L4314"
     },
     {
       "id": "docs_application_developer_create_the_oauth_credential",
@@ -466338,7 +466338,7 @@
       "node_kind": "heading",
       "norm_label": "create the oauth credential",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4349"
+      "source_location": "L4354"
     },
     {
       "id": "docs_user_guide_2_1_company_context",
@@ -1321223,7 +1321223,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4349",
+      "source_location": "L4354",
       "weight": 1.0
     },
     {
@@ -1321234,7 +1321234,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4311",
+      "source_location": "L4316",
       "weight": 1.0
     },
     {
@@ -1321245,7 +1321245,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4326",
+      "source_location": "L4331",
       "weight": 1.0
     },
     {
@@ -1321256,7 +1321256,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4345",
+      "source_location": "L4350",
       "weight": 1.0
     },
     {
@@ -1321267,7 +1321267,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4460",
+      "source_location": "L4465",
       "weight": 1.0
     },
     {
@@ -1321278,7 +1321278,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4495",
+      "source_location": "L4500",
       "weight": 1.0
     },
     {
@@ -1321289,7 +1321289,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4505",
+      "source_location": "L4510",
       "weight": 1.0
     },
     {
@@ -1321300,7 +1321300,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4516",
+      "source_location": "L4521",
       "weight": 1.0
     },
     {
@@ -1321311,7 +1321311,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4524",
+      "source_location": "L4529",
       "weight": 1.0
     },
     {
@@ -1321322,7 +1321322,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4533",
+      "source_location": "L4538",
       "weight": 1.0
     },
     {
@@ -1321333,7 +1321333,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4548",
+      "source_location": "L4553",
       "weight": 1.0
     },
     {
@@ -1321344,7 +1321344,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4557",
+      "source_location": "L4562",
       "weight": 1.0
     },
     {
@@ -1321355,7 +1321355,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4570",
+      "source_location": "L4575",
       "weight": 1.0
     },
     {
@@ -1321366,7 +1321366,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4605",
+      "source_location": "L4610",
       "weight": 1.0
     },
     {
@@ -1321377,7 +1321377,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4637",
+      "source_location": "L4642",
       "weight": 1.0
     },
     {
@@ -1321388,7 +1321388,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4659",
+      "source_location": "L4664",
       "weight": 1.0
     },
     {
@@ -1321399,7 +1321399,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4705",
+      "source_location": "L4710",
       "weight": 1.0
     },
     {
@@ -1321410,7 +1321410,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4740",
+      "source_location": "L4745",
       "weight": 1.0
     },
     {
@@ -1321421,7 +1321421,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4771",
+      "source_location": "L4776",
       "weight": 1.0
     },
     {
@@ -1321432,7 +1321432,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4805",
+      "source_location": "L4810",
       "weight": 1.0
     },
     {
@@ -1322686,7 +1322686,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4166",
+      "source_location": "L4171",
       "weight": 1.0
     },
     {
@@ -1322697,7 +1322697,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4189",
+      "source_location": "L4194",
       "weight": 1.0
     },
     {
@@ -1322708,7 +1322708,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4207",
+      "source_location": "L4212",
       "weight": 1.0
     },
     {
@@ -1322719,7 +1322719,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4244",
+      "source_location": "L4249",
       "weight": 1.0
     },
     {
@@ -1322730,7 +1322730,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4260",
+      "source_location": "L4265",
       "weight": 1.0
     },
     {
@@ -1322807,7 +1322807,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4309",
+      "source_location": "L4314",
       "weight": 1.0
     },
     {
@@ -1322829,7 +1322829,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4493",
+      "source_location": "L4498",
       "weight": 1.0
     },
     {
@@ -1322840,7 +1322840,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4568",
+      "source_location": "L4573",
       "weight": 1.0
     },
     {
@@ -1487188,7 +1487188,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4573",
+      "source_location": "L4578",
       "weight": 1.0
     },
     {
@@ -1487199,7 +1487199,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4574",
+      "source_location": "L4579",
       "weight": 1.0
     },
     {
@@ -1487210,7 +1487210,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "docs/application_developer.md",
-      "source_location": "L4575",
+      "source_location": "L4580",
       "weight": 1.0
     },
     {
@@ -1617678,7 +1617678,7 @@
       "confidence_score": 0.95,
       "context": "ConstructionHandoverPipelineTests",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4272",
+      "source_location": "L4277",
       "weight": 1.0
     },
     {
@@ -1617978,7 +1617978,7 @@
       "confidence_score": 0.95,
       "context": "CrmBusinessPipelineTests",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4270",
+      "source_location": "L4275",
       "weight": 1.0
     },
     {
@@ -1618074,7 +1618074,7 @@
       "confidence_score": 0.95,
       "context": "DepartmentWorkPackageService",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4674",
+      "source_location": "L4679",
       "weight": 1.0
     },
     {
@@ -1618146,7 +1618146,7 @@
       "confidence_score": 0.95,
       "context": "DesignPermitIfcPipelineTests",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4271",
+      "source_location": "L4276",
       "weight": 1.0
     },
     {
@@ -1618218,7 +1618218,7 @@
       "confidence_score": 0.95,
       "context": "DetailDesignScheduleControllerTests",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4271",
+      "source_location": "L4276",
       "weight": 1.0
     },
     {
@@ -1618230,7 +1618230,7 @@
       "confidence_score": 0.95,
       "context": "DetailDesignScheduleService",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4670",
+      "source_location": "L4675",
       "weight": 1.0
     },
     {
@@ -1618590,7 +1618590,7 @@
       "confidence_score": 0.95,
       "context": "OperationalProject",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4711",
+      "source_location": "L4716",
       "weight": 1.0
     },
     {
@@ -1618854,7 +1618854,7 @@
       "confidence_score": 0.95,
       "context": "ProcurementBusinessPipelineTests",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4273",
+      "source_location": "L4278",
       "weight": 1.0
     },
     {
@@ -1618890,7 +1618890,7 @@
       "confidence_score": 0.95,
       "context": "ProjectAccessService",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4668",
+      "source_location": "L4673",
       "weight": 1.0
     },
     {
@@ -1618962,7 +1618962,7 @@
       "confidence_score": 0.95,
       "context": "ProjectDocumentService",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4668",
+      "source_location": "L4673",
       "weight": 1.0
     },
     {
@@ -1619190,7 +1619190,7 @@
       "confidence_score": 0.95,
       "context": "RfqProcurementPipelineTests",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4274",
+      "source_location": "L4279",
       "weight": 1.0
     },
     {
@@ -1619202,7 +1619202,7 @@
       "confidence_score": 0.95,
       "context": "RfqsControllerTests",
       "source_file": "docs/application_developer.md",
-      "source_location": "L4275",
+      "source_location": "L4280",
       "weight": 1.0
     },
     {
@@ -1619567,5 +1619567,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "a9b3bb9a32bdbb14ee7093d7f3d2a328986afebf"
+  "built_at_commit": "581e25b02840f54ff9f55b4a20717890dc3e6b6d"
 }

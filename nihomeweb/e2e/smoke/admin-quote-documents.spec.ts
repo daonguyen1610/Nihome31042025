@@ -270,6 +270,10 @@ test.describe.serial("quote document management", () => {
     loginAs,
     loginInBrowserAs,
   }) => {
+    // Approval and decision emails run on separate outbox ticks. Include
+    // both waits and dependency-ordered cleanup in this workflow's budget.
+    test.setTimeout(90_000);
+
     const token = await loginAs(TEST_USERS.salesManager);
     const headers = { Authorization: `Bearer ${token}` };
     const unique = Date.now().toString();
