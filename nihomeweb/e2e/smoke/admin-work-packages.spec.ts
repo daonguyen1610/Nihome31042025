@@ -19,14 +19,14 @@ test("project, contract and internal work package tabs render without browser er
   const response = await page.goto("/admin/work-packages");
   expect(response?.status()).toBeLessThan(400);
   await expect(page.getByTestId("work-packages-page")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByRole("tab", { name: /Theo dự án|Project work/i })).toBeVisible();
+  await expect(page.getByRole("link", { name: /Theo dự án|Project work/i })).toBeVisible();
 
-  await page.getByRole("tab", { name: /Theo hợp đồng|Contract work/i }).click();
-  await expect(page).toHaveURL(/kind=Contract/);
+  await page.getByRole("link", { name: /Theo hợp đồng|Contract work/i }).click();
+  await expect(page).toHaveURL(/\/admin\/work-packages\/contracts/);
   await expect(page.getByTestId("work-packages-page")).toBeVisible();
 
-  await page.getByRole("tab", { name: /Công việc nội bộ|Internal work/i }).click();
-  await expect(page).toHaveURL(/kind=Internal/);
+  await page.getByRole("link", { name: /Công việc nội bộ|Internal work/i }).click();
+  await expect(page).toHaveURL(/\/admin\/work-packages\/internal/);
   await expect(page.getByTestId("work-packages-page")).toBeVisible();
   expect(errors).toEqual([]);
 });
@@ -540,12 +540,12 @@ for (const width of [390, 1440]) {
       "NICON_NO_MATCH_74918",
     );
     await expect(page.getByText("Chưa có nhóm công việc phù hợp.")).toBeVisible();
-    await page.getByRole("tab", { name: /Công việc nội bộ|Internal work/i }).click();
+    await page.getByRole("link", { name: /Công việc nội bộ|Internal work/i }).click();
     await expect(page.locator("#wp-project")).toHaveCount(0);
     await expect(page.locator("#wp-department")).toHaveValue(String(fixture.departmentRoleGroupId));
     await expect(page).not.toHaveURL(/projectId=/);
     await page.getByRole("button", { name: "Xóa bộ lọc", exact: true }).click();
-    await expect(page).toHaveURL(/\?kind=Internal$/);
+    await expect(page).toHaveURL(/\/admin\/work-packages\/internal$/);
     await expect(page.locator("#wp-department")).toHaveValue("");
     await expect(page.locator("#wp-status")).toHaveValue("");
     await expect(page.locator("#wp-purpose")).toHaveValue("");

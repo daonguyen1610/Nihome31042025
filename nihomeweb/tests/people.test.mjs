@@ -7,14 +7,20 @@ const source = await readFile(new URL("../src/lib/people.ts", import.meta.url), 
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const { personOption, projectMemberOption, mergePeople, collectPeoplePages } = await import(
-  "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
-);
+const {
+  personOption,
+  projectMemberOption,
+  mergePeople,
+  collectPeoplePages,
+  projectPositionLabel,
+} = await import("data:text/javascript;base64," + Buffer.from(compiled).toString("base64"));
 const t = (key) =>
   ({
     "role.architect": "Architect",
     "department.design": "Design",
     "designProjects.team.role.DesignLead": "Design lead",
+    "designProjects.team.position.designLead": "Chủ trì thiết kế",
+    "designProjects.team.position.designProjectManager": "Chủ nhiệm thiết kế",
   })[key] ?? key;
 
 test("schedule choices preserve membership IDs while directory choices use user IDs", () => {
@@ -37,6 +43,13 @@ test("schedule choices preserve membership IDs while directory choices use user 
   assert.match(schedule.hint, /Architect/);
   assert.match(schedule.hint, /Design lead/);
   assert.match(schedule.hint, /Concept coordination/);
+});
+
+test("canonical project positions are translated and free-text positions pass through", () => {
+  assert.equal(projectPositionLabel("Design Project Manager", t), "Chủ nhiệm thiết kế");
+  assert.equal(projectPositionLabel("  design lead ", t), "Chủ trì thiết kế");
+  assert.equal(projectPositionLabel("PM toàn dự án", t), "PM toàn dự án");
+  assert.equal(projectPositionLabel(null, t), "");
 });
 
 test("directory pagination includes later pages and inactive historical people without duplicates", async () => {

@@ -1,9 +1,12 @@
 import { useEffect, useState } from "react";
 import type { SearchableSelectOption } from "@/components/ui/searchable-select";
 import { extractApiError } from "@/lib/apiError";
+import { useI18n } from "@/lib/i18n";
+import { projectPositionLabel } from "@/lib/people";
 import { adminApi, type DesignProjectResponse } from "@/services/adminApi";
 
 export function useDesignTeamOwners(project: DesignProjectResponse, enabled: boolean) {
+  const { t } = useI18n();
   const [options, setOptions] = useState<SearchableSelectOption[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loadedFor, setLoadedFor] = useState<number | null>(null);
@@ -26,7 +29,7 @@ export function useDesignTeamOwners(project: DesignProjectResponse, enabled: boo
             .map((member) => ({
               value: String(member.userId),
               label: member.userName,
-              hint: member.position || member.email,
+              hint: projectPositionLabel(member.position, t) || member.email,
               keywords: member.email,
             })),
         );
@@ -46,7 +49,7 @@ export function useDesignTeamOwners(project: DesignProjectResponse, enabled: boo
     return () => {
       cancelled = true;
     };
-  }, [enabled, project.id, project.operationalProjectId]);
+  }, [enabled, project.id, project.operationalProjectId, t]);
 
   return {
     options: enabled && loadedFor === project.id ? options : [],

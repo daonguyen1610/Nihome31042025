@@ -11,8 +11,8 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import {
   Select,
   SelectContent,
@@ -77,7 +77,6 @@ export default function ProjectDocumentsPanel({
 }: Props) {
   const { t, lang } = useI18n();
   const { toast } = useToast();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const uploadIdempotencyKeysRef = useRef(new Map<File, string>());
   const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [categories, setCategories] = useState<ProjectDocumentCategoryResponse[]>([]);
@@ -141,8 +140,7 @@ export default function ProjectDocumentsPanel({
     setFiles([]);
   }, [projectId]);
 
-  const selectFiles = (selected: FileList | null) => {
-    const nextFiles = Array.from(selected ?? []);
+  const selectFiles = (nextFiles: File[]) => {
     const validationMessage =
       nextFiles.length > MAX_FILES
         ? t("operationalProjects.documents.validation.maxFiles", { count: MAX_FILES })
@@ -159,7 +157,6 @@ export default function ProjectDocumentsPanel({
         description: validationMessage,
         variant: "destructive",
       });
-      if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
     setFiles(nextFiles);
@@ -224,7 +221,6 @@ export default function ProjectDocumentsPanel({
       }
     }
     setFiles(failed);
-    if (fileInputRef.current) fileInputRef.current.value = "";
     if (uploaded > 0) {
       toast({ title: t("operationalProjects.documents.uploaded") });
       await load();
@@ -455,24 +451,18 @@ export default function ProjectDocumentsPanel({
           data-testid="project-documents-upload"
         >
           <div>
-            <Label htmlFor="project-document-file">{t("operationalProjects.documents.file")}</Label>
-            <Input
-              ref={fileInputRef}
+            <Label htmlFor="project-document-file">
+              {t("operationalProjects.documents.file")}
+            </Label>
+            <MultiFilePicker
               id="project-document-file"
-              type="file"
-              multiple
+              files={files}
+              onChange={selectFiles}
+              maxFiles={MAX_FILES}
+              maxSizeMb={100}
               disabled={uploading}
-              className="mt-1 min-w-0 max-w-full"
-              onChange={(event) => selectFiles(event.target.files)}
+              testId="project-document-file"
             />
-            {files.length > 0 && (
-              <p className="mt-1 break-words text-xs text-muted-foreground">
-                {t("operationalProjects.documents.selectedFiles", {
-                  count: files.length,
-                  names: files.map((item) => item.name).join(", "),
-                })}
-              </p>
-            )}
           </div>
           {sourceOptions?.length ? (
             <div>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent, type ReactNode } from "react";
 import { personOption } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -257,6 +258,7 @@ export function RfqBidForm({
   const [note, setNote] = useState("");
   const [prices, setPrices] = useState<Record<number, string>>({});
   const [documentIds, setDocumentIds] = useState<number[]>([]);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [currency, setCurrency] = useState("VND");
   const [exchangeRateToVnd, setExchangeRateToVnd] = useState("1");
   const [freightAmount, setFreightAmount] = useState("0");
@@ -495,14 +497,13 @@ export function RfqBidForm({
             </label>
           ))}
           <RfqField label={t("rfq.upload")}>
-            <Input
-              type="file"
-              multiple
-              onChange={(e) => {
-                const files = Array.from(e.target.files ?? []);
-                e.target.value = "";
-                if (files.length > 0) void onUpload(files);
+            <MultiFilePicker
+              files={uploadFiles}
+              onChange={(files) => {
+                setUploadFiles(files);
+                void onUpload(files).finally(() => setUploadFiles([]));
               }}
+              testId="rfq-form-files"
             />
           </RfqField>
           <p className="mt-2 text-xs text-muted-foreground">{t("rfq.uploadHelp")}</p>

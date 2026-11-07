@@ -47,6 +47,7 @@ public class OperationalProjectAssignment : IConcurrencyTracked
     public OperationalProjectAssignment? ParentAssignment { get; set; }
     public List<OperationalProjectAssignment> Children { get; set; } = new();
     public List<OperationalProjectAssignmentAttachment> Attachments { get; set; } = new();
+    public List<OperationalProjectAssignmentComment> Comments { get; set; } = new();
     public int OperationalProjectId { get; set; }
     public OperationalProject OperationalProject { get; set; } = null!;
     public string WorkKey { get; set; } = string.Empty;

@@ -1216,6 +1216,54 @@
     "ja": "ファイルをアップロードできませんでした。"
   },
   {
+    "key": "common.filePicker.dropHere",
+    "category": "common",
+    "vi": "Kéo thả tệp vào đây hoặc bấm để chọn",
+    "en": "Drop files here or click to browse",
+    "zh": "拖放文件到此处或点击选择",
+    "ja": "ファイルをここにドロップ、またはクリックして選択"
+  },
+  {
+    "key": "common.filePicker.hint",
+    "category": "common",
+    "vi": "Tối đa {count} tệp, {size} MB mỗi tệp",
+    "en": "Up to {count} files, {size} MB each",
+    "zh": "最多 {count} 个文件，每个 {size} MB",
+    "ja": "最大 {count} ファイル、各 {size} MB"
+  },
+  {
+    "key": "common.filePicker.remove",
+    "category": "common",
+    "vi": "Xoá tệp",
+    "en": "Remove file",
+    "zh": "移除文件",
+    "ja": "ファイルを削除"
+  },
+  {
+    "key": "common.filePicker.tooMany",
+    "category": "common",
+    "vi": "Chỉ được chọn tối đa {count} tệp.",
+    "en": "Select up to {count} files.",
+    "zh": "最多可选择 {count} 个文件。",
+    "ja": "最大 {count} ファイルまで選択できます。"
+  },
+  {
+    "key": "common.filePicker.tooLarge",
+    "category": "common",
+    "vi": "{name} vượt quá {size} MB.",
+    "en": "{name} exceeds {size} MB.",
+    "zh": "{name} 超过 {size} MB。",
+    "ja": "{name} は {size} MB を超えています。"
+  },
+  {
+    "key": "common.filePicker.unsupported",
+    "category": "common",
+    "vi": "{name} không đúng định dạng cho phép.",
+    "en": "{name} is not an accepted file type.",
+    "zh": "{name} 不是允许的文件类型。",
+    "ja": "{name} は許可されていない形式です。"
+  },
+  {
     "key": "common.today",
     "category": "common",
     "vi": "Hôm nay",

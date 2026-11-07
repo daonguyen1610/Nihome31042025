@@ -4032,6 +4032,15 @@ export interface OperationalProjectAssignmentAttachmentResponse {
   createdAt: string;
 }
 
+export interface OperationalProjectAssignmentCommentResponse {
+  id: number;
+  assignmentId: number;
+  body: string;
+  createdByUserId: number;
+  createdByName: string;
+  createdAt: string;
+}
+
 export interface OperationalProjectTeamResponse {
   operationalProjectId: number;
   canManage: boolean;
@@ -8646,6 +8655,36 @@ export const adminApi = {
   ) =>
     api.delete(
       `/operational-projects/${projectId}/team/assignments/${assignmentId}/attachments/${attachmentId}`,
+      { params: designProjectId ? { designProjectId } : undefined },
+    ),
+  listOperationalProjectAssignmentComments: (
+    projectId: number,
+    assignmentId: number,
+    designProjectId?: number | null,
+  ) =>
+    api.get<OperationalProjectAssignmentCommentResponse[]>(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}/comments`,
+      { params: designProjectId ? { designProjectId } : undefined },
+    ),
+  addOperationalProjectAssignmentComment: (
+    projectId: number,
+    assignmentId: number,
+    body: string,
+    designProjectId?: number | null,
+  ) =>
+    api.post<OperationalProjectAssignmentCommentResponse>(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}/comments`,
+      { body },
+      { params: designProjectId ? { designProjectId } : undefined },
+    ),
+  deleteOperationalProjectAssignmentComment: (
+    projectId: number,
+    assignmentId: number,
+    commentId: number,
+    designProjectId?: number | null,
+  ) =>
+    api.delete(
+      `/operational-projects/${projectId}/team/assignments/${assignmentId}/comments/${commentId}`,
       { params: designProjectId ? { designProjectId } : undefined },
     ),
   createOperationalProject: (body: CreateOperationalProjectRequest) =>
