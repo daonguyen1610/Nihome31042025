@@ -1452,6 +1452,10 @@ S-Curve and cost comparisons remain subject to the implementation limits below.
 
 **Partial — Procurement handoff:** open Procurement Control, choose the project
 and **Approved equipment and labour**. Filter by resource type or supply state.
+In **Contract lines**, users with Contract viewing permission can open
+**Contract registry** for Downstream contracts on the selected project, even
+before any procurement line exists. The registry keeps its existing ownership,
+viewing and management permissions; this shortcut grants no additional access.
 Procurement can draft a Downstream contract by choosing its vendor, business
 type and value; the existing contract service validates it. The draft is not
 automatically linked or signed. Select/save its link on the approved request;
