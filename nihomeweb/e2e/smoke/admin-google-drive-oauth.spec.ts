@@ -1,3 +1,4 @@
+import { confirmAction } from "../fixtures/confirmation";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 
 const configuration = {
@@ -304,12 +305,12 @@ test("switching Google Drive account disconnects before popup authorization", as
   ).toBeVisible();
   await expect(page.getByText(/\.apps\.googleusercontent\.com/)).toBeVisible();
 
-  page.once("dialog", (dialog) => dialog.accept());
   await page
     .getByRole("button", {
       name: /Switch Google account|Đổi tài khoản Google|切换 Google 帐户|Google アカウントを切り替え/i,
     })
     .click();
+  await confirmAction(page, false);
 
   await expect(page.getByText("replacement@nicon.test")).toBeVisible();
   await expect.poll(() => operations).toEqual(["disconnect", "start", "google"]);
@@ -390,12 +391,12 @@ test("closing replacement popup refreshes the disconnected status", async ({
   await page.goto(`${baseURL}/admin/settings?tab=drive`, { waitUntil: "networkidle" });
   await expect(page.getByText("current@nicon.test")).toBeVisible();
 
-  page.once("dialog", (dialog) => dialog.accept());
   await page
     .getByRole("button", {
       name: /Switch Google account|Đổi tài khoản Google|切换 Google 帐户|Google アカウントを切り替え/i,
     })
     .click();
+  await confirmAction(page, false);
 
   await expect(page.getByText("current@nicon.test")).not.toBeVisible();
   await expect(
@@ -460,8 +461,8 @@ test("manual disconnect warns when Google does not confirm revocation", async ({
     );
 
   await page.goto(`${baseURL}/admin/settings?tab=drive`, { waitUntil: "networkidle" });
-  page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: /Disconnect|Ngắt kết nối|断开连接|接続解除/i }).click();
+  await confirmAction(page, false);
 
   await expect(
     page
@@ -528,8 +529,8 @@ test("manual disconnect error reloads authoritative disconnected status", async 
     );
 
   await page.goto(`${baseURL}/admin/settings?tab=drive`, { waitUntil: "networkidle" });
-  page.once("dialog", (dialog) => dialog.accept());
   await page.getByRole("button", { name: /Disconnect|Ngắt kết nối|断开连接|接続解除/i }).click();
+  await confirmAction(page, false);
 
   await expect(page.getByText("current@nicon.test")).not.toBeVisible();
   await expect(

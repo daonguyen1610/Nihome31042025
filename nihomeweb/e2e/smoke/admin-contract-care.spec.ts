@@ -19,6 +19,7 @@ for (const width of [375, 768]) {
     const contractId = (await contracts.json()).items[0]?.id as number;
     expect(contractId).toBeGreaterThan(0);
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
     const pageErrors: string[] = [];
     page.on("pageerror", (error) => pageErrors.push(error.message));
     let failRead = true;
@@ -76,7 +77,9 @@ for (const width of [375, 768]) {
       waitUntil: "domcontentloaded",
     });
     const care = page.getByTestId("contract-care");
-    await expect(care.getByRole("alert")).toContainText("Care history temporarily unavailable");
+    await expect(care.getByRole("alert")).toContainText(
+      "An error occurred. Please try again later.",
+    );
     await care.getByRole("button", { name: /Thử lại|Retry|重试|再試行/ }).click();
     await expect(
       care.getByText(/chưa có lịch sử|No customer-care entries|暂无客户维护|まだありません/),

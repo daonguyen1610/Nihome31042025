@@ -84,7 +84,9 @@ test("source lead panel retries and explains empty results", async ({
   );
   await page.goto(`/admin/contracts/${linked.id}`);
   const panel = page.getByTestId("contract-source-leads");
-  await expect(panel.getByRole("alert")).toContainText("Source leads temporarily unavailable");
+  await expect(panel.getByRole("alert")).toContainText(
+    "An error occurred. Please try again later.",
+  );
   fail = false;
   await panel.getByRole("button", { name: /retry/i }).click();
   await expect(panel).toContainText("No converted source leads within your viewing scope.");

@@ -128,7 +128,9 @@ test("execution panel handles restricted, empty, retry and translated source pre
   });
   await page.goto(`/admin/contracts/${contract.id}`);
   const panel = page.getByTestId("contract-execution-progress");
-  await expect(panel.getByRole("alert")).toContainText("Progress temporarily unavailable");
+  await expect(panel.getByRole("alert")).toContainText(
+    "An error occurred. Please try again later.",
+  );
   mode = "restricted";
   await panel.getByRole("button", { name: /retry/i }).click();
   await expect(

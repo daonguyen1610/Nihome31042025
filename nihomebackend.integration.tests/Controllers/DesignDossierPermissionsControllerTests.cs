@@ -7,6 +7,24 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 public sealed class DesignDossierPermissionsControllerTests(NihomeWebApplicationFactory factory)
     : IntegrationTestBase(factory)
 {
+    [Theory]
+    [InlineData("concept-options")]
+    [InlineData("basic-design-docs")]
+    [InlineData("shop-drawings")]
+    [InlineData("drawing-revisions")]
+    [InlineData("ifc-releases")]
+    public async Task SalesMember_CanReadAssignedDossier_ButCannotReadAnotherDossier(string resource)
+    {
+        var assigned = await CreateFixtureAsync("SALE");
+        var other = await CreateFixtureAsync("ARCHITECT");
+        await LoginAsync("SALE");
+
+        (await Client.GetAsync($"/api/{resource}?designProjectId={assigned.DesignId}"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/{resource}?designProjectId={other.DesignId}"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
     [Fact]
     public async Task ScopedViewRevocation_HidesDossierAndResourcesDespiteRootMembership()
     {

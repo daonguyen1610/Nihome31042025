@@ -131,7 +131,7 @@ for (const width of [390, 768]) {
       await confirm.click();
       expect((await deletion).status()).toBe(204);
       removed = true;
-      await expect(page).toHaveURL(/\/admin\/work-packages$/);
+      await expect(page).toHaveURL(/\/admin\/work-packages\/projects$/);
       expect((await api.get(`/api/work-packages/${packageId}`, { headers })).status()).toBe(404);
     } finally {
       // Only the package created by this scenario is eligible for cleanup.

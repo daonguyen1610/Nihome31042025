@@ -1,3 +1,4 @@
+import { confirmAction } from "../fixtures/confirmation";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { readFile } from "node:fs/promises";
 
@@ -294,7 +295,6 @@ test.describe("Material rate customer import workflow", () => {
     await bulkSearchResponse;
     await page.getByTestId(`material-rates-select-${bulkCatalogIds[0]}`).click();
     await page.getByTestId(`material-rates-select-${bulkCatalogIds[1]}`).click();
-    page.once("dialog", (dialog) => dialog.accept());
     const bulkDeleteResponses = Promise.all(
       bulkCatalogIds.map((id) =>
         page.waitForResponse(
@@ -305,6 +305,7 @@ test.describe("Material rate customer import workflow", () => {
       ),
     );
     await page.getByRole("button", { name: /Delete selected|Xóa mục đã chọn/i }).click();
+    await confirmAction(page);
     for (const response of await bulkDeleteResponses) expect(response.status()).toBe(204);
     for (const name of bulkCatalogNames)
       await expect(page.getByText(name, { exact: true })).toHaveCount(0);
@@ -1084,7 +1085,6 @@ test.describe("Material rate customer import workflow", () => {
           }),
         });
       });
-      page.once("dialog", (dialog) => dialog.accept());
       const bulkDeleteResponses = Promise.all(
         bulkCatalogIds.map((id) =>
           page.waitForResponse(
@@ -1095,6 +1095,7 @@ test.describe("Material rate customer import workflow", () => {
         ),
       );
       await page.getByRole("button", { name: /Delete selected/i }).click();
+      await confirmAction(page);
       const [deletedResponse, blockedResponse] = await bulkDeleteResponses;
       expect(deletedResponse.status()).toBe(204);
       expect(blockedResponse.status()).toBe(409);
@@ -1109,13 +1110,13 @@ test.describe("Material rate customer import workflow", () => {
       await expect(bulkDeleteErrors).toContainText(/used by a Quote or Quote version history/i);
 
       await page.unroute(blockedDeleteUrl);
-      page.once("dialog", (dialog) => dialog.accept());
       const retryDeleteResponse = page.waitForResponse(
         (response) =>
           new URL(response.url()).pathname === `/api/material-rate-catalogs/${blockedCatalogId}` &&
           response.request().method() === "DELETE",
       );
       await page.getByRole("button", { name: /Delete selected/i }).click();
+      await confirmAction(page);
       expect((await retryDeleteResponse).status()).toBe(204);
       await expect(page.getByText(bulkCatalogNames[1], { exact: true })).toHaveCount(0);
       await expect(page.getByTestId("material-rates-bulk-delete-errors")).toHaveCount(0);
