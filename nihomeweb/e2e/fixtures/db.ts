@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
  * Configure E2E_SQL_CONTAINER and E2E_SQL_DATABASE alongside BASE_URL when
  * running a separate validation stack. The password stays inside the SQL
  * container, using SQLCMDPASSWORD or its existing MSSQL_SA_PASSWORD/SA_PASSWORD.
+ * -I enables QUOTED_IDENTIFIER for writes to tables with filtered indexes.
  */
 const SQL_CONTAINER = process.env.E2E_SQL_CONTAINER ?? "nihome31042025-sqlserver";
 const SQL_USER = process.env.E2E_SQL_USER ?? "sa";
@@ -27,6 +28,7 @@ export function execSql(sql: string): string {
     SQL_DATABASE,
     "-C",
     "-b",
+    "-I",
     "-h",
     "-1",
     "-W",

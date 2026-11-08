@@ -4968,3 +4968,8 @@ SQL test host), `PermissionServiceTests`, `tests/apiError.test.mjs`, and live
 its own records, then exercises the real IFC release and receipt endpoints.
 It covers supplementary-only rejection and successful download of approved
 primary bytes when both files belong to the review. It is not evidence of a live Drive sync pass.
+
+E2E SQL fixtures use `sqlcmd -I` so `QUOTED_IDENTIFIER` is enabled during setup
+and teardown, including writes affected by filtered IFC recipient indexes.
+The Procurement workspace preserves its previous permitted default tab; IFC
+opens explicitly with `tab=ifc`, or by default for users with IFC-only access.
