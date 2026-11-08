@@ -1,3 +1,4 @@
+using Microsoft.Extensions.DependencyInjection;
 using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
@@ -14,6 +15,168 @@ namespace NihomeBackend.IntegrationTests.Controllers;
 public class IfcReleasesControllerTests : IntegrationTestBase
 {
     public IfcReleasesControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
+
+    [Fact]
+    public async Task Procurement_ReceivesOnlyAddressedReleasedPacket_AndAcknowledgesOnce()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var (designId, drawingId, _) = await CreateShopStageProjectWithApprovedDrawingAsync();
+        var contentRoot = Factory.Services.GetRequiredService<Microsoft.AspNetCore.Hosting.IWebHostEnvironment>().ContentRootPath;
+        var filePath = Path.Combine(contentRoot, "wwwroot", "files", "design", "shop", $"ifc-{Guid.NewGuid():N}.pdf");
+        Directory.CreateDirectory(Path.GetDirectoryName(filePath)!);
+        await File.WriteAllTextAsync(filePath, $"ShopDrawing:{drawingId}");
+        await WithDbAsync(async db =>
+        {
+            var drawing = await db.ShopDrawings.SingleAsync(x => x.Id == drawingId);
+            drawing.FilePath = $"/files/design/shop/{Path.GetFileName(filePath)}";
+            drawing.OriginalFileName = "NICON-phat-hanh-ket-cau.pdf";
+            drawing.ContentType = "application/pdf";
+            await db.SaveChangesAsync();
+        });
+        var releaseId = await CreateFullDraftAsync(designId, drawingId);
+        var context = await WithDbAsync(async db =>
+        {
+            var projectId = await db.DesignProjects.Where(x => x.Id == designId).Select(x => x.OperationalProjectId!.Value).SingleAsync();
+            var receiverId = await db.Users.Where(x => x.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT"])
+                .Select(x => x.Id).SingleAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = projectId,
+                UserId = receiverId,
+                Position = "Cung ứng hồ sơ IFC",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+            });
+            await db.SaveChangesAsync();
+            return (ProjectId: projectId, ReceiverId: receiverId);
+        });
+        var added = await Client.PostAsJsonAsync($"/api/ifc-releases/{releaseId}/recipients", new
+        {
+            name = "Cung ứng NICON",
+            recipientTypeCode = "main-contractor",
+            recipientUserId = context.ReceiverId,
+        });
+        added.StatusCode.Should().Be(HttpStatusCode.OK);
+        var internalRecipientId = (await ReadJsonAsync(added)).GetProperty("recipients").EnumerateArray()
+            .Single(x => x.GetProperty("recipientUserId").ValueKind == System.Text.Json.JsonValueKind.Number).GetProperty("id").GetInt32();
+        (await Client.PostAsJsonAsync($"/api/ifc-releases/{releaseId}/recipients", new
+        {
+            name = "Cung ứng trùng",
+            recipientTypeCode = "main-contractor",
+            recipientUserId = context.ReceiverId,
+        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
+        var path = $"/api/operational-projects/{context.ProjectId}/procurement/ifc";
+        (await Client.GetAsync($"{path}?page=0")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.GetAsync($"{path}?page={int.MaxValue}")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var draftInbox = await Client.GetAsync(path);
+        draftInbox.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(draftInbox)).GetProperty("items").GetArrayLength().Should().Be(0);
+        (await Client.PostAsJsonAsync($"{path}/{internalRecipientId}/acknowledge", new { rowVersion = Convert.ToBase64String(new byte[8]) }))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        await WithDbAsync(async db =>
+        {
+            var member = await db.OperationalProjectMembers.SingleAsync(x => x.OperationalProjectId == context.ProjectId && x.UserId == context.ReceiverId);
+            member.EndedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+        (await Client.PostAsync($"/api/ifc-releases/{releaseId}/release", null)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await WithDbAsync(async db =>
+        {
+            (await db.IfcReleases.SingleAsync(x => x.Id == releaseId)).Status.Should().Be(IfcReleaseStatus.Draft);
+            var member = await db.OperationalProjectMembers.SingleAsync(x => x.OperationalProjectId == context.ProjectId && x.UserId == context.ReceiverId);
+            member.EndedAt = null;
+            var other = await db.Users.SingleAsync(x => x.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PROCUREMENT_MANAGER"]);
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = context.ProjectId,
+                UserId = other.Id,
+                Position = "Trưởng phòng cung ứng",
+                StartedAt = DateTime.UtcNow.AddDays(-1)
+            });
+            await db.SaveChangesAsync();
+        });
+        (await Client.PostAsync($"/api/ifc-releases/{releaseId}/release", null)).EnsureSuccessStatusCode();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
+        (await ReadJsonAsync(await Client.GetAsync(path))).GetProperty("items").GetArrayLength().Should().Be(0);
+        (await Client.PostAsJsonAsync($"{path}/{internalRecipientId}/acknowledge", new { rowVersion = Convert.ToBase64String(new byte[8]) }))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
+        var inbox = await Client.GetAsync(path);
+        inbox.StatusCode.Should().Be(HttpStatusCode.OK);
+        var packet = (await ReadJsonAsync(inbox)).GetProperty("items").EnumerateArray().Single();
+        packet.GetProperty("releaseId").GetInt32().Should().Be(releaseId);
+        var recipientId = packet.GetProperty("recipientId").GetInt32();
+        var itemId = packet.GetProperty("drawings")[0].GetProperty("itemId").GetInt32();
+        var downloadPath = $"{path}/{recipientId}/items/{itemId}/content";
+        var otherProjectId = await CreateOperationalProjectAsync(await FirstCustomerIdAsync());
+        (await Client.GetAsync($"/api/operational-projects/{otherProjectId}/procurement/ifc/{recipientId}/items/{itemId}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
+        (await Client.GetAsync(downloadPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
+        var file = await Client.GetAsync(downloadPath);
+        file.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await file.Content.ReadAsStringAsync()).Should().Be($"ShopDrawing:{drawingId}");
+        await File.WriteAllTextAsync(filePath, "NICON – wrong later revision");
+        var changed = await Client.GetAsync(downloadPath);
+        changed.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(changed)).GetProperty("code").GetString().Should().Be("IFC_RELEASED_FILE_CHANGED");
+        await File.WriteAllTextAsync(filePath, $"ShopDrawing:{drawingId}");
+        (await Client.GetAsync($"{path}/{recipientId}/items/{itemId + 100000}/content"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.PostAsJsonAsync($"{path}/{recipientId}/acknowledge", new { rowVersion = Convert.ToBase64String(new byte[8]) }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var ackGrant = await WithDbAsync(async db =>
+        {
+            var grant = await db.RolePermissions.SingleAsync(x => x.Role.Code == "PROCUREMENT" && x.Permission.Module == "proc.ifc" && x.Permission.Action == "acknowledge");
+            var ids = (grant.RoleId, grant.PermissionId);
+            db.RolePermissions.Remove(grant);
+            await db.SaveChangesAsync();
+            return ids;
+        });
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.PostAsJsonAsync($"{path}/{recipientId}/acknowledge", new { rowVersion = packet.GetProperty("rowVersion").GetString() }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await WithDbAsync(async db =>
+        {
+            (await db.IfcReleaseRecipients.SingleAsync(x => x.Id == recipientId)).AcknowledgedAt.Should().BeNull();
+            db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission { RoleId = ackGrant.RoleId, PermissionId = ackGrant.PermissionId });
+            await db.SaveChangesAsync();
+        });
+        var ack = await Client.PostAsJsonAsync($"{path}/{recipientId}/acknowledge", new { rowVersion = packet.GetProperty("rowVersion").GetString() });
+        ack.StatusCode.Should().Be(HttpStatusCode.OK);
+        var received = await ReadJsonAsync(ack);
+        received.GetProperty("acknowledgedByUserId").GetInt32().Should().Be(context.ReceiverId);
+        var retry = await Client.PostAsJsonAsync($"{path}/{recipientId}/acknowledge", new { rowVersion = packet.GetProperty("rowVersion").GetString() });
+        retry.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(retry)).GetProperty("acknowledgedAt").GetString().Should().Be(received.GetProperty("acknowledgedAt").GetString());
+        (await Client.GetAsync($"/api/ifc-releases/{releaseId}")).StatusCode.Should().BeOneOf(HttpStatusCode.Forbidden, HttpStatusCode.NotFound);
+        var viewGrant = await WithDbAsync(async db =>
+        {
+            var grant = await db.RolePermissions.SingleAsync(x => x.Role.Code == "PROCUREMENT" && x.Permission.Module == "proc.ifc" && x.Permission.Action == "view");
+            var ids = (grant.RoleId, grant.PermissionId);
+            db.RolePermissions.Remove(grant);
+            await db.SaveChangesAsync();
+            return ids;
+        });
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        (await Client.GetAsync(downloadPath)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await WithDbAsync(async db =>
+        {
+            db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission { RoleId = viewGrant.RoleId, PermissionId = viewGrant.PermissionId });
+            var member = await db.OperationalProjectMembers.SingleAsync(x => x.OperationalProjectId == context.ProjectId && x.UserId == context.ReceiverId);
+            member.EndedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.GetAsync(downloadPath)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        (await Client.PostAsJsonAsync($"/api/ifc-releases/{releaseId}/recipients/{recipientId}/acknowledge", new { }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        File.Delete(filePath);
+    }
 
     [Fact]
     public async Task List_WithoutAuth_ReturnsUnauthorized()

@@ -39,6 +39,9 @@ public class IfcReleaseItemResponse
 
 public class IfcReleaseRecipientResponse
 {
+    public int? RecipientUserId { get; set; }
+    public int? AcknowledgedByUserId { get; set; }
+    public string? AcknowledgedByName { get; set; }
     public int Id { get; set; }
     public string Name { get; set; } = string.Empty;
     public string RecipientTypeCode { get; set; } = string.Empty;

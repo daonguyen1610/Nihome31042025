@@ -1241,6 +1241,21 @@ Submit drawings for approval before issuance. Apply electronic "Issued For Const
 | IFC Create/Edit | Create/update issuance batch |
 | IFC Detail | Issuance record, electronic stamp, recipient tracking |
 
+**IFC to Procurement — Implemented:** while the IFC packet is Draft, Design
+selects an internal Procurement recipient from active project members with
+`proc.ifc.view`, alongside the existing recipient name/type. After issuance,
+the assigned user opens **Procurement → Received IFC dossiers** for that
+project, previews the released drawing and selects **Confirm IFC receipt**.
+Receipt needs `proc.ifc.acknowledge`; it records the first actor and timestamp,
+preserves them on retry, and cannot be recorded on that user's behalf in
+Design. This does not approve the design or create an RFQ/purchase request.
+
+Only Released packets addressed to the user appear. Leaving the project or
+losing the permission removes access. If a drawing differs from the released
+checksum, the download is blocked: contact Design to check the IFC version.
+Existing named external recipients retain their previous tracking workflow;
+historical confirmations are not assigned an invented user identity.
+
 ### 3.3 Module 3: Permitting
 
 **Objective**: Ensure legal compliance and administrative clearance throughout the project.

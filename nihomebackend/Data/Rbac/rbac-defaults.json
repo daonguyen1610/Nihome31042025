@@ -194,6 +194,8 @@
     { "module": "construction.cm-preparation", "action": "view" },
     { "module": "construction.cm-preparation", "action": "manage" },
     { "module": "construction.cm-preparation", "action": "start" },
+    { "module": "proc.ifc", "action": "view" },
+    { "module": "proc.ifc", "action": "acknowledge" },
     { "module": "proc.resource-requests", "action": "view" },
     { "module": "proc.resource-requests", "action": "manage" },
     { "module": "construction.resource-request", "action": "view" },
@@ -260,7 +262,7 @@
       "code": "PROCUREMENT",
       "labelKey": "rbac.group.procurement",
       "sortOrder": 30,
-      "patterns": [
+      "patterns": ["proc.ifc.view", "proc.ifc.acknowledge",
         "dashboard.view", "master-data.view", "workflow.view", "operations.projects.view",
         "work.packages.view", "work.packages.progress", "analytics.kpi.view", "profile.me.*",
         "crm.contracts.view", "proc.vendors.view", "proc.boq.view", "proc.rfqs.view",
@@ -649,6 +651,7 @@
     },
     "PROCUREMENT": {
       "patterns": [
+        "proc.ifc.view", "proc.ifc.acknowledge",
         "dashboard.view",
         "master-data.view",
         "workflow.view",
@@ -671,6 +674,7 @@
     },
     "PROCUREMENT_MANAGER": {
       "patterns": [
+        "proc.ifc.view", "proc.ifc.acknowledge",
         "dashboard.view", "master-data.view", "workflow.view",
         "operations.projects.view", "work.packages.view",
         "work.packages.manage", "work.packages.assign",

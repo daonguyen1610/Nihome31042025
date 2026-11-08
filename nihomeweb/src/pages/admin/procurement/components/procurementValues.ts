@@ -27,6 +27,7 @@ export type ReceiptLineDraft = {
 export type IssueLineDraft = { projectBoqLineId: number; issuedQuantity: number };
 
 export const procurementTabs = [
+  "ifc",
   "boq",
   "alerts",
   "requests",

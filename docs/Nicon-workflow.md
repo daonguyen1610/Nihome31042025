@@ -326,6 +326,11 @@ có. Email nhắc gia hạn không tự khởi tạo luồng này.
 - Shop/Detailed Drawing được duyệt, đưa vào gói IFC và phát hành phiên bản cụ
   thể sau khi revision Shop Drawing mới nhất là `ClientApproved`. Chỉ revision
   IFC đã phát hành mới được dùng làm chỉ dẫn thi công.
+- Thiết kế chọn người nhận Cung ứng nội bộ trước khi phát hành. Người được
+  gửi, còn phân công dự án và có quyền nhận hồ sơ, xem gói Released trong
+  Cung ứng rồi xác nhận đã nhận. Lưu người nhận thực tế và thời điểm xác nhận
+  đầu tiên; gửi lại không ghi đè. Phạm vi đầu tiên được chủ sản phẩm xác nhận
+  ngày 08/11/2026, không tự sinh giao dịch mua sắm.
 
 ### G3 — Pháp lý
 

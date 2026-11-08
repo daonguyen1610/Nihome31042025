@@ -1,3 +1,4 @@
+import { ProcurementIfcInbox } from "./ProcurementIfcInbox";
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import {
@@ -119,6 +120,7 @@ const ProcurementControlPage = () => {
   const { has } = usePermissions();
   const { toast } = useToast();
   const currentUser = useAppSelector((state) => state.auth.user);
+  const canViewIfc = has(ADMIN_PERMS.procurementIfc);
   const canViewBoq = has(ADMIN_PERMS.procurement);
   const canViewResources = has(ADMIN_PERMS.procurementResources);
   const canManageBoq = has(ADMIN_PERMS.procurementManage);
@@ -143,6 +145,7 @@ const ProcurementControlPage = () => {
     Number.isInteger(requestedProjectId) && requestedProjectId > 0 ? requestedProjectId : 0;
   const availableTabs = procurementTabs.filter(
     (tab) =>
+      (tab === "ifc" && canViewIfc) ||
       (tab === "alerts" && canViewAlerts) ||
       (tab === "resources" && canViewResources) ||
       (tab === "boq" && canViewBoq) ||
@@ -1084,6 +1087,7 @@ const ProcurementControlPage = () => {
           >
             <div className="overflow-x-auto pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
               <TabsList className="h-auto w-max min-w-full justify-start">
+                {canViewIfc && <TabsTrigger value="ifc">{t("procurement.ifc.title")}</TabsTrigger>}
                 {canViewResources && (
                   <TabsTrigger value="resources">{t("construction.handoff.title")}</TabsTrigger>
                 )}
@@ -1379,6 +1383,11 @@ const ProcurementControlPage = () => {
                     currentUserId={currentUser?.userId}
                   />
                 )}
+              </TabsContent>
+            )}
+            {canViewIfc && (
+              <TabsContent value="ifc">
+                <ProcurementIfcInbox key={projectId} projectId={projectId} />
               </TabsContent>
             )}
             {canViewContracts && (

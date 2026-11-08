@@ -579,3 +579,14 @@ For per-controller happy-path coverage (admin/SA returns 2xx with a valid payloa
 ### Browser-level RBAC matrix
 
 `nihomeweb/e2e/smoke/admin-rbac-matrix.spec.ts` drives the seeded role accounts through the admin route surface and asserts that each role can reach its permitted set and gets the inline `<Forbidden />` screen on the rest. Allow/deny sets are kept in sync with `/api/users/me/permissions` returned by the live stack so drift between `rbac-defaults.json`, the seeder, and the frontend permission map fails the suite. Run with `BASE_URL=http://localhost:5043 npx playwright test admin-rbac-matrix`.
+
+### Procurement IFC receipts
+
+`proc.ifc.view` allows active project members to list and download only Released
+IFC packets explicitly addressed to their user account. `proc.ifc.acknowledge`
+also requires View and permits that recipient's first receipt confirmation.
+Default Procurement and Procurement Manager roles receive these new grants;
+custom roles require administrator assignment. These grants do not confer Design
+management or release authority. Existing project/dossier authorization remains
+required for Design to address a packet. Revocation is checked again on every
+list, file request and confirmation.

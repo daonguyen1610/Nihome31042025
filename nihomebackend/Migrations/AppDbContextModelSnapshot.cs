@@ -4863,6 +4863,12 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(30)
@@ -4904,6 +4910,10 @@ namespace nihomebackend.Migrations
                     b.Property<int>("IfcReleaseId")
                         .HasColumnType("int");
 
+                    b.Property<string>("ReleasedFileSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
                     b.Property<int>("ShopDrawingId")
                         .HasColumnType("int");
 
@@ -4928,6 +4938,9 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime?>("AcknowledgedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<int?>("AcknowledgedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("AcknowledgementNote")
                         .HasMaxLength(1000)
                         .HasColumnType("nvarchar(1000)");
@@ -4945,9 +4958,26 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(60)
                         .HasColumnType("nvarchar(60)");
 
+                    b.Property<int?>("RecipientUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("AcknowledgedByUserId");
+
                     b.HasIndex("IfcReleaseId");
+
+                    b.HasIndex("RecipientUserId");
+
+                    b.HasIndex("IfcReleaseId", "RecipientUserId")
+                        .IsUnique()
+                        .HasFilter("[RecipientUserId] IS NOT NULL");
 
                     b.ToTable("ifc_release_recipients", (string)null);
                 });
@@ -13550,13 +13580,27 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.IfcReleaseRecipient", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "AcknowledgedByUser")
+                        .WithMany()
+                        .HasForeignKey("AcknowledgedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.IfcRelease", "IfcRelease")
                         .WithMany("Recipients")
                         .HasForeignKey("IfcReleaseId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "RecipientUser")
+                        .WithMany()
+                        .HasForeignKey("RecipientUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("AcknowledgedByUser");
+
                     b.Navigation("IfcRelease");
+
+                    b.Navigation("RecipientUser");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.JobApplication", b =>

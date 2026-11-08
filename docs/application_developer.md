@@ -4919,3 +4919,40 @@ xác nhận mapping chuyên môn, IT xác nhận deployment/Drive/retention. Ch�
 toàn kế hoạch khi mọi AC trong phạm vi được xác nhận đã có bằng chứng, quyết
 định còn mở được xử lý đúng thẩm quyền và NICON hoàn tất UAT; không dùng số test
 pass hay trạng thái Connected thay cho điều kiện này.
+
+### Procurement IFC receipt API and migration
+
+`GET /api/operational-projects/{projectId}/procurement/ifc?page=1` returns a
+20-item inbox of Released packets addressed to the current active member.
+`POST .../ifc/{recipientId}/acknowledge` requires View + Acknowledge and a
+`rowVersion` body (or the existing concurrency request header). First receipt
+persists actor/time; release and receipt timestamps serialize with explicit UTC
+(`Z`) both immediately and after SQL reload. Replay preserves the first
+values and emits no second receipt audit event. `GET .../ifc/{recipientId}/items/{itemId}/content` serves
+only that released drawing after verifying its SHA-256 against client-approved
+release evidence. Missing/mismatched evidence returns 409
+`IFC_RELEASED_FILE_CHANGED`; the UI asks the recipient to contact Design.
+No raw file path or broad Design permission is granted to Procurement.
+Design's `GET /api/ifc-releases/procurement-recipients?designProjectId=...`
+returns eligible active project members; add-recipient accepts optional
+`recipientUserId`. Existing external recipient payloads remain compatible.
+
+Migration `20261108150000_AddProcurementIfcReceipt` adds nullable addressed and
+acknowledging user IDs, released item SHA-256, and release/recipient rowversions.
+A filtered unique index prevents duplicate internal recipients within a packet.
+Legacy named recipients and timestamps remain unchanged; no actor/hash backfill
+is inferred. Existing released packets cannot acquire new recipients.
+The migration initializes only the two default Procurement role grants; custom
+role grants are preserved. Before deployment take a database backup. Before
+schema rollback export any new recipient identities, acknowledgments and hash
+snapshots: Down removes these columns. Permission catalog entries/grants remain
+on Down to preserve later administrator changes; the old application has no
+receipt endpoints. A database restore is required to recover removed receipt
+metadata. Rehearse Up/Down/Up on an isolated restored database before rollout.
+
+Focused checks: `IfcReleasesControllerTests`, SQL-backed
+`ProcurementIfcConcurrencyTests` (set `NICON_SQL_TEST_CONNECTION` to a disposable
+SQL test host), `PermissionServiceTests`, `tests/apiError.test.mjs`, and live
+`procurement-ifc-receipt-live.spec.ts`. The live receipt fixture bypasses only
+upstream Drive/client approval setup in its own records; issuance gates remain
+covered by integration tests. It is not evidence of a live Drive sync pass.

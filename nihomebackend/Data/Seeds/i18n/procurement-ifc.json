@@ -1,0 +1,98 @@
+[
+  {
+    "key": "procurement.ifc.title",
+    "category": "procurement",
+    "vi": "Hồ sơ IFC nhận",
+    "en": "Received IFC dossiers",
+    "zh": "收到的IFC档案",
+    "ja": "受信IFC図書"
+  },
+  {
+    "key": "procurement.ifc.description",
+    "category": "procurement",
+    "vi": "Chỉ hồ sơ đã phát hành gửi cho bạn trong dự án này. Xác nhận nhận không phải duyệt thiết kế.",
+    "en": "Only released dossiers addressed to you in this project. Receipt does not approve the design.",
+    "zh": "仅显示本项目已发布并发送给您的档案。确认接收不代表批准设计。",
+    "ja": "この案件で自分宛に発行された図書のみ表示します。受領確認は設計承認ではありません。"
+  },
+  {
+    "key": "procurement.ifc.empty",
+    "category": "procurement",
+    "vi": "Chưa có hồ sơ IFC đã phát hành gửi cho bạn trong dự án này.",
+    "en": "No released IFC dossiers are addressed to you in this project.",
+    "zh": "本项目暂无发送给您的已发布IFC档案。",
+    "ja": "この案件には自分宛の発行済みIFC図書がありません。"
+  },
+  {
+    "key": "procurement.ifc.pending",
+    "category": "procurement",
+    "vi": "Chờ xác nhận nhận",
+    "en": "Awaiting receipt",
+    "zh": "待确认接收",
+    "ja": "受領確認待ち"
+  },
+  {
+    "key": "procurement.ifc.received",
+    "category": "procurement",
+    "vi": "Đã xác nhận nhận",
+    "en": "Receipt confirmed",
+    "zh": "已确认接收",
+    "ja": "受領確認済み"
+  },
+  {
+    "key": "procurement.ifc.acknowledge",
+    "category": "procurement",
+    "vi": "Xác nhận đã nhận IFC",
+    "en": "Confirm IFC receipt",
+    "zh": "确认收到IFC",
+    "ja": "IFC受領を確認"
+  },
+  {
+    "key": "procurement.ifc.receivedAt",
+    "category": "procurement",
+    "vi": "Đã nhận lúc {date}",
+    "en": "Received at {date}",
+    "zh": "接收时间：{date}",
+    "ja": "受領日時：{date}"
+  },
+  {
+    "key": "procurement.ifc.recipient",
+    "category": "procurement",
+    "vi": "Người nhận IFC Cung ứng",
+    "en": "Procurement IFC recipient",
+    "zh": "采购IFC接收人",
+    "ja": "調達IFC受領者"
+  },
+  {
+    "key": "procurement.ifc.external",
+    "category": "procurement",
+    "vi": "Nơi nhận ghi tên",
+    "en": "Named recipient",
+    "zh": "填写名称的接收方",
+    "ja": "名称を入力する受領先"
+  },
+  {
+    "key": "procurement.ifc.fileChanged",
+    "category": "procurement",
+    "vi": "Tệp không khớp hồ sơ đã phát hành. Liên hệ Thiết kế kiểm tra phiên bản IFC.",
+    "en": "The file differs from the released dossier. Ask Design to check the IFC version.",
+    "zh": "文件与已发布档案不符。请联系设计部门核对IFC版本。",
+    "ja": "ファイルが発行済み図書と一致しません。設計部門にIFC版の確認を依頼してください。"
+  },
+  {
+    "key": "rbac.perm.proc.ifc.view",
+    "category": "rbac",
+    "vi": "Xem hồ sơ IFC được gửi",
+    "en": "View addressed IFC dossiers",
+    "zh": "查看发送给自己的IFC档案",
+    "ja": "自分宛のIFC図書を表示"
+  },
+  {
+    "key": "rbac.perm.proc.ifc.acknowledge",
+    "category": "rbac",
+    "vi": "Xác nhận nhận IFC",
+    "en": "Confirm IFC receipt",
+    "zh": "确认收到IFC",
+    "ja": "IFC受領を確認"
+  }
+]

@@ -107,6 +107,32 @@ public class PermissionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task BatchRolePermission_MatchesSingleUserResolutionAfterRoleChanges()
+    {
+        var legacy = AddUser("0900000091", UserRole.SUPER_ADMIN);
+        var procurement = _db.Roles.Single(r => r.Code == "PROCUREMENT");
+        var custom = new NihomeBackend.Models.Rbac.Role { Code = "IFC_RECEIVER", Name = "IFC receiver", IsActive = true };
+        _db.Roles.Add(custom);
+        _db.SaveChanges();
+        var permission = _db.Permissions.Single(p => p.Module == "proc.ifc" && p.Action == "view");
+        _db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission { RoleId = custom.Id, PermissionId = permission.Id });
+        _db.SaveChanges();
+        var receiver = AddUser("0900000092", UserRole.USER, custom.Id);
+        var inactive = AddUser("0900000093", UserRole.SUPER_ADMIN, procurement.Id);
+        procurement.IsActive = false;
+        _db.SaveChanges();
+        var ids = new[] { legacy.Id, receiver.Id, inactive.Id };
+        var allowed = await _svc.FilterByRolePermissionAsync(ids, "proc.ifc.view");
+        Assert.Contains(legacy.Id, allowed);
+        Assert.Contains(receiver.Id, allowed);
+        Assert.DoesNotContain(inactive.Id, allowed);
+        foreach (var id in ids) Assert.Equal(await _svc.HasAsync(id, "proc.ifc.view"), allowed.Contains(id));
+        _db.RolePermissions.Remove(_db.RolePermissions.Single(p => p.RoleId == custom.Id));
+        _db.SaveChanges();
+        Assert.DoesNotContain(receiver.Id, await _svc.FilterByRolePermissionAsync(ids, "proc.ifc.view"));
+    }
+
+    [Fact]
     public async Task SuperAdmin_ResolvesToFullCatalog()
     {
         var sa = _db.Roles.Single(r => r.Code == SystemRoleCodes.SuperAdmin);
