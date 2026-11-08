@@ -16,8 +16,13 @@ public sealed class CmScheduleException(string code) : Exception(code)
 public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService constructionTasks, IPermissionService permissions, CmScheduleMailService mail)
 {
     private static void Require(bool valid, string code) { if (!valid) throw new CmScheduleException(code); }
-    private static DateOnly Today => DateOnly.FromDateTime(DateTime.UtcNow);
+    private static readonly TimeZoneInfo VietnamTimeZone = TimeZoneInfo.FindSystemTimeZoneById(
+        OperatingSystem.IsWindows() ? "SE Asia Standard Time" : "Asia/Ho_Chi_Minh");
+    private static DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, VietnamTimeZone));
     private static List<CmScheduleLine> Lines(CmScheduleBaseline baseline) => JsonSerializer.Deserialize<List<CmScheduleLine>>(baseline.ItemsJson)!;
+    private static CmScheduleCalendar Calendar(CmScheduleBaseline baseline) => new(
+        JsonSerializer.Deserialize<int[]>(baseline.WorkingDaysOfWeekJson)!,
+        JsonSerializer.Deserialize<DateOnly[]>(baseline.NonWorkingDatesJson)!);
     private IQueryable<ConstructionTask> Tasks(int projectId) => db.ConstructionTasks.Where(x => x.DesignProject.OperationalProjectId == projectId && x.Status != ConstructionTaskStatus.Cancelled);
     private IQueryable<OperationalProjectMember> Members(int projectId) => db.OperationalProjectMembers.Where(x =>
         x.OperationalProjectId == projectId && x.StartedAt <= DateTime.UtcNow && x.EndedAt == null && x.User.IsActive);
@@ -45,7 +50,7 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
                 child.Id != x.Id && child.Wbs != null && child.Wbs.StartsWith(x.Wbs + ".", StringComparison.Ordinal));
             return new CmScheduleLine(x.Id, x.DesignProjectId, node.NodeId, x.Wbs ?? x.TaskCode, x.Name,
                 node.PlannedStart, node.PlannedEnd, x.PlannedStart, x.PlannedEnd,
-                Math.Max(1, x.PlannedEnd.DayNumber - x.PlannedStart.DayNumber + 1), leaf,
+                0, leaf,
                 x.Predecessors.Select(p => p.PredecessorTaskId).ToList());
         }).ToList();
         var candidates = await Members(projectId).Select(x => x.UserId).Distinct().ToListAsync(ct);
@@ -62,7 +67,7 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
             members,
             emailDeliveries,
             unlinked = tasks.Where(x => !eligible.Any(e => e.Id == x.Id)).Select(x => new { x.Id, x.TaskCode, x.Name, x.DesignProjectId }),
-            actualInputs = tasks.Select(x => new { taskId = x.Id, x.ProgressPercent, updatedAt = Utc(x.UpdatedAt) }),
+            actualInputs = tasks.Select(x => new { taskId = x.Id, x.ProgressPercent, updatedAt = Utc(x.UpdatedAt), progressReportedAt = Utc(x.ProgressReportedAt), x.ProgressReportedByUserId }),
             baselines = baselines.Select(MapBaseline),
             snapshots = snapshots.Select(MapSnapshot)
         };
@@ -75,6 +80,7 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
         Require(project.ProjectManagerUserId.HasValue && await permissions.HasAsync(project.ProjectManagerUserId.Value, "construction.cm-preparation.view", ct) && await permissions.HasAsync(project.ProjectManagerUserId.Value, "construction.tasks.view", ct), "pmRequired");
         Require(await Members(projectId).AnyAsync(x => x.UserId == request.SiteManagerUserId, ct) && await permissions.HasAsync(request.SiteManagerUserId, "construction.tasks.view", ct), "siteManagerRequired");
         Require(request.ChangeReason.Trim().Length >= 3, "reasonRequired");
+        Require(request.WeightBasisNote.Trim().Length >= 3, "weightBasisInvalid");
         Require(await db.Contracts.AnyAsync(x => x.OperationalProjectId == projectId && x.Direction == ContractDirection.Upstream &&
             (x.Type == ContractType.Construction || x.Type == ContractType.DesignAndBuild || x.Type == ContractType.PermitAndConstruction || x.Type == ContractType.DesignPermitAndConstruction) &&
             (x.Status == ContractStatus.Signed || x.Status == ContractStatus.InProgress || x.Status == ContractStatus.OnHold), ct), "signedContractRequired");
@@ -85,6 +91,11 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
         Require(crm is not null, "crmRequired");
         var tasks = await Tasks(projectId).Include(x => x.Predecessors).ToListAsync(ct);
         Require(tasks.Count != 0 && tasks.Count <= 2000 && request.Items.Count == tasks.Count && request.Items.Select(x => x.TaskId).Distinct().Count() == tasks.Count, "taskSetInvalid");
+        var workingDays = request.WorkingDaysOfWeek.Distinct().ToArray();
+        var nonWorkingDates = request.NonWorkingDates.Distinct().Order().ToArray();
+        Require(workingDays.Length == request.WorkingDaysOfWeek.Count && workingDays.All(x => x is >= 0 and <= 6) && workingDays.Length > 0 &&
+            nonWorkingDates.Length == request.NonWorkingDates.Count, "calendarInvalid");
+        var calendar = new CmScheduleCalendar(workingDays, nonWorkingDates);
         var nodes = crm!.Items.ToDictionary(x => x.NodeId);
         var lines = new List<CmScheduleLine>();
         foreach (var task in tasks)
@@ -94,13 +105,19 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
             var input = request.Items.SingleOrDefault(x => x.TaskId == task.Id);
             Require(input is not null, "taskSetInvalid");
             Require(input!.PlannedStart != default && input.PlannedEnd >= input.PlannedStart && input.PlannedStart >= node.PlannedStart && input.PlannedEnd <= node.PlannedEnd, "outsideCrm");
-            Require(input.Weight > 0 && input.Weight <= 1000000000m, "weightInvalid");
+            Require(input.Weight is >= 0 and <= 100, "weightInvalid");
             var leaf = !tasks.Any(x => x.DesignProjectId == task.DesignProjectId && !string.IsNullOrWhiteSpace(task.Wbs) &&
                 x.Id != task.Id && x.Wbs != null && x.Wbs.StartsWith(task.Wbs + ".", StringComparison.Ordinal));
+            Require(!input.IsMilestone || leaf, "milestoneInvalid");
+            Require(leaf && !input.IsMilestone ? input.Weight > 0 : input.Weight == 0, "weightInvalid");
+            if (leaf && !input.IsMilestone)
+                Require(calendar.WorkingDaysBetween(node.PlannedStart, node.PlannedEnd) > 0 && calendar.WorkingDaysBetween(input.PlannedStart, input.PlannedEnd) > 0, "calendarRangeInvalid");
             lines.Add(new(task.Id, task.DesignProjectId, node.NodeId, task.Wbs ?? task.TaskCode, task.Name,
                 node.PlannedStart, node.PlannedEnd, input.PlannedStart, input.PlannedEnd, input.Weight, leaf,
-                task.Predecessors.Select(x => x.PredecessorTaskId).ToList()));
+                task.Predecessors.Select(x => x.PredecessorTaskId).ToList(), input.IsMilestone));
         }
+        var totalWeight = lines.Where(x => x.IsLeaf && !x.IsMilestone).Sum(x => x.Weight);
+        Require(totalWeight >= 99.9999m && totalWeight <= 100.0001m, "weightTotalInvalid");
         Require(lines.GroupBy(x => new { x.DesignProjectId, x.Wbs }).All(x => x.Count() == 1), "taskSetInvalid");
         foreach (var line in lines)
         {
@@ -128,6 +145,9 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
             SiteManagerUserId = request.SiteManagerUserId,
             ApproverUserId = project.ProjectManagerUserId!.Value,
             ChangeReason = request.ChangeReason.Trim(),
+            WeightBasisNote = request.WeightBasisNote.Trim(),
+            WorkingDaysOfWeekJson = JsonSerializer.Serialize(workingDays.Order().ToArray()),
+            NonWorkingDatesJson = JsonSerializer.Serialize(nonWorkingDates),
             CreatedByUserId = userId,
             ItemsJson = JsonSerializer.Serialize(lines)
         };
@@ -215,9 +235,11 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
         var currentTasks = await Tasks(projectId).AsNoTracking().Include(x => x.Predecessors).ToListAsync(ct);
         Require(CmScheduleScope.Matches(lines, currentTasks), "actualIncomplete");
         Require(currentTasks.All(x => x.ProgressPercent >= 0 && x.ProgressPercent <= 100), "actualIncomplete");
-        var tasks = currentTasks.Select(x => new CmActualInput(x.Id, x.ProgressPercent, x.UpdatedAt, x.Status.ToString())).ToList();
-        Require(tasks.Select(x => x.TaskId).Order().SequenceEqual(lines.Select(x => x.TaskId).Order()), "actualIncomplete");
-        var totals = CmScheduleMath.Calculate(lines, tasks, Today);
+        var weightedTaskIds = lines.Where(x => x.IsLeaf && !x.IsMilestone).Select(x => x.TaskId).ToHashSet();
+        if (currentTasks.Where(x => weightedTaskIds.Contains(x.Id)).Any(x => !x.ProgressReportedAt.HasValue || x.ProgressReportedByUserId != baseline!.SiteManagerUserId))
+            return new { baselineId = baseline!.Id, asOfDate = Today, isDataComplete = false };
+        var tasks = currentTasks.Select(x => new CmActualInput(x.Id, x.ProgressPercent, x.UpdatedAt, x.Status.ToString(), x.ProgressReportedAt, x.ProgressReportedByUserId)).ToList();
+        var totals = CmScheduleMath.Calculate(lines, tasks, Today, Calendar(baseline!));
         var threshold = await ThresholdAsync(ct);
         var inputsJson = JsonSerializer.Serialize(tasks.OrderBy(x => x.TaskId));
         var existing = await db.CmProgressSnapshots.AsNoTracking().Where(x => x.BaselineId == baseline!.Id && x.AsOfDate == Today && x.InputsJson == inputsJson && x.ThresholdPercent == threshold)
@@ -248,6 +270,86 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
         return MapSnapshot(snapshot);
     }
 
+    public async Task<object> ReportAsync(int projectId, int baselineId, string period, DateOnly? throughDate, int actor, CancellationToken ct)
+    {
+        Require(period is "day" or "month" or "year", "periodInvalid");
+        var baseline = await BaselineAsync(projectId, baselineId, ct);
+        var canManage = await permissions.HasAsync(actor, "construction.cm-preparation.manage", ct);
+        var projectManager = await db.OperationalProjects.Where(x => x.Id == projectId).Select(x => x.ProjectManagerUserId).SingleAsync(ct);
+        Require(baseline.Status == "Published" || canManage || projectManager == actor, "baselineRequired");
+        var lines = Lines(baseline);
+        var calendar = Calendar(baseline);
+        var weightedLines = lines.Where(x => x.IsLeaf && !x.IsMilestone).ToList();
+        Require(weightedLines.Count > 0, "weightTotalInvalid");
+        var earliest = weightedLines.Min(x => x.CrmStart < x.PlannedStart ? x.CrmStart : x.PlannedStart).AddDays(-1);
+        var through = throughDate ?? Today;
+        var from = through < earliest ? through : earliest;
+        var span = period switch
+        {
+            "day" => through.DayNumber - from.DayNumber + 1,
+            "month" => (through.Year - from.Year) * 12 + through.Month - from.Month + 1,
+            _ => through.Year - from.Year + 1
+        };
+        Require(span is > 0 and <= 3660, "periodTooWide");
+        var dates = ReportDates(from, through, period);
+        var snapshots = await db.CmProgressSnapshots.AsNoTracking()
+            .Where(x => x.BaselineId == baselineId && x.AsOfDate >= dates[0] && x.AsOfDate <= dates[^1])
+            .OrderBy(x => x.AsOfDate).ThenBy(x => x.CapturedAt).ThenBy(x => x.Id).ToListAsync(ct);
+        var actualByDate = snapshots.GroupBy(x => x.AsOfDate).ToDictionary(x => x.Key, x => x.Last());
+        var emptyActual = weightedLines.Select(x => new CmActualInput(x.TaskId, 0, default, "")).ToList();
+        var points = dates.Select(day =>
+        {
+            var totals = CmScheduleMath.Calculate(lines, emptyActual, day, calendar);
+            var snapshot = actualByDate.GetValueOrDefault(day);
+            return new
+            {
+                date = day,
+                crmPercent = totals.Crm,
+                planPercent = totals.Plan,
+                actualPercent = snapshot?.ActualPercent,
+                delayPercent = snapshot?.DelayPercent,
+                isDataComplete = snapshot is not null,
+                snapshotId = snapshot?.Id
+            };
+        }).ToList();
+        return new { baselineId, period, throughDate = through, points };
+    }
+
+    private static List<DateOnly> ReportDates(DateOnly from, DateOnly through, string period)
+    {
+        var dates = new List<DateOnly>();
+        if (period == "day")
+        {
+            for (var day = from; ; day = day.AddDays(1))
+            {
+                dates.Add(day);
+                if (day == through) break;
+            }
+            return dates;
+        }
+        if (period == "month")
+        {
+            var month = new DateOnly(from.Year, from.Month, 1);
+            while (true)
+            {
+                var end = new DateOnly(month.Year, month.Month, DateTime.DaysInMonth(month.Year, month.Month));
+                dates.Add(end < through ? end : through);
+                if (month.Year == through.Year && month.Month == through.Month) break;
+                month = month.AddMonths(1);
+            }
+            return dates;
+        }
+        var year = new DateOnly(from.Year, 1, 1);
+        while (true)
+        {
+            var end = new DateOnly(year.Year, 12, 31);
+            dates.Add(end < through ? end : through);
+            if (year.Year == through.Year) break;
+            year = year.AddYears(1);
+        }
+        return dates;
+    }
+
     public async Task<object> UpdateActualAsync(int projectId, int taskId, CmActualUpdateRequest request, int actor, CancellationToken ct)
     {
         await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
@@ -259,6 +361,7 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
         var task = await Tasks(projectId).SingleOrDefaultAsync(x => x.Id == taskId, ct);
         Require(task is not null, "actualIncomplete");
         Require(request.ProgressPercent.HasValue && request.ProgressPercent >= 0 && request.ProgressPercent <= 100, "actualIncomplete");
+        Require(request.ExpectedUpdatedAt.HasValue, "actualIncomplete");
         if (request.ExpectedUpdatedAt != task!.UpdatedAt) throw new CrmConcurrencyException("Dữ liệu đã đổi. Tải lại tiến độ BCH trước khi gửi lại.");
         if (request.ProgressPercent < 100 && task.Status == ConstructionTaskStatus.Completed) task.ActualEnd = null;
         await constructionTasks.UpdateProgressAsync(taskId, new UpdateConstructionTaskProgressRequest
@@ -324,10 +427,10 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
     private static object Curve(CmScheduleBaseline baseline)
     {
         var lines = Lines(baseline);
-        var actual = lines.Where(x => x.IsLeaf).Select(x => new CmActualInput(x.TaskId, 0, default, "")).ToList();
+        var actual = lines.Where(x => x.IsLeaf && !x.IsMilestone).Select(x => new CmActualInput(x.TaskId, 0, default, "")).ToList();
         var days = lines.Where(x => x.IsLeaf).SelectMany(x => new[] { x.CrmStart == DateOnly.MinValue ? x.CrmStart : x.CrmStart.AddDays(-1), x.CrmEnd,
             x.PlannedStart == DateOnly.MinValue ? x.PlannedStart : x.PlannedStart.AddDays(-1), x.PlannedEnd }).Distinct().Order();
-        return days.Select(day => { var totals = CmScheduleMath.Calculate(lines, actual, day); return new { day, crmPercent = totals.Crm, planPercent = totals.Plan }; }).ToList();
+        return days.Select(day => { var totals = CmScheduleMath.Calculate(lines, actual, day, Calendar(baseline)); return new { day, crmPercent = totals.Crm, planPercent = totals.Plan }; }).ToList();
     }
     private static DateTime? Utc(DateTime? value) => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : null;
     private static object MapBaseline(CmScheduleBaseline x) => new
@@ -337,6 +440,9 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
         x.CrmRevisionId,
         x.Status,
         x.ChangeReason,
+        x.WeightBasisNote,
+        workingDaysOfWeek = JsonSerializer.Deserialize<int[]>(x.WorkingDaysOfWeekJson),
+        nonWorkingDates = JsonSerializer.Deserialize<DateOnly[]>(x.NonWorkingDatesJson),
         items = Lines(x),
         curve = Curve(x),
         x.SiteManagerUserId,

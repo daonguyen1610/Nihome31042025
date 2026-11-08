@@ -12,7 +12,23 @@ export interface CmScheduleLine {
   plannedEnd: string;
   weight: number;
   isLeaf: boolean;
+  isMilestone: boolean;
   predecessorIds: number[];
+}
+export interface CmScheduleReportPoint {
+  date: string;
+  crmPercent: number;
+  planPercent: number;
+  actualPercent: number | null;
+  delayPercent: number | null;
+  isDataComplete: boolean;
+  snapshotId: number | null;
+}
+export interface CmScheduleReport {
+  baselineId: number;
+  period: "day" | "month" | "year";
+  throughDate: string;
+  points: CmScheduleReportPoint[];
 }
 export interface CmBaseline {
   id: number;
@@ -21,6 +37,9 @@ export interface CmBaseline {
   status: "Draft" | "PendingApproval" | "Published" | "Rejected" | "Cancelled";
   curve: { day: string; crmPercent: number; planPercent: number }[];
   changeReason: string;
+  weightBasisNote: string;
+  workingDaysOfWeek: number[];
+  nonWorkingDates: string[];
   items: CmScheduleLine[];
   siteManagerUserId: number;
   approverUserId: number;
@@ -52,6 +71,8 @@ export interface CmActualInput {
   taskId: number;
   progressPercent: number;
   updatedAt: string;
+  progressReportedAt: string | null;
+  progressReportedByUserId: number | null;
 }
 export interface CmMailPreview {
   previewToken: string;
@@ -80,8 +101,19 @@ export const cmScheduleApi = {
   workspace: (id: number) => api.get<CmScheduleWorkspace>(root(id)),
   create: (
     id: number,
-    data: { changeReason: string; siteManagerUserId: number; items: CmScheduleLine[] },
+    data: {
+      changeReason: string;
+      weightBasisNote: string;
+      siteManagerUserId: number;
+      workingDaysOfWeek: number[];
+      nonWorkingDates: string[];
+      items: CmScheduleLine[];
+    },
   ) => postIdempotent<CmBaseline>(`${root(id)}/baselines`, data),
+  report: (id: number, baselineId: number, period: "day" | "month" | "year", throughDate: string) =>
+    api.get<CmScheduleReport>(`${root(id)}/baselines/${baselineId}/report`, {
+      params: { period, throughDate },
+    }),
   previewSubmit: (id: number, row: CmBaseline) =>
     api.get<CmMailPreview>(`${root(id)}/baselines/${row.id}/email-preview`),
   submit: (id: number, row: CmBaseline, previewToken: string) =>

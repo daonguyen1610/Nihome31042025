@@ -23,10 +23,21 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
         published.GetProperty("status").GetString().Should().Be("Published");
         published.GetProperty("curve").GetArrayLength().Should().BeGreaterThan(1);
         await Login("SITE_COMMANDER");
+        await ReportAllLeaves(fixture.Project);
         var snapshot = await Post(fixture.Project, "snapshots", new { });
         snapshot.GetProperty("planPercent").GetDecimal().Should().Be(100m);
         snapshot.GetProperty("actualPercent").GetDecimal().Should().Be(0m, "parent progress must not count twice");
         snapshot.GetProperty("isDelayed").GetBoolean().Should().BeTrue();
+        foreach (var period in new[] { "month", "year" })
+        {
+            var report = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project) + $"/baselines/{id}/report?period={period}&throughDate={snapshot.GetProperty("asOfDate").GetString()}"));
+            report.GetProperty("points").EnumerateArray().Last().GetProperty("actualPercent").GetDecimal().Should().Be(0m);
+        }
+        using (var invalidReport = await Client.GetAsync(Root(fixture.Project) + $"/baselines/{id}/report?period=week"))
+        {
+            invalidReport.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(invalidReport)).GetProperty("code").GetString().Should().Be("CM_SCHEDULE_periodInvalid");
+        }
         var retry = await Post(fixture.Project, "snapshots", new { });
         retry.GetProperty("id").GetInt32().Should().Be(snapshot.GetProperty("id").GetInt32());
         var snapshotId = snapshot.GetProperty("id").GetInt32();
@@ -52,6 +63,7 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
     [InlineData("parent", "outsideCrm")]
     [InlineData("missing", "taskSetInvalid")]
     [InlineData("unlinked", "unlinkedTasks")]
+    [InlineData("badweight", "weightTotalInvalid")]
     [InlineData("unsigned", "signedContractRequired")]
     public async Task Draft_InvalidInputs_DoNotPersist(string scenario, string code)
     {
@@ -93,6 +105,9 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
         var pending = await Post(fixture.Project, $"baselines/{id}/submit", await SubmitToken(fixture.Project, created));
         await Login("PM");
         await Post(fixture.Project, $"baselines/{id}/decision", new { rowVersion = TokenValue(pending), approve = true });
+        await Login("SUPER_ADMIN");
+        await Login("SITE_COMMANDER");
+        await ReportAllLeaves(fixture.Project);
         await Login("SUPER_ADMIN");
         foreach (var invalid in new object[] { new { }, new { thresholdPercent = -1 }, new { thresholdPercent = 101 } })
         {
@@ -141,7 +156,30 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
         var pending = await Post(fixture.Project, $"baselines/{id}/submit", await SubmitToken(fixture.Project, created));
         await Login("PM");
         await Post(fixture.Project, $"baselines/{id}/decision", new { rowVersion = TokenValue(pending), approve = true });
+        var taskBefore = await WithDbAsync(db => db.ConstructionTasks.SingleAsync(x => x.Id == fixture.Leaf));
+        await Login("SUPER_ADMIN");
+        using (var directProgress = await Client.PutAsJsonAsync($"/api/construction-tasks/{fixture.Leaf}", new
+        {
+            wbs = taskBefore.Wbs,
+            projectScheduleNodeId = taskBefore.ProjectScheduleNodeId,
+            name = taskBefore.Name,
+            plannedStart = taskBefore.PlannedStart,
+            plannedEnd = taskBefore.PlannedEnd,
+            progressPercent = 30,
+            status = nameof(ConstructionTaskStatus.InProgress),
+        }))
+        {
+            directProgress.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await directProgress.Content.ReadAsStringAsync()).Should().Contain("Chỉ Chỉ huy trưởng");
+        }
+        (await WithDbAsync(db => db.ConstructionTasks.SingleAsync(x => x.Id == fixture.Leaf))).ProgressPercent.Should().Be(0);
+        await Login("PM");
+        var emptyReport = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project) + $"/baselines/{id}/report?period=day&throughDate={DateOnly.FromDateTime(DateTime.UtcNow):yyyy-MM-dd}"));
+        emptyReport.GetProperty("points").EnumerateArray().Last().GetProperty("actualPercent").ValueKind.Should().Be(JsonValueKind.Null);
         var workspace = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project)));
+        foreach (var input in workspace.GetProperty("actualInputs").EnumerateArray().Where(x => x.GetProperty("taskId").GetInt32() != fixture.Leaf))
+            await Post(fixture.Project, $"tasks/{input.GetProperty("taskId").GetInt32()}/actual", new { expectedUpdatedAt = input.GetProperty("updatedAt").GetString(), progressPercent = 0 });
+        workspace = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project)));
         var input = workspace.GetProperty("actualInputs").EnumerateArray().Single(x => x.GetProperty("taskId").GetInt32() == fixture.Leaf);
         var body = new { expectedUpdatedAt = input.GetProperty("updatedAt").GetString(), progressPercent = 100 };
         await Error(fixture.Project, $"tasks/{fixture.Leaf}/actual", body, "siteManagerRequired");
@@ -152,16 +190,18 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
             invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
         var updated = await Post(fixture.Project, $"tasks/{fixture.Leaf}/actual", body);
-        updated.GetProperty("snapshots")[0].GetProperty("actualPercent").GetDecimal().Should().Be(75m);
+        updated.GetProperty("snapshots")[0].GetProperty("actualPercent").GetDecimal().Should().Be(60m);
         using var stale = await Send(fixture.Project, $"tasks/{fixture.Leaf}/actual", new { body.expectedUpdatedAt, progressPercent = 50 });
         stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
         (await WithDbAsync(db => db.ConstructionTasks.SingleAsync(x => x.Id == fixture.Leaf))).ProgressPercent.Should().Be(100);
         var current = updated.GetProperty("actualInputs").EnumerateArray().Single(x => x.GetProperty("taskId").GetInt32() == fixture.Leaf);
         var corrected = await Post(fixture.Project, $"tasks/{fixture.Leaf}/actual", new { expectedUpdatedAt = current.GetProperty("updatedAt").GetString(), progressPercent = 50 });
-        corrected.GetProperty("snapshots")[0].GetProperty("actualPercent").GetDecimal().Should().Be(37.5m);
+        corrected.GetProperty("snapshots")[0].GetProperty("actualPercent").GetDecimal().Should().Be(30m);
         var task = await WithDbAsync(db => db.ConstructionTasks.SingleAsync(x => x.Id == fixture.Leaf));
         task.Status.Should().Be(ConstructionTaskStatus.InProgress);
         task.ActualEnd.Should().BeNull();
+        task.ProgressReportedAt.Should().NotBeNull();
+        task.ProgressReportedByUserId.Should().Be(await User("SITE_COMMANDER"));
         task.UpdatedByUserId.Should().Be(await User("SITE_COMMANDER"));
     }
 
@@ -303,10 +343,21 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
             {
                 leafId = task.Id;
                 if (scenario == "missing" && task.Wbs == "1.2") continue;
-                inputs.Add(new { taskId = task.Id, plannedStart = scenario == "outside" ? start.AddDays(-1) : scenario == "parent" && task.Wbs == "1" ? start.AddDays(1) : start, plannedEnd = end, weight = task.Wbs == "1.2" ? 3 : 1 });
+                inputs.Add(new { taskId = task.Id, plannedStart = scenario == "outside" ? start.AddDays(-1) : scenario == "parent" && task.Wbs == "1" ? start.AddDays(1) : start, plannedEnd = end, weight = task.Wbs == "1" ? 0 : task.Wbs == "1.1" ? scenario == "badweight" ? 30 : 40 : 60, isMilestone = false });
             }
-            return (project.Id, leafId, (object)new { changeReason = "Triển khai kế hoạch thi công phần móng", siteManagerUserId = site, items = inputs });
+            return (project.Id, leafId, (object)new { changeReason = "Triển khai kế hoạch thi công phần móng", weightBasisNote = "Tỷ trọng theo phạm vi khối lượng công tác móng", workingDaysOfWeek = new[] { 1, 2, 3, 4, 5, 6 }, nonWorkingDates = Array.Empty<DateOnly>(), siteManagerUserId = site, items = inputs });
         });
+    }
+    private async Task ReportAllLeaves(int project)
+    {
+        var workspace = await ReadJsonAsync(await Client.GetAsync(Root(project)));
+        foreach (var item in workspace.GetProperty("baselines")[0].GetProperty("items").EnumerateArray().Where(x => x.GetProperty("isLeaf").GetBoolean() && !x.GetProperty("isMilestone").GetBoolean()))
+        {
+            var id = item.GetProperty("taskId").GetInt32();
+            var input = workspace.GetProperty("actualInputs").EnumerateArray().Single(x => x.GetProperty("taskId").GetInt32() == id);
+            await Post(project, $"tasks/{id}/actual", new { expectedUpdatedAt = input.GetProperty("updatedAt").GetString(), progressPercent = 0 });
+            workspace = await ReadJsonAsync(await Client.GetAsync(Root(project)));
+        }
     }
     private Task Login(string role) => AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
     private Task<int> User(string role) => WithDbAsync(db => db.Users.Where(x => x.PhoneNumber == (role == "SUPER_ADMIN" ? TestDataSeeder.SuperAdminPhone : TestDataSeeder.BusinessRolePhonesByCode[role])).Select(x => x.Id).SingleAsync());

@@ -169,7 +169,7 @@ public sealed class CmScheduleConcurrencyTests
                     CreatedByUserId = user.Id,
                     Items = [new ProjectScheduleItem { Node = node, WbsCode = "1.1", Title = "Thi công móng", PlannedStart = start, PlannedEnd = end }]
                 };
-                var task = new ConstructionTask { DesignProject = design, ProjectScheduleNode = node, TaskCode = "TC-MONG", Wbs = "1.1", Name = "Thi công móng", PlannedStart = start, PlannedEnd = end };
+                var task = new ConstructionTask { DesignProject = design, ProjectScheduleNode = node, TaskCode = "TC-MONG", Wbs = "1.1", Name = "Thi công móng", PlannedStart = start, PlannedEnd = end, ProgressReportedAt = DateTime.UtcNow, ProgressReportedByUserId = user.Id };
                 db.AddRange(task, crm, new OperationalProjectMember { OperationalProject = project, UserId = user.Id, StartedAt = DateTime.UtcNow.AddDays(-1), Position = "Chỉ huy trưởng" }, new SiteSettings());
                 await db.SaveChangesAsync();
                 db.CmScheduleBaselines.Add(new CmScheduleBaseline
@@ -181,7 +181,8 @@ public sealed class CmScheduleConcurrencyTests
                     SiteManagerUserId = user.Id,
                     ApproverUserId = user.Id,
                     CreatedByUserId = user.Id,
-                    ItemsJson = JsonSerializer.Serialize(new[] { new CmScheduleLine(task.Id, design.Id, node.Id, "1.1", task.Name, start, end, start, end, 1m, true, []) })
+                    WorkingDaysOfWeekJson = "[0,1,2,3,4,5,6]",
+                    ItemsJson = JsonSerializer.Serialize(new[] { new CmScheduleLine(task.Id, design.Id, node.Id, "1.1", task.Name, start, end, start, end, 100m, true, []) })
                 });
                 await db.SaveChangesAsync();
                 fixture.ProjectId = project.Id; fixture.TaskId = task.Id; fixture.UserId = user.Id; fixture.UpdatedAt = task.UpdatedAt;

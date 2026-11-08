@@ -117,6 +117,10 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
     await page.goto(url);
     await page.getByRole("button", { name: "Create CM revision", exact: true }).click();
     await page.locator("#cm-change-reason").fill("Triển khai kế hoạch thi công móng theo CRM");
+    await page
+      .getByLabel("Record the scope, quantity, or complexity basis; a BOQ is not required.")
+      .fill("Tỷ trọng theo phạm vi công tác móng");
+    await page.getByLabel("Scope share (%) 1.1").fill("100");
     await page.getByRole("combobox", { name: "Site Manager for alerts", exact: true }).click();
     await page.getByRole("option", { name: site.fullName, exact: true }).click();
     await page
@@ -137,6 +141,12 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
     await loginInBrowserAs(page, TEST_USERS.siteCommander);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(url);
+    await expect(page.getByText("Not yet reported by BCH", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Working days: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday", {
+        exact: true,
+      }),
+    ).toBeVisible();
     await expect(page.getByRole("button", { name: "Create CM revision", exact: true })).toHaveCount(
       0,
     );

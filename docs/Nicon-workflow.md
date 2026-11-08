@@ -411,12 +411,14 @@ hợp. Người dùng xác nhận ngày 24/10/2026: độ chậm S-Curve là `% 
 % thực tế` theo điểm phần trăm; kỳ linh hoạt ngày/tháng/năm. Nguồn % thực tế,
 cách tổng hợp theo kỳ và thẩm quyền publish/mở khóa vẫn cần NICON xác nhận.
 
-**Partial — tiến độ CM:** ứng dụng đã lưu baseline có version, quy trình trình/
-duyệt độc lập, snapshot tiến độ và cảnh báo theo ngưỡng. Người dùng xác nhận
-ngày 09/11/2026 rằng `% thực tế` lấy từ `ConstructionTask.ProgressPercent` do
-BCH cập nhật. Cách quy đổi trọng số/tổng hợp theo kỳ và quyền publish/mở khóa
-baseline vẫn là **Open decision**; kết quả hiện tại chưa thay thế quy tắc do
-NICON duyệt.
+**Partial — tiến độ CM:** theo ủy quyền trên, người đại diện chốt actual từ
+`ConstructionTask.ProgressPercent` do BCH báo cáo có actor/thời điểm; CM phân bổ
+tỷ trọng trên WBS lá tổng 100%, không bắt buộc BOQ, PM duyệt độc lập; summary và
+mốc không có tỷ trọng; lịch từng baseline mặc định Thứ Hai–Thứ Bảy, Chủ nhật
+nghỉ, ngày nghỉ ngoại lệ được đóng băng. Tháng/năm dùng snapshot cuối kỳ; thiếu
+actual/snapshot là unavailable, không phải 0%; baseline published không mở khóa,
+thay đổi tạo version mới. Branch đang triển khai quy tắc này; tổng hợp portfolio
+vẫn còn ngoài phạm vi. Đây chưa phải quyết định mới được NICON xác nhận trực tiếp.
 
 ### 5.2. Giai đoạn 2 — BCH thực hiện, Phòng CM kiểm soát chéo
 
@@ -657,11 +659,11 @@ khóa là snapshot bất biến.
 7. Q-09: template giấy phép theo loại/quy mô Dự án.
 8. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
    phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
-9. Cách tổng hợp S-Curve theo kỳ linh hoạt ngày/tháng/năm; quyền
-   publish/unlock baseline; điều kiện VO. Nguồn actual từ
-   `ConstructionTask.ProgressPercent` được người dùng xác nhận ngày
-   09/11/2026. Công thức điểm phần trăm đã
-   được người dùng xác nhận ngày 24/10/2026.
+9. Quy tắc S-Curve đã được người đại diện chủ sản phẩm chốt theo ủy quyền NICON
+   ngày 09/11/2026 (trọng số lá WBS tổng 100%, lịch baseline cố định, actual có
+   báo cáo BCH, cuối kỳ tháng/năm, thiếu dữ liệu không nội suy, PM duyệt và tạo
+   version thay đổi); kiểm tra đầy đủ triển khai trước khi đánh dấu Implemented.
+   Điều kiện VO và approval matrix ngoài phạm vi vẫn cần chủ nghiệp vụ quyết định.
 10. Hoàn tất mapping bộ ISO trong `docs/Nicon/ISO/` vào QA/QC/cổng khởi công
     theo loại công trình; NICON xác minh `TC-M02`, `TC-M23`, `TQT-M00`, `TC-M00`
     và các mã dùng cho nhiều nội dung, rồi bổ sung riêng form còn thiếu. Không

@@ -237,7 +237,7 @@ The platform is being developed incrementally. The following components are curr
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management | Partial — projects, Concept options with typed revisions, files, client feedback and signed acceptance; Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comments linked to a dossier or one submitted file, Design Manager consolidation and client decision gates are delivered; native 3D viewing, in-drawing markup and full MS Project import remain target work |
 | Permitting checklists | Partial — lifecycle, documents, risk filters, versioned template authoring/independent review and manual application with mandatory items are delivered; CM/NICON approval of actual type/scale catalogues and automatic template matching remain open |
-| Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries, versioned CM schedule comparison, snapshots and delay/recovery workflow, CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; approved S-Curve aggregation, full portfolio review and offline queue/reconnect remain open |
+| Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries, versioned CM schedule comparison, snapshots and delay/recovery workflow, CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; full portfolio review and offline queue/reconnect remain open. S-Curve calculation follows product-owner rules delegated by NICON on 09/11/2026 and remains subject to the relevant code/test validation. |
 | Acceptance and handover | Partial — core records and CM review of QA/QC/QS are delivered; upstream/downstream QS payment eligibility, three-section dossier and complete handover gate remain target work |
 | Punchlist management | Partial — core records are delivered; CM overdue supervision and expanded field evidence remain target work |
 | HSE violations | Partial — Operational-Project-scoped lifecycle, evidence paths, correction, confirmation/closure and concurrency are delivered; the BCH-versus-CM approval/delegation matrix remains open |
@@ -1373,10 +1373,13 @@ issued/non-expired permits, published schedule baseline, approved BCH/resource
 plan and locked Budget Baseline. Site handover, method statement and HSE-plan
 evidence are project-template conditions pending NICON's approved ISO checklist.
 The application now evaluates this start gate server-side and stores the gate
-snapshot and actor. WBS, schedule, S-Curve, BCH organization, resource plan and
-Budget Baseline are currently governed as required versioned references rather
-than editable planning structures. Site handover, method statement and HSE plan
-are enforced when CM marks them required for that preparation version.
+snapshot and actor. WBS, schedule, BCH organization, resource plan and Budget
+Baseline remain governed as versioned references. The S-Curve workspace stores
+CM scope weights for WBS leaves (based on scope, quantity or complexity; BOQ is
+not required), a frozen working calendar and BCH actual reports under
+product-owner decisions delegated by NICON on 09/11/2026. Missing actuals
+are shown as unavailable; monthly and yearly charts use period-end snapshots.
+Site handover, method statement and HSE plan are enforced when CM marks them required for that preparation version.
 
 **Phase 2 - parallel execution and cross-control**
 

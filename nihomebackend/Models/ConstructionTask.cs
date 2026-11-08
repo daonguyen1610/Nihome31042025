@@ -49,6 +49,12 @@ public class ConstructionTask
     /// <summary>0-100 completion.</summary>
     public int ProgressPercent { get; set; }
 
+    /// <summary>When a BCH user last explicitly reported progress, including 0%.</summary>
+    public DateTime? ProgressReportedAt { get; set; }
+
+    /// <summary>User who explicitly reported progress.</summary>
+    public int? ProgressReportedByUserId { get; set; }
+
     public int? OwnerUserId { get; set; }
     public ApplicationUser? Owner { get; set; }
 

@@ -539,22 +539,29 @@ giá trị thực hiện với dự toán; hồ sơ nghiệm thu chất lượng
 Danh sách này đã được NICON xác nhận. Công thức giá trị thực hiện, kỳ báo cáo,
 nguồn số liệu và baseline so sánh vẫn phải được thống nhất trước khi tính toán.
 
-**Target; công thức đã xác nhận ngày 24/10/2026:** độ chậm S-Curve bằng
+**Partial; công thức đã xác nhận ngày 24/10/2026:** độ chậm S-Curve bằng
 `% kế hoạch − % thực tế`, tính theo **điểm phần trăm**, không chia cho % kế
 hoạch. Chỉ khi độ chậm **lớn hơn 5 điểm phần trăm** mới tạo cảnh báo đỏ, yêu
 cầu giải trình và kế hoạch phục hồi. Kế hoạch 50%, thực tế 46% là chậm 4 điểm;
 50% so với 45% chưa vượt ngưỡng; 50% so với 44% vượt ngưỡng.
-Theo xác nhận tiếp của người dùng ngày 24/10/2026, kỳ xem/chốt không set cứng,
-cần linh hoạt theo ngày/tháng/năm. Lưu inputs, baseline version, kỳ và kết quả
-để tái lập; người dùng xác nhận ngày 09/11/2026 rằng `% thực tế` lấy từ
-`ConstructionTask.ProgressPercent` do BCH cập nhật. Cách tổng hợp/trọng số theo
-kỳ và thẩm quyền publish/unlock baseline vẫn là **Open decision** của NICON/CM.
-Xác nhận nguồn actual không đồng nghĩa công thức tổng hợp đã được duyệt.
+Kỳ xem/chốt linh hoạt theo ngày/tháng/năm. Ngày 09/11/2026, NICON giao người
+đại diện chủ sản phẩm toàn quyền quyết định quy tắc S-Curve; người đại diện đã
+chốt: actual lấy từ `ConstructionTask.ProgressPercent` do BCH báo cáo có actor
+và thời điểm; công việc lá WBS được CM phân bổ tỷ trọng phạm vi, tổng đúng 100%,
+PM duyệt độc lập; WBS tổng hợp và mốc không có tỷ trọng. Có thể dùng phạm vi,
+khối lượng và độ phức tạp để giải thích tỷ trọng; không yêu cầu BOQ. Ghi chú căn
+cứ tỷ trọng lưu cùng baseline. Lịch làm việc và ngày nghỉ ngoại lệ được chốt bất biến theo
+version; mặc định lịch baseline mới là Thứ Hai–Thứ Bảy, Chủ nhật nghỉ. Kế hoạch
+được tính theo ngày làm việc; báo cáo tháng/năm lấy trạng thái tại cuối kỳ, không
+nội suy hay lấy trung bình. Thiếu actual report/snapshot hiển thị là chưa có dữ
+liệu, không phải 0%. Baseline công bố không mở khóa hay ghi đè; thay đổi tạo
+version mới và PM duyệt.
 
-**Partial:** ứng dụng đã có CM schedule baseline theo version, trình/duyệt độc
-lập, snapshot actual và cảnh báo chậm. Cách tính hiện hành chỉ là phần triển
-khai; chưa được coi là công thức nghiệp vụ chính thức cho đến khi NICON/CM chốt
-cách tổng hợp theo kỳ và trọng số.
+**Partial:** branch triển khai S-Curve cấp một Dự án vận hành với WBS có trọng số,
+lịch đóng băng, actual BCH có actor/thời điểm, báo cáo ngày/tháng/năm, và luồng
+PM duyệt version; chưa bao gồm tổng hợp S-Curve portfolio/toàn công ty. Đây là
+quyết định của người đại diện chủ sản phẩm theo ủy quyền NICON ngày 09/11/2026,
+không phải xác nhận mới trực tiếp từ khách hàng.
 
 ### 6.2. Nguồn lực và BOQ
 
@@ -881,18 +888,15 @@ Ngoài ra, NICON cần chốt:
    `TQT-M00`, `TC-M00` chưa nhận diện file đối ứng theo mã trong bộ đã nhận,
    kể cả danh sách archive; NICON xác nhận file tương đương/đổi tên và các mã/nhãn xung đột. Nguồn
    chuẩn ISO đã xác nhận.
-2. Nguồn % thực tế, cách tổng hợp S-Curve theo kỳ linh hoạt ngày/tháng/năm và
-   quyền publish/unlock baseline. Công thức điểm phần trăm đã được người dùng
-   xác nhận ngày 24/10/2026 tại mục 6.1.
-3. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
-4. Đối chiếu chứng từ thanh toán theo bốn loại Downstream package với ISO;
+2. Approval/delegation matrix cho MR, QA/QC, HSE, QS và VO.
+3. Đối chiếu chứng từ thanh toán theo bốn loại Downstream package với ISO;
    FA (chị K/Kiara) bổ sung phần thiếu, xác nhận mapping/ngoại lệ chưa rõ và
    điều kiện tạm ứng/trả trước trước khi áp dụng gate chứng từ.
-5. Công thức dải BOQ 85/95/>100 và xử lý zero allowance/reversal/conversion.
-6. Migration `DesignProjectId` → `OperationalProjectId` cho Module 2/3/4.
-7. Migration cây Drive cho `01_Khao_sat`.
-8. KPI definition, target và source cho các vị trí còn thiếu.
-9. **Open decision — GĐ/ĐDCL/TKISO:** xác nhận ủy quyền phát hành điện tử sang
+4. Công thức dải BOQ 85/95/>100 và xử lý zero allowance/reversal/conversion.
+5. Migration `DesignProjectId` → `OperationalProjectId` cho Module 2/3/4.
+6. Migration cây Drive cho `01_Khao_sat`.
+7. KPI definition, target và source cho các vị trí còn thiếu.
+8. **Open decision — GĐ/ĐDCL/TKISO:** xác nhận ủy quyền phát hành điện tử sang
    CM/Admin, thu hồi phiên bản cũ, người/thời hạn lưu và thẩm quyền hủy hồ sơ
    theo QTC-KSTLHS. Quyền xuất bản checklist hiện tại là hành vi sản phẩm đã
    thống nhất, chưa phải xác nhận triển khai đầy đủ quy trình kiểm soát tài liệu ISO.
@@ -935,7 +939,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 | 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |
 | 12 | Host và Drive NICON | Target | Chỉ công nhận sau deployment, OAuth NICON, health check và smoke test có bằng chứng. |
 | 13 | Đầu vào NICON | Open decision | Nguồn ISO đã có trong `docs/Nicon/ISO/` từ 20/10/2026; luồng CM → Cung ứng → FA, danh sách kiểm soát CM và nhân sự BCH đa dự án đã xác nhận qua phản hồi được cung cấp 18/10/2026. Còn thiếu mapping ISO được CM/FA duyệt, form được dẫn chiếu nhưng chưa thấy file, permit matrix và quy ước mã dự án. |
-| 14 | Điểm chưa chắc chắn | Open decision | S-Curve đã chốt chênh lệch điểm phần trăm và kỳ linh hoạt ngày/tháng/năm; nguồn actual `ConstructionTask.ProgressPercent` do BCH cập nhật được xác nhận ngày 09/11/2026; tổng hợp theo kỳ/trọng số, quyền baseline, approval matrix và payment matrix còn cần xác nhận. |
+| 14 | Điểm chưa chắc chắn | Partial | Quy tắc S-Curve được người đại diện chủ sản phẩm chốt theo ủy quyền NICON ngày 09/11/2026: trọng số phạm vi lá WBS tổng 100%, lịch baseline bất biến, actual có báo cáo BCH rõ ràng, tháng/năm lấy cuối kỳ, thiếu dữ liệu không nội suy; PM duyệt baseline độc lập. Còn cần kiểm chứng triển khai end-to-end; approval và payment matrix ngoài phạm vi vẫn mở. |
 
 `Implemented` yêu cầu đồng thời có persistence, API authorization, UI và test phù
 hợp. Bảng này mô tả branch hiện tại, không phải bằng chứng trạng thái môi trường
