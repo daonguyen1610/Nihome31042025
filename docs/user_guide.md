@@ -114,6 +114,14 @@ assignees, approvers and CC belong to that flow. The Operational Project remains
 the shared business root; membership in one flow does not grant access to its
 siblings.
 
+The Team member count covers current assignments; ended assignments have a
+separate count below. Dossier rights show check/cross symbols and accessible
+Yes/No states. Owners retain full rights with a visible explanation. Permission
+history shows the affected member and the saved rights at that time; it does
+not imply that an old/new comparison was recorded. During a save, keep the
+dialog open until the result appears. Invalid member forms announce the error
+and focus the affected field.
+
 People selectors show the person's name, organizational role and department.
 Use **Department / Group** to narrow the eligible candidates, then search by
 name, role or email. Filtering does not grant assignment rights or remove a
