@@ -45,7 +45,7 @@ test("UI only: delayed preview locks the schedule and refresh clears a recovered
   });
   await page.goto(`/admin/contracts/${id}?tab=care`);
   const panel = page.getByRole("region", { name: "Email nhắc thời hạn hợp đồng" });
-  await expect(panel.getByRole("alert")).toContainText("Reminder history unavailable");
+  await expect(panel.getByRole("alert")).toContainText("Đã xảy ra lỗi. Vui lòng thử lại sau.");
   await panel.getByRole("button", { name: "Tải lại", exact: true }).click();
   await expect(panel.getByRole("alert")).toHaveCount(0);
   const day = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(new Date());

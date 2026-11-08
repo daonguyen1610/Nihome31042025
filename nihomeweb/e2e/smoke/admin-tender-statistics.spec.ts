@@ -155,7 +155,9 @@ for (const width of [390, 768, 1440]) {
 
     mode = "error";
     await panel.getByRole("button", { name: "Refresh statistics" }).click();
-    await expect(panel.getByRole("alert")).toContainText("Statistics temporarily unavailable");
+    await expect(panel.getByRole("alert")).toContainText(
+      "An error occurred. Please try again later.",
+    );
     mode = "empty";
     await panel.getByRole("button", { name: /retry/i }).click();
     await expect(

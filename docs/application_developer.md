@@ -4213,7 +4213,9 @@ cd nihomeweb
 BASE_URL=http://localhost:5043 npx playwright test
 ```
 
-CI divides the browser suite into two Playwright shards. Each shard starts an
+CI runs for pull requests against every target branch, including stacked PRs;
+push-triggered runs remain limited to `main`. CI divides the browser suite into
+two Playwright shards. Each shard starts an
 isolated Docker Compose stack and runs with one worker because browser specs
 share seeded SQL data and some deliberately exercise mutable RBAC and
 configuration records. This preserves deterministic cleanup while the two

@@ -344,11 +344,5 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     await expect(page.getByTestId(`shop-drawing-delete-${drawingId}`)).toBeVisible();
   });
 
-  test("SALE role is blocked from Detail Design endpoints", async ({ api, loginAs }) => {
-    const token = await loginAs(TEST_USERS.sale);
-    const res = await api.get("/api/shop-drawings", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(res.status()).toBe(403);
-  });
+  // HTTP membership boundaries are exercised by DesignDossierPermissionsControllerTests.
 });

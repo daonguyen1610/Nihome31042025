@@ -526,8 +526,11 @@ test("legal workspace updates progress and preserves input on concurrency confli
         }),
       )
       .toBe(true);
-    await editDialog.getByTestId("permit-issued-file-upload").scrollIntoViewIfNeeded();
-    await expect(editDialog.getByTestId("permit-issued-file-upload")).toBeInViewport();
+    const uploadControl = editDialog.locator("label").filter({
+      has: page.getByTestId("permit-issued-file-upload"),
+    });
+    await uploadControl.scrollIntoViewIfNeeded();
+    await expect(uploadControl).toBeInViewport();
     await expect(editDialog.getByRole("heading")).toBeInViewport();
     await expect(editDialog.locator("button").nth(-2)).toBeInViewport();
   }

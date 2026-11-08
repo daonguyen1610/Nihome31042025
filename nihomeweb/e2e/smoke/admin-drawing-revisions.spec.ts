@@ -212,11 +212,5 @@ test.describe("NIH-117 — Drawing Revisions (real-user flow)", () => {
     expect(r2.revisionNumber).toBe(2);
   });
 
-  test("SALE role is blocked from Drawing Revision endpoints", async ({ api, loginAs }) => {
-    const token = await loginAs(TEST_USERS.sale);
-    const res = await api.get("/api/drawing-revisions", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(res.status()).toBe(403);
-  });
+  // HTTP membership boundaries are exercised by DesignDossierPermissionsControllerTests.
 });

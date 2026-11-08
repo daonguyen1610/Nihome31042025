@@ -707,7 +707,7 @@ test("material request detail edits safely and completes its workflow", async ({
 
   await quantity.fill("30");
   await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();
-  await expect(page.getByRole("alert")).toContainText("Update unavailable");
+  await expect(page.getByRole("alert")).toContainText("Đã xảy ra lỗi. Vui lòng thử lại sau.");
   await expect(quantity).toHaveValue("30");
   failUpdate = false;
   await page.getByRole("button", { name: /Lưu|Save|保存/i }).click();

@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import { confirmAction } from "../fixtures/confirmation";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import * as fs from "node:fs";
 import * as path from "node:path";
@@ -196,8 +197,8 @@ test("customer related records, documents, and contract owner inheritance work i
     const persistedItem = reopenedDialog.locator("li").filter({ hasText: fileName });
     await expect(persistedItem).toBeVisible();
 
-    page.once("dialog", (dialog) => dialog.accept());
     await persistedItem.getByRole("button", { name: /Xoá|Delete|删除|削除/i }).click();
+    await confirmAction(page);
     await expect(persistedItem).toBeHidden();
     await expect(
       reopenedDialog.getByText(/Chưa có tài liệu|No documents|尚未关联|まだありません/i),

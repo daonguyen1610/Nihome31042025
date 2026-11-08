@@ -109,7 +109,7 @@ test("project search ignores stale responses and remains usable after errors (si
   await expect(search).toBeFocused();
   await expect(page.getByRole("alert")).toHaveCount(0);
   await search.fill("search-error");
-  await expect(page.getByRole("alert")).toContainText("Current search failure");
+  await expect(page.getByRole("alert")).toContainText("Đã xảy ra lỗi. Vui lòng thử lại sau.");
   await expect(search).toBeFocused();
   await search.fill("recovered");
   await expect(page.getByRole("alert")).toHaveCount(0);

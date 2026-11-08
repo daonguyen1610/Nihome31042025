@@ -549,7 +549,7 @@ test("warehouse receipt detail edits, posts, reverses, and preserves context", a
   const quantity = page.locator("#warehouse-receipt-quantity-0");
   await quantity.fill("30");
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("alert")).toContainText("Update unavailable");
+  await expect(page.getByRole("alert")).toContainText("An error occurred. Please try again later.");
   await expect(quantity).toHaveValue("30");
   failUpdate = false;
   await page.getByRole("button", { name: "Save" }).click();
@@ -750,7 +750,7 @@ test("warehouse issue detail preserves allocation and enforces stock and permiss
   await quantity.fill("18");
   await page.locator("#warehouse-work-item").fill("FOUNDATION-B");
   await page.getByRole("button", { name: "Save" }).click();
-  await expect(page.getByRole("alert")).toContainText("Issue update unavailable");
+  await expect(page.getByRole("alert")).toContainText("An error occurred. Please try again later.");
   await expect(quantity).toHaveValue("18");
   await expect(page.locator("#warehouse-work-item")).toHaveValue("FOUNDATION-B");
   failUpdate = false;
