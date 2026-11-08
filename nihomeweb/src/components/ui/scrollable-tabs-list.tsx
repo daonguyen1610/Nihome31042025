@@ -19,6 +19,7 @@ export function ScrollableTabsList({
   ...props
 }: ScrollableTabsListProps) {
   const viewportRef = React.useRef<HTMLDivElement>(null);
+  const revealFrameRef = React.useRef(0);
   const [canScrollLeft, setCanScrollLeft] = React.useState(false);
   const [canScrollRight, setCanScrollRight] = React.useState(false);
 
@@ -32,17 +33,57 @@ export function ScrollableTabsList({
   React.useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
+    const revealActiveTab = () => {
+      const active = viewport.querySelector<HTMLElement>("[data-state='active']");
+      if (active) {
+        const tabBounds = active.getBoundingClientRect();
+        const viewportBounds = viewport.getBoundingClientRect();
+        const offset = centerActiveTab
+          ? tabBounds.left + tabBounds.width / 2 - viewportBounds.left - viewportBounds.width / 2
+          : tabBounds.left < viewportBounds.left
+            ? tabBounds.left - viewportBounds.left
+            : Math.max(0, tabBounds.right - viewportBounds.right);
+        viewport.scrollLeft += offset;
+      }
+      updateScrollState();
+    };
+    const revealAfterLayout = () => {
+      cancelAnimationFrame(revealFrameRef.current);
+      revealFrameRef.current = requestAnimationFrame(() => {
+        revealActiveTab();
+        // Revealing the tab may add arrow controls. Let their layout settle
+        // before checking the final available viewport width.
+        revealFrameRef.current = requestAnimationFrame(revealActiveTab);
+      });
+    };
     updateScrollState();
-    const observer = new ResizeObserver(updateScrollState);
-    observer.observe(viewport);
-    viewport.querySelector<HTMLElement>("[data-state='active']")?.scrollIntoView({
-      block: "nearest",
-      inline: centerActiveTab ? "center" : "nearest",
+    revealAfterLayout();
+    let lastWidth = viewport.parentElement!.getBoundingClientRect().width;
+    const observer = new ResizeObserver(([entry]) => {
+      if (entry.contentRect.width === lastWidth) return;
+      lastWidth = entry.contentRect.width;
+      revealAfterLayout();
     });
-    return () => observer.disconnect();
-  }, [centerActiveTab, children, updateScrollState]);
+    // Observe the whole control, so manual scrolling that hides an arrow
+    // doesn't recenter the selected tab and undo the user's navigation.
+    observer.observe(viewport.parentElement!);
+    const selectionObserver = new MutationObserver(revealAfterLayout);
+    selectionObserver.observe(viewport, {
+      subtree: true,
+      childList: true,
+      characterData: true,
+      attributes: true,
+      attributeFilter: ["data-state"],
+    });
+    return () => {
+      observer.disconnect();
+      selectionObserver.disconnect();
+      cancelAnimationFrame(revealFrameRef.current);
+    };
+  }, [centerActiveTab, updateScrollState]);
 
   const scroll = (direction: number) => {
+    cancelAnimationFrame(revealFrameRef.current);
     viewportRef.current?.scrollBy({ left: direction * 240, behavior: "smooth" });
   };
 
@@ -64,6 +105,8 @@ export function ScrollableTabsList({
       <div
         ref={viewportRef}
         onScroll={updateScrollState}
+        onWheel={() => cancelAnimationFrame(revealFrameRef.current)}
+        onPointerDown={() => cancelAnimationFrame(revealFrameRef.current)}
         className="min-w-0 flex-1 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         <TabsList

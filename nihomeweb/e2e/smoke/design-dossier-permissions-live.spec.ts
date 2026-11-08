@@ -40,6 +40,7 @@ test("leaders save dossier rights while owner rows stay locked in every language
       },
     });
     expect(added.status(), await added.text()).toBe(201);
+    const memberId = ((await added.json()) as { id: number }).id;
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto("/");
     const translations = [
@@ -66,11 +67,15 @@ test("leaders save dossier rights while owner rows stay locked in every language
     ];
     for (const { lang, locked, action } of translations) {
       await page.evaluate((language) => localStorage.setItem("nicon_lang", language), lang);
-      await page.setViewportSize({ width: 390, height: 844 });
+      await page.setViewportSize({
+        width: lang === "en" ? 768 : lang === "zh" ? 1440 : 390,
+        height: 844,
+      });
       await page.goto(`/admin/design-projects/${designId}?tab=team`);
       await expect(
         page.getByRole("button", { name: locked, exact: true }).filter({ visible: true }),
       ).toBeDisabled();
+      await expect(page.getByText(locked, { exact: true }).filter({ visible: true })).toBeVisible();
       const permissions = page
         .getByRole("button", { name: action, exact: true })
         .filter({ visible: true });
@@ -98,8 +103,34 @@ test("leaders save dossier rights while owner rows stay locked in every language
     await dialog.getByRole("checkbox", { name: "View", exact: true }).check();
     await dialog.getByRole("checkbox", { name: "Create", exact: true }).uncheck();
     await dialog.getByRole("checkbox", { name: "Update", exact: true }).uncheck();
-    await dialog.getByRole("button", { name: "Save permissions", exact: true }).click();
+    let releaseSave!: () => void;
+    const saveGate = new Promise<void>((resolve) => {
+      releaseSave = resolve;
+    });
+    const permissionUrl = `**/team/members/${memberId}/design-permissions`;
+    await page.route(permissionUrl, async (route) => {
+      await saveGate;
+      await route.continue();
+    });
+    const saveRequest = page.waitForRequest(
+      (request) =>
+        request.method() === "PUT" &&
+        request.url().endsWith(`/team/members/${memberId}/design-permissions`),
+    );
+    try {
+      await dialog.getByRole("button", { name: "Save permissions", exact: true }).click();
+      await saveRequest;
+      await expect(dialog).toHaveAttribute("aria-busy", "true");
+      await page.keyboard.press("Escape");
+      await expect(dialog).toBeVisible();
+      await dialog.getByRole("button", { name: "Close", exact: true }).click();
+      await expect(dialog).toBeVisible();
+      await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeDisabled();
+    } finally {
+      releaseSave();
+    }
     await expect(dialog).toHaveCount(0);
+    await page.unroute(permissionUrl);
     await page.reload();
     await page
       .getByRole("button", { name: "Dossier permissions", exact: true })
@@ -109,6 +140,25 @@ test("leaders save dossier rights while owner rows stay locked in every language
       page.getByRole("dialog").getByRole("checkbox", { name: "Create", exact: true }),
     ).not.toBeChecked();
     await page.keyboard.press("Escape");
+    const memberCard = page
+      .getByRole("listitem")
+      .filter({ has: page.getByRole("button", { name: "Dossier permissions", exact: true }) })
+      .filter({ hasText: architect.fullName })
+      .filter({ visible: true });
+    await expect(memberCard.getByText("View: Yes", { exact: true })).toBeVisible();
+    await expect(memberCard.getByText("Create: No", { exact: true })).toBeVisible();
+    const historyResponse = await api.get(`${root}/history?designProjectId=${designId}`, {
+      headers,
+    });
+    expect(historyResponse.ok()).toBe(true);
+    const historyEntry = (
+      (await historyResponse.json()) as { id: number; entityType: string; entityId: number }[]
+    ).find((item) => item.entityType === "MemberPermissions" && item.entityId === memberId);
+    expect(historyEntry).toBeTruthy();
+    const historyItem = page.getByTestId(`project-history-MemberPermissions-${historyEntry!.id}`);
+    await expect(historyItem).toContainText(architect.fullName);
+    await expect(historyItem.getByText("View: Yes", { exact: true })).toBeVisible();
+    await expect(historyItem.getByText("Create: No", { exact: true })).toBeVisible();
     await loginInBrowserAs(page, TEST_USERS.architect);
     await page.goto(`/admin/design-projects/${designId}?tab=concept`);
     await expect(page.getByRole("tab", { name: "Concept", exact: true })).toBeVisible();

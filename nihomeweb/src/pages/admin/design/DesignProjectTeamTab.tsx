@@ -2,7 +2,7 @@ import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
 import { FieldScope } from "@/components/ui/field-scope";
-import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type FormEvent, useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { personOption, projectMemberOption, projectPositionLabel } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
@@ -135,6 +135,91 @@ const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
   Reassigned: "border-border bg-muted/30 text-foreground",
 };
 
+const DesignPermissionSummary = ({
+  permissions,
+  owner = false,
+}: {
+  permissions?: DesignProjectMemberPermissionsResponse | null;
+  owner?: boolean;
+}) => {
+  const { t } = useI18n();
+  if (!permissions) return null;
+  const items = [
+    ["view", permissions.canView],
+    ["create", permissions.canCreate],
+    ["update", permissions.canUpdate],
+    ["delete", permissions.canDelete],
+  ] as const;
+  return (
+    <div className="mt-1.5 space-y-1.5">
+      <div className="flex flex-wrap gap-1">
+        {items.map(([key, enabled]) => (
+          <Badge key={key} variant="outline" className="gap-1 whitespace-nowrap text-foreground">
+            {enabled ? (
+              <CheckCircle2 className="h-3 w-3 shrink-0" aria-hidden />
+            ) : (
+              <XCircle className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+            )}
+            <span>
+              {t(`designProjects.team.permissions.${key}`)}
+              <span className="sr-only">: {t(enabled ? "common.yes" : "common.no")}</span>
+            </span>
+          </Badge>
+        ))}
+      </div>
+      {owner && (
+        <p className="max-w-prose text-xs text-muted-foreground">
+          {t("designProjects.team.permissions.ownerLocked")}
+        </p>
+      )}
+    </div>
+  );
+};
+
+const PermissionHistoryDetails = ({ snapshotJson }: { snapshotJson: string }) => {
+  try {
+    const snapshot: unknown = JSON.parse(snapshotJson);
+    if (
+      !snapshot ||
+      typeof snapshot !== "object" ||
+      !("UserName" in snapshot) ||
+      typeof snapshot.UserName !== "string" ||
+      !("DesignPermissions" in snapshot)
+    )
+      return null;
+    const rights = snapshot.DesignPermissions;
+    if (
+      !rights ||
+      typeof rights !== "object" ||
+      !("CanView" in rights) ||
+      typeof rights.CanView !== "boolean" ||
+      !("CanCreate" in rights) ||
+      typeof rights.CanCreate !== "boolean" ||
+      !("CanUpdate" in rights) ||
+      typeof rights.CanUpdate !== "boolean" ||
+      !("CanDelete" in rights) ||
+      typeof rights.CanDelete !== "boolean"
+    )
+      return null;
+    return (
+      <div className="mt-2">
+        <p className="font-medium">{snapshot.UserName}</p>
+        <DesignPermissionSummary
+          permissions={{
+            canView: rights.CanView,
+            canCreate: rights.CanCreate,
+            canUpdate: rights.CanUpdate,
+            canDelete: rights.CanDelete,
+          }}
+        />
+      </div>
+    );
+  } catch {
+    // Historical or incomplete snapshots must not prevent the history from rendering.
+    return null;
+  }
+};
+
 export const ProjectTeamHistory = ({
   history,
 }: {
@@ -163,6 +248,9 @@ export const ProjectTeamHistory = ({
                 <strong>{item.changedByName}</strong> ·{" "}
                 {t(`designProjects.team.history.entity.${item.entityType}`)} ·{" "}
                 {t(`designProjects.team.history.action.${item.action}`)}
+                {item.entityType === "MemberPermissions" && (
+                  <PermissionHistoryDetails snapshotJson={item.snapshotJson} />
+                )}
                 {item.entityType === "ProjectCode" && (
                   <>
                     <p className="mt-1 font-medium">
@@ -654,6 +742,14 @@ export const OperationalProjectTeamPanel = ({
   } | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const memberFormId = useId();
+  const memberErrorId = `${memberFormId}-error`;
+  const [memberInvalidField, setMemberInvalidField] = useState<string | null>(null);
+  const memberFieldProps = (field: string) => ({
+    id: `${memberFormId}-${field}`,
+    "aria-invalid": memberInvalidField === field || undefined,
+    "aria-describedby": memberInvalidField === field ? memberErrorId : undefined,
+  });
   const memberIdempotencyKey = useRef("");
   const assignmentIdempotencyKey = useRef("");
   const load = useCallback(async () => {
@@ -750,32 +846,6 @@ export const OperationalProjectTeamPanel = ({
   };
   const isDesignRole = (role: ProjectMemberRoleRequest) =>
     role.scope === "Module" && role.scopeValue === "Design";
-  const renderPermissions = (permissions?: DesignProjectMemberPermissionsResponse | null) => {
-    if (!permissions) return null;
-    const items = [
-      ["view", permissions.canView],
-      ["create", permissions.canCreate],
-      ["update", permissions.canUpdate],
-      ["delete", permissions.canDelete],
-    ] as const;
-    return (
-      <div className="mt-1.5 flex flex-wrap gap-1">
-        {items.map(([key, enabled]) => (
-          <Badge
-            key={key}
-            variant="outline"
-            className={
-              enabled
-                ? "whitespace-nowrap border-emerald-200 bg-emerald-50 text-emerald-700"
-                : "whitespace-nowrap text-muted-foreground opacity-50"
-            }
-          >
-            {t(`designProjects.team.permissions.${key}`)}
-          </Badge>
-        ))}
-      </div>
-    );
-  };
 
   const createsReportingCycle = (memberId: number, managerId: number | null | undefined) => {
     let current = managerId ?? null;
@@ -804,6 +874,7 @@ export const OperationalProjectTeamPanel = ({
     setEditingMember(null);
     setMemberForm(form);
     setFormError(null);
+    setMemberInvalidField(null);
     memberIdempotencyKey.current = newIdempotencyKey();
     setMemberDialog("add");
   };
@@ -826,6 +897,7 @@ export const OperationalProjectTeamPanel = ({
       rowVersion: member.rowVersion,
     });
     setFormError(null);
+    setMemberInvalidField(null);
     memberIdempotencyKey.current = newIdempotencyKey();
     setMemberDialog(mode);
   };
@@ -882,29 +954,35 @@ export const OperationalProjectTeamPanel = ({
 
   const validateMember = () => {
     const position = memberForm.position.trim();
-    if (!memberForm.userId) return t("designProjects.team.validation.userRequired");
+    if (!memberForm.userId)
+      return { field: "user", message: t("designProjects.team.validation.userRequired") };
     if (position.length < 2 || position.length > 150)
-      return t("designProjects.team.validation.positionLength");
-    if (!memberForm.startedAt) return t("designProjects.team.validation.startRequired");
+      return { field: "position", message: t("designProjects.team.validation.positionLength") };
+    if (!memberForm.startedAt)
+      return { field: "startedAt", message: t("designProjects.team.validation.startRequired") };
     if (memberDialog === "end" && !memberForm.endedAt)
-      return t("designProjects.team.validation.endRequired");
+      return { field: "endedAt", message: t("designProjects.team.validation.endRequired") };
     if (memberForm.endedAt && memberForm.endedAt < memberForm.startedAt)
-      return t("designProjects.team.validation.memberDates");
+      return { field: "endedAt", message: t("designProjects.team.validation.memberDates") };
     if (!editingMember && activeMembers.some((member) => member.userId === memberForm.userId))
-      return t("designProjects.team.validation.userAlreadyActive");
-    if (!memberForm.roles.length) return t("designProjects.team.validation.roleRequired");
+      return { field: "user", message: t("designProjects.team.validation.userAlreadyActive") };
+    if (!memberForm.roles.length)
+      return { field: "roles", message: t("designProjects.team.validation.roleRequired") };
     if (
       designProjectContext &&
       currentDesignManagerUserId &&
       currentDesignManagerUserId !== memberForm.userId &&
       memberForm.roles.some((role) => role.roleCode === "ProjectManager" && isDesignRole(role))
     )
-      return t("designProjects.team.validation.managerAlreadyAssigned");
+      return {
+        field: "roles",
+        message: t("designProjects.team.validation.managerAlreadyAssigned"),
+      };
     const roleKeys = new Set<string>();
     for (const role of memberForm.roles) {
       const definition = team?.roleDefinitions.find((item) => item.code === role.roleCode);
       if (!definition || !definition.allowedScopes.includes(role.scope))
-        return t("designProjects.team.validation.roleInvalid");
+        return { field: "roles", message: t("designProjects.team.validation.roleInvalid") };
       if (
         designProjectContext &&
         !isDesignRole(role) &&
@@ -915,34 +993,42 @@ export const OperationalProjectTeamPanel = ({
             existing.scopeValue === role.scopeValue,
         )
       )
-        return t("designProjects.team.validation.roleInvalid");
+        return { field: "roles", message: t("designProjects.team.validation.roleInvalid") };
       const scopeValue = role.scopeValue?.trim() ?? "";
       if (role.scope === "Project" && scopeValue)
-        return t("designProjects.team.validation.projectScopeValue");
+        return { field: "roles", message: t("designProjects.team.validation.projectScopeValue") };
       if (role.scope !== "Project" && (!scopeValue || scopeValue.length > 80))
-        return t("designProjects.team.validation.scopeValue");
+        return { field: "roles", message: t("designProjects.team.validation.scopeValue") };
       const key = `${role.roleCode}|${role.scope}|${scopeValue}`.toLowerCase();
-      if (roleKeys.has(key)) return t("designProjects.team.validation.duplicateRole");
+      if (roleKeys.has(key))
+        return { field: "roles", message: t("designProjects.team.validation.duplicateRole") };
       roleKeys.add(key);
     }
     if (editingMember && memberForm.reportsToMemberId === editingMember.id)
-      return t("designProjects.team.validation.selfManager");
+      return { field: "reportsTo", message: t("designProjects.team.validation.selfManager") };
     if (editingMember && createsReportingCycle(editingMember.id, memberForm.reportsToMemberId))
-      return t("designProjects.team.validation.managerCycle");
+      return { field: "reportsTo", message: t("designProjects.team.validation.managerCycle") };
     if (
       memberForm.reportsToMemberId &&
       !activeMembers.some((member) => member.id === memberForm.reportsToMemberId)
     )
-      return t("designProjects.team.validation.managerActive");
+      return { field: "reportsTo", message: t("designProjects.team.validation.managerActive") };
     return null;
   };
   const saveMember = async () => {
     if (!operationalProjectId) return;
     const validationError = validateMember();
     if (validationError) {
-      setFormError(validationError);
+      setMemberInvalidField(validationError.field);
+      setFormError(validationError.message);
+      // Run after the error renders on every attempt, including identical errors.
+      requestAnimationFrame(() => {
+        const field = document.getElementById(`${memberFormId}-${validationError.field}`);
+        (field?.querySelector<HTMLElement>('[role="combobox"], input, button') ?? field)?.focus();
+      });
       return;
     }
+    setMemberInvalidField(null);
     setSaving(true);
     setFormError(null);
     const request: UpsertOperationalProjectMemberRequest = {
@@ -1218,7 +1304,7 @@ export const OperationalProjectTeamPanel = ({
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline">
-              {t("designProjects.team.memberTotal", { count: team.members.length })}
+              {t("designProjects.team.memberTotal", { count: activeMembers.length })}
             </Badge>
             {team.canManage ? (
               <Button size="sm" onClick={openAddMember}>
@@ -1347,9 +1433,12 @@ export const OperationalProjectTeamPanel = ({
                       );
                     })}
                   </div>
-                  {renderPermissions(
-                    isDesignOwner(member.userId) ? ownerPermissions : member.designPermissions,
-                  )}
+                  <DesignPermissionSummary
+                    owner={isDesignOwner(member.userId)}
+                    permissions={
+                      isDesignOwner(member.userId) ? ownerPermissions : member.designPermissions
+                    }
+                  />
                   <dl className="mt-3 grid grid-cols-1 gap-2 text-sm sm:grid-cols-2">
                     <div>
                       <dt className="text-xs text-muted-foreground">
@@ -1419,11 +1508,14 @@ export const OperationalProjectTeamPanel = ({
                             );
                           })}
                         </div>
-                        {renderPermissions(
-                          isDesignOwner(member.userId)
-                            ? ownerPermissions
-                            : member.designPermissions,
-                        )}
+                        <DesignPermissionSummary
+                          owner={isDesignOwner(member.userId)}
+                          permissions={
+                            isDesignOwner(member.userId)
+                              ? ownerPermissions
+                              : member.designPermissions
+                          }
+                        />
                       </td>
                       <td className="px-3 py-3 text-foreground">
                         {member.reportsToName ?? t("designProjects.team.value.none")}
@@ -1488,7 +1580,8 @@ export const OperationalProjectTeamPanel = ({
         {endedMembers.length ? (
           <div className="mt-5 border-t pt-4">
             <h3 className="text-sm font-semibold text-foreground">
-              {t("designProjects.team.endedMembers")}
+              {t("designProjects.team.endedMembers")}{" "}
+              <Badge variant="outline">{endedMembers.length}</Badge>
             </h3>
             <div className="mt-2 grid gap-2 md:grid-cols-2">
               {endedMembers.map((member) => (
@@ -1671,8 +1764,11 @@ export const OperationalProjectTeamPanel = ({
 
       {!onHistoryChange && <ProjectTeamHistory history={history} />}
 
-      <Dialog open={memberDialog !== null} onOpenChange={(open) => !open && setMemberDialog(null)}>
-        <DialogContent className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
+      <Dialog
+        open={memberDialog !== null}
+        onOpenChange={(open) => !open && !saving && setMemberDialog(null)}
+      >
+        <DialogContent aria-busy={saving} className="max-h-[92vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
             <DialogTitle>
               {t(`designProjects.team.dialog.member.${memberDialog ?? "add"}.title`)}
@@ -1687,9 +1783,13 @@ export const OperationalProjectTeamPanel = ({
           </DialogHeader>
           <div className="grid gap-4 sm:grid-cols-2">
             <FieldScope className="sm:col-span-2">
-              <Label>{t("designProjects.team.field.user")} *</Label>
+              <Label htmlFor={`${memberFormId}-user`}>
+                {t("designProjects.team.field.user")} *
+              </Label>
               <SearchableSelect
                 ariaLabel={t("designProjects.team.field.user")}
+                {...memberFieldProps("user")}
+                required
                 disabled={memberDialog !== "add"}
                 value={memberForm.userId ? String(memberForm.userId) : ""}
                 onChange={(value) =>
@@ -1704,10 +1804,14 @@ export const OperationalProjectTeamPanel = ({
               />
             </FieldScope>
             <FieldScope className="sm:col-span-2">
-              <Label>{t("designProjects.team.field.position")} *</Label>
+              <Label htmlFor={`${memberFormId}-position`}>
+                {t("designProjects.team.field.position")} *
+              </Label>
               <Input
                 className="mt-1"
                 maxLength={150}
+                {...memberFieldProps("position")}
+                required
                 disabled={memberDialog === "end"}
                 value={memberForm.position}
                 onChange={(event) =>
@@ -1716,10 +1820,14 @@ export const OperationalProjectTeamPanel = ({
               />
             </FieldScope>
             <FieldScope>
-              <Label>{t("designProjects.team.field.startedAt")} *</Label>
+              <Label htmlFor={`${memberFormId}-startedAt`}>
+                {t("designProjects.team.field.startedAt")} *
+              </Label>
               <Input
                 className="mt-1"
                 type="date"
+                {...memberFieldProps("startedAt")}
+                required
                 disabled={memberDialog === "end"}
                 value={memberForm.startedAt}
                 onChange={(event) =>
@@ -1729,7 +1837,7 @@ export const OperationalProjectTeamPanel = ({
             </FieldScope>
             {(!designProjectContext || memberDialog === "end") && (
               <FieldScope>
-                <Label>
+                <Label htmlFor={`${memberFormId}-endedAt`}>
                   {t("designProjects.team.field.endedAt")}
                   {memberDialog === "end" ? " *" : ""}
                 </Label>
@@ -1737,6 +1845,8 @@ export const OperationalProjectTeamPanel = ({
                   className="mt-1"
                   type="date"
                   min={memberForm.startedAt}
+                  {...memberFieldProps("endedAt")}
+                  required={memberDialog === "end"}
                   disabled={memberDialog !== "end"}
                   value={memberForm.endedAt ?? ""}
                   onChange={(event) =>
@@ -1749,8 +1859,11 @@ export const OperationalProjectTeamPanel = ({
               </FieldScope>
             )}
             <FieldScope className="sm:col-span-2">
-              <Label>{t("designProjects.team.field.reportsTo")}</Label>
+              <Label htmlFor={`${memberFormId}-reportsTo`}>
+                {t("designProjects.team.field.reportsTo")}
+              </Label>
               <SearchableSelect
+                {...memberFieldProps("reportsTo")}
                 disabled={memberDialog === "end"}
                 value={memberForm.reportsToMemberId ? String(memberForm.reportsToMemberId) : "none"}
                 onChange={(value) =>
@@ -1769,7 +1882,7 @@ export const OperationalProjectTeamPanel = ({
                 ]}
               />
             </FieldScope>
-            <div className="space-y-3 sm:col-span-2">
+            <div className="space-y-3 sm:col-span-2" {...memberFieldProps("roles")} tabIndex={-1}>
               <div
                 className={
                   designProjectContext
@@ -1843,7 +1956,14 @@ export const OperationalProjectTeamPanel = ({
                           });
                         }}
                       >
-                        <SelectTrigger aria-label={t("a11yUi.role")}>
+                        <SelectTrigger
+                          aria-required="true"
+                          aria-invalid={memberInvalidField === "roles" || undefined}
+                          aria-describedby={
+                            memberInvalidField === "roles" ? memberErrorId : undefined
+                          }
+                          aria-label={t("a11yUi.role")}
+                        >
                           <SelectValue
                             placeholder={
                               designProjectContext
@@ -1882,7 +2002,14 @@ export const OperationalProjectTeamPanel = ({
                           updateRole(index, { scope: value, scopeValue: null })
                         }
                       >
-                        <SelectTrigger aria-label={t("a11yUi.scope")}>
+                        <SelectTrigger
+                          aria-required="true"
+                          aria-invalid={memberInvalidField === "roles" || undefined}
+                          aria-describedby={
+                            memberInvalidField === "roles" ? memberErrorId : undefined
+                          }
+                          aria-label={t("a11yUi.scope")}
+                        >
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1900,7 +2027,14 @@ export const OperationalProjectTeamPanel = ({
                         value={role.scopeValue ?? ""}
                         onValueChange={(value) => updateRole(index, { scopeValue: value })}
                       >
-                        <SelectTrigger aria-label={t("a11yUi.scopeValue")}>
+                        <SelectTrigger
+                          aria-required="true"
+                          aria-invalid={memberInvalidField === "roles" || undefined}
+                          aria-describedby={
+                            memberInvalidField === "roles" ? memberErrorId : undefined
+                          }
+                          aria-label={t("a11yUi.scopeValue")}
+                        >
                           <SelectValue
                             placeholder={t("designProjects.team.placeholder.scopeValue")}
                           />
@@ -1940,7 +2074,11 @@ export const OperationalProjectTeamPanel = ({
               })}
             </div>
           </div>
-          {formError ? <p className="text-sm font-medium text-rose-600">{formError}</p> : null}
+          {formError ? (
+            <p id={memberErrorId} role="alert" className="text-sm font-medium text-destructive">
+              {formError}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" disabled={saving} onClick={() => setMemberDialog(null)}>
               {t("common.cancel")}
@@ -1963,9 +2101,9 @@ export const OperationalProjectTeamPanel = ({
 
       <Dialog
         open={permissionMember !== null}
-        onOpenChange={(open) => !open && setPermissionMember(null)}
+        onOpenChange={(open) => !open && !permissionSaving && setPermissionMember(null)}
       >
-        <DialogContent className="sm:max-w-md">
+        <DialogContent aria-busy={permissionSaving} className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{t("designProjects.team.dialog.permissions.title")}</DialogTitle>
             <DialogDescription>
@@ -1997,7 +2135,11 @@ export const OperationalProjectTeamPanel = ({
               </label>
             ))}
           </div>
-          {formError ? <p className="text-sm font-medium text-rose-600">{formError}</p> : null}
+          {formError ? (
+            <p role="alert" className="text-sm font-medium text-destructive">
+              {formError}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button
               variant="outline"
@@ -2221,7 +2363,11 @@ export const OperationalProjectTeamPanel = ({
               />
             </FieldScope>
           </div>
-          {formError ? <p className="text-sm font-medium text-rose-600">{formError}</p> : null}
+          {formError ? (
+            <p role="alert" className="text-sm font-medium text-destructive">
+              {formError}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" disabled={saving} onClick={() => setAssignmentDialog(null)}>
               {t("common.cancel")}
@@ -2256,7 +2402,11 @@ export const OperationalProjectTeamPanel = ({
               )}
             </DialogDescription>
           </DialogHeader>
-          {formError ? <p className="text-sm font-medium text-rose-600">{formError}</p> : null}
+          {formError ? (
+            <p role="alert" className="text-sm font-medium text-destructive">
+              {formError}
+            </p>
+          ) : null}
           <DialogFooter>
             <Button variant="outline" disabled={saving} onClick={() => setTerminalAction(null)}>
               {t("common.cancel")}
