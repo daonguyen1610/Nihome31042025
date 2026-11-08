@@ -284,8 +284,37 @@ public sealed class DesignPermitIfcPipelineTests(NihomeWebApplicationFactory fac
     private async Task AssertStageAsync(int projectId, DesignProjectStage stage) =>
         (await WithDbAsync(db => db.DesignProjects.SingleAsync(p => p.Id == projectId))).CurrentStage.Should().Be(stage);
 
-    private Task ApproveReviewAsync(int projectId, DesignReviewStage stage, params int[] sourceRecordIds) =>
-        CreateClientApprovedDesignReviewAsync(projectId, stage, sourceRecordIds);
+    private async Task ApproveReviewAsync(int projectId, DesignReviewStage stage, params int[] sourceRecordIds)
+    {
+        await CreateClientApprovedDesignReviewAsync(projectId, stage, sourceRecordIds);
+        if (stage != DesignReviewStage.ShopDrawing) return;
+        // The upload endpoint already registers the real primary bytes. Approve
+        // that source document, not the generic helper's synthetic PDF hash.
+        await WithDbAsync(async db =>
+        {
+            var review = await db.DesignReviews.Include(x => x.Documents).ThenInclude(x => x.ProjectDocument)
+                .Where(x => x.DesignProjectId == projectId && x.Stage == stage)
+                .OrderByDescending(x => x.RevisionNumber).FirstAsync();
+            foreach (var snapshot in review.Documents.ToList())
+            {
+                var drawing = await db.ShopDrawings.SingleAsync(x => x.Id == snapshot.SourceRecordIdSnapshot);
+                var primary = await db.ProjectDocuments.SingleAsync(x => x.SourceEntityType == nameof(ShopDrawing) &&
+                    x.SourceRecordId == drawing.Id && x.SourceSlot == "file" && x.LocalPath == drawing.FilePath);
+                primary.SyncStatus = ProjectDocumentSyncStatus.Synced;
+                primary.DesiredOperation = ProjectDocumentDesiredOperation.None;
+                db.DesignReviewDocuments.Remove(snapshot);
+                db.ProjectDocuments.Remove(snapshot.ProjectDocument);
+                review.Documents.Add(new DesignReviewDocument
+                {
+                    ProjectDocumentId = primary.Id,
+                    SourceEntityTypeSnapshot = nameof(ShopDrawing),
+                    SourceRecordIdSnapshot = drawing.Id,
+                    Sha256Snapshot = primary.Sha256,
+                });
+            }
+            await db.SaveChangesAsync();
+        });
+    }
 
     private async Task UploadAsync(string path, string contents, string? kind = null)
     {

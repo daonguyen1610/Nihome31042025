@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Http;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
 
@@ -25,6 +26,8 @@ public interface IShopDrawingService
     /// <summary>Upload a file and attach it to an existing shop drawing.</summary>
     Task<ShopDrawingResponse?> UploadFileAsync(int id, IFormFile file, int callerUserId, CancellationToken ct = default);
 
+    // Resolve an already-loaded drawing with the same managed-path rules used by downloads.
+    ManagedDocumentContent? ResolvePrimaryContent(ShopDrawing drawing);
     Task<ManagedDocumentContent?> GetContentAsync(int id, CancellationToken ct = default);
 }
 

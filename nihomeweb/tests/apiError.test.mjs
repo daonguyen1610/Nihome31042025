@@ -168,3 +168,27 @@ test("released IFC mismatch localizes download errors in every supported languag
     );
   }
 });
+
+test("IFC primary-file release errors retain drawing context in all languages", async () => {
+  const fs = await import("node:fs");
+  const seed = JSON.parse(
+    fs.readFileSync(
+      new URL("../../nihomebackend/Data/Seeds/i18n/procurement-ifc.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  for (const [code, key] of [
+    ["IFC_PRIMARY_FILE_NOT_APPROVED", "procurement.ifc.primaryNotApproved"],
+    ["IFC_PRIMARY_FILE_UNAVAILABLE", "procurement.ifc.primaryUnavailable"],
+  ]) {
+    for (const lang of ["vi", "en", "zh", "ja"]) {
+      const expected = seed.find((entry) => entry.key === key)[lang];
+      assert.equal(
+        extractApiError(failure({ code, drawingCode: "KC-SD-001" }), undefined, (actual) =>
+          actual === key ? expected : actual,
+        ),
+        `KC-SD-001: ${expected}`,
+      );
+    }
+  }
+});

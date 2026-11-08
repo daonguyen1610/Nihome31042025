@@ -1253,6 +1253,11 @@ Design. This does not approve the design or create an RFQ/purchase request.
 Only Released packets addressed to the user appear. Leaving the project or
 losing the permission removes access. If a drawing differs from the released
 checksum, the download is blocked: contact Design to check the IFC version.
+Before issuing a drawing that has a primary file, that exact file must match
+client-approved evidence. Approval of a supplementary file alone does not
+approve a different primary drawing. If issuance is blocked, the message
+identifies the drawing; restore or upload the primary file, complete the
+applicable client approval, then retry. The packet remains Draft.
 Existing named external recipients retain their previous tracking workflow;
 historical confirmations are not assigned an invented user identity.
 

@@ -327,7 +327,7 @@ public class IfcReleasesController(
         }
         catch (IfcReleaseOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { code = ex.Code, drawingCode = ex.DrawingCode, message = ex.Message });
         }
     }
 

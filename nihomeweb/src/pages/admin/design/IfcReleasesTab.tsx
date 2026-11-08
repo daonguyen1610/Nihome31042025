@@ -332,12 +332,14 @@ export const IfcReleasesTab = ({ project }: Props) => {
 
   // -------- release / cancel --------
   const [releaseConfirmOpen, setReleaseConfirmOpen] = useState(false);
+  const [releaseError, setReleaseError] = useState<string | null>(null);
   const [cancelConfirmOpen, setCancelConfirmOpen] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const doRelease = async () => {
     if (!selected) return;
     setBusy(true);
+    setReleaseError(null);
     try {
       const { data } = await adminApi.releaseIfcRelease(selected.id);
       setSelected(data);
@@ -345,11 +347,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
       setReleaseConfirmOpen(false);
       await fetchRows();
     } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: uiError(err),
-        variant: "destructive",
-      });
+      setReleaseError(uiError(err));
     } finally {
       setBusy(false);
     }
@@ -866,7 +864,13 @@ export const IfcReleasesTab = ({ project }: Props) => {
       </Dialog>
 
       {/* release confirmation */}
-      <AlertDialog open={releaseConfirmOpen} onOpenChange={setReleaseConfirmOpen}>
+      <AlertDialog
+        open={releaseConfirmOpen}
+        onOpenChange={(open) => {
+          setReleaseConfirmOpen(open);
+          if (!open) setReleaseError(null);
+        }}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{t("ifcRelease.action.release")}</AlertDialogTitle>
@@ -874,6 +878,11 @@ export const IfcReleasesTab = ({ project }: Props) => {
               {t("ifcRelease.confirmRelease").replace("{code}", selected?.releaseNumber ?? "")}
             </AlertDialogDescription>
           </AlertDialogHeader>
+          {releaseError && (
+            <p role="alert" className="break-words text-base leading-relaxed text-destructive">
+              {releaseError}
+            </p>
+          )}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busy}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction

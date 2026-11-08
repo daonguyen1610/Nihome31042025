@@ -1,3 +1,4 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -12,9 +13,12 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class IfcReleaseService(
     AppDbContext db,
-    ILogger<IfcReleaseService> logger, ProcurementIfcService? procurementInbox = null) : IIfcReleaseService
+    ILogger<IfcReleaseService> logger, ProcurementIfcService? procurementInbox = null,
+    IShopDrawingService? shopDrawings = null) : IIfcReleaseService
 {
     private const int MaxPageSize = 200;
+    private const string PrimaryUnavailableCode = "IFC_PRIMARY_FILE_UNAVAILABLE";
+    private const string PrimaryNotApprovedCode = "IFC_PRIMARY_FILE_NOT_APPROVED";
     private const string DisciplineCategory = "design_discipline";
     private const string RecipientCategory = "ifc_recipient_type";
 
@@ -373,12 +377,42 @@ public class IfcReleaseService(
         foreach (var recipient in entity.Recipients.Where(x => x.RecipientUserId.HasValue))
             if (procurementInbox is null || !await procurementInbox.CanReceiveAsync(entity.DesignProjectId, recipient.RecipientUserId!.Value, ct))
                 throw new IfcReleaseOperationException("Người nhận IFC không còn quyền hoặc phân công dự án. Cập nhật danh sách nơi nhận trước khi phát hành.");
-        foreach (var item in entity.Items)
-            item.ReleasedFileSha256 = review!.Documents.First(document => document.SourceRecordIdSnapshot == item.ShopDrawingId &&
+        // Validate the exact primary bytes served by the download endpoint, not
+        // an arbitrary attachment sharing the drawing's source record ID.
+        // Collect everything before mutating the tracked release/drawings.
+        var releasedHashes = new Dictionary<int, string>();
+        foreach (var item in entity.Items.Where(x => !string.IsNullOrWhiteSpace(x.ShopDrawing.FilePath)))
+        {
+            var content = shopDrawings?.ResolvePrimaryContent(item.ShopDrawing);
+            if (content is null)
+                throw PrimaryFileError(item, PrimaryUnavailableCode,
+                    "Không đọc được tệp chính. Kiểm tra hoặc tải lại tệp chính trước khi phát hành IFC.");
+            string hash;
+            try
+            {
+                await using var stream = new FileStream(content.FullPath, FileMode.Open, FileAccess.Read, FileShare.Read);
+                hash = Convert.ToHexString(await SHA256.HashDataAsync(stream, ct));
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                logger.LogWarning(exception, "IFC release blocked for drawing {DrawingId}: primary file unavailable. Restore the source file before retrying.", item.ShopDrawingId);
+                throw PrimaryFileError(item, PrimaryUnavailableCode,
+                    "Không đọc được tệp chính. Kiểm tra hoặc tải lại tệp chính trước khi phát hành IFC.");
+            }
+            var approved = review!.Documents.Any(document =>
+                document.SourceRecordIdSnapshot == item.ShopDrawingId &&
                 document.SourceEntityTypeSnapshot == nameof(ShopDrawing) &&
                 document.ProjectDocument.DeletedAt == null &&
                 document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
-                document.ProjectDocument.Sha256 == document.Sha256Snapshot).Sha256Snapshot;
+                document.ProjectDocument.Sha256 == document.Sha256Snapshot &&
+                string.Equals(document.Sha256Snapshot, hash, StringComparison.OrdinalIgnoreCase));
+            if (!approved)
+                throw PrimaryFileError(item, PrimaryNotApprovedCode,
+                    "Tệp chính chưa khớp tài liệu khách đã duyệt. Trình duyệt đúng tệp chính hoặc khôi phục tệp đã duyệt rồi phát hành lại.");
+            releasedHashes.Add(item.Id, hash);
+        }
+        foreach (var item in entity.Items)
+            item.ReleasedFileSha256 = releasedHashes.GetValueOrDefault(item.Id);
 
         // Atomic release: flip every bundled drawing to Released — this is
         // the only writer for that state (the /status endpoint blocks it).
@@ -470,6 +504,9 @@ public class IfcReleaseService(
                 .ToDictionaryAsync(m => m.Code, m => m.Name, StringComparer.OrdinalIgnoreCase, ct);
         return new LabelBundle(disciplineMap, recipientMap);
     }
+
+    private static IfcReleaseOperationException PrimaryFileError(IfcReleaseItem item, string code, string message) =>
+        new($"{item.ShopDrawing.DrawingCode}: {message}", code, item.ShopDrawing.DrawingCode);
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
 

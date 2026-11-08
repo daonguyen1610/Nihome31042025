@@ -126,5 +126,21 @@
     "en": "Confirm receipt of addressed IFC dossiers and retain the first recipient and time; this does not approve the design.",
     "zh": "确认接收发送给自己的IFC档案，并保留首次接收人和时间；此操作不代表批准设计。",
     "ja": "自分宛のIFC図書の受領を確認し、初回の受領者と日時を保持します。設計承認ではありません。"
+  },
+  {
+    "key": "procurement.ifc.primaryNotApproved",
+    "category": "procurement",
+    "vi": "Tệp chính chưa khớp tài liệu khách đã duyệt. Trình duyệt đúng tệp chính hoặc khôi phục tệp đã duyệt rồi phát hành lại.",
+    "en": "The primary file does not match client-approved evidence. Submit the primary file for approval or restore the approved file, then release again.",
+    "zh": "主文件与客户已批准的资料不符。请提交正确主文件审批或恢复已批准的文件，然后重新发布。",
+    "ja": "主ファイルが顧客承認済み資料と一致しません。主ファイルの承認を受けるか承認済みファイルを復元してから再発行してください。"
+  },
+  {
+    "key": "procurement.ifc.primaryUnavailable",
+    "category": "procurement",
+    "vi": "Không đọc được tệp chính. Kiểm tra hoặc tải lại tệp chính trước khi phát hành IFC.",
+    "en": "The primary file cannot be read. Check or upload it again before releasing IFC.",
+    "zh": "无法读取主文件。请检查或重新上传主文件后再发布IFC。",
+    "ja": "主ファイルを読み取れません。確認または再アップロードしてからIFCを発行してください。"
   }
 ]

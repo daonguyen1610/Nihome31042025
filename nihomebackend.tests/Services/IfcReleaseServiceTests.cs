@@ -1,4 +1,6 @@
+using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
+using Moq;
 using Microsoft.Extensions.Logging.Abstractions;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -24,11 +26,13 @@ public class IfcReleaseServiceTests : IDisposable
     private readonly int _approvedShopId;
     private readonly int _pendingIfcShopId;
     private readonly int _draftingShopId;
+    private readonly Mock<IShopDrawingService> _drawingFiles = new();
+    private readonly List<string> _temporaryFiles = [];
 
     public IfcReleaseServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new IfcReleaseService(_db, NullLogger<IfcReleaseService>.Instance);
+        _sut = new IfcReleaseService(_db, NullLogger<IfcReleaseService>.Instance, shopDrawings: _drawingFiles.Object);
 
         var user = new ApplicationUser
         {
@@ -132,7 +136,114 @@ public class IfcReleaseServiceTests : IDisposable
         _draftingShopId = drafting.Id;
     }
 
-    public void Dispose() => _db.Dispose();
+    public void Dispose()
+    {
+        _db.Dispose();
+        foreach (var path in _temporaryFiles) File.Delete(path);
+    }
+
+    [Fact]
+    public async Task ReleaseAsync_OnlySupplementApproved_RejectsBeforeLockingPrimaryDrawing()
+    {
+        await AddPrimaryFileAsync(includeInReview: false);
+        var release = await FullDraftAsync();
+        var error = await Assert.ThrowsAsync<IfcReleaseOperationException>(() => _sut.ReleaseAsync(release.Id, _userId));
+        Assert.Equal("IFC_PRIMARY_FILE_NOT_APPROVED", error.Code);
+        Assert.Equal("KT-SD-001", error.DrawingCode);
+        Assert.Contains("tệp chính", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Equal(IfcReleaseStatus.Draft, (await _db.IfcReleases.SingleAsync(x => x.Id == release.Id)).Status);
+        Assert.Equal(ShopDrawingStatus.Approved, (await _db.ShopDrawings.FindAsync(_approvedShopId))!.Status);
+        Assert.Null((await _db.IfcReleaseItems.SingleAsync(x => x.IfcReleaseId == release.Id)).ReleasedFileSha256);
+    }
+
+    [Fact]
+    public async Task ReleaseAsync_SupplementFirst_SelectsApprovedPrimaryBytes()
+    {
+        var primaryHash = await AddPrimaryFileAsync(includeInReview: true);
+        var release = await FullDraftAsync();
+        await _sut.ReleaseAsync(release.Id, _userId);
+        Assert.Equal(primaryHash, (await _db.IfcReleaseItems.SingleAsync(x => x.IfcReleaseId == release.Id)).ReleasedFileSha256);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task ReleaseAsync_PrimaryUnavailable_RejectsWithoutChangingWorkflow(bool removedAfterResolution)
+    {
+        await AddPrimaryFileAsync(includeInReview: true);
+        if (removedAfterResolution) File.Delete(_temporaryFiles.Single());
+        else _drawingFiles.Setup(x => x.ResolvePrimaryContent(It.Is<ShopDrawing>(drawing => drawing.Id == _approvedShopId)))
+            .Returns((ManagedDocumentContent?)null);
+        var release = await FullDraftAsync();
+        var error = await Assert.ThrowsAsync<IfcReleaseOperationException>(() => _sut.ReleaseAsync(release.Id, _userId));
+        Assert.Equal("IFC_PRIMARY_FILE_UNAVAILABLE", error.Code);
+        Assert.Equal("KT-SD-001", error.DrawingCode);
+        Assert.Equal(IfcReleaseStatus.Draft, (await _db.IfcReleases.FindAsync(release.Id))!.Status);
+        Assert.Equal(ShopDrawingStatus.Approved, (await _db.ShopDrawings.FindAsync(_approvedShopId))!.Status);
+    }
+
+    [Fact]
+    public async Task ReleaseAsync_LaterPrimaryNotApproved_LeavesWholePacketUnchanged()
+    {
+        await AddPrimaryFileAsync(includeInReview: true);
+        var pending = (await _db.ShopDrawings.FindAsync(_pendingIfcShopId))!;
+        pending.FilePath = "/files/design/shop/NICON-pending-ket-cau.pdf";
+        _drawingFiles.Setup(x => x.ResolvePrimaryContent(It.Is<ShopDrawing>(drawing => drawing.Id == _pendingIfcShopId)))
+            .Returns(new ManagedDocumentContent(_temporaryFiles.Single(), "NICON-pending-ket-cau.pdf", "application/pdf"));
+        await _db.SaveChangesAsync();
+        var release = await FullDraftAsync();
+        await _sut.AddItemsAsync(release.Id, new AddIfcReleaseItemsRequest { ShopDrawingIds = [_pendingIfcShopId] }, _userId);
+        var error = await Assert.ThrowsAsync<IfcReleaseOperationException>(() => _sut.ReleaseAsync(release.Id, _userId));
+        Assert.Equal("IFC_PRIMARY_FILE_NOT_APPROVED", error.Code);
+        Assert.Equal(pending.DrawingCode, error.DrawingCode);
+        var stored = (await _db.IfcReleases.FindAsync(release.Id))!;
+        Assert.Equal(IfcReleaseStatus.Draft, stored.Status);
+        Assert.Null(stored.ReleaseDate);
+        Assert.All(await _db.IfcReleaseItems.Where(x => x.IfcReleaseId == release.Id).ToListAsync(), x => Assert.Null(x.ReleasedFileSha256));
+        Assert.Equal(ShopDrawingStatus.Approved, (await _db.ShopDrawings.FindAsync(_approvedShopId))!.Status);
+        Assert.Equal(ShopDrawingStatus.PendingIfc, pending.Status);
+    }
+
+    private async Task<IfcReleaseResponse> FullDraftAsync()
+    {
+        var release = await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.AddItemsAsync(release.Id, new AddIfcReleaseItemsRequest { ShopDrawingIds = [_approvedShopId] }, _userId);
+        return await _sut.AddRecipientAsync(release.Id, new AddIfcReleaseRecipientRequest
+        {
+            Name = "NICON – Giám sát kết cấu",
+            RecipientTypeCode = "supervisor",
+        }, _userId);
+    }
+
+    private async Task<string> AddPrimaryFileAsync(bool includeInReview)
+    {
+        var path = Path.Combine(Path.GetTempPath(), $"nicon-ifc-primary-{Guid.NewGuid():N}.pdf");
+        _temporaryFiles.Add(path);
+        var bytes = System.Text.Encoding.UTF8.GetBytes("NICON – Bản vẽ kết cấu chính A");
+        await File.WriteAllBytesAsync(path, bytes);
+        var hash = Convert.ToHexString(SHA256.HashData(bytes));
+        var drawing = await _db.ShopDrawings.FindAsync(_approvedShopId);
+        drawing!.FilePath = $"/files/design/shop/{Path.GetFileName(path)}";
+        _drawingFiles.Setup(x => x.ResolvePrimaryContent(It.Is<ShopDrawing>(drawing => drawing.Id == _approvedShopId)))
+            .Returns(new ManagedDocumentContent(path, "NICON-ban-ve-ket-cau.pdf", "application/pdf"));
+        if (includeInReview)
+        {
+            var project = await _db.DesignProjects.FindAsync(_projectId);
+            var primary = ReviewDocument(project!.OperationalProjectId!.Value, _approvedShopId, "primary-A");
+            primary.LocalPath = drawing.FilePath;
+            primary.Sha256 = hash;
+            var review = await _db.DesignReviews.Include(x => x.Documents).SingleAsync();
+            review.Documents.Add(new DesignReviewDocument
+            {
+                ProjectDocument = primary,
+                SourceEntityTypeSnapshot = nameof(ShopDrawing),
+                SourceRecordIdSnapshot = _approvedShopId,
+                Sha256Snapshot = hash,
+            });
+        }
+        await _db.SaveChangesAsync();
+        return hash;
+    }
 
     private CreateIfcReleaseRequest ValidCreate(string title = "Fixture release") => new()
     {

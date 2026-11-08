@@ -27,4 +27,8 @@ public interface IIfcReleaseService
     Task<IfcReleaseResponse> CancelAsync(int id, int callerUserId, CancellationToken ct = default);
 }
 
-public class IfcReleaseOperationException(string message) : Exception(message);
+public class IfcReleaseOperationException(string message, string? code = null, string? drawingCode = null) : Exception(message)
+{
+    public string? Code { get; } = code;
+    public string? DrawingCode { get; } = drawingCode;
+}

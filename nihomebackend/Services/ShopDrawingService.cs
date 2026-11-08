@@ -573,13 +573,18 @@ public class ShopDrawingService(
             .Where(item => item.Id == id)
             .Select(item => new { item.FilePath, item.OriginalFileName, item.ContentType })
             .SingleOrDefaultAsync(ct);
-        if (document is null || string.IsNullOrWhiteSpace(document.FilePath)) return null;
-        var fullPath = ToManagedFullPath(document.FilePath);
+        return document is null ? null : ResolvePrimaryContent(document.FilePath, document.OriginalFileName, document.ContentType);
+    }
+
+    public ManagedDocumentContent? ResolvePrimaryContent(ShopDrawing drawing) =>
+        ResolvePrimaryContent(drawing.FilePath, drawing.OriginalFileName, drawing.ContentType);
+
+    private ManagedDocumentContent? ResolvePrimaryContent(string? filePath, string? originalFileName, string? contentType)
+    {
+        if (string.IsNullOrWhiteSpace(filePath)) return null;
+        var fullPath = ToManagedFullPath(filePath);
         return fullPath is not null && File.Exists(fullPath)
-            ? new ManagedDocumentContent(
-                fullPath,
-                document.OriginalFileName ?? Path.GetFileName(fullPath),
-                document.ContentType ?? "application/octet-stream")
+            ? new ManagedDocumentContent(fullPath, originalFileName ?? Path.GetFileName(fullPath), contentType ?? "application/octet-stream")
             : null;
     }
 
