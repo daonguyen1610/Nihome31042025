@@ -30,7 +30,7 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
             .Where(item => item.OperationalProjectId == projectId && item.Status == ProjectScheduleEmail.NeedsReviewStatus)
             .OrderByDescending(item => item.LastAttemptAt)
             .Select(item => new ProjectScheduleEmailReviewItem(item.Id, projectId, item.RevisionId,
-                item.Revision.Version, item.Revision.OperationalProject.Code, item.AttemptCount,
+                item.CmScheduleBaselineId.HasValue ? item.CmScheduleBaseline!.Version : item.Revision.Version, item.Revision.OperationalProject.Code, item.AttemptCount,
                 item.LastAttemptAt, item.ToEmail, item.Subject, item.Body))
             .ToListAsync(ct);
     }
@@ -85,6 +85,13 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
             var message = await db.ProjectScheduleEmails
                 .SingleOrDefaultAsync(item => item.Id == id, ct);
             if (message is null) continue;
+            if (message.Status is not (ProjectScheduleEmail.PendingStatus or ProjectScheduleEmail.SendingStatus)) continue;
+            if (message.CmScheduleBaselineId.HasValue && !await db.CmScheduleBaselines.AnyAsync(x => x.Id == message.CmScheduleBaselineId && x.Status == "PendingApproval", ct))
+            {
+                message.Status = ProjectScheduleEmail.CancelledStatus;
+                try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { }
+                continue;
+            }
             if (message.Status == ProjectScheduleEmail.SendingStatus &&
                 message.LastAttemptAt >= staleBefore) continue;
             if (message.Status == ProjectScheduleEmail.PendingStatus &&
@@ -138,7 +145,7 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
                                 ["revisionId"] = message.RevisionId.ToString(),
                                 ["emailId"] = message.Id.ToString(),
                             }, "ProjectScheduleEmail", message.Id,
-                            $"/admin/operational-projects/{message.OperationalProjectId}?tab=schedule");
+                            message.CmScheduleBaselineId.HasValue ? $"/admin/construction/progress?projectId={message.OperationalProjectId}" : $"/admin/operational-projects/{message.OperationalProjectId}?tab=schedule");
                     }
                 }
                 catch (Exception exception) when (exception is not OperationCanceledException)

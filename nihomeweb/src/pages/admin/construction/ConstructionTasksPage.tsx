@@ -7,7 +7,7 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState, Fragment } from "react";
-import { useSearchParams } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
@@ -771,6 +771,9 @@ const AdminConstructionTasks = () => {
   return (
     <AdminLayout>
       <div className="space-y-6" data-testid="construction-tasks-page">
+        <Button variant="outline" asChild>
+          <Link to="/admin/construction/progress">{t("cmSchedule.title")}</Link>
+        </Button>
         {/* header */}
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>

@@ -57,6 +57,7 @@ import {
   X,
 } from "lucide-react";
 import { Link, useSearchParams } from "react-router-dom";
+import ProcurementContracts from "./ProcurementContracts";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -1392,17 +1393,13 @@ const ProcurementControlPage = () => {
             )}
             {canViewContracts && (
               <TabsContent value="contracts">
-                {canReadContracts && (
-                  <div className="mb-4">
-                    <Button asChild variant="outline">
-                      <Link
-                        to={`/admin/contracts?direction=Downstream&operationalProjectId=${projectId}`}
-                      >
-                        {t("nav.contracts")}
-                      </Link>
-                    </Button>
-                  </div>
-                )}
+                <ProcurementContracts
+                  projectId={projectId!}
+                  rows={contracts}
+                  canRead={canReadContracts}
+                  available={contractsLookupAvailable}
+                  onRetry={() => void loadWorkspace()}
+                />
                 <ContractLinesPanel
                   rows={workspace.contractLines}
                   canManage={canManageContracts}

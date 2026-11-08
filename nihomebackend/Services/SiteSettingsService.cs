@@ -13,13 +13,22 @@ public class SiteSettingsService(AppDbContext db)
             .Take(100)
             .Select(email => new ProjectScheduleEmailReviewItem(
                 email.Id, email.OperationalProjectId, email.RevisionId,
-                email.Revision.Version, email.Revision.OperationalProject.Code,
+                email.CmScheduleBaselineId.HasValue ? email.CmScheduleBaseline!.Version : email.Revision.Version, email.Revision.OperationalProject.Code,
                 email.AttemptCount, email.LastAttemptAt, null, null, null))
             .ToListAsync(ct);
 
     public async Task<SiteSettings?> GetAsync()
     {
         return await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
+    }
+
+    public async Task<decimal> UpdateCmScheduleThresholdAsync(decimal threshold, CancellationToken ct)
+    {
+        var settings = await db.SiteSettings.FirstAsync(ct);
+        settings.CmScheduleDelayThresholdPercent = threshold;
+        settings.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return threshold;
     }
 
     public async Task<SiteSettings> UpdateContractUploadLimitAsync(int maxFileSizeMb, CancellationToken ct)

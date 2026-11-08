@@ -683,10 +683,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       projectFilter === "all"
         ? null
         : (projects.find((project) => project.id === projectFilter) ?? null);
+    const direction =
+      fixedDirection ?? (directionFilter === "all" ? emptyForm.direction : directionFilter);
     setForm({
       ...emptyForm,
-      direction: fixedDirection ?? emptyForm.direction,
-      type: fixedDirection === "Downstream" ? "Supply" : emptyForm.type,
+      direction,
+      type: direction === "Downstream" ? "Supply" : emptyForm.type,
       customerId: selectedProject?.customerId ?? null,
       operationalProjectId: selectedProject?.id ?? null,
     });

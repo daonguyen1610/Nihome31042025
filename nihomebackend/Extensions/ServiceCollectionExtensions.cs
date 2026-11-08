@@ -212,6 +212,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IPunchItemService, PunchItemService>();
         services.AddScoped<IHseViolationService, HseViolationService>();
         services.AddScoped<IConstructionOperationsService, ConstructionOperationsService>();
+        services.AddScoped<CmScheduleService>();
+        services.AddScoped<CmScheduleMailService>();
+        services.AddHostedService<CmScheduleWorker>();
         services.AddScoped<ConstructionProcurementService>();
         services.AddScoped<IProcurementService, ProcurementService>();
         services.AddScoped<RfqService>();

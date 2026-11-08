@@ -191,6 +191,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<IfcReleaseItem> IfcReleaseItems => Set<IfcReleaseItem>();
     public DbSet<IfcReleaseRecipient> IfcReleaseRecipients => Set<IfcReleaseRecipient>();
 
+    public DbSet<CmScheduleBaseline> CmScheduleBaselines => Set<CmScheduleBaseline>();
+    public DbSet<CmProgressSnapshot> CmProgressSnapshots => Set<CmProgressSnapshot>();
     public DbSet<ConstructionTask> ConstructionTasks => Set<ConstructionTask>();
     public DbSet<ConstructionTaskDrawing> ConstructionTaskDrawings => Set<ConstructionTaskDrawing>();
     public DbSet<ConstructionTaskDependency> ConstructionTaskDependencies => Set<ConstructionTaskDependency>();
@@ -368,6 +370,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<SiteSettings>().ToTable("site_settings");
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);
         modelBuilder.Entity<SiteSettings>().Property(s => s.MapEmbedUrl).HasMaxLength(1000);
+        modelBuilder.Entity<SiteSettings>().Property(x => x.CmScheduleDelayThresholdPercent).HasPrecision(9, 4).HasDefaultValue(5m);
         modelBuilder.Entity<SiteSettings>().Property(s => s.ContractMaxFileSizeMb)
             .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultContractMaxFileSizeMb);
 
@@ -1602,6 +1605,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<ProjectScheduleEmail>(b =>
         {
             b.ToTable("project_schedule_emails");
+            b.HasOne(x => x.CmScheduleBaseline).WithMany().HasForeignKey(x => x.CmScheduleBaselineId).OnDelete(DeleteBehavior.NoAction);
             b.Property(item => item.ToEmail).HasMaxLength(254).IsRequired();
             b.Property(item => item.Subject).HasMaxLength(200).IsRequired();
             b.Property(item => item.Body).IsRequired();
@@ -3093,6 +3097,25 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(x => x.IfcReleaseId);
         });
 
+        modelBuilder.Entity<CmScheduleBaseline>(b =>
+        {
+            b.ToTable("cm_schedule_baselines"); b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.OperationalProjectId, x.Version }).IsUnique();
+            b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.NoAction);
+            b.Property(x => x.Status).HasMaxLength(30); b.Property(x => x.ChangeReason).HasMaxLength(2000);
+            b.Property(x => x.ReviewNote).HasMaxLength(2000); b.Property(x => x.RowVersion).IsRowVersion();
+        });
+        modelBuilder.Entity<CmProgressSnapshot>(b =>
+        {
+            b.ToTable("cm_progress_snapshots"); b.HasKey(x => x.Id);
+            b.HasIndex(x => new { x.BaselineId, x.AsOfDate });
+            b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.Baseline).WithMany().HasForeignKey(x => x.BaselineId).OnDelete(DeleteBehavior.NoAction);
+            b.Property(x => x.CrmPercent).HasPrecision(28, 20); b.Property(x => x.PlanPercent).HasPrecision(28, 20);
+            b.Property(x => x.ActualPercent).HasPrecision(28, 20); b.Property(x => x.DelayPercent).HasPrecision(28, 20);
+            b.Property(x => x.ThresholdPercent).HasPrecision(9, 4); b.Property(x => x.Explanation).HasMaxLength(2000);
+            b.Property(x => x.RecoveryPlan).HasMaxLength(4000); b.Property(x => x.RowVersion).IsRowVersion();
+        });
         modelBuilder.Entity<ConstructionTask>(b =>
         {
             b.ToTable("construction_tasks");

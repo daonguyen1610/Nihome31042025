@@ -6,6 +6,11 @@ public class SiteSettings
 
     public int Id { get; set; }
 
+    public decimal CmScheduleDelayThresholdPercent { get; set; } = 5m;
+
+    public string? CmScheduleEmailSubjectTemplate { get; set; }
+    public string? CmScheduleEmailBodyTemplate { get; set; }
+
     public string SiteName { get; set; } = "Nihome";
 
     public string? SiteDescription { get; set; }

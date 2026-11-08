@@ -546,9 +546,15 @@ cầu giải trình và kế hoạch phục hồi. Kế hoạch 50%, thực tế
 50% so với 45% chưa vượt ngưỡng; 50% so với 44% vượt ngưỡng.
 Theo xác nhận tiếp của người dùng ngày 24/10/2026, kỳ xem/chốt không set cứng,
 cần linh hoạt theo ngày/tháng/năm. Lưu inputs, baseline version, kỳ và kết quả
-để tái lập; nguồn % thực tế, cách tổng hợp theo kỳ và thẩm quyền publish/unlock
-baseline vẫn là **Open decision** của NICON/CM. Xác nhận công thức và kỳ xem
-không phải bằng chứng engine S-Curve đã được triển khai.
+để tái lập; người dùng xác nhận ngày 09/11/2026 rằng `% thực tế` lấy từ
+`ConstructionTask.ProgressPercent` do BCH cập nhật. Cách tổng hợp/trọng số theo
+kỳ và thẩm quyền publish/unlock baseline vẫn là **Open decision** của NICON/CM.
+Xác nhận nguồn actual không đồng nghĩa công thức tổng hợp đã được duyệt.
+
+**Partial:** ứng dụng đã có CM schedule baseline theo version, trình/duyệt độc
+lập, snapshot actual và cảnh báo chậm. Cách tính hiện hành chỉ là phần triển
+khai; chưa được coi là công thức nghiệp vụ chính thức cho đến khi NICON/CM chốt
+cách tổng hợp theo kỳ và trọng số.
 
 ### 6.2. Nguồn lực và BOQ
 
@@ -929,7 +935,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 | 11 | Tài chính kế toán | Partial | Có Payment Request Downstream; chưa có dossier hai chiều và ba section chứng từ. |
 | 12 | Host và Drive NICON | Target | Chỉ công nhận sau deployment, OAuth NICON, health check và smoke test có bằng chứng. |
 | 13 | Đầu vào NICON | Open decision | Nguồn ISO đã có trong `docs/Nicon/ISO/` từ 20/10/2026; luồng CM → Cung ứng → FA, danh sách kiểm soát CM và nhân sự BCH đa dự án đã xác nhận qua phản hồi được cung cấp 18/10/2026. Còn thiếu mapping ISO được CM/FA duyệt, form được dẫn chiếu nhưng chưa thấy file, permit matrix và quy ước mã dự án. |
-| 14 | Điểm chưa chắc chắn | Open decision | S-Curve đã chốt chênh lệch điểm phần trăm và kỳ linh hoạt ngày/tháng/năm; nguồn actual, tổng hợp theo kỳ, quyền baseline, approval matrix và payment matrix còn cần xác nhận. |
+| 14 | Điểm chưa chắc chắn | Open decision | S-Curve đã chốt chênh lệch điểm phần trăm và kỳ linh hoạt ngày/tháng/năm; nguồn actual `ConstructionTask.ProgressPercent` do BCH cập nhật được xác nhận ngày 09/11/2026; tổng hợp theo kỳ/trọng số, quyền baseline, approval matrix và payment matrix còn cần xác nhận. |
 
 `Implemented` yêu cầu đồng thời có persistence, API authorization, UI và test phù
 hợp. Bảng này mô tả branch hiện tại, không phải bằng chứng trạng thái môi trường

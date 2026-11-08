@@ -135,6 +135,7 @@ const AdminBchResourceRequests = lazy(
 );
 const AdminQaQcWorkspace = lazy(() => import("./pages/admin/construction/QaQcWorkspacePage.tsx"));
 const AdminQsWorkspace = lazy(() => import("./pages/admin/construction/QsWorkspacePage.tsx"));
+const AdminCmProgress = lazy(() => import("./pages/admin/construction/CmProgressPage"));
 const AdminCmConstruction = lazy(
   () => import("./pages/admin/construction/CmConstructionWorkspacePage.tsx"),
 );
@@ -522,6 +523,9 @@ const App = () => (
                     </Route>
                     <Route element={<RequirePermission code={ADMIN_PERMS.constructionQs} />}>
                       <Route path="/admin/construction/bch/qs" element={<AdminQsWorkspace />} />
+                    </Route>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionTasks} />}>
+                      <Route path="/admin/construction/progress" element={<AdminCmProgress />} />
                     </Route>
                     <Route
                       element={

@@ -237,7 +237,7 @@ The platform is being developed incrementally. The following components are curr
 | Customer contracts, appendices, attachments, and variation orders | Implemented |
 | Design management | Partial — projects, Concept options with typed revisions, files, client feedback and signed acceptance; Basic/Shop/IFC, Project Documents with Drive sync, linked Team/Schedule, one-approver task completion, CC, internal comments linked to a dossier or one submitted file, Design Manager consolidation and client decision gates are delivered; native 3D viewing, in-drawing markup and full MS Project import remain target work |
 | Permitting checklists | Partial — lifecycle, documents, risk filters, versioned template authoring/independent review and manual application with mandatory items are delivered; CM/NICON approval of actual type/scale catalogues and automatic template matching remain open |
-| Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries plus CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; editable WBS/S-Curve baseline, reproducible delay alert, portfolio review and offline/reconnect remain target work |
+| Construction management (tasks/Gantt and site diaries) | Partial — core tasks/diaries, versioned CM schedule comparison, snapshots and delay/recovery workflow, CM preparation/readiness, BCH resource/QA-QC/QS workspaces and Budget Baseline references are delivered; approved S-Curve aggregation, full portfolio review and offline queue/reconnect remain open |
 | Acceptance and handover | Partial — core records and CM review of QA/QC/QS are delivered; upstream/downstream QS payment eligibility, three-section dossier and complete handover gate remain target work |
 | Punchlist management | Partial — core records are delivered; CM overdue supervision and expanded field evidence remain target work |
 | HSE violations | Partial — Operational-Project-scoped lifecycle, evidence paths, correction, confirmation/closure and concurrency are delivered; the BCH-versus-CM approval/delegation matrix remains open |
@@ -1463,12 +1463,13 @@ creates and submits the existing Material Request aggregate atomically.
 
 CM Control groups available work into **Schedule**, **Quantity and cost**,
 **Quality**, **Safety** and **Contracts**, according to your permissions.
-Schedule contains preparation and the existing Gantt link. Quantity and cost
-contains resource and QS reviews; Quality contains dossier reviews and template
-tools. Template managers can open the template editor without dossier viewing
-permission. Safety and Contracts open their existing pages filtered to the
-selected project. These groups reuse source records; the structured schedule,
-S-Curve and cost comparisons remain subject to the implementation limits below.
+Schedule contains versioned CM plans, approval history, progress snapshots and
+the existing Gantt link. Quantity and cost contains resource and QS reviews;
+Quality contains dossier reviews and template tools. Template managers can
+open the template editor without dossier viewing permission. Safety and
+Contracts open their existing pages filtered to the selected project. These
+groups reuse source records; approved S-Curve aggregation and cost comparisons
+remain subject to the implementation limits below.
 
 **Partial — Procurement handoff:** open Procurement Control, choose the project
 and **Approved equipment and labour**. Filter by resource type or supply state.
@@ -1520,6 +1521,27 @@ Create construction schedules with phases and work items (WBS). Assign responsib
 | Task Create/Edit | Create task, update plan/actual/percentage |
 | Gantt Chart Detail | Interactive Gantt, dependencies, personnel assignment, alerts |
 | Interactive Gantt UI | Drag-drop, resize, zoom, dependency lines |
+
+##### CM schedule comparison — Partial
+
+Open **Admin > CM Office > Schedule**, select the Operational Project, and use
+the version selector to review its published CM plan and snapshots. An eligible
+CM preparer with `construction.cm-preparation.manage` can create a revision,
+assign the Site Manager for field actuals, preview the approval email, and
+submit the version for independent PM review. The assigned PM approves or
+rejects the pending version; earlier published versions remain in history.
+
+The assigned BCH Site Manager can update the percentage on a WBS leaf task from
+the same page using **Update site actuals**. The value is written to the
+existing Construction Task progress field. When a captured plan-to-actual gap
+exceeds the configured threshold, the Site Manager must provide an explanation,
+recovery plan and due date; a CM reviewer records a separate review. A failed
+save leaves the entered value visible so the user can reconnect and retry.
+
+The current WBS weighting and calendar-day interpolation have not been
+approved as the NICON roll-up formula. Treat displayed aggregate percentages as
+provisional; do not use them as an approved KPI or cost forecast. The page
+does not queue writes for offline synchronization.
 
 ##### Construction drawings
 

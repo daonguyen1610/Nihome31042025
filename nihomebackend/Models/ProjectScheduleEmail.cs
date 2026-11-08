@@ -10,6 +10,7 @@ namespace NihomeBackend.Models;
 /// </summary>
 public sealed class ProjectScheduleEmail
 {
+    public const string CancelledStatus = "Cancelled";
     public const string PendingStatus = "Pending";
     public const string SendingStatus = "Sending";
     public const string SentStatus = "Sent";
@@ -18,6 +19,8 @@ public sealed class ProjectScheduleEmail
 
     public int Id { get; set; }
     public int OperationalProjectId { get; set; }
+    public int? CmScheduleBaselineId { get; set; }
+    public CmScheduleBaseline? CmScheduleBaseline { get; set; }
     public int RevisionId { get; set; }
     public ProjectScheduleRevision Revision { get; set; } = null!;
     public int? RecipientUserId { get; set; }
