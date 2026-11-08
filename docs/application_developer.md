@@ -3610,6 +3610,14 @@ drawings; export links before rollback if they must be retained.
 
 #### Delivered CM/BCH workflow slice
 
+`/admin/construction/cm` groups existing controls into five permission-filtered
+areas: Schedule (preparation), Quantity and cost (resource/QS reviews), Quality
+(dossiers and template tools), Safety and Contracts. The last two link to their
+existing pages using the selected Operational Project filter. Template management
+keeps its independent capability; lacking dossier view permission suppresses
+dossier/template-list reads, not the authorized template-create action. This is
+a navigation grouping and adds no schedule aggregation or authorization bypass.
+
 The Operational Project route family
 `/api/operational-projects/{projectId}/construction` now exposes versioned CM
 preparation/readiness, typed resource requests, QA/QC templates and dossiers,

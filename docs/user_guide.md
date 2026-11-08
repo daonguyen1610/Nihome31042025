@@ -1440,6 +1440,16 @@ published multilingual QA/QC templates and IFC-linked dossiers; explicit
 Upstream/Downstream QS batches; CM review; row-version concurrency;
 idempotency; and server-side author/reviewer separation. Material approval
 creates and submits the existing Material Request aggregate atomically.
+
+CM Control groups available work into **Schedule**, **Quantity and cost**,
+**Quality**, **Safety** and **Contracts**, according to your permissions.
+Schedule contains preparation and the existing Gantt link. Quantity and cost
+contains resource and QS reviews; Quality contains dossier reviews and template
+tools. Template managers can open the template editor without dossier viewing
+permission. Safety and Contracts open their existing pages filtered to the
+selected project. These groups reuse source records; the structured schedule,
+S-Curve and cost comparisons remain subject to the implementation limits below.
+
 **Partial — Procurement handoff:** open Procurement Control, choose the project
 and **Approved equipment and labour**. Filter by resource type or supply state.
 Procurement can draft a Downstream contract by choosing its vendor, business

@@ -72,7 +72,19 @@ export default function CmConstructionWorkspacePage() {
   const canViewPreparation = has(ADMIN_PERMS.constructionCmPreparation);
   const canViewResources = has(ADMIN_PERMS.constructionResourceRequests);
   const canViewQaQc = has(ADMIN_PERMS.constructionQaQc);
+  const canManageTemplates = has(ADMIN_PERMS.constructionQaQcTemplateManage);
   const canViewQs = has(ADMIN_PERMS.constructionQs);
+  const canViewHse = has(ADMIN_PERMS.constructionHse);
+  const canViewContracts = has(ADMIN_PERMS.contracts);
+  const firstArea = canViewPreparation
+    ? "preparation"
+    : canViewResources || canViewQs
+      ? "commercial"
+      : canViewQaQc || canManageTemplates
+        ? "qa-qc"
+        : canViewHse
+          ? "hse"
+          : "contracts";
   const [projectId, setProjectId] = useState<number | null>(null);
   const selectProject = useCallback((id: number) => setProjectId(id), []);
   const [preparation, setPreparation] = useState<ConstructionPreparationResponse | null>(null);
@@ -352,14 +364,22 @@ export default function CmConstructionWorkspacePage() {
       ) : error ? (
         <PageError message={error} onRetry={() => setReload((value) => value + 1)} />
       ) : (
-        <Tabs defaultValue="preparation" className="space-y-4">
-          <TabsList className="h-auto w-full justify-start overflow-x-auto">
-            <TabsTrigger value="preparation">{t("construction.cm.preparation")}</TabsTrigger>
-            <TabsTrigger value="resources">{t("construction.resource.title")}</TabsTrigger>
-            <TabsTrigger value="qa-qc">{t("construction.qaQc.title")}</TabsTrigger>
-            <TabsTrigger value="qs">{t("construction.qs.title")}</TabsTrigger>
-            {has(ADMIN_PERMS.constructionQaQcTemplateManage) && (
-              <TabsTrigger value="templates">{t("construction.qaQc.templates")}</TabsTrigger>
+        <Tabs defaultValue={firstArea} className="space-y-4">
+          <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
+            {canViewPreparation && (
+              <TabsTrigger value="preparation">{t("construction.cm.area.schedule")}</TabsTrigger>
+            )}
+            {(canViewResources || canViewQs) && (
+              <TabsTrigger value="commercial">{t("construction.cm.area.quantityCost")}</TabsTrigger>
+            )}
+            {(canViewQaQc || canManageTemplates) && (
+              <TabsTrigger value="qa-qc">{t("construction.cm.area.quality")}</TabsTrigger>
+            )}
+            {canViewHse && (
+              <TabsTrigger value="hse">{t("construction.cm.area.safety")}</TabsTrigger>
+            )}
+            {canViewContracts && (
+              <TabsTrigger value="contracts">{t("construction.cm.area.contracts")}</TabsTrigger>
             )}
           </TabsList>
           <TabsContent value="preparation" className="space-y-4">
@@ -522,86 +542,121 @@ export default function CmConstructionWorkspacePage() {
               </>
             )}
           </TabsContent>
-          <TabsContent value="resources">
-            <ReviewList empty={t("construction.cm.noPendingResources")}>
-              {resources.map((row) => (
-                <ReviewCard
-                  key={row.id}
-                  code={row.code}
-                  title={`${t(`construction.resource.type.${row.type}`)} · ${row.quantity.toLocaleString(lang)} ${row.unit}`}
-                  status={row.status}
-                  detail={`${row.wbsCode} · ${row.reason}${row.suppliedAt ? ` · ${t("construction.handoff.Supplied")}` : row.procurementContractId ? ` · ${t("construction.handoff.ContractLinked")}` : ""}`}
-                >
-                  <ReviewButtons
-                    target={{ kind: "resource", row }}
-                    allowed={has(ADMIN_PERMS.constructionResourceRequestsReview)}
-                  />
-                </ReviewCard>
-              ))}
-            </ReviewList>
+          <TabsContent value="commercial">
+            <Tabs defaultValue={canViewResources ? "resources" : "qs"} className="space-y-4">
+              <TabsList className="h-auto flex-wrap justify-start gap-1">
+                {canViewResources && (
+                  <TabsTrigger value="resources">{t("construction.resource.title")}</TabsTrigger>
+                )}
+                {canViewQs && <TabsTrigger value="qs">{t("construction.qs.title")}</TabsTrigger>}
+              </TabsList>
+              <TabsContent value="resources">
+                <ReviewList empty={t("construction.cm.noPendingResources")}>
+                  {resources.map((row) => (
+                    <ReviewCard
+                      key={row.id}
+                      code={row.code}
+                      title={`${t(`construction.resource.type.${row.type}`)} · ${row.quantity.toLocaleString(lang)} ${row.unit}`}
+                      status={row.status}
+                      detail={`${row.wbsCode} · ${row.reason}${row.suppliedAt ? ` · ${t("construction.handoff.Supplied")}` : row.procurementContractId ? ` · ${t("construction.handoff.ContractLinked")}` : ""}`}
+                    >
+                      <ReviewButtons
+                        target={{ kind: "resource", row }}
+                        allowed={has(ADMIN_PERMS.constructionResourceRequestsReview)}
+                      />
+                    </ReviewCard>
+                  ))}
+                </ReviewList>
+              </TabsContent>
+              <TabsContent value="qs">
+                <ReviewList empty={t("construction.cm.noPendingQs")}>
+                  {batches.map((row) => (
+                    <ReviewCard
+                      key={row.id}
+                      code={row.code}
+                      title={`${t(`construction.qs.direction.${row.direction}`)} · ${row.certifiedAmount.toLocaleString(lang)}`}
+                      status={row.status}
+                      detail={`${row.wbsCode} · #${row.contractId}`}
+                    >
+                      <ReviewButtons
+                        target={{ kind: "qs", row }}
+                        allowed={has(ADMIN_PERMS.constructionQsReview)}
+                      />
+                    </ReviewCard>
+                  ))}
+                </ReviewList>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
-          <TabsContent value="qa-qc">
-            <ReviewList empty={t("construction.cm.noPendingQaQc")}>
-              {dossiers.map((row) => (
-                <ReviewCard
-                  key={row.id}
-                  code={row.code}
-                  title={row.title}
-                  status={row.status}
-                  detail={`${row.wbsCode} · IFC #${row.ifcReleaseId ?? "—"}`}
-                >
-                  <ReviewButtons
-                    target={{ kind: "qaQc", row }}
-                    allowed={has(ADMIN_PERMS.constructionQaQcReview)}
-                  />
-                </ReviewCard>
-              ))}
-            </ReviewList>
+          <TabsContent value="qa-qc" className="space-y-6">
+            {canViewQaQc && (
+              <ReviewList empty={t("construction.cm.noPendingQaQc")}>
+                {dossiers.map((row) => (
+                  <ReviewCard
+                    key={row.id}
+                    code={row.code}
+                    title={row.title}
+                    status={row.status}
+                    detail={`${row.wbsCode} · IFC #${row.ifcReleaseId ?? "—"}`}
+                  >
+                    <ReviewButtons
+                      target={{ kind: "qaQc", row }}
+                      allowed={has(ADMIN_PERMS.constructionQaQcReview)}
+                    />
+                  </ReviewCard>
+                ))}
+              </ReviewList>
+            )}
+            {canManageTemplates && (
+              <section className="space-y-3">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <h3 className="font-semibold">{t("construction.qaQc.templates")}</h3>
+                  <Button onClick={() => setTemplateOpen(true)}>
+                    <FilePlus2 className="mr-2 h-4 w-4" />
+                    {t("construction.qaQc.newTemplate")}
+                  </Button>
+                </div>
+                {canViewQaQc && (
+                  <ReviewList empty={t("construction.qaQc.noTemplates")}>
+                    {templates.map((template) => (
+                      <ReviewCard
+                        key={template.id}
+                        code={template.code}
+                        title={template.nameVi}
+                        status={template.isPublished ? "Published" : "Draft"}
+                        detail={`v${template.version}`}
+                      >
+                        {!template.isPublished && (
+                          <Button size="sm" onClick={() => void publishTemplate(template)}>
+                            <ClipboardCheck className="mr-2 h-4 w-4" />
+                            {t("construction.qaQc.publish")}
+                          </Button>
+                        )}
+                      </ReviewCard>
+                    ))}
+                  </ReviewList>
+                )}
+              </section>
+            )}
           </TabsContent>
-          <TabsContent value="qs">
-            <ReviewList empty={t("construction.cm.noPendingQs")}>
-              {batches.map((row) => (
-                <ReviewCard
-                  key={row.id}
-                  code={row.code}
-                  title={`${t(`construction.qs.direction.${row.direction}`)} · ${row.certifiedAmount.toLocaleString(lang)}`}
-                  status={row.status}
-                  detail={`${row.wbsCode} · #${row.contractId}`}
-                >
-                  <ReviewButtons
-                    target={{ kind: "qs", row }}
-                    allowed={has(ADMIN_PERMS.constructionQsReview)}
-                  />
-                </ReviewCard>
-              ))}
-            </ReviewList>
-          </TabsContent>
-          <TabsContent value="templates" className="space-y-3">
-            <div className="flex justify-end">
-              <Button onClick={() => setTemplateOpen(true)}>
-                <FilePlus2 className="mr-2 h-4 w-4" />
-                {t("construction.qaQc.newTemplate")}
+          {canViewHse && (
+            <TabsContent value="hse">
+              <Button asChild variant="outline">
+                <Link to={`/admin/construction/hse?projectId=${projectId}`}>
+                  {t("nav.constructionHse")}
+                </Link>
               </Button>
-            </div>
-            <ReviewList empty={t("construction.qaQc.noTemplates")}>
-              {templates.map((template) => (
-                <ReviewCard
-                  key={template.id}
-                  code={template.code}
-                  title={template.nameVi}
-                  status={template.isPublished ? "Published" : "Draft"}
-                  detail={`v${template.version}`}
-                >
-                  {!template.isPublished && (
-                    <Button size="sm" onClick={() => void publishTemplate(template)}>
-                      <ClipboardCheck className="mr-2 h-4 w-4" />
-                      {t("construction.qaQc.publish")}
-                    </Button>
-                  )}
-                </ReviewCard>
-              ))}
-            </ReviewList>
-          </TabsContent>
+            </TabsContent>
+          )}
+          {canViewContracts && (
+            <TabsContent value="contracts">
+              <Button asChild variant="outline">
+                <Link to={`/admin/contracts?operationalProjectId=${projectId}`}>
+                  {t("nav.contracts")}
+                </Link>
+              </Button>
+            </TabsContent>
+          )}
         </Tabs>
       )}
       <Dialog open={reviewTarget != null} onOpenChange={(value) => !value && setReviewTarget(null)}>
