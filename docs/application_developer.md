@@ -3618,6 +3618,11 @@ keeps its independent capability; lacking dossier view permission suppresses
 dossier/template-list reads, not the authorized template-create action. This is
 a navigation grouping and adds no schedule aggregation or authorization bypass.
 
+Procurement Control's Contract lines tab links to
+`/admin/contracts?direction=Downstream&operationalProjectId={id}` when the user
+has `crm.contracts.view`. The existing registry handles the direction/project
+filters and authorization; no new Contract store or mutation permission is added.
+
 The Operational Project route family
 `/api/operational-projects/{projectId}/construction` now exposes versioned CM
 preparation/readiness, typed resource requests, QA/QC templates and dossiers,
