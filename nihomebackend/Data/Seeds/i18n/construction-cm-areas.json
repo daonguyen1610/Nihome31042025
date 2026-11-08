@@ -1,0 +1,42 @@
+[
+  {
+    "key": "construction.cm.area.schedule",
+    "category": "construction",
+    "vi": "Tiến độ",
+    "en": "Schedule",
+    "zh": "进度",
+    "ja": "工程"
+  },
+  {
+    "key": "construction.cm.area.quantityCost",
+    "category": "construction",
+    "vi": "Khối lượng và chi phí",
+    "en": "Quantity and cost",
+    "zh": "工程量与成本",
+    "ja": "数量とコスト"
+  },
+  {
+    "key": "construction.cm.area.quality",
+    "category": "construction",
+    "vi": "Chất lượng",
+    "en": "Quality",
+    "zh": "质量",
+    "ja": "品質"
+  },
+  {
+    "key": "construction.cm.area.safety",
+    "category": "construction",
+    "vi": "An toàn",
+    "en": "Safety",
+    "zh": "安全",
+    "ja": "安全"
+  },
+  {
+    "key": "construction.cm.area.contracts",
+    "category": "construction",
+    "vi": "Hợp đồng",
+    "en": "Contracts",
+    "zh": "合同",
+    "ja": "契約"
+  }
+]
