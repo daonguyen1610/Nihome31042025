@@ -264,6 +264,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
               ADMIN_PERMS.procurement,
               ADMIN_PERMS.procurementMaterialRequests,
               ADMIN_PERMS.procurementResources,
+              ADMIN_PERMS.procurementIfc,
               ADMIN_PERMS.procurementWarehouse,
               ADMIN_PERMS.procurementMaterialAlerts,
             ],

@@ -26,13 +26,15 @@ export function extractApiError(
   if (data && typeof data === "object") {
     if (translate && "code" in data) {
       const key =
-        data.code === "CONTRACT_SIGNED_SCAN_REQUIRED"
-          ? "contracts.detail.transition.needScan"
-          : data.code === "LEGAL_MEMBER_INVALID"
-            ? "people.legalMemberInvalid"
-            : data.code === "PUNCH_DESIGN_MEMBER_INVALID"
-              ? "people.designMemberInvalid"
-              : null;
+        data.code === "IFC_RELEASED_FILE_CHANGED"
+          ? "procurement.ifc.fileChanged"
+          : data.code === "CONTRACT_SIGNED_SCAN_REQUIRED"
+            ? "contracts.detail.transition.needScan"
+            : data.code === "LEGAL_MEMBER_INVALID"
+              ? "people.legalMemberInvalid"
+              : data.code === "PUNCH_DESIGN_MEMBER_INVALID"
+                ? "people.designMemberInvalid"
+                : null;
       if (key) return translate(key);
     }
     if ("errors" in data && data.errors && typeof data.errors === "object") {
@@ -52,8 +54,12 @@ export function extractApiError(
 }
 
 /** Download requests return Blob bodies even when the server sends JSON errors. */
-export async function extractDownloadError(err: unknown, fallback?: string): Promise<string> {
-  if (typeof err !== "object" || err === null) return extractApiError(err, fallback);
+export async function extractDownloadError(
+  err: unknown,
+  fallback?: string,
+  translate?: (key: string) => string,
+): Promise<string> {
+  if (typeof err !== "object" || err === null) return extractApiError(err, fallback, translate);
   const response = (err as { response?: { data?: unknown } }).response;
   if (response?.data instanceof Blob && response.data.size <= 64 * 1024) {
     try {
@@ -61,12 +67,13 @@ export async function extractDownloadError(err: unknown, fallback?: string): Pro
       return extractApiError(
         { response: { data }, message: extractApiError(err, fallback) },
         fallback,
+        translate,
       );
     } catch {
       // Non-JSON/provider failures retain the original safe fallback.
     }
   }
-  return extractApiError(err, fallback);
+  return extractApiError(err, fallback, translate);
 }
 
 export function isConcurrencyConflict(err: unknown): boolean {

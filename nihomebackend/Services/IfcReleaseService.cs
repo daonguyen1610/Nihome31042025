@@ -12,7 +12,7 @@ namespace NihomeBackend.Services;
 /// </summary>
 public class IfcReleaseService(
     AppDbContext db,
-    ILogger<IfcReleaseService> logger) : IIfcReleaseService
+    ILogger<IfcReleaseService> logger, ProcurementIfcService? procurementInbox = null) : IIfcReleaseService
 {
     private const int MaxPageSize = 200;
     private const string DisciplineCategory = "design_discipline";
@@ -28,7 +28,7 @@ public class IfcReleaseService(
             .Include(r => r.DesignProject)
             .Include(r => r.IssuedBy)
             .Include(r => r.Items).ThenInclude(i => i.ShopDrawing)
-            .Include(r => r.Recipients)
+            .Include(r => r.Recipients).ThenInclude(x => x.AcknowledgedByUser)
             .AsQueryable();
 
         if (p.DesignProjectId.HasValue) q = q.Where(r => r.DesignProjectId == p.DesignProjectId.Value);
@@ -90,7 +90,7 @@ public class IfcReleaseService(
             .Include(r => r.DesignProject)
             .Include(r => r.IssuedBy)
             .Include(r => r.Items).ThenInclude(i => i.ShopDrawing)
-            .Include(r => r.Recipients)
+            .Include(r => r.Recipients).ThenInclude(x => x.AcknowledgedByUser)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
         if (entity is null) return null;
 
@@ -133,7 +133,7 @@ public class IfcReleaseService(
             UpdatedAt = DateTime.UtcNow,
         };
         db.IfcReleases.Add(entity);
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         logger.LogInformation("IfcRelease {Id} ({Number}) created for project {ProjectId} by user {UserId}",
             entity.Id, entity.ReleaseNumber, request.DesignProjectId, callerUserId);
         return (await GetAsync(entity.Id, ct))!;
@@ -155,7 +155,7 @@ public class IfcReleaseService(
         entity.Note = TrimOrNull(request.Note);
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetAsync(id, ct);
     }
 
@@ -163,14 +163,14 @@ public class IfcReleaseService(
     {
         var entity = await db.IfcReleases
             .Include(r => r.Items)
-            .Include(r => r.Recipients)
+            .Include(r => r.Recipients).ThenInclude(x => x.AcknowledgedByUser)
             .FirstOrDefaultAsync(r => r.Id == id, ct);
         if (entity is null) return false;
         if (entity.Status != IfcReleaseStatus.Cancelled)
             throw new IfcReleaseOperationException(
                 "Chỉ phiếu IFC đã hủy trước khi phát hành mới được xóa vĩnh viễn.");
         db.IfcReleases.Remove(entity);
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return true;
     }
 
@@ -218,7 +218,7 @@ public class IfcReleaseService(
         }
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return (await GetAsync(id, ct))!;
     }
 
@@ -236,14 +236,14 @@ public class IfcReleaseService(
         db.Remove(item);
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return (await GetAsync(id, ct))!;
     }
 
     public async Task<IfcReleaseResponse> AddRecipientAsync(int id, AddIfcReleaseRecipientRequest request, int callerUserId, CancellationToken ct = default)
     {
         var entity = await db.IfcReleases
-            .Include(r => r.Recipients)
+            .Include(r => r.Recipients).ThenInclude(x => x.AcknowledgedByUser)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
         EnsureDraft(entity, "thêm nơi nhận");
@@ -261,21 +261,29 @@ public class IfcReleaseService(
             throw new IfcReleaseOperationException($"Loại nơi nhận '{typeCode}' không hợp lệ.");
         }
 
+        if (request.RecipientUserId.HasValue)
+        {
+            if (procurementInbox is null || !await procurementInbox.CanReceiveAsync(entity.DesignProjectId, request.RecipientUserId.Value, ct))
+                throw new IfcReleaseOperationException("Chọn người Cung ứng đang được phân công trong dự án và có quyền nhận IFC.");
+            if (entity.Recipients.Any(x => x.RecipientUserId == request.RecipientUserId))
+                throw new IfcReleaseOperationException("Người nhận đã có trong phiếu IFC.");
+        }
         entity.Recipients.Add(new IfcReleaseRecipient
         {
+            RecipientUserId = request.RecipientUserId,
             Name = name,
             RecipientTypeCode = typeCode,
         });
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return (await GetAsync(id, ct))!;
     }
 
     public async Task<IfcReleaseResponse> RemoveRecipientAsync(int id, int recipientId, int callerUserId, CancellationToken ct = default)
     {
         var entity = await db.IfcReleases
-            .Include(r => r.Recipients)
+            .Include(r => r.Recipients).ThenInclude(x => x.AcknowledgedByUser)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
         EnsureDraft(entity, "xóa nơi nhận khỏi phiếu");
@@ -286,7 +294,7 @@ public class IfcReleaseService(
         db.Remove(recipient);
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return (await GetAsync(id, ct))!;
     }
 
@@ -294,7 +302,7 @@ public class IfcReleaseService(
         AcknowledgeIfcReleaseRecipientRequest request, int callerUserId, CancellationToken ct = default)
     {
         var entity = await db.IfcReleases
-            .Include(r => r.Recipients)
+            .Include(r => r.Recipients).ThenInclude(x => x.AcknowledgedByUser)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
         if (entity.Status != IfcReleaseStatus.Released)
@@ -303,11 +311,15 @@ public class IfcReleaseService(
         }
         var recipient = entity.Recipients.FirstOrDefault(x => x.Id == recipientId)
             ?? throw new IfcReleaseOperationException($"Nơi nhận #{recipientId} không tồn tại.");
+        if (recipient.RecipientUserId.HasValue)
+            throw new IfcReleaseOperationException("Người nhận nội bộ phải tự xác nhận tại hộp IFC Cung ứng.");
+        if (recipient.AcknowledgedAt.HasValue) return (await GetAsync(id, ct))!;
+        recipient.AcknowledgedByUserId = callerUserId;
         recipient.AcknowledgedAt = DateTime.UtcNow;
         recipient.AcknowledgementNote = TrimOrNull(request.AcknowledgementNote);
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return (await GetAsync(id, ct))!;
     }
 
@@ -315,7 +327,7 @@ public class IfcReleaseService(
     {
         var entity = await db.IfcReleases
             .Include(r => r.Items).ThenInclude(i => i.ShopDrawing)
-            .Include(r => r.Recipients)
+            .Include(r => r.Recipients).ThenInclude(x => x.AcknowledgedByUser)
             .FirstOrDefaultAsync(r => r.Id == id, ct)
             ?? throw new IfcReleaseOperationException($"Phiếu IFC #{id} không tồn tại.");
         EnsureDraft(entity, "phát hành");
@@ -358,6 +370,16 @@ public class IfcReleaseService(
                 $"Bản vẽ chưa sẵn sàng để phát hành: {string.Join(", ", invalid)}.");
         }
 
+        foreach (var recipient in entity.Recipients.Where(x => x.RecipientUserId.HasValue))
+            if (procurementInbox is null || !await procurementInbox.CanReceiveAsync(entity.DesignProjectId, recipient.RecipientUserId!.Value, ct))
+                throw new IfcReleaseOperationException("Người nhận IFC không còn quyền hoặc phân công dự án. Cập nhật danh sách nơi nhận trước khi phát hành.");
+        foreach (var item in entity.Items)
+            item.ReleasedFileSha256 = review!.Documents.First(document => document.SourceRecordIdSnapshot == item.ShopDrawingId &&
+                document.SourceEntityTypeSnapshot == nameof(ShopDrawing) &&
+                document.ProjectDocument.DeletedAt == null &&
+                document.ProjectDocument.SyncStatus == ProjectDocumentSyncStatus.Synced &&
+                document.ProjectDocument.Sha256 == document.Sha256Snapshot).Sha256Snapshot;
+
         // Atomic release: flip every bundled drawing to Released — this is
         // the only writer for that state (the /status endpoint blocks it).
         foreach (var item in entity.Items)
@@ -372,7 +394,7 @@ public class IfcReleaseService(
         entity.IssuedByUserId = callerUserId;
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         logger.LogInformation(
             "IfcRelease {Id} released with {Count} drawings by user {UserId}",
             entity.Id, entity.Items.Count, callerUserId);
@@ -387,7 +409,7 @@ public class IfcReleaseService(
         entity.Status = IfcReleaseStatus.Cancelled;
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
         return (await GetAsync(id, ct))!;
     }
 
@@ -461,7 +483,7 @@ public class IfcReleaseService(
             DesignProjectCode = r.DesignProject?.ProjectCode,
             ReleaseNumber = r.ReleaseNumber,
             Title = r.Title,
-            ReleaseDate = r.ReleaseDate,
+            ReleaseDate = r.ReleaseDate.HasValue ? DateTime.SpecifyKind(r.ReleaseDate.Value, DateTimeKind.Utc) : null,
             IssuedByUserId = r.IssuedByUserId,
             IssuedByName = r.IssuedBy?.FullName,
             Status = r.Status.ToString(),
@@ -480,10 +502,13 @@ public class IfcReleaseService(
             Recipients = r.Recipients.Select(x => new IfcReleaseRecipientResponse
             {
                 Id = x.Id,
+                RecipientUserId = x.RecipientUserId,
+                AcknowledgedByUserId = x.AcknowledgedByUserId,
+                AcknowledgedByName = x.AcknowledgedByUser?.FullName,
                 Name = x.Name,
                 RecipientTypeCode = x.RecipientTypeCode,
                 RecipientTypeLabel = recipientByCode.TryGetValue(x.RecipientTypeCode, out var rl) ? rl : null,
-                AcknowledgedAt = x.AcknowledgedAt,
+                AcknowledgedAt = x.AcknowledgedAt.HasValue ? DateTime.SpecifyKind(x.AcknowledgedAt.Value, DateTimeKind.Utc) : null,
                 AcknowledgementNote = x.AcknowledgementNote,
             }).ToList(),
             CreatedAt = r.CreatedAt,

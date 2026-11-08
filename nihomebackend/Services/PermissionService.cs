@@ -101,26 +101,35 @@ public sealed class PermissionService(AppDbContext db) : IPermissionService
         return set.Contains(permissionCode.Trim());
     }
 
+    private sealed record RoleState(int Id, string Code, bool IsActive, bool IsSystem);
+
+    private static int? ResolveActiveRoleId(int? assignedId, string legacyCode, IReadOnlyCollection<RoleState> roles)
+    {
+        var assigned = roles.FirstOrDefault(role => role.Id == assignedId);
+        if (assigned is not null) return assigned.IsActive ? assigned.Id : null;
+        if (!SystemRoleCodes.IsSystem(legacyCode)) return null;
+        return roles.FirstOrDefault(role => role.Code == legacyCode && role.IsActive && role.IsSystem)?.Id;
+    }
+
     private async Task<int?> ResolveActiveRoleIdAsync(int? roleEntityId, string legacyRoleCode, CancellationToken ct)
     {
-        if (roleEntityId.HasValue)
-        {
-            var isActive = await db.Roles.AsNoTracking()
-                .Where(r => r.Id == roleEntityId.Value)
-                .Select(r => (bool?)r.IsActive)
-                .FirstOrDefaultAsync(ct);
-            if (isActive == true) return roleEntityId.Value;
-            // FK set but role inactive: fail closed, do NOT fall back to enum.
-            if (isActive == false) return null;
-            // Role row was deleted (FK SetNull would clear it normally; if for
-            // some reason it lingers, treat as no role).
-        }
+        var roles = await db.Roles.AsNoTracking()
+            .Where(role => role.Id == roleEntityId || role.Code == legacyRoleCode)
+            .Select(role => new RoleState(role.Id, role.Code, role.IsActive, role.IsSystem)).ToListAsync(ct);
+        return ResolveActiveRoleId(roleEntityId, legacyRoleCode, roles);
+    }
 
-        // Legacy fallback: enum value must match a SYSTEM role code.
-        if (!SystemRoleCodes.IsSystem(legacyRoleCode)) return null;
-        return await db.Roles.AsNoTracking()
-            .Where(r => r.Code == legacyRoleCode && r.IsActive && r.IsSystem)
-            .Select(r => (int?)r.Id)
-            .FirstOrDefaultAsync(ct);
+    public async Task<IReadOnlySet<int>> FilterByRolePermissionAsync(IReadOnlyCollection<int> userIds,
+        string permissionCode, CancellationToken ct = default)
+    {
+        var users = await db.Users.AsNoTracking().Where(user => userIds.Contains(user.Id) && user.IsActive)
+            .Select(user => new { user.Id, user.RoleEntityId, user.Role }).ToListAsync(ct);
+        var roles = await db.Roles.AsNoTracking()
+            .Select(role => new RoleState(role.Id, role.Code, role.IsActive, role.IsSystem)).ToListAsync(ct);
+        var permittedRoles = await db.RolePermissions.AsNoTracking()
+            .Where(grant => grant.Permission.IsActive && grant.Permission.Module + RbacConventions.CodeSeparator + grant.Permission.Action == permissionCode)
+            .Select(grant => grant.RoleId).ToListAsync(ct);
+        return users.Where(user => ResolveActiveRoleId(user.RoleEntityId, UserRoleCodeMapper.ToCode(user.Role), roles) is int roleId && permittedRoles.Contains(roleId))
+            .Select(user => user.Id).ToHashSet();
     }
 }

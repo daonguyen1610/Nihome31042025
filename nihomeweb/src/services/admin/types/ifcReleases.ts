@@ -11,6 +11,9 @@ export interface IfcReleaseItemResponse {
 }
 
 export interface IfcReleaseRecipientResponse {
+  recipientUserId?: number | null;
+  acknowledgedByUserId?: number | null;
+  acknowledgedByName?: string | null;
   id: number;
   name: string;
   recipientTypeCode: string;
@@ -71,10 +74,25 @@ export interface AddIfcReleaseItemsRequest {
 }
 
 export interface AddIfcReleaseRecipientRequest {
+  recipientUserId?: number | null;
   name: string;
   recipientTypeCode: string;
 }
 
 export interface AcknowledgeIfcReleaseRecipientRequest {
   acknowledgementNote?: string | null;
+}
+
+export interface ProcurementIfcPacket {
+  recipientId: number;
+  releaseId: number;
+  releaseNumber: string;
+  title: string;
+  releaseDate: string | null;
+  dossierCode: string;
+  acknowledgedAt: string | null;
+  acknowledgedByUserId: number | null;
+  acknowledgementNote: string | null;
+  rowVersion: string;
+  drawings: { itemId: number; code: string; title: string; hasFile: boolean }[];
 }

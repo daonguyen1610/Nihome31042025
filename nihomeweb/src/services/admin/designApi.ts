@@ -521,6 +521,24 @@ export const designApi = {
     const qs = q.toString();
     return api.get<IfcReleaseListResponse>(`/ifc-releases${qs ? `?${qs}` : ""}`);
   },
+  listProcurementIfcRecipients: (designProjectId: number) =>
+    api.get<{ userId: number; name: string }[]>(
+      `/ifc-releases/procurement-recipients?designProjectId=${designProjectId}`,
+    ),
+  listProcurementIfc: (projectId: number, page: number) =>
+    api.get<{ items: import("./types/ifcReleases").ProcurementIfcPacket[]; total: number }>(
+      `/operational-projects/${projectId}/procurement/ifc?page=${page}`,
+    ),
+  acknowledgeProcurementIfc: (projectId: number, recipientId: number, rowVersion: string) =>
+    api.post<import("./types/ifcReleases").ProcurementIfcPacket>(
+      `/operational-projects/${projectId}/procurement/ifc/${recipientId}/acknowledge`,
+      { rowVersion },
+    ),
+  getProcurementIfcContent: (projectId: number, recipientId: number, itemId: number) =>
+    api.get<Blob>(
+      `/operational-projects/${projectId}/procurement/ifc/${recipientId}/items/${itemId}/content`,
+      { responseType: "blob" },
+    ),
   getIfcRelease: (id: number) => api.get<IfcReleaseResponse>(`/ifc-releases/${id}`),
   createIfcRelease: (body: CreateIfcReleaseRequest) =>
     api.post<IfcReleaseResponse>("/ifc-releases", body),

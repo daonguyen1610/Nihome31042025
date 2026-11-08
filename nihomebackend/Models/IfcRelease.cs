@@ -20,8 +20,9 @@ namespace NihomeBackend.Models;
 /// ("ISSUED FOR CONSTRUCTION"), index.pdf zip export, email fanout,
 /// dual-signature workflow (Design Lead + PM).
 /// </summary>
-public class IfcRelease
+public class IfcRelease : IConcurrencyTracked
 {
+    public byte[] RowVersion { get; set; } = [];
     public int Id { get; set; }
 
     public int DesignProjectId { get; set; }
@@ -69,6 +70,7 @@ public enum IfcReleaseStatus
 /// <summary>A single Shop Drawing bundled into a release.</summary>
 public class IfcReleaseItem
 {
+    public string? ReleasedFileSha256 { get; set; }
     public int Id { get; set; }
     public int IfcReleaseId { get; set; }
     public IfcRelease IfcRelease { get; set; } = null!;
@@ -81,8 +83,13 @@ public class IfcReleaseItem
 /// One recipient on the release distribution list (main contractor,
 /// site supervisor, client…) with per-row acknowledgement tracking.
 /// </summary>
-public class IfcReleaseRecipient
+public class IfcReleaseRecipient : IConcurrencyTracked
 {
+    public int? RecipientUserId { get; set; }
+    public ApplicationUser? RecipientUser { get; set; }
+    public int? AcknowledgedByUserId { get; set; }
+    public ApplicationUser? AcknowledgedByUser { get; set; }
+    public byte[] RowVersion { get; set; } = [];
     public int Id { get; set; }
     public int IfcReleaseId { get; set; }
     public IfcRelease IfcRelease { get; set; } = null!;

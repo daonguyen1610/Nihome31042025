@@ -334,6 +334,10 @@ Kiểm soát độ chín, version và người chịu trách nhiệm của hồ 
    thái Approved/Pending IFC/Released.
 4. **IFC:** gói phát hành có drawing/revision cụ thể, người nhận và xác nhận đã
    nhận; hủy gói không được làm mất lịch sử.
+   Theo xác nhận của chủ sản phẩm ngày 08/11/2026, bước đầu chuyển IFC sang
+   Cung ứng chỉ gồm nhận, xem và xác nhận hồ sơ đã phát hành. Người nhận phải
+   được chỉ định trong dự án; xác nhận nhận không phải duyệt thiết kế và
+   không tự tạo yêu cầu báo giá/mua sắm.
 
 Thiết kế có thể bắt đầu trước hợp đồng nhưng luôn thuộc Dự án. Theo MoM
 31/10/2026, giao diện gọi luồng này là **Hồ Sơ Thiết Kế**; tên hiển thị không

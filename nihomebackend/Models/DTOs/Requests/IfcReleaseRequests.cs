@@ -36,6 +36,8 @@ public class AddIfcReleaseItemsRequest
 
 public class AddIfcReleaseRecipientRequest
 {
+    [Range(1, int.MaxValue)]
+    public int? RecipientUserId { get; set; }
     [Required]
     [StringLength(300, MinimumLength = 1)]
     public string Name { get; set; } = string.Empty;
@@ -48,6 +50,7 @@ public class AddIfcReleaseRecipientRequest
 
 public class AcknowledgeIfcReleaseRecipientRequest
 {
+    public string? RowVersion { get; set; }
     [StringLength(1000)]
     public string? AcknowledgementNote { get; set; }
 }

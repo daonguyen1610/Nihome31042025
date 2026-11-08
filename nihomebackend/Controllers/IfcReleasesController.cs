@@ -23,8 +23,16 @@ public class IfcReleasesController(
     IIfcReleaseService svc,
     IDesignRecordDeletionService deletion,
     IProjectAccessService projectAccess,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit, ProcurementIfcService procurementInbox) : ControllerBase
 {
+    [HttpGet("procurement-recipients"), RequirePermission("design.ifc", "view")]
+    public async Task<IActionResult> ProcurementRecipients([FromQuery] int designProjectId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await projectAccess.HasDesignProjectPermissionAsync(userId.Value, designProjectId, DesignProjectAction.Update, ct)) return NotFound();
+        return Ok(await procurementInbox.CandidatesAsync(designProjectId, ct));
+    }
     [HttpGet]
     [RequirePermission("design.ifc", "view")]
     public async Task<ActionResult<IfcReleaseListResponse>> List(

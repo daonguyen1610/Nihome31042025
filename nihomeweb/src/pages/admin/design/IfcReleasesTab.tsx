@@ -261,14 +261,35 @@ export const IfcReleasesTab = ({ project }: Props) => {
   // -------- add recipient --------
   const [recipientName, setRecipientName] = useState("");
   const [recipientType, setRecipientType] = useState("");
+  const [recipientUserId, setRecipientUserId] = useState<number | null>(null);
+  const [internalRecipients, setInternalRecipients] = useState<{ userId: number; name: string }[]>(
+    [],
+  );
+  useEffect(() => {
+    if (!canManage) return;
+    let active = true;
+    void adminApi
+      .listProcurementIfcRecipients(project.id)
+      .then(({ data }) => {
+        if (active) setInternalRecipients(data);
+      })
+      .catch((error) => {
+        if (active) setError(uiError(error));
+      });
+    return () => {
+      active = false;
+    };
+  }, [canManage, project.id, uiError]);
   const addRecipient = async () => {
     if (!selected || !recipientName.trim() || !recipientType) return;
     try {
       const { data } = await adminApi.addIfcReleaseRecipient(selected.id, {
+        recipientUserId,
         name: recipientName.trim(),
         recipientTypeCode: recipientType,
       });
       setSelected(data);
+      setRecipientUserId(null);
       setRecipientName("");
       setRecipientType("");
       await fetchRows();
@@ -659,13 +680,17 @@ export const IfcReleasesTab = ({ project }: Props) => {
                             <p className="text-sm text-foreground">{r.name}</p>
                             <p className="text-[10px] text-muted-foreground">
                               {r.recipientTypeLabel ?? r.recipientTypeCode}
+                              {r.acknowledgedByName ? ` · ${r.acknowledgedByName}` : ""}
                               {r.acknowledgedAt
                                 ? ` · ${t("ifcRelease.action.acknowledged")} ${formatDate(r.acknowledgedAt, lang)}`
                                 : ""}
                             </p>
                           </div>
                           <div className="flex items-center gap-1">
-                            {selected.status === "Released" && !r.isAcknowledged && canManage ? (
+                            {selected.status === "Released" &&
+                            !r.isAcknowledged &&
+                            !r.recipientUserId &&
+                            canManage ? (
                               <Button
                                 variant="outline"
                                 size="sm"
@@ -695,6 +720,31 @@ export const IfcReleasesTab = ({ project }: Props) => {
                   )}
                   {canManage && isDraft ? (
                     <div className="mt-2 flex flex-wrap gap-2">
+                      <Select
+                        value={recipientUserId?.toString() ?? "external"}
+                        onValueChange={(value) => {
+                          const user = internalRecipients.find(
+                            (item) => item.userId === Number(value),
+                          );
+                          setRecipientUserId(user?.userId ?? null);
+                          if (user) setRecipientName(user.name);
+                        }}
+                      >
+                        <SelectTrigger
+                          aria-label={t("procurement.ifc.recipient")}
+                          className="h-9 w-full sm:w-[240px]"
+                        >
+                          <SelectValue placeholder={t("procurement.ifc.recipient")} />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="external">{t("procurement.ifc.external")}</SelectItem>
+                          {internalRecipients.map((user) => (
+                            <SelectItem key={user.userId} value={String(user.userId)}>
+                              {user.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <Input
                         aria-label={t("a11yUi.recipientName")}
                         value={recipientName}

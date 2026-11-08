@@ -3033,6 +3033,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<IfcRelease>(b =>
         {
+            b.Property(x => x.RowVersion).IsRowVersion();
             b.ToTable("ifc_releases");
             b.HasKey(r => r.Id);
             b.Property(r => r.ReleaseNumber).HasMaxLength(60).IsRequired();
@@ -3056,6 +3057,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<IfcReleaseItem>(b =>
         {
+            b.Property(x => x.ReleasedFileSha256).HasMaxLength(64);
             b.ToTable("ifc_release_items");
             b.HasKey(i => i.Id);
 
@@ -3073,6 +3075,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<IfcReleaseRecipient>(b =>
         {
+            b.Property(x => x.RowVersion).IsRowVersion();
+            b.HasOne(x => x.RecipientUser).WithMany().HasForeignKey(x => x.RecipientUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(x => x.AcknowledgedByUser).WithMany().HasForeignKey(x => x.AcknowledgedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(x => new { x.IfcReleaseId, x.RecipientUserId }).IsUnique().HasFilter("[RecipientUserId] IS NOT NULL");
             b.ToTable("ifc_release_recipients");
             b.HasKey(x => x.Id);
             b.Property(x => x.Name).HasMaxLength(300).IsRequired();

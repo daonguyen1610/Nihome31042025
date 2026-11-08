@@ -17,5 +17,8 @@ namespace NihomeBackend.Services;
 public interface IPermissionService
 {
     Task<IReadOnlySet<string>> GetForUserAsync(int userId, CancellationToken ct = default);
+    // Role grants only; membership-derived view capabilities are excluded.
+    Task<IReadOnlySet<int>> FilterByRolePermissionAsync(IReadOnlyCollection<int> userIds,
+        string permissionCode, CancellationToken ct = default);
     Task<bool> HasAsync(int userId, string permissionCode, CancellationToken ct = default);
 }

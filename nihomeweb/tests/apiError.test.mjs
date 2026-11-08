@@ -140,3 +140,31 @@ test("UI failures localize transport errors and hide unexpected implementation d
     "Phone: Enter a valid phone number.",
   );
 });
+
+// Blob errors must use the same localized guidance as JSON API failures.
+test("released IFC mismatch localizes download errors in every supported language", async () => {
+  const fs = await import("node:fs");
+  const seed = JSON.parse(
+    fs.readFileSync(
+      new URL("../../nihomebackend/Data/Seeds/i18n/procurement-ifc.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const entry = seed.find((item) => item.key === "procurement.ifc.fileChanged");
+  for (const lang of ["vi", "en", "zh", "ja"]) {
+    const expected = entry[lang];
+    assert.ok(expected);
+    assert.equal(
+      await extractDownloadError(
+        failure(
+          new Blob([
+            JSON.stringify({ code: "IFC_RELEASED_FILE_CHANGED", message: "server fallback" }),
+          ]),
+        ),
+        undefined,
+        (key) => (key === entry.key ? expected : key),
+      ),
+      expected,
+    );
+  }
+});

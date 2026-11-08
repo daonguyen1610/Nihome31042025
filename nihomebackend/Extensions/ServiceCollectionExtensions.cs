@@ -206,6 +206,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IShopDrawingService, ShopDrawingService>();
         services.AddScoped<IDrawingRevisionService, DrawingRevisionService>();
         services.AddScoped<IIfcReleaseService, IfcReleaseService>();
+        services.AddScoped<ProcurementIfcService>();
         services.AddScoped<IConstructionTaskService, ConstructionTaskService>();
         services.AddScoped<ISiteDiaryService, SiteDiaryService>();
         services.AddScoped<IPunchItemService, PunchItemService>();
