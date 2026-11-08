@@ -64,6 +64,56 @@ public class IfcReleasesControllerTests : IntegrationTestBase
             recipientTypeCode = "main-contractor",
             recipientUserId = context.ReceiverId,
         })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var primaryEvidence = await WithDbAsync(async db =>
+        {
+            var review = await db.DesignReviews.Include(x => x.Documents).ThenInclude(x => x.ProjectDocument)
+                .SingleAsync(x => x.DesignProjectId == designId && x.Stage == DesignReviewStage.ShopDrawing);
+            var primary = review.Documents.Single(x => x.SourceRecordIdSnapshot == drawingId);
+            var evidence = (ReviewId: review.Id, DocumentId: primary.ProjectDocumentId, Hash: primary.Sha256Snapshot);
+            db.DesignReviewDocuments.Remove(primary);
+            var supplement = new ProjectDocument
+            {
+                OperationalProjectId = context.ProjectId,
+                Category = ProjectDocumentCategory.DesignShopDrawing,
+                SourceModule = ProjectDocumentSourceModule.Design,
+                SourceEntityType = nameof(ShopDrawing),
+                SourceRecordId = drawingId,
+                SourceSlot = "manual-upload:supplement",
+                LocalPath = "/files/project-documents/NICON-thuyet-minh-ket-cau-B.pdf",
+                OriginalFileName = "NICON-thuyet-minh-ket-cau-B.pdf",
+                ContentType = "application/pdf",
+                Sha256 = Convert.ToHexString(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes("NICON supplementary evidence B"))),
+                SyncStatus = ProjectDocumentSyncStatus.Synced,
+            };
+            review.Documents.Add(new DesignReviewDocument
+            {
+                ProjectDocument = supplement,
+                SourceEntityTypeSnapshot = nameof(ShopDrawing),
+                SourceRecordIdSnapshot = drawingId,
+                Sha256Snapshot = supplement.Sha256
+            });
+            await db.SaveChangesAsync();
+            return evidence;
+        });
+        var mismatchedRelease = await Client.PostAsync($"/api/ifc-releases/{releaseId}/release", null);
+        mismatchedRelease.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var mismatchError = await ReadJsonAsync(mismatchedRelease);
+        mismatchError.GetProperty("code").GetString().Should().Be("IFC_PRIMARY_FILE_NOT_APPROVED");
+        mismatchError.GetProperty("drawingCode").GetString().Should().NotBeNullOrWhiteSpace();
+        await WithDbAsync(async db =>
+        {
+            (await db.IfcReleases.SingleAsync(x => x.Id == releaseId)).Status.Should().Be(IfcReleaseStatus.Draft);
+            (await db.ShopDrawings.SingleAsync(x => x.Id == drawingId)).Status.Should().Be(ShopDrawingStatus.Approved);
+            db.DesignReviewDocuments.Add(new DesignReviewDocument
+            {
+                DesignReviewId = primaryEvidence.ReviewId,
+                ProjectDocumentId = primaryEvidence.DocumentId,
+                SourceEntityTypeSnapshot = nameof(ShopDrawing),
+                SourceRecordIdSnapshot = drawingId,
+                Sha256Snapshot = primaryEvidence.Hash
+            });
+            await db.SaveChangesAsync();
+        });
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT"));
         var path = $"/api/operational-projects/{context.ProjectId}/procurement/ifc";
         (await Client.GetAsync($"{path}?page=0")).StatusCode.Should().Be(HttpStatusCode.BadRequest);

@@ -4933,6 +4933,17 @@ only that released drawing after verifying its SHA-256 against client-approved
 release evidence. Missing/mismatched evidence returns 409
 `IFC_RELEASED_FILE_CHANGED`; the UI asks the recipient to contact Design.
 No raw file path or broad Design permission is granted to Procurement.
+For a drawing with a primary file, release reads that same managed file and
+requires its SHA-256 to match a client-approved snapshot for the drawing. A
+supplementary attachment cannot supply a different hash. A missing/unreadable
+primary returns 400 `IFC_PRIMARY_FILE_UNAVAILABLE`; unapproved primary bytes
+return 400 `IFC_PRIMARY_FILE_NOT_APPROVED`. Both include `drawingCode`, preserve
+Draft/Approved workflow states and guide the user to restore/upload or obtain
+approval before retrying. The release dialog retains the localized drawing
+error until retry or dismissal instead of relying on a transient toast. Hashes are applied only after every file validates.
+Existing fileless drawings retain their metadata-only release behavior and
+have no downloadable primary snapshot. No schema or historical backfill is
+introduced by this validation.
 Design's `GET /api/ifc-releases/procurement-recipients?designProjectId=...`
 returns eligible active project members; add-recipient accepts optional
 `recipientUserId`. Existing external recipient payloads remain compatible.
@@ -4953,6 +4964,7 @@ metadata. Rehearse Up/Down/Up on an isolated restored database before rollout.
 Focused checks: `IfcReleasesControllerTests`, SQL-backed
 `ProcurementIfcConcurrencyTests` (set `NICON_SQL_TEST_CONNECTION` to a disposable
 SQL test host), `PermissionServiceTests`, `tests/apiError.test.mjs`, and live
-`procurement-ifc-receipt-live.spec.ts`. The live receipt fixture bypasses only
-upstream Drive/client approval setup in its own records; issuance gates remain
-covered by integration tests. It is not evidence of a live Drive sync pass.
+`procurement-ifc-receipt-live.spec.ts`. The live receipt fixture supplies client approval and Drive sync metadata for
+its own records, then exercises the real IFC release and receipt endpoints.
+It covers supplementary-only rejection and successful download of approved
+primary bytes when both files belong to the review. It is not evidence of a live Drive sync pass.

@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
 import { execSql } from "../fixtures/db";
@@ -6,8 +6,8 @@ import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const fixtureSql = (sql: string) => execSql(`SET QUOTED_IDENTIFIER ON; ${sql}`);
 
-// Isolated released fixture: the client-review/Drive issuance gate is covered
-// by integration tests. No API interception or altered production seed records.
+// Client approval is an isolated fixture; IFC release, file verification and
+// receipt use the real API. No API interception or altered production seeds.
 test("addressed Procurement user views and acknowledges released IFC", async ({
   api,
   page,
@@ -74,6 +74,54 @@ test("addressed Procurement user views and acknowledges released IFC", async ({
       },
     });
     expect(uploaded.ok(), await uploaded.text()).toBe(true);
+    const supplementary = await api.post(`/api/operational-projects/${rootId}/documents`, {
+      headers: { ...headers, "Idempotency-Key": randomUUID() },
+      multipart: {
+        file: {
+          name: "NICON-thuyet-minh-bo-sung-B.pdf",
+          mimeType: "application/pdf",
+          buffer: Buffer.from("%PDF-1.4 NICON supplementary B"),
+        },
+        category: "DesignShopDrawing",
+        sourceModule: "Design",
+        sourceEntityType: "ShopDrawing",
+        sourceRecordId: String(drawing.id),
+      },
+    });
+    expect(supplementary.ok(), await supplementary.text()).toBe(true);
+    const supplementaryId = (await supplementary.json()).id;
+    fixtureSql(
+      `UPDATE project_documents SET SyncStatus=N'Synced', DesiredOperation=N'None', NextSyncAttemptAt=NULL WHERE OperationalProjectId=${rootId} AND SourceEntityType=N'ShopDrawing' AND SourceRecordId=${drawing.id};`,
+    );
+    const documents = await (
+      await api.get(`/api/operational-projects/${rootId}/documents`, { headers })
+    ).json();
+    const primary = documents.find(
+      (doc: { sourceSlot: string; sourceRecordId: number }) =>
+        doc.sourceSlot === "file" && doc.sourceRecordId === drawing.id,
+    );
+    expect(primary).toBeTruthy();
+    const reviewer = users.items.find(
+      (user: { phoneNumber: string }) => user.phoneNumber === TEST_USERS.sale.phoneNumber,
+    );
+    expect(reviewer).toBeTruthy();
+    const approveFixture = async (projectDocumentIds: number[]) => {
+      const createdReview = await api.post(`/api/design-projects/${designId}/reviews`, {
+        headers: { ...headers, "Idempotency-Key": randomUUID() },
+        data: {
+          stage: "ShopDrawing",
+          title: "NICON – Hồ sơ kết cấu được khách duyệt",
+          recipientUserIds: [reviewer.id],
+          projectDocumentIds,
+        },
+      });
+      expect(createdReview.ok(), await createdReview.text()).toBe(true);
+      const reviewId = (await createdReview.json()).id;
+      fixtureSql(
+        `UPDATE design_reviews SET Status=N'ClientApproved', ClientSubmittedAt=SYSUTCDATETIME(), ClientDecidedAt=SYSUTCDATETIME(), ClientDecisionRecordedByUserId=CreatedByUserId WHERE Id=${reviewId} AND DesignProjectId=${designId};`,
+      );
+    };
+    await approveFixture([supplementaryId]);
     fixtureSql(`UPDATE shop_drawings SET Status=N'Approved' WHERE Id=${drawing.id};`);
     const created = await api.post("/api/ifc-releases", {
       headers,
@@ -104,15 +152,62 @@ test("addressed Procurement user views and acknowledges released IFC", async ({
     const recipientId = (await added.json()).recipients.find(
       (row: { recipientUserId?: number }) => row.recipientUserId === receiver.id,
     ).id;
+    for (const scenario of [
+      { lang: "vi", width: 390, text: "Tệp chính chưa khớp" },
+      { lang: "en", width: 768, text: "The primary file does not match" },
+      { lang: "zh", width: 1440, text: "主文件与客户已批准的资料不符" },
+      { lang: "ja", width: 390, text: "主ファイルが顧客承認済み資料と一致しません" },
+    ]) {
+      await page.evaluate(
+        (language) => localStorage.setItem("nicon_lang", language),
+        scenario.lang,
+      );
+      await page.setViewportSize({ width: scenario.width, height: 900 });
+      await page.goto(`/admin/design-projects/${designId}?tab=ifc`);
+      await page.getByTestId(`ifc-row-${releaseId}`).click();
+      await page.getByTestId("ifc-release").click();
+      const blocked = page.waitForResponse((response) =>
+        response.url().endsWith(`/ifc-releases/${releaseId}/release`),
+      );
+      await page.getByTestId("ifc-release-confirm").click();
+      const failed = await blocked;
+      expect(failed.status()).toBe(400);
+      expect((await failed.json()).code).toBe("IFC_PRIMARY_FILE_NOT_APPROVED");
+      const guidance = page
+        .getByRole("alertdialog")
+        .getByRole("alert")
+        .filter({ hasText: scenario.text });
+      await expect(guidance).toBeVisible();
+      // The complete recovery guidance must remain readable inside the dialog.
+      await expect
+        .poll(async () => {
+          const box = await guidance.boundingBox();
+          return (
+            box != null &&
+            box.x >= 0 &&
+            box.y >= 0 &&
+            box.x + box.width <= scenario.width &&
+            box.y + box.height <= 900
+          );
+        })
+        .toBe(true);
+      await page.screenshot({
+        path: testInfo.outputPath(`ifc-primary-blocked-${scenario.lang}.png`),
+        animations: "disabled",
+      });
+      const kept = await api.get(`/api/ifc-releases/${releaseId}`, { headers });
+      expect((await kept.json()).status).toBe("Draft");
+    }
+    // A new client-approved review includes both B and the actual primary A.
+    await approveFixture([supplementaryId, primary.id]);
+    await page.evaluate(() => localStorage.setItem("nicon_lang", "vi"));
     await loginInBrowserAs(page, TEST_USERS.procurement);
     await page.goto(`/admin/procurement-control?projectId=${rootId}&tab=ifc`);
     await expect(page.getByTestId("procurement-ifc-inbox")).toContainText(
       "Chưa có hồ sơ IFC đã phát hành",
     );
-    const hash = createHash("sha256").update(bytes).digest("hex");
-    fixtureSql(
-      `UPDATE ifc_release_items SET ReleasedFileSha256='${hash}' WHERE IfcReleaseId=${releaseId}; UPDATE shop_drawings SET Status=N'Released' WHERE Id=${drawing.id}; UPDATE ifc_releases SET Status=N'Released', ReleaseDate=SYSUTCDATETIME() WHERE Id=${releaseId};`,
-    );
+    const released = await api.post(`/api/ifc-releases/${releaseId}/release`, { headers });
+    expect(released.ok(), await released.text()).toBe(true);
     await page.reload();
     const packet = page.getByTestId(`procurement-ifc-${recipientId}`);
     await expect(packet).toContainText("IFC – Kết cấu nhà xưởng Long Thành");
@@ -122,7 +217,9 @@ test("addressed Procurement user views and acknowledges released IFC", async ({
         response.url().endsWith("/content"),
     );
     await packet.getByRole("button", { name: /Xem trước|Preview/ }).click();
-    expect((await contentResponse).status()).toBe(200);
+    const downloaded = await contentResponse;
+    expect(downloaded.status()).toBe(200);
+    expect(await downloaded.body()).toEqual(bytes);
     await expect(page.getByRole("dialog").locator("img")).toBeVisible();
     await page.keyboard.press("Escape");
     const receiptResponse = page.waitForResponse((response) =>
@@ -189,13 +286,31 @@ test("addressed Procurement user views and acknowledges released IFC", async ({
         `DELETE FROM ifc_release_recipients WHERE IfcReleaseId=${releaseId}; DELETE FROM ifc_release_items WHERE IfcReleaseId=${releaseId}; DELETE FROM ifc_releases WHERE Id=${releaseId};`,
       );
     if (designId) {
+      // Remove only this fixture's simulated client-approval records.
+      fixtureSql(
+        `DELETE FROM design_review_documents WHERE DesignReviewId IN (SELECT Id FROM design_reviews WHERE DesignProjectId=${designId}); DELETE FROM design_review_recipients WHERE DesignReviewId IN (SELECT Id FROM design_reviews WHERE DesignProjectId=${designId}); DELETE FROM design_reviews WHERE DesignProjectId=${designId};`,
+      );
       fixtureSql(`UPDATE shop_drawings SET Status=N'Rejected' WHERE DesignProjectId=${designId};`);
       // The isolated released fixture bypasses Drive. Retire only its host-only
       // replica; the source delete API removes the physical file.
       if (rootId && drawingId)
         fixtureSql(
-          `UPDATE project_documents SET DesiredOperation=N'None', SyncStatus=N'Deleted', DeletedAt=SYSUTCDATETIME(), NextSyncAttemptAt=NULL WHERE OperationalProjectId=${rootId} AND SourceEntityType=N'ShopDrawing' AND SourceRecordId=${drawingId} AND DriveFileId IS NULL AND DeletedAt IS NULL;`,
+          `UPDATE project_documents SET DesiredOperation=N'None', SyncStatus=N'Deleted', DeletedAt=SYSUTCDATETIME(), NextSyncAttemptAt=NULL WHERE OperationalProjectId=${rootId} AND SourceEntityType=N'ShopDrawing' AND SourceRecordId=${drawingId} AND SourceType=N'ExistingManagedFile' AND DriveFileId IS NULL AND DeletedAt IS NULL;`,
         );
+      if (rootId) {
+        const remaining = await (
+          await api.get(`/api/operational-projects/${rootId}/documents`, { headers })
+        ).json();
+        for (const document of remaining.filter(
+          (doc: { sourceType: string }) => doc.sourceType === "ManualUpload",
+        )) {
+          const deleted = await api.delete(
+            `/api/operational-projects/${rootId}/documents/${document.id}`,
+            { headers },
+          );
+          expect(deleted.status(), await deleted.text()).toBe(204);
+        }
+      }
       if (drawingId) await hardDeleteBusinessRoot(api, headers, `/api/shop-drawings/${drawingId}`);
       await hardDeleteBusinessRoot(api, headers, `/api/design-projects/${designId}`);
     }

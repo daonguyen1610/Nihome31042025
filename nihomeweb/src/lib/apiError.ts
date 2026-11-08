@@ -25,6 +25,16 @@ export function extractApiError(
 
   if (data && typeof data === "object") {
     if (translate && "code" in data) {
+      const primaryNotApproved = data.code === "IFC_PRIMARY_FILE_NOT_APPROVED";
+      if (primaryNotApproved || data.code === "IFC_PRIMARY_FILE_UNAVAILABLE") {
+        const key = primaryNotApproved
+          ? "procurement.ifc.primaryNotApproved"
+          : "procurement.ifc.primaryUnavailable";
+        const message = translate(key);
+        return "drawingCode" in data && typeof data.drawingCode === "string"
+          ? `${data.drawingCode}: ${message}`
+          : message;
+      }
       const key =
         data.code === "IFC_RELEASED_FILE_CHANGED"
           ? "procurement.ifc.fileChanged"
