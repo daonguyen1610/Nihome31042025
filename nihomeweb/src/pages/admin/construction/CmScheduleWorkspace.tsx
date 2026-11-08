@@ -9,6 +9,7 @@ import {
   type CmSnapshot,
   type CmActualInput,
   type CmMailPreview,
+  type CmScheduleReport,
 } from "@/services/admin/cmScheduleApi";
 import { useAppSelector } from "@/store";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -61,11 +62,18 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
   const [recovery, setRecovery] = useState<CmSnapshot | null>(null);
   const [explanation, setExplanation] = useState("");
   const [plan, setPlan] = useState("");
-  const [period, setPeriod] = useState("all");
+  const [period, setPeriod] = useState<"day" | "month" | "year">("month");
   const [periodDate, setPeriodDate] = useState("");
+  const [report, setReport] = useState<CmScheduleReport | null>(null);
+  const [reportLoading, setReportLoading] = useState(false);
+  const [reportError, setReportError] = useState<string | null>(null);
   const [due, setDue] = useState("");
   const [actual, setActual] = useState<CmActualInput | null>(null);
   const [progress, setProgress] = useState(0);
+  const [weightBasisNote, setWeightBasisNote] = useState("");
+  const [workingDays, setWorkingDays] = useState<number[]>([1, 2, 3, 4, 5, 6]);
+  const [holidayDate, setHolidayDate] = useState("");
+  const [nonWorkingDates, setNonWorkingDates] = useState<string[]>([]);
   useEffect(() => {
     let active = true;
     setLoading(true);
@@ -106,70 +114,41 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
     data?.baselines[0];
   const anchor = periodDate || data?.asOfDate || "";
   const snapshots = useMemo(
-    () =>
-      data?.snapshots.filter(
-        (x) =>
-          x.baselineId === selected?.id &&
-          (period === "all" ||
-            x.asOfDate.slice(0, period === "day" ? 10 : period === "month" ? 7 : 4) ===
-              anchor.slice(0, period === "day" ? 10 : period === "month" ? 7 : 4)),
-      ) ?? [],
-    [data, selected, period, anchor],
+    () => data?.snapshots.filter((x) => x.baselineId === selected?.id) ?? [],
+    [data, selected],
   );
-  const chart = useMemo(() => {
-    const points = new Map<
-      number,
-      { date: number; crmPercent?: number; planPercent?: number; actualPercent?: number }
-    >();
-    selected?.curve.forEach((x) => {
-      const date = Date.parse(x.day + "T00:00:00Z");
-      points.set(date, { date, crmPercent: x.crmPercent, planPercent: x.planPercent });
-    });
-    [...snapshots].reverse().forEach((x) => {
-      const date = Date.parse(x.asOfDate + "T00:00:00Z");
-      points.set(date, {
-        date,
-        crmPercent: x.crmPercent,
-        planPercent: x.planPercent,
-        actualPercent: x.actualPercent,
-      });
-    });
-    if (period !== "all" && anchor) {
-      const start =
-        period === "year"
-          ? anchor.slice(0, 4) + "-01-01"
-          : period === "month"
-            ? anchor.slice(0, 7) + "-01"
-            : anchor;
-      const day = new Date(start + "T00:00:00Z");
-      const end =
-        period === "year"
-          ? Date.UTC(day.getUTCFullYear() + 1, 0, 1) - 86400000
-          : period === "month"
-            ? Date.UTC(day.getUTCFullYear(), day.getUTCMonth() + 1, 1) - 86400000
-            : day.getTime();
-      const curve = [...points.values()].sort((a, b) => a.date - b.date);
-      for (const date of [day.getTime(), end]) {
-        if (points.has(date) || curve.length === 0) continue;
-        const before = [...curve].reverse().find((x) => x.date <= date) ?? curve[0];
-        const after = curve.find((x) => x.date >= date) ?? curve[curve.length - 1];
-        const ratio =
-          before.date === after.date ? 0 : (date - before.date) / (after.date - before.date);
-        points.set(date, {
-          date,
-          crmPercent:
-            (before.crmPercent ?? 0) + ratio * ((after.crmPercent ?? 0) - (before.crmPercent ?? 0)),
-          planPercent:
-            (before.planPercent ?? 0) +
-            ratio * ((after.planPercent ?? 0) - (before.planPercent ?? 0)),
-        });
-      }
-      return [...points.values()]
-        .filter((x) => x.date >= day.getTime() && x.date <= end)
-        .sort((a, b) => a.date - b.date);
+  useEffect(() => {
+    if (!selected || !anchor) {
+      setReport(null);
+      return;
     }
-    return [...points.values()].sort((a, b) => a.date - b.date);
-  }, [selected, snapshots, period, anchor]);
+    let active = true;
+    setReport(null);
+    setReportLoading(true);
+    setReportError(null);
+    void cmScheduleApi
+      .report(projectId, selected.id, period, anchor)
+      .then(({ data }) => {
+        if (active) setReport(data);
+      })
+      .catch((cause) => {
+        if (active) setReportError(uiError(cause));
+      })
+      .finally(() => {
+        if (active) setReportLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [projectId, selected, period, anchor, revision, uiError]);
+  const chart = useMemo(
+    () =>
+      report?.points.map((x) => ({
+        ...x,
+        date: Date.parse(`${x.date}T00:00:00Z`),
+      })) ?? [],
+    [report],
+  );
   const percent = (value: number) => `${value.toLocaleString(lang, { maximumFractionDigits: 8 })}%`;
   const setLine = (id: number, patch: Partial<CmScheduleLine>) =>
     setLines((current) => current.map((row) => (row.taskId === id ? { ...row, ...patch } : row)));
@@ -240,6 +219,10 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                     setLines(data.proposed);
                     setReason("");
                     setSiteManager("");
+                    setWeightBasisNote("");
+                    setWorkingDays([1, 2, 3, 4, 5, 6]);
+                    setNonWorkingDates([]);
+                    setHolidayDate("");
                     setError(null);
                     setCreateOpen(true);
                   }}
@@ -304,6 +287,22 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
           ) : (
             <>
               <p className="text-sm">{selected.changeReason}</p>
+              <p className="text-sm text-muted-foreground">{selected.weightBasisNote}</p>
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <p>
+                  {t("cmSchedule.workingDays")}:{" "}
+                  {[1, 2, 3, 4, 5, 6, 0]
+                    .filter((day) => selected.workingDaysOfWeek.includes(day))
+                    .map((day) => t(`cmSchedule.weekday.${day}`))
+                    .join(", ")}
+                </p>
+                <p>
+                  {t("cmSchedule.nonWorkingDate")}:{" "}
+                  {selected.nonWorkingDates.length
+                    ? selected.nonWorkingDates.join(", ")
+                    : t("common.noData")}
+                </p>
+              </div>
               {selected.crmRevisionId !== data.crmRevisionId && (
                 <p role="status" className="text-destructive">
                   {t("cmSchedule.crmChanged")}
@@ -364,10 +363,32 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                             data.actualInputs.find((input) => input.taskId === x.taskId) && (
                               <p className="text-xs text-muted-foreground">
                                 {t("cmSchedule.bch")}:{" "}
-                                {percent(
-                                  data.actualInputs.find((input) => input.taskId === x.taskId)!
-                                    .progressPercent,
-                                )}
+                                {data.actualInputs.find((input) => input.taskId === x.taskId)!
+                                  .progressReportedAt
+                                  ? percent(
+                                      data.actualInputs.find((input) => input.taskId === x.taskId)!
+                                        .progressPercent,
+                                    )
+                                  : t("cmSchedule.actualUnreported")}
+                              </p>
+                            )}
+                          {x.isLeaf &&
+                            data.actualInputs.find((input) => input.taskId === x.taskId)
+                              ?.progressReportedAt && (
+                              <p className="text-xs text-muted-foreground">
+                                {t("cmSchedule.actualReported", {
+                                  user:
+                                    data.members.find(
+                                      (member) =>
+                                        member.userId ===
+                                        data.actualInputs.find((input) => input.taskId === x.taskId)
+                                          ?.progressReportedByUserId,
+                                    )?.name ?? t("cmSchedule.siteManager"),
+                                  at: new Date(
+                                    data.actualInputs.find((input) => input.taskId === x.taskId)!
+                                      .progressReportedAt!,
+                                  ).toLocaleString(lang, { timeZone: "Asia/Ho_Chi_Minh" }),
+                                })}
                               </p>
                             )}
                           {x.isLeaf &&
@@ -400,7 +421,11 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                           {x.plannedStart} → {x.plannedEnd}
                         </td>
                         <td className="p-2 text-right">
-                          {x.isLeaf ? x.weight.toLocaleString(lang) : "—"}
+                          {x.isMilestone
+                            ? t("cmSchedule.milestone")
+                            : x.isLeaf
+                              ? `${x.weight.toLocaleString(lang)}%`
+                              : t("cmSchedule.summaryTask")}
                         </td>
                       </tr>
                     ))}
@@ -414,22 +439,25 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    {["all", "day", "month", "year"].map((value) => (
+                    {["day", "month", "year"].map((value) => (
                       <SelectItem key={value} value={value}>
                         {t(`cmSchedule.period.${value}`)}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-                {period !== "all" && (
-                  <LocalizedDateInput
-                    aria-label={t("cmSchedule.periodDate")}
-                    value={anchor}
-                    onChange={(e) => setPeriodDate(e.target.value)}
-                  />
-                )}
+                <LocalizedDateInput
+                  aria-label={t("cmSchedule.periodDate")}
+                  value={anchor}
+                  onChange={(e) => setPeriodDate(e.target.value)}
+                />
               </div>
-              {snapshots.length === 0 && <p>{t("cmSchedule.noActual")}</p>}
+              {reportLoading && <p role="status">{t("common.loading")}</p>}
+              {reportError && (
+                <p role="alert" className="text-destructive">
+                  {reportError}
+                </p>
+              )}
               {chart.length === 0 ? (
                 <p>{t("cmSchedule.noActual")}</p>
               ) : (
@@ -453,21 +481,18 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                       />
                       <Legend />
                       <Line
-                        connectNulls
                         type="linear"
                         dataKey="crmPercent"
                         name={t("cmSchedule.crm")}
                         stroke="var(--chart-1, #2563eb)"
                       />
                       <Line
-                        connectNulls
                         type="linear"
                         dataKey="planPercent"
                         name={t("cmSchedule.cm")}
                         stroke="var(--chart-2, #d97706)"
                       />
                       <Line
-                        connectNulls
                         type="linear"
                         dataKey="actualPercent"
                         name={t("cmSchedule.bch")}
@@ -476,6 +501,11 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                     </LineChart>
                   </ResponsiveContainer>
                 </div>
+              )}
+              {chart.some((point) => !point.isDataComplete) && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {t("cmSchedule.reportIncomplete")}
+                </p>
               )}
               <ul className="space-y-3">
                 {snapshots.map((row) => (
@@ -621,9 +651,9 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
             value={reason}
             onChange={(e) => setReason(e.target.value)}
           />
-          <Label>{t("cmSchedule.siteManager")}</Label>
+          <Label htmlFor="cm-site-manager">{t("cmSchedule.siteManager")}</Label>
           <Select value={siteManager} onValueChange={setSiteManager}>
-            <SelectTrigger aria-label={t("cmSchedule.siteManager")}>
+            <SelectTrigger id="cm-site-manager" aria-label={t("cmSchedule.siteManager")}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -634,10 +664,77 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
               ))}
             </SelectContent>
           </Select>
+          <Label htmlFor="cm-weight-basis">{t("cmSchedule.weightBasisNote")}</Label>
+          <Textarea
+            id="cm-weight-basis"
+            value={weightBasisNote}
+            maxLength={1000}
+            onChange={(e) => setWeightBasisNote(e.target.value)}
+          />
+          <p className="text-sm">
+            {t("cmSchedule.weightTotal", {
+              total: lines
+                .filter((x) => x.isLeaf && !x.isMilestone)
+                .reduce((sum, x) => sum + x.weight, 0)
+                .toLocaleString(lang, { maximumFractionDigits: 4 }),
+            })}
+          </p>
+          <fieldset className="space-y-2 rounded-md border p-3">
+            <legend className="px-1 text-sm font-medium">{t("cmSchedule.workingCalendar")}</legend>
+            <div className="flex flex-wrap gap-3">
+              {[1, 2, 3, 4, 5, 6, 0].map((day) => (
+                <label key={day} className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={workingDays.includes(day)}
+                    onChange={(e) =>
+                      setWorkingDays((current) =>
+                        e.target.checked
+                          ? [...current, day].sort()
+                          : current.filter((x) => x !== day),
+                      )
+                    }
+                  />
+                  {t(`cmSchedule.weekday.${day}`)}
+                </label>
+              ))}
+            </div>
+            <div className="flex flex-wrap items-end gap-2">
+              <LocalizedDateInput
+                aria-label={t("cmSchedule.nonWorkingDate")}
+                value={holidayDate}
+                onChange={(e) => setHolidayDate(e.target.value)}
+              />
+              <Button
+                type="button"
+                variant="outline"
+                disabled={!holidayDate || nonWorkingDates.includes(holidayDate)}
+                onClick={() => {
+                  setNonWorkingDates((current) => [...current, holidayDate].sort());
+                  setHolidayDate("");
+                }}
+              >
+                {t("cmSchedule.addNonWorkingDate")}
+              </Button>
+            </div>
+            {nonWorkingDates.map((date) => (
+              <div key={date} className="flex items-center gap-2 text-sm">
+                <span>{date}</span>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setNonWorkingDates((current) => current.filter((x) => x !== date))}
+                >
+                  {t("cmSchedule.removeNonWorkingDate")}
+                </Button>
+              </div>
+            ))}
+          </fieldset>
           <div className="space-y-4">
             {lines.map((row) => (
-              <div key={row.taskId} className="grid gap-2 border-t pt-3 sm:grid-cols-3">
-                <p className="sm:col-span-3">
+              <div key={row.taskId} className="grid gap-2 border-t pt-3 sm:grid-cols-4">
+                <p className="sm:col-span-4">
                   {row.wbs} · {row.name}
                 </p>
                 <LocalizedDateInput
@@ -654,12 +751,30 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                   value={row.plannedEnd}
                   onChange={(e) => setLine(row.taskId, { plannedEnd: e.target.value })}
                 />
-                <MoneyInput
-                  aria-label={`${t("cmSchedule.weight")} ${row.wbs}`}
-                  decimalScale={4}
-                  value={row.weight}
-                  onChange={(weight) => setLine(row.taskId, { weight })}
-                />
+                {row.isLeaf ? (
+                  <>
+                    <label className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={row.isMilestone}
+                        onChange={(e) =>
+                          setLine(row.taskId, { isMilestone: e.target.checked, weight: 0 })
+                        }
+                      />
+                      {t("cmSchedule.milestone")}
+                    </label>
+                    {!row.isMilestone && (
+                      <MoneyInput
+                        aria-label={`${t("cmSchedule.weight")} ${row.wbs}`}
+                        decimalScale={4}
+                        value={row.weight}
+                        onChange={(weight) => setLine(row.taskId, { weight })}
+                      />
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{t("cmSchedule.summaryTask")}</p>
+                )}
               </div>
             ))}
           </div>
@@ -673,11 +788,18 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
               disabled={
                 busy ||
                 reason.trim().length < 3 ||
+                weightBasisNote.trim().length < 3 ||
                 !siteManager ||
+                workingDays.length === 0 ||
+                Math.abs(
+                  lines
+                    .filter((x) => x.isLeaf && !x.isMilestone)
+                    .reduce((sum, x) => sum + x.weight, 0) - 100,
+                ) > 0.0001 ||
                 lines.some(
                   (x) =>
                     !Number.isFinite(x.weight) ||
-                    x.weight <= 0 ||
+                    (x.isLeaf && !x.isMilestone && x.weight <= 0) ||
                     x.plannedStart > x.plannedEnd ||
                     x.plannedStart < x.crmStart ||
                     x.plannedEnd > x.crmEnd,
@@ -688,7 +810,10 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                   () =>
                     cmScheduleApi.create(projectId, {
                       changeReason: reason,
+                      weightBasisNote,
                       siteManagerUserId: Number(siteManager),
+                      workingDaysOfWeek: workingDays,
+                      nonWorkingDates,
                       items: lines,
                     }),
                   () => setCreateOpen(false),

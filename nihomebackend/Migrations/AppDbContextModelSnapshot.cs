@@ -1225,6 +1225,19 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CrmRevisionId")
                         .HasColumnType("int");
 
+                    b.Property<string>("WeightBasisNote")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("WorkingDaysOfWeekJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("NonWorkingDatesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ItemsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -2060,6 +2073,12 @@ namespace nihomebackend.Migrations
                         .HasColumnType("date");
 
                     b.Property<int>("ProgressPercent")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ProgressReportedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ProgressReportedByUserId")
                         .HasColumnType("int");
 
                     b.Property<Guid?>("ProjectScheduleNodeId")

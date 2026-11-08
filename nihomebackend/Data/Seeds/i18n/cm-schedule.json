@@ -10,10 +10,10 @@
   {
     "key": "cmSchedule.method",
     "category": "construction",
-    "vi": "Thực tế lấy từ % công việc BCH. Chỉ công việc cuối WBS được tổng hợp theo trọng số; mặc định theo số ngày lịch. Kế hoạch tuyến tính theo ngày lịch, không phải dự báo chi phí.",
-    "en": "Actuals come from site task completion. Only WBS leaves contribute, with weights initially based on calendar duration. The plan is linear by calendar day, not a cost forecast.",
-    "zh": "实际进度来自现场任务完成率。仅汇总WBS末级任务，默认权重为日历工期。计划按日历日线性计算，不代表成本预测。",
-    "ja": "実績は現場作業の完了率です。WBS末端作業のみ重み付け集計し、初期値は暦日工期です。計画は暦日で線形計算し、費用予測ではありません。"
+    "vi": "Mỗi công việc lá WBS có tỷ trọng scope do CM đề xuất, tổng bằng 100% và PM duyệt. Có thể dựa trên phạm vi/khối lượng và độ phức tạp; không bắt buộc có BOQ. Kế hoạch dùng lịch làm việc lưu cùng baseline. BCH phải xác nhận actual; chưa báo cáo không được tính là 0%.",
+    "en": "Each WBS leaf has a CM-proposed scope share totaling 100%, approved by the PM. Base it on scope, quantity, or complexity; a BOQ is not required. Planned progress uses the calendar frozen with the baseline. BCH must report actuals; unreported values are not treated as 0%.",
+    "zh": "每个WBS末级任务由CM分配范围权重，合计100%，并由PM审批。可依据范围、工程量或复杂度；不要求必须有BOQ。计划按基准中冻结的工作日历计算。BCH必须报告实际进度；未报告值不会按0%处理。",
+    "ja": "各WBS末端作業にCMがスコープ比率を割り当て、合計を100%としてPMが承認します。範囲・数量・複雑さを基準とし、BOQは必須ではありません。計画は基準に固定した稼働カレンダーで計算します。BCHが実績を報告し、未報告を0%として扱いません。"
   },
   {
     "key": "cmSchedule.policy",
@@ -114,10 +114,10 @@
   {
     "key": "cmSchedule.weight",
     "category": "construction",
-    "vi": "Trọng số",
-    "en": "Weight",
-    "zh": "权重",
-    "ja": "重み"
+    "vi": "Tỷ trọng scope (%)",
+    "en": "Scope share (%)",
+    "zh": "范围权重（%）",
+    "ja": "スコープ比率（%）"
   },
   {
     "key": "cmSchedule.comparison",
@@ -618,18 +618,18 @@
   {
     "key": "cmSchedule.periodDate",
     "category": "construction",
-    "vi": "Ngày thuộc kỳ cần xem",
-    "en": "Date within the period",
-    "zh": "周期内日期",
-    "ja": "期間内の日付"
+    "vi": "Xem đến ngày",
+    "en": "Through date",
+    "zh": "截至日期",
+    "ja": "対象日"
   },
   {
     "key": "cmSchedule.period.all",
     "category": "construction",
-    "vi": "Toàn bộ",
-    "en": "All dates",
-    "zh": "全部日期",
-    "ja": "全期間"
+    "vi": "Ngày",
+    "en": "Daily",
+    "zh": "按日",
+    "ja": "日次"
   },
   {
     "key": "cmSchedule.period.day",
@@ -830,5 +830,221 @@
     "en": "Schedule emails currently sending – wait for delivery to finish, then retry",
     "zh": "进度邮件正在发送——请等待发送结束后重试",
     "ja": "工程メールを送信中です。送信完了後に再試行してください"
+  },
+  {
+    "key": "cmSchedule.weightBasisNote",
+    "category": "construction",
+    "vi": "Ghi căn cứ phân bổ theo phạm vi/khối lượng và độ phức tạp; không bắt buộc có BOQ.",
+    "en": "Record the scope, quantity, or complexity basis; a BOQ is not required.",
+    "zh": "记录范围、工程量或复杂度依据；不要求必须有BOQ。",
+    "ja": "範囲・数量・複雑さの根拠を記録します。BOQは必須ではありません。"
+  },
+  {
+    "key": "cmSchedule.weightTotal",
+    "category": "construction",
+    "vi": "Tổng tỷ trọng công việc lá: {total}%",
+    "en": "Total leaf scope share: {total}%",
+    "zh": "末级任务范围权重合计：{total}%",
+    "ja": "末端作業の比率合計：{total}%"
+  },
+  {
+    "key": "cmSchedule.workingCalendar",
+    "category": "construction",
+    "vi": "Lịch làm việc của baseline",
+    "en": "Baseline working calendar",
+    "zh": "基准工作日历",
+    "ja": "基準稼働カレンダー"
+  },
+  {
+    "key": "cmSchedule.workingDays",
+    "category": "construction",
+    "vi": "Ngày làm việc",
+    "en": "Working days",
+    "zh": "工作日",
+    "ja": "稼働日"
+  },
+  {
+    "key": "cmSchedule.nonWorkingDate",
+    "category": "construction",
+    "vi": "Ngày nghỉ bổ sung",
+    "en": "Additional non-working dates",
+    "zh": "额外非工作日",
+    "ja": "追加休業日"
+  },
+  {
+    "key": "cmSchedule.addNonWorkingDate",
+    "category": "construction",
+    "vi": "Thêm ngày nghỉ",
+    "en": "Add date",
+    "zh": "添加日期",
+    "ja": "日付を追加"
+  },
+  {
+    "key": "cmSchedule.removeNonWorkingDate",
+    "category": "construction",
+    "vi": "Xóa ngày nghỉ",
+    "en": "Remove non-working date",
+    "zh": "删除非工作日",
+    "ja": "休業日を削除"
+  },
+  {
+    "key": "cmSchedule.milestone",
+    "category": "construction",
+    "vi": "Mốc",
+    "en": "Milestone",
+    "zh": "里程碑",
+    "ja": "マイルストーン"
+  },
+  {
+    "key": "cmSchedule.summaryTask",
+    "category": "construction",
+    "vi": "WBS tổng hợp; không cộng thêm vào tỷ trọng.",
+    "en": "WBS summary; excluded from scope shares.",
+    "zh": "WBS汇总项；不重复计入范围权重。",
+    "ja": "WBSサマリー。比率に重複計上しません。"
+  },
+  {
+    "key": "cmSchedule.actualUnreported",
+    "category": "construction",
+    "vi": "Chưa BCH xác nhận",
+    "en": "Not yet reported by BCH",
+    "zh": "BCH尚未报告",
+    "ja": "BCH未報告"
+  },
+  {
+    "key": "cmSchedule.reportIncomplete",
+    "category": "construction",
+    "vi": "Thiếu snapshot actual ở một hoặc nhiều kỳ. Kiểm tra tiến độ BCH hoặc thử lại sau khi hệ thống ghi nhận.",
+    "en": "Actual snapshots are missing for one or more periods. Check BCH progress or retry after the system captures it.",
+    "zh": "一个或多个周期缺少实际进度快照。请检查BCH进度，或在系统记录后重试。",
+    "ja": "一部の期間で実績スナップショットがありません。BCHの進捗を確認するか、記録後に再試行してください。"
+  },
+  {
+    "key": "cmSchedule.reportTooWide",
+    "category": "construction",
+    "vi": "Khoảng xem quá dài cho độ chi tiết này. Chọn tháng hoặc năm để xem dữ liệu gọn hơn.",
+    "en": "The selected span is too wide for this detail level. Choose month or year.",
+    "zh": "所选范围对当前粒度过宽。请选择按月或按年查看。",
+    "ja": "選択範囲が詳細度に対して長すぎます。月次または年次を選択してください。"
+  },
+  {
+    "key": "cmSchedule.error.calendarInvalid",
+    "category": "construction",
+    "vi": "Chọn ít nhất một ngày làm việc, không lặp ngày và chỉ chọn thứ trong tuần hợp lệ.",
+    "en": "Choose at least one working day, without duplicates, using valid weekdays.",
+    "zh": "请选择至少一个工作日，不要重复，并使用有效星期。",
+    "ja": "有効な曜日を重複なく1日以上選択してください。"
+  },
+  {
+    "key": "cmSchedule.error.calendarRangeInvalid",
+    "category": "construction",
+    "vi": "Lịch baseline không có ngày làm việc trong khung của một công việc lá. Sửa lịch hoặc ngày kế hoạch.",
+    "en": "The baseline calendar has no working day within a leaf task date range. Adjust the calendar or planned dates.",
+    "zh": "基准日历在某个末级任务日期范围内没有工作日。请调整日历或计划日期。",
+    "ja": "基準カレンダーに末端作業の期間内稼働日がありません。カレンダーまたは計画日を調整してください。"
+  },
+  {
+    "key": "cmSchedule.error.weightTotalInvalid",
+    "category": "construction",
+    "vi": "Tổng tỷ trọng các công việc lá phải bằng 100%. Công việc tổng hợp và mốc không nhận tỷ trọng.",
+    "en": "Leaf task scope shares must total 100%. Summary tasks and milestones have no share.",
+    "zh": "末级任务范围权重总和必须为100%。汇总任务和里程碑不分配权重。",
+    "ja": "末端作業の比率合計は100%にしてください。サマリーとマイルストーンには比率を割り当てません。"
+  },
+  {
+    "key": "cmSchedule.error.milestoneInvalid",
+    "category": "construction",
+    "vi": "Chỉ công việc lá mới có thể được đánh dấu là mốc.",
+    "en": "Only a WBS leaf can be marked as a milestone.",
+    "zh": "只有WBS末级任务可以标记为里程碑。",
+    "ja": "WBS末端作業のみマイルストーンに設定できます。"
+  },
+  {
+    "key": "cmSchedule.error.periodInvalid",
+    "category": "construction",
+    "vi": "Chọn kỳ ngày, tháng hoặc năm hợp lệ và ngày kết thúc không trước ngày bắt đầu kế hoạch.",
+    "en": "Choose a valid day, month, or year period whose end is not before the schedule starts.",
+    "zh": "请选择有效的日、月或年周期，结束日期不能早于计划开始日期。",
+    "ja": "有効な日次・月次・年次を選び、終了日を計画開始日より前にしないでください。"
+  },
+  {
+    "key": "cmSchedule.error.periodTooWide",
+    "category": "construction",
+    "vi": "Khoảng ngày vượt giới hạn kỹ thuật 3.660 điểm. Chọn kỳ tháng hoặc năm.",
+    "en": "The date span exceeds the technical limit of 3,660 points. Choose month or year.",
+    "zh": "日期范围超过3,660个点的技术上限。请选择按月或按年。",
+    "ja": "日付範囲が技術上限の3,660点を超えています。月次または年次を選択してください。"
+  },
+  {
+    "key": "cmSchedule.weekday.0",
+    "category": "construction",
+    "vi": "Chủ nhật",
+    "en": "Sunday",
+    "zh": "星期日",
+    "ja": "日曜日"
+  },
+  {
+    "key": "cmSchedule.weekday.1",
+    "category": "construction",
+    "vi": "Thứ Hai",
+    "en": "Monday",
+    "zh": "星期一",
+    "ja": "月曜日"
+  },
+  {
+    "key": "cmSchedule.weekday.2",
+    "category": "construction",
+    "vi": "Thứ Ba",
+    "en": "Tuesday",
+    "zh": "星期二",
+    "ja": "火曜日"
+  },
+  {
+    "key": "cmSchedule.weekday.3",
+    "category": "construction",
+    "vi": "Thứ Tư",
+    "en": "Wednesday",
+    "zh": "星期三",
+    "ja": "水曜日"
+  },
+  {
+    "key": "cmSchedule.weekday.4",
+    "category": "construction",
+    "vi": "Thứ Năm",
+    "en": "Thursday",
+    "zh": "星期四",
+    "ja": "木曜日"
+  },
+  {
+    "key": "cmSchedule.weekday.5",
+    "category": "construction",
+    "vi": "Thứ Sáu",
+    "en": "Friday",
+    "zh": "星期五",
+    "ja": "金曜日"
+  },
+  {
+    "key": "cmSchedule.weekday.6",
+    "category": "construction",
+    "vi": "Thứ Bảy",
+    "en": "Saturday",
+    "zh": "星期六",
+    "ja": "土曜日"
+  },
+  {
+    "key": "cmSchedule.error.weightBasisInvalid",
+    "category": "construction",
+    "vi": "Nhập căn cứ phân bổ tỷ trọng từ 3 đến 1.000 ký tự.",
+    "en": "Enter the basis for scope shares using 3 to 1,000 characters.",
+    "zh": "请输入3至1,000个字符的范围权重依据。",
+    "ja": "スコープ比率の根拠を3～1,000文字で入力してください。"
+  },
+  {
+    "key": "cmSchedule.actualReported",
+    "category": "construction",
+    "vi": "BCH: {user} · {at}",
+    "en": "BCH: {user} · {at}",
+    "zh": "BCH：{user} · {at}",
+    "ja": "BCH：{user} · {at}"
   }
 ]

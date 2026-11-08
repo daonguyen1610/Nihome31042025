@@ -19,6 +19,8 @@ public class ConstructionTaskResponse
     public DateOnly? ActualEnd { get; set; }
 
     public int ProgressPercent { get; set; }
+    public DateTime? ProgressReportedAt { get; set; }
+    public int? ProgressReportedByUserId { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public Guid? ProjectScheduleNodeId { get; set; }

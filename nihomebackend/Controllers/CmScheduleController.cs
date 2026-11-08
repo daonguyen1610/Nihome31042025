@@ -29,6 +29,9 @@ public sealed class CmScheduleController(CmScheduleService service, IProjectAcce
         Run(projectId, actor => service.DecideAsync(projectId, id, request, actor, ct), ct);
     [HttpPost("snapshots"), RequirePermission("construction.tasks", "view"), Idempotency("cm.schedule.capture", requireKey: true)]
     public Task<IActionResult> Capture(int projectId, CancellationToken ct) => Run(projectId, actor => service.CaptureAsync(projectId, actor, ct), ct);
+    [HttpGet("baselines/{baselineId:int}/report"), RequirePermission("construction.tasks", "view")]
+    public Task<IActionResult> Report(int projectId, int baselineId, [FromQuery] string period = "month", [FromQuery] DateOnly? throughDate = null, CancellationToken ct = default) =>
+        Run(projectId, actor => service.ReportAsync(projectId, baselineId, period, throughDate, actor, ct), ct);
     [HttpPost("tasks/{taskId:int}/actual"), RequirePermission("construction.tasks", "view"), Idempotency("cm.schedule.actual", requireKey: true)]
     public Task<IActionResult> UpdateActual(int projectId, int taskId, CmActualUpdateRequest request, CancellationToken ct) =>
         Run(projectId, actor => service.UpdateActualAsync(projectId, taskId, request, actor, ct), ct);

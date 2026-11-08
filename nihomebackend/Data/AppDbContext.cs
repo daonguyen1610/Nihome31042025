@@ -3103,6 +3103,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(x => new { x.OperationalProjectId, x.Version }).IsUnique();
             b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.NoAction);
             b.Property(x => x.Status).HasMaxLength(30); b.Property(x => x.ChangeReason).HasMaxLength(2000);
+            b.Property(x => x.WeightBasisNote).HasMaxLength(1000);
             b.Property(x => x.ReviewNote).HasMaxLength(2000); b.Property(x => x.RowVersion).IsRowVersion();
         });
         modelBuilder.Entity<CmProgressSnapshot>(b =>

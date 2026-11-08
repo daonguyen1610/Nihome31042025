@@ -3566,22 +3566,29 @@ The `/api` and `/api/v1` route families expose
 | `POST /baselines/{id}/submit` | same manage permission | Queue the previewed email and request independent PM review |
 | `POST /baselines/{id}/decision` | `construction.cm-preparation.view` | Approve or reject as the assigned PM, with author/reviewer separation |
 | `POST /tasks/{taskId}/actual` | `construction.tasks.view` | BCH Site Manager updates the assigned task's progress with stale-write protection |
-| `POST /snapshots` | `construction.tasks.view` | Capture progress against the latest published CRM and CM versions |
+| `POST /snapshots` | `construction.tasks.view` | Capture progress against the latest published CRM and CM versions; incomplete BCH reports do not create snapshots |
+| `GET /baselines/{baselineId}/report?period=day|month|year&throughDate=...` | `construction.tasks.view` | Return CRM/CM curve and period-end BCH snapshots; absent actual data is null |
 | `POST /snapshots/{id}/recovery` | `construction.tasks.view` | Add explanation and recovery plan to an over-threshold snapshot |
 | `POST /snapshots/{id}/review` | `construction.cm-preparation.manage` | Record the independent CM review of a recovery plan |
 
 Mutations use idempotency keys; baseline and snapshot transitions use row
-versions. The background worker captures a snapshot for each published CM
-baseline once per minute, deduplicating identical inputs for the same date.
-Actual comes from BCH-managed `ConstructionTask.ProgressPercent`, confirmed by
-the user on 2026-11-09. The current calculation uses weighted WBS leaves and a
-linear calendar-day plan curve; that roll-up is **not an approved business
-formula** while aggregation by day/month/year and weight rules remain open.
-The delay threshold defaults to 5 percentage points and is managed in Site
-Settings. A snapshot records the CRM/CM versions, progress inputs, threshold,
-and calculated values; `delay > threshold` queues one alert per baseline/date
-and requires the Site Manager to enter an explanation, recovery plan and due
-date. Do not use the provisional roll-up as an approved KPI or cost forecast.
+versions. On 2026-11-09 NICON delegated S-Curve decisions to the product owner.
+The owner decided that CM assigns 0–100 scope shares to WBS leaves totaling
+100%, records the scope/quantity/complexity basis (BOQ is not required), and PM
+independently approves; summary rows and milestones have zero share. A new
+baseline freezes its working weekdays and exception dates (default Monday–
+Saturday, Sunday off); legacy baselines use all seven days to preserve their
+calendar-day curve. Planned progress advances across working days. BCH actual
+comes from `ConstructionTask.ProgressPercent` and stores reporting actor/time.
+Once per minute, a worker snapshots complete inputs and deduplicates identical
+inputs for that date. Incomplete reports skip snapshot creation; reports expose
+missing actuals as null, never 0% or an interpolated value. Monthly/yearly
+series use period-end values. Published baselines are immutable; changes create
+a new independently reviewed version. `delay = plan - actual` in percentage
+points; only values strictly above the configured threshold (default 5) queue
+one alert per baseline/date and require the Site Manager's explanation, recovery
+plan and due date. This decision was delegated by NICON, not newly confirmed
+directly by NICON. Portfolio S-Curve aggregation remains out of scope.
 
 #### Construction task drawing links
 
@@ -3685,19 +3692,14 @@ the file or its source record. Deleted or delete-pending documents cannot be
 newly attached. SQL Server regression tests cover both winning orders for
 create/update and manual/source-managed deletion.
 
-This is a partial delivery of the target below. The CM schedule slice now
-persists versioned CM plans and progress snapshots, sends an approval notice
-through the editable email template, captures BCH task progress, and creates a
-deduplicated delay alert with a recovery explanation/plan lifecycle. The user
-confirmed on 2026-11-09 that `ConstructionTask.ProgressPercent` is the actual
-input. The implemented weighted WBS-leaf roll-up and linear calendar-day plan
-curve remain provisional until NICON/CM approves aggregation by period and
-weights; baseline publish/unlock authority also remains open. The configured
-threshold defaults to the confirmed 5 percentage points. Equipment and labour
-support the Procurement slice below but have no Finance eligibility gate, and
-actual NICON ISO template content is not seeded without an approved source
-pack. Legacy Design Project construction aggregates and offline/reconnect
-behavior remain outside this migration.
+This is a partial delivery of the target below. The CM schedule slice persists
+versioned single-project WBS plans and scope shares, a frozen calendar, explicit
+BCH actual reporting and timestamps, period-end reports, independent PM review,
+and delay/recovery workflow. S-Curve decisions were delegated by NICON to the
+product owner on 2026-11-09; this is not new direct NICON approval. Portfolio
+S-Curve aggregation, Finance eligibility for Equipment/Labour, approved NICON
+ISO template content, legacy Design Project construction aggregates and
+offline/reconnect behavior remain outside this delivery.
 
 #### Procurement resource handoff API — Partial
 
@@ -3819,16 +3821,21 @@ names alone.
 5. Upstream and Downstream QS records use distinct directions and contract
    links. Approved quantities are immutable; correction uses a superseding
    version or reversal with full audit history.
-6. CM compares accepted progress evidence with the published Baseline S-Curve.
-   The user confirmed on 24/10/2026 that delay is planned percentage minus
-   actual percentage, in percentage points. Only a delay strictly greater
-   than 5 points creates a red alert and a required explanation/recovery plan;
-   planned 50 versus actual 46 is 4 points, and 50 versus 45 is not red.
-   The user also requires dynamic day/month/year periods, not one fixed
-   reporting cadence. Actual-progress sources, aggregation across a selected
-   period and publish/unlock authority remain NICON/CM decisions. Store inputs,
-   baseline version, selected period and result for reproducibility. These
-   confirmed rules do not change the current Partial implementation status.
+6. CM compares BCH-reported `ConstructionTask.ProgressPercent` with the
+   published Baseline S-Curve. On 09/11/2026 NICON delegated S-Curve rule
+   decisions to the product owner, who decided: CM assigns scope shares to WBS
+   leaves totaling 100%, records the scope/quantity/complexity basis (BOQ is not
+   required), and PM independently approves; summaries and milestones have no
+   share. Each version freezes a working
+   calendar (new baselines default Monday–Saturday, Sunday off, with explicit
+   non-working dates). Monthly/yearly points are period-end snapshots; do not
+   average or interpolate. Missing reports/snapshots are unavailable, not 0%.
+   Published baselines are immutable; edits require a new version and PM review.
+   The product owner confirmed on 24/10/2026 that delay is plan minus actual in
+   percentage points; only strictly above 5 points creates a red alert and
+   required recovery plan. These delegated decisions are not a new direct NICON
+   approval. Preserve inputs, reporter/time, calendar, baseline version, period
+   and result for reproducibility.
 7. The creator of an MR, QA/QC dossier, QS batch, HSE violation, or VO cannot
    satisfy the independent CM review for that record. Enforce this server-side.
 8. Completion/handover consumes approved acceptance, QA/QC, as-built,
@@ -3915,7 +3922,7 @@ operation; a Drive failure must not falsely mark a dossier synchronized.
 
 #### Required validation
 
-- Unit tests: S-Curve variance, threshold boundary (`5%` is not `> 5%`), budget
+- Unit tests: S-Curve variance, threshold boundary (5 percentage points is not > 5 points), budget
   roll-up, BOQ remaining quantity, QS totals, and baseline version selection.
 - Integration tests: project/contract scope, BCH-versus-CM permissions,
   separation of duties, lifecycle transitions, stale row versions,
@@ -4748,7 +4755,7 @@ người đó đã chấp thuận phương án.
 | Q-09 | Permit applicability theo loại/quy mô, mandatory/exemption và template version | LEGAL-01 |
 | Q-11 | Màn hình Đội ngũ/Tiến độ; WBS/calendar/baseline/import scope; mốc Project/Kinh doanh ban hành và mốc Design đề xuất | DESIGN-03; không coi có file `.mpp` là đã duyệt import contract |
 | ISO / CM / FA | Map quy trình → bước → mã/phiên bản/file nguồn → form/checklist; xử lý mã thiếu/trùng; Supply/Labour/Equipment/Mixed, advance/prepayment và chứng từ áp dụng | ISO-01, CM-01, FIELD-01, FIELD-02, QS-01, FIN-01 |
-| Approval / calculation | Delegation và independent review; baseline publish/unlock; tổng hợp/trọng số S-Curve theo kỳ; executed value; BOQ allowance/zero/reversal/conversion; KPI còn thiếu. Nguồn actual `ConstructionTask.ProgressPercent` do BCH cập nhật được xác nhận ngày 09/11/2026. Người dùng đã chốt ngày 24/10/2026: delay = planned% − actual% theo điểm phần trăm, đỏ khi >5 điểm; kỳ linh hoạt ngày/tháng/năm | CM-01, SUPPLY-01, REPORT-01 |
+| Approval / calculation | Approval matrix ngoài S-Curve cho MR/QA-QC/HSE/QS/VO; executed value; BOQ allowance/zero/reversal/conversion; KPI còn thiếu. Quy tắc S-Curve do người đại diện chủ sản phẩm quyết định theo ủy quyền NICON 09/11/2026: actual/task report, tỷ trọng WBS, lịch, kỳ cuối ngày/tháng/năm, PM duyệt và không mở khóa baseline; chỉ còn kiểm chứng triển khai và portfolio scope | CM-01, SUPPLY-01, REPORT-01 |
 | Approval hiệu lực | Cancel/withdraw nhóm Finance có thu hồi approval không; nội dung/phiên bản nào thay đổi thì phải rà lại | COMM-01, TENDER-01 |
 | Nguồn báo cáo / chức năng chung | Actual cashflow, cost/P&L/inventory sources, kỳ đối chiếu; phạm vi global search/saved filters và data source KPI còn thiếu | FIN-02, REPORT-01, COMMON-01 |
 | Document policy | Actor × source/category × action; historical approved bytes/retention; import-to-dossier; IFC-specific upload; phạm vi scan/native export và migration Survey. Giữ sharing/ACL tắt theo quyết định hiện tại; chỉ mở lại khi có yêu cầu mới được duyệt | SAFE-01, SAFE-02, DRIVE-02, DRIVE-03 |
@@ -4818,7 +4825,7 @@ và migration trước khi code; ưu tiên reuse controller/service/UI đang có
 | QS-01 — Hai hướng khối lượng | Upstream gắn Owner contract/receivable milestone; Downstream gắn NCC/thầu phụ/tổ đội/payable dossier; stable WBS/BOQ/VO/evidence; approved quantity immutable, correction/reversal lineage | Không suy hướng từ dấu tiền, không double-count superseded/reversed batch; downstream consumer nhận source không còn hiệu lực. HTTP/SQL direction/project/milestone/totals/concurrency; retry CM approval không sinh duplicate payment |
 | FIN-01 — Dossier thanh toán hai chiều | Mở rộng tương thích PaymentRequest Downstream, thêm Upstream dossier; ba phần Công trường/CM/Kế toán có actor/evidence/status/version theo matrix duyệt; chạy song song vòng đời | Đủ ba phần và chứng từ áp dụng mới gửi khách/chi; Supply/Labour/Equipment/Mixed, advance/prepayment theo quyết định, không fake receipt. Giữ invoice uniqueness, independent approval, same-request revision khi QS superseded. API validation/authorization/file ownership; live một Upstream send và một Downstream pay |
 | FIN-02 — Nguồn tài chính và báo cáo kho | Chốt với FA nguồn thực thu/thực chi/chi phí, P&L và kho theo dự án/kỳ; hoàn thiện phần Target còn thiếu bằng liên kết nguồn chuẩn, không dựng sổ kế toán hoặc tích hợp ngân hàng chưa được yêu cầu | Approved dossier/milestone không tự bằng cash received/paid. Báo cáo tách kế hoạch/certified/posted/actual theo contract đã chốt; receipt/issue/reversal và package allocation đối chiếu đúng kỳ, currency/unit. Thiếu nguồn không báo số 0 hoặc lãi giả; API source permissions, unit reconciliation và live report/export |
-| REPORT-01 — CM/Finance/KPI | Portfolio progress, QS hai hướng, executed-vs-budget, QA/QC/HSE có source/period/baseline và drill-down; S-Curve và KPI theo definition/target đã duyệt | Theo xác nhận 24/10/2026: delay = planned% − actual% theo điểm phần trăm, strictly >5 điểm tạo red alert cho Site Manager và explanation/recovery; đúng 5 điểm không đỏ; kỳ linh hoạt ngày/tháng/năm. Lưu inputs/version/kỳ để tái tính. Nguồn actual/tổng hợp kỳ còn mở. Missing source hiển thị unavailable; chỉ terminal approved/posted/paid/verified source phù hợp tính KPI, không tính offline draft; unit boundary + API scope + desktop/tablet |
+| REPORT-01 — CM/Finance/KPI | Portfolio progress, QS hai hướng, executed-vs-budget, QA/QC/HSE có source/period/baseline và drill-down; S-Curve và KPI theo definition/target đã duyệt | Với S-Curve cấp dự án, owner decision delegated 09/11/2026: delay = plan − actual theo điểm phần trăm, strictly >5 điểm cảnh báo; lưu task inputs/reporter/time/calendar/version/period; ngày/tháng/năm, period-end snapshots và thiếu actual = unavailable, không nội suy. Portfolio aggregation chưa thuộc slice. KPI khác vẫn cần chốt nguồn; terminal approved/posted/paid/verified phù hợp, không tính offline draft; unit boundary + API scope + desktop/tablet |
 | COMMON-01 — Chức năng chung trong BreakTask | Kiểm kê và map master data, translations, notification/audit, exports, tìm kiếm/filter từng module; chốt phạm vi global search/saved filters còn Target và reuse query/UI hiện có | Tìm kiếm/lưu filter giữ đúng ownership/project/source permission và pagination, không trả record/count ngoài scope. Export phản ánh đúng tập/kỳ/quyền; không mất filter khi reload/back navigation. Các vị trí/KPI được canonical xác nhận có metric/source/target hoặc MissingData rõ ràng; chưa có nguồn HR/budget không tự tạo điểm |
 | MIG-01 — Compatibility/backfill | Inventory IDs/versions/bindings/custom grants/legacy documents; kế hoạch additive migration cho model mới, root ID migration và Drive topology là các thay đổi riêng có decision | Dry-run counts/uniqueness/conflict/orphan/checksum, resume/checkpoint, rollback và rehearsal SQL. Không reset dữ liệu user; legacy thiếu evidence ghi rõ incomplete, không tái tạo submitted snapshot/approval/ISO completion bằng dữ liệu hiện tại |
 | RELEASE-01 — Giao hàng và UAT | Cập nhật guides/RBAC/seed/translations, deploy revision xác định, smoke/UAT theo actor và scenario; bàn giao PDF quy trình kịch bản A có screenshot và hỗ trợ phản hồi NICON qua Sheet | `buildSha`/migration/version khớp; mọi High/Critical đóng, affected tests bản cuối pass; deployment/UAT/Drive NICON và việc bàn giao PDF có bằng chứng riêng. Chỉ miễn/đổi định dạng hướng dẫn khi NICON xác nhận. Gửi tài liệu/thông báo chỉ theo kênh và ủy quyền đã có, không đánh đồng local pass với host đã deploy |

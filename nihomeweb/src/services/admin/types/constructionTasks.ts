@@ -44,6 +44,8 @@ export interface ConstructionTaskResponse {
   actualStart?: string | null;
   actualEnd?: string | null;
   progressPercent: number;
+  progressReportedAt?: string | null;
+  progressReportedByUserId?: number | null;
   ownerUserId?: number | null;
   ownerName?: string | null;
   projectScheduleNodeId?: string | null;

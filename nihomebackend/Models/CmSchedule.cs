@@ -9,6 +9,9 @@ public sealed class CmScheduleBaseline : IConcurrencyTracked
     public int CrmRevisionId { get; set; }
     public string Status { get; set; } = "Draft";
     public string ChangeReason { get; set; } = string.Empty;
+    public string WeightBasisNote { get; set; } = string.Empty;
+    public string WorkingDaysOfWeekJson { get; set; } = "[1,2,3,4,5,6]";
+    public string NonWorkingDatesJson { get; set; } = "[]";
     public string ItemsJson { get; set; } = "[]";
     public int SiteManagerUserId { get; set; }
     public int ApproverUserId { get; set; }

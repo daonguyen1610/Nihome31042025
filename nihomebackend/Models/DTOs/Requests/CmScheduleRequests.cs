@@ -4,7 +4,10 @@ namespace NihomeBackend.Models.DTOs.Requests;
 public sealed class CmScheduleDraftRequest
 {
     [Required, StringLength(2000, MinimumLength = 3)] public string ChangeReason { get; set; } = string.Empty;
+    [Required, StringLength(1000, MinimumLength = 3)] public string WeightBasisNote { get; set; } = string.Empty;
     [Range(1, int.MaxValue)] public int SiteManagerUserId { get; set; }
+    [Required, MinLength(1), MaxLength(7)] public List<int> WorkingDaysOfWeek { get; set; } = [1, 2, 3, 4, 5, 6];
+    [Required, MaxLength(500)] public List<DateOnly> NonWorkingDates { get; set; } = [];
     [Required, MinLength(1), MaxLength(2000)] public List<CmSchedulePlanRequest> Items { get; set; } = [];
 }
 public sealed class CmSchedulePlanRequest
@@ -12,7 +15,8 @@ public sealed class CmSchedulePlanRequest
     [Range(1, int.MaxValue)] public int TaskId { get; set; }
     public DateOnly PlannedStart { get; set; }
     public DateOnly PlannedEnd { get; set; }
-    [Range(typeof(decimal), "0.0001", "1000000000")] public decimal Weight { get; set; }
+    [Range(typeof(decimal), "0", "100")] public decimal Weight { get; set; }
+    public bool IsMilestone { get; set; }
 }
 public sealed class CmScheduleDecisionRequest
 {

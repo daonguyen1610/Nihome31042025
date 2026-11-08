@@ -220,6 +220,8 @@ public partial class ConstructionTaskService(
         else if (request.ProjectScheduleNodeId.HasValue)
             throw new ConstructionTaskOperationException("Luồng Thiết kế chưa gắn với Dự án vận hành để liên kết WBS.");
 
+        var progressChanged = entity.ProgressPercent != request.ProgressPercent;
+        if (progressChanged) await EnsureProgressReporterAsync(entity.Id, callerUserId, ct);
         entity.Wbs = TrimOrNull(request.Wbs);
         entity.ProjectScheduleNodeId = request.ProjectScheduleNodeId;
         entity.Name = name;
@@ -234,6 +236,11 @@ public partial class ConstructionTaskService(
             DateOnly.FromDateTime(DateTime.UtcNow));
         entity.Status = resolvedStatus;
         entity.ActualEnd = resolvedActualEnd;
+        if (progressChanged)
+        {
+            entity.ProgressReportedAt = DateTime.UtcNow;
+            entity.ProgressReportedByUserId = callerUserId;
+        }
         entity.UpdatedByUserId = callerUserId;
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -251,7 +258,11 @@ public partial class ConstructionTaskService(
         var entity = await db.ConstructionTasks.FirstOrDefaultAsync(t => t.Id == id, ct);
         if (entity is null) return null;
 
+        await EnsureProgressReporterAsync(entity.Id, callerUserId, ct);
+
         entity.ProgressPercent = request.ProgressPercent;
+        entity.ProgressReportedAt = DateTime.UtcNow;
+        entity.ProgressReportedByUserId = callerUserId;
         if (request.ActualStart.HasValue) entity.ActualStart = request.ActualStart;
         if (request.ActualEnd.HasValue) entity.ActualEnd = request.ActualEnd;
 
@@ -280,6 +291,18 @@ public partial class ConstructionTaskService(
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         return await GetAsync(id, ct);
+    }
+
+    private async Task EnsureProgressReporterAsync(int taskId, int callerUserId, CancellationToken ct)
+    {
+        var projectId = await db.ConstructionTasks.AsNoTracking().Where(x => x.Id == taskId)
+            .Select(x => x.DesignProject.OperationalProjectId).SingleOrDefaultAsync(ct);
+        if (!projectId.HasValue) return;
+        var siteManagerId = await db.CmScheduleBaselines.AsNoTracking()
+            .Where(x => x.OperationalProjectId == projectId && x.Status == "Published")
+            .OrderByDescending(x => x.Version).Select(x => (int?)x.SiteManagerUserId).FirstOrDefaultAsync(ct);
+        if (siteManagerId.HasValue && siteManagerId.Value != callerUserId)
+            throw new ConstructionTaskOperationException("Chỉ Chỉ huy trưởng được phân công mới được báo cáo tiến độ thực tế của công trường.");
     }
 
     public async Task<ConstructionTaskResponse> SetPredecessorsAsync(int id, SetConstructionTaskPredecessorsRequest request, int callerUserId, CancellationToken ct = default)
@@ -577,6 +600,8 @@ public partial class ConstructionTaskService(
         ActualStart = t.ActualStart,
         ActualEnd = t.ActualEnd,
         ProgressPercent = t.ProgressPercent,
+        ProgressReportedAt = t.ProgressReportedAt,
+        ProgressReportedByUserId = t.ProgressReportedByUserId,
         OwnerUserId = t.OwnerUserId,
         OwnerName = t.Owner?.FullName,
         ProjectScheduleNodeId = t.ProjectScheduleNodeId,
