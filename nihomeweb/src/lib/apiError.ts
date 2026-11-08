@@ -26,11 +26,13 @@ export function extractApiError(
   if (data && typeof data === "object") {
     if (translate && "code" in data) {
       const key =
-        data.code === "LEGAL_MEMBER_INVALID"
-          ? "people.legalMemberInvalid"
-          : data.code === "PUNCH_DESIGN_MEMBER_INVALID"
-            ? "people.designMemberInvalid"
-            : null;
+        data.code === "CONTRACT_SIGNED_SCAN_REQUIRED"
+          ? "contracts.detail.transition.needScan"
+          : data.code === "LEGAL_MEMBER_INVALID"
+            ? "people.legalMemberInvalid"
+            : data.code === "PUNCH_DESIGN_MEMBER_INVALID"
+              ? "people.designMemberInvalid"
+              : null;
       if (key) return translate(key);
     }
     if ("errors" in data && data.errors && typeof data.errors === "object") {

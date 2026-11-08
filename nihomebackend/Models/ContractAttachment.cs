@@ -5,7 +5,7 @@ namespace NihomeBackend.Models;
 /// contract, VO attachments (mirrored via <see cref="ContractAppendix"/>
 /// on the FE), or supporting documents.
 ///
-/// NIH-104 gates <c>Signed → InProgress</c> on the presence of at least one
+/// Signing and starting execution require at least one
 /// <see cref="ContractAttachmentKind.SignedScan"/> row.
 /// </summary>
 public class ContractAttachment
@@ -37,7 +37,7 @@ public class ContractAttachment
 
 public enum ContractAttachmentKind
 {
-    /// <summary>Signed scan of the master contract. Required to enter InProgress.</summary>
+    /// <summary>Signed scan of the master contract. Required to enter Signed or InProgress.</summary>
     SignedScan = 0,
     /// <summary>Additional supporting document (photos, drawings, etc.).</summary>
     Supporting = 1,

@@ -1183,6 +1183,7 @@ public class ContractsControllerTests : IntegrationTestBase
             endDate = "2026-12-31T00:00:00Z",
         });
         update.StatusCode.Should().Be(HttpStatusCode.OK);
+        await AddSignedScanAsync(id);
         var transition = await Client.PostAsJsonAsync(
             $"/api/contracts/{id}/transition",
             new { newStatus = "Signed", rowVersion = (await ReadJsonAsync(update)).GetProperty("rowVersion").GetString() });
@@ -1589,6 +1590,7 @@ public class ContractsControllerTests : IntegrationTestBase
         var id = body.GetProperty("id").GetInt32();
         if (status == "Signed")
         {
+            await AddSignedScanAsync(id);
             var transition = await Client.PostAsJsonAsync($"/api/contracts/{id}/transition", new
             {
                 newStatus = "Signed",
@@ -1598,6 +1600,20 @@ public class ContractsControllerTests : IntegrationTestBase
         }
         return id;
     }
+
+    private Task AddSignedScanAsync(int contractId) => WithDbAsync(async db =>
+    {
+        db.ContractAttachments.Add(new ContractAttachment
+        {
+            ContractId = contractId,
+            Kind = ContractAttachmentKind.SignedScan,
+            FilePath = $"/files/contracts/signed-{Guid.NewGuid():N}.pdf",
+            OriginalFileName = "NICON-hop-dong-da-ky.pdf",
+            ContentType = "application/pdf",
+            FileSize = 1,
+        });
+        await db.SaveChangesAsync();
+    });
 
     [Fact]
     public async Task PrivateFiles_RequireAuthenticatedContentRoutesAndBlockStaticPaths()
@@ -1668,15 +1684,153 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Transition_DraftToSigned_WithoutSignedScan_RejectsAndPreservesDraft()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var before = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(c => c.Id == contractId));
+
+        var response = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new
+        {
+            newStatus = "Signed",
+            rowVersion = Convert.ToBase64String(before.RowVersion),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var error = await ReadJsonAsync(response);
+        error.GetProperty("code").GetString().Should().Be("CONTRACT_SIGNED_SCAN_REQUIRED");
+        error.GetProperty("message").GetString().Should().Contain("scan");
+        var after = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(c => c.Id == contractId));
+        after.Status.Should().Be(before.Status);
+        after.SignedDate.Should().Be(before.SignedDate);
+        after.UpdatedAt.Should().Be(before.UpdatedAt);
+        after.UpdatedByUserId.Should().Be(before.UpdatedByUserId);
+        after.RowVersion.Should().Equal(before.RowVersion);
+    }
+
+    [Fact]
+    public async Task Sign_EnforcesAccessConcurrencyAndReplay()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        await AddSignedScanAsync(contractId);
+        var before = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(c => c.Id == contractId));
+        using var anonymous = Factory.CreateClient();
+        (await anonymous.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" }))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        (await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" }))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(c => c.Id == contractId)))
+            .RowVersion.Should().Equal(before.RowVersion);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        await WithDbAsync(async db =>
+        {
+            var contract = await db.Contracts.SingleAsync(c => c.Id == contractId);
+            contract.ScopeOfWork = "NICON – Phạm vi thiết kế đã cập nhật trước khi ký";
+            await db.SaveChangesAsync();
+        });
+        var stale = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new
+        {
+            newStatus = "Signed",
+            rowVersion = Convert.ToBase64String(before.RowVersion),
+        });
+        stale.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var current = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(c => c.Id == contractId));
+        current.Status.Should().Be(ContractStatus.Draft);
+        var key = Guid.NewGuid().ToString();
+        JsonElement? first = null;
+        for (var attempt = 0; attempt < 2; attempt++)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, $"/api/contracts/{contractId}/transition")
+            {
+                Content = JsonContent.Create(new { newStatus = "Signed", rowVersion = Convert.ToBase64String(current.RowVersion) }),
+            };
+            request.Headers.Add("Idempotency-Key", key);
+            using var response = await Client.SendAsync(request);
+            response.StatusCode.Should().Be(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
+            var signed = await ReadJsonAsync(response);
+            signed.GetProperty("status").GetString().Should().Be("Signed");
+            if (first.HasValue)
+            {
+                signed.GetProperty("rowVersion").GetString().Should().Be(first.Value.GetProperty("rowVersion").GetString());
+                signed.GetProperty("signedDate").GetString().Should().Be(first.Value.GetProperty("signedDate").GetString());
+            }
+            first = signed;
+        }
+    }
+
+    [Fact]
+    public async Task LegacyDownstream_StartWithoutScan_ReturnsScanCodeAndPreservesState()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var before = await WithDbAsync(async db =>
+        {
+            var vendor = new Vendor { VendorCode = $"NICON-SCAN-{Guid.NewGuid():N}", CompanyName = "NICON – Nhà cung cấp kết cấu", VendorType = VendorType.Supplier };
+            var legacy = await db.Contracts.SingleAsync(c => c.Id == contractId);
+            legacy.Direction = ContractDirection.Downstream;
+            legacy.Type = ContractType.Supply;
+            legacy.Vendor = vendor;
+            legacy.QuoteId = null;
+            legacy.Status = ContractStatus.Signed;
+            await db.SaveChangesAsync();
+            return legacy;
+        });
+
+        var response = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "InProgress" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("code").GetString().Should().Be("CONTRACT_SIGNED_SCAN_REQUIRED");
+        var after = await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(c => c.Id == contractId));
+        after.Status.Should().Be(ContractStatus.Signed);
+        after.SignedDate.Should().Be(before.SignedDate);
+        after.RowVersion.Should().Equal(before.RowVersion);
+    }
+
+    [Fact]
     public async Task Transition_DraftToSigned_Succeeds()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
         var contractId = await CreateContractAsync(customerId);
+        using var form = CreateFileForm("NICON signed design contract", "NICON-hop-dong-da-ky.pdf");
+        form.Add(new StringContent("SignedScan"), "kind");
+        var uploaded = await Client.PostAsync($"/api/contracts/{contractId}/attachments", form);
+        uploaded.StatusCode.Should().Be(HttpStatusCode.Created, await uploaded.Content.ReadAsStringAsync());
 
         var res = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" });
         res.StatusCode.Should().Be(HttpStatusCode.OK);
         (await ReadJsonAsync(res)).GetProperty("status").GetString().Should().Be("Signed");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Transition_DraftToSigned_NonqualifyingAttachment_DoesNotPermitSigning(bool otherContract)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var attachmentContractId = otherContract ? await CreateContractAsync(customerId) : contractId;
+        using var form = CreateFileForm("NICON contract evidence", "NICON-ho-so.pdf");
+        form.Add(new StringContent(otherContract ? "SignedScan" : "Supporting"), "kind");
+        var uploaded = await Client.PostAsync($"/api/contracts/{attachmentContractId}/attachments", form);
+        uploaded.StatusCode.Should().Be(HttpStatusCode.Created, await uploaded.Content.ReadAsStringAsync());
+
+        var response = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("code").GetString().Should().Be("CONTRACT_SIGNED_SCAN_REQUIRED");
+        (await WithDbAsync(db => db.Contracts.AsNoTracking().SingleAsync(item => item.Id == contractId)))
+            .Status.Should().Be(ContractStatus.Draft);
     }
 
     [Fact]
@@ -1718,6 +1872,7 @@ public class ContractsControllerTests : IntegrationTestBase
         });
         await SeedApprovedQuoteAsync(customerId);
         var contractId = await CreateContractAsync(customerId);
+        await AddSignedScanAsync(contractId);
 
         var missingTax = await Client.PostAsJsonAsync(
             $"/api/contracts/{contractId}/transition",
@@ -1766,7 +1921,13 @@ public class ContractsControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
-        var contractId = await CreateContractAsync(customerId, status: "Signed");
+        var contractId = await CreateContractAsync(customerId);
+        await WithDbAsync(async db =>
+        {
+            var legacy = await db.Contracts.SingleAsync(item => item.Id == contractId);
+            legacy.Status = ContractStatus.Signed;
+            await db.SaveChangesAsync();
+        });
         var before = await WithDbAsync(db => db.Contracts.AsNoTracking()
             .SingleAsync(contract => contract.Id == contractId));
         var projectCountBefore = await WithDbAsync(db => db.DesignProjects
@@ -2226,6 +2387,7 @@ public class ContractsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var customerId = await CreateCustomerAsync();
         var contractId = await CreateContractAsync(customerId);
+        await AddSignedScanAsync(contractId);
         // Trigger a couple of audited actions so the timeline has content.
         await Client.PostAsJsonAsync($"/api/contracts/{contractId}/transition", new { newStatus = "Signed" });
 

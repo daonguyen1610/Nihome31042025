@@ -37,6 +37,7 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
             scopeOfWork = "Cải tạo nhà xưởng theo giá trị đã thống nhất",
         });
         contract.GetProperty("quoteId").ValueKind.Should().Be(JsonValueKind.Null);
+        await UploadSignedContractScanAsync(Id(contract));
         contract = await WriteAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition",
             new { newStatus = "Signed", rowVersion = Version(contract) });
         contract.GetProperty("status").GetString().Should().Be("Signed");
@@ -150,6 +151,7 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
                 value = quote.GetProperty("grandTotal").GetDecimal(),
                 scopeOfWork = "Factory shell design and construction",
             });
+            await UploadSignedContractScanAsync(Id(contract));
             contract = await WriteAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition", new { newStatus = "Signed", rowVersion = Version(contract) });
             contract.GetProperty("status").GetString().Should().Be("Signed");
             contract.GetProperty("customerId").GetInt32().Should().Be(customerId);
@@ -157,15 +159,6 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
             contract.GetProperty("quoteId").GetInt32().Should().Be(Id(quote));
             await RejectAsync(HttpMethod.Post, $"/api/contracts/{Id(contract)}/transition", new { newStatus = "InProgress", rowVersion = Version(contract) }, HttpStatusCode.BadRequest);
             (await WithDbAsync(db => db.DesignProjects.CountAsync(x => x.ContractId == Id(contract)))).Should().Be(0);
-            using (var form = new MultipartFormDataContent())
-            {
-                var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("%PDF-1.4\nSigned factory contract test evidence\n%%EOF"));
-                file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
-                form.Add(file, "file", "signed-factory-contract.pdf");
-                form.Add(new StringContent("SignedScan"), "kind");
-                using var uploaded = await Client.PostAsync($"/api/contracts/{Id(contract)}/attachments", form);
-                uploaded.IsSuccessStatusCode.Should().BeTrue(await uploaded.Content.ReadAsStringAsync());
-            }
             contract = await ReadAsync($"/api/contracts/{Id(contract)}");
             var executeKey = Guid.NewGuid().ToString();
             var legalUsers = await ConfigureLegalActivationTeamAsync(projectId);

@@ -307,7 +307,10 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       if (!contract) return;
       // Client-side gate mirrors the server rule so we can point users at
       // the right tab before they get a 400.
-      if (next === "InProgress" && contract.status === "Signed" && !contract.hasSignedScan) {
+      if (
+        (next === "Signed" || (next === "InProgress" && contract.status === "Signed")) &&
+        !contract.hasSignedScan
+      ) {
         toast({
           variant: "destructive",
           title: t("contracts.detail.transition.needScan"),

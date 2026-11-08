@@ -884,6 +884,13 @@ Opportunity, Quote and Project links keep their current behavior.
 
 Create contracts or generate from approved quotations. Manage contract value, scope, and terms. Track payment milestones (advance, stage-based, completion). Manage appendices and variation orders. Track contract status: in-progress, paused, completed.
 
+Before selecting **Mark as Signed**, upload the signed contract under
+**Documents** with file type **Signed scan**. A supporting document or a scan
+attached to another Contract does not qualify. Opening Documents suggests
+Signed scan when the Contract has none. If the scan is missing, the app
+opens Documents and keeps the Contract in Draft. Existing Signed Contracts
+without a scan keep their status; add the scan before starting execution.
+
 For a customer (Upstream) contract, open **Customer care** in the Contract
 registry to read calls, emails, meetings and notes for that contract. Users with
 Contract manage permission and owner/CRM manager scope can add an entry with

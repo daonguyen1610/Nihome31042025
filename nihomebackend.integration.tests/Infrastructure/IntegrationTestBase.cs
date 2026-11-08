@@ -49,6 +49,17 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
         return JsonDocument.Parse(body).RootElement.Clone();
     }
 
+    protected async Task UploadSignedContractScanAsync(int contractId)
+    {
+        using var form = new MultipartFormDataContent();
+        using var file = new ByteArrayContent(System.Text.Encoding.UTF8.GetBytes("%PDF-1.4\nNICON signed contract fixture\n%%EOF"));
+        file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+        form.Add(file, "file", "NICON-hop-dong-da-ky.pdf");
+        form.Add(new StringContent("SignedScan"), "kind");
+        using var response = await Client.PostAsync($"/api/contracts/{contractId}/attachments", form);
+        response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+    }
+
     protected Task<(int Id, string RowVersion)> SeedPublishedLegalTemplateAsync() => WithDbAsync(async db =>
     {
         var template = new LegalChecklistTemplate

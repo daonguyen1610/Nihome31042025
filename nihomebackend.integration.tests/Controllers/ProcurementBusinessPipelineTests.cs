@@ -127,6 +127,7 @@ public sealed class ProcurementBusinessPipelineTests : IntegrationTestBase
         var contractLineId = contractLine.GetProperty("id").GetInt32();
 
         await LoginAsRoleAsync("SUPER_ADMIN");
+        await UploadSignedContractScanAsync(contractId);
         var contractSigned = await SendAsync(HttpMethod.Post, $"/api/contracts/{contractId}/transition",
             new { newStatus = "Signed" }, rowVersion: contractDraft.GetProperty("rowVersion").GetString());
         contractSigned.StatusCode.Should().Be(HttpStatusCode.OK, await contractSigned.Content.ReadAsStringAsync());

@@ -197,6 +197,7 @@ public sealed class RfqProcurementPipelineTests(NihomeWebApplicationFactory fact
         // Procurement owns the generated contract, but signing is delegated to
         // the existing contract manager role, which has manage + view.all.
         await LoginAsync("SALES_MANAGER");
+        await UploadSignedContractScanAsync(contractId);
         var signed = await PostAsync($"/api/contracts/{contractId}/transition", new
         {
             newStatus = "Signed",

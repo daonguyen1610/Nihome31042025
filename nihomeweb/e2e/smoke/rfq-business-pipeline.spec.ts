@@ -1,3 +1,4 @@
+import { uploadSignedContractScan } from "../fixtures/contracts";
 import { randomUUID } from "node:crypto";
 import { test, expect, TEST_USERS, type TestUser } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
@@ -104,6 +105,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       contractNumber: string;
       rowVersion: string;
     };
+    await uploadSignedContractScan(api, headers, upstreamContract.id);
     const signedResponse = await api.post(`/api/contracts/${upstreamContract.id}/transition`, {
       headers,
       data: { newStatus: "Signed", rowVersion: upstreamContract.rowVersion },
@@ -232,6 +234,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       await expect(contractLink).toBeVisible();
       contractNumber = (await contractLink.textContent())!;
       const contractUrl = (await contractLink.getAttribute("href"))!;
+      await uploadSignedContractScan(api, headers, Number(contractUrl.split("/").pop()));
       await loginInBrowserAs(page, TEST_USERS.salesManager);
       await page.goto(contractUrl);
       await expect(page.getByRole("heading", { name: contractNumber, exact: true })).toBeVisible();
