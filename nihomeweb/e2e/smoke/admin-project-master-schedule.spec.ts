@@ -1,3 +1,4 @@
+import { uploadSignedContractScan } from "../fixtures/contracts";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
 import { execSql } from "../fixtures/db";
@@ -733,6 +734,7 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
       }),
       "create upstream contract",
     );
+    await uploadSignedContractScan(api, adminHeaders, contract.id);
     const signed = await expectJson<{ id: number }>(
       await api.post(`/api/contracts/${contract.id}/transition`, {
         headers: { ...adminHeaders, "Idempotency-Key": `schedule-sign-${suffix}` },

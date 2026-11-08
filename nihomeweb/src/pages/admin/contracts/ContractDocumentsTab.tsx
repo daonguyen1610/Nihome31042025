@@ -44,7 +44,9 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
   const confirmAction = useConfirm();
   const { t } = useI18n();
   const { toast } = useToast();
-  const [uploadKind, setUploadKind] = useState<ContractAttachmentKind>("Supporting");
+  const [uploadKind, setUploadKind] = useState<ContractAttachmentKind>(
+    contract.hasSignedScan ? "Supporting" : "SignedScan",
+  );
   const [label, setLabel] = useState("");
   const [uploading, setUploading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);

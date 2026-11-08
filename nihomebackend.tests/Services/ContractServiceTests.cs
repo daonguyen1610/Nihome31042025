@@ -1251,12 +1251,27 @@ public class ContractServiceTests : IDisposable
         Assert.Empty(_db.ContractPaymentMilestones);
     }
 
+    private async Task AddSignedScanAsync(int contractId)
+    {
+        _db.ContractAttachments.Add(new ContractAttachment
+        {
+            ContractId = contractId,
+            Kind = ContractAttachmentKind.SignedScan,
+            FilePath = "/files/contracts/nicon-hop-dong-da-ky.pdf",
+            OriginalFileName = "nicon-hop-dong-da-ky.pdf",
+            ContentType = "application/pdf",
+            FileSize = 1,
+        });
+        await _db.SaveChangesAsync();
+    }
+
     // ---------------- State transitions (NIH-104) ----------------
 
     [Fact]
     public async Task Transition_DraftToSigned_StampsSignedDateWhenMissing()
     {
         var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        await AddSignedScanAsync(contract.Id);
         Assert.Null(contract.SignedDate);
 
         var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
@@ -1287,6 +1302,7 @@ public class ContractServiceTests : IDisposable
     public async Task Update_SignedContractCannotClearSignedDate()
     {
         var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        await AddSignedScanAsync(contract.Id);
         var signed = (await _sut.TransitionStatusAsync(
             contract.Id, ContractStatus.Signed, 1, canSeeAll: true))!;
         var update = Req(number: signed.ContractNumber, status: ContractStatus.Signed);
@@ -1312,6 +1328,7 @@ public class ContractServiceTests : IDisposable
     public async Task Transition_SignedToInProgress_EligibleContractRequiresLegalWizard()
     {
         var contract = await _sut.CreateAsync(Req(), 1, canReassignOwner: true);
+        await AddSignedScanAsync(contract.Id);
         contract = (await _sut.TransitionStatusAsync(
             contract.Id, ContractStatus.Signed, 1, canSeeAll: true))!;
         var ex = await Assert.ThrowsAsync<ContractValidationException>(
@@ -1344,6 +1361,7 @@ public class ContractServiceTests : IDisposable
             Milestone(2, 50m, "B"),
         };
         var contract = await _sut.CreateAsync(initial, 1, canReassignOwner: true);
+        await AddSignedScanAsync(contract.Id);
         await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
         _db.ContractAttachments.Add(new ContractAttachment
         {
@@ -1377,6 +1395,7 @@ public class ContractServiceTests : IDisposable
     public async Task Transition_NoOp_ReturnsCurrentState()
     {
         var contract = await _sut.CreateAsync(Req(signed: DateTime.UtcNow), 1, canReassignOwner: true);
+        await AddSignedScanAsync(contract.Id);
         await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
         var updated = await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
         Assert.NotNull(updated);

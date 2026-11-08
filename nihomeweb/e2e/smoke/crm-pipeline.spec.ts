@@ -1,3 +1,4 @@
+import { uploadSignedContractScan } from "../fixtures/contracts";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { randomUUID } from "node:crypto";
 import type { APIRequestContext } from "@playwright/test";
@@ -280,6 +281,7 @@ test.describe("CRM Pipeline: Lead → Opportunity → Quote → Contract", () =>
 
       // ====== STEP 11: Sign Contract (activate) ======
       console.log("Step 11: Signing contract...");
+      await uploadSignedContractScan(api, { Authorization: `Bearer ${token}` }, contractId);
       const signRes = await c.post(`/api/contracts/${contractId}/transition`, {
         newStatus: "Signed",
         rowVersion: contract.rowVersion,

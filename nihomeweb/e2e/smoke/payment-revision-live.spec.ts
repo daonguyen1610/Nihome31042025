@@ -1,3 +1,4 @@
+import { uploadSignedContractScan } from "../fixtures/contracts";
 import { randomUUID } from "node:crypto";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
@@ -78,6 +79,7 @@ test("superseded QS blocks payment until the same request is revised and approve
   });
   expect(contractResponse.status(), await contractResponse.text()).toBe(201);
   const contract = (await contractResponse.json()) as { id: number; rowVersion: string };
+  await uploadSignedContractScan(api, headers(adminToken), contract.id);
   const signedResponse = await api.post(`/api/contracts/${contract.id}/transition`, {
     headers: headers(adminToken),
     data: { newStatus: "Signed", rowVersion: contract.rowVersion },

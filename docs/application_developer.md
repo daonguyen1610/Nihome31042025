@@ -1686,7 +1686,14 @@ permission grants contract mutation rights.
 
 New contracts are always created as `Draft`; create and update reject attempts
 to bypass the contract state machine. Status changes must use
-`POST /api/contracts/{id}/transition`. Signed and later active states require a
+`POST /api/contracts/{id}/transition`. Moving from Draft to Signed requires a
+`SignedScan` attachment belonging to that Contract. A missing scan returns
+`400` with code `CONTRACT_SIGNED_SCAN_REQUIRED` and leaves the Contract unchanged;
+Supporting attachments and scans on other Contracts do not satisfy this gate.
+The UI opens Documents with localized upload guidance. Existing Signed rows
+without a scan are not downgraded; the existing execution/Legal activation gates
+still apply when starting work. This gate does not introduce a new scan-retention
+or attachment-deletion policy. Signed and later active states require a
 signed date, the planned start cannot precede signing, and the end cannot
 precede the start. Payment-schedule updates round-trip milestone IDs and patch
 editable schedule fields in place, preserving finance references and milestone

@@ -25,6 +25,7 @@ public class ContractService(
     IProjectAccessService? projectAccess = null) : IContractService
 {
     private const int MaxPageSize = 100;
+    private const string SignedScanRequiredCode = "CONTRACT_SIGNED_SCAN_REQUIRED";
     private readonly string _contentRoot = env?.ContentRootPath ?? Directory.GetCurrentDirectory();
 
     public async Task<ContractListResponse> ListAsync(
@@ -1169,6 +1170,7 @@ public class ContractService(
     {
         switch (newStatus)
         {
+            case ContractStatus.Signed:
             case ContractStatus.InProgress when entity.Status == ContractStatus.Signed:
                 {
                     var hasScan = await db.ContractAttachments
@@ -1176,8 +1178,11 @@ public class ContractService(
                         .AnyAsync(a => a.ContractId == entity.Id && a.Kind == ContractAttachmentKind.SignedScan, ct);
                     if (!hasScan)
                     {
+                        logger.LogWarning("Contract transition rejected for {ContractId} to {Status}: {Code}.",
+                            entity.Id, newStatus, SignedScanRequiredCode);
                         throw new ContractValidationException(
-                            "Cần đính kèm bản scan hợp đồng đã ký trước khi chuyển sang Đang thực hiện.");
+                            "Cần đính kèm bản scan hợp đồng đã ký ở tab Tài liệu trước khi chuyển trạng thái.",
+                            SignedScanRequiredCode);
                     }
                     break;
                 }

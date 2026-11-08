@@ -14,6 +14,18 @@ const { extractDownloadError, extractApiError } = await import(
 
 const failure = (data) => ({ response: { status: 409, data }, message: "HTTP 409" });
 
+test("missing signed scan uses the localized Documents guidance", () => {
+  assert.equal(
+    extractApiError(
+      failure({ code: "CONTRACT_SIGNED_SCAN_REQUIRED", message: "Server reason" }),
+      undefined,
+      (key) =>
+        key === "contracts.detail.transition.needScan" ? "Upload the scan in Documents." : key,
+    ),
+    "Upload the scan in Documents.",
+  );
+});
+
 test("member eligibility codes use localized guidance and preserve unknown server reasons", () => {
   const translate = (key) =>
     ({

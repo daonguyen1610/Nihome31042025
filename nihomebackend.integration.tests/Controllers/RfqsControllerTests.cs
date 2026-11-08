@@ -91,6 +91,7 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         await LoginAsync("SUPER_ADMIN");
         var contractImpact = await Client.GetStringAsync($"/api/contracts/{contract.Id}/deletion-impact");
         contractImpact.Should().Contain("contract.rfqs").And.Contain("Block");
+        await UploadSignedContractScanAsync(contract.Id);
         using var signRequest = new HttpRequestMessage(HttpMethod.Post, $"/api/contracts/{contract.Id}/transition")
         {
             Content = JsonContent.Create(new { newStatus = "Signed", rowVersion = CrmConcurrency.Encode(contract.RowVersion) }),
