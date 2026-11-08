@@ -512,6 +512,10 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     private async Task<List<string>> MissingReadinessAsync(int projectId, ConstructionPreparation item, CancellationToken ct)
     {
         var missing = new List<string>();
+        var crmId = await db.ProjectScheduleRevisions.Where(x => x.OperationalProjectId == projectId && x.Status == ProjectScheduleRevisionStatus.Published).OrderByDescending(x => x.Version).Select(x => (int?)x.Id).FirstOrDefaultAsync(ct);
+        var cmBaseline = await db.CmScheduleBaselines.AsNoTracking().Where(x => x.OperationalProjectId == projectId && x.Status == "Published").OrderByDescending(x => x.Version).FirstOrDefaultAsync(ct);
+        var tasks = await db.ConstructionTasks.AsNoTracking().Include(x => x.Predecessors).Where(x => x.DesignProject.OperationalProjectId == projectId && x.Status != ConstructionTaskStatus.Cancelled).ToListAsync(ct);
+        if (cmBaseline is null || crmId != cmBaseline.CrmRevisionId || !CmScheduleScope.Matches(JsonSerializer.Deserialize<List<CmScheduleLine>>(cmBaseline.ItemsJson)!, tasks)) missing.Add("published CM schedule baseline");
         var evidenceIds = PreparationDocumentIds(item).Where(x => x.HasValue).Select(x => x!.Value).Distinct().ToList();
         var activeEvidenceIds = await ActiveConstructionDocumentIdsAsync(projectId, evidenceIds, ct);
         if (!HasEvidence(item.WbsBaselineDocumentId, activeEvidenceIds)) missing.Add("published WBS baseline evidence");
@@ -538,7 +542,9 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         var contractIds = await db.Contracts.AsNoTracking().Where(x => x.OperationalProjectId == projectId && x.Direction == ContractDirection.Upstream && (x.Type == ContractType.Construction || x.Type == ContractType.DesignAndBuild || x.Type == ContractType.PermitAndConstruction || x.Type == ContractType.DesignPermitAndConstruction) && x.Status != ContractStatus.Draft && x.Status != ContractStatus.Cancelled && x.SignedDate != null).Select(x => x.Id).ToListAsync(ct);
         var ifcReleaseIds = await db.IfcReleases.AsNoTracking().Where(x => x.DesignProject.OperationalProjectId == projectId && x.Status == IfcReleaseStatus.Released).Select(x => x.Id).ToListAsync(ct);
         var permits = await db.PermitChecklistItems.AsNoTracking().Where(x => x.OperationalProjectId == projectId).Select(x => new { x.Id, x.Status, x.ExpiresAt }).ToListAsync(ct);
-        return JsonSerializer.Serialize(new { evaluatedAt = DateTime.UtcNow, evaluatedByUserId = userId, preparationId = item.Id, preparationVersion = item.Version, baselines = new { item.WbsBaselineDocumentId, item.ScheduleBaselineDocumentId, item.SCurveBaselineDocumentId, item.BchOrganizationDocumentId, item.ResourcePlanDocumentId, item.BudgetBaselineDocumentId, item.BudgetBaselineLocked }, conditionalEvidence = new { item.SiteHandoverDocumentId, item.MethodStatementDocumentId, item.HsePlanDocumentId }, contractIds, ifcReleaseIds, permits, missing });
+        var cmScheduleBaseline = await db.CmScheduleBaselines.AsNoTracking().Where(x => x.OperationalProjectId == projectId && x.Status == "Published").OrderByDescending(x => x.Version)
+            .Select(x => new { x.Id, x.Version, x.CrmRevisionId, x.PublishedAt, x.ReviewedByUserId }).FirstOrDefaultAsync(ct);
+        return JsonSerializer.Serialize(new { cmScheduleBaseline, evaluatedAt = DateTime.UtcNow, evaluatedByUserId = userId, preparationId = item.Id, preparationVersion = item.Version, baselines = new { item.WbsBaselineDocumentId, item.ScheduleBaselineDocumentId, item.SCurveBaselineDocumentId, item.BchOrganizationDocumentId, item.ResourcePlanDocumentId, item.BudgetBaselineDocumentId, item.BudgetBaselineLocked }, conditionalEvidence = new { item.SiteHandoverDocumentId, item.MethodStatementDocumentId, item.HsePlanDocumentId }, contractIds, ifcReleaseIds, permits, missing });
     }
     private async Task ValidatePreparationDocumentsAsync(int projectId, UpsertConstructionPreparationRequest request, CancellationToken ct)
     {

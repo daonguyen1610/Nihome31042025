@@ -3553,6 +3553,36 @@ split, resource requests, QA/QC and QS; detailed gates, matrices and templates
 remain subject to the open decisions in `docs/Nicon-QLVH.md`. It is not a claim
 that every item below is customer-approved or exists in the current API.
 
+#### CM schedule comparison API — Partial
+
+The `/api` and `/api/v1` route families expose
+`/operational-projects/{projectId}/construction/schedule`:
+
+| Method/path | Permission | Purpose |
+|---|---|---|
+| `GET /` | `construction.tasks.view` | CRM revision, linked/unlinked tasks, CM versions, snapshots, actual input values and eligible BCH members |
+| `POST /baselines` | `construction.cm-preparation.manage` | Create a numbered draft, bounded by the current published CRM revision |
+| `GET /baselines/{id}/email-preview` | same manage permission | Preview the rendered approval email before submission |
+| `POST /baselines/{id}/submit` | same manage permission | Queue the previewed email and request independent PM review |
+| `POST /baselines/{id}/decision` | `construction.cm-preparation.view` | Approve or reject as the assigned PM, with author/reviewer separation |
+| `POST /tasks/{taskId}/actual` | `construction.tasks.view` | BCH Site Manager updates the assigned task's progress with stale-write protection |
+| `POST /snapshots` | `construction.tasks.view` | Capture progress against the latest published CRM and CM versions |
+| `POST /snapshots/{id}/recovery` | `construction.tasks.view` | Add explanation and recovery plan to an over-threshold snapshot |
+| `POST /snapshots/{id}/review` | `construction.cm-preparation.manage` | Record the independent CM review of a recovery plan |
+
+Mutations use idempotency keys; baseline and snapshot transitions use row
+versions. The background worker captures a snapshot for each published CM
+baseline once per minute, deduplicating identical inputs for the same date.
+Actual comes from BCH-managed `ConstructionTask.ProgressPercent`, confirmed by
+the user on 2026-11-09. The current calculation uses weighted WBS leaves and a
+linear calendar-day plan curve; that roll-up is **not an approved business
+formula** while aggregation by day/month/year and weight rules remain open.
+The delay threshold defaults to 5 percentage points and is managed in Site
+Settings. A snapshot records the CRM/CM versions, progress inputs, threshold,
+and calculated values; `delay > threshold` queues one alert per baseline/date
+and requires the Site Manager to enter an explanation, recovery plan and due
+date. Do not use the provisional roll-up as an approved KPI or cost forecast.
+
 #### Construction task drawing links
 
 `GET /api/construction-tasks/{id}/drawings` returns `version`, `linked` and
@@ -3655,14 +3685,19 @@ the file or its source record. Deleted or delete-pending documents cannot be
 newly attached. SQL Server regression tests cover both winning orders for
 create/update and manual/source-managed deletion.
 
-This is a partial delivery of the target below. WBS/Gantt/S-Curve and Budget
-Baseline are reference-backed rather than dedicated editable aggregates; the
-reproducible greater-than-5% variance alert is not implemented; equipment and
-labour now support the Procurement slice below but no Finance eligibility gate;
-and actual NICON ISO
-template content is not seeded without an approved source pack. The legacy
-Design Project construction aggregates and offline/reconnect behavior also
-remain outside this migration.
+This is a partial delivery of the target below. The CM schedule slice now
+persists versioned CM plans and progress snapshots, sends an approval notice
+through the editable email template, captures BCH task progress, and creates a
+deduplicated delay alert with a recovery explanation/plan lifecycle. The user
+confirmed on 2026-11-09 that `ConstructionTask.ProgressPercent` is the actual
+input. The implemented weighted WBS-leaf roll-up and linear calendar-day plan
+curve remain provisional until NICON/CM approves aggregation by period and
+weights; baseline publish/unlock authority also remains open. The configured
+threshold defaults to the confirmed 5 percentage points. Equipment and labour
+support the Procurement slice below but have no Finance eligibility gate, and
+actual NICON ISO template content is not seeded without an approved source
+pack. Legacy Design Project construction aggregates and offline/reconnect
+behavior remain outside this migration.
 
 #### Procurement resource handoff API — Partial
 
@@ -4713,7 +4748,7 @@ người đó đã chấp thuận phương án.
 | Q-09 | Permit applicability theo loại/quy mô, mandatory/exemption và template version | LEGAL-01 |
 | Q-11 | Màn hình Đội ngũ/Tiến độ; WBS/calendar/baseline/import scope; mốc Project/Kinh doanh ban hành và mốc Design đề xuất | DESIGN-03; không coi có file `.mpp` là đã duyệt import contract |
 | ISO / CM / FA | Map quy trình → bước → mã/phiên bản/file nguồn → form/checklist; xử lý mã thiếu/trùng; Supply/Labour/Equipment/Mixed, advance/prepayment và chứng từ áp dụng | ISO-01, CM-01, FIELD-01, FIELD-02, QS-01, FIN-01 |
-| Approval / calculation | Delegation và independent review; baseline publish/unlock; nguồn actual và tổng hợp kỳ S-Curve; executed value; BOQ allowance/zero/reversal/conversion; KPI còn thiếu. Người dùng đã chốt ngày 24/10/2026: delay = planned% − actual% theo điểm phần trăm, đỏ khi >5 điểm; kỳ linh hoạt ngày/tháng/năm | CM-01, SUPPLY-01, REPORT-01 |
+| Approval / calculation | Delegation và independent review; baseline publish/unlock; tổng hợp/trọng số S-Curve theo kỳ; executed value; BOQ allowance/zero/reversal/conversion; KPI còn thiếu. Nguồn actual `ConstructionTask.ProgressPercent` do BCH cập nhật được xác nhận ngày 09/11/2026. Người dùng đã chốt ngày 24/10/2026: delay = planned% − actual% theo điểm phần trăm, đỏ khi >5 điểm; kỳ linh hoạt ngày/tháng/năm | CM-01, SUPPLY-01, REPORT-01 |
 | Approval hiệu lực | Cancel/withdraw nhóm Finance có thu hồi approval không; nội dung/phiên bản nào thay đổi thì phải rà lại | COMM-01, TENDER-01 |
 | Nguồn báo cáo / chức năng chung | Actual cashflow, cost/P&L/inventory sources, kỳ đối chiếu; phạm vi global search/saved filters và data source KPI còn thiếu | FIN-02, REPORT-01, COMMON-01 |
 | Document policy | Actor × source/category × action; historical approved bytes/retention; import-to-dossier; IFC-specific upload; phạm vi scan/native export và migration Survey. Giữ sharing/ACL tắt theo quyết định hiện tại; chỉ mở lại khi có yêu cầu mới được duyệt | SAFE-01, SAFE-02, DRIVE-02, DRIVE-03 |

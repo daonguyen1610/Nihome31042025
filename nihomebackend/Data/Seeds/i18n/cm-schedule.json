@@ -1,0 +1,834 @@
+[
+  {
+    "key": "cmSchedule.title",
+    "category": "construction",
+    "vi": "Đối chiếu tiến độ CRM – CM – BCH",
+    "en": "CRM – CM – site progress comparison",
+    "zh": "CRM–CM–现场进度对比",
+    "ja": "CRM・CM・現場の進捗比較"
+  },
+  {
+    "key": "cmSchedule.method",
+    "category": "construction",
+    "vi": "Thực tế lấy từ % công việc BCH. Chỉ công việc cuối WBS được tổng hợp theo trọng số; mặc định theo số ngày lịch. Kế hoạch tuyến tính theo ngày lịch, không phải dự báo chi phí.",
+    "en": "Actuals come from site task completion. Only WBS leaves contribute, with weights initially based on calendar duration. The plan is linear by calendar day, not a cost forecast.",
+    "zh": "实际进度来自现场任务完成率。仅汇总WBS末级任务，默认权重为日历工期。计划按日历日线性计算，不代表成本预测。",
+    "ja": "実績は現場作業の完了率です。WBS末端作業のみ重み付け集計し、初期値は暦日工期です。計画は暦日で線形計算し、費用予測ではありません。"
+  },
+  {
+    "key": "cmSchedule.policy",
+    "category": "construction",
+    "vi": "Chậm lớn hơn {threshold} điểm phần trăm cần giải trình và kế hoạch phục hồi. Ngưỡng được quản trị viên cấu hình.",
+    "en": "Delay strictly above {threshold} percentage points requires an explanation and recovery plan. Administrators configure the threshold.",
+    "zh": "延误严格大于{threshold}个百分点时必须说明原因并制定恢复计划。阈值由管理员配置。",
+    "ja": "遅延が{threshold}ポイントを超える場合は説明と回復計画が必要です。閾値は管理者が設定します。"
+  },
+  {
+    "key": "cmSchedule.unlinked",
+    "category": "construction",
+    "vi": "Công việc chưa liên kết WBS CRM – cần xử lý trước khi lập baseline",
+    "en": "Tasks without CRM WBS links – resolve before creating a baseline",
+    "zh": "未关联CRM WBS的任务——建立基准前请处理",
+    "ja": "CRMのWBSに未連携の作業：基準作成前に対応してください"
+  },
+  {
+    "key": "cmSchedule.version",
+    "category": "construction",
+    "vi": "Phiên bản CM",
+    "en": "CM version",
+    "zh": "CM版本",
+    "ja": "CM版"
+  },
+  {
+    "key": "cmSchedule.noBaseline",
+    "category": "construction",
+    "vi": "Chưa có kế hoạch CM. Liên kết WBS và lập bản nháp trước.",
+    "en": "No CM baseline. Link WBS tasks and create a draft first.",
+    "zh": "尚无CM基准。请先关联WBS任务并创建草稿。",
+    "ja": "CM基準がありません。WBSを連携して下書きを作成してください。"
+  },
+  {
+    "key": "cmSchedule.create",
+    "category": "construction",
+    "vi": "Lập phiên bản CM mới",
+    "en": "Create CM revision",
+    "zh": "新建CM版本",
+    "ja": "CM改訂を作成"
+  },
+  {
+    "key": "cmSchedule.submit",
+    "category": "construction",
+    "vi": "Gửi PM duyệt",
+    "en": "Submit to PM",
+    "zh": "提交PM审批",
+    "ja": "PMに承認依頼"
+  },
+  {
+    "key": "cmSchedule.discard",
+    "category": "construction",
+    "vi": "Hủy bản nháp",
+    "en": "Cancel draft",
+    "zh": "取消草稿",
+    "ja": "下書きを取消"
+  },
+  {
+    "key": "cmSchedule.review",
+    "category": "construction",
+    "vi": "PM xét duyệt",
+    "en": "PM review",
+    "zh": "PM审核",
+    "ja": "PMの確認"
+  },
+  {
+    "key": "cmSchedule.capture",
+    "category": "construction",
+    "vi": "Ghi nhận thực tế hôm nay",
+    "en": "Capture today’s actuals",
+    "zh": "记录今日实际进度",
+    "ja": "本日の実績を記録"
+  },
+  {
+    "key": "cmSchedule.noCrm",
+    "category": "construction",
+    "vi": "Cần tiến độ CRM đã phát hành trước khi lập kế hoạch CM.",
+    "en": "Publish a CRM schedule before preparing a CM baseline.",
+    "zh": "请先发布CRM进度，再编制CM基准。",
+    "ja": "CM基準の作成前にCRM工程を発行してください。"
+  },
+  {
+    "key": "cmSchedule.crmChanged",
+    "category": "construction",
+    "vi": "CRM đã có phiên bản mới. Bản CM này giữ nguyên mốc cũ để truy vết; lập phiên bản CM mới để điều chỉnh.",
+    "en": "CRM has a newer revision. This CM baseline retains its original dates; create a new CM revision to adjust.",
+    "zh": "CRM已有新版本。此CM基准保留原日期以便追溯；请新建CM版本调整。",
+    "ja": "CRMに新しい版があります。このCM基準は元の日付を保持します。調整にはCM改訂を作成してください。"
+  },
+  {
+    "key": "cmSchedule.task",
+    "category": "construction",
+    "vi": "Công việc / WBS",
+    "en": "Task / WBS",
+    "zh": "任务 / WBS",
+    "ja": "作業 / WBS"
+  },
+  {
+    "key": "cmSchedule.weight",
+    "category": "construction",
+    "vi": "Trọng số",
+    "en": "Weight",
+    "zh": "权重",
+    "ja": "重み"
+  },
+  {
+    "key": "cmSchedule.comparison",
+    "category": "construction",
+    "vi": "Kế hoạch và thực tế đã ghi nhận",
+    "en": "Plan and recorded actuals",
+    "zh": "计划与已记录实绩",
+    "ja": "計画と記録済み実績"
+  },
+  {
+    "key": "cmSchedule.noActual",
+    "category": "construction",
+    "vi": "Chưa ghi nhận thực tế cho phiên bản này. Bấm Ghi nhận thực tế hôm nay.",
+    "en": "No actual snapshot for this version. Select Capture today’s actuals.",
+    "zh": "此版本尚无实绩快照。请选择记录今日实际进度。",
+    "ja": "この版の実績がありません。「本日の実績を記録」を選択してください。"
+  },
+  {
+    "key": "cmSchedule.crm",
+    "category": "construction",
+    "vi": "Gốc CRM",
+    "en": "CRM master",
+    "zh": "CRM主计划",
+    "ja": "CRM全体工程"
+  },
+  {
+    "key": "cmSchedule.cm",
+    "category": "construction",
+    "vi": "Kế hoạch CM",
+    "en": "CM plan",
+    "zh": "CM计划",
+    "ja": "CM計画"
+  },
+  {
+    "key": "cmSchedule.bch",
+    "category": "construction",
+    "vi": "Thực tế BCH",
+    "en": "Site actual",
+    "zh": "现场实绩",
+    "ja": "現場実績"
+  },
+  {
+    "key": "cmSchedule.delayed",
+    "category": "construction",
+    "vi": "Trễ {value} – cần phục hồi",
+    "en": "Behind by {value} – recovery required",
+    "zh": "延误{value}——需恢复计划",
+    "ja": "{value}遅延：回復対応が必要"
+  },
+  {
+    "key": "cmSchedule.variance",
+    "category": "construction",
+    "vi": "Chênh lệch {value}",
+    "en": "Variance {value}",
+    "zh": "偏差{value}",
+    "ja": "差異 {value}"
+  },
+  {
+    "key": "cmSchedule.recovery",
+    "category": "construction",
+    "vi": "Giải trình và lập kế hoạch phục hồi",
+    "en": "Explain and plan recovery",
+    "zh": "说明原因及恢复计划",
+    "ja": "説明と回復計画を作成"
+  },
+  {
+    "key": "cmSchedule.reviewRecovery",
+    "category": "construction",
+    "vi": "CM xác nhận đã kiểm tra",
+    "en": "CM confirms review",
+    "zh": "CM确认已审核",
+    "ja": "CMの確認を記録"
+  },
+  {
+    "key": "cmSchedule.reviewed",
+    "category": "construction",
+    "vi": "CM đã kiểm tra phương án phục hồi",
+    "en": "Recovery plan reviewed by CM",
+    "zh": "恢复计划已经CM审核",
+    "ja": "CMが回復計画を確認済み"
+  },
+  {
+    "key": "cmSchedule.reason",
+    "category": "construction",
+    "vi": "Lý do / ghi chú (3–2.000 ký tự)",
+    "en": "Reason / note (3–2,000 characters)",
+    "zh": "原因 / 备注（3至2,000字符）",
+    "ja": "理由・メモ（3～2,000文字）"
+  },
+  {
+    "key": "cmSchedule.siteManager",
+    "category": "construction",
+    "vi": "Chỉ huy trưởng nhận cảnh báo",
+    "en": "Site Manager for alerts",
+    "zh": "接收预警的现场负责人",
+    "ja": "警告を受け取る現場責任者"
+  },
+  {
+    "key": "cmSchedule.start",
+    "category": "construction",
+    "vi": "Bắt đầu kế hoạch",
+    "en": "Planned start",
+    "zh": "计划开始",
+    "ja": "計画開始"
+  },
+  {
+    "key": "cmSchedule.end",
+    "category": "construction",
+    "vi": "Kết thúc kế hoạch",
+    "en": "Planned finish",
+    "zh": "计划结束",
+    "ja": "計画終了"
+  },
+  {
+    "key": "cmSchedule.independent",
+    "category": "construction",
+    "vi": "Chỉ PM được chỉ định và khác người lập được duyệt. Phát hành giữ nguyên bản cũ trong lịch sử.",
+    "en": "Only the assigned PM, distinct from the author, can approve. Previous published versions remain in history.",
+    "zh": "仅指定PM且非编制者可批准。以前发布的版本保留在历史中。",
+    "ja": "作成者と異なる指定PMのみが承認できます。以前の発行版は履歴に残ります。"
+  },
+  {
+    "key": "cmSchedule.recoveryHint",
+    "category": "construction",
+    "vi": "Chỉ huy trưởng nhập nguyên nhân, việc cần làm và hạn khắc phục. CM kiểm tra độc lập.",
+    "en": "The Site Manager records the cause, recovery actions and due date. CM reviews independently.",
+    "zh": "现场负责人填写原因、恢复措施及截止日期，CM独立审核。",
+    "ja": "現場責任者が原因・回復措置・期限を入力し、CMが独立して確認します。"
+  },
+  {
+    "key": "cmSchedule.explanation",
+    "category": "construction",
+    "vi": "Nguyên nhân chậm (3–2.000 ký tự)",
+    "en": "Delay explanation (3–2,000 characters)",
+    "zh": "延误原因（3至2,000字符）",
+    "ja": "遅延理由（3～2,000文字）"
+  },
+  {
+    "key": "cmSchedule.plan",
+    "category": "construction",
+    "vi": "Phương án phục hồi (3–4.000 ký tự)",
+    "en": "Recovery plan (3–4,000 characters)",
+    "zh": "恢复计划（3至4,000字符）",
+    "ja": "回復計画（3～4,000文字）"
+  },
+  {
+    "key": "cmSchedule.due",
+    "category": "construction",
+    "vi": "Hạn khắc phục",
+    "en": "Recovery due date",
+    "zh": "恢复截止日期",
+    "ja": "回復期限"
+  },
+  {
+    "key": "cmSchedule.approvalNotification",
+    "category": "construction",
+    "vi": "Kế hoạch CM phiên bản {version} chờ bạn duyệt",
+    "en": "CM schedule version {version} needs your review",
+    "zh": "CM进度版本{version}待您审核",
+    "ja": "CM工程版{version}の確認をお願いします"
+  },
+  {
+    "key": "cmSchedule.delayNotification",
+    "category": "construction",
+    "vi": "Công trình chậm so với CM phiên bản {version}: cần giải trình và phục hồi",
+    "en": "Site delay against CM version {version}: explanation and recovery required",
+    "zh": "现场进度落后CM版本{version}：请说明原因并制定恢复计划",
+    "ja": "CM版{version}に対する現場遅延：説明と回復計画が必要です"
+  },
+  {
+    "key": "cmSchedule.policyTitle",
+    "category": "construction",
+    "vi": "Ngưỡng cảnh báo tiến độ",
+    "en": "Schedule alert threshold",
+    "zh": "进度预警阈值",
+    "ja": "工程警告の閾値"
+  },
+  {
+    "key": "cmSchedule.threshold",
+    "category": "construction",
+    "vi": "Ngưỡng chậm (0–100 điểm phần trăm)",
+    "en": "Delay threshold (0–100 percentage points)",
+    "zh": "延误阈值（0至100个百分点）",
+    "ja": "遅延閾値（0～100ポイント）"
+  },
+  {
+    "key": "cmSchedule.policyHint",
+    "category": "construction",
+    "vi": "Có hiệu lực ngay cho lần ghi nhận tiếp theo; ảnh chụp cũ giữ nguyên ngưỡng đã dùng.",
+    "en": "Applies to the next capture immediately. Historical snapshots retain their original threshold.",
+    "zh": "立即应用于下次记录，历史快照保留原阈值。",
+    "ja": "次回記録から即時適用されます。過去の記録は元の閾値を保持します。"
+  },
+  {
+    "key": "cmSchedule.status.Draft",
+    "category": "construction",
+    "vi": "Nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "cmSchedule.status.PendingApproval",
+    "category": "construction",
+    "vi": "Chờ PM duyệt",
+    "en": "Pending PM review",
+    "zh": "待PM审核",
+    "ja": "PM確認待ち"
+  },
+  {
+    "key": "cmSchedule.status.Published",
+    "category": "construction",
+    "vi": "Đã phát hành",
+    "en": "Published",
+    "zh": "已发布",
+    "ja": "発行済み"
+  },
+  {
+    "key": "cmSchedule.status.Rejected",
+    "category": "construction",
+    "vi": "Trả lại",
+    "en": "Returned",
+    "zh": "已退回",
+    "ja": "差戻し"
+  },
+  {
+    "key": "cmSchedule.status.Cancelled",
+    "category": "construction",
+    "vi": "Đã hủy nháp",
+    "en": "Draft cancelled",
+    "zh": "草稿已取消",
+    "ja": "下書き取消済み"
+  },
+  {
+    "key": "cmSchedule.error.pmRequired",
+    "category": "construction",
+    "vi": "Dự án chưa có PM đang hoạt động. Cập nhật PM trước khi lập baseline.",
+    "en": "Assign an active project PM before creating a baseline.",
+    "zh": "请先指定有效的项目PM，再建立基准。",
+    "ja": "基準作成前に有効なプロジェクトPMを指定してください。"
+  },
+  {
+    "key": "cmSchedule.error.siteManagerRequired",
+    "category": "construction",
+    "vi": "Chọn chỉ huy trưởng là thành viên đang được phân công trong dự án. Người này tự nhập giải trình.",
+    "en": "Select an active project member as Site Manager. That user records the recovery plan.",
+    "zh": "请选择当前项目成员作为现场负责人，由该用户填写恢复计划。",
+    "ja": "有効な案件メンバーを現場責任者として選択してください。その本人が回復計画を入力します。"
+  },
+  {
+    "key": "cmSchedule.error.reasonRequired",
+    "category": "construction",
+    "vi": "Nhập lý do từ 3 đến 2.000 ký tự, ví dụ: Điều chỉnh mốc bàn giao kết cấu.",
+    "en": "Enter a reason of 3–2,000 characters, for example: Revise structural handover dates.",
+    "zh": "请输入3至2,000字符的原因，例如：调整结构移交日期。",
+    "ja": "3～2,000文字で理由を入力してください。例：構造引渡し日程の変更。"
+  },
+  {
+    "key": "cmSchedule.error.signedContractRequired",
+    "category": "construction",
+    "vi": "CM chỉ lập kế hoạch khi có hợp đồng thi công/D&B Upstream đã ký, đang thực hiện hoặc tạm dừng trong dự án.",
+    "en": "A signed, in-progress or on-hold Upstream construction/D&B contract is required.",
+    "zh": "项目必须有已签署、进行中或暂停的上游施工/D&B合同。",
+    "ja": "署名済み・進行中・保留中の上流施工／D&B契約が必要です。"
+  },
+  {
+    "key": "cmSchedule.error.draftExists",
+    "category": "construction",
+    "vi": "Đã có bản nháp hoặc bản chờ duyệt. Hoàn tất hoặc hủy bản nháp trước khi tạo tiếp.",
+    "en": "A draft or pending version already exists. Complete or cancel it before creating another.",
+    "zh": "已有草稿或待审批版本，请完成或取消后再创建。",
+    "ja": "下書きまたは確認待ちの版があります。完了または取消してから作成してください。"
+  },
+  {
+    "key": "cmSchedule.error.crmRequired",
+    "category": "construction",
+    "vi": "Chưa có tiến độ CRM đã phát hành. Hoàn tất duyệt tiến độ tổng thể trước.",
+    "en": "Publish the CRM master schedule first.",
+    "zh": "请先发布CRM主进度。",
+    "ja": "先にCRM全体工程を発行してください。"
+  },
+  {
+    "key": "cmSchedule.error.unlinkedTasks",
+    "category": "construction",
+    "vi": "Có công việc BCH chưa gắn WBS CRM. Mở công việc và liên kết mốc đúng trước khi tạo baseline.",
+    "en": "Link every site task to the correct published CRM WBS before creating a baseline.",
+    "zh": "建立基准前请将每个现场任务关联到正确的已发布CRM WBS。",
+    "ja": "基準作成前に全現場作業を適切な発行済みCRMのWBSに連携してください。"
+  },
+  {
+    "key": "cmSchedule.error.outsideCrm",
+    "category": "construction",
+    "vi": "Ngày kế hoạch phải nằm trong mốc CRM và kết thúc không trước bắt đầu. Sửa ngày rồi thử lại.",
+    "en": "Planned dates must stay inside the CRM window, with finish on or after start. Correct the dates and retry.",
+    "zh": "计划日期必须在CRM范围内，结束日期不能早于开始日期。请更正后重试。",
+    "ja": "計画日はCRM期間内で、終了日は開始日以降にしてください。修正して再試行してください。"
+  },
+  {
+    "key": "cmSchedule.error.weightInvalid",
+    "category": "construction",
+    "vi": "Trọng số phải lớn hơn 0 và không quá 1.000.000.000. Ví dụ: 10 ngày hoặc 25 điểm.",
+    "en": "Weight must be above zero and at most 1,000,000,000, for example 10 days or 25 points.",
+    "zh": "权重必须大于0且不超过1,000,000,000，例如10天或25点。",
+    "ja": "重みは0より大きく1,000,000,000以下にしてください。例：10日、25点。"
+  },
+  {
+    "key": "cmSchedule.error.predecessorInvalid",
+    "category": "construction",
+    "vi": "Công việc không được bắt đầu trước khi tiền nhiệm kết thúc. Kiểm tra lại liên kết và ngày kế hoạch.",
+    "en": "A task cannot start before its predecessor finishes. Check dependencies and dates.",
+    "zh": "任务不能早于前置任务结束，请检查依赖和日期。",
+    "ja": "先行作業の終了前に開始できません。依存関係と日付を確認してください。"
+  },
+  {
+    "key": "cmSchedule.error.stateInvalid",
+    "category": "construction",
+    "vi": "Trạng thái đã đổi hoặc thao tác không áp dụng. Tải lại và chọn đúng bước hiện tại.",
+    "en": "The state changed or this action is unavailable. Reload and use the current workflow step.",
+    "zh": "状态已变化或此操作不适用，请刷新并选择当前流程步骤。",
+    "ja": "状態が変わったか操作できません。再読込して現在の手順を選択してください。"
+  },
+  {
+    "key": "cmSchedule.error.authorRequired",
+    "category": "construction",
+    "vi": "Chỉ người lập được gửi hoặc hủy bản nháp. Nhờ người lập thực hiện hoặc tải lại trạng thái.",
+    "en": "Only the author can submit or cancel a draft. Ask the author or reload the current state.",
+    "zh": "仅编制者可提交或取消草稿，请联系编制者或刷新状态。",
+    "ja": "下書きの提出・取消は作成者のみ可能です。作成者に依頼するか再読込してください。"
+  },
+  {
+    "key": "cmSchedule.error.independentReview",
+    "category": "construction",
+    "vi": "Người duyệt phải là PM được chỉ định và khác người lập; người kiểm tra phục hồi phải khác người giải trình.",
+    "en": "The assigned PM must be distinct from the baseline author. Recovery reviewers must differ from the recovery author.",
+    "zh": "指定PM须不同于基准编制者；恢复计划审核者须不同于填报者。",
+    "ja": "指定PMは基準作成者と異なる必要があります。回復計画も作成者以外が確認してください。"
+  },
+  {
+    "key": "cmSchedule.error.crmChanged",
+    "category": "construction",
+    "vi": "Tiến độ CRM đã thay đổi. Giữ lịch sử bản này và lập phiên bản CM mới theo mốc hiện hành.",
+    "en": "The CRM schedule changed. Retain this version and create a new CM revision against the current schedule.",
+    "zh": "CRM进度已变化。请保留此版本并按当前进度新建CM版本。",
+    "ja": "CRM工程が変わりました。この版を保持し、現行工程に基づくCM改訂を作成してください。"
+  },
+  {
+    "key": "cmSchedule.error.taskSetInvalid",
+    "category": "construction",
+    "vi": "Danh sách công việc đã thay đổi, bị trùng hoặc vượt giới hạn 2.000 công việc mỗi bản. Tải lại dữ liệu trước khi lập kế hoạch.",
+    "en": "The task set changed, contains duplicates or exceeds the technical limit of 2,000 tasks per baseline. Reload before planning.",
+    "zh": "任务列表已变化、重复或超过每版2,000项的技术上限，请刷新后编制。",
+    "ja": "作業一覧が変更・重複しているか、1基準2,000作業の技術上限を超えています。再読込してください。"
+  },
+  {
+    "key": "cmSchedule.error.baselineRequired",
+    "category": "construction",
+    "vi": "Chưa có baseline CM đã phát hành trong dự án này. Hoàn tất PM duyệt trước khi ghi nhận thực tế.",
+    "en": "Publish a CM baseline in this project before capturing actuals.",
+    "zh": "请先在本项目发布CM基准，再记录实绩。",
+    "ja": "実績記録前にこの案件のCM基準を発行してください。"
+  },
+  {
+    "key": "cmSchedule.error.actualIncomplete",
+    "category": "construction",
+    "vi": "Công việc thực tế đã thêm, hủy hoặc mất liên kết so với baseline. Lập phiên bản CM mới; hệ thống không tự bỏ sót hoặc tính thành 0%.",
+    "en": "Actual tasks were added, cancelled or removed since the baseline. Create a new CM revision; missing data is not treated as 0%.",
+    "zh": "实绩任务自基准以来新增、取消或删除。请新建CM版本；缺失数据不会按0%计算。",
+    "ja": "基準以降に作業が追加・取消・削除されました。CM改訂を作成してください。欠損値を0%にはしません。"
+  },
+  {
+    "key": "cmSchedule.error.snapshotRequired",
+    "category": "construction",
+    "vi": "Không tìm thấy ảnh chụp thuộc dự án này. Tải lại danh sách.",
+    "en": "The snapshot is unavailable in this project. Reload the list.",
+    "zh": "本项目中无此快照，请刷新列表。",
+    "ja": "この案件の記録が見つかりません。一覧を再読込してください。"
+  },
+  {
+    "key": "cmSchedule.error.recoveryRequired",
+    "category": "construction",
+    "vi": "Nhập nguyên nhân và phương án ít nhất 3 ký tự; hạn khắc phục từ hôm nay trở đi.",
+    "en": "Enter a cause and recovery plan of at least 3 characters, with a due date on or after today.",
+    "zh": "原因和恢复计划至少3个字符，截止日期须为今天或以后。",
+    "ja": "原因と回復計画をそれぞれ3文字以上で入力し、期限は本日以降にしてください。"
+  },
+  {
+    "key": "cmSchedule.error.policyRequired",
+    "category": "construction",
+    "vi": "Thiếu cấu hình ngưỡng hoặc bản dịch cảnh báo. Nhờ quản trị viên kiểm tra Cấu hình tiến độ.",
+    "en": "Schedule threshold or alert translations are missing. Ask an administrator to check schedule settings.",
+    "zh": "缺少进度阈值或预警翻译，请联系管理员检查进度设置。",
+    "ja": "工程閾値または警告の翻訳がありません。管理者に工程設定の確認を依頼してください。"
+  },
+  {
+    "key": "deletionImpact.item.operations.cmScheduleBaselines",
+    "category": "construction",
+    "vi": "Phiên bản kế hoạch CM",
+    "en": "CM schedule versions",
+    "zh": "CM进度版本",
+    "ja": "CM工程の版"
+  },
+  {
+    "key": "deletionImpact.item.operations.cmProgressSnapshots",
+    "category": "construction",
+    "vi": "Ảnh chụp tiến độ và giải trình",
+    "en": "Progress snapshots and recovery evidence",
+    "zh": "进度快照及恢复证明",
+    "ja": "進捗記録と回復証跡"
+  },
+  {
+    "key": "cmSchedule.policySaved",
+    "category": "construction",
+    "vi": "Đã lưu ngưỡng. Các lần đối chiếu tiếp theo áp dụng giá trị mới.",
+    "en": "Threshold saved. Subsequent comparisons use the new value.",
+    "zh": "阈值已保存，后续对比将使用新值。",
+    "ja": "閾値を保存しました。次回の比較から新しい値を適用します。"
+  },
+  {
+    "key": "cmSchedule.updateActual",
+    "category": "construction",
+    "vi": "Cập nhật thực tế BCH",
+    "en": "Update site actuals",
+    "zh": "更新现场实绩",
+    "ja": "現場実績を更新"
+  },
+  {
+    "key": "cmSchedule.actualHint",
+    "category": "construction",
+    "vi": "Nhập % hoàn thành từ 0 đến 100. Chỉ chỉ huy trưởng được giao trong baseline hiện hành được cập nhật công việc cuối WBS. Dữ liệu thay đổi sẽ yêu cầu tải lại.",
+    "en": "Enter completion from 0 to 100. Only the site manager assigned to the current baseline can update WBS leaves. Changed data requires a refresh.",
+    "zh": "输入0至100的完成率。仅当前基准指定的现场负责人可更新末级WBS。数据发生变化时请刷新。",
+    "ja": "完了率を0～100で入力してください。現行基準に指定された現場責任者のみWBS末端作業を更新できます。変更があった場合は再読み込みしてください。"
+  },
+  {
+    "key": "cmSchedule.error.conflict",
+    "category": "construction",
+    "vi": "Dữ liệu đang được cập nhật. Tải lại tiến độ và thử lại.",
+    "en": "Progress is being updated. Refresh and retry.",
+    "zh": "进度正在更新。请刷新后重试。",
+    "ja": "進捗を更新中です。再読み込みして再試行してください。"
+  },
+  {
+    "key": "procurement.contractRegistry.title",
+    "category": "procurement",
+    "vi": "Hợp đồng nhà cung cấp và thầu phụ",
+    "en": "Supplier and subcontract contracts",
+    "zh": "供应商与分包合同",
+    "ja": "仕入先・下請契約"
+  },
+  {
+    "key": "procurement.contractRegistry.hint",
+    "category": "procurement",
+    "vi": "Hợp đồng được tạo từ lựa chọn nhà cung cấp hoặc lập tại sổ hợp đồng. Mở hợp đồng để quản lý tài liệu ký, thanh toán và phát sinh. Các dòng mua sắm ở bên dưới.",
+    "en": "Contracts originate from supplier awards or the contract registry. Open a contract to manage signed documents, payments and variations. Procurement lines are listed below.",
+    "zh": "合同来自供应商授标或合同台账。打开合同可管理签署文件、付款和变更。采购明细列于下方。",
+    "ja": "契約は仕入先の選定または契約台帳から作成します。契約を開くと署名書類・支払・変更を管理できます。購買明細は下部に表示します。"
+  },
+  {
+    "key": "procurement.contractRegistry.permission",
+    "category": "procurement",
+    "vi": "Bạn chưa có quyền xem sổ hợp đồng. Liên hệ quản trị viên nếu công việc cần quyền này.",
+    "en": "You do not have contract registry access. Contact an administrator if your work requires it.",
+    "zh": "您无权查看合同台账。如工作需要，请联系管理员。",
+    "ja": "契約台帳の閲覧権限がありません。業務上必要な場合は管理者に連絡してください。"
+  },
+  {
+    "key": "procurement.contractRegistry.loadError",
+    "category": "procurement",
+    "vi": "Chưa tải được danh sách hợp đồng. Thử tải lại.",
+    "en": "Contracts could not be loaded. Retry loading.",
+    "zh": "无法加载合同列表，请重试。",
+    "ja": "契約一覧を読み込めませんでした。再試行してください。"
+  },
+  {
+    "key": "procurement.contractRegistry.empty",
+    "category": "procurement",
+    "vi": "Dự án chưa có hợp đồng nhà cung cấp hoặc thầu phụ.",
+    "en": "This project has no supplier or subcontract contracts.",
+    "zh": "此项目暂无供应商或分包合同。",
+    "ja": "この案件に仕入先・下請契約はありません。"
+  },
+  {
+    "key": "procurement.contractRegistry.createHint",
+    "category": "procurement",
+    "vi": "Để lập hợp đồng ngoài RFQ: mở Sổ hợp đồng rồi chọn Tạo hợp đồng. Dự án và chiều Downstream được chọn sẵn.",
+    "en": "To create a contract outside an RFQ, open Contract registry and choose New contract. The project and Downstream direction are preselected.",
+    "zh": "如需在RFQ外创建合同，请打开合同台账并选择新建合同。项目与下游方向将自动预选。",
+    "ja": "RFQ外で契約を作成する場合は契約台帳を開き、新規契約を選択します。案件と下流方向は選択済みです。"
+  },
+  {
+    "key": "cmSchedule.period",
+    "category": "construction",
+    "vi": "Kỳ xem",
+    "en": "View period",
+    "zh": "查看周期",
+    "ja": "表示期間"
+  },
+  {
+    "key": "cmSchedule.periodDate",
+    "category": "construction",
+    "vi": "Ngày thuộc kỳ cần xem",
+    "en": "Date within the period",
+    "zh": "周期内日期",
+    "ja": "期間内の日付"
+  },
+  {
+    "key": "cmSchedule.period.all",
+    "category": "construction",
+    "vi": "Toàn bộ",
+    "en": "All dates",
+    "zh": "全部日期",
+    "ja": "全期間"
+  },
+  {
+    "key": "cmSchedule.period.day",
+    "category": "construction",
+    "vi": "Ngày",
+    "en": "Day",
+    "zh": "日",
+    "ja": "日"
+  },
+  {
+    "key": "cmSchedule.period.month",
+    "category": "construction",
+    "vi": "Tháng",
+    "en": "Month",
+    "zh": "月",
+    "ja": "月"
+  },
+  {
+    "key": "cmSchedule.period.year",
+    "category": "construction",
+    "vi": "Năm",
+    "en": "Year",
+    "zh": "年",
+    "ja": "年"
+  },
+  {
+    "key": "cmSchedule.error.thresholdInvalid",
+    "category": "construction",
+    "vi": "Ngưỡng chậm phải từ 0 đến 100, tối đa 4 chữ số thập phân. Ví dụ: 5 hoặc 5,5.",
+    "en": "Delay threshold must be from 0 to 100 with at most 4 decimal places. For example: 5 or 5.5.",
+    "zh": "延误阈值必须为0到100，最多4位小数。例如：5或5.5。",
+    "ja": "遅延閾値は0～100、小数点以下4桁以内で入力してください。例：5、5.5。"
+  },
+  {
+    "key": "cmSchedule.readiness",
+    "category": "construction",
+    "vi": "Kế hoạch CM chưa được PM duyệt hoặc chưa theo bản CRM hiện hành. Lập và duyệt phiên bản CM phù hợp trước khi khởi công.",
+    "en": "The CM plan is unapproved or based on an older CRM revision. Publish a matching CM revision before starting construction.",
+    "zh": "CM计划尚未获PM批准或不符合当前CRM版本。开工前请发布对应CM版本。",
+    "ja": "CM計画が未承認、または旧CRM版に基づいています。着工前に現行CRMに対応するCM版を承認してください。"
+  },
+  {
+    "key": "cmSchedule.notice.approval",
+    "category": "construction",
+    "vi": "Kế hoạch CM cần duyệt",
+    "en": "CM plan awaiting approval",
+    "zh": "CM计划待审批",
+    "ja": "CM計画の承認依頼"
+  },
+  {
+    "key": "cmSchedule.notice.delay",
+    "category": "construction",
+    "vi": "Tiến độ chậm cần giải trình và phục hồi",
+    "en": "Schedule delay requires an explanation and recovery plan",
+    "zh": "进度延误，需要说明及恢复计划",
+    "ja": "工程遅延：説明と回復計画が必要です"
+  },
+  {
+    "key": "cmSchedule.emailTemplate",
+    "category": "construction",
+    "vi": "Email duyệt kế hoạch CM",
+    "en": "CM plan approval email",
+    "zh": "CM计划审批邮件",
+    "ja": "CM計画承認メール"
+  },
+  {
+    "key": "cmSchedule.templateSaved",
+    "category": "construction",
+    "vi": "Đã lưu mẫu email kế hoạch CM.",
+    "en": "CM plan email template saved.",
+    "zh": "CM计划邮件模板已保存。",
+    "ja": "CM計画メールテンプレートを保存しました。"
+  },
+  {
+    "key": "cmSchedule.emailPreviewHint",
+    "category": "construction",
+    "vi": "Kiểm tra người nhận và nội dung. Khi xác nhận, hệ thống lưu yêu cầu duyệt và email vào hàng đợi; gửi lỗi sẽ được thử lại.",
+    "en": "Check the recipient and content. Confirmation saves the approval request and queues this email; delivery failures are retried.",
+    "zh": "请核对收件人和内容。确认后将保存审批请求并加入邮件队列；发送失败时自动重试。",
+    "ja": "宛先と内容を確認してください。確定すると承認依頼とメールを保存し、送信失敗時は再試行します。"
+  },
+  {
+    "key": "cmSchedule.emailDelivery",
+    "category": "construction",
+    "vi": "Email duyệt CM",
+    "en": "CM approval email",
+    "zh": "CM审批邮件",
+    "ja": "CM承認メール"
+  },
+  {
+    "key": "cmSchedule.emailStatus.Pending",
+    "category": "construction",
+    "vi": "Đang chờ gửi",
+    "en": "Queued",
+    "zh": "等待发送",
+    "ja": "送信待ち"
+  },
+  {
+    "key": "cmSchedule.emailStatus.Sending",
+    "category": "construction",
+    "vi": "Đang gửi",
+    "en": "Sending",
+    "zh": "发送中",
+    "ja": "送信中"
+  },
+  {
+    "key": "cmSchedule.emailStatus.Sent",
+    "category": "construction",
+    "vi": "Đã gửi",
+    "en": "Sent",
+    "zh": "已发送",
+    "ja": "送信済み"
+  },
+  {
+    "key": "cmSchedule.emailStatus.NeedsReview",
+    "category": "construction",
+    "vi": "Gửi chưa thành công. PM cần kiểm tra với người nhận trước khi gửi lại.",
+    "en": "Delivery needs review. The PM must check with the recipient before retrying.",
+    "zh": "发送需复核。PM应先与收件人确认再重发。",
+    "ja": "送信確認が必要です。再送前にPMが宛先担当者に確認してください。"
+  },
+  {
+    "key": "cmSchedule.emailStatus.ConfirmedReceived",
+    "category": "construction",
+    "vi": "PM đã xác nhận người nhận đã nhận email",
+    "en": "Receipt confirmed by PM",
+    "zh": "PM已确认收件人收到邮件",
+    "ja": "PMが受信確認済み"
+  },
+  {
+    "key": "cmSchedule.error.emailTemplateRequired",
+    "category": "construction",
+    "vi": "Chưa cấu hình mẫu email CM. Nhờ quản trị viên kiểm tra Mẫu email → Email duyệt kế hoạch CM.",
+    "en": "CM email template is missing. Ask an administrator to check Email templates → CM plan approval email.",
+    "zh": "缺少CM邮件模板。请管理员检查邮件模板中的CM计划审批邮件。",
+    "ja": "CMメールテンプレートがありません。管理者にメールテンプレートのCM計画承認メールの確認を依頼してください。"
+  },
+  {
+    "key": "cmSchedule.error.emailRequired",
+    "category": "construction",
+    "vi": "PM chưa có email hợp lệ. Cập nhật email tài khoản PM rồi xem trước lại.",
+    "en": "The PM has no valid email address. Update the PM account email and preview again.",
+    "zh": "PM没有有效邮箱。请更新PM账户邮箱后重新预览。",
+    "ja": "PMの有効なメールアドレスがありません。PMのアカウントを修正して再度プレビューしてください。"
+  },
+  {
+    "key": "cmSchedule.error.emailPreviewRequired",
+    "category": "construction",
+    "vi": "Nội dung hoặc người nhận đã thay đổi. Đóng cửa sổ và xem trước email lại trước khi gửi duyệt.",
+    "en": "The content or recipient changed. Close this dialog and preview the email again before submitting.",
+    "zh": "内容或收件人已变化。请关闭窗口并重新预览邮件后提交。",
+    "ja": "内容または宛先が変更されています。ダイアログを閉じて再度プレビュー後、承認依頼してください。"
+  },
+  {
+    "key": "cmSchedule.error.emailTemplateInvalid",
+    "category": "construction",
+    "vi": "Mẫu email phải có tiêu đề một dòng tối đa 200 ký tự và nội dung HTML an toàn tối đa 8.000 ký tự, đủ bảy biến được liệt kê.",
+    "en": "Use a single-line subject up to 200 characters and safe HTML up to 8,000 characters containing all seven listed variables.",
+    "zh": "邮件标题必须为单行且不超过200字符，正文为不超过8000字符的安全HTML，包含列出的全部7个变量。",
+    "ja": "件名は1行200文字以内、本文は安全なHTMLで8000文字以内とし、表示された7つの変数をすべて含めてください。"
+  },
+  {
+    "key": "cmSchedule.notice.published",
+    "category": "construction",
+    "vi": "Kế hoạch CM đã được PM duyệt và phát hành",
+    "en": "CM plan approved and published by PM",
+    "zh": "CM计划已获PM批准并发布",
+    "ja": "PMがCM計画を承認・発行しました"
+  },
+  {
+    "key": "cmSchedule.notice.rejected",
+    "category": "construction",
+    "vi": "Kế hoạch CM bị từ chối, cần lập lại phiên bản",
+    "en": "CM plan rejected; create a revised version",
+    "zh": "CM计划已被拒绝，请创建修订版",
+    "ja": "CM計画が却下されました。改訂版を作成してください"
+  },
+  {
+    "key": "cmSchedule.emailStatus.Cancelled",
+    "category": "construction",
+    "vi": "Đã hủy email chưa gửi khi rút yêu cầu duyệt",
+    "en": "Unsent email cancelled when the request was withdrawn",
+    "zh": "撤回审批时已取消尚未发送的邮件",
+    "ja": "承認依頼の取り下げにより未送信メールをキャンセルしました"
+  },
+  {
+    "key": "deletionImpact.item.operations.scheduleEmails",
+    "category": "construction",
+    "vi": "Email tiến độ dự án",
+    "en": "Project schedule emails",
+    "zh": "项目进度邮件",
+    "ja": "案件工程メール"
+  },
+  {
+    "key": "deletionImpact.item.operations.scheduleEmailsInFlight",
+    "category": "construction",
+    "vi": "Email tiến độ đang gửi – chờ gửi xong rồi thử lại",
+    "en": "Schedule emails currently sending – wait for delivery to finish, then retry",
+    "zh": "进度邮件正在发送——请等待发送结束后重试",
+    "ja": "工程メールを送信中です。送信完了後に再試行してください"
+  }
+]

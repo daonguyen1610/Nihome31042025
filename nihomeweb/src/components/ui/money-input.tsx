@@ -10,6 +10,7 @@ type MoneyInputProps = {
   disabled?: boolean;
   className?: string;
   decimalScale?: number;
+  showZero?: boolean;
   formatValue?: (value: number) => string;
   preferDecimalComma?: boolean;
   "aria-label"?: string;
@@ -34,6 +35,7 @@ export const MoneyInput = ({
   disabled,
   className,
   decimalScale = 0,
+  showZero = false,
   formatValue = formatVnd,
   preferDecimalComma = false,
   "aria-label": ariaLabel,
@@ -44,8 +46,8 @@ export const MoneyInput = ({
   // formatVnd renders an em dash for null/NaN, which suits a display but not a
   // field — nobody can backspace a dash away. Empty stays empty here.
   const display = useCallback(
-    (amount: number) => (amount ? formatValue(amount) : ""),
-    [formatValue],
+    (amount: number) => (amount || (showZero && amount === 0) ? formatValue(amount) : ""),
+    [formatValue, showZero],
   );
 
   const [text, setText] = useState(() => display(value));

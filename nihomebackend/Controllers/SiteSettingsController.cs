@@ -12,6 +12,22 @@ namespace NihomeBackend.Controllers;
 [Route("api/site-settings")]
 public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 {
+    [HttpGet("cm-schedule"), Authorize, RequirePermission("system.settings", "view")]
+    public async Task<IActionResult> CmSchedulePolicy() => Ok(new { thresholdPercent = (await svc.GetAsync())?.CmScheduleDelayThresholdPercent });
+    [HttpPut("cm-schedule"), Authorize, RequirePermission("system.settings", "manage")]
+    public async Task<IActionResult> UpdateCmSchedulePolicy([FromBody] CmScheduleThresholdRequest request, CancellationToken ct)
+    {
+        if (request.ThresholdPercent != decimal.Round(request.ThresholdPercent!.Value, 4))
+            return BadRequest(new { code = "CM_SCHEDULE_thresholdInvalid", field = "thresholdPercent", message = "Ngưỡng chậm phải từ 0 đến 100, tối đa 4 chữ số thập phân. Ví dụ: 5 hoặc 5,5." });
+        return Ok(new { thresholdPercent = await svc.UpdateCmScheduleThresholdAsync(request.ThresholdPercent!.Value, ct) });
+    }
+    public sealed class CmScheduleThresholdRequest
+    {
+        [System.ComponentModel.DataAnnotations.Required]
+        [System.ComponentModel.DataAnnotations.Range(typeof(decimal), "0", "100")]
+        public decimal? ThresholdPercent { get; set; }
+    }
+
     [HttpGet("contract-uploads")]
     [Authorize]
     [RequirePermission("system.settings", "view")]

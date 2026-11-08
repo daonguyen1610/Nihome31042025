@@ -411,6 +411,13 @@ hợp. Người dùng xác nhận ngày 24/10/2026: độ chậm S-Curve là `% 
 % thực tế` theo điểm phần trăm; kỳ linh hoạt ngày/tháng/năm. Nguồn % thực tế,
 cách tổng hợp theo kỳ và thẩm quyền publish/mở khóa vẫn cần NICON xác nhận.
 
+**Partial — tiến độ CM:** ứng dụng đã lưu baseline có version, quy trình trình/
+duyệt độc lập, snapshot tiến độ và cảnh báo theo ngưỡng. Người dùng xác nhận
+ngày 09/11/2026 rằng `% thực tế` lấy từ `ConstructionTask.ProgressPercent` do
+BCH cập nhật. Cách quy đổi trọng số/tổng hợp theo kỳ và quyền publish/mở khóa
+baseline vẫn là **Open decision**; kết quả hiện tại chưa thay thế quy tắc do
+NICON duyệt.
+
 ### 5.2. Giai đoạn 2 — BCH thực hiện, Phòng CM kiểm soát chéo
 
 | Luồng | BCH tại hiện trường | Phòng CM tại văn phòng | Đầu ra/liên kết |
@@ -650,8 +657,10 @@ khóa là snapshot bất biến.
 7. Q-09: template giấy phép theo loại/quy mô Dự án.
 8. Q-11: hợp đồng import MS Project đầy đủ gồm calendar, baseline và dữ liệu
    phân cấp; Team và Tiến độ hiện được tách thành hai tab liên kết.
-9. Nguồn actual/cách tổng hợp S-Curve theo kỳ linh hoạt ngày/tháng/năm;
-   quyền publish/unlock baseline; điều kiện VO. Công thức điểm phần trăm đã
+9. Cách tổng hợp S-Curve theo kỳ linh hoạt ngày/tháng/năm; quyền
+   publish/unlock baseline; điều kiện VO. Nguồn actual từ
+   `ConstructionTask.ProgressPercent` được người dùng xác nhận ngày
+   09/11/2026. Công thức điểm phần trăm đã
    được người dùng xác nhận ngày 24/10/2026.
 10. Hoàn tất mapping bộ ISO trong `docs/Nicon/ISO/` vào QA/QC/cổng khởi công
     theo loại công trình; NICON xác minh `TC-M02`, `TC-M23`, `TQT-M00`, `TC-M00`

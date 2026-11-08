@@ -483,6 +483,14 @@ internal static class DeletionImpactPlanner
         await AddAsync(items, "operations.procurementContractLines", DeletionImpactActions.Block,
             db.ContractLines.Where(item => item.Contract.OperationalProjectId == projectId), item => item.Id,
             item => item.ProjectBoqLine.ItemCode, ct);
+        await AddAsync(items, "operations.scheduleEmails", DeletionImpactActions.Delete,
+            db.ProjectScheduleEmails.Where(x => x.OperationalProjectId == projectId && x.Status != ProjectScheduleEmail.SendingStatus), x => x.Id, x => x.Subject, ct);
+        await AddAsync(items, "operations.scheduleEmailsInFlight", DeletionImpactActions.Block,
+            db.ProjectScheduleEmails.Where(x => x.OperationalProjectId == projectId && x.Status == ProjectScheduleEmail.SendingStatus), x => x.Id, x => x.Subject, ct);
+        await AddAsync(items, "operations.cmScheduleBaselines", DeletionImpactActions.Delete,
+            db.CmScheduleBaselines.Where(x => x.OperationalProjectId == projectId), x => x.Id, x => x.Version.ToString(), ct);
+        await AddAsync(items, "operations.cmProgressSnapshots", DeletionImpactActions.Delete,
+            db.CmProgressSnapshots.Where(x => x.OperationalProjectId == projectId), x => x.Id, x => x.AsOfDate.ToString(), ct);
         await AddAsync(items, "operations.constructionResources", DeletionImpactActions.Block,
             db.ConstructionResourceRequests.Where(item => item.OperationalProjectId == projectId),
             item => item.Id, item => item.Code, ct);

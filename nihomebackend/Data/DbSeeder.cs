@@ -30,6 +30,8 @@ public static class DbSeeder
         {
             db.SiteSettings.Add(new SiteSettings
             {
+                CmScheduleEmailSubjectTemplate = CmScheduleMailService.DefaultSubject,
+                CmScheduleEmailBodyTemplate = CmScheduleMailService.DefaultBody,
                 SiteName = SiteName,
                 SiteDescription = SiteDescription,
                 PrimaryEmail = "info@nihome.vn",

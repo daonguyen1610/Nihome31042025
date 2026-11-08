@@ -20,6 +20,7 @@ import {
 } from "@/services/adminApi";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import CmSchedulePolicy from "./settings/CmSchedulePolicy";
 import SlideshowSettings from "./settings/SlideshowSettings";
 import GoogleDriveConfigurationForm from "./settings/GoogleDriveConfigurationForm";
 import { Button } from "@/components/ui/button";
@@ -34,10 +35,11 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 // settings and thumbnail media settings used to live here but were
 // localStorage-only mocks; they were removed because they violated the
 // "no dead code / no hardcode" rule.
-type Tab = "security" | "contracts" | "slideshow" | "map" | "drive";
+type Tab = "cm-schedule" | "security" | "contracts" | "slideshow" | "map" | "drive";
 type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
+  { key: "cm-schedule", labelKey: "cmSchedule.policyTitle" },
   { key: "security", labelKey: "settings.tab.security" },
   { key: "contracts", labelKey: "settings.contractUploads.tab" },
   { key: "slideshow", labelKey: "set.slideshow" },
@@ -775,6 +777,7 @@ const SettingsCenter = () => {
           </TabsList>
         </Tabs>
 
+        {activeTab === "cm-schedule" && <CmSchedulePolicy />}
         {activeTab === "security" && <SecurityTab />}
         {activeTab === "contracts" && <ContractUploadTab />}
         {activeTab === "slideshow" && <SlideshowSettings />}

@@ -25,6 +25,9 @@ export function extractApiError(
 
   if (data && typeof data === "object") {
     if (translate && "code" in data) {
+      if (typeof data.code === "string" && data.code.startsWith("CM_SCHEDULE_")) {
+        return translate(`cmSchedule.error.${data.code.slice("CM_SCHEDULE_".length)}`);
+      }
       const primaryNotApproved = data.code === "IFC_PRIMARY_FILE_NOT_APPROVED";
       if (primaryNotApproved || data.code === "IFC_PRIMARY_FILE_UNAVAILABLE") {
         const key = primaryNotApproved

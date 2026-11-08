@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -20,6 +21,33 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     public ConstructionOperationsServiceTests()
     {
         _sut = new ConstructionOperationsService(_db, _procurement.Object);
+    }
+
+    [Fact]
+    public async Task Readiness_requires_structured_published_cm_baseline()
+    {
+        var node = Guid.NewGuid();
+        var task = new ConstructionTask { Id = 61, DesignProject = new DesignProject { Id = 51, OperationalProjectId = ProjectId }, ProjectScheduleNodeId = node, Wbs = "1.1", TaskCode = "TC-1", Name = "Thi công móng" };
+        _db.ConstructionTasks.Add(task);
+        _db.ConstructionPreparations.Add(new ConstructionPreparation { OperationalProjectId = ProjectId, Version = 1 });
+        var crm = new ProjectScheduleRevision { OperationalProjectId = ProjectId, Version = 1, Status = ProjectScheduleRevisionStatus.Published };
+        _db.ProjectScheduleRevisions.Add(crm);
+        await _db.SaveChangesAsync();
+        var missing = await _sut.GetPreparationAsync(ProjectId, default);
+        Assert.Contains("published CM schedule baseline", missing!.MissingConditions);
+        _db.CmScheduleBaselines.Add(new CmScheduleBaseline { OperationalProjectId = ProjectId, CrmRevisionId = crm.Id, Version = 1, Status = "Draft", ItemsJson = JsonSerializer.Serialize(new[] { new CmScheduleLine(task.Id, task.DesignProjectId, node, "1.1", task.Name, new(2026, 11, 1), new(2026, 11, 10), new(2026, 11, 1), new(2026, 11, 10), 1, true, []) }) });
+        await _db.SaveChangesAsync();
+        Assert.Contains("published CM schedule baseline", (await _sut.GetPreparationAsync(ProjectId, default))!.MissingConditions);
+        _db.CmScheduleBaselines.Single().Status = "Published";
+        await _db.SaveChangesAsync();
+        Assert.DoesNotContain("published CM schedule baseline", (await _sut.GetPreparationAsync(ProjectId, default))!.MissingConditions);
+        task.ProjectScheduleNodeId = Guid.NewGuid();
+        await _db.SaveChangesAsync();
+        Assert.Contains("published CM schedule baseline", (await _sut.GetPreparationAsync(ProjectId, default))!.MissingConditions);
+        task.ProjectScheduleNodeId = node;
+        _db.ProjectScheduleRevisions.Add(new ProjectScheduleRevision { OperationalProjectId = ProjectId, Version = 2, Status = ProjectScheduleRevisionStatus.Published });
+        await _db.SaveChangesAsync();
+        Assert.Contains("published CM schedule baseline", (await _sut.GetPreparationAsync(ProjectId, default))!.MissingConditions);
     }
 
     [Fact]

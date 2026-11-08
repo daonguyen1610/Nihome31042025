@@ -292,6 +292,9 @@ internal static class AggregateDeletionService
             .Where(item => item.WorkPackage.OperationalProjectId == projectId).ToListAsync(ct));
         db.DesignScheduleTasks.RemoveRange(await db.DesignScheduleTasks
             .Where(item => item.OperationalProjectId == projectId).ToListAsync(ct));
+        db.ProjectScheduleEmails.RemoveRange(await db.ProjectScheduleEmails.Where(x => x.OperationalProjectId == projectId).ToListAsync(ct));
+        db.CmProgressSnapshots.RemoveRange(await db.CmProgressSnapshots.Where(x => x.OperationalProjectId == projectId).ToListAsync(ct));
+        db.CmScheduleBaselines.RemoveRange(await db.CmScheduleBaselines.Where(x => x.OperationalProjectId == projectId).ToListAsync(ct));
         var projectScheduleRevisions = await db.ProjectScheduleRevisions
             .Where(item => item.OperationalProjectId == projectId).ToListAsync(ct);
         var projectScheduleNodes = await db.ProjectScheduleNodes

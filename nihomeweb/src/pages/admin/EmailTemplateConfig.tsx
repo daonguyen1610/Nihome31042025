@@ -3,6 +3,7 @@ import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useState } from "react";
 import { Save, RotateCcw, Mail, ShieldCheck, FileText } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import CmScheduleTemplateConfig from "@/components/admin/CmScheduleTemplateConfig";
 import WorkPackageApprovalTemplateConfig from "@/components/admin/WorkPackageApprovalTemplateConfig";
 import ContractReminderTemplateConfig from "@/components/admin/ContractReminderTemplateConfig";
 import { useI18n } from "@/lib/i18n";
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import EmailTemplateEditor from "@/components/admin/EmailTemplateEditor";
 
 type TabType =
+  | "cmSchedule"
   | "application"
   | "otp"
   | "quote"
@@ -27,7 +29,13 @@ type TabType =
   | "contract"
   | "approval";
 
-const CUSTOM_TEMPLATE_TABS = ["contract", "approval", "quoteApproval", "quoteDecision"];
+const CUSTOM_TEMPLATE_TABS = [
+  "cmSchedule",
+  "contract",
+  "approval",
+  "quoteApproval",
+  "quoteDecision",
+];
 const usesCustomEditor = (tab: TabType) => CUSTOM_TEMPLATE_TABS.includes(tab);
 
 const APPLICATION_TOKENS = [
@@ -349,33 +357,43 @@ const EmailTemplateConfig = () => {
           >
             <FileText className="h-4 w-4" /> {t("emailTemplate.schedule.tab")}
           </button>
-          {(["contract", "approval", "quoteApproval", "quoteDecision"] as const).map((tab) => (
-            <button
-              key={tab}
-              type="button"
-              onClick={() => setActiveTab(tab)}
-              aria-pressed={activeTab === tab}
-              className={cn(
-                "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-                activeTab === tab
-                  ? "border-primary text-primary"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              <FileText className="h-4 w-4 shrink-0" />
-              {t(
-                tab === "contract"
-                  ? "contractReminder.templates"
-                  : tab === "approval"
-                    ? "approvalEmail.tab"
-                    : tab === "quoteApproval"
-                      ? "quotes.approval.templateTab"
-                      : "quotes.approval.decisionTemplateTab",
-              )}
-            </button>
-          ))}
+          {(["cmSchedule", "contract", "approval", "quoteApproval", "quoteDecision"] as const).map(
+            (tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setActiveTab(tab)}
+                aria-pressed={activeTab === tab}
+                className={cn(
+                  "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
+                  activeTab === tab
+                    ? "border-primary text-primary"
+                    : "border-transparent text-muted-foreground hover:text-foreground",
+                )}
+              >
+                <FileText className="h-4 w-4 shrink-0" />
+                {t(
+                  tab === "cmSchedule"
+                    ? "cmSchedule.emailTemplate"
+                    : tab === "contract"
+                      ? "contractReminder.templates"
+                      : tab === "approval"
+                        ? "approvalEmail.tab"
+                        : tab === "quoteApproval"
+                          ? "quotes.approval.templateTab"
+                          : "quotes.approval.decisionTemplateTab",
+                )}
+              </button>
+            ),
+          )}
         </div>
 
+        <div hidden={activeTab !== "cmSchedule"}>
+          <CmScheduleTemplateConfig
+            active={activeTab === "cmSchedule"}
+            actionsContainer={actionsContainer}
+          />
+        </div>
         <div hidden={activeTab !== "contract"}>
           <ContractReminderTemplateConfig
             active={activeTab === "contract"}

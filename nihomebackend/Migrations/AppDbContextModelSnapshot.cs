@@ -1112,6 +1112,161 @@ namespace nihomebackend.Migrations
                     b.ToTable("client_logos", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.CmProgressSnapshot", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("ActualPercent")
+                        .HasPrecision(28, 20)
+                        .HasColumnType("decimal(28,20)");
+
+                    b.Property<DateOnly>("AsOfDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("BaselineId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CapturedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CapturedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("CrmPercent")
+                        .HasPrecision(28, 20)
+                        .HasColumnType("decimal(28,20)");
+
+                    b.Property<decimal>("DelayPercent")
+                        .HasPrecision(28, 20)
+                        .HasColumnType("decimal(28,20)");
+
+                    b.Property<string>("Explanation")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("InputsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<bool>("IsDelayed")
+                        .HasColumnType("bit");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("PlanPercent")
+                        .HasPrecision(28, 20)
+                        .HasColumnType("decimal(28,20)");
+
+                    b.Property<DateTime?>("RecoveryAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RecoveryByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<DateOnly?>("RecoveryDueDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("RecoveryPlan")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<decimal>("ThresholdPercent")
+                        .HasPrecision(9, 4)
+                        .HasColumnType("decimal(9,4)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationalProjectId");
+
+                    b.HasIndex("BaselineId", "AsOfDate");
+
+                    b.ToTable("cm_progress_snapshots", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.CmScheduleBaseline", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("ApproverUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ChangeReason")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("CrmRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ItemsJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("PublishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("ReviewNote")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<int>("SiteManagerUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OperationalProjectId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("cm_schedule_baselines", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ConceptArtifact", b =>
                 {
                     b.Property<int>("Id")
@@ -8100,6 +8255,9 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("CmScheduleBaselineId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -8148,6 +8306,8 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(254)");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("CmScheduleBaselineId");
 
                     b.HasIndex("OperationalProjectId");
 
@@ -10222,6 +10382,18 @@ namespace nihomebackend.Migrations
                     b.Property<int>("AuditLogRetentionMinutes")
                         .HasColumnType("int");
 
+                    b.Property<decimal>("CmScheduleDelayThresholdPercent")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(9, 4)
+                        .HasColumnType("decimal(9,4)")
+                        .HasDefaultValue(5m);
+
+                    b.Property<string>("CmScheduleEmailBodyTemplate")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("CmScheduleEmailSubjectTemplate")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("ContractEndEmailBodyTemplate")
                         .HasColumnType("nvarchar(max)");
 
@@ -12267,6 +12439,36 @@ namespace nihomebackend.Migrations
                     b.Navigation("CapabilityDocument");
 
                     b.Navigation("UploadedBy");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.CmProgressSnapshot", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.CmScheduleBaseline", "Baseline")
+                        .WithMany()
+                        .HasForeignKey("BaselineId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Baseline");
+
+                    b.Navigation("OperationalProject");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.CmScheduleBaseline", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("OperationalProject");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConceptArtifact", b =>
@@ -14391,11 +14593,18 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleEmail", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.CmScheduleBaseline", "CmScheduleBaseline")
+                        .WithMany()
+                        .HasForeignKey("CmScheduleBaselineId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.ProjectScheduleRevision", "Revision")
                         .WithMany()
                         .HasForeignKey("RevisionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("CmScheduleBaseline");
 
                     b.Navigation("Revision");
                 });

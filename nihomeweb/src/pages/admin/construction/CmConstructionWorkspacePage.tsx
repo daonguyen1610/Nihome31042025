@@ -1,3 +1,4 @@
+import { CmScheduleWorkspace } from "./CmScheduleWorkspace";
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { FormEvent, type ReactNode, useCallback, useEffect, useState } from "react";
@@ -383,6 +384,10 @@ export default function CmConstructionWorkspacePage() {
             )}
           </TabsList>
           <TabsContent value="preparation" className="space-y-4">
+            {projectId != null && canViewPreparation && (
+              <CmScheduleWorkspace key={projectId} projectId={projectId} />
+            )}
+
             {preparation == null ? (
               <PageEmpty message={t("construction.cm.noPreparation")} />
             ) : (
@@ -534,7 +539,11 @@ export default function CmConstructionWorkspacePage() {
                     <h3 className="font-medium text-amber-900">{t("construction.cm.blockers")}</h3>
                     <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-amber-900">
                       {preparation.missingConditions.map((condition) => (
-                        <li key={condition}>{condition}</li>
+                        <li key={condition}>
+                          {condition === "published CM schedule baseline"
+                            ? t("cmSchedule.readiness")
+                            : condition}
+                        </li>
                       ))}
                     </ul>
                   </div>

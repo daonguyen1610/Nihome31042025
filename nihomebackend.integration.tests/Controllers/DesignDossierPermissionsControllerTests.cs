@@ -129,8 +129,10 @@ public sealed class DesignDossierPermissionsControllerTests(NihomeWebApplication
             StartedAt = DateTime.UtcNow.AddDays(-1),
             Roles = [new OperationalProjectMemberRole
             {
-                RoleCode = ProjectTeamRoleCode.StructuralEngineer, Scope = ProjectRoleScope.Module,
-                ScopeValue = "Design", StartedAt = DateTime.UtcNow.AddDays(-1),
+                RoleCode = ProjectTeamRoleCode.StructuralEngineer,
+                Scope = ProjectRoleScope.Module,
+                ScopeValue = "Design",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
             }],
             DesignPermission = new DesignProjectMemberPermission
             {
