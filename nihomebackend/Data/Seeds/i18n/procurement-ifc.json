@@ -94,5 +94,37 @@
     "en": "Confirm IFC receipt",
     "zh": "确认收到IFC",
     "ja": "IFC受領を確認"
+  },
+  {
+    "key": "rbac.perm.proc.ifc.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ IFC được gửi",
+    "en": "View addressed IFC dossiers",
+    "zh": "查看发送给自己的IFC档案",
+    "ja": "自分宛のIFC図書を表示"
+  },
+  {
+    "key": "rbac.perm.proc.ifc.acknowledge.label",
+    "category": "rbac",
+    "vi": "Xác nhận nhận IFC",
+    "en": "Confirm IFC receipt",
+    "zh": "确认收到IFC",
+    "ja": "IFC受領を確認"
+  },
+  {
+    "key": "rbac.perm.proc.ifc.view.description",
+    "category": "rbac",
+    "vi": "Xem hồ sơ IFC đã phát hành gửi đích danh trong dự án đang được phân công.",
+    "en": "View released IFC dossiers addressed to the user in currently assigned projects.",
+    "zh": "查看当前分配项目中发送给自己的已发布IFC档案。",
+    "ja": "現在担当するプロジェクトで自分宛に発行されたIFC図書を表示します。"
+  },
+  {
+    "key": "rbac.perm.proc.ifc.acknowledge.description",
+    "category": "rbac",
+    "vi": "Xác nhận đã nhận hồ sơ IFC được gửi và giữ người, thời điểm nhận đầu tiên; không phải duyệt thiết kế.",
+    "en": "Confirm receipt of addressed IFC dossiers and retain the first recipient and time; this does not approve the design.",
+    "zh": "确认接收发送给自己的IFC档案，并保留首次接收人和时间；此操作不代表批准设计。",
+    "ja": "自分宛のIFC図書の受領を確認し、初回の受領者と日時を保持します。設計承認ではありません。"
   }
 ]
