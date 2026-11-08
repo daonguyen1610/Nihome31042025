@@ -96,6 +96,15 @@ test("multi-file upload stores every quote and customer document", async ({
         timeout: 15_000,
       });
     }
+    await expect
+      .poll(async () => {
+        const response = await api.get(`/api/customers/${customerId}/documents`, { headers });
+        expect(response.status()).toBe(200);
+        return ((await response.json()) as { originalFileName: string }[])
+          .map((item) => item.originalFileName)
+          .sort();
+      })
+      .toEqual([...customerFileNames].sort());
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
     await page.getByRole("tab", { name: documentsTab }).click();
     await page.locator("#quote-document-file").setInputFiles(files(quoteFileNames));
@@ -104,12 +113,22 @@ test("multi-file upload stores every quote and customer document", async ({
     for (const name of quoteFileNames) {
       await expect(page.locator("li").filter({ hasText: name })).toBeVisible({ timeout: 15_000 });
     }
+    await expect
+      .poll(async () => {
+        const response = await api.get(`/api/quotes/${quoteId}/documents`, { headers });
+        expect(response.status()).toBe(200);
+        return ((await response.json()) as { originalFileName: string }[])
+          .map((item) => item.originalFileName)
+          .sort();
+      })
+      .toEqual([...quoteFileNames].sort());
   } finally {
     const deleteDocuments = async (base: string) => {
       const list = await api.get(base, { headers });
-      if (!list.ok()) return;
+      expect(list.status(), await list.text()).toBe(200);
       for (const document of (await list.json()) as { id: number }[]) {
-        await api.delete(`${base}/${document.id}`, { headers });
+        const deleted = await api.delete(`${base}/${document.id}`, { headers });
+        expect(deleted.status(), await deleted.text()).toBe(204);
       }
     };
     if (quoteId) await deleteDocuments(`/api/quotes/${quoteId}/documents`);

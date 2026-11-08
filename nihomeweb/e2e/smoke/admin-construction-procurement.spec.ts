@@ -249,16 +249,26 @@ test("CM source drill-down hydrates a project outside the first project page", a
       },
     }),
   );
-  await page.route(/\/api\/(?:v1\/)?operational-projects(?:\?|$)/, (route) =>
-    route.fulfill({
+  const projectPages: number[] = [];
+  await page.route(/\/api\/(?:v1\/)?operational-projects(?:\?|$)/, (route) => {
+    const pageNumber = Number(new URL(route.request().url()).searchParams.get("page") ?? 1);
+    projectPages.push(pageNumber);
+    return route.fulfill({
       json: {
-        items: [{ id: 5, code: "PJ-FIRST-PAGE", name: "Another assigned project" }],
+        items:
+          pageNumber === 1
+            ? Array.from({ length: 200 }, (_, index) => ({
+                id: index + 1,
+                code: `PJ-FIRST-${index + 1}`,
+                name: `Assigned project ${index + 1}`,
+              }))
+            : [{ id: 201, code: "PJ-SECOND-PAGE", name: "Another assigned project" }],
         total: 201,
-        page: 1,
+        page: pageNumber,
         pageSize: 200,
       },
-    }),
-  );
+    });
+  });
   let hydrated = false;
   await page.route(/\/api\/(?:v1\/)?operational-projects\/501$/, (route) => {
     hydrated = true;
@@ -274,6 +284,7 @@ test("CM source drill-down hydrates a project outside the first project page", a
   });
   await page.goto(`${baseURL}/admin/construction/bch/qa-qc?projectId=501`);
   await expect(page.getByTestId("qa-qc-page-project")).toContainText("PJ-ANPHU");
+  expect([...new Set(projectPages)]).toEqual([1, 2]);
   expect(hydrated).toBe(true);
 });
 

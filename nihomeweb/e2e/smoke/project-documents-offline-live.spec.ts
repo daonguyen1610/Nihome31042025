@@ -1,3 +1,4 @@
+import { confirmAction } from "../fixtures/confirmation";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { execSql } from "../fixtures/db";
 
@@ -71,8 +72,8 @@ for (const width of [390, 768]) {
         (res) =>
           res.url().endsWith(`/documents/${documentId}`) && res.request().method() === "DELETE",
       );
-      page.once("dialog", (dialog) => dialog.accept());
       await actions.getByRole("button", { name: /Xóa|Xoá|Delete/i }).click();
+      await confirmAction(page);
       expect((await removed).status()).toBe(204);
       await expect(actions).toHaveCount(0);
       const dimensions = await page

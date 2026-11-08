@@ -913,7 +913,7 @@ test("contract documents accept and upload multiple local files", async ({
   await page.goto(`${baseURL}/admin/contracts/${contractId}`, { waitUntil: "domcontentloaded" });
   await page.getByRole("tab", { name: /Tài liệu|Documents|文档|資料/i }).click();
 
-  const fileInput = page.locator("#contract-attachment-files");
+  const fileInput = page.getByTestId("contract-attachment-files");
   await expect(fileInput).toHaveAttribute("multiple", "");
   await fileInput.setInputFiles([
     {
@@ -927,6 +927,12 @@ test("contract documents accept and upload multiple local files", async ({
       buffer: Buffer.from("%PDF-1.4\ncontract two\n%%EOF"),
     },
   ]);
+
+  await page
+    .getByRole("button", {
+      name: /^(Upload file|Tải lên tài liệu|上传文件|ファイルをアップロード)$/i,
+    })
+    .click();
 
   await expect.poll(() => uploadedFiles.length).toBe(2);
   await expect(page.getByText("contract-batch-one.pdf", { exact: true })).toBeVisible();

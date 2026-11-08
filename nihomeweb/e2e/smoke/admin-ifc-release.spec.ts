@@ -18,7 +18,7 @@ import {
  *   5. After Released, the header shows the timestamp + issuer, the
  *      recipient row exposes the Acknowledge button, and the header
  *      badge is Released.
- *   6. SALE is bounced from the endpoints. DESIGN can view but cannot
+ *   6. Members are scoped to their dossiers. DESIGN can view but cannot
  *      fire the release action (needs stricter design.ifc.release).
  */
 
@@ -265,11 +265,5 @@ test.describe("NIH-118 — IFC Release (real-user flow)", () => {
       .toBe("Released");
   });
 
-  test("SALE role is blocked from IFC endpoints", async ({ api, loginAs }) => {
-    const token = await loginAs(TEST_USERS.sale);
-    const res = await api.get("/api/ifc-releases", {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    expect(res.status()).toBe(403);
-  });
+  // HTTP membership boundaries are exercised by DesignDossierPermissionsControllerTests.
 });

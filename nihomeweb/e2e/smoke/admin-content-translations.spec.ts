@@ -80,13 +80,20 @@ async function openEntityType(page: Page, entityType: string) {
       response.request().method() === "GET" &&
       !response.url().includes(`/entity/${entityType}/`),
   );
-  const [{ response, body }] = await Promise.all([
+  const registryPromise = page.waitForResponse(
+    (response) =>
+      response.url().endsWith("/api/translations/entity/types") &&
+      response.request().method() === "GET",
+  );
+  const [{ response, body }, registry] = await Promise.all([
     responsePromise.then(async (response) => ({
       response,
       body: (await response.json()) as { items: Array<{ id: number; title: string }> },
     })),
+    registryPromise,
     page.goto(`/admin/translations?tab=entity&type=${entityType}`),
   ]);
+  expect(registry.ok(), "load Content Translations field registry").toBeTruthy();
   expect(response.ok(), `load ${entityType} translation list`).toBeTruthy();
   return body.items;
 }

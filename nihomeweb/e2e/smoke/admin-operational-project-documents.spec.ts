@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import { confirmAction } from "../fixtures/confirmation";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 
 const projectId = 456000;
@@ -231,9 +232,9 @@ test("project manager operates the responsive Drive document catalog", async ({
   await expect(section).toBeVisible();
   const sourceOwnedCard = section.locator("article").filter({ hasText: "contract-source.pdf" });
   await expect(sourceOwnedCard).toBeVisible();
-  await expect(sourceOwnedCard.getByRole("button", { name: /Xoá|Delete|删除|削除/i })).toHaveCount(
-    0,
-  );
+  await expect(
+    sourceOwnedCard.getByRole("button", { name: /Xóa|Xoá|Delete|删除|削除/i }),
+  ).toHaveCount(0);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
     true,
   );
@@ -248,18 +249,18 @@ test("project manager operates the responsive Drive document catalog", async ({
     unclassifiedCard.getByText(/Thiết kế sơ bộ|Concept design|概念设计|コンセプト設計/i),
   ).toBeVisible();
 
-  page.once("dialog", (dialog) => dialog.accept());
   const conflictCard = section.locator("article").filter({ hasText: "drive-conflict.pdf" });
   await conflictCard
     .getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i })
     .click();
+  await confirmAction(page, false);
   await expect(
     conflictCard.getByRole("button", { name: /Giữ cả hai|Keep both|两者都保留|両方を保持/i }),
   ).toHaveCount(0);
 
-  page.once("dialog", (dialog) => dialog.accept());
   const deletedCard = section.locator("article").filter({ hasText: "delete-without-refresh.pdf" });
-  await deletedCard.getByRole("button", { name: /^(Xoá|Delete|删除).*|.*削除$/i }).click();
+  await deletedCard.getByRole("button", { name: /^(Xóa|Xoá|Delete|删除).*|.*削除$/i }).click();
+  await confirmAction(page);
   await expect(deletedCard).toHaveCount(0);
   expect(deleteRequested).toBe(true);
   expect(documents.some((document) => document.id === 14)).toBe(true);
@@ -303,9 +304,9 @@ test("project manager operates the responsive Drive document catalog", async ({
       buffer: Buffer.from(`%PDF-1.4 NIH-${index + 1}`),
     })),
   );
-  await expect(
-    page.getByText("Mỗi lần chỉ được chọn tối đa 20 tệp dự án.", { exact: true }),
-  ).toBeVisible();
+  await expect(section.getByRole("alert").filter({ hasText: /20/ })).toBeVisible();
   await expect(page.locator("#project-document-file")).toHaveValue("");
+  await expect(section.getByRole("listitem").filter({ hasText: /extra-plan-/ })).toHaveCount(20);
+  await expect(section.getByText("extra-plan-21.pdf", { exact: true })).toHaveCount(0);
   expect(uploadIdempotencyKeys).toHaveLength(3);
 });

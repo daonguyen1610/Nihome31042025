@@ -1,4 +1,5 @@
 /// <reference types="node" />
+import { confirmAction } from "../fixtures/confirmation";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import JSZip from "jszip";
 import { createApprovedInvestmentRate, retireInvestmentRate } from "../fixtures/materialRate";
@@ -249,8 +250,8 @@ test.describe.serial("quote document management", () => {
       const persistedItem = page.locator("li").filter({ hasText: fileName });
       await expect(persistedItem).toBeVisible();
 
-      page.once("dialog", (dialog) => dialog.accept());
       await persistedItem.getByRole("button", { name: /Xoá|Delete|删除|削除/i }).click();
+      await confirmAction(page);
       await expect(persistedItem).toBeHidden();
       await expect(
         page.getByText(/Chưa có tài liệu|No documents|尚未上传|まだありません/i),

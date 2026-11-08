@@ -116,6 +116,7 @@ const matrix: RoleExpectation[] = [
     // contacts.* + recruitment.applications.view + dashboard.view. Sales role
     // does NOT have crm.leads.view.all or crm.customers.view.all — the
     // services scope their lists to owned records, but the routes render.
+    // Seeded project membership also grants scoped design view access.
     user: TEST_USERS.sale,
     allowed: [
       "/admin",
@@ -129,6 +130,7 @@ const matrix: RoleExpectation[] = [
       "/admin/tenders",
       "/admin/surveys",
       "/admin/contracts",
+      "/admin/design-projects",
       "/admin/operational-projects",
       "/admin/work-packages",
       "/admin/kpi",
@@ -535,6 +537,10 @@ const MATRIX_PATH_EXCLUSIONS = new Set<string>([
   // Catalog subtype views share the crm.material-rates.view gate covered by the base route.
   "/admin/material-rates/investment",
   "/admin/material-rates/boq",
+  // Work-package context lists share the exact work.packages.view route gate.
+  "/admin/work-packages/projects",
+  "/admin/work-packages/contracts",
+  "/admin/work-packages/internal",
   // Process sub-groups all gated by ADMIN_PERMS.processes; /admin/processes/general
   // already proves the gate works for the whole group.
   "/admin/processes/ptcskh",
