@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { RefreshCw } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import {
   cmScheduleApi,
@@ -38,7 +39,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
+export function CmScheduleWorkspace({
+  projectId,
+  standalone = false,
+}: {
+  projectId: number;
+  standalone?: boolean;
+}) {
   const { t, lang } = useI18n();
   const uiError = useUiError();
   const { has } = usePermissions();
@@ -112,6 +119,7 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
     data?.baselines.find((x) => x.status === "Draft" || x.status === "PendingApproval") ??
     data?.baselines.find((x) => x.status === "Published") ??
     data?.baselines[0];
+  const planReady = !!data?.crmRevisionId && data.proposed.length > 0 && data.unlinked.length === 0;
   const anchor = periodDate || data?.asOfDate || "";
   const snapshots = useMemo(
     () => data?.snapshots.filter((x) => x.baselineId === selected?.id) ?? [],
@@ -152,16 +160,45 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
   const percent = (value: number) => `${value.toLocaleString(lang, { maximumFractionDigits: 8 })}%`;
   const setLine = (id: number, patch: Partial<CmScheduleLine>) =>
     setLines((current) => current.map((row) => (row.taskId === id ? { ...row, ...patch } : row)));
+  const unlinkedTasks = data && data.unlinked.length > 0 && (
+    <div className="space-y-3">
+      <p className="font-medium">{t("cmSchedule.unlinked")}</p>
+      <ul className="space-y-2">
+        {data.unlinked.map((task) => (
+          <li key={task.id}>
+            <Link
+              className="text-sm text-foreground underline decoration-border underline-offset-4 hover:decoration-current"
+              to={`/admin/construction/tasks?taskId=${task.id}`}
+            >
+              {task.taskCode} · {task.name}
+            </Link>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
   if (loading && !data) return <PageLoading />;
   return (
     <section className="space-y-5" data-testid="cm-schedule-workspace">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold">{t("cmSchedule.title")}</h2>
-          <p className="max-w-3xl text-sm text-muted-foreground">{t("cmSchedule.method")}</p>
-        </div>
-        <Button variant="outline" disabled={busy || loading} onClick={refresh}>
-          {t("common.refresh")}
+        <h2 className="min-w-0 flex-1 text-lg font-semibold">
+          {t(
+            standalone
+              ? selected
+                ? "cmSchedule.planSection"
+                : "cmSchedule.setupTitle"
+              : "cmSchedule.title",
+          )}
+        </h2>
+        <Button
+          variant="outline"
+          className="h-11 w-11 shrink-0 gap-2 p-0 sm:w-auto sm:px-4"
+          disabled={busy || loading}
+          onClick={refresh}
+          title={t("common.refresh")}
+        >
+          <RefreshCw className="h-4 w-4" aria-hidden="true" />
+          <span className="sr-only sm:not-sr-only">{t("common.refresh")}</span>
         </Button>
       </div>
       {error && (
@@ -171,40 +208,60 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
       )}
       {data && (
         <>
-          <p className="text-sm">
-            {t("cmSchedule.policy", { threshold: data.thresholdPercent.toLocaleString(lang) })}
-          </p>
-          {data.unlinked.length > 0 && (
-            <div className="space-y-2 rounded-md border p-3">
-              <p className="font-medium">{t("cmSchedule.unlinked")}</p>
-              <ul>
-                {data.unlinked.map((x) => (
-                  <li key={x.id}>
-                    <Link
-                      className="text-primary underline"
-                      to={`/admin/construction/tasks?taskId=${x.id}`}
-                    >
-                      {x.taskCode} · {x.name}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
+          {!selected && (
+            <div
+              className="space-y-5 rounded-xl border bg-card p-5 sm:p-6"
+              data-testid="cm-schedule-setup"
+            >
+              <p className="max-w-3xl text-sm text-muted-foreground">
+                {t("cmSchedule.setupIntro")}
+              </p>
+              {!data.crmRevisionId && (
+                <div className="space-y-3">
+                  <p className="font-medium">{t("cmSchedule.noCrm")}</p>
+                  {has(ADMIN_PERMS.operationalProjects) && (
+                    <Button asChild variant="outline">
+                      <Link to={`/admin/operational-projects/${projectId}?tab=schedule`}>
+                        {t("cmSchedule.openCrm")}
+                      </Link>
+                    </Button>
+                  )}
+                </div>
+              )}
+              {data.crmRevisionId && data.proposed.length === 0 && data.unlinked.length === 0 && (
+                <div className="space-y-3">
+                  <p>{t("cmSchedule.noTasks")}</p>
+                  {has(ADMIN_PERMS.constructionTasksManage) && (
+                    <Button asChild variant="outline">
+                      <Link to="/admin/construction/tasks">{t("cmSchedule.openTasks")}</Link>
+                    </Button>
+                  )}
+                </div>
+              )}
+              {unlinkedTasks}
+              {planReady && <p className="text-sm">{t("cmSchedule.noBaseline")}</p>}
             </div>
           )}
+          {selected && unlinkedTasks && (
+            <div className="space-y-3 rounded-xl border bg-card p-5 sm:p-6">{unlinkedTasks}</div>
+          )}
           <div className="flex flex-wrap gap-2 items-center">
-            <Select value={selected ? String(selected.id) : ""} onValueChange={setBaselineId}>
-              <SelectTrigger className="w-full sm:w-72" aria-label={t("cmSchedule.version")}>
-                <SelectValue placeholder={t("cmSchedule.noBaseline")} />
-              </SelectTrigger>
-              <SelectContent>
-                {data.baselines.map((x) => (
-                  <SelectItem key={x.id} value={String(x.id)}>
-                    {t("cmSchedule.version")} {x.version} · {t(`cmSchedule.status.${x.status}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            {data.baselines.length > 0 && (
+              <Select value={selected ? String(selected.id) : ""} onValueChange={setBaselineId}>
+                <SelectTrigger className="w-full sm:w-72" aria-label={t("cmSchedule.version")}>
+                  <SelectValue placeholder={t("cmSchedule.noBaseline")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {data.baselines.map((x) => (
+                    <SelectItem key={x.id} value={String(x.id)}>
+                      {t("cmSchedule.version")} {x.version} · {t(`cmSchedule.status.${x.status}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
             {manage &&
+              (selected || planReady) &&
               !data.baselines.some(
                 (x) => x.status === "Draft" || x.status === "PendingApproval",
               ) && (
@@ -281,10 +338,7 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
                 </Button>
               )}
           </div>
-          {!data.crmRevisionId && <p>{t("cmSchedule.noCrm")}</p>}
-          {!selected ? (
-            <p>{t("cmSchedule.noBaseline")}</p>
-          ) : (
+          {selected && (
             <>
               <p className="text-sm">{selected.changeReason}</p>
               <p className="text-sm text-muted-foreground">{selected.weightBasisNote}</p>
@@ -557,6 +611,17 @@ export function CmScheduleWorkspace({ projectId }: { projectId: number }) {
               </ul>
             </>
           )}
+          <details className="text-sm">
+            <summary className="w-fit cursor-pointer rounded py-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+              {t("cmSchedule.howItWorks")}
+            </summary>
+            <div className="mt-2 max-w-3xl space-y-3 text-muted-foreground">
+              <p>{t("cmSchedule.method")}</p>
+              <p>
+                {t("cmSchedule.policy", { threshold: data.thresholdPercent.toLocaleString(lang) })}
+              </p>
+            </div>
+          </details>
         </>
       )}
       <Dialog open={submission !== null} onOpenChange={(open) => !open && setSubmission(null)}>

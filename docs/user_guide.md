@@ -1527,8 +1527,14 @@ Create construction schedules with phases and work items (WBS). Assign responsib
 
 ##### CM schedule comparison — Partial
 
-Open **Admin > CM Office > Schedule**, select the Operational Project, and use
-the version selector to review its published CM plan and snapshots. An eligible
+Open **Admin > CM Office > Construction progress** (**Phòng CM > Tiến độ thi
+công**). Site users open **Site Command Board > Construction progress** instead.
+Select the Operational Project; the selection remains in the page URL when
+refreshing. Before a CM plan exists, the preparation panel identifies missing
+CRM/WBS prerequisites and links to the project's master schedule and unlinked
+tasks. The version selector appears once there are saved versions.
+
+An eligible
 CM preparer with `construction.cm-preparation.manage` can create a revision,
 assign the Site Manager for field actuals, preview the approval email, and
 submit the version for independent PM review. The assigned PM approves or
@@ -1541,10 +1547,11 @@ exceeds the configured threshold, the Site Manager must provide an explanation,
 recovery plan and due date; a CM reviewer records a separate review. A failed
 save leaves the entered value visible so the user can reconnect and retry.
 
-The current WBS weighting and calendar-day interpolation have not been
-approved as the NICON roll-up formula. Treat displayed aggregate percentages as
-provisional; do not use them as an approved KPI or cost forecast. The page
-does not queue writes for offline synchronization.
+The plan uses the WBS scope weights and working calendar frozen with its
+version. Missing site reports remain unavailable rather than becoming 0%.
+Expand **Progress calculation and alerts** for the calculation guidance and
+configured alert threshold. The page does not queue writes for offline
+synchronization.
 
 ##### Construction drawings
 

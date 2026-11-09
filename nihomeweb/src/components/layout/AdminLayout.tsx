@@ -157,6 +157,16 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     [t],
   );
 
+  const cmProgressItem: NavItem = useMemo(
+    () => ({
+      to: "/admin/construction/progress",
+      label: t("cmSchedule.navigation"),
+      icon: ChartNoAxesCombined,
+      permission: ADMIN_PERMS.constructionTasks,
+    }),
+    [t],
+  );
+
   const rawGroups: NavGroup[] = useMemo(
     () => [
       {
@@ -324,6 +334,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.constructionBch"),
         icon: HardHat,
         items: [
+          ...(!permissions.has(ADMIN_PERMS.constructionCmPreparation) ? [cmProgressItem] : []),
           {
             to: "/admin/construction/bch/resource-requests",
             label: t("nav.constructionResourceRequests"),
@@ -391,6 +402,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.constructionCm"),
         icon: MonitorCheck,
         items: [
+          ...(permissions.has(ADMIN_PERMS.constructionCmPreparation) ? [cmProgressItem] : []),
           {
             to: "/admin/construction/tasks",
             label: t("nav.constructionTasks"),
@@ -635,7 +647,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         ],
       },
     ],
-    [t],
+    [t, cmProgressItem, permissions],
   );
 
   const groups: NavGroup[] = useMemo(
@@ -753,9 +765,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         className={cn(
           "flex items-center gap-3 rounded-xl text-sm font-semibold transition-all",
           effectiveCollapsed ? "px-3 py-3 justify-center" : "px-4 py-2.5",
-          active
-            ? "bg-gradient-to-br from-primary to-orange-500 text-primary-foreground shadow-md shadow-primary/40"
-            : "text-foreground/70 hover:bg-muted",
+          active ? "bg-muted text-foreground" : "text-foreground/70 hover:bg-muted",
         )}
       >
         <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
@@ -828,13 +838,13 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                   aria-expanded={isOpen}
                   aria-controls={`admin-nav-group-${g.id}`}
                   className={cn(
-                    "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-[11px] uppercase tracking-[0.18em] font-bold transition",
+                    "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors",
                     isOpen || groupActive
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-muted/60",
                   )}
                 >
-                  <g.icon className="w-3.5 h-3.5" />
+                  <g.icon className="w-4 h-4 shrink-0" />
                   <span className="flex-1 text-left">{g.label}</span>
                   <ChevronDown
                     className={cn("w-3.5 h-3.5 transition-transform", isOpen ? "rotate-180" : "")}
@@ -843,7 +853,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                 {isOpen && (
                   <div
                     id={`admin-nav-group-${g.id}`}
-                    className="mt-1 space-y-1 rounded-r-xl border-l-2 border-primary/40 bg-muted/60 py-1 pl-4"
+                    className="mt-1 space-y-1 rounded-xl bg-muted/40 py-1 pl-4"
                   >
                     {g.items.map(renderItem)}
                   </div>
