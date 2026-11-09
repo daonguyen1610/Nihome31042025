@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { FieldScope } from "@/components/ui/field-scope";
@@ -426,7 +427,7 @@ export const ProjectMasterSchedule = ({
   return (
     <section
       id="project-master-schedule"
-      className="space-y-4 rounded-lg border bg-card p-4 shadow-sm"
+      className="scroll-mt-24 space-y-5 rounded-xl border bg-card p-4 sm:p-6"
     >
       <Dialog
         open={emailPreview !== null}
@@ -517,8 +518,27 @@ export const ProjectMasterSchedule = ({
           </Button>
         )}
       </header>
+      <div className="space-y-3 border-y py-4">
+        <p className="max-w-3xl text-sm text-muted-foreground">{t("scheduleUx.masterPurpose")}</p>
+        <p className="max-w-3xl text-sm font-medium" role="status">
+          {t(!selected ? "scheduleUx.masterNew" : `scheduleUx.masterState.${selected.status}`)}
+        </p>
+        {schedule?.publishedRevisionId != null && has(ADMIN_PERMS.constructionTasks) && (
+          <Button asChild variant="outline">
+            <Link to={`/admin/construction/progress?projectId=${projectId}`}>
+              {t("scheduleUx.openProgress")}
+            </Link>
+          </Button>
+        )}
+      </div>
       {isProjectManager && (
-        <section className="space-y-3 rounded-md border p-3">
+        <details
+          className="space-y-3 border-t pt-3"
+          open={emailsNeedingReview.length > 0 ? true : undefined}
+        >
+          <summary className="cursor-pointer py-2 text-sm font-medium">
+            {t("operationalProjects.schedule.email.reviewTitle")} ({emailsNeedingReview.length})
+          </summary>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h3 className="font-semibold">{t("operationalProjects.schedule.email.reviewTitle")}</h3>
             <Button variant="outline" size="sm" onClick={() => void loadEmailsNeedingReview()}>
@@ -562,7 +582,7 @@ export const ProjectMasterSchedule = ({
               </div>
             </div>
           ))}
-        </section>
+        </details>
       )}
       <div className="space-y-4">
         {error && (
@@ -622,6 +642,9 @@ export const ProjectMasterSchedule = ({
               selected?.status === "Draft" ||
               selected?.status === "Rejected") && (
               <div className="space-y-4">
+                <p className="max-w-3xl text-sm text-muted-foreground">
+                  {t("scheduleUx.masterFormGuide")}
+                </p>
                 <FieldScope className="space-y-2">
                   <Label>{t("operationalProjects.schedule.changeReason")}</Label>
                   <Textarea
@@ -631,14 +654,14 @@ export const ProjectMasterSchedule = ({
                     disabled={!editable}
                   />
                 </FieldScope>
-                <div className="space-y-3">
+                <div className="space-y-5">
                   {items.map((item, index) => (
                     <div
                       key={item.nodeId || `new-${index}`}
-                      className="grid gap-3 rounded-md border p-3 md:grid-cols-12"
+                      className="grid items-end gap-3 border-b pb-5 lg:grid-cols-12"
                     >
-                      <FieldScope className="space-y-2 md:col-span-1">
-                        <Label>{t("operationalProjects.schedule.wbs")}</Label>
+                      <FieldScope className="space-y-2 lg:col-span-1">
+                        <Label>{t("scheduleUx.wbsCode")}</Label>
                         <Input
                           value={item.wbsCode}
                           onChange={(event) => patchItem(index, { wbsCode: event.target.value })}
@@ -646,17 +669,18 @@ export const ProjectMasterSchedule = ({
                           disabled={!editable}
                         />
                       </FieldScope>
-                      <FieldScope className="space-y-2 md:col-span-3">
-                        <Label>{t("operationalProjects.schedule.item")}</Label>
+                      <FieldScope className="space-y-2 lg:col-span-3">
+                        <Label>{t("scheduleUx.workItem")}</Label>
                         <Input
                           value={item.title}
+                          placeholder={t("scheduleUx.taskExample")}
                           onChange={(event) => patchItem(index, { title: event.target.value })}
                           maxLength={300}
                           disabled={!editable}
                         />
                       </FieldScope>
-                      <FieldScope className="space-y-2 md:col-span-2">
-                        <Label>{t("operationalProjects.schedule.parent")}</Label>
+                      <FieldScope className="space-y-2 lg:col-span-2">
+                        <Label>{t("scheduleUx.parentItem")}</Label>
                         <Select
                           value={item.parentNodeId || "none"}
                           onValueChange={(value) =>
@@ -683,7 +707,7 @@ export const ProjectMasterSchedule = ({
                           </SelectContent>
                         </Select>
                       </FieldScope>
-                      <FieldScope className="space-y-2 md:col-span-2">
+                      <FieldScope className="space-y-2 lg:col-span-2">
                         <Label>{t("operationalProjects.schedule.start")}</Label>
                         <Input
                           type="date"
@@ -694,7 +718,7 @@ export const ProjectMasterSchedule = ({
                           disabled={!editable}
                         />
                       </FieldScope>
-                      <FieldScope className="space-y-2 md:col-span-2">
+                      <FieldScope className="space-y-2 lg:col-span-2">
                         <Label>{t("operationalProjects.schedule.end")}</Label>
                         <Input
                           type="date"
@@ -704,7 +728,7 @@ export const ProjectMasterSchedule = ({
                         />
                       </FieldScope>
                       {editable && (
-                        <div className="flex items-end md:col-span-2">
+                        <div className="flex items-end lg:col-span-2">
                           <Button
                             type="button"
                             variant="outline"
@@ -819,9 +843,9 @@ export const ProjectMasterSchedule = ({
                 <table className="w-full min-w-[720px] text-sm">
                   <thead>
                     <tr className="border-b text-left">
-                      <th className="p-2">{t("operationalProjects.schedule.wbs")}</th>
-                      <th className="p-2">{t("operationalProjects.schedule.item")}</th>
-                      <th className="p-2">{t("operationalProjects.schedule.parent")}</th>
+                      <th className="p-2">{t("scheduleUx.wbsCode")}</th>
+                      <th className="p-2">{t("scheduleUx.workItem")}</th>
+                      <th className="p-2">{t("scheduleUx.parentItem")}</th>
                       <th className="p-2">{t("operationalProjects.schedule.start")}</th>
                       <th className="p-2">{t("operationalProjects.schedule.end")}</th>
                     </tr>

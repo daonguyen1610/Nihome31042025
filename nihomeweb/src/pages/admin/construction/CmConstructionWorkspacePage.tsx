@@ -47,15 +47,6 @@ type ReviewTarget =
   | { kind: "qaQc"; row: QaQcDossierResponse }
   | { kind: "qs"; row: ConstructionQsBatchResponse };
 
-const referenceFields = [
-  "wbsBaselineReference",
-  "scheduleBaselineReference",
-  "sCurveBaselineReference",
-  "bchOrganizationReference",
-  "resourcePlanReference",
-  "budgetBaselineReference",
-] as const;
-
 const baselineDocumentFields = [
   ["wbsBaselineDocumentId", "wbsBaselineReference"],
   ["scheduleBaselineDocumentId", "scheduleBaselineReference"],
@@ -368,7 +359,10 @@ export default function CmConstructionWorkspacePage() {
         <Tabs defaultValue={firstArea} className="space-y-4">
           <TabsList className="h-auto w-full flex-wrap justify-start gap-1">
             {canViewPreparation && (
-              <TabsTrigger value="preparation">{t("construction.cm.area.schedule")}</TabsTrigger>
+              <>
+                <TabsTrigger value="preparation">{t("construction.cm.preparationTab")}</TabsTrigger>
+                <TabsTrigger value="schedule">{t("cmSchedule.navigation")}</TabsTrigger>
+              </>
             )}
             {(canViewResources || canViewQs) && (
               <TabsTrigger value="commercial">{t("construction.cm.area.quantityCost")}</TabsTrigger>
@@ -383,16 +377,20 @@ export default function CmConstructionWorkspacePage() {
               <TabsTrigger value="contracts">{t("construction.cm.area.contracts")}</TabsTrigger>
             )}
           </TabsList>
-          <TabsContent value="preparation" className="space-y-4">
+          <TabsContent value="schedule">
             {projectId != null && canViewPreparation && (
-              <CmScheduleWorkspace key={projectId} projectId={projectId} />
+              <CmScheduleWorkspace key={projectId} projectId={projectId} standalone />
             )}
-
+          </TabsContent>
+          <TabsContent value="preparation" className="space-y-5">
+            <p className="max-w-3xl text-sm text-muted-foreground">
+              {t("construction.cm.preparationGuide")}
+            </p>
             {preparation == null ? (
               <PageEmpty message={t("construction.cm.noPreparation")} />
             ) : (
               <>
-                <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 rounded-xl border bg-card p-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <div className="flex items-center gap-2">
                       <h2 className="font-semibold">
@@ -413,21 +411,26 @@ export default function CmConstructionWorkspacePage() {
                           : t("construction.cm.notEvaluated")}
                     </p>
                   </div>
+                </div>
+                <div className="z-10 space-y-3 rounded-xl border bg-background p-4 sm:sticky sm:top-20">
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {t("construction.cm.actionGuide")}
+                  </p>
                   <div className="flex flex-wrap gap-2">
                     <Button asChild variant="outline">
                       <Link to="/admin/construction/tasks">{t("nav.constructionTasks")}</Link>
                     </Button>
                     {has(ADMIN_PERMS.constructionCmPreparationManage) && (
-                      <Button
-                        variant="outline"
-                        disabled={acting}
-                        onClick={() => void savePreparation()}
-                      >
+                      <Button disabled={acting} onClick={() => void savePreparation()}>
                         <Save className="mr-2 h-4 w-4" />
                         {t("common.save")}
                       </Button>
                     )}
-                    <Button disabled={acting} onClick={() => void readinessAction(false)}>
+                    <Button
+                      variant="outline"
+                      disabled={acting}
+                      onClick={() => void readinessAction(false)}
+                    >
                       <RefreshCcw className="mr-2 h-4 w-4" />
                       {t("construction.cm.evaluate")}
                     </Button>
@@ -446,31 +449,50 @@ export default function CmConstructionWorkspacePage() {
                     )}
                   </div>
                 </div>
-                <div className="grid gap-4 rounded-xl border bg-card p-4 shadow-sm md:grid-cols-2 xl:grid-cols-3">
-                  {referenceFields.map((field) => (
-                    <div key={field} className="space-y-1.5">
-                      <Label htmlFor={field}>{t(`construction.cm.${field}`)}</Label>
-                      <Input
-                        id={field}
-                        required
-                        maxLength={500}
-                        disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
-                        value={preparation[field]}
-                        onChange={(event) => patchPreparation({ [field]: event.target.value })}
-                      />
-                    </div>
-                  ))}
-                  {baselineDocumentFields.map(([field, labelField]) => (
-                    <DocumentSelect
-                      key={field}
-                      id={field}
-                      label={`${t(`construction.cm.${labelField}`)} · ${t("acceptance.field.documents")}`}
-                      value={preparation[field]}
-                      documents={projectDocuments}
-                      disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
-                      onChange={(value) => patchPreparation({ [field]: value })}
-                    />
-                  ))}
+                <fieldset className="space-y-4 rounded-xl border bg-card p-4 sm:p-5">
+                  <legend className="px-2 font-semibold">
+                    {t("construction.cm.baselineEvidence")}
+                  </legend>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {t("construction.cm.baselineGuide")}
+                  </p>
+                  <div className="divide-y">
+                    {baselineDocumentFields.map(([documentField, referenceField]) => (
+                      <div
+                        key={referenceField}
+                        className="grid gap-3 py-4 first:pt-0 last:pb-0 md:grid-cols-2"
+                      >
+                        <div className="space-y-1.5">
+                          <Label htmlFor={referenceField}>
+                            {t(`construction.cm.${referenceField}`)}
+                          </Label>
+                          <Input
+                            id={referenceField}
+                            required
+                            maxLength={500}
+                            disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
+                            value={preparation[referenceField]}
+                            onChange={(event) =>
+                              patchPreparation({ [referenceField]: event.target.value })
+                            }
+                          />
+                        </div>
+                        <DocumentSelect
+                          id={documentField}
+                          label={`${t(`construction.cm.${referenceField}`)} · ${t("acceptance.field.documents")}`}
+                          value={preparation[documentField]}
+                          documents={projectDocuments}
+                          disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
+                          onChange={(value) => patchPreparation({ [documentField]: value })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                </fieldset>
+                <fieldset className="grid gap-4 rounded-xl border bg-card p-4 sm:p-5 md:grid-cols-2 xl:grid-cols-3">
+                  <legend className="px-2 font-semibold">
+                    {t("construction.cm.projectRequirements")}
+                  </legend>
                   {(
                     ["siteHandoverRequired", "methodStatementRequired", "hsePlanRequired"] as const
                   ).map((field) => (
@@ -485,22 +507,6 @@ export default function CmConstructionWorkspacePage() {
                         disabled={!has(ADMIN_PERMS.constructionCmPreparationManage)}
                         onCheckedChange={(checked) => patchPreparation({ [field]: checked })}
                       />
-                    </div>
-                  ))}
-                  {(
-                    [
-                      "budgetBaselineLocked",
-                      "siteHandoverComplete",
-                      "methodStatementApproved",
-                      "hsePlanApproved",
-                    ] as const
-                  ).map((field) => (
-                    <div
-                      key={field}
-                      className="flex items-center justify-between gap-3 rounded-lg border bg-muted/30 p-3"
-                    >
-                      <Label htmlFor={field}>{t(`construction.cm.${field}`)}</Label>
-                      <Switch id={field} checked={preparation[field]} disabled />
                     </div>
                   ))}
                   {preparation.siteHandoverRequired && (
@@ -533,7 +539,37 @@ export default function CmConstructionWorkspacePage() {
                       onChange={(value) => patchPreparation({ hsePlanDocumentId: value })}
                     />
                   )}
-                </div>
+                </fieldset>
+                <section className="space-y-3" aria-labelledby="cm-verified-status">
+                  <h3 id="cm-verified-status" className="font-semibold">
+                    {t("construction.cm.verifiedStatus")}
+                  </h3>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {t("construction.cm.verifiedGuide")}
+                  </p>
+                  <dl className="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                    {(
+                      [
+                        "budgetBaselineLocked",
+                        "siteHandoverComplete",
+                        "methodStatementApproved",
+                        "hsePlanApproved",
+                      ] as const
+                    ).map((field) => (
+                      <div
+                        key={field}
+                        className="flex items-center justify-between gap-4 border-b py-2"
+                      >
+                        <dt className="text-sm">{t(`construction.cm.${field}`)}</dt>
+                        <dd>
+                          <Badge variant="outline">
+                            {t(preparation[field] ? "common.yes" : "common.no")}
+                          </Badge>
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                </section>
                 {preparation.missingConditions.length > 0 && (
                   <div className="rounded-xl border border-amber-200 bg-amber-50 p-4">
                     <h3 className="font-medium text-amber-900">{t("construction.cm.blockers")}</h3>

@@ -158,6 +158,8 @@ export function CmScheduleWorkspace({
     [report],
   );
   const percent = (value: number) => `${value.toLocaleString(lang, { maximumFractionDigits: 8 })}%`;
+  const displayDate = (value: string) =>
+    new Date(`${value.slice(0, 10)}T00:00:00Z`).toLocaleDateString(lang, { timeZone: "UTC" });
   const setLine = (id: number, patch: Partial<CmScheduleLine>) =>
     setLines((current) => current.map((row) => (row.taskId === id ? { ...row, ...patch } : row)));
   const unlinkedTasks = data && data.unlinked.length > 0 && (
@@ -168,7 +170,7 @@ export function CmScheduleWorkspace({
           <li key={task.id}>
             <Link
               className="text-sm text-foreground underline decoration-border underline-offset-4 hover:decoration-current"
-              to={`/admin/construction/tasks?taskId=${task.id}`}
+              to={`/admin/construction/tasks?designProjectId=${task.designProjectId}&taskId=${task.id}`}
             >
               {task.taskCode} · {task.name}
             </Link>
@@ -213,52 +215,80 @@ export function CmScheduleWorkspace({
               className="space-y-5 rounded-xl border bg-card p-5 sm:p-6"
               data-testid="cm-schedule-setup"
             >
-              <p className="max-w-3xl text-sm text-muted-foreground">
-                {t("cmSchedule.setupIntro")}
-              </p>
-              {!data.crmRevisionId && (
-                <div className="space-y-3">
-                  <p className="font-medium">{t("cmSchedule.noCrm")}</p>
+              <div className="space-y-2">
+                <h3 className="font-semibold">{t("scheduleUx.setupHeading")}</h3>
+                <p className="max-w-3xl text-sm text-muted-foreground">
+                  {t("scheduleUx.setupDescription")}
+                </p>
+              </div>
+              <ol className="list-decimal space-y-5 pl-5 marker:font-semibold">
+                <li className="space-y-2 pl-1">
+                  <p className="font-medium">{t("scheduleUx.crmStep")}</p>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {t(data.crmRevisionId ? "scheduleUx.crmReady" : "scheduleUx.crmMissing")}
+                  </p>
                   {has(ADMIN_PERMS.operationalProjects) && (
-                    <Button asChild variant="outline">
-                      <Link to={`/admin/operational-projects/${projectId}?tab=schedule`}>
+                    <Button asChild variant={data.crmRevisionId ? "outline" : "default"}>
+                      <Link
+                        to={`/admin/operational-projects/${projectId}?tab=schedule#project-master-schedule`}
+                      >
                         {t("cmSchedule.openCrm")}
                       </Link>
                     </Button>
                   )}
-                </div>
-              )}
-              {data.crmRevisionId && data.proposed.length === 0 && data.unlinked.length === 0 && (
-                <div className="space-y-3">
-                  <p>{t("cmSchedule.noTasks")}</p>
-                  {has(ADMIN_PERMS.constructionTasksManage) && (
-                    <Button asChild variant="outline">
-                      <Link to="/admin/construction/tasks">{t("cmSchedule.openTasks")}</Link>
-                    </Button>
-                  )}
-                </div>
-              )}
-              {unlinkedTasks}
-              {planReady && <p className="text-sm">{t("cmSchedule.noBaseline")}</p>}
+                </li>
+                <li className="space-y-2 pl-1">
+                  <p className="font-medium">{t("scheduleUx.taskStep")}</p>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {t("scheduleUx.taskStepHint")}
+                  </p>
+                  {unlinkedTasks}
+                  {data.crmRevisionId &&
+                    data.proposed.length === 0 &&
+                    data.unlinked.length === 0 && (
+                      <p className="text-sm">{t("cmSchedule.noTasks")}</p>
+                    )}
+                  {has(ADMIN_PERMS.constructionTasks) &&
+                    data.unlinked.length === 0 &&
+                    !data.proposed.length && (
+                      <Button asChild variant="outline">
+                        <Link to="/admin/construction/tasks">{t("cmSchedule.openTasks")}</Link>
+                      </Button>
+                    )}
+                </li>
+                <li className="space-y-2 pl-1">
+                  <p className="font-medium">{t("scheduleUx.planStep")}</p>
+                  <p className="max-w-3xl text-sm text-muted-foreground">
+                    {t(planReady ? "scheduleUx.planReady" : "scheduleUx.planBlocked")}
+                  </p>
+                </li>
+              </ol>
             </div>
           )}
           {selected && unlinkedTasks && (
             <div className="space-y-3 rounded-xl border bg-card p-5 sm:p-6">{unlinkedTasks}</div>
           )}
-          <div className="flex flex-wrap gap-2 items-center">
+          <div className="flex flex-wrap gap-3 items-end">
             {data.baselines.length > 0 && (
-              <Select value={selected ? String(selected.id) : ""} onValueChange={setBaselineId}>
-                <SelectTrigger className="w-full sm:w-72" aria-label={t("cmSchedule.version")}>
-                  <SelectValue placeholder={t("cmSchedule.noBaseline")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {data.baselines.map((x) => (
-                    <SelectItem key={x.id} value={String(x.id)}>
-                      {t("cmSchedule.version")} {x.version} · {t(`cmSchedule.status.${x.status}`)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="w-full space-y-1.5 sm:w-80">
+                <Label htmlFor="cm-baseline-version">{t("cmSchedule.version")}</Label>
+                <Select value={selected ? String(selected.id) : ""} onValueChange={setBaselineId}>
+                  <SelectTrigger
+                    id="cm-baseline-version"
+                    className="w-full"
+                    aria-label={t("cmSchedule.version")}
+                  >
+                    <SelectValue placeholder={t("cmSchedule.noBaseline")} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {data.baselines.map((x) => (
+                      <SelectItem key={x.id} value={String(x.id)}>
+                        {t("cmSchedule.version")} {x.version} · {t(`cmSchedule.status.${x.status}`)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             )}
             {manage &&
               (selected || planReady) &&
@@ -340,23 +370,33 @@ export function CmScheduleWorkspace({
           </div>
           {selected && (
             <>
-              <p className="text-sm">{selected.changeReason}</p>
-              <p className="text-sm text-muted-foreground">{selected.weightBasisNote}</p>
-              <div className="space-y-1 text-sm text-muted-foreground">
-                <p>
-                  {t("cmSchedule.workingDays")}:{" "}
-                  {[1, 2, 3, 4, 5, 6, 0]
-                    .filter((day) => selected.workingDaysOfWeek.includes(day))
-                    .map((day) => t(`cmSchedule.weekday.${day}`))
-                    .join(", ")}
-                </p>
-                <p>
-                  {t("cmSchedule.nonWorkingDate")}:{" "}
-                  {selected.nonWorkingDates.length
-                    ? selected.nonWorkingDates.join(", ")
-                    : t("common.noData")}
-                </p>
-              </div>
+              <p role="status" className="max-w-3xl text-sm text-muted-foreground">
+                {t(`scheduleUx.state.${selected.status}`)}
+              </p>
+              <details className="text-sm">
+                <summary className="cursor-pointer py-2 font-medium">
+                  {t("scheduleUx.planDetails")}
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <p className="text-sm">{selected.changeReason}</p>
+                  <p className="text-sm text-muted-foreground">{selected.weightBasisNote}</p>
+                  <div className="space-y-1 text-sm text-muted-foreground">
+                    <p>
+                      {t("cmSchedule.workingDays")}:{" "}
+                      {[1, 2, 3, 4, 5, 6, 0]
+                        .filter((day) => selected.workingDaysOfWeek.includes(day))
+                        .map((day) => t(`cmSchedule.weekday.${day}`))
+                        .join(", ")}
+                    </p>
+                    <p>
+                      {t("cmSchedule.nonWorkingDate")}:{" "}
+                      {selected.nonWorkingDates.length
+                        ? selected.nonWorkingDates.join(", ")
+                        : t("common.noData")}
+                    </p>
+                  </div>
+                </div>
+              </details>
               {selected.crmRevisionId !== data.crmRevisionId && (
                 <p role="status" className="text-destructive">
                   {t("cmSchedule.crmChanged")}
@@ -396,13 +436,164 @@ export function CmScheduleWorkspace({
                   </div>
                 ))}
               {selected.reviewNote && <p>{selected.reviewNote}</p>}
+              <div className="space-y-2">
+                <h3 className="font-semibold">{t("scheduleUx.curveTitle")}</h3>
+                <p className="max-w-3xl text-sm text-muted-foreground">
+                  {t("scheduleUx.curveHint")}
+                </p>
+                <p className="max-w-3xl text-sm text-muted-foreground">
+                  {t("scheduleUx.curveMissingHint")}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="cm-report-period">{t("cmSchedule.period")}</Label>
+                  <Select value={period} onValueChange={setPeriod}>
+                    <SelectTrigger
+                      id="cm-report-period"
+                      className="w-48"
+                      aria-label={t("cmSchedule.period")}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {["day", "month", "year"].map((value) => (
+                        <SelectItem key={value} value={value}>
+                          {t(`cmSchedule.period.${value}`)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="cm-report-date">{t("cmSchedule.periodDate")}</Label>
+                  <LocalizedDateInput
+                    id="cm-report-date"
+                    aria-label={t("cmSchedule.periodDate")}
+                    value={anchor}
+                    onChange={(e) => setPeriodDate(e.target.value)}
+                  />
+                </div>
+              </div>
+              {reportLoading && <p role="status">{t("common.loading")}</p>}
+              {reportError && (
+                <p role="alert" className="text-destructive">
+                  {reportError}
+                </p>
+              )}
+              {!reportLoading && !reportError && chart.length === 0 && (
+                <p className="rounded-lg border p-4 text-sm">{t("scheduleUx.noPeriodData")}</p>
+              )}
+              {chart.length > 0 && (
+                <div className="h-72 w-full min-w-0">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={chart}>
+                      <XAxis
+                        dataKey="date"
+                        type="number"
+                        domain={["dataMin", "dataMax"]}
+                        tickFormatter={(value) =>
+                          new Date(value).toLocaleDateString(lang, { timeZone: "UTC" })
+                        }
+                      />
+                      <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} width={48} />
+                      <Tooltip
+                        labelFormatter={(value) =>
+                          new Date(Number(value)).toLocaleDateString(lang, { timeZone: "UTC" })
+                        }
+                        formatter={(value) => percent(Number(value))}
+                      />
+                      <Legend />
+                      <Line
+                        type="linear"
+                        dataKey="crmPercent"
+                        name={t("scheduleUx.seriesCrm")}
+                        stroke="var(--chart-1, #2563eb)"
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        dot={false}
+                      />
+                      <Line
+                        type="linear"
+                        dataKey="planPercent"
+                        name={t("scheduleUx.seriesCm")}
+                        stroke="var(--chart-2, #d97706)"
+                        strokeWidth={2}
+                        strokeDasharray="2 3"
+                        dot={false}
+                      />
+                      <Line
+                        type="linear"
+                        dataKey="actualPercent"
+                        name={t("scheduleUx.seriesActual")}
+                        stroke="var(--chart-3, #16a34a)"
+                        strokeWidth={3}
+                        connectNulls={false}
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              {chart.length > 0 && (
+                <details className="text-sm">
+                  <summary className="cursor-pointer py-2 font-medium">
+                    {t("scheduleUx.viewValues")}
+                  </summary>
+                  <div className="mt-2 overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <caption className="sr-only">{t("scheduleUx.curveTitle")}</caption>
+                      <thead>
+                        <tr>
+                          {[
+                            "cmSchedule.periodDate",
+                            "scheduleUx.seriesCrm",
+                            "scheduleUx.seriesCm",
+                            "scheduleUx.seriesActual",
+                          ].map((key) => (
+                            <th key={key} scope="col" className="p-2 text-left">
+                              {t(key)}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {report?.points.map((point) => (
+                          <tr key={point.date} className="border-t">
+                            <th scope="row" className="whitespace-nowrap p-2 text-left font-normal">
+                              {displayDate(point.date)}
+                            </th>
+                            <td className="p-2 tabular-nums">{percent(point.crmPercent)}</td>
+                            <td className="p-2 tabular-nums">{percent(point.planPercent)}</td>
+                            <td className="p-2 tabular-nums">
+                              {point.actualPercent === null
+                                ? t("cmSchedule.actualUnreported")
+                                : percent(point.actualPercent)}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </details>
+              )}
+              {chart.some((point) => !point.isDataComplete) && (
+                <p role="status" className="text-sm text-muted-foreground">
+                  {t("cmSchedule.reportIncomplete")}
+                </p>
+              )}
+              <div className="space-y-2 pt-3">
+                <h3 className="font-semibold">{t("scheduleUx.taskProgress")}</h3>
+                <p className="max-w-3xl text-sm text-muted-foreground">
+                  {t("scheduleUx.actualGuidance")}
+                </p>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr>
                       <th className="p-2 text-left">{t("cmSchedule.task")}</th>
-                      <th className="p-2 text-left">CRM</th>
-                      <th className="p-2 text-left">CM</th>
+                      <th className="p-2 text-left">{t("scheduleUx.seriesCrm")}</th>
+                      <th className="p-2 text-left">{t("scheduleUx.seriesCm")}</th>
                       <th className="p-2 text-right">{t("cmSchedule.weight")}</th>
                     </tr>
                   </thead>
@@ -416,7 +607,7 @@ export function CmScheduleWorkspace({
                           {x.isLeaf &&
                             data.actualInputs.find((input) => input.taskId === x.taskId) && (
                               <p className="text-xs text-muted-foreground">
-                                {t("cmSchedule.bch")}:{" "}
+                                {t("scheduleUx.seriesActual")}:{" "}
                                 {data.actualInputs.find((input) => input.taskId === x.taskId)!
                                   .progressReportedAt
                                   ? percent(
@@ -469,10 +660,10 @@ export function CmScheduleWorkspace({
                             )}
                         </td>
                         <td className="p-2 whitespace-nowrap">
-                          {x.crmStart} → {x.crmEnd}
+                          {displayDate(x.crmStart)} → {displayDate(x.crmEnd)}
                         </td>
                         <td className="p-2 whitespace-nowrap">
-                          {x.plannedStart} → {x.plannedEnd}
+                          {displayDate(x.plannedStart)} → {displayDate(x.plannedEnd)}
                         </td>
                         <td className="p-2 text-right">
                           {x.isMilestone
@@ -486,86 +677,15 @@ export function CmScheduleWorkspace({
                   </tbody>
                 </table>
               </div>
-              <h3 className="font-semibold">{t("cmSchedule.comparison")}</h3>
-              <div className="flex flex-wrap items-center gap-3">
-                <Select value={period} onValueChange={setPeriod}>
-                  <SelectTrigger className="w-48" aria-label={t("cmSchedule.period")}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {["day", "month", "year"].map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {t(`cmSchedule.period.${value}`)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <LocalizedDateInput
-                  aria-label={t("cmSchedule.periodDate")}
-                  value={anchor}
-                  onChange={(e) => setPeriodDate(e.target.value)}
-                />
-              </div>
-              {reportLoading && <p role="status">{t("common.loading")}</p>}
-              {reportError && (
-                <p role="alert" className="text-destructive">
-                  {reportError}
-                </p>
-              )}
-              {chart.length === 0 ? (
-                <p>{t("cmSchedule.noActual")}</p>
-              ) : (
-                <div className="h-72 w-full min-w-0">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chart}>
-                      <XAxis
-                        dataKey="date"
-                        type="number"
-                        domain={["dataMin", "dataMax"]}
-                        tickFormatter={(value) =>
-                          new Date(value).toLocaleDateString(lang, { timeZone: "UTC" })
-                        }
-                      />
-                      <YAxis domain={[0, 100]} />
-                      <Tooltip
-                        labelFormatter={(value) =>
-                          new Date(Number(value)).toLocaleDateString(lang, { timeZone: "UTC" })
-                        }
-                        formatter={(value) => percent(Number(value))}
-                      />
-                      <Legend />
-                      <Line
-                        type="linear"
-                        dataKey="crmPercent"
-                        name={t("cmSchedule.crm")}
-                        stroke="var(--chart-1, #2563eb)"
-                      />
-                      <Line
-                        type="linear"
-                        dataKey="planPercent"
-                        name={t("cmSchedule.cm")}
-                        stroke="var(--chart-2, #d97706)"
-                      />
-                      <Line
-                        type="linear"
-                        dataKey="actualPercent"
-                        name={t("cmSchedule.bch")}
-                        stroke="var(--chart-3, #16a34a)"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              )}
-              {chart.some((point) => !point.isDataComplete) && (
-                <p role="status" className="text-sm text-muted-foreground">
-                  {t("cmSchedule.reportIncomplete")}
-                </p>
+              <h3 className="font-semibold">{t("scheduleUx.history")}</h3>
+              {snapshots.length === 0 && (
+                <p className="text-sm text-muted-foreground">{t("scheduleUx.noSnapshots")}</p>
               )}
               <ul className="space-y-3">
                 {snapshots.map((row) => (
                   <li key={row.id} className="space-y-2 rounded-md border p-3">
                     <div className="flex flex-wrap gap-3">
-                      <span>{row.asOfDate}</span>
+                      <span>{displayDate(row.asOfDate)}</span>
                       <span>CRM {percent(row.crmPercent)}</span>
                       <span>CM {percent(row.planPercent)}</span>
                       <span>BCH {percent(row.actualPercent)}</span>
@@ -674,7 +794,7 @@ export function CmScheduleWorkspace({
             <DialogTitle>{t("cmSchedule.updateActual")}</DialogTitle>
             <DialogDescription>{t("cmSchedule.actualHint")}</DialogDescription>
           </DialogHeader>
-          <Label htmlFor="cm-actual-progress">{t("cmSchedule.bch")}</Label>
+          <Label htmlFor="cm-actual-progress">{t("scheduleUx.seriesActual")}</Label>
           <MoneyInput
             showZero
             decimalScale={4}
@@ -802,20 +922,28 @@ export function CmScheduleWorkspace({
                 <p className="sm:col-span-4">
                   {row.wbs} · {row.name}
                 </p>
-                <LocalizedDateInput
-                  aria-label={`${t("cmSchedule.start")} ${row.wbs}`}
-                  min={row.crmStart}
-                  max={row.crmEnd}
-                  value={row.plannedStart}
-                  onChange={(e) => setLine(row.taskId, { plannedStart: e.target.value })}
-                />
-                <LocalizedDateInput
-                  aria-label={`${t("cmSchedule.end")} ${row.wbs}`}
-                  min={row.crmStart}
-                  max={row.crmEnd}
-                  value={row.plannedEnd}
-                  onChange={(e) => setLine(row.taskId, { plannedEnd: e.target.value })}
-                />
+                <div className="space-y-1.5">
+                  <Label htmlFor={`cm-start-${row.taskId}`}>{t("cmSchedule.start")}</Label>
+                  <LocalizedDateInput
+                    id={`cm-start-${row.taskId}`}
+                    aria-label={`${t("cmSchedule.start")} ${row.wbs}`}
+                    min={row.crmStart}
+                    max={row.crmEnd}
+                    value={row.plannedStart}
+                    onChange={(e) => setLine(row.taskId, { plannedStart: e.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor={`cm-end-${row.taskId}`}>{t("cmSchedule.end")}</Label>
+                  <LocalizedDateInput
+                    id={`cm-end-${row.taskId}`}
+                    aria-label={`${t("cmSchedule.end")} ${row.wbs}`}
+                    min={row.crmStart}
+                    max={row.crmEnd}
+                    value={row.plannedEnd}
+                    onChange={(e) => setLine(row.taskId, { plannedEnd: e.target.value })}
+                  />
+                </div>
                 {row.isLeaf ? (
                   <>
                     <label className="flex items-center gap-2 text-sm">
@@ -829,12 +957,16 @@ export function CmScheduleWorkspace({
                       {t("cmSchedule.milestone")}
                     </label>
                     {!row.isMilestone && (
-                      <MoneyInput
-                        aria-label={`${t("cmSchedule.weight")} ${row.wbs}`}
-                        decimalScale={4}
-                        value={row.weight}
-                        onChange={(weight) => setLine(row.taskId, { weight })}
-                      />
+                      <div className="space-y-1.5">
+                        <Label htmlFor={`cm-weight-${row.taskId}`}>{t("cmSchedule.weight")}</Label>
+                        <MoneyInput
+                          id={`cm-weight-${row.taskId}`}
+                          aria-label={`${t("cmSchedule.weight")} ${row.wbs}`}
+                          decimalScale={4}
+                          value={row.weight}
+                          onChange={(weight) => setLine(row.taskId, { weight })}
+                        />
+                      </div>
                     )}
                   </>
                 ) : (
@@ -848,6 +980,7 @@ export function CmScheduleWorkspace({
               {error}
             </p>
           )}
+          <p className="text-sm text-muted-foreground">{t("scheduleUx.createGuide")}</p>
           <DialogFooter>
             <Button
               disabled={

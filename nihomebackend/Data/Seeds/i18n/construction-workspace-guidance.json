@@ -1,0 +1,394 @@
+[
+  {
+    "key": "construction.cm.preparationTab",
+    "category": "construction",
+    "vi": "Điều kiện khởi công",
+    "en": "Startup readiness",
+    "zh": "开工条件",
+    "ja": "着工条件"
+  },
+  {
+    "key": "construction.cm.preparationGuide",
+    "category": "construction",
+    "vi": "Chuẩn bị hồ sơ để kiểm tra dự án có đủ điều kiện khởi công. Lập và duyệt kế hoạch tại thẻ Tiến độ thi công.",
+    "en": "Prepare evidence to check whether the project can start. Create and approve the plan in Construction progress.",
+    "zh": "准备资料以检查项目是否满足开工条件。在施工进度页签中编制和审批计划。",
+    "ja": "着工条件を確認するための資料を準備します。計画の作成と承認は「施工進捗」で行います。"
+  },
+  {
+    "key": "construction.cm.baselineEvidence",
+    "category": "construction",
+    "vi": "Hồ sơ kế hoạch gốc",
+    "en": "Baseline evidence",
+    "zh": "基线资料",
+    "ja": "ベースライン資料"
+  },
+  {
+    "key": "construction.cm.baselineGuide",
+    "category": "construction",
+    "vi": "Nhập tham chiếu và chọn tài liệu tương ứng trên cùng một hàng. Các tài liệu được lấy từ hồ sơ thi công của dự án.",
+    "en": "Enter each reference and select its supporting document on the same row. Documents come from this project’s construction records.",
+    "zh": "在同一行填写引用并选择对应文件。文件来自本项目的施工档案。",
+    "ja": "各行に参照情報を入力し、対応する資料を選択します。資料はこのプロジェクトの施工記録から取得されます。"
+  },
+  {
+    "key": "construction.cm.projectRequirements",
+    "category": "construction",
+    "vi": "Yêu cầu bổ sung của dự án",
+    "en": "Additional project requirements",
+    "zh": "项目附加要求",
+    "ja": "プロジェクトの追加要件"
+  },
+  {
+    "key": "construction.cm.verifiedStatus",
+    "category": "construction",
+    "vi": "Kết quả xác minh",
+    "en": "Verification results",
+    "zh": "核验结果",
+    "ja": "確認結果"
+  },
+  {
+    "key": "construction.cm.verifiedGuide",
+    "category": "construction",
+    "vi": "Các trạng thái này do hệ thống xác minh từ hồ sơ nguồn khi đánh giá điều kiện; không chỉnh trực tiếp tại đây.",
+    "en": "These results are verified from source records during readiness evaluation. They cannot be edited here.",
+    "zh": "这些结果在开工条件评估时根据源记录核验，无法在此直接编辑。",
+    "ja": "これらの結果は着工条件の評価時に元の記録から確認されます。ここでは直接編集できません。"
+  },
+  {
+    "key": "construction.cm.actionGuide",
+    "category": "construction",
+    "vi": "Sau khi sửa hồ sơ, lưu thay đổi rồi đánh giá điều kiện. Chỉ có thể cho phép khởi công khi kết quả đánh giá xác nhận đủ điều kiện.",
+    "en": "After editing, save changes, then evaluate readiness. Starting construction is available only after evaluation confirms readiness.",
+    "zh": "修改资料后，先保存，再评估开工条件。评估确认满足条件后才能允许开工。",
+    "ja": "編集後は変更を保存してから着工条件を評価してください。評価で条件を満たしたことが確認されると着工を許可できます。"
+  },
+  {
+    "key": "scheduleUx.setupHeading",
+    "category": "construction",
+    "vi": "Để xem biểu đồ tiến độ, cần hoàn thành các bước sau",
+    "en": "Complete these steps to see the progress chart",
+    "zh": "完成以下步骤以查看进度图",
+    "ja": "進捗グラフを表示するための準備"
+  },
+  {
+    "key": "scheduleUx.setupDescription",
+    "category": "construction",
+    "vi": "Biểu đồ S-curve cho biết theo kế hoạch và thực tế, dự án đã hoàn thành bao nhiêu phần trăm theo thời gian. Dự án này chưa có kế hoạch CM để đối chiếu.",
+    "en": "The S-curve shows planned and actual project completion over time. This project does not yet have a CM plan to compare.",
+    "zh": "S曲线显示项目计划与实际完成比例随时间的变化。本项目尚无可对比的CM计划。",
+    "ja": "Sカーブは時間に沿った計画と実績の完成率を示します。このプロジェクトには比較用のCM計画がまだありません。"
+  },
+  {
+    "key": "scheduleUx.crmStep",
+    "category": "construction",
+    "vi": "Phát hành tiến độ tổng thể của dự án",
+    "en": "Publish the project master schedule",
+    "zh": "发布项目总进度",
+    "ja": "プロジェクト全体工程を公開"
+  },
+  {
+    "key": "scheduleUx.crmReady",
+    "category": "construction",
+    "vi": "Đã có tiến độ tổng thể được phát hành để lập kế hoạch thi công.",
+    "en": "A published master schedule is available for construction planning.",
+    "zh": "已发布的总进度可用于编制施工计划。",
+    "ja": "公開済みの全体工程を施工計画に使用できます。"
+  },
+  {
+    "key": "scheduleUx.crmMissing",
+    "category": "construction",
+    "vi": "CRM cần nhập các hạng mục, ngày bắt đầu và kết thúc, rồi gửi người phụ trách duyệt. Lưu bản nháp chưa đủ để lập kế hoạch CM.",
+    "en": "CRM needs to enter work items and dates, then send the schedule for approval. Saving a draft alone does not make it available to CM.",
+    "zh": "CRM需填写工作项和日期并提交审批。仅保存草稿还不能用于CM计划。",
+    "ja": "CRMが作業項目と日付を入力して承認を申請します。下書きの保存だけではCM計画に使用できません。"
+  },
+  {
+    "key": "scheduleUx.taskStep",
+    "category": "construction",
+    "vi": "Liên kết công việc thi công với tiến độ tổng thể",
+    "en": "Link construction tasks to the master schedule",
+    "zh": "将施工任务关联到总进度",
+    "ja": "施工作業を全体工程に連携"
+  },
+  {
+    "key": "scheduleUx.taskStepHint",
+    "category": "construction",
+    "vi": "WBS là mã phân chia công việc. Mỗi công việc thi công cần liên kết với hạng mục tương ứng trong tiến độ tổng thể.",
+    "en": "WBS is the work breakdown code. Each construction task needs a link to its corresponding master schedule item.",
+    "zh": "WBS是工作分解编码。每项施工任务需关联到总进度中的对应工作项。",
+    "ja": "WBSは作業を分解したコードです。各施工作業を全体工程の対応する項目に連携します。"
+  },
+  {
+    "key": "scheduleUx.planStep",
+    "category": "construction",
+    "vi": "Phòng CM lập kế hoạch, PM duyệt, BCH cập nhật thực tế",
+    "en": "CM prepares, PM approves, site team reports",
+    "zh": "CM编制、PM审批、现场报告",
+    "ja": "CMが作成、PMが承認、現場が実績報告"
+  },
+  {
+    "key": "scheduleUx.planReady",
+    "category": "construction",
+    "vi": "Đã đủ dữ liệu để Phòng CM lập phiên bản kế hoạch bên dưới. Sau khi PM duyệt, chỉ huy trưởng được phân công cập nhật tỷ lệ hoàn thành từng công việc.",
+    "en": "CM can create a plan version below. After PM approval, the assigned site manager reports completion for each task.",
+    "zh": "CM可在下方创建计划版本。PM审批后，由指定现场负责人报告各任务完成率。",
+    "ja": "下の操作でCM計画を作成できます。PM承認後、担当現場責任者が各作業の完成率を報告します。"
+  },
+  {
+    "key": "scheduleUx.planBlocked",
+    "category": "construction",
+    "vi": "Hoàn thành tiến độ tổng thể và liên kết công việc trước. Sau đó Phòng CM phân bổ tỷ trọng công việc, lập kế hoạch và gửi PM duyệt.",
+    "en": "Complete the master schedule and task links first. CM can then assign task weights, prepare the plan, and send it for PM approval.",
+    "zh": "先完成总进度与任务关联，再由CM分配权重、编制计划并提交PM审批。",
+    "ja": "全体工程と作業の連携を先に完了します。その後、CMが配分比率と計画を設定しPMに承認を申請します。"
+  },
+  {
+    "key": "scheduleUx.state.Draft",
+    "category": "construction",
+    "vi": "Kế hoạch đang là bản nháp. Người lập cần gửi PM duyệt trước khi BCH báo cáo tiến độ theo kế hoạch này.",
+    "en": "This plan is a draft. Its author needs to send it for PM approval before site reporting can use it.",
+    "zh": "此计划为草稿，编制人需提交PM审批后才能用于现场进度报告。",
+    "ja": "下書きの計画です。現場報告に使用するには作成者がPMに承認を申請してください。"
+  },
+  {
+    "key": "scheduleUx.state.PendingApproval",
+    "category": "construction",
+    "vi": "Đang chờ PM được phân công duyệt. Kế hoạch này chưa được phát hành để BCH cập nhật thực tế.",
+    "en": "Waiting for the assigned PM to approve. This plan is not yet published for site reporting.",
+    "zh": "等待指定PM审批，尚未发布供现场报告使用。",
+    "ja": "担当PMの承認待ちです。現場報告用にはまだ公開されていません。"
+  },
+  {
+    "key": "scheduleUx.state.Published",
+    "category": "construction",
+    "vi": "Kế hoạch đã được phát hành. Chỉ huy trưởng được phân công cập nhật thực tế ở từng công việc bên dưới.",
+    "en": "This plan is published. The assigned site manager can report actual progress on the tasks below.",
+    "zh": "计划已发布，指定现场负责人可在下方任务中更新实际进度。",
+    "ja": "公開済みの計画です。担当現場責任者は下の作業から実績を報告できます。"
+  },
+  {
+    "key": "scheduleUx.state.Rejected",
+    "category": "construction",
+    "vi": "Kế hoạch bị từ chối. Xem ý kiến duyệt trong chi tiết kế hoạch và lập phiên bản mới theo quyền được cấp.",
+    "en": "This plan was rejected. Read the review note in plan details and prepare a new version if permitted.",
+    "zh": "计划已被拒绝。请查看计划详情中的审批意见，并在有权限时创建新版本。",
+    "ja": "却下された計画です。計画詳細で審査コメントを確認し、権限がある場合は新しい版を作成してください。"
+  },
+  {
+    "key": "scheduleUx.state.Cancelled",
+    "category": "construction",
+    "vi": "Phiên bản này đã hủy và không dùng để cập nhật tiến độ thực tế.",
+    "en": "This version was cancelled and is not used for site progress reporting.",
+    "zh": "此版本已取消，不用于现场实际进度报告。",
+    "ja": "取り消された版です。現場実績の報告には使用されません。"
+  },
+  {
+    "key": "scheduleUx.planDetails",
+    "category": "construction",
+    "vi": "Chi tiết kế hoạch và lịch làm việc",
+    "en": "Plan details and working calendar",
+    "zh": "计划详情与工作日历",
+    "ja": "計画詳細と作業カレンダー"
+  },
+  {
+    "key": "scheduleUx.curveTitle",
+    "category": "construction",
+    "vi": "Biểu đồ hoàn thành theo thời gian (S-curve)",
+    "en": "Completion over time (S-curve)",
+    "zh": "完成率随时间变化（S曲线）",
+    "ja": "時間に沿った完成率（Sカーブ）"
+  },
+  {
+    "key": "scheduleUx.curveHint",
+    "category": "construction",
+    "vi": "CRM là tiến độ tổng thể; CM là kế hoạch thi công đã chọn; BCH là thực tế công trường. Trục ngang là thời gian, trục dọc là tỷ lệ hoàn thành từ 0% đến 100%.",
+    "en": "CRM is the master schedule; CM is the selected construction plan; BCH is site actual progress. Time runs horizontally and completion from 0% to 100% vertically.",
+    "zh": "CRM为总进度，CM为所选施工计划，BCH为现场实际进度。横轴为时间，纵轴为0%至100%的完成率。",
+    "ja": "CRMは全体工程、CMは選択中の施工計画、BCHは現場実績です。横軸が時間、縦軸が0%～100%の完成率です。"
+  },
+  {
+    "key": "scheduleUx.curveMissingHint",
+    "category": "construction",
+    "vi": "Khoảng trống ở đường thực tế nghĩa là chưa đủ báo cáo, không phải hoàn thành 0%. Các đường dùng nét khác nhau để dễ phân biệt.",
+    "en": "A gap in the actual line means reports are missing, rather than 0% completion. Different line styles help distinguish the series.",
+    "zh": "实际曲线的空缺表示缺少报告，并非完成率为0%。各曲线使用不同线型区分。",
+    "ja": "実績線の空白は報告不足を意味し、完成率0%ではありません。線種でも各系列を区別できます。"
+  },
+  {
+    "key": "scheduleUx.noPeriodData",
+    "category": "construction",
+    "vi": "Chưa có điểm dữ liệu trong kỳ đã chọn. Thử chọn ngày hoặc kỳ khác; đường thực tế chỉ xuất hiện khi có đủ báo cáo công trường.",
+    "en": "No data points in this period. Try another date or period. The actual line appears only when enough site reports are available.",
+    "zh": "所选期间暂无数据点。请尝试其他日期或期间。现场报告充分时才显示实际曲线。",
+    "ja": "選択期間にデータ点がありません。別の日付や期間を選んでください。実績線は現場報告が揃うと表示されます。"
+  },
+  {
+    "key": "scheduleUx.taskProgress",
+    "category": "construction",
+    "vi": "Công việc và tiến độ thực tế",
+    "en": "Tasks and actual progress",
+    "zh": "任务与实际进度",
+    "ja": "作業と実績進捗"
+  },
+  {
+    "key": "scheduleUx.actualGuidance",
+    "category": "construction",
+    "vi": "Chỉ huy trưởng được phân công dùng nút cập nhật ở từng công việc. Tỷ trọng cho biết phần đóng góp của công việc vào tiến độ dự án; các công việc chi tiết có tổng tỷ trọng 100%.",
+    "en": "The assigned site manager uses the update action on each task. A task’s weight is its share of overall project progress; detailed tasks total 100%.",
+    "zh": "指定现场负责人通过各任务的更新按钮报告实绩。权重表示任务对项目总进度的贡献，明细任务权重合计100%。",
+    "ja": "担当現場責任者が各作業の更新ボタンから報告します。配分比率は全体進捗への寄与を表し、明細作業の合計は100%です。"
+  },
+  {
+    "key": "scheduleUx.history",
+    "category": "construction",
+    "vi": "Lịch sử ghi nhận và xử lý chậm tiến độ",
+    "en": "Progress history and delay recovery",
+    "zh": "进度记录与延期处理",
+    "ja": "進捗記録と遅延への対応"
+  },
+  {
+    "key": "scheduleUx.noSnapshots",
+    "category": "construction",
+    "vi": "Chưa có bản ghi tiến độ. Khi kế hoạch hiện hành đã phát hành và có đủ báo cáo thực tế, dùng chức năng ghi nhận để lưu kết quả đối chiếu.",
+    "en": "No progress snapshots yet. Once the current plan is published and site reports are complete, use capture to save a comparison.",
+    "zh": "尚无进度快照。当前计划发布且现场报告完整后，可记录对比结果。",
+    "ja": "進捗の記録はまだありません。現行計画の公開後、現場報告が揃ったら記録操作で比較結果を保存できます。"
+  },
+  {
+    "key": "scheduleUx.masterPurpose",
+    "category": "construction",
+    "vi": "Tiến độ tổng thể là khung thời gian chung của dự án. Phòng CM dùng bản đã phát hành để lập kế hoạch thi công và biểu đồ S-curve; phần này không nhập tỷ lệ hoàn thành thực tế.",
+    "en": "The master schedule sets the project’s overall timeframe. CM uses its published version for construction planning and the S-curve. Actual completion is reported separately on site.",
+    "zh": "总进度定义项目总体时间框架。CM使用已发布版本编制施工计划和S曲线；实际完成率由现场另行报告。",
+    "ja": "全体工程はプロジェクト全体の期間を定めます。CMは公開版を施工計画とSカーブに使用します。実績は現場で別途報告します。"
+  },
+  {
+    "key": "scheduleUx.masterNew",
+    "category": "construction",
+    "vi": "Bắt đầu bằng các hạng mục và ngày dự kiến bên dưới, lưu bản nháp, rồi chọn người duyệt để gửi phê duyệt.",
+    "en": "Start with work items and planned dates below. Save a draft, then choose an approver and send it for approval.",
+    "zh": "先填写下方工作项和计划日期，保存草稿后选择审批人并提交。",
+    "ja": "下の作業項目と予定日から始めます。下書きを保存してから承認者を選び、承認を申請します。"
+  },
+  {
+    "key": "scheduleUx.masterState.Draft",
+    "category": "construction",
+    "vi": "Bản nháp chưa dùng được cho kế hoạch CM. Hoàn thiện hạng mục, lưu thay đổi, rồi chọn người duyệt để gửi phê duyệt.",
+    "en": "This draft is not yet available to CM. Complete the items, save changes, choose an approver, and send for approval.",
+    "zh": "草稿尚不能用于CM计划。完善工作项并保存后，选择审批人并提交。",
+    "ja": "下書きはまだCM計画に使用できません。項目を完成して保存し、承認者を選んで申請します。"
+  },
+  {
+    "key": "scheduleUx.masterState.PendingApproval",
+    "category": "construction",
+    "vi": "Đang chờ người được phân công phê duyệt. Chỉ bản đã phát hành mới được dùng để lập kế hoạch CM.",
+    "en": "Waiting for the assigned approver. Only a published version can be used for CM planning.",
+    "zh": "等待指定审批人审批。仅已发布版本可用于CM计划。",
+    "ja": "担当者の承認待ちです。CM計画には公開済みの版を使用します。"
+  },
+  {
+    "key": "scheduleUx.masterState.Published",
+    "category": "construction",
+    "vi": "Phiên bản này đã phát hành. Mở Tiến độ thi công để tiếp tục lập kế hoạch CM hoặc theo dõi thực tế.",
+    "en": "This version is published. Open Construction progress to prepare the CM plan or monitor actual progress.",
+    "zh": "此版本已发布。打开施工进度以编制CM计划或跟踪实际进度。",
+    "ja": "公開済みの版です。「施工進捗」でCM計画の作成や実績確認に進めます。"
+  },
+  {
+    "key": "scheduleUx.masterState.Rejected",
+    "category": "construction",
+    "vi": "Phiên bản bị từ chối. Xem ý kiến duyệt, sửa hạng mục rồi lưu và gửi duyệt lại.",
+    "en": "This version was rejected. Read the review comment, correct the items, save, and submit again.",
+    "zh": "此版本被拒绝。请查看审批意见，修改并保存后重新提交。",
+    "ja": "却下された版です。コメントを確認し、修正・保存して再申請してください。"
+  },
+  {
+    "key": "scheduleUx.masterFormGuide",
+    "category": "construction",
+    "vi": "Mỗi dòng là một hạng mục. Ví dụ: 1 — Phần móng; 1.1 — Thi công cốt thép móng. Chọn hạng mục cha nếu đây là công việc con; ngày của công việc con phải nằm trong thời gian của hạng mục cha.",
+    "en": "Each row is a work item, for example 1 — Foundation and 1.1 — Foundation reinforcement. Select a parent for a subtask; its dates must fall within the parent’s timeframe.",
+    "zh": "每行是一个工作项，例如1—基础、1.1—基础钢筋。子任务需选择父项，日期必须在父项期间内。",
+    "ja": "各行が作業項目です。例：1—基礎工事、1.1—基礎配筋。子作業は親項目を選び、その期間内に日付を設定します。"
+  },
+  {
+    "key": "scheduleUx.taskExample",
+    "category": "construction",
+    "vi": "Ví dụ: Thi công cốt thép móng",
+    "en": "Example: Foundation reinforcement",
+    "zh": "例如：基础钢筋施工",
+    "ja": "例：基礎配筋工事"
+  },
+  {
+    "key": "scheduleUx.openProgress",
+    "category": "construction",
+    "vi": "Mở tiến độ thi công và S-curve",
+    "en": "Open construction progress and S-curve",
+    "zh": "打开施工进度与S曲线",
+    "ja": "施工進捗とSカーブを開く"
+  },
+  {
+    "key": "scheduleUx.seriesCrm",
+    "category": "construction",
+    "vi": "Tiến độ tổng thể (CRM)",
+    "en": "Master schedule (CRM)",
+    "zh": "总进度（CRM）",
+    "ja": "全体工程（CRM）"
+  },
+  {
+    "key": "scheduleUx.seriesCm",
+    "category": "construction",
+    "vi": "Kế hoạch thi công (CM)",
+    "en": "Construction plan (CM)",
+    "zh": "施工计划（CM）",
+    "ja": "施工計画（CM）"
+  },
+  {
+    "key": "scheduleUx.seriesActual",
+    "category": "construction",
+    "vi": "Thực tế công trường (BCH)",
+    "en": "Site actuals (BCH)",
+    "zh": "现场实际（BCH）",
+    "ja": "現場実績（BCH）"
+  },
+  {
+    "key": "scheduleUx.viewValues",
+    "category": "construction",
+    "vi": "Xem số liệu biểu đồ",
+    "en": "View chart values",
+    "zh": "查看图表数据",
+    "ja": "グラフの数値を表示"
+  },
+  {
+    "key": "scheduleUx.wbsCode",
+    "category": "construction",
+    "vi": "Mã công việc (WBS)",
+    "en": "Work code (WBS)",
+    "zh": "工作编码（WBS）",
+    "ja": "作業コード（WBS）"
+  },
+  {
+    "key": "scheduleUx.workItem",
+    "category": "construction",
+    "vi": "Hạng mục / công việc",
+    "en": "Work item / task",
+    "zh": "工作项／任务",
+    "ja": "工事項目／作業"
+  },
+  {
+    "key": "scheduleUx.parentItem",
+    "category": "construction",
+    "vi": "Thuộc hạng mục",
+    "en": "Parent work item",
+    "zh": "所属工作项",
+    "ja": "親項目"
+  },
+  {
+    "key": "scheduleUx.createGuide",
+    "category": "construction",
+    "vi": "Để lưu kế hoạch: nhập lý do và căn cứ tỷ trọng (mỗi nội dung ít nhất 3 ký tự), chọn chỉ huy trưởng, ít nhất một ngày làm việc; tổng tỷ trọng công việc chi tiết phải bằng 100%, mỗi công việc có tỷ trọng lớn hơn 0 và ngày nằm trong tiến độ tổng thể.",
+    "en": "To save: enter a reason and weight basis (at least 3 characters each), choose a site manager and at least one working day. Detailed task weights must total 100%, each weight must be positive, and dates must stay within the master schedule.",
+    "zh": "保存前请填写原因和权重依据（各至少3个字符），选择现场负责人及至少一个工作日。明细任务权重合计须为100%且各自大于0，日期须在总进度范围内。",
+    "ja": "保存には理由と配分根拠を各3文字以上で入力し、現場責任者と1日以上の作業日を選択します。明細作業の比率は各0超・合計100%とし、日付を全体工程の範囲内に設定します。"
+  }
+]
