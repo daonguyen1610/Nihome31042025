@@ -1,5 +1,4 @@
 import { useCallback, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -11,21 +10,7 @@ export default function CmProgressPage() {
   const { t } = useI18n();
   const { has } = usePermissions();
   const [projectId, setProjectId] = useState<number | null>(null);
-  const [, setSearchParams] = useSearchParams();
-  const selectProject = useCallback(
-    (id: number) => {
-      setProjectId(id);
-      setSearchParams(
-        (current) => {
-          const next = new URLSearchParams(current);
-          next.set("projectId", String(id));
-          return next;
-        },
-        { replace: true },
-      );
-    },
-    [setSearchParams],
-  );
+  const selectProject = useCallback((id: number) => setProjectId(id), []);
   return (
     <ConstructionWorkspaceShell
       title={t("cmSchedule.navigation")}
@@ -33,7 +18,6 @@ export default function CmProgressPage() {
       projectId={projectId}
       onProjectChange={selectProject}
       testId="cm-progress-page"
-      compactHeader
     >
       {has(ADMIN_PERMS.constructionTasks) ? (
         projectId !== null && (

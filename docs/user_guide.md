@@ -1525,6 +1525,14 @@ Create construction schedules with phases and work items (WBS). Assign responsib
 | Gantt Chart Detail | Interactive Gantt, dependencies, personnel assignment, alerts |
 | Interactive Gantt UI | Drag-drop, resize, zoom, dependency lines |
 
+The CM control workspace separates **Startup readiness** from **Construction
+progress**. In Startup readiness, each baseline reference is paired with its
+supporting document. Additional project requirements and read-only verification
+results are separate sections. Use the action bar above the evidence fields to save changes, then
+evaluate readiness; starting construction remains subject to the existing
+server-side gate. Construction workspace project pickers support searching by
+project code or name, and explicitly selected projects remain in the page URL.
+
 ##### CM schedule comparison — Partial
 
 Open **Admin > CM Office > Construction progress** (**Phòng CM > Tiến độ thi
@@ -1533,6 +1541,14 @@ Select the Operational Project; the selection remains in the page URL when
 refreshing. Before a CM plan exists, the preparation panel identifies missing
 CRM/WBS prerequisites and links to the project's master schedule and unlinked
 tasks. The version selector appears once there are saved versions.
+
+Before any plan exists, the numbered setup checklist explains master-schedule
+publication, WBS task links, and CM/PM/site responsibilities. A saved master
+schedule draft is not a published plan. The S-curve view explains its axes and
+series, distinguishes missing actual reports from zero completion, and offers
+**View chart values** as a table. Task reporting and snapshot/recovery history
+follow the chart. Plan rationale and its frozen working calendar are available
+under **Plan details and working calendar**.
 
 An eligible
 CM preparer with `construction.cm-preparation.manage` can create a revision,
