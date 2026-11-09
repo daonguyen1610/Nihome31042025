@@ -176,12 +176,12 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
         await Login("PM");
         var emptyReport = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project) + $"/baselines/{id}/report?period=day&throughDate={DateOnly.FromDateTime(DateTime.UtcNow):yyyy-MM-dd}"));
         emptyReport.GetProperty("points").EnumerateArray().Last().GetProperty("actualPercent").ValueKind.Should().Be(JsonValueKind.Null);
+        await Login("SITE_COMMANDER");
+        await ReportAllLeaves(fixture.Project);
         var workspace = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project)));
-        foreach (var otherInput in workspace.GetProperty("actualInputs").EnumerateArray().Where(x => x.GetProperty("taskId").GetInt32() != fixture.Leaf))
-            await Post(fixture.Project, $"tasks/{otherInput.GetProperty("taskId").GetInt32()}/actual", new { expectedUpdatedAt = otherInput.GetProperty("updatedAt").GetString(), progressPercent = 0 });
-        workspace = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project)));
         var input = workspace.GetProperty("actualInputs").EnumerateArray().Single(x => x.GetProperty("taskId").GetInt32() == fixture.Leaf);
         var body = new { expectedUpdatedAt = input.GetProperty("updatedAt").GetString(), progressPercent = 100 };
+        await Login("PM");
         await Error(fixture.Project, $"tasks/{fixture.Leaf}/actual", body, "siteManagerRequired");
         await Login("SITE_COMMANDER");
         foreach (var progress in new[] { -1, 101 })
@@ -203,6 +203,54 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
         task.ProgressReportedAt.Should().NotBeNull();
         task.ProgressReportedByUserId.Should().Be(await User("SITE_COMMANDER"));
         task.UpdatedByUserId.Should().Be(await User("SITE_COMMANDER"));
+    }
+
+    [Fact]
+    public async Task LegacyActual_RejectsEndedSiteManagerWhoStillHasProjectAccess()
+    {
+        var fixture = await FixtureAsync();
+        var reporter = await User("SUPER_ADMIN");
+        await WithDbAsync(async db =>
+        {
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = fixture.Project,
+                UserId = reporter,
+                Position = "Chỉ huy trưởng",
+                StartedAt = DateTime.UtcNow.AddDays(-1),
+            });
+            await db.SaveChangesAsync();
+        });
+        await Login("SUPER_ADMIN");
+        var payload = JsonSerializer.SerializeToElement(fixture.Payload);
+        var draft = await Post(fixture.Project, "baselines", new
+        {
+            changeReason = "Phân công chỉ huy trưởng nhà máy Long An",
+            weightBasisNote = "Tỷ trọng theo phạm vi khối lượng công tác",
+            workingDaysOfWeek = new[] { 1, 2, 3, 4, 5, 6 },
+            nonWorkingDates = Array.Empty<DateOnly>(),
+            siteManagerUserId = reporter,
+            items = payload.GetProperty("items"),
+        });
+        var id = draft.GetProperty("id").GetInt32();
+        var pending = await Post(fixture.Project, $"baselines/{id}/submit", await SubmitToken(fixture.Project, draft));
+        await Login("PM");
+        await Post(fixture.Project, $"baselines/{id}/decision", new { rowVersion = TokenValue(pending), approve = true });
+        await WithDbAsync(async db =>
+        {
+            // Administrative access must not restore an
+            // ended BCH assignment's authority to report site actuals.
+            (await db.OperationalProjectMembers.SingleAsync(x => x.OperationalProjectId == fixture.Project && x.UserId == reporter)).EndedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+        await Login("SUPER_ADMIN");
+        (await Client.GetAsync(Root(fixture.Project))).StatusCode.Should().Be(HttpStatusCode.OK);
+        using var response = await Client.PatchAsJsonAsync($"/api/construction-tasks/{fixture.Leaf}/progress", new { progressPercent = 30 });
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Chỉ Chỉ huy trưởng");
+        var task = await WithDbAsync(db => db.ConstructionTasks.SingleAsync(x => x.Id == fixture.Leaf));
+        task.ProgressPercent.Should().Be(0);
+        task.ProgressReportedAt.Should().BeNull();
     }
 
     [Fact]
@@ -266,7 +314,15 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
         var workspace = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project)));
         workspace.GetProperty("members").EnumerateArray().Select(x => x.GetProperty("userId").GetInt32()).Should().NotContain(hr);
         var payload = JsonSerializer.SerializeToElement(fixture.Payload);
-        await Error(fixture.Project, "baselines", new { changeReason = "Phân công không phù hợp", siteManagerUserId = hr, items = payload.GetProperty("items") }, "siteManagerRequired");
+        await Error(fixture.Project, "baselines", new
+        {
+            changeReason = "Phân công không phù hợp",
+            weightBasisNote = "Tỷ trọng theo phạm vi khối lượng công tác",
+            workingDaysOfWeek = new[] { 1, 2, 3, 4, 5, 6 },
+            nonWorkingDates = Array.Empty<DateOnly>(),
+            siteManagerUserId = hr,
+            items = payload.GetProperty("items")
+        }, "siteManagerRequired");
     }
 
     [Fact]

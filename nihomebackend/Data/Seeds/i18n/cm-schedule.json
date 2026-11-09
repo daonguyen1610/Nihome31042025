@@ -13,7 +13,13 @@
     "vi": "Mỗi công việc lá WBS có tỷ trọng scope do CM đề xuất, tổng bằng 100% và PM duyệt. Có thể dựa trên phạm vi/khối lượng và độ phức tạp; không bắt buộc có BOQ. Kế hoạch dùng lịch làm việc lưu cùng baseline. BCH phải xác nhận actual; chưa báo cáo không được tính là 0%.",
     "en": "Each WBS leaf has a CM-proposed scope share totaling 100%, approved by the PM. Base it on scope, quantity, or complexity; a BOQ is not required. Planned progress uses the calendar frozen with the baseline. BCH must report actuals; unreported values are not treated as 0%.",
     "zh": "每个WBS末级任务由CM分配范围权重，合计100%，并由PM审批。可依据范围、工程量或复杂度；不要求必须有BOQ。计划按基准中冻结的工作日历计算。BCH必须报告实际进度；未报告值不会按0%处理。",
-    "ja": "各WBS末端作業にCMがスコープ比率を割り当て、合計を100%としてPMが承認します。範囲・数量・複雑さを基準とし、BOQは必須ではありません。計画は基準に固定した稼働カレンダーで計算します。BCHが実績を報告し、未報告を0%として扱いません。"
+    "ja": "各WBS末端作業にCMがスコープ比率を割り当て、合計を100%としてPMが承認します。範囲・数量・複雑さを基準とし、BOQは必須ではありません。計画は基準に固定した稼働カレンダーで計算します。BCHが実績を報告し、未報告を0%として扱いません。",
+    "old": {
+      "vi": "Thực tế lấy từ % công việc BCH. Chỉ công việc cuối WBS được tổng hợp theo trọng số; mặc định theo số ngày lịch. Kế hoạch tuyến tính theo ngày lịch, không phải dự báo chi phí.",
+      "en": "Actuals come from site task completion. Only WBS leaves contribute, with weights initially based on calendar duration. The plan is linear by calendar day, not a cost forecast.",
+      "zh": "实际进度来自现场任务完成率。仅汇总WBS末级任务，默认权重为日历工期。计划按日历日线性计算，不代表成本预测。",
+      "ja": "実績は現場作業の完了率です。WBS末端作業のみ重み付け集計し、初期値は暦日工期です。計画は暦日で線形計算し、費用予測ではありません。"
+    }
   },
   {
     "key": "cmSchedule.policy",
@@ -117,7 +123,13 @@
     "vi": "Tỷ trọng scope (%)",
     "en": "Scope share (%)",
     "zh": "范围权重（%）",
-    "ja": "スコープ比率（%）"
+    "ja": "スコープ比率（%）",
+    "old": {
+      "vi": "Trọng số",
+      "en": "Weight",
+      "zh": "权重",
+      "ja": "重み"
+    }
   },
   {
     "key": "cmSchedule.comparison",
@@ -621,7 +633,13 @@
     "vi": "Xem đến ngày",
     "en": "Through date",
     "zh": "截至日期",
-    "ja": "対象日"
+    "ja": "対象日",
+    "old": {
+      "vi": "Ngày thuộc kỳ cần xem",
+      "en": "Date within the period",
+      "zh": "周期内日期",
+      "ja": "期間内の日付"
+    }
   },
   {
     "key": "cmSchedule.period.all",
@@ -629,7 +647,13 @@
     "vi": "Ngày",
     "en": "Daily",
     "zh": "按日",
-    "ja": "日次"
+    "ja": "日次",
+    "old": {
+      "vi": "Toàn bộ",
+      "en": "All dates",
+      "zh": "全部日期",
+      "ja": "全期間"
+    }
   },
   {
     "key": "cmSchedule.period.day",

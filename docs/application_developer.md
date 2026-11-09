@@ -3580,6 +3580,13 @@ baseline freezes its working weekdays and exception dates (default Monday–
 Saturday, Sunday off); legacy baselines use all seven days to preserve their
 calendar-day curve. Planned progress advances across working days. BCH actual
 comes from `ConstructionTask.ProgressPercent` and stores reporting actor/time.
+With a published CM baseline, both the legacy task-update/progress routes and
+the CM actual endpoint require the assigned Site Manager to have an active
+account and project membership that has started and has no end date. A retained
+baseline assignment does not grant reporting rights after membership ends.
+`20261109130000_SyncCmScheduleTranslations` upgrades the former calendar-duration
+guidance and scope-share/date labels in all four languages only when a stored
+value still matches its old default; administrator wording is preserved.
 Once per minute, a worker snapshots complete inputs and deduplicates identical
 inputs for that date. Incomplete reports skip snapshot creation; reports expose
 missing actuals as null, never 0% or an interpolated value. Monthly/yearly

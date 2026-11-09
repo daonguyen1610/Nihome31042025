@@ -138,10 +138,32 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
     await page.getByRole("button", { name: "PM review", exact: true }).click();
     await page.getByRole("dialog").getByRole("button", { name: "Approve", exact: true }).click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
+    const siteToken = await loginAs(TEST_USERS.siteCommander);
+    const siteWorkspace = await json(
+      await api.get(`/api/operational-projects/${projectId}/construction/schedule`, {
+        headers: { Authorization: `Bearer ${siteToken}` },
+      }),
+    );
+    const publishedBaseline = siteWorkspace.baselines.find(
+      (baseline: { status: string }) => baseline.status === "Published",
+    );
+    expect(publishedBaseline).toBeTruthy();
+    const weightedLeafIds = publishedBaseline.items
+      .filter((item: { isLeaf: boolean; isMilestone: boolean }) => item.isLeaf && !item.isMilestone)
+      .map((item: { taskId: number }) => item.taskId);
+    for (const taskId of weightedLeafIds) {
+      const actualInput = siteWorkspace.actualInputs.find(
+        (input: { taskId: number }) => input.taskId === taskId,
+      );
+      expect(actualInput, `actual input for weighted task ${taskId}`).toBeTruthy();
+      expect(actualInput.progressReportedAt).toBeNull();
+    }
     await loginInBrowserAs(page, TEST_USERS.siteCommander);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(url);
-    await expect(page.getByText("Not yet reported by BCH", { exact: true })).toBeVisible();
+    await expect(
+      page.getByText("Site actual: Not yet reported by BCH", { exact: true }),
+    ).toBeVisible();
     await expect(
       page.getByText("Working days: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday", {
         exact: true,

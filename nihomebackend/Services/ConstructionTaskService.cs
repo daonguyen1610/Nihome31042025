@@ -301,7 +301,9 @@ public partial class ConstructionTaskService(
         var siteManagerId = await db.CmScheduleBaselines.AsNoTracking()
             .Where(x => x.OperationalProjectId == projectId && x.Status == "Published")
             .OrderByDescending(x => x.Version).Select(x => (int?)x.SiteManagerUserId).FirstOrDefaultAsync(ct);
-        if (siteManagerId.HasValue && siteManagerId.Value != callerUserId)
+        if (siteManagerId.HasValue && (siteManagerId.Value != callerUserId ||
+            !await db.OperationalProjectMembers.AnyAsync(x => x.OperationalProjectId == projectId &&
+                x.UserId == callerUserId && x.StartedAt <= DateTime.UtcNow && x.EndedAt == null && x.User.IsActive, ct)))
             throw new ConstructionTaskOperationException("Chỉ Chỉ huy trưởng được phân công mới được báo cáo tiến độ thực tế của công trường.");
     }
 
