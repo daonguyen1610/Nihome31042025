@@ -73,6 +73,76 @@ public class ConstructionTaskServiceTests : IDisposable
             PlannedEnd = end ?? new DateOnly(2026, 6, 10),
         };
 
+    [Theory]
+    [InlineData("ended", false)]
+    [InlineData("future", false)]
+    [InlineData("inactive", false)]
+    [InlineData("active", false)]
+    [InlineData("ended", true)]
+    [InlineData("future", true)]
+    [InlineData("inactive", true)]
+    [InlineData("active", true)]
+    public async Task PublishedBaseline_progress_requires_current_active_site_member(string membership, bool fullUpdate)
+    {
+        var task = await _sut.CreateAsync(Req("Thi công móng nhà máy Long An"), _userId);
+        var design = await _db.DesignProjects.SingleAsync(x => x.Id == _projectId);
+        var project = new OperationalProject
+        {
+            Code = "PJ-CM-MEMBERSHIP",
+            Name = "Nhà máy Long An",
+            CustomerId = design.CustomerId,
+        };
+        design.OperationalProject = project;
+        _db.CmScheduleBaselines.Add(new CmScheduleBaseline
+        {
+            OperationalProject = project,
+            Version = 1,
+            Status = "Published",
+            SiteManagerUserId = _userId,
+        });
+        _db.OperationalProjectMembers.Add(new OperationalProjectMember
+        {
+            OperationalProject = project,
+            UserId = _userId,
+            Position = "Chỉ huy trưởng",
+            StartedAt = DateTime.UtcNow.AddDays(membership == "future" ? 1 : -1),
+            EndedAt = membership == "ended" ? DateTime.UtcNow : null,
+        });
+        (await _db.Users.SingleAsync(x => x.Id == _userId)).IsActive = membership != "inactive";
+        await _db.SaveChangesAsync();
+        var request = new UpdateConstructionTaskProgressRequest { ProgressPercent = 20 };
+        async Task ReportAsync()
+        {
+            if (fullUpdate)
+                await _sut.UpdateAsync(task.Id, new UpdateConstructionTaskRequest
+                {
+                    Name = task.Name,
+                    PlannedStart = task.PlannedStart,
+                    PlannedEnd = task.PlannedEnd,
+                    ProgressPercent = 20,
+                    Status = nameof(ConstructionTaskStatus.InProgress),
+                }, _userId);
+            else
+                await _sut.UpdateProgressAsync(task.Id, request, _userId);
+        }
+
+        if (membership == "active")
+        {
+            await ReportAsync();
+            var updated = await _db.ConstructionTasks.SingleAsync(x => x.Id == task.Id);
+            Assert.Equal(20, updated.ProgressPercent);
+            Assert.Equal(_userId, updated.ProgressReportedByUserId);
+        }
+        else
+        {
+            await Assert.ThrowsAsync<ConstructionTaskOperationException>(ReportAsync);
+            var unchanged = await _db.ConstructionTasks.SingleAsync(x => x.Id == task.Id);
+            Assert.Equal(0, unchanged.ProgressPercent);
+            Assert.Null(unchanged.ProgressReportedAt);
+            Assert.Null(unchanged.ProgressReportedByUserId);
+        }
+    }
+
     [Fact]
     public async Task CreateAsync_allocates_sequential_task_code_when_blank()
     {
