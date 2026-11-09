@@ -177,8 +177,8 @@ public sealed class CmScheduleControllerTests(NihomeWebApplicationFactory factor
         var emptyReport = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project) + $"/baselines/{id}/report?period=day&throughDate={DateOnly.FromDateTime(DateTime.UtcNow):yyyy-MM-dd}"));
         emptyReport.GetProperty("points").EnumerateArray().Last().GetProperty("actualPercent").ValueKind.Should().Be(JsonValueKind.Null);
         var workspace = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project)));
-        foreach (var input in workspace.GetProperty("actualInputs").EnumerateArray().Where(x => x.GetProperty("taskId").GetInt32() != fixture.Leaf))
-            await Post(fixture.Project, $"tasks/{input.GetProperty("taskId").GetInt32()}/actual", new { expectedUpdatedAt = input.GetProperty("updatedAt").GetString(), progressPercent = 0 });
+        foreach (var otherInput in workspace.GetProperty("actualInputs").EnumerateArray().Where(x => x.GetProperty("taskId").GetInt32() != fixture.Leaf))
+            await Post(fixture.Project, $"tasks/{otherInput.GetProperty("taskId").GetInt32()}/actual", new { expectedUpdatedAt = otherInput.GetProperty("updatedAt").GetString(), progressPercent = 0 });
         workspace = await ReadJsonAsync(await Client.GetAsync(Root(fixture.Project)));
         var input = workspace.GetProperty("actualInputs").EnumerateArray().Single(x => x.GetProperty("taskId").GetInt32() == fixture.Leaf);
         var body = new { expectedUpdatedAt = input.GetProperty("updatedAt").GetString(), progressPercent = 100 };

@@ -18,7 +18,7 @@ test("email editor exposes per-event templates without a shared layout editor", 
   await expect(page.getByRole("button", { name: "Giao diện chung" })).toHaveCount(0);
   await expect(page.locator('label[for="email-body"]')).toHaveText("Nội dung email");
   await page.getByRole("button", { name: "Tiến độ tổng thể", exact: true }).click();
-  const preview = page.frameLocator('iframe[title="Email preview"]');
+  const preview = page.frameLocator('iframe[title="Email preview"]:visible');
   await expect(preview.locator('table[role="presentation"]')).toHaveCSS("max-width", "600px");
   await expect(preview.locator("body")).toContainText("PJ-2026-001");
   for (const width of [390, 768, 1440]) {
@@ -47,7 +47,7 @@ test("schedule email preview uses server rendering at mobile and desktop widths"
   await expect(body).toBeVisible();
   const originalBody = await body.inputValue();
   expect((await previewResponse).ok()).toBe(true);
-  const frame = page.frameLocator('iframe[title="Email preview"]');
+  const frame = page.frameLocator('iframe[title="Email preview"]:visible');
   await expect(frame.locator('table[role="presentation"]')).toHaveCSS("max-width", "600px");
   await expect(frame.locator("body")).toContainText("PJ-2026-001");
   await expect(frame.locator("body")).toContainText("Nguyễn Văn An");
@@ -61,7 +61,7 @@ test("schedule email preview uses server rendering at mobile and desktop widths"
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(
       width,
     );
-    await page.locator('iframe[title="Email preview"]').screenshot({
+    await page.locator('iframe[title="Email preview"]:visible').screenshot({
       path: testInfo.outputPath(`schedule-email-preview-${width}.png`),
     });
   }
