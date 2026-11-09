@@ -3,6 +3,7 @@ import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import { cn } from "@/lib/utils";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Label } from "@/components/ui/label";
@@ -24,6 +25,7 @@ interface ConstructionWorkspaceShellProps {
   onProjectChange: (projectId: number) => void;
   children: ReactNode;
   testId: string;
+  compactHeader?: boolean;
 }
 
 export function ConstructionWorkspaceShell({
@@ -33,6 +35,7 @@ export function ConstructionWorkspaceShell({
   onProjectChange,
   children,
   testId,
+  compactHeader = false,
 }: ConstructionWorkspaceShellProps) {
   const uiError = useUiError();
   const { t } = useI18n();
@@ -76,19 +79,37 @@ export function ConstructionWorkspaceShell({
   return (
     <AdminLayout>
       <main className="mx-auto w-full max-w-[1500px] space-y-5 p-4 sm:p-6" data-testid={testId}>
-        <header className="flex flex-col gap-4 rounded-xl border bg-card p-4 shadow-sm sm:p-6 lg:flex-row lg:items-end lg:justify-between">
-          <div className="space-y-1">
+        <header
+          className={cn(
+            "flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between",
+            !compactHeader && "rounded-xl border bg-card p-4 shadow-sm sm:p-6",
+          )}
+        >
+          <div className="min-w-0 space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             <p className="max-w-3xl text-sm text-muted-foreground">{description}</p>
           </div>
-          <div className="w-full space-y-1.5 lg:w-80">
+          <div
+            className={cn(
+              "w-full space-y-1.5 lg:w-80",
+              compactHeader && "min-w-0 lg:w-[26rem] lg:shrink-0",
+            )}
+          >
             <Label htmlFor={`${testId}-project`}>{t("construction.common.project")}</Label>
             <Select
               value={projectId == null ? "" : String(projectId)}
               onValueChange={(value) => onProjectChange(Number(value))}
               disabled={loading || projects.length === 0}
             >
-              <SelectTrigger id={`${testId}-project`} data-testid={`${testId}-project`}>
+              <SelectTrigger
+                id={`${testId}-project`}
+                data-testid={`${testId}-project`}
+                className={
+                  compactHeader
+                    ? "h-auto min-h-11 gap-3 text-left [&>span]:line-clamp-none [&>span]:break-words"
+                    : undefined
+                }
+              >
                 <SelectValue placeholder={t("construction.common.selectProject")} />
               </SelectTrigger>
               <SelectContent>

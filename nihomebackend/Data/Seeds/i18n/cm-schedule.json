@@ -1070,5 +1070,77 @@
     "en": "BCH: {user} · {at}",
     "zh": "BCH：{user} · {at}",
     "ja": "BCH：{user} · {at}"
+  },
+  {
+    "key": "cmSchedule.navigation",
+    "category": "construction",
+    "vi": "Tiến độ thi công",
+    "en": "Construction progress",
+    "zh": "施工进度",
+    "ja": "施工進捗"
+  },
+  {
+    "key": "cmSchedule.pageDescription",
+    "category": "construction",
+    "vi": "Đối chiếu tiến độ gốc CRM, kế hoạch CM và thực tế công trường.",
+    "en": "Compare the CRM master schedule, CM plan, and site actuals.",
+    "zh": "对比CRM总进度、CM计划和现场实际进度。",
+    "ja": "CRM全体工程・CM計画・現場実績を比較します。"
+  },
+  {
+    "key": "cmSchedule.planSection",
+    "category": "construction",
+    "vi": "Kế hoạch thi công",
+    "en": "Construction plan",
+    "zh": "施工计划",
+    "ja": "施工計画"
+  },
+  {
+    "key": "cmSchedule.setupTitle",
+    "category": "construction",
+    "vi": "Chuẩn bị kế hoạch thi công",
+    "en": "Prepare the construction plan",
+    "zh": "准备施工计划",
+    "ja": "施工計画の準備"
+  },
+  {
+    "key": "cmSchedule.setupIntro",
+    "category": "construction",
+    "vi": "CRM phát hành tiến độ tổng thể, Phòng CM lập kế hoạch và gửi PM duyệt. BCH cập nhật thực tế sau khi kế hoạch được công bố.",
+    "en": "CRM publishes the master schedule. CM prepares the plan for PM approval, then BCH reports site progress against the published plan.",
+    "zh": "CRM发布总进度，CM编制计划并提交PM审批；计划发布后，由现场指挥部报告实际进度。",
+    "ja": "CRMが全体工程を公開し、CMが計画を作成してPMに承認を申請します。公開後は現場指揮本部が実績を報告します。"
+  },
+  {
+    "key": "cmSchedule.openCrm",
+    "category": "construction",
+    "vi": "Xem tiến độ tổng thể",
+    "en": "View master schedule",
+    "zh": "查看总进度",
+    "ja": "全体工程を確認"
+  },
+  {
+    "key": "cmSchedule.openTasks",
+    "category": "construction",
+    "vi": "Mở công việc thi công",
+    "en": "Open construction tasks",
+    "zh": "打开施工任务",
+    "ja": "施工作業を開く"
+  },
+  {
+    "key": "cmSchedule.noTasks",
+    "category": "construction",
+    "vi": "Chưa có công việc thi công được liên kết. Phòng CM cần tạo công việc từ WBS đã phát hành.",
+    "en": "No linked construction tasks yet. CM needs to create tasks from the published WBS.",
+    "zh": "尚无已关联的施工任务。CM需要根据已发布的WBS创建任务。",
+    "ja": "連携済みの施工作業がありません。CMが公開済みWBSから作業を作成してください。"
+  },
+  {
+    "key": "cmSchedule.howItWorks",
+    "category": "construction",
+    "vi": "Cách tính tiến độ và cảnh báo",
+    "en": "Progress calculation and alerts",
+    "zh": "进度计算与预警",
+    "ja": "進捗の計算とアラート"
   }
 ]
