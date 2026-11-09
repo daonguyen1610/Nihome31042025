@@ -111,6 +111,51 @@ Report ambiguity, missing evidence, defects, blocked checks, and residual risk. 
 - Do not rewrite history, force-push, squash, or amend another commit unless explicitly requested.
 - Never commit secrets, credentials, private keys, tokens, local environment files, or sensitive production data. Stop and report the issue if discovered.
 
+## UI/UX for nontechnical users
+
+The website serves nontechnical staff. Every page must be easy to understand
+and use without knowledge of the implementation or help from a developer.
+
+- Make the page purpose, current project or record, current status, and next
+  available action clear at a glance. Use meaningful business names and codes
+  instead of internal IDs.
+- Use plain, familiar language. Explain necessary business abbreviations on
+  first use. Keep API names, database terms, JSON, and other implementation
+  details out of normal user workflows.
+- Give each task one clear primary action. Label buttons with a specific verb
+  and object, such as "Save plan" or "Send for approval". Keep secondary actions
+  visually quieter and destructive actions clearly distinguishable.
+- Organize information in the order users do the work. Group related fields,
+  place instructions beside the relevant control, and reveal advanced details
+  only when needed. Avoid duplicate headings, repeated instructions, and walls
+  of text.
+- Make features discoverable through clearly named navigation. Keep sidebar
+  labels, page titles, breadcrumbs, tabs, and action labels consistent. Preserve
+  relevant project and record context when navigating between related pages.
+- Explain prerequisites before users attempt an action. If an action is
+  blocked, state why and provide the next step their role can perform. Never
+  leave an unexplained disabled button or an empty selector as the only clue.
+- Use persistent field labels, readable numbers and dates, and useful examples.
+  Clearly identify required fields. Prefer searchable choices with meaningful
+  names over asking users to enter technical identifiers.
+- Distinguish loading, first use, no search results, missing prerequisites,
+  permission restrictions, and failures. Empty states should explain how to
+  proceed; errors should explain what needs correction or how to recover.
+- Confirm what was saved, submitted, approved, or rejected. Preserve entered
+  work after a failed operation and make retry behavior clear. Follow the
+  existing confirmation and deletion policies for consequential actions.
+- Keep text readable, controls easy to reach, and layouts usable on desktop,
+  tablet, and mobile. Support keyboard navigation, visible focus, accessible
+  labels, and sufficient contrast. Never communicate status through color or
+  icons alone.
+- Keep all user-facing guidance in the supported translation system. Check
+  that translated text and long project names remain readable without hiding
+  the information needed to act.
+- Before calling a UI change complete, inspect the rendered page and walk
+  through the intended user's task. Verify that a nontechnical person can tell
+  where they are, what to do next, why something is blocked, and whether their
+  action succeeded. Follow the task's agreed validation scope.
+
 ## Frontend and backend integration
 
 - Keep frontend behavior, backend behavior, DTOs, validation, and API contracts aligned. Update both sides when a contract changes.
