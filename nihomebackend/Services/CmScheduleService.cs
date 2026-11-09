@@ -292,8 +292,10 @@ public sealed class CmScheduleService(AppDbContext db, IConstructionTaskService 
         };
         Require(span is > 0 and <= 3660, "periodTooWide");
         var dates = ReportDates(from, through, period);
+        var firstDate = dates[0];
+        var lastDate = dates[dates.Count - 1];
         var snapshots = await db.CmProgressSnapshots.AsNoTracking()
-            .Where(x => x.BaselineId == baselineId && x.AsOfDate >= dates[0] && x.AsOfDate <= dates[^1])
+            .Where(x => x.BaselineId == baselineId && x.AsOfDate >= firstDate && x.AsOfDate <= lastDate)
             .OrderBy(x => x.AsOfDate).ThenBy(x => x.CapturedAt).ThenBy(x => x.Id).ToListAsync(ct);
         var actualByDate = snapshots.GroupBy(x => x.AsOfDate).ToDictionary(x => x.Key, x => x.Last());
         var emptyActual = weightedLines.Select(x => new CmActualInput(x.TaskId, 0, default, "")).ToList();
