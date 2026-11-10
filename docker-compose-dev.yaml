@@ -14,9 +14,9 @@ services:
     command: >-
       sh -c 'rm -f /app/obj/NihomeBackend.csproj.nuget.g.props
       /app/obj/NihomeBackend.csproj.nuget.g.targets &&
-      exec dotnet watch --non-interactive run --urls=http://0.0.0.0:5043'
+      exec dotnet watch --no-hot-reload --non-interactive run --urls=http://0.0.0.0:5043'
     ports:
-      - "5043:5043"
+      - "5044:5043"
     restart: unless-stopped
     depends_on:
       sqlserver:
@@ -24,18 +24,40 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ASPNETCORE_URLS: http://0.0.0.0:5043
-      DOTNET_USE_POLLING_FILE_WATCHER: "1"
+      DOTNET_USE_POLLING_FILE_WATCHER: "${DOTNET_USE_POLLING_FILE_WATCHER:-0}"
+      SkipNihomeWebBuild: "true"
       ConnectionStrings__DefaultConnection: Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=Nihome@31042025;TrustServerCertificate=True;
       DataProtection__KeysPath: /root/.aspnet/DataProtection-Keys
     volumes:
       - ./nihomebackend:/app
-      - ./nihomeweb:/nihomeweb
       - nihomebackend_bin:/app/bin
       - nihomebackend_obj:/app/obj
-      - nihomeweb_node_modules:/nihomeweb/node_modules
-      - nihomeweb_dist:/nihomeweb/dist
       - nuget_packages:/root/.nuget/packages
       - data_protection_keys:/root/.aspnet/DataProtection-Keys
+    networks:
+      - nihome-network
+
+  nihomeWeb:
+    image: node:22-bullseye-slim
+    container_name: nihome31042025-web-dev
+    working_dir: /app
+    command: >-
+      sh -c 'if [ ! -f node_modules/.package-lock.json ] ||
+      [ package-lock.json -nt node_modules/.package-lock.json ]; then npm ci; fi &&
+      exec npm run dev -- --host 0.0.0.0 --port 5043'
+    ports:
+      - "5043:5043"
+    restart: unless-stopped
+    depends_on:
+      nihomeBackend:
+        condition: service_started
+    environment:
+      CHOKIDAR_USEPOLLING: "${CHOKIDAR_USEPOLLING:-false}"
+      VITE_API_PROXY_TARGET: http://nihomeBackend:5043
+    volumes:
+      - ./nihomeweb:/app
+      - ./nihomebackend:/nihomebackend:ro
+      - nihomeweb_node_modules:/app/node_modules
     networks:
       - nihome-network
 
@@ -46,6 +68,7 @@ services:
     environment:
       SA_PASSWORD: "Nihome@31042025"
       ACCEPT_EULA: "Y"
+      MSSQL_MEMORY_LIMIT_MB: "1024"
     ports:
       - "1433:1433"
     restart: unless-stopped
@@ -62,7 +85,6 @@ services:
 
 volumes:
   nihomeweb_node_modules:
-  nihomeweb_dist:
   nihomebackend_bin:
   nihomebackend_obj:
   nuget_packages:

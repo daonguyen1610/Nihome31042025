@@ -221,12 +221,23 @@ network for SQL tests and isolated test databases; the runtime container is
 not an SDK substitute.
 
 For source-watching development, use the standalone `docker-compose-dev.yaml`
-instead of the runtime Compose file. It builds `nihomebackend/Dockerfile.dev`
-with .NET SDK 8, Node 22 and PDF fonts, mounts the repository at `/src`, and
-runs `dotnet watch` from `/src/nihomebackend`. Linux dependency/build caches,
-managed files, uploaded/process images and file quarantine use named volumes;
-frontend changes are rebuilt and served by ASP.NET. The image supplies the
-tracked design/as-built sample PDFs to initialize a new managed-file volume.
+instead of the runtime Compose file. It runs two independent development loops:
+the backend image contains .NET SDK 8 and PDF fonts and runs
+`dotnet watch --no-hot-reload` from `/app`; the Node 22 frontend service runs
+Vite with HMR. Restart-on-change avoids Roslyn Hot Reload instability in the
+Linux development container. Frontend source
+changes no longer trigger an ASP.NET rebuild or a production web build. Vite
+proxies `/api`, `/files` and `/images` to the backend, so the application stays
+at `http://localhost:5043`; direct backend/Swagger access is available at
+`http://localhost:5044`. Linux dependency/build caches, managed files,
+uploaded/process images and file quarantine use named volumes. The backend
+image supplies the tracked design/as-built sample PDFs to initialize a new
+managed-file volume. The development SQL Server is capped at 1 GiB so the C#
+compiler and Vite have enough memory inside Docker Desktop; production Compose
+does not apply this development-only cap. Native file events are used by
+default to avoid expensive source-tree polling. On a host where bind-mount
+events are unavailable, set `DOTNET_USE_POLLING_FILE_WATCHER=1` and
+`CHOKIDAR_USEPOLLING=true` before starting the dev stack.
 Startup removes only obsolete mixed-case NuGet import files left in the
 persistent backend `obj` volume by the former `NihomeBackend.csproj` name; this
 prevents duplicate `MSB4011` imports without discarding the remaining cache.
@@ -234,9 +245,10 @@ Run `docker compose -f docker-compose-dev.yaml up -d --build`. The development
 connection string and SQL `MSSQL_SA_PASSWORD` use the same fixed local password
 as the standard Compose setup. An existing SQL volume must already use that
 password; changing environment settings does not reset a persisted login. Both Compose
-files use the same application/container ports and SQL/key volumes by default,
-so stop the runtime stack before starting the development stack. The dev image
-has a separate tag and does not replace the published runtime image.
+files publish the application on port 5043 and reuse the SQL/key volumes by
+default, so stop the runtime stack before starting the development stack. The
+dev backend's additional port 5044 is for direct API and Swagger access. The
+dev image has a separate tag and does not replace the published runtime image.
 When reusing a database with uploads, back up and copy its matching managed
 files/images into the development volumes before startup. Database metadata
 and file storage must belong to the same dataset. A fresh project/database must
