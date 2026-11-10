@@ -19,7 +19,8 @@ public sealed class HseViolationsController(
     IHseViolationService service,
     IProjectAccessService access,
     IPermissionService permissions,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    ILogger<HseViolationsController> logger) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("construction.hse", "view")]
@@ -132,6 +133,46 @@ public sealed class HseViolationsController(
             service.CorrectAsync(projectId, id, request, userId.Value, ct));
     }
 
+    [HttpDelete("{id:int}")]
+    [RequirePermission("construction.hse", "delete")]
+    public async Task<IActionResult> Delete(int projectId, int id, ConfirmDeletionRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        try
+        {
+            if (!await service.DeleteAsync(projectId, id, request, ct)) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "hse-violation.delete",
+                ResourceType = EntityTypes.HseViolation,
+                ResourceId = id.ToString(),
+                Message = $"HSE violation #{id} deleted in operational project #{projectId}.",
+            });
+            return Ok(new { id });
+        }
+        catch (HseViolationOperationException exception)
+        {
+            return BadRequest(new { code = exception.Code, message = exception.Message });
+        }
+        catch (DeletionPlanChangedException exception)
+        {
+            return Conflict(new { message = exception.Message });
+        }
+    }
+
+    [HttpGet("{id:int}/deletion-impact")]
+    [RequirePermission("construction.hse", "delete")]
+    public async Task<ActionResult<DeletionImpactResponse>> GetDeletionImpact(int projectId, int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        if (!await access.CanViewOperationalProjectAsync(userId.Value, projectId, ct)) return NotFound();
+        var impact = await service.GetDeletionImpactAsync(projectId, id, ct);
+        return impact is null ? NotFound() : Ok(impact);
+    }
+
     private async Task<ActionResult<HseViolationResponse>> Transition(
         int projectId,
         int id,
@@ -174,6 +215,20 @@ public sealed class HseViolationsController(
         }
         catch (HseViolationOperationException exception)
         {
+            if (exception.Code is not null)
+            {
+                logger.LogWarning(
+                    "HSE operation {Operation} rejected for project {ProjectId}, violation {ViolationId}, actor {ActorId}: {ErrorCode}. Use an independent reviewer. CorrelationId: {CorrelationId}",
+                    action, projectId, id, GetUserId(), exception.Code, HttpContext.TraceIdentifier);
+                return BadRequest(new
+                {
+                    code = exception.Code,
+                    message = exception.Message,
+                    operation = action,
+                    projectId,
+                    violationId = id,
+                });
+            }
             return BadRequest(new { message = exception.Message });
         }
     }

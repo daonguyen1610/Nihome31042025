@@ -57,6 +57,9 @@ public static class EntityTypes
     public const string DrawingRevision = "DrawingRevision";
     public const string IfcRelease = "IfcRelease";
     public const string ConstructionTask = "ConstructionTask";
+    public const string ConstructionResourceRequest = "ConstructionResourceRequest";
+    public const string QaQcDossier = "QaQcDossier";
+    public const string ConstructionQsBatch = "ConstructionQsBatch";
     public const string SiteDiary = "SiteDiary";
     public const string PunchItem = "PunchItem";
     public const string HseViolation = "HseViolation";

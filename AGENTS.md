@@ -45,8 +45,12 @@ For every reported defect, establish evidence before changing product code:
    could change the expected outcome.
 2. Reproduce the issue on the unchanged implementation. Write and run the
    smallest regression test at the appropriate layer first. For browser issues,
-   also exercise the real UI manually in the live Docker Compose application;
-   use a live Playwright test when the behavior can be automated. Capture the
+   also exercise the real UI manually in the live Docker Compose application.
+   Add a live Playwright test only when browser behavior or deployed-stack wiring
+   is the defect contract. Do not add or update E2E tests for presentation-only
+   UI/UX changes such as spacing, colour, typography, visual hierarchy, wrapping,
+   or responsive layout; verify those changes manually at the affected widths.
+   Capture the
    exact failing assertion or manual steps and observed result. A test that
    fails for setup, permissions, or missing fixtures does not prove the defect.
 3. Use that failure to define the issue precisely. Investigate the relevant
@@ -398,6 +402,14 @@ Choose the lowest test layer that can prove the behavior. Do not duplicate the s
 - Unit tests ('nihomebackend.tests'): isolated services, validation, branching, JSON handling, cache invalidation, and file-resolution helpers. Use InMemory EF and Moq where appropriate; no HTTP or Docker.
 - Integration tests ('nihomebackend.integration.tests'): the real ASP.NET pipeline through 'WebApplicationFactory', including middleware, auth, model binding, EF persistence, API contracts, CRUD, validation, and authorization.
 - E2E tests ('nihomeweb/e2e/smoke'): live browser tests against the running Docker Compose environment, using its served frontend, backend API, SQL Server, configuration, and seeded accounts. Cover browser rendering, SPA mounting, JavaScript errors, route rendering, and deployed-stack wiring such as CORS and health checks. API-only behavior belongs in integration tests.
+- Do not add E2E tests for presentation-only UI/UX changes. This includes CSS,
+  spacing, colour, typography, visual hierarchy, wrapping, and responsive layout
+  when the user interaction and business behavior are unchanged. Validate these
+  changes with a focused live browser review at the affected viewport sizes.
+- Add or change E2E coverage only when the acceptance contract depends on browser
+  behavior, such as navigation, focus/keyboard interaction, preserving form input,
+  browser-only APIs, or deployed frontend/backend wiring. Do not copy a visual
+  assertion across unrelated E2E suites or add broad screenshot tests by default.
 - Start Docker Compose and confirm its services and application endpoint are ready before running E2E. Set `BASE_URL` to the Compose-served application. A Vite dev server, mocked/intercepted API responses, or an in-memory backend may support a separate UI test, but its result does not count as a live E2E pass. Report mock-based and live-stack results separately.
 - E2E and Integration tests validate fully business pipeline test. Not only feature level.
 - Covers Happy path, Negative path testing. Ensure all test cases to cover business scenarios of the customers.

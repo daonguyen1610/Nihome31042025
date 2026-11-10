@@ -1,11 +1,15 @@
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { FieldScope } from "@/components/ui/field-scope";
-import { FormEvent, useCallback, useEffect, useState } from "react";
-import { FileCheck2, Plus, Send } from "lucide-react";
-import { ConstructionWorkspaceShell } from "./ConstructionWorkspaceShell";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { FormEvent, useEffect, useState } from "react";
+import { FileCheck2, Pencil, Plus, Send } from "lucide-react";
+import { ConstructionReviewActions } from "./ConstructionReviewActions";
+import { ConstructionDeletionControl } from "./ConstructionDeletionControl";
+import { type ScopeProps, useConstructionActions } from "./constructionScope";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { REVIEW_STATUS_TONE } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,17 +28,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
+  type IfcReleaseResponse,
+  type ProjectDocumentResponse,
   type QaQcDossierResponse,
   type QaQcEvidenceType,
   type QaQcTemplateResponse,
 } from "@/services/adminApi";
+
+const isValidJson = (value: string) => {
+  try {
+    JSON.parse(value);
+    return true;
+  } catch {
+    return false;
+  }
+};
 
 const evidenceTypes: QaQcEvidenceType[] = [
   "General",
@@ -45,19 +59,31 @@ const evidenceTypes: QaQcEvidenceType[] = [
   "SiteDiary",
 ];
 
-export default function QaQcWorkspacePage() {
+export function QaQcDossiersPanel({
+  projectId,
+  scope = "execute",
+  templatesVersion = 0,
+}: ScopeProps & { templatesVersion?: number }) {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
-  const { has } = usePermissions();
-  const [projectId, setProjectId] = useState<number | null>(null);
-  const selectProject = useCallback((id: number) => setProjectId(id), []);
+  const { canManage, canApprove, canEditRow, canDeleteRow } = useConstructionActions(scope, {
+    manage: ADMIN_PERMS.constructionQaQcCreate,
+    supervisor: ADMIN_PERMS.constructionQaQcReview,
+    approve: ADMIN_PERMS.constructionQaQcReview,
+  });
   const [templates, setTemplates] = useState<QaQcTemplateResponse[]>([]);
+  const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
+  const [ifcReleases, setIfcReleases] = useState<
+    Array<{ release: IfcReleaseResponse; designProjectCode: string }>
+  >([]);
+  const [ifcLoading, setIfcLoading] = useState(false);
   const [rows, setRows] = useState<QaQcDossierResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<QaQcDossierResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [evidence, setEvidence] = useState<
     Array<{ projectDocumentId: string; evidenceType: QaQcEvidenceType }>
@@ -71,26 +97,103 @@ export default function QaQcWorkspacePage() {
   });
 
   useEffect(() => {
-    if (projectId == null) return;
     let active = true;
     setLoading(true);
     setError(null);
-    void Promise.all([adminApi.listQaQcTemplates(projectId), adminApi.listQaQcDossiers(projectId)])
-      .then(([templateResponse, dossierResponse]) => {
+    void Promise.all([
+      adminApi.listQaQcTemplates(projectId),
+      adminApi.listQaQcDossiers(projectId),
+      adminApi.listProjectDocuments(projectId),
+    ])
+      .then(([templateResponse, dossierResponse, documentResponse]) => {
         if (!active) return;
         setTemplates(templateResponse.data);
         setRows(dossierResponse.data);
+        setDocuments(documentResponse.data);
       })
       .catch((cause) => active && setError(uiError(cause, t("construction.qaQc.loadError"))))
       .finally(() => active && setLoading(false));
     return () => {
       active = false;
     };
-  }, [projectId, reload, t, uiError]);
+  }, [projectId, reload, templatesVersion, t, uiError]);
+
+  useEffect(() => {
+    let active = true;
+    setIfcLoading(true);
+    void adminApi
+      .getOperationalProject(projectId)
+      .then(async ({ data }) => {
+        const perProject = await Promise.all(
+          data.designProjects.map(async (designProject) => {
+            try {
+              const { data: list } = await adminApi.listIfcReleases({
+                designProjectId: designProject.id,
+                status: "Released",
+                pageSize: 100,
+              });
+              return list.items.map((release) => ({
+                release,
+                designProjectCode: designProject.projectCode,
+              }));
+            } catch {
+              return [];
+            }
+          }),
+        );
+        if (active) setIfcReleases(perProject.flat());
+      })
+      .catch(() => active && setIfcReleases([]))
+      .finally(() => active && setIfcLoading(false));
+    return () => {
+      active = false;
+    };
+  }, [projectId]);
+
+  const ifcLabel = (releaseId: number) => {
+    const match = ifcReleases.find((item) => item.release.id === releaseId);
+    return match ? match.release.releaseNumber : `#${releaseId}`;
+  };
+
+  const emptyForm = () => ({
+    templateId: "",
+    wbsCode: "",
+    title: "",
+    ifcReleaseId: "",
+    checklistResultsJson: "[]",
+  });
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm());
+    setEvidence([]);
+    setOpen(true);
+  };
+
+  const openEdit = (row: QaQcDossierResponse) => {
+    setEditing(row);
+    setForm({
+      templateId: String(row.templateId),
+      wbsCode: row.wbsCode,
+      title: row.title,
+      ifcReleaseId: row.ifcReleaseId ? String(row.ifcReleaseId) : "",
+      checklistResultsJson: row.checklistResultsJson,
+    });
+    setEvidence(
+      row.evidence.map((item) => ({
+        projectDocumentId: String(item.projectDocumentId),
+        evidenceType: item.evidenceType,
+      })),
+    );
+    setOpen(true);
+  };
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (projectId == null) return;
+    if (!form.ifcReleaseId) {
+      toast({ variant: "destructive", title: t("construction.qaQc.ifcRequired") });
+      return;
+    }
     let checklist: unknown;
     try {
       checklist = JSON.parse(form.checklistResultsJson);
@@ -106,30 +209,34 @@ export default function QaQcWorkspacePage() {
       toast({ variant: "destructive", title: t("construction.qaQc.invalidEvidence") });
       return;
     }
+    const body = {
+      templateId: Number(form.templateId),
+      wbsCode: form.wbsCode.trim(),
+      title: form.title.trim(),
+      ifcReleaseId: form.ifcReleaseId ? Number(form.ifcReleaseId) : null,
+      checklistResultsJson: JSON.stringify(checklist),
+      evidence: evidence.map((item, index) => ({
+        projectDocumentId: evidenceIds[index],
+        evidenceType: item.evidenceType,
+      })),
+    };
     setSaving(true);
     try {
-      await adminApi.createQaQcDossier(projectId, {
-        templateId: Number(form.templateId),
-        wbsCode: form.wbsCode.trim(),
-        title: form.title.trim(),
-        ifcReleaseId: form.ifcReleaseId ? Number(form.ifcReleaseId) : null,
-        checklistResultsJson: JSON.stringify(checklist),
-        evidence: evidence.map((item, index) => ({
-          projectDocumentId: evidenceIds[index],
-          evidenceType: item.evidenceType,
-        })),
-      });
+      if (editing) {
+        await adminApi.updateQaQcDossier(projectId, editing.id, {
+          ...body,
+          rowVersion: editing.rowVersion,
+        });
+        toast({ title: t("construction.common.updated") });
+      } else {
+        await adminApi.createQaQcDossier(projectId, body);
+        toast({ title: t("construction.qaQc.created") });
+      }
       setOpen(false);
-      setForm({
-        templateId: "",
-        wbsCode: "",
-        title: "",
-        ifcReleaseId: "",
-        checklistResultsJson: "[]",
-      });
+      setEditing(null);
+      setForm(emptyForm());
       setEvidence([]);
       setReload((value) => value + 1);
-      toast({ title: t("construction.qaQc.created") });
     } catch (cause) {
       toast({
         variant: "destructive",
@@ -141,7 +248,6 @@ export default function QaQcWorkspacePage() {
   };
 
   const submit = async (row: QaQcDossierResponse) => {
-    if (projectId == null) return;
     try {
       await adminApi.submitQaQcDossier(projectId, row.id, row.rowVersion);
       setReload((value) => value + 1);
@@ -154,24 +260,40 @@ export default function QaQcWorkspacePage() {
     }
   };
 
+  const decide = async (row: QaQcDossierResponse, approved: boolean, reason: string) => {
+    try {
+      await adminApi.decideQaQcDossier(projectId, row.id, approved, reason, row.rowVersion);
+      setReload((value) => value + 1);
+      toast({ title: t("construction.cm.decisionSaved") });
+      return true;
+    } catch (cause) {
+      toast({
+        variant: "destructive",
+        title: uiError(cause, t("construction.common.actionError")),
+      });
+      return false;
+    }
+  };
+
   const publishedTemplates = templates.filter((template) => template.isPublished);
   return (
-    <ConstructionWorkspaceShell
-      title={t("construction.qaQc.title")}
-      description={t("construction.qaQc.description")}
-      projectId={projectId}
-      onProjectChange={selectProject}
-      testId="qa-qc-page"
-    >
+    <>
       <section className="space-y-4">
         <div className="flex flex-col gap-2 rounded-lg border bg-muted/20 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-          <span>
-            {t("construction.qaQc.templateSummary", { count: publishedTemplates.length })}
-          </span>
-          {has(ADMIN_PERMS.constructionQaQcCreate) && (
+          <div className="space-y-1">
+            <span>
+              {t("construction.qaQc.templateSummary", { count: publishedTemplates.length })}
+            </span>
+            {publishedTemplates.length === 0 && (
+              <p className="text-xs text-muted-foreground">
+                {t("construction.qaQc.noTemplatesHint")}
+              </p>
+            )}
+          </div>
+          {canManage && (
             <Button
-              onClick={() => setOpen(true)}
-              disabled={publishedTemplates.length === 0}
+              onClick={openCreate}
+              disabled={publishedTemplates.length === 0 && !editing}
               data-testid="qa-qc-new"
             >
               <Plus className="mr-2 h-4 w-4" />
@@ -184,7 +306,21 @@ export default function QaQcWorkspacePage() {
         ) : error ? (
           <PageError message={error} onRetry={() => setReload((value) => value + 1)} />
         ) : rows.length === 0 ? (
-          <PageEmpty message={t("construction.qaQc.empty")} />
+          <PageEmpty
+            message={t("construction.qaQc.empty")}
+            action={
+              canManage && (
+                <Button
+                  onClick={openCreate}
+                  disabled={publishedTemplates.length === 0}
+                  data-testid="qa-qc-empty-new"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("construction.qaQc.new")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {rows.map((row) => (
@@ -203,7 +339,9 @@ export default function QaQcWorkspacePage() {
                     <p className="font-semibold">{row.code}</p>
                     <p className="text-sm text-muted-foreground">{row.title}</p>
                   </div>
-                  <Badge variant="outline">{t(`construction.status.${row.status}`)}</Badge>
+                  <ConstructionStatusBadge tone={REVIEW_STATUS_TONE[row.status]}>
+                    {t(`construction.status.${row.status}`)}
+                  </ConstructionStatusBadge>
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -213,12 +351,14 @@ export default function QaQcWorkspacePage() {
                   <div>
                     <dt className="text-muted-foreground">{t("construction.qaQc.template")}</dt>
                     <dd>
-                      #{row.templateId} · v{row.templateVersion}
+                      {templates.find((template) => template.id === row.templateId)?.code ??
+                        `#${row.templateId}`}{" "}
+                      · v{row.templateVersion}
                     </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">{t("construction.qaQc.ifcRelease")}</dt>
-                    <dd>{row.ifcReleaseId ?? "—"}</dd>
+                    <dd>{row.ifcReleaseId ? ifcLabel(row.ifcReleaseId) : "—"}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">{t("construction.qaQc.evidence")}</dt>
@@ -231,23 +371,48 @@ export default function QaQcWorkspacePage() {
                     <ul className="space-y-1">
                       {row.evidence.map((item) => (
                         <li key={item.projectDocumentId} className="break-words">
-                          #{item.projectDocumentId} ·{" "}
-                          {t(`construction.qaQc.evidenceType.${item.evidenceType}`)}
+                          {documents.find((document) => document.id === item.projectDocumentId)
+                            ?.originalFileName ?? `#${item.projectDocumentId}`}{" "}
+                          · {t(`construction.qaQc.evidenceType.${item.evidenceType}`)}
                         </li>
                       ))}
                     </ul>
                   </div>
                 )}
-                {row.status === "Draft" && (
-                  <Button
-                    size="sm"
-                    onClick={() => void submit(row)}
-                    data-testid={`qa-qc-submit-${row.id}`}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    {t("construction.common.submit")}
-                  </Button>
+                {row.status === "Draft" && canEditRow(row.createdByUserId) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => void submit(row)}
+                      data-testid={`qa-qc-submit-${row.id}`}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      {t("construction.common.submit")}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t("common.edit")}
+                    </Button>
+                  </div>
                 )}
+                {(row.status === "Draft" || row.status === "CmRejected") &&
+                  canDeleteRow(row.createdByUserId) && (
+                    <ConstructionDeletionControl
+                      rowVersion={row.rowVersion}
+                      getImpact={() => adminApi.getQaQcDossierDeletionImpact(projectId, row.id)}
+                      deleteRecord={(request) =>
+                        adminApi.deleteQaQcDossier(projectId, row.id, request)
+                      }
+                      onDeleted={() => setReload((value) => value + 1)}
+                    />
+                  )}
+                <ConstructionReviewActions
+                  allowed={canApprove}
+                  status={row.status}
+                  createdByUserId={row.createdByUserId}
+                  lastEditedByUserId={row.lastEditedByUserId}
+                  onDecide={(approved, reason) => decide(row, approved, reason)}
+                />
               </article>
             ))}
           </div>
@@ -259,12 +424,18 @@ export default function QaQcWorkspacePage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <FileCheck2 className="h-5 w-5" />
-                {t("construction.qaQc.new")}
+                {t(editing ? "common.edit" : "construction.qaQc.new")}
               </DialogTitle>
             </DialogHeader>
+            <p className="text-sm text-muted-foreground">{t("construction.qaQc.formIntro")}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <FieldScope className="space-y-1.5 sm:col-span-2">
-                <Label>{t("construction.qaQc.template")}</Label>
+                <Label>
+                  {t("construction.qaQc.template")}
+                  <span className="ml-0.5 text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </Label>
                 <Select
                   required
                   value={form.templateId}
@@ -281,68 +452,124 @@ export default function QaQcWorkspacePage() {
                     ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t("construction.qaQc.selectTemplateHint")}
+                </p>
               </FieldScope>
               <div className="space-y-1.5">
-                <Label htmlFor="qa-wbs">{t("construction.common.wbs")}</Label>
+                <Label htmlFor="qa-wbs">
+                  {t("construction.common.wbs")}
+                  <span className="ml-0.5 text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </Label>
                 <Input
                   id="qa-wbs"
                   required
                   maxLength={100}
+                  placeholder="WBS-3.1-FORM"
+                  aria-describedby="qa-wbs-hint"
                   value={form.wbsCode}
                   onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
                 />
+                <p id="qa-wbs-hint" className="text-xs text-muted-foreground">
+                  {t("construction.qaQc.wbsHint")}
+                </p>
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="qa-ifc">{t("construction.qaQc.ifcRelease")}</Label>
-                <Input
+                <Label htmlFor="qa-ifc">
+                  {t("construction.qaQc.ifcRelease")}
+                  <span className="ml-0.5 text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </Label>
+                <SearchableSelect
                   id="qa-ifc"
-                  type="number"
-                  min="1"
+                  required
+                  data-testid="qa-qc-ifc-release"
+                  ariaLabel={t("construction.qaQc.ifcRelease")}
                   value={form.ifcReleaseId}
-                  onChange={(e) => setForm({ ...form, ifcReleaseId: e.target.value })}
+                  onChange={(value) => setForm({ ...form, ifcReleaseId: value })}
+                  placeholder={t("construction.qaQc.selectIfcRelease")}
+                  searchPlaceholder={t("construction.qaQc.ifcRelease")}
+                  emptyText={t("common.noResults")}
+                  loading={ifcLoading}
+                  disabled={ifcLoading || ifcReleases.length === 0}
+                  options={ifcReleases.map(({ release, designProjectCode }) => ({
+                    value: String(release.id),
+                    label: `${release.releaseNumber} · ${release.title}`,
+                    hint: `${designProjectCode}${
+                      release.releaseDate
+                        ? ` · ${new Date(release.releaseDate).toLocaleDateString(lang)}`
+                        : ""
+                    }`,
+                  }))}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {ifcReleases.length === 0 && !ifcLoading
+                    ? t("construction.qaQc.noIfcRelease")
+                    : t("construction.qaQc.ifcHint")}
+                </p>
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="qa-title">{t("construction.qaQc.dossierTitle")}</Label>
+                <Label htmlFor="qa-title">
+                  {t("construction.qaQc.dossierTitle")}
+                  <span className="ml-0.5 text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </Label>
                 <Input
                   id="qa-title"
                   required
                   maxLength={300}
+                  placeholder={t("construction.qaQc.titleHint")}
+                  aria-describedby="qa-title-hint"
                   value={form.title}
                   onChange={(e) => setForm({ ...form, title: e.target.value })}
                 />
+                <p id="qa-title-hint" className="text-xs text-muted-foreground">
+                  {t("construction.qaQc.titleHint")}
+                </p>
               </div>
               <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="qa-checklist">{t("construction.qaQc.checklistJson")}</Label>
+                <Label htmlFor="qa-checklist">{t("construction.qaQc.checklistLabel")}</Label>
                 <Textarea
                   id="qa-checklist"
                   required
                   className="min-h-28 font-mono text-xs"
+                  placeholder={'[{"item": "Cốp pha đúng cao độ", "result": "Pass"}]'}
                   value={form.checklistResultsJson}
                   onChange={(e) => setForm({ ...form, checklistResultsJson: e.target.value })}
                 />
+                <p className="text-xs text-muted-foreground">
+                  {t("construction.qaQc.checklistHelpAdvanced")}
+                </p>
+                {!isValidJson(form.checklistResultsJson) && (
+                  <p className="text-xs text-destructive" role="alert">
+                    {t("construction.qaQc.invalidChecklistJson")}
+                  </p>
+                )}
               </div>
               <div className="space-y-1.5 sm:col-span-2">
                 <span>{t("construction.qaQc.evidence")}</span>
                 {evidence.map((item, index) => (
                   <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                    <Input
+                    <SearchableSelect
                       data-testid={`qa-evidence-document-${index}`}
-                      type="number"
-                      min="1"
-                      step="1"
-                      required
-                      aria-label={t("construction.qaQc.evidenceDocumentId")}
+                      ariaLabel={t("construction.qaQc.evidenceDocumentId")}
                       value={item.projectDocumentId}
-                      onChange={(event) =>
+                      onChange={(value) =>
                         setEvidence((current) =>
                           current.map((entry, entryIndex) =>
-                            entryIndex === index
-                              ? { ...entry, projectDocumentId: event.target.value }
-                              : entry,
+                            entryIndex === index ? { ...entry, projectDocumentId: value } : entry,
                           ),
                         )
                       }
+                      placeholder={t("construction.qaQc.evidenceDocumentId")}
+                      options={documents.map((document) => ({
+                        value: String(document.id),
+                        label: document.originalFileName,
+                      }))}
                     />
                     <Select
                       value={item.evidenceType}
@@ -406,6 +633,6 @@ export default function QaQcWorkspacePage() {
           </form>
         </DialogContent>
       </Dialog>
-    </ConstructionWorkspaceShell>
+    </>
   );
 }

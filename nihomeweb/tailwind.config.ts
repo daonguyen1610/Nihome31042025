@@ -51,6 +51,21 @@ export default {
           DEFAULT: "hsl(var(--destructive))",
           foreground: "hsl(var(--destructive-foreground))",
         },
+        success: {
+          DEFAULT: "hsl(var(--admin-success))",
+          soft: "hsl(var(--admin-success-soft))",
+          strong: "hsl(150 62% 28%)",
+        },
+        warning: {
+          DEFAULT: "hsl(var(--admin-warning))",
+          soft: "hsl(var(--admin-warning-soft))",
+          strong: "hsl(28 85% 30%)",
+        },
+        info: {
+          DEFAULT: "hsl(var(--admin-info))",
+          soft: "hsl(var(--admin-info-soft))",
+          strong: "hsl(199 90% 28%)",
+        },
         muted: {
           DEFAULT: "hsl(var(--muted))",
           foreground: "hsl(var(--muted-foreground))",
@@ -80,6 +95,7 @@ export default {
       },
       borderRadius: {
         lg: "var(--radius)",
+        xl: "var(--radius)",
         md: "calc(var(--radius) - 4px)",
         sm: "calc(var(--radius) - 8px)",
         "2xl": "calc(var(--radius) + 8px)",

@@ -27,6 +27,66 @@ public sealed class HseViolationsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Delete_WithoutImpactConfirmation_ReturnsBadRequestAndPreservesDraft()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+        var fixture = await CreateProjectAsync();
+        using var createdResponse = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/hse-violations", ValidCreate(fixture.PmUserId));
+        var created = await ReadJsonAsync(createdResponse);
+        var violationId = created.GetProperty("id").GetInt32();
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+
+        using var deleteResponse = await SendAsync(
+            HttpMethod.Delete,
+            $"/api/operational-projects/{fixture.ProjectId}/hse-violations/{violationId}",
+            new { });
+
+        deleteResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.HseViolations.AnyAsync(x => x.Id == violationId)))
+            .Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("confirm", false, false)]
+    [InlineData("confirm", true, false)]
+    [InlineData("confirm", true, true)]
+    [InlineData("reject", false, false)]
+    [InlineData("reject", true, false)]
+    [InlineData("reject", true, true)]
+    public async Task IndependentReview_WhenReviewerCreatedOrReportedViolation_RejectsWithoutChangingRecord(
+        string action, bool differentReporter, bool confirmAsReporter)
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+        var fixture = await CreateProjectAsync();
+        using var createdResponse = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/hse-violations", ValidCreate(fixture.PmUserId));
+        createdResponse.EnsureSuccessStatusCode();
+        var created = await ReadJsonAsync(createdResponse);
+        if (differentReporter)
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var reported = await TransitionAsync(fixture.ProjectId, created, "report");
+        if (!confirmAsReporter)
+            await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+
+        using var response = await SendAsync(HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/hse-violations/{reported.GetProperty("id").GetInt32()}/{action}",
+            new { rowVersion = reported.GetProperty("rowVersion").GetString(), reason = "Review field evidence" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var error = await ReadJsonAsync(response);
+        error.GetProperty("code").GetString().Should().Be("HSE_INDEPENDENT_REVIEW_REQUIRED");
+        error.GetProperty("operation").GetString().Should().Be($"hse-violation.{action}");
+        error.GetProperty("violationId").GetInt32().Should().Be(reported.GetProperty("id").GetInt32());
+        error.GetProperty("message").GetString().Should().Contain("người khác");
+        var unchanged = await GetAsync(fixture.ProjectId, reported.GetProperty("id").GetInt32());
+        unchanged.GetProperty("status").GetString().Should().Be("Reported");
+        unchanged.GetProperty("confirmedAt").ValueKind.Should().Be(JsonValueKind.Null);
+        unchanged.GetProperty("rowVersion").GetString().Should().Be(reported.GetProperty("rowVersion").GetString());
+        unchanged.GetProperty("events").GetArrayLength().Should().Be(reported.GetProperty("events").GetArrayLength());
+    }
+
+    [Fact]
     public async Task Lifecycle_InvalidTransitionPreservesState_AndConfirmedRowsAreImmutable()
     {
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
@@ -51,6 +111,7 @@ public sealed class HseViolationsControllerTests : IntegrationTestBase
         unchanged.GetProperty("events").GetArrayLength().Should().Be(1);
 
         var reported = await TransitionAsync(fixture.ProjectId, created, "report");
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         var confirmed = await TransitionAsync(fixture.ProjectId, reported, "confirm");
         confirmed.GetProperty("status").GetString().Should().Be("Confirmed");
         confirmed.GetProperty("confirmedAt").ValueKind.Should().Be(JsonValueKind.String);
@@ -103,6 +164,7 @@ public sealed class HseViolationsControllerTests : IntegrationTestBase
         (await GetAsync(fixture.ProjectId, rejected.GetProperty("id").GetInt32()))
             .GetProperty("status").GetString().Should().Be("Reported");
 
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         rejected = await TransitionAsync(fixture.ProjectId, rejected, "reject", new
         {
             reason = "Report was not an HSE violation",
@@ -110,7 +172,9 @@ public sealed class HseViolationsControllerTests : IntegrationTestBase
         });
         rejected.GetProperty("status").GetString().Should().Be("Rejected");
 
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
         var cancelled = await CreateAndReportAsync(fixture);
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
         cancelled = await TransitionAsync(fixture.ProjectId, cancelled, "confirm");
         cancelled = await TransitionAsync(fixture.ProjectId, cancelled, "cancel", new
         {
@@ -174,6 +238,9 @@ public sealed class HseViolationsControllerTests : IntegrationTestBase
             .Single(item => item.GetProperty("id").GetInt32() == id);
         listed.GetProperty("penaltyReference").ValueKind.Should().Be(JsonValueKind.Null);
         listed.GetProperty("penaltyAmount").ValueKind.Should().Be(JsonValueKind.Null);
+        listed.GetProperty("events").EnumerateArray()
+            .Single(entry => entry.GetProperty("type").GetString() == "Created")
+            .GetProperty("createdByUserId").GetInt32().Should().Be(fixture.PmUserId);
     }
 
     private async Task<(int ProjectId, int PmUserId, int DesignUserId)> CreateProjectAsync()
@@ -212,6 +279,17 @@ public sealed class HseViolationsControllerTests : IntegrationTestBase
                 OperationalProjectId = project.Id,
                 UserId = designUserId,
                 Position = "Designer",
+                StartedAt = DateTime.UtcNow,
+                CreatedByUserId = pmUserId,
+                UpdatedByUserId = pmUserId,
+            });
+            var reviewerId = await db.Users.Where(user => user.PhoneNumber == TestDataSeeder.AdminPhone)
+                .Select(user => user.Id).SingleAsync();
+            db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = reviewerId,
+                Position = "CM Reviewer",
                 StartedAt = DateTime.UtcNow,
                 CreatedByUserId = pmUserId,
                 UpdatedByUserId = pmUserId,

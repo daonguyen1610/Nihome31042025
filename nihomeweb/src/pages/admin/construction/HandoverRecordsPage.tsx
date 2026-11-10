@@ -8,7 +8,6 @@ import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { personOption } from "@/lib/people";
 import type { SearchableSelectOption } from "@/components/ui/searchable-select";
-import { useSearchParams } from "react-router-dom";
 import {
   CalendarDays,
   Check,
@@ -27,9 +26,11 @@ import {
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
-import AdminLayout from "@/components/layout/AdminLayout";
-import { PageError, PageLoading } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { type DesignProjectScopeProps } from "./constructionScope";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { HANDOVER_STATUS_TONE } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -89,14 +90,6 @@ const HANDOVER_STATUSES: HandoverStatus[] = [
 
 const EDITABLE_STATUSES = new Set<HandoverStatus>(["Draft", "Reopened"]);
 
-const STATUS_BADGE: Record<HandoverStatus, string> = {
-  Draft: "border-border bg-muted/30 text-foreground",
-  ReadyForHandover: "border-sky-200 bg-sky-50 text-sky-700",
-  HandedOver: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Reopened: "border-amber-200 bg-amber-50 text-amber-800",
-  Cancelled: "border-zinc-200 bg-zinc-50 text-zinc-600",
-};
-
 interface HandoverFormState {
   designProjectId: string;
   title: string;
@@ -137,22 +130,21 @@ const formatDateTime = (value: string | null | undefined, fallback: string) => {
   return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
 };
 
-export default function HandoverRecordsPage() {
+export function HandoverRecordsPanel({
+  designProjectId,
+  scope = "review",
+}: DesignProjectScopeProps) {
   const uiError = useUiError();
   const { t } = useI18n();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionHandoverManage);
-  const canComplete = has(ADMIN_PERMS.constructionHandoverComplete);
+  const canComplete = scope === "review" && has(ADMIN_PERMS.constructionHandoverComplete);
   const emptyValue = t("common.noData");
 
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | undefined>(() => {
-    const value = Number(searchParams.get("designProjectId"));
-    return Number.isInteger(value) && value > 0 ? value : undefined;
-  });
+  const projectId = designProjectId ?? undefined;
   const [responsibleUserId, setResponsibleUserId] = useState<number | undefined>();
   const [status, setStatus] = useState<HandoverStatus | "">("");
   const [plannedFrom, setPlannedFrom] = useState("");
@@ -212,6 +204,13 @@ export default function HandoverRecordsPage() {
   const projectOptions = useMemo(
     () => projects.map((project) => ({ value: String(project.id), label: project.name })),
     [projects],
+  );
+  const formProjectOptions = useMemo(
+    () =>
+      projectId
+        ? projectOptions.filter((option) => option.value === String(projectId))
+        : projectOptions,
+    [projectId, projectOptions],
   );
 
   const userOptions = useMemo(() => {
@@ -338,7 +337,7 @@ export default function HandoverRecordsPage() {
 
   const openCreate = () => {
     setEditingId(null);
-    setForm(emptyForm());
+    setForm({ ...emptyForm(), designProjectId: projectId ? String(projectId) : "" });
     setFormError(null);
     setFormOpen(true);
   };
@@ -578,7 +577,6 @@ export default function HandoverRecordsPage() {
       icon: CheckCircle2,
     },
   ];
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const ReadinessIndicator = ({
     ready,
@@ -592,13 +590,13 @@ export default function HandoverRecordsPage() {
     <div
       className={cn(
         "flex items-start gap-2 rounded-lg border p-3",
-        ready ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50",
+        ready ? "border-success/40 bg-success-soft" : "border-warning/40 bg-warning-soft",
       )}
     >
       {ready ? (
-        <Check className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+        <Check className="mt-0.5 h-4 w-4 shrink-0 text-success-strong" />
       ) : (
-        <X className="mt-0.5 h-4 w-4 shrink-0 text-amber-700" />
+        <X className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong" />
       )}
       <div className="min-w-0">
         <p className="text-sm font-medium">{label}</p>
@@ -655,13 +653,9 @@ export default function HandoverRecordsPage() {
   );
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 p-4 md:p-6" data-testid="handover-page">
-        <header className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{t("handover.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("handover.subtitle")}</p>
-          </div>
+    <>
+      <div className="space-y-6" data-testid="handover-page">
+        <header className="flex justify-end">
           <div className="flex flex-wrap gap-2">
             <AdminExportButton
               onClick={handleExport}
@@ -696,18 +690,9 @@ export default function HandoverRecordsPage() {
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <FieldScope className="space-y-1.5">
               <Label>{t("handover.field.project")}</Label>
-              <SearchableSelect
-                value={projectId ? String(projectId) : null}
-                onChange={(value) => {
-                  setProjectId(value ? Number(value) : undefined);
-                  setPage(1);
-                }}
-                options={[
-                  { value: "", label: t("handover.filter.allProjects") },
-                  ...projectOptions,
-                ]}
-                placeholder={t("handover.filter.allProjects")}
-                searchPlaceholder={t("handover.filter.searchProject")}
+              <Input
+                value={projects.find((project) => project.id === projectId)?.name ?? emptyValue}
+                readOnly
               />
             </FieldScope>
             <FieldScope className="space-y-1.5">
@@ -825,9 +810,17 @@ export default function HandoverRecordsPage() {
         ) : loading ? (
           <PageLoading />
         ) : rows.length === 0 ? (
-          <div className="rounded-xl border bg-card py-16 text-center text-muted-foreground">
-            {t("handover.empty")}
-          </div>
+          <PageEmpty
+            message={t("handover.empty")}
+            action={
+              canManage && (
+                <Button onClick={openCreate} data-testid="handover-empty-new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("handover.action.new")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <>
             <div className="hidden overflow-x-auto rounded-xl border bg-card shadow-sm md:block">
@@ -868,23 +861,18 @@ export default function HandoverRecordsPage() {
                       </td>
                       <td className="px-4 py-3">{record.responsibleUserName}</td>
                       <td className="px-4 py-3">
-                        <Badge
-                          className={
-                            record.readiness.isReady
-                              ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                              : "border-amber-200 bg-amber-50 text-amber-800"
-                          }
-                          variant="outline"
+                        <ConstructionStatusBadge
+                          tone={record.readiness.isReady ? "success" : "warning"}
                         >
                           {record.readiness.isReady
                             ? t("handover.readiness.ready")
                             : t("handover.readiness.notReady")}
-                        </Badge>
+                        </ConstructionStatusBadge>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge className={STATUS_BADGE[record.status]} variant="outline">
+                        <ConstructionStatusBadge tone={HANDOVER_STATUS_TONE[record.status]}>
                           {t(`handover.status.${record.status.toLowerCase()}`)}
-                        </Badge>
+                        </ConstructionStatusBadge>
                       </td>
                       <td className="px-4 py-3" onClick={(event) => event.stopPropagation()}>
                         <div className="flex justify-end gap-1">
@@ -943,9 +931,9 @@ export default function HandoverRecordsPage() {
                       <p className="font-semibold">{record.handoverCode}</p>
                       <p className="text-sm">{record.title}</p>
                     </div>
-                    <Badge className={STATUS_BADGE[record.status]} variant="outline">
+                    <ConstructionStatusBadge tone={HANDOVER_STATUS_TONE[record.status]}>
                       {t(`handover.status.${record.status.toLowerCase()}`)}
-                    </Badge>
+                    </ConstructionStatusBadge>
                   </div>
                   <p className="mt-3 text-sm text-muted-foreground">{record.designProjectName}</p>
                   <div className="mt-3 grid grid-cols-2 gap-2 text-xs">
@@ -961,7 +949,7 @@ export default function HandoverRecordsPage() {
                   <p
                     className={cn(
                       "mt-3 text-xs font-medium",
-                      record.readiness.isReady ? "text-emerald-700" : "text-amber-700",
+                      record.readiness.isReady ? "text-success-strong" : "text-warning-strong",
                     )}
                   >
                     {record.readiness.isReady
@@ -1010,32 +998,13 @@ export default function HandoverRecordsPage() {
         )}
 
         {total > 0 && (
-          <div className="flex flex-col items-center justify-between gap-3 sm:flex-row">
-            <p className="text-sm text-muted-foreground">
-              {t("handover.pagination.summary")
-                .replace("{from}", String((page - 1) * pageSize + 1))
-                .replace("{to}", String(Math.min(page * pageSize, total)))
-                .replace("{total}", String(total))}
-            </p>
-            <div className="flex gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page <= 1 || loading}
-                onClick={() => setPage((value) => value - 1)}
-              >
-                {t("handover.pagination.previous")}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={page >= totalPages || loading}
-                onClick={() => setPage((value) => value + 1)}
-              >
-                {t("handover.pagination.next")}
-              </Button>
-            </div>
-          </div>
+          <ListPagination
+            page={page}
+            pageSize={pageSize}
+            total={total}
+            onPageChange={setPage}
+            disabled={loading}
+          />
         )}
       </div>
 
@@ -1053,21 +1022,14 @@ export default function HandoverRecordsPage() {
             detail && (
               <div className="mt-6 space-y-6">
                 <div className="flex flex-wrap gap-2">
-                  <Badge className={STATUS_BADGE[detail.status]} variant="outline">
+                  <ConstructionStatusBadge tone={HANDOVER_STATUS_TONE[detail.status]}>
                     {t(`handover.status.${detail.status.toLowerCase()}`)}
-                  </Badge>
-                  <Badge
-                    variant="outline"
-                    className={
-                      detail.readiness.isReady
-                        ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                        : "border-amber-200 bg-amber-50 text-amber-800"
-                    }
-                  >
+                  </ConstructionStatusBadge>
+                  <ConstructionStatusBadge tone={detail.readiness.isReady ? "success" : "warning"}>
                     {detail.readiness.isReady
                       ? t("handover.readiness.ready")
                       : t("handover.readiness.notReady")}
-                  </Badge>
+                  </ConstructionStatusBadge>
                 </div>
                 <dl className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
                   <div>
@@ -1165,9 +1127,9 @@ export default function HandoverRecordsPage() {
                         <div key={`${item.name}-${index}`} className="rounded-lg border p-3">
                           <p className="flex items-center gap-2 text-sm font-medium">
                             {item.isCompleted ? (
-                              <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                              <CheckCircle2 className="h-4 w-4 text-success-strong" />
                             ) : (
-                              <X className="h-4 w-4 text-amber-600" />
+                              <X className="h-4 w-4 text-warning-strong" />
                             )}
                             {item.name}
                           </p>
@@ -1290,7 +1252,7 @@ export default function HandoverRecordsPage() {
                 disabled={Boolean(editingId)}
                 value={form.designProjectId || null}
                 onChange={(value) => setForm((current) => ({ ...current, designProjectId: value }))}
-                options={projectOptions}
+                options={formProjectOptions}
                 placeholder={t("handover.form.selectProject")}
                 searchPlaceholder={t("handover.filter.searchProject")}
               />
@@ -1604,6 +1566,6 @@ export default function HandoverRecordsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   );
 }

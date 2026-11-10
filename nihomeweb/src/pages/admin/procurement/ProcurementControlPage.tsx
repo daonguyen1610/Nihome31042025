@@ -165,7 +165,13 @@ const ProcurementControlPage = () => {
   const projectIdRef = useRef(projectId);
   const requestLoadIdRef = useRef(0);
   const dialogTriggerRef = useRef<HTMLElement | null>(null);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
   const [workspace, setWorkspace] = useState<ProcurementWorkspaceResponse | null>(null);
+  useEffect(() => {
+    tabsScrollRef.current
+      ?.querySelector('[data-state="active"]')
+      ?.scrollIntoView({ block: "nearest", inline: "center" });
+  }, [activeTab, workspace]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [procurementUsers, setProcurementUsers] = useState<UserOption[]>([]);
   const [contracts, setContracts] = useState<ContractResponse[]>([]);
@@ -1086,7 +1092,10 @@ const ProcurementControlPage = () => {
             }}
             className="space-y-4"
           >
-            <div className="overflow-x-auto pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent">
+            <div
+              ref={tabsScrollRef}
+              className="overflow-x-auto pb-1 [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border [&::-webkit-scrollbar-track]:bg-transparent"
+            >
               <TabsList className="h-auto w-max min-w-full justify-start">
                 {canViewIfc && <TabsTrigger value="ifc">{t("procurement.ifc.title")}</TabsTrigger>}
                 {canViewResources && (
@@ -1113,7 +1122,7 @@ const ProcurementControlPage = () => {
                 {canViewContracts && (
                   <TabsTrigger value="contracts">
                     <FilePlus2 className="mr-2 h-4 w-4" />
-                    {t("procurement.tabs.contracts")} ({workspace.contractLines.length})
+                    {t("construction.cm.area.contracts")}
                   </TabsTrigger>
                 )}
                 {canViewWarehouse && (

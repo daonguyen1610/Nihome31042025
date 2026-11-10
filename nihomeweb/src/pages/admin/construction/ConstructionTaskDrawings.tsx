@@ -2,6 +2,7 @@ import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import { PageEmpty } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useI18n } from "@/lib/i18n";
@@ -85,7 +86,7 @@ export default function ConstructionTaskDrawings({
       {data && (
         <>
           {data.linked.length === 0 && (
-            <p className="text-sm text-muted-foreground">{t("constructionTasks.drawings.empty")}</p>
+            <PageEmpty message={t("constructionTasks.drawings.empty")} />
           )}
           <ul className="space-y-2">
             {data.linked.map((drawing) => (

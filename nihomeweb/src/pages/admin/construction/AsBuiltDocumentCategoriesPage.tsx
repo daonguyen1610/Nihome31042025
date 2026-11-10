@@ -15,6 +15,8 @@ import {
   X,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
+import { ConstructionStatusBadge } from "./constructionUi";
 import { useI18n } from "@/lib/i18n";
 import { localizedName } from "@/lib/category";
 import { extractApiError } from "@/lib/apiError";
@@ -241,7 +243,7 @@ export default function AsBuiltDocumentCategoriesPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="space-y-5">
         <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">{t("asbuiltCat.title")}</h1>
@@ -365,38 +367,27 @@ export default function AsBuiltDocumentCategoriesPage() {
         </section>
 
         {loadError ? (
-          <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-8 text-center">
-            <p className="font-medium text-destructive">{t("asbuiltCat.error.loadTitle")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">{loadError}</p>
-            <Button variant="outline" size="sm" className="mt-4" onClick={() => void loadData()}>
-              <RefreshCcw className="mr-2 h-4 w-4" />
-              {t("common.retry")}
-            </Button>
-          </div>
+          <PageError message={loadError} onRetry={() => void loadData()} />
         ) : loading ? (
-          <div className="rounded-xl border border-dashed p-12 text-center text-sm text-muted-foreground">
-            {t("common.loading")}
-          </div>
+          <PageLoading />
         ) : filtered.length === 0 ? (
-          <div className="rounded-xl border border-dashed p-12 text-center">
-            <p className="font-medium">{t("asbuiltCat.empty.title")}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t("asbuiltCat.empty.description")}
-            </p>
-            {(q || statusFilter !== "all") && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-4"
-                onClick={() => {
-                  setQ("");
-                  setStatusFilter("all");
-                }}
-              >
-                {t("asbuiltCat.filter.clear")}
-              </Button>
-            )}
-          </div>
+          <PageEmpty
+            message={t("asbuiltCat.empty.description")}
+            action={
+              (q || statusFilter !== "all") && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setQ("");
+                    setStatusFilter("all");
+                  }}
+                >
+                  {t("asbuiltCat.filter.clear")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <>
             <ul className="grid gap-3 lg:hidden">
@@ -504,20 +495,22 @@ export default function AsBuiltDocumentCategoriesPage() {
                       </TableCell>
                       <TableCell className="text-center">
                         {item.isRequired ? (
-                          <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                          <ConstructionStatusBadge tone="warning">
                             {t("common.yes")}
-                          </Badge>
+                          </ConstructionStatusBadge>
                         ) : (
                           <span className="text-sm text-muted-foreground">{t("common.no")}</span>
                         )}
                       </TableCell>
                       <TableCell className="text-center">
                         {item.isActive ? (
-                          <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                          <ConstructionStatusBadge tone="success">
                             {t("common.active")}
-                          </Badge>
+                          </ConstructionStatusBadge>
                         ) : (
-                          <Badge variant="secondary">{t("common.inactive")}</Badge>
+                          <ConstructionStatusBadge tone="muted">
+                            {t("common.inactive")}
+                          </ConstructionStatusBadge>
                         )}
                       </TableCell>
                       <TableCell className="text-center">{item.sortOrder}</TableCell>
@@ -623,8 +616,8 @@ export default function AsBuiltDocumentCategoriesPage() {
               <p className="text-xs text-muted-foreground">{t("asbuiltCat.hint.sourceName")}</p>
             </div>
 
-            <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-sky-900">{t("asbuiltCat.hint.manageTranslations")}</p>
+            <div className="flex flex-col gap-3 rounded-lg border border-info/40 bg-info-soft p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-info-strong">{t("asbuiltCat.hint.manageTranslations")}</p>
               {canViewTranslations && (
                 <Button
                   asChild

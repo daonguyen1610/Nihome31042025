@@ -91,6 +91,7 @@
   {"key":"deletionImpact.item.design.shopDrawings","category":"deletionImpact","vi":"Tài liệu thiết kế chi tiết","en":"Detail design documents","zh":"详细设计文档","ja":"詳細設計文書"},
   {"key":"deletionImpact.item.design.ifcReleases","category":"deletionImpact","vi":"Bộ phát hành IFC","en":"IFC releases","zh":"IFC 发布包","ja":"IFC リリース"},
   {"key":"deletionImpact.item.design.constructionTasks","category":"deletionImpact","vi":"Công việc thi công","en":"Construction tasks","zh":"施工任务","ja":"施工タスク"},
+  {"key":"deletionImpact.item.construction.hseEvents","category":"deletionImpact","vi":"Sự kiện HSE","en":"HSE events","zh":"HSE 事件","ja":"HSE イベント"},
   {"key":"deletionImpact.item.design.schedulePhases","category":"deletionImpact","vi":"Giai đoạn tiến độ thiết kế","en":"Design schedule phases","zh":"设计进度阶段","ja":"設計スケジュール工程"},
   {"key":"deletionImpact.item.design.scheduleTasks","category":"deletionImpact","vi":"Công việc tiến độ thiết kế","en":"Design schedule tasks","zh":"设计进度任务","ja":"設計スケジュールタスク"},
   {"key":"deletionImpact.item.design.scheduleHistory","category":"deletionImpact","vi":"Lịch sử tiến độ thiết kế","en":"Design schedule history","zh":"设计进度历史","ja":"設計スケジュール履歴"},

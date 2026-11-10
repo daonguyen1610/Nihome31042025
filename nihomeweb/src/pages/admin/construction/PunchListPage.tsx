@@ -1,7 +1,6 @@
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useRequestGuard } from "@/hooks/useRequestGuard";
-import { collectLookupPages } from "@/lib/pagination";
 import StatTile from "./ConstructionStatTile";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
@@ -23,15 +22,18 @@ import {
   Trash2,
   Wrench,
 } from "lucide-react";
-import AdminLayout from "@/components/layout/AdminLayout";
+import { type DesignProjectScopeProps } from "./constructionScope";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { PageLoading, PageError } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import { PageEmpty, PageLoading, PageError } from "@/components/PageState";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { OVERDUE_TONE, PUNCH_SEVERITY_TONE, PUNCH_STATUS_TONE } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,7 +75,6 @@ import {
 import {
   adminApi,
   type CreatePunchItemRequest,
-  type DesignProjectListItemResponse,
   type PunchItemListParams,
   type PunchItemResponse,
   type PunchRootCause,
@@ -98,23 +99,6 @@ const DESIGN_TEAM_ROLES = new Set([
   "MepEngineer",
   "InteriorDesigner",
 ]);
-
-const STATUS_BADGE: Record<PunchStatus, string> = {
-  Open: "border-border bg-muted/30 text-foreground",
-  InProgress: "border-sky-200 bg-sky-50 text-sky-700",
-  Fixed: "border-amber-200 bg-amber-50 text-amber-800",
-  Verified: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
-};
-
-const SEVERITY_BADGE: Record<PunchSeverity, string> = {
-  Low: "border-border bg-muted text-foreground",
-  Medium: "border-sky-200 bg-sky-50 text-sky-700",
-  High: "border-orange-200 bg-orange-50 text-orange-800",
-  Critical: "border-rose-300 bg-rose-100 text-rose-800",
-};
-
-const OVERDUE_BADGE = "border-amber-300 bg-amber-50 text-amber-800";
 
 interface UserOption extends PersonIdentity {
   id: number;
@@ -165,13 +149,17 @@ const formFromRow = (row: PunchItemResponse): PunchForm => ({
   note: row.note ?? "",
 });
 
-const AdminPunchList = () => {
+export const PunchListPanel = ({
+  designProjectId,
+  operationalProjectId,
+  scope = "execute",
+}: DesignProjectScopeProps) => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionPunchManage);
-  const canVerify = has(ADMIN_PERMS.constructionPunchVerify);
+  const canVerify = scope === "review" && has(ADMIN_PERMS.constructionPunchVerify);
   const canListUsers = has(ADMIN_PERMS.users);
 
   // list state
@@ -183,7 +171,7 @@ const AdminPunchList = () => {
   const [error, setError] = useState<string | null>(null);
 
   // filters
-  const [projectId, setProjectId] = useState<number | null>(null);
+  const projectId = designProjectId;
   const [status, setStatus] = useState<PunchStatus | "">("");
   const [severity, setSeverity] = useState<PunchSeverity | "">("");
   const [assigneeUserId, setAssigneeUserId] = useState<number | null>(null);
@@ -226,21 +214,11 @@ const AdminPunchList = () => {
   const [verifyCandidates, setVerifyCandidates] = useState<UserOption[]>([]);
 
   // lookups
-  const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
-      try {
-        const { data } = await collectLookupPages((page) =>
-          adminApi.listDesignProjects({ pageSize: 200, page }),
-        );
-        if (cancelled) return;
-        setProjects(data.items ?? []);
-      } catch {
-        /* non-fatal */
-      }
       if (canListUsers) {
         try {
           const { data } = await adminApi.getPeopleDirectory();
@@ -321,20 +299,8 @@ const AdminPunchList = () => {
     void fetchList();
   }, [fetchList]);
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusPill = (s: PunchStatus) => statusCounts[s] ?? 0;
 
-  const projectOptions = useMemo(
-    () => [
-      { value: "", label: t("punch.filter.allProjects") },
-      ...projects.map((p) => ({ value: String(p.id), label: `${p.projectCode} — ${p.name}` })),
-    ],
-    [projects, t],
-  );
-  const projectOptionsForCreate = useMemo(
-    () => projects.map((p) => ({ value: String(p.id), label: `${p.projectCode} — ${p.name}` })),
-    [projects],
-  );
   const userFilterOptions = useMemo(
     () => [
       { value: "", label: t("punch.filter.allAssignees") },
@@ -345,7 +311,6 @@ const AdminPunchList = () => {
   const userFormOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const hasActiveFilter =
-    projectId != null ||
     status !== "" ||
     severity !== "" ||
     assigneeUserId != null ||
@@ -354,7 +319,6 @@ const AdminPunchList = () => {
     search.trim() !== "";
 
   const resetFilters = () => {
-    setProjectId(null);
     setStatus("");
     setSeverity("");
     setAssigneeUserId(null);
@@ -534,11 +498,10 @@ const AdminPunchList = () => {
     setVerifyResponsibleUserId(row.responsibleDesignUserId ?? null);
     setVerifyRootCauseNote(row.rootCauseNote ?? "");
     setVerifyCandidates([]);
-    const project = projects.find((item) => item.id === row.designProjectId);
-    if (project?.operationalProjectId) {
+    if (operationalProjectId) {
       try {
         const { data } = await adminApi.getOperationalProjectTeam(
-          project.operationalProjectId,
+          operationalProjectId,
           row.designProjectId,
         );
         setVerifyCandidates(
@@ -610,16 +573,16 @@ const AdminPunchList = () => {
   // ---- render helpers ----
   const renderBadges = (row: PunchItemResponse) => (
     <div className="flex flex-wrap items-center gap-1">
-      <Badge variant="outline" className={cn(SEVERITY_BADGE[row.severity])}>
+      <ConstructionStatusBadge tone={PUNCH_SEVERITY_TONE[row.severity]}>
         {t(`punch.severity.${row.severity}`)}
-      </Badge>
-      <Badge variant="outline" className={cn(STATUS_BADGE[row.status])}>
+      </ConstructionStatusBadge>
+      <ConstructionStatusBadge tone={PUNCH_STATUS_TONE[row.status]}>
         {t(`punch.status.${row.status}`)}
-      </Badge>
+      </ConstructionStatusBadge>
       {row.isOverdue && (
-        <Badge variant="outline" className={OVERDUE_BADGE}>
+        <ConstructionStatusBadge tone={OVERDUE_TONE}>
           {t("punch.status.Overdue")}
-        </Badge>
+        </ConstructionStatusBadge>
       )}
     </div>
   );
@@ -653,14 +616,9 @@ const AdminPunchList = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6" data-testid="punch-page">
-        {/* header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">{t("punch.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("punch.subtitle")}</p>
-          </div>
+        <div className="flex justify-end">
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()}>
               <RefreshCcw className="mr-2 h-4 w-4" />
@@ -702,18 +660,6 @@ const AdminPunchList = () => {
         {/* filters */}
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
-            <FieldScope>
-              <Label className="text-xs text-muted-foreground">{t("punch.field.project")}</Label>
-              <SearchableSelect
-                value={projectId == null ? "" : String(projectId)}
-                onChange={(v) => {
-                  setProjectId(v ? Number(v) : null);
-                  setPage(1);
-                }}
-                options={projectOptions}
-                placeholder={t("punch.filter.allProjects")}
-              />
-            </FieldScope>
             <FieldScope>
               <Label className="text-xs text-muted-foreground">{t("punch.field.status")}</Label>
               <Select
@@ -758,9 +704,9 @@ const AdminPunchList = () => {
                 </SelectContent>
               </Select>
             </FieldScope>
-            <FieldScope>
-              <Label className="text-xs text-muted-foreground">{t("punch.field.assignee")}</Label>
-              {canListUsers ? (
+            {canListUsers && (
+              <FieldScope>
+                <Label className="text-xs text-muted-foreground">{t("punch.field.assignee")}</Label>
                 <SearchableSelect
                   value={assigneeUserId == null ? "" : String(assigneeUserId)}
                   onChange={(v) => {
@@ -770,10 +716,8 @@ const AdminPunchList = () => {
                   options={userFilterOptions}
                   placeholder={t("punch.filter.allAssignees")}
                 />
-              ) : (
-                <Input value="—" disabled />
-              )}
-            </FieldScope>
+              </FieldScope>
+            )}
           </div>
           <div className="mt-3 grid gap-3 sm:grid-cols-2 [&>div]:min-w-0">
             <FieldScope>
@@ -819,20 +763,15 @@ const AdminPunchList = () => {
                 {t("common.reset")}
               </Button>
             )}
-            {canManage && selected.size > 0 && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => setConfirmBulkDelete(true)}
-                className="ml-auto"
-                data-testid="punch-bulk-delete"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                {t("punch.action.bulkDelete")} ({selected.size})
-              </Button>
-            )}
           </div>
         </div>
+
+        <BulkActionBar
+          selectedCount={selected.size}
+          bulkDeleting={bulkDeleting}
+          onClear={() => setSelected(new Set())}
+          onBulkDelete={() => setConfirmBulkDelete(true)}
+        />
 
         {/* body */}
         {loading ? (
@@ -840,9 +779,17 @@ const AdminPunchList = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
-            {t("punch.empty")}
-          </div>
+          <PageEmpty
+            message={t("punch.empty")}
+            action={
+              canManage && (
+                <Button size="sm" onClick={openCreate} data-testid="punch-empty-new">
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  {t("punch.new")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <>
             {/* Mobile cards (< md) */}
@@ -852,7 +799,7 @@ const AdminPunchList = () => {
                   key={`m-${row.id}`}
                   className={cn(
                     "relative rounded-xl border border-border bg-card p-4 text-left shadow-sm",
-                    row.isOverdue && "border-amber-300 bg-amber-50/40",
+                    row.isOverdue && "border-warning/50 bg-warning-soft/50",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -930,32 +877,6 @@ const AdminPunchList = () => {
                   </div>
                 </article>
               ))}
-              <div className="flex items-center justify-between px-1 pt-1 text-xs text-muted-foreground">
-                <span>
-                  {t("common.showing")} {rows.length} / {total}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    ←
-                  </Button>
-                  <span className="px-2 py-1">
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    →
-                  </Button>
-                </div>
-              </div>
             </div>
 
             {/* Desktop table (md+) */}
@@ -989,7 +910,7 @@ const AdminPunchList = () => {
                         key={row.id}
                         className={cn(
                           "cursor-pointer hover:bg-muted/30",
-                          row.isOverdue && "bg-amber-50/40",
+                          row.isOverdue && "bg-warning-soft/50",
                         )}
                         onClick={() => openDetail(row)}
                         data-testid={`punch-row-${row.id}`}
@@ -1015,19 +936,19 @@ const AdminPunchList = () => {
                           )}
                         </td>
                         <td className="px-3 py-2">
-                          <Badge variant="outline" className={cn(SEVERITY_BADGE[row.severity])}>
+                          <ConstructionStatusBadge tone={PUNCH_SEVERITY_TONE[row.severity]}>
                             {t(`punch.severity.${row.severity}`)}
-                          </Badge>
+                          </ConstructionStatusBadge>
                         </td>
                         <td className="px-3 py-2">
                           <div className="flex flex-wrap items-center gap-1">
-                            <Badge variant="outline" className={cn(STATUS_BADGE[row.status])}>
+                            <ConstructionStatusBadge tone={PUNCH_STATUS_TONE[row.status]}>
                               {t(`punch.status.${row.status}`)}
-                            </Badge>
+                            </ConstructionStatusBadge>
                             {row.isOverdue && (
-                              <Badge variant="outline" className={OVERDUE_BADGE}>
+                              <ConstructionStatusBadge tone={OVERDUE_TONE}>
                                 {t("punch.status.Overdue")}
-                              </Badge>
+                              </ConstructionStatusBadge>
                             )}
                           </div>
                         </td>
@@ -1082,33 +1003,14 @@ const AdminPunchList = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                <span>
-                  {t("common.showing")} {rows.length} / {total}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    ←
-                  </Button>
-                  <span className="px-2 py-1">
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    →
-                  </Button>
-                </div>
-              </div>
             </div>
+            <ListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              disabled={loading}
+            />
           </>
         )}
 
@@ -1120,15 +1022,6 @@ const AdminPunchList = () => {
               <DialogDescription>{t("punch.form.hint")}</DialogDescription>
             </DialogHeader>
             <div className="space-y-3">
-              <FieldScope>
-                <Label>{t("punch.field.project")}</Label>
-                <SearchableSelect
-                  value={createProjectId == null ? "" : String(createProjectId)}
-                  onChange={(v) => setCreateProjectId(v ? Number(v) : null)}
-                  options={projectOptionsForCreate}
-                  placeholder="—"
-                />
-              </FieldScope>
               <FieldScope>
                 <Label>{t("punch.field.title")}</Label>
                 <Input
@@ -1209,7 +1102,7 @@ const AdminPunchList = () => {
                   onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))}
                 />
               </FieldScope>
-              {createError && <div className="text-sm text-rose-600">{createError}</div>}
+              {createError && <div className="text-sm text-destructive">{createError}</div>}
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setCreating(false)} disabled={saving}>
@@ -1358,7 +1251,7 @@ const AdminPunchList = () => {
                   </FieldScope>
 
                   {detail.verifiedByName && (
-                    <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800">
+                    <div className="rounded-md border border-success/40 bg-success-soft p-3 text-xs text-success-strong">
                       <div className="flex items-center gap-1 font-semibold">
                         <ShieldCheck className="h-4 w-4" /> {t("punch.field.verifiedBy")}
                       </div>
@@ -1382,7 +1275,7 @@ const AdminPunchList = () => {
                     </div>
                   )}
 
-                  {detailError && <div className="text-sm text-rose-600">{detailError}</div>}
+                  {detailError && <div className="text-sm text-destructive">{detailError}</div>}
 
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                     <div className="flex flex-wrap gap-2">
@@ -1585,8 +1478,6 @@ const AdminPunchList = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AdminLayout>
+    </>
   );
 };
-
-export default AdminPunchList;

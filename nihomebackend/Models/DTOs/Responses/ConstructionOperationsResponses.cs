@@ -18,7 +18,7 @@ public sealed record ConstructionResourceRequestResponse(
     int Id, string Code, ConstructionResourceType Type, ConstructionReviewStatus Status,
     string WbsCode, DateTime NeedByDate, decimal Quantity, string Unit, string Reason,
     int? ProjectBoqLineId, int? ResponsibleSiteUserId, int? AssignedProcurementUserId,
-    int CreatedByUserId, string? CmDecisionReason,
+    int CreatedByUserId, int LastEditedByUserId, string? CmDecisionReason,
     string? HandoffEntityType, long? HandoffEntityId, ConstructionHandoffStatus HandoffStatus,
     string RowVersion, int? ProcurementContractId = null, DateTime? SuppliedAt = null,
     int? SuppliedByUserId = null, long? SupplyDocumentId = null);
@@ -41,7 +41,7 @@ public sealed record QaQcTemplateResponse(int Id, string Code, int Version, stri
 
 public sealed record QaQcDossierResponse(int Id, string Code, int TemplateId, int TemplateVersion,
     string TemplateSnapshotJson, int? IfcReleaseId, string ChecklistResultsJson, string WbsCode, string Title, ConstructionReviewStatus Status,
-    int CreatedByUserId, IReadOnlyList<long> EvidenceDocumentIds, string? CmDecisionReason, string RowVersion,
+    int CreatedByUserId, int LastEditedByUserId, IReadOnlyList<long> EvidenceDocumentIds, string? CmDecisionReason, string RowVersion,
     IReadOnlyList<QaQcEvidenceResponse> Evidence);
 
 public sealed record QaQcEvidenceResponse(long ProjectDocumentId, QaQcEvidenceType EvidenceType);
@@ -49,7 +49,7 @@ public sealed record QaQcEvidenceResponse(long ProjectDocumentId, QaQcEvidenceTy
 public sealed record ConstructionQsBatchResponse(int Id, string Code, ConstructionQsDirection Direction,
     ConstructionReviewStatus Status, int ContractId, string WbsCode, DateTime PeriodFrom, DateTime PeriodTo, int? ProjectBoqRevisionId,
     int? ContractAppendixId, int? ContractPaymentMilestoneId, decimal CertifiedAmount,
-    string Description, int CreatedByUserId, string? CmDecisionReason, int? SupersedesBatchId,
+    string Description, int CreatedByUserId, int LastEditedByUserId, string? CmDecisionReason, int? SupersedesBatchId,
     int? ReversesBatchId, ConstructionQsAdjustmentKind AdjustmentKind,
     ConstructionQsRecordState RecordState, IReadOnlyList<ConstructionQsBatchLineResponse> Lines,
     IReadOnlyList<long> EvidenceDocumentIds, string RowVersion);

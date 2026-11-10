@@ -1719,6 +1719,9 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<int>("LastEditedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -1932,6 +1935,9 @@ namespace nihomebackend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LastEditedByUserId")
                         .HasColumnType("int");
 
                     b.Property<long?>("HandoffEntityId")
@@ -8633,6 +8639,9 @@ namespace nihomebackend.Migrations
                         .HasColumnType("datetime2");
 
                     b.Property<int>("CreatedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("LastEditedByUserId")
                         .HasColumnType("int");
 
                     b.Property<int?>("IfcReleaseId")

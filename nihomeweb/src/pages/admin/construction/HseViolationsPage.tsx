@@ -1,11 +1,11 @@
+import { useAppSelector } from "@/store";
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
-import { collectLookupPages } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { useListPage } from "@/hooks/useListPage";
 import { ListPagination } from "@/components/admin/ListPagination";
 import { FieldScope } from "@/components/ui/field-scope";
-import { useEffect, useState } from "react";
+import { cloneElement, isValidElement, useEffect, useId, useState } from "react";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useSearchParams } from "react-router-dom";
@@ -21,9 +21,11 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import AdminLayout from "@/components/layout/AdminLayout";
-import { PageError, PageLoading } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { type ScopeProps } from "./constructionScope";
+import { ConstructionDeletionControl } from "./ConstructionDeletionControl";
+import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { HSE_SEVERITY_TONE, HSE_STATUS_TONE, statusToneClass } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -56,7 +58,7 @@ import {
   type HseViolationResponse,
   type HseViolationSeverity,
   type HseViolationStatus,
-  type OperationalProjectListItemResponse,
+  type OperationalProjectResponse,
   type UpdateHseViolationRequest,
 } from "@/services/adminApi";
 
@@ -70,23 +72,6 @@ const STATUSES: HseViolationStatus[] = [
   "Cancelled",
 ];
 const SEVERITIES: HseViolationSeverity[] = ["Low", "Medium", "High", "Critical"];
-
-const statusStyle: Record<HseViolationStatus, string> = {
-  Draft: "border-zinc-200 bg-zinc-100 text-zinc-700",
-  Reported: "border-sky-200 bg-sky-50 text-sky-800",
-  Confirmed: "border-amber-200 bg-amber-50 text-amber-900",
-  Remediated: "border-teal-200 bg-teal-50 text-teal-800",
-  Closed: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-800",
-  Cancelled: "border-zinc-300 bg-zinc-100 text-zinc-600",
-};
-
-const severityStyle: Record<HseViolationSeverity, string> = {
-  Low: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Medium: "border-sky-200 bg-sky-50 text-sky-800",
-  High: "border-orange-200 bg-orange-50 text-orange-900",
-  Critical: "border-rose-300 bg-rose-100 text-rose-900",
-};
 
 interface UserOption extends PersonIdentity {
   id: number;
@@ -112,8 +97,18 @@ interface HseForm {
 type FormMode = "create" | "edit" | "correct";
 type DecisionAction = "reject" | "cancel" | "remediate" | null;
 
+/** Server dates are stored in UTC but serialized without an offset. */
+const parseStoredUtc = (value: string) =>
+  new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`);
+
+const toLocalInputValue = (value: string) => {
+  const date = parseStoredUtc(value);
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+};
+
 const emptyForm = (): HseForm => ({
-  occurredAt: new Date().toISOString().slice(0, 16),
+  occurredAt: toLocalInputValue(new Date().toISOString()),
   location: "",
   category: "",
   severity: "Low",
@@ -129,7 +124,7 @@ const emptyForm = (): HseForm => ({
 });
 
 const fromRecord = (row: HseViolationResponse): HseForm => ({
-  occurredAt: new Date(row.occurredAt).toISOString().slice(0, 16),
+  occurredAt: toLocalInputValue(row.occurredAt),
   location: row.location,
   category: row.category,
   severity: row.severity,
@@ -137,9 +132,7 @@ const fromRecord = (row: HseViolationResponse): HseForm => ({
   regulatoryReference: row.regulatoryReference ?? "",
   responsibleSiteUserId: String(row.responsibleSiteUserId),
   remediationOwnerUserId: row.remediationOwnerUserId ? String(row.remediationOwnerUserId) : "",
-  remediationDeadline: row.remediationDeadline
-    ? new Date(row.remediationDeadline).toISOString().slice(0, 16)
-    : "",
+  remediationDeadline: row.remediationDeadline ? toLocalInputValue(row.remediationDeadline) : "",
   remediationNote: row.remediationNote ?? "",
   penaltyReference: row.penaltyReference ?? "",
   penaltyAmount: row.penaltyAmount == null ? "" : String(row.penaltyAmount),
@@ -147,25 +140,23 @@ const fromRecord = (row: HseViolationResponse): HseForm => ({
 });
 
 const dateTime = (value: string | null | undefined, lang: string) =>
-  value ? new Date(value).toLocaleString(lang) : "-";
+  value ? parseStoredUtc(value).toLocaleString(lang) : "-";
 
-const HseViolationsPage = () => {
+export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps) => {
   const uiError = useUiError();
   const [searchParams] = useSearchParams();
-  const sourceProjectId = Number(searchParams.get("projectId"));
   const sourceViolationId = Number(searchParams.get("violationId"));
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionHseManage);
-  const canConfirm = has(ADMIN_PERMS.constructionHseConfirm);
-  const canClose = has(ADMIN_PERMS.constructionHseClose);
+  const canDelete = has(ADMIN_PERMS.constructionHseDelete);
+  const canConfirm = scope === "review" && has(ADMIN_PERMS.constructionHseConfirm);
+  const currentUserId = useAppSelector((state) => state.auth.user?.userId);
+  const canClose = scope === "review" && has(ADMIN_PERMS.constructionHseClose);
 
-  const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | null>(() => {
-    const value = sourceProjectId;
-    return Number.isInteger(value) && value > 0 ? value : null;
-  });
+  const [project, setProject] = useState<OperationalProjectResponse | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [rows, setRows] = useState<HseViolationResponse[]>([]);
   const [statusCounts, setStatusCounts] = useState<Partial<Record<HseViolationStatus, number>>>({});
@@ -177,10 +168,8 @@ const HseViolationsPage = () => {
   const [detail, setDetail] = useState<HseViolationResponse | null>(null);
   useEffect(() => {
     setDetail(null);
-    const sourceProject = sourceProjectId;
     const sourceId = sourceViolationId;
-    if (!projectId || projectId !== sourceProject || !Number.isInteger(sourceId) || sourceId <= 0)
-      return;
+    if (!Number.isInteger(sourceId) || sourceId <= 0) return;
     let active = true;
     void adminApi
       .getHseViolation(projectId, sourceId)
@@ -193,7 +182,7 @@ const HseViolationsPage = () => {
     return () => {
       active = false;
     };
-  }, [projectId, sourceProjectId, sourceViolationId, uiError]);
+  }, [projectId, sourceViolationId, uiError]);
 
   const [formOpen, setFormOpen] = useState(false);
   const [formMode, setFormMode] = useState<FormMode>("create");
@@ -210,19 +199,10 @@ const HseViolationsPage = () => {
 
   useEffect(() => {
     let active = true;
-    void collectLookupPages((page) => adminApi.listOperationalProjects({ pageSize: 200, page }))
-      .then(async ({ data }) => {
-        if (!active) return;
-        const available = data.items ?? [];
-        if (sourceProjectId > 0 && !available.some((project) => project.id === sourceProjectId)) {
-          const source = await adminApi.getOperationalProject(sourceProjectId);
-          if (!active) return;
-          available.push(source.data);
-        }
-        setProjects(available);
-        setProjectId((current) =>
-          sourceProjectId > 0 ? sourceProjectId : (current ?? available[0]?.id ?? null),
-        );
+    void adminApi
+      .getOperationalProject(projectId)
+      .then(({ data }) => {
+        if (active) setProject(data);
       })
       .catch((requestError) => {
         if (active) setError(uiError(requestError));
@@ -230,7 +210,7 @@ const HseViolationsPage = () => {
     return () => {
       active = false;
     };
-  }, [sourceProjectId, uiError]);
+  }, [projectId, uiError]);
 
   const [page, setPage] = useListPage(JSON.stringify([projectId, deferredSearch, status]));
   const [total, setTotal] = useState(0);
@@ -257,7 +237,6 @@ const HseViolationsPage = () => {
         setRows(listResponse.data.items ?? []);
         setTotal(listResponse.data.total);
         setStatusCounts(listResponse.data.statusCounts ?? {});
-        const project = projects.find((item) => item.id === projectId);
         const options = new Map<number, UserOption>();
         if (project?.projectManagerUserId) {
           options.set(project.projectManagerUserId, {
@@ -280,7 +259,7 @@ const HseViolationsPage = () => {
     return () => {
       active = false;
     };
-  }, [deferredSearch, projectId, projects, status, page, uiError]);
+  }, [deferredSearch, projectId, project, status, page, reloadToken, uiError]);
 
   const refresh = async (focusId?: number) => {
     if (!projectId) return;
@@ -301,7 +280,6 @@ const HseViolationsPage = () => {
 
   const openCreate = () => {
     const next = emptyForm();
-    const project = projects.find((item) => item.id === projectId);
     if (project?.projectManagerUserId)
       next.responsibleSiteUserId = String(project.projectManagerUserId);
     setForm(next);
@@ -438,6 +416,10 @@ const HseViolationsPage = () => {
     await transition(decisionRecord, decisionAction, { reason: decisionReason.trim() });
   };
 
+  const isOwnReport = (row: HseViolationResponse) =>
+    row.reportedByUserId === currentUserId ||
+    row.events.some((event) => event.type === "Created" && event.createdByUserId === currentUserId);
+
   const actionButtons = (row: HseViolationResponse) => (
     <div className="flex flex-wrap gap-2">
       {canManage && row.status === "Draft" && (
@@ -454,14 +436,28 @@ const HseViolationsPage = () => {
       )}
       {canConfirm && row.status === "Reported" && (
         <>
-          <Button size="sm" onClick={() => void transition(row, "confirm")}>
+          <Button
+            size="sm"
+            disabled={isOwnReport(row)}
+            onClick={() => void transition(row, "confirm")}
+          >
             <Check className="mr-2 h-4 w-4" />
             {t("hse.action.confirm")}
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => openDecision(row, "reject")}>
+          <Button
+            size="sm"
+            variant="destructive"
+            disabled={isOwnReport(row)}
+            onClick={() => openDecision(row, "reject")}
+          >
             <X className="mr-2 h-4 w-4" />
             {t("hse.action.reject")}
           </Button>
+          {isOwnReport(row) && (
+            <p className="w-full text-sm text-muted-foreground">
+              {t("hse.independentReviewRequired")}
+            </p>
+          )}
         </>
       )}
       {canManage && row.status === "Confirmed" && (
@@ -488,114 +484,95 @@ const HseViolationsPage = () => {
           {t("hse.correct")}
         </Button>
       )}
+      {canDelete && ["Draft", "Rejected", "Cancelled"].includes(row.status) && (
+        <ConstructionDeletionControl
+          rowVersion={row.rowVersion}
+          getImpact={() => adminApi.getHseViolationDeletionImpact(projectId, row.id)}
+          deleteRecord={(request) => adminApi.deleteHseViolation(projectId, row.id, request)}
+          onDeleted={() => {
+            if (detail?.id === row.id) setDetail(null);
+            setReloadToken((value) => value + 1);
+          }}
+        />
+      )}
     </div>
   );
 
   return (
-    <AdminLayout>
-      <div className="mx-auto w-full max-w-7xl space-y-6 px-3 py-4 sm:px-6 sm:py-6">
-        <header className="flex flex-col gap-4 border-b border-zinc-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="mb-2 flex items-center gap-2 text-rose-700">
-              <ShieldAlert className="h-5 w-5" />
-              <span className="text-sm font-semibold">HSE</span>
-            </div>
-            <h1 className="text-2xl font-bold text-zinc-950 sm:text-3xl">{t("hse.title")}</h1>
-            <p className="mt-1 max-w-2xl text-sm text-zinc-600">{t("hse.subtitle")}</p>
-          </div>
+    <>
+      <div className="space-y-4">
+        <div className="flex justify-end">
           {canManage && (
-            <Button disabled={!projectId} onClick={openCreate}>
+            <Button onClick={openCreate}>
               <Plus className="mr-2 h-4 w-4" />
               {t("hse.new")}
             </Button>
           )}
-        </header>
+        </div>
 
-        <section className="grid gap-3 lg:grid-cols-[minmax(260px,1fr)_minmax(260px,1fr)_220px]">
-          <FieldScope className="space-y-1.5">
-            <Label>{t("hse.project")}</Label>
-            <Select
-              value={projectId ? String(projectId) : ""}
-              onValueChange={(value) => setProjectId(Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder={t("hse.selectProject")} />
-              </SelectTrigger>
-              <SelectContent>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={String(project.id)}>
-                    {project.code} - {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
+        <section className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="space-y-1.5">
             <Label htmlFor="hse-search">{t("hse.search")}</Label>
             <div className="relative">
-              <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-400" />
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 id="hse-search"
+                type="search"
                 value={search}
+                placeholder={t("hse.searchPlaceholder")}
                 onChange={(event) => setSearch(event.target.value)}
                 className="pl-9"
               />
             </div>
           </div>
-          <FieldScope className="space-y-1.5">
-            <Label>{t("hse.allStatuses")}</Label>
-            <Select
-              value={status}
-              onValueChange={(value) => setStatus(value as HseViolationStatus | "all")}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">{t("hse.allStatuses")}</SelectItem>
-                {STATUSES.map((item) => (
-                  <SelectItem key={item} value={item}>
-                    {t(`hse.status.${item}`)}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FieldScope>
-        </section>
 
-        <ListPagination
-          page={page}
-          pageSize={50}
-          total={total}
-          onPageChange={setPage}
-          disabled={loading}
-        />
-        <div className="flex gap-2 overflow-x-auto pb-1">
-          {STATUSES.map((item) => (
+          <div className="flex gap-2 overflow-x-auto pb-1">
             <button
-              key={item}
               type="button"
-              onClick={() => setStatus(item)}
-              className={cn("shrink-0 border px-3 py-2 text-xs font-semibold", statusStyle[item])}
+              onClick={() => setStatus("all")}
+              aria-pressed={status === "all"}
+              className={cn(
+                "status-pill shrink-0 border border-border bg-card text-foreground",
+                status === "all" && "ring-2 ring-ring ring-offset-1",
+              )}
             >
-              {t(`hse.status.${item}`)}{" "}
-              <span className="ml-1 tabular-nums">{statusCounts[item] ?? 0}</span>
+              {t("hse.allStatuses")}
             </button>
-          ))}
-        </div>
+            {STATUSES.map((item) => (
+              <button
+                key={item}
+                type="button"
+                onClick={() => setStatus(item)}
+                aria-pressed={status === item}
+                className={cn(
+                  "shrink-0",
+                  statusToneClass(HSE_STATUS_TONE[item]),
+                  status === item && "ring-2 ring-ring ring-offset-1",
+                )}
+              >
+                {t(`hse.status.${item}`)}{" "}
+                <span className="ml-1 tabular-nums">{statusCounts[item] ?? 0}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         {loading ? (
           <PageLoading />
         ) : error ? (
-          <PageError message={error} onRetry={() => setProjectId((value) => value)} />
-        ) : !projectId ? (
-          <div className="border-y border-dashed border-zinc-300 py-16 text-center text-sm text-zinc-600">
-            {t("hse.selectProject")}
-          </div>
+          <PageError message={error} onRetry={() => setReloadToken((value) => value + 1)} />
         ) : rows.length === 0 ? (
-          <div className="border-y border-dashed border-zinc-300 py-16 text-center text-sm text-zinc-600">
-            {t("hse.empty")}
-          </div>
+          <PageEmpty
+            message={t("hse.empty")}
+            action={
+              canManage && (
+                <Button size="sm" onClick={openCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("hse.new")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <>
             <div className="space-y-3 md:hidden">
@@ -604,21 +581,21 @@ const HseViolationsPage = () => {
                   key={row.id}
                   type="button"
                   onClick={() => setDetail(row)}
-                  className="w-full border border-zinc-200 bg-card p-4 text-left shadow-sm"
+                  className="w-full rounded-xl border border-border bg-card p-4 text-left shadow-sm"
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="font-bold text-zinc-950">{row.code}</p>
-                      <p className="mt-1 line-clamp-2 text-sm text-zinc-700">{row.description}</p>
+                      <p className="font-bold text-foreground">{row.code}</p>
+                      <p className="mt-1 line-clamp-2 text-sm text-foreground">{row.description}</p>
                     </div>
-                    <Badge variant="outline" className={statusStyle[row.status]}>
+                    <ConstructionStatusBadge tone={HSE_STATUS_TONE[row.status]}>
                       {t(`hse.status.${row.status}`)}
-                    </Badge>
+                    </ConstructionStatusBadge>
                   </div>
-                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-zinc-600">
-                    <Badge variant="outline" className={severityStyle[row.severity]}>
+                  <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                    <ConstructionStatusBadge tone={HSE_SEVERITY_TONE[row.severity]}>
                       {t(`hse.severity.${row.severity}`)}
-                    </Badge>
+                    </ConstructionStatusBadge>
                     <span className="flex items-center gap-1">
                       <MapPin className="h-3.5 w-3.5" />
                       {row.location}
@@ -628,41 +605,41 @@ const HseViolationsPage = () => {
                 </button>
               ))}
             </div>
-            <div className="hidden overflow-hidden border border-zinc-200 md:block">
+            <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-sm md:block">
               <table className="w-full text-left text-sm">
-                <thead className="bg-zinc-100 text-xs font-semibold uppercase text-zinc-600">
+                <thead className="bg-muted text-xs font-semibold uppercase text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">{t("hse.field.description")}</th>
                     <th className="px-4 py-3">{t("hse.field.location")}</th>
                     <th className="px-4 py-3">{t("hse.field.responsible")}</th>
                     <th className="px-4 py-3">{t("hse.field.severity")}</th>
-                    <th className="px-4 py-3">{t("hse.allStatuses")}</th>
+                    <th className="px-4 py-3">{t("hse.field.status")}</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-zinc-200">
+                <tbody className="divide-y divide-border">
                   {rows.map((row) => (
                     <tr
                       key={row.id}
                       onClick={() => setDetail(row)}
-                      className="cursor-pointer bg-card hover:bg-zinc-50"
+                      className="cursor-pointer bg-card hover:bg-muted/50"
                     >
                       <td className="max-w-md px-4 py-3">
-                        <p className="font-semibold text-zinc-950">{row.code}</p>
-                        <p className="truncate text-zinc-600">{row.description}</p>
+                        <p className="font-semibold text-foreground">{row.code}</p>
+                        <p className="truncate text-muted-foreground">{row.description}</p>
                       </td>
-                      <td className="px-4 py-3 text-zinc-700">{row.location}</td>
-                      <td className="px-4 py-3 text-zinc-700">
+                      <td className="px-4 py-3 text-foreground">{row.location}</td>
+                      <td className="px-4 py-3 text-foreground">
                         {row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}`}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={severityStyle[row.severity]}>
+                        <ConstructionStatusBadge tone={HSE_SEVERITY_TONE[row.severity]}>
                           {t(`hse.severity.${row.severity}`)}
-                        </Badge>
+                        </ConstructionStatusBadge>
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant="outline" className={statusStyle[row.status]}>
+                        <ConstructionStatusBadge tone={HSE_STATUS_TONE[row.status]}>
                           {t(`hse.status.${row.status}`)}
-                        </Badge>
+                        </ConstructionStatusBadge>
                       </td>
                     </tr>
                   ))}
@@ -671,6 +648,13 @@ const HseViolationsPage = () => {
             </div>
           </>
         )}
+        <ListPagination
+          page={page}
+          pageSize={50}
+          total={total}
+          onPageChange={setPage}
+          disabled={loading}
+        />
       </div>
 
       <Sheet
@@ -685,63 +669,63 @@ const HseViolationsPage = () => {
               <SheetHeader>
                 <SheetTitle className="flex items-center justify-between gap-3 pr-7">
                   <span>{detail.code}</span>
-                  <Badge variant="outline" className={statusStyle[detail.status]}>
+                  <ConstructionStatusBadge tone={HSE_STATUS_TONE[detail.status]}>
                     {t(`hse.status.${detail.status}`)}
-                  </Badge>
+                  </ConstructionStatusBadge>
                 </SheetTitle>
               </SheetHeader>
-              <div className="border-l-4 border-rose-600 pl-4">
-                <p className="text-sm font-semibold text-zinc-950">{detail.description}</p>
-                <p className="mt-2 text-sm text-zinc-600">
+              <div className="border-l-4 border-destructive pl-4">
+                <p className="text-sm font-semibold text-foreground">{detail.description}</p>
+                <p className="mt-2 text-sm text-muted-foreground">
                   {detail.category} - {detail.location}
                 </p>
               </div>
               <dl className="grid grid-cols-2 gap-x-4 gap-y-4 text-sm">
                 <div>
-                  <dt className="text-zinc-500">{t("hse.field.occurredAt")}</dt>
+                  <dt className="text-muted-foreground">{t("hse.field.occurredAt")}</dt>
                   <dd className="mt-1 font-medium">{dateTime(detail.occurredAt, lang)}</dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t("hse.field.severity")}</dt>
+                  <dt className="text-muted-foreground">{t("hse.field.severity")}</dt>
                   <dd className="mt-1">
-                    <Badge variant="outline" className={severityStyle[detail.severity]}>
+                    <ConstructionStatusBadge tone={HSE_SEVERITY_TONE[detail.severity]}>
                       {t(`hse.severity.${detail.severity}`)}
-                    </Badge>
+                    </ConstructionStatusBadge>
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t("hse.field.responsible")}</dt>
+                  <dt className="text-muted-foreground">{t("hse.field.responsible")}</dt>
                   <dd className="mt-1 font-medium">
                     {detail.responsibleSiteUserName ?? `#${detail.responsibleSiteUserId}`}
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-zinc-500">{t("hse.field.remediationOwner")}</dt>
+                  <dt className="text-muted-foreground">{t("hse.field.remediationOwner")}</dt>
                   <dd className="mt-1 font-medium">{detail.remediationOwnerUserName ?? "-"}</dd>
                 </div>
               </dl>
               {detail.remediationNote && (
-                <div className="border border-teal-200 bg-teal-50 p-3 text-sm text-teal-950">
+                <div className="border border-border bg-muted/50 p-3 text-sm text-foreground">
                   <p className="font-semibold">{t("hse.field.remediationNote")}</p>
                   <p className="mt-1">{detail.remediationNote}</p>
                 </div>
               )}
               {actionButtons(detail)}
               <section>
-                <h2 className="mb-3 text-sm font-bold text-zinc-950">{t("hse.history")}</h2>
-                <ol className="space-y-3 border-l border-zinc-300 pl-4">
+                <h2 className="mb-3 text-sm font-bold text-foreground">{t("hse.history")}</h2>
+                <ol className="space-y-3 border-l border-border pl-4">
                   {detail.events.map((event) => (
                     <li key={event.id} className="text-sm">
-                      <p className="font-semibold text-zinc-900">
+                      <p className="font-semibold text-foreground">
                         {event.type === "Correction"
                           ? t("hse.correct")
                           : t(`hse.status.${event.toStatus}`)}
                       </p>
-                      <p className="text-xs text-zinc-500">
+                      <p className="text-xs text-muted-foreground">
                         {dateTime(event.createdAt, lang)} -{" "}
                         {event.createdByName ?? `#${event.createdByUserId}`}
                       </p>
-                      {event.reason && <p className="mt-1 text-zinc-700">{event.reason}</p>}
+                      {event.reason && <p className="mt-1 text-foreground">{event.reason}</p>}
                     </li>
                   ))}
                 </ol>
@@ -762,25 +746,30 @@ const HseViolationsPage = () => {
                   : t("hse.correct")}
             </DialogTitle>
           </DialogHeader>
+          {formMode !== "correct" && (
+            <p className="text-sm text-muted-foreground">{t("hse.formIntro")}</p>
+          )}
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label={t("hse.field.occurredAt")}>
+            <Field label={t("hse.field.occurredAt")} hint={t("hse.hint.occurredAt")} required>
               <Input
                 type="datetime-local"
                 value={form.occurredAt}
                 onChange={(event) => setForm({ ...form, occurredAt: event.target.value })}
               />
             </Field>
-            <Field label={t("hse.field.location")}>
+            <Field label={t("hse.field.location")} hint={t("hse.hint.location")} required>
               <Input
                 value={form.location}
                 maxLength={300}
+                placeholder={t("hse.placeholder.location")}
                 onChange={(event) => setForm({ ...form, location: event.target.value })}
               />
             </Field>
-            <Field label={t("hse.field.category")}>
+            <Field label={t("hse.field.category")} hint={t("hse.hint.category")} required>
               <Input
                 value={form.category}
                 maxLength={100}
+                placeholder={t("hse.placeholder.category")}
                 onChange={(event) => setForm({ ...form, category: event.target.value })}
               />
             </Field>
@@ -804,30 +793,35 @@ const HseViolationsPage = () => {
               </Select>
             </Field>
             <div className="sm:col-span-2">
-              <Field label={t("hse.field.description")}>
+              <Field label={t("hse.field.description")} hint={t("hse.hint.description")} required>
                 <Textarea
                   value={form.description}
                   maxLength={4000}
                   rows={4}
+                  placeholder={t("hse.placeholder.description")}
                   onChange={(event) => setForm({ ...form, description: event.target.value })}
                 />
               </Field>
             </div>
-            <Field label={t("hse.field.responsible")}>
+            <Field label={t("hse.field.responsible")} hint={t("hse.hint.responsible")} required>
               <UserSelect
                 value={form.responsibleSiteUserId}
                 users={users}
                 onChange={(value) => setForm({ ...form, responsibleSiteUserId: value })}
               />
             </Field>
-            <Field label={t("hse.field.regulatoryReference")}>
+            <Field
+              label={t("hse.field.regulatoryReference")}
+              hint={t("hse.hint.regulatoryReference")}
+            >
               <Input
                 value={form.regulatoryReference}
                 maxLength={500}
+                placeholder={t("hse.placeholder.regulatoryReference")}
                 onChange={(event) => setForm({ ...form, regulatoryReference: event.target.value })}
               />
             </Field>
-            <Field label={t("hse.field.remediationOwner")}>
+            <Field label={t("hse.field.remediationOwner")} hint={t("hse.hint.remediationOwner")}>
               <UserSelect
                 value={form.remediationOwnerUserId}
                 users={users}
@@ -835,7 +829,10 @@ const HseViolationsPage = () => {
                 onChange={(value) => setForm({ ...form, remediationOwnerUserId: value })}
               />
             </Field>
-            <Field label={t("hse.field.remediationDeadline")}>
+            <Field
+              label={t("hse.field.remediationDeadline")}
+              hint={t("hse.hint.remediationDeadline")}
+            >
               <Input
                 type="datetime-local"
                 value={form.remediationDeadline}
@@ -843,7 +840,7 @@ const HseViolationsPage = () => {
               />
             </Field>
             <div className="sm:col-span-2">
-              <Field label={t("hse.field.remediationNote")}>
+              <Field label={t("hse.field.remediationNote")} hint={t("hse.hint.remediationNote")}>
                 <Textarea
                   value={form.remediationNote}
                   maxLength={4000}
@@ -853,14 +850,17 @@ const HseViolationsPage = () => {
             </div>
             {canConfirm && (
               <>
-                <Field label={t("hse.field.penaltyReference")}>
+                <Field
+                  label={t("hse.field.penaltyReference")}
+                  hint={t("hse.hint.penaltyReference")}
+                >
                   <Input
                     value={form.penaltyReference}
                     maxLength={200}
                     onChange={(event) => setForm({ ...form, penaltyReference: event.target.value })}
                   />
                 </Field>
-                <Field label={t("hse.field.penaltyAmount")}>
+                <Field label={t("hse.field.penaltyAmount")} hint={t("hse.hint.penaltyAmount")}>
                   <Input
                     type="number"
                     min="0"
@@ -873,7 +873,7 @@ const HseViolationsPage = () => {
             )}
             {formMode === "correct" && (
               <div className="sm:col-span-2">
-                <Field label={t("hse.field.reason")}>
+                <Field label={t("hse.field.reason")} hint={t("hse.hint.reason")} required>
                   <Textarea
                     value={form.reason}
                     minLength={3}
@@ -907,14 +907,14 @@ const HseViolationsPage = () => {
           </DialogHeader>
           {decisionAction === "remediate" ? (
             <div className="space-y-4">
-              <Field label={t("hse.field.remediationOwner")}>
+              <Field label={t("hse.field.remediationOwner")} hint={t("hse.hint.remediationOwner")}>
                 <UserSelect
                   value={remediationOwnerId}
                   users={users}
                   onChange={setRemediationOwnerId}
                 />
               </Field>
-              <Field label={t("hse.field.remediationNote")}>
+              <Field label={t("hse.field.remediationNote")} hint={t("hse.hint.remediationNote")}>
                 <Textarea
                   value={remediationNote}
                   maxLength={4000}
@@ -923,7 +923,7 @@ const HseViolationsPage = () => {
               </Field>
             </div>
           ) : (
-            <Field label={t("hse.field.reason")}>
+            <Field label={t("hse.field.reason")} hint={t("hse.hint.reason")} required>
               <Textarea
                 value={decisionReason}
                 maxLength={2000}
@@ -941,16 +941,46 @@ const HseViolationsPage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </AdminLayout>
+    </>
   );
 };
 
-const Field = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <FieldScope className="space-y-1.5">
-    <Label>{label}</Label>
-    {children}
-  </FieldScope>
-);
+const Field = ({
+  label,
+  hint,
+  required = false,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  required?: boolean;
+  children: React.ReactNode;
+}) => {
+  const hintId = useId();
+  return (
+    <FieldScope className="space-y-1.5">
+      <Label>
+        {label}
+        {required && (
+          <span className="ml-0.5 text-destructive" aria-hidden="true">
+            *
+          </span>
+        )}
+      </Label>
+      {isValidElement(children)
+        ? cloneElement(children as React.ReactElement<Record<string, unknown>>, {
+            "aria-describedby": hint ? hintId : undefined,
+            "aria-required": required || undefined,
+          })
+        : children}
+      {hint && (
+        <p id={hintId} className="text-xs text-muted-foreground">
+          {hint}
+        </p>
+      )}
+    </FieldScope>
+  );
+};
 
 const UserSelect = ({
   value,
@@ -976,5 +1006,3 @@ const UserSelect = ({
     />
   );
 };
-
-export default HseViolationsPage;

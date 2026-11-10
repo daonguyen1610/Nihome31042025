@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { AlertCircle, Inbox, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { Button } from "@/components/ui/button";
@@ -36,13 +37,14 @@ export function PageError({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
-export function PageEmpty({ message }: { message: string }) {
+export function PageEmpty({ message, action }: { message: string; action?: ReactNode }) {
   return (
     <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">
       <span className="rounded-full bg-muted p-2.5">
         <Inbox className="h-5 w-5" aria-hidden />
       </span>
       <p>{message}</p>
+      {action}
     </div>
   );
 }

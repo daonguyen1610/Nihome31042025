@@ -42,9 +42,9 @@ const actionIcon: Record<DeletionImpactAction, typeof Trash2> = {
 };
 
 const actionClass: Record<DeletionImpactAction, string> = {
-  Delete: "border-rose-200 bg-rose-50 text-rose-700",
-  Unlink: "border-amber-200 bg-amber-50 text-amber-700",
-  Block: "border-red-300 bg-red-100 text-red-800",
+  Delete: "border-destructive/40 bg-destructive/5 text-destructive",
+  Unlink: "border-border bg-muted text-foreground",
+  Block: "border-destructive/50 bg-destructive/10 text-destructive",
 };
 
 export const DeletionImpactDialog = ({
@@ -176,11 +176,8 @@ export const DeletionImpactDialog = ({
         ) : null}
 
         {operation ? (
-          <div
-            className="space-y-3 rounded-md border border-amber-200 bg-amber-50 p-4"
-            role="status"
-          >
-            <div className="flex items-start gap-2 text-sm text-amber-900">
+          <div className="space-y-3 rounded-md border border-border bg-muted p-4" role="status">
+            <div className="flex items-start gap-2 text-sm text-foreground">
               {operationActive ? (
                 <Loader2 className="mt-0.5 h-4 w-4 animate-spin" />
               ) : (

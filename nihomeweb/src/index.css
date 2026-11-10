@@ -42,7 +42,7 @@
     --accent: 220 25% 96%;
     --accent-foreground: 222 25% 12%;
 
-    --destructive: 0 84% 50%;
+    --destructive: 354 68% 34%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 220 15% 90%;
@@ -105,7 +105,7 @@
     --muted-foreground: 220 9% 65%;
     --accent: 230 20% 14%;
     --accent-foreground: 0 0% 96%;
-    --destructive: 0 70% 45%;
+    --destructive: 354 55% 45%;
     --destructive-foreground: 0 0% 96%;
     --border: 230 20% 16%;
     --input: 230 20% 16%;
@@ -279,6 +279,16 @@
   }
 
   /* Pill chip */
+  .status-pill {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium;
+  }
+
+  /* BCH phone surfaces: every inline control meets the 44px touch target. */
+  @media (max-width: 767px) {
+    .construction-touch :is(button, [role="tab"]) {
+      min-height: 2.75rem;
+    }
+  }
   .chip {
     @apply inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider;
   }
@@ -297,6 +307,22 @@
   .chip-success {
     background: hsl(150 62% 45% / 0.12);
     color: hsl(150 62% 35%);
+  }
+  .chip-muted {
+    background: hsl(var(--muted));
+    color: hsl(var(--muted-foreground));
+  }
+  .chip-warning {
+    background: hsl(var(--admin-warning-soft));
+    color: hsl(28 85% 30%);
+  }
+  .chip-info {
+    background: hsl(var(--admin-info-soft));
+    color: hsl(199 90% 28%);
+  }
+  .chip-danger {
+    background: hsl(var(--admin-danger-soft));
+    color: hsl(354 75% 40%);
   }
 }
 
