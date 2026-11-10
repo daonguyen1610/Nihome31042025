@@ -37,6 +37,7 @@ public class TranslationsController(
             [EntityTypes.NewsCategory] = new("translations.entityType.newsCategory", Fields(("Name", "text"))),
             [EntityTypes.ProjectCategory] = new("translations.entityType.projectCategory", Fields(("Name", "text"))),
             [EntityTypes.AsBuiltDocumentCategory] = new("translations.entityType.asBuiltCategory", Fields(("Name", "text"))),
+            [EntityTypes.QaQcTemplate] = new("translations.entityType.qaQcTemplate", Fields(("Name", "text"))),
             [EntityTypes.RoleGroup] = new("translations.entityType.roleGroup", Fields(("Name", "text"))),
             [EntityTypes.EmploymentType] = new("translations.entityType.employmentType", Fields(("Name", "text"))),
             [EntityTypes.RecruitmentDropdownOption] = new("translations.entityType.recruitmentDropdownOption", Fields(("Name", "text"))),
@@ -292,6 +293,16 @@ public class TranslationsController(
                     translationCount = CountCategoryTranslations(c.NameVi, c.Id, explicitlySavedCategoryLanguages, c.NameEn, c.NameZh, c.NameJa),
                     expectedFields = 3
                 }),
+            EntityTypes.QaQcTemplate => (await db.QaQcTemplates.AsNoTracking().OrderBy(t => t.Code).ThenByDescending(t => t.Version).ToListAsync())
+                .Select(t => new
+                {
+                    id = t.Id,
+                    title = t.NameVi,
+                    description = $"{t.Code} · v{t.Version}",
+                    hasTranslation = CountCategoryTranslations(t.NameVi, t.Id, explicitlySavedCategoryLanguages, t.Name, t.NameZh, t.NameJa) > 0,
+                    translationCount = CountCategoryTranslations(t.NameVi, t.Id, explicitlySavedCategoryLanguages, t.Name, t.NameZh, t.NameJa),
+                    expectedFields = 3
+                }),
             EntityTypes.EmploymentType => (await db.EmploymentTypes.AsNoTracking().OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync())
                 .Select(c => new
                 {
@@ -484,6 +495,19 @@ public class TranslationsController(
                     };
                 }
                 break;
+            case EntityTypes.QaQcTemplate:
+                var qaQcTemplate = await db.QaQcTemplates.AsNoTracking().FirstOrDefaultAsync(t => t.Id == entityId);
+                if (qaQcTemplate != null)
+                {
+                    original = new() { ["Name"] = qaQcTemplate.NameVi };
+                    categoryTranslations = new()
+                    {
+                        ["en"] = new() { ["Name"] = GetActualTranslation(qaQcTemplate.NameVi, qaQcTemplate.Name, explicitlySavedCategoryLanguages.Contains("en")) },
+                        ["zh"] = new() { ["Name"] = GetActualTranslation(qaQcTemplate.NameVi, qaQcTemplate.NameZh, explicitlySavedCategoryLanguages.Contains("zh")) },
+                        ["ja"] = new() { ["Name"] = GetActualTranslation(qaQcTemplate.NameVi, qaQcTemplate.NameJa, explicitlySavedCategoryLanguages.Contains("ja")) },
+                    };
+                }
+                break;
             case EntityTypes.EmploymentType:
                 var employmentType = await db.EmploymentTypes.AsNoTracking().FirstOrDefaultAsync(c => c.Id == entityId);
                 if (employmentType != null) original = new() { ["Name"] = employmentType.Name };
@@ -566,7 +590,8 @@ public class TranslationsController(
         }
 
         if (entityType is EntityTypes.ActivityCategory or EntityTypes.NewsCategory
-            or EntityTypes.ProjectCategory or EntityTypes.AsBuiltDocumentCategory)
+            or EntityTypes.ProjectCategory or EntityTypes.AsBuiltDocumentCategory
+            or EntityTypes.QaQcTemplate)
         {
             var value = req.Translations["Name"].Trim();
             if (value.Length > 200)
@@ -596,6 +621,11 @@ public class TranslationsController(
                     if (asBuiltCat == null) return NotFound();
                     SetCategoryLanguageField(asBuiltCat, req.LanguageCode, value);
                     asBuiltCat.UpdatedAt = DateTime.UtcNow;
+                    break;
+                case EntityTypes.QaQcTemplate:
+                    var qaQcTemplate = await db.QaQcTemplates.FindAsync(entityId);
+                    if (qaQcTemplate == null) return NotFound();
+                    SetCategoryLanguageField(qaQcTemplate, req.LanguageCode, value);
                     break;
             }
             await db.SaveChangesAsync();
@@ -659,6 +689,16 @@ public class TranslationsController(
             case "en": category.NameEn = value; break;
             case "zh": category.NameZh = value; break;
             case "ja": category.NameJa = value; break;
+        }
+    }
+
+    private static void SetCategoryLanguageField(QaQcTemplate template, string lang, string value)
+    {
+        switch (lang)
+        {
+            case "en": template.Name = value; break;
+            case "zh": template.NameZh = value; break;
+            case "ja": template.NameJa = value; break;
         }
     }
 
@@ -734,6 +774,15 @@ public class TranslationsController(
                 await db.SaveChangesAsync();
                 await entitySvc.DeleteEntityTranslationsAsync(entityType, entityId);
                 return NoContent();
+            case EntityTypes.QaQcTemplate:
+                var qaQcTemplate = await db.QaQcTemplates.FindAsync(entityId);
+                if (qaQcTemplate == null) return NotFound();
+                qaQcTemplate.Name = qaQcTemplate.NameVi;
+                qaQcTemplate.NameZh = qaQcTemplate.NameVi;
+                qaQcTemplate.NameJa = qaQcTemplate.NameVi;
+                await db.SaveChangesAsync();
+                await entitySvc.DeleteEntityTranslationsAsync(entityType, entityId);
+                return NoContent();
         }
 
         await entitySvc.DeleteEntityTranslationsAsync(entityType, entityId);
@@ -753,6 +802,7 @@ public class TranslationsController(
         EntityTypes.NewsCategory => await db.NewsCategories.AsNoTracking().AnyAsync(item => item.Id == entityId),
         EntityTypes.ProjectCategory => await db.ProjectCategories.AsNoTracking().AnyAsync(item => item.Id == entityId),
         EntityTypes.AsBuiltDocumentCategory => await db.AsBuiltDocumentCategories.AsNoTracking().AnyAsync(item => item.Id == entityId),
+        EntityTypes.QaQcTemplate => await db.QaQcTemplates.AsNoTracking().AnyAsync(item => item.Id == entityId),
         EntityTypes.RoleGroup => await db.RoleGroups.AsNoTracking().AnyAsync(item => item.Id == entityId && item.IsActive),
         EntityTypes.EmploymentType => await db.EmploymentTypes.AsNoTracking().AnyAsync(item => item.Id == entityId),
         EntityTypes.RecruitmentDropdownOption => await db.RecruitmentDropdownOptions.AsNoTracking().AnyAsync(item => item.Id == entityId),

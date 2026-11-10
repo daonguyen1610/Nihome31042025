@@ -276,11 +276,15 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     public async Task<QaQcTemplateResponse> CreateTemplateAsync(CreateQaQcTemplateRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
-        EnsureText(request.Code, "Mã mẫu"); EnsureText(request.NameVi, "Tên mẫu tiếng Việt"); EnsureText(request.Name, "Tên mẫu tiếng Anh"); EnsureText(request.NameZh, "Tên mẫu tiếng Trung"); EnsureText(request.NameJa, "Tên mẫu tiếng Nhật");
+        EnsureText(request.Code, "Mã mẫu"); EnsureText(request.NameVi, "Tên mẫu tiếng Việt");
         ValidateQaQcTemplateSchema(request.SchemaJson, requireAcceptanceCriteria: true);
         var code = request.Code.Trim().ToUpperInvariant();
         var version = (await db.QaQcTemplates.Where(x => x.Code == code).MaxAsync(x => (int?)x.Version, ct) ?? 0) + 1;
-        var item = new QaQcTemplate { Code = code, Version = version, NameVi = request.NameVi.Trim(), Name = request.Name.Trim(), NameZh = request.NameZh.Trim(), NameJa = request.NameJa.Trim(), SchemaJson = request.SchemaJson, CreatedByUserId = userId };
+        // The source language is Vietnamese. Other languages are managed in
+        // Content translations, so a new template starts with the source name
+        // in every language field instead of an empty required value.
+        var nameVi = request.NameVi.Trim();
+        var item = new QaQcTemplate { Code = code, Version = version, NameVi = nameVi, Name = NameOrSource(request.Name, nameVi), NameZh = NameOrSource(request.NameZh, nameVi), NameJa = NameOrSource(request.NameJa, nameVi), SchemaJson = request.SchemaJson, CreatedByUserId = userId };
         db.QaQcTemplates.Add(item); await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         return Map(item);
@@ -725,6 +729,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     }
     private static void EnsureDecision(ConstructionReviewStatus status, int creator, int lastEditor, int reviewer, string reason) { if (status != ConstructionReviewStatus.PendingCmReview) throw new ConstructionOperationException("Chỉ bản ghi đang chờ duyệt mới được xem xét."); if (creator == reviewer || lastEditor == reviewer) throw new ConstructionOperationException("Người tạo hoặc chỉnh sửa gần nhất không được tự thực hiện bước duyệt CM độc lập."); EnsureText(reason, "Lý do duyệt CM"); }
     private static void EnsureText(string? value, string field) { if (string.IsNullOrWhiteSpace(value)) throw new ConstructionOperationException($"{field} là bắt buộc và không được chỉ gồm khoảng trắng."); }
+    private static string NameOrSource(string? value, string source) => string.IsNullOrWhiteSpace(value) ? source : value.Trim();
     private static void ValidateJson(string value, string field, JsonValueKind expectedKind) { try { using var document = JsonDocument.Parse(value); if (document.RootElement.ValueKind != expectedKind) throw new ConstructionOperationException($"{field} phải là JSON dạng {expectedKind.ToString().ToLowerInvariant()}."); } catch (JsonException) { throw new ConstructionOperationException($"{field} phải là JSON hợp lệ."); } }
     private static HashSet<string> ValidateQaQcTemplateSchema(string value, bool requireAcceptanceCriteria)
     {

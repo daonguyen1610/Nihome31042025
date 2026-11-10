@@ -1,4 +1,5 @@
 import { useEffect, useState, type FormEvent } from "react";
+import { Link } from "react-router-dom";
 import { ClipboardCheck, FilePlus2, Plus, Trash2 } from "lucide-react";
 import { PageEmpty } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +16,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { useUiError } from "@/hooks/useUiError";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
 import { adminApi, type QaQcTemplateResponse } from "@/services/adminApi";
 import {
@@ -41,16 +44,12 @@ export function QaQcTemplatesSection({
   const { t } = useI18n();
   const uiError = useUiError();
   const { toast } = useToast();
+  const { has } = usePermissions();
+  const canViewTranslations = has(ADMIN_PERMS.translations);
   const [templates, setTemplates] = useState<QaQcTemplateResponse[]>([]);
   const [open, setOpen] = useState(false);
   const [acting, setActing] = useState(false);
-  const [form, setForm] = useState({
-    code: "",
-    nameVi: "",
-    name: "",
-    nameZh: "",
-    nameJa: "",
-  });
+  const [form, setForm] = useState({ code: "", nameVi: "" });
   const [checklistItems, setChecklistItems] = useState<QaQcTemplateItem[]>(() => [
     nextChecklistItem([]),
   ]);
@@ -84,8 +83,15 @@ export function QaQcTemplatesSection({
     }
     setActing(true);
     try {
+      const nameVi = form.nameVi.trim();
       const { data } = await adminApi.createQaQcTemplate(projectId, {
-        ...form,
+        code: form.code.trim(),
+        nameVi,
+        // Vietnamese is the source language; other languages are managed in
+        // Content translations, so start every language field from the source.
+        name: nameVi,
+        nameZh: nameVi,
+        nameJa: nameVi,
         schemaJson: serializeQaQcTemplateSchema(checklistItems),
       });
       setTemplates((current) => [...current, data]);
@@ -104,7 +110,7 @@ export function QaQcTemplatesSection({
 
   const openCreate = () => {
     const initialItems = [nextChecklistItem([])];
-    setForm({ code: "", nameVi: "", name: "", nameZh: "", nameJa: "" });
+    setForm({ code: "", nameVi: "" });
     setChecklistItems(initialItems);
     setAdvancedJson(serializeQaQcTemplateSchema(initialItems));
     setOpen(true);
@@ -206,26 +212,45 @@ export function QaQcTemplatesSection({
             </DialogHeader>
             <DialogDescription>{t("construction.qaQc.templateFormIntro")}</DialogDescription>
             <div className="grid gap-4 sm:grid-cols-2">
-              {(
-                [
-                  ["code", "construction.qaQc.templateCode"],
-                  ["nameVi", "construction.qaQc.nameVi"],
-                  ["name", "construction.qaQc.nameEn"],
-                  ["nameZh", "construction.qaQc.nameZh"],
-                  ["nameJa", "construction.qaQc.nameJa"],
-                ] as const
-              ).map(([field, labelKey]) => (
-                <div key={field} className="space-y-1.5">
-                  <Label htmlFor={`qa-template-${field}`}>{t(labelKey)}</Label>
-                  <Input
-                    id={`qa-template-${field}`}
-                    required
-                    maxLength={field === "code" ? 60 : 200}
-                    value={form[field]}
-                    onChange={(event) => setForm({ ...form, [field]: event.target.value })}
-                  />
-                </div>
-              ))}
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-template-code">{t("construction.qaQc.templateCode")}</Label>
+                <Input
+                  id="qa-template-code"
+                  required
+                  maxLength={60}
+                  value={form.code}
+                  onChange={(event) => setForm({ ...form, code: event.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label htmlFor="qa-template-nameVi">{t("construction.qaQc.nameVi")}</Label>
+                <Input
+                  id="qa-template-nameVi"
+                  required
+                  maxLength={200}
+                  value={form.nameVi}
+                  onChange={(event) => setForm({ ...form, nameVi: event.target.value })}
+                />
+                <p className="text-xs text-muted-foreground">
+                  {t("construction.qaQc.nameSourceHint")}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-sky-900">{t("cat.manageTranslationsHint")}</p>
+              {canViewTranslations && (
+                <Button
+                  asChild
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0 bg-background"
+                >
+                  <Link to="/admin/translations?tab=entity&type=QaQcTemplate">
+                    {t("cat.openTranslations")}
+                  </Link>
+                </Button>
+              )}
             </div>
             <fieldset className="min-w-0 max-w-full space-y-3 rounded-lg border p-4">
               <legend className="px-1 text-sm font-semibold">

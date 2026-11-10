@@ -602,34 +602,18 @@
   {
     "key": "construction.qaQc.nameVi",
     "category": "construction",
-    "vi": "Tên tiếng Việt",
-    "en": "Vietnamese name",
-    "zh": "越南语名称",
-    "ja": "ベトナム語名"
+    "vi": "Tên mẫu",
+    "en": "Template name",
+    "zh": "模板名称",
+    "ja": "テンプレート名"
   },
   {
-    "key": "construction.qaQc.nameEn",
+    "key": "construction.qaQc.nameSourceHint",
     "category": "construction",
-    "vi": "Tên tiếng Anh",
-    "en": "English name",
-    "zh": "英语名称",
-    "ja": "英語名"
-  },
-  {
-    "key": "construction.qaQc.nameZh",
-    "category": "construction",
-    "vi": "Tên tiếng Trung",
-    "en": "Chinese name",
-    "zh": "中文名称",
-    "ja": "中国語名"
-  },
-  {
-    "key": "construction.qaQc.nameJa",
-    "category": "construction",
-    "vi": "Tên tiếng Nhật",
-    "en": "Japanese name",
-    "zh": "日语名称",
-    "ja": "日本語名"
+    "vi": "Đây là tên gốc tiếng Việt. Bản dịch tiếng Anh, Trung và Nhật được quản lý tại Dịch nội dung.",
+    "en": "This is the Vietnamese source name. English, Chinese, and Japanese translations are managed in Content translations.",
+    "zh": "这是越南语原始名称。英语、中文和日语翻译在“内容翻译”中管理。",
+    "ja": "これはベトナム語の元の名前です。英語・中国語・日本語の翻訳は「コンテンツ翻訳」で管理します。"
   },
   {
     "key": "construction.qaQc.invalidSchemaJson",

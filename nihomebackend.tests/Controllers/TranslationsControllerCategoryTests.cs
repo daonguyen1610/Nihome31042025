@@ -172,4 +172,45 @@ public class TranslationsControllerCategoryTests : IDisposable
         Assert.Equal("", translations.GetProperty("zh").GetProperty("Name").GetString());
         Assert.Equal("", translations.GetProperty("ja").GetProperty("Name").GetString());
     }
+
+    [Fact]
+    public async Task SaveThenDelete_RoundTripsQaQcTemplateName()
+    {
+        var template = new QaQcTemplate
+        {
+            Code = "ISO-QA-T",
+            Version = 1,
+            NameVi = "Nghiệm thu bê tông",
+            Name = "Nghiệm thu bê tông",
+            NameZh = "Nghiệm thu bê tông",
+            NameJa = "Nghiệm thu bê tông",
+            SchemaJson = "{}",
+        };
+        _db.QaQcTemplates.Add(template);
+        await _db.SaveChangesAsync();
+
+        var saveResult = await _sut.SaveEntityTranslations(
+            EntityTypes.QaQcTemplate,
+            template.Id,
+            new SaveEntityTranslationsRequest { LanguageCode = "en", Translations = new() { ["Name"] = "Concrete inspection" } });
+        Assert.IsType<OkResult>(saveResult);
+
+        var stored = await _db.QaQcTemplates.FindAsync(template.Id);
+        Assert.Equal("Concrete inspection", stored!.Name);
+        Assert.Equal("Nghiệm thu bê tông", stored.NameVi);
+        Assert.Equal("Nghiệm thu bê tông", stored.NameZh);
+        Assert.Equal("Nghiệm thu bê tông", stored.NameJa);
+
+        var statusResult = Assert.IsType<OkObjectResult>(
+            await _sut.GetEntitiesWithTranslationStatus(EntityTypes.QaQcTemplate));
+        Assert.Contains("\"translationCount\":1", JsonSerializer.Serialize(statusResult.Value));
+
+        var deleteResult = await _sut.DeleteEntityTranslations(EntityTypes.QaQcTemplate, template.Id);
+
+        Assert.IsType<NoContentResult>(deleteResult);
+        stored = await _db.QaQcTemplates.FindAsync(template.Id);
+        Assert.Equal("Nghiệm thu bê tông", stored!.Name);
+        Assert.Equal("Nghiệm thu bê tông", stored.NameZh);
+        Assert.Equal("Nghiệm thu bê tông", stored.NameJa);
+    }
 }

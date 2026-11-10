@@ -3168,6 +3168,14 @@
     "ja": "竣工資料カテゴリ"
   },
   {
+    "key": "translations.entityType.qaQcTemplate",
+    "category": "translations",
+    "vi": "Mẫu QA/QC",
+    "en": "QA/QC templates",
+    "zh": "QA/QC 模板",
+    "ja": "QA/QC テンプレート"
+  },
+  {
     "key": "adminRbac.groups.codeLabel",
     "category": "rbac",
     "vi": "Mã nhóm",
