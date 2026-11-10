@@ -55,9 +55,9 @@ public sealed class CreateQaQcTemplateRequest
 {
     [Required, MaxLength(60)] public string Code { get; set; } = string.Empty;
     [Required, MaxLength(200)] public string NameVi { get; set; } = string.Empty;
-    [Required, MaxLength(200)] public string Name { get; set; } = string.Empty;
-    [Required, MaxLength(200)] public string NameZh { get; set; } = string.Empty;
-    [Required, MaxLength(200)] public string NameJa { get; set; } = string.Empty;
+    [MaxLength(200)] public string Name { get; set; } = string.Empty;
+    [MaxLength(200)] public string NameZh { get; set; } = string.Empty;
+    [MaxLength(200)] public string NameJa { get; set; } = string.Empty;
     [Required, MaxLength(20000)] public string SchemaJson { get; set; } = "{}";
 }
 

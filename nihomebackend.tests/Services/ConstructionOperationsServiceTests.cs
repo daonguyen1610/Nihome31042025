@@ -149,6 +149,25 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Qa_qc_template_uses_vietnamese_source_name_for_other_languages()
+    {
+        var request = new CreateQaQcTemplateRequest
+        {
+            Code = "ISO-QA-SRC",
+            NameVi = "  Kiểm tra cốp pha  ",
+            SchemaJson = """{"schemaVersion":1,"items":[{"code":"C1","title":"Cao độ cốp pha","acceptanceCriteria":"Sai số ±5 mm"}]}""",
+        };
+
+        var created = await _sut.CreateTemplateAsync(request, CmUserId, default);
+
+        Assert.Equal("Kiểm tra cốp pha", created.NameVi);
+        var stored = Assert.Single(_db.QaQcTemplates);
+        Assert.Equal("Kiểm tra cốp pha", stored.Name);
+        Assert.Equal("Kiểm tra cốp pha", stored.NameZh);
+        Assert.Equal("Kiểm tra cốp pha", stored.NameJa);
+    }
+
+    [Fact]
     public async Task Qa_qc_dossier_requires_released_ifc_reference()
     {
         var template = new QaQcTemplate
