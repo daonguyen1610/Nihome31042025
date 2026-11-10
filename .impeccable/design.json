@@ -1,0 +1,237 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T07:43:20Z",
+  "title": "Design System: Nicon Admin",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "primary"
+      },
+      "primary-foreground": {
+        "role": "neutral",
+        "displayName": "primary foreground"
+      },
+      "foreground": {
+        "role": "neutral",
+        "displayName": "foreground"
+      },
+      "admin-text": {
+        "role": "neutral",
+        "displayName": "admin text"
+      },
+      "card": {
+        "role": "neutral",
+        "displayName": "card"
+      },
+      "workspace": {
+        "role": "neutral",
+        "displayName": "workspace"
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "muted"
+      },
+      "muted-foreground": {
+        "role": "neutral",
+        "displayName": "muted foreground"
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "border"
+      },
+      "destructive": {
+        "role": "semantic",
+        "displayName": "destructive"
+      },
+      "destructive-foreground": {
+        "role": "semantic",
+        "displayName": "destructive foreground"
+      },
+      "success-soft": {
+        "role": "semantic",
+        "displayName": "success soft"
+      },
+      "success-strong": {
+        "role": "semantic",
+        "displayName": "success strong"
+      },
+      "warning-soft": {
+        "role": "semantic",
+        "displayName": "warning soft"
+      },
+      "warning-strong": {
+        "role": "semantic",
+        "displayName": "warning strong"
+      },
+      "info-soft": {
+        "role": "semantic",
+        "displayName": "info soft"
+      },
+      "info-strong": {
+        "role": "semantic",
+        "displayName": "info strong"
+      },
+      "ring": {
+        "role": "neutral",
+        "displayName": "ring"
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Page title",
+        "purpose": "One workspace h1."
+      },
+      "headline": {
+        "displayName": "Section title",
+        "purpose": "Meaningful section or drawer heading."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Readable forms, records and instructions."
+      },
+      "label": {
+        "displayName": "Field label",
+        "purpose": "Persistent, sentence-case control labels."
+      },
+      "metadata": {
+        "displayName": "Metadata",
+        "purpose": "Short secondary information only."
+      }
+    },
+    "shadows": [
+      {
+        "name": "legacy-admin-card",
+        "value": "0 2px 6px -1px hsl(230 30% 15% / 0.04), 0 1px 2px -1px hsl(230 30% 15% / 0.03)",
+        "purpose": "Existing .admin-card compatibility treatment, not required on every panel."
+      },
+      {
+        "name": "soft",
+        "value": "0 2px 14px -4px hsl(220 30% 15% / 0.06)",
+        "purpose": "Existing soft floating-surface token."
+      },
+      {
+        "name": "card",
+        "value": "0 12px 40px -12px hsl(220 30% 15% / 0.1)",
+        "purpose": "Existing overlay elevation token."
+      }
+    ],
+    "motion": [
+      {
+        "name": "feedback",
+        "value": "150ms",
+        "purpose": "Ordinary control feedback; avoid decorative entrance motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary action",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary action using the existing shared control scale.",
+      "html": "<button class=\"ds-control ds-primary\">Lưu kế hoạch</button>",
+      "css": ".ds-control{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;border-radius:12px;padding:8px 16px;min-height:40px;cursor:pointer;transition:background-color 150ms,color 150ms}.ds-control:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}.ds-control:disabled{opacity:.5;pointer-events:none}.ds-primary{border:1px solid transparent;background:hsl(var(--primary,354 84% 43%));color:hsl(var(--primary-foreground,0 0% 100%))}.ds-primary:hover{background:hsl(var(--primary,354 84% 43%) / .9)}"
+    },
+    {
+      "name": "Secondary outline action",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary outline action using the existing shared control scale.",
+      "html": "<button class=\"ds-control ds-outline\">Hủy</button>",
+      "css": ".ds-control{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;border-radius:12px;padding:8px 16px;min-height:40px;cursor:pointer;transition:background-color 150ms,color 150ms}.ds-control:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}.ds-control:disabled{opacity:.5;pointer-events:none}.ds-outline{border:1px solid hsl(var(--input,220 15% 90%));background:hsl(var(--background,0 0% 100%));color:hsl(var(--foreground,222 25% 12%))}.ds-outline:hover{background:hsl(var(--accent,220 25% 96%))}"
+    },
+    {
+      "name": "Final destructive decision",
+      "kind": "button",
+      "refersTo": "button-destructive",
+      "description": "Final destructive decision using the existing shared control scale.",
+      "html": "<button class=\"ds-control ds-destructive\">Xóa vĩnh viễn</button>",
+      "css": ".ds-control{font-family:\"Be Vietnam Pro\",Inter,system-ui,sans-serif;font-size:14px;font-weight:500;line-height:20px;border-radius:12px;padding:8px 16px;min-height:40px;cursor:pointer;transition:background-color 150ms,color 150ms}.ds-control:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}.ds-control:disabled{opacity:.5;pointer-events:none}.ds-destructive{border:1px solid transparent;background:hsl(var(--destructive,354 68% 34%));color:hsl(var(--destructive-foreground,0 0% 100%))}.ds-destructive:hover{background:hsl(var(--destructive,354 68% 34%) / .9)}"
+    },
+    {
+      "name": "Labelled field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "A persistent label and visible focus using shared input dimensions.",
+      "html": "<div class=\"ds-field\"><label for=\"ds-project\">Dự án</label><input id=\"ds-project\" placeholder=\"Tìm theo mã hoặc tên dự án\" /></div>",
+      "css": ".ds-field{font:14px/20px \"Be Vietnam Pro\",Inter,system-ui,sans-serif;display:grid;gap:6px;color:hsl(var(--foreground,222 25% 12%))}.ds-field input{box-sizing:border-box;width:100%;min-height:40px;border:1px solid hsl(var(--input,220 15% 90%));border-radius:12px;background:hsl(var(--background,0 0% 100%));color:inherit;padding:8px 12px;font:inherit}.ds-field input:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}"
+    },
+    {
+      "name": "Active navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "A quiet selected surface with a written current-page label.",
+      "html": "<nav aria-label=\"Phòng CM\"><a class=\"ds-nav\" href=\"#schedule\" aria-current=\"page\">Tiến độ</a></nav>",
+      "css": ".ds-nav{display:block;border-radius:12px;padding:10px 16px;background:hsl(var(--muted,220 20% 96%));color:hsl(var(--foreground,222 25% 12%));font:600 14px/20px \"Be Vietnam Pro\",Inter,system-ui,sans-serif;text-decoration:none}.ds-nav:hover{background:hsl(var(--accent,220 25% 96%))}.ds-nav:focus-visible{outline:2px solid hsl(var(--ring,354 84% 57%));outline-offset:2px}"
+    },
+    {
+      "name": "Unresolved HSE state",
+      "kind": "chip",
+      "description": "Confirmed HSE remains a warning until the violation is resolved.",
+      "html": "<span class=\"ds-status\">Vi phạm đã xác nhận</span>",
+      "css": ".ds-status{display:inline-block;border-radius:9999px;padding:4px 12px;font:600 12px/16px \"Be Vietnam Pro\",Inter,system-ui,sans-serif;background:hsl(var(--admin-warning-soft,38 92% 94%));color:hsl(28 85% 30%)}"
+    },
+    {
+      "name": "Working panel",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "One quiet boundary; headings and spacing structure the content.",
+      "html": "<section class=\"ds-panel\"><h2>Tiến độ thi công</h2><p>Chọn dự án để xem kế hoạch và thực tế công trường.</p></section>",
+      "css": ".ds-panel{border:1px solid hsl(var(--border,220 15% 90%));border-radius:16px;padding:16px;background:hsl(var(--card,0 0% 100%));color:hsl(var(--foreground,222 25% 12%));font:14px/20px \"Be Vietnam Pro\",Inter,system-ui,sans-serif}.ds-panel h2{margin:0 0 8px;font-size:18px;font-weight:600;line-height:28px}.ds-panel p{margin:0;color:hsl(var(--muted-foreground,220 9% 40%))}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Site Office Ledger",
+    "overview": "Nicon is a working system for nontechnical construction staff. Its design must\nhelp someone understand the current project, the state of the work, and the next\nsafe action without a developer explaining the screen. Keep the existing Nicon\nidentity: Vietnamese-first typography, red for the main action, white working\nsurfaces, quiet rules, and readable records.\n\nThe priority order is business correctness, understandable actions, recovery,\naccessibility, then visual refinement. A tidy screen that saves against the wrong\nproject, loses an approval reason, or conceals missing reports is a design failure.\nThe user should be able to answer: **Where am I? What needs attention? What can I\ndo? Did it work?**\n\nThis standard covers authenticated admin screens. Public marketing pages need a\nseparate brief; their gradients, large display typography, and decorative motion\nmust not become defaults for workspaces. `AGENTS.md` and the canonical business\ncontracts take precedence over visual choices. This file is a standard to apply,\nnot a claim that every existing screen already complies.",
+    "keyCharacteristics": [
+      "One visible project context and one page title; related panels share the frame.",
+      "Familiar controls, sentence-case labels, readable data, and restrained colour.",
+      "CM plans and reviews; BCH executes. Both reference the same business records.",
+      "The next permitted action is clear; blocked actions explain their prerequisite.",
+      "Loading, missing data, errors, conflicts, and completed work remain distinct.",
+      "BCH supports phone use; CM supports desktop comparison and keyboard operation."
+    ],
+    "rules": [],
+    "dos": [
+      "Do make project, record, state and next permitted action visible together.",
+      "Do retain Nicon's type, red accent and semantic tokens through shared components.",
+      "Do use one page frame, sentence-case labels, readable help and accessible focus.",
+      "Do validate dependent IDs whenever the selected project changes.",
+      "Do keep input and decision reasons until the server confirms success.",
+      "Do apply status meaning by lifecycle, with words as well as colour.",
+      "Do check real content at phone, tablet and desktop widths and 200% zoom.",
+      "Do verify keyboard flow, all supported languages, and real error/retry paths.",
+      "Do follow server authorization, independent-review and deletion-impact contracts."
+    ],
+    "donts": [
+      "Don't invent extra records, formulas, claims or counts to make a dashboard look complete.",
+      "Don't make documentation claims of accessibility or business readiness from styling alone.",
+      "Don't use nested cards, gradients, glow or animated entrances as the structure of a work screen.",
+      "Don't replace clear business names with internal IDs, abbreviations or raw JSON.",
+      "Don't hide critical names, reasons or prerequisites behind truncation or tooltips alone.",
+      "Don't turn every approve button into the page's dominant red action.",
+      "Don't close a dialog after a failed operation or silently reset a user's work.",
+      "Don't treat a generic confirmation as authorization for permanent deletion.",
+      "Don't call a chart, list or state complete while its source data is missing or truncated."
+    ]
+  }
+}
