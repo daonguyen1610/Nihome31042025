@@ -67,3 +67,9 @@ nihomebackend/.managed-file-quarantine/
 .DS_Store
 deployment-config/.DS_Store
 test-results
+
+# Local Impeccable tooling install: skills, agents and hooks are machine-local.
+.claude/
+.github/agents/
+.github/hooks/impeccable.json
+.github/skills/impeccable/
