@@ -160,7 +160,10 @@ public class TranslationsControllerTests : IntegrationTestBase
 
         response.StatusCode.Should().Be(HttpStatusCode.OK);
         var types = await ReadJsonAsync(response);
-        types.GetArrayLength().Should().Be(16);
+        types.GetArrayLength().Should().Be(17);
+        var qaQcTemplate = types.EnumerateArray().Single(item =>
+            item.GetProperty("type").GetString() == "QaQcTemplate");
+        qaQcTemplate.GetProperty("displayKey").GetString().Should().Be("translations.entityType.qaQcTemplate");
         var slideshow = types.EnumerateArray().Single(item =>
             item.GetProperty("type").GetString() == "Slideshow");
         slideshow.GetProperty("displayKey").GetString().Should().Be("translations.entityType.slideshow");

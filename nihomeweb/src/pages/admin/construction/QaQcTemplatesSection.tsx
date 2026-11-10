@@ -45,6 +45,7 @@ export function QaQcTemplatesSection({
   const uiError = useUiError();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const canManageTemplates = has(ADMIN_PERMS.constructionQaQcTemplateManage);
   const canViewTranslations = has(ADMIN_PERMS.translations);
   const [templates, setTemplates] = useState<QaQcTemplateResponse[]>([]);
   const [open, setOpen] = useState(false);
@@ -204,119 +205,74 @@ export function QaQcTemplatesSection({
           ))}
         </div>
       )}
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-x-hidden overflow-y-auto sm:max-w-2xl">
-          <form onSubmit={createTemplate} className="min-w-0 space-y-4">
-            <DialogHeader>
-              <DialogTitle>{t("construction.qaQc.newTemplate")}</DialogTitle>
-            </DialogHeader>
-            <DialogDescription>{t("construction.qaQc.templateFormIntro")}</DialogDescription>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="qa-template-code">{t("construction.qaQc.templateCode")}</Label>
-                <Input
-                  id="qa-template-code"
-                  required
-                  maxLength={60}
-                  value={form.code}
-                  onChange={(event) => setForm({ ...form, code: event.target.value })}
-                />
+      <Dialog open={open} onOpenChange={(nextOpen) => !acting && setOpen(nextOpen)}>
+        <DialogContent
+          className="max-h-[calc(100dvh-2rem)] overflow-hidden p-0 sm:max-w-3xl"
+          onEscapeKeyDown={(event) => acting && event.preventDefault()}
+          onInteractOutside={(event) => acting && event.preventDefault()}
+        >
+          <form
+            onSubmit={createTemplate}
+            className="flex max-h-[calc(100dvh-2rem)] min-h-0 min-w-0 flex-col"
+            aria-busy={acting}
+          >
+            <div className="min-h-0 space-y-5 overflow-y-auto px-4 pb-6 pt-5 sm:px-6 sm:pt-6">
+              <DialogHeader className="pr-8 text-left">
+                <DialogTitle>{t("construction.qaQc.newTemplate")}</DialogTitle>
+                <DialogDescription>{t("construction.qaQc.templateFormIntro")}</DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="qa-template-code">{t("construction.qaQc.templateCode")}</Label>
+                  <Input
+                    id="qa-template-code"
+                    required
+                    maxLength={60}
+                    value={form.code}
+                    onChange={(event) => setForm({ ...form, code: event.target.value })}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="qa-template-nameVi">{t("construction.qaQc.nameVi")}</Label>
+                  <Input
+                    id="qa-template-nameVi"
+                    required
+                    maxLength={200}
+                    value={form.nameVi}
+                    onChange={(event) => setForm({ ...form, nameVi: event.target.value })}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    {t("construction.qaQc.nameSourceHint")}
+                  </p>
+                  {canViewTranslations && (
+                    <Button asChild type="button" variant="link" className="h-auto p-0 text-sm">
+                      <Link to="/admin/translations?tab=entity&type=QaQcTemplate">
+                        {t("cat.openTranslations")}
+                      </Link>
+                    </Button>
+                  )}
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="qa-template-nameVi">{t("construction.qaQc.nameVi")}</Label>
-                <Input
-                  id="qa-template-nameVi"
-                  required
-                  maxLength={200}
-                  value={form.nameVi}
-                  onChange={(event) => setForm({ ...form, nameVi: event.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.nameSourceHint")}
-                </p>
-              </div>
-            </div>
-            <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-sm text-sky-900">{t("cat.manageTranslationsHint")}</p>
-              {canViewTranslations && (
-                <Button
-                  asChild
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="shrink-0 bg-background"
-                >
-                  <Link to="/admin/translations?tab=entity&type=QaQcTemplate">
-                    {t("cat.openTranslations")}
-                  </Link>
-                </Button>
-              )}
-            </div>
-            <fieldset className="min-w-0 max-w-full space-y-3 rounded-lg border p-4">
-              <legend className="px-1 text-sm font-semibold">
-                {t("construction.qaQc.checklistDefinition")}
-              </legend>
-              <p className="text-sm text-muted-foreground">
-                {t("construction.qaQc.checklistDefinitionHint")}
-              </p>
-              <p className="text-xs text-muted-foreground sm:hidden">
-                {t("construction.qaQc.scrollTableHint")}
-              </p>
-              <div className="min-w-0 max-w-full overflow-x-auto">
-                <table className="w-full min-w-[560px] text-sm">
-                  <thead>
-                    <tr className="border-b text-left text-muted-foreground">
-                      <th className="pb-2 pr-3 font-medium">
-                        {t("construction.qaQc.inspectionItem")}
-                      </th>
-                      <th className="pb-2 pr-3 font-medium">
-                        {t("construction.qaQc.acceptanceCriteria")}
-                      </th>
-                      <th className="w-11 pb-2">
-                        <span className="sr-only">{t("common.actions")}</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
+              <fieldset className="min-w-0 max-w-full rounded-lg border">
+                <legend className="ml-3 px-1 text-sm font-semibold">
+                  {t("construction.qaQc.checklistDefinition")}
+                </legend>
+                <div className="space-y-4 p-4 pt-2">
+                  <p className="text-sm text-muted-foreground">
+                    {t("construction.qaQc.checklistDefinitionHint")}
+                  </p>
+                  <ol className="divide-y rounded-md border">
                     {checklistItems.map((item, index) => (
-                      <tr key={`${item.code}-${index}`} className="border-b last:border-0">
-                        <td className="py-3 pr-3 align-top">
-                          <Label htmlFor={`qa-item-${index}`} className="sr-only">
-                            {t("construction.qaQc.inspectionItem")}
-                          </Label>
-                          <Input
-                            id={`qa-item-${index}`}
-                            required
-                            maxLength={300}
-                            placeholder={t("construction.qaQc.inspectionItemExample")}
-                            value={item.title}
-                            onChange={(event) =>
-                              updateChecklistItem(index, { title: event.target.value })
-                            }
-                          />
-                        </td>
-                        <td className="py-3 pr-3 align-top">
-                          <Label htmlFor={`qa-criteria-${index}`} className="sr-only">
-                            {t("construction.qaQc.acceptanceCriteria")}
-                          </Label>
-                          <Input
-                            id={`qa-criteria-${index}`}
-                            required
-                            maxLength={1000}
-                            placeholder={t("construction.qaQc.acceptanceCriteriaExample")}
-                            value={item.acceptanceCriteria}
-                            onChange={(event) =>
-                              updateChecklistItem(index, {
-                                acceptanceCriteria: event.target.value,
-                              })
-                            }
-                          />
-                        </td>
-                        <td className="py-3 align-top">
+                      <li key={`${item.code}-${index}`} className="space-y-3 p-3 sm:p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="text-sm font-medium">
+                            {t("construction.qaQc.inspectionItem")} {index + 1}
+                          </p>
                           <Button
                             type="button"
                             size="icon"
                             variant="ghost"
+                            className="h-11 w-11 shrink-0 text-muted-foreground"
                             disabled={checklistItems.length === 1}
                             aria-label={t("construction.qaQc.removeInspectionItem")}
                             onClick={() => {
@@ -329,51 +285,93 @@ export function QaQcTemplatesSection({
                           >
                             <Trash2 className="h-4 w-4" />
                           </Button>
-                        </td>
-                      </tr>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`qa-item-${index}`}>
+                              {t("construction.qaQc.inspectionItem")}
+                            </Label>
+                            <Input
+                              id={`qa-item-${index}`}
+                              required
+                              maxLength={300}
+                              placeholder={t("construction.qaQc.inspectionItemExample")}
+                              value={item.title}
+                              onChange={(event) =>
+                                updateChecklistItem(index, { title: event.target.value })
+                              }
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`qa-criteria-${index}`}>
+                              {t("construction.qaQc.acceptanceCriteria")}
+                            </Label>
+                            <Input
+                              id={`qa-criteria-${index}`}
+                              required
+                              maxLength={1000}
+                              placeholder={t("construction.qaQc.acceptanceCriteriaExample")}
+                              value={item.acceptanceCriteria}
+                              onChange={(event) =>
+                                updateChecklistItem(index, {
+                                  acceptanceCriteria: event.target.value,
+                                })
+                              }
+                            />
+                          </div>
+                        </div>
+                      </li>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                  </ol>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      const next = [...checklistItems, nextChecklistItem(checklistItems)];
+                      setChecklistItems(next);
+                      setAdvancedJson(serializeQaQcTemplateSchema(next));
+                    }}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t("construction.qaQc.addInspectionItem")}
+                  </Button>
+                </div>
+              </fieldset>
+              {canManageTemplates && (
+                <details className="rounded-lg border bg-muted/30 px-4 py-3">
+                  <summary className="cursor-pointer text-sm font-medium">
+                    {t("construction.qaQc.advancedJson")}
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      {t("construction.qaQc.advancedJsonHint")}
+                    </p>
+                    <Textarea
+                      aria-label={t("a11yUi.checklistSchema")}
+                      maxLength={20000}
+                      spellCheck={false}
+                      className="min-h-36 font-mono text-xs"
+                      value={advancedJson}
+                      onChange={(event) => setAdvancedJson(event.target.value)}
+                    />
+                    <Button type="button" size="sm" variant="outline" onClick={applyAdvancedJson}>
+                      {t("construction.qaQc.applyJson")}
+                    </Button>
+                  </div>
+                </details>
+              )}
+            </div>
+            <DialogFooter className="shrink-0 gap-2 border-t bg-background px-4 py-3 sm:px-6">
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => {
-                  const next = [...checklistItems, nextChecklistItem(checklistItems)];
-                  setChecklistItems(next);
-                  setAdvancedJson(serializeQaQcTemplateSchema(next));
-                }}
+                disabled={acting}
+                onClick={() => setOpen(false)}
               >
-                <Plus className="mr-2 h-4 w-4" />
-                {t("construction.qaQc.addInspectionItem")}
-              </Button>
-            </fieldset>
-            <details className="rounded-lg border bg-muted/30 px-4 py-3">
-              <summary className="cursor-pointer text-sm font-medium">
-                {t("construction.qaQc.advancedJson")}
-              </summary>
-              <div className="mt-3 space-y-3">
-                <p className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.advancedJsonHint")}
-                </p>
-                <Textarea
-                  aria-label={t("a11yUi.checklistSchema")}
-                  maxLength={20000}
-                  className="min-h-36 font-mono text-xs"
-                  value={advancedJson}
-                  onChange={(event) => setAdvancedJson(event.target.value)}
-                />
-                <Button type="button" size="sm" variant="outline" onClick={applyAdvancedJson}>
-                  {t("construction.qaQc.applyJson")}
-                </Button>
-              </div>
-            </details>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={acting}>
-                {t("common.save")}
+                {t("construction.qaQc.saveTemplate")}
               </Button>
             </DialogFooter>
           </form>

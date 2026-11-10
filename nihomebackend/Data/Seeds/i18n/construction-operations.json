@@ -362,7 +362,7 @@
   {
     "key": "construction.qaQc.description",
     "category": "construction",
-    "vi": "Hồ sơ chất lượng theo template ISO, WBS và IFC đã phát hành.",
+    "vi": "Hồ sơ chất lượng theo mẫu kiểm tra, WBS và bản vẽ IFC đã phát hành.",
     "en": "Quality dossiers based on an ISO template, WBS, and released IFC.",
     "zh": "基于ISO模板、WBS和已发布IFC的质量档案。",
     "ja": "ISOテンプレート、WBS、発行済みIFCに基づく品質記録です。"
@@ -376,6 +376,14 @@
     "ja": "QA/QC記録を作成"
   },
   {
+    "key": "construction.qaQc.editDossier",
+    "category": "construction",
+    "vi": "Chỉnh sửa hồ sơ QA/QC",
+    "en": "Edit QA/QC dossier",
+    "zh": "编辑QA/QC档案",
+    "ja": "QA/QC記録を編集"
+  },
+  {
     "key": "construction.qaQc.empty",
     "category": "construction",
     "vi": "Chưa có hồ sơ QA/QC",
@@ -386,7 +394,7 @@
   {
     "key": "construction.qaQc.template",
     "category": "construction",
-    "vi": "Template ISO",
+    "vi": "Mẫu kiểm tra",
     "en": "ISO template",
     "zh": "ISO模板",
     "ja": "ISOテンプレート"
@@ -394,7 +402,7 @@
   {
     "key": "construction.qaQc.selectTemplate",
     "category": "construction",
-    "vi": "Chọn template đã phát hành",
+    "vi": "Chọn mẫu kiểm tra đã phát hành",
     "en": "Select a published template",
     "zh": "选择已发布模板",
     "ja": "公開済みテンプレートを選択"
@@ -562,7 +570,7 @@
   {
     "key": "construction.qaQc.templates",
     "category": "construction",
-    "vi": "Template QA/QC",
+    "vi": "Mẫu kiểm tra QA/QC",
     "en": "QA/QC templates",
     "zh": "QA/QC模板",
     "ja": "QA/QCテンプレート"
@@ -570,31 +578,31 @@
   {
     "key": "construction.qaQc.newTemplate",
     "category": "construction",
-    "vi": "Tạo phiên bản template",
-    "en": "New template version",
-    "zh": "新建模板版本",
-    "ja": "テンプレート版を作成"
+    "vi": "Tạo mẫu kiểm tra",
+    "en": "Create inspection template",
+    "zh": "创建检查模板",
+    "ja": "検査テンプレートを作成"
   },
   {
     "key": "construction.qaQc.noTemplates",
     "category": "construction",
-    "vi": "Chưa có template",
-    "en": "No templates",
-    "zh": "暂无模板",
-    "ja": "テンプレートはありません"
+    "vi": "Chưa có mẫu kiểm tra",
+    "en": "No inspection templates",
+    "zh": "暂无检查模板",
+    "ja": "検査テンプレートはありません"
   },
   {
     "key": "construction.qaQc.publish",
     "category": "construction",
-    "vi": "Phát hành",
-    "en": "Publish",
-    "zh": "发布",
-    "ja": "公開"
+    "vi": "Phát hành mẫu",
+    "en": "Publish template",
+    "zh": "发布模板",
+    "ja": "テンプレートを公開"
   },
   {
     "key": "construction.qaQc.templateCode",
     "category": "construction",
-    "vi": "Mã template",
+    "vi": "Mã mẫu",
     "en": "Template code",
     "zh": "模板编码",
     "ja": "テンプレートコード"
@@ -618,7 +626,7 @@
   {
     "key": "construction.qaQc.invalidSchemaJson",
     "category": "construction",
-    "vi": "Schema template phải là JSON hợp lệ",
+    "vi": "Dữ liệu mẫu kiểm tra chưa đúng định dạng JSON",
     "en": "Template schema must be valid JSON",
     "zh": "模板结构必须是有效JSON",
     "ja": "テンプレートスキーマは有効なJSONである必要があります"
@@ -626,18 +634,26 @@
   {
     "key": "construction.qaQc.templateCreated",
     "category": "construction",
-    "vi": "Đã tạo phiên bản template",
-    "en": "Template version created",
-    "zh": "模板版本已创建",
-    "ja": "テンプレート版を作成しました"
+    "vi": "Đã tạo mẫu kiểm tra",
+    "en": "Inspection template created",
+    "zh": "检查模板已创建",
+    "ja": "検査テンプレートを作成しました"
   },
   {
     "key": "construction.qaQc.templatePublished",
     "category": "construction",
-    "vi": "Đã phát hành template",
+    "vi": "Đã phát hành mẫu kiểm tra",
     "en": "Template published",
     "zh": "模板已发布",
     "ja": "テンプレートを公開しました"
+  },
+  {
+    "key": "construction.qaQc.saveTemplate",
+    "category": "construction",
+    "vi": "Lưu mẫu kiểm tra",
+    "en": "Save inspection template",
+    "zh": "保存检查模板",
+    "ja": "検査テンプレートを保存"
   },
   {
     "key": "construction.qs.description",

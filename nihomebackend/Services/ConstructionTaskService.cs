@@ -450,7 +450,10 @@ public partial class ConstructionTaskService(
         // header would silently misclassify.
         if (progress >= 100)
         {
-            return (ConstructionTaskStatus.Completed, actualEnd ?? today);
+            // Prefer the recorded start over the server's UTC calendar date.
+            // Callers such as the CM workspace use the Vietnam business date;
+            // around UTC midnight that date can be one day ahead of UTC.
+            return (ConstructionTaskStatus.Completed, actualEnd ?? actualStart ?? today);
         }
         // Actual start set + not yet Completed/Cancelled => at least
         // InProgress. Preserve an already-InProgress request.

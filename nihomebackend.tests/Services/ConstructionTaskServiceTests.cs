@@ -649,5 +649,22 @@ public class ConstructionTaskServiceTests : IDisposable
         Assert.Equal("Completed", updated.Status);
     }
 
+    [Fact]
+    public async Task UpdateProgressAsync_completion_never_auto_ends_before_actual_start()
+    {
+        var task = await _sut.CreateAsync(Req(), _userId);
+        var businessDate = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1);
+
+        var updated = await _sut.UpdateProgressAsync(task.Id, new UpdateConstructionTaskProgressRequest
+        {
+            ProgressPercent = 100,
+            ActualStart = businessDate,
+            Status = nameof(ConstructionTaskStatus.InProgress),
+        }, _userId);
+
+        Assert.Equal("Completed", updated!.Status);
+        Assert.Equal(businessDate, updated.ActualEnd);
+    }
+
     public void Dispose() => _db.Dispose();
 }
