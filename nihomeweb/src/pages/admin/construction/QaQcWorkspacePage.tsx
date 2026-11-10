@@ -475,323 +475,341 @@ export function QaQcDossiersPanel({
           </div>
         )}
       </section>
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-xl">
-          <form onSubmit={save} className="space-y-4">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <FileCheck2 className="h-5 w-5" />
-                {t(editing ? "common.edit" : "construction.qaQc.new")}
-              </DialogTitle>
-            </DialogHeader>
-            <DialogDescription>{t("construction.qaQc.formIntro")}</DialogDescription>
-            {!ifcLoading && ifcReleases.length === 0 && (
-              <p role="status" className="rounded-lg chip-warning p-3 text-sm">
-                {t("construction.qaQc.noIfcRelease")}
-              </p>
-            )}
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="qa-title">
-                  {t("construction.qaQc.dossierTitle")}
-                  <span className="ml-0.5 text-destructive" aria-hidden="true">
-                    *
-                  </span>
-                </Label>
-                <Input
-                  id="qa-title"
-                  required
-                  maxLength={300}
-                  placeholder={t("construction.qaQc.titleExample")}
-                  aria-describedby="qa-title-hint"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                />
-                <p id="qa-title-hint" className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.titleHint")}
+      <Dialog open={open} onOpenChange={(nextOpen) => !saving && setOpen(nextOpen)}>
+        <DialogContent
+          className="max-h-[calc(100dvh-2rem)] overflow-hidden p-0 sm:max-w-2xl"
+          onEscapeKeyDown={(event) => saving && event.preventDefault()}
+          onInteractOutside={(event) => saving && event.preventDefault()}
+        >
+          <form
+            onSubmit={save}
+            className="flex max-h-[calc(100dvh-2rem)] min-h-0 flex-col"
+            aria-busy={saving}
+          >
+            <div className="min-h-0 space-y-4 overflow-y-auto px-4 pb-6 pt-5 sm:px-6 sm:pt-6">
+              <DialogHeader className="pr-8">
+                <DialogTitle className="flex items-center gap-2">
+                  <FileCheck2 className="h-5 w-5" />
+                  {t(editing ? "construction.qaQc.editDossier" : "construction.qaQc.new")}
+                </DialogTitle>
+                <DialogDescription>{t("construction.qaQc.formIntro")}</DialogDescription>
+              </DialogHeader>
+              {!ifcLoading && ifcReleases.length === 0 && (
+                <p role="status" className="rounded-lg chip-warning p-3 text-sm">
+                  {t("construction.qaQc.noIfcRelease")}
                 </p>
-              </div>
-              <FieldScope className="space-y-1.5 sm:col-span-2">
-                <Label>
-                  {t("construction.qaQc.templateLabel")}
-                  <span className="ml-0.5 text-destructive" aria-hidden="true">
-                    *
-                  </span>
-                </Label>
-                <Select
-                  required
-                  value={form.templateId}
-                  onValueChange={(value) => {
-                    setForm({ ...form, templateId: value });
-                    const template = publishedTemplates.find((item) => item.id === Number(value));
-                    if (template && !loadChecklist(template.schemaJson)) {
-                      toast({
-                        variant: "destructive",
-                        title: t("construction.qaQc.invalidPublishedTemplate"),
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger data-testid="qa-qc-template">
-                    <SelectValue placeholder={t("construction.qaQc.selectTemplatePlaceholder")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {publishedTemplates.map((template) => (
-                      <SelectItem key={template.id} value={String(template.id)}>
-                        {templateName(template)} · v{template.version}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.selectTemplateHint")}
-                </p>
-              </FieldScope>
-              <div className="space-y-1.5">
-                <Label htmlFor="qa-wbs">
-                  {t("construction.qaQc.wbsLabel")}
-                  <span className="ml-0.5 text-destructive" aria-hidden="true">
-                    *
-                  </span>
-                </Label>
-                <Input
-                  id="qa-wbs"
-                  required
-                  maxLength={100}
-                  placeholder="WBS-3.1-FORM"
-                  aria-describedby="qa-wbs-hint"
-                  value={form.wbsCode}
-                  onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
-                />
-                <p id="qa-wbs-hint" className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.wbsHint")}
-                </p>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="qa-ifc">
-                  {t("construction.qaQc.ifcReleaseLabel")}
-                  <span className="ml-0.5 text-destructive" aria-hidden="true">
-                    *
-                  </span>
-                </Label>
-                <SearchableSelect
-                  id="qa-ifc"
-                  required
-                  data-testid="qa-qc-ifc-release"
-                  ariaLabel={t("construction.qaQc.ifcRelease")}
-                  value={form.ifcReleaseId}
-                  onChange={(value) => setForm({ ...form, ifcReleaseId: value })}
-                  placeholder={t("construction.qaQc.selectIfcRelease")}
-                  searchPlaceholder={t("construction.qaQc.ifcRelease")}
-                  emptyText={t("common.noResults")}
-                  loading={ifcLoading}
-                  disabled={ifcLoading || ifcReleases.length === 0}
-                  options={ifcReleases.map(({ release, designProjectCode }) => ({
-                    value: String(release.id),
-                    label: `${release.releaseNumber} · ${release.title}`,
-                    hint: `${designProjectCode}${
-                      release.releaseDate
-                        ? ` · ${new Date(release.releaseDate).toLocaleDateString(lang)}`
-                        : ""
-                    }`,
-                  }))}
-                />
-                {ifcReleases.length > 0 && (
-                  <p className="text-xs text-muted-foreground">{t("construction.qaQc.ifcHint")}</p>
-                )}
-              </div>
-              <fieldset className="space-y-3 rounded-lg border p-4 sm:col-span-2">
-                <legend className="px-1 text-sm font-semibold">
-                  {t("construction.qaQc.inspectionResults")}
-                </legend>
-                <p className="text-sm text-muted-foreground">
-                  {t("construction.qaQc.inspectionResultsHint")}
-                </p>
-                {!form.templateId ? (
-                  <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-                    {t("construction.qaQc.chooseTemplateForChecklist")}
-                  </p>
-                ) : checklistItems.length === 0 ? (
-                  <p className="rounded-lg chip-warning p-3 text-sm" role="alert">
-                    {t("construction.qaQc.invalidPublishedTemplate")}
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {checklistItems.map((item, index) => (
-                      <div key={item.code} className="rounded-lg border bg-card p-3">
-                        <div className="mb-3">
-                          <p className="font-medium">
-                            {index + 1}. {item.title}
-                          </p>
-                          {item.acceptanceCriteria && (
-                            <p className="mt-1 text-sm text-muted-foreground">
-                              {t("construction.qaQc.acceptanceCriteria")}: {item.acceptanceCriteria}
-                            </p>
-                          )}
-                        </div>
-                        <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`qa-result-${index}`}>
-                              {t("construction.qaQc.result")}
-                            </Label>
-                            <Select
-                              value={checklistResults[index]?.result ?? "Pending"}
-                              onValueChange={(result: QaQcChecklistResultValue) => {
-                                const next = checklistResults.map((entry, resultIndex) =>
-                                  resultIndex === index ? { ...entry, result } : entry,
-                                );
-                                setChecklistResults(next);
-                                setAdvancedResultsJson(serializeQaQcChecklistResults(next));
-                              }}
-                            >
-                              <SelectTrigger id={`qa-result-${index}`}>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {checklistResultValues.map((result) => (
-                                  <SelectItem key={result} value={result}>
-                                    {t(`construction.qaQc.resultValue.${result}`)}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor={`qa-note-${index}`}>
-                              {t("construction.qaQc.resultNote")}
-                            </Label>
-                            <Input
-                              id={`qa-note-${index}`}
-                              maxLength={1000}
-                              placeholder={t("construction.qaQc.resultNotePlaceholder")}
-                              value={checklistResults[index]?.note ?? ""}
-                              onChange={(event) => {
-                                const next = checklistResults.map((entry, resultIndex) =>
-                                  resultIndex === index
-                                    ? { ...entry, note: event.target.value }
-                                    : entry,
-                                );
-                                setChecklistResults(next);
-                                setAdvancedResultsJson(serializeQaQcChecklistResults(next));
-                              }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </fieldset>
-              {canManageTemplates && checklistItems.length > 0 && (
-                <details className="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-2">
-                  <summary className="cursor-pointer text-sm font-medium">
-                    {t("construction.qaQc.advancedJson")}
-                  </summary>
-                  <div className="mt-3 space-y-3">
-                    <p className="text-xs text-muted-foreground">
-                      {t("construction.qaQc.checklistHelpAdvanced")}
-                    </p>
-                    <Textarea
-                      id="qa-checklist"
-                      aria-label={t("construction.qaQc.checklistLabel")}
-                      className="min-h-28 font-mono text-xs"
-                      value={advancedResultsJson}
-                      onChange={(event) => setAdvancedResultsJson(event.target.value)}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={applyAdvancedResults}
-                    >
-                      {t("construction.qaQc.applyJson")}
-                    </Button>
-                  </div>
-                </details>
               )}
-              <div className="space-y-1.5 sm:col-span-2">
-                <span className="text-sm font-medium">{t("construction.qaQc.evidence")}</span>
-                <p className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.evidenceHint")}
-                </p>
-                {documents.length === 0 && (
-                  <p className="text-xs text-muted-foreground">
-                    {t("construction.qaQc.noEvidenceDocuments")}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5 sm:col-span-2">
+                  <Label htmlFor="qa-title">
+                    {t("construction.qaQc.dossierTitle")}
+                    <span className="ml-0.5 text-destructive" aria-hidden="true">
+                      *
+                    </span>
+                  </Label>
+                  <Input
+                    id="qa-title"
+                    required
+                    maxLength={300}
+                    placeholder={t("construction.qaQc.titleExample")}
+                    aria-describedby="qa-title-hint"
+                    value={form.title}
+                    onChange={(e) => setForm({ ...form, title: e.target.value })}
+                  />
+                  <p id="qa-title-hint" className="text-xs text-muted-foreground">
+                    {t("construction.qaQc.titleHint")}
                   </p>
-                )}
-                {evidence.map((item, index) => (
-                  <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
-                    <SearchableSelect
-                      data-testid={`qa-evidence-document-${index}`}
-                      ariaLabel={t("construction.qaQc.selectEvidenceDocument")}
-                      value={item.projectDocumentId}
-                      onChange={(value) =>
-                        setEvidence((current) =>
-                          current.map((entry, entryIndex) =>
-                            entryIndex === index ? { ...entry, projectDocumentId: value } : entry,
-                          ),
-                        )
+                </div>
+                <FieldScope className="space-y-1.5 sm:col-span-2">
+                  <Label>
+                    {t("construction.qaQc.templateLabel")}
+                    <span className="ml-0.5 text-destructive" aria-hidden="true">
+                      *
+                    </span>
+                  </Label>
+                  <Select
+                    required
+                    value={form.templateId}
+                    onValueChange={(value) => {
+                      setForm({ ...form, templateId: value });
+                      const template = publishedTemplates.find((item) => item.id === Number(value));
+                      if (template && !loadChecklist(template.schemaJson)) {
+                        toast({
+                          variant: "destructive",
+                          title: t("construction.qaQc.invalidPublishedTemplate"),
+                        });
                       }
-                      placeholder={t("construction.qaQc.selectEvidenceDocument")}
-                      options={documents.map((document) => ({
-                        value: String(document.id),
-                        label: document.originalFileName,
-                      }))}
-                    />
-                    <Select
-                      value={item.evidenceType}
-                      onValueChange={(value: QaQcEvidenceType) =>
-                        setEvidence((current) =>
-                          current.map((entry, entryIndex) =>
-                            entryIndex === index ? { ...entry, evidenceType: value } : entry,
-                          ),
-                        )
-                      }
-                    >
-                      <SelectTrigger
-                        data-testid={`qa-evidence-type-${index}`}
-                        aria-label={t("construction.qaQc.evidenceType")}
+                    }}
+                  >
+                    <SelectTrigger data-testid="qa-qc-template">
+                      <SelectValue placeholder={t("construction.qaQc.selectTemplatePlaceholder")} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {publishedTemplates.map((template) => (
+                        <SelectItem key={template.id} value={String(template.id)}>
+                          {templateName(template)} · v{template.version}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {t("construction.qaQc.selectTemplateHint")}
+                  </p>
+                </FieldScope>
+                <div className="space-y-1.5">
+                  <Label htmlFor="qa-wbs">
+                    {t("construction.qaQc.wbsLabel")}
+                    <span className="ml-0.5 text-destructive" aria-hidden="true">
+                      *
+                    </span>
+                  </Label>
+                  <Input
+                    id="qa-wbs"
+                    required
+                    maxLength={100}
+                    placeholder="WBS-3.1-FORM"
+                    aria-describedby="qa-wbs-hint"
+                    value={form.wbsCode}
+                    onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
+                  />
+                  <p id="qa-wbs-hint" className="text-xs text-muted-foreground">
+                    {t("construction.qaQc.wbsHint")}
+                  </p>
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="qa-ifc">
+                    {t("construction.qaQc.ifcReleaseLabel")}
+                    <span className="ml-0.5 text-destructive" aria-hidden="true">
+                      *
+                    </span>
+                  </Label>
+                  <SearchableSelect
+                    id="qa-ifc"
+                    required
+                    data-testid="qa-qc-ifc-release"
+                    ariaLabel={t("construction.qaQc.ifcRelease")}
+                    value={form.ifcReleaseId}
+                    onChange={(value) => setForm({ ...form, ifcReleaseId: value })}
+                    placeholder={t("construction.qaQc.selectIfcRelease")}
+                    searchPlaceholder={t("construction.qaQc.ifcRelease")}
+                    emptyText={t("common.noResults")}
+                    loading={ifcLoading}
+                    disabled={ifcLoading || ifcReleases.length === 0}
+                    options={ifcReleases.map(({ release, designProjectCode }) => ({
+                      value: String(release.id),
+                      label: `${release.releaseNumber} · ${release.title}`,
+                      hint: `${designProjectCode}${
+                        release.releaseDate
+                          ? ` · ${new Date(release.releaseDate).toLocaleDateString(lang)}`
+                          : ""
+                      }`,
+                    }))}
+                  />
+                  {ifcReleases.length > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("construction.qaQc.ifcHint")}
+                    </p>
+                  )}
+                </div>
+                <fieldset className="space-y-3 rounded-lg border p-4 sm:col-span-2">
+                  <legend className="px-1 text-sm font-semibold">
+                    {t("construction.qaQc.inspectionResults")}
+                  </legend>
+                  <p className="text-sm text-muted-foreground">
+                    {t("construction.qaQc.inspectionResultsHint")}
+                  </p>
+                  {!form.templateId ? (
+                    <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+                      {t("construction.qaQc.chooseTemplateForChecklist")}
+                    </p>
+                  ) : checklistItems.length === 0 ? (
+                    <p className="rounded-lg chip-warning p-3 text-sm" role="alert">
+                      {t("construction.qaQc.invalidPublishedTemplate")}
+                    </p>
+                  ) : (
+                    <div className="space-y-3">
+                      {checklistItems.map((item, index) => (
+                        <div key={item.code} className="rounded-lg border bg-card p-3">
+                          <div className="mb-3">
+                            <p className="font-medium">
+                              {index + 1}. {item.title}
+                            </p>
+                            {item.acceptanceCriteria && (
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {t("construction.qaQc.acceptanceCriteria")}:{" "}
+                                {item.acceptanceCriteria}
+                              </p>
+                            )}
+                          </div>
+                          <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`qa-result-${index}`}>
+                                {t("construction.qaQc.result")}
+                              </Label>
+                              <Select
+                                value={checklistResults[index]?.result ?? "Pending"}
+                                onValueChange={(result: QaQcChecklistResultValue) => {
+                                  const next = checklistResults.map((entry, resultIndex) =>
+                                    resultIndex === index ? { ...entry, result } : entry,
+                                  );
+                                  setChecklistResults(next);
+                                  setAdvancedResultsJson(serializeQaQcChecklistResults(next));
+                                }}
+                              >
+                                <SelectTrigger id={`qa-result-${index}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {checklistResultValues.map((result) => (
+                                    <SelectItem key={result} value={result}>
+                                      {t(`construction.qaQc.resultValue.${result}`)}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            <div className="space-y-1.5">
+                              <Label htmlFor={`qa-note-${index}`}>
+                                {t("construction.qaQc.resultNote")}
+                              </Label>
+                              <Input
+                                id={`qa-note-${index}`}
+                                maxLength={1000}
+                                placeholder={t("construction.qaQc.resultNotePlaceholder")}
+                                value={checklistResults[index]?.note ?? ""}
+                                onChange={(event) => {
+                                  const next = checklistResults.map((entry, resultIndex) =>
+                                    resultIndex === index
+                                      ? { ...entry, note: event.target.value }
+                                      : entry,
+                                  );
+                                  setChecklistResults(next);
+                                  setAdvancedResultsJson(serializeQaQcChecklistResults(next));
+                                }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </fieldset>
+                {canManageTemplates && checklistItems.length > 0 && (
+                  <details className="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-2">
+                    <summary className="cursor-pointer text-sm font-medium">
+                      {t("construction.qaQc.advancedJson")}
+                    </summary>
+                    <div className="mt-3 space-y-3">
+                      <p className="text-xs text-muted-foreground">
+                        {t("construction.qaQc.checklistHelpAdvanced")}
+                      </p>
+                      <Textarea
+                        id="qa-checklist"
+                        aria-label={t("construction.qaQc.checklistLabel")}
+                        className="min-h-28 font-mono text-xs"
+                        value={advancedResultsJson}
+                        onChange={(event) => setAdvancedResultsJson(event.target.value)}
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={applyAdvancedResults}
                       >
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {evidenceTypes.map((type) => (
-                          <SelectItem key={type} value={type}>
-                            {t(`construction.qaQc.evidenceType.${type}`)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() =>
-                        setEvidence((current) => current.filter((_, i) => i !== index))
-                      }
-                    >
-                      {t("construction.qaQc.removeEvidence")}
-                    </Button>
-                  </div>
-                ))}
-                <Button
-                  data-testid="qa-add-evidence"
-                  type="button"
-                  variant="outline"
-                  disabled={documents.length === 0}
-                  onClick={() =>
-                    setEvidence((current) => [
-                      ...current,
-                      { projectDocumentId: "", evidenceType: "General" },
-                    ])
-                  }
-                >
-                  <Plus className="mr-2 h-4 w-4" />
-                  {t("construction.qaQc.addEvidence")}
-                </Button>
+                        {t("construction.qaQc.applyJson")}
+                      </Button>
+                    </div>
+                  </details>
+                )}
+                <div className="space-y-1.5 sm:col-span-2">
+                  <span className="text-sm font-medium">{t("construction.qaQc.evidence")}</span>
+                  <p className="text-xs text-muted-foreground">
+                    {t("construction.qaQc.evidenceHint")}
+                  </p>
+                  {documents.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      {t("construction.qaQc.noEvidenceDocuments")}
+                    </p>
+                  )}
+                  {evidence.map((item, index) => (
+                    <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
+                      <SearchableSelect
+                        data-testid={`qa-evidence-document-${index}`}
+                        ariaLabel={t("construction.qaQc.selectEvidenceDocument")}
+                        value={item.projectDocumentId}
+                        onChange={(value) =>
+                          setEvidence((current) =>
+                            current.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, projectDocumentId: value } : entry,
+                            ),
+                          )
+                        }
+                        placeholder={t("construction.qaQc.selectEvidenceDocument")}
+                        options={documents.map((document) => ({
+                          value: String(document.id),
+                          label: document.originalFileName,
+                        }))}
+                      />
+                      <Select
+                        value={item.evidenceType}
+                        onValueChange={(value: QaQcEvidenceType) =>
+                          setEvidence((current) =>
+                            current.map((entry, entryIndex) =>
+                              entryIndex === index ? { ...entry, evidenceType: value } : entry,
+                            ),
+                          )
+                        }
+                      >
+                        <SelectTrigger
+                          data-testid={`qa-evidence-type-${index}`}
+                          aria-label={t("construction.qaQc.evidenceType")}
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {evidenceTypes.map((type) => (
+                            <SelectItem key={type} value={type}>
+                              {t(`construction.qaQc.evidenceType.${type}`)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() =>
+                          setEvidence((current) => current.filter((_, i) => i !== index))
+                        }
+                      >
+                        {t("construction.qaQc.removeEvidence")}
+                      </Button>
+                    </div>
+                  ))}
+                  <Button
+                    data-testid="qa-add-evidence"
+                    type="button"
+                    variant="outline"
+                    disabled={documents.length === 0}
+                    onClick={() =>
+                      setEvidence((current) => [
+                        ...current,
+                        { projectDocumentId: "", evidenceType: "General" },
+                      ])
+                    }
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t("construction.qaQc.addEvidence")}
+                  </Button>
+                </div>
               </div>
             </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <DialogFooter className="shrink-0 gap-2 border-t bg-background px-4 py-3 sm:px-6">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={saving}
+                onClick={() => setOpen(false)}
+              >
                 {t("common.cancel")}
               </Button>
               <Button
