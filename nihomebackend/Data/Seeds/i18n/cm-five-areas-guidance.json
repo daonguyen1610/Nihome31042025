@@ -106,17 +106,73 @@
   {
     "key": "construction.cm.contracts.openUpstreamLedger",
     "category": "construction",
-    "vi": "Mở sổ hợp đồng đầu ra",
-    "en": "Open upstream ledger",
-    "zh": "打开上游合同台账",
-    "ja": "上流契約台帳を開く"
+    "vi": "Hợp đồng bán ra – với chủ đầu tư",
+    "en": "Sales contracts – with owner/customer",
+    "zh": "销售合同 – 与业主/客户",
+    "ja": "販売契約 – 発注者/顧客向け"
   },
   {
     "key": "construction.cm.contracts.openDownstreamLedger",
     "category": "construction",
-    "vi": "Mở sổ hợp đồng đầu vào",
-    "en": "Open downstream ledger",
-    "zh": "打开下游合同台账",
-    "ja": "下流契約台帳を開く"
+    "vi": "Hợp đồng mua vào – với nhà cung cấp, thầu phụ",
+    "en": "Purchase contracts – with suppliers/subcontractors",
+    "zh": "采购合同 – 与供应商/分包商",
+    "ja": "購入契約 – 仕入先/下請業者向け"
+  },
+  {
+    "key": "construction.cm.contracts.singleLedgerTitle",
+    "category": "construction",
+    "vi": "Một Sổ hợp đồng, hai chiều mua và bán",
+    "en": "One contract registry, two purchase and sale directions",
+    "zh": "一个合同台账，采购与销售两个方向",
+    "ja": "1つの契約台帳、購入と販売の2区分"
+  },
+  {
+    "key": "construction.cm.contracts.singleLedgerGuide",
+    "category": "construction",
+    "vi": "Hợp đồng bán ra được ký với chủ đầu tư/khách hàng và tạo doanh thu. Hợp đồng mua vào được ký với nhà cung cấp, thầu phụ và tạo chi phí. Tất cả nằm trong cùng Sổ hợp đồng; hai nút bên dưới chỉ mở sổ với bộ lọc có sẵn.",
+    "en": "Sales contracts are signed with the owner/customer and generate revenue. Purchase contracts are signed with suppliers or subcontractors and generate cost. Both are kept in the same contract registry; the buttons below only open it with a preset filter.",
+    "zh": "销售合同与业主/客户签订并形成收入；采购合同与供应商或分包商签订并形成成本。两类合同都在同一合同台账中；下方按钮仅用于按预设条件筛选打开。",
+    "ja": "販売契約は発注者/顧客と締結して売上を生み、購入契約は仕入先・下請業者と締結して費用を生みます。どちらも同じ契約台帳で管理し、下のボタンは絞り込み済みの台帳を開くだけです。"
+  },
+  {
+    "key": "construction.cm.contracts.soldSummary",
+    "category": "construction",
+    "vi": "Hợp đồng bán ra",
+    "en": "Sales contracts",
+    "zh": "销售合同",
+    "ja": "販売契約"
+  },
+  {
+    "key": "construction.cm.contracts.boughtSummary",
+    "category": "construction",
+    "vi": "Hợp đồng mua vào",
+    "en": "Purchase contracts",
+    "zh": "采购合同",
+    "ja": "購入契約"
+  },
+  {
+    "key": "construction.cm.contracts.countAndTotal",
+    "category": "construction",
+    "vi": "{count} hợp đồng · Tổng {total}",
+    "en": "{count} contract(s) · Total {total}",
+    "zh": "{count} 份合同 · 合计 {total}",
+    "ja": "{count}件 · 合計 {total}"
+  },
+  {
+    "key": "construction.cm.contracts.summaryScope",
+    "category": "construction",
+    "vi": "Không gồm bản nháp và hợp đồng đã hủy.",
+    "en": "Excludes draft and cancelled contracts.",
+    "zh": "不含草稿和已取消的合同。",
+    "ja": "下書きと取消済みの契約は含みません。"
+  },
+  {
+    "key": "construction.cm.contracts.openFilteredGuide",
+    "category": "construction",
+    "vi": "Mở Sổ hợp đồng theo chiều cần xem",
+    "en": "Open the contract registry in the direction you need",
+    "zh": "按所需方向打开合同台账",
+    "ja": "必要な区分で契約台帳を開く"
   }
 ]

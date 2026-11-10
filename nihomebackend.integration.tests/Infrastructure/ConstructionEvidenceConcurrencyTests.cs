@@ -144,6 +144,7 @@ public sealed class ConstructionEvidenceConcurrencyTests
             Name = "Steel quality inspection",
             NameZh = "钢结构质量检查",
             NameJa = "鉄骨品質検査",
+            SchemaJson = """{"schemaVersion":1,"items":[{"code":"C1","title":"Liên kết kết cấu thép","acceptanceCriteria":"Đúng bản vẽ IFC"}]}""",
             IsPublished = true,
             CreatedByUserId = database.UserId,
         };
@@ -164,7 +165,7 @@ public sealed class ConstructionEvidenceConcurrencyTests
             IfcReleaseId = release.Id,
             WbsCode = "STRUCTURE-02",
             Title = "Nghiệm thu kết cấu thép nhà xưởng NICON",
-            ChecklistResultsJson = "[]",
+            ChecklistResultsJson = """[{"code":"C1","result":"Pending","note":""}]""",
         };
         var draft = updating ? await operations.CreateDossierAsync(database.ProjectId, dossier, database.UserId, default) : null;
         dossier.EvidenceDocumentIds = [database.DocumentId];

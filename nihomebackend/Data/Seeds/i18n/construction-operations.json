@@ -1688,18 +1688,18 @@
   {
     "key": "construction.qaQc.selectTemplateHint",
     "category": "construction",
-    "vi": "Chỉ hiển thị mẫu đã phát hành. Nếu chưa có, nhờ quản trị QA/QC phát hành mẫu trước.",
-    "en": "Only published templates are listed. If none appear, ask the QA/QC administrator to publish one first.",
-    "zh": "仅列出已发布的模板。若为空，请先由QA/QC管理员发布模板。",
-    "ja": "公開済みのテンプレートのみ表示されます。ない場合はQA/QC管理者に公開を依頼してください。"
+    "vi": "Chỉ hiển thị mẫu đã phát hành. Nếu chưa có, nhờ QA/QC phụ trách dự án phát hành mẫu trước.",
+    "en": "Only published templates are listed. If none appear, ask the project's QA/QC person in charge to publish one first.",
+    "zh": "仅列出已发布的模板。若为空，请先联系项目QA/QC负责人发布模板。",
+    "ja": "公開済みのテンプレートのみ表示されます。ない場合はプロジェクトのQA/QC担当者に公開を依頼してください。"
   },
   {
     "key": "construction.qaQc.noTemplatesHint",
     "category": "construction",
-    "vi": "Chưa có mẫu QA/QC đã phát hành nên chưa thể lập hồ sơ. Phát hành mẫu trước ở khu vực Quản trị QA/QC.",
-    "en": "No published QA/QC template yet, so no dossier can be created. Publish a template in QA/QC administration first.",
-    "zh": "尚无已发布的QA/QC模板，无法创建档案。请先在QA/QC管理区发布模板。",
-    "ja": "公開済みのQA/QCテンプレートがないため、書類を作成できません。先にQA/QC管理でテンプレートを公開してください。"
+    "vi": "Chưa có mẫu QA/QC đã phát hành nên chưa thể lập hồ sơ. Nhờ QA/QC phụ trách dự án phát hành mẫu trước.",
+    "en": "No published QA/QC template yet, so no dossier can be created. Ask the project's QA/QC person in charge to publish one first.",
+    "zh": "尚无已发布的QA/QC模板，无法创建档案。请先联系项目QA/QC负责人发布模板。",
+    "ja": "公開済みのQA/QCテンプレートがないため、書類を作成できません。先にプロジェクトのQA/QC担当者へ公開を依頼してください。"
   },
   {
     "key": "construction.qaQc.selectIfcRelease",
@@ -1836,5 +1836,301 @@
     "en": "e.g. Floor 2 slab formwork acceptance — period 1",
     "zh": "例如：二层楼板模板验收—第一期",
     "ja": "例：2階スラブ型枠受入 — 第1回"
+  },
+  {
+    "key": "construction.qaQc.titleExample",
+    "category": "construction",
+    "vi": "Ví dụ: Kiểm tra cốp pha sàn tầng 2 – trục A-B",
+    "en": "e.g. Level 2 slab formwork inspection – axes A-B",
+    "zh": "例如：二层楼板模板检查——A-B轴",
+    "ja": "例：2階スラブ型枠検査 — A-B通り"
+  },
+  {
+    "key": "construction.qaQc.templateLabel",
+    "category": "construction",
+    "vi": "Mẫu kiểm tra",
+    "en": "Inspection template",
+    "zh": "检验模板",
+    "ja": "検査テンプレート"
+  },
+  {
+    "key": "construction.qaQc.wbsLabel",
+    "category": "construction",
+    "vi": "Hạng mục công việc (mã WBS)",
+    "en": "Work item (WBS code)",
+    "zh": "工作项（WBS编码）",
+    "ja": "作業項目（WBSコード）"
+  },
+  {
+    "key": "construction.qaQc.ifcReleaseLabel",
+    "category": "construction",
+    "vi": "Bản vẽ IFC đã phát hành",
+    "en": "Issued IFC drawing",
+    "zh": "已发布的IFC图纸",
+    "ja": "発行済みIFC図面"
+  },
+  {
+    "key": "construction.qaQc.technicalSection",
+    "category": "construction",
+    "vi": "Nội dung kỹ thuật (nâng cao)",
+    "en": "Technical details (advanced)",
+    "zh": "技术内容（高级）",
+    "ja": "技術内容（上級）"
+  },
+  {
+    "key": "construction.qaQc.technicalHint",
+    "category": "construction",
+    "vi": "Mặc định dùng checklist của mẫu. Chỉ mở khi QA/QC cần nhập kết quả riêng.",
+    "en": "Uses the template checklist by default. Open only if QA/QC needs to enter custom results.",
+    "zh": "默认使用模板的检查表；仅当QA/QC需要录入自定义结果时展开。",
+    "ja": "既定ではテンプレートのチェックリストを使用します。QA/QCが独自の結果を入力する場合のみ開きます。"
+  },
+  {
+    "key": "construction.qaQc.createSubmit",
+    "category": "construction",
+    "vi": "Tạo hồ sơ",
+    "en": "Create dossier",
+    "zh": "创建记录",
+    "ja": "記録を作成"
+  },
+  {
+    "key": "construction.qaQc.evidenceHint",
+    "category": "construction",
+    "vi": "Chứng từ kèm theo để chứng minh kết quả kiểm tra (biên bản, ảnh, kết quả thí nghiệm). Có thể bỏ trống.",
+    "en": "Supporting records proving the inspection result (minutes, photos, test results). Optional.",
+    "zh": "用于证明检验结果的附件（记录、照片、试验结果），可留空。",
+    "ja": "検査結果を証明する添付資料（記録・写真・試験結果）。任意です。"
+  },
+  {
+    "key": "construction.qaQc.noEvidenceDocuments",
+    "category": "construction",
+    "vi": "Dự án chưa có tài liệu nào để đính kèm.",
+    "en": "This project has no documents to attach.",
+    "zh": "本项目暂无可附文件。",
+    "ja": "添付できる資料がまだありません。"
+  },
+  {
+    "key": "construction.qaQc.selectTemplatePlaceholder",
+    "category": "construction",
+    "vi": "Chọn mẫu đã phát hành",
+    "en": "Select a published template",
+    "zh": "选择已发布的模板",
+    "ja": "発行済みテンプレートを選択"
+  },
+  {
+    "key": "construction.qaQc.selectEvidenceDocument",
+    "category": "construction",
+    "vi": "Chọn tài liệu minh chứng",
+    "en": "Select a supporting document",
+    "zh": "选择证明文件",
+    "ja": "証拠資料を選択"
+  },
+  {
+    "key": "construction.qaQc.templateFormIntro",
+    "category": "construction",
+    "vi": "Đặt tên mẫu và khai báo từng nội dung cần kiểm tra. Người lập hồ sơ sẽ chọn kết quả trên biểu mẫu này, không phải nhập dữ liệu kỹ thuật.",
+    "en": "Name the template and define each inspection item. Dossier creators will select results on this form instead of entering technical data.",
+    "zh": "为模板命名并定义每个检查项。建档人员将在表单中选择结果，无需录入技术数据。",
+    "ja": "テンプレート名と各検査項目を設定します。書類作成者は技術データを入力せず、このフォームで結果を選択します。"
+  },
+  {
+    "key": "construction.qaQc.checklistDefinition",
+    "category": "construction",
+    "vi": "Nội dung kiểm tra",
+    "en": "Inspection checklist",
+    "zh": "检查内容",
+    "ja": "検査内容"
+  },
+  {
+    "key": "construction.qaQc.checklistDefinitionHint",
+    "category": "construction",
+    "vi": "Mỗi dòng nêu rõ cần kiểm tra gì và điều kiện nào được xem là đạt.",
+    "en": "Each row states what to inspect and the condition that counts as accepted.",
+    "zh": "每行说明检查内容以及判定合格的条件。",
+    "ja": "各行に検査内容と合格とする条件を明記します。"
+  },
+  {
+    "key": "construction.qaQc.scrollTableHint",
+    "category": "construction",
+    "vi": "Kéo ngang bảng để xem đủ các cột.",
+    "en": "Scroll the table sideways to see every column.",
+    "zh": "横向滚动表格以查看所有列。",
+    "ja": "表を横にスクロールするとすべての列を確認できます。"
+  },
+  {
+    "key": "construction.qaQc.inspectionItem",
+    "category": "construction",
+    "vi": "Hạng mục kiểm tra",
+    "en": "Inspection item",
+    "zh": "检查项目",
+    "ja": "検査項目"
+  },
+  {
+    "key": "construction.qaQc.acceptanceCriteria",
+    "category": "construction",
+    "vi": "Tiêu chí đạt",
+    "en": "Acceptance criteria",
+    "zh": "合格标准",
+    "ja": "合格基準"
+  },
+  {
+    "key": "construction.qaQc.inspectionItemExample",
+    "category": "construction",
+    "vi": "Ví dụ: Cao độ cốp pha sàn",
+    "en": "e.g. Slab formwork elevation",
+    "zh": "例如：楼板模板标高",
+    "ja": "例：スラブ型枠の高さ"
+  },
+  {
+    "key": "construction.qaQc.acceptanceCriteriaExample",
+    "category": "construction",
+    "vi": "Ví dụ: Đúng bản vẽ IFC, sai số không quá 5 mm",
+    "en": "e.g. Matches the IFC drawing, tolerance not over 5 mm",
+    "zh": "例如：符合IFC图纸，偏差不超过5毫米",
+    "ja": "例：IFC図面どおり、許容差5mm以内"
+  },
+  {
+    "key": "construction.qaQc.addInspectionItem",
+    "category": "construction",
+    "vi": "Thêm hạng mục kiểm tra",
+    "en": "Add inspection item",
+    "zh": "添加检查项目",
+    "ja": "検査項目を追加"
+  },
+  {
+    "key": "construction.qaQc.removeInspectionItem",
+    "category": "construction",
+    "vi": "Xóa hạng mục kiểm tra",
+    "en": "Remove inspection item",
+    "zh": "删除检查项目",
+    "ja": "検査項目を削除"
+  },
+  {
+    "key": "construction.qaQc.checklistRequired",
+    "category": "construction",
+    "vi": "Mỗi mẫu cần ít nhất một hạng mục kiểm tra và phải ghi đủ hạng mục, tiêu chí đạt.",
+    "en": "Each template needs at least one inspection item with both the item and acceptance criteria completed.",
+    "zh": "每个模板至少需要一个检查项，并完整填写检查内容和合格标准。",
+    "ja": "各テンプレートには検査項目が1件以上必要で、項目名と合格基準の両方を入力してください。"
+  },
+  {
+    "key": "construction.qaQc.advancedJson",
+    "category": "construction",
+    "vi": "Nâng cao: dữ liệu kỹ thuật",
+    "en": "Advanced: technical data",
+    "zh": "高级：技术数据",
+    "ja": "上級：技術データ"
+  },
+  {
+    "key": "construction.qaQc.advancedJsonHint",
+    "category": "construction",
+    "vi": "Chỉ dành cho người quản lý mẫu khi cần nhập dữ liệu từ hệ thống khác. Áp dụng JSON sẽ thay các dòng ở biểu mẫu phía trên.",
+    "en": "For template managers only when importing data from another system. Applying JSON replaces the rows in the form above.",
+    "zh": "仅供模板管理员从其他系统导入数据时使用。应用JSON会替换上方表单中的行。",
+    "ja": "他システムからデータを取り込むテンプレート管理者向けです。JSONを適用すると上の行が置き換わります。"
+  },
+  {
+    "key": "construction.qaQc.applyJson",
+    "category": "construction",
+    "vi": "Áp dụng dữ liệu",
+    "en": "Apply data",
+    "zh": "应用数据",
+    "ja": "データを適用"
+  },
+  {
+    "key": "construction.qaQc.advancedApplied",
+    "category": "construction",
+    "vi": "Đã áp dụng dữ liệu vào biểu mẫu.",
+    "en": "The data was applied to the form.",
+    "zh": "数据已应用到表单。",
+    "ja": "データをフォームに適用しました。"
+  },
+  {
+    "key": "construction.qaQc.inspectionResults",
+    "category": "construction",
+    "vi": "Kết quả kiểm tra",
+    "en": "Inspection results",
+    "zh": "检查结果",
+    "ja": "検査結果"
+  },
+  {
+    "key": "construction.qaQc.inspectionResultsHint",
+    "category": "construction",
+    "vi": "Đối chiếu hiện trường với tiêu chí đạt, chọn kết quả và ghi chú sai lệch khi cần.",
+    "en": "Compare the site condition with the acceptance criteria, select a result, and note any variance when needed.",
+    "zh": "将现场情况与合格标准对照，选择结果，并在需要时记录偏差。",
+    "ja": "現場状況を合格基準と照合し、結果を選び、必要に応じて差異を記録します。"
+  },
+  {
+    "key": "construction.qaQc.chooseTemplateForChecklist",
+    "category": "construction",
+    "vi": "Chọn mẫu kiểm tra để hiện các hạng mục cần thực hiện.",
+    "en": "Choose an inspection template to show the items to complete.",
+    "zh": "选择检查模板以显示需要完成的项目。",
+    "ja": "検査テンプレートを選ぶと、実施する項目が表示されます。"
+  },
+  {
+    "key": "construction.qaQc.invalidPublishedTemplate",
+    "category": "construction",
+    "vi": "Mẫu đã chọn chưa có danh sách kiểm tra hợp lệ. Nhờ QA/QC phụ trách dự án tạo phiên bản mẫu mới và phát hành trước khi lập hồ sơ.",
+    "en": "The selected template has no valid checklist. Ask the project's QA/QC person in charge to create and publish a new template version before creating the dossier.",
+    "zh": "所选模板没有有效检查清单。请联系项目QA/QC负责人新建并发布模板版本后再建档。",
+    "ja": "選択したテンプレートに有効なチェックリストがありません。プロジェクトのQA/QC担当者に新版の作成・公開を依頼してください。"
+  },
+  {
+    "key": "construction.qaQc.result",
+    "category": "construction",
+    "vi": "Kết quả",
+    "en": "Result",
+    "zh": "结果",
+    "ja": "結果"
+  },
+  {
+    "key": "construction.qaQc.resultNote",
+    "category": "construction",
+    "vi": "Ghi chú / sai lệch",
+    "en": "Note / variance",
+    "zh": "备注 / 偏差",
+    "ja": "備考 / 差異"
+  },
+  {
+    "key": "construction.qaQc.resultNotePlaceholder",
+    "category": "construction",
+    "vi": "Ghi rõ vị trí, sai lệch hoặc việc cần xử lý",
+    "en": "State the location, variance, or corrective action",
+    "zh": "填写位置、偏差或需处理事项",
+    "ja": "位置、差異、必要な対応を記入"
+  },
+  {
+    "key": "construction.qaQc.resultValue.Pending",
+    "category": "construction",
+    "vi": "Chưa kiểm tra",
+    "en": "Not inspected",
+    "zh": "尚未检查",
+    "ja": "未検査"
+  },
+  {
+    "key": "construction.qaQc.resultValue.Pass",
+    "category": "construction",
+    "vi": "Đạt",
+    "en": "Pass",
+    "zh": "合格",
+    "ja": "合格"
+  },
+  {
+    "key": "construction.qaQc.resultValue.Fail",
+    "category": "construction",
+    "vi": "Không đạt",
+    "en": "Fail",
+    "zh": "不合格",
+    "ja": "不合格"
+  },
+  {
+    "key": "construction.qaQc.resultValue.NotApplicable",
+    "category": "construction",
+    "vi": "Không áp dụng",
+    "en": "Not applicable",
+    "zh": "不适用",
+    "ja": "対象外"
   }
 ]

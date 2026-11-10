@@ -129,6 +129,26 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Qa_qc_template_requires_business_friendly_checklist_rows()
+    {
+        var request = new CreateQaQcTemplateRequest
+        {
+            Code = "ISO-QA-UX",
+            NameVi = "Kiểm tra cốp pha",
+            Name = "Formwork inspection",
+            NameZh = "模板检查",
+            NameJa = "型枠検査",
+            SchemaJson = """{"schemaVersion":1,"items":[{"code":"C1","title":"Cao độ cốp pha"}]}""",
+        };
+
+        var action = () => _sut.CreateTemplateAsync(request, CmUserId, default);
+
+        var error = await Assert.ThrowsAsync<ConstructionOperationException>(action);
+        Assert.Contains("tiêu chí đạt", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(_db.QaQcTemplates);
+    }
+
+    [Fact]
     public async Task Qa_qc_dossier_requires_released_ifc_reference()
     {
         var template = new QaQcTemplate
@@ -139,7 +159,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
             Name = "Quality dossier",
             NameZh = "质量档案",
             NameJa = "品質記録",
-            SchemaJson = "{}",
+            SchemaJson = """{"schemaVersion":1,"items":[{"code":"C1","title":"Cao độ móng","acceptanceCriteria":"Đúng bản vẽ IFC"}]}""",
             IsPublished = true,
             CreatedByUserId = CmUserId,
         };
@@ -153,13 +173,27 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
                 TemplateId = template.Id,
                 WbsCode = "1.2.1",
                 Title = "Foundation concrete inspection",
-                ChecklistResultsJson = "[]",
+                ChecklistResultsJson = """[{"code":"C1","result":"Pending","note":""}]""",
             },
             BchUserId,
             default);
 
         var error = await Assert.ThrowsAsync<ConstructionOperationException>(action);
         Assert.Contains("IFC đã phát hành", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(_db.QaQcDossiers);
+    }
+
+    [Fact]
+    public async Task Qa_qc_dossier_rejects_result_not_defined_by_selected_template()
+    {
+        var templateId = await SeedQaQcReferencesAsync();
+        var request = QaQcRequest(templateId);
+        request.ChecklistResultsJson = """[{"code":"UNKNOWN","result":"Pass","note":""}]""";
+
+        var action = () => _sut.CreateDossierAsync(ProjectId, request, BchUserId, default);
+
+        var error = await Assert.ThrowsAsync<ConstructionOperationException>(action);
+        Assert.Contains("không thuộc mẫu", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(_db.QaQcDossiers);
     }
 
@@ -521,7 +555,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
             Name = "Material quality dossier",
             NameZh = "材料质量档案",
             NameJa = "材料品質記録",
-            SchemaJson = "{}",
+            SchemaJson = """{"schemaVersion":1,"items":[{"code":"C1","title":"Chất lượng vật liệu","acceptanceCriteria":"Đúng hồ sơ được duyệt"}]}""",
             IsPublished = true,
             CreatedByUserId = CmUserId,
         };
@@ -560,7 +594,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         WbsCode = "1.2.1",
         Title = "Kiểm tra chất lượng bê tông móng",
         IfcReleaseId = 801,
-        ChecklistResultsJson = "[]",
+        ChecklistResultsJson = """[{"code":"C1","result":"Pending","note":""}]""",
     };
 
     private async Task SeedDownstreamContractAsync()

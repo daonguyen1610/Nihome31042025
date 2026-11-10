@@ -269,7 +269,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
                 Name = "Material quality dossier",
                 NameZh = "材料质量档案",
                 NameJa = "材料品質記録",
-                SchemaJson = "{}",
+                SchemaJson = """{"schemaVersion":1,"items":[{"code":"C1","title":"Chất lượng vật liệu","acceptanceCriteria":"Đúng hồ sơ được duyệt"}]}""",
                 IsPublished = true,
                 CreatedByUserId = fixture.PmUserId,
             };
@@ -310,7 +310,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
             wbsCode = "1.2.1",
             title = "Foundation concrete laboratory test",
             ifcReleaseId = references.ReleaseId,
-            checklistResultsJson = "[]",
+            checklistResultsJson = """[{"code":"C1","result":"Pending","note":""}]""",
             evidence = new[] { new { projectDocumentId = references.DocumentId, evidenceType = "LaboratoryResult" } },
         });
         createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
@@ -330,7 +330,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
             wbsCode = "1.2.2",
             title = "Invalid mixed evidence",
             ifcReleaseId = references.ReleaseId,
-            checklistResultsJson = "[]",
+            checklistResultsJson = """[{"code":"C1","result":"Pending","note":""}]""",
             evidenceDocumentIds = new[] { references.DocumentId },
             evidence = new[] { new { projectDocumentId = references.DocumentId, evidenceType = "Sample" } },
         });
