@@ -510,7 +510,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
           )}
         </div>
 
-        <section className="space-y-3 rounded-lg border border-border bg-card p-4 shadow-sm">
+        <section className="space-y-5 rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="space-y-1.5">
             <Label htmlFor="hse-search">{t("hse.search")}</Label>
             <div className="relative">
@@ -533,7 +533,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
               aria-pressed={status === "all"}
               className={cn(
                 "status-pill shrink-0 border border-border bg-card text-foreground",
-                status === "all" && "ring-2 ring-ring ring-offset-1",
+                status === "all" && "shadow-[inset_0_0_0_2px_currentColor]",
               )}
             >
               {t("hse.allStatuses")}
@@ -547,7 +547,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
                 className={cn(
                   "shrink-0",
                   statusToneClass(HSE_STATUS_TONE[item]),
-                  status === item && "ring-2 ring-ring ring-offset-1",
+                  status === item && "shadow-[inset_0_0_0_2px_currentColor]",
                 )}
               >
                 {t(`hse.status.${item}`)}{" "}
