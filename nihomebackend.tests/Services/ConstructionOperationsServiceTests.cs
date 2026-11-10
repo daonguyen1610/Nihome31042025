@@ -70,7 +70,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
             default);
 
         var error = await Assert.ThrowsAsync<ConstructionOperationException>(action);
-        Assert.Contains("author cannot", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("không được tự thực hiện bước duyệt CM độc lập", error.Message, StringComparison.OrdinalIgnoreCase);
 
         var stored = await _db.ConstructionResourceRequests.FindAsync(created.Id);
         Assert.Equal(ConstructionReviewStatus.PendingCmReview, stored!.Status);
@@ -159,7 +159,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
             default);
 
         var error = await Assert.ThrowsAsync<ConstructionOperationException>(action);
-        Assert.Contains("released IFC", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("IFC đã phát hành", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(_db.QaQcDossiers);
     }
 
@@ -303,7 +303,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         var action = () => _sut.CreateQsAsync(ProjectId, request, BchUserId, default);
 
         var error = await Assert.ThrowsAsync<ConstructionOperationException>(action);
-        Assert.Contains("exactly mirror", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("phản chiếu chính xác", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -337,7 +337,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         var error = await Assert.ThrowsAsync<ConstructionOperationException>(
             () => _sut.CreateQsAsync(ProjectId, request, BchUserId, default));
 
-        Assert.Contains("active successor", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("lô kế nhiệm đang hiệu lực", error.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]
@@ -412,7 +412,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         var error = await Assert.ThrowsAsync<ConstructionOperationException>(
             () => _sut.CreateQsAsync(ProjectId, request, BchUserId, default));
 
-        Assert.Contains("must be approved", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("VO/phụ lục phải được duyệt", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(_db.ConstructionQsBatches);
     }
 
@@ -426,7 +426,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         var error = await Assert.ThrowsAsync<ConstructionOperationException>(
             () => _sut.CreateResourceAsync(ProjectId, request, BchUserId, default));
 
-        Assert.Contains("responsible site user", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("người phụ trách tại công trường", error.Message, StringComparison.OrdinalIgnoreCase);
         Assert.Empty(_db.ConstructionResourceRequests);
     }
 
