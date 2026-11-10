@@ -28,6 +28,9 @@ export function extractApiError(
       if (typeof data.code === "string" && data.code.startsWith("CM_SCHEDULE_")) {
         return translate(`cmSchedule.error.${data.code.slice("CM_SCHEDULE_".length)}`);
       }
+      if (data.code === "HSE_INDEPENDENT_REVIEW_REQUIRED") {
+        return translate("hse.independentReviewRequired");
+      }
       const primaryNotApproved = data.code === "IFC_PRIMARY_FILE_NOT_APPROVED";
       if (primaryNotApproved || data.code === "IFC_PRIMARY_FILE_UNAVAILABLE") {
         const key = primaryNotApproved

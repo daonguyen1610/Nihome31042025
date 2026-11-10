@@ -62,6 +62,7 @@ public sealed class ConstructionResourceRequest : IConcurrencyTracked
     public int? AssignedProcurementUserId { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public int CreatedByUserId { get; set; }
+    public int LastEditedByUserId { get; set; }
     public DateTime? CmReviewedAt { get; set; }
     public int? CmReviewedByUserId { get; set; }
     public string? CmDecisionReason { get; set; }
@@ -128,6 +129,7 @@ public sealed class QaQcDossier : IConcurrencyTracked
     public string Title { get; set; } = string.Empty;
     public ConstructionReviewStatus Status { get; set; } = ConstructionReviewStatus.Draft;
     public int CreatedByUserId { get; set; }
+    public int LastEditedByUserId { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public int? CmReviewedByUserId { get; set; }
     public DateTime? CmReviewedAt { get; set; }
@@ -166,6 +168,7 @@ public sealed class ConstructionQsBatch : IConcurrencyTracked
     public decimal CertifiedAmount { get; set; }
     public string Description { get; set; } = string.Empty;
     public int CreatedByUserId { get; set; }
+    public int LastEditedByUserId { get; set; }
     public DateTime? SubmittedAt { get; set; }
     public int? CmReviewedByUserId { get; set; }
     public DateTime? CmReviewedAt { get; set; }

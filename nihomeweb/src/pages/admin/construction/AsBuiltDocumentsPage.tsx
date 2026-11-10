@@ -6,7 +6,6 @@ import ConstructionStatTile from "./ConstructionStatTile";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import {
   CheckCircle2,
   Download,
@@ -20,7 +19,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import AdminLayout from "@/components/layout/AdminLayout";
+import { type DesignProjectScopeProps } from "./constructionScope";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
@@ -31,7 +30,10 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { isManagedDocumentPath, resolveSafeLinkUrl } from "@/lib/url";
-import { PageLoading, PageError } from "@/components/PageState";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { PageEmpty, PageLoading, PageError } from "@/components/PageState";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { ASBUILT_STATUS_TONE } from "./constructionStatus";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -92,15 +94,7 @@ const ASBUILT_STATUSES: AsBuiltStatus[] = [
 ];
 const EDITABLE_STATUSES = new Set<AsBuiltStatus>(["Draft", "Submitted"]);
 
-const STATUS_BADGE: Record<AsBuiltStatus, string> = {
-  Draft: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Archived: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  Cancelled: "border-zinc-200 bg-zinc-50 text-zinc-600",
-};
-
-const CATEGORY_BADGE = "border-violet-200 bg-violet-50 text-violet-700";
+const CATEGORY_BADGE = "border-indigo/40 bg-indigo/10 text-indigo";
 
 const formatDateTime = (iso: string | null | undefined) => {
   if (!iso) return "—";
@@ -108,20 +102,19 @@ const formatDateTime = (iso: string | null | undefined) => {
   return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
 };
 
-export default function AsBuiltDocumentsPage() {
+export function AsBuiltDocumentsPanel({
+  designProjectId,
+  scope = "review",
+}: DesignProjectScopeProps) {
   const uiError = useUiError();
   const { t, lang } = useI18n();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionAsBuiltManage);
-  const canApprove = has(ADMIN_PERMS.constructionAsBuiltApprove);
+  const canApprove = scope === "review" && has(ADMIN_PERMS.constructionAsBuiltApprove);
 
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | undefined>(() => {
-    const value = Number(searchParams.get("designProjectId"));
-    return Number.isInteger(value) && value > 0 ? value : undefined;
-  });
+  const projectId = designProjectId ?? undefined;
   const [category, setCategory] = useState<AsBuiltCategory | "">("");
   const [status, setStatus] = useState<AsBuiltStatus | "">("");
   const [openOnly, setOpenOnly] = useState(false);
@@ -524,8 +517,8 @@ export default function AsBuiltDocumentsPage() {
         value: totalRequired > 0 ? `${completedRequired}/${totalRequired}` : "—",
         gradient:
           totalRequired > 0 && completedRequired === totalRequired
-            ? "from-emerald-500 to-teal-500"
-            : "from-amber-500 to-orange-500",
+            ? "from-success to-info"
+            : "from-warning to-accent-orange",
         icon: FolderOpen,
       },
     ],
@@ -554,13 +547,9 @@ export default function AsBuiltDocumentsPage() {
   );
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 p-4 md:p-6" data-testid="asbuilt-page">
-        <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{t("asbuilt.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("asbuilt.subtitle")}</p>
-          </div>
+    <>
+      <div className="space-y-6" data-testid="asbuilt-page">
+        <header className="flex justify-end">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
@@ -611,18 +600,7 @@ export default function AsBuiltDocumentsPage() {
           <div className="grid grid-cols-1 gap-3 md:grid-cols-5 [&>div]:min-w-0">
             <FieldScope>
               <Label>{t("asbuilt.field.project")}</Label>
-              <SearchableSelect
-                options={[
-                  { value: "", label: t("asbuilt.filter.project.all") },
-                  ...projects.map((p) => ({ value: String(p.id), label: p.name })),
-                ]}
-                value={projectId != null ? String(projectId) : ""}
-                onChange={(v) => {
-                  setProjectId(v ? Number(v) : undefined);
-                  setPage(1);
-                }}
-                placeholder={t("asbuilt.filter.project.all")}
-              />
+              <Input value={projects.find((p) => p.id === projectId)?.name ?? "—"} readOnly />
             </FieldScope>
             <FieldScope>
               <Label>{t("asbuilt.field.category")}</Label>
@@ -748,9 +726,17 @@ export default function AsBuiltDocumentsPage() {
         ) : error ? (
           <PageError message={error} onRetry={load} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-            {t("asbuilt.empty")}
-          </div>
+          <PageEmpty
+            message={t("asbuilt.empty")}
+            action={
+              canManage && (
+                <Button size="sm" onClick={openCreate} data-testid="asbuilt-empty-new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("asbuilt.action.new")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <>
             {/* Desktop table */}
@@ -811,9 +797,9 @@ export default function AsBuiltDocumentsPage() {
                         {r.designProjectName}
                       </td>
                       <td className="px-3 py-2">
-                        <Badge variant="outline" className={STATUS_BADGE[r.status]}>
+                        <ConstructionStatusBadge tone={ASBUILT_STATUS_TONE[r.status]}>
                           {t(`asbuilt.status.${r.status.toLowerCase()}`)}
-                        </Badge>
+                        </ConstructionStatusBadge>
                       </td>
                       <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1">
@@ -848,7 +834,7 @@ export default function AsBuiltDocumentsPage() {
                                 onClick={() => setPendingDelete(r)}
                                 data-testid={`asbuilt-row-delete-${r.id}`}
                               >
-                                <Trash2 className="h-4 w-4 text-rose-500" />
+                                <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </>
                           )}
@@ -879,9 +865,9 @@ export default function AsBuiltDocumentsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={STATUS_BADGE[r.status]}>
+                      <ConstructionStatusBadge tone={ASBUILT_STATUS_TONE[r.status]}>
                         {t(`asbuilt.status.${r.status.toLowerCase()}`)}
-                      </Badge>
+                      </ConstructionStatusBadge>
                       <Badge variant="outline" className={CATEGORY_BADGE}>
                         {getCategoryName(r.category)}
                       </Badge>
@@ -926,27 +912,13 @@ export default function AsBuiltDocumentsPage() {
               ))}
             </div>
 
-            <div className="flex flex-col gap-2 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-              <div>{t("common.pagination.total").replace("{total}", String(total))}</div>
-              <div className="flex justify-end gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  {t("common.pagination.prev")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page * pageSize >= total}
-                  onClick={() => setPage(page + 1)}
-                >
-                  {t("common.pagination.next")}
-                </Button>
-              </div>
-            </div>
+            <ListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              disabled={loading}
+            />
           </>
         )}
       </div>
@@ -967,9 +939,9 @@ export default function AsBuiltDocumentsPage() {
               </SheetHeader>
               <div className="mt-4 space-y-4 text-sm">
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className={STATUS_BADGE[detail.status]}>
+                  <ConstructionStatusBadge tone={ASBUILT_STATUS_TONE[detail.status]}>
                     {t(`asbuilt.status.${detail.status.toLowerCase()}`)}
-                  </Badge>
+                  </ConstructionStatusBadge>
                   <Badge variant="outline" className={CATEGORY_BADGE}>
                     {getCategoryName(detail.category)}
                   </Badge>
@@ -1111,7 +1083,7 @@ export default function AsBuiltDocumentsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-rose-600"
+                        className="text-destructive"
                         onClick={() => setPendingDelete(detail)}
                         data-testid="asbuilt-delete"
                       >
@@ -1227,7 +1199,7 @@ export default function AsBuiltDocumentsPage() {
                 onChange={(e) => setForm({ ...form, note: e.target.value })}
               />
             </FieldScope>
-            {formError && <div className="text-sm text-rose-600">{formError}</div>}
+            {formError && <div className="text-sm text-destructive">{formError}</div>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>
@@ -1325,6 +1297,6 @@ export default function AsBuiltDocumentsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AdminLayout>
+    </>
   );
 }

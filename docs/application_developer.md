@@ -3545,6 +3545,119 @@ stale writes, duplicate keys, immutable approvals, reversals and unchanged state
 after rejection through integration tests. Pure formulas, zero denominators,
 targets, weights, precision and Vietnam-time boundaries belong in unit tests.
 
+### 7.20 Construction workspace information architecture (frontend)
+
+The Construction menu is split by role, and each screen belongs to exactly one
+menu entry.
+
+| Group | Route | Content |
+|---|---|---|
+| Site Command Board (BCH) | `/admin/construction/bch/operations` | Tabs `resources` (`ResourceRequestsPanel`) and `diary` (`SiteDiaryPanel`) |
+| | `/admin/construction/bch/qa-qc` | Tabs `dossiers`, `punchlist`, `acceptance`, `hse`, each hidden without its view permission |
+| | `/admin/construction/bch/qs` | `QsBatchesPanel` |
+| CM Office | `/admin/construction/cm/schedule` | Tabs `plan` (`CmScheduleWorkspace` + `CmPreparationSection`), `tasks` (`ConstructionTasksPanel`), and `diary` (`SiteDiaryPanel`, review scope) |
+| | `/admin/construction/cm/commercial` | Tabs `resources` and `qs` |
+| | `/admin/construction/cm/quality` | Tabs `dossiers` (+ `QaQcTemplatesSection` for template managers), `punchlist`, `acceptance`, `asbuilt`, `handover` |
+| | `/admin/construction/cm/safety` | `HseViolationsPanel` |
+| | `/admin/construction/cm/contracts` | `CmContractsPanel` |
+
+Every portal and area page wraps its content in `ConstructionWorkspaceShell`.
+The shell owns page chrome (one header, no nested main frame), loads the
+operational project list, keeps `?projectId` in the URL, falls back to the
+first project and writes that fallback to the URL, resolves
+`adminApi.getOperationalProject(projectId)`, and passes
+`{ projectId, designProjectId, designProjects }` to its render-prop child.
+Retry after a failed load increments a reload key that both the project list
+and project-scope effects depend on.
+Resource, QA/QC and QS records persist against the operational project; diary,
+punch list, acceptance, as-built, handover and construction tasks persist
+against the design project. Area pages read `?designProjectId` when present and
+otherwise use the linked design project; when an operational project has more
+than one design project, `CmAreaPage` shows a bounded selector and keeps the
+choice in the URL.
+
+Business pages are exported as named panels — `ResourceRequestsPanel`,
+`QaQcDossiersPanel`, `QsBatchesPanel`, `HseViolationsPanel`, `SiteDiaryPanel`,
+`PunchListPanel`, `AcceptanceRecordsPanel`, `AsBuiltDocumentsPanel`,
+`HandoverRecordsPanel`, and `ConstructionTasksPanel`. Each takes either
+`projectId` (operational anchor) or `designProjectId` (design anchor) plus
+`scope: "execute" | "review"` from `constructionScope.ts`:
+
+- `scope` is the portal context (approval surface and copy), not a management
+  gate. Capabilities come from permission plus scope through
+  `useConstructionActions(scope, { manage, supervisor, approve })` in
+  `constructionScope.ts`:
+  - `canManage` requires the module's `manage`/`create` permission, or, in
+    `review` scope, the `cm-review` supervisor permission.
+  - `canApprove` is `review` scope only, so BCH never renders approve, reject,
+    confirm, verify, close, or complete even where a wildcard grants the action.
+  - Row editing and deletion require `canManage` and either supervisor context
+    or authorship (`canEditRow`).
+- CM therefore creates, updates, submits, deletes, and monitors records that
+  BCH executes, including records authored by BCH. BCH portals show create,
+  edit, submit, report, and remediate for the signed-in author's drafts.
+- The site diary is reachable from both BCH operations (execute) and the CM
+  schedule area (review). Confirm/reopen stays permission-based and
+  review-scoped; BCH cannot confirm.
+- Independent review remains enforced server-side; `ConstructionReviewActions`
+  renders the "different reviewer required" message when the current user
+  authored the record. A CM supervisor who edits a BCH draft does not become
+  its author, so `createdByUserId ≠ approverUserId` still holds.
+
+Resource requests, QA/QC dossiers, QS batches, and HSE violations expose
+`DELETE` endpoints behind the same manage/supervisor gate. Hard delete is
+limited to Draft and CmRejected records (HSE: Draft, Rejected, Cancelled);
+submitted, approved, and closed records must move through their status
+transitions. Deletes remove only the child record and never touch linked
+project documents, which are independent roots. The HSE delete action is
+`construction.hse.delete`; PM receives it through the grow-only wildcard
+reconciliation in `RbacSeeder`, while BCH roles only hold `hse.manage`.
+
+Tab state is stored in `?tab=` with `replace`, and hidden tabs are skipped when
+choosing the default. Tab visibility uses the view permission union of the
+route guard, while menu visibility uses reviewer permissions only.
+
+#### Construction development sample data
+
+`ConstructionSampleSeeder` runs only when `DbSeeder` is called with
+`includeDevelopmentSamples` (the Development environment) and seeds project
+`PJ-SAMPLE-003` so every CM and BCH screen has at least one record in each
+workflow state: one published preparation version with all baseline references,
+two published QA/QC templates, four QA/QC dossiers (`QA-SAMPLE-001`–`004`)
+covering CM-approved, pending, draft, and rejected, three QS batches
+(`QS-SAMPLE-001`–`003`) covering both directions and three statuses, and five
+HSE violations (`HSE-SAMPLE-001`–`005`) covering draft, reported, confirmed,
+remediated, and closed with their transition events. The seeder also grants the
+site commander, site QA/QC, and quantity surveyor membership of the project.
+Each block is idempotent by its own marker (sample code prefix or
+`WBS-BASELINE-ANPHU-R1`), so it never duplicates or rewrites existing rows; it
+also tolerates the missing sample project and returns without changes.
+Resource-request samples come from `SampleCrmDataSeeder` (`RR-SAMPLE-ANPHU-*`).
+Never rely on these codes in production logic; they exist for live UI review
+only.
+
+#### UI guidance and translation updates
+
+Form fields that a first-time user cannot infer carry a placeholder example and
+a one-line hint under the input. The hint is linked with `aria-describedby`, so
+the text is announced with the field and is never the only clue.
+
+`TranslationSeeder` only inserts missing keys. Changing the wording of an
+already-seeded key therefore needs both an `old` object beside the new value in
+the i18n entry and a guarded data migration (see
+`SyncConstructionGuidanceTranslations`), otherwise existing databases keep the
+old text. `GET /api/translations/{lang}` is served from a process cache, so a
+value change needs a backend restart even after the migration runs.
+
+Legacy URLs redirect through `ConstructionRedirect.tsx`, preserving all query
+parameters (except `area`) and the hash: `/construction/cm?area=` picks the
+first permitted area; `/progress` and `/tasks` go to the CM schedule;
+`/diary`, `/bch/resource-requests`, `/punchlist`, `/acceptance` and `/hse`
+resolve to the BCH portal or CM area based on reviewer permissions;
+`/asbuilt` and `/handover` go to the CM quality tabs.
+`/admin/construction/asbuilt-categories` remains a standalone route linked from
+the as-built panel.
+
 ### 7.20 Module 4 Target Integration Contract
 
 This section records the target contract synthesized for the expanded
@@ -3845,6 +3958,12 @@ names alone.
    and result for reproducibility.
 7. The creator of an MR, QA/QC dossier, QS batch, HSE violation, or VO cannot
    satisfy the independent CM review for that record. Enforce this server-side.
+   For HSE, both the creator and the reporting actor are barred from confirming
+   or rejecting their own report. Those requests return HTTP 400 with
+   `HSE_INDEPENDENT_REVIEW_REQUIRED`, `operation`, `projectId`, and `violationId`;
+   status, rowversion, and event history remain unchanged. The client localizes
+   the guidance and asks for another authorized reviewer. Existing HSE errors
+   retain their message response; this adds no role grants or schema changes.
 8. Completion/handover consumes approved acceptance, QA/QC, as-built,
    commissioning, and blocking-Punchlist state; it never trusts a client-only
    readiness flag.

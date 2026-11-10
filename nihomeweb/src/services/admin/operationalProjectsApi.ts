@@ -480,6 +480,19 @@ export const operationalProjectsApi = {
       body,
       withIfMatch(body.rowVersion),
     ),
+  getConstructionResourceRequestDeletionImpact: (projectId: number, id: number) =>
+    api.get<DeletionImpactResponse>(
+      `/operational-projects/${projectId}/construction/resource-requests/${id}/deletion-impact`,
+    ),
+  deleteConstructionResourceRequest: (
+    projectId: number,
+    id: number,
+    body: ConfirmDeletionRequest,
+  ) =>
+    api.delete(`/operational-projects/${projectId}/construction/resource-requests/${id}`, {
+      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      data: body,
+    }),
   submitConstructionResourceRequest: (projectId: number, id: number, rowVersion: string) =>
     postIdempotent<ConstructionResourceRequestResponse>(
       `/operational-projects/${projectId}/construction/resource-requests/${id}/submit`,
@@ -525,6 +538,15 @@ export const operationalProjectsApi = {
       body,
       withIfMatch(body.rowVersion),
     ),
+  getQaQcDossierDeletionImpact: (projectId: number, id: number) =>
+    api.get<DeletionImpactResponse>(
+      `/operational-projects/${projectId}/construction/qa-qc/dossiers/${id}/deletion-impact`,
+    ),
+  deleteQaQcDossier: (projectId: number, id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/operational-projects/${projectId}/construction/qa-qc/dossiers/${id}`, {
+      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      data: body,
+    }),
   submitQaQcDossier: (projectId: number, id: number, rowVersion: string) =>
     postIdempotent<QaQcDossierResponse>(
       `/operational-projects/${projectId}/construction/qa-qc/dossiers/${id}/submit`,
@@ -564,6 +586,15 @@ export const operationalProjectsApi = {
       body,
       withIfMatch(body.rowVersion),
     ),
+  getConstructionQsBatchDeletionImpact: (projectId: number, id: number) =>
+    api.get<DeletionImpactResponse>(
+      `/operational-projects/${projectId}/construction/qs-batches/${id}/deletion-impact`,
+    ),
+  deleteConstructionQsBatch: (projectId: number, id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/operational-projects/${projectId}/construction/qs-batches/${id}`, {
+      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      data: body,
+    }),
   submitConstructionQsBatch: (projectId: number, id: number, rowVersion: string) =>
     postIdempotent<ConstructionQsBatchResponse>(
       `/operational-projects/${projectId}/construction/qs-batches/${id}/submit`,
@@ -623,6 +654,15 @@ export const operationalProjectsApi = {
         ...withIdempotencyKey(idempotencyKey).headers,
         ...withIfMatch(body.rowVersion).headers,
       },
+    }),
+  getHseViolationDeletionImpact: (projectId: number, id: number) =>
+    api.get<DeletionImpactResponse>(
+      `/operational-projects/${projectId}/hse-violations/${id}/deletion-impact`,
+    ),
+  deleteHseViolation: (projectId: number, id: number, body: ConfirmDeletionRequest) =>
+    api.delete(`/operational-projects/${projectId}/hse-violations/${id}`, {
+      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      data: body,
     }),
   transitionHseViolation: (
     projectId: number,

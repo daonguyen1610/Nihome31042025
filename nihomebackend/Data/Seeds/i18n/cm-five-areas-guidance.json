@@ -1,0 +1,122 @@
+[
+  {
+    "key": "cmAreas.roleBoundary",
+    "category": "construction",
+    "vi": "Phòng CM lập kế hoạch, giám sát và kiểm tra hồ sơ do BCH thực hiện. Dùng chung hồ sơ nguồn; việc kiểm tra độc lập phải do người khác với người thực hiện xử lý.",
+    "en": "CM plans, supervises, and reviews work performed by the site team. Both use the same source records; independent review belongs to a different person.",
+    "zh": "CM负责计划、监督及审核现场执行的工作。双方使用同一源记录，独立审核必须由执行人以外的人员完成。",
+    "ja": "CMは現場が実施した作業の計画・監督・確認を担当します。同じ元記録を使用し、独立した確認は実施者以外が行います。"
+  },
+  {
+    "key": "cmAreas.scheduleGuide",
+    "category": "construction",
+    "vi": "CM lập kế hoạch từ tiến độ tổng thể CRM, gửi PM duyệt và đối chiếu với thực tế BCH báo cáo. Hồ sơ điều kiện khởi công nằm ở phần mở rộng bên dưới.",
+    "en": "CM prepares the plan from the CRM master schedule, sends it for PM approval, and compares it with site reports. Startup-readiness evidence is in the expandable section below.",
+    "zh": "CM根据CRM总进度编制计划，提交PM审批并与现场报告对比。开工条件资料位于下方可展开部分。",
+    "ja": "CMはCRM全体工程から計画を作成しPMに承認申請して現場報告と比較します。着工条件の資料は下の展開部分にあります。"
+  },
+  {
+    "key": "cmAreas.commercialGuide",
+    "category": "construction",
+    "vi": "BCH lập đề xuất nguồn lực và hồ sơ khối lượng. CM kiểm tra trên chính hồ sơ đó, duyệt theo thẩm quyền hoặc trả lại kèm lý do; khối lượng đầu ra và đầu vào được theo dõi riêng.",
+    "en": "The site team prepares resource requests and quantity dossiers. CM reviews those same records, approves within its authority or returns them with a reason. Upstream and downstream quantities remain separate.",
+    "zh": "现场编制资源申请和工程量资料，CM在同一记录上审核并按权限批准或说明原因退回。上游与下游工程量分别跟踪。",
+    "ja": "現場がリソース申請と数量資料を作成し、CMが同じ記録を確認して権限内で承認または理由付きで差し戻します。上流・下流の数量は別々に管理します。"
+  },
+  {
+    "key": "cmAreas.qualityGuide",
+    "category": "construction",
+    "vi": "BCH lập hồ sơ chất lượng và đính kèm bằng chứng. CM kiểm tra độc lập, phê duyệt hoặc trả lại hồ sơ; mẫu kiểm tra được quản lý tại đây theo quyền được cấp.",
+    "en": "The site team prepares quality dossiers and evidence. CM independently reviews, approves, or returns the same dossiers. Inspection templates are managed here when permitted.",
+    "zh": "现场编制质量资料并附证据，CM独立审核、批准或退回同一资料。有权限时可在此管理检查模板。",
+    "ja": "現場が品質資料と証拠を作成し、CMが同じ資料を独立して確認・承認・差し戻します。権限がある場合は検査テンプレートも管理できます。"
+  },
+  {
+    "key": "cmAreas.safetyGuide",
+    "category": "construction",
+    "vi": "BCH ghi nhận vi phạm an toàn và cập nhật khắc phục. CM mở sổ HSE của đúng dự án để kiểm tra, xác nhận và theo dõi việc đóng vi phạm theo quyền; không lập thêm một sổ vi phạm riêng.",
+    "en": "The site team records safety violations and remediation. CM opens this project’s HSE register to review, confirm, and track closure within its permissions. No separate violation register is created.",
+    "zh": "现场记录安全违规与整改。CM打开本项目HSE台账，按权限审核、确认和跟踪关闭，不另建违规台账。",
+    "ja": "現場が安全違反と是正状況を記録します。CMはこのプロジェクトのHSE台帳で権限に応じて確認・承認・完了を追跡します。別台帳は作成しません。"
+  },
+  {
+    "key": "cmAreas.contractsGuide",
+    "category": "construction",
+    "vi": "CM theo dõi hợp đồng gắn với dự án để kiểm tra phạm vi và các cam kết liên quan thi công. Hợp đồng với chủ đầu tư và với nhà cung cấp/thầu phụ giữ riêng; việc lập và quản lý hợp đồng tiếp tục dùng sổ hợp đồng hiện có.",
+    "en": "CM follows project contracts to check scope and construction commitments. Owner and supplier/subcontractor contracts remain separate. Creation and management continue in the existing contract registry.",
+    "zh": "CM跟踪项目合同，核查施工范围与承诺。业主合同和供应商／分包合同保持分离，创建和管理继续使用现有合同台账。",
+    "ja": "CMはプロジェクト契約の施工範囲と約束事項を確認します。発注者契約と仕入先・下請契約を分け、作成・管理には既存の契約台帳を使用します。"
+  },
+  {
+    "key": "cmAreas.openRfq",
+    "category": "construction",
+    "vi": "Mở RFQ và so sánh báo giá",
+    "en": "Open RFQs and bid comparison",
+    "zh": "打开询价与报价比较",
+    "ja": "RFQと見積比較を開く"
+  },
+  {
+    "key": "cmAreas.supplierContractGuide",
+    "category": "construction",
+    "vi": "Bắt đầu tại RFQ để thu thập và so sánh báo giá. Người có quyền chọn nhà cung cấp xác nhận kết quả để tạo hợp đồng đầu vào nháp. Mở hợp đồng để tiếp tục hoàn thiện và quản lý; các hợp đồng bên dưới thuộc dự án đang chọn.",
+    "en": "Start with an RFQ to collect and compare quotations. An authorized award user confirms the selection to create draft downstream contracts. Open the contract to complete and manage it. The contracts below belong to the selected project.",
+    "zh": "从RFQ开始收集和比较报价。有定标权限的人员确认供应商后生成下游合同草稿，再打开合同完善和管理。下方合同属于所选项目。",
+    "ja": "RFQで見積を収集・比較し、権限のある選定担当者が確定すると下流契約の下書きが作成されます。契約を開いて内容を完成・管理してください。下の一覧は選択中プロジェクトの契約です。"
+  },
+  {
+    "key": "cmAreas.independentReviewer",
+    "category": "construction",
+    "vi": "Bạn là người lập hồ sơ này. Cần người kiểm tra CM khác có thẩm quyền phê duyệt hoặc trả lại hồ sơ.",
+    "en": "You created this record. A different authorized CM reviewer must approve or return it.",
+    "zh": "您是此记录的创建人，须由另一位有权限的CM审核人批准或退回。",
+    "ja": "この記録の作成者です。承認または差し戻しは別の権限のあるCM確認者が行います。"
+  },
+  {
+    "key": "cmAreas.tab.plan",
+    "category": "construction",
+    "vi": "Kế hoạch tiến độ",
+    "en": "Schedule plan",
+    "zh": "进度计划",
+    "ja": "工程計画"
+  },
+  {
+    "key": "construction.cm.contracts.counterparty",
+    "category": "construction",
+    "vi": "Đối tác hợp đồng",
+    "en": "Contract counterparty",
+    "zh": "合同对方",
+    "ja": "契約相手"
+  },
+  {
+    "key": "construction.cm.contracts.empty",
+    "category": "construction",
+    "vi": "Dự án này chưa có hợp đồng nào. Hợp đồng được lập tại sổ hợp đồng hiện có.",
+    "en": "This project has no contracts yet. Contracts are created in the existing contract registry.",
+    "zh": "此项目尚无合同。合同在现有合同台账中创建。",
+    "ja": "このプロジェクトにはまだ契約がありません。契約は既存の契約台帳で作成します。"
+  },
+  {
+    "key": "construction.cm.contracts.loadError",
+    "category": "construction",
+    "vi": "Không tải được danh sách hợp đồng của dự án.",
+    "en": "Could not load this project’s contracts.",
+    "zh": "无法加载该项目的合同列表。",
+    "ja": "このプロジェクトの契約一覧を読み込めませんでした。"
+  },
+  {
+    "key": "construction.cm.contracts.openUpstreamLedger",
+    "category": "construction",
+    "vi": "Mở sổ hợp đồng đầu ra",
+    "en": "Open upstream ledger",
+    "zh": "打开上游合同台账",
+    "ja": "上流契約台帳を開く"
+  },
+  {
+    "key": "construction.cm.contracts.openDownstreamLedger",
+    "category": "construction",
+    "vi": "Mở sổ hợp đồng đầu vào",
+    "en": "Open downstream ledger",
+    "zh": "打开下游合同台账",
+    "ja": "下流契約台帳を開く"
+  }
+]

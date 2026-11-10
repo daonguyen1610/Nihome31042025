@@ -3,10 +3,13 @@ import { getUiError } from "@/lib/apiError";
 import { FieldScope } from "@/components/ui/field-scope";
 import { FormEvent, useCallback, useEffect, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
-import { CircleDollarSign, Plus, Send, Trash2 } from "lucide-react";
-import { ConstructionWorkspaceShell } from "./ConstructionWorkspaceShell";
+import { CircleDollarSign, Pencil, Plus, Send, Trash2 } from "lucide-react";
+import { ConstructionReviewActions } from "./ConstructionReviewActions";
+import { ConstructionDeletionControl } from "./ConstructionDeletionControl";
+import { type ScopeProps, useConstructionActions } from "./constructionScope";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { REVIEW_STATUS_TONE } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,7 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
@@ -48,11 +50,15 @@ const emptyLine = (): ConstructionQsBatchLineRequest => ({
   unitPrice: 0,
 });
 
-export default function QsWorkspacePage() {
+export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
-  const { has } = usePermissions();
+  const { canManage, canApprove, canEditRow, canDeleteRow } = useConstructionActions(scope, {
+    manage: ADMIN_PERMS.constructionQsCreate,
+    supervisor: ADMIN_PERMS.constructionQsReview,
+    approve: ADMIN_PERMS.constructionQsReview,
+  });
   const [searchParams, setSearchParams] = useSearchParams();
   const { hash } = useLocation();
   const scrollToSource = useCallback(
@@ -61,16 +67,7 @@ export default function QsWorkspacePage() {
     },
     [hash],
   );
-  const requestedProject = Number(searchParams.get("projectId"));
   const requestedContract = Number(searchParams.get("contractId"));
-  const projectId =
-    Number.isInteger(requestedProject) && requestedProject > 0 ? requestedProject : null;
-  const selectProject = useCallback(
-    (id: number) => {
-      setSearchParams({ projectId: String(id) });
-    },
-    [setSearchParams],
-  );
   const contractFilter =
     Number.isInteger(requestedContract) && requestedContract > 0 ? requestedContract : null;
   const [rows, setRows] = useState<ConstructionQsBatchResponse[]>([]);
@@ -81,6 +78,7 @@ export default function QsWorkspacePage() {
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ConstructionQsBatchResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [referenceData, setReferenceData] = useState<ConstructionQsReferenceDataResponse>({
     contracts: [],
@@ -105,7 +103,6 @@ export default function QsWorkspacePage() {
   });
 
   useEffect(() => {
-    if (projectId == null) return;
     let active = true;
     setLoading(true);
     setError(null);
@@ -120,7 +117,6 @@ export default function QsWorkspacePage() {
   }, [projectId, reload, t, uiError]);
 
   useEffect(() => {
-    if (projectId == null) return;
     let active = true;
     setLookupsLoading(true);
     void adminApi
@@ -149,9 +145,60 @@ export default function QsWorkspacePage() {
         lineIndex === index ? { ...line, ...patch } : line,
       ),
     }));
+  const emptyForm = () => ({
+    direction: "Upstream" as ConstructionQsDirection,
+    adjustmentKind: "Original" as ConstructionQsAdjustmentKind,
+    predecessorBatchId: "",
+    contractId: "",
+    wbsCode: "",
+    periodFrom: "",
+    periodTo: "",
+    projectBoqRevisionId: "",
+    contractAppendixId: "",
+    contractPaymentMilestoneId: "",
+    certifiedAmount: 0,
+    description: "",
+    evidenceDocumentIds: "",
+    lines: [emptyLine()],
+  });
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm());
+    setOpen(true);
+  };
+  const openEdit = (row: ConstructionQsBatchResponse) => {
+    setEditing(row);
+    setForm({
+      direction: row.direction,
+      adjustmentKind: row.adjustmentKind,
+      predecessorBatchId: String(row.supersedesBatchId ?? row.reversesBatchId ?? ""),
+      contractId: String(row.contractId),
+      wbsCode: row.wbsCode,
+      periodFrom: row.periodFrom.slice(0, 10),
+      periodTo: row.periodTo.slice(0, 10),
+      projectBoqRevisionId: row.projectBoqRevisionId ? String(row.projectBoqRevisionId) : "",
+      contractAppendixId: row.contractAppendixId ? String(row.contractAppendixId) : "",
+      contractPaymentMilestoneId: row.contractPaymentMilestoneId
+        ? String(row.contractPaymentMilestoneId)
+        : "",
+      certifiedAmount: row.certifiedAmount,
+      description: row.description,
+      evidenceDocumentIds: row.evidenceDocumentIds.join(","),
+      lines:
+        row.lines.length > 0
+          ? row.lines.map((line) => ({
+              itemCode: line.itemCode,
+              description: line.description,
+              unit: line.unit,
+              quantity: line.quantity,
+              unitPrice: line.unitPrice,
+            }))
+          : [emptyLine()],
+    });
+    setOpen(true);
+  };
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (projectId == null) return;
     if (!form.contractId) {
       toast({ variant: "destructive", title: t("construction.qs.contractRequired") });
       return;
@@ -164,35 +211,44 @@ export default function QsWorkspacePage() {
       toast({ variant: "destructive", title: t("construction.qs.predecessorRequired") });
       return;
     }
+    const body = {
+      direction: form.direction,
+      contractId: Number(form.contractId),
+      wbsCode: form.wbsCode.trim(),
+      periodFrom: form.periodFrom,
+      periodTo: form.periodTo,
+      projectBoqRevisionId: form.projectBoqRevisionId ? Number(form.projectBoqRevisionId) : null,
+      contractAppendixId: form.contractAppendixId ? Number(form.contractAppendixId) : null,
+      contractPaymentMilestoneId: form.contractPaymentMilestoneId
+        ? Number(form.contractPaymentMilestoneId)
+        : null,
+      certifiedAmount: form.certifiedAmount,
+      description: form.description.trim(),
+      lines: form.lines,
+      evidenceDocumentIds: form.evidenceDocumentIds
+        .split(",")
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .map(Number),
+      supersedesBatchId:
+        form.adjustmentKind === "SupersedingCorrection" ? Number(form.predecessorBatchId) : null,
+      reversesBatchId: form.adjustmentKind === "Reversal" ? Number(form.predecessorBatchId) : null,
+    };
     setSaving(true);
     try {
-      await adminApi.createConstructionQsBatch(projectId, {
-        direction: form.direction,
-        contractId: Number(form.contractId),
-        wbsCode: form.wbsCode.trim(),
-        periodFrom: form.periodFrom,
-        periodTo: form.periodTo,
-        projectBoqRevisionId: form.projectBoqRevisionId ? Number(form.projectBoqRevisionId) : null,
-        contractAppendixId: form.contractAppendixId ? Number(form.contractAppendixId) : null,
-        contractPaymentMilestoneId: form.contractPaymentMilestoneId
-          ? Number(form.contractPaymentMilestoneId)
-          : null,
-        certifiedAmount: form.certifiedAmount,
-        description: form.description.trim(),
-        lines: form.lines,
-        evidenceDocumentIds: form.evidenceDocumentIds
-          .split(",")
-          .map((value) => value.trim())
-          .filter(Boolean)
-          .map(Number),
-        supersedesBatchId:
-          form.adjustmentKind === "SupersedingCorrection" ? Number(form.predecessorBatchId) : null,
-        reversesBatchId:
-          form.adjustmentKind === "Reversal" ? Number(form.predecessorBatchId) : null,
-      });
+      if (editing) {
+        await adminApi.updateConstructionQsBatch(projectId, editing.id, {
+          ...body,
+          rowVersion: editing.rowVersion,
+        });
+        toast({ title: t("construction.common.updated") });
+      } else {
+        await adminApi.createConstructionQsBatch(projectId, body);
+        toast({ title: t("construction.qs.created") });
+      }
       setOpen(false);
+      setEditing(null);
       setReload((value) => value + 1);
-      toast({ title: t("construction.qs.created") });
     } catch (cause) {
       toast({
         variant: "destructive",
@@ -202,8 +258,8 @@ export default function QsWorkspacePage() {
       setSaving(false);
     }
   };
+
   const submit = async (row: ConstructionQsBatchResponse) => {
-    if (projectId == null) return;
     try {
       await adminApi.submitConstructionQsBatch(projectId, row.id, row.rowVersion);
       setReload((value) => value + 1);
@@ -216,32 +272,52 @@ export default function QsWorkspacePage() {
     }
   };
 
+  const decide = async (row: ConstructionQsBatchResponse, approved: boolean, reason: string) => {
+    try {
+      await adminApi.decideConstructionQsBatch(projectId, row.id, approved, reason, row.rowVersion);
+      setReload((value) => value + 1);
+      toast({ title: t("construction.cm.decisionSaved") });
+      return true;
+    } catch (cause) {
+      toast({
+        variant: "destructive",
+        title: uiError(cause, t("construction.common.actionError")),
+      });
+      return false;
+    }
+  };
+
   return (
-    <ConstructionWorkspaceShell
-      title={t("construction.qs.title")}
-      description={t("construction.qs.description")}
-      projectId={projectId}
-      onProjectChange={selectProject}
-      testId="qs-page"
-    >
+    <>
       <section className="space-y-4">
         {contractFilter != null && (
           <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 p-3 text-sm">
             <span>
-              {t("construction.qs.contract")} #{contractFilter}
+              {t("construction.qs.contract")}{" "}
+              {referenceData.contracts.find((contract) => contract.id === contractFilter)
+                ?.contractNumber ?? `#${contractFilter}`}
             </span>
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setSearchParams(projectId ? { projectId: String(projectId) } : {})}
+              onClick={() =>
+                setSearchParams(
+                  (current) => {
+                    const next = new URLSearchParams(current);
+                    next.delete("contractId");
+                    return next;
+                  },
+                  { replace: true },
+                )
+              }
             >
               {t("common.reset")}
             </Button>
           </div>
         )}
         <div className="flex justify-end">
-          {has(ADMIN_PERMS.constructionQsCreate) && (
-            <Button onClick={() => setOpen(true)} data-testid="qs-new">
+          {canManage && (
+            <Button onClick={openCreate} data-testid="qs-new">
               <Plus className="mr-2 h-4 w-4" />
               {t("construction.qs.new")}
             </Button>
@@ -252,7 +328,19 @@ export default function QsWorkspacePage() {
         ) : error ? (
           <PageError message={error} onRetry={() => setReload((value) => value + 1)} />
         ) : visibleRows.length === 0 ? (
-          <PageEmpty message={t("construction.qs.empty")} />
+          <PageEmpty
+            message={t(contractFilter != null ? "common.noResults" : "construction.qs.empty")}
+            action={
+              contractFilter != null
+                ? undefined
+                : canManage && (
+                    <Button onClick={openCreate} data-testid="qs-empty-new">
+                      <Plus className="mr-2 h-4 w-4" />
+                      {t("construction.qs.new")}
+                    </Button>
+                  )
+            }
+          />
         ) : (
           <div className="grid gap-3 lg:grid-cols-2">
             {visibleRows.map((row) => (
@@ -270,12 +358,17 @@ export default function QsWorkspacePage() {
                       {t(`construction.qs.direction.${row.direction}`)}
                     </p>
                   </div>
-                  <Badge variant="outline">{t(`construction.status.${row.status}`)}</Badge>
+                  <ConstructionStatusBadge tone={REVIEW_STATUS_TONE[row.status]}>
+                    {t(`construction.status.${row.status}`)}
+                  </ConstructionStatusBadge>
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm sm:grid-cols-3">
                   <div>
                     <dt className="text-muted-foreground">{t("construction.qs.contract")}</dt>
-                    <dd>#{row.contractId}</dd>
+                    <dd>
+                      {referenceData.contracts.find((contract) => contract.id === row.contractId)
+                        ?.contractNumber ?? `#${row.contractId}`}
+                    </dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">{t("construction.common.wbs")}</dt>
@@ -296,16 +389,42 @@ export default function QsWorkspacePage() {
                   </div>
                 </dl>
                 <p className="text-sm">{row.description}</p>
-                {row.status === "Draft" && (
-                  <Button
-                    size="sm"
-                    onClick={() => void submit(row)}
-                    data-testid={`qs-submit-${row.id}`}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    {t("construction.common.submit")}
-                  </Button>
+                {row.status === "Draft" && canEditRow(row.createdByUserId) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => void submit(row)}
+                      data-testid={`qs-submit-${row.id}`}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      {t("construction.common.submit")}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t("common.edit")}
+                    </Button>
+                  </div>
                 )}
+                {(row.status === "Draft" || row.status === "CmRejected") &&
+                  canDeleteRow(row.createdByUserId) && (
+                    <ConstructionDeletionControl
+                      rowVersion={row.rowVersion}
+                      getImpact={() =>
+                        adminApi.getConstructionQsBatchDeletionImpact(projectId, row.id)
+                      }
+                      deleteRecord={(request) =>
+                        adminApi.deleteConstructionQsBatch(projectId, row.id, request)
+                      }
+                      onDeleted={() => setReload((value) => value + 1)}
+                    />
+                  )}
+                <ConstructionReviewActions
+                  allowed={canApprove}
+                  status={row.status}
+                  createdByUserId={row.createdByUserId}
+                  lastEditedByUserId={row.lastEditedByUserId}
+                  onDecide={(approved, reason) => decide(row, approved, reason)}
+                />
               </article>
             ))}
           </div>
@@ -317,9 +436,10 @@ export default function QsWorkspacePage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <CircleDollarSign className="h-5 w-5" />
-                {t("construction.qs.new")}
+                {t(editing ? "common.edit" : "construction.qs.new")}
               </DialogTitle>
             </DialogHeader>
+            <p className="text-sm text-muted-foreground">{t("construction.qs.formIntro")}</p>
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               <FieldScope className="space-y-1.5">
                 <Label>{t("construction.qs.direction")}</Label>
@@ -349,6 +469,9 @@ export default function QsWorkspacePage() {
                     </SelectItem>
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">
+                  {t("construction.qs.directionHint")}
+                </p>
               </FieldScope>
               <div className="space-y-1.5">
                 <Label htmlFor="qs-adjustment">{t("construction.qs.adjustmentMode")}</Label>
@@ -418,7 +541,7 @@ export default function QsWorkspacePage() {
                   disabled={lookupsLoading}
                 >
                   <SelectTrigger id="qs-contract" data-testid="qs-contract">
-                    <SelectValue placeholder={t("construction.qs.contract")} />
+                    <SelectValue placeholder={t("construction.qs.selectContract")} />
                   </SelectTrigger>
                   <SelectContent>
                     {referenceData.contracts
@@ -430,6 +553,7 @@ export default function QsWorkspacePage() {
                       ))}
                   </SelectContent>
                 </Select>
+                <p className="text-xs text-muted-foreground">{t("construction.qs.contractHint")}</p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="qs-wbs">{t("construction.common.wbs")}</Label>
@@ -437,9 +561,14 @@ export default function QsWorkspacePage() {
                   id="qs-wbs"
                   required
                   maxLength={100}
+                  placeholder="WBS-3.2-MEP"
+                  aria-describedby="qs-wbs-hint"
                   value={form.wbsCode}
                   onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
                 />
+                <p id="qs-wbs-hint" className="text-xs text-muted-foreground">
+                  {t("construction.qs.wbsHint")}
+                </p>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="qs-boq">{t("procurement.boq.title")}</Label>
@@ -450,10 +579,10 @@ export default function QsWorkspacePage() {
                   }
                 >
                   <SelectTrigger id="qs-boq" data-testid="qs-boq-revision">
-                    <SelectValue />
+                    <SelectValue placeholder={t("construction.qs.notApplicable")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">—</SelectItem>
+                    <SelectItem value="none">{t("construction.qs.notApplicable")}</SelectItem>
                     {referenceData.approvedBoqRevisions.map((revision) => (
                       <SelectItem key={revision.id} value={String(revision.id)}>
                         BOQ v{revision.revisionNumber} · {revision.currency}
@@ -472,10 +601,10 @@ export default function QsWorkspacePage() {
                   disabled={!form.contractId}
                 >
                   <SelectTrigger id="qs-vo" data-testid="qs-contract-appendix">
-                    <SelectValue />
+                    <SelectValue placeholder={t("construction.qs.notApplicable")} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="none">—</SelectItem>
+                    <SelectItem value="none">{t("construction.qs.notApplicable")}</SelectItem>
                     {(
                       referenceData.contracts.find(
                         (contract) => contract.id === Number(form.contractId),
@@ -500,7 +629,7 @@ export default function QsWorkspacePage() {
                     disabled={!form.contractId}
                   >
                     <SelectTrigger id="qs-milestone" data-testid="qs-payment-milestone">
-                      <SelectValue placeholder={t("contracts.milestonesTitle")} />
+                      <SelectValue placeholder={t("construction.qs.selectMilestone")} />
                     </SelectTrigger>
                     <SelectContent>
                       {(
@@ -515,6 +644,9 @@ export default function QsWorkspacePage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <p className="text-xs text-muted-foreground">
+                    {t("construction.qs.milestoneHint")}
+                  </p>
                 </div>
               )}
               <div className="space-y-1.5">
@@ -542,9 +674,13 @@ export default function QsWorkspacePage() {
                 <Label htmlFor="qs-amount">{t("construction.qs.amount")}</Label>
                 <MoneyInput
                   id="qs-amount"
+                  aria-describedby="qs-amount-hint"
                   value={form.certifiedAmount}
                   onChange={(value) => setForm({ ...form, certifiedAmount: value })}
                 />
+                <p id="qs-amount-hint" className="text-xs text-muted-foreground">
+                  {t("construction.qs.amountHint")}
+                </p>
               </div>
               <div className="space-y-1.5 sm:col-span-2 lg:col-span-3">
                 <Label htmlFor="qs-description">{t("construction.qs.batchDescription")}</Label>
@@ -552,9 +688,14 @@ export default function QsWorkspacePage() {
                   id="qs-description"
                   required
                   maxLength={2000}
+                  placeholder={t("construction.qs.descriptionPlaceholder")}
+                  aria-describedby="qs-description-hint"
                   value={form.description}
                   onChange={(e) => setForm({ ...form, description: e.target.value })}
                 />
+                <p id="qs-description-hint" className="text-xs text-muted-foreground">
+                  {t("construction.qs.descriptionHint")}
+                </p>
               </div>
             </div>
             <div className="space-y-3">
@@ -639,7 +780,11 @@ export default function QsWorkspacePage() {
                 value={form.evidenceDocumentIds}
                 onChange={(e) => setForm({ ...form, evidenceDocumentIds: e.target.value })}
                 placeholder="101, 102"
+                aria-describedby="qs-evidence-hint"
               />
+              <p id="qs-evidence-hint" className="text-xs text-muted-foreground">
+                {t("construction.qs.evidenceHint")}
+              </p>
             </div>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -652,6 +797,6 @@ export default function QsWorkspacePage() {
           </form>
         </DialogContent>
       </Dialog>
-    </ConstructionWorkspaceShell>
+    </>
   );
 }

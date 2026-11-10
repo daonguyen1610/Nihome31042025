@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Data;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -20,25 +22,31 @@ public interface IConstructionOperationsService
     Task<List<ConstructionResourceRequestResponse>> ListResourcesAsync(int projectId, CancellationToken ct);
     Task<ConstructionResourceReferenceDataResponse> GetResourceReferencesAsync(int projectId, CancellationToken ct);
     Task<ConstructionResourceRequestResponse?> GetResourceAsync(int projectId, int id, CancellationToken ct);
+    Task<DeletionImpactResponse?> GetResourceDeletionImpactAsync(int projectId, int id, int userId, bool supervisor, CancellationToken ct);
     Task<ConstructionResourceRequestResponse> CreateResourceAsync(int projectId, UpsertConstructionResourceRequest request, int userId, CancellationToken ct);
-    Task<ConstructionResourceRequestResponse?> UpdateResourceAsync(int projectId, int id, UpsertConstructionResourceRequest request, int userId, CancellationToken ct);
-    Task<ConstructionResourceRequestResponse?> SubmitResourceAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct);
+    Task<ConstructionResourceRequestResponse?> UpdateResourceAsync(int projectId, int id, UpsertConstructionResourceRequest request, int userId, CancellationToken ct, bool supervisor = false);
+    Task<ConstructionResourceRequestResponse?> SubmitResourceAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct, bool supervisor = false);
+    Task<bool> DeleteResourceAsync(int projectId, int id, ConfirmDeletionRequest request, int userId, CancellationToken ct, bool supervisor = false);
     Task<ConstructionResourceRequestResponse?> DecideResourceAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct);
     Task<List<QaQcTemplateResponse>> ListTemplatesAsync(CancellationToken ct);
     Task<QaQcTemplateResponse> CreateTemplateAsync(CreateQaQcTemplateRequest request, int userId, CancellationToken ct);
     Task<QaQcTemplateResponse?> PublishTemplateAsync(int id, string rowVersion, CancellationToken ct);
     Task<List<QaQcDossierResponse>> ListDossiersAsync(int projectId, CancellationToken ct);
     Task<QaQcDossierResponse?> GetDossierAsync(int projectId, int id, CancellationToken ct);
+    Task<DeletionImpactResponse?> GetDossierDeletionImpactAsync(int projectId, int id, int userId, bool supervisor, CancellationToken ct);
     Task<QaQcDossierResponse> CreateDossierAsync(int projectId, CreateQaQcDossierRequest request, int userId, CancellationToken ct);
-    Task<QaQcDossierResponse?> UpdateDossierAsync(int projectId, int id, CreateQaQcDossierRequest request, string rowVersion, int userId, CancellationToken ct);
-    Task<QaQcDossierResponse?> SubmitDossierAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct);
+    Task<QaQcDossierResponse?> UpdateDossierAsync(int projectId, int id, CreateQaQcDossierRequest request, string rowVersion, int userId, CancellationToken ct, bool supervisor = false);
+    Task<QaQcDossierResponse?> SubmitDossierAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct, bool supervisor = false);
+    Task<bool> DeleteDossierAsync(int projectId, int id, ConfirmDeletionRequest request, int userId, CancellationToken ct, bool supervisor = false);
     Task<QaQcDossierResponse?> DecideDossierAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct);
     Task<List<ConstructionQsBatchResponse>> ListQsAsync(int projectId, CancellationToken ct);
     Task<ConstructionQsReferenceDataResponse> GetQsReferencesAsync(int projectId, CancellationToken ct);
     Task<ConstructionQsBatchResponse?> GetQsAsync(int projectId, int id, CancellationToken ct);
+    Task<DeletionImpactResponse?> GetQsDeletionImpactAsync(int projectId, int id, int userId, bool supervisor, CancellationToken ct);
     Task<ConstructionQsBatchResponse> CreateQsAsync(int projectId, CreateConstructionQsBatchRequest request, int userId, CancellationToken ct);
-    Task<ConstructionQsBatchResponse?> UpdateQsAsync(int projectId, int id, CreateConstructionQsBatchRequest request, string rowVersion, int userId, CancellationToken ct);
-    Task<ConstructionQsBatchResponse?> SubmitQsAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct);
+    Task<ConstructionQsBatchResponse?> UpdateQsAsync(int projectId, int id, CreateConstructionQsBatchRequest request, string rowVersion, int userId, CancellationToken ct, bool supervisor = false);
+    Task<ConstructionQsBatchResponse?> SubmitQsAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct, bool supervisor = false);
+    Task<bool> DeleteQsAsync(int projectId, int id, ConfirmDeletionRequest request, int userId, CancellationToken ct, bool supervisor = false);
     Task<ConstructionQsBatchResponse?> DecideQsAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct);
 }
 
@@ -60,7 +68,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         if (current is { Status: not ConstructionPreparationStatus.Draft })
         {
             if (current.Status == ConstructionPreparationStatus.InConstruction)
-                throw new ConstructionOperationException("An in-construction baseline requires the approved VO/change workflow before a new preparation version can be created.");
+                throw new ConstructionOperationException("Baseline trong giai đoạn thi công phải đi qua quy trình VO/điều chỉnh đã được duyệt trước khi có thể tạo phiên bản chuẩn bị mới.");
             CrmConcurrency.Apply(db, current, request.RowVersion);
             var previous = current;
             previous.Status = ConstructionPreparationStatus.Superseded;
@@ -104,10 +112,10 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     {
         var item = await LatestPreparation(projectId, ct);
         if (item.Status == ConstructionPreparationStatus.InConstruction) return Map(item)!;
-        if (item.Status != ConstructionPreparationStatus.ReadyToStart) throw new ConstructionOperationException("Readiness must be evaluated successfully before construction can start.");
+        if (item.Status != ConstructionPreparationStatus.ReadyToStart) throw new ConstructionOperationException("Phải hoàn tất đánh giá mức độ sẵn sàng trước khi khởi công.");
         CrmConcurrency.Apply(db, item, rowVersion);
         var missing = await MissingReadinessAsync(projectId, item, ct);
-        if (missing.Count != 0) throw new ConstructionOperationException($"Construction cannot start. Missing: {string.Join(", ", missing)}.");
+        if (missing.Count != 0) throw new ConstructionOperationException($"Không thể khởi công. Còn thiếu: {string.Join(", ", missing)}.");
         item.Status = ConstructionPreparationStatus.InConstruction;
         item.StartedAt = DateTime.UtcNow;
         item.StartedByUserId = userId;
@@ -189,35 +197,63 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         return item is null ? null : Map(item);
     }
 
+    public async Task<DeletionImpactResponse?> GetResourceDeletionImpactAsync(int projectId, int id, int userId, bool supervisor, CancellationToken ct)
+    {
+        var item = await db.ConstructionResourceRequests.AsNoTracking()
+            .SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
+        if (item is null) return null;
+        EnsureDeletionViewer(item.CreatedByUserId, userId, supervisor);
+        var ownedCount = await db.Set<ConstructionResourceHandoffEvent>()
+            .CountAsync(x => x.ConstructionResourceRequestId == id, ct);
+        var blocked = item.Status is not (ConstructionReviewStatus.Draft or ConstructionReviewStatus.CmRejected) ||
+            item.HandoffEntityId.HasValue || item.ProcurementContractId.HasValue || item.SupplyDocumentId.HasValue;
+        return BuildDeletionImpact(nameof(ConstructionResourceRequest), item.Id, item.Code,
+            item.Status, item.RowVersion, blocked, ownedCount, "construction.resourceHandoffEvents");
+    }
+
     public async Task<ConstructionResourceRequestResponse> CreateResourceAsync(int projectId, UpsertConstructionResourceRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         await ValidateResource(projectId, request, ct);
         var next = await db.ConstructionResourceRequests.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
-        var item = new ConstructionResourceRequest { OperationalProjectId = projectId, Code = $"RR-{projectId:D4}-{next:D4}", CreatedByUserId = userId };
+        var item = new ConstructionResourceRequest { OperationalProjectId = projectId, Code = $"RR-{projectId:D4}-{next:D4}", CreatedByUserId = userId, LastEditedByUserId = userId };
         Apply(item, request); db.ConstructionResourceRequests.Add(item);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         return Map(item);
     }
 
-    public async Task<ConstructionResourceRequestResponse?> UpdateResourceAsync(int projectId, int id, UpsertConstructionResourceRequest request, int userId, CancellationToken ct)
+    public async Task<ConstructionResourceRequestResponse?> UpdateResourceAsync(int projectId, int id, UpsertConstructionResourceRequest request, int userId, CancellationToken ct, bool supervisor = false)
     {
         var item = await db.ConstructionResourceRequests.SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
         if (item is null) return null;
-        if (item.Status != ConstructionReviewStatus.Draft || item.CreatedByUserId != userId) throw new ConstructionOperationException("Only the BCH author can edit a draft resource request.");
-        await ValidateResource(projectId, request, ct); CrmConcurrency.Apply(db, item, request.RowVersion); Apply(item, request);
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor);
+        await ValidateResource(projectId, request, ct); CrmConcurrency.Apply(db, item, request.RowVersion); Apply(item, request); item.LastEditedByUserId = userId;
         await CrmConcurrency.SaveChangesAsync(db, ct); return Map(item);
     }
 
-    public async Task<ConstructionResourceRequestResponse?> SubmitResourceAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct)
+    public async Task<ConstructionResourceRequestResponse?> SubmitResourceAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct, bool supervisor = false)
     {
         var item = await db.ConstructionResourceRequests.SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
         if (item is null) return null;
         if (item.Status == ConstructionReviewStatus.PendingCmReview) return Map(item);
-        if (item.Status != ConstructionReviewStatus.Draft || item.CreatedByUserId != userId) throw new ConstructionOperationException("Only the BCH author can submit a draft resource request.");
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor);
         CrmConcurrency.Apply(db, item, rowVersion); item.Status = ConstructionReviewStatus.PendingCmReview; item.SubmittedAt = DateTime.UtcNow; item.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct); return Map(item);
+    }
+
+    public async Task<bool> DeleteResourceAsync(int projectId, int id, ConfirmDeletionRequest request, int userId, CancellationToken ct, bool supervisor = false)
+    {
+        var impact = await GetResourceDeletionImpactAsync(projectId, id, userId, supervisor, ct);
+        if (impact is null) return false;
+        ValidateDeletion(impact, request);
+        var item = await db.ConstructionResourceRequests.SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
+        if (item is null) return false;
+        EnsureDeletable(item.Status, item.CreatedByUserId, userId, supervisor);
+        CrmConcurrency.Apply(db, item, request.RowVersion!);
+        db.ConstructionResourceRequests.Remove(item);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return true;
     }
 
     public async Task<ConstructionResourceRequestResponse?> DecideResourceAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct)
@@ -227,7 +263,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             : null;
         var item = await db.ConstructionResourceRequests.SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
         if (item is null) return null;
-        EnsureDecision(item.Status, item.CreatedByUserId, userId, request.Reason); CrmConcurrency.Apply(db, item, request.RowVersion);
+        EnsureDecision(item.Status, item.CreatedByUserId, item.LastEditedByUserId, userId, request.Reason); CrmConcurrency.Apply(db, item, request.RowVersion);
         item.Status = request.Approved ? ConstructionReviewStatus.CmApproved : ConstructionReviewStatus.CmRejected;
         item.CmReviewedAt = DateTime.UtcNow; item.CmReviewedByUserId = userId; item.CmDecisionReason = request.Reason.Trim(); item.UpdatedAt = DateTime.UtcNow;
         if (request.Approved) await CreateResourceHandoff(item, userId, ct);
@@ -240,8 +276,8 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     public async Task<QaQcTemplateResponse> CreateTemplateAsync(CreateQaQcTemplateRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
-        EnsureText(request.Code, "Template code"); EnsureText(request.NameVi, "Vietnamese template name"); EnsureText(request.Name, "English template name"); EnsureText(request.NameZh, "Chinese template name"); EnsureText(request.NameJa, "Japanese template name");
-        ValidateJson(request.SchemaJson, "Template schema", JsonValueKind.Object);
+        EnsureText(request.Code, "Mã mẫu"); EnsureText(request.NameVi, "Tên mẫu tiếng Việt"); EnsureText(request.Name, "Tên mẫu tiếng Anh"); EnsureText(request.NameZh, "Tên mẫu tiếng Trung"); EnsureText(request.NameJa, "Tên mẫu tiếng Nhật");
+        ValidateJson(request.SchemaJson, "Cấu trúc mẫu", JsonValueKind.Object);
         var code = request.Code.Trim().ToUpperInvariant();
         var version = (await db.QaQcTemplates.Where(x => x.Code == code).MaxAsync(x => (int?)x.Version, ct) ?? 0) + 1;
         var item = new QaQcTemplate { Code = code, Version = version, NameVi = request.NameVi.Trim(), Name = request.Name.Trim(), NameZh = request.NameZh.Trim(), NameJa = request.NameJa.Trim(), SchemaJson = request.SchemaJson, CreatedByUserId = userId };
@@ -258,6 +294,16 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
 
     public async Task<List<QaQcDossierResponse>> ListDossiersAsync(int projectId, CancellationToken ct) => (await Dossiers().AsNoTracking().Where(x => x.OperationalProjectId == projectId).OrderByDescending(x => x.Id).ToListAsync(ct)).Select(x => Map(x)!).ToList();
     public async Task<QaQcDossierResponse?> GetDossierAsync(int projectId, int id, CancellationToken ct) => Map(await Dossiers().AsNoTracking().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct));
+    public async Task<DeletionImpactResponse?> GetDossierDeletionImpactAsync(int projectId, int id, int userId, bool supervisor, CancellationToken ct)
+    {
+        var item = await Dossiers().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
+        if (item is null) return null;
+        EnsureDeletionViewer(item.CreatedByUserId, userId, supervisor);
+        return BuildDeletionImpact(nameof(QaQcDossier), item.Id, item.Code, item.Status, item.RowVersion,
+            item.Status is not (ConstructionReviewStatus.Draft or ConstructionReviewStatus.CmRejected),
+            item.Evidence.Count, "construction.qaQcEvidenceLinks");
+    }
     public async Task<QaQcDossierResponse> CreateDossierAsync(int projectId, CreateQaQcDossierRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
@@ -265,25 +311,39 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         await PinEvidenceAsync(projectId, request.Evidence.Count > 0
             ? request.Evidence.Select(x => x.ProjectDocumentId).ToList() : request.EvidenceDocumentIds, userId, ct);
         var next = await db.QaQcDossiers.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
-        var item = new QaQcDossier { OperationalProjectId = projectId, Code = $"QA-{projectId:D4}-{next:D4}", CreatedByUserId = userId };
+        var item = new QaQcDossier { OperationalProjectId = projectId, Code = $"QA-{projectId:D4}-{next:D4}", CreatedByUserId = userId, LastEditedByUserId = userId };
         Apply(item, request, template); db.QaQcDossiers.Add(item); await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         return Map(item)!;
     }
-    public async Task<QaQcDossierResponse?> UpdateDossierAsync(int projectId, int id, CreateQaQcDossierRequest request, string rowVersion, int userId, CancellationToken ct)
+    public async Task<QaQcDossierResponse?> UpdateDossierAsync(int projectId, int id, CreateQaQcDossierRequest request, string rowVersion, int userId, CancellationToken ct, bool supervisor = false)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         var item = await Dossiers().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
-        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); var template = await ValidateDossier(projectId, request, ct);
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor); var template = await ValidateDossier(projectId, request, ct);
         await PinEvidenceAsync(projectId, request.Evidence.Count > 0
             ? request.Evidence.Select(x => x.ProjectDocumentId).ToList() : request.EvidenceDocumentIds, userId, ct);
-        CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request, template);
+        CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request, template); item.LastEditedByUserId = userId;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         return Map(item);
     }
-    public Task<QaQcDossierResponse?> SubmitDossierAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct) => TransitionDossier(projectId, id, rowVersion, userId, null, ct);
-    public Task<QaQcDossierResponse?> DecideDossierAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct) => TransitionDossier(projectId, id, request.RowVersion!, userId, request, ct);
+    public Task<QaQcDossierResponse?> SubmitDossierAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct, bool supervisor = false) => TransitionDossier(projectId, id, rowVersion, userId, supervisor, null, ct);
+    public Task<QaQcDossierResponse?> DecideDossierAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct) => TransitionDossier(projectId, id, request.RowVersion!, userId, false, request, ct);
+
+    public async Task<bool> DeleteDossierAsync(int projectId, int id, ConfirmDeletionRequest request, int userId, CancellationToken ct, bool supervisor = false)
+    {
+        var impact = await GetDossierDeletionImpactAsync(projectId, id, userId, supervisor, ct);
+        if (impact is null) return false;
+        ValidateDeletion(impact, request);
+        var item = await Dossiers().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
+        if (item is null) return false;
+        EnsureDeletable(item.Status, item.CreatedByUserId, userId, supervisor);
+        CrmConcurrency.Apply(db, item, request.RowVersion!);
+        db.QaQcDossiers.Remove(item);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return true;
+    }
 
     public async Task<List<ConstructionQsBatchResponse>> ListQsAsync(int projectId, CancellationToken ct) => (await Qs().AsNoTracking().Where(x => x.OperationalProjectId == projectId).OrderByDescending(x => x.Id).ToListAsync(ct)).Select(x => Map(x)!).ToList();
     public async Task<ConstructionQsReferenceDataResponse> GetQsReferencesAsync(int projectId, CancellationToken ct)
@@ -309,56 +369,80 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         return new ConstructionQsReferenceDataResponse(contracts, revisions);
     }
     public async Task<ConstructionQsBatchResponse?> GetQsAsync(int projectId, int id, CancellationToken ct) => Map(await Qs().AsNoTracking().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct));
+    public async Task<DeletionImpactResponse?> GetQsDeletionImpactAsync(int projectId, int id, int userId, bool supervisor, CancellationToken ct)
+    {
+        var item = await Qs().AsNoTracking()
+            .SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
+        if (item is null) return null;
+        EnsureDeletionViewer(item.CreatedByUserId, userId, supervisor);
+        return BuildDeletionImpact(nameof(ConstructionQsBatch), item.Id, item.Code, item.Status, item.RowVersion,
+            item.Status is not (ConstructionReviewStatus.Draft or ConstructionReviewStatus.CmRejected),
+            item.Lines.Count + item.Evidence.Count, "construction.qsOwnedRecords");
+    }
     public async Task<ConstructionQsBatchResponse> CreateQsAsync(int projectId, CreateConstructionQsBatchRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         await ValidateQs(projectId, request, ct);
         await PinEvidenceAsync(projectId, request.EvidenceDocumentIds, userId, ct);
         var next = await db.ConstructionQsBatches.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
-        var item = new ConstructionQsBatch { OperationalProjectId = projectId, Code = $"QS-{projectId:D4}-{next:D4}", CreatedByUserId = userId }; Apply(item, request);
+        var item = new ConstructionQsBatch { OperationalProjectId = projectId, Code = $"QS-{projectId:D4}-{next:D4}", CreatedByUserId = userId, LastEditedByUserId = userId }; Apply(item, request);
         db.ConstructionQsBatches.Add(item); await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         return Map(item)!;
     }
-    public async Task<ConstructionQsBatchResponse?> UpdateQsAsync(int projectId, int id, CreateConstructionQsBatchRequest request, string rowVersion, int userId, CancellationToken ct)
+    public async Task<ConstructionQsBatchResponse?> UpdateQsAsync(int projectId, int id, CreateConstructionQsBatchRequest request, string rowVersion, int userId, CancellationToken ct, bool supervisor = false)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         var item = await Qs().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
-        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); await ValidateQs(projectId, request, ct);
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor); await ValidateQs(projectId, request, ct);
         await PinEvidenceAsync(projectId, request.EvidenceDocumentIds, userId, ct);
-        CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request);
+        CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request); item.LastEditedByUserId = userId;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (tx is not null) await tx.CommitAsync(ct);
         return Map(item);
     }
-    public Task<ConstructionQsBatchResponse?> SubmitQsAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct) => TransitionQs(projectId, id, rowVersion, userId, null, ct);
-    public Task<ConstructionQsBatchResponse?> DecideQsAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct) => TransitionQs(projectId, id, request.RowVersion!, userId, request, ct);
+    public Task<ConstructionQsBatchResponse?> SubmitQsAsync(int projectId, int id, string rowVersion, int userId, CancellationToken ct, bool supervisor = false) => TransitionQs(projectId, id, rowVersion, userId, supervisor, null, ct);
+    public Task<ConstructionQsBatchResponse?> DecideQsAsync(int projectId, int id, CmDecisionRequest request, int userId, CancellationToken ct) => TransitionQs(projectId, id, request.RowVersion!, userId, false, request, ct);
 
-    private async Task<QaQcDossierResponse?> TransitionDossier(int projectId, int id, string rowVersion, int userId, CmDecisionRequest? decision, CancellationToken ct)
+    public async Task<bool> DeleteQsAsync(int projectId, int id, ConfirmDeletionRequest request, int userId, CancellationToken ct, bool supervisor = false)
+    {
+        var impact = await GetQsDeletionImpactAsync(projectId, id, userId, supervisor, ct);
+        if (impact is null) return false;
+        ValidateDeletion(impact, request);
+        var item = await Qs().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
+        if (item is null) return false;
+        EnsureDeletable(item.Status, item.CreatedByUserId, userId, supervisor);
+        CrmConcurrency.Apply(db, item, request.RowVersion!);
+        db.ConstructionQsBatches.Remove(item);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return true;
+    }
+
+    private async Task<QaQcDossierResponse?> TransitionDossier(int projectId, int id, string rowVersion, int userId, bool supervisor, CmDecisionRequest? decision, CancellationToken ct)
     {
         var item = await Dossiers().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
         CrmConcurrency.Apply(db, item, rowVersion);
-        if (decision is null) { EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); item.Status = ConstructionReviewStatus.PendingCmReview; item.SubmittedAt = DateTime.UtcNow; }
-        else { EnsureDecision(item.Status, item.CreatedByUserId, userId, decision.Reason); item.Status = decision.Approved ? ConstructionReviewStatus.CmApproved : ConstructionReviewStatus.CmRejected; item.CmReviewedAt = DateTime.UtcNow; item.CmReviewedByUserId = userId; item.CmDecisionReason = decision.Reason.Trim(); }
+        if (decision is null) { EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor); item.Status = ConstructionReviewStatus.PendingCmReview; item.SubmittedAt = DateTime.UtcNow; }
+        else { EnsureDecision(item.Status, item.CreatedByUserId, item.LastEditedByUserId, userId, decision.Reason); item.Status = decision.Approved ? ConstructionReviewStatus.CmApproved : ConstructionReviewStatus.CmRejected; item.CmReviewedAt = DateTime.UtcNow; item.CmReviewedByUserId = userId; item.CmDecisionReason = decision.Reason.Trim(); }
         item.UpdatedAt = DateTime.UtcNow; await CrmConcurrency.SaveChangesAsync(db, ct); return Map(item);
     }
-    private async Task<ConstructionQsBatchResponse?> TransitionQs(int projectId, int id, string rowVersion, int userId, CmDecisionRequest? decision, CancellationToken ct)
+    private async Task<ConstructionQsBatchResponse?> TransitionQs(int projectId, int id, string rowVersion, int userId, bool supervisor, CmDecisionRequest? decision, CancellationToken ct)
     {
         await using var tx = decision is not null && db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)
             : null;
         var item = await Qs().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
         CrmConcurrency.Apply(db, item, rowVersion);
-        if (decision is null) { EnsureDraftOwner(item.Status, item.CreatedByUserId, userId); item.Status = ConstructionReviewStatus.PendingCmReview; item.SubmittedAt = DateTime.UtcNow; }
+        if (decision is null) { EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor); item.Status = ConstructionReviewStatus.PendingCmReview; item.SubmittedAt = DateTime.UtcNow; }
         else
         {
-            EnsureDecision(item.Status, item.CreatedByUserId, userId, decision.Reason);
+            EnsureDecision(item.Status, item.CreatedByUserId, item.LastEditedByUserId, userId, decision.Reason);
             var predecessorId = item.SupersedesBatchId ?? item.ReversesBatchId;
             if (decision.Approved && predecessorId is int approvedPredecessorId)
             {
                 var predecessor = await db.ConstructionQsBatches.SingleAsync(x => x.Id == approvedPredecessorId, ct);
                 if (predecessor.RecordState != ConstructionQsRecordState.Active)
-                    throw new ConstructionOperationException("The referenced QS batch already has an approved correction or reversal.");
+                    throw new ConstructionOperationException("Lô QS được tham chiếu đã có bản điều chỉnh hoặc đảo giá trị được duyệt.");
                 predecessor.RecordState = item.AdjustmentKind == ConstructionQsAdjustmentKind.Reversal
                     ? ConstructionQsRecordState.Reversed
                     : ConstructionQsRecordState.Superseded;
@@ -378,7 +462,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         if (item.HandoffStatus != ConstructionHandoffStatus.NotReady) return;
         if (item.Type != ConstructionResourceType.Material) { item.HandoffEntityType = "ConstructionResourceRequest"; item.HandoffEntityId = item.Id; item.HandoffStatus = ConstructionHandoffStatus.ReadyForProcurementAndFinance; return; }
         if (item.ProjectBoqLineId is null || item.ResponsibleSiteUserId is null || item.AssignedProcurementUserId is null)
-            throw new ConstructionOperationException("Material requests require BOQ line, responsible site user, and assigned procurement user before CM approval.");
+            throw new ConstructionOperationException("Yêu cầu vật tư phải có dòng BOQ, người phụ trách tại công trường và người mua hàng được phân công trước khi CM duyệt.");
         var created = await procurement.CreateMaterialRequestAsync(item.OperationalProjectId, new MaterialRequestUpsertRequest
         {
             ResponsibleSiteUserId = item.ResponsibleSiteUserId.Value,
@@ -395,25 +479,25 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
 
     private async Task ValidateResource(int projectId, UpsertConstructionResourceRequest request, CancellationToken ct)
     {
-        if (!Enum.IsDefined(request.Type)) throw new ConstructionOperationException("Resource type must be material, equipment, or labour.");
-        EnsureText(request.WbsCode, "WBS code"); EnsureText(request.Unit, "Unit"); EnsureText(request.Reason, "Reason");
-        if (request.NeedByDate!.Value.Date < DateTime.UtcNow.Date) throw new ConstructionOperationException("Need-by date cannot be in the past.");
-        if (request.Type == ConstructionResourceType.Material && request.ProjectBoqLineId is null) throw new ConstructionOperationException("Material resource requests require an approved Execution BOQ line.");
+        if (!Enum.IsDefined(request.Type)) throw new ConstructionOperationException("Loại nguồn lực phải là vật tư, thiết bị hoặc nhân công.");
+        EnsureText(request.WbsCode, "Mã WBS"); EnsureText(request.Unit, "Đơn vị tính"); EnsureText(request.Reason, "Lý do");
+        if (request.NeedByDate!.Value.Date < DateTime.UtcNow.Date) throw new ConstructionOperationException("Ngày cần không được ở trong quá khứ.");
+        if (request.Type == ConstructionResourceType.Material && request.ProjectBoqLineId is null) throw new ConstructionOperationException("Yêu cầu vật tư phải tham chiếu một dòng BOQ thi công đã được duyệt.");
         if (request.Type == ConstructionResourceType.Material &&
             (request.ResponsibleSiteUserId is null || request.AssignedProcurementUserId is null))
-            throw new ConstructionOperationException("Material resource requests require a responsible site user and assigned procurement user.");
-        if (request.ProjectBoqLineId is not null && !await db.ProjectBoqLines.AnyAsync(x => x.Id == request.ProjectBoqLineId && x.ProjectBoqRevision.OperationalProjectId == projectId && x.ProjectBoqRevision.Status == ProjectBoqRevisionStatus.Approved, ct)) throw new ConstructionOperationException("BOQ line must belong to an approved project BOQ revision.");
+            throw new ConstructionOperationException("Yêu cầu vật tư phải có người phụ trách tại công trường và người mua hàng được phân công.");
+        if (request.ProjectBoqLineId is not null && !await db.ProjectBoqLines.AnyAsync(x => x.Id == request.ProjectBoqLineId && x.ProjectBoqRevision.OperationalProjectId == projectId && x.ProjectBoqRevision.Status == ProjectBoqRevisionStatus.Approved, ct)) throw new ConstructionOperationException("Dòng BOQ phải thuộc một phiên bản BOQ dự án đã được duyệt.");
         if (request.ResponsibleSiteUserId is int siteUserId &&
             !await IsActiveProjectUserAsync(projectId, siteUserId, ct))
-            throw new ConstructionOperationException("Responsible site user must be an active project member.");
+            throw new ConstructionOperationException("Người phụ trách tại công trường phải là thành viên đang hoạt động của dự án.");
         if (request.AssignedProcurementUserId is int procurementUserId)
         {
             if (!await IsActiveProjectUserAsync(projectId, procurementUserId, ct))
-                throw new ConstructionOperationException("Assigned procurement user must be an active project member.");
+                throw new ConstructionOperationException("Người mua hàng được phân công phải là thành viên đang hoạt động của dự án.");
             var hasProcurementRole = await db.Users.AsNoTracking().AnyAsync(x => x.Id == procurementUserId && x.IsActive &&
                 x.RoleEntity != null && x.RoleEntity.Code == RbacRoleCodes.Procurement, ct);
             if (!hasProcurementRole)
-                throw new ConstructionOperationException("Assigned procurement user must have the PROCUREMENT role.");
+                throw new ConstructionOperationException("Người mua hàng được phân công phải giữ vai trò PROCUREMENT.");
         }
     }
 
@@ -430,7 +514,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             item.DesiredOperation != ProjectDocumentDesiredOperation.Delete &&
             item.SyncStatus != ProjectDocumentSyncStatus.Deleted).ToListAsync(ct);
         if (documents.Count != documentIds.Count)
-            throw new ConstructionOperationException("Every evidence document must remain active in this project.");
+            throw new ConstructionOperationException("Mọi tài liệu minh chứng phải còn hiệu lực trong dự án này.");
         foreach (var document in documents)
         {
             // Fence deletes that passed their reference check before this link
@@ -443,45 +527,45 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
 
     private async Task<QaQcTemplate> ValidateDossier(int projectId, CreateQaQcDossierRequest request, CancellationToken ct)
     {
-        EnsureText(request.WbsCode, "WBS code"); EnsureText(request.Title, "Dossier title");
-        ValidateJson(request.ChecklistResultsJson, "Checklist results", JsonValueKind.Array);
-        var template = await db.QaQcTemplates.SingleOrDefaultAsync(x => x.Id == request.TemplateId && x.IsPublished, ct) ?? throw new ConstructionOperationException("A published QA/QC template is required.");
-        if (request.IfcReleaseId is null) throw new ConstructionOperationException("A released IFC packet is required for every QA/QC dossier.");
-        if (!await db.IfcReleases.AnyAsync(x => x.Id == request.IfcReleaseId && x.Status == IfcReleaseStatus.Released && x.DesignProject.OperationalProjectId == projectId, ct)) throw new ConstructionOperationException("QA/QC dossiers may reference only a released IFC packet for the same project.");
+        EnsureText(request.WbsCode, "Mã WBS"); EnsureText(request.Title, "Tên hồ sơ");
+        ValidateJson(request.ChecklistResultsJson, "Kết quả checklist", JsonValueKind.Array);
+        var template = await db.QaQcTemplates.SingleOrDefaultAsync(x => x.Id == request.TemplateId && x.IsPublished, ct) ?? throw new ConstructionOperationException("Cần có mẫu QA/QC đã phát hành.");
+        if (request.IfcReleaseId is null) throw new ConstructionOperationException("Mỗi hồ sơ QA/QC phải tham chiếu một gói IFC đã phát hành.");
+        if (!await db.IfcReleases.AnyAsync(x => x.Id == request.IfcReleaseId && x.Status == IfcReleaseStatus.Released && x.DesignProject.OperationalProjectId == projectId, ct)) throw new ConstructionOperationException("Hồ sơ QA/QC chỉ được tham chiếu gói IFC đã phát hành của cùng dự án.");
         if (request.Evidence is null || request.EvidenceDocumentIds is null || request.Evidence.Any(x => x is null))
-            throw new ConstructionOperationException("QA/QC evidence lists and items cannot be null.");
+            throw new ConstructionOperationException("Danh sách và hạng mục minh chứng QA/QC không được để trống.");
         if (request.Evidence.Count > 0 && request.EvidenceDocumentIds.Count > 0)
-            throw new ConstructionOperationException("Provide either typed QA/QC evidence or legacy evidence document IDs, not both.");
+            throw new ConstructionOperationException("Chỉ chọn một trong hai: minh chứng QA/QC có kiểu hoặc mã tài liệu minh chứng cũ.");
         if (request.Evidence.Any(x => x.ProjectDocumentId <= 0 || !Enum.IsDefined(x.EvidenceType)))
-            throw new ConstructionOperationException("Every QA/QC evidence item requires a positive document ID and a valid evidence type.");
+            throw new ConstructionOperationException("Mỗi hạng mục minh chứng QA/QC cần mã tài liệu dương và kiểu minh chứng hợp lệ.");
         var evidenceIds = request.Evidence.Count > 0
             ? request.Evidence.Select(x => x.ProjectDocumentId).ToList()
             : request.EvidenceDocumentIds;
         if (evidenceIds.Count != evidenceIds.Distinct().Count() ||
             await db.ProjectDocuments.CountAsync(x => evidenceIds.Contains(x.Id) &&
                 x.OperationalProjectId == projectId && x.DeletedAt == null, ct) != evidenceIds.Count)
-            throw new ConstructionOperationException("Every evidence document must be an active staged document in the same project and appear only once.");
+            throw new ConstructionOperationException("Mọi tài liệu minh chứng phải là tài liệu đã đưa vào dự án, còn hiệu lực và chỉ xuất hiện một lần.");
         return template;
     }
 
     private async Task ValidateQs(int projectId, CreateConstructionQsBatchRequest request, CancellationToken ct)
     {
-        if (!Enum.IsDefined(request.Direction)) throw new ConstructionOperationException("QS direction must be Upstream or Downstream.");
-        EnsureText(request.WbsCode, "WBS code"); EnsureText(request.Description, "QS description");
-        if (request.Lines.Any(x => string.IsNullOrWhiteSpace(x.ItemCode) || string.IsNullOrWhiteSpace(x.Description) || string.IsNullOrWhiteSpace(x.Unit))) throw new ConstructionOperationException("Every QS line requires an item code, description, and unit.");
-        if (request.PeriodFrom > request.PeriodTo) throw new ConstructionOperationException("QS period start must not be after its end.");
-        var contract = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.ContractId && x.OperationalProjectId == projectId, ct) ?? throw new ConstructionOperationException("Contract must belong to the operational project.");
+        if (!Enum.IsDefined(request.Direction)) throw new ConstructionOperationException("Chiều QS phải là Upstream hoặc Downstream.");
+        EnsureText(request.WbsCode, "Mã WBS"); EnsureText(request.Description, "Mô tả QS");
+        if (request.Lines.Any(x => string.IsNullOrWhiteSpace(x.ItemCode) || string.IsNullOrWhiteSpace(x.Description) || string.IsNullOrWhiteSpace(x.Unit))) throw new ConstructionOperationException("Mỗi dòng QS phải có mã hạng mục, mô tả và đơn vị tính.");
+        if (request.PeriodFrom > request.PeriodTo) throw new ConstructionOperationException("Ngày bắt đầu kỳ QS không được sau ngày kết thúc.");
+        var contract = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.ContractId && x.OperationalProjectId == projectId, ct) ?? throw new ConstructionOperationException("Hợp đồng phải thuộc dự án vận hành.");
         if (contract.Status is ContractStatus.Draft or ContractStatus.Cancelled)
-            throw new ConstructionOperationException("QS batches require a signed or active contract.");
-        if ((request.Direction == ConstructionQsDirection.Upstream) != (contract.Direction == ContractDirection.Upstream)) throw new ConstructionOperationException("QS direction must match the linked contract direction.");
-        if (request.ContractPaymentMilestoneId is not null && !await db.ContractPaymentMilestones.AnyAsync(x => x.Id == request.ContractPaymentMilestoneId && x.ContractId == request.ContractId, ct)) throw new ConstructionOperationException("Payment milestone must belong to the linked contract.");
+            throw new ConstructionOperationException("Lô QS phải gắn với hợp đồng đã ký hoặc đang hiệu lực.");
+        if ((request.Direction == ConstructionQsDirection.Upstream) != (contract.Direction == ContractDirection.Upstream)) throw new ConstructionOperationException("Chiều QS phải khớp với chiều của hợp đồng được liên kết.");
+        if (request.ContractPaymentMilestoneId is not null && !await db.ContractPaymentMilestones.AnyAsync(x => x.Id == request.ContractPaymentMilestoneId && x.ContractId == request.ContractId, ct)) throw new ConstructionOperationException("Mốc thanh toán phải thuộc hợp đồng được liên kết.");
         if (request.ContractAppendixId is not null && !await db.ContractAppendices.AnyAsync(x =>
                 x.Id == request.ContractAppendixId && x.ContractId == request.ContractId &&
                 x.Status == ContractAppendixStatus.Approved, ct))
-            throw new ConstructionOperationException("VO/appendix must be approved and belong to the linked contract.");
-        if (request.ProjectBoqRevisionId is not null && !await db.ProjectBoqRevisions.AnyAsync(x => x.Id == request.ProjectBoqRevisionId && x.OperationalProjectId == projectId && x.Status == ProjectBoqRevisionStatus.Approved, ct)) throw new ConstructionOperationException("BOQ revision must be approved and belong to the project.");
-        if (request.Direction == ConstructionQsDirection.Upstream && request.ContractPaymentMilestoneId is null) throw new ConstructionOperationException("Upstream QS requires a receivable payment milestone.");
-        if (request.SupersedesBatchId is not null && request.ReversesBatchId is not null) throw new ConstructionOperationException("A QS correction may either supersede or reverse a prior batch, but not both.");
+            throw new ConstructionOperationException("VO/phụ lục phải được duyệt và thuộc hợp đồng được liên kết.");
+        if (request.ProjectBoqRevisionId is not null && !await db.ProjectBoqRevisions.AnyAsync(x => x.Id == request.ProjectBoqRevisionId && x.OperationalProjectId == projectId && x.Status == ProjectBoqRevisionStatus.Approved, ct)) throw new ConstructionOperationException("Phiên bản BOQ phải được duyệt và thuộc dự án.");
+        if (request.Direction == ConstructionQsDirection.Upstream && request.ContractPaymentMilestoneId is null) throw new ConstructionOperationException("QS Đầu vào cần có mốc thanh toán phải thu.");
+        if (request.SupersedesBatchId is not null && request.ReversesBatchId is not null) throw new ConstructionOperationException("Điều chỉnh QS chỉ được thay thế hoặc đảo một lô trước đó, không được làm cả hai.");
         var correctionId = request.SupersedesBatchId ?? request.ReversesBatchId;
         ConstructionQsBatch? predecessor = null;
         if (correctionId is not null)
@@ -489,15 +573,15 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             predecessor = await db.ConstructionQsBatches.Include(x => x.Lines).SingleOrDefaultAsync(x =>
                 x.Id == correctionId && x.OperationalProjectId == projectId && x.Direction == request.Direction &&
                 x.Status == ConstructionReviewStatus.CmApproved && x.RecordState == ConstructionQsRecordState.Active, ct);
-            if (predecessor is null) throw new ConstructionOperationException("A QS correction must reference an active approved batch in the same project and direction.");
+            if (predecessor is null) throw new ConstructionOperationException("Điều chỉnh QS phải tham chiếu một lô đã duyệt còn hiệu lực trong cùng dự án và cùng chiều.");
             if (predecessor.ContractId != request.ContractId || predecessor.WbsCode != request.WbsCode.Trim())
-                throw new ConstructionOperationException("A QS correction or reversal must retain the predecessor contract and WBS.");
+                throw new ConstructionOperationException("Điều chỉnh hoặc đảo QS phải giữ nguyên hợp đồng và WBS của lô trước.");
             if (await db.ConstructionQsBatches.AnyAsync(x =>
                     (x.SupersedesBatchId == correctionId || x.ReversesBatchId == correctionId) && x.IsActiveLineage, ct))
-                throw new ConstructionOperationException("The referenced QS batch already has an active successor.");
+                throw new ConstructionOperationException("Lô QS được tham chiếu đã có lô kế nhiệm đang hiệu lực.");
         }
-        if (request.EvidenceDocumentIds.Count != request.EvidenceDocumentIds.Distinct().Count() || await db.ProjectDocuments.CountAsync(x => request.EvidenceDocumentIds.Contains(x.Id) && x.OperationalProjectId == projectId && x.DeletedAt == null, ct) != request.EvidenceDocumentIds.Count) throw new ConstructionOperationException("Every QS evidence document must be active and belong to the project.");
-        var computed = request.Lines.Sum(x => x.Quantity * x.UnitPrice); if (computed != request.CertifiedAmount) throw new ConstructionOperationException("Certified amount must equal the sum of QS quantity lines.");
+        if (request.EvidenceDocumentIds.Count != request.EvidenceDocumentIds.Distinct().Count() || await db.ProjectDocuments.CountAsync(x => request.EvidenceDocumentIds.Contains(x.Id) && x.OperationalProjectId == projectId && x.DeletedAt == null, ct) != request.EvidenceDocumentIds.Count) throw new ConstructionOperationException("Mọi tài liệu minh chứng QS phải còn hiệu lực và thuộc dự án.");
+        var computed = request.Lines.Sum(x => x.Quantity * x.UnitPrice); if (computed != request.CertifiedAmount) throw new ConstructionOperationException("Giá trị xác nhận phải bằng tổng giá trị các dòng khối lượng QS.");
         if (request.ReversesBatchId is not null && predecessor is not null)
         {
             var requestedLines = request.Lines.OrderBy(x => x.ItemCode).ToList();
@@ -505,7 +589,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             if (request.CertifiedAmount != predecessor.CertifiedAmount || requestedLines.Count != predecessorLines.Count ||
                 requestedLines.Where((line, index) => line.ItemCode.Trim() != predecessorLines[index].ItemCode ||
                     line.Quantity != predecessorLines[index].Quantity || line.UnitPrice != predecessorLines[index].UnitPrice).Any())
-                throw new ConstructionOperationException("A QS reversal must exactly mirror the predecessor amount and quantity lines.");
+                throw new ConstructionOperationException("Đảo QS phải phản chiếu chính xác giá trị và các dòng khối lượng của lô trước.");
         }
     }
 
@@ -549,9 +633,9 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     private async Task ValidatePreparationDocumentsAsync(int projectId, UpsertConstructionPreparationRequest request, CancellationToken ct)
     {
         var ids = PreparationDocumentIds(request).Where(x => x.HasValue).Select(x => x!.Value).ToList();
-        if (ids.Count != ids.Distinct().Count()) throw new ConstructionOperationException("Each preparation condition must reference a distinct project document.");
+        if (ids.Count != ids.Distinct().Count()) throw new ConstructionOperationException("Mỗi điều kiện chuẩn bị phải tham chiếu một tài liệu dự án khác nhau.");
         var active = await ActiveConstructionDocumentIdsAsync(projectId, ids, ct);
-        if (active.Count != ids.Count) throw new ConstructionOperationException("Preparation evidence must be an active Construction Acceptance document in the same operational project.");
+        if (active.Count != ids.Count) throw new ConstructionOperationException("Minh chứng chuẩn bị phải là biên bản nghiệm thu thi công còn hiệu lực trong cùng dự án vận hành.");
     }
     private async Task<HashSet<long>> ActiveConstructionDocumentIdsAsync(int projectId, IReadOnlyCollection<long> ids, CancellationToken ct) =>
         (await db.ProjectDocuments.AsNoTracking().Where(x => ids.Contains(x.Id) && x.OperationalProjectId == projectId &&
@@ -579,12 +663,69 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             x.MethodStatementDocumentId,
             x.HsePlanDocumentId];
     private static bool HasEvidence(long? id, IReadOnlySet<long> activeIds) => id.HasValue && activeIds.Contains(id.Value);
-    private async Task<ConstructionPreparation> LatestPreparation(int projectId, CancellationToken ct) => await db.ConstructionPreparations.Where(x => x.OperationalProjectId == projectId).OrderByDescending(x => x.Version).FirstOrDefaultAsync(ct) ?? throw new ConstructionOperationException("Construction preparation has not been created.");
-    private static void EnsureRequiredReferences(UpsertConstructionPreparationRequest x) { if (new[] { x.WbsBaselineReference, x.ScheduleBaselineReference, x.SCurveBaselineReference, x.BchOrganizationReference, x.ResourcePlanReference, x.BudgetBaselineReference }.Any(string.IsNullOrWhiteSpace)) throw new ConstructionOperationException("WBS, schedule, S-curve, BCH organization, resource, and budget baseline references are required."); }
-    private static void EnsureDraftOwner(ConstructionReviewStatus status, int creator, int user) { if (status != ConstructionReviewStatus.Draft || creator != user) throw new ConstructionOperationException("Only the author can change or submit a draft."); }
-    private static void EnsureDecision(ConstructionReviewStatus status, int creator, int reviewer, string reason) { if (status != ConstructionReviewStatus.PendingCmReview) throw new ConstructionOperationException("Only a pending record can be reviewed."); if (creator == reviewer) throw new ConstructionOperationException("The author cannot perform the independent CM review."); EnsureText(reason, "CM review reason"); }
-    private static void EnsureText(string? value, string field) { if (string.IsNullOrWhiteSpace(value)) throw new ConstructionOperationException($"{field} is required and cannot contain only whitespace."); }
-    private static void ValidateJson(string value, string field, JsonValueKind expectedKind) { try { using var document = JsonDocument.Parse(value); if (document.RootElement.ValueKind != expectedKind) throw new ConstructionOperationException($"{field} must be a JSON {expectedKind.ToString().ToLowerInvariant()}."); } catch (JsonException) { throw new ConstructionOperationException($"{field} must be valid JSON."); } }
+    private async Task<ConstructionPreparation> LatestPreparation(int projectId, CancellationToken ct) => await db.ConstructionPreparations.Where(x => x.OperationalProjectId == projectId).OrderByDescending(x => x.Version).FirstOrDefaultAsync(ct) ?? throw new ConstructionOperationException("Chưa có thông tin chuẩn bị khởi công cho dự án này.");
+    private static void EnsureRequiredReferences(UpsertConstructionPreparationRequest x) { if (new[] { x.WbsBaselineReference, x.ScheduleBaselineReference, x.SCurveBaselineReference, x.BchOrganizationReference, x.ResourcePlanReference, x.BudgetBaselineReference }.Any(string.IsNullOrWhiteSpace)) throw new ConstructionOperationException("Cần nhập đủ tham chiếu baseline WBS, tiến độ, S-curve, tổ chức BCH, nguồn lực và ngân sách."); }
+    private static void EnsureDraftOwner(ConstructionReviewStatus status, int creator, int user, bool supervisor) { if (status != ConstructionReviewStatus.Draft || (!supervisor && creator != user)) throw new ConstructionOperationException("Chỉ tác giả hoặc CM giám sát mới được sửa hoặc trình duyệt bản nháp."); }
+    private static void EnsureDeletable(ConstructionReviewStatus status, int creator, int user, bool supervisor)
+    {
+        if (status is not (ConstructionReviewStatus.Draft or ConstructionReviewStatus.CmRejected))
+            throw new ConstructionOperationException("Chỉ xoá được bản ghi ở trạng thái Nháp hoặc Từ chối.");
+        if (!supervisor && creator != user)
+            throw new ConstructionOperationException("Chỉ tác giả được xoá bản ghi này.");
+    }
+    private static void EnsureDeletionViewer(int creator, int user, bool supervisor)
+    {
+        if (!supervisor && creator != user)
+            throw new ConstructionOperationException("Chỉ tác giả được xem ảnh hưởng xoá bản ghi này.");
+    }
+    private static DeletionImpactResponse BuildDeletionImpact(string resourceType, int id, string code,
+        ConstructionReviewStatus status, byte[] rowVersion, bool blocked, int ownedCount, string ownedKey)
+    {
+        var encodedVersion = CrmConcurrency.Encode(rowVersion);
+        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"{resourceType}:{id}:{code}:{status}:{encodedVersion}:{ownedCount}:{blocked}"))).ToLowerInvariant();
+        var items = new List<DeletionImpactItemResponse>();
+        if (blocked)
+            items.Add(new DeletionImpactItemResponse
+            {
+                Key = "construction.recordState",
+                Action = DeletionImpactActions.Block,
+                Count = 1,
+                Examples = [status.ToString()],
+            });
+        if (ownedCount > 0)
+            items.Add(new DeletionImpactItemResponse
+            {
+                Key = ownedKey,
+                Action = DeletionImpactActions.Delete,
+                Count = ownedCount,
+            });
+        return new DeletionImpactResponse
+        {
+            ResourceType = resourceType,
+            ResourceId = id,
+            ResourceLabel = code,
+            RequiredConfirmation = code,
+            PlanToken = token,
+            CanDelete = !blocked,
+            TotalAffected = 1 + ownedCount,
+            Items = items,
+        };
+    }
+    private static void ValidateDeletion(DeletionImpactResponse impact, ConfirmDeletionRequest request)
+    {
+        if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException("Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!impact.CanDelete)
+            throw new ConstructionOperationException("Chỉ có thể xoá bản ghi Nháp hoặc Từ chối chưa được bàn giao hay liên kết xử lý tiếp theo.");
+        if (!string.Equals(request.Confirmation, impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new ConstructionOperationException($"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");
+        if (string.IsNullOrWhiteSpace(request.RowVersion))
+            throw new ConstructionOperationException("Phiên bản dữ liệu là bắt buộc. Vui lòng tải lại ảnh hưởng xoá.");
+    }
+    private static void EnsureDecision(ConstructionReviewStatus status, int creator, int lastEditor, int reviewer, string reason) { if (status != ConstructionReviewStatus.PendingCmReview) throw new ConstructionOperationException("Chỉ bản ghi đang chờ duyệt mới được xem xét."); if (creator == reviewer || lastEditor == reviewer) throw new ConstructionOperationException("Người tạo hoặc chỉnh sửa gần nhất không được tự thực hiện bước duyệt CM độc lập."); EnsureText(reason, "Lý do duyệt CM"); }
+    private static void EnsureText(string? value, string field) { if (string.IsNullOrWhiteSpace(value)) throw new ConstructionOperationException($"{field} là bắt buộc và không được chỉ gồm khoảng trắng."); }
+    private static void ValidateJson(string value, string field, JsonValueKind expectedKind) { try { using var document = JsonDocument.Parse(value); if (document.RootElement.ValueKind != expectedKind) throw new ConstructionOperationException($"{field} phải là JSON dạng {expectedKind.ToString().ToLowerInvariant()}."); } catch (JsonException) { throw new ConstructionOperationException($"{field} phải là JSON hợp lệ."); } }
     private static void Apply(ConstructionPreparation x, UpsertConstructionPreparationRequest r, int user) { x.WbsBaselineReference = r.WbsBaselineReference.Trim(); x.ScheduleBaselineReference = r.ScheduleBaselineReference.Trim(); x.SCurveBaselineReference = r.SCurveBaselineReference.Trim(); x.BchOrganizationReference = r.BchOrganizationReference.Trim(); x.ResourcePlanReference = r.ResourcePlanReference.Trim(); x.BudgetBaselineReference = r.BudgetBaselineReference.Trim(); x.WbsBaselineDocumentId = r.WbsBaselineDocumentId; x.ScheduleBaselineDocumentId = r.ScheduleBaselineDocumentId; x.SCurveBaselineDocumentId = r.SCurveBaselineDocumentId; x.BchOrganizationDocumentId = r.BchOrganizationDocumentId; x.ResourcePlanDocumentId = r.ResourcePlanDocumentId; x.BudgetBaselineDocumentId = r.BudgetBaselineDocumentId; x.BudgetBaselineLocked = false; x.SiteHandoverRequired = r.SiteHandoverRequired; x.SiteHandoverComplete = false; x.SiteHandoverDocumentId = r.SiteHandoverDocumentId; x.MethodStatementRequired = r.MethodStatementRequired; x.MethodStatementApproved = false; x.MethodStatementDocumentId = r.MethodStatementDocumentId; x.HsePlanRequired = r.HsePlanRequired; x.HsePlanApproved = false; x.HsePlanDocumentId = r.HsePlanDocumentId; x.UpdatedAt = DateTime.UtcNow; x.UpdatedByUserId = user; }
     private static void Apply(ConstructionResourceRequest x, UpsertConstructionResourceRequest r) { x.Type = r.Type; x.WbsCode = r.WbsCode.Trim(); x.NeedByDate = r.NeedByDate!.Value; x.Quantity = r.Quantity; x.Unit = r.Unit.Trim(); x.Reason = r.Reason.Trim(); x.ProjectBoqLineId = r.ProjectBoqLineId; x.ResponsibleSiteUserId = r.ResponsibleSiteUserId; x.AssignedProcurementUserId = r.AssignedProcurementUserId; x.UpdatedAt = DateTime.UtcNow; }
     private static void Apply(QaQcDossier x, CreateQaQcDossierRequest r, QaQcTemplate t)
@@ -617,8 +758,8 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     private IQueryable<QaQcDossier> Dossiers() => db.QaQcDossiers.Include(x => x.Evidence);
     private IQueryable<ConstructionQsBatch> Qs() => db.ConstructionQsBatches.Include(x => x.Lines).Include(x => x.Evidence);
     private static ConstructionPreparationResponse? Map(ConstructionPreparation? x, IReadOnlyList<string>? missing = null) => x is null ? null : new(x.Id, x.OperationalProjectId, x.Version, x.Status, x.WbsBaselineReference, x.ScheduleBaselineReference, x.SCurveBaselineReference, x.BchOrganizationReference, x.ResourcePlanReference, x.BudgetBaselineReference, x.WbsBaselineDocumentId, x.ScheduleBaselineDocumentId, x.SCurveBaselineDocumentId, x.BchOrganizationDocumentId, x.ResourcePlanDocumentId, x.BudgetBaselineDocumentId, x.BudgetBaselineLocked, x.SiteHandoverRequired, x.SiteHandoverComplete, x.MethodStatementRequired, x.MethodStatementApproved, x.HsePlanRequired, x.HsePlanApproved, x.SiteHandoverDocumentId, x.MethodStatementDocumentId, x.HsePlanDocumentId, missing ?? [], x.ReadinessSnapshotJson, CrmConcurrency.Encode(x.RowVersion));
-    private static ConstructionResourceRequestResponse Map(ConstructionResourceRequest x) => new(x.Id, x.Code, x.Type, x.Status, x.WbsCode, x.NeedByDate, x.Quantity, x.Unit, x.Reason, x.ProjectBoqLineId, x.ResponsibleSiteUserId, x.AssignedProcurementUserId, x.CreatedByUserId, x.CmDecisionReason, x.HandoffEntityType, x.HandoffEntityId, x.HandoffStatus, CrmConcurrency.Encode(x.RowVersion), x.ProcurementContractId, x.SuppliedAt, x.SuppliedByUserId, x.SupplyDocumentId);
+    private static ConstructionResourceRequestResponse Map(ConstructionResourceRequest x) => new(x.Id, x.Code, x.Type, x.Status, x.WbsCode, x.NeedByDate, x.Quantity, x.Unit, x.Reason, x.ProjectBoqLineId, x.ResponsibleSiteUserId, x.AssignedProcurementUserId, x.CreatedByUserId, x.LastEditedByUserId, x.CmDecisionReason, x.HandoffEntityType, x.HandoffEntityId, x.HandoffStatus, CrmConcurrency.Encode(x.RowVersion), x.ProcurementContractId, x.SuppliedAt, x.SuppliedByUserId, x.SupplyDocumentId);
     private static QaQcTemplateResponse Map(QaQcTemplate x) => new(x.Id, x.Code, x.Version, x.NameVi, x.Name, x.NameZh, x.NameJa, x.SchemaJson, x.IsPublished, CrmConcurrency.Encode(x.RowVersion));
-    private static QaQcDossierResponse? Map(QaQcDossier? x) => x is null ? null : new(x.Id, x.Code, x.QaQcTemplateId, x.TemplateVersion, x.TemplateSnapshotJson, x.IfcReleaseId, x.ChecklistResultsJson, x.WbsCode, x.Title, x.Status, x.CreatedByUserId, x.Evidence.Select(e => e.ProjectDocumentId).ToList(), x.CmDecisionReason, CrmConcurrency.Encode(x.RowVersion), x.Evidence.Select(e => new QaQcEvidenceResponse(e.ProjectDocumentId, e.EvidenceType)).ToList());
-    private static ConstructionQsBatchResponse? Map(ConstructionQsBatch? x) => x is null ? null : new(x.Id, x.Code, x.Direction, x.Status, x.ContractId, x.WbsCode, x.PeriodFrom, x.PeriodTo, x.ProjectBoqRevisionId, x.ContractAppendixId, x.ContractPaymentMilestoneId, x.CertifiedAmount, x.Description, x.CreatedByUserId, x.CmDecisionReason, x.SupersedesBatchId, x.ReversesBatchId, x.AdjustmentKind, x.RecordState, x.Lines.OrderBy(l => l.SortOrder).Select(l => new ConstructionQsBatchLineResponse(l.Id, l.ItemCode, l.Description, l.Unit, l.Quantity, l.UnitPrice, l.Amount, l.SortOrder)).ToList(), x.Evidence.Select(e => e.ProjectDocumentId).ToList(), CrmConcurrency.Encode(x.RowVersion));
+    private static QaQcDossierResponse? Map(QaQcDossier? x) => x is null ? null : new(x.Id, x.Code, x.QaQcTemplateId, x.TemplateVersion, x.TemplateSnapshotJson, x.IfcReleaseId, x.ChecklistResultsJson, x.WbsCode, x.Title, x.Status, x.CreatedByUserId, x.LastEditedByUserId, x.Evidence.Select(e => e.ProjectDocumentId).ToList(), x.CmDecisionReason, CrmConcurrency.Encode(x.RowVersion), x.Evidence.Select(e => new QaQcEvidenceResponse(e.ProjectDocumentId, e.EvidenceType)).ToList());
+    private static ConstructionQsBatchResponse? Map(ConstructionQsBatch? x) => x is null ? null : new(x.Id, x.Code, x.Direction, x.Status, x.ContractId, x.WbsCode, x.PeriodFrom, x.PeriodTo, x.ProjectBoqRevisionId, x.ContractAppendixId, x.ContractPaymentMilestoneId, x.CertifiedAmount, x.Description, x.CreatedByUserId, x.LastEditedByUserId, x.CmDecisionReason, x.SupersedesBatchId, x.ReversesBatchId, x.AdjustmentKind, x.RecordState, x.Lines.OrderBy(l => l.SortOrder).Select(l => new ConstructionQsBatchLineResponse(l.Id, l.ItemCode, l.Description, l.Unit, l.Quantity, l.UnitPrice, l.Amount, l.SortOrder)).ToList(), x.Evidence.Select(e => e.ProjectDocumentId).ToList(), CrmConcurrency.Encode(x.RowVersion));
 }

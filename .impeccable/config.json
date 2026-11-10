@@ -29,6 +29,12 @@
         ],
         "createdAt": "2026-11-07T15:25:36.054Z",
         "reason": "Agent review: pre-existing needsOverride warning requires an award override reason; semantic amber warning, not decoration; git blame 93297cab6."
+      },
+      {
+        "rule": "design-system-font",
+        "value": "manrope",
+        "createdAt": "2026-11-10T08:34:13.327Z",
+        "reason": "Documented in DESIGN.md Typography: Manrope is the optional existing numeric-display face, used by the legacy .font-mono-display utility. Pre-existing (attribution unknown), not introduced by this session."
       }
     ]
   }

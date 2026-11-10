@@ -128,7 +128,7 @@ public static class SampleCrmDataSeeder
             {
                 Code = "RR-SAMPLE-ANPHU-CRANE", Type = ConstructionResourceType.Equipment,
                 WbsCode = "STRUCTURE-02", Quantity = 2, Unit = "bộ",
-                Reason = "[SAMPLE_RESOURCE] Thuê cần cẩu phục vụ lắp dựng kết cấu nhà máy An Phú; chờ Cung ứng lựa chọn hợp đồng.",
+                Reason = "Thuê cần cẩu phục vụ lắp dựng kết cấu nhà máy An Phú; chờ Cung ứng lựa chọn hợp đồng.",
                 Status = ConstructionReviewStatus.CmApproved, SubmittedAt = now.AddDays(-3),
                 CmReviewedAt = now.AddDays(-2), CmReviewedByUserId = cm.Id,
                 CmDecisionReason = "Đã đối chiếu nhu cầu lắp dựng kết cấu và kế hoạch nguồn lực mẫu.",
@@ -138,7 +138,7 @@ public static class SampleCrmDataSeeder
             {
                 Code = "RR-SAMPLE-ANPHU-CREW", Type = ConstructionResourceType.Labour,
                 WbsCode = "STRUCTURE-03", Quantity = 12, Unit = "người",
-                Reason = "[SAMPLE_RESOURCE] Tổ đội lắp dựng kết cấu nhà máy An Phú; chờ CM thẩm định nhu cầu.",
+                Reason = "Tổ đội lắp dựng kết cấu nhà máy An Phú; chờ CM thẩm định nhu cầu.",
                 Status = ConstructionReviewStatus.PendingCmReview, SubmittedAt = now.AddDays(-1),
             },
         };

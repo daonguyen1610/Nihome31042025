@@ -44,10 +44,7 @@ import {
   PenTool,
   Scale,
   HardHat,
-  ShieldAlert,
   ClipboardCheck,
-  FolderArchive,
-  PackageCheck,
   User as UserIcon,
   BriefcaseBusiness,
   ChartNoAxesCombined,
@@ -88,6 +85,18 @@ type NavItem = {
   permission?: string | readonly string[];
 };
 type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] };
+
+const PROCUREMENT_CONTRACTS_PATH = "/admin/procurement-control?tab=contracts";
+
+function matchesNavRoute(to: string, pathname: string, search: string, end = false) {
+  const [routePath, routeSearch] = to.split("?");
+  const matchesPath = pathname === routePath || (!end && pathname.startsWith(`${routePath}/`));
+  const params = new URLSearchParams(search);
+  return (
+    matchesPath &&
+    Array.from(new URLSearchParams(routeSearch)).every(([key, value]) => params.get(key) === value)
+  );
+}
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -153,16 +162,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       label: t("nav.workPackages"),
       icon: ClipboardList,
       permission: ADMIN_PERMS.workPackages,
-    }),
-    [t],
-  );
-
-  const cmProgressItem: NavItem = useMemo(
-    () => ({
-      to: "/admin/construction/progress",
-      label: t("cmSchedule.navigation"),
-      icon: ChartNoAxesCombined,
-      permission: ADMIN_PERMS.constructionTasks,
     }),
     [t],
   );
@@ -264,7 +263,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             to: "/admin/procurement-control/rfqs",
             label: t("rfq.title"),
             icon: ShoppingCart,
-            permission: "proc.rfqs.view",
+            permission: ADMIN_PERMS.procurementRfqs,
           },
           {
             to: "/admin/procurement-control",
@@ -278,6 +277,12 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
               ADMIN_PERMS.procurementWarehouse,
               ADMIN_PERMS.procurementMaterialAlerts,
             ],
+          },
+          {
+            to: PROCUREMENT_CONTRACTS_PATH,
+            label: t("construction.cm.area.contracts"),
+            icon: FileText,
+            permission: ADMIN_PERMS.procurementContractLines,
           },
           {
             to: "/admin/vendors",
@@ -334,66 +339,28 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.constructionBch"),
         icon: HardHat,
         items: [
-          ...(!permissions.has(ADMIN_PERMS.constructionCmPreparation) ? [cmProgressItem] : []),
           {
-            to: "/admin/construction/bch/resource-requests",
-            label: t("nav.constructionResourceRequests"),
-            icon: Boxes,
-            permission: ADMIN_PERMS.constructionResourceRequests,
+            to: "/admin/construction/bch/operations",
+            label: t("nav.constructionBchOperations"),
+            icon: HardHat,
+            permission: [ADMIN_PERMS.constructionResourceRequests, ADMIN_PERMS.constructionDiary],
           },
           {
             to: "/admin/construction/bch/qa-qc",
             label: t("nav.constructionQaQc"),
             icon: FileCheck2,
-            permission: ADMIN_PERMS.constructionQaQc,
+            permission: [
+              ADMIN_PERMS.constructionQaQc,
+              ADMIN_PERMS.constructionPunch,
+              ADMIN_PERMS.constructionAcceptance,
+              ADMIN_PERMS.constructionHse,
+            ],
           },
           {
             to: "/admin/construction/bch/qs",
             label: t("nav.constructionQs"),
             icon: CircleDollarSign,
             permission: ADMIN_PERMS.constructionQs,
-          },
-          {
-            to: "/admin/construction/diary",
-            label: t("nav.constructionDiary"),
-            icon: ClipboardList,
-            permission: ADMIN_PERMS.constructionDiary,
-          },
-          {
-            to: "/admin/construction/punchlist",
-            label: t("nav.constructionPunch"),
-            icon: ShieldAlert,
-            permission: ADMIN_PERMS.constructionPunch,
-          },
-          {
-            to: "/admin/construction/hse",
-            label: t("nav.constructionHse"),
-            icon: ShieldCheck,
-            permission: ADMIN_PERMS.constructionHse,
-          },
-          {
-            to: "/admin/construction/acceptance",
-            label: t("nav.constructionAcceptance"),
-            icon: ClipboardCheck,
-            permission: ADMIN_PERMS.constructionAcceptance,
-          },
-          {
-            to: "/admin/construction/asbuilt",
-            label: t("nav.constructionAsBuilt"),
-            icon: FolderArchive,
-            permission: ADMIN_PERMS.constructionAsBuilt,
-          },
-          {
-            to: "/admin/construction/asbuilt-categories",
-            label: t("nav.constructionAsBuiltCategories"),
-            icon: FolderTree,
-            permission: ADMIN_PERMS.constructionAsBuiltCategories,
-          },
-          {
-            to: "/admin/construction/handover",
-            label: t("nav.constructionHandover"),
-            icon: PackageCheck,
-            permission: ADMIN_PERMS.constructionHandover,
           },
         ],
       },
@@ -402,23 +369,47 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.constructionCm"),
         icon: MonitorCheck,
         items: [
-          ...(permissions.has(ADMIN_PERMS.constructionCmPreparation) ? [cmProgressItem] : []),
           {
-            to: "/admin/construction/tasks",
-            label: t("nav.constructionTasks"),
-            icon: HardHat,
-            permission: ADMIN_PERMS.constructionTasks,
-          },
-          {
-            to: "/admin/construction/cm",
-            label: t("nav.constructionCmControl"),
-            icon: MonitorCheck,
+            to: "/admin/construction/cm/schedule",
+            label: t("construction.cm.area.schedule"),
+            icon: ChartNoAxesCombined,
             permission: [
               ADMIN_PERMS.constructionCmPreparation,
+              ADMIN_PERMS.constructionTasksManage,
+            ],
+          },
+          {
+            to: "/admin/construction/cm/commercial",
+            label: t("construction.cm.area.quantityCost"),
+            icon: Boxes,
+            permission: [
               ADMIN_PERMS.constructionResourceRequestsReview,
-              ADMIN_PERMS.constructionQaQcReview,
               ADMIN_PERMS.constructionQsReview,
             ],
+          },
+          {
+            to: "/admin/construction/cm/quality",
+            label: t("construction.cm.area.quality"),
+            icon: ClipboardCheck,
+            permission: [
+              ADMIN_PERMS.constructionQaQcReview,
+              ADMIN_PERMS.constructionPunchVerify,
+              ADMIN_PERMS.constructionAcceptanceApprove,
+              ADMIN_PERMS.constructionAsBuiltApprove,
+              ADMIN_PERMS.constructionHandoverComplete,
+            ],
+          },
+          {
+            to: "/admin/construction/cm/safety",
+            label: t("construction.cm.area.safety"),
+            icon: ShieldCheck,
+            permission: [ADMIN_PERMS.constructionHseConfirm, ADMIN_PERMS.constructionHseClose],
+          },
+          {
+            to: "/admin/construction/cm/contracts",
+            label: t("construction.cm.area.contracts"),
+            icon: FileText,
+            permission: ADMIN_PERMS.contracts,
           },
         ],
       },
@@ -647,7 +638,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         ],
       },
     ],
-    [t, cmProgressItem, permissions],
+    [t],
   );
 
   const groups: NavGroup[] = useMemo(
@@ -662,6 +653,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
               !permissions.has(ADMIN_PERMS.contractsViewAll) &&
               !permissions.has(ADMIN_PERMS.contractsManage);
             if (it.to === "/admin/contracts" && scopedFinanceReader) return false;
+            if (it.to === PROCUREMENT_CONTRACTS_PATH && !permissions.has(ADMIN_PERMS.procurement))
+              return false;
             return (
               !it.permission ||
               (Array.isArray(it.permission)
@@ -685,10 +678,12 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   const initialOpen = useMemo(() => {
     const map: Record<string, boolean> = {};
     groups.forEach((g) => {
-      map[g.id] = g.items.some((it) => location.pathname.startsWith(it.to));
+      map[g.id] = g.items.some((it) =>
+        matchesNavRoute(it.to, location.pathname, location.search, it.end),
+      );
     });
     return map;
-  }, [groups, location.pathname]);
+  }, [groups, location.pathname, location.search]);
 
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(initialOpen);
   useEffect(() => {
@@ -696,8 +691,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       const next = { ...current };
       groups.forEach((group) => {
         if (
-          group.items.some(
-            (item) => location.pathname === item.to || location.pathname.startsWith(`${item.to}/`),
+          group.items.some((item) =>
+            matchesNavRoute(item.to, location.pathname, location.search, item.end),
           )
         ) {
           next[group.id] = true;
@@ -705,7 +700,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       });
       return next;
     });
-  }, [groups, location.pathname]);
+  }, [groups, location.pathname, location.search]);
 
   const toggleGroup = (id: string) => setOpenGroups((s) => ({ ...s, [id]: !s[id] }));
 
@@ -730,10 +725,9 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   }, [dashboardItem, notificationsItem, workPackagesItem, rawGroups]);
 
   const breadcrumb = useMemo(() => {
-    const path = location.pathname;
     // find longest matching route so nested routes still resolve correctly
     const matches = flatItems
-      .filter((it) => path === it.to || path.startsWith(`${it.to}/`))
+      .filter((it) => matchesNavRoute(it.to, location.pathname, location.search))
       .sort((a, b) => b.to.length - a.to.length);
     const current = matches[0];
     const crumbs: { label: string; to?: string }[] = [{ label: t("nav.dashboard"), to: "/admin" }];
@@ -742,18 +736,16 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     if (current.groupLabel) crumbs.push({ label: current.groupLabel });
     crumbs.push({ label: current.label });
     return crumbs;
-  }, [flatItems, location.pathname, t]);
+  }, [flatItems, location.pathname, location.search, t]);
 
   const renderItem = (item: NavItem) => {
-    const matches = item.end
-      ? location.pathname === item.to
-      : location.pathname === item.to || location.pathname.startsWith(`${item.to}/`);
+    const matches = matchesNavRoute(item.to, location.pathname, location.search, item.end);
     const active =
       matches &&
       !flatItems.some(
         (other) =>
           other.to.length > item.to.length &&
-          (location.pathname === other.to || location.pathname.startsWith(`${other.to}/`)),
+          matchesNavRoute(other.to, location.pathname, location.search),
       );
     return (
       <Link
@@ -819,8 +811,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
           {/* Groups */}
           {groups.map((g) => {
-            const groupActive = g.items.some(
-              (it) => location.pathname === it.to || location.pathname.startsWith(`${it.to}/`),
+            const groupActive = g.items.some((it) =>
+              matchesNavRoute(it.to, location.pathname, location.search, it.end),
             );
             const isOpen = openGroups[g.id] ?? false;
             if (effectiveCollapsed) {

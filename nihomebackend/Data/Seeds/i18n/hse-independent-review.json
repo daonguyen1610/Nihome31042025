@@ -1,0 +1,10 @@
+[
+  {
+    "key": "hse.independentReviewRequired",
+    "category": "construction",
+    "vi": "Người lập hoặc gửi vi phạm HSE không được tự xác nhận hay từ chối. Hãy nhờ người khác có quyền kiểm tra hồ sơ này.",
+    "en": "The person who created or reported this HSE violation cannot confirm or reject it. Ask another authorized reviewer to check this record.",
+    "zh": "HSE违规的创建人或报告人不能自行确认或拒绝。请其他有权限的审核人检查此记录。",
+    "ja": "このHSE違反を作成または報告した本人は、確認や却下を行えません。権限を持つ別の担当者に確認を依頼してください。"
+  }
+]

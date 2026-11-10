@@ -155,6 +155,7 @@ export interface InputPriceOfferResponse {
   vatAmount: number;
   grandTotal: number;
   createdByUserId: number;
+  lastEditedByUserId: number;
   rowVersion: string;
   lines: InputPriceLineResponse[];
 }
@@ -171,6 +172,7 @@ export interface FinanceReviewResponse {
   findings?: string | null;
   decisionReason?: string | null;
   createdByUserId: number;
+  lastEditedByUserId: number;
   reviewedByUserId?: number | null;
   reviewedByName?: string | null;
   rowVersion: string;
@@ -554,6 +556,7 @@ export interface ConstructionResourceRequestResponse {
   assignedProcurementUserId?: number | null;
   status: ConstructionWorkflowStatus;
   createdByUserId: number;
+  lastEditedByUserId: number;
   cmDecisionReason?: string | null;
   handoffEntityType?: string | null;
   handoffEntityId?: number | null;
@@ -641,6 +644,7 @@ export interface QaQcDossierResponse {
   evidence: QaQcEvidence[];
   status: ConstructionWorkflowStatus;
   createdByUserId: number;
+  lastEditedByUserId: number;
   cmDecisionReason?: string | null;
   rowVersion: string;
 }
@@ -693,6 +697,7 @@ export interface ConstructionQsBatchResponse {
   evidenceDocumentIds: number[];
   status: ConstructionWorkflowStatus;
   createdByUserId: number;
+  lastEditedByUserId: number;
   cmDecisionReason?: string | null;
   rowVersion: string;
 }

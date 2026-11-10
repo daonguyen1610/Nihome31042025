@@ -112,32 +112,46 @@ const AdminDesignProjects = lazy(() => import("./pages/admin/DesignProjects.tsx"
 const AdminDesignProjectDetail = lazy(() => import("./pages/admin/DesignProjectDetail.tsx"));
 const AdminDesignReviewInbox = lazy(() => import("./pages/admin/DesignReviewInbox.tsx"));
 const AdminPermits = lazy(() => import("./pages/admin/Permits.tsx"));
-const AdminConstructionTasks = lazy(
-  () => import("./pages/admin/construction/ConstructionTasksPage.tsx"),
+const BchOperationsPortal = lazy(() =>
+  import("./pages/admin/construction/BchOperationsPortal").then((module) => ({
+    default: module.BchOperationsPortal,
+  })),
 );
-const AdminSiteDiary = lazy(() => import("./pages/admin/construction/SiteDiaryPage.tsx"));
-const AdminPunchList = lazy(() => import("./pages/admin/construction/PunchListPage.tsx"));
-const AdminHseViolations = lazy(() => import("./pages/admin/construction/HseViolationsPage.tsx"));
-const AdminAcceptanceRecords = lazy(
-  () => import("./pages/admin/construction/AcceptanceRecordsPage.tsx"),
+const BchQaQcPortal = lazy(() =>
+  import("./pages/admin/construction/BchQaQcPortal").then((module) => ({
+    default: module.BchQaQcPortal,
+  })),
 );
-const AdminAsBuiltDocuments = lazy(
-  () => import("./pages/admin/construction/AsBuiltDocumentsPage.tsx"),
+const BchQsPage = lazy(() =>
+  import("./pages/admin/construction/BchQsPage").then((module) => ({
+    default: module.BchQsPage,
+  })),
 );
-const AdminAsBuiltDocumentCategories = lazy(
-  () => import("./pages/admin/construction/AsBuiltDocumentCategoriesPage.tsx"),
+const CmAreaPage = lazy(() =>
+  import("./pages/admin/construction/CmAreaPage").then((module) => ({
+    default: module.CmAreaPage,
+  })),
 );
-const AdminHandoverRecords = lazy(
-  () => import("./pages/admin/construction/HandoverRecordsPage.tsx"),
+const AsBuiltDocumentCategories = lazy(
+  () => import("./pages/admin/construction/AsBuiltDocumentCategoriesPage"),
 );
-const AdminBchResourceRequests = lazy(
-  () => import("./pages/admin/construction/BchResourceRequestsPage.tsx"),
+const legacyRedirectImports = () => import("./pages/admin/construction/ConstructionRedirect");
+const LegacyConstructionRedirect = lazy(() =>
+  legacyRedirectImports().then((module) => ({
+    default: module.LegacyConstructionRedirect,
+  })),
 );
-const AdminQaQcWorkspace = lazy(() => import("./pages/admin/construction/QaQcWorkspacePage.tsx"));
-const AdminQsWorkspace = lazy(() => import("./pages/admin/construction/QsWorkspacePage.tsx"));
-const AdminCmProgress = lazy(() => import("./pages/admin/construction/CmProgressPage"));
-const AdminCmConstruction = lazy(
-  () => import("./pages/admin/construction/CmConstructionWorkspacePage.tsx"),
+const LegacyCmAreaRedirect = lazy(() =>
+  legacyRedirectImports().then((module) => ({ default: module.LegacyCmAreaRedirect })),
+);
+const LegacyPunchRedirect = lazy(() =>
+  legacyRedirectImports().then((module) => ({ default: module.LegacyPunchRedirect })),
+);
+const LegacyAcceptanceRedirect = lazy(() =>
+  legacyRedirectImports().then((module) => ({ default: module.LegacyAcceptanceRedirect })),
+);
+const LegacyHseRedirect = lazy(() =>
+  legacyRedirectImports().then((module) => ({ default: module.LegacyHseRedirect })),
 );
 const NotFound = lazy(() => import("./pages/NotFound.tsx"));
 
@@ -265,7 +279,7 @@ const App = () => (
                       <Route path="/admin/vendors" element={<VendorPage />} />
                       <Route path="/admin/vendors/:id" element={<VendorDetail />} />
                     </Route>
-                    <Route element={<RequirePermission code="proc.rfqs.view" />}>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.procurementRfqs} />}>
                       <Route path="/admin/procurement-control/rfqs" element={<RfqPage />} />
                     </Route>
                     <Route
@@ -460,33 +474,113 @@ const App = () => (
                     <Route element={<RequirePermission code={ADMIN_PERMS.permits} />}>
                       <Route path="/admin/permits" element={<AdminPermits />} />
                     </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionTasks} />}>
-                      <Route
-                        path="/admin/construction/tasks"
-                        element={<AdminConstructionTasks />}
-                      />
-                    </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionDiary} />}>
-                      <Route path="/admin/construction/diary" element={<AdminSiteDiary />} />
-                    </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionPunch} />}>
-                      <Route path="/admin/construction/punchlist" element={<AdminPunchList />} />
-                    </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionHse} />}>
-                      <Route path="/admin/construction/hse" element={<AdminHseViolations />} />
-                    </Route>
                     <Route
-                      element={<RequirePermission code={ADMIN_PERMS.constructionAcceptance} />}
+                      element={
+                        <RequirePermission
+                          code={[
+                            ADMIN_PERMS.constructionResourceRequests,
+                            ADMIN_PERMS.constructionDiary,
+                          ]}
+                        />
+                      }
                     >
                       <Route
-                        path="/admin/construction/acceptance"
-                        element={<AdminAcceptanceRecords />}
+                        path="/admin/construction/bch/operations"
+                        element={<BchOperationsPortal />}
                       />
                     </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionAsBuilt} />}>
+                    <Route
+                      element={
+                        <RequirePermission
+                          code={[
+                            ADMIN_PERMS.constructionQaQc,
+                            ADMIN_PERMS.constructionPunch,
+                            ADMIN_PERMS.constructionAcceptance,
+                            ADMIN_PERMS.constructionHse,
+                          ]}
+                        />
+                      }
+                    >
+                      <Route path="/admin/construction/bch/qa-qc" element={<BchQaQcPortal />} />
+                    </Route>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionQs} />}>
+                      <Route path="/admin/construction/bch/qs" element={<BchQsPage />} />
+                    </Route>
+                    <Route
+                      element={
+                        <RequirePermission
+                          code={[
+                            ADMIN_PERMS.constructionCmPreparation,
+                            ADMIN_PERMS.constructionTasks,
+                          ]}
+                        />
+                      }
+                    >
                       <Route
-                        path="/admin/construction/asbuilt"
-                        element={<AdminAsBuiltDocuments />}
+                        path="/admin/construction/cm/schedule"
+                        element={<CmAreaPage area="schedule" />}
+                      />
+                    </Route>
+                    <Route
+                      element={
+                        <RequirePermission
+                          code={[
+                            ADMIN_PERMS.constructionResourceRequestsReview,
+                            ADMIN_PERMS.constructionResourceRequests,
+                            ADMIN_PERMS.constructionQsReview,
+                            ADMIN_PERMS.constructionQs,
+                          ]}
+                        />
+                      }
+                    >
+                      <Route
+                        path="/admin/construction/cm/commercial"
+                        element={<CmAreaPage area="commercial" />}
+                      />
+                    </Route>
+                    <Route
+                      element={
+                        <RequirePermission
+                          code={[
+                            ADMIN_PERMS.constructionQaQcReview,
+                            ADMIN_PERMS.constructionQaQc,
+                            ADMIN_PERMS.constructionPunchVerify,
+                            ADMIN_PERMS.constructionPunch,
+                            ADMIN_PERMS.constructionAcceptanceApprove,
+                            ADMIN_PERMS.constructionAcceptance,
+                            ADMIN_PERMS.constructionAsBuiltApprove,
+                            ADMIN_PERMS.constructionAsBuilt,
+                            ADMIN_PERMS.constructionHandoverComplete,
+                            ADMIN_PERMS.constructionHandover,
+                          ]}
+                        />
+                      }
+                    >
+                      <Route
+                        path="/admin/construction/cm/quality"
+                        element={<CmAreaPage area="quality" />}
+                      />
+                    </Route>
+                    <Route
+                      element={
+                        <RequirePermission
+                          code={[
+                            ADMIN_PERMS.constructionHseConfirm,
+                            ADMIN_PERMS.constructionHseClose,
+                            ADMIN_PERMS.constructionHse,
+                          ]}
+                        />
+                      }
+                    >
+                      <Route
+                        path="/admin/construction/cm/safety"
+                        element={<CmAreaPage area="safety" />}
+                      />
+                    </Route>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.contracts} />}>
+                      <Route
+                        path="/admin/construction/cm/contracts"
+                        element={<CmAreaPage area="contracts" />}
                       />
                     </Route>
                     <Route
@@ -496,13 +590,76 @@ const App = () => (
                     >
                       <Route
                         path="/admin/construction/asbuilt-categories"
-                        element={<AdminAsBuiltDocumentCategories />}
+                        element={<AsBuiltDocumentCategories />}
+                      />
+                    </Route>
+
+                    {/* Legacy routes: preserve query and redirect to the role workspace. */}
+                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionTasks} />}>
+                      <Route
+                        path="/admin/construction/tasks"
+                        element={
+                          <LegacyConstructionRedirect
+                            path="/admin/construction/cm/schedule"
+                            tab="tasks"
+                          />
+                        }
+                      />
+                      <Route
+                        path="/admin/construction/progress"
+                        element={
+                          <LegacyConstructionRedirect path="/admin/construction/cm/schedule" />
+                        }
+                      />
+                    </Route>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionDiary} />}>
+                      <Route
+                        path="/admin/construction/diary"
+                        element={
+                          <LegacyConstructionRedirect
+                            path="/admin/construction/bch/operations"
+                            tab="diary"
+                          />
+                        }
+                      />
+                    </Route>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionPunch} />}>
+                      <Route
+                        path="/admin/construction/punchlist"
+                        element={<LegacyPunchRedirect />}
+                      />
+                    </Route>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionHse} />}>
+                      <Route path="/admin/construction/hse" element={<LegacyHseRedirect />} />
+                    </Route>
+                    <Route
+                      element={<RequirePermission code={ADMIN_PERMS.constructionAcceptance} />}
+                    >
+                      <Route
+                        path="/admin/construction/acceptance"
+                        element={<LegacyAcceptanceRedirect />}
+                      />
+                    </Route>
+                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionAsBuilt} />}>
+                      <Route
+                        path="/admin/construction/asbuilt"
+                        element={
+                          <LegacyConstructionRedirect
+                            path="/admin/construction/cm/quality"
+                            tab="asbuilt"
+                          />
+                        }
                       />
                     </Route>
                     <Route element={<RequirePermission code={ADMIN_PERMS.constructionHandover} />}>
                       <Route
                         path="/admin/construction/handover"
-                        element={<AdminHandoverRecords />}
+                        element={
+                          <LegacyConstructionRedirect
+                            path="/admin/construction/cm/quality"
+                            tab="handover"
+                          />
+                        }
                       />
                     </Route>
                     <Route
@@ -512,20 +669,13 @@ const App = () => (
                     >
                       <Route
                         path="/admin/construction/bch/resource-requests"
-                        element={<AdminBchResourceRequests />}
+                        element={
+                          <LegacyConstructionRedirect
+                            path="/admin/construction/bch/operations"
+                            tab="resources"
+                          />
+                        }
                       />
-                    </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionQaQc} />}>
-                      <Route
-                        path="/admin/construction/bch/qa-qc"
-                        element={<AdminQaQcWorkspace />}
-                      />
-                    </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionQs} />}>
-                      <Route path="/admin/construction/bch/qs" element={<AdminQsWorkspace />} />
-                    </Route>
-                    <Route element={<RequirePermission code={ADMIN_PERMS.constructionTasks} />}>
-                      <Route path="/admin/construction/progress" element={<AdminCmProgress />} />
                     </Route>
                     <Route
                       element={
@@ -539,7 +689,7 @@ const App = () => (
                         />
                       }
                     >
-                      <Route path="/admin/construction/cm" element={<AdminCmConstruction />} />
+                      <Route path="/admin/construction/cm" element={<LegacyCmAreaRedirect />} />
                     </Route>
                     <Route element={<RequirePermission code={ADMIN_PERMS.recruitment} />}>
                       <Route path="/admin/recruitment" element={<AdminRecruitment />} />

@@ -525,7 +525,7 @@ export const ProjectMasterSchedule = ({
         </p>
         {schedule?.publishedRevisionId != null && has(ADMIN_PERMS.constructionTasks) && (
           <Button asChild variant="outline">
-            <Link to={`/admin/construction/progress?projectId=${projectId}`}>
+            <Link to={`/admin/construction/cm/schedule?projectId=${projectId}`}>
               {t("scheduleUx.openProgress")}
             </Link>
           </Button>

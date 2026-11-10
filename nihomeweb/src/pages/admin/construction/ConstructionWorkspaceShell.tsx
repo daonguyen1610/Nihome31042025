@@ -1,32 +1,36 @@
 import { useUiError } from "@/hooks/useUiError";
-import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { ReactNode, useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { PageError, PageLoading } from "@/components/PageState";
+import { cn } from "@/lib/utils";
+import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { adminApi, type OperationalProjectListItemResponse } from "@/services/adminApi";
+import { selectAccessibleProjectId } from "./constructionProjectSelection";
+
+export interface ConstructionProjectScope {
+  projectId: number;
+  designProjectId: number | null;
+  designProjects: { id: number; projectCode: string; name: string }[];
+}
 
 interface ConstructionWorkspaceShellProps {
   title: string;
   description: string;
-  projectId: number | null;
-  onProjectChange: (projectId: number) => void;
-  children: ReactNode;
+  children: (scope: ConstructionProjectScope) => ReactNode;
   testId: string;
+  touchFriendly?: boolean;
 }
 
 export function ConstructionWorkspaceShell({
   title,
   description,
-  projectId,
-  onProjectChange,
   children,
   testId,
+  touchFriendly,
 }: ConstructionWorkspaceShellProps) {
   const uiError = useUiError();
   const { t } = useI18n();
@@ -36,24 +40,30 @@ export function ConstructionWorkspaceShell({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [reloadKey, setReloadKey] = useState(0);
+  const [scope, setScope] = useState<ConstructionProjectScope | null>(null);
+  const [scopeError, setScopeError] = useState<string | null>(null);
+
+  const selectedProjectId = selectAccessibleProjectId(requestedProjectId, projects);
 
   useEffect(() => {
     let active = true;
     setLoading(true);
     setError(null);
     void collectLookupPages((page) => adminApi.listOperationalProjects({ pageSize: 200, page }))
-      .then(async ({ data }) => {
+      .then(({ data }) => {
         if (!active) return;
         const items = [...data.items];
-        if (requestedProjectId > 0 && !items.some((project) => project.id === requestedProjectId)) {
-          const requested = await adminApi.getOperationalProject(requestedProjectId);
-          if (!active) return;
-          items.push(requested.data);
-        }
         setProjects(items);
-        if (projectId == null && items.length > 0) {
-          const requested = items.find((project) => project.id === requestedProjectId);
-          onProjectChange(requested?.id ?? items[0].id);
+        const next = selectAccessibleProjectId(requestedProjectId, items);
+        if (next != null && next !== requestedProjectId) {
+          setSearchParams(
+            (current) => {
+              const params = new URLSearchParams(current);
+              params.set("projectId", String(next));
+              return params;
+            },
+            { replace: true },
+          );
         }
       })
       .catch((cause) => {
@@ -65,34 +75,66 @@ export function ConstructionWorkspaceShell({
     return () => {
       active = false;
     };
-  }, [onProjectChange, projectId, reloadKey, requestedProjectId, t, uiError]);
+  }, [reloadKey, requestedProjectId, setSearchParams, t, uiError]);
+
+  useEffect(() => {
+    if (selectedProjectId == null) {
+      setScope(null);
+      return;
+    }
+    let active = true;
+    setScope(null);
+    setScopeError(null);
+    void adminApi
+      .getOperationalProject(selectedProjectId)
+      .then(({ data }) => {
+        if (!active) return;
+        setScope({
+          projectId: selectedProjectId,
+          designProjectId: data.designProjectId ?? null,
+          designProjects: (data.designProjects ?? []).map((project) => ({
+            id: project.id,
+            projectCode: project.projectCode,
+            name: project.name,
+          })),
+        });
+      })
+      .catch((cause) => {
+        if (active) setScopeError(uiError(cause, t("construction.common.projectsLoadError")));
+      });
+    return () => {
+      active = false;
+    };
+  }, [reloadKey, selectedProjectId, t, uiError]);
 
   return (
     <AdminLayout>
-      <main className="mx-auto w-full max-w-[1500px] space-y-5 p-4 sm:p-6" data-testid={testId}>
+      <div className={cn("space-y-5", touchFriendly && "construction-touch")} data-testid={testId}>
         <header className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div className="min-w-0 space-y-2">
             <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
             <p className="max-w-3xl text-sm text-muted-foreground">{description}</p>
           </div>
           <div className="w-full min-w-0 space-y-1.5 lg:w-[26rem] lg:shrink-0">
-            <Label htmlFor={`${testId}-project`}>{t("construction.common.project")}</Label>
+            <Label htmlFor={`${testId}-project`}>
+              {t("construction.common.operationalProject")}
+            </Label>
             <SearchableSelect
               id={`${testId}-project`}
               data-testid={`${testId}-project`}
-              ariaLabel={t("construction.common.project")}
-              value={projectId == null ? "" : String(projectId)}
-              onChange={(value) => {
-                onProjectChange(Number(value));
+              ariaLabel={t("construction.common.operationalProject")}
+              value={selectedProjectId == null ? "" : String(selectedProjectId)}
+              onChange={(value) =>
                 setSearchParams(
                   (current) => {
                     const next = new URLSearchParams(current);
                     next.set("projectId", value);
+                    next.delete("designProjectId");
                     return next;
                   },
                   { replace: true },
-                );
-              }}
+                )
+              }
               options={projects.map((project) => ({
                 value: String(project.id),
                 label: `${project.code} · ${project.name}`,
@@ -110,11 +152,15 @@ export function ConstructionWorkspaceShell({
         ) : error ? (
           <PageError message={error} onRetry={() => setReloadKey((value) => value + 1)} />
         ) : projects.length === 0 ? (
-          <PageError message={t("construction.common.noProjects")} />
-        ) : (
-          children
-        )}
-      </main>
+          <PageEmpty message={t("construction.common.noProjects")} />
+        ) : selectedProjectId == null || (!scope && !scopeError) ? (
+          <PageLoading />
+        ) : scopeError ? (
+          <PageError message={scopeError} onRetry={() => setReloadKey((value) => value + 1)} />
+        ) : scope ? (
+          children(scope)
+        ) : null}
+      </div>
     </AdminLayout>
   );
 }

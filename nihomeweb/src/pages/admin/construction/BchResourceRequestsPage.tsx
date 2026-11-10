@@ -1,13 +1,16 @@
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { FieldScope } from "@/components/ui/field-scope";
-import { FormEvent, useCallback, useEffect, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { SearchableSelect } from "@/components/ui/searchable-select";
-import { Boxes, Plus, Send } from "lucide-react";
-import { ConstructionWorkspaceShell } from "./ConstructionWorkspaceShell";
+import { Boxes, Pencil, Plus, Send } from "lucide-react";
+import { ConstructionReviewActions } from "./ConstructionReviewActions";
+import { ConstructionDeletionControl } from "./ConstructionDeletionControl";
+import { type ScopeProps, useConstructionActions } from "./constructionScope";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { REVIEW_STATUS_TONE } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -26,7 +29,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
@@ -42,18 +44,21 @@ const TYPES: ConstructionResourceType[] = ["Material", "Equipment", "Labour"];
 type UserOption = PersonIdentity & { userId: number; userName: string };
 type BoqLineOption = ConstructionResourceReferenceDataResponse["boqLines"][number];
 
-export default function BchResourceRequestsPage() {
+export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopeProps) {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
-  const { has } = usePermissions();
-  const [projectId, setProjectId] = useState<number | null>(null);
-  const selectProject = useCallback((id: number) => setProjectId(id), []);
+  const { canManage, canApprove, canEditRow, canDeleteRow } = useConstructionActions(scope, {
+    manage: ADMIN_PERMS.constructionResourceRequestsCreate,
+    supervisor: ADMIN_PERMS.constructionResourceRequestsReview,
+    approve: ADMIN_PERMS.constructionResourceRequestsReview,
+  });
   const [rows, setRows] = useState<ConstructionResourceRequestResponse[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [reload, setReload] = useState(0);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<ConstructionResourceRequestResponse | null>(null);
   const [saving, setSaving] = useState(false);
   const [siteUsers, setSiteUsers] = useState<UserOption[]>([]);
   const [procurementUsers, setProcurementUsers] = useState<UserOption[]>([]);
@@ -71,7 +76,6 @@ export default function BchResourceRequestsPage() {
   });
 
   useEffect(() => {
-    if (projectId == null) return;
     let active = true;
     setLoading(true);
     setError(null);
@@ -93,9 +97,44 @@ export default function BchResourceRequestsPage() {
     };
   }, [projectId, reload, t, uiError]);
 
+  const emptyForm = () => ({
+    type: "Material" as ConstructionResourceType,
+    wbsCode: "",
+    needByDate: "",
+    quantity: "",
+    unit: "",
+    reason: "",
+    projectBoqLineId: "",
+    responsibleSiteUserId: "",
+    assignedProcurementUserId: "",
+  });
+
+  const openCreate = () => {
+    setEditing(null);
+    setForm(emptyForm());
+    setOpen(true);
+  };
+
+  const openEdit = (row: ConstructionResourceRequestResponse) => {
+    setEditing(row);
+    setForm({
+      type: row.type,
+      wbsCode: row.wbsCode,
+      needByDate: row.needByDate.slice(0, 10),
+      quantity: String(row.quantity),
+      unit: row.unit,
+      reason: row.reason,
+      projectBoqLineId: row.projectBoqLineId ? String(row.projectBoqLineId) : "",
+      responsibleSiteUserId: row.responsibleSiteUserId ? String(row.responsibleSiteUserId) : "",
+      assignedProcurementUserId: row.assignedProcurementUserId
+        ? String(row.assignedProcurementUserId)
+        : "",
+    });
+    setOpen(true);
+  };
+
   const save = async (event: FormEvent) => {
     event.preventDefault();
-    if (projectId == null) return;
     if (
       form.type === "Material" &&
       (!form.projectBoqLineId || !form.responsibleSiteUserId || !form.assignedProcurementUserId)
@@ -106,37 +145,35 @@ export default function BchResourceRequestsPage() {
       });
       return;
     }
+    const body = {
+      type: form.type,
+      wbsCode: form.wbsCode.trim(),
+      needByDate: form.needByDate,
+      quantity: Number(form.quantity),
+      unit: form.unit.trim(),
+      reason: form.reason.trim(),
+      projectBoqLineId: form.projectBoqLineId ? Number(form.projectBoqLineId) : null,
+      responsibleSiteUserId: form.responsibleSiteUserId ? Number(form.responsibleSiteUserId) : null,
+      assignedProcurementUserId: form.assignedProcurementUserId
+        ? Number(form.assignedProcurementUserId)
+        : null,
+    };
     setSaving(true);
     try {
-      await adminApi.createConstructionResourceRequest(projectId, {
-        type: form.type,
-        wbsCode: form.wbsCode.trim(),
-        needByDate: form.needByDate,
-        quantity: Number(form.quantity),
-        unit: form.unit.trim(),
-        reason: form.reason.trim(),
-        projectBoqLineId: form.projectBoqLineId ? Number(form.projectBoqLineId) : null,
-        responsibleSiteUserId: form.responsibleSiteUserId
-          ? Number(form.responsibleSiteUserId)
-          : null,
-        assignedProcurementUserId: form.assignedProcurementUserId
-          ? Number(form.assignedProcurementUserId)
-          : null,
-      });
+      if (editing) {
+        await adminApi.updateConstructionResourceRequest(projectId, editing.id, {
+          ...body,
+          rowVersion: editing.rowVersion,
+        });
+        toast({ title: t("construction.common.updated") });
+      } else {
+        await adminApi.createConstructionResourceRequest(projectId, body);
+        toast({ title: t("construction.resource.created") });
+      }
       setOpen(false);
-      setForm({
-        type: "Material",
-        wbsCode: "",
-        needByDate: "",
-        quantity: "",
-        unit: "",
-        reason: "",
-        projectBoqLineId: "",
-        responsibleSiteUserId: "",
-        assignedProcurementUserId: "",
-      });
+      setEditing(null);
+      setForm(emptyForm());
       setReload((value) => value + 1);
-      toast({ title: t("construction.resource.created") });
     } catch (cause) {
       toast({
         variant: "destructive",
@@ -148,7 +185,6 @@ export default function BchResourceRequestsPage() {
   };
 
   const submit = async (row: ConstructionResourceRequestResponse) => {
-    if (projectId == null) return;
     try {
       await adminApi.submitConstructionResourceRequest(projectId, row.id, row.rowVersion);
       setReload((value) => value + 1);
@@ -161,18 +197,37 @@ export default function BchResourceRequestsPage() {
     }
   };
 
+  const decide = async (
+    row: ConstructionResourceRequestResponse,
+    approved: boolean,
+    reason: string,
+  ) => {
+    try {
+      await adminApi.decideConstructionResourceRequest(
+        projectId,
+        row.id,
+        approved,
+        reason,
+        row.rowVersion,
+      );
+      setReload((value) => value + 1);
+      toast({ title: t("construction.cm.decisionSaved") });
+      return true;
+    } catch (cause) {
+      toast({
+        variant: "destructive",
+        title: uiError(cause, t("construction.common.actionError")),
+      });
+      return false;
+    }
+  };
+
   return (
-    <ConstructionWorkspaceShell
-      title={t("construction.resource.title")}
-      description={t("construction.resource.description")}
-      projectId={projectId}
-      onProjectChange={selectProject}
-      testId="bch-resource-page"
-    >
+    <>
       <section className="space-y-4">
-        <div className="flex justify-end">
-          {has(ADMIN_PERMS.constructionResourceRequestsCreate) && (
-            <Button onClick={() => setOpen(true)} data-testid="resource-new">
+        <div className="flex flex-wrap items-center justify-end gap-2">
+          {canManage && (
+            <Button onClick={openCreate} data-testid="resource-new">
               <Plus className="mr-2 h-4 w-4" />
               {t("construction.resource.new")}
             </Button>
@@ -183,7 +238,17 @@ export default function BchResourceRequestsPage() {
         ) : error ? (
           <PageError message={error} onRetry={() => setReload((value) => value + 1)} />
         ) : rows.length === 0 ? (
-          <PageEmpty message={t("construction.resource.empty")} />
+          <PageEmpty
+            message={t("construction.resource.empty")}
+            action={
+              canManage && (
+                <Button onClick={openCreate} data-testid="resource-empty-new">
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("construction.resource.new")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {rows.map((row) => (
@@ -199,7 +264,9 @@ export default function BchResourceRequestsPage() {
                       {t(`construction.resource.type.${row.type}`)}
                     </p>
                   </div>
-                  <Badge variant="outline">{t(`construction.status.${row.status}`)}</Badge>
+                  <ConstructionStatusBadge tone={REVIEW_STATUS_TONE[row.status]}>
+                    {t(`construction.status.${row.status}`)}
+                  </ConstructionStatusBadge>
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -226,17 +293,42 @@ export default function BchResourceRequestsPage() {
                   </div>
                 </dl>
                 <p className="text-sm">{row.reason}</p>
-                {row.status === "Draft" && (
-                  <Button
-                    size="sm"
-                    className="w-full sm:w-auto"
-                    onClick={() => void submit(row)}
-                    data-testid={`resource-submit-${row.id}`}
-                  >
-                    <Send className="mr-2 h-4 w-4" />
-                    {t("construction.common.submit")}
-                  </Button>
+                {row.status === "Draft" && canEditRow(row.createdByUserId) && (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      onClick={() => void submit(row)}
+                      data-testid={`resource-submit-${row.id}`}
+                    >
+                      <Send className="mr-2 h-4 w-4" />
+                      {t("construction.common.submit")}
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(row)}>
+                      <Pencil className="mr-2 h-4 w-4" />
+                      {t("common.edit")}
+                    </Button>
+                  </div>
                 )}
+                {(row.status === "Draft" || row.status === "CmRejected") &&
+                  canDeleteRow(row.createdByUserId) && (
+                    <ConstructionDeletionControl
+                      rowVersion={row.rowVersion}
+                      getImpact={() =>
+                        adminApi.getConstructionResourceRequestDeletionImpact(projectId, row.id)
+                      }
+                      deleteRecord={(request) =>
+                        adminApi.deleteConstructionResourceRequest(projectId, row.id, request)
+                      }
+                      onDeleted={() => setReload((value) => value + 1)}
+                    />
+                  )}
+                <ConstructionReviewActions
+                  allowed={canApprove}
+                  status={row.status}
+                  createdByUserId={row.createdByUserId}
+                  lastEditedByUserId={row.lastEditedByUserId}
+                  onDecide={(approved, reason) => decide(row, approved, reason)}
+                />
               </article>
             ))}
           </div>
@@ -248,7 +340,7 @@ export default function BchResourceRequestsPage() {
             <DialogHeader>
               <DialogTitle className="flex items-center gap-2">
                 <Boxes className="h-5 w-5" />
-                {t("construction.resource.new")}
+                {t(editing ? "common.edit" : "construction.resource.new")}
               </DialogTitle>
             </DialogHeader>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -373,7 +465,7 @@ export default function BchResourceRequestsPage() {
           </form>
         </DialogContent>
       </Dialog>
-    </ConstructionWorkspaceShell>
+    </>
   );
 }
 

@@ -33,6 +33,18 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task GetPreparation_WhenNotCreated_ReturnsNoContent()
+    {
+        var fixture = await CreateProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+
+        using var response = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/construction/preparation");
+
+        response.StatusCode.Should().Be(HttpStatusCode.NoContent);
+    }
+
+    [Fact]
     public async Task ResourceRequest_CreateReplaySubmitAndCmApproval_PreservesSingleRecord()
     {
         var fixture = await CreateProjectAsync();
@@ -115,6 +127,108 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
             .Where(x => x.Id == requestId)
             .Select(x => x.Status)
             .SingleAsync())).Should().Be(ConstructionReviewStatus.PendingCmReview);
+    }
+
+    [Fact]
+    public async Task CmDecision_WhenReviewerEditedAndSubmittedDraft_ReturnsBadRequest()
+    {
+        var fixture = await CreateProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "QS"));
+        using var createdResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests",
+            ValidEquipmentRequest());
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createdResponse);
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+        using var updateResponse = await SendAsync(
+            HttpMethod.Put,
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests/{created.GetProperty("id").GetInt32()}",
+            new
+            {
+                type = "Equipment",
+                wbsCode = "WBS-STR-01",
+                needByDate = DateTime.UtcNow.AddDays(21),
+                quantity = 3m,
+                unit = "set",
+                reason = "CM corrected the resource quantity before submission",
+                rowVersion = created.GetProperty("rowVersion").GetString(),
+            });
+        updateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await ReadJsonAsync(updateResponse);
+        var submitted = await TransitionAsync(fixture.ProjectId, updated, "submit");
+
+        using var decisionResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests/{created.GetProperty("id").GetInt32()}/cm-decision",
+            new
+            {
+                approved = true,
+                reason = "The same CM reviewer must not approve their own correction",
+                rowVersion = submitted.GetProperty("rowVersion").GetString(),
+            });
+
+        decisionResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ConstructionResourceRequests
+            .Where(x => x.Id == created.GetProperty("id").GetInt32())
+            .Select(x => x.Status)
+            .SingleAsync())).Should().Be(ConstructionReviewStatus.PendingCmReview);
+    }
+
+    [Fact]
+    public async Task DeleteResource_RequiresCurrentImpactAndTypedCode()
+    {
+        var fixture = await CreateProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "QS"));
+        using var createdResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests",
+            ValidEquipmentRequest());
+        var created = await ReadJsonAsync(createdResponse);
+        var requestId = created.GetProperty("id").GetInt32();
+        var path = $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests/{requestId}";
+
+        using var missingConfirmation = await SendAsync(HttpMethod.Delete, path, new { });
+        missingConfirmation.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ConstructionResourceRequests.AnyAsync(x => x.Id == requestId)))
+            .Should().BeTrue();
+
+        using var impactResponse = await Client.GetAsync($"{path}/deletion-impact");
+        impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await ReadJsonAsync(impactResponse);
+        using var confirmedDelete = await SendAsync(HttpMethod.Delete, path, new
+        {
+            planToken = impact.GetProperty("planToken").GetString(),
+            confirmation = impact.GetProperty("requiredConfirmation").GetString(),
+            rowVersion = created.GetProperty("rowVersion").GetString(),
+        });
+
+        confirmedDelete.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.ConstructionResourceRequests.AnyAsync(x => x.Id == requestId)))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task DeleteResource_WhenCmReviewerIsNotAuthor_ReturnsBadRequestAndPreservesDraft()
+    {
+        var fixture = await CreateProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "QS"));
+        using var createdResponse = await SendAsync(
+            HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests",
+            ValidEquipmentRequest());
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await ReadJsonAsync(createdResponse);
+        var requestId = created.GetProperty("id").GetInt32();
+
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "PM"));
+        using var impactResponse = await Client.GetAsync(
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests/{requestId}/deletion-impact");
+
+        impactResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ConstructionResourceRequests.AnyAsync(x => x.Id == requestId)))
+            .Should().BeTrue();
     }
 
     [Fact]

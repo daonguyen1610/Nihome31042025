@@ -27,6 +27,16 @@ export default function ProcurementContracts({
     <section className="mb-6 space-y-3" data-testid="procurement-contract-registry">
       <h2 className="text-lg font-semibold">{t("procurement.contractRegistry.title")}</h2>
       <p className="text-sm text-muted-foreground">{t("procurement.contractRegistry.hint")}</p>
+      <p className="max-w-3xl text-sm text-muted-foreground">
+        {t("cmAreas.supplierContractGuide")}
+      </p>
+      {has(ADMIN_PERMS.procurementRfqs) && (
+        <Button asChild variant="outline">
+          <Link to={`/admin/procurement-control/rfqs?projectId=${projectId}`}>
+            {t("cmAreas.openRfq")}
+          </Link>
+        </Button>
+      )}
       {!canRead ? (
         <p>{t("procurement.contractRegistry.permission")}</p>
       ) : (

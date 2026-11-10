@@ -1456,23 +1456,36 @@ payment-document gaps referred to FA (chị K/Kiara). The source pack is now in
 a four-package payment matrix. These confirmed requirements do not mean the
 complete portfolio or Finance handoff is delivered.
 
-**Current implementation boundary:** The split menu now provides BCH Resource,
-QA/QC, Site QS and CM Control workspaces. It delivers versioned CM preparation
+**Current implementation boundary:** The Construction menu is split by role.
+**Site Command Board (BCH)** has three execution portals: **Site operations**
+(resource requests and site diary), **QA/QC records** (dossiers, punch list,
+partial acceptance, HSE), and **Site QS**. **CM Office** has five management
+areas: **Schedule**, **Quantity and cost**, **Quality**, **Safety**, and
+**Contracts**. The slice delivers versioned CM preparation
 references and a server start gate; typed material/equipment/labour requests;
 published multilingual QA/QC templates and IFC-linked dossiers; explicit
 Upstream/Downstream QS batches; CM review; row-version concurrency;
 idempotency; and server-side author/reviewer separation. Material approval
 creates and submits the existing Material Request aggregate atomically.
 
-CM Control groups available work into **Schedule**, **Quantity and cost**,
-**Quality**, **Safety** and **Contracts**, according to your permissions.
-Schedule contains versioned CM plans, approval history, progress snapshots and
-the existing Gantt link. Quantity and cost contains resource and QS reviews;
-Quality contains dossier reviews and template tools. Template managers can
-open the template editor without dossier viewing permission. Safety and
-Contracts open their existing pages filtered to the selected project. These
-groups reuse source records; approved S-Curve aggregation and cost comparisons
-remain subject to the implementation limits below.
+CM manages the same source records that BCH executes, and each office area
+shows every status rather than only the pending queue. **Schedule** holds
+versioned CM plans, approval history, progress snapshots, the task list, and
+startup-readiness evidence. **Quantity and cost** reviews resource requests and
+QS batches. **Quality** reviews QA/QC dossiers, punch list, partial acceptance,
+as-built records, and handover; template managers can open the template editor
+without dossier-viewing permission. **Safety** opens this project's HSE
+register. **Contracts** lists the project's Upstream and Downstream contracts
+and links to the contract ledger. CM can create records on BCH's behalf and can
+edit, submit, or delete a BCH-authored draft or rejected record when it holds
+the module's review permission. BCH works only with its own drafts. Approve,
+reject, confirm, verify, close, and complete appear only to reviewers and never
+to the record's author, even when that author is a CM user. Hard delete is
+limited to drafts and rejected records; approved and closed records change
+through their status actions. The selected project, area, and tab stay in the
+URL, so refreshing, back/forward, and deep links all restore the workspace.
+Approved S-Curve aggregation and cost comparisons remain subject to the
+implementation limits below.
 
 **Partial — Procurement handoff:** open Procurement Control, choose the project
 and **Approved equipment and labour**. Filter by resource type or supply state.
@@ -1525,18 +1538,27 @@ Create construction schedules with phases and work items (WBS). Assign responsib
 | Gantt Chart Detail | Interactive Gantt, dependencies, personnel assignment, alerts |
 | Interactive Gantt UI | Drag-drop, resize, zoom, dependency lines |
 
-The CM control workspace separates **Startup readiness** from **Construction
-progress**. In Startup readiness, each baseline reference is paired with its
-supporting document. Additional project requirements and read-only verification
-results are separate sections. Use the action bar above the evidence fields to save changes, then
-evaluate readiness; starting construction remains subject to the existing
-server-side gate. Construction workspace project pickers support searching by
-project code or name, and explicitly selected projects remain in the page URL.
+The CM Office menu has five areas: **Schedule**, **Quantity and cost**,
+**Quality**, **Safety**, and **Contracts**, each filtered by the user's
+permissions. CM plans, supervises, and independently reviews the same records
+that BCH executes; it does not maintain a second set of field records, and it
+may create or correct a record on BCH's behalf. The area, the selected project,
+and the active tab are retained in the URL when refreshing, changing projects,
+or using browser back/forward.
+
+Expand **Startup readiness** inside **Schedule** for preparation evidence.
+Each baseline reference is paired with its supporting document. Additional
+project requirements and read-only verification results are separate sections.
+Use the action bar above the evidence fields to save changes, then evaluate
+readiness; starting construction remains subject to the existing server-side
+gate. Construction project pickers support searching by code or name, and
+explicitly selected projects remain in the page URL.
 
 ##### CM schedule comparison — Partial
 
-Open **Admin > CM Office > Construction progress** (**Phòng CM > Tiến độ thi
-công**). Site users open **Site Command Board > Construction progress** instead.
+Open **Admin > CM Office > Schedule** (**Phòng CM > Tiến độ**). Site users
+continue to use **Site Command Board > Site operations** and
+**Site Command Board > QA/QC records** for field work.
 Select the Operational Project; the selection remains in the page URL when
 refreshing. Before a CM plan exists, the preparation panel identifies missing
 CRM/WBS prerequisites and links to the project's master schedule and unlinked
@@ -1571,8 +1593,8 @@ synchronization.
 
 ##### Construction drawings
 
-To link drawings, open a task at **Admin > Construction > Construction
-schedule** and find **Construction drawings** in its detail panel. Users with
+To link drawings, open a task at **Admin > CM Office > Schedule > Tasks** and
+find **Construction drawings** in its detail panel. Users with
 task management permission can select up to 200 released IFC drawings from
 the same project and click **Save drawing links**. This saves independently
 from task dates/progress. Clearing the selection removes links only.
@@ -1587,7 +1609,7 @@ offline synchronization.
 
 #### 3.4.2 Electronic Site Log
 
-Open **Admin > Construction > Site Diary** to record daily weather, workforce, equipment, materials, completed work, incidents, and internal notes. The list provides explicit View, Edit, and Delete actions on desktop and mobile, plus multi-select deletion.
+Open **Admin > Site Command Board > Site operations > Site diary** to record daily weather, workforce, equipment, materials, completed work, incidents, and internal notes. The list provides explicit View, Edit, and Delete actions on desktop and mobile, plus multi-select deletion.
 
 The lifecycle is **Draft → Submitted → Confirmed**. Only Draft diaries can be edited; reopen a Submitted or Confirmed diary to Draft when its content needs correction. Users with management permission can permanently delete a diary in any status when it was created or transitioned accidentally. Single and bulk deletion always show a destructive confirmation and cannot be undone; the single-delete audit event retains the removed record snapshot.
 
@@ -1600,7 +1622,7 @@ The lifecycle is **Draft → Submitted → Confirmed**. Only Draft diaries can b
 
 #### 3.4.3 Partial Acceptance (Phase/Section Acceptance)
 
-Open **Admin > Construction > Partial Acceptance** to manage phase or work-item acceptance records. Authorized users can search, filter, sort, and paginate records by project, linked construction task, responsible person, acceptance date, and workflow status. Create or edit records with participants, findings, and related document or photo paths, then move them through Draft, Submitted, Approved, Rejected, or Cancelled states. Rejected records can be revised and resubmitted; approved and cancelled records are locked. Unless granted the view-all permission, users only see records connected to their project assignment, linked task ownership, creation, or workflow participation.
+Open **Admin > Site Command Board > QA/QC records > Partial acceptance** to manage phase or work-item acceptance records. Authorized users can search, filter, sort, and paginate records by project, linked construction task, responsible person, acceptance date, and workflow status. Create or edit records with participants, findings, and related document or photo paths, then move them through Draft, Submitted, Approved, Rejected, or Cancelled states. Rejected records can be revised and resubmitted; approved and cancelled records are locked. Unless granted the view-all permission, users only see records connected to their project assignment, linked task ownership, creation, or workflow participation.
 
 | Page | Functions |
 |------|-----------|
@@ -1610,7 +1632,7 @@ Open **Admin > Construction > Partial Acceptance** to manage phase or work-item 
 
 #### 3.4.4 Full Acceptance (Handover)
 
-Open **Admin > Construction > Project Handover** to manage one handover record
+Open **Admin > CM Office > Quality > Handover** to manage one handover record
 per Design Project in the current compatibility model. The list supports
 project, responsible user, planned date, status, readiness, text search, sorting,
 pagination, and CSV export. Users without the view-all permission only see
@@ -1699,6 +1721,15 @@ Before permanent deletion, the system shows an impact preview and requires the e
 | Vendor Detail | View company metadata and edit or permanently delete the record | Implemented |
 
 #### 3.5.2 Bid Comparison (Bid Tabulation)
+
+Open **Procurement → Contracts** to reach the selected project's supplier
+contract register. The **Open RFQs and bid comparison** action starts the
+quotation/selection path; **Contract registry** opens the existing Downstream
+contract registry filtered to the project. Award remains restricted to the
+existing authorized role, and direct contract creation still requires its
+existing management permission. This navigation does not grant either right.
+Contract lines for BOQ execution remain distinct from the supplier contract
+records themselves.
 
 Implemented at **Procurement → RFQs & bid comparison**. See the
 [RFQ workflow and operating contract](application_developer.md#718-rfq-and-supplier-comparison) for roles,
@@ -2339,7 +2370,8 @@ The main admin page provides an overview of system status and quick access to ma
 | Dashboard | `/admin`, `/admin/notifications` | Operational overview and personal notifications |
 | CRM | `/admin/leads`, `/admin/customers`, `/admin/opportunities`, `/admin/quotes`, `/admin/capability-documents`, `/admin/tenders`, `/admin/surveys`, `/admin/contracts` | Sales and contract lifecycle |
 | Design and permits | `/admin/design-projects`, `/admin/permits` | Concept, basic design, detail design, revision, IFC, and permit workflows |
-| Construction | `/admin/construction/tasks`, `/diary`, `/punchlist`, `/acceptance`, `/asbuilt`, `/handover` | Delivery, quality, acceptance, and handover |
+| Site Command Board (BCH) | `/admin/construction/bch/operations` (resource requests, site diary), `/admin/construction/bch/qa-qc` (dossiers, punch list, partial acceptance, HSE), `/admin/construction/bch/qs` | Field execution and evidence capture |
+| CM Office | `/admin/construction/cm/schedule` (plan, tasks, site diary), `/admin/construction/cm/commercial` (resource and QS management), `/admin/construction/cm/quality` (dossiers, punch list, acceptance, as-built, handover), `/admin/construction/cm/safety`, `/admin/construction/cm/contracts` | Planning, management on BCH's behalf, supervision, independent review, and project contract view |
 | Content | `/admin/activities`, `/admin/news`, `/admin/projects`, `/admin/services`, `/admin/about`, `/admin/categories` | Public website content and categories |
 | Recruitment and contacts | `/admin/recruitment`, `/admin/recruitment/employment-types`, `/admin/contacts` | Positions, applications, options, and inquiries |
 | Branding and processes | `/admin/clients`, `/admin/partners`, `/admin/suppliers`, `/admin/awards`, `/admin/processes/*` | Logo catalogs and internal process documents |

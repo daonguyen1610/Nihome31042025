@@ -1,7 +1,6 @@
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useRequestGuard } from "@/hooks/useRequestGuard";
-import { collectLookupPages } from "@/lib/pagination";
 import StatTile from "./ConstructionStatTile";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
@@ -20,15 +19,17 @@ import {
   Trash2,
   Users,
 } from "lucide-react";
-import AdminLayout from "@/components/layout/AdminLayout";
+import { type DesignProjectScopeProps } from "./constructionScope";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { PageLoading, PageError } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { PageEmpty, PageLoading, PageError } from "@/components/PageState";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { DIARY_STATUS_TONE } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -70,7 +71,6 @@ import {
 import {
   adminApi,
   type CreateSiteDiaryRequest,
-  type DesignProjectListItemResponse,
   type MasterDataOption,
   type SiteDiaryListParams,
   type SiteDiaryResponse,
@@ -79,12 +79,6 @@ import {
 } from "@/services/adminApi";
 
 const DIARY_STATUSES: SiteDiaryStatus[] = ["Draft", "Submitted", "Confirmed"];
-
-const STATUS_BADGE: Record<SiteDiaryStatus, string> = {
-  Draft: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Confirmed: "border-emerald-200 bg-emerald-50 text-emerald-800",
-};
 
 type ConfirmKind = "submit" | "confirm" | "reopen" | "delete" | null;
 
@@ -153,13 +147,13 @@ const formFromRow = (row: SiteDiaryResponse): DiaryForm => ({
   note: row.note ?? "",
 });
 
-const AdminSiteDiary = () => {
+export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopeProps) => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionDiaryManage);
-  const canConfirm = has(ADMIN_PERMS.constructionDiaryConfirm);
+  const canConfirm = scope === "review" && has(ADMIN_PERMS.constructionDiaryConfirm);
 
   // list state
   const [rows, setRows] = useState<SiteDiaryResponse[]>([]);
@@ -169,7 +163,7 @@ const AdminSiteDiary = () => {
   const [error, setError] = useState<string | null>(null);
 
   // filters
-  const [projectId, setProjectId] = useState<number | null>(null);
+  const projectId = designProjectId;
   const [status, setStatus] = useState<SiteDiaryStatus | "">("");
   const [weatherCode, setWeatherCode] = useState("");
   const [dateFrom, setDateFrom] = useState("");
@@ -207,28 +201,18 @@ const AdminSiteDiary = () => {
   const [actionBusy, setActionBusy] = useState(false);
 
   // lookups
-  const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
   const [weatherOptions, setWeatherOptions] = useState<MasterDataOption[]>([]);
 
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      try {
-        const [projResp, wxResp] = await Promise.all([
-          collectLookupPages((page) => adminApi.listDesignProjects({ pageSize: 200, page })).catch(
-            () => ({
-              data: { total: 0, page: 1, pageSize: 200, items: [] },
-            }),
-          ),
-          adminApi.getMasterDataOptions("diary_weather", lang).catch(() => ({ data: [] })),
-        ]);
-        if (cancelled) return;
-        setProjects(projResp.data.items ?? []);
-        setWeatherOptions((wxResp.data ?? []).filter((o) => o.isActive));
-      } catch {
+    void adminApi
+      .getMasterDataOptions("diary_weather", lang)
+      .then(({ data }) => {
+        if (!cancelled) setWeatherOptions((data ?? []).filter((option) => option.isActive));
+      })
+      .catch(() => {
         // non-fatal
-      }
-    })();
+      });
     return () => {
       cancelled = true;
     };
@@ -289,20 +273,8 @@ const AdminSiteDiary = () => {
     void fetchList();
   }, [fetchList]);
 
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusPill = (s: SiteDiaryStatus) => statusCounts[s] ?? 0;
 
-  const projectOptions = useMemo(
-    () => [
-      { value: "", label: t("siteDiary.filter.allProjects") },
-      ...projects.map((p) => ({ value: String(p.id), label: `${p.projectCode} — ${p.name}` })),
-    ],
-    [projects, t],
-  );
-  const projectOptionsForCreate = useMemo(
-    () => projects.map((p) => ({ value: String(p.id), label: `${p.projectCode} — ${p.name}` })),
-    [projects],
-  );
   const weatherSelectOptions = useMemo(
     () => [
       { value: "__all__", label: t("siteDiary.filter.allWeather") },
@@ -312,15 +284,9 @@ const AdminSiteDiary = () => {
   );
 
   const hasActiveFilter =
-    projectId != null ||
-    status !== "" ||
-    weatherCode !== "" ||
-    dateFrom !== "" ||
-    dateTo !== "" ||
-    search.trim() !== "";
+    status !== "" || weatherCode !== "" || dateFrom !== "" || dateTo !== "" || search.trim() !== "";
 
   const resetFilters = () => {
-    setProjectId(null);
     setStatus("");
     setWeatherCode("");
     setDateFrom("");
@@ -526,9 +492,9 @@ const AdminSiteDiary = () => {
 
   // ---- render helpers ----
   const renderStatusBadge = (row: SiteDiaryResponse) => (
-    <Badge variant="outline" className={cn(STATUS_BADGE[row.status])}>
+    <ConstructionStatusBadge tone={DIARY_STATUS_TONE[row.status]}>
       {t(`siteDiary.status.${row.status}`)}
-    </Badge>
+    </ConstructionStatusBadge>
   );
 
   const renderConfirmMessage = () => {
@@ -564,14 +530,9 @@ const AdminSiteDiary = () => {
   };
 
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6" data-testid="site-diary-page">
-        {/* header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">{t("siteDiary.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("siteDiary.subtitle")}</p>
-          </div>
+        <div className="flex justify-end">
           <div className="flex flex-wrap items-center gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()}>
               <RefreshCcw className="mr-2 h-4 w-4" />
@@ -613,20 +574,6 @@ const AdminSiteDiary = () => {
         {/* filters */}
         <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 [&>div]:min-w-0">
-            <FieldScope>
-              <Label className="text-xs text-muted-foreground">
-                {t("siteDiary.field.project")}
-              </Label>
-              <SearchableSelect
-                value={projectId == null ? "" : String(projectId)}
-                onChange={(v) => {
-                  setProjectId(v ? Number(v) : null);
-                  setPage(1);
-                }}
-                options={projectOptions}
-                placeholder={t("siteDiary.filter.allProjects")}
-              />
-            </FieldScope>
             <FieldScope>
               <Label className="text-xs text-muted-foreground">{t("siteDiary.field.status")}</Label>
               <Select
@@ -746,9 +693,17 @@ const AdminSiteDiary = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
-            {t("siteDiary.empty")}
-          </div>
+          <PageEmpty
+            message={t("siteDiary.empty")}
+            action={
+              canManage && (
+                <Button size="sm" onClick={openCreate} data-testid="diary-empty-new">
+                  <ClipboardList className="mr-2 h-4 w-4" />
+                  {t("siteDiary.new")}
+                </Button>
+              )
+            }
+          />
         ) : (
           <>
             {/* Mobile cards (< md) */}
@@ -778,11 +733,11 @@ const AdminSiteDiary = () => {
                   </div>
                   <div className="mt-2 flex flex-wrap items-center gap-2">
                     {renderStatusBadge(row)}
-                    <span className="inline-flex items-center gap-1 rounded bg-sky-50 px-1.5 py-0.5 text-xs text-sky-700">
+                    <span className="inline-flex items-center gap-1 rounded bg-info-soft px-1.5 py-0.5 text-xs text-info-strong">
                       <CloudSun className="h-3 w-3" />
                       {row.weatherLabel ?? row.weatherCode}
                     </span>
-                    <span className="inline-flex items-center gap-1 rounded bg-indigo-50 px-1.5 py-0.5 text-xs text-indigo-700">
+                    <span className="inline-flex items-center gap-1 rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
                       <Users className="h-3 w-3" />
                       {row.headcountTotal}
                     </span>
@@ -791,7 +746,7 @@ const AdminSiteDiary = () => {
                     {row.workPerformed}
                   </div>
                   {row.incidents && (
-                    <div className="mt-1 flex items-start gap-1 text-xs text-amber-700">
+                    <div className="mt-1 flex items-start gap-1 text-xs text-warning-strong">
                       <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                       <span className="line-clamp-2">{row.incidents}</span>
                     </div>
@@ -837,32 +792,6 @@ const AdminSiteDiary = () => {
                   </div>
                 </article>
               ))}
-              <div className="flex items-center justify-between px-1 pt-1 text-xs text-muted-foreground">
-                <span>
-                  {t("common.showing")} {rows.length} / {total}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    ←
-                  </Button>
-                  <span className="px-2 py-1">
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    →
-                  </Button>
-                </div>
-              </div>
             </div>
 
             {/* Desktop table (md+) */}
@@ -917,7 +846,7 @@ const AdminSiteDiary = () => {
                         </td>
                         <td className="px-3 py-2 text-xs text-foreground">
                           <div className="inline-flex items-center gap-1">
-                            <CloudSun className="h-3.5 w-3.5 text-sky-600" />
+                            <CloudSun className="h-3.5 w-3.5 text-info-strong" />
                             {row.weatherLabel ?? row.weatherCode}
                           </div>
                           {row.weatherNote && (
@@ -934,7 +863,7 @@ const AdminSiteDiary = () => {
                             {row.workPerformed}
                           </div>
                           {row.incidents && (
-                            <div className="mt-0.5 flex items-start gap-1 text-[11px] text-amber-700">
+                            <div className="mt-0.5 flex items-start gap-1 text-[11px] text-warning-strong">
                               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                               <span className="line-clamp-1">{row.incidents}</span>
                             </div>
@@ -995,33 +924,14 @@ const AdminSiteDiary = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                <span>
-                  {t("common.showing")} {rows.length} / {total}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    ←
-                  </Button>
-                  <span className="px-2 py-1">
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    →
-                  </Button>
-                </div>
-              </div>
             </div>
+            <ListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              disabled={loading}
+            />
           </>
         )}
 
@@ -1034,15 +944,6 @@ const AdminSiteDiary = () => {
             </DialogHeader>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <FieldScope>
-                  <Label>{t("siteDiary.field.project")}</Label>
-                  <SearchableSelect
-                    value={createProjectId == null ? "" : String(createProjectId)}
-                    onChange={(v) => setCreateProjectId(v ? Number(v) : null)}
-                    options={projectOptionsForCreate}
-                    placeholder="—"
-                  />
-                </FieldScope>
                 <FieldScope>
                   <Label>{t("siteDiary.field.date")}</Label>
                   <Input
@@ -1148,7 +1049,7 @@ const AdminSiteDiary = () => {
                   onChange={(e) => setCreateForm((f) => ({ ...f, note: e.target.value }))}
                 />
               </FieldScope>
-              {createError && <div className="text-sm text-rose-600">{createError}</div>}
+              {createError && <div className="text-sm text-destructive">{createError}</div>}
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setCreating(false)} disabled={saving}>
@@ -1331,7 +1232,7 @@ const AdminSiteDiary = () => {
                     </div>
                   )}
 
-                  {detailError && <div className="text-sm text-rose-600">{detailError}</div>}
+                  {detailError && <div className="text-sm text-destructive">{detailError}</div>}
 
                   <div className="flex flex-wrap items-center justify-between gap-2 pt-2">
                     <div className="flex flex-wrap gap-2">
@@ -1469,7 +1370,7 @@ const AdminSiteDiary = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AdminLayout>
+    </>
   );
 };
 
@@ -1493,5 +1394,3 @@ const HeadcountField = ({ label, value, onChange, disabled }: HeadcountFieldProp
     />
   </FieldScope>
 );
-
-export default AdminSiteDiary;

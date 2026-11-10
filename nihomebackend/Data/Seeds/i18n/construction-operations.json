@@ -1,189 +1,1840 @@
 [
-  { "key": "construction.workspace.cm", "category": "construction", "vi": "Phòng CM", "en": "CM Office", "zh": "CM办公室", "ja": "CMオフィス" },
-  { "key": "construction.workspace.siteCommand", "category": "construction", "vi": "Ban chỉ huy công trường", "en": "Site Command Board", "zh": "现场指挥部", "ja": "現場指揮本部" },
-  { "key": "construction.resourceRequests.title", "category": "construction", "vi": "Đề xuất nguồn lực", "en": "Resource requests", "zh": "资源申请", "ja": "リソース申請" },
-  { "key": "construction.resourceRequests.material", "category": "construction", "vi": "Vật tư", "en": "Material", "zh": "材料", "ja": "資材" },
-  { "key": "construction.resourceRequests.equipment", "category": "construction", "vi": "Máy móc, thiết bị", "en": "Equipment and machinery", "zh": "设备与机械", "ja": "設備・機械" },
-  { "key": "construction.resourceRequests.labour", "category": "construction", "vi": "Nhân công", "en": "Labour", "zh": "人工", "ja": "労務" },
-  { "key": "construction.qaQc.title", "category": "construction", "vi": "QA/QC", "en": "QA/QC", "zh": "QA/QC", "ja": "QA/QC" },
-  { "key": "construction.qs.title", "category": "construction", "vi": "QS công trường", "en": "Site QS", "zh": "现场QS", "ja": "現場QS" },
-  { "key": "construction.qs.upstream", "category": "construction", "vi": "Đầu ra", "en": "Upstream", "zh": "上游", "ja": "上流" },
-  { "key": "construction.qs.downstream", "category": "construction", "vi": "Đầu vào", "en": "Downstream", "zh": "下游", "ja": "下流" },
-  { "key": "construction.review.pendingCm", "category": "construction", "vi": "Chờ Phòng CM duyệt", "en": "Pending CM review", "zh": "等待CM审核", "ja": "CMレビュー待ち" },
-  { "key": "construction.cm.notEvaluated", "category": "construction", "vi": "Chưa đánh giá điều kiện khởi công", "en": "Start readiness has not been evaluated", "zh": "尚未评估开工条件", "ja": "着工条件はまだ評価されていません" },
-  { "key": "nav.constructionBch", "category": "nav", "vi": "Ban chỉ huy công trường", "en": "Site Command Board", "zh": "现场指挥部", "ja": "現場指揮本部" },
-  { "key": "nav.constructionCm", "category": "nav", "vi": "Phòng CM", "en": "CM Office", "zh": "CM办公室", "ja": "CMオフィス" },
-  { "key": "nav.constructionResourceRequests", "category": "nav", "vi": "Đề xuất nguồn lực", "en": "Resource requests", "zh": "资源申请", "ja": "リソース申請" },
-  { "key": "nav.constructionQaQc", "category": "nav", "vi": "Hồ sơ QA/QC", "en": "QA/QC dossiers", "zh": "QA/QC档案", "ja": "QA/QC記録" },
-  { "key": "nav.constructionQs", "category": "nav", "vi": "QS công trường", "en": "Site QS", "zh": "现场QS", "ja": "現場QS" },
-  { "key": "nav.constructionCmControl", "category": "nav", "vi": "Kiểm soát thi công", "en": "Construction control", "zh": "施工管控", "ja": "施工管理" },
-  { "key": "construction.common.project", "category": "construction", "vi": "Dự án", "en": "Project", "zh": "项目", "ja": "プロジェクト" },
-  { "key": "construction.common.selectProject", "category": "construction", "vi": "Chọn dự án", "en": "Select project", "zh": "选择项目", "ja": "プロジェクトを選択" },
-  { "key": "construction.common.noProjects", "category": "construction", "vi": "Không có dự án được phân công", "en": "No assigned projects", "zh": "没有已分配的项目", "ja": "担当プロジェクトがありません" },
-  { "key": "construction.common.projectsLoadError", "category": "construction", "vi": "Không thể tải danh sách dự án", "en": "Unable to load projects", "zh": "无法加载项目", "ja": "プロジェクトを読み込めません" },
-  { "key": "construction.common.actionError", "category": "construction", "vi": "Không thể hoàn tất thao tác", "en": "Unable to complete the action", "zh": "无法完成操作", "ja": "操作を完了できません" },
-  { "key": "construction.common.wbs", "category": "construction", "vi": "Mã WBS", "en": "WBS code", "zh": "WBS编码", "ja": "WBSコード" },
-  { "key": "construction.common.submit", "category": "construction", "vi": "Trình Phòng CM", "en": "Submit to CM", "zh": "提交CM", "ja": "CMへ提出" },
-  { "key": "construction.common.submitted", "category": "construction", "vi": "Đã trình Phòng CM", "en": "Submitted to CM", "zh": "已提交CM", "ja": "CMへ提出済み" },
-  { "key": "construction.common.approve", "category": "construction", "vi": "Phê duyệt", "en": "Approve", "zh": "批准", "ja": "承認" },
-  { "key": "construction.common.reject", "category": "construction", "vi": "Từ chối", "en": "Reject", "zh": "拒绝", "ja": "却下" },
-  { "key": "construction.resource.title", "category": "construction", "vi": "Đề xuất nguồn lực", "en": "Resource requests", "zh": "资源申请", "ja": "リソース申請" },
-  { "key": "construction.resource.description", "category": "construction", "vi": "BCH đề xuất vật tư, máy móc hoặc nhân công theo WBS để Phòng CM duyệt.", "en": "BCH requests material, equipment, or labour by WBS for CM review.", "zh": "现场指挥部按WBS申请材料、设备或人工，供CM审核。", "ja": "現場指揮部がWBS別に資材・設備・労務を申請し、CMが審査します。" },
-  { "key": "construction.resource.new", "category": "construction", "vi": "Tạo đề xuất", "en": "New request", "zh": "新建申请", "ja": "新規申請" },
-  { "key": "construction.resource.empty", "category": "construction", "vi": "Chưa có đề xuất nguồn lực", "en": "No resource requests", "zh": "暂无资源申请", "ja": "リソース申請はありません" },
-  { "key": "construction.resource.type", "category": "construction", "vi": "Loại nguồn lực", "en": "Resource type", "zh": "资源类型", "ja": "リソース種別" },
-  { "key": "construction.resource.type.Material", "category": "construction", "vi": "Vật tư", "en": "Material", "zh": "材料", "ja": "資材" },
-  { "key": "construction.resource.type.Equipment", "category": "construction", "vi": "Máy móc, thiết bị", "en": "Equipment", "zh": "设备", "ja": "設備" },
-  { "key": "construction.resource.type.Labour", "category": "construction", "vi": "Nhân công", "en": "Labour", "zh": "人工", "ja": "労務" },
-  { "key": "construction.resource.needBy", "category": "construction", "vi": "Ngày cần", "en": "Need-by date", "zh": "需求日期", "ja": "必要日" },
-  { "key": "construction.resource.quantity", "category": "construction", "vi": "Khối lượng", "en": "Quantity", "zh": "数量", "ja": "数量" },
-  { "key": "construction.resource.unit", "category": "construction", "vi": "Đơn vị", "en": "Unit", "zh": "单位", "ja": "単位" },
-  { "key": "construction.resource.reason", "category": "construction", "vi": "Lý do", "en": "Reason", "zh": "原因", "ja": "理由" },
-  { "key": "construction.resource.boqLine", "category": "construction", "vi": "Dòng BOQ thực hiện", "en": "Execution BOQ line", "zh": "执行BOQ明细", "ja": "実行BOQ明細" },
-  { "key": "construction.resource.handoff", "category": "construction", "vi": "Trạng thái bàn giao", "en": "Handoff status", "zh": "移交状态", "ja": "引継ぎ状況" },
-  { "key": "construction.resource.created", "category": "construction", "vi": "Đã tạo đề xuất nguồn lực", "en": "Resource request created", "zh": "资源申请已创建", "ja": "リソース申請を作成しました" },
-  { "key": "construction.resource.loadError", "category": "construction", "vi": "Không thể tải đề xuất nguồn lực", "en": "Unable to load resource requests", "zh": "无法加载资源申请", "ja": "リソース申請を読み込めません" },
-  { "key": "construction.resource.saveError", "category": "construction", "vi": "Không thể lưu đề xuất nguồn lực", "en": "Unable to save resource request", "zh": "无法保存资源申请", "ja": "リソース申請を保存できません" },
-  { "key": "construction.qaQc.description", "category": "construction", "vi": "Hồ sơ chất lượng theo template ISO, WBS và IFC đã phát hành.", "en": "Quality dossiers based on an ISO template, WBS, and released IFC.", "zh": "基于ISO模板、WBS和已发布IFC的质量档案。", "ja": "ISOテンプレート、WBS、発行済みIFCに基づく品質記録です。" },
-  { "key": "construction.qaQc.new", "category": "construction", "vi": "Tạo hồ sơ QA/QC", "en": "New QA/QC dossier", "zh": "新建QA/QC档案", "ja": "QA/QC記録を作成" },
-  { "key": "construction.qaQc.empty", "category": "construction", "vi": "Chưa có hồ sơ QA/QC", "en": "No QA/QC dossiers", "zh": "暂无QA/QC档案", "ja": "QA/QC記録はありません" },
-  { "key": "construction.qaQc.template", "category": "construction", "vi": "Template ISO", "en": "ISO template", "zh": "ISO模板", "ja": "ISOテンプレート" },
-  { "key": "construction.qaQc.selectTemplate", "category": "construction", "vi": "Chọn template đã phát hành", "en": "Select a published template", "zh": "选择已发布模板", "ja": "公開済みテンプレートを選択" },
-  { "key": "construction.qaQc.dossierTitle", "category": "construction", "vi": "Tên hồ sơ", "en": "Dossier title", "zh": "档案名称", "ja": "記録名" },
-  { "key": "construction.qaQc.ifcRelease", "category": "construction", "vi": "IFC đã phát hành", "en": "Released IFC", "zh": "已发布IFC", "ja": "発行済みIFC" },
-  { "key": "construction.qaQc.checklistJson", "category": "construction", "vi": "Kết quả checklist (JSON)", "en": "Checklist results (JSON)", "zh": "检查表结果（JSON）", "ja": "チェックリスト結果（JSON）" },
-  { "key": "construction.qaQc.evidence", "category": "construction", "vi": "Tài liệu minh chứng", "en": "Evidence documents", "zh": "证明文件", "ja": "証拠書類" },
-  { "key": "construction.qaQc.evidenceIds", "category": "construction", "vi": "ID tài liệu, phân cách bằng dấu phẩy", "en": "Document IDs, comma-separated", "zh": "文档ID，以逗号分隔", "ja": "文書ID（カンマ区切り）" },
-  { "key": "construction.qaQc.evidenceDocumentId", "category": "construction", "vi": "ID tài liệu minh chứng", "en": "Evidence document ID", "zh": "证明文档ID", "ja": "証拠文書ID" },
-  { "key": "construction.qaQc.evidenceType", "category": "construction", "vi": "Loại minh chứng", "en": "Evidence type", "zh": "证明类型", "ja": "証拠の種類" },
-  { "key": "construction.qaQc.evidenceType.General", "category": "construction", "vi": "Khác", "en": "Other", "zh": "其他", "ja": "その他" },
-  { "key": "construction.qaQc.evidenceType.AcceptanceRecord", "category": "construction", "vi": "Biên bản nghiệm thu", "en": "Acceptance record", "zh": "验收记录", "ja": "検収記録" },
-  { "key": "construction.qaQc.evidenceType.Sample", "category": "construction", "vi": "Mẫu vật liệu", "en": "Sample", "zh": "材料样品", "ja": "材料サンプル" },
-  { "key": "construction.qaQc.evidenceType.LaboratoryResult", "category": "construction", "vi": "Kết quả thí nghiệm", "en": "Laboratory result", "zh": "试验结果", "ja": "試験結果" },
-  { "key": "construction.qaQc.evidenceType.MaterialCertificate", "category": "construction", "vi": "Chứng chỉ vật liệu", "en": "Material certificate", "zh": "材料合格证", "ja": "材料証明書" },
-  { "key": "construction.qaQc.evidenceType.SiteDiary", "category": "construction", "vi": "Nhật ký công trường", "en": "Site diary", "zh": "施工日志", "ja": "現場日誌" },
-  { "key": "construction.qaQc.addEvidence", "category": "construction", "vi": "Thêm minh chứng", "en": "Add evidence", "zh": "添加证明文件", "ja": "証拠を追加" },
-  { "key": "construction.qaQc.removeEvidence", "category": "construction", "vi": "Bỏ minh chứng", "en": "Remove evidence", "zh": "移除证明文件", "ja": "証拠を削除" },
-  { "key": "construction.qaQc.invalidEvidence", "category": "construction", "vi": "ID minh chứng phải là số nguyên dương và không được trùng. Ví dụ: 101.", "en": "Evidence IDs must be unique positive integers, for example 101.", "zh": "证明文档ID必须是唯一的正整数，例如101。", "ja": "証拠文書IDは重複しない正の整数にしてください（例：101）。" },
-  { "key": "construction.qaQc.created", "category": "construction", "vi": "Đã tạo hồ sơ QA/QC", "en": "QA/QC dossier created", "zh": "QA/QC档案已创建", "ja": "QA/QC記録を作成しました" },
-  { "key": "construction.qaQc.loadError", "category": "construction", "vi": "Không thể tải hồ sơ QA/QC", "en": "Unable to load QA/QC dossiers", "zh": "无法加载QA/QC档案", "ja": "QA/QC記録を読み込めません" },
-  { "key": "construction.qaQc.saveError", "category": "construction", "vi": "Không thể lưu hồ sơ QA/QC", "en": "Unable to save QA/QC dossier", "zh": "无法保存QA/QC档案", "ja": "QA/QC記録を保存できません" },
-  { "key": "construction.qaQc.invalidChecklistJson", "category": "construction", "vi": "Kết quả checklist phải là JSON hợp lệ", "en": "Checklist results must be valid JSON", "zh": "检查表结果必须是有效JSON", "ja": "チェックリスト結果は有効なJSONである必要があります" },
-  { "key": "construction.qaQc.templates", "category": "construction", "vi": "Template QA/QC", "en": "QA/QC templates", "zh": "QA/QC模板", "ja": "QA/QCテンプレート" },
-  { "key": "construction.qaQc.newTemplate", "category": "construction", "vi": "Tạo phiên bản template", "en": "New template version", "zh": "新建模板版本", "ja": "テンプレート版を作成" },
-  { "key": "construction.qaQc.noTemplates", "category": "construction", "vi": "Chưa có template", "en": "No templates", "zh": "暂无模板", "ja": "テンプレートはありません" },
-  { "key": "construction.qaQc.publish", "category": "construction", "vi": "Phát hành", "en": "Publish", "zh": "发布", "ja": "公開" },
-  { "key": "construction.qaQc.templateCode", "category": "construction", "vi": "Mã template", "en": "Template code", "zh": "模板编码", "ja": "テンプレートコード" },
-  { "key": "construction.qaQc.nameVi", "category": "construction", "vi": "Tên tiếng Việt", "en": "Vietnamese name", "zh": "越南语名称", "ja": "ベトナム語名" },
-  { "key": "construction.qaQc.nameEn", "category": "construction", "vi": "Tên tiếng Anh", "en": "English name", "zh": "英语名称", "ja": "英語名" },
-  { "key": "construction.qaQc.nameZh", "category": "construction", "vi": "Tên tiếng Trung", "en": "Chinese name", "zh": "中文名称", "ja": "中国語名" },
-  { "key": "construction.qaQc.nameJa", "category": "construction", "vi": "Tên tiếng Nhật", "en": "Japanese name", "zh": "日语名称", "ja": "日本語名" },
-  { "key": "construction.qaQc.invalidSchemaJson", "category": "construction", "vi": "Schema template phải là JSON hợp lệ", "en": "Template schema must be valid JSON", "zh": "模板结构必须是有效JSON", "ja": "テンプレートスキーマは有効なJSONである必要があります" },
-  { "key": "construction.qaQc.templateCreated", "category": "construction", "vi": "Đã tạo phiên bản template", "en": "Template version created", "zh": "模板版本已创建", "ja": "テンプレート版を作成しました" },
-  { "key": "construction.qaQc.templatePublished", "category": "construction", "vi": "Đã phát hành template", "en": "Template published", "zh": "模板已发布", "ja": "テンプレートを公開しました" },
-  { "key": "construction.qs.description", "category": "construction", "vi": "Nghiệm thu khối lượng Upstream và Downstream tách biệt.", "en": "Separate Upstream and Downstream quantity certification.", "zh": "分别管理上游和下游工程量确认。", "ja": "上流・下流の出来高認定を分離します。" },
-  { "key": "construction.qs.new", "category": "construction", "vi": "Tạo đợt QS", "en": "New QS batch", "zh": "新建QS批次", "ja": "QSバッチを作成" },
-  { "key": "construction.qs.empty", "category": "construction", "vi": "Chưa có đợt QS", "en": "No QS batches", "zh": "暂无QS批次", "ja": "QSバッチはありません" },
-  { "key": "construction.qs.direction", "category": "construction", "vi": "Hướng", "en": "Direction", "zh": "方向", "ja": "方向" },
-  { "key": "construction.qs.direction.Upstream", "category": "construction", "vi": "Đầu ra", "en": "Upstream", "zh": "上游", "ja": "上流" },
-  { "key": "construction.qs.direction.Downstream", "category": "construction", "vi": "Đầu vào", "en": "Downstream", "zh": "下游", "ja": "下流" },
-  { "key": "construction.qs.contract", "category": "construction", "vi": "Hợp đồng", "en": "Contract", "zh": "合同", "ja": "契約" },
-  { "key": "construction.qs.period", "category": "construction", "vi": "Kỳ nghiệm thu", "en": "Certification period", "zh": "确认期间", "ja": "認定期間" },
-  { "key": "construction.qs.periodFrom", "category": "construction", "vi": "Từ ngày", "en": "From", "zh": "开始日期", "ja": "開始日" },
-  { "key": "construction.qs.periodTo", "category": "construction", "vi": "Đến ngày", "en": "To", "zh": "结束日期", "ja": "終了日" },
-  { "key": "construction.qs.batchDescription", "category": "construction", "vi": "Mô tả đợt nghiệm thu", "en": "Batch description", "zh": "批次说明", "ja": "バッチ説明" },
-  { "key": "construction.qs.lines", "category": "construction", "vi": "Dòng khối lượng", "en": "Quantity lines", "zh": "工程量明细", "ja": "数量明細" },
-  { "key": "construction.qs.addLine", "category": "construction", "vi": "Thêm dòng", "en": "Add line", "zh": "添加明细", "ja": "明細を追加" },
-  { "key": "construction.qs.itemCode", "category": "construction", "vi": "Mã hạng mục", "en": "Item code", "zh": "项目编码", "ja": "項目コード" },
-  { "key": "construction.qs.lineDescription", "category": "construction", "vi": "Mô tả hạng mục", "en": "Item description", "zh": "项目说明", "ja": "項目説明" },
-  { "key": "construction.qs.amount", "category": "construction", "vi": "Giá trị nghiệm thu", "en": "Certified amount", "zh": "确认金额", "ja": "認定額" },
-  { "key": "construction.qs.created", "category": "construction", "vi": "Đã tạo đợt QS", "en": "QS batch created", "zh": "QS批次已创建", "ja": "QSバッチを作成しました" },
-  { "key": "construction.qs.loadError", "category": "construction", "vi": "Không thể tải dữ liệu QS", "en": "Unable to load QS batches", "zh": "无法加载QS批次", "ja": "QSバッチを読み込めません" },
-  { "key": "construction.qs.saveError", "category": "construction", "vi": "Không thể lưu đợt QS", "en": "Unable to save QS batch", "zh": "无法保存QS批次", "ja": "QSバッチを保存できません" },
-  { "key": "construction.cm.title", "category": "construction", "vi": "Kiểm soát thi công – Phòng CM", "en": "CM construction control", "zh": "CM施工管控", "ja": "CM施工管理" },
-  { "key": "construction.cm.description", "category": "construction", "vi": "Chuẩn bị dự án, kiểm tra điều kiện khởi công và duyệt độc lập hồ sơ BCH.", "en": "Prepare projects, evaluate start readiness, and independently review BCH records.", "zh": "项目准备、开工条件评估及BCH记录独立审核。", "ja": "プロジェクト準備、着工条件評価、BCH記録の独立審査を行います。" },
-  { "key": "construction.cm.preparation", "category": "construction", "vi": "Chuẩn bị và khởi công", "en": "Preparation and start", "zh": "准备与开工", "ja": "準備と着工" },
-  { "key": "construction.cm.version", "category": "construction", "vi": "Phiên bản {version}", "en": "Version {version}", "zh": "版本 {version}", "ja": "バージョン {version}" },
-  { "key": "construction.cm.evaluate", "category": "construction", "vi": "Đánh giá điều kiện", "en": "Evaluate readiness", "zh": "评估条件", "ja": "条件を評価" },
-  { "key": "construction.cm.start", "category": "construction", "vi": "Cho phép khởi công", "en": "Start construction", "zh": "允许开工", "ja": "着工を許可" },
-  { "key": "construction.cm.ready", "category": "construction", "vi": "Đủ điều kiện khởi công", "en": "Ready to start", "zh": "具备开工条件", "ja": "着工可能" },
-  { "key": "construction.cm.blockerCount", "category": "construction", "vi": "Còn {count} điều kiện chưa đạt", "en": "{count} readiness conditions remain", "zh": "尚有 {count} 项条件未满足", "ja": "未達条件が {count} 件あります" },
-  { "key": "construction.cm.blockers", "category": "construction", "vi": "Điều kiện chưa đạt", "en": "Unmet conditions", "zh": "未满足条件", "ja": "未達条件" },
-  { "key": "construction.cm.noPreparation", "category": "construction", "vi": "Chưa có kế hoạch chuẩn bị thi công", "en": "No construction preparation exists", "zh": "尚无施工准备计划", "ja": "施工準備計画がありません" },
-  { "key": "construction.cm.noPendingResources", "category": "construction", "vi": "Không có đề xuất nguồn lực chờ duyệt", "en": "No resource requests pending review", "zh": "没有待审核的资源申请", "ja": "審査待ちのリソース申請はありません" },
-  { "key": "construction.cm.noPendingQaQc", "category": "construction", "vi": "Không có hồ sơ QA/QC chờ duyệt", "en": "No QA/QC dossiers pending review", "zh": "没有待审核的QA/QC档案", "ja": "審査待ちのQA/QC記録はありません" },
-  { "key": "construction.cm.noPendingQs", "category": "construction", "vi": "Không có đợt QS chờ duyệt", "en": "No QS batches pending review", "zh": "没有待审核的QS批次", "ja": "審査待ちのQSバッチはありません" },
-  { "key": "construction.cm.decisionReason", "category": "construction", "vi": "Ý kiến duyệt", "en": "Review reason", "zh": "审核意见", "ja": "審査理由" },
-  { "key": "construction.cm.approveTitle", "category": "construction", "vi": "Phê duyệt hồ sơ", "en": "Approve record", "zh": "批准记录", "ja": "記録を承認" },
-  { "key": "construction.cm.rejectTitle", "category": "construction", "vi": "Từ chối hồ sơ", "en": "Reject record", "zh": "拒绝记录", "ja": "記録を却下" },
-  { "key": "construction.cm.saved", "category": "construction", "vi": "Đã lưu kế hoạch chuẩn bị", "en": "Preparation saved", "zh": "准备计划已保存", "ja": "準備計画を保存しました" },
-  { "key": "construction.cm.evaluated", "category": "construction", "vi": "Đã đánh giá điều kiện khởi công", "en": "Readiness evaluated", "zh": "开工条件已评估", "ja": "着工条件を評価しました" },
-  { "key": "construction.cm.started", "category": "construction", "vi": "Dự án đã chuyển sang thi công", "en": "Project moved into construction", "zh": "项目已进入施工阶段", "ja": "プロジェクトを施工段階へ移行しました" },
-  { "key": "construction.cm.decisionSaved", "category": "construction", "vi": "Đã lưu quyết định duyệt", "en": "Review decision saved", "zh": "审核决定已保存", "ja": "審査結果を保存しました" },
-  { "key": "construction.cm.loadError", "category": "construction", "vi": "Không thể tải dữ liệu kiểm soát thi công", "en": "Unable to load construction control data", "zh": "无法加载施工管控数据", "ja": "施工管理データを読み込めません" },
-  { "key": "rbac.role.SITE_COMMANDER.label", "category": "rbac", "vi": "Chỉ huy trưởng BCH", "en": "Site Commander", "zh": "现场指挥长", "ja": "現場指揮責任者" },
-  { "key": "rbac.role.SITE_COMMANDER.description", "category": "rbac", "vi": "Điều phối công trường và lập hồ sơ BCH trong dự án được phân công.", "en": "Coordinates the assigned site and creates BCH records.", "zh": "协调所分配工地并创建BCH记录。", "ja": "担当現場を調整しBCH記録を作成します。" },
-  { "key": "rbac.role.SITE_QAQC.label", "category": "rbac", "vi": "Kỹ sư QA/QC công trường", "en": "Site QA/QC Engineer", "zh": "现场QA/QC工程师", "ja": "現場QA/QC技術者" },
-  { "key": "rbac.role.SITE_QAQC.description", "category": "rbac", "vi": "Lập nhật ký, hồ sơ chất lượng và bằng chứng kiểm tra theo IFC.", "en": "Creates diaries, quality dossiers, and IFC inspection evidence.", "zh": "创建日志、质量档案和IFC检查证据。", "ja": "日誌、品質記録、IFC検査証拠を作成します。" },
-  { "key": "construction.preparationStatus.Draft", "category": "construction", "vi": "Bản nháp", "en": "Draft", "zh": "草稿", "ja": "下書き" },
-  { "key": "construction.preparationStatus.Published", "category": "construction", "vi": "Đã công bố", "en": "Published", "zh": "已发布", "ja": "公開済み" },
-  { "key": "construction.preparationStatus.ReadyToStart", "category": "construction", "vi": "Sẵn sàng khởi công", "en": "Ready to start", "zh": "可开工", "ja": "着工可能" },
-  { "key": "construction.preparationStatus.InConstruction", "category": "construction", "vi": "Đang thi công", "en": "In construction", "zh": "施工中", "ja": "施工中" },
-  { "key": "construction.preparationStatus.Superseded", "category": "construction", "vi": "Đã thay thế", "en": "Superseded", "zh": "已替代", "ja": "置換済み" },
-  { "key": "construction.status.Draft", "category": "construction", "vi": "Bản nháp", "en": "Draft", "zh": "草稿", "ja": "下書き" },
-  { "key": "construction.status.PendingCmReview", "category": "construction", "vi": "Chờ CM duyệt", "en": "Pending CM review", "zh": "待CM审核", "ja": "CM審査待ち" },
-  { "key": "construction.status.CmApproved", "category": "construction", "vi": "CM đã duyệt", "en": "CM approved", "zh": "CM已批准", "ja": "CM承認済み" },
-  { "key": "construction.status.CmRejected", "category": "construction", "vi": "CM từ chối", "en": "CM rejected", "zh": "CM已拒绝", "ja": "CM却下" },
-  { "key": "construction.handoff.NotReady", "category": "construction", "vi": "Chưa sẵn sàng", "en": "Not ready", "zh": "未就绪", "ja": "未準備" },
-  { "key": "construction.handoff.ReadyForProcurementAndFinance", "category": "construction", "vi": "Sẵn sàng cho Cung ứng và Tài chính", "en": "Ready for Procurement and Finance", "zh": "可移交采购与财务", "ja": "調達・財務へ引渡し可能" },
-  { "key": "construction.handoff.MaterialRequestCreated", "category": "construction", "vi": "Đã tạo đề nghị vật tư", "en": "Material request created", "zh": "物料申请已创建", "ja": "資材申請作成済み" },
-  { "key": "construction.cm.wbsBaselineReference", "category": "construction", "vi": "Tham chiếu WBS baseline", "en": "WBS baseline reference", "zh": "WBS基线引用", "ja": "WBSベースライン参照" },
-  { "key": "construction.cm.scheduleBaselineReference", "category": "construction", "vi": "Tham chiếu tiến độ baseline", "en": "Schedule baseline reference", "zh": "进度基线引用", "ja": "工程ベースライン参照" },
-  { "key": "construction.cm.sCurveBaselineReference", "category": "construction", "vi": "Tham chiếu S-Curve baseline", "en": "S-Curve baseline reference", "zh": "S曲线基线引用", "ja": "Sカーブベースライン参照" },
-  { "key": "construction.cm.bchOrganizationReference", "category": "construction", "vi": "Tham chiếu tổ chức BCH", "en": "BCH organization reference", "zh": "BCH组织引用", "ja": "BCH組織参照" },
-  { "key": "construction.cm.resourcePlanReference", "category": "construction", "vi": "Tham chiếu kế hoạch nguồn lực", "en": "Resource plan reference", "zh": "资源计划引用", "ja": "リソース計画参照" },
-  { "key": "construction.cm.budgetBaselineReference", "category": "construction", "vi": "Tham chiếu ngân sách baseline", "en": "Budget baseline reference", "zh": "预算基线引用", "ja": "予算ベースライン参照" },
-  { "key": "construction.cm.budgetBaselineLocked", "category": "construction", "vi": "Đã khóa ngân sách baseline", "en": "Budget baseline locked", "zh": "预算基线已锁定", "ja": "予算ベースラインをロック済み" },
-  { "key": "construction.cm.siteHandoverRequired", "category": "construction", "vi": "Yêu cầu bàn giao mặt bằng", "en": "Site handover required", "zh": "要求场地移交", "ja": "現場引渡し必須" },
-  { "key": "construction.cm.siteHandoverComplete", "category": "construction", "vi": "Đã bàn giao mặt bằng", "en": "Site handover complete", "zh": "场地移交已完成", "ja": "現場引渡し完了" },
-  { "key": "construction.cm.methodStatementRequired", "category": "construction", "vi": "Yêu cầu biện pháp thi công", "en": "Method statement required", "zh": "要求施工方案", "ja": "施工要領書必須" },
-  { "key": "construction.cm.methodStatementApproved", "category": "construction", "vi": "Biện pháp thi công đã duyệt", "en": "Method statement approved", "zh": "施工方案已批准", "ja": "施工要領書承認済み" },
-  { "key": "construction.cm.hsePlanRequired", "category": "construction", "vi": "Yêu cầu kế hoạch HSE", "en": "HSE plan required", "zh": "要求HSE计划", "ja": "HSE計画必須" },
-  { "key": "construction.cm.hsePlanApproved", "category": "construction", "vi": "Kế hoạch HSE đã duyệt", "en": "HSE plan approved", "zh": "HSE计划已批准", "ja": "HSE計画承認済み" },
-  { "key": "construction.qaQc.templateSummary", "category": "construction", "vi": "{count} mẫu QA/QC đang áp dụng", "en": "{count} active QA/QC templates", "zh": "{count} 个有效QA/QC模板", "ja": "有効なQA/QCテンプレート {count} 件" },
-  { "key": "rbac.perm.construction.cm-preparation.view.label", "category": "rbac", "vi": "Xem chuẩn bị thi công", "en": "View CM preparation", "zh": "查看施工准备", "ja": "施工準備を表示" },
-  { "key": "rbac.perm.construction.cm-preparation.view.description", "category": "rbac", "vi": "Xem baseline và điều kiện khởi công của dự án được phân công.", "en": "View baselines and start readiness for assigned projects.", "zh": "查看所分配项目的基线和开工条件。", "ja": "担当プロジェクトのベースラインと着工条件を表示します。" },
-  { "key": "rbac.perm.construction.cm-preparation.manage.label", "category": "rbac", "vi": "Quản lý chuẩn bị thi công", "en": "Manage CM preparation", "zh": "管理施工准备", "ja": "施工準備を管理" },
-  { "key": "rbac.perm.construction.cm-preparation.manage.description", "category": "rbac", "vi": "Lập phiên bản chuẩn bị và đánh giá điều kiện khởi công.", "en": "Version preparation records and evaluate start readiness.", "zh": "编制准备版本并评估开工条件。", "ja": "準備記録を版管理し着工条件を評価します。" },
-  { "key": "rbac.perm.construction.cm-preparation.start.label", "category": "rbac", "vi": "Cho phép khởi công", "en": "Authorize construction start", "zh": "批准开工", "ja": "着工を承認" },
-  { "key": "rbac.perm.construction.cm-preparation.start.description", "category": "rbac", "vi": "Chuyển dự án đủ điều kiện sang trạng thái đang thi công.", "en": "Move a ready project into construction.", "zh": "将满足条件的项目转入施工。", "ja": "条件を満たすプロジェクトを施工中へ移行します。" },
-  { "key": "rbac.perm.construction.resource-request.view.label", "category": "rbac", "vi": "Xem đề xuất nguồn lực", "en": "View resource requests", "zh": "查看资源申请", "ja": "リソース申請を表示" },
-  { "key": "rbac.perm.construction.resource-request.view.description", "category": "rbac", "vi": "Xem đề xuất vật tư, máy móc và nhân công trong dự án.", "en": "View material, equipment, and labour requests in a project.", "zh": "查看项目物料、设备和劳务申请。", "ja": "プロジェクトの資材・機材・労務申請を表示します。" },
-  { "key": "rbac.perm.construction.resource-request.create.label", "category": "rbac", "vi": "Lập đề xuất nguồn lực", "en": "Create resource requests", "zh": "创建资源申请", "ja": "リソース申請を作成" },
-  { "key": "rbac.perm.construction.resource-request.create.description", "category": "rbac", "vi": "Lập, sửa bản nháp và gửi đề xuất nguồn lực của BCH.", "en": "Create, edit, and submit BCH resource request drafts.", "zh": "创建、编辑并提交BCH资源申请草稿。", "ja": "BCHリソース申請の作成・編集・提出を行います。" },
-  { "key": "rbac.perm.construction.resource-request.cm-review.label", "category": "rbac", "vi": "CM duyệt đề xuất nguồn lực", "en": "CM review resource requests", "zh": "CM审核资源申请", "ja": "CMリソース申請審査" },
-  { "key": "rbac.perm.construction.resource-request.cm-review.description", "category": "rbac", "vi": "Duyệt độc lập và chuyển giao đề xuất nguồn lực hợp lệ.", "en": "Independently review and hand off valid resource requests.", "zh": "独立审核并移交有效资源申请。", "ja": "有効なリソース申請を独立審査し引き渡します。" },
-  { "key": "rbac.perm.construction.qa-qc.view.label", "category": "rbac", "vi": "Xem hồ sơ QA/QC", "en": "View QA/QC dossiers", "zh": "查看QA/QC档案", "ja": "QA/QC記録を表示" },
-  { "key": "rbac.perm.construction.qa-qc.view.description", "category": "rbac", "vi": "Xem mẫu và hồ sơ QA/QC trong dự án.", "en": "View QA/QC templates and project dossiers.", "zh": "查看QA/QC模板和项目档案。", "ja": "QA/QCテンプレートとプロジェクト記録を表示します。" },
-  { "key": "rbac.perm.construction.qa-qc.create.label", "category": "rbac", "vi": "Lập hồ sơ QA/QC", "en": "Create QA/QC dossiers", "zh": "创建QA/QC档案", "ja": "QA/QC記録を作成" },
-  { "key": "rbac.perm.construction.qa-qc.create.description", "category": "rbac", "vi": "Lập, sửa và gửi hồ sơ QA/QC theo IFC đã phát hành.", "en": "Create, edit, and submit dossiers against released IFC.", "zh": "按已发布IFC创建、编辑并提交档案。", "ja": "発行済みIFCに基づく記録を作成・編集・提出します。" },
-  { "key": "rbac.perm.construction.qa-qc.cm-review.label", "category": "rbac", "vi": "CM duyệt hồ sơ QA/QC", "en": "CM review QA/QC dossiers", "zh": "CM审核QA/QC档案", "ja": "CM QA/QC審査" },
-  { "key": "rbac.perm.construction.qa-qc.cm-review.description", "category": "rbac", "vi": "Duyệt độc lập hồ sơ chất lượng do BCH gửi.", "en": "Independently review quality dossiers submitted by BCH.", "zh": "独立审核BCH提交的质量档案。", "ja": "BCHが提出した品質記録を独立審査します。" },
-  { "key": "rbac.perm.construction.qa-qc.template-manage.label", "category": "rbac", "vi": "Quản lý mẫu QA/QC", "en": "Manage QA/QC templates", "zh": "管理QA/QC模板", "ja": "QA/QCテンプレートを管理" },
-  { "key": "rbac.perm.construction.qa-qc.template-manage.description", "category": "rbac", "vi": "Tạo phiên bản và công bố mẫu QA/QC đa ngôn ngữ.", "en": "Version and publish multilingual QA/QC templates.", "zh": "版本化并发布多语言QA/QC模板。", "ja": "多言語QA/QCテンプレートを版管理・公開します。" },
-  { "key": "rbac.perm.construction.qs.view.label", "category": "rbac", "vi": "Xem hồ sơ QS", "en": "View QS batches", "zh": "查看QS批次", "ja": "QSバッチを表示" },
-  { "key": "rbac.perm.construction.qs.view.description", "category": "rbac", "vi": "Xem hồ sơ QS đầu ra và đầu vào trong dự án.", "en": "View upstream and downstream QS batches in a project.", "zh": "查看项目上游和下游QS批次。", "ja": "プロジェクトの上流・下流QSバッチを表示します。" },
-  { "key": "rbac.perm.construction.qs.create.label", "category": "rbac", "vi": "Lập hồ sơ QS", "en": "Create QS batches", "zh": "创建QS批次", "ja": "QSバッチを作成" },
-  { "key": "rbac.perm.construction.qs.create.description", "category": "rbac", "vi": "Lập, sửa và gửi đợt nghiệm thu khối lượng theo đúng chiều hợp đồng.", "en": "Create, edit, and submit quantity batches for the linked contract direction.", "zh": "按关联合同方向创建、编辑并提交工程量批次。", "ja": "契約方向に沿う数量バッチを作成・編集・提出します。" },
-  { "key": "rbac.perm.construction.qs.cm-review.label", "category": "rbac", "vi": "CM duyệt hồ sơ QS", "en": "CM review QS batches", "zh": "CM审核QS批次", "ja": "CM QS審査" },
-  { "key": "rbac.perm.construction.qs.cm-review.description", "category": "rbac", "vi": "Duyệt độc lập hồ sơ QS đầu ra hoặc đầu vào do BCH gửi.", "en": "Independently review upstream or downstream QS batches submitted by BCH.", "zh": "独立审核BCH提交的上游或下游QS批次。", "ja": "BCH提出の上流・下流QSバッチを独立審査します。" },
-  { "key": "construction.qs.adjustmentMode", "category": "construction", "vi": "Loại hồ sơ", "en": "Record type", "zh": "记录类型", "ja": "記録種別" },
-  { "key": "construction.qs.adjustment.Original", "category": "construction", "vi": "Hồ sơ gốc", "en": "Original", "zh": "原始记录", "ja": "原記録" },
-  { "key": "construction.qs.adjustment.SupersedingCorrection", "category": "construction", "vi": "Hiệu chỉnh thay thế", "en": "Superseding correction", "zh": "替代更正", "ja": "差替え訂正" },
-  { "key": "construction.qs.adjustment.Reversal", "category": "construction", "vi": "Bút toán đảo", "en": "Reversal", "zh": "冲销", "ja": "取消記録" },
-  { "key": "construction.qs.predecessor", "category": "construction", "vi": "Hồ sơ đã duyệt cần điều chỉnh", "en": "Approved record to adjust", "zh": "待调整的已批准记录", "ja": "調整対象の承認済み記録" },
-  { "key": "construction.resource.materialReferencesRequired", "category": "construction", "vi": "Đề xuất vật tư phải chọn dòng BOQ thực hiện, người phụ trách công trường và người phụ trách mua sắm.", "en": "A material request must select an Execution BOQ line, responsible site user, and procurement owner.", "zh": "物料申请必须选择执行 BOQ 明细、现场负责人和采购负责人。", "ja": "資材申請では、実行BOQ明細、現場責任者、調達担当者を選択してください。" },
-  { "key": "construction.qs.contractRequired", "category": "construction", "vi": "Hồ sơ QS phải chọn hợp đồng cùng hướng Upstream hoặc Downstream.", "en": "A QS batch must select a contract with the matching Upstream or Downstream direction.", "zh": "QS 批次必须选择上游或下游方向一致的合同。", "ja": "QSバッチでは、上流または下流の方向が一致する契約を選択してください。" },
-  { "key": "construction.qs.milestoneRequired", "category": "construction", "vi": "Hồ sơ QS Upstream phải chọn mốc phải thu của hợp đồng.", "en": "An Upstream QS batch must select a receivable payment milestone.", "zh": "上游 QS 批次必须选择应收付款里程碑。", "ja": "上流QSバッチでは、入金対象の支払マイルストーンを選択してください。" },
-  { "key": "construction.qs.predecessorRequired", "category": "construction", "vi": "Hồ sơ hiệu chỉnh hoặc đảo phải chọn một hồ sơ QS đã duyệt còn hiệu lực.", "en": "A correction or reversal must select an active approved QS batch.", "zh": "更正或冲销必须选择一条有效且已批准的 QS 批次。", "ja": "訂正または取消では、有効な承認済みQSバッチを選択してください。" }
+  {
+    "key": "construction.workspace.cm",
+    "category": "construction",
+    "vi": "Phòng CM",
+    "en": "CM Office",
+    "zh": "CM办公室",
+    "ja": "CMオフィス"
+  },
+  {
+    "key": "construction.workspace.siteCommand",
+    "category": "construction",
+    "vi": "Ban chỉ huy công trường",
+    "en": "Site Command Board",
+    "zh": "现场指挥部",
+    "ja": "現場指揮本部"
+  },
+  {
+    "key": "construction.resourceRequests.title",
+    "category": "construction",
+    "vi": "Đề xuất nguồn lực",
+    "en": "Resource requests",
+    "zh": "资源申请",
+    "ja": "リソース申請"
+  },
+  {
+    "key": "construction.resourceRequests.material",
+    "category": "construction",
+    "vi": "Vật tư",
+    "en": "Material",
+    "zh": "材料",
+    "ja": "資材"
+  },
+  {
+    "key": "construction.resourceRequests.equipment",
+    "category": "construction",
+    "vi": "Máy móc, thiết bị",
+    "en": "Equipment and machinery",
+    "zh": "设备与机械",
+    "ja": "設備・機械"
+  },
+  {
+    "key": "construction.resourceRequests.labour",
+    "category": "construction",
+    "vi": "Nhân công",
+    "en": "Labour",
+    "zh": "人工",
+    "ja": "労務"
+  },
+  {
+    "key": "construction.qaQc.title",
+    "category": "construction",
+    "vi": "QA/QC",
+    "en": "QA/QC",
+    "zh": "QA/QC",
+    "ja": "QA/QC"
+  },
+  {
+    "key": "construction.qs.title",
+    "category": "construction",
+    "vi": "QS công trường",
+    "en": "Site QS",
+    "zh": "现场QS",
+    "ja": "現場QS"
+  },
+  {
+    "key": "construction.qs.upstream",
+    "category": "construction",
+    "vi": "Đầu ra",
+    "en": "Upstream",
+    "zh": "上游",
+    "ja": "上流"
+  },
+  {
+    "key": "construction.qs.downstream",
+    "category": "construction",
+    "vi": "Đầu vào",
+    "en": "Downstream",
+    "zh": "下游",
+    "ja": "下流"
+  },
+  {
+    "key": "construction.review.pendingCm",
+    "category": "construction",
+    "vi": "Chờ Phòng CM duyệt",
+    "en": "Pending CM review",
+    "zh": "等待CM审核",
+    "ja": "CMレビュー待ち"
+  },
+  {
+    "key": "construction.cm.notEvaluated",
+    "category": "construction",
+    "vi": "Chưa đánh giá điều kiện khởi công",
+    "en": "Start readiness has not been evaluated",
+    "zh": "尚未评估开工条件",
+    "ja": "着工条件はまだ評価されていません"
+  },
+  {
+    "key": "nav.constructionBch",
+    "category": "nav",
+    "vi": "Ban chỉ huy công trường",
+    "en": "Site Command Board",
+    "zh": "现场指挥部",
+    "ja": "現場指揮本部"
+  },
+  {
+    "key": "nav.constructionCm",
+    "category": "nav",
+    "vi": "Phòng CM",
+    "en": "CM Office",
+    "zh": "CM办公室",
+    "ja": "CMオフィス"
+  },
+  {
+    "key": "nav.constructionResourceRequests",
+    "category": "nav",
+    "vi": "Đề xuất nguồn lực",
+    "en": "Resource requests",
+    "zh": "资源申请",
+    "ja": "リソース申請"
+  },
+  {
+    "key": "nav.constructionQaQc",
+    "category": "nav",
+    "vi": "Hồ sơ QA/QC",
+    "en": "QA/QC dossiers",
+    "zh": "QA/QC档案",
+    "ja": "QA/QC記録"
+  },
+  {
+    "key": "nav.constructionQs",
+    "category": "nav",
+    "vi": "QS công trường",
+    "en": "Site QS",
+    "zh": "现场QS",
+    "ja": "現場QS"
+  },
+  {
+    "key": "nav.constructionCmControl",
+    "category": "nav",
+    "vi": "Kiểm soát thi công",
+    "en": "Construction control",
+    "zh": "施工管控",
+    "ja": "施工管理"
+  },
+  {
+    "key": "construction.common.project",
+    "category": "construction",
+    "vi": "Dự án",
+    "en": "Project",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "construction.common.selectProject",
+    "category": "construction",
+    "vi": "Chọn dự án",
+    "en": "Select project",
+    "zh": "选择项目",
+    "ja": "プロジェクトを選択"
+  },
+  {
+    "key": "construction.common.noProjects",
+    "category": "construction",
+    "vi": "Không có dự án được phân công",
+    "en": "No assigned projects",
+    "zh": "没有已分配的项目",
+    "ja": "担当プロジェクトがありません"
+  },
+  {
+    "key": "construction.common.projectsLoadError",
+    "category": "construction",
+    "vi": "Không thể tải danh sách dự án",
+    "en": "Unable to load projects",
+    "zh": "无法加载项目",
+    "ja": "プロジェクトを読み込めません"
+  },
+  {
+    "key": "construction.common.actionError",
+    "category": "construction",
+    "vi": "Không thể hoàn tất thao tác",
+    "en": "Unable to complete the action",
+    "zh": "无法完成操作",
+    "ja": "操作を完了できません"
+  },
+  {
+    "key": "construction.common.wbs",
+    "category": "construction",
+    "vi": "Mã WBS",
+    "en": "WBS code",
+    "zh": "WBS编码",
+    "ja": "WBSコード"
+  },
+  {
+    "key": "construction.common.submit",
+    "category": "construction",
+    "vi": "Trình Phòng CM",
+    "en": "Submit to CM",
+    "zh": "提交CM",
+    "ja": "CMへ提出"
+  },
+  {
+    "key": "construction.common.submitted",
+    "category": "construction",
+    "vi": "Đã trình Phòng CM",
+    "en": "Submitted to CM",
+    "zh": "已提交CM",
+    "ja": "CMへ提出済み"
+  },
+  {
+    "key": "construction.common.approve",
+    "category": "construction",
+    "vi": "Phê duyệt",
+    "en": "Approve",
+    "zh": "批准",
+    "ja": "承認"
+  },
+  {
+    "key": "construction.common.reject",
+    "category": "construction",
+    "vi": "Từ chối",
+    "en": "Reject",
+    "zh": "拒绝",
+    "ja": "却下"
+  },
+  {
+    "key": "construction.resource.title",
+    "category": "construction",
+    "vi": "Đề xuất nguồn lực",
+    "en": "Resource requests",
+    "zh": "资源申请",
+    "ja": "リソース申請"
+  },
+  {
+    "key": "construction.resource.description",
+    "category": "construction",
+    "vi": "BCH đề xuất vật tư, máy móc hoặc nhân công theo WBS để Phòng CM duyệt.",
+    "en": "BCH requests material, equipment, or labour by WBS for CM review.",
+    "zh": "现场指挥部按WBS申请材料、设备或人工，供CM审核。",
+    "ja": "現場指揮部がWBS別に資材・設備・労務を申請し、CMが審査します。"
+  },
+  {
+    "key": "construction.resource.new",
+    "category": "construction",
+    "vi": "Tạo đề xuất",
+    "en": "New request",
+    "zh": "新建申请",
+    "ja": "新規申請"
+  },
+  {
+    "key": "construction.resource.empty",
+    "category": "construction",
+    "vi": "Chưa có đề xuất nguồn lực",
+    "en": "No resource requests",
+    "zh": "暂无资源申请",
+    "ja": "リソース申請はありません"
+  },
+  {
+    "key": "construction.resource.type",
+    "category": "construction",
+    "vi": "Loại nguồn lực",
+    "en": "Resource type",
+    "zh": "资源类型",
+    "ja": "リソース種別"
+  },
+  {
+    "key": "construction.resource.type.Material",
+    "category": "construction",
+    "vi": "Vật tư",
+    "en": "Material",
+    "zh": "材料",
+    "ja": "資材"
+  },
+  {
+    "key": "construction.resource.type.Equipment",
+    "category": "construction",
+    "vi": "Máy móc, thiết bị",
+    "en": "Equipment",
+    "zh": "设备",
+    "ja": "設備"
+  },
+  {
+    "key": "construction.resource.type.Labour",
+    "category": "construction",
+    "vi": "Nhân công",
+    "en": "Labour",
+    "zh": "人工",
+    "ja": "労務"
+  },
+  {
+    "key": "construction.resource.needBy",
+    "category": "construction",
+    "vi": "Ngày cần",
+    "en": "Need-by date",
+    "zh": "需求日期",
+    "ja": "必要日"
+  },
+  {
+    "key": "construction.resource.quantity",
+    "category": "construction",
+    "vi": "Khối lượng",
+    "en": "Quantity",
+    "zh": "数量",
+    "ja": "数量"
+  },
+  {
+    "key": "construction.resource.unit",
+    "category": "construction",
+    "vi": "Đơn vị",
+    "en": "Unit",
+    "zh": "单位",
+    "ja": "単位"
+  },
+  {
+    "key": "construction.resource.reason",
+    "category": "construction",
+    "vi": "Lý do",
+    "en": "Reason",
+    "zh": "原因",
+    "ja": "理由"
+  },
+  {
+    "key": "construction.resource.boqLine",
+    "category": "construction",
+    "vi": "Dòng BOQ thực hiện",
+    "en": "Execution BOQ line",
+    "zh": "执行BOQ明细",
+    "ja": "実行BOQ明細"
+  },
+  {
+    "key": "construction.resource.handoff",
+    "category": "construction",
+    "vi": "Trạng thái bàn giao",
+    "en": "Handoff status",
+    "zh": "移交状态",
+    "ja": "引継ぎ状況"
+  },
+  {
+    "key": "construction.resource.created",
+    "category": "construction",
+    "vi": "Đã tạo đề xuất nguồn lực",
+    "en": "Resource request created",
+    "zh": "资源申请已创建",
+    "ja": "リソース申請を作成しました"
+  },
+  {
+    "key": "construction.resource.loadError",
+    "category": "construction",
+    "vi": "Không thể tải đề xuất nguồn lực",
+    "en": "Unable to load resource requests",
+    "zh": "无法加载资源申请",
+    "ja": "リソース申請を読み込めません"
+  },
+  {
+    "key": "construction.resource.saveError",
+    "category": "construction",
+    "vi": "Không thể lưu đề xuất nguồn lực",
+    "en": "Unable to save resource request",
+    "zh": "无法保存资源申请",
+    "ja": "リソース申請を保存できません"
+  },
+  {
+    "key": "construction.qaQc.description",
+    "category": "construction",
+    "vi": "Hồ sơ chất lượng theo template ISO, WBS và IFC đã phát hành.",
+    "en": "Quality dossiers based on an ISO template, WBS, and released IFC.",
+    "zh": "基于ISO模板、WBS和已发布IFC的质量档案。",
+    "ja": "ISOテンプレート、WBS、発行済みIFCに基づく品質記録です。"
+  },
+  {
+    "key": "construction.qaQc.new",
+    "category": "construction",
+    "vi": "Tạo hồ sơ QA/QC",
+    "en": "New QA/QC dossier",
+    "zh": "新建QA/QC档案",
+    "ja": "QA/QC記録を作成"
+  },
+  {
+    "key": "construction.qaQc.empty",
+    "category": "construction",
+    "vi": "Chưa có hồ sơ QA/QC",
+    "en": "No QA/QC dossiers",
+    "zh": "暂无QA/QC档案",
+    "ja": "QA/QC記録はありません"
+  },
+  {
+    "key": "construction.qaQc.template",
+    "category": "construction",
+    "vi": "Template ISO",
+    "en": "ISO template",
+    "zh": "ISO模板",
+    "ja": "ISOテンプレート"
+  },
+  {
+    "key": "construction.qaQc.selectTemplate",
+    "category": "construction",
+    "vi": "Chọn template đã phát hành",
+    "en": "Select a published template",
+    "zh": "选择已发布模板",
+    "ja": "公開済みテンプレートを選択"
+  },
+  {
+    "key": "construction.qaQc.dossierTitle",
+    "category": "construction",
+    "vi": "Tên hồ sơ",
+    "en": "Dossier title",
+    "zh": "档案名称",
+    "ja": "記録名"
+  },
+  {
+    "key": "construction.qaQc.ifcRelease",
+    "category": "construction",
+    "vi": "IFC đã phát hành",
+    "en": "Released IFC",
+    "zh": "已发布IFC",
+    "ja": "発行済みIFC"
+  },
+  {
+    "key": "construction.qaQc.checklistJson",
+    "category": "construction",
+    "vi": "Kết quả checklist (JSON)",
+    "en": "Checklist results (JSON)",
+    "zh": "检查表结果（JSON）",
+    "ja": "チェックリスト結果（JSON）"
+  },
+  {
+    "key": "construction.qaQc.evidence",
+    "category": "construction",
+    "vi": "Tài liệu minh chứng",
+    "en": "Evidence documents",
+    "zh": "证明文件",
+    "ja": "証拠書類"
+  },
+  {
+    "key": "construction.qaQc.evidenceIds",
+    "category": "construction",
+    "vi": "ID tài liệu, phân cách bằng dấu phẩy",
+    "en": "Document IDs, comma-separated",
+    "zh": "文档ID，以逗号分隔",
+    "ja": "文書ID（カンマ区切り）"
+  },
+  {
+    "key": "construction.qaQc.evidenceDocumentId",
+    "category": "construction",
+    "vi": "ID tài liệu minh chứng",
+    "en": "Evidence document ID",
+    "zh": "证明文档ID",
+    "ja": "証拠文書ID"
+  },
+  {
+    "key": "construction.qaQc.evidenceType",
+    "category": "construction",
+    "vi": "Loại minh chứng",
+    "en": "Evidence type",
+    "zh": "证明类型",
+    "ja": "証拠の種類"
+  },
+  {
+    "key": "construction.qaQc.evidenceType.General",
+    "category": "construction",
+    "vi": "Khác",
+    "en": "Other",
+    "zh": "其他",
+    "ja": "その他"
+  },
+  {
+    "key": "construction.qaQc.evidenceType.AcceptanceRecord",
+    "category": "construction",
+    "vi": "Biên bản nghiệm thu",
+    "en": "Acceptance record",
+    "zh": "验收记录",
+    "ja": "検収記録"
+  },
+  {
+    "key": "construction.qaQc.evidenceType.Sample",
+    "category": "construction",
+    "vi": "Mẫu vật liệu",
+    "en": "Sample",
+    "zh": "材料样品",
+    "ja": "材料サンプル"
+  },
+  {
+    "key": "construction.qaQc.evidenceType.LaboratoryResult",
+    "category": "construction",
+    "vi": "Kết quả thí nghiệm",
+    "en": "Laboratory result",
+    "zh": "试验结果",
+    "ja": "試験結果"
+  },
+  {
+    "key": "construction.qaQc.evidenceType.MaterialCertificate",
+    "category": "construction",
+    "vi": "Chứng chỉ vật liệu",
+    "en": "Material certificate",
+    "zh": "材料合格证",
+    "ja": "材料証明書"
+  },
+  {
+    "key": "construction.qaQc.evidenceType.SiteDiary",
+    "category": "construction",
+    "vi": "Nhật ký công trường",
+    "en": "Site diary",
+    "zh": "施工日志",
+    "ja": "現場日誌"
+  },
+  {
+    "key": "construction.qaQc.addEvidence",
+    "category": "construction",
+    "vi": "Thêm minh chứng",
+    "en": "Add evidence",
+    "zh": "添加证明文件",
+    "ja": "証拠を追加"
+  },
+  {
+    "key": "construction.qaQc.removeEvidence",
+    "category": "construction",
+    "vi": "Bỏ minh chứng",
+    "en": "Remove evidence",
+    "zh": "移除证明文件",
+    "ja": "証拠を削除"
+  },
+  {
+    "key": "construction.qaQc.invalidEvidence",
+    "category": "construction",
+    "vi": "ID minh chứng phải là số nguyên dương và không được trùng. Ví dụ: 101.",
+    "en": "Evidence IDs must be unique positive integers, for example 101.",
+    "zh": "证明文档ID必须是唯一的正整数，例如101。",
+    "ja": "証拠文書IDは重複しない正の整数にしてください（例：101）。"
+  },
+  {
+    "key": "construction.qaQc.created",
+    "category": "construction",
+    "vi": "Đã tạo hồ sơ QA/QC",
+    "en": "QA/QC dossier created",
+    "zh": "QA/QC档案已创建",
+    "ja": "QA/QC記録を作成しました"
+  },
+  {
+    "key": "construction.qaQc.loadError",
+    "category": "construction",
+    "vi": "Không thể tải hồ sơ QA/QC",
+    "en": "Unable to load QA/QC dossiers",
+    "zh": "无法加载QA/QC档案",
+    "ja": "QA/QC記録を読み込めません"
+  },
+  {
+    "key": "construction.qaQc.saveError",
+    "category": "construction",
+    "vi": "Không thể lưu hồ sơ QA/QC",
+    "en": "Unable to save QA/QC dossier",
+    "zh": "无法保存QA/QC档案",
+    "ja": "QA/QC記録を保存できません"
+  },
+  {
+    "key": "construction.qaQc.invalidChecklistJson",
+    "category": "construction",
+    "vi": "Kết quả checklist phải là JSON hợp lệ",
+    "en": "Checklist results must be valid JSON",
+    "zh": "检查表结果必须是有效JSON",
+    "ja": "チェックリスト結果は有効なJSONである必要があります"
+  },
+  {
+    "key": "construction.qaQc.templates",
+    "category": "construction",
+    "vi": "Template QA/QC",
+    "en": "QA/QC templates",
+    "zh": "QA/QC模板",
+    "ja": "QA/QCテンプレート"
+  },
+  {
+    "key": "construction.qaQc.newTemplate",
+    "category": "construction",
+    "vi": "Tạo phiên bản template",
+    "en": "New template version",
+    "zh": "新建模板版本",
+    "ja": "テンプレート版を作成"
+  },
+  {
+    "key": "construction.qaQc.noTemplates",
+    "category": "construction",
+    "vi": "Chưa có template",
+    "en": "No templates",
+    "zh": "暂无模板",
+    "ja": "テンプレートはありません"
+  },
+  {
+    "key": "construction.qaQc.publish",
+    "category": "construction",
+    "vi": "Phát hành",
+    "en": "Publish",
+    "zh": "发布",
+    "ja": "公開"
+  },
+  {
+    "key": "construction.qaQc.templateCode",
+    "category": "construction",
+    "vi": "Mã template",
+    "en": "Template code",
+    "zh": "模板编码",
+    "ja": "テンプレートコード"
+  },
+  {
+    "key": "construction.qaQc.nameVi",
+    "category": "construction",
+    "vi": "Tên tiếng Việt",
+    "en": "Vietnamese name",
+    "zh": "越南语名称",
+    "ja": "ベトナム語名"
+  },
+  {
+    "key": "construction.qaQc.nameEn",
+    "category": "construction",
+    "vi": "Tên tiếng Anh",
+    "en": "English name",
+    "zh": "英语名称",
+    "ja": "英語名"
+  },
+  {
+    "key": "construction.qaQc.nameZh",
+    "category": "construction",
+    "vi": "Tên tiếng Trung",
+    "en": "Chinese name",
+    "zh": "中文名称",
+    "ja": "中国語名"
+  },
+  {
+    "key": "construction.qaQc.nameJa",
+    "category": "construction",
+    "vi": "Tên tiếng Nhật",
+    "en": "Japanese name",
+    "zh": "日语名称",
+    "ja": "日本語名"
+  },
+  {
+    "key": "construction.qaQc.invalidSchemaJson",
+    "category": "construction",
+    "vi": "Schema template phải là JSON hợp lệ",
+    "en": "Template schema must be valid JSON",
+    "zh": "模板结构必须是有效JSON",
+    "ja": "テンプレートスキーマは有効なJSONである必要があります"
+  },
+  {
+    "key": "construction.qaQc.templateCreated",
+    "category": "construction",
+    "vi": "Đã tạo phiên bản template",
+    "en": "Template version created",
+    "zh": "模板版本已创建",
+    "ja": "テンプレート版を作成しました"
+  },
+  {
+    "key": "construction.qaQc.templatePublished",
+    "category": "construction",
+    "vi": "Đã phát hành template",
+    "en": "Template published",
+    "zh": "模板已发布",
+    "ja": "テンプレートを公開しました"
+  },
+  {
+    "key": "construction.qs.description",
+    "category": "construction",
+    "vi": "Nghiệm thu khối lượng Upstream và Downstream tách biệt.",
+    "en": "Separate Upstream and Downstream quantity certification.",
+    "zh": "分别管理上游和下游工程量确认。",
+    "ja": "上流・下流の出来高認定を分離します。"
+  },
+  {
+    "key": "construction.qs.new",
+    "category": "construction",
+    "vi": "Tạo đợt QS",
+    "en": "New QS batch",
+    "zh": "新建QS批次",
+    "ja": "QSバッチを作成"
+  },
+  {
+    "key": "construction.qs.empty",
+    "category": "construction",
+    "vi": "Chưa có đợt QS",
+    "en": "No QS batches",
+    "zh": "暂无QS批次",
+    "ja": "QSバッチはありません"
+  },
+  {
+    "key": "construction.qs.direction",
+    "category": "construction",
+    "vi": "Hướng",
+    "en": "Direction",
+    "zh": "方向",
+    "ja": "方向"
+  },
+  {
+    "key": "construction.qs.direction.Upstream",
+    "category": "construction",
+    "vi": "Đầu ra",
+    "en": "Upstream",
+    "zh": "上游",
+    "ja": "上流"
+  },
+  {
+    "key": "construction.qs.direction.Downstream",
+    "category": "construction",
+    "vi": "Đầu vào",
+    "en": "Downstream",
+    "zh": "下游",
+    "ja": "下流"
+  },
+  {
+    "key": "construction.qs.contract",
+    "category": "construction",
+    "vi": "Hợp đồng",
+    "en": "Contract",
+    "zh": "合同",
+    "ja": "契約"
+  },
+  {
+    "key": "construction.qs.selectContract",
+    "category": "construction",
+    "vi": "Chọn hợp đồng",
+    "en": "Select a contract",
+    "zh": "选择合同",
+    "ja": "契約を選択"
+  },
+  {
+    "key": "construction.qs.selectMilestone",
+    "category": "construction",
+    "vi": "Chọn mốc thanh toán",
+    "en": "Select a payment milestone",
+    "zh": "选择付款节点",
+    "ja": "支払マイルストーンを選択"
+  },
+  {
+    "key": "construction.qs.notApplicable",
+    "category": "construction",
+    "vi": "Không áp dụng",
+    "en": "Not applicable",
+    "zh": "不适用",
+    "ja": "該当なし"
+  },
+  {
+    "key": "construction.qs.period",
+    "category": "construction",
+    "vi": "Kỳ nghiệm thu",
+    "en": "Certification period",
+    "zh": "确认期间",
+    "ja": "認定期間"
+  },
+  {
+    "key": "construction.qs.periodFrom",
+    "category": "construction",
+    "vi": "Từ ngày",
+    "en": "From",
+    "zh": "开始日期",
+    "ja": "開始日"
+  },
+  {
+    "key": "construction.qs.periodTo",
+    "category": "construction",
+    "vi": "Đến ngày",
+    "en": "To",
+    "zh": "结束日期",
+    "ja": "終了日"
+  },
+  {
+    "key": "construction.qs.batchDescription",
+    "category": "construction",
+    "vi": "Mô tả đợt nghiệm thu",
+    "en": "Batch description",
+    "zh": "批次说明",
+    "ja": "バッチ説明"
+  },
+  {
+    "key": "construction.qs.lines",
+    "category": "construction",
+    "vi": "Dòng khối lượng",
+    "en": "Quantity lines",
+    "zh": "工程量明细",
+    "ja": "数量明細"
+  },
+  {
+    "key": "construction.qs.addLine",
+    "category": "construction",
+    "vi": "Thêm dòng",
+    "en": "Add line",
+    "zh": "添加明细",
+    "ja": "明細を追加"
+  },
+  {
+    "key": "construction.qs.itemCode",
+    "category": "construction",
+    "vi": "Mã hạng mục",
+    "en": "Item code",
+    "zh": "项目编码",
+    "ja": "項目コード"
+  },
+  {
+    "key": "construction.qs.lineDescription",
+    "category": "construction",
+    "vi": "Mô tả hạng mục",
+    "en": "Item description",
+    "zh": "项目说明",
+    "ja": "項目説明"
+  },
+  {
+    "key": "construction.qs.amount",
+    "category": "construction",
+    "vi": "Giá trị nghiệm thu",
+    "en": "Certified amount",
+    "zh": "确认金额",
+    "ja": "認定額"
+  },
+  {
+    "key": "construction.qs.created",
+    "category": "construction",
+    "vi": "Đã tạo đợt QS",
+    "en": "QS batch created",
+    "zh": "QS批次已创建",
+    "ja": "QSバッチを作成しました"
+  },
+  {
+    "key": "construction.qs.loadError",
+    "category": "construction",
+    "vi": "Không thể tải dữ liệu QS",
+    "en": "Unable to load QS batches",
+    "zh": "无法加载QS批次",
+    "ja": "QSバッチを読み込めません"
+  },
+  {
+    "key": "construction.qs.saveError",
+    "category": "construction",
+    "vi": "Không thể lưu đợt QS",
+    "en": "Unable to save QS batch",
+    "zh": "无法保存QS批次",
+    "ja": "QSバッチを保存できません"
+  },
+  {
+    "key": "construction.cm.title",
+    "category": "construction",
+    "vi": "Kiểm soát thi công – Phòng CM",
+    "en": "CM construction control",
+    "zh": "CM施工管控",
+    "ja": "CM施工管理"
+  },
+  {
+    "key": "construction.cm.description",
+    "category": "construction",
+    "vi": "Chuẩn bị dự án, kiểm tra điều kiện khởi công và duyệt độc lập hồ sơ BCH.",
+    "en": "Prepare projects, evaluate start readiness, and independently review BCH records.",
+    "zh": "项目准备、开工条件评估及BCH记录独立审核。",
+    "ja": "プロジェクト準備、着工条件評価、BCH記録の独立審査を行います。"
+  },
+  {
+    "key": "construction.cm.preparation",
+    "category": "construction",
+    "vi": "Chuẩn bị và khởi công",
+    "en": "Preparation and start",
+    "zh": "准备与开工",
+    "ja": "準備と着工"
+  },
+  {
+    "key": "construction.cm.version",
+    "category": "construction",
+    "vi": "Phiên bản {version}",
+    "en": "Version {version}",
+    "zh": "版本 {version}",
+    "ja": "バージョン {version}"
+  },
+  {
+    "key": "construction.cm.evaluate",
+    "category": "construction",
+    "vi": "Đánh giá điều kiện",
+    "en": "Evaluate readiness",
+    "zh": "评估条件",
+    "ja": "条件を評価"
+  },
+  {
+    "key": "construction.cm.start",
+    "category": "construction",
+    "vi": "Cho phép khởi công",
+    "en": "Start construction",
+    "zh": "允许开工",
+    "ja": "着工を許可"
+  },
+  {
+    "key": "construction.cm.ready",
+    "category": "construction",
+    "vi": "Đủ điều kiện khởi công",
+    "en": "Ready to start",
+    "zh": "具备开工条件",
+    "ja": "着工可能"
+  },
+  {
+    "key": "construction.cm.blockerCount",
+    "category": "construction",
+    "vi": "Còn {count} điều kiện chưa đạt",
+    "en": "{count} readiness conditions remain",
+    "zh": "尚有 {count} 项条件未满足",
+    "ja": "未達条件が {count} 件あります"
+  },
+  {
+    "key": "construction.cm.blockers",
+    "category": "construction",
+    "vi": "Điều kiện chưa đạt",
+    "en": "Unmet conditions",
+    "zh": "未满足条件",
+    "ja": "未達条件"
+  },
+  {
+    "key": "construction.cm.noPreparation",
+    "category": "construction",
+    "vi": "Chưa có kế hoạch chuẩn bị thi công",
+    "en": "No construction preparation exists",
+    "zh": "尚无施工准备计划",
+    "ja": "施工準備計画がありません"
+  },
+  {
+    "key": "construction.cm.noPendingResources",
+    "category": "construction",
+    "vi": "Không có đề xuất nguồn lực chờ duyệt",
+    "en": "No resource requests pending review",
+    "zh": "没有待审核的资源申请",
+    "ja": "審査待ちのリソース申請はありません"
+  },
+  {
+    "key": "construction.cm.noPendingQaQc",
+    "category": "construction",
+    "vi": "Không có hồ sơ QA/QC chờ duyệt",
+    "en": "No QA/QC dossiers pending review",
+    "zh": "没有待审核的QA/QC档案",
+    "ja": "審査待ちのQA/QC記録はありません"
+  },
+  {
+    "key": "construction.cm.noPendingQs",
+    "category": "construction",
+    "vi": "Không có đợt QS chờ duyệt",
+    "en": "No QS batches pending review",
+    "zh": "没有待审核的QS批次",
+    "ja": "審査待ちのQSバッチはありません"
+  },
+  {
+    "key": "construction.cm.decisionReason",
+    "category": "construction",
+    "vi": "Ý kiến duyệt",
+    "en": "Review reason",
+    "zh": "审核意见",
+    "ja": "審査理由"
+  },
+  {
+    "key": "construction.cm.approveTitle",
+    "category": "construction",
+    "vi": "Phê duyệt hồ sơ",
+    "en": "Approve record",
+    "zh": "批准记录",
+    "ja": "記録を承認"
+  },
+  {
+    "key": "construction.cm.rejectTitle",
+    "category": "construction",
+    "vi": "Từ chối hồ sơ",
+    "en": "Reject record",
+    "zh": "拒绝记录",
+    "ja": "記録を却下"
+  },
+  {
+    "key": "construction.cm.saved",
+    "category": "construction",
+    "vi": "Đã lưu kế hoạch chuẩn bị",
+    "en": "Preparation saved",
+    "zh": "准备计划已保存",
+    "ja": "準備計画を保存しました"
+  },
+  {
+    "key": "construction.cm.evaluated",
+    "category": "construction",
+    "vi": "Đã đánh giá điều kiện khởi công",
+    "en": "Readiness evaluated",
+    "zh": "开工条件已评估",
+    "ja": "着工条件を評価しました"
+  },
+  {
+    "key": "construction.cm.started",
+    "category": "construction",
+    "vi": "Dự án đã chuyển sang thi công",
+    "en": "Project moved into construction",
+    "zh": "项目已进入施工阶段",
+    "ja": "プロジェクトを施工段階へ移行しました"
+  },
+  {
+    "key": "construction.cm.decisionSaved",
+    "category": "construction",
+    "vi": "Đã lưu quyết định duyệt",
+    "en": "Review decision saved",
+    "zh": "审核决定已保存",
+    "ja": "審査結果を保存しました"
+  },
+  {
+    "key": "construction.cm.loadError",
+    "category": "construction",
+    "vi": "Không thể tải dữ liệu kiểm soát thi công",
+    "en": "Unable to load construction control data",
+    "zh": "无法加载施工管控数据",
+    "ja": "施工管理データを読み込めません"
+  },
+  {
+    "key": "rbac.role.SITE_COMMANDER.label",
+    "category": "rbac",
+    "vi": "Chỉ huy trưởng BCH",
+    "en": "Site Commander",
+    "zh": "现场指挥长",
+    "ja": "現場指揮責任者"
+  },
+  {
+    "key": "rbac.role.SITE_COMMANDER.description",
+    "category": "rbac",
+    "vi": "Điều phối công trường và lập hồ sơ BCH trong dự án được phân công.",
+    "en": "Coordinates the assigned site and creates BCH records.",
+    "zh": "协调所分配工地并创建BCH记录。",
+    "ja": "担当現場を調整しBCH記録を作成します。"
+  },
+  {
+    "key": "rbac.role.SITE_QAQC.label",
+    "category": "rbac",
+    "vi": "Kỹ sư QA/QC công trường",
+    "en": "Site QA/QC Engineer",
+    "zh": "现场QA/QC工程师",
+    "ja": "現場QA/QC技術者"
+  },
+  {
+    "key": "rbac.role.SITE_QAQC.description",
+    "category": "rbac",
+    "vi": "Lập nhật ký, hồ sơ chất lượng và bằng chứng kiểm tra theo IFC.",
+    "en": "Creates diaries, quality dossiers, and IFC inspection evidence.",
+    "zh": "创建日志、质量档案和IFC检查证据。",
+    "ja": "日誌、品質記録、IFC検査証拠を作成します。"
+  },
+  {
+    "key": "construction.preparationStatus.Draft",
+    "category": "construction",
+    "vi": "Bản nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "construction.preparationStatus.Published",
+    "category": "construction",
+    "vi": "Đã công bố",
+    "en": "Published",
+    "zh": "已发布",
+    "ja": "公開済み"
+  },
+  {
+    "key": "construction.preparationStatus.ReadyToStart",
+    "category": "construction",
+    "vi": "Sẵn sàng khởi công",
+    "en": "Ready to start",
+    "zh": "可开工",
+    "ja": "着工可能"
+  },
+  {
+    "key": "construction.preparationStatus.InConstruction",
+    "category": "construction",
+    "vi": "Đang thi công",
+    "en": "In construction",
+    "zh": "施工中",
+    "ja": "施工中"
+  },
+  {
+    "key": "construction.preparationStatus.Superseded",
+    "category": "construction",
+    "vi": "Đã thay thế",
+    "en": "Superseded",
+    "zh": "已替代",
+    "ja": "置換済み"
+  },
+  {
+    "key": "construction.status.Draft",
+    "category": "construction",
+    "vi": "Bản nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "construction.status.PendingCmReview",
+    "category": "construction",
+    "vi": "Chờ CM duyệt",
+    "en": "Pending CM review",
+    "zh": "待CM审核",
+    "ja": "CM審査待ち"
+  },
+  {
+    "key": "construction.status.CmApproved",
+    "category": "construction",
+    "vi": "CM đã duyệt",
+    "en": "CM approved",
+    "zh": "CM已批准",
+    "ja": "CM承認済み"
+  },
+  {
+    "key": "construction.status.CmRejected",
+    "category": "construction",
+    "vi": "CM từ chối",
+    "en": "CM rejected",
+    "zh": "CM已拒绝",
+    "ja": "CM却下"
+  },
+  {
+    "key": "construction.handoff.NotReady",
+    "category": "construction",
+    "vi": "Chưa sẵn sàng",
+    "en": "Not ready",
+    "zh": "未就绪",
+    "ja": "未準備"
+  },
+  {
+    "key": "construction.handoff.ReadyForProcurementAndFinance",
+    "category": "construction",
+    "vi": "Sẵn sàng cho Cung ứng và Tài chính",
+    "en": "Ready for Procurement and Finance",
+    "zh": "可移交采购与财务",
+    "ja": "調達・財務へ引渡し可能"
+  },
+  {
+    "key": "construction.handoff.MaterialRequestCreated",
+    "category": "construction",
+    "vi": "Đã tạo đề nghị vật tư",
+    "en": "Material request created",
+    "zh": "物料申请已创建",
+    "ja": "資材申請作成済み"
+  },
+  {
+    "key": "construction.cm.wbsBaselineReference",
+    "category": "construction",
+    "vi": "Tham chiếu WBS baseline",
+    "en": "WBS baseline reference",
+    "zh": "WBS基线引用",
+    "ja": "WBSベースライン参照"
+  },
+  {
+    "key": "construction.cm.scheduleBaselineReference",
+    "category": "construction",
+    "vi": "Tham chiếu tiến độ baseline",
+    "en": "Schedule baseline reference",
+    "zh": "进度基线引用",
+    "ja": "工程ベースライン参照"
+  },
+  {
+    "key": "construction.cm.sCurveBaselineReference",
+    "category": "construction",
+    "vi": "Tham chiếu S-Curve baseline",
+    "en": "S-Curve baseline reference",
+    "zh": "S曲线基线引用",
+    "ja": "Sカーブベースライン参照"
+  },
+  {
+    "key": "construction.cm.bchOrganizationReference",
+    "category": "construction",
+    "vi": "Tham chiếu tổ chức BCH",
+    "en": "BCH organization reference",
+    "zh": "BCH组织引用",
+    "ja": "BCH組織参照"
+  },
+  {
+    "key": "construction.cm.resourcePlanReference",
+    "category": "construction",
+    "vi": "Tham chiếu kế hoạch nguồn lực",
+    "en": "Resource plan reference",
+    "zh": "资源计划引用",
+    "ja": "リソース計画参照"
+  },
+  {
+    "key": "construction.cm.budgetBaselineReference",
+    "category": "construction",
+    "vi": "Tham chiếu ngân sách baseline",
+    "en": "Budget baseline reference",
+    "zh": "预算基线引用",
+    "ja": "予算ベースライン参照"
+  },
+  {
+    "key": "construction.cm.budgetBaselineLocked",
+    "category": "construction",
+    "vi": "Đã khóa ngân sách baseline",
+    "en": "Budget baseline locked",
+    "zh": "预算基线已锁定",
+    "ja": "予算ベースラインをロック済み"
+  },
+  {
+    "key": "construction.cm.siteHandoverRequired",
+    "category": "construction",
+    "vi": "Yêu cầu bàn giao mặt bằng",
+    "en": "Site handover required",
+    "zh": "要求场地移交",
+    "ja": "現場引渡し必須"
+  },
+  {
+    "key": "construction.cm.siteHandoverComplete",
+    "category": "construction",
+    "vi": "Đã bàn giao mặt bằng",
+    "en": "Site handover complete",
+    "zh": "场地移交已完成",
+    "ja": "現場引渡し完了"
+  },
+  {
+    "key": "construction.cm.methodStatementRequired",
+    "category": "construction",
+    "vi": "Yêu cầu biện pháp thi công",
+    "en": "Method statement required",
+    "zh": "要求施工方案",
+    "ja": "施工要領書必須"
+  },
+  {
+    "key": "construction.cm.methodStatementApproved",
+    "category": "construction",
+    "vi": "Biện pháp thi công đã duyệt",
+    "en": "Method statement approved",
+    "zh": "施工方案已批准",
+    "ja": "施工要領書承認済み"
+  },
+  {
+    "key": "construction.cm.hsePlanRequired",
+    "category": "construction",
+    "vi": "Yêu cầu kế hoạch HSE",
+    "en": "HSE plan required",
+    "zh": "要求HSE计划",
+    "ja": "HSE計画必須"
+  },
+  {
+    "key": "construction.cm.hsePlanApproved",
+    "category": "construction",
+    "vi": "Kế hoạch HSE đã duyệt",
+    "en": "HSE plan approved",
+    "zh": "HSE计划已批准",
+    "ja": "HSE計画承認済み"
+  },
+  {
+    "key": "construction.qaQc.templateSummary",
+    "category": "construction",
+    "vi": "{count} mẫu QA/QC đang áp dụng",
+    "en": "{count} active QA/QC templates",
+    "zh": "{count} 个有效QA/QC模板",
+    "ja": "有効なQA/QCテンプレート {count} 件"
+  },
+  {
+    "key": "rbac.perm.construction.cm-preparation.view.label",
+    "category": "rbac",
+    "vi": "Xem chuẩn bị thi công",
+    "en": "View CM preparation",
+    "zh": "查看施工准备",
+    "ja": "施工準備を表示"
+  },
+  {
+    "key": "rbac.perm.construction.cm-preparation.view.description",
+    "category": "rbac",
+    "vi": "Xem baseline và điều kiện khởi công của dự án được phân công.",
+    "en": "View baselines and start readiness for assigned projects.",
+    "zh": "查看所分配项目的基线和开工条件。",
+    "ja": "担当プロジェクトのベースラインと着工条件を表示します。"
+  },
+  {
+    "key": "rbac.perm.construction.cm-preparation.manage.label",
+    "category": "rbac",
+    "vi": "Quản lý chuẩn bị thi công",
+    "en": "Manage CM preparation",
+    "zh": "管理施工准备",
+    "ja": "施工準備を管理"
+  },
+  {
+    "key": "rbac.perm.construction.cm-preparation.manage.description",
+    "category": "rbac",
+    "vi": "Lập phiên bản chuẩn bị và đánh giá điều kiện khởi công.",
+    "en": "Version preparation records and evaluate start readiness.",
+    "zh": "编制准备版本并评估开工条件。",
+    "ja": "準備記録を版管理し着工条件を評価します。"
+  },
+  {
+    "key": "rbac.perm.construction.cm-preparation.start.label",
+    "category": "rbac",
+    "vi": "Cho phép khởi công",
+    "en": "Authorize construction start",
+    "zh": "批准开工",
+    "ja": "着工を承認"
+  },
+  {
+    "key": "rbac.perm.construction.cm-preparation.start.description",
+    "category": "rbac",
+    "vi": "Chuyển dự án đủ điều kiện sang trạng thái đang thi công.",
+    "en": "Move a ready project into construction.",
+    "zh": "将满足条件的项目转入施工。",
+    "ja": "条件を満たすプロジェクトを施工中へ移行します。"
+  },
+  {
+    "key": "rbac.perm.construction.resource-request.view.label",
+    "category": "rbac",
+    "vi": "Xem đề xuất nguồn lực",
+    "en": "View resource requests",
+    "zh": "查看资源申请",
+    "ja": "リソース申請を表示"
+  },
+  {
+    "key": "rbac.perm.construction.resource-request.view.description",
+    "category": "rbac",
+    "vi": "Xem đề xuất vật tư, máy móc và nhân công trong dự án.",
+    "en": "View material, equipment, and labour requests in a project.",
+    "zh": "查看项目物料、设备和劳务申请。",
+    "ja": "プロジェクトの資材・機材・労務申請を表示します。"
+  },
+  {
+    "key": "rbac.perm.construction.resource-request.create.label",
+    "category": "rbac",
+    "vi": "Lập đề xuất nguồn lực",
+    "en": "Create resource requests",
+    "zh": "创建资源申请",
+    "ja": "リソース申請を作成"
+  },
+  {
+    "key": "rbac.perm.construction.resource-request.create.description",
+    "category": "rbac",
+    "vi": "Lập, sửa bản nháp và gửi đề xuất nguồn lực của BCH.",
+    "en": "Create, edit, and submit BCH resource request drafts.",
+    "zh": "创建、编辑并提交BCH资源申请草稿。",
+    "ja": "BCHリソース申請の作成・編集・提出を行います。"
+  },
+  {
+    "key": "rbac.perm.construction.resource-request.cm-review.label",
+    "category": "rbac",
+    "vi": "CM duyệt đề xuất nguồn lực",
+    "en": "CM review resource requests",
+    "zh": "CM审核资源申请",
+    "ja": "CMリソース申請審査"
+  },
+  {
+    "key": "rbac.perm.construction.resource-request.cm-review.description",
+    "category": "rbac",
+    "vi": "Duyệt độc lập và chuyển giao đề xuất nguồn lực hợp lệ.",
+    "en": "Independently review and hand off valid resource requests.",
+    "zh": "独立审核并移交有效资源申请。",
+    "ja": "有効なリソース申請を独立審査し引き渡します。"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ QA/QC",
+    "en": "View QA/QC dossiers",
+    "zh": "查看QA/QC档案",
+    "ja": "QA/QC記録を表示"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.view.description",
+    "category": "rbac",
+    "vi": "Xem mẫu và hồ sơ QA/QC trong dự án.",
+    "en": "View QA/QC templates and project dossiers.",
+    "zh": "查看QA/QC模板和项目档案。",
+    "ja": "QA/QCテンプレートとプロジェクト記録を表示します。"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.create.label",
+    "category": "rbac",
+    "vi": "Lập hồ sơ QA/QC",
+    "en": "Create QA/QC dossiers",
+    "zh": "创建QA/QC档案",
+    "ja": "QA/QC記録を作成"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.create.description",
+    "category": "rbac",
+    "vi": "Lập, sửa và gửi hồ sơ QA/QC theo IFC đã phát hành.",
+    "en": "Create, edit, and submit dossiers against released IFC.",
+    "zh": "按已发布IFC创建、编辑并提交档案。",
+    "ja": "発行済みIFCに基づく記録を作成・編集・提出します。"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.cm-review.label",
+    "category": "rbac",
+    "vi": "CM duyệt hồ sơ QA/QC",
+    "en": "CM review QA/QC dossiers",
+    "zh": "CM审核QA/QC档案",
+    "ja": "CM QA/QC審査"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.cm-review.description",
+    "category": "rbac",
+    "vi": "Duyệt độc lập hồ sơ chất lượng do BCH gửi.",
+    "en": "Independently review quality dossiers submitted by BCH.",
+    "zh": "独立审核BCH提交的质量档案。",
+    "ja": "BCHが提出した品質記録を独立審査します。"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.template-manage.label",
+    "category": "rbac",
+    "vi": "Quản lý mẫu QA/QC",
+    "en": "Manage QA/QC templates",
+    "zh": "管理QA/QC模板",
+    "ja": "QA/QCテンプレートを管理"
+  },
+  {
+    "key": "rbac.perm.construction.qa-qc.template-manage.description",
+    "category": "rbac",
+    "vi": "Tạo phiên bản và công bố mẫu QA/QC đa ngôn ngữ.",
+    "en": "Version and publish multilingual QA/QC templates.",
+    "zh": "版本化并发布多语言QA/QC模板。",
+    "ja": "多言語QA/QCテンプレートを版管理・公開します。"
+  },
+  {
+    "key": "rbac.perm.construction.qs.view.label",
+    "category": "rbac",
+    "vi": "Xem hồ sơ QS",
+    "en": "View QS batches",
+    "zh": "查看QS批次",
+    "ja": "QSバッチを表示"
+  },
+  {
+    "key": "rbac.perm.construction.qs.view.description",
+    "category": "rbac",
+    "vi": "Xem hồ sơ QS đầu ra và đầu vào trong dự án.",
+    "en": "View upstream and downstream QS batches in a project.",
+    "zh": "查看项目上游和下游QS批次。",
+    "ja": "プロジェクトの上流・下流QSバッチを表示します。"
+  },
+  {
+    "key": "rbac.perm.construction.qs.create.label",
+    "category": "rbac",
+    "vi": "Lập hồ sơ QS",
+    "en": "Create QS batches",
+    "zh": "创建QS批次",
+    "ja": "QSバッチを作成"
+  },
+  {
+    "key": "rbac.perm.construction.qs.create.description",
+    "category": "rbac",
+    "vi": "Lập, sửa và gửi đợt nghiệm thu khối lượng theo đúng chiều hợp đồng.",
+    "en": "Create, edit, and submit quantity batches for the linked contract direction.",
+    "zh": "按关联合同方向创建、编辑并提交工程量批次。",
+    "ja": "契約方向に沿う数量バッチを作成・編集・提出します。"
+  },
+  {
+    "key": "rbac.perm.construction.qs.cm-review.label",
+    "category": "rbac",
+    "vi": "CM duyệt hồ sơ QS",
+    "en": "CM review QS batches",
+    "zh": "CM审核QS批次",
+    "ja": "CM QS審査"
+  },
+  {
+    "key": "rbac.perm.construction.qs.cm-review.description",
+    "category": "rbac",
+    "vi": "Duyệt độc lập hồ sơ QS đầu ra hoặc đầu vào do BCH gửi.",
+    "en": "Independently review upstream or downstream QS batches submitted by BCH.",
+    "zh": "独立审核BCH提交的上游或下游QS批次。",
+    "ja": "BCH提出の上流・下流QSバッチを独立審査します。"
+  },
+  {
+    "key": "construction.qs.adjustmentMode",
+    "category": "construction",
+    "vi": "Loại hồ sơ",
+    "en": "Record type",
+    "zh": "记录类型",
+    "ja": "記録種別"
+  },
+  {
+    "key": "construction.qs.adjustment.Original",
+    "category": "construction",
+    "vi": "Hồ sơ gốc",
+    "en": "Original",
+    "zh": "原始记录",
+    "ja": "原記録"
+  },
+  {
+    "key": "construction.qs.adjustment.SupersedingCorrection",
+    "category": "construction",
+    "vi": "Hiệu chỉnh thay thế",
+    "en": "Superseding correction",
+    "zh": "替代更正",
+    "ja": "差替え訂正"
+  },
+  {
+    "key": "construction.qs.adjustment.Reversal",
+    "category": "construction",
+    "vi": "Bút toán đảo",
+    "en": "Reversal",
+    "zh": "冲销",
+    "ja": "取消記録"
+  },
+  {
+    "key": "construction.qs.predecessor",
+    "category": "construction",
+    "vi": "Hồ sơ đã duyệt cần điều chỉnh",
+    "en": "Approved record to adjust",
+    "zh": "待调整的已批准记录",
+    "ja": "調整対象の承認済み記録"
+  },
+  {
+    "key": "construction.resource.materialReferencesRequired",
+    "category": "construction",
+    "vi": "Đề xuất vật tư phải chọn dòng BOQ thực hiện, người phụ trách công trường và người phụ trách mua sắm.",
+    "en": "A material request must select an Execution BOQ line, responsible site user, and procurement owner.",
+    "zh": "物料申请必须选择执行 BOQ 明细、现场负责人和采购负责人。",
+    "ja": "資材申請では、実行BOQ明細、現場責任者、調達担当者を選択してください。"
+  },
+  {
+    "key": "construction.qs.contractRequired",
+    "category": "construction",
+    "vi": "Hồ sơ QS phải chọn hợp đồng cùng hướng Upstream hoặc Downstream.",
+    "en": "A QS batch must select a contract with the matching Upstream or Downstream direction.",
+    "zh": "QS 批次必须选择上游或下游方向一致的合同。",
+    "ja": "QSバッチでは、上流または下流の方向が一致する契約を選択してください。"
+  },
+  {
+    "key": "construction.qs.milestoneRequired",
+    "category": "construction",
+    "vi": "Hồ sơ QS Upstream phải chọn mốc phải thu của hợp đồng.",
+    "en": "An Upstream QS batch must select a receivable payment milestone.",
+    "zh": "上游 QS 批次必须选择应收付款里程碑。",
+    "ja": "上流QSバッチでは、入金対象の支払マイルストーンを選択してください。"
+  },
+  {
+    "key": "construction.qs.predecessorRequired",
+    "category": "construction",
+    "vi": "Hồ sơ hiệu chỉnh hoặc đảo phải chọn một hồ sơ QS đã duyệt còn hiệu lực.",
+    "en": "A correction or reversal must select an active approved QS batch.",
+    "zh": "更正或冲销必须选择一条有效且已批准的 QS 批次。",
+    "ja": "訂正または取消では、有効な承認済みQSバッチを選択してください。"
+  },
+  {
+    "key": "nav.constructionBchOperations",
+    "category": "nav",
+    "vi": "Vận hành công trường",
+    "en": "Site operations",
+    "zh": "现场运营",
+    "ja": "現場運営",
+    "old": {
+      "vi": "Ban chỉ huy công trường – Vận hành",
+      "en": "Site Command Board – Operations",
+      "zh": "现场指挥部 – 运营",
+      "ja": "現場指揮本部 – 運営"
+    }
+  },
+  {
+    "key": "construction.bch.operations.title",
+    "category": "construction",
+    "vi": "Vận hành công trường",
+    "en": "Site operations",
+    "zh": "现场运营",
+    "ja": "現場運営"
+  },
+  {
+    "key": "construction.bch.operations.description",
+    "category": "construction",
+    "vi": "BCH thực hiện đề xuất nguồn lực và ghi nhật ký công trường cho dự án đang chọn. Phòng CM kiểm tra trên cùng hồ sơ này.",
+    "en": "The site team raises resource requests and keeps the site diary for the selected project. The CM office reviews the same records.",
+    "zh": "现场针对所选项目提交资源申请并填写施工日志，CM办公室在同一记录上审核。",
+    "ja": "現場は選択中プロジェクトのリソース申請と現場日誌を作成し、CMオフィスが同じ記録を確認します。"
+  },
+  {
+    "key": "construction.bch.qaQc.title",
+    "category": "construction",
+    "vi": "Hồ sơ QA/QC công trường",
+    "en": "Site QA/QC records",
+    "zh": "现场QA/QC记录",
+    "ja": "現場QA/QC記録"
+  },
+  {
+    "key": "construction.bch.qaQc.description",
+    "category": "construction",
+    "vi": "BCH lập hồ sơ chất lượng, punchlist, nghiệm thu và ghi nhận an toàn. Việc phê duyệt thuộc Phòng CM.",
+    "en": "The site team prepares quality dossiers, punch lists, acceptance records, and safety entries. Approval belongs to the CM office.",
+    "zh": "现场编制质量资料、缺陷清单、验收记录和安全记录，审批由CM办公室负责。",
+    "ja": "現場は品質資料・パンチリスト・検収記録・安全記録を作成し、承認はCMオフィスが行います。"
+  },
+  {
+    "key": "construction.bch.qs.title",
+    "category": "construction",
+    "vi": "QS công trường",
+    "en": "Site QS",
+    "zh": "现场QS",
+    "ja": "現場QS"
+  },
+  {
+    "key": "construction.bch.qs.description",
+    "category": "construction",
+    "vi": "BCH lập hồ sơ khối lượng theo hợp đồng và dòng BOQ; Phòng CM kiểm tra và duyệt trên cùng hồ sơ.",
+    "en": "The site team prepares quantity dossiers against the contract and BOQ lines; the CM office reviews and approves the same records.",
+    "zh": "现场按合同和BOQ明细编制工程量资料，CM办公室在同一记录上审核批准。",
+    "ja": "現場は契約とBOQ明細に基づく数量資料を作成し、CMオフィスが同じ記録を確認・承認します。"
+  },
+  {
+    "key": "construction.common.designProject",
+    "category": "construction",
+    "vi": "Dự án thiết kế",
+    "en": "Design project",
+    "zh": "设计项目",
+    "ja": "設計プロジェクト"
+  },
+  {
+    "key": "construction.common.noDesignProject",
+    "category": "construction",
+    "vi": "Dự án vận hành này chưa liên kết dự án thiết kế nên chưa có công việc hiển thị. Hãy liên kết dự án thiết kế trong hồ sơ dự án vận hành.",
+    "en": "This operational project has no linked design project, so there are no tasks to show. Link a design project in the operational project record.",
+    "zh": "此运营项目尚未关联设计项目，因此没有可显示的任务。请在运营项目资料中关联设计项目。",
+    "ja": "この運営プロジェクトには設計プロジェクトが紐付いていないため、表示する作業がありません。運営プロジェクトの記録で設計プロジェクトを紐付けてください。"
+  },
+  {
+    "key": "construction.qaQc.published",
+    "category": "construction",
+    "vi": "Đã phát hành",
+    "en": "Published",
+    "zh": "已发布",
+    "ja": "公開済み"
+  },
+  {
+    "key": "construction.qaQc.draft",
+    "category": "construction",
+    "vi": "Bản nháp",
+    "en": "Draft",
+    "zh": "草稿",
+    "ja": "下書き"
+  },
+  {
+    "key": "construction.common.operationalProject",
+    "category": "construction",
+    "vi": "Dự án vận hành",
+    "en": "Operational project",
+    "zh": "运营项目",
+    "ja": "運用プロジェクト"
+  },
+  {
+    "key": "construction.common.updated",
+    "category": "construction",
+    "vi": "Đã cập nhật hồ sơ",
+    "en": "Record updated",
+    "zh": "记录已更新",
+    "ja": "記録を更新しました"
+  },
+  {
+    "key": "construction.common.noDesignProject.generic",
+    "category": "construction",
+    "vi": "Dự án vận hành này chưa liên kết dự án thiết kế. Hãy liên kết trong hồ sơ dự án vận hành để dùng màn hình này.",
+    "en": "This operational project has no linked design project. Link one in the operational project record to use this screen.",
+    "zh": "此运营项目尚未关联设计项目。请在运营项目记录中关联后使用此页面。",
+    "ja": "この運用プロジェクトには設計プロジェクトがリンクされていません。運用プロジェクト記録でリンクしてからこの画面を使用してください。"
+  },
+  {
+    "key": "construction.actions.deleteConfirm",
+    "category": "construction",
+    "vi": "Xoá hồ sơ này? Không thể hoàn tác.",
+    "en": "Delete this record? This action cannot be undone.",
+    "zh": "删除此记录？此操作无法撤销。",
+    "ja": "この記録を削除しますか？元に戻せません。"
+  },
+  {
+    "key": "construction.actions.deleted",
+    "category": "construction",
+    "vi": "Đã xoá hồ sơ",
+    "en": "Record deleted",
+    "zh": "记录已删除",
+    "ja": "記録を削除しました"
+  },
+  {
+    "key": "construction.common.moreFilters",
+    "category": "construction",
+    "vi": "Bộ lọc khác",
+    "en": "More filters",
+    "zh": "更多筛选",
+    "ja": "その他の絞り込み"
+  },
+  {
+    "key": "construction.common.fewerFilters",
+    "category": "construction",
+    "vi": "Thu gọn bộ lọc",
+    "en": "Fewer filters",
+    "zh": "收起筛选",
+    "ja": "絞り込みを閉じる"
+  },
+  {
+    "key": "construction.qaQc.checklistHelp",
+    "category": "construction",
+    "vi": "Dán kết quả checklist dạng JSON. Hệ thống kiểm tra định dạng trước khi lưu.",
+    "en": "Paste the checklist results as JSON. The format is validated before saving.",
+    "zh": "以 JSON 粘贴检查清单结果，保存前会校验格式。",
+    "ja": "チェックリスト結果を JSON 形式で貼り付けてください。保存前に形式を検証します。"
+  },
+  {
+    "key": "construction.qaQc.formIntro",
+    "category": "construction",
+    "vi": "Chọn mẫu QA/QC đã phát hành và gói IFC đã phát hành của dự án. Hồ sơ được Phòng CM duyệt trước khi nghiệm thu.",
+    "en": "Choose a published QA/QC template and a released IFC package of the project. The CM Office approves the dossier before acceptance.",
+    "zh": "选择已发布的QA/QC模板和本项目的已发布IFC包。验收前须经CM部门批准。",
+    "ja": "公開済みのQA/QCテンプレートと、このプロジェクトの公開済みIFCパッケージを選択します。受入前にCM部門が承認します。"
+  },
+  {
+    "key": "construction.qaQc.selectTemplateHint",
+    "category": "construction",
+    "vi": "Chỉ hiển thị mẫu đã phát hành. Nếu chưa có, nhờ quản trị QA/QC phát hành mẫu trước.",
+    "en": "Only published templates are listed. If none appear, ask the QA/QC administrator to publish one first.",
+    "zh": "仅列出已发布的模板。若为空，请先由QA/QC管理员发布模板。",
+    "ja": "公開済みのテンプレートのみ表示されます。ない場合はQA/QC管理者に公開を依頼してください。"
+  },
+  {
+    "key": "construction.qaQc.noTemplatesHint",
+    "category": "construction",
+    "vi": "Chưa có mẫu QA/QC đã phát hành nên chưa thể lập hồ sơ. Phát hành mẫu trước ở khu vực Quản trị QA/QC.",
+    "en": "No published QA/QC template yet, so no dossier can be created. Publish a template in QA/QC administration first.",
+    "zh": "尚无已发布的QA/QC模板，无法创建档案。请先在QA/QC管理区发布模板。",
+    "ja": "公開済みのQA/QCテンプレートがないため、書類を作成できません。先にQA/QC管理でテンプレートを公開してください。"
+  },
+  {
+    "key": "construction.qaQc.selectIfcRelease",
+    "category": "construction",
+    "vi": "Chọn gói IFC đã phát hành",
+    "en": "Select a released IFC package",
+    "zh": "选择已发布的IFC包",
+    "ja": "公開済みIFCパッケージを選択"
+  },
+  {
+    "key": "construction.qaQc.ifcHint",
+    "category": "construction",
+    "vi": "Hồ sơ phải gắn với một gói IFC đã phát hành của đúng dự án. Tìm theo mã hoặc tên đợt phát hành.",
+    "en": "The dossier must reference a released IFC package of this project. Search by release number or title.",
+    "zh": "档案必须关联本项目已发布的IFC包。可按发布编号或标题搜索。",
+    "ja": "書類はこのプロジェクトの公開済みIFCパッケージに紐付けます。公開番号やタイトルで検索できます。"
+  },
+  {
+    "key": "construction.qaQc.noIfcRelease",
+    "category": "construction",
+    "vi": "Dự án chưa có gói IFC đã phát hành. Nhờ bộ phận Thiết kế phát hành bản vẽ IFC trước khi lập hồ sơ QA/QC.",
+    "en": "This project has no released IFC package yet. Ask the Design team to release IFC drawings before creating a QA/QC dossier.",
+    "zh": "本项目尚无已发布的IFC包。请先由设计部门发布IFC图纸。",
+    "ja": "このプロジェクトには公開済みIFCパッケージがありません。先に設計部門へIFC図面の公開を依頼してください。"
+  },
+  {
+    "key": "construction.qaQc.ifcRequired",
+    "category": "construction",
+    "vi": "Chọn gói IFC đã phát hành trước khi lưu hồ sơ.",
+    "en": "Select a released IFC package before saving.",
+    "zh": "保存前请选择已发布的IFC包。",
+    "ja": "保存前に公開済みIFCパッケージを選択してください。"
+  },
+  {
+    "key": "construction.qaQc.wbsHint",
+    "category": "construction",
+    "vi": "Mã WBS của hạng mục được kiểm tra. Ví dụ: WBS-3.1-FORM.",
+    "en": "WBS code of the item being inspected. e.g. WBS-3.1-FORM.",
+    "zh": "受检项的WBS编码。例如：WBS-3.1-FORM。",
+    "ja": "検査対象のWBSコード。例：WBS-3.1-FORM。"
+  },
+  {
+    "key": "construction.qaQc.titleHint",
+    "category": "construction",
+    "vi": "Tên ngắn gọn để nhận biết hồ sơ. Ví dụ: Kiểm tra cốp pha sàn tầng 2.",
+    "en": "A short name to identify the dossier. e.g. Formwork inspection, floor 2 slab.",
+    "zh": "便于识别档案的简短名称。例如：二层楼板模板检查。",
+    "ja": "書類を識別しやすい短い名称。例：2階スラブ型枠検査。"
+  },
+  {
+    "key": "construction.qaQc.checklistLabel",
+    "category": "construction",
+    "vi": "Kết quả checklist (dành cho kỹ thuật)",
+    "en": "Checklist results (technical)",
+    "zh": "检查清单结果（技术人员）",
+    "ja": "チェックリスト結果（技術者向け）"
+  },
+  {
+    "key": "construction.qaQc.checklistHelpAdvanced",
+    "category": "construction",
+    "vi": "Dữ liệu kỹ thuật dạng JSON, lấy từ biểu mẫu chuẩn của mẫu QA/QC. Chỉ sửa khi có hướng dẫn; hệ thống kiểm tra định dạng trước khi lưu.",
+    "en": "Technical JSON copied from the QA/QC template. Edit only when instructed; the format is validated before saving.",
+    "zh": "来自QA/QC标准表单的技术JSON。仅在指导下修改；保存前会校验格式。",
+    "ja": "QA/QC標準様式から取得した技術用JSONです。指示がある場合のみ編集してください。保存前に形式を検証します。"
+  },
+  {
+    "key": "construction.qs.formIntro",
+    "category": "construction",
+    "vi": "Chọn hợp đồng, mốc thanh toán và nhập khối lượng nghiệm thu. Giá trị nghiệm thu phải bằng tổng giá trị các dòng khối lượng.",
+    "en": "Choose the contract and payment milestone, then enter accepted quantities. The certified amount must equal the sum of the line amounts.",
+    "zh": "选择合同和付款节点，录入验收工程量。确认金额必须等于各工程量行金额之和。",
+    "ja": "契約と支払マイルストーンを選び、受入数量を入力します。確認金額は各明細金額の合計と一致する必要があります。"
+  },
+  {
+    "key": "construction.qs.contractHint",
+    "category": "construction",
+    "vi": "Chỉ hiển thị hợp đồng cùng hướng với đợt QS đang lập.",
+    "en": "Only contracts matching the QS batch direction are listed.",
+    "zh": "仅列出与本次QS单据方向相同的合同。",
+    "ja": "QSバッチと同じ方向の契約のみ表示されます。"
+  },
+  {
+    "key": "construction.qs.milestoneHint",
+    "category": "construction",
+    "vi": "Bắt buộc với đợt Upstream. Chọn mốc phải thu mà đợt nghiệm thu này sẽ thanh toán.",
+    "en": "Required for Upstream batches. Choose the receivable milestone this batch will be paid against.",
+    "zh": "上游单据必填。选择本次验收对应的收款节点。",
+    "ja": "Upstreamでは必須です。この受入が対応する入金マイルストーンを選択します。"
+  },
+  {
+    "key": "construction.qs.amountHint",
+    "category": "construction",
+    "vi": "Phải bằng tổng (số lượng × đơn giá) của các dòng bên dưới.",
+    "en": "Must equal the sum of (quantity × unit price) across the lines below.",
+    "zh": "必须等于下方各行的（数量×单价）合计。",
+    "ja": "下記明細の（数量×単価）合計と一致する必要があります。"
+  },
+  {
+    "key": "construction.qs.wbsHint",
+    "category": "construction",
+    "vi": "Mã WBS của hạng mục được nghiệm thu. Ví dụ: WBS-3.2-MEP.",
+    "en": "WBS code of the accepted work item. e.g. WBS-3.2-MEP.",
+    "zh": "验收项的WBS编码。例如：WBS-3.2-MEP。",
+    "ja": "受入対象のWBSコード。例：WBS-3.2-MEP。"
+  },
+  {
+    "key": "construction.qs.descriptionHint",
+    "category": "construction",
+    "vi": "Tóm tắt phạm vi và kết quả nghiệm thu. Ví dụ: Nghiệm thu cốp pha sàn tầng 2, đợt 1.",
+    "en": "Summarise the scope and result. e.g. Floor 2 slab formwork, period 1.",
+    "zh": "概述验收范围与结果。例如：二层楼板模板，第一期。",
+    "ja": "受入範囲と結果の概要。例：2階スラブ型枠、第1回。"
+  },
+  {
+    "key": "construction.qs.evidenceHint",
+    "category": "construction",
+    "vi": "Tuỳ chọn — mã tài liệu minh chứng kèm theo, phân cách bằng dấu phẩy. Ví dụ: 101, 102.",
+    "en": "Optional — evidence document IDs, comma separated. e.g. 101, 102.",
+    "zh": "可选——附带的证明材料编号，以逗号分隔。例如：101, 102。",
+    "ja": "任意 — 証拠資料IDをカンマ区切りで入力。例：101, 102。"
+  },
+  {
+    "key": "construction.qs.directionHint",
+    "category": "construction",
+    "vi": "Đầu ra: nghiệm thu với chủ đầu tư. Đầu vào: nghiệm thu với nhà thầu phụ.",
+    "en": "Upstream: acceptance with the client. Downstream: acceptance with a subcontractor.",
+    "zh": "上游：与业主验收。下游：与分包商验收。",
+    "ja": "Upstream：発注者との受入。Downstream：下請業者との受入。"
+  },
+  {
+    "key": "construction.qs.descriptionPlaceholder",
+    "category": "construction",
+    "vi": "Ví dụ: Nghiệm thu cốp pha sàn tầng 2 — đợt 1",
+    "en": "e.g. Floor 2 slab formwork acceptance — period 1",
+    "zh": "例如：二层楼板模板验收—第一期",
+    "ja": "例：2階スラブ型枠受入 — 第1回"
+  }
 ]

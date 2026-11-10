@@ -12,6 +12,12 @@ public interface IHseViolationService
     Task<HseViolationResponse?> UpdateAsync(int projectId, int id, UpdateHseViolationRequest request, int callerUserId, CancellationToken ct = default);
     Task<HseViolationResponse?> TransitionAsync(int projectId, int id, HseViolationStatus next, TransitionHseViolationRequest request, int callerUserId, CancellationToken ct = default);
     Task<HseViolationResponse?> CorrectAsync(int projectId, int id, CorrectHseViolationRequest request, int callerUserId, CancellationToken ct = default);
+    Task<DeletionImpactResponse?> GetDeletionImpactAsync(int projectId, int id, CancellationToken ct = default);
+    Task<bool> DeleteAsync(int projectId, int id, ConfirmDeletionRequest request, CancellationToken ct = default);
 }
 
-public sealed class HseViolationOperationException(string message) : Exception(message);
+public sealed class HseViolationOperationException(string message, string? code = null) : Exception(message)
+{
+    public const string IndependentReviewRequiredCode = "HSE_INDEPENDENT_REVIEW_REQUIRED";
+    public string? Code { get; } = code;
+}

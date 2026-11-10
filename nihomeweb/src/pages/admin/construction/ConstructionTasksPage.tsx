@@ -19,7 +19,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import AdminLayout from "@/components/layout/AdminLayout";
+import { type DesignProjectScopeProps } from "./constructionScope";
 import ConstructionTaskDrawings from "./ConstructionTaskDrawings";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -27,8 +27,10 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { PageLoading, PageError } from "@/components/PageState";
-import { Badge } from "@/components/ui/badge";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { PageEmpty, PageLoading, PageError } from "@/components/PageState";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { OVERDUE_TONE, STATUS_SURFACE_CLASS, TASK_STATUS_TONE } from "./constructionStatus";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -87,17 +89,6 @@ const CONSTRUCTION_STATUSES: ConstructionTaskStatus[] = [
   "OnHold",
   "WaitingForDepartment",
 ];
-
-const STATUS_BADGE: Record<ConstructionTaskStatus, string> = {
-  Planned: "border-border bg-muted/30 text-foreground",
-  InProgress: "border-sky-200 bg-sky-50 text-sky-700",
-  Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
-  OnHold: "border-amber-200 bg-amber-50 text-amber-800",
-  WaitingForDepartment: "border-violet-200 bg-violet-50 text-violet-700",
-};
-
-const OVERDUE_BADGE = "border-amber-300 bg-amber-50 text-amber-800";
 
 interface UserOption extends PersonIdentity {
   id: number;
@@ -206,13 +197,17 @@ const buildGantt = (tasks: ConstructionTaskResponse[]) => {
 
 // ------------------------------- page ---------------------------------
 
-const AdminConstructionTasks = () => {
+export function ConstructionTasksPanel({
+  designProjectId,
+  designProjects = [],
+  scope = "review",
+}: DesignProjectScopeProps) {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const [searchParams] = useSearchParams();
-  const canManage = has(ADMIN_PERMS.constructionTasksManage);
+  const canManage = scope === "review" && has(ADMIN_PERMS.constructionTasksManage);
   const canListUsers = has(ADMIN_PERMS.users);
 
   // list state
@@ -226,15 +221,10 @@ const AdminConstructionTasks = () => {
   const [error, setError] = useState<string | null>(null);
 
   // filters
-  const projectIdParam = Number(
-    searchParams.get("designProjectId") ?? searchParams.get("projectId"),
-  );
-  const initialProjectId =
-    Number.isInteger(projectIdParam) && projectIdParam > 0 ? projectIdParam : null;
   const taskIdParam = Number(searchParams.get("taskId"));
   const requestedTaskId = Number.isInteger(taskIdParam) && taskIdParam > 0 ? taskIdParam : null;
   const openedTaskIdRef = useRef<number | null>(null);
-  const [projectId, setProjectId] = useState<number | null>(initialProjectId);
+  const projectId = designProjectId;
   const [status, setStatus] = useState<ConstructionTaskStatus | "">("");
   const [ownerUserId, setOwnerUserId] = useState<number | null>(null);
   const [search, setSearch] = useState("");
@@ -251,7 +241,7 @@ const AdminConstructionTasks = () => {
 
   // dialog / sheet
   const [creating, setCreating] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateForm>(() => emptyCreateForm(initialProjectId));
+  const [createForm, setCreateForm] = useState<CreateForm>(() => emptyCreateForm(designProjectId));
   const [saving, setSaving] = useState(false);
   const [createError, setCreateError] = useState<string | null>(null);
 
@@ -445,18 +435,18 @@ const AdminConstructionTasks = () => {
   }, [fetchList]);
 
   const projectOptions = useMemo(
-    () => [
-      // Explicit "All projects" so users can clear the filter after
-      // picking one. Empty-string sentinel matches SearchableSelect's
-      // convention for `no selection`.
-      { value: "", label: t("constructionTasks.filter.allProjects") },
-      ...projects.map((p) => ({
+    () =>
+      projects.map((p) => ({
         value: String(p.id),
         label: `${p.projectCode} — ${p.name}`,
       })),
-    ],
-    [projects, t],
+    [projects],
   );
+  const projectLabel = useMemo(() => {
+    if (designProjectId == null) return t("common.noData");
+    const match = designProjects.find((p) => p.id === designProjectId);
+    return match ? `${match.projectCode} — ${match.name}` : t("common.noData");
+  }, [designProjectId, designProjects, t]);
   const userOptions = useMemo(
     () => [
       { value: "", label: t("constructionTasks.filter.allOwners") },
@@ -466,7 +456,6 @@ const AdminConstructionTasks = () => {
   );
 
   const resetFilters = () => {
-    setProjectId(null);
     setStatus("");
     setOwnerUserId(null);
     setSearch("");
@@ -732,13 +721,8 @@ const AdminConstructionTasks = () => {
   };
 
   // -------- render helpers --------
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const hasActiveFilter =
-    projectId != null ||
-    status !== "" ||
-    ownerUserId != null ||
-    search.trim().length > 0 ||
-    overdueOnly;
+    status !== "" || ownerUserId != null || search.trim().length > 0 || overdueOnly;
 
   const statusPillCount = (s: ConstructionTaskStatus) => statusCounts[s] ?? 0;
 
@@ -757,31 +741,32 @@ const AdminConstructionTasks = () => {
 
   const renderStatusBadge = (row: ConstructionTaskResponse) => (
     <div className="flex flex-wrap items-center gap-1">
-      <Badge variant="outline" className={cn(STATUS_BADGE[row.status])}>
+      <ConstructionStatusBadge tone={TASK_STATUS_TONE[row.status]}>
         {t(`constructionTasks.status.${row.status}`)}
-      </Badge>
+      </ConstructionStatusBadge>
       {row.isOverdue && (
-        <Badge variant="outline" className={OVERDUE_BADGE}>
+        <ConstructionStatusBadge tone={OVERDUE_TONE}>
           {t("constructionTasks.status.Overdue")}
-        </Badge>
+        </ConstructionStatusBadge>
       )}
     </div>
   );
 
+  if (designProjectId == null) {
+    return (
+      <div data-testid="construction-tasks-no-project">
+        <PageEmpty message={t("construction.common.noDesignProject")} />
+      </div>
+    );
+  }
+
   return (
-    <AdminLayout>
+    <>
       <div className="space-y-6" data-testid="construction-tasks-page">
         <Button variant="outline" asChild>
-          <Link to="/admin/construction/progress">{t("cmSchedule.title")}</Link>
+          <Link to="/admin/construction/cm/schedule">{t("cmSchedule.title")}</Link>
         </Button>
-        {/* header */}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold text-foreground">
-              {t("constructionTasks.title")}
-            </h1>
-            <p className="text-sm text-muted-foreground">{t("constructionTasks.subtitle")}</p>
-          </div>
+        <div className="flex justify-end">
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
@@ -840,15 +825,7 @@ const AdminConstructionTasks = () => {
               <Label className="text-xs text-muted-foreground">
                 {t("constructionTasks.field.project")}
               </Label>
-              <SearchableSelect
-                value={projectId == null ? "" : String(projectId)}
-                onChange={(v) => {
-                  setProjectId(v ? Number(v) : null);
-                  setPage(1);
-                }}
-                options={projectOptions}
-                placeholder={t("constructionTasks.filter.allProjects")}
-              />
+              <Input value={projectLabel} readOnly />
             </FieldScope>
             <FieldScope>
               <Label className="text-xs text-muted-foreground">
@@ -952,9 +929,22 @@ const AdminConstructionTasks = () => {
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
-            {t("constructionTasks.empty")}
-          </div>
+          <PageEmpty
+            message={t("constructionTasks.empty")}
+            action={
+              canManage && (
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={openCreate}
+                  data-testid="construction-empty-new"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  {t("constructionTasks.new")}
+                </Button>
+              )
+            }
+          />
         ) : view === "list" ? (
           <>
             {/* Mobile cards (< md) — desktop table drops the important
@@ -979,7 +969,7 @@ const AdminConstructionTasks = () => {
                   }}
                   className={cn(
                     "relative rounded-xl border border-border bg-card p-4 text-left shadow-sm transition hover:border-input hover:shadow-md focus:outline-none focus:ring-2 focus:ring-ring",
-                    row.isOverdue && "border-amber-300 bg-amber-50/40",
+                    row.isOverdue && "border-warning/50 bg-warning-soft/50",
                   )}
                 >
                   <div className="flex items-start justify-between gap-3">
@@ -1046,7 +1036,7 @@ const AdminConstructionTasks = () => {
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="text-rose-600 hover:text-rose-700"
+                        className="text-destructive hover:text-destructive/80"
                         onClick={(e) => {
                           e.stopPropagation();
                           setDeleting(row);
@@ -1059,32 +1049,6 @@ const AdminConstructionTasks = () => {
                   )}
                 </div>
               ))}
-              <div className="flex items-center justify-between px-1 pt-1 text-xs text-muted-foreground">
-                <span>
-                  {t("common.showing")} {rows.length} / {total}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    ←
-                  </Button>
-                  <span className="px-2 py-1">
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    →
-                  </Button>
-                </div>
-              </div>
             </div>
 
             {/* Desktop table (md+) — table has too many columns to fit
@@ -1120,7 +1084,7 @@ const AdminConstructionTasks = () => {
                         key={row.id}
                         className={cn(
                           "cursor-pointer hover:bg-muted/30",
-                          row.isOverdue && "bg-amber-50/40",
+                          row.isOverdue && "bg-warning-soft/50",
                         )}
                         onClick={() => void openDetail(row)}
                         data-testid={`construction-row-${row.id}`}
@@ -1176,7 +1140,7 @@ const AdminConstructionTasks = () => {
                             <Button
                               size="sm"
                               variant="ghost"
-                              className="text-rose-600 hover:text-rose-700"
+                              className="text-destructive hover:text-destructive/80"
                               onClick={() => setDeleting(row)}
                               data-testid={`construction-delete-${row.id}`}
                               aria-label={`delete-${row.taskCode}`}
@@ -1190,33 +1154,14 @@ const AdminConstructionTasks = () => {
                   </tbody>
                 </table>
               </div>
-              <div className="flex items-center justify-between border-t border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground">
-                <span>
-                  {t("common.showing")} {rows.length} / {total}
-                </span>
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page <= 1}
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  >
-                    ←
-                  </Button>
-                  <span className="px-2 py-1">
-                    {page} / {totalPages}
-                  </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                  >
-                    →
-                  </Button>
-                </div>
-              </div>
             </div>
+            <ListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              disabled={loading}
+            />
           </>
         ) : (
           <GanttChart data={ganttData} lang={lang} t={t} onOpen={openDetail} />
@@ -1239,7 +1184,7 @@ const AdminConstructionTasks = () => {
                   onChange={(v) =>
                     setCreateForm((f) => ({ ...f, designProjectId: v ? Number(v) : null }))
                   }
-                  options={projectOptions.filter((o) => o.value !== "")}
+                  options={projectOptions.filter((o) => o.value === String(designProjectId))}
                   placeholder={t("constructionTasks.selectProject")}
                 />
               </FieldScope>
@@ -1321,7 +1266,7 @@ const AdminConstructionTasks = () => {
                 </FieldScope>
               )}
               {createScheduleFailed && (
-                <p className="text-sm text-rose-600">
+                <p className="text-sm text-destructive">
                   {t("constructionTasks.form.masterWbsLoadFailed")}
                 </p>
               )}
@@ -1341,7 +1286,7 @@ const AdminConstructionTasks = () => {
                   <Input value="—" disabled />
                 )}
               </FieldScope>
-              {createError && <div className="text-sm text-rose-600">{createError}</div>}
+              {createError && <div className="text-sm text-destructive">{createError}</div>}
             </div>
             <DialogFooter>
               <Button variant="ghost" onClick={() => setCreating(false)} disabled={saving}>
@@ -1445,7 +1390,7 @@ const AdminConstructionTasks = () => {
                     </FieldScope>
                   )}
                   {detailScheduleFailed && (
-                    <p className="text-sm text-rose-600">
+                    <p className="text-sm text-destructive">
                       {t("constructionTasks.form.masterWbsLoadFailed")}
                     </p>
                   )}
@@ -1582,7 +1527,7 @@ const AdminConstructionTasks = () => {
                     taskId={detail.id}
                     canManage={canManage}
                   />
-                  {detailError && <div className="text-sm text-rose-600">{detailError}</div>}
+                  {detailError && <div className="text-sm text-destructive">{detailError}</div>}
                   <div className="flex items-center justify-between pt-2">
                     {canManage ? (
                       <Button
@@ -1663,9 +1608,9 @@ const AdminConstructionTasks = () => {
           </AlertDialogContent>
         </AlertDialog>
       </div>
-    </AdminLayout>
+    </>
   );
-};
+}
 
 interface GanttChartProps {
   data: { rows: GanttRow[]; totalDays: number; startIso: string };
@@ -1678,11 +1623,7 @@ const DAY_WIDTH = 14; // px per day — keeps a 3-month window under ~1300px
 
 const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
   if (data.rows.length === 0) {
-    return (
-      <div className="rounded-lg border border-dashed border-input bg-card p-10 text-center text-sm text-muted-foreground">
-        {t("constructionTasks.empty")}
-      </div>
-    );
+    return <PageEmpty message={t("constructionTasks.empty")} />;
   }
   const totalWidth = Math.max(600, data.totalDays * DAY_WIDTH);
   return (
@@ -1721,8 +1662,8 @@ const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
                   <div
                     className={cn(
                       "absolute top-2 h-6 rounded-md border text-[10px] font-semibold text-foreground",
-                      STATUS_BADGE[task.status],
-                      task.isOverdue && "ring-2 ring-amber-400",
+                      STATUS_SURFACE_CLASS[TASK_STATUS_TONE[task.status]],
+                      task.isOverdue && "ring-2 ring-warning/60",
                     )}
                     style={{
                       left: offsetDays * DAY_WIDTH + 8,
@@ -1750,5 +1691,3 @@ const GanttChart = ({ data, lang, t, onOpen }: GanttChartProps) => {
     </div>
   );
 };
-
-export default AdminConstructionTasks;

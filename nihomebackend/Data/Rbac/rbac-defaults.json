@@ -191,6 +191,7 @@
     { "module": "construction.hse", "action": "manage" },
     { "module": "construction.hse", "action": "confirm" },
     { "module": "construction.hse", "action": "close" },
+    { "module": "construction.hse", "action": "delete" },
     { "module": "construction.cm-preparation", "action": "view" },
     { "module": "construction.cm-preparation", "action": "manage" },
     { "module": "construction.cm-preparation", "action": "start" },
@@ -591,7 +592,9 @@
     "SITE_COMMANDER": {
       "patterns": [
         "dashboard.view", "operations.projects.view", "reports.projects.view",
-        "construction.tasks.view", "construction.diary.**", "construction.punch.**",
+        "construction.tasks.view",
+        "construction.diary.view", "construction.diary.manage",
+        "construction.punch.view", "construction.punch.manage",
         "construction.hse.view", "construction.hse.manage",
         "construction.acceptance.view", "construction.acceptance.manage",
         "construction.resource-request.view", "construction.resource-request.create",
@@ -604,7 +607,8 @@
       "patterns": [
         "dashboard.view", "operations.projects.view",
         "design.ifc.view", "construction.tasks.view", "construction.diary.view", "construction.diary.manage",
-        "construction.punch.**", "construction.hse.view", "construction.acceptance.view", "construction.acceptance.manage",
+        "construction.punch.view", "construction.punch.manage",
+        "construction.hse.view", "construction.acceptance.view", "construction.acceptance.manage",
         "construction.resource-request.view", "construction.resource-request.create",
         "construction.qa-qc.view", "construction.qa-qc.create",
         "profile.me.*"

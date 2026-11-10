@@ -170,7 +170,7 @@ export function CmScheduleWorkspace({
           <li key={task.id}>
             <Link
               className="text-sm text-foreground underline decoration-border underline-offset-4 hover:decoration-current"
-              to={`/admin/construction/tasks?designProjectId=${task.designProjectId}&taskId=${task.id}`}
+              to={`/admin/construction/cm/schedule?tab=tasks&designProjectId=${task.designProjectId}&taskId=${task.id}`}
             >
               {task.taskCode} · {task.name}
             </Link>
@@ -252,7 +252,9 @@ export function CmScheduleWorkspace({
                     data.unlinked.length === 0 &&
                     !data.proposed.length && (
                       <Button asChild variant="outline">
-                        <Link to="/admin/construction/tasks">{t("cmSchedule.openTasks")}</Link>
+                        <Link to="/admin/construction/cm/schedule?tab=tasks">
+                          {t("cmSchedule.openTasks")}
+                        </Link>
                       </Button>
                     )}
                 </li>
@@ -448,7 +450,10 @@ export function CmScheduleWorkspace({
               <div className="flex flex-wrap items-center gap-3">
                 <div className="space-y-1.5">
                   <Label htmlFor="cm-report-period">{t("cmSchedule.period")}</Label>
-                  <Select value={period} onValueChange={setPeriod}>
+                  <Select
+                    value={period}
+                    onValueChange={(value) => setPeriod(value as "day" | "month" | "year")}
+                  >
                     <SelectTrigger
                       id="cm-report-period"
                       className="w-48"

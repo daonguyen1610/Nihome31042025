@@ -1,4 +1,6 @@
 using System.Text.Json;
+using System.Security.Cryptography;
+using System.Text;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -134,6 +136,11 @@ public sealed class HseViolationService(AppDbContext db) : IHseViolationService
         if (entity is null) return null;
         if (entity.Status == next) return await GetAsync(projectId, id, true, ct);
         EnsureTransitionAllowed(entity.Status, next, request.Reason);
+        if ((next is HseViolationStatus.Confirmed or HseViolationStatus.Rejected) &&
+            (entity.CreatedByUserId == callerUserId || entity.ReportedByUserId == callerUserId))
+            throw new HseViolationOperationException(
+                "Người lập hoặc gửi vi phạm HSE không được tự xác nhận hay từ chối. Hãy nhờ người khác có quyền kiểm tra hồ sơ này.",
+                HseViolationOperationException.IndependentReviewRequiredCode);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
 
         if (next == HseViolationStatus.Remediated)
@@ -199,6 +206,59 @@ public sealed class HseViolationService(AppDbContext db) : IHseViolationService
         entity.Events.Add(NewEvent(entity, HseViolationEventType.Correction, entity.Status, entity.Status, request.Reason.Trim(), callerUserId, now));
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetAsync(projectId, id, true, ct);
+    }
+
+    public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(int projectId, int id, CancellationToken ct = default)
+    {
+        var entity = await db.HseViolations.AsNoTracking().SingleOrDefaultAsync(item =>
+            item.OperationalProjectId == projectId && item.Id == id, ct);
+        if (entity is null) return null;
+        var eventCount = await db.HseViolationEvents.CountAsync(item => item.HseViolationId == id, ct);
+        var hasEvidence = entity.EvidenceDocumentsJson != "[]";
+        var allowedStatus = entity.Status is HseViolationStatus.Draft or HseViolationStatus.Rejected or HseViolationStatus.Cancelled;
+        var token = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            $"HseViolation:{id}:{entity.Code}:{entity.Status}:{CrmConcurrency.Encode(entity.RowVersion)}:{eventCount}:{entity.EvidenceDocumentsJson}"))).ToLowerInvariant();
+        var items = new List<DeletionImpactItemResponse>();
+        if (!allowedStatus)
+            items.Add(new DeletionImpactItemResponse { Key = "construction.recordState", Action = DeletionImpactActions.Block, Count = 1, Examples = [entity.Status.ToString()] });
+        if (hasEvidence)
+            items.Add(new DeletionImpactItemResponse { Key = "construction.hseEvidenceCleanup", Action = DeletionImpactActions.Block, Count = 1 });
+        if (eventCount > 0)
+            items.Add(new DeletionImpactItemResponse { Key = "construction.hseEvents", Action = DeletionImpactActions.Delete, Count = eventCount });
+        return new DeletionImpactResponse
+        {
+            ResourceType = nameof(HseViolation),
+            ResourceId = id,
+            ResourceLabel = entity.Code,
+            RequiredConfirmation = entity.Code,
+            PlanToken = token,
+            CanDelete = allowedStatus && !hasEvidence,
+            TotalAffected = 1 + eventCount,
+            Items = items,
+        };
+    }
+
+    public async Task<bool> DeleteAsync(int projectId, int id, ConfirmDeletionRequest request, CancellationToken ct = default)
+    {
+        var impact = await GetDeletionImpactAsync(projectId, id, ct);
+        if (impact is null) return false;
+        if (!string.Equals(request.PlanToken?.Trim(), impact.PlanToken, StringComparison.Ordinal))
+            throw new DeletionPlanChangedException("Dữ liệu liên quan đã thay đổi. Vui lòng xem lại danh sách ảnh hưởng trước khi xoá.");
+        if (!impact.CanDelete)
+            throw new HseViolationOperationException("Không thể xoá vi phạm HSE khi hồ sơ còn mở hoặc còn bằng chứng cần dọn an toàn.");
+        if (!string.Equals(request.Confirmation, impact.RequiredConfirmation, StringComparison.Ordinal))
+            throw new HseViolationOperationException($"Mã xác nhận không đúng. Vui lòng nhập chính xác '{impact.RequiredConfirmation}'.");
+        if (string.IsNullOrWhiteSpace(request.RowVersion))
+            throw new HseViolationOperationException("Phiên bản dữ liệu là bắt buộc. Vui lòng tải lại ảnh hưởng xoá.");
+        var entity = await db.HseViolations.SingleOrDefaultAsync(item =>
+            item.OperationalProjectId == projectId && item.Id == id, ct);
+        if (entity is null) return false;
+        if (entity.Status is not (HseViolationStatus.Draft or HseViolationStatus.Rejected or HseViolationStatus.Cancelled))
+            throw new HseViolationOperationException("Chỉ được xoá vi phạm HSE ở trạng thái Nháp, Từ chối hoặc Đã huỷ.");
+        CrmConcurrency.Apply(db, entity, request.RowVersion);
+        db.HseViolations.Remove(entity);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        return true;
     }
 
     private IQueryable<HseViolation> BaseQuery() => db.HseViolations.AsNoTracking()

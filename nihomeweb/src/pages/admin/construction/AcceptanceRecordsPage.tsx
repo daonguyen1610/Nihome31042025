@@ -6,10 +6,10 @@ import ConstructionStatTile from "./ConstructionStatTile";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   ClipboardList,
   Eye,
@@ -21,7 +21,7 @@ import {
   Search,
   Trash2,
 } from "lucide-react";
-import AdminLayout from "@/components/layout/AdminLayout";
+import { type DesignProjectScopeProps } from "./constructionScope";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
@@ -31,9 +31,12 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { isManagedDocumentPath, resolveSafeLinkUrl } from "@/lib/url";
-import { PageLoading, PageError } from "@/components/PageState";
+import { ListPagination } from "@/components/admin/ListPagination";
+import { PageEmpty, PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ConstructionStatusBadge } from "./constructionUi";
+import { ACCEPTANCE_STATUS_TONE, OVERDUE_TONE } from "./constructionStatus";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -90,16 +93,6 @@ const ACCEPTANCE_STATUSES: AcceptanceStatus[] = [
   "Cancelled",
 ];
 
-const STATUS_BADGE: Record<AcceptanceStatus, string> = {
-  Draft: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
-  Cancelled: "border-zinc-200 bg-zinc-50 text-zinc-600",
-};
-
-const OVERDUE_BADGE = "border-amber-300 bg-amber-50 text-amber-800";
-
 const OPEN_STATUSES = new Set<AcceptanceStatus>(["Draft", "Submitted", "Rejected"]);
 
 const parseDocuments = (value: string | null | undefined): string[] => {
@@ -144,21 +137,20 @@ const formatDateTime = (iso: string | null | undefined) => {
   return d.toLocaleString();
 };
 
-export default function AcceptanceRecordsPage() {
+export function AcceptanceRecordsPanel({
+  designProjectId,
+  scope = "execute",
+}: DesignProjectScopeProps) {
   const uiError = useUiError();
   const { t } = useI18n();
-  const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.constructionAcceptanceManage);
-  const canApprove = has(ADMIN_PERMS.constructionAcceptanceApprove);
+  const canApprove = scope === "review" && has(ADMIN_PERMS.constructionAcceptanceApprove);
 
   const [projects, setProjects] = useState<DesignProjectListItemResponse[]>([]);
   const [tasks, setTasks] = useState<ConstructionTaskResponse[]>([]);
-  const [projectId, setProjectId] = useState<number | undefined>(() => {
-    const value = Number(searchParams.get("designProjectId"));
-    return Number.isInteger(value) && value > 0 ? value : undefined;
-  });
+  const projectId = designProjectId ?? undefined;
   const [taskId, setTaskId] = useState<number | undefined>();
   const [responsibleUserId, setResponsibleUserId] = useState<number | undefined>();
   const [acceptanceFrom, setAcceptanceFrom] = useState("");
@@ -167,6 +159,7 @@ export default function AcceptanceRecordsPage() {
   const [openOnly, setOpenOnly] = useState(false);
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [search, setSearch] = useState("");
+  const [showMoreFilters, setShowMoreFilters] = useState(false);
   const settledSearch = useDebouncedValue(search);
   const [sortBy, setSortBy] = useState<NonNullable<AcceptanceRecordListParams["sortBy"]>>("date");
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("desc");
@@ -555,7 +548,7 @@ export default function AcceptanceRecordsPage() {
             testId: "acceptance-approve",
             requiresPerm: true,
           });
-        if (canManage)
+        if (canApprove)
           out.push({
             next: "Rejected",
             label: t("acceptance.action.reject"),
@@ -634,7 +627,6 @@ export default function AcceptanceRecordsPage() {
   ];
 
   const hasActiveFilters = Boolean(
-    projectId ||
     taskId ||
     responsibleUserId ||
     acceptanceFrom ||
@@ -644,6 +636,17 @@ export default function AcceptanceRecordsPage() {
     openOnly ||
     overdueOnly,
   );
+
+  const clearFilters = useCallback(() => {
+    setTaskId(undefined);
+    setResponsibleUserId(undefined);
+    setAcceptanceFrom("");
+    setAcceptanceTo("");
+    setStatus("");
+    setSearch("");
+    setOpenOnly(false);
+    setOverdueOnly(false);
+  }, []);
 
   const rowClickable = useCallback(
     (r: AcceptanceRecordResponse) => ({
@@ -661,13 +664,9 @@ export default function AcceptanceRecordsPage() {
   );
 
   return (
-    <AdminLayout>
-      <div className="space-y-6 p-4 md:p-6" data-testid="acceptance-page">
-        <header className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">{t("acceptance.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("acceptance.subtitle")}</p>
-          </div>
+    <>
+      <div className="space-y-6" data-testid="acceptance-page">
+        <header className="flex justify-end">
           <div className="flex items-center gap-2">
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCcw className="mr-2 h-4 w-4" />
@@ -704,22 +703,6 @@ export default function AcceptanceRecordsPage() {
 
         <div className="rounded-lg border bg-card p-3 md:p-4">
           <div className="grid grid-cols-1 gap-3 md:grid-cols-4 [&>div]:min-w-0">
-            <FieldScope>
-              <Label>{t("acceptance.field.project")}</Label>
-              <SearchableSelect
-                options={[
-                  { value: "", label: t("acceptance.filter.project.all") },
-                  ...projects.map((p) => ({ value: String(p.id), label: p.name })),
-                ]}
-                value={projectId != null ? String(projectId) : ""}
-                onChange={(v) => {
-                  setProjectId(v ? Number(v) : undefined);
-                  setTaskId(undefined);
-                  setPage(1);
-                }}
-                placeholder={t("acceptance.filter.project.all")}
-              />
-            </FieldScope>
             <FieldScope>
               <Label>{t("acceptance.field.task")}</Label>
               <SearchableSelect
@@ -791,82 +774,103 @@ export default function AcceptanceRecordsPage() {
                 />
               </div>
             </FieldScope>
-            <div className="flex items-end gap-4">
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={openOnly}
-                  onCheckedChange={(v) => {
-                    setOpenOnly(!!v);
-                    setPage(1);
-                  }}
-                />
-                {t("acceptance.filter.openOnly")}
-              </label>
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={overdueOnly}
-                  onCheckedChange={(v) => {
-                    setOverdueOnly(!!v);
-                    setPage(1);
-                  }}
-                />
-                {t("acceptance.filter.overdueOnly")}
-              </label>
-            </div>
-            <FieldScope>
-              <Label>{t("acceptance.filter.from")}</Label>
-              <Input
-                type="date"
-                value={acceptanceFrom}
-                onChange={(event) => {
-                  setAcceptanceFrom(event.target.value);
-                  setPage(1);
-                }}
-              />
-            </FieldScope>
-            <FieldScope>
-              <Label>{t("acceptance.filter.to")}</Label>
-              <Input
-                type="date"
-                value={acceptanceTo}
-                onChange={(event) => {
-                  setAcceptanceTo(event.target.value);
-                  setPage(1);
-                }}
-              />
-            </FieldScope>
-            <FieldScope>
-              <Label>{t("acceptance.filter.sort")}</Label>
-              <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="date">{t("acceptance.field.date")}</SelectItem>
-                  <SelectItem value="code">{t("acceptance.field.code")}</SelectItem>
-                  <SelectItem value="title">{t("acceptance.field.title")}</SelectItem>
-                  <SelectItem value="project">{t("acceptance.field.project")}</SelectItem>
-                  <SelectItem value="status">{t("acceptance.field.status")}</SelectItem>
-                  <SelectItem value="updatedAt">{t("acceptance.field.updatedAt")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </FieldScope>
-            <FieldScope>
-              <Label>{t("acceptance.filter.direction")}</Label>
-              <Select
-                value={sortDirection}
-                onValueChange={(value) => setSortDirection(value as "asc" | "desc")}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="asc">{t("acceptance.filter.asc")}</SelectItem>
-                  <SelectItem value="desc">{t("acceptance.filter.desc")}</SelectItem>
-                </SelectContent>
-              </Select>
-            </FieldScope>
           </div>
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setShowMoreFilters((value) => !value)}
+              aria-expanded={showMoreFilters}
+            >
+              {t(
+                showMoreFilters
+                  ? "construction.common.fewerFilters"
+                  : "construction.common.moreFilters",
+              )}
+              <ChevronDown
+                className={cn("ml-2 h-4 w-4 transition-transform", showMoreFilters && "rotate-180")}
+              />
+            </Button>
+          </div>
+          {showMoreFilters && (
+            <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-4 [&>div]:min-w-0">
+              <div className="flex items-end gap-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={openOnly}
+                    onCheckedChange={(v) => {
+                      setOpenOnly(!!v);
+                      setPage(1);
+                    }}
+                  />
+                  {t("acceptance.filter.openOnly")}
+                </label>
+                <label className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={overdueOnly}
+                    onCheckedChange={(v) => {
+                      setOverdueOnly(!!v);
+                      setPage(1);
+                    }}
+                  />
+                  {t("acceptance.filter.overdueOnly")}
+                </label>
+              </div>
+              <FieldScope>
+                <Label>{t("acceptance.filter.from")}</Label>
+                <Input
+                  type="date"
+                  value={acceptanceFrom}
+                  onChange={(event) => {
+                    setAcceptanceFrom(event.target.value);
+                    setPage(1);
+                  }}
+                />
+              </FieldScope>
+              <FieldScope>
+                <Label>{t("acceptance.filter.to")}</Label>
+                <Input
+                  type="date"
+                  value={acceptanceTo}
+                  onChange={(event) => {
+                    setAcceptanceTo(event.target.value);
+                    setPage(1);
+                  }}
+                />
+              </FieldScope>
+              <FieldScope>
+                <Label>{t("acceptance.filter.sort")}</Label>
+                <Select value={sortBy} onValueChange={(value) => setSortBy(value as typeof sortBy)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">{t("acceptance.field.date")}</SelectItem>
+                    <SelectItem value="code">{t("acceptance.field.code")}</SelectItem>
+                    <SelectItem value="title">{t("acceptance.field.title")}</SelectItem>
+                    <SelectItem value="project">{t("acceptance.field.project")}</SelectItem>
+                    <SelectItem value="status">{t("acceptance.field.status")}</SelectItem>
+                    <SelectItem value="updatedAt">{t("acceptance.field.updatedAt")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+              <FieldScope>
+                <Label>{t("acceptance.filter.direction")}</Label>
+                <Select
+                  value={sortDirection}
+                  onValueChange={(value) => setSortDirection(value as "asc" | "desc")}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="asc">{t("acceptance.filter.asc")}</SelectItem>
+                    <SelectItem value="desc">{t("acceptance.filter.desc")}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </FieldScope>
+            </div>
+          )}
         </div>
 
         {canManage && selected.size > 0 && (
@@ -891,9 +895,28 @@ export default function AcceptanceRecordsPage() {
         ) : error ? (
           <PageError message={error} onRetry={load} />
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border bg-card p-8 text-center text-sm text-muted-foreground">
-            {t(hasActiveFilters ? "acceptance.noResults" : "acceptance.empty")}
-          </div>
+          <PageEmpty
+            message={t(hasActiveFilters ? "acceptance.noResults" : "acceptance.empty")}
+            action={
+              hasActiveFilters ? (
+                <Button variant="outline" size="sm" onClick={clearFilters}>
+                  {t("common.reset")}
+                </Button>
+              ) : (
+                canManage && (
+                  <Button
+                    size="sm"
+                    onClick={openCreate}
+                    disabled={projectId == null}
+                    data-testid="acceptance-empty-new"
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    {t("acceptance.action.new")}
+                  </Button>
+                )
+              )
+            }
+          />
         ) : (
           <>
             {/* Desktop table */}
@@ -956,13 +979,13 @@ export default function AcceptanceRecordsPage() {
                       <td className="px-3 py-2 text-xs">{formatDate(r.acceptanceDate)}</td>
                       <td className="px-3 py-2">
                         <div className="flex flex-wrap items-center gap-1">
-                          <Badge variant="outline" className={STATUS_BADGE[r.status]}>
+                          <ConstructionStatusBadge tone={ACCEPTANCE_STATUS_TONE[r.status]}>
                             {t(`acceptance.status.${r.status.toLowerCase()}`)}
-                          </Badge>
+                          </ConstructionStatusBadge>
                           {r.isOverdue && (
-                            <Badge variant="outline" className={OVERDUE_BADGE}>
+                            <ConstructionStatusBadge tone={OVERDUE_TONE}>
                               {t("acceptance.stats.overdue")}
-                            </Badge>
+                            </ConstructionStatusBadge>
                           )}
                         </div>
                       </td>
@@ -999,7 +1022,7 @@ export default function AcceptanceRecordsPage() {
                                 onClick={() => setPendingDelete(r)}
                                 data-testid={`acceptance-row-delete-${r.id}`}
                               >
-                                <Trash2 className="h-4 w-4 text-rose-500" />
+                                <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
                             </>
                           )}
@@ -1030,13 +1053,13 @@ export default function AcceptanceRecordsPage() {
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1">
-                      <Badge variant="outline" className={STATUS_BADGE[r.status]}>
+                      <ConstructionStatusBadge tone={ACCEPTANCE_STATUS_TONE[r.status]}>
                         {t(`acceptance.status.${r.status.toLowerCase()}`)}
-                      </Badge>
+                      </ConstructionStatusBadge>
                       {r.isOverdue && (
-                        <Badge variant="outline" className={OVERDUE_BADGE}>
+                        <ConstructionStatusBadge tone={OVERDUE_TONE}>
                           {t("acceptance.stats.overdue")}
-                        </Badge>
+                        </ConstructionStatusBadge>
                       )}
                     </div>
                   </div>
@@ -1082,27 +1105,13 @@ export default function AcceptanceRecordsPage() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between text-xs text-muted-foreground">
-              <div>{t("common.pagination.total").replace("{total}", String(total))}</div>
-              <div className="flex gap-1">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                >
-                  {t("common.pagination.prev")}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={page * pageSize >= total}
-                  onClick={() => setPage(page + 1)}
-                >
-                  {t("common.pagination.next")}
-                </Button>
-              </div>
-            </div>
+            <ListPagination
+              page={page}
+              pageSize={pageSize}
+              total={total}
+              onPageChange={setPage}
+              disabled={loading}
+            />
           </>
         )}
       </div>
@@ -1139,13 +1148,13 @@ export default function AcceptanceRecordsPage() {
               </SheetHeader>
               <div className="mt-4 space-y-4 text-sm">
                 <div className="flex flex-wrap gap-2">
-                  <Badge variant="outline" className={STATUS_BADGE[detail.status]}>
+                  <ConstructionStatusBadge tone={ACCEPTANCE_STATUS_TONE[detail.status]}>
                     {t(`acceptance.status.${detail.status.toLowerCase()}`)}
-                  </Badge>
+                  </ConstructionStatusBadge>
                   {detail.isOverdue && (
-                    <Badge variant="outline" className={OVERDUE_BADGE}>
+                    <ConstructionStatusBadge tone={OVERDUE_TONE}>
                       {t("acceptance.stats.overdue")}
-                    </Badge>
+                    </ConstructionStatusBadge>
                   )}
                   {detail.revisionCount > 0 && (
                     <Badge variant="outline">
@@ -1273,7 +1282,7 @@ export default function AcceptanceRecordsPage() {
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="text-rose-600"
+                        className="text-destructive"
                         onClick={() => setPendingDelete(detail)}
                         data-testid="acceptance-delete"
                       >
@@ -1428,7 +1437,7 @@ export default function AcceptanceRecordsPage() {
               )}
             </div>
             {formError && (
-              <div role="alert" className="text-sm text-rose-600">
+              <div role="alert" className="text-sm text-destructive">
                 {formError}
               </div>
             )}
@@ -1529,6 +1538,6 @@ export default function AcceptanceRecordsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </AdminLayout>
+    </>
   );
 }
