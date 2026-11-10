@@ -49,6 +49,13 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    proxy: process.env.VITE_API_PROXY_TARGET
+      ? {
+          "/api": process.env.VITE_API_PROXY_TARGET,
+          "/files": process.env.VITE_API_PROXY_TARGET,
+          "/images": process.env.VITE_API_PROXY_TARGET,
+        }
+      : undefined,
     hmr: {
       overlay: false,
     },
