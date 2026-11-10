@@ -72,5 +72,7 @@
   {"key":"rbac.perm.construction.hse.confirm.label","category":"rbac","vi":"Xác nhận vi phạm HSE","en":"Confirm HSE violations","zh":"确认HSE违规","ja":"HSE違反を確認"},
   {"key":"rbac.perm.construction.hse.confirm.description","category":"rbac","vi":"Xác nhận, từ chối, hủy có lý do hoặc lập điều chỉnh chính thức.","en":"Confirm, reject, cancel with a reason, or record formal corrections.","zh":"确认、拒绝、有理由取消或记录正式更正。","ja":"確認、却下、理由付き取消、正式な訂正を記録します。"},
   {"key":"rbac.perm.construction.hse.close.label","category":"rbac","vi":"Đóng vi phạm HSE","en":"Close HSE violations","zh":"关闭HSE违规","ja":"HSE違反を完了"},
-  {"key":"rbac.perm.construction.hse.close.description","category":"rbac","vi":"Đóng biên bản sau khi kết quả khắc phục đã được ghi nhận.","en":"Close records after remediation has been documented.","zh":"在记录整改结果后关闭记录。","ja":"是正内容の記録後に完了します。"}
+  {"key":"rbac.perm.construction.hse.close.description","category":"rbac","vi":"Đóng biên bản sau khi kết quả khắc phục đã được ghi nhận.","en":"Close records after remediation has been documented.","zh":"在记录整改结果后关闭记录。","ja":"是正内容の記録後に完了します。"},
+  {"key":"rbac.perm.construction.hse.delete.label","category":"rbac","vi":"Xóa vi phạm HSE","en":"Delete HSE violations","zh":"删除HSE违规","ja":"HSE違反を削除"},
+  {"key":"rbac.perm.construction.hse.delete.description","category":"rbac","vi":"Xóa biên bản HSE ở trạng thái nháp, bị từ chối hoặc đã hủy.","en":"Delete HSE records in Draft, Rejected or Cancelled status.","zh":"删除草稿、已拒绝或已取消状态的HSE记录。","ja":"下書き、却下、取消済みのHSE記録を削除します。"}
 ]
