@@ -50,10 +50,10 @@
   {
     "key": "contracts.primary.subtitle",
     "category": "contracts",
-    "vi": "Theo dõi giá trị, mốc thu và công nợ của hợp đồng đầu ra theo dự án và phạm vi được cấp.",
-    "en": "Monitor values, collection milestones and receivables for upstream contracts within the authorized scope.",
-    "zh": "按授权范围跟踪上游合同的金额、收款节点和应收款。",
-    "ja": "権限範囲内の上流契約について、金額・回収マイルストーン・売掛金を追跡します。"
+    "vi": "Theo dõi giá trị, mốc thu và công nợ của hợp đồng bán ra với chủ đầu tư/khách hàng.",
+    "en": "Monitor values, collection milestones and receivables for sales contracts with owners/customers.",
+    "zh": "跟踪与业主/客户签订的销售合同金额、收款节点和应收款。",
+    "ja": "発注者/顧客との販売契約について、金額・回収マイルストーン・売掛金を追跡します。"
   },
   {
     "key": "contracts.input.title",
@@ -330,10 +330,10 @@
   {
     "key": "contracts.field.direction",
     "category": "contracts",
-    "vi": "Hướng hợp đồng",
-    "en": "Contract direction",
-    "zh": "合同方向",
-    "ja": "契約区分"
+    "vi": "Chiều mua / bán",
+    "en": "Purchase / sale direction",
+    "zh": "采购 / 销售方向",
+    "ja": "購入 / 販売区分"
   },
   {
     "key": "contracts.field.type",
@@ -346,10 +346,10 @@
   {
     "key": "contracts.field.counterparty",
     "category": "contracts",
-    "vi": "Đối tác hợp đồng",
-    "en": "Counterparty",
-    "zh": "合同相对方",
-    "ja": "契約相手"
+    "vi": "Chủ đầu tư / Nhà cung cấp",
+    "en": "Owner / Supplier",
+    "zh": "业主 / 供应商",
+    "ja": "発注者 / 仕入先"
   },
   {
     "key": "contracts.field.vendor",
@@ -362,18 +362,18 @@
   {
     "key": "contracts.direction.Upstream",
     "category": "contracts",
-    "vi": "Đầu ra - Khách hàng",
-    "en": "Upstream - Customer",
-    "zh": "上游 - 客户",
-    "ja": "上流 - 顧客"
+    "vi": "Bán ra – chủ đầu tư",
+    "en": "Sale – owner/customer",
+    "zh": "销售 – 业主/客户",
+    "ja": "販売 – 発注者/顧客"
   },
   {
     "key": "contracts.direction.Downstream",
     "category": "contracts",
-    "vi": "Đầu vào - Đối tác",
-    "en": "Downstream - Partner",
-    "zh": "下游 - 合作方",
-    "ja": "下流 - パートナー"
+    "vi": "Mua vào – nhà cung cấp, thầu phụ",
+    "en": "Purchase – supplier/subcontractor",
+    "zh": "采购 – 供应商/分包商",
+    "ja": "購入 – 仕入先/下請業者"
   },
   {
     "key": "contracts.type.Unclassified",
@@ -474,10 +474,10 @@
   {
     "key": "contracts.validation.vendorRequired",
     "category": "contracts",
-    "vi": "Hợp đồng đầu vào phải chọn nhà cung cấp hoặc thầu phụ.",
-    "en": "A downstream contract requires a supplier or subcontractor.",
-    "zh": "下游合同必须选择供应商或分包商。",
-    "ja": "下流契約には仕入先または下請業者が必要です。"
+    "vi": "Hợp đồng mua vào phải chọn nhà cung cấp hoặc thầu phụ.",
+    "en": "A purchase contract requires a supplier or subcontractor.",
+    "zh": "采购合同必须选择供应商或分包商。",
+    "ja": "購入契約には仕入先または下請業者が必要です。"
   },
   {
     "key": "contracts.validation.quoteOptional",
@@ -1208,24 +1208,44 @@
     "ja": "変更契約はまだありません。"
   },
   {
-    "key": "contracts.appendix.guide.title", "category": "contracts",
-    "vi": "VO trong hệ thống", "en": "VO in the system", "zh": "系统中的 VO", "ja": "システム上のVO"
+    "key": "contracts.appendix.guide.title",
+    "category": "contracts",
+    "vi": "VO trong hệ thống",
+    "en": "VO in the system",
+    "zh": "系统中的 VO",
+    "ja": "システム上のVO"
   },
   {
-    "key": "contracts.appendix.guide.purpose", "category": "contracts",
-    "vi": "Dùng VO để ghi nhận thay đổi có lý do làm tăng hoặc giảm giá trị hợp đồng.", "en": "Use a VO to record a reasoned change that increases or decreases the contract value.", "zh": "使用 VO 记录有明确原因、会增加或减少合同金额的变更。", "ja": "VOは、理由を伴う契約金額の増額または減額を記録するために使用します。"
+    "key": "contracts.appendix.guide.purpose",
+    "category": "contracts",
+    "vi": "Dùng VO để ghi nhận thay đổi có lý do làm tăng hoặc giảm giá trị hợp đồng.",
+    "en": "Use a VO to record a reasoned change that increases or decreases the contract value.",
+    "zh": "使用 VO 记录有明确原因、会增加或减少合同金额的变更。",
+    "ja": "VOは、理由を伴う契約金額の増額または減額を記録するために使用します。"
   },
   {
-    "key": "contracts.appendix.guide.workflow", "category": "contracts",
-    "vi": "Luồng hệ thống: Nháp → Gửi duyệt → Đã duyệt hoặc Từ chối. VO bị từ chối có thể sửa và gửi lại.", "en": "System flow: Draft → Submitted → Approved or Rejected. A rejected VO can be edited and resubmitted.", "zh": "系统流程：草稿 → 已提交 → 已批准或已拒绝。被拒绝的 VO 可编辑后重新提交。", "ja": "システムフロー：下書き → 申請済み → 承認または却下。却下されたVOは編集して再申請できます。"
+    "key": "contracts.appendix.guide.workflow",
+    "category": "contracts",
+    "vi": "Luồng hệ thống: Nháp → Gửi duyệt → Đã duyệt hoặc Từ chối. VO bị từ chối có thể sửa và gửi lại.",
+    "en": "System flow: Draft → Submitted → Approved or Rejected. A rejected VO can be edited and resubmitted.",
+    "zh": "系统流程：草稿 → 已提交 → 已批准或已拒绝。被拒绝的 VO 可编辑后重新提交。",
+    "ja": "システムフロー：下書き → 申請済み → 承認または却下。却下されたVOは編集して再申請できます。"
   },
   {
-    "key": "contracts.appendix.guide.impact", "category": "contracts",
-    "vi": "Chỉ VO đã duyệt được cộng vào Giá trị hiện tại; VO nháp, đang duyệt hoặc bị từ chối không làm thay đổi giá trị.", "en": "Only approved VOs affect Current value; draft, submitted, or rejected VOs do not change it.", "zh": "只有已批准的 VO 会影响当前金额；草稿、已提交或已拒绝的 VO 不会改变该金额。", "ja": "現在金額に反映されるのは承認済みVOのみです。下書き・申請済み・却下のVOは金額を変更しません。"
+    "key": "contracts.appendix.guide.impact",
+    "category": "contracts",
+    "vi": "Chỉ VO đã duyệt được cộng vào Giá trị hiện tại; VO nháp, đang duyệt hoặc bị từ chối không làm thay đổi giá trị.",
+    "en": "Only approved VOs affect Current value; draft, submitted, or rejected VOs do not change it.",
+    "zh": "只有已批准的 VO 会影响当前金额；草稿、已提交或已拒绝的 VO 不会改变该金额。",
+    "ja": "現在金額に反映されるのは承認済みVOのみです。下書き・申請済み・却下のVOは金額を変更しません。"
   },
   {
-    "key": "contracts.appendix.guide.delete", "category": "contracts",
-    "vi": "Người có quyền chỉnh sửa có thể xoá VO ở mọi trạng thái. Khi xoá VO đã duyệt, giá trị điều chỉnh sẽ được loại khỏi Giá trị hiện tại.", "en": "Users with edit permission may delete a VO in any status. Deleting an approved VO removes its adjustment from Current value.", "zh": "拥有编辑权限的用户可以删除任何状态的 VO。删除已批准的 VO 后，其调整金额将从当前金额中移除。", "ja": "編集権限を持つユーザーは、どのステータスのVOでも削除できます。承認済みVOを削除すると、その調整額は現在金額から除外されます。"
+    "key": "contracts.appendix.guide.delete",
+    "category": "contracts",
+    "vi": "Người có quyền chỉnh sửa có thể xoá VO ở mọi trạng thái. Khi xoá VO đã duyệt, giá trị điều chỉnh sẽ được loại khỏi Giá trị hiện tại.",
+    "en": "Users with edit permission may delete a VO in any status. Deleting an approved VO removes its adjustment from Current value.",
+    "zh": "拥有编辑权限的用户可以删除任何状态的 VO。删除已批准的 VO 后，其调整金额将从当前金额中移除。",
+    "ja": "編集権限を持つユーザーは、どのステータスのVOでも削除できます。承認済みVOを削除すると、その調整額は現在金額から除外されます。"
   },
   {
     "key": "contracts.appendix.new",
@@ -1500,60 +1520,116 @@
     "ja": "実行者"
   },
   {
-    "key": "contracts.timeline.action.create", "category": "contracts",
-    "vi": "Tạo hợp đồng", "en": "Contract created", "zh": "已创建合同", "ja": "契約を作成"
+    "key": "contracts.timeline.action.create",
+    "category": "contracts",
+    "vi": "Tạo hợp đồng",
+    "en": "Contract created",
+    "zh": "已创建合同",
+    "ja": "契約を作成"
   },
   {
-    "key": "contracts.timeline.action.update", "category": "contracts",
-    "vi": "Cập nhật hợp đồng", "en": "Contract updated", "zh": "已更新合同", "ja": "契約を更新"
+    "key": "contracts.timeline.action.update",
+    "category": "contracts",
+    "vi": "Cập nhật hợp đồng",
+    "en": "Contract updated",
+    "zh": "已更新合同",
+    "ja": "契約を更新"
   },
   {
-    "key": "contracts.timeline.action.delete", "category": "contracts",
-    "vi": "Xoá hợp đồng", "en": "Contract deleted", "zh": "已删除合同", "ja": "契約を削除"
+    "key": "contracts.timeline.action.delete",
+    "category": "contracts",
+    "vi": "Xoá hợp đồng",
+    "en": "Contract deleted",
+    "zh": "已删除合同",
+    "ja": "契約を削除"
   },
   {
-    "key": "contracts.timeline.action.transition", "category": "contracts",
-    "vi": "Chuyển trạng thái hợp đồng", "en": "Contract status changed", "zh": "合同状态已更改", "ja": "契約ステータスを変更"
+    "key": "contracts.timeline.action.transition",
+    "category": "contracts",
+    "vi": "Chuyển trạng thái hợp đồng",
+    "en": "Contract status changed",
+    "zh": "合同状态已更改",
+    "ja": "契約ステータスを変更"
   },
   {
-    "key": "contracts.timeline.action.designProjectEnsure", "category": "contracts",
-    "vi": "Tạo hoặc liên kết Hồ Sơ Thiết Kế", "en": "Design dossier created or linked", "zh": "已创建或关联设计档案", "ja": "設計図書を作成または連携"
+    "key": "contracts.timeline.action.designProjectEnsure",
+    "category": "contracts",
+    "vi": "Tạo hoặc liên kết Hồ Sơ Thiết Kế",
+    "en": "Design dossier created or linked",
+    "zh": "已创建或关联设计档案",
+    "ja": "設計図書を作成または連携"
   },
   {
-    "key": "contracts.timeline.action.milestoneStatus", "category": "contracts",
-    "vi": "Cập nhật mốc thanh toán", "en": "Payment milestone updated", "zh": "已更新付款里程碑", "ja": "支払マイルストーンを更新"
+    "key": "contracts.timeline.action.milestoneStatus",
+    "category": "contracts",
+    "vi": "Cập nhật mốc thanh toán",
+    "en": "Payment milestone updated",
+    "zh": "已更新付款里程碑",
+    "ja": "支払マイルストーンを更新"
   },
   {
-    "key": "contracts.timeline.action.voCreate", "category": "contracts",
-    "vi": "Tạo VO", "en": "VO created", "zh": "已创建 VO", "ja": "VOを作成"
+    "key": "contracts.timeline.action.voCreate",
+    "category": "contracts",
+    "vi": "Tạo VO",
+    "en": "VO created",
+    "zh": "已创建 VO",
+    "ja": "VOを作成"
   },
   {
-    "key": "contracts.timeline.action.voUpdate", "category": "contracts",
-    "vi": "Cập nhật VO", "en": "VO updated", "zh": "已更新 VO", "ja": "VOを更新"
+    "key": "contracts.timeline.action.voUpdate",
+    "category": "contracts",
+    "vi": "Cập nhật VO",
+    "en": "VO updated",
+    "zh": "已更新 VO",
+    "ja": "VOを更新"
   },
   {
-    "key": "contracts.timeline.action.voSubmit", "category": "contracts",
-    "vi": "Gửi duyệt VO", "en": "VO submitted for approval", "zh": "VO 已提交审批", "ja": "VOを承認申請"
+    "key": "contracts.timeline.action.voSubmit",
+    "category": "contracts",
+    "vi": "Gửi duyệt VO",
+    "en": "VO submitted for approval",
+    "zh": "VO 已提交审批",
+    "ja": "VOを承認申請"
   },
   {
-    "key": "contracts.timeline.action.voApprove", "category": "contracts",
-    "vi": "Duyệt VO", "en": "VO approved", "zh": "VO 已批准", "ja": "VOを承認"
+    "key": "contracts.timeline.action.voApprove",
+    "category": "contracts",
+    "vi": "Duyệt VO",
+    "en": "VO approved",
+    "zh": "VO 已批准",
+    "ja": "VOを承認"
   },
   {
-    "key": "contracts.timeline.action.voReject", "category": "contracts",
-    "vi": "Từ chối VO", "en": "VO rejected", "zh": "VO 已拒绝", "ja": "VOを却下"
+    "key": "contracts.timeline.action.voReject",
+    "category": "contracts",
+    "vi": "Từ chối VO",
+    "en": "VO rejected",
+    "zh": "VO 已拒绝",
+    "ja": "VOを却下"
   },
   {
-    "key": "contracts.timeline.action.voDelete", "category": "contracts",
-    "vi": "Xoá VO", "en": "VO deleted", "zh": "VO 已删除", "ja": "VOを削除"
+    "key": "contracts.timeline.action.voDelete",
+    "category": "contracts",
+    "vi": "Xoá VO",
+    "en": "VO deleted",
+    "zh": "VO 已删除",
+    "ja": "VOを削除"
   },
   {
-    "key": "contracts.timeline.action.attachmentCreate", "category": "contracts",
-    "vi": "Tải tài liệu hợp đồng lên", "en": "Contract document uploaded", "zh": "已上传合同文件", "ja": "契約資料をアップロード"
+    "key": "contracts.timeline.action.attachmentCreate",
+    "category": "contracts",
+    "vi": "Tải tài liệu hợp đồng lên",
+    "en": "Contract document uploaded",
+    "zh": "已上传合同文件",
+    "ja": "契約資料をアップロード"
   },
   {
-    "key": "contracts.timeline.action.attachmentDelete", "category": "contracts",
-    "vi": "Xoá tài liệu hợp đồng", "en": "Contract document deleted", "zh": "已删除合同文件", "ja": "契約資料を削除"
+    "key": "contracts.timeline.action.attachmentDelete",
+    "category": "contracts",
+    "vi": "Xoá tài liệu hợp đồng",
+    "en": "Contract document deleted",
+    "zh": "已删除合同文件",
+    "ja": "契約資料を削除"
   },
   {
     "key": "contracts.designProject.title",
@@ -1708,206 +1784,597 @@
     "ja": "プロジェクト #{id}（見積から）"
   },
   {
-    "key": "contracts.overdueBadge", "category": "contracts",
-    "vi": "Đã quá hạn", "en": "Overdue", "zh": "已逾期", "ja": "期限超過"
+    "key": "contracts.overdueBadge",
+    "category": "contracts",
+    "vi": "Đã quá hạn",
+    "en": "Overdue",
+    "zh": "已逾期",
+    "ja": "期限超過"
   },
   {
-    "key": "contracts.overdueBadgeTitle", "category": "contracts",
-    "vi": "Ngày kết thúc dự kiến đã qua", "en": "The planned end date has passed", "zh": "计划结束日期已过", "ja": "予定終了日を過ぎています"
+    "key": "contracts.overdueBadgeTitle",
+    "category": "contracts",
+    "vi": "Ngày kết thúc dự kiến đã qua",
+    "en": "The planned end date has passed",
+    "zh": "计划结束日期已过",
+    "ja": "予定終了日を過ぎています"
   },
   {
-    "key": "contracts.exportProgress", "category": "contracts",
-    "vi": "Đang xuất {current}/{total}", "en": "Exporting {current}/{total}", "zh": "正在导出 {current}/{total}", "ja": "エクスポート中 {current}/{total}"
+    "key": "contracts.exportProgress",
+    "category": "contracts",
+    "vi": "Đang xuất {current}/{total}",
+    "en": "Exporting {current}/{total}",
+    "zh": "正在导出 {current}/{total}",
+    "ja": "エクスポート中 {current}/{total}"
   },
   {
-    "key": "contracts.filter.allOwners", "category": "contracts",
-    "vi": "Tất cả phụ trách", "en": "All owners", "zh": "全部负责人", "ja": "全担当者"
+    "key": "contracts.filter.allOwners",
+    "category": "contracts",
+    "vi": "Tất cả phụ trách",
+    "en": "All owners",
+    "zh": "全部负责人",
+    "ja": "全担当者"
   },
   {
-    "key": "contracts.filter.endRange", "category": "contracts",
-    "vi": "Khoảng ngày kết thúc", "en": "End date range", "zh": "结束日期范围", "ja": "終了日の範囲"
+    "key": "contracts.filter.endRange",
+    "category": "contracts",
+    "vi": "Khoảng ngày kết thúc",
+    "en": "End date range",
+    "zh": "结束日期范围",
+    "ja": "終了日の範囲"
   },
   {
-    "key": "contracts.filter.endFrom", "category": "contracts",
-    "vi": "Ngày kết thúc từ", "en": "End date from", "zh": "结束日期起", "ja": "終了日（開始）"
+    "key": "contracts.filter.endFrom",
+    "category": "contracts",
+    "vi": "Ngày kết thúc từ",
+    "en": "End date from",
+    "zh": "结束日期起",
+    "ja": "終了日（開始）"
   },
   {
-    "key": "contracts.filter.endTo", "category": "contracts",
-    "vi": "Ngày kết thúc đến", "en": "End date to", "zh": "结束日期止", "ja": "終了日（終了）"
+    "key": "contracts.filter.endTo",
+    "category": "contracts",
+    "vi": "Ngày kết thúc đến",
+    "en": "End date to",
+    "zh": "结束日期止",
+    "ja": "終了日（終了）"
   },
   {
-    "key": "contracts.filter.signedFrom", "category": "contracts",
-    "vi": "Ngày ký từ", "en": "Signed date from", "zh": "签署日期起", "ja": "署名日（開始）"
+    "key": "contracts.filter.signedFrom",
+    "category": "contracts",
+    "vi": "Ngày ký từ",
+    "en": "Signed date from",
+    "zh": "签署日期起",
+    "ja": "署名日（開始）"
   },
   {
-    "key": "contracts.filter.signedTo", "category": "contracts",
-    "vi": "Ngày ký đến", "en": "Signed date to", "zh": "签署日期止", "ja": "署名日（終了）"
+    "key": "contracts.filter.signedTo",
+    "category": "contracts",
+    "vi": "Ngày ký đến",
+    "en": "Signed date to",
+    "zh": "签署日期止",
+    "ja": "署名日（終了）"
   },
   {
-    "key": "contracts.filter.valueMin", "category": "contracts",
-    "vi": "Giá trị hiện hành tối thiểu", "en": "Minimum current value", "zh": "最低当前价值", "ja": "現在価値の最小値"
+    "key": "contracts.filter.valueMin",
+    "category": "contracts",
+    "vi": "Giá trị hiện hành tối thiểu",
+    "en": "Minimum current value",
+    "zh": "最低当前价值",
+    "ja": "現在価値の最小値"
   },
   {
-    "key": "contracts.filter.valueMax", "category": "contracts",
-    "vi": "Giá trị hiện hành tối đa", "en": "Maximum current value", "zh": "最高当前价值", "ja": "現在価値の最大値"
+    "key": "contracts.filter.valueMax",
+    "category": "contracts",
+    "vi": "Giá trị hiện hành tối đa",
+    "en": "Maximum current value",
+    "zh": "最高当前价值",
+    "ja": "現在価値の最大値"
   },
   {
-    "key": "contracts.filter.min", "category": "contracts",
-    "vi": "Tối thiểu", "en": "Minimum", "zh": "最小", "ja": "最小"
+    "key": "contracts.filter.min",
+    "category": "contracts",
+    "vi": "Tối thiểu",
+    "en": "Minimum",
+    "zh": "最小",
+    "ja": "最小"
   },
   {
-    "key": "contracts.filter.max", "category": "contracts",
-    "vi": "Tối đa", "en": "Maximum", "zh": "最大", "ja": "最大"
+    "key": "contracts.filter.max",
+    "category": "contracts",
+    "vi": "Tối đa",
+    "en": "Maximum",
+    "zh": "最大",
+    "ja": "最大"
   },
   {
-    "key": "contracts.filter.showAdvanced", "category": "contracts",
-    "vi": "Bộ lọc nâng cao", "en": "Advanced filters", "zh": "高级筛选", "ja": "詳細フィルター"
+    "key": "contracts.filter.showAdvanced",
+    "category": "contracts",
+    "vi": "Bộ lọc nâng cao",
+    "en": "Advanced filters",
+    "zh": "高级筛选",
+    "ja": "詳細フィルター"
   },
   {
-    "key": "contracts.filter.hideAdvanced", "category": "contracts",
-    "vi": "Ẩn bộ lọc nâng cao", "en": "Hide advanced filters", "zh": "隐藏高级筛选", "ja": "詳細フィルターを隠す"
+    "key": "contracts.filter.hideAdvanced",
+    "category": "contracts",
+    "vi": "Ẩn bộ lọc nâng cao",
+    "en": "Hide advanced filters",
+    "zh": "隐藏高级筛选",
+    "ja": "詳細フィルターを隠す"
   },
   {
-    "key": "contracts.field.originalValue", "category": "contracts",
-    "vi": "Giá trị gốc", "en": "Original value", "zh": "原始价值", "ja": "当初価値"
+    "key": "contracts.field.originalValue",
+    "category": "contracts",
+    "vi": "Giá trị gốc",
+    "en": "Original value",
+    "zh": "原始价值",
+    "ja": "当初価値"
   },
   {
-    "key": "contracts.field.approvedVoTotal", "category": "contracts",
-    "vi": "VO đã duyệt", "en": "Approved VO", "zh": "已批准变更", "ja": "承認済みVO"
+    "key": "contracts.field.approvedVoTotal",
+    "category": "contracts",
+    "vi": "VO đã duyệt",
+    "en": "Approved VO",
+    "zh": "已批准变更",
+    "ja": "承認済みVO"
   },
   {
-    "key": "contracts.field.currentValue", "category": "contracts",
-    "vi": "Giá trị hiện hành", "en": "Current value", "zh": "当前价值", "ja": "現在価値"
+    "key": "contracts.field.currentValue",
+    "category": "contracts",
+    "vi": "Giá trị hiện hành",
+    "en": "Current value",
+    "zh": "当前价值",
+    "ja": "現在価値"
   },
   {
-    "key": "contracts.field.voShort", "category": "contracts",
-    "vi": "VO", "en": "VO", "zh": "变更", "ja": "VO"
+    "key": "contracts.field.voShort",
+    "category": "contracts",
+    "vi": "VO",
+    "en": "VO",
+    "zh": "变更",
+    "ja": "VO"
   },
   {
-    "key": "contracts.field.nextCollection", "category": "contracts",
-    "vi": "Đợt thu tiếp theo", "en": "Next collection", "zh": "下次收款", "ja": "次回回収"
+    "key": "contracts.field.nextCollection",
+    "category": "contracts",
+    "vi": "Đợt thu tiếp theo",
+    "en": "Next collection",
+    "zh": "下次收款",
+    "ja": "次回回収"
   },
   {
-    "key": "contracts.field.nextPaymentDueDate", "category": "contracts",
-    "vi": "Hạn thu tiếp theo", "en": "Next payment due", "zh": "下次付款到期日", "ja": "次回支払期限"
+    "key": "contracts.field.nextPaymentDueDate",
+    "category": "contracts",
+    "vi": "Hạn thu tiếp theo",
+    "en": "Next payment due",
+    "zh": "下次付款到期日",
+    "ja": "次回支払期限"
   },
   {
-    "key": "contracts.field.nextPaymentAmount", "category": "contracts",
-    "vi": "Số tiền đợt thu tiếp theo", "en": "Next collection amount", "zh": "下次收款金额", "ja": "次回回収額"
+    "key": "contracts.field.nextPaymentAmount",
+    "category": "contracts",
+    "vi": "Số tiền đợt thu tiếp theo",
+    "en": "Next collection amount",
+    "zh": "下次收款金额",
+    "ja": "次回回収額"
   },
   {
-    "key": "contracts.field.outstandingScheduledAmount", "category": "contracts",
-    "vi": "Giá trị theo lịch chưa thu", "en": "Scheduled amount outstanding", "zh": "计划未收金额", "ja": "未回収予定額"
+    "key": "contracts.field.outstandingScheduledAmount",
+    "category": "contracts",
+    "vi": "Giá trị theo lịch chưa thu",
+    "en": "Scheduled amount outstanding",
+    "zh": "计划未收金额",
+    "ja": "未回収予定額"
   },
   {
-    "key": "contracts.input.nextPayment", "category": "contracts",
-    "vi": "Đợt chi tiếp theo", "en": "Next payment", "zh": "下次付款", "ja": "次回支払"
+    "key": "contracts.input.nextPayment",
+    "category": "contracts",
+    "vi": "Đợt chi tiếp theo",
+    "en": "Next payment",
+    "zh": "下次付款",
+    "ja": "次回支払"
   },
   {
-    "key": "contracts.input.nextPaymentDueDate", "category": "contracts",
-    "vi": "Hạn chi tiếp theo", "en": "Next payment due", "zh": "下次付款到期日", "ja": "次回支払期限"
+    "key": "contracts.input.nextPaymentDueDate",
+    "category": "contracts",
+    "vi": "Hạn chi tiếp theo",
+    "en": "Next payment due",
+    "zh": "下次付款到期日",
+    "ja": "次回支払期限"
   },
   {
-    "key": "contracts.input.nextPaymentAmount", "category": "contracts",
-    "vi": "Số tiền đợt chi tiếp theo", "en": "Next payment amount", "zh": "下次付款金额", "ja": "次回支払額"
+    "key": "contracts.input.nextPaymentAmount",
+    "category": "contracts",
+    "vi": "Số tiền đợt chi tiếp theo",
+    "en": "Next payment amount",
+    "zh": "下次付款金额",
+    "ja": "次回支払額"
   },
   {
-    "key": "contracts.input.outstandingScheduledAmount", "category": "contracts",
-    "vi": "Giá trị theo lịch chưa chi", "en": "Scheduled payable outstanding", "zh": "计划未付金额", "ja": "未払予定額"
+    "key": "contracts.input.outstandingScheduledAmount",
+    "category": "contracts",
+    "vi": "Giá trị theo lịch chưa chi",
+    "en": "Scheduled payable outstanding",
+    "zh": "计划未付金额",
+    "ja": "未払予定額"
   },
   {
-    "key": "contracts.summary.label", "category": "contracts",
-    "vi": "Tổng quan danh mục", "en": "Portfolio summary", "zh": "组合概览", "ja": "ポートフォリオ概要"
+    "key": "contracts.summary.label",
+    "category": "contracts",
+    "vi": "Tổng quan danh mục",
+    "en": "Portfolio summary",
+    "zh": "组合概览",
+    "ja": "ポートフォリオ概要"
   },
   {
-    "key": "contracts.summary.contracts", "category": "contracts",
-    "vi": "Hợp đồng", "en": "Contracts", "zh": "合同", "ja": "契約"
+    "key": "contracts.summary.contracts",
+    "category": "contracts",
+    "vi": "Hợp đồng",
+    "en": "Contracts",
+    "zh": "合同",
+    "ja": "契約"
   },
   {
-    "key": "contracts.summary.currentValue", "category": "contracts",
-    "vi": "Tổng giá trị hiện hành", "en": "Total current value", "zh": "当前总价值", "ja": "現在価値合計"
+    "key": "contracts.summary.currentValue",
+    "category": "contracts",
+    "vi": "Tổng giá trị hiện hành",
+    "en": "Total current value",
+    "zh": "当前总价值",
+    "ja": "現在価値合計"
   },
   {
-    "key": "contracts.summary.overdueCollection", "category": "contracts",
-    "vi": "Có đợt thu quá hạn", "en": "Collections overdue", "zh": "收款逾期", "ja": "回収期限超過"
+    "key": "contracts.summary.overdueCollection",
+    "category": "contracts",
+    "vi": "Có đợt thu quá hạn",
+    "en": "Collections overdue",
+    "zh": "收款逾期",
+    "ja": "回収期限超過"
   },
   {
-    "key": "contracts.summary.dueSoonCollection", "category": "contracts",
-    "vi": "Đến hạn trong 30 ngày", "en": "Due within 30 days", "zh": "30天内到期", "ja": "30日以内に期限"
+    "key": "contracts.summary.dueSoonCollection",
+    "category": "contracts",
+    "vi": "Đến hạn trong 30 ngày",
+    "en": "Due within 30 days",
+    "zh": "30天内到期",
+    "ja": "30日以内に期限"
   },
   {
-    "key": "contracts.summary.overduePayment", "category": "contracts",
-    "vi": "Có đợt chi quá hạn", "en": "Payments overdue", "zh": "付款逾期", "ja": "支払期限超過"
+    "key": "contracts.summary.overduePayment",
+    "category": "contracts",
+    "vi": "Có đợt chi quá hạn",
+    "en": "Payments overdue",
+    "zh": "付款逾期",
+    "ja": "支払期限超過"
   },
   {
-    "key": "contracts.summary.dueSoonPayment", "category": "contracts",
-    "vi": "Đợt chi đến hạn trong 30 ngày", "en": "Payments due within 30 days", "zh": "30天内到期的付款", "ja": "30日以内に期限の支払"
+    "key": "contracts.summary.dueSoonPayment",
+    "category": "contracts",
+    "vi": "Đợt chi đến hạn trong 30 ngày",
+    "en": "Payments due within 30 days",
+    "zh": "30天内到期的付款",
+    "ja": "30日以内に期限の支払"
   },
   {
-    "key": "contracts.primary.directionLockedHint", "category": "contracts",
-    "vi": "Không gian Tài chính chỉ theo dõi hợp đồng đầu ra; dữ liệu gốc được quản trị tại Sổ hợp đồng.", "en": "Finance monitors upstream contracts here; master data is managed in the Contract registry.", "zh": "财务在此跟踪上游合同；主数据在合同台账中管理。", "ja": "財務では上流契約を追跡し、マスターデータは契約台帳で管理します。"
+    "key": "contracts.primary.directionLockedHint",
+    "category": "contracts",
+    "vi": "Không gian Tài chính chỉ theo dõi hợp đồng bán ra với chủ đầu tư/khách hàng; dữ liệu gốc được quản trị tại Sổ hợp đồng.",
+    "en": "Finance monitors sales contracts with owners/customers here; master data is managed in the Contract registry.",
+    "zh": "财务在此跟踪与业主/客户签订的销售合同；主数据在合同台账中管理。",
+    "ja": "財務では発注者/顧客との販売契約を追跡し、マスターデータは契約台帳で管理します。"
   },
   {
-    "key": "contracts.input.directionLockedHint", "category": "contracts",
-    "vi": "Không gian Tài chính chỉ theo dõi hợp đồng đầu vào; dữ liệu gốc được quản trị tại Sổ hợp đồng.", "en": "Finance monitors downstream contracts here; master data is managed in the Contract registry.", "zh": "财务在此跟踪下游合同；主数据在合同台账中管理。", "ja": "財務では下流契約を追跡し、マスターデータは契約台帳で管理します。"
+    "key": "contracts.input.directionLockedHint",
+    "category": "contracts",
+    "vi": "Không gian Tài chính chỉ theo dõi hợp đồng mua vào với nhà cung cấp/thầu phụ; dữ liệu gốc được quản trị tại Sổ hợp đồng.",
+    "en": "Finance monitors purchase contracts with suppliers/subcontractors here; master data is managed in the Contract registry.",
+    "zh": "财务在此跟踪与供应商/分包商签订的采购合同；主数据在合同台账中管理。",
+    "ja": "財務では仕入先/下請業者との購入契約を追跡し、マスターデータは契約台帳で管理します。"
   },
   {
-    "key": "contracts.finance.masterManagedElsewhere", "category": "contracts",
-    "vi": "Đây là góc nhìn Tài chính trên cùng dữ liệu hợp đồng. Tạo, sửa, chuyển trạng thái và xóa hồ sơ gốc tại Sổ hợp đồng.", "en": "This is a Finance view of the same contract data. Create, edit, transition and delete master records in the Contract registry.", "zh": "这是同一合同数据的财务视图。请在合同台账中创建、编辑、变更状态或删除主记录。", "ja": "同じ契約データの財務ビューです。マスターの作成・編集・状態変更・削除は契約台帳で行います。"
+    "key": "contracts.finance.masterManagedElsewhere",
+    "category": "contracts",
+    "vi": "Đây là góc nhìn Tài chính trên cùng dữ liệu hợp đồng. Tạo, sửa, chuyển trạng thái và xóa hồ sơ gốc tại Sổ hợp đồng.",
+    "en": "This is a Finance view of the same contract data. Create, edit, transition and delete master records in the Contract registry.",
+    "zh": "这是同一合同数据的财务视图。请在合同台账中创建、编辑、变更状态或删除主记录。",
+    "ja": "同じ契約データの財務ビューです。マスターの作成・編集・状態変更・削除は契約台帳で行います。"
   },
   {
-    "key": "contracts.finance.openRegistry", "category": "contracts",
-    "vi": "Mở Sổ hợp đồng", "en": "Open Contract registry", "zh": "打开合同台账", "ja": "契約台帳を開く"
+    "key": "contracts.finance.openRegistry",
+    "category": "contracts",
+    "vi": "Mở Sổ hợp đồng",
+    "en": "Open Contract registry",
+    "zh": "打开合同台账",
+    "ja": "契約台帳を開く"
   },
   {
-    "key": "contracts.finance.openMasterRecord", "category": "contracts",
-    "vi": "Mở hồ sơ gốc", "en": "Open master record", "zh": "打开主记录", "ja": "マスターを開く"
+    "key": "contracts.finance.openMasterRecord",
+    "category": "contracts",
+    "vi": "Mở hồ sơ gốc",
+    "en": "Open master record",
+    "zh": "打开主记录",
+    "ja": "マスターを開く"
   },
   {
-    "key": "contracts.detail.partialLoadError", "category": "contracts",
-    "vi": "Một phần dữ liệu liên quan chưa tải được. Hãy thử tải lại trước khi ra quyết định.", "en": "Some related data could not be loaded. Retry before making a decision.", "zh": "部分相关数据无法加载。请在做出决定前重试。", "ja": "一部の関連データを読み込めませんでした。判断する前に再読み込みしてください。"
+    "key": "contracts.detail.partialLoadError",
+    "category": "contracts",
+    "vi": "Một phần dữ liệu liên quan chưa tải được. Hãy thử tải lại trước khi ra quyết định.",
+    "en": "Some related data could not be loaded. Retry before making a decision.",
+    "zh": "部分相关数据无法加载。请在做出决定前重试。",
+    "ja": "一部の関連データを読み込めませんでした。判断する前に再読み込みしてください。"
   },
   {
-    "key": "contracts.filterOptionsLoadError", "category": "contracts",
-    "vi": "Chưa tải được một số lựa chọn bộ lọc; danh sách hợp đồng vẫn có thể sử dụng.", "en": "Some filter choices could not be loaded; the contract list remains available.", "zh": "部分筛选选项无法加载；合同列表仍可使用。", "ja": "一部のフィルター候補を読み込めませんでした。契約一覧は引き続き利用できます。"
+    "key": "contracts.filterOptionsLoadError",
+    "category": "contracts",
+    "vi": "Chưa tải được một số lựa chọn bộ lọc; danh sách hợp đồng vẫn có thể sử dụng.",
+    "en": "Some filter choices could not be loaded; the contract list remains available.",
+    "zh": "部分筛选选项无法加载；合同列表仍可使用。",
+    "ja": "一部のフィルター候補を読み込めませんでした。契約一覧は引き続き利用できます。"
   },
   {
-    "key": "contracts.referenceLoadError", "category": "contracts",
-    "vi": "Chưa tải đủ khách hàng hoặc dự án. Hãy đóng biểu mẫu và thử lại.", "en": "Customers or projects could not be fully loaded. Close the form and retry.", "zh": "客户或项目未能完整加载。请关闭表单后重试。", "ja": "顧客またはプロジェクトを完全に読み込めませんでした。フォームを閉じて再試行してください。"
+    "key": "contracts.referenceLoadError",
+    "category": "contracts",
+    "vi": "Chưa tải đủ khách hàng hoặc dự án. Hãy đóng biểu mẫu và thử lại.",
+    "en": "Customers or projects could not be fully loaded. Close the form and retry.",
+    "zh": "客户或项目未能完整加载。请关闭表单后重试。",
+    "ja": "顧客またはプロジェクトを完全に読み込めませんでした。フォームを閉じて再試行してください。"
   },
-  { "key": "contracts.legal.title", "category": "contracts", "vi": "Kích hoạt hợp đồng và thiết lập Pháp lý", "en": "Activate contract and set up permitting", "zh": "激活合同并设置法务许可", "ja": "契約を開始し許認可を設定" },
-  { "key": "contracts.legal.description", "category": "contracts", "vi": "Kiểm tra dữ liệu điền sẵn, điều chỉnh từng giấy phép rồi xác nhận. Hệ thống chỉ tạo dữ liệu sau bước cuối.", "en": "Review the prefilled data, adjust each permit, then confirm. Nothing is created before the final step.", "zh": "检查预填数据并调整每项许可证，然后确认；最后一步前不会创建数据。", "ja": "事前入力された内容と各許認可を確認・調整してから確定してください。最終確定前にはデータを作成しません。" },
-  { "key": "contracts.legal.step.check", "category": "contracts", "vi": "Kiểm tra", "en": "Check", "zh": "检查", "ja": "確認" },
-  { "key": "contracts.legal.step.permits", "category": "contracts", "vi": "Giấy phép", "en": "Permits", "zh": "许可证", "ja": "許認可" },
-  { "key": "contracts.legal.step.assignment", "category": "contracts", "vi": "Phân công", "en": "Assignment", "zh": "分工", "ja": "担当" },
-  { "key": "contracts.legal.step.review", "category": "contracts", "vi": "Xác nhận", "en": "Review", "zh": "确认", "ja": "確定" },
-  { "key": "contracts.legal.contract", "category": "contracts", "vi": "Hợp đồng", "en": "Contract", "zh": "合同", "ja": "契約" },
-  { "key": "contracts.legal.project", "category": "contracts", "vi": "Dự án vận hành", "en": "Operational project", "zh": "运营项目", "ja": "運用プロジェクト" },
-  { "key": "contracts.legal.currentStatus", "category": "contracts", "vi": "Trạng thái hiện tại", "en": "Current status", "zh": "当前状态", "ja": "現在の状態" },
-  { "key": "contracts.legal.package", "category": "contracts", "vi": "Gói công việc Pháp lý", "en": "Legal work package", "zh": "法务工作包", "ja": "法務ワークパッケージ" },
-  { "key": "contracts.legal.packageReuse", "category": "contracts", "vi": "Tái sử dụng gói hiện có", "en": "Reuse existing package", "zh": "复用现有工作包", "ja": "既存パッケージを再利用" },
-  { "key": "contracts.legal.packageCreate", "category": "contracts", "vi": "Tạo khi xác nhận", "en": "Create on confirmation", "zh": "确认时创建", "ja": "確定時に作成" },
-  { "key": "contracts.legal.alreadyActivated", "category": "contracts", "vi": "Hợp đồng này đã được kích hoạt Pháp lý. Hãy tải lại trang để xem trạng thái mới.", "en": "Legal activation already exists for this contract. Reload to see the current status.", "zh": "该合同已完成法务激活，请刷新页面查看最新状态。", "ja": "この契約は既に法務設定済みです。再読み込みして最新状態を確認してください。" },
-  { "key": "contracts.legal.existing", "category": "contracts", "vi": "Đã có trong dự án", "en": "Already in project", "zh": "项目中已存在", "ja": "プロジェクトに登録済み" },
-  { "key": "contracts.legal.lead", "category": "contracts", "vi": "Chủ trì Pháp lý", "en": "Legal lead", "zh": "法务负责人", "ja": "法務責任者" },
-  { "key": "contracts.legal.start", "category": "contracts", "vi": "Ngày bắt đầu", "en": "Start date", "zh": "开始日期", "ja": "開始日" },
-  { "key": "contracts.legal.end", "category": "contracts", "vi": "Ngày kết thúc", "en": "End date", "zh": "结束日期", "ja": "終了日" },
-  { "key": "contracts.legal.permit", "category": "contracts", "vi": "Giấy phép", "en": "Permit", "zh": "许可证", "ja": "許認可" },
-  { "key": "contracts.legal.agency", "category": "contracts", "vi": "Cơ quan cấp", "en": "Issuing agency", "zh": "签发机构", "ja": "発行機関" },
-  { "key": "contracts.legal.assignee", "category": "contracts", "vi": "Người thực hiện", "en": "Assignee", "zh": "执行人", "ja": "担当者" },
-  { "key": "contracts.legal.approver", "category": "contracts", "vi": "Người duyệt", "en": "Approver", "zh": "审批人", "ja": "承認者" },
-  { "key": "contracts.legal.period", "category": "contracts", "vi": "Kế hoạch", "en": "Schedule", "zh": "计划", "ja": "計画" },
-  { "key": "contracts.legal.predecessor", "category": "contracts", "vi": "Công tác trước", "en": "Predecessor", "zh": "前置任务", "ja": "先行タスク" },
-  { "key": "contracts.legal.confirm", "category": "contracts", "vi": "Xác nhận kích hoạt", "en": "Confirm activation", "zh": "确认激活", "ja": "開始を確定" },
-  { "key": "contracts.legal.error.ineligible", "category": "contracts", "vi": "Hợp đồng không đủ điều kiện kích hoạt Pháp lý.", "en": "This contract is not eligible for legal activation.", "zh": "该合同不符合许可激活条件。", "ja": "この契約は法務設定の対象外です。" },
-  { "key": "contracts.legal.error.permitRequired", "category": "contracts", "vi": "Phải có ít nhất một giấy phép trong gói Pháp lý.", "en": "The legal package must contain at least one permit.", "zh": "法务工作包必须至少包含一项许可证。", "ja": "法務パッケージには許認可が1件以上必要です。" },
-  { "key": "contracts.legal.error.leadRequired", "category": "contracts", "vi": "Phải chọn chủ trì Pháp lý.", "en": "Select a legal lead.", "zh": "请选择法务负责人。", "ja": "法務責任者を選択してください。" },
-  { "key": "contracts.legal.error.packageDates", "category": "contracts", "vi": "Thời gian gói Pháp lý không hợp lệ.", "en": "The legal package schedule is invalid.", "zh": "法务工作包日期无效。", "ja": "法務パッケージの日程が正しくありません。" },
-  { "key": "contracts.legal.error.assignmentRequired", "category": "contracts", "vi": "Mỗi giấy phép phải có người thực hiện và người duyệt.", "en": "Every permit needs an assignee and approver.", "zh": "每项许可证都必须指定执行人和审批人。", "ja": "各許認可に担当者と承認者が必要です。" },
-  { "key": "contracts.legal.error.selfApproval", "category": "contracts", "vi": "Người thực hiện không được tự duyệt công việc của mình.", "en": "An assignee cannot approve their own work.", "zh": "执行人不得审批自己的工作。", "ja": "担当者は自分の作業を承認できません。" },
-  { "key": "contracts.legal.error.taskDates", "category": "contracts", "vi": "Kế hoạch từng giấy phép phải nằm trong thời gian gói và ngày kết thúc không trước ngày bắt đầu.", "en": "Each permit schedule must fall within the package and end on or after its start.", "zh": "每项许可证计划必须在工作包周期内，且结束日期不得早于开始日期。", "ja": "各許認可の日程はパッケージ期間内で、終了日は開始日以降にしてください。" },
-  { "key": "contracts.legal.error.concurrency", "category": "contracts", "vi": "Hợp đồng đã được người khác cập nhật. Dữ liệu bạn nhập vẫn được giữ; hãy kiểm tra lại trước khi thử lại.", "en": "Someone updated the contract. Your entries are preserved; review them before retrying.", "zh": "合同已被他人更新。您的输入已保留，请检查后重试。", "ja": "契約が別のユーザーにより更新されました。入力内容は保持されています。確認して再試行してください。" }
-,
+  {
+    "key": "contracts.legal.title",
+    "category": "contracts",
+    "vi": "Kích hoạt hợp đồng và thiết lập Pháp lý",
+    "en": "Activate contract and set up permitting",
+    "zh": "激活合同并设置法务许可",
+    "ja": "契約を開始し許認可を設定"
+  },
+  {
+    "key": "contracts.legal.description",
+    "category": "contracts",
+    "vi": "Kiểm tra dữ liệu điền sẵn, điều chỉnh từng giấy phép rồi xác nhận. Hệ thống chỉ tạo dữ liệu sau bước cuối.",
+    "en": "Review the prefilled data, adjust each permit, then confirm. Nothing is created before the final step.",
+    "zh": "检查预填数据并调整每项许可证，然后确认；最后一步前不会创建数据。",
+    "ja": "事前入力された内容と各許認可を確認・調整してから確定してください。最終確定前にはデータを作成しません。"
+  },
+  {
+    "key": "contracts.legal.step.check",
+    "category": "contracts",
+    "vi": "Kiểm tra",
+    "en": "Check",
+    "zh": "检查",
+    "ja": "確認"
+  },
+  {
+    "key": "contracts.legal.step.permits",
+    "category": "contracts",
+    "vi": "Giấy phép",
+    "en": "Permits",
+    "zh": "许可证",
+    "ja": "許認可"
+  },
+  {
+    "key": "contracts.legal.step.assignment",
+    "category": "contracts",
+    "vi": "Phân công",
+    "en": "Assignment",
+    "zh": "分工",
+    "ja": "担当"
+  },
+  {
+    "key": "contracts.legal.step.review",
+    "category": "contracts",
+    "vi": "Xác nhận",
+    "en": "Review",
+    "zh": "确认",
+    "ja": "確定"
+  },
+  {
+    "key": "contracts.legal.contract",
+    "category": "contracts",
+    "vi": "Hợp đồng",
+    "en": "Contract",
+    "zh": "合同",
+    "ja": "契約"
+  },
+  {
+    "key": "contracts.legal.project",
+    "category": "contracts",
+    "vi": "Dự án vận hành",
+    "en": "Operational project",
+    "zh": "运营项目",
+    "ja": "運用プロジェクト"
+  },
+  {
+    "key": "contracts.legal.currentStatus",
+    "category": "contracts",
+    "vi": "Trạng thái hiện tại",
+    "en": "Current status",
+    "zh": "当前状态",
+    "ja": "現在の状態"
+  },
+  {
+    "key": "contracts.legal.package",
+    "category": "contracts",
+    "vi": "Gói công việc Pháp lý",
+    "en": "Legal work package",
+    "zh": "法务工作包",
+    "ja": "法務ワークパッケージ"
+  },
+  {
+    "key": "contracts.legal.packageReuse",
+    "category": "contracts",
+    "vi": "Tái sử dụng gói hiện có",
+    "en": "Reuse existing package",
+    "zh": "复用现有工作包",
+    "ja": "既存パッケージを再利用"
+  },
+  {
+    "key": "contracts.legal.packageCreate",
+    "category": "contracts",
+    "vi": "Tạo khi xác nhận",
+    "en": "Create on confirmation",
+    "zh": "确认时创建",
+    "ja": "確定時に作成"
+  },
+  {
+    "key": "contracts.legal.alreadyActivated",
+    "category": "contracts",
+    "vi": "Hợp đồng này đã được kích hoạt Pháp lý. Hãy tải lại trang để xem trạng thái mới.",
+    "en": "Legal activation already exists for this contract. Reload to see the current status.",
+    "zh": "该合同已完成法务激活，请刷新页面查看最新状态。",
+    "ja": "この契約は既に法務設定済みです。再読み込みして最新状態を確認してください。"
+  },
+  {
+    "key": "contracts.legal.existing",
+    "category": "contracts",
+    "vi": "Đã có trong dự án",
+    "en": "Already in project",
+    "zh": "项目中已存在",
+    "ja": "プロジェクトに登録済み"
+  },
+  {
+    "key": "contracts.legal.lead",
+    "category": "contracts",
+    "vi": "Chủ trì Pháp lý",
+    "en": "Legal lead",
+    "zh": "法务负责人",
+    "ja": "法務責任者"
+  },
+  {
+    "key": "contracts.legal.start",
+    "category": "contracts",
+    "vi": "Ngày bắt đầu",
+    "en": "Start date",
+    "zh": "开始日期",
+    "ja": "開始日"
+  },
+  {
+    "key": "contracts.legal.end",
+    "category": "contracts",
+    "vi": "Ngày kết thúc",
+    "en": "End date",
+    "zh": "结束日期",
+    "ja": "終了日"
+  },
+  {
+    "key": "contracts.legal.permit",
+    "category": "contracts",
+    "vi": "Giấy phép",
+    "en": "Permit",
+    "zh": "许可证",
+    "ja": "許認可"
+  },
+  {
+    "key": "contracts.legal.agency",
+    "category": "contracts",
+    "vi": "Cơ quan cấp",
+    "en": "Issuing agency",
+    "zh": "签发机构",
+    "ja": "発行機関"
+  },
+  {
+    "key": "contracts.legal.assignee",
+    "category": "contracts",
+    "vi": "Người thực hiện",
+    "en": "Assignee",
+    "zh": "执行人",
+    "ja": "担当者"
+  },
+  {
+    "key": "contracts.legal.approver",
+    "category": "contracts",
+    "vi": "Người duyệt",
+    "en": "Approver",
+    "zh": "审批人",
+    "ja": "承認者"
+  },
+  {
+    "key": "contracts.legal.period",
+    "category": "contracts",
+    "vi": "Kế hoạch",
+    "en": "Schedule",
+    "zh": "计划",
+    "ja": "計画"
+  },
+  {
+    "key": "contracts.legal.predecessor",
+    "category": "contracts",
+    "vi": "Công tác trước",
+    "en": "Predecessor",
+    "zh": "前置任务",
+    "ja": "先行タスク"
+  },
+  {
+    "key": "contracts.legal.confirm",
+    "category": "contracts",
+    "vi": "Xác nhận kích hoạt",
+    "en": "Confirm activation",
+    "zh": "确认激活",
+    "ja": "開始を確定"
+  },
+  {
+    "key": "contracts.legal.error.ineligible",
+    "category": "contracts",
+    "vi": "Hợp đồng không đủ điều kiện kích hoạt Pháp lý.",
+    "en": "This contract is not eligible for legal activation.",
+    "zh": "该合同不符合许可激活条件。",
+    "ja": "この契約は法務設定の対象外です。"
+  },
+  {
+    "key": "contracts.legal.error.permitRequired",
+    "category": "contracts",
+    "vi": "Phải có ít nhất một giấy phép trong gói Pháp lý.",
+    "en": "The legal package must contain at least one permit.",
+    "zh": "法务工作包必须至少包含一项许可证。",
+    "ja": "法務パッケージには許認可が1件以上必要です。"
+  },
+  {
+    "key": "contracts.legal.error.leadRequired",
+    "category": "contracts",
+    "vi": "Phải chọn chủ trì Pháp lý.",
+    "en": "Select a legal lead.",
+    "zh": "请选择法务负责人。",
+    "ja": "法務責任者を選択してください。"
+  },
+  {
+    "key": "contracts.legal.error.packageDates",
+    "category": "contracts",
+    "vi": "Thời gian gói Pháp lý không hợp lệ.",
+    "en": "The legal package schedule is invalid.",
+    "zh": "法务工作包日期无效。",
+    "ja": "法務パッケージの日程が正しくありません。"
+  },
+  {
+    "key": "contracts.legal.error.assignmentRequired",
+    "category": "contracts",
+    "vi": "Mỗi giấy phép phải có người thực hiện và người duyệt.",
+    "en": "Every permit needs an assignee and approver.",
+    "zh": "每项许可证都必须指定执行人和审批人。",
+    "ja": "各許認可に担当者と承認者が必要です。"
+  },
+  {
+    "key": "contracts.legal.error.selfApproval",
+    "category": "contracts",
+    "vi": "Người thực hiện không được tự duyệt công việc của mình.",
+    "en": "An assignee cannot approve their own work.",
+    "zh": "执行人不得审批自己的工作。",
+    "ja": "担当者は自分の作業を承認できません。"
+  },
+  {
+    "key": "contracts.legal.error.taskDates",
+    "category": "contracts",
+    "vi": "Kế hoạch từng giấy phép phải nằm trong thời gian gói và ngày kết thúc không trước ngày bắt đầu.",
+    "en": "Each permit schedule must fall within the package and end on or after its start.",
+    "zh": "每项许可证计划必须在工作包周期内，且结束日期不得早于开始日期。",
+    "ja": "各許認可の日程はパッケージ期間内で、終了日は開始日以降にしてください。"
+  },
+  {
+    "key": "contracts.legal.error.concurrency",
+    "category": "contracts",
+    "vi": "Hợp đồng đã được người khác cập nhật. Dữ liệu bạn nhập vẫn được giữ; hãy kiểm tra lại trước khi thử lại.",
+    "en": "Someone updated the contract. Your entries are preserved; review them before retrying.",
+    "zh": "合同已被他人更新。您的输入已保留，请检查后重试。",
+    "ja": "契約が別のユーザーにより更新されました。入力内容は保持されています。確認して再試行してください。"
+  },
   {
     "key": "contracts.sourceLeads.title",
     "category": "contracts",

@@ -224,7 +224,7 @@ public static class DbSeeder
             DepartmentWorkPackageSampleSeeder.Seed(db);
             LegalChecklistTemplateSampleSeeder.Seed(db);
             RfqSampleDataSeeder.Seed(db);
-            ConstructionSampleSeeder.Seed(db);
+            ConstructionSampleSeeder.Seed(db, webRootPath);
         }
     }
 

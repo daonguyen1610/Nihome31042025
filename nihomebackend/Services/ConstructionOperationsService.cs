@@ -277,7 +277,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         EnsureText(request.Code, "Mã mẫu"); EnsureText(request.NameVi, "Tên mẫu tiếng Việt"); EnsureText(request.Name, "Tên mẫu tiếng Anh"); EnsureText(request.NameZh, "Tên mẫu tiếng Trung"); EnsureText(request.NameJa, "Tên mẫu tiếng Nhật");
-        ValidateJson(request.SchemaJson, "Cấu trúc mẫu", JsonValueKind.Object);
+        ValidateQaQcTemplateSchema(request.SchemaJson, requireAcceptanceCriteria: true);
         var code = request.Code.Trim().ToUpperInvariant();
         var version = (await db.QaQcTemplates.Where(x => x.Code == code).MaxAsync(x => (int?)x.Version, ct) ?? 0) + 1;
         var item = new QaQcTemplate { Code = code, Version = version, NameVi = request.NameVi.Trim(), Name = request.Name.Trim(), NameZh = request.NameZh.Trim(), NameJa = request.NameJa.Trim(), SchemaJson = request.SchemaJson, CreatedByUserId = userId };
@@ -528,8 +528,8 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     private async Task<QaQcTemplate> ValidateDossier(int projectId, CreateQaQcDossierRequest request, CancellationToken ct)
     {
         EnsureText(request.WbsCode, "Mã WBS"); EnsureText(request.Title, "Tên hồ sơ");
-        ValidateJson(request.ChecklistResultsJson, "Kết quả checklist", JsonValueKind.Array);
         var template = await db.QaQcTemplates.SingleOrDefaultAsync(x => x.Id == request.TemplateId && x.IsPublished, ct) ?? throw new ConstructionOperationException("Cần có mẫu QA/QC đã phát hành.");
+        ValidateQaQcChecklistResults(template.SchemaJson, request.ChecklistResultsJson);
         if (request.IfcReleaseId is null) throw new ConstructionOperationException("Mỗi hồ sơ QA/QC phải tham chiếu một gói IFC đã phát hành.");
         if (!await db.IfcReleases.AnyAsync(x => x.Id == request.IfcReleaseId && x.Status == IfcReleaseStatus.Released && x.DesignProject.OperationalProjectId == projectId, ct)) throw new ConstructionOperationException("Hồ sơ QA/QC chỉ được tham chiếu gói IFC đã phát hành của cùng dự án.");
         if (request.Evidence is null || request.EvidenceDocumentIds is null || request.Evidence.Any(x => x is null))
@@ -726,6 +726,75 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     private static void EnsureDecision(ConstructionReviewStatus status, int creator, int lastEditor, int reviewer, string reason) { if (status != ConstructionReviewStatus.PendingCmReview) throw new ConstructionOperationException("Chỉ bản ghi đang chờ duyệt mới được xem xét."); if (creator == reviewer || lastEditor == reviewer) throw new ConstructionOperationException("Người tạo hoặc chỉnh sửa gần nhất không được tự thực hiện bước duyệt CM độc lập."); EnsureText(reason, "Lý do duyệt CM"); }
     private static void EnsureText(string? value, string field) { if (string.IsNullOrWhiteSpace(value)) throw new ConstructionOperationException($"{field} là bắt buộc và không được chỉ gồm khoảng trắng."); }
     private static void ValidateJson(string value, string field, JsonValueKind expectedKind) { try { using var document = JsonDocument.Parse(value); if (document.RootElement.ValueKind != expectedKind) throw new ConstructionOperationException($"{field} phải là JSON dạng {expectedKind.ToString().ToLowerInvariant()}."); } catch (JsonException) { throw new ConstructionOperationException($"{field} phải là JSON hợp lệ."); } }
+    private static HashSet<string> ValidateQaQcTemplateSchema(string value, bool requireAcceptanceCriteria)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(value);
+            if (document.RootElement.ValueKind != JsonValueKind.Object ||
+                !document.RootElement.TryGetProperty("items", out var items) ||
+                items.ValueKind != JsonValueKind.Array || items.GetArrayLength() == 0)
+                throw new ConstructionOperationException("Mẫu QA/QC cần ít nhất một hạng mục kiểm tra.");
+
+            var codes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var item in items.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object ||
+                    !item.TryGetProperty("code", out var codeValue) ||
+                    !item.TryGetProperty("title", out var titleValue) ||
+                    codeValue.ValueKind != JsonValueKind.String ||
+                    titleValue.ValueKind != JsonValueKind.String ||
+                    string.IsNullOrWhiteSpace(codeValue.GetString()) ||
+                    string.IsNullOrWhiteSpace(titleValue.GetString()))
+                    throw new ConstructionOperationException("Mỗi hạng mục QA/QC cần có mã và tên nội dung kiểm tra.");
+                if (!codes.Add(codeValue.GetString()!.Trim()))
+                    throw new ConstructionOperationException("Mã hạng mục kiểm tra trong mẫu QA/QC không được trùng nhau.");
+                if (requireAcceptanceCriteria &&
+                    (!item.TryGetProperty("acceptanceCriteria", out var criteriaValue) ||
+                     criteriaValue.ValueKind != JsonValueKind.String ||
+                     string.IsNullOrWhiteSpace(criteriaValue.GetString())))
+                    throw new ConstructionOperationException("Mỗi hạng mục QA/QC cần ghi rõ tiêu chí đạt.");
+            }
+            return codes;
+        }
+        catch (JsonException)
+        {
+            throw new ConstructionOperationException("Cấu trúc mẫu QA/QC phải là JSON hợp lệ.");
+        }
+    }
+
+    private static void ValidateQaQcChecklistResults(string schemaJson, string resultsJson)
+    {
+        var templateCodes = ValidateQaQcTemplateSchema(schemaJson, requireAcceptanceCriteria: false);
+        try
+        {
+            using var document = JsonDocument.Parse(resultsJson);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+                throw new ConstructionOperationException("Kết quả kiểm tra phải là một danh sách.");
+            var resultCodes = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var allowedResults = new HashSet<string>(["Pending", "Pass", "Fail", "NotApplicable"], StringComparer.Ordinal);
+            foreach (var item in document.RootElement.EnumerateArray())
+            {
+                if (item.ValueKind != JsonValueKind.Object ||
+                    !item.TryGetProperty("code", out var codeValue) ||
+                    !item.TryGetProperty("result", out var resultValue) ||
+                    codeValue.ValueKind != JsonValueKind.String ||
+                    resultValue.ValueKind != JsonValueKind.String ||
+                    string.IsNullOrWhiteSpace(codeValue.GetString()) ||
+                    !allowedResults.Contains(resultValue.GetString()!))
+                    throw new ConstructionOperationException("Mỗi kết quả QA/QC cần có hạng mục và một trạng thái hợp lệ.");
+                var code = codeValue.GetString()!.Trim();
+                if (!templateCodes.Contains(code))
+                    throw new ConstructionOperationException($"Hạng mục kiểm tra '{code}' không thuộc mẫu QA/QC đã chọn.");
+                if (!resultCodes.Add(code))
+                    throw new ConstructionOperationException($"Hạng mục kiểm tra '{code}' chỉ được ghi kết quả một lần.");
+            }
+        }
+        catch (JsonException)
+        {
+            throw new ConstructionOperationException("Kết quả kiểm tra phải là JSON hợp lệ.");
+        }
+    }
     private static void Apply(ConstructionPreparation x, UpsertConstructionPreparationRequest r, int user) { x.WbsBaselineReference = r.WbsBaselineReference.Trim(); x.ScheduleBaselineReference = r.ScheduleBaselineReference.Trim(); x.SCurveBaselineReference = r.SCurveBaselineReference.Trim(); x.BchOrganizationReference = r.BchOrganizationReference.Trim(); x.ResourcePlanReference = r.ResourcePlanReference.Trim(); x.BudgetBaselineReference = r.BudgetBaselineReference.Trim(); x.WbsBaselineDocumentId = r.WbsBaselineDocumentId; x.ScheduleBaselineDocumentId = r.ScheduleBaselineDocumentId; x.SCurveBaselineDocumentId = r.SCurveBaselineDocumentId; x.BchOrganizationDocumentId = r.BchOrganizationDocumentId; x.ResourcePlanDocumentId = r.ResourcePlanDocumentId; x.BudgetBaselineDocumentId = r.BudgetBaselineDocumentId; x.BudgetBaselineLocked = false; x.SiteHandoverRequired = r.SiteHandoverRequired; x.SiteHandoverComplete = false; x.SiteHandoverDocumentId = r.SiteHandoverDocumentId; x.MethodStatementRequired = r.MethodStatementRequired; x.MethodStatementApproved = false; x.MethodStatementDocumentId = r.MethodStatementDocumentId; x.HsePlanRequired = r.HsePlanRequired; x.HsePlanApproved = false; x.HsePlanDocumentId = r.HsePlanDocumentId; x.UpdatedAt = DateTime.UtcNow; x.UpdatedByUserId = user; }
     private static void Apply(ConstructionResourceRequest x, UpsertConstructionResourceRequest r) { x.Type = r.Type; x.WbsCode = r.WbsCode.Trim(); x.NeedByDate = r.NeedByDate!.Value; x.Quantity = r.Quantity; x.Unit = r.Unit.Trim(); x.Reason = r.Reason.Trim(); x.ProjectBoqLineId = r.ProjectBoqLineId; x.ResponsibleSiteUserId = r.ResponsibleSiteUserId; x.AssignedProcurementUserId = r.AssignedProcurementUserId; x.UpdatedAt = DateTime.UtcNow; }
     private static void Apply(QaQcDossier x, CreateQaQcDossierRequest r, QaQcTemplate t)

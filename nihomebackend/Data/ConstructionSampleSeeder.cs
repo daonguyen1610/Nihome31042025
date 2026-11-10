@@ -1,3 +1,5 @@
+using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 using NihomeBackend.Models.Rbac;
 
@@ -7,11 +9,32 @@ namespace NihomeBackend.Data;
 /// Development-only samples for the CM Office and Site Command Board workspaces.
 /// The CRM sample seeder already covers schedule, diary, punch, acceptance,
 /// as-built and handover; this seeder fills the operational deliverables that
-/// the CM/BCH screens otherwise show empty: preparation, QA/QC, QS and HSE.
+/// the CM/BCH screens otherwise show empty: preparation, resource handoff,
+/// QA/QC, QS and HSE. Every record is scoped to the An Phu factory sample and
+/// is created only when <see cref="DbSeeder"/> runs with development samples.
 /// </summary>
 public static class ConstructionSampleSeeder
 {
-    public static void Seed(AppDbContext db)
+    private const string EvidenceRoot = "/files/business-documents/construction";
+
+    private static readonly (string Key, string FileName, string Title)[] EvidenceSamples =
+    [
+        ("wbs-baseline", "WBS-baseline-An-Phu-R1.pdf", "WBS baseline An Phu factory R1"),
+        ("schedule-baseline", "Tien-do-baseline-An-Phu-R1.pdf", "Schedule baseline An Phu factory R1"),
+        ("s-curve-baseline", "S-curve-baseline-An-Phu-R1.pdf", "S-curve baseline An Phu factory R1"),
+        ("bch-organization", "So-do-to-chuc-BCH-An-Phu-2026.pdf", "Site command organization An Phu 2026"),
+        ("resource-plan", "Ke-hoach-nguon-luc-An-Phu-R1.pdf", "Resource plan An Phu factory R1"),
+        ("budget-baseline", "Ngan-sach-baseline-An-Phu-R1.pdf", "Budget baseline An Phu factory R1"),
+        ("site-handover", "Bien-ban-ban-giao-mat-bang.pdf", "Site handover minute An Phu factory"),
+        ("method-statement", "Bien-phap-thi-cong-ket-cau.pdf", "Structural method statement approval"),
+        ("hse-plan", "Ke-hoach-an-toan-lao-dong.pdf", "HSE plan approval An Phu factory"),
+        ("concrete-test", "Ket-qua-thi-nghiem-be-tong-C30.pdf", "C30 concrete test report"),
+        ("rebar-inspection", "Bien-ban-kiem-tra-cot-thep.pdf", "Rebar inspection record floor 2"),
+        ("mep-duct-inspection", "Bien-ban-nghiem-thu-ong-gio.pdf", "MEP duct inspection record floor 1"),
+        ("qs-measurement", "Bang-do-khoi-luong-thang-9.pdf", "Quantity measurement sheet September"),
+    ];
+
+    public static void Seed(AppDbContext db, string? webRootPath = null)
     {
         var now = DateTime.UtcNow;
         var project = db.OperationalProjects.FirstOrDefault(x => x.Code == "PJ-SAMPLE-003");
@@ -22,17 +45,22 @@ public static class ConstructionSampleSeeder
         var site = ResolveUser(db, RbacRoleCodes.SiteCommander) ?? cm;
         var qa = ResolveUser(db, RbacRoleCodes.SiteQaQc) ?? site;
         var qs = ResolveUser(db, RbacRoleCodes.QuantitySurveyor) ?? site;
+        var procurement = ResolveUser(db, RbacRoleCodes.Procurement) ?? qs;
 
         EnsureMember(db, project.Id, site.Id, "Chỉ huy trưởng công trường", cm.Id, now);
         EnsureMember(db, project.Id, qa.Id, "Kỹ sư QA/QC công trường", cm.Id, now);
         EnsureMember(db, project.Id, qs.Id, "QS công trường nhà máy", cm.Id, now);
+        EnsureMember(db, project.Id, procurement.Id, "Cung ứng công trình nhà máy", cm.Id, now);
         db.SaveChanges();
 
-        SeedPreparation(db, project.Id, cm.Id, now);
+        var documents = SeedEvidenceDocuments(db, project.Id, qa.Id, webRootPath, now);
+        var boqLines = SeedBoqRevision(db, project, qs.Id, cm.Id, now);
+        SeedPreparation(db, project.Id, cm.Id, documents, now);
         var templates = SeedQaQcTemplates(db, qa.Id, now);
         db.SaveChanges();
-        SeedQaQcDossiers(db, project.Id, templates, qa.Id, cm.Id, site.Id, now);
-        SeedQsBatches(db, project.Id, qa.Id, cm.Id, now);
+        SeedQaQcDossiers(db, project.Id, templates, documents, qa.Id, cm.Id, now);
+        SeedQsBatches(db, project.Id, documents, qs.Id, cm.Id, now);
+        SeedResourceRequests(db, project.Id, site.Id, procurement.Id, cm.Id, boqLines, now);
         SeedHseViolations(db, project.Id, site.Id, qa.Id, cm.Id, now);
         db.SaveChanges();
     }
@@ -59,31 +87,187 @@ public static class ConstructionSampleSeeder
         });
     }
 
-    private static void SeedPreparation(AppDbContext db, int projectId, int actorId, DateTime now)
+    /// <summary>
+    /// Materialises the evidence library used by preparation, QA/QC and QS
+    /// samples. Rows are matched by their stable storage path so re-running the
+    /// seeder self-heals the database and the physical placeholder files.
+    /// </summary>
+    private static Dictionary<string, long> SeedEvidenceDocuments(
+        AppDbContext db, int projectId, int actorId, string? webRootPath, DateTime now)
     {
-        if (db.ConstructionPreparations.Any(x => x.OperationalProjectId == projectId && x.WbsBaselineReference == "WBS-BASELINE-ANPHU-R1")) return;
-        db.ConstructionPreparations.Add(new ConstructionPreparation
+        string? storageDirectory = null;
+        if (!string.IsNullOrWhiteSpace(webRootPath))
         {
-            OperationalProjectId = projectId,
-            Version = 1,
-            Status = ConstructionPreparationStatus.Published,
-            WbsBaselineReference = "WBS-BASELINE-ANPHU-R1",
-            ScheduleBaselineReference = "CM-SCHEDULE-BASELINE-ANPHU-R1",
-            SCurveBaselineReference = "S-CURVE-BASELINE-ANPHU-R1",
-            BchOrganizationReference = "BCH-ORG-ANPHU-2026",
-            ResourcePlanReference = "RESOURCE-PLAN-ANPHU-R1",
-            BudgetBaselineReference = "BUDGET-BASELINE-ANPHU-R1",
-            BudgetBaselineLocked = true,
-            SiteHandoverRequired = true,
-            MethodStatementRequired = true,
-            HsePlanRequired = true,
-            PublishedAt = now.AddDays(-30),
-            PublishedByUserId = actorId,
-            CreatedByUserId = actorId,
-            UpdatedByUserId = actorId,
-            CreatedAt = now.AddDays(-32),
-            UpdatedAt = now.AddDays(-30),
-        });
+            var root = Path.GetFullPath(webRootPath);
+            var candidate = Path.GetFullPath(Path.Combine(root, "files", "business-documents", "construction"));
+            var rootPrefix = root.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+            if (candidate.StartsWith(rootPrefix, StringComparison.Ordinal))
+            {
+                Directory.CreateDirectory(candidate);
+                storageDirectory = candidate;
+            }
+        }
+
+        var resolved = new List<(string Key, ProjectDocument Document)>();
+        foreach (var sample in EvidenceSamples)
+        {
+            var localPath = $"{EvidenceRoot}/{sample.FileName}";
+            var document = db.ProjectDocuments.FirstOrDefault(x =>
+                x.OperationalProjectId == projectId && x.LocalPath == localPath && x.DeletedAt == null);
+
+            var bytes = SampleCrmDataSeeder.BuildPlaceholderPdf(sample.Title);
+            if (storageDirectory is not null)
+            {
+                var fullPath = Path.Combine(storageDirectory, sample.FileName);
+                if (!File.Exists(fullPath)) File.WriteAllBytes(fullPath, bytes);
+                bytes = File.ReadAllBytes(fullPath);
+            }
+            var sha256 = Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
+
+            if (document is null)
+            {
+                document = new ProjectDocument
+                {
+                    OperationalProjectId = projectId,
+                    Category = ProjectDocumentCategory.ConstructionAcceptance,
+                    SourceModule = ProjectDocumentSourceModule.Construction,
+                    SourceType = ProjectDocumentSourceType.ManualUpload,
+                    LocalPath = localPath,
+                    OriginalFileName = sample.FileName,
+                    ContentType = "application/pdf",
+                    Size = bytes.Length,
+                    Sha256 = sha256,
+                    Origin = ProjectDocumentOrigin.Nicon,
+                    DesiredOperation = ProjectDocumentDesiredOperation.None,
+                    SyncStatus = ProjectDocumentSyncStatus.Synced,
+                    IsDownloadable = true,
+                    CreatedAt = now.AddDays(-36),
+                    CreatedByUserId = actorId,
+                    UpdatedAt = now.AddDays(-36),
+                    UpdatedByUserId = actorId,
+                };
+                db.ProjectDocuments.Add(document);
+            }
+            else if (document.Size != bytes.Length || document.Sha256 != sha256)
+            {
+                document.Size = bytes.Length;
+                document.Sha256 = sha256;
+                document.UpdatedAt = now;
+                document.UpdatedByUserId = actorId;
+            }
+            resolved.Add((sample.Key, document));
+        }
+        db.SaveChanges();
+        return resolved.ToDictionary(x => x.Key, x => x.Document.Id, StringComparer.Ordinal);
+    }
+
+    /// <summary>
+    /// Seeds the approved construction BOQ revision that the BCH material
+    /// requests and QS batches reference. Projects created without a BOQ would
+    /// leave the resource picker empty and block the material handoff flow.
+    /// </summary>
+    private static Dictionary<string, ProjectBoqLine> SeedBoqRevision(
+        AppDbContext db, OperationalProject project, int preparedByUserId, int approvedByUserId, DateTime now)
+    {
+        var revision = db.ProjectBoqRevisions.Include(x => x.Lines)
+            .Where(x => x.OperationalProjectId == project.Id && x.Status == ProjectBoqRevisionStatus.Approved)
+            .OrderByDescending(x => x.RevisionNumber)
+            .FirstOrDefault();
+        if (revision is null)
+        {
+            var upstreamContractId = db.Contracts
+                .Where(x => x.OperationalProjectId == project.Id && x.Direction == ContractDirection.Upstream &&
+                    x.Type == ContractType.DesignAndBuild)
+                .Select(x => (int?)x.Id)
+                .FirstOrDefault();
+            revision = new ProjectBoqRevision
+            {
+                OperationalProjectId = project.Id,
+                UpstreamContractId = upstreamContractId,
+                RevisionNumber = 1,
+                Currency = "VND",
+                Status = ProjectBoqRevisionStatus.Approved,
+                PreparedByUserId = preparedByUserId,
+                SubmittedByUserId = preparedByUserId,
+                SubmittedAt = now.AddDays(-32),
+                ApprovedByUserId = approvedByUserId,
+                ApprovedAt = now.AddDays(-30),
+                FinalSelectedAt = now.AddDays(-30),
+                CreatedAt = now.AddDays(-35),
+                UpdatedAt = now.AddDays(-30),
+                Lines =
+                {
+                    new ProjectBoqLine { ItemCode = "CT-01", Description = "Cốp pha sàn tầng 2", Unit = "m2", ApprovedQuantity = 1_200, BudgetUnitPrice = 420_000, Amount = 504_000_000, SortOrder = 0 },
+                    new ProjectBoqLine { ItemCode = "CT-02", Description = "Cốt thép D16 cột và sàn", Unit = "tấn", ApprovedQuantity = 42, BudgetUnitPrice = 18_500_000, Amount = 777_000_000, SortOrder = 1 },
+                    new ProjectBoqLine { ItemCode = "BT-01", Description = "Bê tông thương phẩm C30", Unit = "m3", ApprovedQuantity = 80, BudgetUnitPrice = 1_650_000, Amount = 132_000_000, SortOrder = 2 },
+                    new ProjectBoqLine { ItemCode = "MEP-01", Description = "Ống gió tôn tráng kẽm", Unit = "m2", ApprovedQuantity = 86, BudgetUnitPrice = 420_000, Amount = 36_120_000, SortOrder = 3 },
+                },
+            };
+            revision.CostTotal = revision.Lines.Sum(x => x.Amount);
+            db.ProjectBoqRevisions.Add(revision);
+            db.SaveChanges();
+        }
+        if (project.FinalProjectBoqRevisionId != revision.Id)
+        {
+            project.FinalProjectBoqRevisionId = revision.Id;
+            db.SaveChanges();
+        }
+        return revision.Lines.ToDictionary(x => x.ItemCode, StringComparer.Ordinal);
+    }
+
+    private static void SeedPreparation(
+        AppDbContext db, int projectId, int actorId, IReadOnlyDictionary<string, long> documents, DateTime now)
+    {
+        var item = db.ConstructionPreparations.FirstOrDefault(x =>
+            x.OperationalProjectId == projectId && x.WbsBaselineReference == "WBS-BASELINE-ANPHU-R1");
+        if (item is null)
+        {
+            item = new ConstructionPreparation
+            {
+                OperationalProjectId = projectId,
+                Version = 1,
+                Status = ConstructionPreparationStatus.Published,
+                WbsBaselineReference = "WBS-BASELINE-ANPHU-R1",
+                ScheduleBaselineReference = "CM-SCHEDULE-BASELINE-ANPHU-R1",
+                SCurveBaselineReference = "S-CURVE-BASELINE-ANPHU-R1",
+                BchOrganizationReference = "BCH-ORG-ANPHU-2026",
+                ResourcePlanReference = "RESOURCE-PLAN-ANPHU-R1",
+                BudgetBaselineReference = "BUDGET-BASELINE-ANPHU-R1",
+                SiteHandoverRequired = true,
+                MethodStatementRequired = true,
+                HsePlanRequired = true,
+                PublishedAt = now.AddDays(-30),
+                PublishedByUserId = actorId,
+                CreatedByUserId = actorId,
+                CreatedAt = now.AddDays(-32),
+            };
+            db.ConstructionPreparations.Add(item);
+        }
+
+        var needsEvidence = item.WbsBaselineDocumentId is null || item.ScheduleBaselineDocumentId is null ||
+            item.SCurveBaselineDocumentId is null || item.BchOrganizationDocumentId is null ||
+            item.ResourcePlanDocumentId is null || item.BudgetBaselineDocumentId is null ||
+            item.SiteHandoverDocumentId is null || item.MethodStatementDocumentId is null ||
+            item.HsePlanDocumentId is null;
+        if (needsEvidence)
+        {
+            item.WbsBaselineDocumentId ??= documents["wbs-baseline"];
+            item.ScheduleBaselineDocumentId ??= documents["schedule-baseline"];
+            item.SCurveBaselineDocumentId ??= documents["s-curve-baseline"];
+            item.BchOrganizationDocumentId ??= documents["bch-organization"];
+            item.ResourcePlanDocumentId ??= documents["resource-plan"];
+            item.BudgetBaselineDocumentId ??= documents["budget-baseline"];
+            item.SiteHandoverDocumentId ??= documents["site-handover"];
+            item.MethodStatementDocumentId ??= documents["method-statement"];
+            item.HsePlanDocumentId ??= documents["hse-plan"];
+            item.BudgetBaselineLocked = true;
+            item.SiteHandoverComplete = true;
+            item.MethodStatementApproved = true;
+            item.HsePlanApproved = true;
+            item.UpdatedAt = now;
+            item.UpdatedByUserId = actorId;
+        }
+        db.SaveChanges();
     }
 
     private static List<QaQcTemplate> SeedQaQcTemplates(AppDbContext db, int actorId, DateTime now)
@@ -98,7 +282,7 @@ public static class ConstructionSampleSeeder
                 Name = "Structural concrete inspection",
                 NameZh = "结构混凝土验收",
                 NameJa = "構造コンクリート検査",
-                SchemaJson = """{"items":[{"code":"C1","title":"Cao độ và tim trục đúng thiết kế"},{"code":"C2","title":"Cốp pha kín, không rò rỉ"},{"code":"C3","title":"Cốt thép đúng chủng loại và khoảng cách"},{"code":"C4","title":"Độ sụt bê tông trong giới hạn cho phép"},{"code":"C5","title":"Bảo dưỡng bê tông theo phương án"}]}""",
+                SchemaJson = """{"schemaVersion":1,"items":[{"code":"C1","title":"Cao độ và tim trục","acceptanceCriteria":"Đúng bản vẽ IFC đã phát hành"},{"code":"C2","title":"Độ kín của cốp pha","acceptanceCriteria":"Kín khít, không có vị trí gây rò rỉ vữa"},{"code":"C3","title":"Chủng loại và khoảng cách cốt thép","acceptanceCriteria":"Đúng bản vẽ IFC và biện pháp thi công đã duyệt"},{"code":"C4","title":"Độ sụt bê tông","acceptanceCriteria":"Nằm trong giới hạn của cấp phối được duyệt"},{"code":"C5","title":"Bảo dưỡng bê tông","acceptanceCriteria":"Đúng thời gian và phương án bảo dưỡng đã duyệt"}]}""",
             },
             new QaQcTemplate
             {
@@ -108,7 +292,7 @@ public static class ConstructionSampleSeeder
                 Name = "MEP ducting and piping inspection",
                 NameZh = "MEP风管与管道验收",
                 NameJa = "MEPダクト・配管検査",
-                SchemaJson = """{"items":[{"code":"M1","title":"Cao độ treo ống gió đúng bản vẽ"},{"code":"M2","title":"Mối nối ống gió kín, có keo làm kín"},{"code":"M3","title":"Thử kín đường ống nước"},{"code":"M4","title":"Tiếp địa và liên kết thiết bị điện"}]}""",
+                SchemaJson = """{"schemaVersion":1,"items":[{"code":"M1","title":"Cao độ treo ống gió","acceptanceCriteria":"Đúng bản vẽ IFC đã phát hành"},{"code":"M2","title":"Độ kín mối nối ống gió","acceptanceCriteria":"Mối nối kín và có keo làm kín theo biện pháp được duyệt"},{"code":"M3","title":"Thử kín đường ống nước","acceptanceCriteria":"Đạt áp lực và thời gian thử theo yêu cầu kỹ thuật"},{"code":"M4","title":"Tiếp địa thiết bị điện","acceptanceCriteria":"Đủ liên kết và đạt điện trở theo yêu cầu thiết kế"}]}""",
             },
         };
         var result = new List<QaQcTemplate>();
@@ -117,6 +301,19 @@ public static class ConstructionSampleSeeder
             var existing = db.QaQcTemplates.FirstOrDefault(x => x.Code == sample.Code && x.Version == sample.Version);
             if (existing is not null)
             {
+                // Sample templates are owned by this seeder. Refresh their wording
+                // and checklist so an existing development database reflects the
+                // current sample; dossiers keep their stored template snapshot.
+                if (existing.SchemaJson != sample.SchemaJson
+                    || existing.NameVi != sample.NameVi || existing.Name != sample.Name
+                    || existing.NameZh != sample.NameZh || existing.NameJa != sample.NameJa)
+                {
+                    existing.NameVi = sample.NameVi;
+                    existing.Name = sample.Name;
+                    existing.NameZh = sample.NameZh;
+                    existing.NameJa = sample.NameJa;
+                    existing.SchemaJson = sample.SchemaJson;
+                }
                 result.Add(existing);
                 continue;
             }
@@ -131,9 +328,9 @@ public static class ConstructionSampleSeeder
     }
 
     private static void SeedQaQcDossiers(
-        AppDbContext db, int projectId, List<QaQcTemplate> templates, int authorId, int reviewerId, int siteId, DateTime now)
+        AppDbContext db, int projectId, List<QaQcTemplate> templates, IReadOnlyDictionary<string, long> documents,
+        int authorId, int reviewerId, DateTime now)
     {
-        if (db.QaQcDossiers.Any(x => x.OperationalProjectId == projectId && x.Code.StartsWith("QA-SAMPLE-"))) return;
         var concrete = templates.FirstOrDefault(x => x.Code == "QA-SAMPLE-CONCRETE");
         var mep = templates.FirstOrDefault(x => x.Code == "QA-SAMPLE-MEP");
         if (concrete is null || mep is null) return;
@@ -161,6 +358,11 @@ public static class ConstructionSampleSeeder
                 CmReviewedAt = now.AddDays(-8),
                 CmReviewedByUserId = reviewerId,
                 CmDecisionReason = "Hồ sơ đầy đủ, kết quả kiểm tra đạt yêu cầu thiết kế.",
+                Evidence =
+                {
+                    new QaQcDossierEvidence { ProjectDocumentId = documents["concrete-test"], EvidenceType = QaQcEvidenceType.LaboratoryResult },
+                    new QaQcDossierEvidence { ProjectDocumentId = documents["rebar-inspection"], EvidenceType = QaQcEvidenceType.AcceptanceRecord },
+                },
             },
             new QaQcDossier
             {
@@ -174,6 +376,10 @@ public static class ConstructionSampleSeeder
                 ChecklistResultsJson = """[{"code":"M1","result":"Pass"},{"code":"M2","result":"Fail","note":"Còn 2 mối nối chưa làm kín tại trục C"}]""",
                 Status = ConstructionReviewStatus.PendingCmReview,
                 SubmittedAt = now.AddDays(-2),
+                Evidence =
+                {
+                    new QaQcDossierEvidence { ProjectDocumentId = documents["mep-duct-inspection"], EvidenceType = QaQcEvidenceType.AcceptanceRecord },
+                },
             },
             new QaQcDossier
             {
@@ -203,7 +409,28 @@ public static class ConstructionSampleSeeder
                 CmReviewedByUserId = reviewerId,
                 CmDecisionReason = "Thiếu biên bản đo điện trở tiếp địa. Bổ sung trước khi trình lại.",
             },
+            new QaQcDossier
+            {
+                Code = "QA-SAMPLE-005",
+                QaQcTemplate = concrete,
+                TemplateVersion = concrete.Version,
+                TemplateSnapshotJson = concrete.SchemaJson,
+                IfcReleaseId = ifcReleaseId,
+                WbsCode = "WBS-3.1-FOUND",
+                Title = "Nghiệm thu bê tông móng — trục 1–2",
+                ChecklistResultsJson = """[{"code":"C1","result":"Pass"},{"code":"C2","result":"Pass"},{"code":"C3","result":"Pass","note":"Thép móng đã được nghiệm thu trước khi đổ"},{"code":"C4","result":"Pass","note":"Độ sụt 110 mm"},{"code":"C5","result":"NotApplicable","note":"Đang theo dõi bảo dưỡng, chưa đến hạn đánh giá"}]""",
+                Status = ConstructionReviewStatus.PendingCmReview,
+                SubmittedAt = now.AddHours(-6),
+                Evidence =
+                {
+                    new QaQcDossierEvidence { ProjectDocumentId = documents["concrete-test"], EvidenceType = QaQcEvidenceType.LaboratoryResult },
+                },
+            },
         };
+
+        var existing = db.QaQcDossiers.Include(x => x.Evidence)
+            .Where(x => x.OperationalProjectId == projectId && x.Code.StartsWith("QA-SAMPLE-"))
+            .ToList();
 
         foreach (var sample in samples)
         {
@@ -212,14 +439,33 @@ public static class ConstructionSampleSeeder
             sample.LastEditedByUserId = authorId;
             sample.CreatedAt = sample.SubmittedAt?.AddDays(-1) ?? now.AddDays(-1);
             sample.UpdatedAt = sample.CmReviewedAt ?? sample.SubmittedAt ?? sample.CreatedAt;
-            db.QaQcDossiers.Add(sample);
+
+            var current = existing.FirstOrDefault(x => x.Code == sample.Code);
+            if (current is null)
+            {
+                db.QaQcDossiers.Add(sample);
+                continue;
+            }
+            foreach (var evidence in sample.Evidence)
+            {
+                if (current.Evidence.All(x => x.ProjectDocumentId != evidence.ProjectDocumentId))
+                    current.Evidence.Add(new QaQcDossierEvidence
+                    {
+                        ProjectDocumentId = evidence.ProjectDocumentId,
+                        EvidenceType = evidence.EvidenceType,
+                    });
+            }
         }
     }
 
-    private static void SeedQsBatches(AppDbContext db, int projectId, int authorId, int reviewerId, DateTime now)
+    /// <summary>
+    /// Covers every QS direction, review status, adjustment kind and record
+    /// state: original, pending, draft, superseding correction and reversal.
+    /// </summary>
+    private static void SeedQsBatches(
+        AppDbContext db, int projectId, IReadOnlyDictionary<string, long> documents,
+        int authorId, int reviewerId, DateTime now)
     {
-        if (db.ConstructionQsBatches.Any(x => x.OperationalProjectId == projectId && x.Code.StartsWith("QS-SAMPLE-"))) return;
-
         var upstreamContract = db.Contracts
             .Where(x => x.OperationalProjectId == projectId && x.Direction == ContractDirection.Upstream)
             .OrderBy(x => x.Id)
@@ -230,20 +476,57 @@ public static class ConstructionSampleSeeder
             .FirstOrDefault();
         if (upstreamContract is null) return;
 
-        var upstreamMilestone = db.ContractPaymentMilestones
+        var milestones = db.ContractPaymentMilestones
             .Where(x => x.ContractId == upstreamContract.Id)
             .OrderBy(x => x.Order)
-            .Skip(1)
+            .Select(x => x.Id)
+            .ToList();
+        int? Milestone(int index) => index < milestones.Count ? milestones[index] : null;
+        var firstMilestone = Milestone(0);
+        var secondMilestone = Milestone(1);
+        var boqRevisionId = db.ProjectBoqRevisions
+            .Where(x => x.OperationalProjectId == projectId && x.Status == ProjectBoqRevisionStatus.Approved)
+            .OrderByDescending(x => x.RevisionNumber)
             .Select(x => (int?)x.Id)
             .FirstOrDefault();
 
-        AddBatch(db, projectId, authorId, now, new ConstructionQsBatch
+        var batches = db.ConstructionQsBatches.Include(x => x.Evidence)
+            .Where(x => x.OperationalProjectId == projectId && x.Code.StartsWith("QS-SAMPLE-"))
+            .ToList();
+        var byCode = batches.ToDictionary(x => x.Code, StringComparer.Ordinal);
+
+        ConstructionQsBatch Ensure(string code, Func<ConstructionQsBatch> build)
+        {
+            if (byCode.TryGetValue(code, out var current)) return current;
+            var batch = build();
+            batch.OperationalProjectId = projectId;
+            batch.CertifiedAmount = batch.Lines.Sum(x => x.Amount);
+            batch.CreatedByUserId = authorId;
+            batch.LastEditedByUserId = authorId;
+            batch.CreatedAt = now.AddDays(-15);
+            batch.UpdatedAt = batch.CmReviewedAt ?? batch.SubmittedAt ?? batch.CreatedAt;
+            db.ConstructionQsBatches.Add(batch);
+            byCode[code] = batch;
+            return batch;
+        }
+
+        void EnsureEvidence(ConstructionQsBatch batch, params string[] keys)
+        {
+            foreach (var key in keys)
+            {
+                if (batch.Evidence.All(x => x.ProjectDocumentId != documents[key]))
+                    batch.Evidence.Add(new ConstructionQsBatchEvidence { ProjectDocumentId = documents[key] });
+            }
+        }
+
+        var qs001 = Ensure("QS-SAMPLE-001", () => new ConstructionQsBatch
         {
             Code = "QS-SAMPLE-001",
             Direction = ConstructionQsDirection.Upstream,
             Status = ConstructionReviewStatus.CmApproved,
             ContractId = upstreamContract.Id,
-            ContractPaymentMilestoneId = upstreamMilestone,
+            ContractPaymentMilestoneId = secondMilestone,
+            ProjectBoqRevisionId = boqRevisionId,
             WbsCode = "WBS-3.1",
             PeriodFrom = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
             PeriodTo = new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc),
@@ -252,63 +535,349 @@ public static class ConstructionSampleSeeder
             CmReviewedAt = now.AddDays(-11),
             CmReviewedByUserId = reviewerId,
             CmDecisionReason = "Khối lượng khớp bản vẽ và biên bản hiện trường.",
+            RecordState = ConstructionQsRecordState.Active,
+            IsActiveLineage = true,
             Lines =
             {
                 new ConstructionQsBatchLine { ItemCode = "CT-01", Description = "Cốp pha sàn tầng 2", Unit = "m2", Quantity = 120, UnitPrice = 850_000, Amount = 102_000_000, SortOrder = 1 },
                 new ConstructionQsBatchLine { ItemCode = "CT-02", Description = "Bê tông sàn tầng 2", Unit = "m3", Quantity = 45, UnitPrice = 1_650_000, Amount = 74_250_000, SortOrder = 2 },
             },
         });
+        EnsureEvidence(qs001, "qs-measurement");
 
-        AddBatch(db, projectId, authorId, now, new ConstructionQsBatch
+        var qs002 = Ensure("QS-SAMPLE-002", () => new ConstructionQsBatch
         {
             Code = "QS-SAMPLE-002",
             Direction = ConstructionQsDirection.Upstream,
             Status = ConstructionReviewStatus.PendingCmReview,
             ContractId = upstreamContract.Id,
-            ContractPaymentMilestoneId = upstreamMilestone,
+            ContractPaymentMilestoneId = secondMilestone,
+            ProjectBoqRevisionId = boqRevisionId,
             WbsCode = "WBS-3.2",
             PeriodFrom = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
             PeriodTo = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc),
             Description = "Nghiệm thu khối lượng kết cấu tầng 3, đợt 2",
             SubmittedAt = now.AddDays(-1),
+            RecordState = ConstructionQsRecordState.Active,
+            IsActiveLineage = true,
             Lines =
             {
                 new ConstructionQsBatchLine { ItemCode = "CT-03", Description = "Cốt thép cột tầng 3", Unit = "tấn", Quantity = 12.5m, UnitPrice = 18_500_000, Amount = 231_250_000, SortOrder = 1 },
             },
         });
+        EnsureEvidence(qs002, "qs-measurement");
 
         if (downstreamContract is not null)
         {
-            AddBatch(db, projectId, authorId, now, new ConstructionQsBatch
+            Ensure("QS-SAMPLE-003", () => new ConstructionQsBatch
             {
                 Code = "QS-SAMPLE-003",
                 Direction = ConstructionQsDirection.Downstream,
                 Status = ConstructionReviewStatus.Draft,
                 ContractId = downstreamContract.Id,
+                ProjectBoqRevisionId = boqRevisionId,
                 WbsCode = "WBS-3.4",
                 PeriodFrom = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
                 PeriodTo = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc),
                 Description = "Khối lượng nhà thầu phụ MEP trình kỳ tháng 10",
+                RecordState = ConstructionQsRecordState.Active,
                 Lines =
                 {
                     new ConstructionQsBatchLine { ItemCode = "MEP-01", Description = "Ống gió tầng 1", Unit = "m2", Quantity = 86, UnitPrice = 420_000, Amount = 36_120_000, SortOrder = 1 },
                 },
             });
         }
+
+        var qs005 = Ensure("QS-SAMPLE-005", () => new ConstructionQsBatch
+        {
+            Code = "QS-SAMPLE-005",
+            Direction = ConstructionQsDirection.Upstream,
+            Status = ConstructionReviewStatus.CmApproved,
+            ContractId = upstreamContract.Id,
+            ContractPaymentMilestoneId = firstMilestone,
+            ProjectBoqRevisionId = boqRevisionId,
+            WbsCode = "WBS-3.3",
+            PeriodFrom = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc),
+            PeriodTo = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc),
+            Description = "Nghiệm thu khối lượng bê tông móng, đợt 0",
+            SubmittedAt = now.AddDays(-20),
+            CmReviewedAt = now.AddDays(-19),
+            CmReviewedByUserId = reviewerId,
+            CmDecisionReason = "Khối lượng móng khớp biên bản nghiệm thu.",
+            RecordState = ConstructionQsRecordState.Active,
+            IsActiveLineage = true,
+            Lines =
+            {
+                new ConstructionQsBatchLine { ItemCode = "CT-05", Description = "Bê tông móng C30", Unit = "m3", Quantity = 30, UnitPrice = 1_650_000, Amount = 49_500_000, SortOrder = 1 },
+            },
+        });
+        EnsureEvidence(qs005, "qs-measurement");
+
+        if (downstreamContract is not null)
+        {
+            var qs007 = Ensure("QS-SAMPLE-007", () => new ConstructionQsBatch
+            {
+                Code = "QS-SAMPLE-007",
+                Direction = ConstructionQsDirection.Downstream,
+                Status = ConstructionReviewStatus.CmApproved,
+                ContractId = downstreamContract.Id,
+                ProjectBoqRevisionId = boqRevisionId,
+                WbsCode = "WBS-3.4",
+                PeriodFrom = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+                PeriodTo = new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc),
+                Description = "Khối lượng nhà thầu phụ MEP kỳ tháng 9",
+                SubmittedAt = now.AddDays(-10),
+                CmReviewedAt = now.AddDays(-9),
+                CmReviewedByUserId = reviewerId,
+                CmDecisionReason = "Khối lượng được xác nhận theo biên bản hiện trường.",
+                RecordState = ConstructionQsRecordState.Active,
+                IsActiveLineage = true,
+                Lines =
+                {
+                    new ConstructionQsBatchLine { ItemCode = "MEP-02", Description = "Ống gió tầng 2", Unit = "m2", Quantity = 120, UnitPrice = 420_000, Amount = 50_400_000, SortOrder = 1 },
+                },
+            });
+            EnsureEvidence(qs007, "qs-measurement");
+
+            Ensure("QS-SAMPLE-008", () => new ConstructionQsBatch
+            {
+                Code = "QS-SAMPLE-008",
+                Direction = ConstructionQsDirection.Downstream,
+                Status = ConstructionReviewStatus.CmRejected,
+                ContractId = downstreamContract.Id,
+                ProjectBoqRevisionId = boqRevisionId,
+                WbsCode = "WBS-3.4",
+                PeriodFrom = new DateTime(2026, 10, 1, 0, 0, 0, DateTimeKind.Utc),
+                PeriodTo = new DateTime(2026, 10, 31, 0, 0, 0, DateTimeKind.Utc),
+                Description = "Khối lượng miệng gió nhà thầu phụ trình kỳ tháng 10",
+                SubmittedAt = now.AddDays(-3),
+                CmReviewedAt = now.AddDays(-2),
+                CmReviewedByUserId = reviewerId,
+                CmDecisionReason = "Khối lượng chưa khớp biên bản nghiệm thu hiện trường. Đề nghị đo lại.",
+                RecordState = ConstructionQsRecordState.Active,
+                Lines =
+                {
+                    new ConstructionQsBatchLine { ItemCode = "MEP-03", Description = "Miệng gió thổi", Unit = "bộ", Quantity = 24, UnitPrice = 650_000, Amount = 15_600_000, SortOrder = 1 },
+                },
+            });
+        }
+
+        db.SaveChanges();
+
+        var qs004 = Ensure("QS-SAMPLE-004", () => new ConstructionQsBatch
+        {
+            Code = "QS-SAMPLE-004",
+            Direction = ConstructionQsDirection.Upstream,
+            Status = ConstructionReviewStatus.CmApproved,
+            ContractId = upstreamContract.Id,
+            ContractPaymentMilestoneId = secondMilestone,
+            ProjectBoqRevisionId = boqRevisionId,
+            WbsCode = "WBS-3.1",
+            PeriodFrom = new DateTime(2026, 9, 1, 0, 0, 0, DateTimeKind.Utc),
+            PeriodTo = new DateTime(2026, 9, 30, 0, 0, 0, DateTimeKind.Utc),
+            Description = "Điều chỉnh khối lượng cốp pha sàn tầng 2 theo biên bản đo",
+            SubmittedAt = now.AddDays(-7),
+            CmReviewedAt = now.AddDays(-6),
+            CmReviewedByUserId = reviewerId,
+            CmDecisionReason = "Chấp thuận điều chỉnh tăng 5 m2 cốp pha theo biên bản đo hiện trường.",
+            SupersedesBatchId = qs001.Id,
+            AdjustmentKind = ConstructionQsAdjustmentKind.SupersedingCorrection,
+            RecordState = ConstructionQsRecordState.Active,
+            IsActiveLineage = true,
+            Lines =
+            {
+                new ConstructionQsBatchLine { ItemCode = "CT-01", Description = "Cốp pha sàn tầng 2", Unit = "m2", Quantity = 125, UnitPrice = 850_000, Amount = 106_250_000, SortOrder = 1 },
+                new ConstructionQsBatchLine { ItemCode = "CT-02", Description = "Bê tông sàn tầng 2", Unit = "m3", Quantity = 45, UnitPrice = 1_650_000, Amount = 74_250_000, SortOrder = 2 },
+            },
+        });
+        EnsureEvidence(qs004, "qs-measurement");
+        if (qs001.RecordState != ConstructionQsRecordState.Superseded)
+        {
+            qs001.RecordState = ConstructionQsRecordState.Superseded;
+            qs001.IsActiveLineage = false;
+            qs001.UpdatedAt = now.AddDays(-6);
+        }
+
+        Ensure("QS-SAMPLE-006", () => new ConstructionQsBatch
+        {
+            Code = "QS-SAMPLE-006",
+            Direction = ConstructionQsDirection.Upstream,
+            Status = ConstructionReviewStatus.CmApproved,
+            ContractId = upstreamContract.Id,
+            ContractPaymentMilestoneId = firstMilestone,
+            ProjectBoqRevisionId = boqRevisionId,
+            WbsCode = "WBS-3.3",
+            PeriodFrom = new DateTime(2026, 8, 1, 0, 0, 0, DateTimeKind.Utc),
+            PeriodTo = new DateTime(2026, 8, 31, 0, 0, 0, DateTimeKind.Utc),
+            Description = "Đảo toàn bộ lô nghiệm thu bê tông móng do sai khối lượng",
+            SubmittedAt = now.AddDays(-16),
+            CmReviewedAt = now.AddDays(-15),
+            CmReviewedByUserId = reviewerId,
+            CmDecisionReason = "Đảo lô do biên bản nghiệm thu móng bị thay thế.",
+            ReversesBatchId = qs005.Id,
+            AdjustmentKind = ConstructionQsAdjustmentKind.Reversal,
+            RecordState = ConstructionQsRecordState.Active,
+            IsActiveLineage = true,
+            Lines =
+            {
+                new ConstructionQsBatchLine { ItemCode = "CT-05", Description = "Bê tông móng C30", Unit = "m3", Quantity = 30, UnitPrice = 1_650_000, Amount = 49_500_000, SortOrder = 1 },
+            },
+        });
+        if (qs005.RecordState != ConstructionQsRecordState.Reversed)
+        {
+            qs005.RecordState = ConstructionQsRecordState.Reversed;
+            qs005.IsActiveLineage = false;
+            qs005.UpdatedAt = now.AddDays(-15);
+        }
     }
 
-    private static void AddBatch(
-        AppDbContext db, int projectId, int authorId, DateTime now, ConstructionQsBatch batch)
+    private static void SeedResourceRequests(
+        AppDbContext db, int projectId, int siteUserId, int procurementUserId, int reviewerId,
+        IReadOnlyDictionary<string, ProjectBoqLine> boqLines, DateTime now)
     {
-        batch.OperationalProjectId = projectId;
-        batch.CertifiedAmount = batch.Lines.Sum(x => x.Amount);
-        batch.RecordState = ConstructionQsRecordState.Active;
-        batch.IsActiveLineage = true;
-        batch.CreatedByUserId = authorId;
-        batch.LastEditedByUserId = authorId;
-        batch.CreatedAt = now.AddDays(-15);
-        batch.UpdatedAt = batch.CmReviewedAt ?? batch.SubmittedAt ?? batch.CreatedAt;
-        db.ConstructionQsBatches.Add(batch);
+        MaterialRequest? ductMaterialRequest = null;
+        if (boqLines.TryGetValue("MEP-01", out var handoffDuctLine))
+        {
+            ductMaterialRequest = db.MaterialRequests
+                .FirstOrDefault(x => x.OperationalProjectId == projectId && x.Code == "MR-SAMPLE-ANPHU-DUCT");
+            if (ductMaterialRequest is null)
+            {
+                ductMaterialRequest = new MaterialRequest
+                {
+                    OperationalProjectId = projectId,
+                    Code = "MR-SAMPLE-ANPHU-DUCT",
+                    Status = MaterialRequestStatus.Submitted,
+                    SiteRequesterUserId = siteUserId,
+                    ResponsibleSiteUserId = siteUserId,
+                    AssignedProcurementUserId = procurementUserId,
+                    RequiredAt = now.Date.AddDays(10),
+                    Note = "Tạo tự động khi CM duyệt yêu cầu nguồn lực RR-SAMPLE-ANPHU-DUCT.",
+                    SubmittedAt = now.AddDays(-5),
+                    CreatedAt = now.AddDays(-6),
+                    UpdatedAt = now.AddDays(-5),
+                    Lines =
+                    {
+                        new MaterialRequestLine { ProjectBoqLineId = handoffDuctLine.Id, RequestedQuantity = 86, SortOrder = 0 },
+                    },
+                };
+                db.MaterialRequests.Add(ductMaterialRequest);
+                db.SaveChanges();
+            }
+        }
+
+        var samples = new List<ConstructionResourceRequest>();
+        if (boqLines.TryGetValue("CT-02", out var rebarLine))
+            samples.Add(new ConstructionResourceRequest
+            {
+                Code = "RR-SAMPLE-ANPHU-REBAR",
+                Type = ConstructionResourceType.Material,
+                Status = ConstructionReviewStatus.Draft,
+                WbsCode = "WBS-3.1-COL",
+                Quantity = 12.5m,
+                Unit = "tấn",
+                Reason = "Bổ sung thép D16 cho cột tầng 3 theo biên bản kiểm tra cốt thép.",
+                ProjectBoqLineId = rebarLine.Id,
+                HandoffStatus = ConstructionHandoffStatus.NotReady,
+            });
+        if (boqLines.TryGetValue("BT-01", out var concreteLine))
+            samples.Add(new ConstructionResourceRequest
+            {
+                Code = "RR-SAMPLE-ANPHU-CONCRETE",
+                Type = ConstructionResourceType.Material,
+                Status = ConstructionReviewStatus.PendingCmReview,
+                WbsCode = "WBS-3.1-FORM",
+                Quantity = 45,
+                Unit = "m3",
+                Reason = "Bê tông C30 cho sàn tầng 2, đợt đổ tiếp theo.",
+                ProjectBoqLineId = concreteLine.Id,
+                SubmittedAt = now.AddDays(-1),
+                HandoffStatus = ConstructionHandoffStatus.NotReady,
+            });
+        if (boqLines.TryGetValue("MEP-01", out var ductLine))
+            samples.Add(new ConstructionResourceRequest
+            {
+                Code = "RR-SAMPLE-ANPHU-DUCT",
+                Type = ConstructionResourceType.Material,
+                Status = ConstructionReviewStatus.CmApproved,
+                WbsCode = "WBS-3.4-MEP",
+                Quantity = 86,
+                Unit = "m2",
+                Reason = "Ống gió tôn tráng kẽm cho tầng 1 khu vực xưởng may.",
+                ProjectBoqLineId = ductLine.Id,
+                SubmittedAt = now.AddDays(-6),
+                CmReviewedAt = now.AddDays(-5),
+                CmReviewedByUserId = reviewerId,
+                CmDecisionReason = "Nhu cầu khớp BOQ và tiến độ MEP tầng 1.",
+                HandoffStatus = ConstructionHandoffStatus.MaterialRequestCreated,
+                HandoffEntityType = "MaterialRequest",
+                HandoffEntityId = ductMaterialRequest?.Id,
+            });
+        samples.Add(new ConstructionResourceRequest
+        {
+            Code = "RR-SAMPLE-ANPHU-SCAFFOLD",
+            Type = ConstructionResourceType.Equipment,
+            Status = ConstructionReviewStatus.CmRejected,
+            WbsCode = "WBS-3.1-FORM",
+            Quantity = 24,
+            Unit = "bộ",
+            Reason = "Giàn giáo di động phục vụ thi công sàn tầng 2.",
+            SubmittedAt = now.AddDays(-4),
+            CmReviewedAt = now.AddDays(-3),
+            CmReviewedByUserId = reviewerId,
+            CmDecisionReason = "Chưa có biện pháp an toàn và chứng nhận kiểm định giàn giáo. Bổ sung trước khi trình lại.",
+            HandoffStatus = ConstructionHandoffStatus.NotReady,
+        });
+        samples.Add(new ConstructionResourceRequest
+        {
+            Code = "RR-SAMPLE-ANPHU-STEELCREW",
+            Type = ConstructionResourceType.Labour,
+            Status = ConstructionReviewStatus.CmApproved,
+            WbsCode = "WBS-3.1-COL",
+            Quantity = 8,
+            Unit = "người",
+            Reason = "Tổ thép bổ sung cho cột tầng 3 để bám tiến độ.",
+            SubmittedAt = now.AddDays(-3),
+            CmReviewedAt = now.AddDays(-2),
+            CmReviewedByUserId = reviewerId,
+            CmDecisionReason = "Đã đối chiếu kế hoạch nguồn lực và biện pháp thi công.",
+            HandoffStatus = ConstructionHandoffStatus.ReadyForProcurementAndFinance,
+        });
+        samples.Add(new ConstructionResourceRequest
+        {
+            Code = "RR-SAMPLE-ANPHU-EXCAVATOR",
+            Type = ConstructionResourceType.Equipment,
+            Status = ConstructionReviewStatus.Draft,
+            WbsCode = "WBS-3.2",
+            Quantity = 1,
+            Unit = "bộ",
+            Reason = "Máy đào phục vụ san lấp khu vực mở rộng nhà xưởng.",
+            HandoffStatus = ConstructionHandoffStatus.NotReady,
+        });
+
+        var added = new List<ConstructionResourceRequest>();
+        foreach (var sample in samples)
+        {
+            if (db.ConstructionResourceRequests.Any(x => x.OperationalProjectId == projectId && x.Code == sample.Code)) continue;
+            sample.OperationalProjectId = projectId;
+            sample.NeedByDate = now.Date.AddDays(14);
+            sample.ResponsibleSiteUserId = siteUserId;
+            sample.AssignedProcurementUserId = procurementUserId;
+            sample.CreatedByUserId = siteUserId;
+            sample.LastEditedByUserId = siteUserId;
+            sample.CreatedAt = sample.SubmittedAt?.AddDays(-1) ?? now.AddDays(-2);
+            sample.UpdatedAt = sample.CmReviewedAt ?? sample.SubmittedAt ?? sample.CreatedAt;
+            db.ConstructionResourceRequests.Add(sample);
+            added.Add(sample);
+        }
+        db.SaveChanges();
+        foreach (var request in added.Where(x =>
+                     x.HandoffStatus == ConstructionHandoffStatus.ReadyForProcurementAndFinance &&
+                     x.HandoffEntityId is null))
+        {
+            request.HandoffEntityType = nameof(ConstructionResourceRequest);
+            request.HandoffEntityId = request.Id;
+        }
+        db.SaveChanges();
     }
 
     private static void SeedHseViolations(

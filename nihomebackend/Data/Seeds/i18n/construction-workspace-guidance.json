@@ -390,5 +390,293 @@
     "en": "To save: enter a reason and weight basis (at least 3 characters each), choose a site manager and at least one working day. Detailed task weights must total 100%, each weight must be positive, and dates must stay within the master schedule.",
     "zh": "保存前请填写原因和权重依据（各至少3个字符），选择现场负责人及至少一个工作日。明细任务权重合计须为100%且各自大于0，日期须在总进度范围内。",
     "ja": "保存には理由と配分根拠を各3文字以上で入力し、現場責任者と1日以上の作業日を選択します。明細作業の比率は各0超・合計100%とし、日付を全体工程の範囲内に設定します。"
+  },
+  {
+    "key": "construction.cm.documentNumberLabel",
+    "category": "construction",
+    "vi": "Số hiệu văn bản",
+    "en": "Document number",
+    "zh": "文件编号",
+    "ja": "文書番号"
+  },
+  {
+    "key": "construction.cm.docSelectNone",
+    "category": "construction",
+    "vi": "Không đính kèm",
+    "en": "Not attached",
+    "zh": "不附文件",
+    "ja": "添付なし"
+  },
+  {
+    "key": "construction.cm.docSelectEmpty",
+    "category": "construction",
+    "vi": "Dự án chưa có tài liệu nào. Cần tải tài liệu lên trước khi chọn.",
+    "en": "This project has no documents yet. Upload one before selecting.",
+    "zh": "本项目暂无文件，请先上传所需文件。",
+    "ja": "このプロジェクトには資料がまだありません。先にアップロードしてください。"
+  },
+  {
+    "key": "construction.cm.wbsBaselineReferenceHelp",
+    "category": "construction",
+    "vi": "Danh mục công việc đã chốt của dự án: dự án chia thành những gói việc nào.",
+    "en": "The approved work breakdown for this project: which work packages it contains.",
+    "zh": "项目已确认的工作分解结构：包含哪些工作包。",
+    "ja": "確定済みの作業分解構成：どの作業パッケージがあるか。"
+  },
+  {
+    "key": "construction.cm.scheduleBaselineReferenceHelp",
+    "category": "construction",
+    "vi": "Lịch thi công đã chốt: ngày bắt đầu, ngày kết thúc và các mốc chính.",
+    "en": "The approved construction schedule: start date, finish date and key milestones.",
+    "zh": "已确认的施工进度：开工日、完工日及主要节点。",
+    "ja": "確定済みの施工工程：着工日・完工日・主要マイルストーン。"
+  },
+  {
+    "key": "construction.cm.sCurveBaselineReferenceHelp",
+    "category": "construction",
+    "vi": "Đường cong tiến độ theo kế hoạch, dùng để so sánh với tiến độ thực tế.",
+    "en": "The planned progress curve, used to compare against actual progress.",
+    "zh": "计划进度曲线，用于与实际进度对比。",
+    "ja": "計画の進捗カーブ。実績進捗との比較に使います。"
+  },
+  {
+    "key": "construction.cm.bchOrganizationReferenceHelp",
+    "category": "construction",
+    "vi": "Sơ đồ Ban chỉ huy công trường: ai phụ trách mảng nào và liên hệ ai.",
+    "en": "The site command board chart: who owns which area and who to contact.",
+    "zh": "现场指挥部组织图：谁负责哪部分、联系谁。",
+    "ja": "現場指揮本部の組織図：誰がどの担当か、連絡先。"
+  },
+  {
+    "key": "construction.cm.resourcePlanReferenceHelp",
+    "category": "construction",
+    "vi": "Kế hoạch nhân công, thiết bị và vật tư cho từng giai đoạn thi công.",
+    "en": "Planned labour, equipment and materials for each construction phase.",
+    "zh": "各施工阶段的劳动力、设备和材料计划。",
+    "ja": "各施工段階の人員・機材・資材の計画。"
+  },
+  {
+    "key": "construction.cm.budgetBaselineReferenceHelp",
+    "category": "construction",
+    "vi": "Ngân sách đã chốt của dự án, dùng để so sánh với chi phí thực tế.",
+    "en": "The approved project budget, used to compare against actual cost.",
+    "zh": "项目已确认预算，用于与实际成本对比。",
+    "ja": "確定済みのプロジェクト予算。実績コストとの比較に使います。"
+  },
+  {
+    "key": "construction.cm.wbsBaselineReferencePlaceholder",
+    "category": "construction",
+    "vi": "Ví dụ: WBS-2026-01",
+    "en": "e.g. WBS-2026-01",
+    "zh": "例如：WBS-2026-01",
+    "ja": "例：WBS-2026-01"
+  },
+  {
+    "key": "construction.cm.scheduleBaselineReferencePlaceholder",
+    "category": "construction",
+    "vi": "Ví dụ: TD-2026-01",
+    "en": "e.g. SCH-2026-01",
+    "zh": "例如：SCH-2026-01",
+    "ja": "例：SCH-2026-01"
+  },
+  {
+    "key": "construction.cm.sCurveBaselineReferencePlaceholder",
+    "category": "construction",
+    "vi": "Ví dụ: SC-2026-01",
+    "en": "e.g. SC-2026-01",
+    "zh": "例如：SC-2026-01",
+    "ja": "例：SC-2026-01"
+  },
+  {
+    "key": "construction.cm.bchOrganizationReferencePlaceholder",
+    "category": "construction",
+    "vi": "Ví dụ: BCH-2026-01",
+    "en": "e.g. BCH-2026-01",
+    "zh": "例如：BCH-2026-01",
+    "ja": "例：BCH-2026-01"
+  },
+  {
+    "key": "construction.cm.resourcePlanReferencePlaceholder",
+    "category": "construction",
+    "vi": "Ví dụ: KH-NL-2026-01",
+    "en": "e.g. RES-2026-01",
+    "zh": "例如：RES-2026-01",
+    "ja": "例：RES-2026-01"
+  },
+  {
+    "key": "construction.cm.budgetBaselineReferencePlaceholder",
+    "category": "construction",
+    "vi": "Ví dụ: NS-2026-01",
+    "en": "e.g. BUD-2026-01",
+    "zh": "例如：BUD-2026-01",
+    "ja": "例：BUD-2026-01"
+  },
+  {
+    "key": "construction.cm.projectRequirementsGuide",
+    "category": "construction",
+    "vi": "Bật những yêu cầu bắt buộc phải xong trước khi khởi công. Mỗi yêu cầu đã bật chỉ được tính là đạt khi có tài liệu chứng minh.",
+    "en": "Turn on each requirement that must be completed before work starts. An enabled requirement only counts as met when its supporting document is attached.",
+    "zh": "开启开工前必须完成的各项要求。已开启的要求只有附上证明文件才算满足。",
+    "ja": "着工前に完了が必要な要件をオンにします。オンにした要件は証拠書類を添付した場合のみ満たされたとみなされます。"
+  },
+  {
+    "key": "construction.cm.siteHandoverRequiredHelp",
+    "category": "construction",
+    "vi": "Bật khi chỉ được khởi công sau khi chủ đầu tư bàn giao mặt bằng. Sau đó cần đính kèm biên bản bàn giao.",
+    "en": "Turn on when work may only start after the site is handed over. You then need to attach the handover minutes.",
+    "zh": "仅在场地移交后方可开工时开启。开启后需附上场地移交记录。",
+    "ja": "現場引渡し後にのみ着工できる場合にオンにします。オンにしたら引渡し記録を添付してください。"
+  },
+  {
+    "key": "construction.cm.methodStatementRequiredHelp",
+    "category": "construction",
+    "vi": "Bật khi biện pháp thi công phải được duyệt trước khi thi công. Sau đó cần đính kèm biện pháp đã duyệt.",
+    "en": "Turn on when the method statement must be approved before construction. You then need to attach the approved one.",
+    "zh": "施工前必须批准施工方案时开启。开启后需附上已批准的方案。",
+    "ja": "施工前に施工要領書の承認が必要な場合にオンにします。オンにしたら承認済みの要領書を添付してください。"
+  },
+  {
+    "key": "construction.cm.hsePlanRequiredHelp",
+    "category": "construction",
+    "vi": "Bật khi kế hoạch an toàn HSE phải được duyệt trước khi khởi công. Sau đó cần đính kèm kế hoạch đã duyệt.",
+    "en": "Turn on when the HSE plan must be approved before work starts. You then need to attach the approved plan.",
+    "zh": "开工前必须批准HSE计划时开启。开启后需附上已批准的计划。",
+    "ja": "着工前にHSE計画の承認が必要な場合にオンにします。オンにしたら承認済みの計画を添付してください。"
+  },
+  {
+    "key": "construction.cm.siteHandoverDocumentLabel",
+    "category": "construction",
+    "vi": "Biên bản bàn giao mặt bằng",
+    "en": "Site handover minutes",
+    "zh": "场地移交记录",
+    "ja": "現場引渡し記録"
+  },
+  {
+    "key": "construction.cm.methodStatementDocumentLabel",
+    "category": "construction",
+    "vi": "Biện pháp thi công đã duyệt",
+    "en": "Approved method statement",
+    "zh": "已批准的施工方案",
+    "ja": "承認済み施工要領書"
+  },
+  {
+    "key": "construction.cm.hsePlanDocumentLabel",
+    "category": "construction",
+    "vi": "Kế hoạch an toàn HSE đã duyệt",
+    "en": "Approved HSE plan",
+    "zh": "已批准的HSE计划",
+    "ja": "承認済みHSE計画"
+  },
+  {
+    "key": "construction.cm.verifiedMet",
+    "category": "construction",
+    "vi": "Đạt",
+    "en": "Met",
+    "zh": "已满足",
+    "ja": "達成"
+  },
+  {
+    "key": "construction.cm.verifiedNotMet",
+    "category": "construction",
+    "vi": "Chưa đạt",
+    "en": "Not met",
+    "zh": "未满足",
+    "ja": "未達成"
+  },
+  {
+    "key": "construction.cm.baselineRequirement",
+    "category": "construction",
+    "vi": "Hồ sơ yêu cầu",
+    "en": "Required document",
+    "zh": "所需文件",
+    "ja": "必要な資料"
+  },
+  {
+    "key": "construction.cm.uploadTitle",
+    "category": "construction",
+    "vi": "Tải tài liệu lên",
+    "en": "Upload documents",
+    "zh": "上传文件",
+    "ja": "資料をアップロード"
+  },
+  {
+    "key": "construction.cm.uploadManage",
+    "category": "construction",
+    "vi": "Quản lý tài liệu dự án",
+    "en": "Manage project documents",
+    "zh": "管理项目文档",
+    "ja": "プロジェクト文書を管理"
+  },
+  {
+    "key": "construction.cm.uploaded",
+    "category": "construction",
+    "vi": "Đã tải lên {count} tệp.",
+    "en": "Uploaded {count} file(s).",
+    "zh": "已上传 {count} 个文件。",
+    "ja": "{count} 件のファイルをアップロードしました。"
+  },
+  {
+    "key": "construction.cm.uploadAvailable",
+    "category": "construction",
+    "vi": "Hiện có {count} tài liệu để chọn ở các dòng bên dưới.",
+    "en": "{count} document(s) are available to choose on the rows below.",
+    "zh": "下表中可选择 {count} 个文件。",
+    "ja": "下の行で {count} 件の資料を選択できます。"
+  },
+  {
+    "key": "construction.cm.assignTitle",
+    "category": "construction",
+    "vi": "Chọn tệp cho từng hồ sơ",
+    "en": "Assign a file to each document",
+    "zh": "为每份文件选择文件",
+    "ja": "各資料にファイルを割り当てる"
+  },
+  {
+    "key": "construction.cm.assignGuide",
+    "category": "construction",
+    "vi": "Mỗi hồ sơ cần một tệp. Số hiệu được điền sẵn theo tên tệp, bạn có thể sửa lại.",
+    "en": "Each document needs one file. The document number is filled from the file name; you can change it.",
+    "zh": "每份文件需要一个文件。文件编号会按文件名自动填写，可自行修改。",
+    "ja": "各資料に1つのファイルが必要です。資料番号はファイル名から自動入力されます（変更可）。"
+  },
+  {
+    "key": "construction.cm.scrollTableHint",
+    "category": "construction",
+    "vi": "Kéo ngang bảng để xem đủ các cột.",
+    "en": "Scroll the table sideways to see every column.",
+    "zh": "横向滚动表格以查看所有列。",
+    "ja": "表を横にスクロールするとすべての列を確認できます。"
+  },
+  {
+    "key": "construction.cm.evidenceFileLabel",
+    "category": "construction",
+    "vi": "Tệp bằng chứng",
+    "en": "Evidence file",
+    "zh": "证明文件",
+    "ja": "証拠資料"
+  },
+  {
+    "key": "construction.cm.requiredTag",
+    "category": "construction",
+    "vi": "Bắt buộc",
+    "en": "Required",
+    "zh": "必填",
+    "ja": "必須"
+  },
+  {
+    "key": "construction.cm.docReferenceHelp",
+    "category": "construction",
+    "vi": "Số hiệu là mã ghi trong sổ văn bản của dự án (ví dụ WBS-2026-01), dùng để tra đúng bản baseline khi đối chiếu sau này. Tệp bằng chứng nên có để làm căn cứ.",
+    "en": "The document number is the code in the project document register (for example WBS-2026-01), used to find the exact baseline version when comparing later. Attach the evidence file as the basis.",
+    "zh": "文件编号是项目文件登记册中的编号（例如 WBS-2026-01），用于日后对照时找到准确的基础版本。建议附上证明文件作为依据。",
+    "ja": "文書番号はプロジェクト文書台帳の番号（例：WBS-2026-01）で、後日の照合時に正確な基準版を特定するために使います。根拠として証拠資料を添付してください。"
+  },
+  {
+    "key": "construction.cm.selectFile",
+    "category": "construction",
+    "vi": "Chọn tệp",
+    "en": "Select a file",
+    "zh": "选择文件",
+    "ja": "ファイルを選択"
   }
 ]

@@ -1523,7 +1523,7 @@ public static class SampleCrmDataSeeder
     /// Build a minimal valid single-page PDF containing the document's
     /// display name and optional sample details.
     /// </summary>
-    private static byte[] BuildPlaceholderPdf(string title, IEnumerable<string>? details = null)
+    internal static byte[] BuildPlaceholderPdf(string title, IEnumerable<string>? details = null)
     {
         static string Sanitize(string value) => new string(value
                 .Where(c => c is >= (char)0x20 and < (char)0x7F)

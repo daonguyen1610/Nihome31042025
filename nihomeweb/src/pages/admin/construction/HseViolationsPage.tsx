@@ -605,15 +605,18 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
                 </button>
               ))}
             </div>
-            <div className="hidden overflow-hidden rounded-xl border border-border bg-card shadow-sm md:block">
-              <table className="w-full text-left text-sm">
+            <p className="hidden text-xs text-muted-foreground md:block lg:hidden">
+              {t("construction.cm.scrollTableHint")}
+            </p>
+            <div className="hidden overflow-x-auto rounded-xl border border-border bg-card shadow-sm md:block">
+              <table className="w-full min-w-[900px] text-left text-sm">
                 <thead className="bg-muted text-xs font-semibold uppercase text-muted-foreground">
                   <tr>
                     <th className="px-4 py-3">{t("hse.field.description")}</th>
-                    <th className="px-4 py-3">{t("hse.field.location")}</th>
-                    <th className="px-4 py-3">{t("hse.field.responsible")}</th>
-                    <th className="px-4 py-3">{t("hse.field.severity")}</th>
-                    <th className="px-4 py-3">{t("hse.field.status")}</th>
+                    <th className="min-w-[140px] px-4 py-3">{t("hse.field.location")}</th>
+                    <th className="min-w-[160px] px-4 py-3">{t("hse.field.responsible")}</th>
+                    <th className="w-[110px] px-4 py-3">{t("hse.field.severity")}</th>
+                    <th className="w-[110px] px-4 py-3">{t("hse.field.status")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -631,12 +634,12 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
                       <td className="px-4 py-3 text-foreground">
                         {row.responsibleSiteUserName ?? `#${row.responsibleSiteUserId}`}
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="whitespace-nowrap px-4 py-3">
                         <ConstructionStatusBadge tone={HSE_SEVERITY_TONE[row.severity]}>
                           {t(`hse.severity.${row.severity}`)}
                         </ConstructionStatusBadge>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="whitespace-nowrap px-4 py-3">
                         <ConstructionStatusBadge tone={HSE_STATUS_TONE[row.status]}>
                           {t(`hse.status.${row.status}`)}
                         </ConstructionStatusBadge>
@@ -674,7 +677,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
                   </ConstructionStatusBadge>
                 </SheetTitle>
               </SheetHeader>
-              <div className="border-l-4 border-destructive pl-4">
+              <div className="rounded-lg bg-muted/40 p-4">
                 <p className="text-sm font-semibold text-foreground">{detail.description}</p>
                 <p className="mt-2 text-sm text-muted-foreground">
                   {detail.category} - {detail.location}

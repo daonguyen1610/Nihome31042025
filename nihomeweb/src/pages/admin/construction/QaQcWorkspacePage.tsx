@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
@@ -40,15 +42,15 @@ import {
   type QaQcEvidenceType,
   type QaQcTemplateResponse,
 } from "@/services/adminApi";
-
-const isValidJson = (value: string) => {
-  try {
-    JSON.parse(value);
-    return true;
-  } catch {
-    return false;
-  }
-};
+import {
+  buildQaQcChecklistResults,
+  parseQaQcChecklistResults,
+  parseQaQcTemplateSchema,
+  serializeQaQcChecklistResults,
+  type QaQcChecklistResult,
+  type QaQcChecklistResultValue,
+  type QaQcTemplateItem,
+} from "./qaQcChecklist";
 
 const evidenceTypes: QaQcEvidenceType[] = [
   "General",
@@ -59,6 +61,13 @@ const evidenceTypes: QaQcEvidenceType[] = [
   "SiteDiary",
 ];
 
+const checklistResultValues: QaQcChecklistResultValue[] = [
+  "Pending",
+  "Pass",
+  "Fail",
+  "NotApplicable",
+];
+
 export function QaQcDossiersPanel({
   projectId,
   scope = "execute",
@@ -67,6 +76,8 @@ export function QaQcDossiersPanel({
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
+  const { has } = usePermissions();
+  const canManageTemplates = has(ADMIN_PERMS.constructionQaQcTemplateManage);
   const { canManage, canApprove, canEditRow, canDeleteRow } = useConstructionActions(scope, {
     manage: ADMIN_PERMS.constructionQaQcCreate,
     supervisor: ADMIN_PERMS.constructionQaQcReview,
@@ -88,12 +99,14 @@ export function QaQcDossiersPanel({
   const [evidence, setEvidence] = useState<
     Array<{ projectDocumentId: string; evidenceType: QaQcEvidenceType }>
   >([]);
+  const [checklistItems, setChecklistItems] = useState<QaQcTemplateItem[]>([]);
+  const [checklistResults, setChecklistResults] = useState<QaQcChecklistResult[]>([]);
+  const [advancedResultsJson, setAdvancedResultsJson] = useState("[]");
   const [form, setForm] = useState({
     templateId: "",
     wbsCode: "",
     title: "",
     ifcReleaseId: "",
-    checklistResultsJson: "[]",
   });
 
   useEffect(() => {
@@ -155,17 +168,42 @@ export function QaQcDossiersPanel({
     return match ? match.release.releaseNumber : `#${releaseId}`;
   };
 
+  const templateName = (template: QaQcTemplateResponse) => {
+    if (lang === "vi") return template.nameVi;
+    if (lang === "zh") return template.nameZh;
+    if (lang === "ja") return template.nameJa;
+    return template.name || template.nameVi;
+  };
+
   const emptyForm = () => ({
     templateId: "",
     wbsCode: "",
     title: "",
     ifcReleaseId: "",
-    checklistResultsJson: "[]",
   });
+
+  const loadChecklist = (schemaJson: string, resultsJson = "[]") => {
+    try {
+      const items = parseQaQcTemplateSchema(schemaJson);
+      const results = buildQaQcChecklistResults(items, resultsJson);
+      setChecklistItems(items);
+      setChecklistResults(results);
+      setAdvancedResultsJson(serializeQaQcChecklistResults(results));
+      return true;
+    } catch {
+      setChecklistItems([]);
+      setChecklistResults([]);
+      setAdvancedResultsJson("[]");
+      return false;
+    }
+  };
 
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
+    setChecklistItems([]);
+    setChecklistResults([]);
+    setAdvancedResultsJson("[]");
     setEvidence([]);
     setOpen(true);
   };
@@ -177,8 +215,8 @@ export function QaQcDossiersPanel({
       wbsCode: row.wbsCode,
       title: row.title,
       ifcReleaseId: row.ifcReleaseId ? String(row.ifcReleaseId) : "",
-      checklistResultsJson: row.checklistResultsJson,
     });
+    loadChecklist(row.templateSnapshotJson, row.checklistResultsJson);
     setEvidence(
       row.evidence.map((item) => ({
         projectDocumentId: String(item.projectDocumentId),
@@ -194,11 +232,8 @@ export function QaQcDossiersPanel({
       toast({ variant: "destructive", title: t("construction.qaQc.ifcRequired") });
       return;
     }
-    let checklist: unknown;
-    try {
-      checklist = JSON.parse(form.checklistResultsJson);
-    } catch {
-      toast({ variant: "destructive", title: t("construction.qaQc.invalidChecklistJson") });
+    if (checklistItems.length === 0 || checklistResults.length !== checklistItems.length) {
+      toast({ variant: "destructive", title: t("construction.qaQc.invalidPublishedTemplate") });
       return;
     }
     const evidenceIds = evidence.map((item) => Number(item.projectDocumentId));
@@ -214,7 +249,7 @@ export function QaQcDossiersPanel({
       wbsCode: form.wbsCode.trim(),
       title: form.title.trim(),
       ifcReleaseId: form.ifcReleaseId ? Number(form.ifcReleaseId) : null,
-      checklistResultsJson: JSON.stringify(checklist),
+      checklistResultsJson: serializeQaQcChecklistResults(checklistResults),
       evidence: evidence.map((item, index) => ({
         projectDocumentId: evidenceIds[index],
         evidenceType: item.evidenceType,
@@ -235,6 +270,9 @@ export function QaQcDossiersPanel({
       setOpen(false);
       setEditing(null);
       setForm(emptyForm());
+      setChecklistItems([]);
+      setChecklistResults([]);
+      setAdvancedResultsJson("[]");
       setEvidence([]);
       setReload((value) => value + 1);
     } catch (cause) {
@@ -276,6 +314,25 @@ export function QaQcDossiersPanel({
   };
 
   const publishedTemplates = templates.filter((template) => template.isPublished);
+  const applyAdvancedResults = () => {
+    try {
+      const parsed = parseQaQcChecklistResults(advancedResultsJson);
+      const templateCodes = new Set(checklistItems.map((item) => item.code.toLocaleUpperCase()));
+      if (parsed.some((entry) => !templateCodes.has(entry.code.toLocaleUpperCase()))) {
+        throw new Error("unknown-checklist-code");
+      }
+      const merged = buildQaQcChecklistResults(
+        checklistItems,
+        serializeQaQcChecklistResults(parsed),
+      );
+      setChecklistResults(merged);
+      setAdvancedResultsJson(serializeQaQcChecklistResults(merged));
+      toast({ title: t("construction.qaQc.advancedApplied") });
+    } catch {
+      toast({ variant: "destructive", title: t("construction.qaQc.invalidChecklistJson") });
+    }
+  };
+
   return (
     <>
       <section className="space-y-4">
@@ -427,11 +484,36 @@ export function QaQcDossiersPanel({
                 {t(editing ? "common.edit" : "construction.qaQc.new")}
               </DialogTitle>
             </DialogHeader>
-            <p className="text-sm text-muted-foreground">{t("construction.qaQc.formIntro")}</p>
+            <DialogDescription>{t("construction.qaQc.formIntro")}</DialogDescription>
+            {!ifcLoading && ifcReleases.length === 0 && (
+              <p role="status" className="rounded-lg chip-warning p-3 text-sm">
+                {t("construction.qaQc.noIfcRelease")}
+              </p>
+            )}
             <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label htmlFor="qa-title">
+                  {t("construction.qaQc.dossierTitle")}
+                  <span className="ml-0.5 text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                </Label>
+                <Input
+                  id="qa-title"
+                  required
+                  maxLength={300}
+                  placeholder={t("construction.qaQc.titleExample")}
+                  aria-describedby="qa-title-hint"
+                  value={form.title}
+                  onChange={(e) => setForm({ ...form, title: e.target.value })}
+                />
+                <p id="qa-title-hint" className="text-xs text-muted-foreground">
+                  {t("construction.qaQc.titleHint")}
+                </p>
+              </div>
               <FieldScope className="space-y-1.5 sm:col-span-2">
                 <Label>
-                  {t("construction.qaQc.template")}
+                  {t("construction.qaQc.templateLabel")}
                   <span className="ml-0.5 text-destructive" aria-hidden="true">
                     *
                   </span>
@@ -439,15 +521,24 @@ export function QaQcDossiersPanel({
                 <Select
                   required
                   value={form.templateId}
-                  onValueChange={(value) => setForm({ ...form, templateId: value })}
+                  onValueChange={(value) => {
+                    setForm({ ...form, templateId: value });
+                    const template = publishedTemplates.find((item) => item.id === Number(value));
+                    if (template && !loadChecklist(template.schemaJson)) {
+                      toast({
+                        variant: "destructive",
+                        title: t("construction.qaQc.invalidPublishedTemplate"),
+                      });
+                    }
+                  }}
                 >
                   <SelectTrigger data-testid="qa-qc-template">
-                    <SelectValue placeholder={t("construction.qaQc.selectTemplate")} />
+                    <SelectValue placeholder={t("construction.qaQc.selectTemplatePlaceholder")} />
                   </SelectTrigger>
                   <SelectContent>
                     {publishedTemplates.map((template) => (
                       <SelectItem key={template.id} value={String(template.id)}>
-                        {template.nameVi} · v{template.version}
+                        {templateName(template)} · v{template.version}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -458,7 +549,7 @@ export function QaQcDossiersPanel({
               </FieldScope>
               <div className="space-y-1.5">
                 <Label htmlFor="qa-wbs">
-                  {t("construction.common.wbs")}
+                  {t("construction.qaQc.wbsLabel")}
                   <span className="ml-0.5 text-destructive" aria-hidden="true">
                     *
                   </span>
@@ -478,7 +569,7 @@ export function QaQcDossiersPanel({
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="qa-ifc">
-                  {t("construction.qaQc.ifcRelease")}
+                  {t("construction.qaQc.ifcReleaseLabel")}
                   <span className="ml-0.5 text-destructive" aria-hidden="true">
                     *
                   </span>
@@ -505,58 +596,134 @@ export function QaQcDossiersPanel({
                     }`,
                   }))}
                 />
-                <p className="text-xs text-muted-foreground">
-                  {ifcReleases.length === 0 && !ifcLoading
-                    ? t("construction.qaQc.noIfcRelease")
-                    : t("construction.qaQc.ifcHint")}
-                </p>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="qa-title">
-                  {t("construction.qaQc.dossierTitle")}
-                  <span className="ml-0.5 text-destructive" aria-hidden="true">
-                    *
-                  </span>
-                </Label>
-                <Input
-                  id="qa-title"
-                  required
-                  maxLength={300}
-                  placeholder={t("construction.qaQc.titleHint")}
-                  aria-describedby="qa-title-hint"
-                  value={form.title}
-                  onChange={(e) => setForm({ ...form, title: e.target.value })}
-                />
-                <p id="qa-title-hint" className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.titleHint")}
-                </p>
-              </div>
-              <div className="space-y-1.5 sm:col-span-2">
-                <Label htmlFor="qa-checklist">{t("construction.qaQc.checklistLabel")}</Label>
-                <Textarea
-                  id="qa-checklist"
-                  required
-                  className="min-h-28 font-mono text-xs"
-                  placeholder={'[{"item": "Cốp pha đúng cao độ", "result": "Pass"}]'}
-                  value={form.checklistResultsJson}
-                  onChange={(e) => setForm({ ...form, checklistResultsJson: e.target.value })}
-                />
-                <p className="text-xs text-muted-foreground">
-                  {t("construction.qaQc.checklistHelpAdvanced")}
-                </p>
-                {!isValidJson(form.checklistResultsJson) && (
-                  <p className="text-xs text-destructive" role="alert">
-                    {t("construction.qaQc.invalidChecklistJson")}
-                  </p>
+                {ifcReleases.length > 0 && (
+                  <p className="text-xs text-muted-foreground">{t("construction.qaQc.ifcHint")}</p>
                 )}
               </div>
+              <fieldset className="space-y-3 rounded-lg border p-4 sm:col-span-2">
+                <legend className="px-1 text-sm font-semibold">
+                  {t("construction.qaQc.inspectionResults")}
+                </legend>
+                <p className="text-sm text-muted-foreground">
+                  {t("construction.qaQc.inspectionResultsHint")}
+                </p>
+                {!form.templateId ? (
+                  <p className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
+                    {t("construction.qaQc.chooseTemplateForChecklist")}
+                  </p>
+                ) : checklistItems.length === 0 ? (
+                  <p className="rounded-lg chip-warning p-3 text-sm" role="alert">
+                    {t("construction.qaQc.invalidPublishedTemplate")}
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {checklistItems.map((item, index) => (
+                      <div key={item.code} className="rounded-lg border bg-card p-3">
+                        <div className="mb-3">
+                          <p className="font-medium">
+                            {index + 1}. {item.title}
+                          </p>
+                          {item.acceptanceCriteria && (
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              {t("construction.qaQc.acceptanceCriteria")}: {item.acceptanceCriteria}
+                            </p>
+                          )}
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-[12rem_1fr]">
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`qa-result-${index}`}>
+                              {t("construction.qaQc.result")}
+                            </Label>
+                            <Select
+                              value={checklistResults[index]?.result ?? "Pending"}
+                              onValueChange={(result: QaQcChecklistResultValue) => {
+                                const next = checklistResults.map((entry, resultIndex) =>
+                                  resultIndex === index ? { ...entry, result } : entry,
+                                );
+                                setChecklistResults(next);
+                                setAdvancedResultsJson(serializeQaQcChecklistResults(next));
+                              }}
+                            >
+                              <SelectTrigger id={`qa-result-${index}`}>
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {checklistResultValues.map((result) => (
+                                  <SelectItem key={result} value={result}>
+                                    {t(`construction.qaQc.resultValue.${result}`)}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor={`qa-note-${index}`}>
+                              {t("construction.qaQc.resultNote")}
+                            </Label>
+                            <Input
+                              id={`qa-note-${index}`}
+                              maxLength={1000}
+                              placeholder={t("construction.qaQc.resultNotePlaceholder")}
+                              value={checklistResults[index]?.note ?? ""}
+                              onChange={(event) => {
+                                const next = checklistResults.map((entry, resultIndex) =>
+                                  resultIndex === index
+                                    ? { ...entry, note: event.target.value }
+                                    : entry,
+                                );
+                                setChecklistResults(next);
+                                setAdvancedResultsJson(serializeQaQcChecklistResults(next));
+                              }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </fieldset>
+              {canManageTemplates && checklistItems.length > 0 && (
+                <details className="rounded-lg border bg-muted/30 px-4 py-3 sm:col-span-2">
+                  <summary className="cursor-pointer text-sm font-medium">
+                    {t("construction.qaQc.advancedJson")}
+                  </summary>
+                  <div className="mt-3 space-y-3">
+                    <p className="text-xs text-muted-foreground">
+                      {t("construction.qaQc.checklistHelpAdvanced")}
+                    </p>
+                    <Textarea
+                      id="qa-checklist"
+                      aria-label={t("construction.qaQc.checklistLabel")}
+                      className="min-h-28 font-mono text-xs"
+                      value={advancedResultsJson}
+                      onChange={(event) => setAdvancedResultsJson(event.target.value)}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      onClick={applyAdvancedResults}
+                    >
+                      {t("construction.qaQc.applyJson")}
+                    </Button>
+                  </div>
+                </details>
+              )}
               <div className="space-y-1.5 sm:col-span-2">
-                <span>{t("construction.qaQc.evidence")}</span>
+                <span className="text-sm font-medium">{t("construction.qaQc.evidence")}</span>
+                <p className="text-xs text-muted-foreground">
+                  {t("construction.qaQc.evidenceHint")}
+                </p>
+                {documents.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {t("construction.qaQc.noEvidenceDocuments")}
+                  </p>
+                )}
                 {evidence.map((item, index) => (
                   <div key={index} className="grid gap-2 sm:grid-cols-[1fr_1fr_auto]">
                     <SearchableSelect
                       data-testid={`qa-evidence-document-${index}`}
-                      ariaLabel={t("construction.qaQc.evidenceDocumentId")}
+                      ariaLabel={t("construction.qaQc.selectEvidenceDocument")}
                       value={item.projectDocumentId}
                       onChange={(value) =>
                         setEvidence((current) =>
@@ -565,7 +732,7 @@ export function QaQcDossiersPanel({
                           ),
                         )
                       }
-                      placeholder={t("construction.qaQc.evidenceDocumentId")}
+                      placeholder={t("construction.qaQc.selectEvidenceDocument")}
                       options={documents.map((document) => ({
                         value: String(document.id),
                         label: document.originalFileName,
@@ -610,6 +777,7 @@ export function QaQcDossiersPanel({
                   data-testid="qa-add-evidence"
                   type="button"
                   variant="outline"
+                  disabled={documents.length === 0}
                   onClick={() =>
                     setEvidence((current) => [
                       ...current,
@@ -626,8 +794,12 @@ export function QaQcDossiersPanel({
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
                 {t("common.cancel")}
               </Button>
-              <Button type="submit" disabled={saving} data-testid="qa-qc-save">
-                {t("common.save")}
+              <Button
+                type="submit"
+                disabled={saving || (!ifcLoading && ifcReleases.length === 0)}
+                data-testid="qa-qc-save"
+              >
+                {t(editing ? "common.save" : "construction.qaQc.createSubmit")}
               </Button>
             </DialogFooter>
           </form>
