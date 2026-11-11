@@ -1520,6 +1520,14 @@
     "ja": "訂正または取消では、有効な承認済みQSバッチを選択してください。"
   },
   {
+    "key": "nav.constructionProgress",
+    "category": "nav",
+    "vi": "Tiến độ thi công",
+    "en": "Construction progress",
+    "zh": "施工进度",
+    "ja": "施工進捗"
+  },
+  {
     "key": "nav.constructionBchOperations",
     "category": "nav",
     "vi": "Vận hành công trường",

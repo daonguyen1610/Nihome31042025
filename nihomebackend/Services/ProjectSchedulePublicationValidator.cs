@@ -19,14 +19,14 @@ internal static class ProjectSchedulePublicationValidator
             if (!items.TryGetValue(task.NodeId, out var item))
             {
                 throw new ProjectScheduleOperationException(
-                    $"Không thể phát hành: {task.Source} {task.Reference} đang liên kết một mốc đã bị gỡ khỏi phiên bản tiến độ. Hãy giữ mốc hoặc sửa liên kết công việc.",
+                    $"Không thể phát hành: {task.Source} {task.Reference} đang liên kết một hạng mục đã bị gỡ khỏi phiên bản tiến độ. Hãy giữ hạng mục hoặc sửa liên kết công việc.",
                     409);
             }
 
             if (task.PlannedStart < item.PlannedStart || task.PlannedEnd > item.PlannedEnd)
             {
                 throw new ProjectScheduleOperationException(
-                    $"Không thể phát hành: lịch của {task.Source} {task.Reference} nằm ngoài khung mốc {item.WbsCode} ({item.PlannedStart:yyyy-MM-dd} đến {item.PlannedEnd:yyyy-MM-dd}). Hãy điều chỉnh lịch hoặc giữ khung mốc phù hợp.",
+                    $"Không thể phát hành: lịch của {task.Source} {task.Reference} nằm ngoài khung hạng mục {item.WbsCode} ({item.PlannedStart:yyyy-MM-dd} đến {item.PlannedEnd:yyyy-MM-dd}). Hãy điều chỉnh lịch hoặc giữ khung hạng mục phù hợp.",
                     409);
             }
         }

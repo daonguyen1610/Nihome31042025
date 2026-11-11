@@ -1186,10 +1186,10 @@
   {
     "key": "operationalProjects.schedule.approverCrm",
     "category": "operationalProjects",
-    "vi": "Trước khi ký hợp đồng với chủ đầu tư: Trưởng phòng Kinh doanh duyệt tiến độ.",
-    "en": "Before an upstream contract is signed: the CRM Sales Manager (SALES_MANAGER) is the approver.",
-    "zh": "上游合同签署前：由 CRM 销售经理（SALES_MANAGER）审批。",
-    "ja": "上流契約の署名前：CRM の営業マネージャー（SALES_MANAGER）が承認します。"
+    "vi": "Trước khi ký hợp đồng với chủ đầu tư: Trưởng phòng CRM duyệt tiến độ.",
+    "en": "Before an upstream contract is signed: the CRM department head approves the schedule.",
+    "zh": "上游合同签署前：由 CRM 部门负责人审批进度。",
+    "ja": "上流契約の署名前：CRM 部門長が工程を承認します。"
   },
   {
     "key": "operationalProjects.schedule.approverPm",
@@ -1402,39 +1402,39 @@
   {
     "key": "operationalProjects.schedule.validation.atLeastOneItem",
     "category": "operationalProjects",
-    "vi": "Tiến độ cần có ít nhất một mốc.",
-    "en": "Add at least one WBS milestone to the schedule.",
-    "zh": "进度计划至少需要一个 WBS 里程碑。",
-    "ja": "工程には WBS マイルストーンを1つ以上追加してください。"
+    "vi": "Tiến độ cần có ít nhất một hạng mục.",
+    "en": "Add at least one WBS item to the schedule.",
+    "zh": "进度计划至少需要一个 WBS 工作项。",
+    "ja": "工程には WBS 項目を1つ以上追加してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.tooManyItems",
     "category": "operationalProjects",
-    "vi": "Tiến độ không được có quá 500 mốc.",
-    "en": "The schedule can contain at most 500 WBS milestones.",
-    "zh": "进度计划最多可包含 500 个 WBS 里程碑。",
-    "ja": "工程に登録できる WBS マイルストーンは最大500件です。"
+    "vi": "Tiến độ không được có quá 500 hạng mục.",
+    "en": "The schedule can contain at most 500 WBS items.",
+    "zh": "进度计划最多可包含 500 个 WBS 工作项。",
+    "ja": "工程に登録できる WBS 項目は最大500件です。"
   },
   {
     "key": "operationalProjects.schedule.validation.wbsRequired",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: hãy nhập mã mốc.",
-    "en": "Milestone {index}: enter a WBS code.",
-    "zh": "里程碑 {index}：请输入 WBS 编码。",
-    "ja": "マイルストーン {index}：WBS コードを入力してください。"
+    "vi": "Hạng mục {index}: hãy nhập mã WBS.",
+    "en": "Item {index}: enter a WBS code.",
+    "zh": "工作项 {index}：请输入 WBS 编码。",
+    "ja": "項目 {index}：WBS コードを入力してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.wbsTooLong",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: mã mốc tối đa 80 ký tự.",
-    "en": "Milestone {index}: the WBS code must be 80 characters or fewer.",
-    "zh": "里程碑 {index}：WBS 编码最多 80 个字符。",
-    "ja": "マイルストーン {index}：WBS コードは80文字以内で入力してください。"
+    "vi": "Hạng mục {index}: mã WBS tối đa 80 ký tự.",
+    "en": "Item {index}: the WBS code must be 80 characters or fewer.",
+    "zh": "工作项 {index}：WBS 编码最多 80 个字符。",
+    "ja": "項目 {index}：WBS コードは80文字以内で入力してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.wbsDuplicate",
     "category": "operationalProjects",
-    "vi": "Mã mốc “{code}” đang bị trùng. Hãy dùng mã khác.",
+    "vi": "Mã WBS “{code}” đang bị trùng. Hãy dùng mã khác.",
     "en": "WBS code “{code}” is duplicated. Enter a unique code.",
     "zh": "WBS 编码“{code}”重复，请输入唯一编码。",
     "ja": "WBS コード「{code}」が重複しています。一意のコードを入力してください。"
@@ -1442,63 +1442,63 @@
   {
     "key": "operationalProjects.schedule.validation.titleRequired",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: hãy nhập tên mốc / hạng mục.",
-    "en": "Milestone {index}: enter a milestone or work item name.",
-    "zh": "里程碑 {index}：请输入里程碑或工作项名称。",
-    "ja": "マイルストーン {index}：名称を入力してください。"
+    "vi": "Hạng mục {index}: hãy nhập tên hạng mục.",
+    "en": "Item {index}: enter a name.",
+    "zh": "工作项 {index}：请输入名称。",
+    "ja": "項目 {index}：名称を入力してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.titleTooLong",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: tên tối đa 300 ký tự.",
-    "en": "Milestone {index}: the name must be 300 characters or fewer.",
-    "zh": "里程碑 {index}：名称最多 300 个字符。",
-    "ja": "マイルストーン {index}：名称は300文字以内で入力してください。"
+    "vi": "Hạng mục {index}: tên tối đa 300 ký tự.",
+    "en": "Item {index}: the name must be 300 characters or fewer.",
+    "zh": "工作项 {index}：名称最多 300 个字符。",
+    "ja": "項目 {index}：名称は300文字以内で入力してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.startRequired",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: hãy chọn ngày bắt đầu.",
-    "en": "Milestone {index}: choose a start date.",
-    "zh": "里程碑 {index}：请选择开始日期。",
-    "ja": "マイルストーン {index}：開始日を選択してください。"
+    "vi": "Hạng mục {index}: hãy chọn ngày bắt đầu.",
+    "en": "Item {index}: choose a start date.",
+    "zh": "工作项 {index}：请选择开始日期。",
+    "ja": "項目 {index}：開始日を選択してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.endRequired",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: hãy chọn ngày kết thúc.",
-    "en": "Milestone {index}: choose an end date.",
-    "zh": "里程碑 {index}：请选择结束日期。",
-    "ja": "マイルストーン {index}：終了日を選択してください。"
+    "vi": "Hạng mục {index}: hãy chọn ngày kết thúc.",
+    "en": "Item {index}: choose an end date.",
+    "zh": "工作项 {index}：请选择结束日期。",
+    "ja": "項目 {index}：終了日を選択してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.dateOrder",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: ngày kết thúc phải sau hoặc bằng ngày bắt đầu.",
-    "en": "Milestone {index}: the end date must be on or after the start date.",
-    "zh": "里程碑 {index}：结束日期必须晚于或等于开始日期。",
-    "ja": "マイルストーン {index}：終了日は開始日以降にしてください。"
+    "vi": "Hạng mục {index}: ngày kết thúc phải sau hoặc bằng ngày bắt đầu.",
+    "en": "Item {index}: the end date must be on or after the start date.",
+    "zh": "工作项 {index}：结束日期必须晚于或等于开始日期。",
+    "ja": "項目 {index}：終了日は開始日以降にしてください。"
   },
   {
     "key": "operationalProjects.schedule.validation.parentInvalid",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: hãy chọn mốc cha trong cùng phiên bản tiến độ.",
-    "en": "Milestone {index}: choose a parent milestone in this revision.",
-    "zh": "里程碑 {index}：请选择此版本中存在的父级里程碑。",
-    "ja": "マイルストーン {index}：この改訂内の親マイルストーンを選択してください。"
+    "vi": "Hạng mục {index}: hãy chọn hạng mục cha trong cùng phiên bản tiến độ.",
+    "en": "Item {index}: choose a parent item in this revision.",
+    "zh": "工作项 {index}：请选择此版本中存在的父级工作项。",
+    "ja": "項目 {index}：この改訂内の親項目を選択してください。"
   },
   {
     "key": "operationalProjects.schedule.validation.parentDates",
     "category": "operationalProjects",
-    "vi": "Mốc {index}: thời gian phải nằm trong ngày bắt đầu và kết thúc của mốc cha.",
-    "en": "Milestone {index}: its dates must stay within the parent milestone dates.",
-    "zh": "里程碑 {index}：日期必须位于父级里程碑的日期范围内。",
-    "ja": "マイルストーン {index}：日付を親マイルストーンの期間内にしてください。"
+    "vi": "Hạng mục {index}: thời gian phải nằm trong ngày bắt đầu và kết thúc của hạng mục cha.",
+    "en": "Item {index}: its dates must stay within the parent item dates.",
+    "zh": "工作项 {index}：日期必须位于父级工作项的日期范围内。",
+    "ja": "項目 {index}：日付を親項目の期間内にしてください。"
   },
   {
     "key": "operationalProjects.schedule.validation.parentCycle",
     "category": "operationalProjects",
-    "vi": "Quan hệ mốc cha tạo thành vòng lặp. Hãy kiểm tra lại các mốc tiến độ.",
+    "vi": "Quan hệ hạng mục cha tạo thành vòng lặp. Hãy kiểm tra lại các hạng mục tiến độ.",
     "en": "The parent links create a cycle. Check the WBS hierarchy.",
     "zh": "父级关系形成循环，请检查 WBS 层级。",
     "ja": "親子関係が循環しています。WBS 階層を確認してください。"
@@ -1551,15 +1551,148 @@
     "zh": "更新审批人",
     "ja": "承認者を更新"
   },
-  {"key":"operationalProjects.schedule.email.previewTitle","category":"operationalProjects","vi":"Xem email trước khi gửi","en":"Preview email before sending","zh":"发送前预览邮件","ja":"送信前にメールを確認"},
-  {"key":"operationalProjects.schedule.email.previewGuidance","category":"operationalProjects","vi":"Kiểm tra người nhận và nội dung của từng email trước khi tiếp tục.","en":"Check each recipient and message before continuing.","zh":"继续前请检查每位收件人及邮件内容。","ja":"続行する前に宛先と内容を確認してください。"},
-  {"key":"operationalProjects.schedule.email.recipient","category":"operationalProjects","vi":"Người nhận","en":"Recipient","zh":"收件人","ja":"宛先"},
-  {"key":"operationalProjects.schedule.email.noRecipients","category":"operationalProjects","vi":"Không có người cần nhận email về thay đổi này.","en":"No one needs an email about this change.","zh":"此变更无需发送邮件。","ja":"この変更についてメールの送信先はありません。"},
-  {"key":"operationalProjects.schedule.email.continue","category":"operationalProjects","vi":"Tiếp tục","en":"Continue","zh":"继续","ja":"続行"},
-  {"key":"operationalProjects.schedule.email.reviewTitle","category":"operationalProjects","vi":"Email cần kiểm tra","en":"Emails to check","zh":"待检查的邮件","ja":"確認が必要なメール"},
-  {"key":"operationalProjects.schedule.email.checkFirst","category":"operationalProjects","vi":"Hãy kiểm tra với người nhận xem email đã đến chưa. Chỉ chọn Gửi lại khi chắc chắn cần gửi thêm, để tránh nhận trùng.","en":"Ask the recipient whether the email arrived. Retry only when another copy is needed to avoid duplicates.","zh":"请先向收件人确认是否收到邮件。仅在确需再次发送时选择重发，以免重复。","ja":"受信者に届いたか確認してください。重複を避けるため、必要な場合にのみ再送してください。"},
-  {"key":"operationalProjects.schedule.email.confirmReceived","category":"operationalProjects","vi":"Đã nhận","en":"Received","zh":"已收到","ja":"受信済み"},
-  {"key":"operationalProjects.schedule.email.retry","category":"operationalProjects","vi":"Gửi lại","en":"Send again","zh":"重新发送","ja":"再送"},
-  {"key":"operationalProjects.schedule.email.ConfirmReceivedDone","category":"operationalProjects","vi":"Đã ghi nhận email đến người nhận.","en":"Recorded that the email arrived.","zh":"已记录邮件送达。","ja":"メールの到着を記録しました。"},
-  {"key":"operationalProjects.schedule.email.RetryDone","category":"operationalProjects","vi":"Đã xếp email để gửi lại.","en":"Email queued to send again.","zh":"已安排重新发送邮件。","ja":"メールを再送待ちにしました。"}
+  {
+    "key": "operationalProjects.schedule.email.previewTitle",
+    "category": "operationalProjects",
+    "vi": "Xem email trước khi gửi",
+    "en": "Preview email before sending",
+    "zh": "发送前预览邮件",
+    "ja": "送信前にメールを確認"
+  },
+  {
+    "key": "operationalProjects.schedule.email.previewGuidance",
+    "category": "operationalProjects",
+    "vi": "Kiểm tra người nhận và nội dung của từng email trước khi tiếp tục.",
+    "en": "Check each recipient and message before continuing.",
+    "zh": "继续前请检查每位收件人及邮件内容。",
+    "ja": "続行する前に宛先と内容を確認してください。"
+  },
+  {
+    "key": "operationalProjects.schedule.email.recipient",
+    "category": "operationalProjects",
+    "vi": "Người nhận",
+    "en": "Recipient",
+    "zh": "收件人",
+    "ja": "宛先"
+  },
+  {
+    "key": "operationalProjects.schedule.email.noRecipientsTitle",
+    "category": "operationalProjects",
+    "vi": "Không có người nhận email",
+    "en": "No email recipients",
+    "zh": "没有邮件收件人",
+    "ja": "メール送信先なし"
+  },
+  {
+    "key": "operationalProjects.schedule.email.noRecipients",
+    "category": "operationalProjects",
+    "vi": "Chưa có công việc phòng ban, thiết kế hay thi công nào liên kết với các hạng mục thay đổi, nên hiện không có ai cần nhận email. Bạn vẫn có thể phát hành bản tiến độ này.",
+    "en": "No department, design or construction task is linked to the changed items, so no one currently needs an email. You can still publish this schedule.",
+    "zh": "目前没有部门、设计或施工任务关联到已变更的工作项，因此暂无邮件收件人。仍可发布此进度。",
+    "ja": "変更された項目に部門・設計・施工のタスクが紐づいていないため、現在メール送信先はありません。この版はそのまま公開できます。"
+  },
+  {
+    "key": "operationalProjects.schedule.email.continue",
+    "category": "operationalProjects",
+    "vi": "Tiếp tục",
+    "en": "Continue",
+    "zh": "继续",
+    "ja": "続行"
+  },
+  {
+    "key": "operationalProjects.schedule.email.reviewTitle",
+    "category": "operationalProjects",
+    "vi": "Email cần kiểm tra",
+    "en": "Emails to check",
+    "zh": "待检查的邮件",
+    "ja": "確認が必要なメール"
+  },
+  {
+    "key": "operationalProjects.schedule.email.checkFirst",
+    "category": "operationalProjects",
+    "vi": "Hãy kiểm tra với người nhận xem email đã đến chưa. Chỉ chọn Gửi lại khi chắc chắn cần gửi thêm, để tránh nhận trùng.",
+    "en": "Ask the recipient whether the email arrived. Retry only when another copy is needed to avoid duplicates.",
+    "zh": "请先向收件人确认是否收到邮件。仅在确需再次发送时选择重发，以免重复。",
+    "ja": "受信者に届いたか確認してください。重複を避けるため、必要な場合にのみ再送してください。"
+  },
+  {
+    "key": "operationalProjects.schedule.email.confirmReceived",
+    "category": "operationalProjects",
+    "vi": "Đã nhận",
+    "en": "Received",
+    "zh": "已收到",
+    "ja": "受信済み"
+  },
+  {
+    "key": "operationalProjects.schedule.email.retry",
+    "category": "operationalProjects",
+    "vi": "Gửi lại",
+    "en": "Send again",
+    "zh": "重新发送",
+    "ja": "再送"
+  },
+  {
+    "key": "operationalProjects.schedule.email.ConfirmReceivedDone",
+    "category": "operationalProjects",
+    "vi": "Đã ghi nhận email đến người nhận.",
+    "en": "Recorded that the email arrived.",
+    "zh": "已记录邮件送达。",
+    "ja": "メールの到着を記録しました。"
+  },
+  {
+    "key": "operationalProjects.schedule.email.RetryDone",
+    "category": "operationalProjects",
+    "vi": "Đã xếp email để gửi lại.",
+    "en": "Email queued to send again.",
+    "zh": "已安排重新发送邮件。",
+    "ja": "メールを再送待ちにしました。"
+  },
+  {
+    "key": "operationalProjects.schedule.noApprovers",
+    "category": "operationalProjects",
+    "vi": "Chưa có người duyệt phù hợp với giai đoạn hợp đồng của dự án.",
+    "en": "No eligible approver matches this project's contract stage.",
+    "zh": "当前项目合同阶段没有合适的审批人。",
+    "ja": "このプロジェクトの契約段階に適した承認者がいません。"
+  },
+  {
+    "key": "operationalProjects.schedule.diffTitle",
+    "category": "operationalProjects",
+    "vi": "Thay đổi so với bản đã phát hành",
+    "en": "Changes from the published version",
+    "zh": "与已发布版本的变更",
+    "ja": "公開版からの変更"
+  },
+  {
+    "key": "operationalProjects.schedule.diffNone",
+    "category": "operationalProjects",
+    "vi": "Chưa có thay đổi hạng mục so với bản đã phát hành.",
+    "en": "No item changes from the published version yet.",
+    "zh": "与已发布版本相比暂无工作项变更。",
+    "ja": "公開版から作業項目の変更はまだありません。"
+  },
+  {
+    "key": "operationalProjects.schedule.diff.Added",
+    "category": "operationalProjects",
+    "vi": "Thêm mới",
+    "en": "Added",
+    "zh": "新增",
+    "ja": "追加"
+  },
+  {
+    "key": "operationalProjects.schedule.diff.Removed",
+    "category": "operationalProjects",
+    "vi": "Đã bỏ",
+    "en": "Removed",
+    "zh": "已删除",
+    "ja": "削除"
+  },
+  {
+    "key": "operationalProjects.schedule.diff.Changed",
+    "category": "operationalProjects",
+    "vi": "Đã sửa",
+    "en": "Changed",
+    "zh": "已变更",
+    "ja": "変更"
+  }
 ]

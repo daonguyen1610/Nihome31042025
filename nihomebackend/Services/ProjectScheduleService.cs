@@ -40,6 +40,8 @@ public sealed class ProjectScheduleService(
     ILogger<ProjectScheduleService> logger) : IProjectScheduleService
 {
     private const int NotificationChangeSummaryMaxLength = 900;
+    private const string ConcurrentEditMessage =
+        "Bản tiến độ vừa được người khác cập nhật. Hãy tải lại để xem thay đổi mới nhất trước khi lưu.";
     private readonly IDataProtector previewProtector = protection.CreateProtector("ProjectSchedule.EmailPreview.v1");
     private sealed record EmailPreviewClaim(int ProjectId, int RevisionId, int UserId, string Action,
         int? RecipientUserId, string RowVersion, string ContentHash, DateTime ExpiresAt);
@@ -48,9 +50,15 @@ public sealed class ProjectScheduleService(
     {
         if (!await CanReadScheduleAsync(projectId, callerUserId, ct)) return null;
         var canManage = await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct) &&
-            await permissions.HasAsync(callerUserId, "operations.projects.manage", ct);
+            await CanAuthorScheduleAsync(callerUserId, ct);
         return await BuildResponseAsync(projectId, ct, callerUserId, canManage);
     }
+
+    // The master frame belongs to CRM: sales staff author it, other departments
+    // only detail inside it (MoM 2026-10-31).
+    private async Task<bool> CanAuthorScheduleAsync(int userId, CancellationToken ct) =>
+        await permissions.HasAsync(userId, "operations.projects.manage", ct) &&
+        await permissions.HasAsync(userId, "crm.opportunities.manage", ct);
 
     public async Task<ProjectScheduleResponse> CreateRevisionAsync(
         int projectId, SaveProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct)
@@ -59,6 +67,8 @@ public sealed class ProjectScheduleService(
             ?? throw new ProjectScheduleOperationException("Dự án không tồn tại.", 404);
         if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct))
             throw new ProjectScheduleOperationException("Không tìm thấy dự án.", 404);
+        if (!await CanAuthorScheduleAsync(callerUserId, ct))
+            throw new ProjectScheduleOperationException("Chỉ phòng CRM được lập và gửi duyệt tiến độ tổng thể.", 403);
         if (await db.ProjectScheduleRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
                 (item.Status == ProjectScheduleRevisionStatus.Draft ||
                  item.Status == ProjectScheduleRevisionStatus.PendingApproval), ct))
@@ -90,9 +100,13 @@ public sealed class ProjectScheduleService(
         var revision = await db.ProjectScheduleRevisions.Include(item => item.Items)
             .SingleOrDefaultAsync(item => item.Id == revisionId && item.OperationalProjectId == projectId, ct);
         if (revision is null) return null;
+        if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
+        if (!await CanAuthorScheduleAsync(callerUserId, ct))
+            throw new ProjectScheduleOperationException("Chỉ phòng CRM được lập và gửi duyệt tiến độ tổng thể.", 403);
         if (revision.Status is not (ProjectScheduleRevisionStatus.Draft or ProjectScheduleRevisionStatus.Rejected))
             throw new ProjectScheduleOperationException("Chỉ bản tiến độ đang soạn hoặc bị trả lại mới được chỉnh sửa.", 409);
-        if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
+        if (!string.IsNullOrWhiteSpace(request.RowVersion) && !MatchesRowVersion(revision, request.RowVersion))
+            throw new ProjectScheduleOperationException(ConcurrentEditMessage, 409);
         if (await db.ProjectScheduleRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
                 item.Id != revisionId && (item.Status == ProjectScheduleRevisionStatus.Draft ||
                     item.Status == ProjectScheduleRevisionStatus.PendingApproval), ct))
@@ -107,10 +121,14 @@ public sealed class ProjectScheduleService(
         revision.ReviewedAt = null;
         revision.ReviewedByUserId = null;
         revision.ReviewComment = null;
+        // Always update the revision row so its RowVersion changes, even when only
+        // the item rows differ; a concurrent save then fails instead of silently winning.
+        db.Entry(revision).Property(item => item.Status).IsModified = true;
         db.ProjectScheduleItems.RemoveRange(revision.Items);
         // Commit the removals before inserting the replacement set so the unique
         // (RevisionId, NodeId) index never sees the old and new rows at once.
-        await db.SaveChangesAsync(ct);
+        try { await db.SaveChangesAsync(ct); }
+        catch (DbUpdateConcurrencyException) { throw new ProjectScheduleOperationException(ConcurrentEditMessage, 409); }
         revision.Items.Clear();
         await ApplyItemsAsync(projectId, revision, request.Items, ct);
         await db.SaveChangesAsync(ct);
@@ -124,10 +142,12 @@ public sealed class ProjectScheduleService(
         var revision = await db.ProjectScheduleRevisions.Include(item => item.Items)
             .SingleOrDefaultAsync(item => item.Id == revisionId && item.OperationalProjectId == projectId, ct);
         if (revision is null) return null;
+        if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
+        if (!await CanAuthorScheduleAsync(callerUserId, ct))
+            throw new ProjectScheduleOperationException("Chỉ phòng CRM được lập và gửi duyệt tiến độ tổng thể.", 403);
         var reassigning = revision.Status == ProjectScheduleRevisionStatus.PendingApproval;
         if ((!reassigning && revision.Status != ProjectScheduleRevisionStatus.Draft) || revision.Items.Count == 0)
-            throw new ProjectScheduleOperationException("Chỉ bản tiến độ đang soạn có ít nhất một mốc mới được gửi duyệt.", 409);
-        if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return null;
+            throw new ProjectScheduleOperationException("Chỉ bản tiến độ đang soạn có ít nhất một hạng mục mới được gửi duyệt.", 409);
         if (revision.Version > 1 && string.IsNullOrWhiteSpace(revision.ChangeReason))
             throw new ProjectScheduleOperationException("Phiên bản tiến độ mới cần ghi rõ yêu cầu khách hàng đã thay đổi.");
         if (await db.ProjectScheduleRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
@@ -206,13 +226,25 @@ public sealed class ProjectScheduleService(
             revision.Status = ProjectScheduleRevisionStatus.Published;
             revision.PublishedAt = DateTime.UtcNow;
         }
+        // The approval notice is stale the moment the approver decides, whether the
+        // outcome is published or rejected. Only the approver's own notice can be
+        // queued before this point, so every pending row for the revision is one.
+        var staleEmails = await db.ProjectScheduleEmails
+            .Where(item => item.RevisionId == revision.Id && !item.CmScheduleBaselineId.HasValue &&
+                (item.Status == ProjectScheduleEmail.PendingStatus || item.Status == ProjectScheduleEmail.SendingStatus))
+            .ToListAsync(ct);
+        foreach (var staleEmail in staleEmails)
+        {
+            staleEmail.Status = ProjectScheduleEmail.CancelledStatus;
+            staleEmail.NextAttemptAt = null;
+        }
         await db.SaveChangesAsync(ct);
         if (revision.Status == ProjectScheduleRevisionStatus.Published)
             await NotifyAffectedDepartmentsAsync(projectId, revision, publicationUsers, publicationChanges, publicationEmails, ct);
         await CommitAsync(transaction, ct);
         logger.LogInformation("Project schedule revision {RevisionId} reviewed as {Decision} by assigned approver {UserId}.", revision.Id, request.Decision, callerUserId);
         var canManage = await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct) &&
-            await permissions.HasAsync(callerUserId, "operations.projects.manage", ct);
+            await CanAuthorScheduleAsync(callerUserId, ct);
         return await BuildResponseAsync(projectId, ct, callerUserId, canManage);
     }
 
@@ -239,11 +271,11 @@ public sealed class ProjectScheduleService(
         IReadOnlyCollection<SaveProjectScheduleItemRequest> requested, CancellationToken ct)
     {
         var ids = requested.Select(item => item.NodeId ?? Guid.NewGuid()).ToArray();
-        if (ids.Distinct().Count() != ids.Length) throw new ProjectScheduleOperationException("Mỗi mốc tiến độ phải có mã nhận diện riêng.");
+        if (ids.Distinct().Count() != ids.Length) throw new ProjectScheduleOperationException("Mỗi hạng mục tiến độ phải có mã nhận diện riêng.");
         var nodes = await db.ProjectScheduleNodes.Where(item => ids.Contains(item.Id))
             .Select(item => new { item.Id, item.OperationalProjectId }).ToListAsync(ct);
         if (nodes.Any(item => item.OperationalProjectId != projectId))
-            throw new ProjectScheduleOperationException("Một mốc tiến độ không thuộc dự án này.");
+            throw new ProjectScheduleOperationException("Một hạng mục tiến độ không thuộc dự án này.");
         var existingIds = nodes.Select(item => item.Id).ToHashSet();
         foreach (var nodeId in ids.Except(existingIds))
             db.ProjectScheduleNodes.Add(new ProjectScheduleNode { Id = nodeId, OperationalProjectId = projectId });
@@ -251,24 +283,24 @@ public sealed class ProjectScheduleService(
             .ToDictionary(pair => pair.nodeId, pair => pair.item);
         var wbs = requested.Select(item => item.WbsCode.Trim()).ToArray();
         if (wbs.Any(string.IsNullOrWhiteSpace) || wbs.Distinct(StringComparer.OrdinalIgnoreCase).Count() != wbs.Length)
-            throw new ProjectScheduleOperationException("Mã mốc bắt buộc và không được trùng nhau trong phiên bản tiến độ.");
+            throw new ProjectScheduleOperationException("Mã WBS bắt buộc và không được trùng nhau trong phiên bản tiến độ.");
         foreach (var (nodeId, item) in byId)
         {
             if (string.IsNullOrWhiteSpace(item.Title))
-                throw new ProjectScheduleOperationException("Tên mốc tiến độ không được để trống.");
+                throw new ProjectScheduleOperationException("Tên hạng mục tiến độ không được để trống.");
             if (item.Title.Trim().Length > 300 || item.WbsCode.Trim().Length > 80)
-                throw new ProjectScheduleOperationException("Tên mốc tối đa 300 ký tự và mã mốc tối đa 80 ký tự.");
+                throw new ProjectScheduleOperationException("Tên hạng mục tối đa 300 ký tự và mã WBS tối đa 80 ký tự.");
             var start = item.PlannedStart ?? throw new ProjectScheduleOperationException("Ngày bắt đầu là bắt buộc.");
             var end = item.PlannedEnd ?? throw new ProjectScheduleOperationException("Ngày kết thúc là bắt buộc.");
             if (end < start) throw new ProjectScheduleOperationException("Ngày kết thúc không được trước ngày bắt đầu.");
             if (item.ParentNodeId.HasValue)
             {
                 if (!byId.TryGetValue(item.ParentNodeId.Value, out var parent) || item.ParentNodeId == nodeId)
-                    throw new ProjectScheduleOperationException("Mốc cha phải nằm trong cùng phiên bản tiến độ và không thể là chính nó.");
+                    throw new ProjectScheduleOperationException("Hạng mục cha phải nằm trong cùng phiên bản tiến độ và không thể là chính nó.");
                 if (!parent.PlannedStart.HasValue || !parent.PlannedEnd.HasValue)
-                    throw new ProjectScheduleOperationException("Mốc cha phải có đủ ngày bắt đầu và kết thúc.");
+                    throw new ProjectScheduleOperationException("Hạng mục cha phải có đủ ngày bắt đầu và kết thúc.");
                 if (start < parent.PlannedStart.Value || end > parent.PlannedEnd.Value)
-                    throw new ProjectScheduleOperationException($"Thời gian của mốc {item.WbsCode} phải nằm trong khung của mốc cha.");
+                    throw new ProjectScheduleOperationException($"Thời gian của hạng mục {item.WbsCode} phải nằm trong khung của hạng mục cha.");
             }
             revision.Items.Add(new ProjectScheduleItem
             {
@@ -281,7 +313,7 @@ public sealed class ProjectScheduleService(
                 SortOrder = item.SortOrder,
             });
         }
-        if (HasParentCycle(revision.Items)) throw new ProjectScheduleOperationException("Các mốc tiến độ không được liên kết cha-con thành vòng lặp.");
+        if (HasParentCycle(revision.Items)) throw new ProjectScheduleOperationException("Các hạng mục tiến độ không được liên kết cha-con thành vòng lặp.");
     }
 
     private static bool HasParentCycle(IReadOnlyCollection<ProjectScheduleItem> items)
@@ -360,22 +392,34 @@ public sealed class ProjectScheduleService(
             oldItem.PlannedStart != newItem.PlannedStart || oldItem.PlannedEnd != newItem.PlannedEnd ||
             oldItem.ParentNodeId != newItem.ParentNodeId).ToHashSet();
         var relatedDepartmentTasks = db.DepartmentWorkTasks.AsNoTracking().Where(task => task.WorkPackage.OperationalProjectId == projectId &&
-                task.ProjectScheduleNodeId.HasValue && changed.Contains(task.ProjectScheduleNodeId.Value))
-            .Select(task => new { task.AssigneeUserId, task.ApproverUserId });
+                task.ProjectScheduleNodeId.HasValue && changed.Contains(task.ProjectScheduleNodeId.Value) &&
+                task.Status != WorkTaskStatus.Cancelled)
+            .Select(task => new { task.AssigneeUserId, task.ApproverUserId, task.WorkPackage.LeadUserId });
         var departmentAssignees = await relatedDepartmentTasks.Select(task => task.AssigneeUserId).Distinct().ToListAsync(ct);
         var departmentApprovers = await relatedDepartmentTasks.Where(task => task.ApproverUserId.HasValue)
             .Select(task => task.ApproverUserId!.Value).Distinct().ToListAsync(ct);
+        // The department lead owns the package and must review how the changed
+        // frame moves their detail plan, even when they hold no task row.
+        var departmentLeads = await relatedDepartmentTasks.Select(task => task.LeadUserId)
+            .Distinct().ToListAsync(ct);
         var designUserIds = await db.DesignScheduleTasks.AsNoTracking()
             .Where(task => task.OperationalProjectId == projectId && task.ProjectScheduleNodeId.HasValue &&
                 changed.Contains(task.ProjectScheduleNodeId.Value))
             .Join(db.OperationalProjectMembers.AsNoTracking(), task => task.AssigneeMemberId, member => member.Id,
                 (task, member) => member.UserId).Distinct().ToListAsync(ct);
+        var designApprovers = await db.DesignScheduleTasks.AsNoTracking()
+            .Where(task => task.OperationalProjectId == projectId && task.ProjectScheduleNodeId.HasValue &&
+                changed.Contains(task.ProjectScheduleNodeId.Value))
+            .Join(db.OperationalProjectMembers.AsNoTracking(), task => task.ApproverMemberId, member => member.Id,
+                (task, member) => member.UserId).Distinct().ToListAsync(ct);
         var constructionOwners = await db.ConstructionTasks.AsNoTracking()
             .Where(task => task.DesignProject.OperationalProjectId == projectId && task.OwnerUserId.HasValue &&
-                task.ProjectScheduleNodeId.HasValue && changed.Contains(task.ProjectScheduleNodeId.Value))
+                task.ProjectScheduleNodeId.HasValue && changed.Contains(task.ProjectScheduleNodeId.Value) &&
+                task.Status != ConstructionTaskStatus.Cancelled)
             .Select(task => task.OwnerUserId!.Value).Distinct().ToListAsync(ct);
-        var users = departmentAssignees.Union(departmentApprovers).Union(designUserIds)
-            .Union(constructionOwners).Distinct().OrderBy(userId => userId).ToList();
+        var users = departmentAssignees.Union(departmentApprovers).Union(departmentLeads)
+            .Union(designUserIds).Union(designApprovers).Union(constructionOwners)
+            .Distinct().OrderBy(userId => userId).ToList();
         var changes = string.Join("; ", changed.OrderBy(id => id).Select(id => FormatChange(id, oldItems, currentItems)));
         return (users, changes);
     }
@@ -385,7 +429,8 @@ public sealed class ProjectScheduleService(
     {
         var tasks = new List<ProjectScheduleLinkedTask>();
         var departmentTasks = await db.DepartmentWorkTasks.AsNoTracking()
-            .Where(task => task.WorkPackage.OperationalProjectId == projectId && task.ProjectScheduleNodeId.HasValue)
+            .Where(task => task.WorkPackage.OperationalProjectId == projectId && task.ProjectScheduleNodeId.HasValue &&
+                task.Status != WorkTaskStatus.Cancelled)
             .Select(task => new
             {
                 task.WbsCode,
@@ -412,7 +457,8 @@ public sealed class ProjectScheduleService(
             "công việc Thiết kế", $"{task.Code} · {task.Name}", task.NodeId, task.PlannedStart, task.PlannedEnd)));
 
         var constructionTasks = await db.ConstructionTasks.AsNoTracking()
-            .Where(task => task.DesignProject.OperationalProjectId == projectId && task.ProjectScheduleNodeId.HasValue)
+            .Where(task => task.DesignProject.OperationalProjectId == projectId && task.ProjectScheduleNodeId.HasValue &&
+                task.Status != ConstructionTaskStatus.Cancelled)
             .Select(task => new
             {
                 task.TaskCode,
@@ -432,9 +478,11 @@ public sealed class ProjectScheduleService(
         if (await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct)) return true;
         return await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(task =>
                 task.WorkPackage.OperationalProjectId == projectId &&
-                (task.AssigneeUserId == callerUserId || task.ApproverUserId == callerUserId), ct) ||
+                (task.AssigneeUserId == callerUserId || task.ApproverUserId == callerUserId ||
+                 task.WorkPackage.LeadUserId == callerUserId), ct) ||
             await db.DesignScheduleTasks.AsNoTracking().AnyAsync(task => task.OperationalProjectId == projectId &&
-                task.AssigneeMember != null && task.AssigneeMember.UserId == callerUserId, ct) ||
+                (task.AssigneeMember != null && task.AssigneeMember.UserId == callerUserId ||
+                 task.ApproverMember != null && task.ApproverMember.UserId == callerUserId), ct) ||
             await db.ConstructionTasks.AsNoTracking().AnyAsync(task =>
                 task.DesignProject.OperationalProjectId == projectId && task.OwnerUserId == callerUserId, ct) ||
             await db.OperationalProjectMembers.AsNoTracking().AnyAsync(member =>
@@ -566,7 +614,7 @@ public sealed class ProjectScheduleService(
         if (action == "Submit")
         {
             if (!await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct) ||
-                !await permissions.HasAsync(callerUserId, "operations.projects.manage", ct))
+                !await CanAuthorScheduleAsync(callerUserId, ct))
                 throw new ProjectScheduleOperationException("Bạn không có quyền gửi bản tiến độ này.", 403);
             if (revision.Status is not (ProjectScheduleRevisionStatus.Draft or ProjectScheduleRevisionStatus.PendingApproval) ||
                 !recipientUserId.HasValue || !await IsEligibleApproverAsync(projectId, recipientUserId.Value, ct))

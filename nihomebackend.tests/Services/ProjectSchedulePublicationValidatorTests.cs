@@ -32,7 +32,7 @@ public sealed class ProjectSchedulePublicationValidatorTests
 
         Assert.Equal(409, error.StatusCode);
         Assert.Contains("1.1 · Ép cọc", error.Message);
-        Assert.Contains("nằm ngoài khung mốc", error.Message);
+        Assert.Contains("nằm ngoài khung hạng mục", error.Message);
     }
 
     [Fact]

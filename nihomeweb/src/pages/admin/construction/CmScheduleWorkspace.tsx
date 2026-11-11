@@ -38,6 +38,15 @@ import {
   SelectItem,
   SelectValue,
 } from "@/components/ui/select";
+import { ConstructionStatusBadge } from "./constructionUi";
+
+const CM_STATUS_TONE = {
+  Draft: "muted",
+  PendingApproval: "info",
+  Published: "success",
+  Rejected: "danger",
+  Cancelled: "muted",
+} as const;
 
 export function CmScheduleWorkspace({
   projectId,
@@ -157,9 +166,31 @@ export function CmScheduleWorkspace({
       })) ?? [],
     [report],
   );
-  const percent = (value: number) => `${value.toLocaleString(lang, { maximumFractionDigits: 8 })}%`;
+  const percent = (value: number) => `${value.toLocaleString(lang, { maximumFractionDigits: 1 })}%`;
   const displayDate = (value: string) =>
     new Date(`${value.slice(0, 10)}T00:00:00Z`).toLocaleDateString(lang, { timeZone: "UTC" });
+  const weightTotal = lines
+    .filter((x) => x.isLeaf && !x.isMilestone)
+    .reduce((sum, x) => sum + x.weight, 0);
+  const createBlocker = (() => {
+    if (reason.trim().length < 3) return t("cmSchedule.error.reasonRequired");
+    if (!siteManager) return t("cmSchedule.error.siteManagerRequired");
+    if (weightBasisNote.trim().length < 3) return t("cmSchedule.error.weightBasisInvalid");
+    if (Math.abs(weightTotal - 100) > 0.0001) return t("cmSchedule.error.weightTotalInvalid");
+    if (workingDays.length === 0) return t("cmSchedule.error.calendarInvalid");
+    if (
+      lines.some((x) => !Number.isFinite(x.weight) || (x.isLeaf && !x.isMilestone && x.weight <= 0))
+    )
+      return t("cmSchedule.error.weightInvalid");
+    if (
+      lines.some(
+        (x) =>
+          x.plannedStart > x.plannedEnd || x.plannedStart < x.crmStart || x.plannedEnd > x.crmEnd,
+      )
+    )
+      return t("cmSchedule.error.outsideCrm");
+    return "";
+  })();
   const setLine = (id: number, patch: Partial<CmScheduleLine>) =>
     setLines((current) => current.map((row) => (row.taskId === id ? { ...row, ...patch } : row)));
   const unlinkedTasks = data && data.unlinked.length > 0 && (
@@ -372,6 +403,14 @@ export function CmScheduleWorkspace({
           </div>
           {selected && (
             <>
+              <div className="flex flex-wrap items-center gap-2">
+                <ConstructionStatusBadge tone={CM_STATUS_TONE[selected.status]}>
+                  {t(`cmSchedule.status.${selected.status}`)}
+                </ConstructionStatusBadge>
+                <span className="text-sm text-muted-foreground">
+                  {t("cmSchedule.version")} {selected.version}
+                </span>
+              </div>
               <p role="status" className="max-w-3xl text-sm text-muted-foreground">
                 {t(`scheduleUx.state.${selected.status}`)}
               </p>
@@ -404,39 +443,43 @@ export function CmScheduleWorkspace({
                   {t("cmSchedule.crmChanged")}
                 </p>
               )}
-              {data.emailDeliveries
-                .filter((x) => x.baselineId === selected.id)
-                .map((email) => (
-                  <div key={email.id} className="space-y-2 text-sm">
-                    <p>
-                      {t("cmSchedule.emailDelivery")}: {t(`cmSchedule.emailStatus.${email.status}`)}
-                    </p>
-                    {email.status === "NeedsReview" && data.projectManagerUserId === userId && (
-                      <div className="flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          disabled={busy}
-                          onClick={() =>
-                            void act(() =>
-                              cmScheduleApi.resolveEmail(projectId, email.id, "ConfirmReceived"),
-                            )
-                          }
-                        >
-                          {t("operationalProjects.schedule.email.confirmReceived")}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          disabled={busy}
-                          onClick={() =>
-                            void act(() => cmScheduleApi.resolveEmail(projectId, email.id, "Retry"))
-                          }
-                        >
-                          {t("common.retry")}
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                ))}
+              {(manage || data.projectManagerUserId === userId) &&
+                data.emailDeliveries
+                  .filter((x) => x.baselineId === selected.id)
+                  .map((email) => (
+                    <div key={email.id} className="space-y-2 text-sm">
+                      <p>
+                        {t("cmSchedule.emailDelivery")}:{" "}
+                        {t(`cmSchedule.emailStatus.${email.status}`)}
+                      </p>
+                      {email.status === "NeedsReview" && data.projectManagerUserId === userId && (
+                        <div className="flex flex-wrap gap-2">
+                          <Button
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() =>
+                              void act(() =>
+                                cmScheduleApi.resolveEmail(projectId, email.id, "ConfirmReceived"),
+                              )
+                            }
+                          >
+                            {t("operationalProjects.schedule.email.confirmReceived")}
+                          </Button>
+                          <Button
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() =>
+                              void act(() =>
+                                cmScheduleApi.resolveEmail(projectId, email.id, "Retry"),
+                              )
+                            }
+                          >
+                            {t("common.retry")}
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
               {selected.reviewNote && <p>{selected.reviewNote}</p>}
               <div className="space-y-2">
                 <h3 className="font-semibold">{t("scheduleUx.curveTitle")}</h3>
@@ -480,6 +523,11 @@ export function CmScheduleWorkspace({
                   />
                 </div>
               </div>
+              <p className="text-sm text-muted-foreground">
+                {t("cmSchedule.version")} {selected.version} · {t("cmSchedule.period")}:{" "}
+                {t(`cmSchedule.period.${period}`)} · {t("cmSchedule.periodDate")}:{" "}
+                {anchor ? displayDate(anchor) : "—"}
+              </p>
               {reportLoading && <p role="status">{t("common.loading")}</p>}
               {reportError && (
                 <p role="alert" className="text-destructive">
@@ -490,25 +538,31 @@ export function CmScheduleWorkspace({
                 <p className="rounded-lg border p-4 text-sm">{t("scheduleUx.noPeriodData")}</p>
               )}
               {chart.length > 0 && (
-                <div className="h-72 w-full min-w-0">
+                <div className="h-80 w-full min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chart}>
+                    <LineChart data={chart} margin={{ top: 4, right: 8, left: 4, bottom: 8 }}>
                       <XAxis
                         dataKey="date"
                         type="number"
                         domain={["dataMin", "dataMax"]}
+                        height={32}
                         tickFormatter={(value) =>
                           new Date(value).toLocaleDateString(lang, { timeZone: "UTC" })
                         }
                       />
-                      <YAxis domain={[0, 100]} tickFormatter={(value) => `${value}%`} width={48} />
+                      <YAxis domain={[0, 100]} width={56} tickFormatter={(value) => `${value}%`} />
                       <Tooltip
                         labelFormatter={(value) =>
                           new Date(Number(value)).toLocaleDateString(lang, { timeZone: "UTC" })
                         }
                         formatter={(value) => percent(Number(value))}
                       />
-                      <Legend />
+                      <Legend
+                        verticalAlign="bottom"
+                        align="center"
+                        height={56}
+                        wrapperStyle={{ fontSize: 12 }}
+                      />
                       <Line
                         type="linear"
                         dataKey="crmPercent"
@@ -534,6 +588,7 @@ export function CmScheduleWorkspace({
                         stroke="var(--chart-3, #16a34a)"
                         strokeWidth={3}
                         connectNulls={false}
+                        dot={{ r: 4, fill: "var(--chart-3, #16a34a)", strokeWidth: 0 }}
                       />
                     </LineChart>
                   </ResponsiveContainer>
@@ -581,7 +636,7 @@ export function CmScheduleWorkspace({
                   </div>
                 </details>
               )}
-              {chart.some((point) => !point.isDataComplete) && (
+              {chart.length > 0 && !chart[chart.length - 1]?.isDataComplete && (
                 <p role="status" className="text-sm text-muted-foreground">
                   {t("cmSchedule.reportIncomplete")}
                 </p>
@@ -593,7 +648,7 @@ export function CmScheduleWorkspace({
                 </p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[720px] text-sm">
                   <thead>
                     <tr>
                       <th className="p-2 text-left">{t("cmSchedule.task")}</th>
@@ -612,7 +667,6 @@ export function CmScheduleWorkspace({
                           {x.isLeaf &&
                             data.actualInputs.find((input) => input.taskId === x.taskId) && (
                               <p className="text-xs text-muted-foreground">
-                                {t("scheduleUx.seriesActual")}:{" "}
                                 {data.actualInputs.find((input) => input.taskId === x.taskId)!
                                   .progressReportedAt
                                   ? percent(
@@ -655,7 +709,9 @@ export function CmScheduleWorkspace({
                                   );
                                   if (input) {
                                     setActual(input);
-                                    setProgress(input.progressPercent);
+                                    setProgress(
+                                      input.progressReportedAt ? input.progressPercent : 0,
+                                    );
                                     setError(null);
                                   }
                                 }}
@@ -703,7 +759,9 @@ export function CmScheduleWorkspace({
                     {row.explanation && <p>{row.explanation}</p>}
                     {row.recoveryPlan && (
                       <p>
-                        {row.recoveryPlan} · {row.recoveryDueDate}
+                        {row.recoveryPlan}
+                        {row.recoveryDueDate &&
+                          ` · ${t("cmSchedule.due")}: ${displayDate(row.recoveryDueDate)}`}
                       </p>
                     )}
                     {row.isDelayed && !row.recoveryAt && selected.siteManagerUserId === userId && (
@@ -863,10 +921,7 @@ export function CmScheduleWorkspace({
           />
           <p className="text-sm">
             {t("cmSchedule.weightTotal", {
-              total: lines
-                .filter((x) => x.isLeaf && !x.isMilestone)
-                .reduce((sum, x) => sum + x.weight, 0)
-                .toLocaleString(lang, { maximumFractionDigits: 4 }),
+              total: weightTotal.toLocaleString(lang, { maximumFractionDigits: 4 }),
             })}
           </p>
           <fieldset className="space-y-2 rounded-md border p-3">
@@ -924,9 +979,15 @@ export function CmScheduleWorkspace({
           <div className="space-y-4">
             {lines.map((row) => (
               <div key={row.taskId} className="grid gap-2 border-t pt-3 sm:grid-cols-4">
-                <p className="sm:col-span-4">
-                  {row.wbs} · {row.name}
-                </p>
+                <div className="space-y-1 sm:col-span-4">
+                  <p>
+                    {row.wbs} · {row.name}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("cmSchedule.crmFrame")}: {displayDate(row.crmStart)} →{" "}
+                    {displayDate(row.crmEnd)}
+                  </p>
+                </div>
                 <div className="space-y-1.5">
                   <Label htmlFor={`cm-start-${row.taskId}`}>{t("cmSchedule.start")}</Label>
                   <LocalizedDateInput
@@ -986,28 +1047,14 @@ export function CmScheduleWorkspace({
             </p>
           )}
           <p className="text-sm text-muted-foreground">{t("scheduleUx.createGuide")}</p>
+          {createBlocker && (
+            <p role="status" className="text-sm font-medium text-muted-foreground">
+              {createBlocker}
+            </p>
+          )}
           <DialogFooter>
             <Button
-              disabled={
-                busy ||
-                reason.trim().length < 3 ||
-                weightBasisNote.trim().length < 3 ||
-                !siteManager ||
-                workingDays.length === 0 ||
-                Math.abs(
-                  lines
-                    .filter((x) => x.isLeaf && !x.isMilestone)
-                    .reduce((sum, x) => sum + x.weight, 0) - 100,
-                ) > 0.0001 ||
-                lines.some(
-                  (x) =>
-                    !Number.isFinite(x.weight) ||
-                    (x.isLeaf && !x.isMilestone && x.weight <= 0) ||
-                    x.plannedStart > x.plannedEnd ||
-                    x.plannedStart < x.crmStart ||
-                    x.plannedEnd > x.crmEnd,
-                )
-              }
+              disabled={busy || Boolean(createBlocker)}
               onClick={() =>
                 void act(
                   () =>

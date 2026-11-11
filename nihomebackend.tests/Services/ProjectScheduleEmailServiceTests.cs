@@ -116,6 +116,25 @@ public sealed class ProjectScheduleEmailServiceTests
         Assert.Equal(ProjectScheduleEmailService.MaxAttempts, sender.Attempts);
     }
 
+    [Fact]
+    public async Task SendPending_CancelsApprovalEmailWhenApproverChanged()
+    {
+        await using var db = DbContextFactory.Create();
+        var message = await SeedQueuedAsync(db);
+        var revision = await db.ProjectScheduleRevisions.SingleAsync(item => item.Id == message.RevisionId);
+        revision.ApproverUserId = 2;
+        await db.SaveChangesAsync();
+        var sender = new FlakyEmailService(failuresBeforeSuccess: 0);
+        var service = new ProjectScheduleEmailService(db, sender, Mock.Of<INotificationService>(),
+            NullLogger<ProjectScheduleEmailService>.Instance);
+
+        Assert.Equal(0, await service.SendPendingAsync(default));
+
+        var cancelled = await db.ProjectScheduleEmails.AsNoTracking().SingleAsync(item => item.Id == message.Id);
+        Assert.Equal(ProjectScheduleEmail.CancelledStatus, cancelled.Status);
+        Assert.Equal(0, sender.Attempts);
+    }
+
     private static async Task<ProjectScheduleEmail> SeedQueuedAsync(NihomeBackend.Data.AppDbContext db)
     {
         var customer = new Customer { Name = "Schedule email customer" };
@@ -132,6 +151,7 @@ public sealed class ProjectScheduleEmailServiceTests
             OperationalProjectId = project.Id,
             Version = 1,
             Status = ProjectScheduleRevisionStatus.PendingApproval,
+            ApproverUserId = 1,
             CreatedByUserId = 1,
             RowVersion = [1],
         };

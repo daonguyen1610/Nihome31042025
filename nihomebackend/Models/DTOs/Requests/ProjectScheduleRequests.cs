@@ -9,6 +9,9 @@ public sealed class SaveProjectScheduleRevisionRequest
 
     [Required, MinLength(1), MaxLength(500)]
     public List<SaveProjectScheduleItemRequest> Items { get; set; } = new();
+
+    [StringLength(64)]
+    public string? RowVersion { get; set; }
 }
 
 public sealed class SaveProjectScheduleItemRequest

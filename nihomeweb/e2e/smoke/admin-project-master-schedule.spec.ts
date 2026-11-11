@@ -371,7 +371,7 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
       },
     });
     expect(invalidParent.status()).toBe(400);
-    expect(await invalidParent.text()).toContain("khung của mốc cha");
+    expect(await invalidParent.text()).toContain("khung của hạng mục cha");
 
     const submitted = await submitRevision(
       api,
@@ -648,6 +648,17 @@ test.describe("Master schedule — MoM one-way planning contract", () => {
     await expect(publishPreview.frameLocator("iframe").locator("body")).toContainText("2026-06-12");
     await publishPreview.getByRole("button", { name: "Tiếp tục" }).click();
     await expect(page.locator("#project-master-schedule")).toContainText("Đã phát hành");
+    // The older published revision stays selectable as history but is marked so
+    // departments can tell it apart from the frame now in force.
+    const revisionSelect = page.locator("#project-master-schedule").getByRole("combobox").first();
+    await expect(revisionSelect).toContainText(`v${revision2.version}`);
+    await revisionSelect.click();
+    await expect(
+      page.getByRole("option", {
+        name: `v${revision1.version} · Đã phát hành · bản cũ`,
+      }),
+    ).toBeVisible();
+    await page.keyboard.press("Escape");
     const published2 = await expectJson<ScheduleResponse>(
       await api.get(scheduleUrl(projectId), { headers: adminHeaders }),
       "load published schedule after browser review",

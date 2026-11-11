@@ -94,6 +94,7 @@
   {"key":"designProjects.team.unlinkedTitle","category":"designProjects","vi":"Chưa liên kết Dự án vận hành","en":"No operational project linked","zh":"尚未关联运营项目","ja":"運用プロジェクト未連携"},
   {"key":"designProjects.team.unlinkedDescription","category":"designProjects","vi":"Liên kết Hồ Sơ Thiết Kế với Dự án vận hành để quản lý đội ngũ chính thức.","en":"Link this design dossier to an operational project to manage its authoritative team.","zh":"请关联运营项目以管理正式项目团队。","ja":"正式なチームを管理するには運用プロジェクトを連携してください。"},
   {"key":"designProjects.team.memberTotal","category":"designProjects","vi":"{count} thành viên","en":"{count} members","zh":"{count} 名成员","ja":"{count} 名"},
+  {"key":"designProjects.team.memberTotalOne","category":"designProjects","vi":"{count} thành viên","en":"{count} member","zh":"{count} 名成员","ja":"{count} 名"},
   {"key":"designProjects.team.endedMembers","category":"designProjects","vi":"Thành viên đã kết thúc","en":"Ended members","zh":"已结束成员","ja":"終了メンバー"},
   {"key":"designProjects.team.value.none","category":"designProjects","vi":"Không có","en":"None","zh":"无","ja":"なし"},
   {"key":"designProjects.team.action.addMember","category":"designProjects","vi":"Thêm thành viên","en":"Add member","zh":"添加成员","ja":"メンバーを追加"},

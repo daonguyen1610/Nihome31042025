@@ -83,6 +83,8 @@ type NavItem = {
   end?: boolean;
   /** Permission code required to see this entry. Omitted = always visible. */
   permission?: string | readonly string[];
+  /** Hide this entry when the user already has a role-specific entry for the same route. */
+  hideWhen?: readonly string[];
 };
 type NavGroup = { id: string; label: string; icon: LucideIcon; items: NavItem[] };
 
@@ -339,6 +341,13 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.constructionBch"),
         icon: HardHat,
         items: [
+          {
+            to: "/admin/construction/cm/schedule",
+            label: t("nav.constructionProgress"),
+            icon: ChartNoAxesCombined,
+            permission: ADMIN_PERMS.constructionTasks,
+            hideWhen: [ADMIN_PERMS.constructionCmPreparation, ADMIN_PERMS.constructionTasksManage],
+          },
           {
             to: "/admin/construction/bch/operations",
             label: t("nav.constructionBchOperations"),
@@ -655,6 +664,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             if (it.to === "/admin/contracts" && scopedFinanceReader) return false;
             if (it.to === PROCUREMENT_CONTRACTS_PATH && !permissions.has(ADMIN_PERMS.procurement))
               return false;
+            if (it.hideWhen?.some((permission) => permissions.has(permission))) return false;
             return (
               !it.permission ||
               (Array.isArray(it.permission)

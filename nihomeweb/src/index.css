@@ -306,7 +306,7 @@
   }
   .chip-success {
     background: hsl(150 62% 45% / 0.12);
-    color: hsl(150 62% 35%);
+    color: hsl(150 62% 28%);
   }
   .chip-muted {
     background: hsl(var(--muted));

@@ -503,6 +503,8 @@ export interface SaveProjectScheduleItemRequest {
 export interface SaveProjectScheduleRevisionRequest {
   changeReason: string;
   items: SaveProjectScheduleItemRequest[];
+  /** Concurrency token of the revision being edited; a stale value is rejected with 409. */
+  rowVersion?: string | null;
 }
 
 export type ConstructionWorkflowStatus = "Draft" | "PendingCmReview" | "CmApproved" | "CmRejected";
