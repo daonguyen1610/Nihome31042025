@@ -78,6 +78,19 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
             .Select(item => item.Id)
             .Take(20)
             .ToListAsync(ct);
+        if (ids.Count == 0) return 0;
+        // Load every revision this batch refers to once instead of one query per
+        // message; the status is a concurrency token on the email row, so a
+        // revision decided during the cycle still prevents a stale send below.
+        var revisionIds = await db.ProjectScheduleEmails.AsNoTracking()
+            .Where(item => ids.Contains(item.Id) && !item.CmScheduleBaselineId.HasValue)
+            .Select(item => item.RevisionId)
+            .Distinct()
+            .ToListAsync(ct);
+        var revisions = await db.ProjectScheduleRevisions.AsNoTracking()
+            .Where(item => revisionIds.Contains(item.Id))
+            .Select(item => new { item.Id, item.Status, item.ApproverUserId, item.PublishedAt })
+            .ToDictionaryAsync(item => item.Id, ct);
         var sent = 0;
         foreach (var id in ids)
         {
@@ -89,7 +102,7 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
             if (message.CmScheduleBaselineId.HasValue && !await db.CmScheduleBaselines.AnyAsync(x => x.Id == message.CmScheduleBaselineId && x.Status == "PendingApproval", ct))
             {
                 message.Status = ProjectScheduleEmail.CancelledStatus;
-                try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { }
+                if (!await TrySaveAsync(ct)) await db.Entry(message).ReloadAsync(ct);
                 continue;
             }
             // A master-schedule approval notice stops being valid as soon as the
@@ -97,10 +110,7 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
             // Publication notices are queued only after the revision is Published.
             if (!message.CmScheduleBaselineId.HasValue)
             {
-                var revision = await db.ProjectScheduleRevisions.AsNoTracking()
-                    .Where(item => item.Id == message.RevisionId)
-                    .Select(item => new { item.Status, item.ApproverUserId, item.PublishedAt })
-                    .SingleOrDefaultAsync(ct);
+                revisions.TryGetValue(message.RevisionId, out var revision);
                 // An approval notice is only useful while the revision waits for that
                 // approver. Once published, only notices queued at publication time
                 // remain valid; an older approval notice is stale even though its
@@ -113,7 +123,7 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
                 if (!stillValid)
                 {
                     message.Status = ProjectScheduleEmail.CancelledStatus;
-                    try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { }
+                    if (!await TrySaveAsync(ct)) await db.Entry(message).ReloadAsync(ct);
                     continue;
                 }
             }
@@ -124,14 +134,20 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
 
             message.Status = ProjectScheduleEmail.SendingStatus;
             message.LastAttemptAt = DateTime.UtcNow;
-            await db.SaveChangesAsync(ct);
+            if (!await TrySaveAsync(ct))
+            {
+                // Another process decided or claimed this row first; leave it to them.
+                await db.Entry(message).ReloadAsync(ct);
+                continue;
+            }
+            var delivered = false;
             try
             {
                 await email.SendEmailAsync(message.ToEmail, message.Subject, message.Body);
                 message.Status = ProjectScheduleEmail.SentStatus;
                 message.SentAt = DateTime.UtcNow;
                 message.LastError = null;
-                sent++;
+                delivered = true;
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
@@ -153,7 +169,17 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
                         message.Id, message.OperationalProjectId, message.AttemptCount);
                 }
             }
-            await db.SaveChangesAsync(ct);
+            if (!await TrySaveAsync(ct))
+            {
+                // The revision was decided while the message was in flight; the row
+                // now holds the newer state and must not be overwritten with "Sent".
+                await db.Entry(message).ReloadAsync(ct);
+                logger.LogWarning(
+                    "Project schedule email {EmailId} for project {ProjectId} changed while sending; kept {Status}.",
+                    message.Id, message.OperationalProjectId, message.Status);
+                continue;
+            }
+            if (delivered) sent++;
             if (message.Status == ProjectScheduleEmail.NeedsReviewStatus)
             {
                 try
@@ -181,5 +207,18 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
             }
         }
         return sent;
+    }
+
+    private async Task<bool> TrySaveAsync(CancellationToken ct)
+    {
+        try
+        {
+            await db.SaveChangesAsync(ct);
+            return true;
+        }
+        catch (DbUpdateConcurrencyException)
+        {
+            return false;
+        }
     }
 }

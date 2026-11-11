@@ -500,14 +500,20 @@ export function useDepartmentWorkPackages() {
   }, [packageForm.operationalProjectId]);
   useEffect(() => {
     const projectIdValue = detail?.operationalProjectId;
-    if (!projectIdValue) {
-      setProjectSchedule(null);
-      return;
-    }
+    setProjectSchedule(null);
+    if (!projectIdValue) return;
+    let cancelled = false;
     adminApi
       .getProjectSchedule(projectIdValue)
-      .then((response) => setProjectSchedule(response.data))
-      .catch(() => setProjectSchedule(null));
+      .then((response) => {
+        if (!cancelled) setProjectSchedule(response.data);
+      })
+      .catch(() => {
+        if (!cancelled) setProjectSchedule(null);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [detail?.operationalProjectId]);
   const autoOpenedCreateRef = useRef<string | null>(null);
   useEffect(() => {
@@ -960,10 +966,22 @@ export function useDepartmentWorkPackages() {
       toast({ variant: "destructive", title: t("workPackages.validation.task") });
       return;
     }
+    // The frame loads separately, so it can still be unknown here (first save
+    // after opening, or a failed fetch). Load it before validating instead of
+    // skipping the link and date checks. If this fetch also fails, the server
+    // stays the authority.
+    let schedule = projectSchedule;
+    if (detail.operationalProjectId && !schedule) {
+      try {
+        schedule = (await adminApi.getProjectSchedule(detail.operationalProjectId)).data;
+        setProjectSchedule(schedule);
+      } catch {
+        schedule = null;
+      }
+    }
     const frameItems =
-      projectSchedule?.revisions.find(
-        (revision) => revision.id === projectSchedule.publishedRevisionId,
-      )?.items ?? [];
+      schedule?.revisions.find((revision) => revision.id === schedule?.publishedRevisionId)
+        ?.items ?? [];
     const frameNode = frameItems.find((item) => item.nodeId === taskForm.projectScheduleNodeId);
     if (frameItems.length > 0 && !frameNode) {
       toast({ variant: "destructive", title: t("workPackages.validation.masterWbsRequired") });

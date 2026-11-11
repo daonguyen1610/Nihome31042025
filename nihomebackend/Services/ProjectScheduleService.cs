@@ -179,7 +179,13 @@ public sealed class ProjectScheduleService(
                 "Failed to create in-app notification for schedule revision {RevisionId} and approver {ApproverId}.",
                 revision.Id, request.ApproverUserId);
         }
-        if (approvalEmail is not null) await QueueEmailAsync(projectId, revision, approvalEmail, ct);
+        // Re-submitting to the same approver while the first notice is still queued
+        // must not queue a second one; both would pass the worker's validity check.
+        if (approvalEmail is not null &&
+            !await db.ProjectScheduleEmails.AnyAsync(item => item.RevisionId == revision.Id &&
+                !item.CmScheduleBaselineId.HasValue && item.RecipientUserId == request.ApproverUserId &&
+                (item.Status == ProjectScheduleEmail.PendingStatus || item.Status == ProjectScheduleEmail.SendingStatus), ct))
+            await QueueEmailAsync(projectId, revision, approvalEmail, ct);
         await CommitAsync(transaction, ct);
         logger.LogInformation("Project schedule revision {RevisionId} submitted for project {ProjectId}; approver {ApproverId}.", revision.Id, projectId, request.ApproverUserId);
         return await BuildResponseAsync(projectId, ct);

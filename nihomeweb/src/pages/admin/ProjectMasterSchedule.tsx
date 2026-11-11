@@ -235,8 +235,7 @@ export const ProjectMasterSchedule = ({
   const dateFormat = useMemo(() => new Intl.DateTimeFormat(lang), [lang]);
   const monthLabel = useMemo(() => {
     const short = new Intl.DateTimeFormat(lang, { month: "short", timeZone: "UTC" });
-    return (date: Date) =>
-      lang === "vi" ? `T${date.getUTCMonth() + 1}` : short.format(date);
+    return (date: Date) => (lang === "vi" ? `T${date.getUTCMonth() + 1}` : short.format(date));
   }, [lang]);
   const formatScheduleDate = useCallback(
     (value?: string | null) => {
@@ -271,6 +270,11 @@ export const ProjectMasterSchedule = ({
     title: string;
     count: number;
   } | null>(null);
+  // Switching away from an unsaved new revision would discard it, so the choice
+  // waits here until the user confirms.
+  const [pendingRevision, setPendingRevision] = useState<ProjectScheduleRevisionResponse | null>(
+    null,
+  );
   const errorRef = useRef<HTMLDivElement>(null);
   const [emailPreview, setEmailPreview] = useState<ProjectScheduleEmailPreviewResponse | null>(
     null,
@@ -396,8 +400,14 @@ export const ProjectMasterSchedule = ({
   );
 
   const scheduleBounds = useMemo(() => {
-    const starts = viewItems.map((item) => item.plannedStart).filter(Boolean).sort();
-    const ends = viewItems.map((item) => item.plannedEnd).filter(Boolean).sort();
+    const starts = viewItems
+      .map((item) => item.plannedStart)
+      .filter(Boolean)
+      .sort();
+    const ends = viewItems
+      .map((item) => item.plannedEnd)
+      .filter(Boolean)
+      .sort();
     return {
       start: starts[0] ?? projectStart?.slice(0, 10) ?? null,
       end: ends[ends.length - 1] ?? projectEnd?.slice(0, 10) ?? null,
@@ -495,9 +505,7 @@ export const ProjectMasterSchedule = ({
           : null,
       frameLeft: frameStart != null ? ((frameStart - start) / total) * 100 : null,
       frameWidth:
-        frameStart != null && frameEnd != null
-          ? ((frameEnd - frameStart + 1) / total) * 100
-          : null,
+        frameStart != null && frameEnd != null ? ((frameEnd - frameStart + 1) / total) * 100 : null,
     };
   }, [monthLabel, projectEnd, projectStart, viewItems]);
 
@@ -609,7 +617,11 @@ export const ProjectMasterSchedule = ({
 
   const savePayload = (
     rowVersion?: string | null,
-  ): { changeReason: string; items: SaveProjectScheduleItemRequest[]; rowVersion?: string | null } => ({
+  ): {
+    changeReason: string;
+    items: SaveProjectScheduleItemRequest[];
+    rowVersion?: string | null;
+  } => ({
     changeReason: changeReason.trim(),
     rowVersion: rowVersion ?? null,
     items: items.map((item) => ({
@@ -886,8 +898,7 @@ export const ProjectMasterSchedule = ({
   };
 
   const setToastSuccess = (key: string) => toast({ title: t(key) });
-  const displayTitle = (item: DraftItem) =>
-    item.title.trim() || t("scheduleUx.untitled");
+  const displayTitle = (item: DraftItem) => item.title.trim() || t("scheduleUx.untitled");
   const toggleCollapsed = (nodeId: string) =>
     setCollapsed((current) => {
       const next = new Set(current);
@@ -967,19 +978,14 @@ export const ProjectMasterSchedule = ({
   }));
   const renderEditor = () =>
     showEditor ? (
-      <section
-        aria-labelledby="schedule-editor-heading"
-        className="space-y-3 border-t pt-4"
-      >
+      <section aria-labelledby="schedule-editor-heading" className="space-y-3 border-t pt-4">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="max-w-3xl space-y-1">
             <h3 id="schedule-editor-heading" className="text-sm font-semibold">
               {t("scheduleUx.editSchedule")}
             </h3>
             <p className="text-sm text-muted-foreground">{t("scheduleUx.masterFormGuide")}</p>
-            <p className="text-xs text-muted-foreground">
-              {t("scheduleUx.constructionOrderHint")}
-            </p>
+            <p className="text-xs text-muted-foreground">{t("scheduleUx.constructionOrderHint")}</p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setEditorOpen(false)}>
             {t("scheduleUx.hideEditor")}
@@ -1176,9 +1182,7 @@ export const ProjectMasterSchedule = ({
                       </div>
                     </td>
                     <td className="whitespace-nowrap py-2 pr-2 align-middle text-xs tabular-nums text-muted-foreground">
-                      {isMilestone(item)
-                        ? t("scheduleUx.milestone")
-                        : formatDuration(duration)}
+                      {isMilestone(item) ? t("scheduleUx.milestone") : formatDuration(duration)}
                     </td>
                     <td className="py-2 pl-2 align-middle">
                       <div className="flex items-center justify-end gap-1">
@@ -1228,7 +1232,10 @@ export const ProjectMasterSchedule = ({
     ) : null;
 
   return (
-    <section id="project-master-schedule" className="space-y-5 rounded-xl border bg-card p-4 sm:p-6">
+    <section
+      id="project-master-schedule"
+      className="space-y-5 rounded-xl border bg-card p-4 sm:p-6"
+    >
       <Dialog
         open={emailPreview !== null}
         onOpenChange={(open) => {
@@ -1338,6 +1345,34 @@ export const ProjectMasterSchedule = ({
         </AlertDialogContent>
       </AlertDialog>
 
+      <AlertDialog
+        open={pendingRevision !== null}
+        onOpenChange={(open) => {
+          if (!open) setPendingRevision(null);
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t("scheduleUx.discardNewRevisionTitle")}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t("scheduleUx.discardNewRevisionBody", { version: nextVersion })}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t("common.cancel")}</AlertDialogCancel>
+            <AlertDialogAction
+              className={buttonVariants({ variant: "destructive" })}
+              onClick={() => {
+                if (pendingRevision) selectRevision(pendingRevision);
+                setPendingRevision(null);
+              }}
+            >
+              {t("scheduleUx.discardNewRevisionAction")}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       <header className="flex flex-col gap-4 border-b pb-4 lg:grid lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start lg:gap-6">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold">{t("operationalProjects.schedule.title")}</h2>
@@ -1383,13 +1418,17 @@ export const ProjectMasterSchedule = ({
                   value={revisionId?.toString() ?? "new"}
                   onValueChange={(value) => {
                     if (value === "new") {
+                      if (revisionId == null) return;
                       void startRevision();
                       return;
                     }
-                    const revision = schedule.revisions.find(
-                      (entry) => entry.id === Number(value),
-                    );
-                    if (revision) selectRevision(revision);
+                    const revision = schedule.revisions.find((entry) => entry.id === Number(value));
+                    if (!revision) return;
+                    if (isDirty) {
+                      setPendingRevision(revision);
+                      return;
+                    }
+                    selectRevision(revision);
                   }}
                   disabled={revisionSelectDisabled}
                 >
@@ -1418,7 +1457,9 @@ export const ProjectMasterSchedule = ({
                   </SelectContent>
                 </Select>
                 {revisionSelectDisabled && selected && isDirty && (
-                  <p className="text-xs text-muted-foreground">{t("scheduleUx.saveBeforeSwitch")}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {t("scheduleUx.saveBeforeSwitch")}
+                  </p>
                 )}
               </div>
             )}
@@ -1442,15 +1483,15 @@ export const ProjectMasterSchedule = ({
               schedule.publishedRevisionId != null &&
               !hasEditableRevision &&
               revisionId != null && (
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => void startRevision()}
-                disabled={busy}
-              >
-                {t("operationalProjects.schedule.newRevision")}
-              </Button>
-            )}
+                <Button
+                  variant="outline"
+                  className="w-full sm:w-auto"
+                  onClick={() => void startRevision()}
+                  disabled={busy}
+                >
+                  {t("operationalProjects.schedule.newRevision")}
+                </Button>
+              )}
           </div>
         )}
       </header>
@@ -1582,10 +1623,7 @@ export const ProjectMasterSchedule = ({
 
             {selected?.status === "PendingApproval" && !isApprover && (
               <div className="space-y-2">
-                <p
-                  className="text-sm text-muted-foreground"
-                  role="status"
-                >
+                <p className="text-sm text-muted-foreground" role="status">
                   {t("scheduleUx.masterState.PendingApproval")}
                   {selected.approverName
                     ? ` ${t("operationalProjects.schedule.assignedApprover", {
@@ -1689,9 +1727,7 @@ export const ProjectMasterSchedule = ({
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-muted-foreground">
-                            {t("scheduleUx.items")}
-                          </dt>
+                          <dt className="text-xs text-muted-foreground">{t("scheduleUx.items")}</dt>
                           <dd className="mt-0.5 text-sm font-medium tabular-nums">
                             {viewItems.length}
                           </dd>
