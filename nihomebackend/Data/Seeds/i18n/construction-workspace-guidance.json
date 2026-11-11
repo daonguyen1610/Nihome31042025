@@ -920,6 +920,30 @@
     "ja": "版を切り替える前に変更を保存してください。"
   },
   {
+    "key": "scheduleUx.discardNewRevisionTitle",
+    "category": "construction",
+    "vi": "Bỏ bản tiến độ chưa lưu?",
+    "en": "Discard the unsaved revision?",
+    "zh": "要放弃未保存的版本吗？",
+    "ja": "保存されていない版を破棄しますか？"
+  },
+  {
+    "key": "scheduleUx.discardNewRevisionBody",
+    "category": "construction",
+    "vi": "Các thay đổi của v{version} chưa được lưu và sẽ bị xoá khi chuyển phiên bản.",
+    "en": "Changes to v{version} have not been saved and will be lost when you switch revisions.",
+    "zh": "v{version} 的更改尚未保存，切换版本后将丢失。",
+    "ja": "v{version} の変更は保存されていないため、版を切り替えると失われます。"
+  },
+  {
+    "key": "scheduleUx.discardNewRevisionAction",
+    "category": "construction",
+    "vi": "Bỏ thay đổi và chuyển",
+    "en": "Discard and switch",
+    "zh": "放弃并切换",
+    "ja": "破棄して切り替え"
+  },
+  {
     "key": "scheduleUx.currentRevision",
     "category": "construction",
     "vi": "Xem bản hiện hành",

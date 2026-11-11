@@ -139,6 +139,56 @@ public sealed class ProjectScheduleServiceTests
         Assert.False(await db.ProjectScheduleEmails.AnyAsync(item => item.RevisionId == revision.Id));
     }
 
+    [Fact]
+    public async Task Submit_to_same_approver_does_not_queue_a_duplicate_notice()
+    {
+        await using var db = DbContextFactory.CreateRelational();
+        var (parentNode, _) = SeedProject(db);
+        var roleGroup = new RoleGroup { Code = RoleGroupCodes.Crm, LabelKey = "crm" };
+        var permission = new Permission { Module = "crm.opportunities", Action = "manage" };
+        var role = new Role { Code = RbacRoleCodes.SalesManager, Name = "Sales Manager", RoleGroup = roleGroup };
+        role.RolePermissions.Add(new RolePermission { Permission = permission });
+        db.Users.Add(new ApplicationUser
+        {
+            Id = 85,
+            RoleEntity = role,
+            PhoneNumber = "0900000085",
+            Email = "approver@nihome.test",
+        });
+        var revision = new ProjectScheduleRevision
+        {
+            OperationalProjectId = ProjectId,
+            Version = 1,
+            Status = ProjectScheduleRevisionStatus.Draft,
+            CreatedByUserId = CallerId,
+            RowVersion = [1, 2, 3],
+            Items = [Item(parentNode, null, "1", "Móng", new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 30))],
+        };
+        db.ProjectScheduleRevisions.Add(revision);
+        await db.SaveChangesAsync();
+
+        var service = CreateService(db);
+        var preview = await service.PreviewEmailAsync(ProjectId, revision.Id, "Submit", 85, CallerId, default);
+        await service.SubmitAsync(ProjectId, revision.Id, new SubmitProjectScheduleRevisionRequest
+        {
+            ApproverUserId = 85,
+            RowVersion = Convert.ToBase64String(revision.RowVersion),
+            PreviewToken = preview.PreviewToken,
+        }, CallerId, default);
+
+        db.ChangeTracker.Clear();
+        var pending = await db.ProjectScheduleRevisions.SingleAsync(item => item.Id == revision.Id);
+        var reassignedPreview = await service.PreviewEmailAsync(ProjectId, revision.Id, "Submit", 85, CallerId, default);
+        await service.SubmitAsync(ProjectId, revision.Id, new SubmitProjectScheduleRevisionRequest
+        {
+            ApproverUserId = 85,
+            RowVersion = Convert.ToBase64String(pending.RowVersion),
+            PreviewToken = reassignedPreview.PreviewToken,
+        }, CallerId, default);
+
+        Assert.Equal(1, await db.ProjectScheduleEmails.CountAsync(item => item.RevisionId == revision.Id));
+    }
+
     private static (Guid Parent, Guid Child) SeedProject(AppDbContext db)
     {
         var parent = Guid.NewGuid();

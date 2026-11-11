@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
@@ -135,6 +136,46 @@ public sealed class ProjectScheduleEmailServiceTests
         Assert.Equal(0, sender.Attempts);
     }
 
+    [Fact]
+    public async Task SendPending_keepsNewerStateAndContinuesWhenCancelledWhileSending()
+    {
+        await using var db = DbContextFactory.CreateRelational();
+        var message = await SeedQueuedAsync(db);
+        var second = new ProjectScheduleEmail
+        {
+            OperationalProjectId = message.OperationalProjectId,
+            RevisionId = message.RevisionId,
+            RecipientUserId = 1,
+            ToEmail = "approver@nihome.test",
+            Subject = "NICON · Yêu cầu duyệt tiến độ · PJ-EMAIL · v1",
+            Body = "<p>Tiến độ tổng thể</p>",
+            NextAttemptAt = DateTime.UtcNow.AddMinutes(-1),
+        };
+        db.ProjectScheduleEmails.Add(second);
+        await db.SaveChangesAsync();
+        var options = new DbContextOptionsBuilder<AppDbContext>()
+            .UseSqlite(db.Database.GetDbConnection())
+            .Options;
+        var sender = new CancellingEmailService(async () =>
+        {
+            await using var racing = new SqliteAppDbContext(options);
+            var cancelled = await racing.ProjectScheduleEmails.SingleAsync(item => item.Id == message.Id);
+            cancelled.Status = ProjectScheduleEmail.CancelledStatus;
+            await racing.SaveChangesAsync();
+        });
+        var service = new ProjectScheduleEmailService(db, sender, Mock.Of<INotificationService>(),
+            NullLogger<ProjectScheduleEmailService>.Instance);
+
+        Assert.Equal(1, await service.SendPendingAsync(default));
+
+        Assert.Equal(2, sender.Attempts);
+        db.ChangeTracker.Clear();
+        var kept = await db.ProjectScheduleEmails.AsNoTracking().SingleAsync(item => item.Id == message.Id);
+        Assert.Equal(ProjectScheduleEmail.CancelledStatus, kept.Status);
+        var delivered = await db.ProjectScheduleEmails.AsNoTracking().SingleAsync(item => item.Id == second.Id);
+        Assert.Equal(ProjectScheduleEmail.SentStatus, delivered.Status);
+    }
+
     private static async Task<ProjectScheduleEmail> SeedQueuedAsync(NihomeBackend.Data.AppDbContext db)
     {
         var customer = new Customer { Name = "Schedule email customer" };
@@ -177,6 +218,21 @@ public sealed class ProjectScheduleEmailServiceTests
         var message = await db.ProjectScheduleEmails.SingleAsync(item => item.Id == messageId);
         message.NextAttemptAt = DateTime.UtcNow.AddMinutes(-1);
         await db.SaveChangesAsync();
+    }
+
+    private sealed class CancellingEmailService(Func<Task> cancelFirstMessage) : IEmailService
+    {
+        public int Attempts { get; private set; }
+
+        public async Task SendEmailAsync(string toEmail, string subject, string htmlBody)
+        {
+            Attempts++;
+            if (Attempts == 1) await cancelFirstMessage();
+        }
+
+        public Task SendEmailWithAttachmentAsync(
+            string toEmail, string subject, string htmlBody, EmailAttachment attachment,
+            CancellationToken ct = default) => SendEmailAsync(toEmail, subject, htmlBody);
     }
 
     private sealed class FlakyEmailService(int failuresBeforeSuccess) : IEmailService
