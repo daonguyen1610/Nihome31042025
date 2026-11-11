@@ -960,6 +960,25 @@ export function useDepartmentWorkPackages() {
       toast({ variant: "destructive", title: t("workPackages.validation.task") });
       return;
     }
+    const frameItems =
+      projectSchedule?.revisions.find(
+        (revision) => revision.id === projectSchedule.publishedRevisionId,
+      )?.items ?? [];
+    const frameNode = frameItems.find((item) => item.nodeId === taskForm.projectScheduleNodeId);
+    if (frameItems.length > 0 && !frameNode) {
+      toast({ variant: "destructive", title: t("workPackages.validation.masterWbsRequired") });
+      return;
+    }
+    if (
+      frameNode &&
+      (taskForm.plannedStart < frameNode.plannedStart || taskForm.plannedEnd > frameNode.plannedEnd)
+    ) {
+      toast({
+        variant: "destructive",
+        title: t("workPackages.validation.masterWbsDates", { wbs: frameNode.wbsCode }),
+      });
+      return;
+    }
     setSaving(true);
     const body = {
       ...taskForm,

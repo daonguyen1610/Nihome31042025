@@ -92,6 +92,31 @@ public sealed class ProjectScheduleEmailService(AppDbContext db, IEmailService e
                 try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { }
                 continue;
             }
+            // A master-schedule approval notice stops being valid as soon as the
+            // revision leaves PendingApproval or the designated approver changes.
+            // Publication notices are queued only after the revision is Published.
+            if (!message.CmScheduleBaselineId.HasValue)
+            {
+                var revision = await db.ProjectScheduleRevisions.AsNoTracking()
+                    .Where(item => item.Id == message.RevisionId)
+                    .Select(item => new { item.Status, item.ApproverUserId, item.PublishedAt })
+                    .SingleOrDefaultAsync(ct);
+                // An approval notice is only useful while the revision waits for that
+                // approver. Once published, only notices queued at publication time
+                // remain valid; an older approval notice is stale even though its
+                // recipient may also be a publication recipient.
+                var stillValid = revision is not null &&
+                    (revision.Status == ProjectScheduleRevisionStatus.PendingApproval &&
+                        message.RecipientUserId == revision.ApproverUserId ||
+                     revision.Status == ProjectScheduleRevisionStatus.Published &&
+                        revision.PublishedAt.HasValue && message.CreatedAt >= revision.PublishedAt.Value);
+                if (!stillValid)
+                {
+                    message.Status = ProjectScheduleEmail.CancelledStatus;
+                    try { await db.SaveChangesAsync(ct); } catch (DbUpdateConcurrencyException) { }
+                    continue;
+                }
+            }
             if (message.Status == ProjectScheduleEmail.SendingStatus &&
                 message.LastAttemptAt >= staleBefore) continue;
             if (message.Status == ProjectScheduleEmail.PendingStatus &&

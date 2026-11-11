@@ -16,6 +16,14 @@
     "ja": "CMはCRM全体工程から計画を作成しPMに承認申請して現場報告と比較します。着工条件の資料は下の展開部分にあります。"
   },
   {
+    "key": "cmAreas.scheduleGuideSite",
+    "category": "construction",
+    "vi": "Tiến độ tổng thể CRM là khung thời gian chung của dự án. Xem kế hoạch thi công CM đã được PM duyệt, cập nhật tỷ lệ hoàn thành thực tế và báo vướng mắc để CM điều chỉnh.",
+    "en": "The CRM master schedule sets the project timeframe. Review the CM plan approved by the PM, report actual completion, and flag delays so CM can adjust.",
+    "zh": "CRM总进度定义项目时间框架。查看PM已批准的CM施工计划，上报实际完成率并标记延误，便于CM调整。",
+    "ja": "CRM全体工程がプロジェクト期間を定めます。PM承認済みのCM計画を確認し、実績を報告して遅延を連絡し、CMが調整できるようにします。"
+  },
+  {
     "key": "cmAreas.commercialGuide",
     "category": "construction",
     "vi": "BCH lập đề xuất nguồn lực và hồ sơ khối lượng. CM kiểm tra trên chính hồ sơ đó, duyệt theo thẩm quyền hoặc trả lại kèm lý do; khối lượng đầu ra và đầu vào được theo dõi riêng.",

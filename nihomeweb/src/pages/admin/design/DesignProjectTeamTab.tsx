@@ -1304,7 +1304,12 @@ export const OperationalProjectTeamPanel = ({
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline">
-              {t("designProjects.team.memberTotal", { count: activeMembers.length })}
+              {t(
+                activeMembers.length === 1
+                  ? "designProjects.team.memberTotalOne"
+                  : "designProjects.team.memberTotal",
+                { count: activeMembers.length },
+              )}
             </Badge>
             {team.canManage ? (
               <Button size="sm" onClick={openAddMember}>

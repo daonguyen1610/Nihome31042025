@@ -161,9 +161,12 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
     await loginInBrowserAs(page, TEST_USERS.siteCommander);
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(url);
-    await expect(
-      page.getByText("Site actual: Not yet reported by BCH", { exact: true }),
-    ).toBeVisible();
+    // The collapsed "view values" table repeats this text; assert the line under
+    // the task, which stays visible in the task list.
+    await expect(page.locator("p", { hasText: "Not yet reported by BCH" }).first()).toBeVisible();
+    // The working calendar lives in the collapsed plan-details disclosure so the
+    // mobile task list stays in view; open it before asserting the frozen calendar.
+    await page.getByText("Plan details and working calendar", { exact: true }).click();
     await expect(
       page.getByText("Working days: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday", {
         exact: true,

@@ -1142,5 +1142,13 @@
     "en": "Progress calculation and alerts",
     "zh": "进度计算与预警",
     "ja": "進捗の計算とアラート"
+  },
+  {
+    "key": "cmSchedule.crmFrame",
+    "category": "construction",
+    "vi": "Khung tiến độ tổng thể (CRM)",
+    "en": "Master schedule frame (CRM)",
+    "zh": "总体进度框架（CRM）",
+    "ja": "全体工程の枠（CRM）"
   }
 ]

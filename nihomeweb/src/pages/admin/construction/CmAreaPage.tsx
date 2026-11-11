@@ -48,11 +48,16 @@ const AREA_GUIDE: Record<CmArea, string> = {
 
 export function CmAreaPage({ area }: { area: CmArea }) {
   const { t } = useI18n();
+  const { has } = usePermissions();
+  const siteOnly =
+    area === "schedule" &&
+    !has(ADMIN_PERMS.constructionCmPreparation) &&
+    !has(ADMIN_PERMS.constructionTasksManage);
 
   return (
     <ConstructionWorkspaceShell
       title={t(AREA_LABEL[area])}
-      description={t(AREA_GUIDE[area])}
+      description={t(siteOnly ? "cmAreas.scheduleGuideSite" : AREA_GUIDE[area])}
       testId={`cm-${area}-page`}
     >
       {(scope) => <CmAreaContent area={area} scope={scope} />}
@@ -141,7 +146,9 @@ function CmAreaContent({ area, scope }: { area: CmArea; scope: ConstructionProje
             {tabs.some((tab) => tab.value === "plan") && (
               <TabsContent value="plan" className="space-y-5">
                 <CmScheduleWorkspace key={scope.projectId} projectId={scope.projectId} standalone />
-                <CmPreparationSection projectId={scope.projectId} />
+                {has(ADMIN_PERMS.constructionCmPreparation) && (
+                  <CmPreparationSection projectId={scope.projectId} />
+                )}
               </TabsContent>
             )}
             {tabs.some((tab) => tab.value === "tasks") && (
@@ -262,7 +269,7 @@ function areaTabs(
 ): TabDef[] {
   if (area === "schedule") {
     return [
-      ...(has(ADMIN_PERMS.constructionCmPreparation)
+      ...(has(ADMIN_PERMS.constructionCmPreparation) || has(ADMIN_PERMS.constructionTasks)
         ? [{ value: "plan", label: t("cmAreas.tab.plan") }]
         : []),
       ...(has(ADMIN_PERMS.constructionTasks)

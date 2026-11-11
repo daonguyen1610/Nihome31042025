@@ -272,6 +272,14 @@
     "ja": "下の作業項目と予定日から始めます。下書きを保存してから承認者を選び、承認を申請します。"
   },
   {
+    "key": "scheduleUx.masterNone",
+    "category": "construction",
+    "vi": "Dự án chưa có tiến độ tổng thể. Phòng CRM lập và gửi phê duyệt trước khi các phòng ban triển khai kế hoạch.",
+    "en": "This project has no master schedule yet. CRM prepares it and sends it for approval before departments plan their work.",
+    "zh": "该项目尚无总进度。CRM编制并提交审批后，各部门再开展计划。",
+    "ja": "このプロジェクトにはまだ全体工程がありません。CRMが作成し承認申請した後、各部門が計画を進めます。"
+  },
+  {
     "key": "scheduleUx.masterState.Draft",
     "category": "construction",
     "vi": "Bản nháp chưa dùng được cho kế hoạch CM. Hoàn thiện hạng mục, lưu thay đổi, rồi chọn người duyệt để gửi phê duyệt.",
@@ -296,12 +304,36 @@
     "ja": "公開済みの版です。「施工進捗」でCM計画の作成や実績確認に進めます。"
   },
   {
+    "key": "scheduleUx.masterState.Superseded",
+    "category": "construction",
+    "vi": "Bản đã phát hành này đã được bản v{version} thay thế. Các phòng ban đang dùng bản v{version}; bản này chỉ để tra cứu lịch sử.",
+    "en": "This published version was replaced by v{version}. Departments now use v{version}; keep this version for history only.",
+    "zh": "此已发布版本已被v{version}替代。各部门现使用v{version}；此版本仅供历史查阅。",
+    "ja": "この公開済みの版はv{version}に置き換えられました。現在はv{version}を使用します。この版は履歴参照用です。"
+  },
+  {
+    "key": "scheduleUx.revisionCurrent",
+    "category": "construction",
+    "vi": "bản hiện hành",
+    "en": "current version",
+    "zh": "当前版本",
+    "ja": "現行版"
+  },
+  {
+    "key": "scheduleUx.revisionSuperseded",
+    "category": "construction",
+    "vi": "bản cũ",
+    "en": "superseded",
+    "zh": "旧版本",
+    "ja": "旧版"
+  },
+  {
     "key": "scheduleUx.masterState.Rejected",
     "category": "construction",
-    "vi": "Phiên bản bị từ chối. Xem ý kiến duyệt, sửa hạng mục rồi lưu và gửi duyệt lại.",
-    "en": "This version was rejected. Read the review comment, correct the items, save, and submit again.",
-    "zh": "此版本被拒绝。请查看审批意见，修改并保存后重新提交。",
-    "ja": "却下された版です。コメントを確認し、修正・保存して再申請してください。"
+    "vi": "Bản này được trả lại để chỉnh sửa. Xem ý kiến duyệt, sửa hạng mục rồi lưu và gửi duyệt lại.",
+    "en": "This version was returned for changes. Read the review comment, correct the items, save, and submit again.",
+    "zh": "此版本已退回修改。请查看审批意见，修改并保存后重新提交。",
+    "ja": "この版は修正のため差し戻されました。コメントを確認し、修正・保存して再申請してください。"
   },
   {
     "key": "scheduleUx.masterFormGuide",
@@ -678,5 +710,253 @@
     "en": "Select a file",
     "zh": "选择文件",
     "ja": "ファイルを選択"
+  },
+  {
+    "key": "scheduleUx.masterSubtitle",
+    "category": "construction",
+    "vi": "Khung thời gian chung của dự án do CRM lập. Các phòng triển khai chi tiết trong khung này; khi khách đổi yêu cầu, CRM cập nhật thành phiên bản mới và thông báo các phòng bị ảnh hưởng.",
+    "en": "The project's shared timeframe, set by CRM. Departments detail their work inside it; when the client changes a requirement, CRM records a new revision and notifies the affected departments.",
+    "zh": "由CRM制定的项目总体时间框架。各部门在此框架内细化工作；客户变更需求时，CRM更新为新版本并通知受影响部门。",
+    "ja": "CRMが作成するプロジェクト全体の期間枠。各部門はこの枠内で詳細化し、顧客の変更時はCRMが新しい版に更新して影響部門へ通知します。"
+  },
+  {
+    "key": "scheduleUx.constructionOrderHint",
+    "category": "construction",
+    "vi": "Thứ tự thi công tham khảo của NICON: móng → kết cấu → hoàn thiện → M&E → hạ tầng ngoại vi.",
+    "en": "NICON's typical construction order: foundation → structure → finishing → M&E → external infrastructure.",
+    "zh": "NICON施工顺序参考：基础 → 结构 → 装修 → 机电 → 室外基础设施。",
+    "ja": "NICONの標準的な施工順序：基礎 → 構造 → 仕上げ → M&E → 外構インフラ。"
+  },
+  {
+    "key": "scheduleUx.items",
+    "category": "construction",
+    "vi": "Hạng mục",
+    "en": "Items",
+    "zh": "项目",
+    "ja": "項目"
+  },
+  {
+    "key": "scheduleUx.milestone",
+    "category": "construction",
+    "vi": "Mốc",
+    "en": "Milestone",
+    "zh": "里程碑",
+    "ja": "マイルストーン"
+  },
+  {
+    "key": "scheduleUx.duration",
+    "category": "construction",
+    "vi": "Thời lượng",
+    "en": "Duration",
+    "zh": "工期",
+    "ja": "期間"
+  },
+  {
+    "key": "scheduleUx.day",
+    "category": "construction",
+    "vi": "1 ngày",
+    "en": "1 day",
+    "zh": "1天",
+    "ja": "1日"
+  },
+  {
+    "key": "scheduleUx.days",
+    "category": "construction",
+    "vi": "{count} ngày",
+    "en": "{count} days",
+    "zh": "{count}天",
+    "ja": "{count}日"
+  },
+  {
+    "key": "scheduleUx.timeline",
+    "category": "construction",
+    "vi": "Tiến độ",
+    "en": "Timeline",
+    "zh": "进度",
+    "ja": "工程表"
+  },
+  {
+    "key": "scheduleUx.timelineHint",
+    "category": "construction",
+    "vi": "Kéo ngang bảng để xem toàn bộ trục thời gian.",
+    "en": "Scroll the table sideways to see the full timeline.",
+    "zh": "横向滚动表格查看完整时间轴。",
+    "ja": "表を横にスクロールして全体の時間軸を表示します。"
+  },
+  {
+    "key": "scheduleUx.today",
+    "category": "construction",
+    "vi": "Hôm nay",
+    "en": "Today",
+    "zh": "今天",
+    "ja": "今日"
+  },
+  {
+    "key": "scheduleUx.expandItem",
+    "category": "construction",
+    "vi": "Mở rộng {name}",
+    "en": "Expand {name}",
+    "zh": "展开{name}",
+    "ja": "{name}を展開"
+  },
+  {
+    "key": "scheduleUx.collapseItem",
+    "category": "construction",
+    "vi": "Thu gọn {name}",
+    "en": "Collapse {name}",
+    "zh": "收起{name}",
+    "ja": "{name}を折りたたむ"
+  },
+  {
+    "key": "scheduleUx.editSchedule",
+    "category": "construction",
+    "vi": "Chỉnh sửa tiến độ",
+    "en": "Edit schedule",
+    "zh": "编辑进度",
+    "ja": "工程を編集"
+  },
+  {
+    "key": "scheduleUx.hideEditor",
+    "category": "construction",
+    "vi": "Thu gọn phần chỉnh sửa",
+    "en": "Hide editor",
+    "zh": "收起编辑",
+    "ja": "編集を閉じる"
+  },
+  {
+    "key": "scheduleUx.addItem",
+    "category": "construction",
+    "vi": "Thêm hạng mục",
+    "en": "Add item",
+    "zh": "添加项目",
+    "ja": "項目を追加"
+  },
+  {
+    "key": "scheduleUx.addChild",
+    "category": "construction",
+    "vi": "Thêm hạng mục con",
+    "en": "Add child item",
+    "zh": "添加子项",
+    "ja": "子項目を追加"
+  },
+  {
+    "key": "scheduleUx.reviewAssigned",
+    "category": "construction",
+    "vi": "Bạn được chỉ định duyệt bản v{version}. Kiểm tra khung bên dưới rồi duyệt hoặc trả lại.",
+    "en": "You are the assigned approver for v{version}. Check the frame below, then approve or return it.",
+    "zh": "您被指定审批第{version}版。请检查下方框架后批准或退回。",
+    "ja": "あなたは第{version}版の承認者です。下の枠を確認して承認または差し戻してください。"
+  },
+  {
+    "key": "scheduleUx.changeReasonHint",
+    "category": "construction",
+    "vi": "Bắt buộc từ phiên bản 2. Nêu rõ khách đổi yêu cầu gì và phần nào bị ảnh hưởng.",
+    "en": "Required from revision 2. State what the client changed and which parts are affected.",
+    "zh": "第2版起必填。说明客户变更内容及受影响部分。",
+    "ja": "第2版以降は必須。顧客の変更内容と影響範囲を記載してください。"
+  },
+  {
+    "key": "scheduleUx.changeReasonRequired",
+    "category": "construction",
+    "vi": "Phiên bản 2 trở đi cần lý do cập nhật từ khách hàng trước khi gửi duyệt.",
+    "en": "Revision 2 onward needs the client's change reason before you submit for approval.",
+    "zh": "第2版起需填写客户变更原因后才能提交审批。",
+    "ja": "第2版以降は、承認依頼の前に顧客の変更理由が必要です。"
+  },
+  {
+    "key": "scheduleUx.approverHint",
+    "category": "construction",
+    "vi": "Trước hợp đồng: Trưởng phòng CRM. Sau hợp đồng: PM dự án. Chọn người duyệt để gửi yêu cầu cho đúng người đó.",
+    "en": "Before contract: CRM department head. After contract: project PM. Choose the approver — the request goes only to that person.",
+    "zh": "合同前：CRM 部门负责人。合同后：项目经理。选择审批人后，请求只发送给该人员。",
+    "ja": "契約前：CRM 部門長。契約後：プロジェクトPM。承認者を選ぶと、依頼はその本人にのみ送信されます。"
+  },
+  {
+    "key": "scheduleUx.masterHistory",
+    "category": "construction",
+    "vi": "Lịch sử phiên bản",
+    "en": "Revision history",
+    "zh": "版本历史",
+    "ja": "版履歴"
+  },
+  {
+    "key": "scheduleUx.projectFrame",
+    "category": "construction",
+    "vi": "Khung dự án",
+    "en": "Project frame",
+    "zh": "项目框架",
+    "ja": "プロジェクト枠"
+  },
+  {
+    "key": "scheduleUx.outsideFrame",
+    "category": "construction",
+    "vi": "{count} hạng mục nằm ngoài khung thời gian dự án. Kiểm tra lại ngày hoặc khung dự án trước khi phát hành.",
+    "en": "Items outside the project period: {count}. Check the dates or the project frame before publishing.",
+    "zh": "{count} 个工作项超出项目周期。发布前请检查日期或项目框架。",
+    "ja": "プロジェクト期間外の項目：{count}件。公開前に日付またはプロジェクト枠を確認してください。"
+  },
+  {
+    "key": "scheduleUx.deleteParentTitle",
+    "category": "construction",
+    "vi": "Xóa hạng mục và hạng mục con?",
+    "en": "Delete item and child items?",
+    "zh": "删除项目及其子项？",
+    "ja": "項目と子項目を削除しますか？"
+  },
+  {
+    "key": "scheduleUx.deleteParentBody",
+    "category": "construction",
+    "vi": "“{title}” còn {count} hạng mục con. Xóa cả nhóm khỏi bản nháp?",
+    "en": "“{title}” still has {count} child items. Remove the whole group from the draft?",
+    "zh": "“{title}”仍有{count}个子项。要从草稿中删除整个组吗？",
+    "ja": "「{title}」には{count}件の子項目があります。グループ全体を下書きから削除しますか？"
+  },
+  {
+    "key": "scheduleUx.saveBeforeSwitch",
+    "category": "construction",
+    "vi": "Lưu thay đổi trước khi chuyển phiên bản.",
+    "en": "Save your changes before switching revisions.",
+    "zh": "切换版本前请先保存更改。",
+    "ja": "版を切り替える前に変更を保存してください。"
+  },
+  {
+    "key": "scheduleUx.currentRevision",
+    "category": "construction",
+    "vi": "Xem bản hiện hành",
+    "en": "View current revision",
+    "zh": "查看当前版本",
+    "ja": "現行版を表示"
+  },
+  {
+    "key": "scheduleUx.untitled",
+    "category": "construction",
+    "vi": "Chưa đặt tên",
+    "en": "Untitled",
+    "zh": "未命名",
+    "ja": "名称未設定"
+  },
+  {
+    "key": "scheduleUx.wbs",
+    "category": "construction",
+    "vi": "Mã WBS",
+    "en": "WBS code",
+    "zh": "WBS编码",
+    "ja": "WBSコード"
+  },
+  {
+    "key": "scheduleUx.rootItem",
+    "category": "construction",
+    "vi": "Hạng mục cấp 1",
+    "en": "Top-level item",
+    "zh": "一级项目",
+    "ja": "最上位項目"
+  },
+  {
+    "key": "scheduleUx.reviewCommentHint",
+    "vi": "Bắt buộc nhập lý do khi trả lại để CRM biết cần sửa gì.",
+    "en": "Required when returning the plan so CRM knows what to fix.",
+    "zh": "退回时必填，便于CRM知道需要修改什么。",
+    "ja": "差し戻す場合は理由を入力してください（CRMが修正内容を把握するため）。",
+    "category": "construction"
   }
 ]
