@@ -22,6 +22,25 @@ test("superseded QS blocks payment until the same request is revised and approve
   });
   const adminHeaders = headers(adminToken);
   const customerId = await createOwnCustomer(api, adminHeaders, "Payment revision");
+  const reviewerPhone = `09${Date.now().toString().slice(-8)}`;
+  const reviewerResponse = await api.post("/api/users", {
+    headers: headers(adminToken),
+    data: {
+      phoneNumber: reviewerPhone,
+      fullName: `E2E schedule reviewer ${suffix}`,
+      email: `schedule-reviewer-${suffix}@nihome.test`,
+      password: "Demo@123!",
+      role: "SALES_MANAGER",
+    },
+  });
+  expect(reviewerResponse.status(), await reviewerResponse.text()).toBe(201);
+  const reviewer = (await reviewerResponse.json()) as { id: number };
+  const reviewerToken = await loginAs({
+    phoneNumber: reviewerPhone,
+    password: "Demo@123!",
+    role: "SALES_MANAGER",
+  });
+  const salesManagerId = reviewer.id;
   const vendorResponse = await api.post("/api/vendors", {
     headers: headers(adminToken),
     data: {
@@ -53,6 +72,68 @@ test("superseded QS blocks payment until the same request is revised and approve
   });
   expect(projectResponse.status(), await projectResponse.text()).toBe(201);
   const projectId = (await projectResponse.json()).id as number;
+
+  const scheduleUrl = `/api/operational-projects/${projectId}/master-schedule`;
+  const scheduleItems = [
+    {
+      nodeId: randomUUID(),
+      wbsCode: "1",
+      title: "Kết cấu nhà xưởng",
+      plannedStart: "2026-08-01",
+      plannedEnd: "2026-12-31",
+      sortOrder: 0,
+    },
+  ];
+  const scheduleResponse = await api.post(`${scheduleUrl}/revisions`, {
+    headers: headers(adminToken),
+    data: { changeReason: "E2E payment revision baseline", items: scheduleItems },
+  });
+  expect(scheduleResponse.status(), await scheduleResponse.text()).toBe(201);
+  const schedule = (await scheduleResponse.json()) as {
+    revisions: Array<{ id: number; rowVersion: string }>;
+  };
+  const scheduleRevision = schedule.revisions[0];
+  const approvalPreviewResponse = await api.get(
+    `${scheduleUrl}/revisions/${scheduleRevision.id}/email-preview?action=Submit&recipientUserId=${salesManagerId}`,
+    { headers: adminHeaders },
+  );
+  expect(approvalPreviewResponse.ok(), await approvalPreviewResponse.text()).toBe(true);
+  const approvalPreview = (await approvalPreviewResponse.json()) as { previewToken: string };
+  const submitScheduleResponse = await api.post(
+    `${scheduleUrl}/revisions/${scheduleRevision.id}/submit`,
+    {
+      headers: headers(adminToken),
+      data: {
+        approverUserId: salesManagerId,
+        rowVersion: scheduleRevision.rowVersion,
+        previewToken: approvalPreview.previewToken,
+      },
+    },
+  );
+  expect(submitScheduleResponse.status(), await submitScheduleResponse.text()).toBe(200);
+  const pendingSchedule = (
+    (await submitScheduleResponse.json()) as {
+      revisions: Array<{ id: number; rowVersion: string }>;
+    }
+  ).revisions.find((revision) => revision.id === scheduleRevision.id)!;
+  const publishPreviewResponse = await api.get(
+    `${scheduleUrl}/revisions/${scheduleRevision.id}/email-preview?action=Publish`,
+    { headers: adminHeaders },
+  );
+  expect(publishPreviewResponse.ok(), await publishPreviewResponse.text()).toBe(true);
+  const publishPreview = (await publishPreviewResponse.json()) as { previewToken: string };
+  const publishScheduleResponse = await api.post(
+    `${scheduleUrl}/revisions/${scheduleRevision.id}/review`,
+    {
+      headers: headers(reviewerToken),
+      data: {
+        decision: "Approve",
+        rowVersion: pendingSchedule.rowVersion,
+        previewToken: publishPreview.previewToken,
+      },
+    },
+  );
+  expect(publishScheduleResponse.status(), await publishScheduleResponse.text()).toBe(200);
   const memberResponse = await api.post(`/api/operational-projects/${projectId}/team/members`, {
     headers: headers(adminToken),
     data: {
@@ -94,7 +175,8 @@ test("superseded QS blocks payment until the same request is revised and approve
         data: {
           direction: "Downstream",
           contractId: contract.id,
-          wbsCode: "STRUCTURE-01",
+          wbsCode: "1",
+          projectScheduleNodeId: scheduleItems[0].nodeId,
           periodFrom: "2026-08-01T00:00:00Z",
           periodTo: "2026-08-31T00:00:00Z",
           certifiedAmount: 1_000,
