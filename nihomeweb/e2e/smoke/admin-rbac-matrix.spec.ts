@@ -299,7 +299,6 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
-      "/admin/design-projects",
       "/admin/operational-projects",
       "/admin/reports/projects",
       "/admin/construction/tasks",

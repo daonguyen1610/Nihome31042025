@@ -300,7 +300,9 @@ test("material alert detail preserves context and acknowledges with concurrency"
     `/admin/procurement-control/projects/${projectId}/material-requests/${openAlert.sourceEntityId}`,
   );
   await expect(page.getByText("PO-0170")).toBeVisible();
-  await expect(page.getByText("Downstream - Partner")).toBeVisible();
+  await expect(
+    page.getByText(/Downstream - Partner|Purchase – supplier\/subcontractor/i),
+  ).toBeVisible();
   expect(
     await page.evaluate(
       () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

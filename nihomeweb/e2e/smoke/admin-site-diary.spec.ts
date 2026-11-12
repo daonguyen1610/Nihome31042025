@@ -1,5 +1,9 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+import {
+  createDesignProject,
+  createOwnCustomer,
+  getOperationalProjectId,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-142 M4 Site Diary end-to-end. Real-user path through the
@@ -40,26 +44,26 @@ test.describe("NIH-142 — Site Diary (real-user flow)", () => {
       customerId,
     });
 
-    // ---------- 2. Open the diary page + filter to this project ----------
+    const operationalProjectId = await getOperationalProjectId(api, authHeader, projectId);
+
+    // ---------- 2. Open the CM review-scope diary for this project ----------
+    // The legacy `/admin/construction/diary` route redirects to BCH operations,
+    // which has no review actions; diaries are confirmed from CM review scope.
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/construction/diary`, { waitUntil: "networkidle" });
+    const diaryListLoaded = page.waitForResponse(
+      (r) =>
+        r.url().includes("/api/site-diaries") && r.url().includes(`designProjectId=${projectId}`),
+    );
+    await page.goto(
+      `${baseURL}/admin/construction/cm/schedule?tab=diary&projectId=${operationalProjectId}`,
+      { waitUntil: "networkidle" },
+    );
     await page.evaluate(() => {
       const region = document.querySelector('[aria-label*="Notifications ("]');
       region?.remove();
     });
     await expect(page.getByTestId("site-diary-page")).toBeVisible();
-
-    const projectFilter = page.locator('button[role="combobox"]').first();
-    await Promise.all([
-      page.waitForResponse(
-        (r) =>
-          r.url().includes("/api/site-diaries") && r.url().includes(`designProjectId=${projectId}`),
-      ),
-      (async () => {
-        await projectFilter.click();
-        await page.getByRole("option", { name: new RegExp(`E2E-DIARY ${projSuffix}`) }).click();
-      })(),
-    ]);
+    await diaryListLoaded;
 
     // ---------- 3. Create the diary via the dialog ----------
     await page.getByTestId("diary-new").click();

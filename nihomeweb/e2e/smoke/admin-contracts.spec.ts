@@ -534,7 +534,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
   await page.locator("#c-direction-form").click();
   await page
     .getByRole("option", {
-      name: /Đầu vào - Đối tác|Downstream - Partner|下游 - 合作方|下流 - パートナー/i,
+      name: /Đầu vào - Đối tác|Mua vào|Downstream - Partner|Purchase – supplier\/subcontractor|下游 - 合作方|采购 – 供应商|下流 - パートナー|購入 – 仕入先/i,
     })
     .click();
   await expect(page.locator("#c-type-form")).toContainText(/Cung ứng|Supply|供应|供給/i);
@@ -542,7 +542,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
   await page.locator("#c-direction-form").click();
   await page
     .getByRole("option", {
-      name: /Đầu ra - Khách hàng|Upstream - Customer|上游 - 客户|上流 - 顧客/i,
+      name: /Đầu ra - Khách hàng|Bán ra|Upstream - Customer|Sale – owner\/customer|上游 - 客户|销售 – 业主|上流 - 顧客|販売 – 発注者/i,
     })
     .click();
   await expect(page.locator("#c-vendor-form")).toBeHidden();
