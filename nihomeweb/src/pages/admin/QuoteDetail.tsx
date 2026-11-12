@@ -95,7 +95,13 @@ import {
   type InputPriceOfferResponse,
   type DepartmentWorkPackageResponse,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime, formatMoney } from "@/lib/displaySettings";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  normalizeCurrency,
+  useDisplaySettings,
+} from "@/lib/displaySettings";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
@@ -181,6 +187,7 @@ const AdminQuoteDetail = () => {
   const navigate = useNavigate();
   const { t, lang } = useI18n();
   const { toast } = useToast();
+  const display = useDisplaySettings();
   const { has } = usePermissions();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId);
 
@@ -209,6 +216,9 @@ const AdminQuoteDetail = () => {
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
     null,
   );
+  // Currency of the BOQ catalog last applied to the item table. BOQ items keep
+  // the catalog's amounts verbatim, so the quote adopts that currency on save.
+  const [boqCurrency, setBoqCurrency] = useState<string | null>(null);
   const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
   const [boqBulkEntryOpen, setBoqBulkEntryOpen] = useState(false);
 
@@ -395,6 +405,7 @@ const AdminQuoteDetail = () => {
       !(await confirmAction(t("quotes.boqCatalog.replaceConfirm"), { destructive: false }))
     )
       return;
+    setBoqCurrency(revision.currency);
     setForm({
       ...form,
       materialRateCatalogId: revision.catalogId,
@@ -758,6 +769,12 @@ const AdminQuoteDetail = () => {
       </AdminLayout>
     );
   if (!quote || !form) return null;
+
+  // Amounts in the edit form come verbatim from the selected catalog, so the
+  // form's currency follows that catalog until the save adopts it.
+  const previewCurrency =
+    (editing ? (form.method === "Boq" ? boqCurrency : effectiveRevision?.currency) : null) ??
+    quote.currency;
 
   const workflowKinds = WORKFLOW_BY_STATUS[quote.status];
   const awaitingInputPrice = quote.status === "Draft" && quote.grandTotal === 0;
@@ -1228,6 +1245,7 @@ const AdminQuoteDetail = () => {
                       unitPrice={form.unitPricePerSqm}
                       overrideReason={form.rateOverrideReason}
                       rateSource={quote.rateSource}
+                      currency={quote.currency}
                       canOverride={canOverrideRate}
                       onEffectiveRevisionChange={setEffectiveRevision}
                       onChange={(patch) =>
@@ -1268,7 +1286,7 @@ const AdminQuoteDetail = () => {
                     onChange={updateBoqRow}
                     onBulkEntry={() => setBoqBulkEntryOpen(true)}
                     t={t}
-                    currency={quote.currency}
+                    currency={previewCurrency}
                   />
                 </div>
               )}
@@ -1322,7 +1340,7 @@ const AdminQuoteDetail = () => {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">{t("quotes.field.subtotal")}</span>
                 <span className="font-medium">
-                  {formatMoney(preview?.subtotal ?? quote.subtotal, quote.currency)}
+                  {formatMoney(preview?.subtotal ?? quote.subtotal, previewCurrency)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-muted-foreground">
@@ -1337,12 +1355,16 @@ const AdminQuoteDetail = () => {
               <div className="flex items-center justify-between">
                 <span className="font-semibold">{t("quotes.field.grandTotal")}</span>
                 <span className="text-lg font-bold text-primary">
-                  {formatMoney(preview?.grandTotal ?? quote.grandTotal, quote.currency)}
+                  {formatMoney(preview?.grandTotal ?? quote.grandTotal, previewCurrency)}
                 </span>
               </div>
               <p className="break-words text-xs italic text-muted-foreground">
                 <span className="mr-1 font-medium not-italic">
-                  {t("quotes.field.grandTotalInWords")}:
+                  {t("quotes.field.grandTotalInWords")}
+                  {display.currency !== normalizeCurrency(quote.currency)
+                    ? ` (${normalizeCurrency(quote.currency)})`
+                    : ""}
+                  :
                 </span>
                 {quote.grandTotalInWords}
               </p>
@@ -2126,6 +2148,9 @@ const BoqTable = ({
               <th className="w-24 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
               <th className="w-32 px-2 py-1.5 text-right font-medium">
                 {t("quotes.boq.unitPrice")}
+                <span className="ml-1 font-normal normal-case text-muted-foreground">
+                  ({currency})
+                </span>
               </th>
               <th className="w-32 px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
               {editing && <th className="w-10 px-2 py-1.5" />}
@@ -2175,7 +2200,7 @@ const BoqTable = ({
                   </td>
                   <td className="px-2 py-1">
                     <Input
-                      aria-label={t("quotes.boq.unitPrice")}
+                      aria-label={`${t("quotes.boq.unitPrice")} (${currency})`}
                       className="h-8 text-right"
                       type="number"
                       inputMode="decimal"
@@ -2277,7 +2302,7 @@ const BoqTable = ({
                       onChange={(e) => onChange(idx, { quantity: Number(e.target.value) || 0 })}
                     />
                     <Input
-                      aria-label={t("quotes.boq.unitPrice")}
+                      aria-label={`${t("quotes.boq.unitPrice")} (${currency})`}
                       className="h-9 text-right"
                       type="number"
                       inputMode="decimal"

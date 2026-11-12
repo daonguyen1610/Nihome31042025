@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import QuoteCatalogEmptyState from "@/components/admin/QuoteCatalogEmptyState";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
-import { formatMoney } from "@/lib/displaySettings";
+import { formatNumber } from "@/lib/displaySettings";
 import { roundQuoteMoney } from "@/lib/quoteTotals";
 import {
   adminApi,
@@ -31,6 +31,8 @@ interface QuoteRateFieldsProps {
   unitPrice?: number | null;
   overrideReason?: string | null;
   rateSource?: "Catalog" | "Override" | "CatalogReference";
+  /** Currency the applied rate is stored in when no catalog revision is resolved yet. */
+  currency?: string | null;
   canOverride: boolean;
   disabled?: boolean;
   onChange: (patch: {
@@ -48,6 +50,7 @@ const QuoteRateFields = ({
   unitPrice,
   overrideReason,
   rateSource = "Catalog",
+  currency,
   canOverride,
   disabled = false,
   onChange,
@@ -136,6 +139,9 @@ const QuoteRateFields = ({
     unitPrice != null &&
     unitPrice !== roundQuoteMoney(Number(revision.totalRatePerSqm)),
   );
+  // The applied rate is entered in the catalog's currency: that is the currency
+  // the quote adopts as its own, so every amount in the quote stays exact.
+  const rateCurrency = revision?.currency ?? currency ?? "VND";
 
   return (
     <div className="space-y-3 rounded-md border bg-muted/20 p-3">
@@ -222,7 +228,7 @@ const QuoteRateFields = ({
           <div>
             <dt className="text-xs text-muted-foreground">{t("quotes.field.catalogRate")}</dt>
             <dd className="font-medium">
-              {formatMoney(revision.totalRatePerSqm, revision.currency)}/m²
+              {formatNumber(revision.totalRatePerSqm)} {revision.currency}/m²
             </dd>
           </div>
           <div>
@@ -235,7 +241,10 @@ const QuoteRateFields = ({
       )}
 
       <FieldScope>
-        <Label>{t("quotes.field.appliedRate")} *</Label>
+        <Label>
+          {t("quotes.field.appliedRate")}
+          <span className="ml-1 font-normal text-muted-foreground">({rateCurrency})</span> *
+        </Label>
         <Input
           type="number"
           inputMode="decimal"

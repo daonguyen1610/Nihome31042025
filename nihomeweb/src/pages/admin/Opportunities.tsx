@@ -75,7 +75,14 @@ import {
   type QuoteListItemResponse,
   type UpdateOpportunityRequest,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/displaySettings";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  normalizeCurrency,
+  useDisplaySettings,
+} from "@/lib/displaySettings";
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
 const SIGNED_CONTRACT_REQUIRED_CODE = "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED";
@@ -159,6 +166,7 @@ const emptyCreate = (): CreateOpportunityRequest => ({
 const AdminOpportunities = () => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
+  const display = useDisplaySettings();
   const { toast } = useToast();
   const { has } = usePermissions();
   const navigate = useNavigate();
@@ -1302,7 +1310,12 @@ const AdminOpportunities = () => {
             </FieldScope>
             <div className="grid grid-cols-2 gap-3">
               <FieldScope>
-                <Label>{t("opportunities.field.estimatedValue")}</Label>
+                <Label>
+                  {t("opportunities.field.estimatedValue")}
+                  <span className="ml-1 font-normal text-muted-foreground">
+                    ({display.currency})
+                  </span>
+                </Label>
                 <Input
                   inputMode="numeric"
                   value={
@@ -1819,7 +1832,12 @@ const AdminOpportunities = () => {
                           </FieldScope>
                           <div className="grid grid-cols-2 gap-3">
                             <FieldScope>
-                              <Label>{t("opportunities.field.estimatedValue")}</Label>
+                              <Label>
+                                {t("opportunities.field.estimatedValue")}
+                                <span className="ml-1 font-normal text-muted-foreground">
+                                  ({normalizeCurrency(detail.currency)})
+                                </span>
+                              </Label>
                               <Input
                                 inputMode="numeric"
                                 value={

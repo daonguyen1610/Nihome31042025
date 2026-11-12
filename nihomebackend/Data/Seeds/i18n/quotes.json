@@ -25,7 +25,7 @@
   {"key": "quotes.field.area", "category": "quotes", "vi": "Diện tích", "en": "Area", "zh": "面积", "ja": "面積"},
   {"key": "quotes.field.areaSqm", "category": "quotes", "vi": "Diện tích (m²)", "en": "Area (m²)", "zh": "面积 (m²)", "ja": "面積 (m²)"},
   {"key": "quotes.field.unitPrice", "category": "quotes", "vi": "Đơn giá", "en": "Unit price", "zh": "单价", "ja": "単価"},
-  {"key": "quotes.field.unitPricePerSqm", "category": "quotes", "vi": "Đơn giá/m² (VND)", "en": "Unit price / m² (VND)", "zh": "单价/m² (VND)", "ja": "単価/m² (VND)"},
+  {"key": "quotes.field.unitPricePerSqm", "category": "quotes", "vi": "Đơn giá/m²", "en": "Unit price / m²", "zh": "单价/m²", "ja": "単価/m²"},
   {"key": "quotes.field.packageDescription", "category": "quotes", "vi": "Mô tả gói", "en": "Package description", "zh": "套餐说明", "ja": "パッケージ説明"},
   {"key": "quotes.field.subtotal", "category": "quotes", "vi": "Tạm tính", "en": "Subtotal", "zh": "小计", "ja": "小計"},
   {"key": "quotes.field.discount", "category": "quotes", "vi": "Chiết khấu", "en": "Discount", "zh": "折扣", "ja": "割引"},
