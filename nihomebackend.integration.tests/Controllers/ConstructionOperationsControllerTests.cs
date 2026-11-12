@@ -50,7 +50,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         var fixture = await CreateProjectAsync();
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "QS"));
         var key = Guid.NewGuid().ToString("N");
-        var payload = ValidEquipmentRequest();
+        var payload = ValidEquipmentRequest(fixture.WbsNodeId);
 
         using var first = await SendAsync(
             HttpMethod.Post,
@@ -67,6 +67,8 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         var created = await ReadJsonAsync(first);
         var replayed = await ReadJsonAsync(replay);
         replayed.GetProperty("id").GetInt32().Should().Be(created.GetProperty("id").GetInt32());
+        created.GetProperty("projectScheduleNodeId").GetGuid().Should().Be(fixture.WbsNodeId);
+        created.GetProperty("wbsCode").GetString().Should().Be("WBS-STR-01");
 
         var submitted = await TransitionAsync(fixture.ProjectId, created, "submit");
         submitted.GetProperty("status").GetString().Should().Be("PendingCmReview");
@@ -87,6 +89,31 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         approved.GetProperty("handoffStatus").GetString().Should().Be("ReadyForProcurementAndFinance");
         (await WithDbAsync(db => db.ConstructionResourceRequests.CountAsync(x => x.OperationalProjectId == fixture.ProjectId)))
             .Should().Be(1);
+    }
+
+    [Fact]
+    public async Task ResourceRequest_CreateWithoutPublishedWbsNode_IsRejectedWithoutSaving()
+    {
+        var fixture = await CreateProjectAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "QS"));
+        var payload = new
+        {
+            type = "Equipment",
+            wbsCode = "WBS-STR-01",
+            needByDate = DateTime.UtcNow.AddDays(14),
+            quantity = 2m,
+            unit = "set",
+            reason = "Resource needed for the approved structural work sequence",
+        };
+
+        using var response = await SendAsync(
+            HttpMethod.Post,
+            $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests",
+            payload);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.ConstructionResourceRequests.CountAsync(x =>
+            x.OperationalProjectId == fixture.ProjectId))).Should().Be(0);
     }
 
     [Fact]
@@ -137,7 +164,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         using var createdResponse = await SendAsync(
             HttpMethod.Post,
             $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests",
-            ValidEquipmentRequest());
+            ValidEquipmentRequest(fixture.WbsNodeId));
         createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await ReadJsonAsync(createdResponse);
 
@@ -148,6 +175,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
             new
             {
                 type = "Equipment",
+                projectScheduleNodeId = fixture.WbsNodeId,
                 wbsCode = "WBS-STR-01",
                 needByDate = DateTime.UtcNow.AddDays(21),
                 quantity = 3m,
@@ -184,7 +212,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         using var createdResponse = await SendAsync(
             HttpMethod.Post,
             $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests",
-            ValidEquipmentRequest());
+            ValidEquipmentRequest(fixture.WbsNodeId));
         var created = await ReadJsonAsync(createdResponse);
         var requestId = created.GetProperty("id").GetInt32();
         var path = $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests/{requestId}";
@@ -217,7 +245,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         using var createdResponse = await SendAsync(
             HttpMethod.Post,
             $"/api/operational-projects/{fixture.ProjectId}/construction/resource-requests",
-            ValidEquipmentRequest());
+            ValidEquipmentRequest(fixture.WbsNodeId));
         createdResponse.StatusCode.Should().Be(HttpStatusCode.Created);
         var created = await ReadJsonAsync(createdResponse);
         var requestId = created.GetProperty("id").GetInt32();
@@ -244,6 +272,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
             {
                 direction = "Downstream",
                 contractId = 1,
+                projectScheduleNodeId = fixture.WbsNodeId,
                 wbsCode = "WBS-01",
                 periodFrom = DateTime.UtcNow.Date,
                 periodTo = DateTime.UtcNow.Date,
@@ -307,6 +336,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         using var createdResponse = await SendAsync(HttpMethod.Post, path, new
         {
             templateId = references.TemplateId,
+            projectScheduleNodeId = fixture.WbsNodeId,
             wbsCode = "1.2.1",
             title = "Foundation concrete laboratory test",
             ifcReleaseId = references.ReleaseId,
@@ -327,6 +357,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
         using var invalidResponse = await SendAsync(HttpMethod.Post, path, new
         {
             templateId = references.TemplateId,
+            projectScheduleNodeId = fixture.WbsNodeId,
             wbsCode = "1.2.2",
             title = "Invalid mixed evidence",
             ifcReleaseId = references.ReleaseId,
@@ -339,7 +370,7 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
             .Should().Be(1);
     }
 
-    private async Task<(int ProjectId, int PmUserId)> CreateProjectAsync() =>
+    private async Task<(int ProjectId, int PmUserId, Guid WbsNodeId)> CreateProjectAsync() =>
         await WithDbAsync(async db =>
         {
             var pm = await db.Users.SingleAsync(x => x.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["PM"]);
@@ -363,6 +394,30 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
             };
             db.OperationalProjects.Add(project);
             await db.SaveChangesAsync();
+            var wbsNodeId = Guid.NewGuid();
+            db.ProjectScheduleNodes.Add(new ProjectScheduleNode
+            {
+                Id = wbsNodeId,
+                OperationalProjectId = project.Id,
+            });
+            db.ProjectScheduleRevisions.Add(new ProjectScheduleRevision
+            {
+                OperationalProjectId = project.Id,
+                Version = 1,
+                Status = ProjectScheduleRevisionStatus.Published,
+                CreatedByUserId = pm.Id,
+                Items =
+                [
+                    new ProjectScheduleItem
+                    {
+                        NodeId = wbsNodeId,
+                        WbsCode = "WBS-STR-01",
+                        Title = "Kết cấu bê tông cốt thép",
+                        PlannedStart = new DateOnly(2026, 1, 1),
+                        PlannedEnd = new DateOnly(2027, 1, 1),
+                    },
+                ],
+            });
             db.OperationalProjectMembers.Add(new OperationalProjectMember
             {
                 OperationalProjectId = project.Id,
@@ -373,13 +428,14 @@ public sealed class ConstructionOperationsControllerTests : IntegrationTestBase
                 UpdatedByUserId = pm.Id,
             });
             await db.SaveChangesAsync();
-            return (project.Id, pm.Id);
+            return (project.Id, pm.Id, wbsNodeId);
         });
 
-    private static object ValidEquipmentRequest() => new
+    private static object ValidEquipmentRequest(Guid wbsNodeId) => new
     {
         type = "Equipment",
-        wbsCode = "WBS-STR-01",
+        projectScheduleNodeId = wbsNodeId,
+        wbsCode = "user-entered-value",
         needByDate = DateTime.UtcNow.AddDays(14),
         quantity = 2m,
         unit = "set",

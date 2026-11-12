@@ -400,6 +400,14 @@
     "ja": "作業コード（WBS）"
   },
   {
+    "key": "scheduleUx.wbsCodeHelp",
+    "category": "construction",
+    "vi": "Hệ thống gợi ý mã theo cấp cha/con. Có thể sửa mã; mỗi phiên bản tiến độ không được có mã trùng.",
+    "en": "The system suggests a code from the parent and child levels. You may edit it; codes must be unique within each schedule version.",
+    "zh": "系统根据父子层级建议编号。可以修改，但每个进度版本内编号必须唯一。",
+    "ja": "システムが親子階層に基づいてコードを提案します。編集できますが、各工程バージョン内で一意である必要があります。"
+  },
+  {
     "key": "scheduleUx.workItem",
     "category": "construction",
     "vi": "Hạng mục / công việc",

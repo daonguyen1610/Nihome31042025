@@ -76,6 +76,19 @@ hiển thị email thực theo dự án và từng người nhận. Nếu nội 
 chưa được xác nhận. Việc xác minh email đã đến
 là trách nhiệm thủ công của người quản lý dự án.
 
+Khi thêm hạng mục vào tiến độ tổng thể, hệ thống gợi ý mã theo thứ tự trong
+cây WBS; người lập có thể sửa mã trước khi gửi duyệt. Mỗi mã phải có giá trị,
+không dài quá 80 ký tự và không trùng (không phân biệt hoa/thường) trong cùng
+revision. Việc liên kết giữa các phân hệ dùng `NodeId` ổn định, không dựa vào
+chuỗi mã WBS. Đổi mã không tạo hạng mục mới; lịch sử revision giữ lại mã cũ.
+Mã cho đầu việc phòng ban được gợi ý theo đầu việc cùng cấp và phải duy nhất
+trong gói công việc. Khi tạo yêu cầu nguồn lực, hồ sơ QA/QC hoặc đợt QS, người
+dùng chọn một mục từ tiến độ tổng thể đã phát hành; hệ thống lưu cả `NodeId`
+và mã làm thông tin hiển thị tại thời điểm lập. Bản ghi lịch sử chưa thể ghép
+duy nhất với một `NodeId` được giữ nguyên mã cũ và yêu cầu chọn mục khi sửa
+liên kết. **Open decision — NICON:** quy tắc mã WBS chuẩn và bộ mẫu WBS theo
+loại dự án vẫn chờ NICON xác nhận (D-03); hiện chưa áp mẫu bắt buộc chung.
+
 Phòng ban của lịch thiết kế chi tiết lấy trực tiếp từ nhóm vai trò RBAC đang
 hoạt động: `DepartmentCode` lưu mã nhóm (ví dụ `DESIGN`), còn `DisciplineCode`
 (không bắt buộc) lấy từ danh mục `design_discipline`. Phản hồi lịch trả kèm danh

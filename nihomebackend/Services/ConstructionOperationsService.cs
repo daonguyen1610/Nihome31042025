@@ -214,6 +214,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     public async Task<ConstructionResourceRequestResponse> CreateResourceAsync(int projectId, UpsertConstructionResourceRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+        request.WbsCode = await ResolveWbsCodeAsync(projectId, request.ProjectScheduleNodeId, null, null, false, ct);
         await ValidateResource(projectId, request, ct);
         var next = await db.ConstructionResourceRequests.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
         var item = new ConstructionResourceRequest { OperationalProjectId = projectId, Code = $"RR-{projectId:D4}-{next:D4}", CreatedByUserId = userId, LastEditedByUserId = userId };
@@ -228,6 +229,8 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         var item = await db.ConstructionResourceRequests.SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct);
         if (item is null) return null;
         EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor);
+        request.WbsCode = await ResolveWbsCodeAsync(projectId, request.ProjectScheduleNodeId,
+            item.ProjectScheduleNodeId, item.WbsCode, true, ct);
         await ValidateResource(projectId, request, ct); CrmConcurrency.Apply(db, item, request.RowVersion); Apply(item, request); item.LastEditedByUserId = userId;
         await CrmConcurrency.SaveChangesAsync(db, ct); return Map(item);
     }
@@ -311,6 +314,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     public async Task<QaQcDossierResponse> CreateDossierAsync(int projectId, CreateQaQcDossierRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+        request.WbsCode = await ResolveWbsCodeAsync(projectId, request.ProjectScheduleNodeId, null, null, false, ct);
         var template = await ValidateDossier(projectId, request, ct);
         await PinEvidenceAsync(projectId, request.Evidence.Count > 0
             ? request.Evidence.Select(x => x.ProjectDocumentId).ToList() : request.EvidenceDocumentIds, userId, ct);
@@ -324,7 +328,10 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         var item = await Dossiers().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
-        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor); var template = await ValidateDossier(projectId, request, ct);
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor);
+        request.WbsCode = await ResolveWbsCodeAsync(projectId, request.ProjectScheduleNodeId,
+            item.ProjectScheduleNodeId, item.WbsCode, true, ct);
+        var template = await ValidateDossier(projectId, request, ct);
         await PinEvidenceAsync(projectId, request.Evidence.Count > 0
             ? request.Evidence.Select(x => x.ProjectDocumentId).ToList() : request.EvidenceDocumentIds, userId, ct);
         CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request, template); item.LastEditedByUserId = userId;
@@ -386,6 +393,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     public async Task<ConstructionQsBatchResponse> CreateQsAsync(int projectId, CreateConstructionQsBatchRequest request, int userId, CancellationToken ct)
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
+        request.WbsCode = await ResolveWbsCodeAsync(projectId, request.ProjectScheduleNodeId, null, null, false, ct);
         await ValidateQs(projectId, request, ct);
         await PinEvidenceAsync(projectId, request.EvidenceDocumentIds, userId, ct);
         var next = await db.ConstructionQsBatches.CountAsync(x => x.OperationalProjectId == projectId, ct) + 1;
@@ -398,7 +406,10 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     {
         await using var tx = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct) : null;
         var item = await Qs().SingleOrDefaultAsync(x => x.OperationalProjectId == projectId && x.Id == id, ct); if (item is null) return null;
-        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor); await ValidateQs(projectId, request, ct);
+        EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor);
+        request.WbsCode = await ResolveWbsCodeAsync(projectId, request.ProjectScheduleNodeId,
+            item.ProjectScheduleNodeId, item.WbsCode, true, ct);
+        await ValidateQs(projectId, request, ct);
         await PinEvidenceAsync(projectId, request.EvidenceDocumentIds, userId, ct);
         CrmConcurrency.Apply(db, item, rowVersion); Apply(item, request); item.LastEditedByUserId = userId;
         await CrmConcurrency.SaveChangesAsync(db, ct);
@@ -479,6 +490,46 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             new ProcurementTransitionRequest { RowVersion = created.RowVersion, Reason = $"CM approval by user #{cmUserId}." },
             item.CreatedByUserId, ct);
         item.HandoffEntityType = "MaterialRequest"; item.HandoffEntityId = created.Id; item.HandoffStatus = ConstructionHandoffStatus.MaterialRequestCreated;
+    }
+
+    private async Task<string> ResolveWbsCodeAsync(
+        int projectId,
+        Guid? nodeId,
+        Guid? existingNodeId,
+        string? existingWbsCode,
+        bool allowUnlinkedLegacyRecord,
+        CancellationToken ct)
+    {
+        if (!nodeId.HasValue)
+        {
+            if (allowUnlinkedLegacyRecord && !existingNodeId.HasValue &&
+                !string.IsNullOrWhiteSpace(existingWbsCode))
+                return existingWbsCode.Trim();
+
+            throw new ConstructionOperationException(
+                "Hãy chọn một hạng mục từ tiến độ tổng thể đã phát hành của dự án.");
+        }
+
+        var latestPublishedRevisionId = await db.ProjectScheduleRevisions.AsNoTracking()
+            .Where(revision => revision.OperationalProjectId == projectId &&
+                revision.Status == ProjectScheduleRevisionStatus.Published)
+            .OrderByDescending(revision => revision.Version)
+            .Select(revision => (int?)revision.Id)
+            .FirstOrDefaultAsync(ct);
+
+        var selected = latestPublishedRevisionId.HasValue
+            ? await db.ProjectScheduleItems.AsNoTracking()
+                .Where(item => item.RevisionId == latestPublishedRevisionId.Value &&
+                    item.NodeId == nodeId.Value)
+                .Select(item => new { item.NodeId, item.WbsCode })
+                .FirstOrDefaultAsync(ct)
+            : null;
+
+        if (selected is null)
+            throw new ConstructionOperationException(
+                "Hạng mục WBS không thuộc tiến độ tổng thể đang có hiệu lực của dự án. Hãy tải lại danh sách và chọn lại.");
+
+        return selected.WbsCode.Trim();
     }
 
     private async Task ValidateResource(int projectId, UpsertConstructionResourceRequest request, CancellationToken ct)
@@ -578,7 +629,10 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
                 x.Id == correctionId && x.OperationalProjectId == projectId && x.Direction == request.Direction &&
                 x.Status == ConstructionReviewStatus.CmApproved && x.RecordState == ConstructionQsRecordState.Active, ct);
             if (predecessor is null) throw new ConstructionOperationException("Điều chỉnh QS phải tham chiếu một lô đã duyệt còn hiệu lực trong cùng dự án và cùng chiều.");
-            if (predecessor.ContractId != request.ContractId || predecessor.WbsCode != request.WbsCode.Trim())
+            var sameWbs = predecessor.ProjectScheduleNodeId.HasValue
+                ? predecessor.ProjectScheduleNodeId == request.ProjectScheduleNodeId
+                : string.Equals(predecessor.WbsCode.Trim(), request.WbsCode.Trim(), StringComparison.OrdinalIgnoreCase);
+            if (predecessor.ContractId != request.ContractId || !sameWbs)
                 throw new ConstructionOperationException("Điều chỉnh hoặc đảo QS phải giữ nguyên hợp đồng và WBS của lô trước.");
             if (await db.ConstructionQsBatches.AnyAsync(x =>
                     (x.SupersedesBatchId == correctionId || x.ReversesBatchId == correctionId) && x.IsActiveLineage, ct))
@@ -801,13 +855,14 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         }
     }
     private static void Apply(ConstructionPreparation x, UpsertConstructionPreparationRequest r, int user) { x.WbsBaselineReference = r.WbsBaselineReference.Trim(); x.ScheduleBaselineReference = r.ScheduleBaselineReference.Trim(); x.SCurveBaselineReference = r.SCurveBaselineReference.Trim(); x.BchOrganizationReference = r.BchOrganizationReference.Trim(); x.ResourcePlanReference = r.ResourcePlanReference.Trim(); x.BudgetBaselineReference = r.BudgetBaselineReference.Trim(); x.WbsBaselineDocumentId = r.WbsBaselineDocumentId; x.ScheduleBaselineDocumentId = r.ScheduleBaselineDocumentId; x.SCurveBaselineDocumentId = r.SCurveBaselineDocumentId; x.BchOrganizationDocumentId = r.BchOrganizationDocumentId; x.ResourcePlanDocumentId = r.ResourcePlanDocumentId; x.BudgetBaselineDocumentId = r.BudgetBaselineDocumentId; x.BudgetBaselineLocked = false; x.SiteHandoverRequired = r.SiteHandoverRequired; x.SiteHandoverComplete = false; x.SiteHandoverDocumentId = r.SiteHandoverDocumentId; x.MethodStatementRequired = r.MethodStatementRequired; x.MethodStatementApproved = false; x.MethodStatementDocumentId = r.MethodStatementDocumentId; x.HsePlanRequired = r.HsePlanRequired; x.HsePlanApproved = false; x.HsePlanDocumentId = r.HsePlanDocumentId; x.UpdatedAt = DateTime.UtcNow; x.UpdatedByUserId = user; }
-    private static void Apply(ConstructionResourceRequest x, UpsertConstructionResourceRequest r) { x.Type = r.Type; x.WbsCode = r.WbsCode.Trim(); x.NeedByDate = r.NeedByDate!.Value; x.Quantity = r.Quantity; x.Unit = r.Unit.Trim(); x.Reason = r.Reason.Trim(); x.ProjectBoqLineId = r.ProjectBoqLineId; x.ResponsibleSiteUserId = r.ResponsibleSiteUserId; x.AssignedProcurementUserId = r.AssignedProcurementUserId; x.UpdatedAt = DateTime.UtcNow; }
+    private static void Apply(ConstructionResourceRequest x, UpsertConstructionResourceRequest r) { x.Type = r.Type; x.ProjectScheduleNodeId = r.ProjectScheduleNodeId; x.WbsCode = r.WbsCode.Trim(); x.NeedByDate = r.NeedByDate!.Value; x.Quantity = r.Quantity; x.Unit = r.Unit.Trim(); x.Reason = r.Reason.Trim(); x.ProjectBoqLineId = r.ProjectBoqLineId; x.ResponsibleSiteUserId = r.ResponsibleSiteUserId; x.AssignedProcurementUserId = r.AssignedProcurementUserId; x.UpdatedAt = DateTime.UtcNow; }
     private static void Apply(QaQcDossier x, CreateQaQcDossierRequest r, QaQcTemplate t)
     {
         x.QaQcTemplateId = t.Id;
         x.TemplateVersion = t.Version;
         x.TemplateSnapshotJson = t.SchemaJson;
         x.IfcReleaseId = r.IfcReleaseId;
+        x.ProjectScheduleNodeId = r.ProjectScheduleNodeId;
         x.ChecklistResultsJson = r.ChecklistResultsJson;
         x.WbsCode = r.WbsCode.Trim();
         x.Title = r.Title.Trim();
@@ -828,12 +883,12 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         }
         x.UpdatedAt = DateTime.UtcNow;
     }
-    private static void Apply(ConstructionQsBatch x, CreateConstructionQsBatchRequest r) { x.Direction = r.Direction; x.ContractId = r.ContractId; x.WbsCode = r.WbsCode.Trim(); x.PeriodFrom = r.PeriodFrom!.Value; x.PeriodTo = r.PeriodTo!.Value; x.ProjectBoqRevisionId = r.ProjectBoqRevisionId; x.ContractAppendixId = r.ContractAppendixId; x.ContractPaymentMilestoneId = r.ContractPaymentMilestoneId; x.CertifiedAmount = r.CertifiedAmount; x.Description = r.Description.Trim(); x.SupersedesBatchId = r.SupersedesBatchId; x.ReversesBatchId = r.ReversesBatchId; x.AdjustmentKind = r.SupersedesBatchId is not null ? ConstructionQsAdjustmentKind.SupersedingCorrection : r.ReversesBatchId is not null ? ConstructionQsAdjustmentKind.Reversal : ConstructionQsAdjustmentKind.Original; x.IsActiveLineage = false; x.Lines.Clear(); x.Lines.AddRange(r.Lines.Select((line, i) => new ConstructionQsBatchLine { ItemCode = line.ItemCode.Trim(), Description = line.Description.Trim(), Unit = line.Unit.Trim(), Quantity = line.Quantity, UnitPrice = line.UnitPrice, Amount = line.Quantity * line.UnitPrice, SortOrder = i })); x.Evidence.Clear(); x.Evidence.AddRange(r.EvidenceDocumentIds.Select(id => new ConstructionQsBatchEvidence { ProjectDocumentId = id })); x.UpdatedAt = DateTime.UtcNow; }
+    private static void Apply(ConstructionQsBatch x, CreateConstructionQsBatchRequest r) { x.Direction = r.Direction; x.ContractId = r.ContractId; x.ProjectScheduleNodeId = r.ProjectScheduleNodeId; x.WbsCode = r.WbsCode.Trim(); x.PeriodFrom = r.PeriodFrom!.Value; x.PeriodTo = r.PeriodTo!.Value; x.ProjectBoqRevisionId = r.ProjectBoqRevisionId; x.ContractAppendixId = r.ContractAppendixId; x.ContractPaymentMilestoneId = r.ContractPaymentMilestoneId; x.CertifiedAmount = r.CertifiedAmount; x.Description = r.Description.Trim(); x.SupersedesBatchId = r.SupersedesBatchId; x.ReversesBatchId = r.ReversesBatchId; x.AdjustmentKind = r.SupersedesBatchId is not null ? ConstructionQsAdjustmentKind.SupersedingCorrection : r.ReversesBatchId is not null ? ConstructionQsAdjustmentKind.Reversal : ConstructionQsAdjustmentKind.Original; x.IsActiveLineage = false; x.Lines.Clear(); x.Lines.AddRange(r.Lines.Select((line, i) => new ConstructionQsBatchLine { ItemCode = line.ItemCode.Trim(), Description = line.Description.Trim(), Unit = line.Unit.Trim(), Quantity = line.Quantity, UnitPrice = line.UnitPrice, Amount = line.Quantity * line.UnitPrice, SortOrder = i })); x.Evidence.Clear(); x.Evidence.AddRange(r.EvidenceDocumentIds.Select(id => new ConstructionQsBatchEvidence { ProjectDocumentId = id })); x.UpdatedAt = DateTime.UtcNow; }
     private IQueryable<QaQcDossier> Dossiers() => db.QaQcDossiers.Include(x => x.Evidence);
     private IQueryable<ConstructionQsBatch> Qs() => db.ConstructionQsBatches.Include(x => x.Lines).Include(x => x.Evidence);
     private static ConstructionPreparationResponse? Map(ConstructionPreparation? x, IReadOnlyList<string>? missing = null) => x is null ? null : new(x.Id, x.OperationalProjectId, x.Version, x.Status, x.WbsBaselineReference, x.ScheduleBaselineReference, x.SCurveBaselineReference, x.BchOrganizationReference, x.ResourcePlanReference, x.BudgetBaselineReference, x.WbsBaselineDocumentId, x.ScheduleBaselineDocumentId, x.SCurveBaselineDocumentId, x.BchOrganizationDocumentId, x.ResourcePlanDocumentId, x.BudgetBaselineDocumentId, x.BudgetBaselineLocked, x.SiteHandoverRequired, x.SiteHandoverComplete, x.MethodStatementRequired, x.MethodStatementApproved, x.HsePlanRequired, x.HsePlanApproved, x.SiteHandoverDocumentId, x.MethodStatementDocumentId, x.HsePlanDocumentId, missing ?? [], x.ReadinessSnapshotJson, CrmConcurrency.Encode(x.RowVersion));
-    private static ConstructionResourceRequestResponse Map(ConstructionResourceRequest x) => new(x.Id, x.Code, x.Type, x.Status, x.WbsCode, x.NeedByDate, x.Quantity, x.Unit, x.Reason, x.ProjectBoqLineId, x.ResponsibleSiteUserId, x.AssignedProcurementUserId, x.CreatedByUserId, x.LastEditedByUserId, x.CmDecisionReason, x.HandoffEntityType, x.HandoffEntityId, x.HandoffStatus, CrmConcurrency.Encode(x.RowVersion), x.ProcurementContractId, x.SuppliedAt, x.SuppliedByUserId, x.SupplyDocumentId);
+    private static ConstructionResourceRequestResponse Map(ConstructionResourceRequest x) => new(x.Id, x.Code, x.Type, x.Status, x.WbsCode, x.NeedByDate, x.Quantity, x.Unit, x.Reason, x.ProjectBoqLineId, x.ResponsibleSiteUserId, x.AssignedProcurementUserId, x.CreatedByUserId, x.LastEditedByUserId, x.CmDecisionReason, x.HandoffEntityType, x.HandoffEntityId, x.HandoffStatus, CrmConcurrency.Encode(x.RowVersion), x.ProcurementContractId, x.SuppliedAt, x.SuppliedByUserId, x.SupplyDocumentId, x.ProjectScheduleNodeId);
     private static QaQcTemplateResponse Map(QaQcTemplate x) => new(x.Id, x.Code, x.Version, x.NameVi, x.Name, x.NameZh, x.NameJa, x.SchemaJson, x.IsPublished, CrmConcurrency.Encode(x.RowVersion));
-    private static QaQcDossierResponse? Map(QaQcDossier? x) => x is null ? null : new(x.Id, x.Code, x.QaQcTemplateId, x.TemplateVersion, x.TemplateSnapshotJson, x.IfcReleaseId, x.ChecklistResultsJson, x.WbsCode, x.Title, x.Status, x.CreatedByUserId, x.LastEditedByUserId, x.Evidence.Select(e => e.ProjectDocumentId).ToList(), x.CmDecisionReason, CrmConcurrency.Encode(x.RowVersion), x.Evidence.Select(e => new QaQcEvidenceResponse(e.ProjectDocumentId, e.EvidenceType)).ToList());
-    private static ConstructionQsBatchResponse? Map(ConstructionQsBatch? x) => x is null ? null : new(x.Id, x.Code, x.Direction, x.Status, x.ContractId, x.WbsCode, x.PeriodFrom, x.PeriodTo, x.ProjectBoqRevisionId, x.ContractAppendixId, x.ContractPaymentMilestoneId, x.CertifiedAmount, x.Description, x.CreatedByUserId, x.LastEditedByUserId, x.CmDecisionReason, x.SupersedesBatchId, x.ReversesBatchId, x.AdjustmentKind, x.RecordState, x.Lines.OrderBy(l => l.SortOrder).Select(l => new ConstructionQsBatchLineResponse(l.Id, l.ItemCode, l.Description, l.Unit, l.Quantity, l.UnitPrice, l.Amount, l.SortOrder)).ToList(), x.Evidence.Select(e => e.ProjectDocumentId).ToList(), CrmConcurrency.Encode(x.RowVersion));
+    private static QaQcDossierResponse? Map(QaQcDossier? x) => x is null ? null : new(x.Id, x.Code, x.QaQcTemplateId, x.TemplateVersion, x.TemplateSnapshotJson, x.IfcReleaseId, x.ChecklistResultsJson, x.WbsCode, x.Title, x.Status, x.CreatedByUserId, x.LastEditedByUserId, x.Evidence.Select(e => e.ProjectDocumentId).ToList(), x.CmDecisionReason, CrmConcurrency.Encode(x.RowVersion), x.Evidence.Select(e => new QaQcEvidenceResponse(e.ProjectDocumentId, e.EvidenceType)).ToList(), x.ProjectScheduleNodeId);
+    private static ConstructionQsBatchResponse? Map(ConstructionQsBatch? x) => x is null ? null : new(x.Id, x.Code, x.Direction, x.Status, x.ContractId, x.WbsCode, x.PeriodFrom, x.PeriodTo, x.ProjectBoqRevisionId, x.ContractAppendixId, x.ContractPaymentMilestoneId, x.CertifiedAmount, x.Description, x.CreatedByUserId, x.LastEditedByUserId, x.CmDecisionReason, x.SupersedesBatchId, x.ReversesBatchId, x.AdjustmentKind, x.RecordState, x.Lines.OrderBy(l => l.SortOrder).Select(l => new ConstructionQsBatchLineResponse(l.Id, l.ItemCode, l.Description, l.Unit, l.Quantity, l.UnitPrice, l.Amount, l.SortOrder)).ToList(), x.Evidence.Select(e => e.ProjectDocumentId).ToList(), CrmConcurrency.Encode(x.RowVersion), x.ProjectScheduleNodeId);
 }

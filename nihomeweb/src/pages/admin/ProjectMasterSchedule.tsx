@@ -907,16 +907,32 @@ export const ProjectMasterSchedule = ({
       return next;
     });
   const patchItem = (nodeId: string, change: Partial<DraftItem>) =>
-    setItems((current) =>
-      current.map((item) => {
-        if (item.nodeId !== nodeId) return item;
-        const updated = { ...item, ...change };
-        if (change.parentNodeId !== undefined && change.parentNodeId !== item.parentNodeId) {
-          updated.wbsCode = suggestWbsCode(current, change.parentNodeId);
-        }
-        return updated;
-      }),
-    );
+    setItems((current) => {
+      const original = current.find((item) => item.nodeId === nodeId);
+      if (!original) return current;
+
+      const updated = {
+        ...original,
+        ...change,
+      };
+      if (change.parentNodeId !== undefined && change.parentNodeId !== original.parentNodeId) {
+        updated.wbsCode = suggestWbsCode(current, change.parentNodeId);
+      }
+
+      const next = current.map((item) => (item.nodeId === nodeId ? updated : item));
+      if (updated.wbsCode === original.wbsCode) return next;
+
+      const oldPrefix = `${original.wbsCode}.`;
+      const newPrefix = `${updated.wbsCode}.`;
+      const descendants = collectDescendantIds(current, nodeId);
+      return next.map((item) => {
+        if (!descendants.has(item.nodeId) || !item.wbsCode.startsWith(oldPrefix)) return item;
+        return {
+          ...item,
+          wbsCode: `${newPrefix}${item.wbsCode.slice(oldPrefix.length)}`,
+        };
+      });
+    });
   const addChild = (parent: DraftItem) => {
     setItems((current) => {
       const child = makeDefaultItem(projectStart, projectEnd);
@@ -986,6 +1002,9 @@ export const ProjectMasterSchedule = ({
             </h3>
             <p className="text-sm text-muted-foreground">{t("scheduleUx.masterFormGuide")}</p>
             <p className="text-xs text-muted-foreground">{t("scheduleUx.constructionOrderHint")}</p>
+            <p id="schedule-wbs-help" className="text-xs text-muted-foreground">
+              {t("scheduleUx.wbsCodeHelp")}
+            </p>
           </div>
           <Button variant="ghost" size="sm" onClick={() => setEditorOpen(false)}>
             {t("scheduleUx.hideEditor")}
@@ -1067,6 +1086,13 @@ export const ProjectMasterSchedule = ({
                           }
                           maxLength={80}
                           className="w-24"
+                          aria-invalid={items.some(
+                            (candidate) =>
+                              candidate.nodeId !== item.nodeId &&
+                              candidate.wbsCode.trim().toLocaleLowerCase() ===
+                                item.wbsCode.trim().toLocaleLowerCase(),
+                          )}
+                          aria-describedby="schedule-wbs-help"
                         />
                       </div>
                     </td>

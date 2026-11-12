@@ -10,6 +10,8 @@ import { type ScopeProps, useConstructionActions } from "./constructionScope";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { ConstructionStatusBadge } from "./constructionUi";
 import { REVIEW_STATUS_TONE } from "./constructionStatus";
+import { ProjectWbsField } from "./ProjectWbsField";
+import { usePublishedProjectWbs } from "./usePublishedProjectWbs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -102,8 +104,15 @@ export function QaQcDossiersPanel({
   const [checklistItems, setChecklistItems] = useState<QaQcTemplateItem[]>([]);
   const [checklistResults, setChecklistResults] = useState<QaQcChecklistResult[]>([]);
   const [advancedResultsJson, setAdvancedResultsJson] = useState("[]");
+  const {
+    items: wbsItems,
+    loading: wbsLoading,
+    failed: wbsFailed,
+    retry: retryWbs,
+  } = usePublishedProjectWbs(projectId);
   const [form, setForm] = useState({
     templateId: "",
+    projectScheduleNodeId: "",
     wbsCode: "",
     title: "",
     ifcReleaseId: "",
@@ -177,6 +186,7 @@ export function QaQcDossiersPanel({
 
   const emptyForm = () => ({
     templateId: "",
+    projectScheduleNodeId: "",
     wbsCode: "",
     title: "",
     ifcReleaseId: "",
@@ -212,6 +222,7 @@ export function QaQcDossiersPanel({
     setEditing(row);
     setForm({
       templateId: String(row.templateId),
+      projectScheduleNodeId: row.projectScheduleNodeId ?? "",
       wbsCode: row.wbsCode,
       title: row.title,
       ifcReleaseId: row.ifcReleaseId ? String(row.ifcReleaseId) : "",
@@ -228,6 +239,14 @@ export function QaQcDossiersPanel({
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    const selectedWbs = wbsItems.find((item) => item.nodeId === form.projectScheduleNodeId);
+    const keepsLegacyWbs =
+      Boolean(editing && !editing.projectScheduleNodeId) &&
+      form.wbsCode.trim() === editing?.wbsCode.trim();
+    if (!selectedWbs && !keepsLegacyWbs) {
+      toast({ variant: "destructive", title: t("construction.common.wbsRequired") });
+      return;
+    }
     if (!form.ifcReleaseId) {
       toast({ variant: "destructive", title: t("construction.qaQc.ifcRequired") });
       return;
@@ -246,7 +265,8 @@ export function QaQcDossiersPanel({
     }
     const body = {
       templateId: Number(form.templateId),
-      wbsCode: form.wbsCode.trim(),
+      projectScheduleNodeId: form.projectScheduleNodeId || null,
+      wbsCode: selectedWbs?.wbsCode ?? editing?.wbsCode ?? "",
       title: form.title.trim(),
       ifcReleaseId: form.ifcReleaseId ? Number(form.ifcReleaseId) : null,
       checklistResultsJson: serializeQaQcChecklistResults(checklistResults),
@@ -556,26 +576,24 @@ export function QaQcDossiersPanel({
                     {t("construction.qaQc.selectTemplateHint")}
                   </p>
                 </FieldScope>
-                <div className="space-y-1.5">
-                  <Label htmlFor="qa-wbs">
-                    {t("construction.qaQc.wbsLabel")}
-                    <span className="ml-0.5 text-destructive" aria-hidden="true">
-                      *
-                    </span>
-                  </Label>
-                  <Input
-                    id="qa-wbs"
-                    required
-                    maxLength={100}
-                    placeholder="WBS-3.1-FORM"
-                    aria-describedby="qa-wbs-hint"
-                    value={form.wbsCode}
-                    onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
-                  />
-                  <p id="qa-wbs-hint" className="text-xs text-muted-foreground">
-                    {t("construction.qaQc.wbsHint")}
-                  </p>
-                </div>
+                <ProjectWbsField
+                  projectId={projectId}
+                  items={wbsItems}
+                  value={form.projectScheduleNodeId}
+                  onChange={(value) => {
+                    const selected = wbsItems.find((item) => item.nodeId === value);
+                    setForm({
+                      ...form,
+                      projectScheduleNodeId: value,
+                      wbsCode: selected?.wbsCode ?? form.wbsCode,
+                    });
+                  }}
+                  loading={wbsLoading}
+                  failed={wbsFailed}
+                  onRetry={retryWbs}
+                  legacyWbsCode={editing?.projectScheduleNodeId ? null : editing?.wbsCode}
+                  disabled={saving}
+                />
                 <div className="space-y-1.5">
                   <Label htmlFor="qa-ifc">
                     {t("construction.qaQc.ifcReleaseLabel")}

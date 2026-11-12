@@ -476,6 +476,28 @@ public sealed class ProjectScheduleService(
         tasks.AddRange(constructionTasks.Select(task => new ProjectScheduleLinkedTask(
             "công việc Thi công", $"{task.TaskCode} · {task.Name}", task.NodeId, task.PlannedStart, task.PlannedEnd)));
 
+        var resourceRequests = await db.ConstructionResourceRequests.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId && item.ProjectScheduleNodeId.HasValue)
+            .Select(item => new { item.Code, NodeId = item.ProjectScheduleNodeId!.Value })
+            .ToListAsync(ct);
+        tasks.AddRange(resourceRequests.Select(item => new ProjectScheduleLinkedTask(
+            "đề xuất nguồn lực", item.Code, item.NodeId, null, null)));
+
+        var qaQcDossiers = await db.QaQcDossiers.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId && item.ProjectScheduleNodeId.HasValue)
+            .Select(item => new { item.Code, NodeId = item.ProjectScheduleNodeId!.Value })
+            .ToListAsync(ct);
+        tasks.AddRange(qaQcDossiers.Select(item => new ProjectScheduleLinkedTask(
+            "hồ sơ QA/QC", item.Code, item.NodeId, null, null)));
+
+        var qsBatches = await db.ConstructionQsBatches.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId && item.ProjectScheduleNodeId.HasValue &&
+                item.RecordState == ConstructionQsRecordState.Active)
+            .Select(item => new { item.Code, NodeId = item.ProjectScheduleNodeId!.Value })
+            .ToListAsync(ct);
+        tasks.AddRange(qsBatches.Select(item => new ProjectScheduleLinkedTask(
+            "hồ sơ khối lượng QS", item.Code, item.NodeId, null, null)));
+
         ProjectSchedulePublicationValidator.Validate(revision, tasks);
     }
 

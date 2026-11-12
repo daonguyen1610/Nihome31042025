@@ -186,10 +186,74 @@
   {
     "key": "construction.common.wbs",
     "category": "construction",
-    "vi": "Mã WBS",
-    "en": "WBS code",
-    "zh": "WBS编码",
-    "ja": "WBSコード"
+    "vi": "Hạng mục tiến độ (WBS)",
+    "en": "Schedule item (WBS)",
+    "zh": "进度工作项（WBS）",
+    "ja": "工程項目（WBS）"
+  },
+  {
+    "key": "construction.common.chooseWbs",
+    "category": "construction",
+    "vi": "Chọn hạng mục trong tiến độ đã phát hành",
+    "en": "Choose an item from the published schedule",
+    "zh": "选择已发布进度中的工作项",
+    "ja": "公開済み工程から項目を選択"
+  },
+  {
+    "key": "construction.common.wbsRequired",
+    "category": "construction",
+    "vi": "Hãy chọn hạng mục trong tiến độ tổng thể đã phát hành của dự án.",
+    "en": "Choose an item from the project's published master schedule.",
+    "zh": "请从项目已发布的总体进度中选择工作项。",
+    "ja": "プロジェクトの公開済み全体工程から項目を選択してください。"
+  },
+  {
+    "key": "construction.common.searchWbs",
+    "category": "construction",
+    "vi": "Tìm theo mã hoặc tên hạng mục",
+    "en": "Search by item code or name",
+    "zh": "按工作项编号或名称搜索",
+    "ja": "項目コードまたは名称で検索"
+  },
+  {
+    "key": "construction.common.wbsSelectHelp",
+    "category": "construction",
+    "vi": "Chọn đúng hạng mục để hệ thống liên kết hồ sơ với tiến độ của dự án.",
+    "en": "Choose the correct item so this record stays linked to the project schedule.",
+    "zh": "选择正确的工作项，以便此记录与项目进度保持关联。",
+    "ja": "該当項目を選択すると、この記録がプロジェクト工程に紐づきます。"
+  },
+  {
+    "key": "construction.common.wbsLoadFailed",
+    "category": "construction",
+    "vi": "Không tải được tiến độ tổng thể.",
+    "en": "Could not load the master schedule.",
+    "zh": "无法加载总体进度。",
+    "ja": "全体工程を読み込めませんでした。"
+  },
+  {
+    "key": "construction.common.wbsNoPublished",
+    "category": "construction",
+    "vi": "Dự án chưa có tiến độ tổng thể được phát hành. Hãy phát hành tiến độ trước khi tạo hồ sơ.",
+    "en": "This project has no published master schedule. Publish the schedule before creating a record.",
+    "zh": "此项目尚无已发布的总体进度。请先发布进度再创建记录。",
+    "ja": "このプロジェクトには公開済みの全体工程がありません。記録を作成する前に工程を公開してください。"
+  },
+  {
+    "key": "construction.common.openMasterSchedule",
+    "category": "construction",
+    "vi": "Mở tiến độ tổng thể",
+    "en": "Open master schedule",
+    "zh": "打开总体进度",
+    "ja": "全体工程を開く"
+  },
+  {
+    "key": "construction.common.wbsLegacyUnlinked",
+    "category": "construction",
+    "vi": "Mã WBS cũ {code} chưa liên kết với hạng mục tiến độ. Hãy chọn hạng mục để cập nhật liên kết hoặc giữ nguyên mã khi chỉ sửa thông tin khác.",
+    "en": "Legacy WBS code {code} is not linked to a schedule item. Choose an item to link it, or keep the code unchanged when editing other details.",
+    "zh": "旧 WBS 编码 {code} 尚未关联进度工作项。请选择工作项建立关联；仅编辑其他信息时请保持编码不变。",
+    "ja": "旧WBSコード {code} は工程項目に紐づいていません。項目を選択して紐づけるか、他の情報だけを編集する場合はコードを変更しないでください。"
   },
   {
     "key": "construction.common.submit",
@@ -1744,10 +1808,10 @@
   {
     "key": "construction.qaQc.wbsHint",
     "category": "construction",
-    "vi": "Mã WBS của hạng mục được kiểm tra. Ví dụ: WBS-3.1-FORM.",
-    "en": "WBS code of the item being inspected. e.g. WBS-3.1-FORM.",
-    "zh": "受检项的WBS编码。例如：WBS-3.1-FORM。",
-    "ja": "検査対象のWBSコード。例：WBS-3.1-FORM。"
+    "vi": "Chọn hạng mục đã phát hành trong tiến độ tổng thể của dự án.",
+    "en": "Choose an item from the project's published master schedule.",
+    "zh": "选择项目已发布总体进度中的工作项。",
+    "ja": "プロジェクトの公開済み全体工程から項目を選択してください。"
   },
   {
     "key": "construction.qaQc.titleHint",
@@ -1808,10 +1872,10 @@
   {
     "key": "construction.qs.wbsHint",
     "category": "construction",
-    "vi": "Mã WBS của hạng mục được nghiệm thu. Ví dụ: WBS-3.2-MEP.",
-    "en": "WBS code of the accepted work item. e.g. WBS-3.2-MEP.",
-    "zh": "验收项的WBS编码。例如：WBS-3.2-MEP。",
-    "ja": "受入対象のWBSコード。例：WBS-3.2-MEP。"
+    "vi": "Chọn hạng mục đã phát hành trong tiến độ tổng thể của dự án.",
+    "en": "Choose an item from the project's published master schedule.",
+    "zh": "选择项目已发布总体进度中的工作项。",
+    "ja": "プロジェクトの公開済み全体工程から項目を選択してください。"
   },
   {
     "key": "construction.qs.descriptionHint",
@@ -1864,10 +1928,10 @@
   {
     "key": "construction.qaQc.wbsLabel",
     "category": "construction",
-    "vi": "Hạng mục công việc (mã WBS)",
-    "en": "Work item (WBS code)",
-    "zh": "工作项（WBS编码）",
-    "ja": "作業項目（WBSコード）"
+    "vi": "Hạng mục tiến độ (WBS)",
+    "en": "Schedule item (WBS)",
+    "zh": "进度工作项（WBS）",
+    "ja": "工程項目（WBS）"
   },
   {
     "key": "construction.qaQc.ifcReleaseLabel",

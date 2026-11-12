@@ -2011,8 +2011,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne<ApplicationUser>().WithMany().HasForeignKey(x => x.SuppliedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.Property(x => x.RowVersion).IsRowVersion();
             b.HasOne(x => x.OperationalProject).WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.ProjectScheduleNode).WithMany().HasForeignKey(x => x.ProjectScheduleNodeId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
             b.HasIndex(x => new { x.OperationalProjectId, x.Status });
+            b.HasIndex(x => x.ProjectScheduleNodeId);
         });
 
         modelBuilder.Entity<ConstructionResourceHandoffEvent>(b =>
@@ -2040,7 +2042,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(x => x.RowVersion).IsRowVersion(); b.HasOne(x => x.QaQcTemplate).WithMany().HasForeignKey(x => x.QaQcTemplateId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<OperationalProject>().WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<IfcRelease>().WithMany().HasForeignKey(x => x.IfcReleaseId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.ProjectScheduleNode).WithMany().HasForeignKey(x => x.ProjectScheduleNodeId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
+            b.HasIndex(x => x.ProjectScheduleNodeId);
         });
         modelBuilder.Entity<QaQcDossierEvidence>(b =>
         {
@@ -2058,6 +2062,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(x => x.WbsCode).HasMaxLength(100).IsRequired(); b.Property(x => x.CertifiedAmount).HasPrecision(18, 2);
             b.Property(x => x.Description).HasMaxLength(2000).IsRequired(); b.Property(x => x.CmDecisionReason).HasMaxLength(2000);
             b.Property(x => x.RowVersion).IsRowVersion(); b.HasOne<OperationalProject>().WithMany().HasForeignKey(x => x.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(x => x.ProjectScheduleNode).WithMany().HasForeignKey(x => x.ProjectScheduleNodeId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<Contract>().WithMany().HasForeignKey(x => x.ContractId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<ProjectBoqRevision>().WithMany().HasForeignKey(x => x.ProjectBoqRevisionId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<ContractAppendix>().WithMany().HasForeignKey(x => x.ContractAppendixId).OnDelete(DeleteBehavior.Restrict);
@@ -2065,6 +2070,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne<ConstructionQsBatch>().WithMany().HasForeignKey(x => x.SupersedesBatchId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne<ConstructionQsBatch>().WithMany().HasForeignKey(x => x.ReversesBatchId).OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(x => new { x.OperationalProjectId, x.Code }).IsUnique();
+            b.HasIndex(x => x.ProjectScheduleNodeId);
             b.HasIndex(x => x.SupersedesBatchId).IsUnique().HasFilter("[SupersedesBatchId] IS NOT NULL AND [IsActiveLineage] = CAST(1 AS bit)");
             b.HasIndex(x => x.ReversesBatchId).IsUnique().HasFilter("[ReversesBatchId] IS NOT NULL AND [IsActiveLineage] = CAST(1 AS bit)");
             b.ToTable(table => table.HasCheckConstraint("CK_construction_qs_batches_adjustment_link",

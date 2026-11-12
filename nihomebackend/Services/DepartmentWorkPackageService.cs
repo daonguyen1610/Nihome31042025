@@ -802,8 +802,9 @@ public sealed partial class DepartmentWorkPackageService(
         }
         foreach (var ccUserId in request.CcUserIds.Distinct())
             await EnsureActiveUserAsync(ccUserId, "Người CC", ct);
+        var normalizedWbsCode = request.WbsCode.Trim().ToUpper();
         if (await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(item =>
-            item.WorkPackageId == package.Id && item.WbsCode == request.WbsCode.Trim() && item.Id != taskId, ct))
+            item.WorkPackageId == package.Id && item.WbsCode.Trim().ToUpper() == normalizedWbsCode && item.Id != taskId, ct))
             throw Error("Mã WBS đã tồn tại trong nhóm công việc.");
         if (request.KpiDefinitionId.HasValue)
         {

@@ -50,6 +50,22 @@ public sealed class ProjectSchedulePublicationValidatorTests
         Assert.Contains("đã bị gỡ khỏi phiên bản tiến độ", error.Message);
     }
 
+    [Fact]
+    public void Validate_keeps_non_scheduled_construction_records_linked_to_their_wbs_node()
+    {
+        var removedNodeId = Guid.NewGuid();
+        var revision = Revision(Guid.NewGuid(), Start, End);
+        var linkedRecord = new ProjectScheduleLinkedTask(
+            "hồ sơ QA/QC", "QA-0041-0001", removedNodeId, null, null);
+
+        var error = Assert.Throws<ProjectScheduleOperationException>(
+            () => ProjectSchedulePublicationValidator.Validate(revision, [linkedRecord]));
+
+        Assert.Equal(409, error.StatusCode);
+        Assert.Contains("hồ sơ QA/QC QA-0041-0001", error.Message);
+        Assert.Contains("đã bị gỡ khỏi phiên bản tiến độ", error.Message);
+    }
+
     private static ProjectScheduleRevision Revision(Guid nodeId, DateOnly start, DateOnly end) => new()
     {
         Items =

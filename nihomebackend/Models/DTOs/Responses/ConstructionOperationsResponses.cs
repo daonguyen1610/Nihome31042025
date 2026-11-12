@@ -21,7 +21,7 @@ public sealed record ConstructionResourceRequestResponse(
     int CreatedByUserId, int LastEditedByUserId, string? CmDecisionReason,
     string? HandoffEntityType, long? HandoffEntityId, ConstructionHandoffStatus HandoffStatus,
     string RowVersion, int? ProcurementContractId = null, DateTime? SuppliedAt = null,
-    int? SuppliedByUserId = null, long? SupplyDocumentId = null);
+    int? SuppliedByUserId = null, long? SupplyDocumentId = null, Guid? ProjectScheduleNodeId = null);
 
 public sealed record ConstructionResourceReferenceDataResponse(
     IReadOnlyList<ConstructionResourceBoqLineReferenceResponse> BoqLines,
@@ -42,7 +42,7 @@ public sealed record QaQcTemplateResponse(int Id, string Code, int Version, stri
 public sealed record QaQcDossierResponse(int Id, string Code, int TemplateId, int TemplateVersion,
     string TemplateSnapshotJson, int? IfcReleaseId, string ChecklistResultsJson, string WbsCode, string Title, ConstructionReviewStatus Status,
     int CreatedByUserId, int LastEditedByUserId, IReadOnlyList<long> EvidenceDocumentIds, string? CmDecisionReason, string RowVersion,
-    IReadOnlyList<QaQcEvidenceResponse> Evidence);
+    IReadOnlyList<QaQcEvidenceResponse> Evidence, Guid? ProjectScheduleNodeId = null);
 
 public sealed record QaQcEvidenceResponse(long ProjectDocumentId, QaQcEvidenceType EvidenceType);
 
@@ -52,7 +52,7 @@ public sealed record ConstructionQsBatchResponse(int Id, string Code, Constructi
     string Description, int CreatedByUserId, int LastEditedByUserId, string? CmDecisionReason, int? SupersedesBatchId,
     int? ReversesBatchId, ConstructionQsAdjustmentKind AdjustmentKind,
     ConstructionQsRecordState RecordState, IReadOnlyList<ConstructionQsBatchLineResponse> Lines,
-    IReadOnlyList<long> EvidenceDocumentIds, string RowVersion);
+    IReadOnlyList<long> EvidenceDocumentIds, string RowVersion, Guid? ProjectScheduleNodeId = null);
 
 public sealed record ConstructionQsBatchLineResponse(int Id, string ItemCode, string Description,
     string Unit, decimal Quantity, decimal UnitPrice, decimal Amount, int SortOrder);

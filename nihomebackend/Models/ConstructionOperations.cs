@@ -52,6 +52,8 @@ public sealed class ConstructionResourceRequest : IConcurrencyTracked
     public string Code { get; set; } = string.Empty;
     public ConstructionResourceType Type { get; set; }
     public ConstructionReviewStatus Status { get; set; } = ConstructionReviewStatus.Draft;
+    public Guid? ProjectScheduleNodeId { get; set; }
+    public ProjectScheduleNode? ProjectScheduleNode { get; set; }
     public string WbsCode { get; set; } = string.Empty;
     public DateTime NeedByDate { get; set; }
     public decimal Quantity { get; set; }
@@ -124,6 +126,8 @@ public sealed class QaQcDossier : IConcurrencyTracked
     public int TemplateVersion { get; set; }
     public string TemplateSnapshotJson { get; set; } = "{}";
     public int? IfcReleaseId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
+    public ProjectScheduleNode? ProjectScheduleNode { get; set; }
     public string ChecklistResultsJson { get; set; } = "[]";
     public string WbsCode { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
@@ -159,6 +163,8 @@ public sealed class ConstructionQsBatch : IConcurrencyTracked
     public ConstructionQsDirection Direction { get; set; }
     public ConstructionReviewStatus Status { get; set; } = ConstructionReviewStatus.Draft;
     public int ContractId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
+    public ProjectScheduleNode? ProjectScheduleNode { get; set; }
     public string WbsCode { get; set; } = string.Empty;
     public DateTime PeriodFrom { get; set; }
     public DateTime PeriodTo { get; set; }

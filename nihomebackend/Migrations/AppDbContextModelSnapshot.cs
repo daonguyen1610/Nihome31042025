@@ -1225,20 +1225,11 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CrmRevisionId")
                         .HasColumnType("int");
 
-                    b.Property<string>("WeightBasisNote")
-                        .IsRequired()
-                        .HasMaxLength(1000)
-                        .HasColumnType("nvarchar(1000)");
-
-                    b.Property<string>("WorkingDaysOfWeekJson")
+                    b.Property<string>("ItemsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("NonWorkingDatesJson")
-                        .IsRequired()
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ItemsJson")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
@@ -1271,6 +1262,15 @@ namespace nihomebackend.Migrations
 
                     b.Property<int>("Version")
                         .HasColumnType("int");
+
+                    b.Property<string>("WeightBasisNote")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<string>("WorkingDaysOfWeekJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -1719,9 +1719,6 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
 
-                    b.Property<int>("LastEditedByUserId")
-                        .HasColumnType("int");
-
                     b.Property<string>("Description")
                         .IsRequired()
                         .HasMaxLength(2000)
@@ -1735,6 +1732,9 @@ namespace nihomebackend.Migrations
                     b.Property<bool>("IsActiveLineage")
                         .HasColumnType("bit");
 
+                    b.Property<int>("LastEditedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<int>("OperationalProjectId")
                         .HasColumnType("int");
 
@@ -1746,6 +1746,9 @@ namespace nihomebackend.Migrations
 
                     b.Property<int?>("ProjectBoqRevisionId")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("ProjectScheduleNodeId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<string>("RecordState")
                         .IsRequired()
@@ -1789,6 +1792,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("ContractPaymentMilestoneId");
 
                     b.HasIndex("ProjectBoqRevisionId");
+
+                    b.HasIndex("ProjectScheduleNodeId");
 
                     b.HasIndex("ReversesBatchId")
                         .IsUnique()
@@ -1937,9 +1942,6 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
 
-                    b.Property<int>("LastEditedByUserId")
-                        .HasColumnType("int");
-
                     b.Property<long?>("HandoffEntityId")
                         .HasColumnType("bigint");
 
@@ -1952,6 +1954,9 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<int>("LastEditedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("NeedByDate")
                         .HasColumnType("datetime2");
 
@@ -1963,6 +1968,9 @@ namespace nihomebackend.Migrations
 
                     b.Property<int?>("ProjectBoqLineId")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("ProjectScheduleNodeId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<decimal>("Quantity")
                         .HasPrecision(18, 6)
@@ -2020,6 +2028,8 @@ namespace nihomebackend.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ProcurementContractId");
+
+                    b.HasIndex("ProjectScheduleNodeId");
 
                     b.HasIndex("SuppliedByUserId");
 
@@ -8641,14 +8651,17 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CreatedByUserId")
                         .HasColumnType("int");
 
-                    b.Property<int>("LastEditedByUserId")
+                    b.Property<int?>("IfcReleaseId")
                         .HasColumnType("int");
 
-                    b.Property<int?>("IfcReleaseId")
+                    b.Property<int>("LastEditedByUserId")
                         .HasColumnType("int");
 
                     b.Property<int>("OperationalProjectId")
                         .HasColumnType("int");
+
+                    b.Property<Guid?>("ProjectScheduleNodeId")
+                        .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("QaQcTemplateId")
                         .HasColumnType("int");
@@ -8690,6 +8703,8 @@ namespace nihomebackend.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("IfcReleaseId");
+
+                    b.HasIndex("ProjectScheduleNodeId");
 
                     b.HasIndex("QaQcTemplateId");
 
@@ -12661,6 +12676,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("ProjectBoqRevisionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ProjectScheduleNode")
+                        .WithMany()
+                        .HasForeignKey("ProjectScheduleNodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.ConstructionQsBatch", null)
                         .WithMany()
                         .HasForeignKey("ReversesBatchId")
@@ -12670,6 +12690,8 @@ namespace nihomebackend.Migrations
                         .WithMany()
                         .HasForeignKey("SupersedesBatchId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ProjectScheduleNode");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.ConstructionQsBatchEvidence", b =>
@@ -12732,6 +12754,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("ProcurementContractId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ProjectScheduleNode")
+                        .WithMany()
+                        .HasForeignKey("ProjectScheduleNodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", null)
                         .WithMany()
                         .HasForeignKey("SuppliedByUserId")
@@ -12745,6 +12772,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("OperationalProject");
 
                     b.Navigation("ProcurementContract");
+
+                    b.Navigation("ProjectScheduleNode");
 
                     b.Navigation("SupplyDocument");
                 });
@@ -14760,11 +14789,18 @@ namespace nihomebackend.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("NihomeBackend.Models.ProjectScheduleNode", "ProjectScheduleNode")
+                        .WithMany()
+                        .HasForeignKey("ProjectScheduleNodeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.QaQcTemplate", "QaQcTemplate")
                         .WithMany()
                         .HasForeignKey("QaQcTemplateId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.Navigation("ProjectScheduleNode");
 
                     b.Navigation("QaQcTemplate");
                 });
