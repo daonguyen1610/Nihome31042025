@@ -77,6 +77,10 @@ import {
   type SiteDiaryStatus,
   type UpdateSiteDiaryRequest,
 } from "@/services/adminApi";
+import {
+  formatDate as formatDateInZone,
+  formatDateTime as formatDateTimeInZone,
+} from "@/lib/displaySettings";
 
 const DIARY_STATUSES: SiteDiaryStatus[] = ["Draft", "Submitted", "Confirmed"];
 
@@ -87,7 +91,7 @@ const todayIso = () => new Date().toISOString().slice(0, 10);
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }
@@ -96,7 +100,7 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString(lang);
+    return formatDateTimeInZone(iso, lang);
   } catch {
     return iso;
   }

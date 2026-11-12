@@ -1,6 +1,7 @@
 import type { VoDraft } from "./ContractAppendicesTab";
 import { CheckCircle2, Clock, Pencil, Play, ShieldCheck, XCircle } from "lucide-react";
 import { extractApiError } from "@/lib/apiError";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 import {
   type ContractAppendixStatus,
   type ContractPaymentMilestoneRequest,
@@ -10,6 +11,7 @@ import {
   type ContractType,
   type PaymentMilestoneStatus,
 } from "@/services/adminApi";
+import { todayIsoDate } from "@/lib/displaySettings";
 
 export const STATUS_STYLES: Record<ContractStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
@@ -36,10 +38,8 @@ export const MILESTONE_STATUS_STYLES: Record<PaymentMilestoneStatus, string> = {
 export const formatDate = (value?: string | null): string => {
   if (!value) return "—";
   const iso = value.slice(0, 10);
-  const parts = iso.split("-");
-  if (parts.length !== 3) return iso;
-  const [yyyy, mm, dd] = parts;
-  return `${dd}/${mm}/${yyyy}`;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  return formatDateInZone(iso);
 };
 
 export const formatBytes = (bytes: number | undefined | null): string => {
@@ -85,13 +85,7 @@ export interface ContractEditForm {
 
 export const toIsoDate = (value?: string | null): string => value?.slice(0, 10) ?? "";
 
-export const getLocalIsoDate = (): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+export const getLocalIsoDate = (): string => todayIsoDate();
 
 export const toIsoTimestamp = (value: string): string | null => {
   if (!value) return null;

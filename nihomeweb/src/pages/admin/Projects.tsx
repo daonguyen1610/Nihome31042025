@@ -269,7 +269,7 @@ const AdminProjects = () => {
                     <Checkbox
                       checked={selectedIds.has(p.id)}
                       onCheckedChange={(v) => toggleOne(p.id, v === true)}
-                      aria-label={`${t("common.selectAll")} · ${p.name}`}
+                      aria-label={`${t("common.selectItem")} · ${p.name}`}
                     />
                   </div>
                   <Link

@@ -18,8 +18,10 @@ import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
+  AlertTriangle,
   ArrowLeft,
   BriefcaseBusiness,
+  CalendarDays,
   CheckCircle2,
   ChevronDown,
   ClipboardList,
@@ -68,6 +70,7 @@ import { useToast } from "@/hooks/use-toast";
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { formatDate } from "@/lib/displaySettings";
 import { translateError, useI18n } from "@/lib/i18n";
 import { isValidEmail } from "@/lib/validation";
 import { cn } from "@/lib/utils";
@@ -236,6 +239,7 @@ const DepartmentWorkPackages = () => {
     TASK_FILE_EXTENSIONS,
     statusTone,
   } = useDepartmentWorkPackages();
+  const { lang } = useI18n();
   const taskWbsDuplicate = Boolean(
     taskForm.wbsCode.trim() &&
     detail?.tasks.some(
@@ -244,6 +248,10 @@ const DepartmentWorkPackages = () => {
         task.wbsCode.trim().toLocaleLowerCase() === taskForm.wbsCode.trim().toLocaleLowerCase(),
     ),
   );
+  const blockingPredecessorCodes = (task: DepartmentWorkTaskResponse) =>
+    (task.blockingPredecessorTaskIds ?? [])
+      .map((id) => detail?.tasks.find((item) => item.id === id)?.wbsCode ?? `#${id}`)
+      .join(", ");
   if (loading && packageId)
     return (
       <AdminLayout>
@@ -301,7 +309,26 @@ const DepartmentWorkPackages = () => {
                     {t(`workPackages.status.${detail.status}`)}
                   </Badge>
                   <Badge variant="secondary">{t(`workPackages.purpose.${detail.purpose}`)}</Badge>
+                  {detail.isOverdue && (
+                    <Badge
+                      className="border-rose-200 bg-rose-50 text-rose-700"
+                      variant="outline"
+                      title={t("workPackages.overdue.help")}
+                    >
+                      <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                      {(detail.overdueDays ?? 0) === 1
+                        ? t("workPackages.overdue.badgeOne")
+                        : t("workPackages.overdue.badge", { count: detail.overdueDays ?? 0 })}
+                    </Badge>
+                  )}
                 </div>
+                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
+                  <span>
+                    {t("workPackages.field.timeline")}: {formatDate(detail.plannedStart, lang)} →{" "}
+                    {formatDate(detail.plannedEnd, lang)}
+                  </span>
+                </p>
                 <p className="text-sm text-muted-foreground">
                   {detail.description || t("workPackages.noDescription")}
                 </p>
@@ -342,7 +369,15 @@ const DepartmentWorkPackages = () => {
                   </Button>
                 )}
                 {detail.canManagePackage && detail.status === "Active" && (
-                  <Button onClick={() => void transitionPackage("Completed")}>
+                  <Button
+                    onClick={() => void transitionPackage("Completed")}
+                    disabled={detail.completionBlockers.length > 0}
+                    aria-describedby={
+                      detail.completionBlockers.length > 0
+                        ? "work-package-completion-blockers"
+                        : undefined
+                    }
+                  >
                     {t("workPackages.action.completePackage")}
                   </Button>
                 )}
@@ -356,6 +391,22 @@ const DepartmentWorkPackages = () => {
                     </Button>
                   )}
               </div>
+              {detail.status === "Active" && detail.completionBlockers.length > 0 && (
+                <div
+                  id="work-package-completion-blockers"
+                  className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                >
+                  <p className="flex items-center gap-2 font-medium">
+                    <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                    {t("workPackages.blockers.title")}
+                  </p>
+                  <ul className="mt-1 list-disc space-y-0.5 pl-6">
+                    {detail.completionBlockers.map((code) => (
+                      <li key={code}>{t(`workPackages.blockers.${code}`)}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
@@ -422,7 +473,7 @@ const DepartmentWorkPackages = () => {
                           </div>
                           <p className="text-sm text-muted-foreground">
                             {offer.supplierReference} · {t("workPackages.inputPrice.validUntil")}{" "}
-                            {dateValue(offer.validUntil)}
+                            {formatDate(offer.validUntil, lang)}
                           </p>
                         </div>
                         <strong>{money(offer.grandTotal, offer.currency)}</strong>
@@ -644,7 +695,7 @@ const DepartmentWorkPackages = () => {
                     style={{ marginLeft: Math.min(depth, 3) * 12 }}
                   >
                     <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="min-w-0 space-y-1">
+                      <div className="min-w-0 space-y-1 lg:flex-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <Badge variant="outline">{task.wbsCode}</Badge>
                           <h3 className="font-medium">{task.title}</h3>
@@ -655,13 +706,32 @@ const DepartmentWorkPackages = () => {
                             <Badge variant="outline">{t("workPackages.task.aggregated")}</Badge>
                           )}
                           {task.kpiDefinitionCode && <Badge>{t("workPackages.tasks.kpi")}</Badge>}
+                          {task.isOverdue && (
+                            <Badge
+                              className="border-rose-200 bg-rose-50 text-rose-700"
+                              variant="outline"
+                              title={t("workPackages.overdue.help")}
+                            >
+                              <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                              {(task.overdueDays ?? 0) === 1
+                                ? t("workPackages.overdue.badgeOne")
+                                : t("workPackages.overdue.badge", { count: task.overdueDays ?? 0 })}
+                            </Badge>
+                          )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {task.assigneeName} · {dateValue(task.plannedStart)} →{" "}
-                          {dateValue(task.plannedEnd)}
+                          {task.assigneeName} · {formatDate(task.plannedStart, lang)} →{" "}
+                          {formatDate(task.plannedEnd, lang)}
                         </p>
+                        {(task.blockingPredecessorTaskIds ?? []).length > 0 && (
+                          <p className="text-sm text-amber-700">
+                            {t("workPackages.blockers.predecessors", {
+                              tasks: blockingPredecessorCodes(task),
+                            })}
+                          </p>
+                        )}
                       </div>
-                      <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
                         {canAssign &&
                           detail.canAssignTasks &&
                           !task.kpiDefinitionId &&
@@ -702,7 +772,16 @@ const DepartmentWorkPackages = () => {
                         {detail.status === "Active" &&
                           task.canUpdateProgress &&
                           ["Planned", "InProgress"].includes(task.status) && (
-                            <Button size="sm" onClick={() => void progressTask(task, true)}>
+                            <Button
+                              size="sm"
+                              onClick={() => void progressTask(task, true)}
+                              disabled={(task.blockingPredecessorTaskIds ?? []).length > 0}
+                              title={
+                                (task.blockingPredecessorTaskIds ?? []).length > 0
+                                  ? t("workPackages.blockers.completeTask")
+                                  : undefined
+                              }
+                            >
                               {t("workPackages.action.completeTask")}
                             </Button>
                           )}

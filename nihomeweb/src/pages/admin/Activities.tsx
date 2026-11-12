@@ -226,7 +226,7 @@ const AdminActivities = () => {
                             <Checkbox
                               checked={selectedIds.has(a.id)}
                               onCheckedChange={(v) => toggleOne(a.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${a.title}`}
+                              aria-label={`${t("common.selectItem")} · ${a.title}`}
                             />
                           </span>
                           <Link
@@ -340,7 +340,7 @@ const AdminActivities = () => {
                             <Checkbox
                               checked={selectedIds.has(a.id)}
                               onCheckedChange={(v) => toggleOne(a.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${a.title}`}
+                              aria-label={`${t("common.selectItem")} · ${a.title}`}
                             />
                           </td>
                           <td className="px-3 py-3">

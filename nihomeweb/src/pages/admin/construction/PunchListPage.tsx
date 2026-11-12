@@ -82,6 +82,8 @@ import {
   type PunchStatus,
   type UpdatePunchItemRequest,
 } from "@/services/adminApi";
+import { formatDateTime } from "@/lib/displaySettings";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const PUNCH_STATUSES: PunchStatus[] = ["Open", "InProgress", "Fixed", "Verified", "Cancelled"];
 const PUNCH_SEVERITIES: PunchSeverity[] = ["Low", "Medium", "High", "Critical"];
@@ -110,7 +112,7 @@ type ConfirmKind = "reopen" | "verify" | "delete" | null;
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }
@@ -1257,7 +1259,7 @@ export const PunchListPanel = ({
                       </div>
                       <div>
                         {detail.verifiedByName} ·{" "}
-                        {detail.verifiedAt && new Date(detail.verifiedAt).toLocaleString(lang)}
+                        {detail.verifiedAt && formatDateTime(detail.verifiedAt, lang)}
                       </div>
                     </div>
                   )}

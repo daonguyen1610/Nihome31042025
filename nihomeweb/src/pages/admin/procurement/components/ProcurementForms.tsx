@@ -92,7 +92,6 @@ export const BoqForm = ({
   setUpstreamContractId,
   upstreamContracts,
   currency,
-  setCurrency,
   lines,
   setLines,
   t,
@@ -101,7 +100,6 @@ export const BoqForm = ({
   setUpstreamContractId: (value: number) => void;
   upstreamContracts: ContractResponse[];
   currency: string;
-  setCurrency: (value: string) => void;
   lines: BoqLineDraft[];
   setLines: React.Dispatch<React.SetStateAction<BoqLineDraft[]>>;
   t: Translate;
@@ -131,12 +129,9 @@ export const BoqForm = ({
       </FieldScope>
       <div className="space-y-2">
         <Label htmlFor="boq-currency">{t("procurement.field.currency")}</Label>
-        <Input
-          id="boq-currency"
-          maxLength={3}
-          value={currency}
-          onChange={(event) => setCurrency(event.target.value.toUpperCase())}
-        />
+        <p id="boq-currency" className="pt-2 text-sm font-medium">
+          {currency}
+        </p>
       </div>
     </div>
     <div className="space-y-3">

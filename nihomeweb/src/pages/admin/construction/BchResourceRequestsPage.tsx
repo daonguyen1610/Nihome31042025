@@ -41,6 +41,7 @@ import {
   type ConstructionResourceType,
   type ConstructionResourceReferenceDataResponse,
 } from "@/services/adminApi";
+import { formatDate } from "@/lib/displaySettings";
 
 const TYPES: ConstructionResourceType[] = ["Material", "Equipment", "Labour"];
 type UserOption = PersonIdentity & { userId: number; userName: string };
@@ -295,7 +296,7 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
                   </div>
                   <div>
                     <dt className="text-muted-foreground">{t("construction.resource.needBy")}</dt>
-                    <dd>{new Date(row.needByDate).toLocaleDateString(lang)}</dd>
+                    <dd>{formatDate(row.needByDate, lang)}</dd>
                   </div>
                   <div>
                     <dt className="text-muted-foreground">{t("construction.resource.quantity")}</dt>

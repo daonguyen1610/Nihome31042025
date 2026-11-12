@@ -95,6 +95,7 @@ import {
   type InputPriceOfferResponse,
   type DepartmentWorkPackageResponse,
 } from "@/services/adminApi";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
@@ -1075,7 +1076,7 @@ const AdminQuoteDetail = () => {
           </dt>
           <dd className="flex items-center gap-1 truncate">
             <Calendar className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-            <span className="truncate">{new Date(quote.validUntil).toLocaleDateString()}</span>
+            <span className="truncate">{formatDate(quote.validUntil)}</span>
             {quote.isExpired && (
               <Badge
                 variant="outline"
@@ -1422,8 +1423,7 @@ const AdminQuoteDetail = () => {
                       </p>
                     )}
                     <p className="text-xs text-muted-foreground">
-                      {formatFileSize(document.fileSize)} ·{" "}
-                      {new Date(document.createdAt).toLocaleString()}
+                      {formatFileSize(document.fileSize)} · {formatDateTime(document.createdAt)}
                     </p>
                     {document.uploadedByName && (
                       <p className="truncate text-xs text-muted-foreground">
@@ -1503,7 +1503,7 @@ const AdminQuoteDetail = () => {
                       <div className="text-right">
                         <div className="font-medium">{formatVnd(v.grandTotal)} ₫</div>
                         <div className="text-xs text-muted-foreground">
-                          {new Date(v.capturedAt).toLocaleString()}
+                          {formatDateTime(v.capturedAt)}
                         </div>
                       </div>
                     </div>
@@ -1529,7 +1529,7 @@ const AdminQuoteDetail = () => {
                   <div className="flex flex-wrap items-center justify-between gap-1">
                     <span className="font-medium">{translateAction(l.action, t)}</span>
                     <span className="text-xs text-muted-foreground">
-                      {new Date(l.createdAt).toLocaleString()}
+                      {formatDateTime(l.createdAt)}
                     </span>
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -1774,8 +1774,7 @@ const AdminQuoteDetail = () => {
             <DialogDescription>
               {selectedVersion && (
                 <>
-                  {t("quotes.version.capturedAt")}:{" "}
-                  {new Date(selectedVersion.capturedAt).toLocaleString()}
+                  {t("quotes.version.capturedAt")}: {formatDateTime(selectedVersion.capturedAt)}
                 </>
               )}
             </DialogDescription>

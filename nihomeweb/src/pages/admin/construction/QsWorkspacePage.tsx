@@ -43,6 +43,7 @@ import {
   type ConstructionQsDirection,
   type ConstructionQsReferenceDataResponse,
 } from "@/services/adminApi";
+import { formatDate } from "@/lib/displaySettings";
 
 const emptyLine = (): ConstructionQsBatchLineRequest => ({
   itemCode: "",
@@ -403,8 +404,7 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
                   <div className="col-span-2 sm:col-span-3">
                     <dt className="text-muted-foreground">{t("construction.qs.period")}</dt>
                     <dd>
-                      {new Date(row.periodFrom).toLocaleDateString(lang)} –{" "}
-                      {new Date(row.periodTo).toLocaleDateString(lang)}
+                      {formatDate(row.periodFrom, lang)} – {formatDate(row.periodTo, lang)}
                     </dd>
                   </div>
                 </dl>

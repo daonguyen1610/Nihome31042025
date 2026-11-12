@@ -58,6 +58,7 @@ import {
   type QuoteStatus,
   type DeletionImpactResponse,
 } from "@/services/adminApi";
+import { formatDate } from "@/lib/displaySettings";
 
 // -------- Static styling --------
 
@@ -480,7 +481,7 @@ const AdminQuotes = () => {
                         <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
                       </Td>
                       <Td className="whitespace-nowrap text-muted-foreground">
-                        {new Date(r.validUntil).toLocaleDateString()}
+                        {formatDate(r.validUntil)}
                       </Td>
                       <Td>{r.ownerName ?? "—"}</Td>
                       <Td className="text-right">V{r.version}</Td>
@@ -544,7 +545,7 @@ const AdminQuotes = () => {
                   </div>
                   <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">
                     <span>
-                      {t("quotes.field.validUntil")}: {new Date(r.validUntil).toLocaleDateString()}
+                      {t("quotes.field.validUntil")}: {formatDate(r.validUntil)}
                     </span>
                     {r.ownerName && <span className="truncate">{r.ownerName}</span>}
                   </div>

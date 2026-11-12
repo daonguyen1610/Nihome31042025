@@ -53,6 +53,7 @@ import {
 import { DesignSchedulePhaseDialog } from "./DesignSchedulePhaseDialog";
 import { DesignScheduleTaskDialog } from "./DesignScheduleTaskDialog";
 import { DesignScheduleTimeline } from "./DesignScheduleTimeline";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 interface Props {
   project: DesignProjectResponse;
@@ -159,9 +160,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
 
   const formatDate = (value?: string | null) => {
     if (!value) return t("designProjects.schedule.value.none");
-    return new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" }).format(
-      new Date(`${value.slice(0, 10)}T00:00:00Z`),
-    );
+    return formatDateInZone(value, lang, { dateStyle: "medium", timeZone: "UTC" });
   };
   const departmentLabel = (code: string) => {
     const option = departments.find((item) => item.code.toLowerCase() === code.toLowerCase());

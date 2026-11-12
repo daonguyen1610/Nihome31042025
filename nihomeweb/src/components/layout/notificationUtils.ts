@@ -1,5 +1,6 @@
 import { Briefcase, Building2, Mail, Newspaper, User, Wrench } from "lucide-react";
 import type { NotificationDto } from "@/services/notificationApi";
+import { formatDate } from "@/lib/displaySettings";
 
 export function resolveCurrentLocale() {
   if (typeof document !== "undefined" && document.documentElement.lang) {
@@ -33,11 +34,7 @@ export function formatRelativeTime(value: string) {
   const diffDays = Math.floor(diffHours / 24);
   if (diffDays < 7) return relativeTimeFormatter.format(-diffDays, "day");
 
-  return new Intl.DateTimeFormat(locale, {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  }).format(date);
+  return formatDate(date, locale, { day: "2-digit", month: "2-digit", year: "numeric" });
 }
 
 export function moduleIcon(notification: NotificationDto) {

@@ -39,6 +39,8 @@ import {
   type ProjectBoqRevisionRequest,
   type ProjectBoqRevisionResponse,
 } from "@/services/adminApi";
+import { formatDateTime } from "@/lib/displaySettings";
+import { getActiveCurrency } from "@/lib/numberFormat";
 
 type BoqLineDraft = ProjectBoqRevisionRequest["lines"][number] & { draftId: string };
 
@@ -77,7 +79,7 @@ const BoqRevisionDetailPage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [decision, setDecision] = useState<boolean | null>(null);
   const [decisionReason, setDecisionReason] = useState("");
-  const [currency, setCurrency] = useState("VND");
+  const currency = getActiveCurrency();
   const [upstreamContractId, setUpstreamContractId] = useState(0);
   const [upstreamContracts, setUpstreamContracts] = useState<ContractResponse[]>([]);
   const [lines, setLines] = useState<BoqLineDraft[]>([emptyLine()]);
@@ -123,7 +125,6 @@ const BoqRevisionDetailPage = () => {
 
   const openEdit = () => {
     if (!boq) return;
-    setCurrency(boq.currency);
     setUpstreamContractId(boq.upstreamContractId ?? 0);
     setLines(
       boq.lines.map((line) => ({
@@ -246,9 +247,7 @@ const BoqRevisionDetailPage = () => {
 
   const dateTime = (value?: string | null) =>
     value
-      ? new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
-          new Date(value),
-        )
+      ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" })
       : t("procurement.boq.detail.notAvailable");
   const money = (value: number, valueCurrency: string) =>
     new Intl.NumberFormat(lang, {
@@ -584,7 +583,6 @@ const BoqRevisionDetailPage = () => {
             setUpstreamContractId={setUpstreamContractId}
             upstreamContracts={upstreamContracts}
             currency={currency}
-            setCurrency={setCurrency}
             lines={lines}
             setLines={setLines}
             t={t}
@@ -667,7 +665,6 @@ const BoqForm = ({
   setUpstreamContractId,
   upstreamContracts,
   currency,
-  setCurrency,
   lines,
   setLines,
   t,
@@ -676,7 +673,6 @@ const BoqForm = ({
   setUpstreamContractId: (value: number) => void;
   upstreamContracts: ContractResponse[];
   currency: string;
-  setCurrency: (value: string) => void;
   lines: BoqLineDraft[];
   setLines: React.Dispatch<React.SetStateAction<BoqLineDraft[]>>;
   t: Translate;
@@ -703,12 +699,9 @@ const BoqForm = ({
       </FieldScope>
       <div className="space-y-2">
         <Label htmlFor="boq-edit-currency">{t("procurement.field.currency")}</Label>
-        <Input
-          id="boq-edit-currency"
-          maxLength={3}
-          value={currency}
-          onChange={(event) => setCurrency(event.target.value.toUpperCase())}
-        />
+        <p id="boq-edit-currency" className="pt-2 text-sm font-medium">
+          {currency}
+        </p>
       </div>
     </div>
     <div className="space-y-3">

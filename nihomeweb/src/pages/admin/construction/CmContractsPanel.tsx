@@ -8,6 +8,7 @@ import { formatVnd } from "@/lib/numberFormat";
 import { collectLookupPages } from "@/lib/pagination";
 import { contractsApi } from "@/services/admin/contractsApi";
 import type { ContractResponse } from "@/services/adminApi";
+import { formatDate } from "@/lib/displaySettings";
 
 export function CmContractsPanel({ projectId }: { projectId: number }) {
   const { t, lang } = useI18n();
@@ -126,12 +127,7 @@ export function CmContractsPanel({ projectId }: { projectId: number }) {
                     <td className="p-3">{t(`contracts.direction.${row.direction}`)}</td>
                     <td className="p-3">{t(`contracts.status.${row.status}`)}</td>
                     <td className="p-3 tabular-nums">
-                      {row.signedDate
-                        ? new Date(`${row.signedDate.slice(0, 10)}T00:00:00Z`).toLocaleDateString(
-                            lang,
-                            { timeZone: "UTC" },
-                          )
-                        : "—"}
+                      {row.signedDate ? formatDate(row.signedDate, lang, { timeZone: "UTC" }) : "—"}
                     </td>
                     <td className="p-3 text-right tabular-nums">{formatVnd(row.currentValue)}</td>
                   </tr>

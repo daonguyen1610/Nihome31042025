@@ -313,7 +313,7 @@ function ProcessCard({
           <Checkbox
             checked={selected}
             onCheckedChange={(v) => onToggleSelect(v === true)}
-            aria-label={`${t("common.selectAll")} · ${p.title}`}
+            aria-label={`${t("common.selectItem")} · ${p.title}`}
           />
         </div>
         <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">

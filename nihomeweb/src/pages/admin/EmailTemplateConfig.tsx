@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import EmailTemplateEditor from "@/components/admin/EmailTemplateEditor";
+import { formatDateTime } from "@/lib/displaySettings";
 
 type TabType =
   | "cmSchedule"
@@ -125,7 +126,7 @@ const EmailTemplateConfig = () => {
     } catch {
       toast({
         title: t("common.error"),
-        description: "Không thể tải cấu hình email",
+        description: t("emailTemplate.editor.loadFailed"),
         variant: "destructive",
       });
     } finally {
@@ -520,8 +521,7 @@ const EmailTemplateConfig = () => {
                       </div>
                       <div className="text-muted-foreground">
                         {t("emailTemplate.schedule.delivery.attempts")}: {email.attemptCount}
-                        {email.lastAttemptAt &&
-                          ` · ${new Date(email.lastAttemptAt).toLocaleString()}`}
+                        {email.lastAttemptAt && ` · ${formatDateTime(email.lastAttemptAt)}`}
                       </div>
                     </div>
                     <Link

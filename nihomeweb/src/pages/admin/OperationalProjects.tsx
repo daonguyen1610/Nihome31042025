@@ -82,6 +82,8 @@ import {
   type UpdateOperationalProjectRequest,
   type UserListItemResponse,
 } from "@/services/adminApi";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
+import { formatVndWithSymbol } from "@/lib/numberFormat";
 
 const statusClass: Record<OperationalProjectStatus, string> = {
   Planning: "border-sky-200 bg-sky-50 text-sky-700",
@@ -429,17 +431,7 @@ const OperationalProjects = () => {
     }
   };
 
-  const dateFormat = useMemo(() => new Intl.DateTimeFormat(lang), [lang]);
-  const currencyFormat = useMemo(
-    () =>
-      new Intl.NumberFormat(lang, {
-        style: "currency",
-        currency: "VND",
-        maximumFractionDigits: 0,
-      }),
-    [lang],
-  );
-  const formatDate = (value?: string | null) => (value ? dateFormat.format(new Date(value)) : "—");
+  const formatDate = (value?: string | null) => (value ? formatDateInZone(value, lang) : "—");
 
   const renameProject = async () => {
     if (!detail) return;
@@ -725,7 +717,7 @@ const OperationalProjects = () => {
                             )}
                           </div>
                           <p className="shrink-0 font-semibold text-primary">
-                            {currencyFormat.format(item.amount)}
+                            {formatVndWithSymbol(item.amount)}
                           </p>
                         </div>
                         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -806,7 +798,7 @@ const OperationalProjects = () => {
                                   {t("opportunities.field.estimatedValue")}:
                                 </dt>
                                 <dd className="font-medium">
-                                  {currencyFormat.format(item.estimatedValue)}
+                                  {formatVndWithSymbol(item.estimatedValue)}
                                 </dd>
                               </div>
                               <div className="flex gap-2">
@@ -820,7 +812,7 @@ const OperationalProjects = () => {
                                   <dt className="text-muted-foreground">
                                     {t("opportunities.field.expectedCloseDate")}:
                                   </dt>
-                                  <dd>{new Date(item.expectedCloseDate).toLocaleDateString()}</dd>
+                                  <dd>{formatDate(item.expectedCloseDate)}</dd>
                                 </div>
                               )}
                               {item.ownerName && (
@@ -913,14 +905,14 @@ const OperationalProjects = () => {
                               <dt className="text-muted-foreground text-xs">
                                 {t("quotes.field.unitPrice")}
                               </dt>
-                              <dd>{currencyFormat.format(item.unitPricePerSqm)}/m²</dd>
+                              <dd>{formatVndWithSymbol(item.unitPricePerSqm)}/m²</dd>
                             </div>
                           )}
                           <div>
                             <dt className="text-muted-foreground text-xs">
                               {t("quotes.field.subtotal")}
                             </dt>
-                            <dd>{currencyFormat.format(item.subtotal)}</dd>
+                            <dd>{formatVndWithSymbol(item.subtotal)}</dd>
                           </div>
                           {item.discountPercent > 0 && (
                             <div>
@@ -941,14 +933,14 @@ const OperationalProjects = () => {
                               {t("quotes.field.grandTotal")}
                             </dt>
                             <dd className="font-semibold text-primary">
-                              {currencyFormat.format(item.grandTotal)}
+                              {formatVndWithSymbol(item.grandTotal)}
                             </dd>
                           </div>
                           <div>
                             <dt className="text-muted-foreground text-xs">
                               {t("quotes.field.validUntil")}
                             </dt>
-                            <dd>{new Date(item.validUntil).toLocaleDateString()}</dd>
+                            <dd>{formatDate(item.validUntil)}</dd>
                           </div>
                           {item.ownerName && (
                             <div>
@@ -963,7 +955,7 @@ const OperationalProjects = () => {
                               <dt className="text-muted-foreground text-xs">
                                 {t("quotes.field.submittedAt")}
                               </dt>
-                              <dd>{new Date(item.submittedAt).toLocaleDateString()}</dd>
+                              <dd>{formatDate(item.submittedAt)}</dd>
                             </div>
                           )}
                           {item.approvedAt && (
@@ -971,7 +963,7 @@ const OperationalProjects = () => {
                               <dt className="text-muted-foreground text-xs">
                                 {t("quotes.field.approvedAt")}
                               </dt>
-                              <dd>{new Date(item.approvedAt).toLocaleDateString()}</dd>
+                              <dd>{formatDate(item.approvedAt)}</dd>
                             </div>
                           )}
                           {item.sentAt && (
@@ -979,7 +971,7 @@ const OperationalProjects = () => {
                               <dt className="text-muted-foreground text-xs">
                                 {t("quotes.field.sentAt")}
                               </dt>
-                              <dd>{new Date(item.sentAt).toLocaleDateString()}</dd>
+                              <dd>{formatDate(item.sentAt)}</dd>
                             </div>
                           )}
                         </dl>
@@ -1027,10 +1019,10 @@ const OperationalProjects = () => {
                                       <td className="py-1 pr-2 text-right">{line.quantity}</td>
                                       <td className="py-1 pr-2">{line.unit}</td>
                                       <td className="py-1 pr-2 text-right">
-                                        {currencyFormat.format(line.unitPrice)}
+                                        {formatVndWithSymbol(line.unitPrice)}
                                       </td>
                                       <td className="py-1 text-right font-medium">
-                                        {currencyFormat.format(line.amount)}
+                                        {formatVndWithSymbol(line.amount)}
                                       </td>
                                     </tr>
                                   ))}
@@ -1078,7 +1070,7 @@ const OperationalProjects = () => {
                       <ContractMetric
                         icon={ArrowDownToLine}
                         label={t("operationalProjects.contractSummary.upstream")}
-                        value={currencyFormat.format(detail.contractSummary.upstreamCurrentValue)}
+                        value={formatVndWithSymbol(detail.contractSummary.upstreamCurrentValue)}
                         detail={t("operationalProjects.count.contractsWithValue", {
                           count: detail.contractSummary.upstreamContractCount,
                         })}
@@ -1086,7 +1078,7 @@ const OperationalProjects = () => {
                       <ContractMetric
                         icon={ArrowUpFromLine}
                         label={t("operationalProjects.contractSummary.downstream")}
-                        value={currencyFormat.format(detail.contractSummary.downstreamCurrentValue)}
+                        value={formatVndWithSymbol(detail.contractSummary.downstreamCurrentValue)}
                         detail={t("operationalProjects.count.contractsWithValue", {
                           count: detail.contractSummary.downstreamContractCount,
                         })}
@@ -1095,7 +1087,7 @@ const OperationalProjects = () => {
                         icon={CircleDollarSign}
                         label={t("operationalProjects.contractSummary.paid")}
                         value={`${detail.contractSummary.paymentProgressPercent}%`}
-                        detail={`${currencyFormat.format(detail.contractSummary.paidPaymentAmount)} / ${currencyFormat.format(detail.contractSummary.scheduledPaymentAmount)}`}
+                        detail={`${formatVndWithSymbol(detail.contractSummary.paidPaymentAmount)} / ${formatVndWithSymbol(detail.contractSummary.scheduledPaymentAmount)}`}
                       />
                       <ContractMetric
                         icon={ShoppingCart}
@@ -1142,7 +1134,7 @@ const OperationalProjects = () => {
                               {t("contracts.field.value")}
                             </dt>
                             <dd className="font-semibold text-primary">
-                              {currencyFormat.format(item.currentValue)}
+                              {formatVndWithSymbol(item.currentValue)}
                             </dd>
                           </div>
                           {item.signedDate && (
@@ -1150,7 +1142,7 @@ const OperationalProjects = () => {
                               <dt className="text-muted-foreground text-xs">
                                 {t("contracts.field.signedDate")}
                               </dt>
-                              <dd>{new Date(item.signedDate).toLocaleDateString()}</dd>
+                              <dd>{formatDate(item.signedDate)}</dd>
                             </div>
                           )}
                           {(item.startDate || item.endDate) && (
@@ -1159,9 +1151,9 @@ const OperationalProjects = () => {
                                 {t("contracts.field.duration")}
                               </dt>
                               <dd>
-                                {item.startDate && new Date(item.startDate).toLocaleDateString()}
+                                {item.startDate && formatDate(item.startDate)}
                                 {item.startDate && item.endDate && " - "}
-                                {item.endDate && new Date(item.endDate).toLocaleDateString()}
+                                {item.endDate && formatDate(item.endDate)}
                               </dd>
                             </div>
                           )}

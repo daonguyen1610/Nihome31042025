@@ -64,6 +64,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
+import { todayIsoDate } from "@/lib/displaySettings";
 
 // Number of days before end-date that triggers the red "ending soon" badge.
 const ENDING_SOON_DAYS = 30;
@@ -168,13 +170,7 @@ const blankMilestone = (order: number): MilestoneDraft => ({
   note: "",
 });
 
-const getLocalIsoDate = (): string => {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-};
+const getLocalIsoDate = (): string => todayIsoDate();
 
 const toIsoTimestamp = (value: string): string | null => {
   if (!value) return null;
@@ -195,7 +191,7 @@ const formatDate = (value: string | null | undefined, locale: string): string =>
   const parsed = new Date(Date.UTC(yyyy, mm - 1, dd));
   return Number.isNaN(parsed.getTime())
     ? iso
-    : new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeZone: "UTC" }).format(parsed);
+    : formatDateInZone(parsed, locale, { dateStyle: "medium", timeZone: "UTC" });
 };
 
 const getDeadlineState = (contract: ContractResponse): "overdue" | "endingSoon" | null => {

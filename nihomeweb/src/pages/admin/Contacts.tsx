@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const AdminContacts = () => {
   const { t } = useI18n();
@@ -167,7 +168,7 @@ const AdminContacts = () => {
     if (diffH < 24) return `${diffH} ${t("contacts.hoursAgo")}`;
     const diffD = Math.floor(diffH / 24);
     if (diffD < 7) return `${diffD} ${t("contacts.daysAgo")}`;
-    return d.toLocaleDateString("vi-VN");
+    return formatDateInZone(d);
   };
 
   return (
@@ -254,7 +255,7 @@ const AdminContacts = () => {
                       <Checkbox
                         checked={selectedIds.has(c.id)}
                         onCheckedChange={(v) => toggleOne(c.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${c.name}`}
+                        aria-label={`${t("common.selectItem")} · ${c.name}`}
                       />
                     </div>
                     <button

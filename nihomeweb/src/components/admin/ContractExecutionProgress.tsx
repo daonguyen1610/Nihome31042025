@@ -13,6 +13,7 @@ import {
   type ContractExecutionProgressResponse,
   type ContractProgressSource,
 } from "@/services/adminApi";
+import { formatDateTime } from "@/lib/displaySettings";
 
 export default function ContractExecutionProgress({
   contract,
@@ -191,12 +192,10 @@ export default function ContractExecutionProgress({
               </div>
               <p className="mt-4 border-t pt-3 text-xs text-muted-foreground">
                 {key("updated")}{" "}
-                {new Intl.DateTimeFormat(lang, {
+                {formatDateTime(data.calculatedAt, lang, {
                   dateStyle: "short",
                   timeStyle: "short",
-                  timeZone: "Asia/Ho_Chi_Minh",
-                }).format(new Date(data.calculatedAt))}{" "}
-                (UTC+7)
+                })}
               </p>
             </>
           )

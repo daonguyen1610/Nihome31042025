@@ -413,7 +413,7 @@ const MasterData = () => {
                           <Checkbox
                             checked={selectedIds.has(o.id)}
                             onCheckedChange={(v) => toggleOne(o.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${o.name}`}
+                            aria-label={`${t("common.selectItem")} · ${o.name}`}
                           />
                         </span>
                       )}
@@ -519,7 +519,7 @@ const MasterData = () => {
                           <Checkbox
                             checked={selectedIds.has(o.id)}
                             onCheckedChange={(v) => toggleOne(o.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${o.name}`}
+                            aria-label={`${t("common.selectItem")} · ${o.name}`}
                           />
                         </td>
                       )}

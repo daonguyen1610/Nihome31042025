@@ -17,11 +17,9 @@ import {
   type TenderStatisticsParams,
   type TenderStatisticsResponse,
 } from "@/services/adminApi";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
 
-const currentYear = () =>
-  new Intl.DateTimeFormat("en", { timeZone: "Asia/Ho_Chi_Minh", year: "numeric" }).format(
-    new Date(),
-  );
+const currentYear = () => formatDate(new Date(), "en", { year: "numeric" });
 
 interface Props {
   onInspect: (
@@ -333,12 +331,10 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
               )}
               <p className="mt-4 border-t pt-3 text-xs leading-relaxed text-muted-foreground">
                 {t("tenders.stats.currentResults")} {t("tenders.stats.updated")}{" "}
-                {new Intl.DateTimeFormat(lang, {
+                {formatDateTime(data.calculatedAt, lang, {
                   dateStyle: "short",
                   timeStyle: "short",
-                  timeZone: "Asia/Ho_Chi_Minh",
-                }).format(new Date(data.calculatedAt))}{" "}
-                (UTC+7)
+                })}
               </p>
             </>
           )

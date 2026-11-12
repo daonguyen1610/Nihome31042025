@@ -23,6 +23,7 @@ import {
   ActionButton,
 } from "./procurementShared";
 import { Translate } from "./procurementValues";
+import { formatDate } from "@/lib/displaySettings";
 
 export const BoqPanel = ({
   rows,

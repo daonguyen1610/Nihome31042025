@@ -53,6 +53,7 @@ import {
   type QaQcChecklistResultValue,
   type QaQcTemplateItem,
 } from "./qaQcChecklist";
+import { formatDate } from "@/lib/displaySettings";
 
 const evidenceTypes: QaQcEvidenceType[] = [
   "General",
@@ -617,9 +618,7 @@ export function QaQcDossiersPanel({
                       value: String(release.id),
                       label: `${release.releaseNumber} · ${release.title}`,
                       hint: `${designProjectCode}${
-                        release.releaseDate
-                          ? ` · ${new Date(release.releaseDate).toLocaleDateString(lang)}`
-                          : ""
+                        release.releaseDate ? ` · ${formatDate(release.releaseDate, lang)}` : ""
                       }`,
                     }))}
                   />

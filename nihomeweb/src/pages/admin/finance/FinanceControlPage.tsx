@@ -60,6 +60,8 @@ import {
   type UserListItemResponse,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
+import { formatDateTime } from "@/lib/displaySettings";
+import { getActiveCurrency } from "@/lib/numberFormat";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
 type CreateDialog = "payment" | "period" | "correction" | null;
@@ -97,7 +99,7 @@ const emptyPayment = () => ({
   supplierInvoiceNumber: "",
   invoiceDate: new Date().toISOString().slice(0, 10),
   invoiceAmount: 0,
-  currency: "VND",
+  currency: getActiveCurrency(),
   receivedAt: currentLocalDateTime(),
   assignedAccountantUserId: 0,
   attachments: [emptyAttachment()],
@@ -110,7 +112,7 @@ const emptyCorrection = () => ({
   reasonCode: "",
   originalValue: 0,
   correctedValue: 0,
-  currency: "VND",
+  currency: getActiveCurrency(),
   note: "",
   responsibleAccountantUserId: 0,
 });
@@ -186,10 +188,6 @@ const FinanceControlPage = () => {
   });
   const [correctionForm, setCorrectionForm] = useState(emptyCorrection);
 
-  const dateTime = useMemo(
-    () => new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }),
-    [lang],
-  );
   const money = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }), [lang]);
   const defaultTab = canViewPayments ? "payments" : canViewPeriods ? "periods" : "corrections";
 
@@ -280,7 +278,8 @@ const FinanceControlPage = () => {
       {t(`finance.status.${value}`)}
     </Badge>
   );
-  const formatDate = (value?: string | null) => (value ? dateTime.format(new Date(value)) : "-");
+  const formatDate = (value?: string | null) =>
+    value ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" }) : "-";
 
   const runMutation = async (
     operation: () => Promise<unknown>,
@@ -328,7 +327,7 @@ const FinanceControlPage = () => {
       supplierInvoiceNumber: row.supplierInvoiceNumber,
       invoiceDate: row.invoiceDate.slice(0, 10),
       invoiceAmount: row.invoiceAmount,
-      currency: row.currency,
+      currency: getActiveCurrency(),
       receivedAt: toLocalDateTime(row.receivedAt),
       assignedAccountantUserId: row.assignedAccountantUserId,
       attachments: row.attachments.map((item) => ({
@@ -1513,14 +1512,9 @@ const PaymentForm = ({
         </div>
         <div className="space-y-2">
           <Label htmlFor="finance-currency">{t("finance.field.currency")}</Label>
-          <Input
-            id="finance-currency"
-            maxLength={3}
-            value={form.currency}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
-            }
-          />
+          <p id="finance-currency" className="pt-2 text-sm font-medium">
+            {form.currency}
+          </p>
         </div>
         <div className="space-y-2">
           <Label htmlFor="finance-received">{t("finance.field.receivedAt")}</Label>
@@ -1824,14 +1818,9 @@ const CorrectionForm = ({
       </div>
       <div className="space-y-2">
         <Label htmlFor="finance-correction-currency">{t("finance.field.currency")}</Label>
-        <Input
-          id="finance-correction-currency"
-          maxLength={3}
-          value={form.currency}
-          onChange={(event) =>
-            setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
-          }
-        />
+        <p id="finance-correction-currency" className="pt-2 text-sm font-medium">
+          {form.currency}
+        </p>
       </div>
       <div className="space-y-2 sm:col-span-2">
         <Label htmlFor="finance-correction-note">{t("finance.field.note")}</Label>

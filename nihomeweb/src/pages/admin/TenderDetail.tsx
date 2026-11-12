@@ -73,6 +73,11 @@ import {
   type TenderStatus,
   type TenderTimelineEvent,
 } from "@/services/adminApi";
+import {
+  formatDate as formatDateInZone,
+  formatDateTime as formatDateTimeInZone,
+} from "@/lib/displaySettings";
+import { todayIsoDate } from "@/lib/displaySettings";
 
 // ---------------------------- shared helpers ----------------------------
 
@@ -105,7 +110,7 @@ const DEADLINE_ALERT_DAYS = 3;
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }
@@ -114,7 +119,7 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString(lang);
+    return formatDateTimeInZone(iso, lang);
   } catch {
     return iso;
   }
@@ -122,12 +127,7 @@ const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
 
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
-const todayDateInputValue = () => {
-  const now = new Date();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${month}-${day}`;
-};
+const todayDateInputValue = () => todayIsoDate();
 
 /** Whole days until (or since, negative) the ISO deadline. */
 const daysUntil = (iso: string): number => {

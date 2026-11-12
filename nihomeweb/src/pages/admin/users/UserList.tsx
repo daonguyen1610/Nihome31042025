@@ -378,7 +378,7 @@ export default function UserList() {
                               className="mt-1"
                               checked={selectedIds.has(user.id)}
                               onCheckedChange={(v) => toggleOne(user.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${user.fullName ?? user.phoneNumber}`}
+                              aria-label={`${t("common.selectItem")} · ${user.fullName ?? user.phoneNumber}`}
                             />
                           </div>
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
@@ -520,7 +520,7 @@ export default function UserList() {
                               <Checkbox
                                 checked={selectedIds.has(user.id)}
                                 onCheckedChange={(v) => toggleOne(user.id, v === true)}
-                                aria-label={`${t("common.selectAll")} · ${user.fullName ?? user.phoneNumber}`}
+                                aria-label={`${t("common.selectItem")} · ${user.fullName ?? user.phoneNumber}`}
                               />
                             </td>
                             <td className="px-3 py-3">

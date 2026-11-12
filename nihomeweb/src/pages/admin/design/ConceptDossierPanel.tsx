@@ -26,6 +26,7 @@ import {
   type DesignReviewResponse,
   type ProjectDocumentResponse,
 } from "@/services/adminApi";
+import { formatDateTime } from "@/lib/displaySettings";
 
 const kinds: ConceptArtifactKind[] = [
   "Model3D",
@@ -628,7 +629,7 @@ export const ConceptDossierPanel = ({
                     <p className="mt-1 break-words text-muted-foreground">
                       {item.channel} ·{" "}
                       <time dateTime={item.occurredAt}>
-                        {new Date(item.occurredAt).toLocaleString(lang)}
+                        {formatDateTime(item.occurredAt, lang)}
                       </time>
                     </p>
                   </div>

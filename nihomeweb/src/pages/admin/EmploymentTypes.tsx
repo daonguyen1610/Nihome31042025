@@ -554,7 +554,7 @@ const EmploymentTypes = () => {
                         className="mt-1 shrink-0"
                         checked={empSelectedIds.has(item.id)}
                         onCheckedChange={(v) => empToggleOne(item.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${item.name}`}
+                        aria-label={`${t("common.selectItem")} · ${item.name}`}
                       />
                       <div className="min-w-0">
                         <h3 className="break-words text-sm font-semibold leading-tight">
@@ -605,7 +605,7 @@ const EmploymentTypes = () => {
                         className="mt-1 shrink-0"
                         checked={dropSelectedIds.has(item.id)}
                         onCheckedChange={(v) => dropToggleOne(item.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${item.name}`}
+                        aria-label={`${t("common.selectItem")} · ${item.name}`}
                       />
                       <div className="min-w-0">
                         <h3 className="break-words text-sm font-semibold leading-tight">
@@ -711,7 +711,7 @@ const EmploymentTypes = () => {
                         <Checkbox
                           checked={empSelectedIds.has(item.id)}
                           onCheckedChange={(v) => empToggleOne(item.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${item.name}`}
+                          aria-label={`${t("common.selectItem")} · ${item.name}`}
                         />
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{item.code}</td>
@@ -748,7 +748,7 @@ const EmploymentTypes = () => {
                         <Checkbox
                           checked={dropSelectedIds.has(item.id)}
                           onCheckedChange={(v) => dropToggleOne(item.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${item.name}`}
+                          aria-label={`${t("common.selectItem")} · ${item.name}`}
                         />
                       </td>
                       <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{item.code}</td>

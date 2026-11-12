@@ -79,6 +79,10 @@ import {
   type UpdateHandoverRecordRequest,
   type UserListItemResponse,
 } from "@/services/adminApi";
+import {
+  formatDate as formatDateInZone,
+  formatDateTime as formatDateTimeInZone,
+} from "@/lib/displaySettings";
 
 const HANDOVER_STATUSES: HandoverStatus[] = [
   "Draft",
@@ -121,13 +125,13 @@ const emptyForm = (): HandoverFormState => ({
 const formatDate = (value: string | null | undefined, fallback: string) => {
   if (!value) return fallback;
   const date = new Date(`${value}T00:00:00`);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleDateString();
+  return Number.isNaN(date.getTime()) ? value : formatDateInZone(value);
 };
 
 const formatDateTime = (value: string | null | undefined, fallback: string) => {
   if (!value) return fallback;
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+  return Number.isNaN(date.getTime()) ? value : formatDateTimeInZone(value);
 };
 
 export function HandoverRecordsPanel({

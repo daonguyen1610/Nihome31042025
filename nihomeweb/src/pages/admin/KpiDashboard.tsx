@@ -53,6 +53,7 @@ import {
   type KpiScoreStatus,
   type KpiUserOptionResponse,
 } from "@/services/adminApi";
+import { todayIsoDate } from "@/lib/displaySettings";
 
 const statusStyle: Record<KpiScoreStatus, string> = {
   Available: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -74,18 +75,14 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
   const canManage = has(ADMIN_PERMS.kpiManage);
   const canViewAll = has(ADMIN_PERMS.kpiViewAll);
   const canExport = has(ADMIN_PERMS.kpiExport);
-  const now = new Date();
+  const [todayYear, todayMonth] = todayIsoDate().split("-").map(Number);
   const queryYear = Number(searchParams.get("year"));
   const queryMonth = Number(searchParams.get("month"));
   const [year, setYear] = useState(
-    Number.isInteger(queryYear) && queryYear >= 2020 && queryYear <= 2100
-      ? queryYear
-      : now.getFullYear(),
+    Number.isInteger(queryYear) && queryYear >= 2020 && queryYear <= 2100 ? queryYear : todayYear,
   );
   const [month, setMonth] = useState(
-    Number.isInteger(queryMonth) && queryMonth >= 1 && queryMonth <= 12
-      ? queryMonth
-      : now.getMonth() + 1,
+    Number.isInteger(queryMonth) && queryMonth >= 1 && queryMonth <= 12 ? queryMonth : todayMonth,
   );
   const [userId, setUserId] = useState(currentUser?.userId ?? 0);
   const [users, setUsers] = useState<KpiUserOptionResponse[]>([]);

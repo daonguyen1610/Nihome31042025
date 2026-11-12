@@ -27,6 +27,10 @@ import { OperationalProjectTeamPanel } from "./design/DesignProjectTeamTab";
 import { DesignProjectDocumentsTab } from "./design/DesignProjectDocumentsTab";
 import { DesignScheduleTab } from "./design/DesignScheduleTab";
 import { DesignReviewsTab } from "./design/DesignReviewsTab";
+import {
+  formatDate as formatDateInZone,
+  formatDateTime as formatDateTimeInZone,
+} from "@/lib/displaySettings";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-sky-200 bg-sky-50 text-sky-700",
@@ -47,7 +51,7 @@ const STAGE_ORDER: DesignProjectStage[] = ["Concept", "BasicDesign", "ShopDrawin
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }
@@ -56,8 +60,7 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 const formatDateTime = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    const d = new Date(iso);
-    return `${d.toLocaleTimeString(lang, { hour: "2-digit", minute: "2-digit", second: "2-digit" })} ${d.toLocaleDateString(lang)}`;
+    return formatDateTimeInZone(iso, lang);
   } catch {
     return iso;
   }

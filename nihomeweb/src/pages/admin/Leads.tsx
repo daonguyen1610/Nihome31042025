@@ -48,6 +48,8 @@ import {
   type CustomerDuplicateDetail,
   type DeletionImpactResponse,
 } from "@/services/adminApi";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatTime } from "@/lib/displaySettings";
 
 const STATUSES: LeadStatus[] = [
   "New",
@@ -677,9 +679,7 @@ const AdminLeads = () => {
                     </div>
                     <div>
                       <dt className="text-muted-foreground">{t("leads.field.createdAt")}</dt>
-                      <dd className="font-medium">
-                        {new Date(lead.createdAt).toLocaleDateString()}
-                      </dd>
+                      <dd className="font-medium">{formatDate(lead.createdAt)}</dd>
                     </div>
                     {canSeeAll && lead.ownerName && (
                       <div className="col-span-2">
@@ -781,9 +781,9 @@ const AdminLeads = () => {
                         </td>
                       )}
                       <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                        <div>{new Date(lead.createdAt).toLocaleDateString()}</div>
+                        <div>{formatDate(lead.createdAt)}</div>
                         <div className="text-[11px] opacity-70">
-                          {new Date(lead.createdAt).toLocaleTimeString([], {
+                          {formatTime(lead.createdAt, lang, {
                             hour: "2-digit",
                             minute: "2-digit",
                           })}
@@ -1101,7 +1101,7 @@ const AdminLeads = () => {
                     <div className="text-xs text-muted-foreground">
                       {t("leads.field.createdAt")}
                     </div>
-                    <div>{new Date(detail.createdAt).toLocaleString()}</div>
+                    <div>{formatDateTime(detail.createdAt)}</div>
                   </div>
                   {detail.note && (
                     <div className="col-span-2">

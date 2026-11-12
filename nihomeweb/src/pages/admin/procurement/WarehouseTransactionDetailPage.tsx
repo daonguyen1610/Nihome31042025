@@ -42,6 +42,7 @@ import {
   type WarehouseStockItemResponse,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
+import { formatDateTime } from "@/lib/displaySettings";
 
 type WarehouseKind = "receipt" | "issue";
 type WarehouseDetail = WarehouseReceiptDetailResponse | WarehouseIssueDetailResponse;
@@ -156,9 +157,7 @@ const WarehouseTransactionDetailPage = () => {
   const number = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }), [lang]);
   const dateTime = (value?: string | null) =>
     value
-      ? new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
-          new Date(value),
-        )
+      ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" })
       : t("procurement.request.detail.notAvailable");
   const isReceipt = kind === "receipt";
   const receipt = isReceipt ? (record as WarehouseReceiptDetailResponse | null) : null;

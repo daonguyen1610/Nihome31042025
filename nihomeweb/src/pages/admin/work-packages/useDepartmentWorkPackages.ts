@@ -30,6 +30,7 @@ import {
   Users,
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
+import { getActiveCurrency } from "@/lib/numberFormat";
 import type { WorkPackageApprovalPreview, DeletionImpactResponse } from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -294,7 +295,7 @@ export function useDepartmentWorkPackages() {
   const [priceForm, setPriceForm] = useState<UpsertInputPriceOfferRequest>({
     vendorId: 0,
     supplierReference: "",
-    currency: "VND",
+    currency: getActiveCurrency(),
     validUntil: "",
     note: "",
     lines: [newPriceLine()],
@@ -1127,7 +1128,7 @@ export function useDepartmentWorkPackages() {
     setPriceForm({
       vendorId: 0,
       supplierReference: "",
-      currency: "VND",
+      currency: getActiveCurrency(),
       validUntil: "",
       note: "",
       lines: [newPriceLine()],
@@ -1143,7 +1144,7 @@ export function useDepartmentWorkPackages() {
     setPriceForm({
       vendorId: offer.vendorId,
       supplierReference: offer.supplierReference,
-      currency: offer.currency,
+      currency: getActiveCurrency(),
       validUntil: dateValue(offer.validUntil),
       note: offer.note ?? "",
       lines: offer.lines.map((line) => ({

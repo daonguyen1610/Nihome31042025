@@ -1,10 +1,36 @@
 /**
  * Locale-aware number formatters shared across admin pages. Kept in one place
- * so VND / percent / date formatting stays consistent — swap once here and
+ * so money / percent / date formatting stays consistent — swap once here and
  * every table + card + dialog picks it up.
+ *
+ * The active currency comes from the global display settings (admin
+ * configuration) and is applied to every money value. It can only be changed
+ * through those settings; no page may hard-code a currency.
  */
 
+export type CurrencyCode = "VND" | "USD";
+
+let activeCurrency: CurrencyCode = "VND";
+
+/** Set the system-wide currency. Unknown values fall back to VND. */
+export function setActiveCurrency(code: string | null | undefined): void {
+  activeCurrency = (code ?? "").trim().toUpperCase() === "USD" ? "USD" : "VND";
+}
+
+export function getActiveCurrency(): CurrencyCode {
+  return activeCurrency;
+}
+
+/** Symbol used next to money inputs and totals for the active currency. */
+export function currencySymbol(code: CurrencyCode = activeCurrency): string {
+  return code === "USD" ? "$" : "₫";
+}
+
 const vndFormatter = new Intl.NumberFormat("vi-VN");
+const usdFormatter = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 2,
+  maximumFractionDigits: 2,
+});
 
 function formatDecimalString(value: string): string | null {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
@@ -27,17 +53,25 @@ function formatDecimalString(value: string): string | null {
   return fraction ? `${formattedInteger},${fraction}` : formattedInteger;
 }
 
-/** Format a VND amount without losing decimal-string precision. */
+function formatUsd(value: number | string | null | undefined): string {
+  if (value == null) return "—";
+  const numeric = typeof value === "string" ? Number(value) : value;
+  return Number.isFinite(numeric) ? usdFormatter.format(numeric) : "—";
+}
+
+/** Format a money amount in the system-wide currency (VND by default). */
 export function formatVnd(value: number | string | null | undefined): string {
+  if (activeCurrency === "USD") return formatUsd(value);
   if (value == null || (typeof value === "number" && Number.isNaN(value))) return "—";
   if (typeof value === "string") return formatDecimalString(value) ?? "—";
   return vndFormatter.format(value);
 }
 
-/** Format an integer VND amount as "1.234.567 ₫" for headings / totals. */
+/** Format a money amount with the currency symbol, e.g. "1.234.567 ₫" or "$1,234.56". */
 export function formatVndWithSymbol(value: number | string | null | undefined): string {
   const formatted = formatVnd(value);
-  return formatted === "—" ? formatted : `${formatted} ₫`;
+  if (formatted === "—") return formatted;
+  return activeCurrency === "USD" ? `$${formatted}` : `${formatted} ₫`;
 }
 
 export function formatFileSize(bytes: number): string {

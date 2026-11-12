@@ -78,6 +78,7 @@ import {
   type UpsertOperationalProjectAssignmentRequest,
   type UpsertOperationalProjectMemberRequest,
 } from "@/services/adminApi";
+import { formatDateTime, formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 interface Props {
   operationalProjectId?: number | null;
@@ -268,9 +269,10 @@ export const ProjectTeamHistory = ({
                 )}
               </div>
               <span className="shrink-0 text-xs text-muted-foreground">
-                {new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
-                  new Date(item.changedAt),
-                )}
+                {formatDateTime(item.changedAt, lang, {
+                  dateStyle: "medium",
+                  timeStyle: "short",
+                })}
               </span>
             </li>
           ))}
@@ -544,9 +546,7 @@ const AssignmentComments = ({
   };
 
   const formatWhen = (value: string) =>
-    new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
-      new Date(value),
-    );
+    formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" });
 
   return (
     <div className="mt-2">
@@ -821,10 +821,11 @@ export const OperationalProjectTeamPanel = ({
   }, [activeMembers, candidates]);
   const formatDate = (value?: string | null, withTime = false) => {
     if (!value) return t("designProjects.team.value.none");
-    return new Intl.DateTimeFormat(
+    return formatDateInZone(
+      value,
       lang,
       withTime ? { dateStyle: "medium", timeStyle: "short" } : { dateStyle: "medium" },
-    ).format(new Date(value));
+    );
   };
   const roleLabel = (code: string, scope?: string, scopeValue?: string | null) =>
     code === "ProjectManager" && scope === "Module" && scopeValue === "Design"

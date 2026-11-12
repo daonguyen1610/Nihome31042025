@@ -84,6 +84,10 @@ import {
   type DesignProjectListItemResponse,
   type UpdateAcceptanceRecordRequest,
 } from "@/services/adminApi";
+import {
+  formatDate as formatDateInZone,
+  formatDateTime as formatDateTimeInZone,
+} from "@/lib/displaySettings";
 
 const ACCEPTANCE_STATUSES: AcceptanceStatus[] = [
   "Draft",
@@ -127,14 +131,14 @@ const formatDate = (iso: string | null | undefined) => {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleDateString();
+  return formatDateInZone(d);
 };
 
 const formatDateTime = (iso: string | null | undefined) => {
   if (!iso) return "—";
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return iso;
-  return d.toLocaleString();
+  return formatDateTimeInZone(d);
 };
 
 export function AcceptanceRecordsPanel({

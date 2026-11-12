@@ -56,6 +56,7 @@ import {
   type MasterDataOption,
   type UpsertCapabilityDocumentRequest,
 } from "@/services/adminApi";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const ALL_VALUE = "__all__";
 
@@ -82,7 +83,7 @@ const formatBytes = (n: number) => {
 const formatDate = (iso?: string | null, lang: string = "vi") => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }
@@ -712,7 +713,7 @@ const CapabilityDocuments = () => {
                     <div className="min-w-0 flex-1">
                       <button
                         type="button"
-                        className="min-h-11 break-words text-left text-sm font-semibold leading-tight text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        className="min-h-11 break-words text-left text-sm font-semibold leading-tight text-foreground hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         onClick={() => setPreviewRow(r)}
                       >
                         {r.name}
@@ -797,7 +798,7 @@ const CapabilityDocuments = () => {
                       <td className="min-w-[240px] px-3 py-2">
                         <button
                           type="button"
-                          className="min-h-11 text-left font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          className="min-h-11 text-left font-medium text-foreground hover:text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                           onClick={() => setPreviewRow(r)}
                         >
                           {r.name}

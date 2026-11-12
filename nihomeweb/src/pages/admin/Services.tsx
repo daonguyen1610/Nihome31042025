@@ -640,7 +640,7 @@ const AdminServices = () => {
                         <Checkbox
                           checked={selectedIds.has(s.id)}
                           onCheckedChange={(v) => toggleOne(s.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${s.title}`}
+                          aria-label={`${t("common.selectItem")} · ${s.title}`}
                         />
                       </span>
                       <div className="min-w-0">
@@ -741,7 +741,7 @@ const AdminServices = () => {
                         <Checkbox
                           checked={selectedIds.has(s.id)}
                           onCheckedChange={(v) => toggleOne(s.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${s.title}`}
+                          aria-label={`${t("common.selectItem")} · ${s.title}`}
                         />
                       </td>
                       <td className="whitespace-nowrap px-3 py-3">

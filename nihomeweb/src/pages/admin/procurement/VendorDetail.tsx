@@ -29,6 +29,7 @@ import {
   type VendorResponse,
 } from "@/services/adminApi";
 import VendorForm from "./VendorForm";
+import { formatDateTime } from "@/lib/displaySettings";
 
 export default function VendorDetail() {
   const uiError = useUiError();
@@ -295,15 +296,9 @@ export default function VendorDetail() {
               <h2 className="text-lg font-semibold">{t("proc.vendors.section.history")}</h2>
               <dl className="grid gap-5 rounded-md border bg-card p-5 sm:grid-cols-2 lg:grid-cols-4">
                 {value(t("proc.vendors.field.createdBy"), vendor.createdByName)}
-                {value(
-                  t("proc.vendors.field.createdAt"),
-                  new Date(vendor.createdAt).toLocaleString(),
-                )}
+                {value(t("proc.vendors.field.createdAt"), formatDateTime(vendor.createdAt))}
                 {value(t("proc.vendors.field.updatedBy"), vendor.updatedByName)}
-                {value(
-                  t("proc.vendors.field.updatedAt"),
-                  new Date(vendor.updatedAt).toLocaleString(),
-                )}
+                {value(t("proc.vendors.field.updatedAt"), formatDateTime(vendor.updatedAt))}
               </dl>
               <div className="divide-y rounded-md border">
                 {vendor.history.map((item) => (
@@ -311,7 +306,7 @@ export default function VendorDetail() {
                     <div className="flex flex-wrap justify-between gap-2">
                       <span className="font-medium">{item.actorName || t("common.noData")}</span>
                       <time className="text-muted-foreground">
-                        {new Date(item.createdAt).toLocaleString()}
+                        {formatDateTime(item.createdAt)}
                       </time>
                     </div>
                     <p className="mt-1 text-muted-foreground">

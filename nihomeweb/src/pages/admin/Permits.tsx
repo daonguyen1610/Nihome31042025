@@ -81,6 +81,7 @@ import {
   type PermitStatus,
   type UpdatePermitChecklistItemRequest,
 } from "@/services/adminApi";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 // ------------------------------- helpers -------------------------------
 
@@ -98,7 +99,7 @@ const STATUS_BADGE: Record<PermitStatus, string> = {
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }
@@ -1276,11 +1277,11 @@ const AdminPermits = () => {
                     <div>
                       <h3 className="text-sm font-semibold">{t("workPackages.tasks.title")}</h3>
                       <p className="text-xs text-muted-foreground">
-                        {viewTask.wbsCode} Â· {viewTask.title}
+                        {viewTask.wbsCode} · {viewTask.title}
                       </p>
                     </div>
                     <Badge variant="outline">
-                      {viewTask.status} Â· {viewTask.progressPercent}%
+                      {viewTask.status} · {viewTask.progressPercent}%
                     </Badge>
                   </div>
                   {viewTask.canUpdateProgress &&

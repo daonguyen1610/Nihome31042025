@@ -75,6 +75,7 @@ import {
   type QuoteListItemResponse,
   type UpdateOpportunityRequest,
 } from "@/services/adminApi";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
 const SIGNED_CONTRACT_REQUIRED_CODE = "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED";
@@ -958,9 +959,7 @@ const AdminOpportunities = () => {
                                 aria-label={t("opportunities.overdue")}
                               />
                             )}
-                            {o.expectedCloseDate
-                              ? new Date(o.expectedCloseDate).toLocaleDateString()
-                              : "—"}
+                            {o.expectedCloseDate ? formatDate(o.expectedCloseDate) : "—"}
                           </dd>
                         </div>
                         {canSeeAll && (
@@ -1067,7 +1066,7 @@ const AdminOpportunities = () => {
                                   aria-label={t("opportunities.overdue")}
                                 />
                               )}
-                              {new Date(o.expectedCloseDate).toLocaleDateString()}
+                              {formatDate(o.expectedCloseDate)}
                             </span>
                           ) : (
                             <span className="text-muted-foreground">—</span>
@@ -1187,7 +1186,7 @@ const AdminOpportunities = () => {
                               className={`mt-1 text-[11px] flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}
                             >
                               {overdue && <AlertTriangle className="h-3 w-3" />}
-                              {new Date(o.expectedCloseDate).toLocaleDateString()}
+                              {formatDate(o.expectedCloseDate)}
                               {overdue && (
                                 <span className="font-medium">· {t("opportunities.overdue")}</span>
                               )}
@@ -1664,29 +1663,27 @@ const AdminOpportunities = () => {
                             {t("opportunities.field.expectedCloseDate")}
                           </div>
                           <div>
-                            {detail.expectedCloseDate
-                              ? new Date(detail.expectedCloseDate).toLocaleDateString()
-                              : "—"}
+                            {detail.expectedCloseDate ? formatDate(detail.expectedCloseDate) : "—"}
                           </div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">
                             {t("opportunities.field.createdAt")}
                           </div>
-                          <div>{new Date(detail.createdAt).toLocaleString()}</div>
+                          <div>{formatDateTime(detail.createdAt)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">
                             {t("opportunities.field.updatedAt")}
                           </div>
-                          <div>{new Date(detail.updatedAt).toLocaleString()}</div>
+                          <div>{formatDateTime(detail.updatedAt)}</div>
                         </div>
                         {detail.closedAt && (
                           <div>
                             <div className="text-xs text-muted-foreground">
                               {t("opportunities.field.closedAt")}
                             </div>
-                            <div>{new Date(detail.closedAt).toLocaleString()}</div>
+                            <div>{formatDateTime(detail.closedAt)}</div>
                           </div>
                         )}
                         {detail.stage === "Won" && (detail.wonQuoteId || detail.wonTenderId) && (
@@ -2088,7 +2085,7 @@ const AdminOpportunities = () => {
                               <Badge variant="outline">
                                 {t(`opportunities.activity.type.${a.type}`)}
                               </Badge>
-                              <span>{new Date(a.occurredAt).toLocaleString()}</span>
+                              <span>{formatDateTime(a.occurredAt)}</span>
                               {a.createdByName && <span>· {a.createdByName}</span>}
                             </div>
                             <div className="mt-1 whitespace-pre-wrap">{a.content}</div>
@@ -2124,7 +2121,7 @@ const AdminOpportunities = () => {
                                         ? t("opportunities.audit.actionDelete")
                                         : a.action}
                               </Badge>
-                              <span>{new Date(a.createdAt).toLocaleString()}</span>
+                              <span>{formatDateTime(a.createdAt)}</span>
                               {a.actorName && <span>· {a.actorName}</span>}
                               {a.status !== "success" && (
                                 <Badge variant="destructive">{a.status}</Badge>

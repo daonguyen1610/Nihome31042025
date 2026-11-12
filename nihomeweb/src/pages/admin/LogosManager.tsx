@@ -405,7 +405,7 @@ const LogosManager = ({ kind, titleKey }: { kind: Kind; titleKey: string }) => {
                     <Checkbox
                       checked={selectedIds.has(item.id)}
                       onCheckedChange={(v) => toggleOne(item.id, v === true)}
-                      aria-label={`${t("common.selectAll")} · ${item.name}`}
+                      aria-label={`${t("common.selectItem")} · ${item.name}`}
                     />
                   </div>
                   <div className={imageFrameClassName}>

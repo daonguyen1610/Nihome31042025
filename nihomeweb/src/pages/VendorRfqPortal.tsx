@@ -11,6 +11,8 @@ import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { calculateRfqCommercialPreview } from "@/lib/rfqCommercial";
 import { rfqApi, saveRfqDownload, type VendorPortalRfq } from "@/services/rfqApi";
+import { formatDateTime } from "@/lib/displaySettings";
+import { getActiveCurrency } from "@/lib/numberFormat";
 
 export default function VendorRfqPortal() {
   const uiError = useUiError();
@@ -29,8 +31,7 @@ export default function VendorRfqPortal() {
     validUntil: string;
   } | null>(null);
   const [prices, setPrices] = useState<Record<number, string>>({});
-  const [currency, setCurrency] = useState("VND");
-  const [exchangeRate, setExchangeRate] = useState("1");
+  const currency = getActiveCurrency();
   const [leadTime, setLeadTime] = useState("0");
   const [paymentTerms, setPaymentTerms] = useState("");
   const [validUntil, setValidUntil] = useState("");
@@ -75,9 +76,6 @@ export default function VendorRfqPortal() {
       !lines.length ||
       !paymentTerms.trim() ||
       new Date(validUntil).getTime() < new Date(rfq.dueAt).getTime() ||
-      !/^[A-Z]{3}$/.test(currency) ||
-      Number(exchangeRate) <= 0 ||
-      (currency === "VND" && Number(exchangeRate) !== 1) ||
       (Number(discountPercent) > 0 && Number(discountAmount) > 0)
     ) {
       setError(t("rfq.portal.validation"));
@@ -92,7 +90,7 @@ export default function VendorRfqPortal() {
       discountPercent,
       discountAmount,
       vatPercent,
-      exchangeRate,
+      "1",
     );
     try {
       await rfqApi.portalBid(token, {
@@ -102,7 +100,7 @@ export default function VendorRfqPortal() {
         note: note.trim(),
         lines,
         currency,
-        exchangeRateToVnd: Number(exchangeRate),
+        exchangeRateToVnd: 1,
         freightAmount: Number(freight),
         discountPercent: Number(discountPercent),
         discountAmount: Number(discountAmount),
@@ -151,7 +149,7 @@ export default function VendorRfqPortal() {
     discountPercent,
     discountAmount,
     vatPercent,
-    exchangeRate,
+    "1",
   );
   if (submission)
     return (
@@ -165,15 +163,11 @@ export default function VendorRfqPortal() {
           <dl className="mx-auto mt-6 grid max-w-sm gap-3 text-left text-sm sm:grid-cols-2">
             <div>
               <dt className="text-muted-foreground">{t("rfq.portal.submittedAt")}</dt>
-              <dd className="font-medium">
-                {new Date(submission.submittedAt).toLocaleString(lang)}
-              </dd>
+              <dd className="font-medium">{formatDateTime(submission.submittedAt, lang)}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("rfq.field.validity")}</dt>
-              <dd className="font-medium">
-                {new Date(submission.validUntil).toLocaleString(lang)}
-              </dd>
+              <dd className="font-medium">{formatDateTime(submission.validUntil, lang)}</dd>
             </div>
             <div>
               <dt className="text-muted-foreground">{t("rfq.commercial.totalOriginal")}</dt>
@@ -201,7 +195,7 @@ export default function VendorRfqPortal() {
           </div>
           <h1 className="mt-3 text-3xl font-semibold">{rfq.title}</h1>
           <p className="mt-2 text-muted-foreground">
-            {rfq.vendorName} · {new Date(rfq.dueAt).toLocaleString(lang)}
+            {rfq.vendorName} · {formatDateTime(rfq.dueAt, lang)}
           </p>
         </header>
         <form onSubmit={submit} className="space-y-7 py-7">
@@ -267,27 +261,9 @@ export default function VendorRfqPortal() {
                 </label>
               ))}
             </section>
-            <section className="grid gap-4 border-y py-5 sm:grid-cols-2 lg:grid-cols-3">
+            <section className="grid gap-4 border-y py-5 sm:grid-cols-2">
               <Field label={t("rfq.field.currency")}>
-                <Input
-                  maxLength={3}
-                  value={currency}
-                  onChange={(event) => {
-                    const value = event.target.value.toUpperCase();
-                    setCurrency(value);
-                    if (value === "VND") setExchangeRate("1");
-                  }}
-                />
-              </Field>
-              <Field label={t("rfq.field.exchangeRate")}>
-                <Input
-                  type="number"
-                  min="0.00000001"
-                  step="0.00000001"
-                  disabled={currency === "VND"}
-                  value={exchangeRate}
-                  onChange={(event) => setExchangeRate(event.target.value)}
-                />
+                <p className="pt-2 text-sm font-medium">{currency}</p>
               </Field>
               <Field label={t("rfq.field.leadTime")}>
                 <Input

@@ -43,6 +43,7 @@ import {
   RfqField,
   rfqSelectClass,
 } from "./RfqForms";
+import { formatDateTime } from "@/lib/displaySettings";
 
 const statuses: RfqStatus[] = [
   "Draft",
@@ -196,7 +197,7 @@ function RfqWorkspace({
   const filterJson = JSON.stringify({ ...filter, search: settledSearch });
   const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 4 });
   const quantity = new Intl.NumberFormat(lang, { maximumFractionDigits: 6 });
-  const date = (value: string | null) => (value ? new Date(value).toLocaleString(lang) : "—");
+  const date = (value: string | null) => (value ? formatDateTime(value, lang) : "—");
   useEffect(() => {
     let cancelled = false;
     setLoading(true);

@@ -176,7 +176,7 @@ const Notifications = () => {
                         <Checkbox
                           checked={selectedIds.has(notification.id)}
                           onCheckedChange={(v) => toggleOne(notification.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${notification.title}`}
+                          aria-label={`${t("common.selectItem")} · ${t(notification.title)}`}
                         />
                       </span>
                       <span className="mt-0.5 flex h-9 w-9 items-center justify-center rounded-full bg-muted text-primary">

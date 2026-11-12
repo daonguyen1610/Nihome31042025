@@ -39,6 +39,9 @@ import type {
   UpdateOtpSettingsRequest,
   MapEmbedResponse,
   UpdateMapEmbedRequest,
+  DisplaySettingsResponse,
+  UpdateDisplaySettingsRequest,
+  TimeZoneOption,
   GoogleDriveAdminStatusResponse,
   GoogleDriveAdminConfigurationResponse,
   UpdateGoogleDriveConfigurationRequest,
@@ -253,6 +256,10 @@ export const contentApi = {
   getMapEmbed: () => api.get<MapEmbedResponse>("/site-settings/map-embed"),
   updateMapEmbed: (data: UpdateMapEmbedRequest) =>
     api.put<MapEmbedResponse>("/site-settings/map-embed", data),
+  getDisplaySettings: () => api.get<DisplaySettingsResponse>("/site-settings/display"),
+  updateDisplaySettings: (data: UpdateDisplaySettingsRequest) =>
+    api.put<DisplaySettingsResponse>("/site-settings/display", data),
+  getTimeZones: () => api.get<TimeZoneOption[]>("/site-settings/time-zones"),
   getGoogleDriveAdminStatus: () =>
     api.get<GoogleDriveAdminStatusResponse>("/site-settings/google-drive/status"),
   getGoogleDriveConfiguration: () =>
