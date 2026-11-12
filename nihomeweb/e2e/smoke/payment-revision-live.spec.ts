@@ -40,6 +40,7 @@ test("superseded QS blocks payment until the same request is revised and approve
     password: "Demo@123!",
     role: "SALES_MANAGER",
   });
+  const reviewerHeaders = headers(reviewerToken);
   const salesManagerId = reviewer.id;
   const vendorResponse = await api.post("/api/vendors", {
     headers: headers(adminToken),
@@ -118,7 +119,7 @@ test("superseded QS blocks payment until the same request is revised and approve
   ).revisions.find((revision) => revision.id === scheduleRevision.id)!;
   const publishPreviewResponse = await api.get(
     `${scheduleUrl}/revisions/${scheduleRevision.id}/email-preview?action=Publish`,
-    { headers: adminHeaders },
+    { headers: reviewerHeaders },
   );
   expect(publishPreviewResponse.ok(), await publishPreviewResponse.text()).toBe(true);
   const publishPreview = (await publishPreviewResponse.json()) as { previewToken: string };
