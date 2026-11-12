@@ -13,6 +13,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     private const int ProjectId = 41;
     private const int BchUserId = 101;
     private const int CmUserId = 202;
+    private static readonly Guid WbsNodeId = Guid.Parse("a4c18d9a-f7ab-4e6f-9ca2-019b71000041");
 
     private readonly AppDbContext _db = DbContextFactory.Create();
     private readonly Mock<IProcurementService> _procurement = new();
@@ -20,6 +21,29 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
 
     public ConstructionOperationsServiceTests()
     {
+        _db.ProjectScheduleNodes.Add(new ProjectScheduleNode
+        {
+            Id = WbsNodeId,
+            OperationalProjectId = ProjectId,
+        });
+        _db.ProjectScheduleRevisions.Add(new ProjectScheduleRevision
+        {
+            OperationalProjectId = ProjectId,
+            Version = 1,
+            Status = ProjectScheduleRevisionStatus.Published,
+            Items =
+            [
+                new ProjectScheduleItem
+                {
+                    NodeId = WbsNodeId,
+                    WbsCode = "1.2.1",
+                    Title = "Thi công móng",
+                    PlannedStart = new DateOnly(2026, 1, 1),
+                    PlannedEnd = new DateOnly(2027, 1, 1),
+                },
+            ],
+        });
+        _db.SaveChanges();
         _sut = new ConstructionOperationsService(_db, _procurement.Object);
     }
 
@@ -30,8 +54,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         var task = new ConstructionTask { Id = 61, DesignProject = new DesignProject { Id = 51, OperationalProjectId = ProjectId }, ProjectScheduleNodeId = node, Wbs = "1.1", TaskCode = "TC-1", Name = "Thi công móng" };
         _db.ConstructionTasks.Add(task);
         _db.ConstructionPreparations.Add(new ConstructionPreparation { OperationalProjectId = ProjectId, Version = 1 });
-        var crm = new ProjectScheduleRevision { OperationalProjectId = ProjectId, Version = 1, Status = ProjectScheduleRevisionStatus.Published };
-        _db.ProjectScheduleRevisions.Add(crm);
+        var crm = _db.ProjectScheduleRevisions.Single();
         await _db.SaveChangesAsync();
         var missing = await _sut.GetPreparationAsync(ProjectId, default);
         Assert.Contains("published CM schedule baseline", missing!.MissingConditions);
@@ -75,6 +98,24 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         var stored = await _db.ConstructionResourceRequests.FindAsync(created.Id);
         Assert.Equal(ConstructionReviewStatus.PendingCmReview, stored!.Status);
         Assert.Equal(ConstructionHandoffStatus.NotReady, stored.HandoffStatus);
+    }
+
+    [Fact]
+    public async Task Resource_request_rejects_wbs_removed_from_latest_published_revision()
+    {
+        _db.ProjectScheduleRevisions.Add(new ProjectScheduleRevision
+        {
+            OperationalProjectId = ProjectId,
+            Version = 2,
+            Status = ProjectScheduleRevisionStatus.Published,
+        });
+        await _db.SaveChangesAsync();
+
+        var action = () => _sut.CreateResourceAsync(ProjectId, EquipmentRequest(), BchUserId, default);
+
+        var error = await Assert.ThrowsAsync<ConstructionOperationException>(action);
+        Assert.Contains("đang có hiệu lực", error.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Empty(_db.ConstructionResourceRequests);
     }
 
     [Fact]
@@ -190,6 +231,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
             new CreateQaQcDossierRequest
             {
                 TemplateId = template.Id,
+                ProjectScheduleNodeId = WbsNodeId,
                 WbsCode = "1.2.1",
                 Title = "Foundation concrete inspection",
                 ChecklistResultsJson = """[{"code":"C1","result":"Pending","note":""}]""",
@@ -373,7 +415,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
             Direction = ConstructionQsDirection.Downstream,
             Status = ConstructionReviewStatus.PendingCmReview,
             ContractId = 501,
-            WbsCode = "2.1.3",
+            WbsCode = "1.2.1",
             PeriodFrom = DateTime.UtcNow.Date,
             PeriodTo = DateTime.UtcNow.Date,
             CertifiedAmount = 1000m,
@@ -557,7 +599,8 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     private static UpsertConstructionResourceRequest EquipmentRequest() => new()
     {
         Type = ConstructionResourceType.Equipment,
-        WbsCode = "2.1.3",
+        ProjectScheduleNodeId = WbsNodeId,
+        WbsCode = "1.2.1",
         NeedByDate = DateTime.UtcNow.AddDays(7),
         Quantity = 2,
         Unit = "machine",
@@ -610,6 +653,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     private static CreateQaQcDossierRequest QaQcRequest(int templateId) => new()
     {
         TemplateId = templateId,
+        ProjectScheduleNodeId = WbsNodeId,
         WbsCode = "1.2.1",
         Title = "Kiểm tra chất lượng bê tông móng",
         IfcReleaseId = 801,
@@ -638,7 +682,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         Direction = ConstructionQsDirection.Downstream,
         Status = ConstructionReviewStatus.CmApproved,
         ContractId = 501,
-        WbsCode = "2.1.3",
+        WbsCode = "1.2.1",
         PeriodFrom = DateTime.UtcNow.Date,
         PeriodTo = DateTime.UtcNow.Date,
         CertifiedAmount = 1000m,
@@ -652,7 +696,8 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     {
         Direction = ConstructionQsDirection.Downstream,
         ContractId = 501,
-        WbsCode = "2.1.3",
+        ProjectScheduleNodeId = WbsNodeId,
+        WbsCode = "1.2.1",
         PeriodFrom = DateTime.UtcNow.Date,
         PeriodTo = DateTime.UtcNow.Date,
         CertifiedAmount = 1000m,

@@ -236,6 +236,14 @@ const DepartmentWorkPackages = () => {
     TASK_FILE_EXTENSIONS,
     statusTone,
   } = useDepartmentWorkPackages();
+  const taskWbsDuplicate = Boolean(
+    taskForm.wbsCode.trim() &&
+    detail?.tasks.some(
+      (task) =>
+        task.id !== taskEditing?.id &&
+        task.wbsCode.trim().toLocaleLowerCase() === taskForm.wbsCode.trim().toLocaleLowerCase(),
+    ),
+  );
   if (loading && packageId)
     return (
       <AdminLayout>
@@ -1597,12 +1605,28 @@ const DepartmentWorkPackages = () => {
             )}
             <Field label={t("workPackages.field.wbs")}>
               <Input
+                required
                 maxLength={120}
                 value={taskForm.wbsCode}
+                aria-invalid={taskWbsDuplicate}
+                aria-describedby="work-task-wbs-help"
                 onChange={(event) =>
                   setTaskForm((current) => ({ ...current, wbsCode: event.target.value }))
                 }
               />
+              <p
+                id="work-task-wbs-help"
+                className={cn(
+                  "text-xs",
+                  taskWbsDuplicate ? "text-destructive" : "text-muted-foreground",
+                )}
+              >
+                {t(
+                  taskWbsDuplicate
+                    ? "workPackages.validation.wbsDuplicate"
+                    : "workPackages.field.wbsHelp",
+                )}
+              </p>
             </Field>
             <Field label={t("workPackages.field.taskName")}>
               <Input

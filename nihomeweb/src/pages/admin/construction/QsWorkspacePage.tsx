@@ -10,6 +10,8 @@ import { type ScopeProps, useConstructionActions } from "./constructionScope";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { ConstructionStatusBadge } from "./constructionUi";
 import { REVIEW_STATUS_TONE } from "./constructionStatus";
+import { ProjectWbsField } from "./ProjectWbsField";
+import { usePublishedProjectWbs } from "./usePublishedProjectWbs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -85,11 +87,18 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
     approvedBoqRevisions: [],
   });
   const [lookupsLoading, setLookupsLoading] = useState(false);
+  const {
+    items: wbsItems,
+    loading: wbsLoading,
+    failed: wbsFailed,
+    retry: retryWbs,
+  } = usePublishedProjectWbs(projectId);
   const [form, setForm] = useState({
     direction: "Upstream" as ConstructionQsDirection,
     adjustmentKind: "Original" as ConstructionQsAdjustmentKind,
     predecessorBatchId: "",
     contractId: "",
+    projectScheduleNodeId: "",
     wbsCode: "",
     periodFrom: "",
     periodTo: "",
@@ -150,6 +159,7 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
     adjustmentKind: "Original" as ConstructionQsAdjustmentKind,
     predecessorBatchId: "",
     contractId: "",
+    projectScheduleNodeId: "",
     wbsCode: "",
     periodFrom: "",
     periodTo: "",
@@ -173,6 +183,7 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
       adjustmentKind: row.adjustmentKind,
       predecessorBatchId: String(row.supersedesBatchId ?? row.reversesBatchId ?? ""),
       contractId: String(row.contractId),
+      projectScheduleNodeId: row.projectScheduleNodeId ?? "",
       wbsCode: row.wbsCode,
       periodFrom: row.periodFrom.slice(0, 10),
       periodTo: row.periodTo.slice(0, 10),
@@ -199,6 +210,14 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
   };
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    const selectedWbs = wbsItems.find((item) => item.nodeId === form.projectScheduleNodeId);
+    const keepsLegacyWbs =
+      Boolean(editing && !editing.projectScheduleNodeId) &&
+      form.wbsCode.trim() === editing?.wbsCode.trim();
+    if (!selectedWbs && !keepsLegacyWbs) {
+      toast({ variant: "destructive", title: t("construction.common.wbsRequired") });
+      return;
+    }
     if (!form.contractId) {
       toast({ variant: "destructive", title: t("construction.qs.contractRequired") });
       return;
@@ -214,7 +233,8 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
     const body = {
       direction: form.direction,
       contractId: Number(form.contractId),
-      wbsCode: form.wbsCode.trim(),
+      projectScheduleNodeId: form.projectScheduleNodeId || null,
+      wbsCode: selectedWbs?.wbsCode ?? editing?.wbsCode ?? "",
       periodFrom: form.periodFrom,
       periodTo: form.periodTo,
       projectBoqRevisionId: form.projectBoqRevisionId ? Number(form.projectBoqRevisionId) : null,
@@ -503,7 +523,22 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
                   <Select
                     required
                     value={form.predecessorBatchId}
-                    onValueChange={(value) => setForm({ ...form, predecessorBatchId: value })}
+                    onValueChange={(value) => {
+                      const predecessor = rows.find((row) => row.id === Number(value));
+                      const matchingWbs = predecessor?.projectScheduleNodeId
+                        ? wbsItems.find((item) => item.nodeId === predecessor.projectScheduleNodeId)
+                        : wbsItems.find(
+                            (item) =>
+                              item.wbsCode.toLocaleLowerCase() ===
+                              predecessor?.wbsCode.toLocaleLowerCase(),
+                          );
+                      setForm({
+                        ...form,
+                        predecessorBatchId: value,
+                        projectScheduleNodeId: matchingWbs?.nodeId ?? "",
+                        wbsCode: matchingWbs?.wbsCode ?? predecessor?.wbsCode ?? form.wbsCode,
+                      });
+                    }}
                   >
                     <SelectTrigger id="qs-predecessor" data-testid="qs-predecessor">
                       <SelectValue placeholder={t("construction.qs.predecessor")} />
@@ -555,21 +590,24 @@ export function QsBatchesPanel({ projectId, scope = "execute" }: ScopeProps) {
                 </Select>
                 <p className="text-xs text-muted-foreground">{t("construction.qs.contractHint")}</p>
               </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="qs-wbs">{t("construction.common.wbs")}</Label>
-                <Input
-                  id="qs-wbs"
-                  required
-                  maxLength={100}
-                  placeholder="WBS-3.2-MEP"
-                  aria-describedby="qs-wbs-hint"
-                  value={form.wbsCode}
-                  onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
-                />
-                <p id="qs-wbs-hint" className="text-xs text-muted-foreground">
-                  {t("construction.qs.wbsHint")}
-                </p>
-              </div>
+              <ProjectWbsField
+                projectId={projectId}
+                items={wbsItems}
+                value={form.projectScheduleNodeId}
+                onChange={(value) => {
+                  const selected = wbsItems.find((item) => item.nodeId === value);
+                  setForm({
+                    ...form,
+                    projectScheduleNodeId: value,
+                    wbsCode: selected?.wbsCode ?? form.wbsCode,
+                  });
+                }}
+                loading={wbsLoading}
+                failed={wbsFailed}
+                onRetry={retryWbs}
+                legacyWbsCode={editing?.projectScheduleNodeId ? null : editing?.wbsCode}
+                disabled={saving}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="qs-boq">{t("procurement.boq.title")}</Label>
                 <Select

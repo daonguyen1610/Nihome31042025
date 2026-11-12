@@ -259,6 +259,11 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         var task = await _service.AddTaskAsync(package.Id, valid, _procurementLead.Id);
         Assert.Equal(_warehouseStaff.Id, task.AssigneeUserId);
 
+        var duplicateWbs = TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "sup-01");
+        var duplicateError = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.AddTaskAsync(package.Id, duplicateWbs, _procurementLead.Id));
+        Assert.Contains("Mã WBS đã tồn tại", duplicateError.Message);
+
         var wrongDepartment = TaskRequest(_sales.Id, _procurementLead.Id, "SUP-02");
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
             _service.AddTaskAsync(package.Id, wrongDepartment, _procurementLead.Id));

@@ -549,6 +549,7 @@ export interface ConstructionResourceRequestResponse {
   code: string;
   type: ConstructionResourceType;
   wbsCode: string;
+  projectScheduleNodeId?: string | null;
   needByDate: string;
   quantity: number;
   unit: string;
@@ -605,6 +606,7 @@ export interface ConstructionResourceReferenceDataResponse {
 
 export interface CreateConstructionResourceRequest {
   type: ConstructionResourceType;
+  projectScheduleNodeId?: string | null;
   wbsCode: string;
   needByDate: string;
   quantity: number;
@@ -640,6 +642,7 @@ export interface QaQcDossierResponse {
   templateSnapshotJson: string;
   ifcReleaseId?: number | null;
   checklistResultsJson: string;
+  projectScheduleNodeId?: string | null;
   wbsCode: string;
   title: string;
   evidenceDocumentIds: number[];
@@ -666,6 +669,7 @@ export interface QaQcEvidence {
 
 export interface CreateQaQcDossierRequest {
   templateId: number;
+  projectScheduleNodeId?: string | null;
   wbsCode: string;
   title: string;
   ifcReleaseId?: number | null;
@@ -683,6 +687,7 @@ export interface ConstructionQsBatchResponse {
   code: string;
   direction: ConstructionQsDirection;
   contractId: number;
+  projectScheduleNodeId?: string | null;
   wbsCode: string;
   periodFrom: string;
   periodTo: string;
@@ -707,6 +712,7 @@ export interface ConstructionQsBatchResponse {
 export interface CreateConstructionQsBatchRequest {
   direction: ConstructionQsDirection;
   contractId: number;
+  projectScheduleNodeId?: string | null;
   wbsCode: string;
   periodFrom: string;
   periodTo: string;

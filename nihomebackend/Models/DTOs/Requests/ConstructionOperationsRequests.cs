@@ -33,6 +33,7 @@ public sealed class UpsertConstructionPreparationRequest : IConcurrencyRequest
 public sealed class UpsertConstructionResourceRequest : IConcurrencyRequest
 {
     [Required] public ConstructionResourceType Type { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     [Required, MaxLength(100)] public string WbsCode { get; set; } = string.Empty;
     [Required] public DateTime? NeedByDate { get; set; }
     [Range(typeof(decimal), "0.000001", "999999999999.999999")] public decimal Quantity { get; set; }
@@ -64,6 +65,7 @@ public sealed class CreateQaQcTemplateRequest
 public sealed class CreateQaQcDossierRequest : IConcurrencyRequest
 {
     [Range(1, int.MaxValue)] public int TemplateId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     [Required, MaxLength(100)] public string WbsCode { get; set; } = string.Empty;
     [Required, MaxLength(300)] public string Title { get; set; } = string.Empty;
     [Range(1, int.MaxValue)] public int? IfcReleaseId { get; set; }
@@ -83,6 +85,7 @@ public sealed class CreateConstructionQsBatchRequest : IConcurrencyRequest
 {
     [Required] public ConstructionQsDirection Direction { get; set; }
     [Range(1, int.MaxValue)] public int ContractId { get; set; }
+    public Guid? ProjectScheduleNodeId { get; set; }
     [Required, MaxLength(100)] public string WbsCode { get; set; } = string.Empty;
     [Required] public DateTime? PeriodFrom { get; set; }
     [Required] public DateTime? PeriodTo { get; set; }

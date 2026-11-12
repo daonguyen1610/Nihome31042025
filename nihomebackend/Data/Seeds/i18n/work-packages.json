@@ -52,6 +52,8 @@
   {"key":"workPackages.field.end","category":"work-packages","vi":"Ngày kết thúc","en":"End date","zh":"结束日期","ja":"終了日"},
   {"key":"workPackages.field.description","category":"work-packages","vi":"Mô tả / kết quả cần bàn giao","en":"Description / deliverable","zh":"描述 / 交付成果","ja":"説明 / 成果物"},
   {"key":"workPackages.field.wbs","category":"work-packages","vi":"Mã WBS","en":"WBS code","zh":"WBS编号","ja":"WBSコード"},
+  {"key":"workPackages.field.wbsHelp","category":"work-packages","vi":"Hệ thống gợi ý mã theo công việc cha/con. Bạn có thể sửa nếu cần; mã phải duy nhất trong nhóm công việc.","en":"The system suggests a code from the parent and child task structure. You can edit it if needed; codes must be unique within this work package.","zh":"系统根据父子任务结构建议编号。必要时可以修改，但同一工作组内编号必须唯一。","ja":"システムが親子タスクの構造に基づいてコードを提案します。必要に応じて編集できますが、同じ作業グループ内で一意である必要があります。"},
+  {"key":"workPackages.validation.wbsDuplicate","category":"work-packages","vi":"Mã WBS này đã được dùng trong nhóm công việc. Hãy chọn mã khác.","en":"This WBS code is already used in the work package. Choose another code.","zh":"此 WBS 编号已在该工作组中使用，请选择其他编号。","ja":"このWBSコードは作業グループ内ですでに使用されています。別のコードを選択してください。"},
   {"key":"workPackages.field.parentTask","category":"work-packages","vi":"Công việc cha","en":"Parent task","zh":"父任务","ja":"親タスク"},
   {"key":"workPackages.parent.none","category":"work-packages","vi":"Không có (công việc cấp cao nhất)","en":"None (top-level task)","zh":"无（顶层任务）","ja":"なし（最上位タスク）"},
   {"key":"workPackages.task.aggregated","category":"work-packages","vi":"Tự tổng hợp từ con","en":"Rolled up from subtasks","zh":"从子任务汇总","ja":"サブタスクから集計"},

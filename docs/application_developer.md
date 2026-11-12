@@ -1953,6 +1953,36 @@ it must not be confused with public portfolio content or the three-phase
 | `POST` | `/api/operational-projects/{id}/code/drive-retry` | `operations.projects.rename` | Requeue the latest failed Drive folder rename without creating a new folder |
 | `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
 
+#### WBS identity and entry rules
+
+The master schedule is the project's source of WBS identity. `NodeId` is the
+stable relationship key across revisions; `WbsCode` is an editable display code
+and snapshot. The API requires a nonblank code of at most 80 characters and
+rejects case-insensitive duplicates within one revision. The UI suggests a
+code from the item's position in the hierarchy and updates descendant prefixes
+when a parent code changes; users may edit the suggestion before submission.
+Department work-package task codes are similarly suggested from sibling tasks,
+remain editable, and must be unique within their package (case-insensitive).
+
+Construction resource requests, QA/QC dossiers, and QS batches now accept and
+return optional `projectScheduleNodeId`. New records must select a node in the
+latest published revision for the same Operational Project; the server resolves
+the authoritative code from that revision and ignores a client-supplied code.
+Updates to linked records must select a valid current node. A legacy record with
+no resolvable node may retain its existing code while editing other fields, but
+cannot change its WBS until a published node is selected. Publishing a revision
+that removes a referenced node is rejected. The migration links legacy records
+only when their code maps to exactly one stable node across published revisions;
+ambiguous or unmatched records retain their original code and null node link.
+Rollback drops only the new nullable links and leaves WBS codes intact.
+
+There is no approved universal NICON WBS numbering pattern or project-type
+template yet (D-03 remains an open decision). Do not add a fixed regular
+expression, default project template, or business-managed format until NICON
+confirms it. The current generator is a convenience; required, length,
+uniqueness, parent-child identity, and published-schedule membership are the
+enforced rules.
+
 Schedule approval and publication notifications create rows in
 `project_schedule_emails` instead of calling SMTP inside the request.
 `POST /api/site-settings/email-templates/project-schedule/preview` requires

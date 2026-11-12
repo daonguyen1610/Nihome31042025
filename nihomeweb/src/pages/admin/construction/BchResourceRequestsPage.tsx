@@ -11,6 +11,8 @@ import { type ScopeProps, useConstructionActions } from "./constructionScope";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { ConstructionStatusBadge } from "./constructionUi";
 import { REVIEW_STATUS_TONE } from "./constructionStatus";
+import { ProjectWbsField } from "./ProjectWbsField";
+import { usePublishedProjectWbs } from "./usePublishedProjectWbs";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -63,8 +65,15 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
   const [siteUsers, setSiteUsers] = useState<UserOption[]>([]);
   const [procurementUsers, setProcurementUsers] = useState<UserOption[]>([]);
   const [boqLines, setBoqLines] = useState<BoqLineOption[]>([]);
+  const {
+    items: wbsItems,
+    loading: wbsLoading,
+    failed: wbsFailed,
+    retry: retryWbs,
+  } = usePublishedProjectWbs(projectId);
   const [form, setForm] = useState({
     type: "Material" as ConstructionResourceType,
+    projectScheduleNodeId: "",
     wbsCode: "",
     needByDate: "",
     quantity: "",
@@ -99,6 +108,7 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
 
   const emptyForm = () => ({
     type: "Material" as ConstructionResourceType,
+    projectScheduleNodeId: "",
     wbsCode: "",
     needByDate: "",
     quantity: "",
@@ -119,6 +129,7 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
     setEditing(row);
     setForm({
       type: row.type,
+      projectScheduleNodeId: row.projectScheduleNodeId ?? "",
       wbsCode: row.wbsCode,
       needByDate: row.needByDate.slice(0, 10),
       quantity: String(row.quantity),
@@ -135,6 +146,14 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
 
   const save = async (event: FormEvent) => {
     event.preventDefault();
+    const selectedWbs = wbsItems.find((item) => item.nodeId === form.projectScheduleNodeId);
+    const keepsLegacyWbs =
+      Boolean(editing && !editing.projectScheduleNodeId) &&
+      form.wbsCode.trim() === editing?.wbsCode.trim();
+    if (!selectedWbs && !keepsLegacyWbs) {
+      toast({ variant: "destructive", title: t("construction.common.wbsRequired") });
+      return;
+    }
     if (
       form.type === "Material" &&
       (!form.projectBoqLineId || !form.responsibleSiteUserId || !form.assignedProcurementUserId)
@@ -147,7 +166,8 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
     }
     const body = {
       type: form.type,
-      wbsCode: form.wbsCode.trim(),
+      projectScheduleNodeId: form.projectScheduleNodeId || null,
+      wbsCode: selectedWbs?.wbsCode ?? editing?.wbsCode ?? "",
       needByDate: form.needByDate,
       quantity: Number(form.quantity),
       unit: form.unit.trim(),
@@ -364,16 +384,24 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
                   </SelectContent>
                 </Select>
               </FieldScope>
-              <div className="space-y-1.5">
-                <Label htmlFor="resource-wbs">{t("construction.common.wbs")}</Label>
-                <Input
-                  id="resource-wbs"
-                  required
-                  maxLength={100}
-                  value={form.wbsCode}
-                  onChange={(e) => setForm({ ...form, wbsCode: e.target.value })}
-                />
-              </div>
+              <ProjectWbsField
+                projectId={projectId}
+                items={wbsItems}
+                value={form.projectScheduleNodeId}
+                onChange={(value) => {
+                  const selected = wbsItems.find((item) => item.nodeId === value);
+                  setForm({
+                    ...form,
+                    projectScheduleNodeId: value,
+                    wbsCode: selected?.wbsCode ?? form.wbsCode,
+                  });
+                }}
+                loading={wbsLoading}
+                failed={wbsFailed}
+                onRetry={retryWbs}
+                legacyWbsCode={editing?.projectScheduleNodeId ? null : editing?.wbsCode}
+                disabled={saving}
+              />
               <div className="space-y-1.5">
                 <Label htmlFor="resource-date">{t("construction.resource.needBy")}</Label>
                 <Input

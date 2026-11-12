@@ -44,6 +44,36 @@ test("BCH resource workspace renders the assigned project on mobile", async ({
     }),
   );
   await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/master-schedule$`),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          operationalProjectId: projectId,
+          publishedRevisionId: 190111,
+          approverOptions: [],
+          revisions: [
+            {
+              id: 190111,
+              version: 1,
+              status: "Published",
+              items: [
+                {
+                  nodeId: "3a0058e0-3129-4d0e-8e6c-190001000001",
+                  wbsCode: "WBS-STR-01",
+                  title: "Kết cấu bê tông cốt thép",
+                  plannedStart: "2026-10-01",
+                  plannedEnd: "2026-12-31",
+                  sortOrder: 1,
+                },
+              ],
+            },
+          ],
+        }),
+      }),
+  );
+  await page.route(
     new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/construction/resource-requests$`),
     (route) =>
       route.fulfill({
@@ -122,6 +152,7 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
   const projectId = 190002;
   const errors: string[] = [];
   let submittedEvidence: unknown;
+  let submittedWbs: unknown;
   page.on("pageerror", (error) => errors.push(error.message));
   await page.setViewportSize({ width: 390, height: 844 });
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -151,6 +182,36 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
         designProjects: [{ id: 9102, projectCode: "E2E-QA", name: "E2E QA design project" }],
       }),
     }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/master-schedule$`),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          operationalProjectId: projectId,
+          publishedRevisionId: 190221,
+          approverOptions: [],
+          revisions: [
+            {
+              id: 190221,
+              version: 1,
+              status: "Published",
+              items: [
+                {
+                  nodeId: "3a0058e0-3129-4d0e-8e6c-190002000001",
+                  wbsCode: "WBS-FOUNDATION-01",
+                  title: "Thi công móng",
+                  plannedStart: "2026-10-01",
+                  plannedEnd: "2026-12-31",
+                  sortOrder: 1,
+                },
+              ],
+            },
+          ],
+        }),
+      }),
   );
   await page.route(
     new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents(\\?.*)?$`),
@@ -223,7 +284,12 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
     new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/construction/qa-qc/dossiers$`),
     async (route) => {
       if (route.request().method() === "POST") {
-        submittedEvidence = route.request().postDataJSON().evidence;
+        const body = route.request().postDataJSON();
+        submittedEvidence = body.evidence;
+        submittedWbs = {
+          projectScheduleNodeId: body.projectScheduleNodeId,
+          wbsCode: body.wbsCode,
+        };
         await route.fulfill({ status: 201, contentType: "application/json", body: "{}" });
       } else {
         await route.fulfill({
@@ -258,7 +324,8 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
   await page.getByTestId("qa-qc-new").click();
   await page.getByTestId("qa-qc-template").click();
   await page.getByRole("option", { name: /Hồ sơ chất lượng vật liệu/ }).click();
-  await page.locator("#qa-wbs").fill("WBS-FOUNDATION-01");
+  await page.getByTestId("project-wbs-select").click();
+  await page.getByRole("option", { name: /WBS-FOUNDATION-01 · Thi công móng/ }).click();
   await page.getByTestId("qa-qc-ifc-release").click();
   await page.getByRole("option", { name: /IFC-FOUNDATION-01/ }).click();
   await page.locator("#qa-title").fill("Kiểm tra bê tông móng");
@@ -272,5 +339,11 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
   await expect
     .poll(() => submittedEvidence)
     .toEqual([{ projectDocumentId: 3001, evidenceType: "LaboratoryResult" }]);
+  await expect
+    .poll(() => submittedWbs)
+    .toEqual({
+      projectScheduleNodeId: "3a0058e0-3129-4d0e-8e6c-190002000001",
+      wbsCode: "WBS-FOUNDATION-01",
+    });
   expect(errors).toEqual([]);
 });

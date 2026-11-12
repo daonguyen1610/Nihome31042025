@@ -306,6 +306,19 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         }
 
         var parent = await AddTaskAsync("SUP-01", "Điều phối vật tư nhà máy");
+        var duplicateWbs = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            wbsCode = "sup-01",
+            title = "Mã trùng khác kiểu chữ",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = "2026-10-12T00:00:00Z",
+            plannedEnd = "2026-10-30T00:00:00Z",
+        });
+        duplicateWbs.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DepartmentWorkTasks.CountAsync(task => task.WorkPackageId == packageId)))
+            .Should().Be(1);
+
         var missingParent = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
         {
             parentTaskId = int.MaxValue,
