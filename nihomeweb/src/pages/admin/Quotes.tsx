@@ -25,7 +25,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { formatVnd, parseVnd } from "@/lib/numberFormat";
+import { formatVnd, formatVndWithSymbol, parseVnd } from "@/lib/numberFormat";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -475,7 +475,7 @@ const AdminQuotes = () => {
                       <Td className="whitespace-nowrap text-right font-medium">
                         {r.status === "Draft" && r.grandTotal === 0
                           ? t("quotes.inputPrice.pricePending")
-                          : `${formatVnd(r.grandTotal)} ₫`}
+                          : formatVndWithSymbol(r.grandTotal)}
                       </Td>
                       <Td>
                         <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
@@ -540,7 +540,7 @@ const AdminQuotes = () => {
                     <div className="whitespace-nowrap text-sm font-semibold">
                       {r.status === "Draft" && r.grandTotal === 0
                         ? t("quotes.inputPrice.pricePending")
-                        : `${formatVnd(r.grandTotal)} ₫`}
+                        : formatVndWithSymbol(r.grandTotal)}
                     </div>
                   </div>
                   <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">

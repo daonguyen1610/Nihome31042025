@@ -25,7 +25,7 @@ import {
   type ContractClassificationOptions,
   type ContractType,
 } from "@/services/adminApi";
-import { formatDateTime } from "@/lib/displaySettings";
+import { formatDateTime, formatNumber } from "@/lib/displaySettings";
 
 type ContractOption = { id: number; contractNumber: string; status: string };
 type SupplyDocument = { id: number; originalFileName: string };
@@ -372,7 +372,7 @@ function ResourceCard({
             ? "construction.resourceRequests.equipment"
             : "construction.resourceRequests.labour",
         )}{" "}
-        · {formatVnd(row.quantity)} {row.unit}
+        · {formatNumber(row.quantity, lang)} {row.unit}
       </p>
       <p className="break-words text-sm">{row.reason}</p>
       {row.contractNumber && (
@@ -388,7 +388,7 @@ function ResourceCard({
       {row.suppliedAt && (
         <p className="text-sm">
           {t("construction.handoff.Supplied")}: {date(row.suppliedAt)} ·{" "}
-          {t("construction.handoff.actor")}: {formatVnd(row.suppliedByUserId ?? 0)}
+          {t("construction.handoff.actor")}: {row.suppliedByUserId ?? 0}
         </p>
       )}
       {canManage && !row.suppliedAt && (
@@ -460,8 +460,8 @@ function ResourceCard({
                   ? "construction.handoff.Supplied"
                   : "construction.handoff.ContractLinked",
               )}{" "}
-              · {t("construction.handoff.contract")}: {formatVnd(event.contractId)} ·{" "}
-              {t("construction.handoff.actor")}: {formatVnd(event.actorUserId)}
+              · {t("construction.handoff.contract")}: {event.contractId} ·{" "}
+              {t("construction.handoff.actor")}: {event.actorUserId}
             </li>
           ))}
         </ul>

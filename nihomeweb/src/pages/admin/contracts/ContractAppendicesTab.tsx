@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { currencySymbol, formatVndWithSymbol } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -435,7 +435,9 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                 />
               </FieldScope>
               <FieldScope>
-                <Label>{t("contracts.appendix.valueDelta")} (₫) *</Label>
+                <Label>
+                  {t("contracts.appendix.valueDelta")} ({currencySymbol()}) *
+                </Label>
                 <Input
                   type="number"
                   step="1"

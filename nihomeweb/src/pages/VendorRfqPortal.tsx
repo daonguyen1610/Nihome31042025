@@ -177,7 +177,9 @@ export default function VendorRfqPortal() {
             </div>
             <div>
               <dt className="text-muted-foreground">{t("rfq.commercial.totalVnd")}</dt>
-              <dd className="font-semibold">{number.format(submission.totalVnd)} VND</dd>
+              <dd className="font-semibold">
+                {number.format(submission.totalVnd)} {currency}
+              </dd>
             </div>
           </dl>
           <p className="mt-6 text-sm text-muted-foreground">{t("rfq.portal.successNote")}</p>
@@ -415,7 +417,9 @@ function PortalCommercialPreview({
         </div>
         <div>
           <dt className="text-muted-foreground">{t("rfq.commercial.totalVnd")}</dt>
-          <dd className="font-semibold">{number(preview.totalVnd)} VND</dd>
+          <dd className="font-semibold">
+            {number(preview.totalVnd)} {currency}
+          </dd>
         </div>
       </dl>
     </section>

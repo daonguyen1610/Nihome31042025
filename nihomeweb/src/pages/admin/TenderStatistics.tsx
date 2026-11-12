@@ -10,14 +10,13 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd } from "@/lib/numberFormat";
 import { extractApiError } from "@/lib/apiError";
 import {
   adminApi,
   type TenderStatisticsParams,
   type TenderStatisticsResponse,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/displaySettings";
 
 const currentYear = () => formatDate(new Date(), "en", { year: "numeric" });
 
@@ -279,7 +278,7 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
                         className="text-2xl tabular-nums"
                         data-testid="tender-submitted-count"
                       >
-                        {formatVnd(data.submittedCount)}
+                        {formatNumber(data.submittedCount, lang)}
                       </strong>
                     </div>
                     <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-4">
@@ -294,7 +293,7 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
                             {t(`tenders.status.${s.key}`)}
                           </dt>
                           <dd className="mt-1 pl-4 text-xl font-semibold tabular-nums">
-                            {formatVnd(s.value)}
+                            {formatNumber(s.value, lang)}
                           </dd>
                         </div>
                       ))}
@@ -325,7 +324,7 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
                   <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
                   <span>
                     {t("tenders.stats.missing")}{" "}
-                    <strong>{formatVnd(data.missingSubmissionCount)}</strong>
+                    <strong>{formatNumber(data.missingSubmissionCount, lang)}</strong>
                   </span>
                 </p>
               )}
