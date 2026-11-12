@@ -60,7 +60,7 @@ import {
   type UserListItemResponse,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
-import { formatDateTime } from "@/lib/displaySettings";
+import { dateTimeLocalToIso, formatDateTime, toDateTimeLocalValue } from "@/lib/displaySettings";
 import { getActiveCurrency } from "@/lib/numberFormat";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
@@ -78,17 +78,9 @@ type ActionKind =
 type ActionTarget = { kind: ActionKind; id: number; rowVersion: string };
 type UserOption = Pick<UserListItemResponse, "id" | "fullName" | "email">;
 
-const currentLocalDateTime = () => {
-  const now = new Date();
-  now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
-  return now.toISOString().slice(0, 16);
-};
+const currentLocalDateTime = () => toDateTimeLocalValue(new Date());
 
-const toLocalDateTime = (value: string) => {
-  const date = new Date(value);
-  date.setMinutes(date.getMinutes() - date.getTimezoneOffset());
-  return date.toISOString().slice(0, 16);
-};
+const toLocalDateTime = (value: string) => toDateTimeLocalValue(value);
 
 const emptyAttachment = (): PaymentAttachmentRequest => ({ fileName: "", filePath: "" });
 const emptyPayment = () => ({
@@ -354,14 +346,15 @@ const FinanceControlPage = () => {
       attachments.every(
         (item) => item.fileName.trim().length > 0 && hostRelativePath(item.filePath.trim()),
       );
-    if (!valid) {
+    const receivedAt = dateTimeLocalToIso(paymentForm.receivedAt);
+    if (!valid || !receivedAt) {
       setFormError(t("finance.validation.payment"));
       return;
     }
     const payload = {
       ...paymentForm,
       supplierInvoiceNumber: paymentForm.supplierInvoiceNumber.trim(),
-      receivedAt: new Date(paymentForm.receivedAt).toISOString(),
+      receivedAt,
       contractPaymentMilestoneId: paymentForm.contractPaymentMilestoneId || null,
       constructionQsBatchId: paymentForm.constructionQsBatchId || null,
       attachments: attachments.map((item) => ({

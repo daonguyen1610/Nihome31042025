@@ -519,6 +519,41 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task PlannedDates_KeepTheCalendarDateWhateverKindTheClientSends()
+    {
+        // System.Text.Json yields Unspecified for "2026-03-02T00:00:00"; the date
+        // must not shift by the server's own offset.
+        var request = ProjectRequest();
+        request.PlannedStart = new DateTime(2026, 3, 2, 0, 0, 0, DateTimeKind.Unspecified);
+        request.PlannedEnd = new DateTime(2026, 3, 16, 0, 0, 0, DateTimeKind.Unspecified);
+        var package = await _service.CreateAsync(request, _pm.Id);
+
+        Assert.Equal(new DateTime(2026, 3, 2, 0, 0, 0), package.PlannedStart);
+        Assert.Equal(new DateTime(2026, 3, 16, 0, 0, 0), package.PlannedEnd);
+        var persisted = await _db.DepartmentWorkPackages.SingleAsync(item => item.Id == package.Id);
+        Assert.Equal(new DateTime(2026, 3, 2, 0, 0, 0), persisted.PlannedStart);
+        Assert.Equal(new DateTime(2026, 3, 16, 0, 0, 0), persisted.PlannedEnd);
+    }
+
+    [Fact]
+    public async Task Overdue_ComparesTheStoredCalendarDateNotTheZoneShift()
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById("America/New_York");
+        var zoneToday = DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone));
+        _db.SiteSettings.Add(new SiteSettings { DisplayTimeZoneId = zone.Id });
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.PlannedStart = zoneToday.AddDays(-10).ToDateTime(TimeOnly.MinValue);
+        request.PlannedEnd = zoneToday.AddDays(-1).ToDateTime(TimeOnly.MinValue);
+        var package = await _service.CreateAsync(request, _pm.Id);
+
+        var detail = await _service.GetAsync(package.Id, _pm.Id, true);
+
+        Assert.True(detail!.IsOverdue);
+        Assert.Equal(1, detail.OverdueDays);
+    }
+
+    [Fact]
     public async Task TenderPlan_CannotCloseUntilEveryTaskIsIndependentlyVerified()
     {
         var tender = new Tender

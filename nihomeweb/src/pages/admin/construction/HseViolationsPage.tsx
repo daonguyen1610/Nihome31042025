@@ -61,7 +61,7 @@ import {
   type OperationalProjectResponse,
   type UpdateHseViolationRequest,
 } from "@/services/adminApi";
-import { toDateTimeLocalValue, formatDateTime } from "@/lib/displaySettings";
+import { dateTimeLocalToIso, toDateTimeLocalValue, formatDateTime } from "@/lib/displaySettings";
 
 const STATUSES: HseViolationStatus[] = [
   "Draft",
@@ -297,9 +297,11 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
       !form.responsibleSiteUserId
     )
       return null;
+    const occurredAt = dateTimeLocalToIso(form.occurredAt);
+    if (!occurredAt) return null;
     return {
       offlineClientId: formRecord?.offlineClientId ?? crypto.randomUUID(),
-      occurredAt: new Date(form.occurredAt).toISOString(),
+      occurredAt,
       location: form.location.trim(),
       category: form.category.trim(),
       severity: form.severity,
@@ -311,7 +313,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
         ? Number(form.remediationOwnerUserId)
         : null,
       remediationDeadline: form.remediationDeadline
-        ? new Date(form.remediationDeadline).toISOString()
+        ? dateTimeLocalToIso(form.remediationDeadline)
         : null,
       remediationNote: form.remediationNote.trim() || null,
       penaltyReference: form.penaltyReference.trim() || null,
