@@ -27,7 +27,11 @@ test("creating from the project supplier registry keeps Downstream direction", a
     await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
     await page.goto(`/admin/contracts?direction=Downstream&operationalProjectId=${projectId}`);
     await page.getByRole("button", { name: "New contract", exact: true }).click();
-    await expect(page.locator("#c-direction-form")).toContainText("Downstream");
+    // The direction select shows the localized direction name; the seeded
+    // English label and the legacy one both identify the Downstream option.
+    await expect(page.locator("#c-direction-form")).toContainText(
+      /Downstream|Purchase – supplier\/subcontractor/,
+    );
     await expect(page.getByRole("dialog")).toContainText("NICON – Lập hợp đồng cung ứng từ dự án");
   } finally {
     if (projectId)
