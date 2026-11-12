@@ -26,7 +26,8 @@ import SlideshowSettings from "./settings/SlideshowSettings";
 import GoogleDriveConfigurationForm from "./settings/GoogleDriveConfigurationForm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { formatVnd } from "@/lib/numberFormat";
+import { parseVnd } from "@/lib/numberFormat";
+import { formatNumber } from "@/lib/displaySettings";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -638,7 +639,7 @@ const DriveTab = () => {
 
 /* ─── Settings Center ─── */
 const ContractUploadTab = () => {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const [value, setValue] = useState("");
@@ -654,34 +655,34 @@ const ContractUploadTab = () => {
     setError(null);
     try {
       const { data } = await adminApi.getContractUploadLimit();
-      setValue(formatVnd(data.maxFileSizeMb));
-      setSavedValue(formatVnd(data.maxFileSizeMb));
+      setValue(formatNumber(data.maxFileSizeMb, lang));
+      setSavedValue(formatNumber(data.maxFileSizeMb, lang));
       setMaxAllowed(data.maxAllowedFileSizeMb);
     } catch {
       setError(t("settings.contractUploads.loadError"));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [t, lang]);
 
   useEffect(() => {
     void load();
   }, [load]);
 
   const save = async () => {
-    const parsed = /^(?:\d+|\d{1,3}(?:\.\d{3})+)$/.test(value)
-      ? Number(value.replace(/\./g, ""))
-      : NaN;
+    const parsed = /^(?:\d+|\d{1,3}(?:[.,]\d{3})+)$/.test(value.trim()) ? parseVnd(value) : NaN;
     if (maxAllowed === null || !Number.isSafeInteger(parsed) || parsed < 1 || parsed > maxAllowed) {
-      setError(t("settings.contractUploads.invalidRange", { max: formatVnd(maxAllowed ?? 0) }));
+      setError(
+        t("settings.contractUploads.invalidRange", { max: formatNumber(maxAllowed ?? 0, lang) }),
+      );
       return;
     }
     setSaving(true);
     setError(null);
     try {
       const { data } = await adminApi.updateContractUploadLimit(parsed);
-      setValue(formatVnd(data.maxFileSizeMb));
-      setSavedValue(formatVnd(data.maxFileSizeMb));
+      setValue(formatNumber(data.maxFileSizeMb, lang));
+      setSavedValue(formatNumber(data.maxFileSizeMb, lang));
       setMaxAllowed(data.maxAllowedFileSizeMb);
       toast({ title: t("settings.saved") });
     } catch {
@@ -710,14 +711,14 @@ const ContractUploadTab = () => {
             onChange={(event) => setValue(event.target.value)}
             onBlur={() => {
               if (/^\d+$/.test(value) && Number.isSafeInteger(Number(value))) {
-                setValue(formatVnd(Number(value)));
+                setValue(formatNumber(Number(value), lang));
               }
             }}
             className="max-w-40"
           />
           {maxAllowed !== null ? (
             <p className="text-sm text-muted-foreground">
-              {t("settings.contractUploads.maximum", { max: formatVnd(maxAllowed) })}
+              {t("settings.contractUploads.maximum", { max: formatNumber(maxAllowed, lang) })}
             </p>
           ) : null}
           {error ? (

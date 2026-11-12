@@ -575,7 +575,9 @@ function CommercialPreview({
         </div>
         <div>
           <dt className="text-muted-foreground">{t("rfq.commercial.totalVnd")}</dt>
-          <dd className="font-semibold">{number(preview.totalVnd)} VND</dd>
+          <dd className="font-semibold">
+            {number(preview.totalVnd)} {currency}
+          </dd>
         </div>
       </dl>
     </section>

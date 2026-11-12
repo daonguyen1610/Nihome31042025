@@ -50,7 +50,7 @@ import type {
   ProjectReportFilters,
   ProjectReportUnavailableMetricResponse,
 } from "@/types/projectReports";
-import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatDate, formatDateTime, formatNumber } from "@/lib/displaySettings";
 
 const ALL_PROJECTS = "all";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
@@ -318,7 +318,8 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
                     {section.availability === "Available" ? (
                       <>
                         <p>
-                          {formatVnd(section.count ?? 0)} {t("construction.portfolio.records")}
+                          {formatNumber(section.count ?? 0, lang)}{" "}
+                          {t("construction.portfolio.records")}
                         </p>
                         <ul className="space-y-1">
                           {section.sources.map((source) => (

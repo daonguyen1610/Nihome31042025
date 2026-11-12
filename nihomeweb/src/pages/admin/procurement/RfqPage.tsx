@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useI18n } from "@/lib/i18n";
+import { getActiveCurrency } from "@/lib/numberFormat";
 import { extractApiError } from "@/lib/apiError";
 import { adminApi, type OperationalProjectListItemResponse } from "@/services/adminApi";
 import {
@@ -196,6 +197,7 @@ function RfqWorkspace({
   const settledSearch = useDebouncedValue(filter.search);
   const filterJson = JSON.stringify({ ...filter, search: settledSearch });
   const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 4 });
+  const currency = getActiveCurrency();
   const quantity = new Intl.NumberFormat(lang, { maximumFractionDigits: 6 });
   const date = (value: string | null) => (value ? formatDateTime(value, lang) : "—");
   useEffect(() => {
@@ -779,10 +781,11 @@ function RfqWorkspace({
                                     {number.format(cell.unitPrice)} {bid!.currency}
                                   </div>
                                   <div className="text-xs">
-                                    {number.format(cell.unitPriceVnd)} VND
+                                    {number.format(cell.unitPriceVnd)} {currency}
                                   </div>
                                   <div className="text-xs">
-                                    {t("rfq.field.total")}: {number.format(cell.amountVnd)} VND
+                                    {t("rfq.field.total")}: {number.format(cell.amountVnd)}{" "}
+                                    {currency}
                                   </div>
                                 </>
                               ) : (
@@ -806,7 +809,9 @@ function RfqWorkspace({
                                 <strong>
                                   {number.format(bid.totalOriginal)} {bid.currency}
                                 </strong>
-                                <p className="text-xs">{number.format(bid.total)} VND</p>
+                                <p className="text-xs">
+                                  {number.format(bid.total)} {currency}
+                                </p>
                                 <p>{!bid.isComplete && t("rfq.partial")}</p>
                                 <p>{!bid.isEligible && t("rfq.ineligible")}</p>
                                 <p className="mt-2">
@@ -844,7 +849,7 @@ function RfqWorkspace({
                       <span>
                         {" "}
                         · {award.vendorName} · {number.format(award.originalValue)} {award.currency}{" "}
-                        / {number.format(award.valueVnd)} VND
+                        / {number.format(award.valueVnd)} {currency}
                       </span>
                     </div>
                   ))

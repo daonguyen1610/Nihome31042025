@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatVndWithSymbol } from "@/lib/numberFormat";
 import { extractApiError } from "@/lib/apiError";
 import {
   adminApi,
@@ -13,7 +13,7 @@ import {
   type ContractExecutionProgressResponse,
   type ContractProgressSource,
 } from "@/services/adminApi";
-import { formatDateTime } from "@/lib/displaySettings";
+import { formatDateTime, formatNumber } from "@/lib/displaySettings";
 
 export default function ContractExecutionProgress({
   contract,
@@ -53,14 +53,14 @@ export default function ContractExecutionProgress({
     <div key={label} className="flex items-start justify-between gap-3 py-1.5">
       <dt className="text-sm text-muted-foreground">{key(label)}</dt>
       <dd className="shrink-0 text-sm font-semibold tabular-nums">
-        {money ? formatVndWithSymbol(value) : formatVnd(value)}
+        {money ? formatVndWithSymbol(value) : formatNumber(value, lang)}
       </dd>
     </div>
   );
   const sources = (items: ContractProgressSource[], type: "work" | "qs", total: number) => (
     <>
       <p className="mt-4 text-xs text-muted-foreground">
-        {key("latestSources")} ({formatVnd(items.length)}/{formatVnd(total)})
+        {key("latestSources")} ({formatNumber(items.length, lang)}/{formatNumber(total, lang)})
       </p>
       <ul className="mt-2 space-y-2">
         {items.map((item) => (
