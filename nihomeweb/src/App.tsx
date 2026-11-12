@@ -16,6 +16,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { I18nProvider } from "@/lib/i18n";
+import { useDisplaySettings } from "@/lib/displaySettings";
 import { ConfirmationProvider } from "@/components/ui/confirmation";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import RequirePermission from "@/components/auth/RequirePermission";
@@ -179,8 +180,15 @@ const DesignProjectDetailAccess = () => {
   return <RequirePermission code={ADMIN_PERMS.designProjects} />;
 };
 
+/** Re-render the tree when the admin display settings load or change. */
+const DisplaySettingsSync = () => {
+  useDisplaySettings();
+  return null;
+};
+
 const App = () => (
   <Provider store={store}>
+    <DisplaySettingsSync />
     <QueryClientProvider client={queryClient}>
       <I18nProvider>
         <TooltipProvider>
