@@ -3,9 +3,7 @@ import App from "./App.tsx";
 import { loadDisplaySettings } from "./lib/displaySettings";
 import "./index.css";
 
-// Resolve the admin-configured time zone and currency before the first paint
-// so no date or amount flashes in a different format. The loader always
-// resolves (Vietnam defaults when the API is unavailable).
-void loadDisplaySettings().finally(() => {
-  createRoot(document.getElementById("root")!).render(<App />);
-});
+// Render immediately with the Vietnam + VND defaults. The loader always
+// resolves and App re-renders once the admin settings arrive.
+void loadDisplaySettings();
+createRoot(document.getElementById("root")!).render(<App />);

@@ -48,12 +48,22 @@ export function normalizeCurrency(code: string | null | undefined): CurrencyCode
   return (code ?? "").trim().toUpperCase() === "USD" ? "USD" : "VND";
 }
 
+function isValidTimeZone(id: string): boolean {
+  try {
+    new Intl.DateTimeFormat("en-US", { timeZone: id });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 /** Apply time zone + currency. Unknown values fall back to the defaults. */
 export function applyDisplaySettings(next: {
   timeZoneId?: string | null;
   currency?: string | null;
 }): void {
-  const timeZoneId = next.timeZoneId?.trim() || DEFAULT_TIME_ZONE;
+  const requested = next.timeZoneId?.trim();
+  const timeZoneId = requested && isValidTimeZone(requested) ? requested : DEFAULT_TIME_ZONE;
   const currency = normalizeCurrency(next.currency);
   if (current.timeZoneId === timeZoneId && current.currency === currency) return;
   current = { ...current, timeZoneId, currency };
@@ -138,12 +148,33 @@ const EMPTY_DATE = "—";
 
 type DateOptions = Intl.DateTimeFormatOptions;
 
+const FORMAT_FIELDS = [
+  "weekday",
+  "era",
+  "year",
+  "month",
+  "day",
+  "dayPeriod",
+  "hour",
+  "minute",
+  "second",
+  "fractionalSecondDigits",
+  "timeZoneName",
+];
+
+/**
+ * Callers that choose the displayed fields (`{ month: "short" }`) or a preset
+ * style own the whole format; callers that only override the zone still get
+ * the base fields for the helper they called.
+ */
 function withDefaults(
   options: DateOptions | undefined,
   defaults: DateOptions,
 ): Intl.DateTimeFormatOptions {
-  if (options && (options.dateStyle || options.timeStyle)) return options;
-  return { ...defaults, ...options };
+  if (!options) return defaults;
+  if (options.dateStyle || options.timeStyle) return options;
+  const definesFormat = FORMAT_FIELDS.some((field) => field in options);
+  return definesFormat ? options : { ...defaults, ...options };
 }
 
 function formatWith(
@@ -221,10 +252,15 @@ export function formatNumber(
 }
 
 function zonedParts(date: Date, extra: Intl.DateTimeFormatOptions) {
-  return new Intl.DateTimeFormat("en-CA", {
-    ...extra,
-    timeZone: current.timeZoneId,
-  }).formatToParts(date);
+  try {
+    return new Intl.DateTimeFormat("en-CA", {
+      ...extra,
+      timeZone: current.timeZoneId,
+    }).formatToParts(date);
+  } catch {
+    // An unparseable zone must not break date input prefill/submit.
+    return new Intl.DateTimeFormat("en-CA", { ...extra, timeZone: "UTC" }).formatToParts(date);
+  }
 }
 
 function part(parts: Intl.DateTimeFormatPart[], type: Intl.DateTimeFormatPartTypes): string {
@@ -257,4 +293,51 @@ export function toDateTimeLocalValue(value: DateInput): string {
     parts,
     "hour",
   )}:${part(parts, "minute")}`;
+}
+
+/** Offset (ms) of the configured zone from UTC at the given instant. */
+function zoneOffsetMs(date: Date): number {
+  const parts = zonedParts(date, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  });
+  const wallClock = Date.UTC(
+    Number(part(parts, "year")),
+    Number(part(parts, "month")) - 1,
+    Number(part(parts, "day")),
+    Number(part(parts, "hour")),
+    Number(part(parts, "minute")),
+    Number(part(parts, "second")),
+  );
+  return wallClock - Math.floor(date.getTime() / 1000) * 1000;
+}
+
+const LOCAL_DATE_TIME = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?/;
+
+/**
+ * Convert a `datetime-local` value (wall time in the configured time zone) to
+ * the UTC ISO instant the API stores. The browser's own offset never applies.
+ */
+export function dateTimeLocalToIso(value: string | null | undefined): string | null {
+  const match = LOCAL_DATE_TIME.exec((value ?? "").trim());
+  if (!match) return null;
+  const wallClock = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+    Number(match[6] ?? 0),
+  );
+  if (Number.isNaN(wallClock)) return null;
+  // Resolve the offset twice so times near a DST change use the offset in force.
+  let offset = zoneOffsetMs(new Date(wallClock));
+  const secondOffset = zoneOffsetMs(new Date(wallClock - offset));
+  if (secondOffset !== offset) offset = secondOffset;
+  return new Date(wallClock - offset).toISOString();
 }
