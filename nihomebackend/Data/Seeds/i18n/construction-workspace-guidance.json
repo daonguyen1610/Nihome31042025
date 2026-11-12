@@ -720,6 +720,14 @@
     "ja": "CRMが作成するプロジェクト全体の期間枠。各部門はこの枠内で詳細化し、顧客の変更時はCRMが新しい版に更新して影響部門へ通知します。"
   },
   {
+    "key": "scheduleUx.effectiveMasterSchedule",
+    "category": "construction",
+    "vi": "Tiến độ đang có hiệu lực là phiên bản v{version}. Bản đang xem chưa làm thay đổi tiến độ này; phiên bản mới chỉ có hiệu lực sau khi được người duyệt phê duyệt và phát hành.",
+    "en": "The schedule currently in force is v{version}. The version you are viewing does not change it; a new version takes effect only after the assigned approver approves and publishes it.",
+    "zh": "当前生效的进度版本为 v{version}。您正在查看的版本不会改变当前进度；新版本只有在指定审批人批准并发布后才会生效。",
+    "ja": "現在有効な工程は v{version} です。表示中の版では現在の工程は変わりません。新しい版は、指定された承認者が承認して公開した後に有効になります。"
+  },
+  {
     "key": "scheduleUx.constructionOrderHint",
     "category": "construction",
     "vi": "Thứ tự thi công tham khảo của NICON: móng → kết cấu → hoàn thiện → M&E → hạ tầng ngoại vi.",

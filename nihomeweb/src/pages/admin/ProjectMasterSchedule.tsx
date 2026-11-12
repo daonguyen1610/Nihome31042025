@@ -1401,6 +1401,16 @@ export const ProjectMasterSchedule = ({
               )}
             </div>
           )}
+          {currentPublished && selected?.id !== currentPublished.id && (
+            <p
+              role="status"
+              className="mt-3 rounded-md border border-info/40 bg-info/10 p-3 text-sm text-foreground"
+            >
+              {t("scheduleUx.effectiveMasterSchedule", {
+                version: currentPublished.version,
+              })}
+            </p>
+          )}
           {!selected && canManage && (schedule?.revisions.length ?? 0) > 0 && (
             <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
               <ConstructionStatusBadge tone="muted">
@@ -2003,10 +2013,7 @@ export const ProjectMasterSchedule = ({
                 {renderEditor()}
 
                 {diffBaseline && (
-                  <details
-                    className="border-t pt-3"
-                    open={selected?.status === "PendingApproval" ? true : undefined}
-                  >
+                  <details className="border-t pt-3" open={selected?.status !== "Published"}>
                     <summary className="cursor-pointer py-2 text-sm font-medium">
                       {t("operationalProjects.schedule.diffTitle")} ({diffRows.length})
                     </summary>
