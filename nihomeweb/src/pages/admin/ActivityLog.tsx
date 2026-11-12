@@ -27,6 +27,7 @@ import { Label } from "@/components/ui/label";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import { adminApi, type AuditLogItem, type AuditLogPage } from "@/services/adminApi";
 import { cn } from "@/lib/utils";
+import { formatDateTime as formatDateTimeInZone } from "@/lib/displaySettings";
 
 type RetentionUnit = "minutes" | "hours" | "days";
 
@@ -48,7 +49,7 @@ const toMinutes = (value: number, unit: RetentionUnit): number => {
 
 const formatDate = (iso: string) => {
   try {
-    return new Date(iso).toLocaleString();
+    return formatDateTimeInZone(iso);
   } catch {
     return iso;
   }
@@ -585,7 +586,7 @@ const ActivityLog = () => {
                         <Checkbox
                           checked={selectedIds.has(l.id)}
                           onCheckedChange={(v) => toggleOne(l.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${l.action}`}
+                          aria-label={`${t("common.selectItem")} · ${l.action}`}
                         />
                       </span>
                     )}
@@ -710,7 +711,7 @@ const ActivityLog = () => {
                         <Checkbox
                           checked={selectedIds.has(l.id)}
                           onCheckedChange={(v) => toggleOne(l.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${l.action}`}
+                          aria-label={`${t("common.selectItem")} · ${l.action}`}
                         />
                       </td>
                     )}

@@ -1,5 +1,6 @@
 import { Fragment, useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { formatDate, formatDateTime, formatTime } from "@/lib/displaySettings";
 
 export interface TimelineEntry {
   id: number;
@@ -11,19 +12,19 @@ export interface TimelineEntry {
   at: string;
 }
 
-const dayKey = (iso: string) => new Date(iso).toDateString();
+const dayKey = (iso: string) => formatDate(iso, "en-CA");
+const todayKey = () => dayKey(new Date().toISOString());
 
 /**
  * Entries in today's group show only a time; older ones would be ambiguous that
  * way, so they keep their date.
  */
 const stamp = (iso: string, locale: string) => {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return "";
-  const isToday = dayKey(iso) === new Date().toDateString();
+  if (!iso) return "";
+  const isToday = dayKey(iso) === todayKey();
   return isToday
-    ? date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" })
-    : date.toLocaleString(locale, {
+    ? formatTime(iso, locale, { hour: "2-digit", minute: "2-digit" })
+    : formatDateTime(iso, locale, {
         day: "2-digit",
         month: "2-digit",
         hour: "2-digit",
@@ -32,9 +33,8 @@ const stamp = (iso: string, locale: string) => {
 };
 
 const dayHeading = (iso: string, locale: string, todayLabel: string) => {
-  const date = new Date(iso);
-  if (dayKey(iso) === new Date().toDateString()) return todayLabel;
-  return date.toLocaleDateString(locale, { day: "2-digit", month: "2-digit", year: "numeric" });
+  if (dayKey(iso) === todayKey()) return todayLabel;
+  return formatDate(iso, locale, { day: "2-digit", month: "2-digit", year: "numeric" });
 };
 
 interface ActivityTimelineProps {

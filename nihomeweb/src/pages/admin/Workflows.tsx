@@ -394,7 +394,7 @@ const Workflows = () => {
                           <Checkbox
                             checked={selectedIds.has(w.id)}
                             onCheckedChange={(v) => toggleOne(w.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${w.name}`}
+                            aria-label={`${t("common.selectItem")} · ${w.name}`}
                           />
                         </span>
                       )}
@@ -498,7 +498,7 @@ const Workflows = () => {
                           <Checkbox
                             checked={selectedIds.has(w.id)}
                             onCheckedChange={(v) => toggleOne(w.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${w.name}`}
+                            aria-label={`${t("common.selectItem")} · ${w.name}`}
                           />
                         </td>
                       )}

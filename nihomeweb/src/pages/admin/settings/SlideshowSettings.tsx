@@ -275,7 +275,7 @@ const SlideshowSettings = () => {
                       <Checkbox
                         checked={selectedIds.has(slide.id)}
                         onCheckedChange={(v) => toggleOne(slide.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${slide.title}`}
+                        aria-label={`${t("common.selectItem")} · ${slide.title}`}
                       />
                     </div>
                     <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-32">

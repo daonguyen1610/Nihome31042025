@@ -269,7 +269,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                         <Checkbox
                           checked={bulk.selectedIds.has(vo.id)}
                           onCheckedChange={(v) => bulk.toggleOne(vo.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · VO#${vo.voNumber}`}
+                          aria-label={`${t("common.selectItem")} · VO#${vo.voNumber}`}
                         />
                       </div>
                     ) : null}

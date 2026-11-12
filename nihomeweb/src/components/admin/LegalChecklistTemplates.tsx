@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { formatDateTime } from "@/lib/displaySettings";
 
 const blank = (): SaveLegalChecklistTemplate => ({
   code: "",
@@ -188,7 +189,7 @@ export default function LegalChecklistTemplates() {
             {selected.publishedByUserId ? (
               <p className="text-xs">
                 {t("legalTemplates.reviewer")} #{selected.publishedByUserId} ·{" "}
-                {selected.publishedAt ? new Date(selected.publishedAt).toLocaleString() : ""} ·{" "}
+                {selected.publishedAt ? formatDateTime(selected.publishedAt) : ""} ·{" "}
                 {selected.approvalReference}
               </p>
             ) : null}

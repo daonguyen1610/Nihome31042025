@@ -1,5 +1,6 @@
 import { createContext, ReactNode, useContext, useEffect, useMemo, useState } from "react";
 import api from "@/lib/api";
+import { setDisplayLanguage } from "@/lib/displaySettings";
 
 export type Lang = "vi" | "en" | "zh" | "ja";
 export const TRANSLATIONS_CHANGED_EVENT = "nicon:translations-changed";
@@ -71,6 +72,7 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     localStorage.setItem("nicon_lang", lang);
     document.documentElement.lang = lang;
+    setDisplayLanguage(lang);
   }, [lang]);
 
   useEffect(() => {

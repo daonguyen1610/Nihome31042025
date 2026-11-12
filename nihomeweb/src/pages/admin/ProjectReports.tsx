@@ -50,10 +50,10 @@ import type {
   ProjectReportFilters,
   ProjectReportUnavailableMetricResponse,
 } from "@/types/projectReports";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
 
 const ALL_PROJECTS = "all";
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const LOCALES: Record<Lang, string> = { vi: "vi-VN", en: "en-US", zh: "zh-CN", ja: "ja-JP" };
 
 const metricLabelKey = (metricCode: string) => `projectReports.metric.${metricCode}`;
 const reasonLabelKey = (reasonCode: string) => `projectReports.reason.${reasonCode}`;
@@ -63,9 +63,7 @@ const formatReportDate = (value: string | null | undefined, lang: Lang) => {
   const parsed = new Date(`${value.slice(0, 10)}T00:00:00Z`);
   return Number.isNaN(parsed.getTime())
     ? value
-    : new Intl.DateTimeFormat(LOCALES[lang], { dateStyle: "medium", timeZone: "UTC" }).format(
-        parsed,
-      );
+    : formatDate(value, lang, { dateStyle: "medium", timeZone: "UTC" });
 };
 
 const statusKey = (
@@ -261,7 +259,11 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
             <Badge variant="outline">{report.project.code}</Badge>
             <Badge variant="secondary">{t(statusKey("project", report.project.status))}</Badge>
             {partial && (
-              <Badge variant="outline" className="border-amber-300 text-amber-700">
+              <Badge
+                variant="outline"
+                className="border-amber-300 text-amber-700"
+                title={t("projectReports.partialDataHelp")}
+              >
                 {t("projectReports.partialData")}
               </Badge>
             )}
@@ -302,9 +304,10 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
             <h3 className="font-semibold">{t("construction.portfolio.title")}</h3>
             <p className="text-sm text-muted-foreground">
               {t("construction.portfolio.currentState")} ·{" "}
-              {new Intl.DateTimeFormat(lang, { dateStyle: "short", timeStyle: "short" }).format(
-                new Date(report.cmControl.generatedAtUtc),
-              )}
+              {formatDateTime(report.cmControl.generatedAtUtc, lang, {
+                dateStyle: "short",
+                timeStyle: "short",
+              })}
             </p>
             <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
               {(["upstream", "downstream", "qaQc", "safety", "budget"] as const).map((key) => {
@@ -670,11 +673,7 @@ export default function ProjectReports() {
 
   const generatedAt = useMemo(() => {
     const value = activeQuery.data?.generatedAtUtc;
-    return value
-      ? new Intl.DateTimeFormat(LOCALES[lang], { dateStyle: "medium", timeStyle: "short" }).format(
-          new Date(value),
-        )
-      : null;
+    return value ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" }) : null;
   }, [activeQuery.data?.generatedAtUtc, lang]);
 
   const updateFilter = (key: "project" | "from" | "to", value: string) => {

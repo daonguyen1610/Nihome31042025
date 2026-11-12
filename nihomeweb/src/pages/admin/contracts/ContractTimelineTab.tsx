@@ -1,6 +1,7 @@
 import { History } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { type ContractTimelineEvent } from "@/services/adminApi";
+import { formatDateTime } from "@/lib/displaySettings";
 
 export const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => {
   const { t } = useI18n();
@@ -43,9 +44,7 @@ export const TimelineTab = ({ events }: { events: ContractTimelineEvent[] }) => 
               <span className="font-semibold text-foreground">
                 {actionKeys[ev.action] ? t(actionKeys[ev.action]) : ev.action}
               </span>
-              <span className="text-xs text-muted-foreground">
-                {new Date(ev.occurredAt).toLocaleString()}
-              </span>
+              <span className="text-xs text-muted-foreground">{formatDateTime(ev.occurredAt)}</span>
             </div>
             {!actionKeys[ev.action] && ev.message ? (
               <p className="mt-0.5 text-sm text-foreground">{ev.message}</p>

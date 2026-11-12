@@ -55,6 +55,7 @@ import {
   type MasterDataOption,
   type ShopDrawingResponse,
 } from "@/services/adminApi";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STATUS_BADGE: Record<IfcReleaseStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
@@ -65,7 +66,7 @@ const STATUS_BADGE: Record<IfcReleaseStatus, string> = {
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }

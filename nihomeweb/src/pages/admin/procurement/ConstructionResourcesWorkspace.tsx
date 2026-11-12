@@ -25,6 +25,7 @@ import {
   type ContractClassificationOptions,
   type ContractType,
 } from "@/services/adminApi";
+import { formatDateTime } from "@/lib/displaySettings";
 
 type ContractOption = { id: number; contractNumber: string; status: string };
 type SupplyDocument = { id: number; originalFileName: string };
@@ -349,9 +350,7 @@ function ResourceCard({
     }
   }
   const date = (value: string) =>
-    new Intl.DateTimeFormat(lang, { dateStyle: "short", timeStyle: "short" }).format(
-      new Date(value),
-    );
+    formatDateTime(value, lang, { dateStyle: "short", timeStyle: "short" });
   return (
     <article
       className="space-y-3 rounded-lg border p-4"

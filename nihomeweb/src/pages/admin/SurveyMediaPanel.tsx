@@ -57,6 +57,7 @@ import {
   type SurveyResponse,
   type SurveySyncLogResponse,
 } from "@/services/adminApi";
+import { formatDateTime } from "@/lib/displaySettings";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const ALLOWED_EXTENSIONS = new Set([

@@ -54,6 +54,7 @@ import {
   type ConceptOptionResponse,
   type ProjectDocumentResponse,
 } from "@/services/adminApi";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
 
 type Props = (
   | { project: DesignProjectResponse; recipientProjectId?: never }
@@ -511,7 +512,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
                   <div key={comment.id} className="rounded-md border p-3 text-sm">
                     <div className="flex flex-wrap justify-between gap-2 text-xs text-muted-foreground">
                       <span>{comment.authorName}</span>
-                      <time>{new Date(comment.createdAt).toLocaleString(lang)}</time>
+                      <time>{formatDateTime(comment.createdAt, lang)}</time>
                     </div>
                     <p className="mt-1 text-xs font-medium text-muted-foreground">
                       {comment.projectDocumentId
@@ -534,7 +535,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
               <p className="mt-2 text-xs text-emerald-700">
                 {t("concepts.dossier.acceptanceRecorded")}: {review.clientAcceptanceSignedBy} ·{" "}
                 {review.clientAcceptanceSignedAt
-                  ? new Date(review.clientAcceptanceSignedAt).toLocaleDateString(lang)
+                  ? formatDate(review.clientAcceptanceSignedAt, lang)
                   : null}
               </p>
             ) : null}

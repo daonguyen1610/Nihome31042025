@@ -6,9 +6,10 @@
  * Overdue rule (spec NIH-88 / NIH-91):
  *   ExpectedCloseDate < today  AND  stage is NOT terminal (Won / Lost)
  *
- * "Today" is compared in the browser's local time zone (start of day)
- * so a deal expected to close today is not flagged as overdue.
+ * "Today" is compared in the configured display time zone so a deal
+ * expected to close today is not flagged as overdue.
  */
+import { todayIsoDate } from "@/lib/displaySettings";
 
 export type TerminalCheckStage = string; // narrow via caller (OpportunityStage)
 
@@ -19,11 +20,7 @@ export function isOpportunityOverdue(
   if (!expectedCloseDate) return false;
   if (stage === "Won" || stage === "Lost") return false;
 
-  const due = new Date(expectedCloseDate);
-  if (Number.isNaN(due.getTime())) return false;
-
-  const now = new Date();
-  const dueDay = new Date(due.getFullYear(), due.getMonth(), due.getDate());
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  return dueDay.getTime() < today.getTime();
+  const dueDay = expectedCloseDate.slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDay)) return false;
+  return dueDay < todayIsoDate();
 }

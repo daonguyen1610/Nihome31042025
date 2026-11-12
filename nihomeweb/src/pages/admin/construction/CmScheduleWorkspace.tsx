@@ -39,6 +39,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { ConstructionStatusBadge } from "./constructionUi";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
 
 const CM_STATUS_TONE = {
   Draft: "muted",
@@ -167,8 +168,7 @@ export function CmScheduleWorkspace({
     [report],
   );
   const percent = (value: number) => `${value.toLocaleString(lang, { maximumFractionDigits: 1 })}%`;
-  const displayDate = (value: string) =>
-    new Date(`${value.slice(0, 10)}T00:00:00Z`).toLocaleDateString(lang, { timeZone: "UTC" });
+  const displayDate = (value: string) => formatDate(value, lang, { timeZone: "UTC" });
   const weightTotal = lines
     .filter((x) => x.isLeaf && !x.isMilestone)
     .reduce((sum, x) => sum + x.weight, 0);
@@ -546,14 +546,12 @@ export function CmScheduleWorkspace({
                         type="number"
                         domain={["dataMin", "dataMax"]}
                         height={32}
-                        tickFormatter={(value) =>
-                          new Date(value).toLocaleDateString(lang, { timeZone: "UTC" })
-                        }
+                        tickFormatter={(value) => formatDate(value, lang, { timeZone: "UTC" })}
                       />
                       <YAxis domain={[0, 100]} width={56} tickFormatter={(value) => `${value}%`} />
                       <Tooltip
                         labelFormatter={(value) =>
-                          new Date(Number(value)).toLocaleDateString(lang, { timeZone: "UTC" })
+                          formatDate(Number(value), lang, { timeZone: "UTC" })
                         }
                         formatter={(value) => percent(Number(value))}
                       />
@@ -688,10 +686,11 @@ export function CmScheduleWorkspace({
                                         data.actualInputs.find((input) => input.taskId === x.taskId)
                                           ?.progressReportedByUserId,
                                     )?.name ?? t("cmSchedule.siteManager"),
-                                  at: new Date(
+                                  at: formatDateTime(
                                     data.actualInputs.find((input) => input.taskId === x.taskId)!
                                       .progressReportedAt!,
-                                  ).toLocaleString(lang, { timeZone: "Asia/Ho_Chi_Minh" }),
+                                    lang,
+                                  ),
                                 })}
                               </p>
                             )}

@@ -50,7 +50,7 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd } from "@/lib/numberFormat";
+import { formatVnd, getActiveCurrency } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
 import {
   adminApi,
@@ -77,7 +77,7 @@ const emptyCatalog = (catalogType: MaterialRateCatalogType): UpsertMaterialRateC
   code: "",
   name: "",
   description: "",
-  currency: "VND",
+  currency: getActiveCurrency(),
   isActive: true,
 });
 
@@ -338,7 +338,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
   const saveCatalog = async () => {
     const code = catalogForm.code.trim().toUpperCase();
     const name = catalogForm.name.trim();
-    const currency = catalogForm.currency.trim().toUpperCase();
+    const currency = getActiveCurrency();
     if (!/^[A-Z0-9][A-Z0-9._-]{0,49}$/.test(code)) {
       setFormError(t("materialRates.validation.catalogCode"));
       return;
@@ -1036,12 +1036,6 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                 <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
                   {t("materialRates.catalog.emptyHint")}
                 </p>
-                {canManage && (
-                  <Button size="sm" className="mt-4" onClick={openCatalogForm}>
-                    <Plus className="mr-1 h-4 w-4" />
-                    {t("materialRates.catalog.new")}
-                  </Button>
-                )}
               </div>
             ) : (
               <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
@@ -1057,7 +1051,7 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                       <Checkbox
                         className="mt-0.5 shrink-0"
                         data-testid={`material-rates-select-${catalog.id}`}
-                        aria-label={`${t("common.selectAll")} · ${catalog.name}`}
+                        aria-label={`${t("common.selectItem")} · ${catalog.name}`}
                         checked={selectedIds.has(catalog.id)}
                         onCheckedChange={(value) => toggleOne(catalog.id, value === true)}
                       />
@@ -1791,15 +1785,8 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
               />
             </FieldScope>
             <FieldScope>
-              <Label>{t("materialRates.catalog.currency")} *</Label>
-              <Input
-                data-testid="material-rates-catalog-currency"
-                maxLength={3}
-                value={catalogForm.currency}
-                onChange={(event) =>
-                  setCatalogForm({ ...catalogForm, currency: event.target.value })
-                }
-              />
+              <Label>{t("materialRates.catalog.currency")}</Label>
+              <p className="pt-2 text-sm font-medium">{getActiveCurrency()}</p>
             </FieldScope>
             <FieldScope>
               <Label>{t("materialRates.catalog.description")}</Label>

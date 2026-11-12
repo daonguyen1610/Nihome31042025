@@ -5,6 +5,7 @@ import type {
   DesignScheduleTaskResponse,
   OperationalProjectMemberResponse,
 } from "@/services/adminApi";
+import { formatDate } from "@/lib/displaySettings";
 
 interface Props {
   tasks: DesignScheduleTaskResponse[];
@@ -27,7 +28,7 @@ export const DesignScheduleTimeline = ({ tasks, members }: Props) => {
   const end = Math.max(...tasks.map((task) => timestamp(task.plannedEnd)));
   const totalDays = Math.max(1, Math.round((end - start) / day) + 1);
   const format = (value: number) =>
-    new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeZone: "UTC" }).format(new Date(value));
+    formatDate(value, lang, { dateStyle: "medium", timeZone: "UTC" });
   const taskById = new Map(tasks.map((task) => [task.id, task]));
   const memberById = new Map(members.map((member) => [member.id, member]));
 

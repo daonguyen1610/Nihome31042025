@@ -42,6 +42,7 @@ import {
   type MaterialRequestUpsertRequest,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
+import { formatDateTime } from "@/lib/displaySettings";
 
 type UserOption = PersonIdentity & { userId: number; userName: string };
 type RequestLineDraft = MaterialRequestUpsertRequest["lines"][number] & { draftId: string };
@@ -176,9 +177,7 @@ const MaterialRequestDetailPage = () => {
   const number = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }), [lang]);
   const dateTime = (value?: string | null) =>
     value
-      ? new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
-          new Date(value),
-        )
+      ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" })
       : t("procurement.request.detail.notAvailable");
 
   const openEdit = () => {

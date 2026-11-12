@@ -211,7 +211,7 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
                       <Checkbox
                         checked={bulk.selectedIds.has(att.id)}
                         onCheckedChange={(v) => bulk.toggleOne(att.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${att.originalFileName}`}
+                        aria-label={`${t("common.selectItem")} · ${att.originalFileName}`}
                       />
                     </div>
                   ) : null}

@@ -463,7 +463,7 @@ const Categories = () => {
                         className="mt-1 shrink-0"
                         checked={selectedIds.has(item.id)}
                         onCheckedChange={(v) => toggleOne(item.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${localizedName(item, lang)}`}
+                        aria-label={`${t("common.selectItem")} · ${localizedName(item, lang)}`}
                       />
                       <h3 className="min-w-0 break-words text-sm font-semibold leading-tight">
                         {localizedName(item, lang)}
@@ -549,7 +549,7 @@ const Categories = () => {
                         <Checkbox
                           checked={selectedIds.has(item.id)}
                           onCheckedChange={(v) => toggleOne(item.id, v === true)}
-                          aria-label={`${t("common.selectAll")} · ${localizedName(item, lang)}`}
+                          aria-label={`${t("common.selectItem")} · ${localizedName(item, lang)}`}
                         />
                       </td>
                       <td className="px-3 py-3 font-medium">{localizedName(item, lang)}</td>

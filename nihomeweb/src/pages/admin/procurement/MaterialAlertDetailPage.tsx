@@ -29,6 +29,7 @@ import {
   type MaterialAlertStatus,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
+import { formatDateTime } from "@/lib/displaySettings";
 
 const statusClass: Record<MaterialAlertStatus, string> = {
   Open: "border-rose-200 bg-rose-50 text-rose-800",
@@ -88,9 +89,7 @@ const MaterialAlertDetailPage = () => {
   const number = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 3 }), [lang]);
   const dateTime = (value?: string | null) =>
     value
-      ? new Intl.DateTimeFormat(lang, { dateStyle: "medium", timeStyle: "short" }).format(
-          new Date(value),
-        )
+      ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" })
       : t("procurement.alerts.notAvailable");
 
   const acknowledge = async () => {

@@ -84,6 +84,7 @@ import {
   type DesignProjectListItemResponse,
   type UpdateAsBuiltDocumentRequest,
 } from "@/services/adminApi";
+import { formatDateTime as formatDateTimeInZone } from "@/lib/displaySettings";
 
 const ASBUILT_STATUSES: AsBuiltStatus[] = [
   "Draft",
@@ -99,7 +100,7 @@ const CATEGORY_BADGE = "border-indigo/40 bg-indigo/10 text-indigo";
 const formatDateTime = (iso: string | null | undefined) => {
   if (!iso) return "—";
   const d = new Date(iso);
-  return Number.isNaN(d.getTime()) ? iso : d.toLocaleString();
+  return formatDateTimeInZone(iso);
 };
 
 export function AsBuiltDocumentsPanel({

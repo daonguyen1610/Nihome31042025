@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatDateTime } from "@/lib/displaySettings";
 
 type PermitDraft = {
   code: string;
@@ -440,8 +441,7 @@ export default function LegalActivationWizard({
               )}
               {preview.templateAppliedAt ? (
                 <p className="text-xs text-muted-foreground">
-                  {new Date(preview.templateAppliedAt).toLocaleString()} · #
-                  {preview.templateAppliedByUserId}
+                  {formatDateTime(preview.templateAppliedAt)} · #{preview.templateAppliedByUserId}
                 </p>
               ) : null}
               {permits.map((permit) => (

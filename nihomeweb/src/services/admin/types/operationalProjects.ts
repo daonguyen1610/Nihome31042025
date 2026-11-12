@@ -58,8 +58,11 @@ export interface DepartmentWorkTaskResponse {
   ccUserIds: number[];
   predecessorTaskIds: number[];
   successorTaskIds: number[];
+  blockingPredecessorTaskIds: number[];
   canUpdateProgress: boolean;
   canVerify: boolean;
+  isOverdue: boolean;
+  overdueDays?: number | null;
   rowVersion: string;
 }
 
@@ -106,6 +109,9 @@ export interface DepartmentWorkPackageResponse {
   plannedEnd?: string | null;
   completedAt?: string | null;
   progressPercent: number;
+  isOverdue: boolean;
+  overdueDays?: number | null;
+  completionBlockers: string[];
   canManagePackage: boolean;
   canAssignTasks: boolean;
   rowVersion: string;

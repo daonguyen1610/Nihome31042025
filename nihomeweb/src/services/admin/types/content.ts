@@ -408,6 +408,22 @@ export interface UpdateMapEmbedRequest {
   mapEmbedUrl: string | null;
 }
 
+export interface DisplaySettingsResponse {
+  timeZoneId: string;
+  currency: "VND" | "USD";
+}
+
+export interface UpdateDisplaySettingsRequest {
+  timeZoneId: string;
+  currency: "VND" | "USD";
+}
+
+export interface TimeZoneOption {
+  id: string;
+  label: string;
+  utcOffsetMinutes: number;
+}
+
 export interface GoogleDriveAdminStatusResponse {
   status:
     "Disabled" | "Connected" | "ReadOnly" | "InvalidRoot" | "ReconnectRequired" | "Unavailable";

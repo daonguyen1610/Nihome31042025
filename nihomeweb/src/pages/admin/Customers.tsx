@@ -76,6 +76,8 @@ import {
   type UpsertCustomerContactRequest,
 } from "@/services/adminApi";
 import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatTime } from "@/lib/displaySettings";
 
 const TYPES: CustomerType[] = ["Individual", "Company"];
 const STATUSES: CustomerRelationshipStatus[] = ["Prospect", "InProgress", "Signed", "Suspended"];
@@ -903,9 +905,7 @@ const AdminCustomers = () => {
                       )}
                       <div className={cn("min-w-0", !canSeeAll && "col-start-2")}>
                         <dt className="text-muted-foreground">{t("customers.field.createdAt")}</dt>
-                        <dd className="mt-0.5 font-medium">
-                          {new Date(c.createdAt).toLocaleDateString()}
-                        </dd>
+                        <dd className="mt-0.5 font-medium">{formatDate(c.createdAt)}</dd>
                       </div>
                     </dl>
 
@@ -1036,9 +1036,9 @@ const AdminCustomers = () => {
                           </td>
                         )}
                         <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                          <div>{new Date(c.createdAt).toLocaleDateString()}</div>
+                          <div>{formatDate(c.createdAt)}</div>
                           <div className="text-[11px] opacity-70">
-                            {new Date(c.createdAt).toLocaleTimeString([], {
+                            {formatTime(c.createdAt, lang, {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
@@ -1439,13 +1439,13 @@ const AdminCustomers = () => {
                           <div className="text-xs text-muted-foreground">
                             {t("customers.field.createdAt")}
                           </div>
-                          <div>{new Date(detail.createdAt).toLocaleString()}</div>
+                          <div>{formatDateTime(detail.createdAt)}</div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">
                             {t("customers.field.updatedAt")}
                           </div>
-                          <div>{new Date(detail.updatedAt).toLocaleString()}</div>
+                          <div>{formatDateTime(detail.updatedAt)}</div>
                         </div>
                         {detail.note && (
                           <div className="col-span-2">
@@ -2056,7 +2056,7 @@ const AdminCustomers = () => {
                             )}
                             <p className="text-xs text-muted-foreground">
                               {formatFileSize(document.fileSize)} ·{" "}
-                              {new Date(document.createdAt).toLocaleString()}
+                              {formatDateTime(document.createdAt)}
                             </p>
                             {document.uploadedByName && (
                               <p className="truncate text-xs text-muted-foreground">

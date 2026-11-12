@@ -11,6 +11,7 @@ import {
   type ContractResponse,
   type ContractSourceLeadResponse,
 } from "@/services/adminApi";
+import { formatDate } from "@/lib/displaySettings";
 
 export default function ContractSourceLeads({ contract }: { contract: ContractResponse }) {
   const uiError = useUiError();
@@ -95,10 +96,7 @@ export default function ContractSourceLeads({ contract }: { contract: ContractRe
                     </span>
                     <span className="mt-1 block text-xs text-muted-foreground">
                       {t("contracts.sourceLeads.converted")}{" "}
-                      {new Intl.DateTimeFormat(lang, {
-                        dateStyle: "medium",
-                        timeZone: "Asia/Ho_Chi_Minh",
-                      }).format(new Date(lead.convertedAt))}
+                      {formatDate(lead.convertedAt, lang, { dateStyle: "medium" })}
                     </span>
                   </span>
                   <ArrowUpRight

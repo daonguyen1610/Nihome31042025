@@ -41,6 +41,7 @@ import {
 import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { matchesSearch } from "@/lib/utils";
+import { formatDate, formatDateTime } from "@/lib/displaySettings";
 
 const EMP_TYPE_KEY_MAP: Record<string, string> = {
   "full-time": "rec.empType.fullTime",
@@ -296,7 +297,7 @@ const AdminRecruitment = () => {
         },
         {
           header: t("recruit.appliedOn"),
-          value: (row) => new Date(row.appliedAt).toLocaleString("vi-VN"),
+          value: (row) => formatDateTime(row.appliedAt, "vi-VN"),
         },
         { header: "CV URL", value: (row) => row.cvUrl ?? "" },
         { header: "Cover letter", value: (row) => row.coverLetter ?? "" },
@@ -399,7 +400,7 @@ const AdminRecruitment = () => {
                       <Checkbox
                         checked={posSelectedIds.has(p.id)}
                         onCheckedChange={(v) => posToggleOne(p.id, v === true)}
-                        aria-label={`${t("common.selectAll")} · ${p.title}`}
+                        aria-label={`${t("common.selectItem")} · ${p.title}`}
                       />
                     </div>
                     <div className="mb-3 flex items-start justify-between gap-2">
@@ -570,7 +571,7 @@ const AdminRecruitment = () => {
                           <Checkbox
                             checked={appSelectedIds.has(a.id)}
                             onCheckedChange={(v) => appToggleOne(a.id, v === true)}
-                            aria-label={`${t("common.selectAll")} · ${a.candidateName}`}
+                            aria-label={`${t("common.selectItem")} · ${a.candidateName}`}
                           />
                         </span>
                         <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
@@ -597,7 +598,7 @@ const AdminRecruitment = () => {
                             : "—"}
                         </dd>
                         <dt className="text-muted-foreground">{t("recruit.appliedOn")}</dt>
-                        <dd>{new Date(a.appliedAt).toLocaleDateString("vi-VN")}</dd>
+                        <dd>{formatDate(a.appliedAt, "vi-VN")}</dd>
                       </dl>
 
                       <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t pt-2">
@@ -698,7 +699,7 @@ const AdminRecruitment = () => {
                             <Checkbox
                               checked={appSelectedIds.has(a.id)}
                               onCheckedChange={(v) => appToggleOne(a.id, v === true)}
-                              aria-label={`${t("common.selectAll")} · ${a.candidateName}`}
+                              aria-label={`${t("common.selectItem")} · ${a.candidateName}`}
                             />
                           </td>
                           <td className="px-3 py-3">
@@ -722,7 +723,7 @@ const AdminRecruitment = () => {
                               : "—"}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                            {new Date(a.appliedAt).toLocaleDateString("vi-VN")}
+                            {formatDate(a.appliedAt, "vi-VN")}
                           </td>
                           <td className="whitespace-nowrap px-3 py-3">
                             <Select

@@ -36,11 +36,12 @@ import {
   type DrawingRevisionTargetType,
   type MasterDataOption,
 } from "@/services/adminApi";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }

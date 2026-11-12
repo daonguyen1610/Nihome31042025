@@ -64,6 +64,7 @@ import {
   type MasterDataOption,
 } from "@/services/adminApi";
 import { RevisionsPanel } from "./RevisionsPanel";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STATUS_BADGE: Record<BasicDesignDocStatus, string> = {
   InProgress: "border-sky-200 bg-sky-50 text-sky-700",
@@ -77,7 +78,7 @@ const STATUS_BADGE: Record<BasicDesignDocStatus, string> = {
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }

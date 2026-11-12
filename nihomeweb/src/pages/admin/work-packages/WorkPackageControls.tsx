@@ -340,14 +340,9 @@ export const PriceOfferDialog = ({
             />
           </Field>
           <Field label={t("workPackages.inputPrice.currency")} htmlFor="input-price-currency">
-            <Input
-              id="input-price-currency"
-              maxLength={3}
-              value={form.currency}
-              onChange={(event) =>
-                setForm((current) => ({ ...current, currency: event.target.value.toUpperCase() }))
-              }
-            />
+            <p id="input-price-currency" className="pt-2 text-sm font-medium">
+              {form.currency}
+            </p>
           </Field>
           <Field label={t("workPackages.inputPrice.validUntil")} htmlFor="input-price-valid-until">
             <Input

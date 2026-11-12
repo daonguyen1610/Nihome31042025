@@ -66,6 +66,29 @@ test("member eligibility codes use localized guidance and preserve unknown serve
   );
 });
 
+test("work package close rejections use localized guidance in every language", async () => {
+  const fs = await import("node:fs");
+  const seed = JSON.parse(
+    fs.readFileSync(
+      new URL("../../nihomebackend/Data/Seeds/i18n/work-packages.json", import.meta.url),
+      "utf8",
+    ),
+  );
+  const entry = seed.find((item) => item.key === "workPackages.error.notCompletable");
+  for (const lang of ["vi", "en", "zh", "ja"]) {
+    const expected = entry[lang];
+    assert.ok(expected);
+    assert.equal(
+      extractApiError(
+        failure({ code: "WORK_PACKAGE_NOT_COMPLETABLE", message: "server fallback" }),
+        undefined,
+        (key) => (key === entry.key ? expected : key),
+      ),
+      expected,
+    );
+  }
+});
+
 test("download conflict preserves the server's recovery message from a JSON Blob", async () => {
   const message = "Nội dung tệp không khớp bản đã trình. Liên hệ Chủ nhiệm thiết kế.";
   assert.equal(

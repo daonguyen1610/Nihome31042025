@@ -25,6 +25,7 @@ import type {
   WarehouseStockItemResponse,
   WarehouseTransactionListItemResponse,
 } from "@/services/adminApi";
+import { formatDate } from "@/lib/displaySettings";
 
 type UserOption = PersonIdentity & { userId: number; userName: string };
 type Translate = (key: string, params?: Record<string, string | number>) => string;

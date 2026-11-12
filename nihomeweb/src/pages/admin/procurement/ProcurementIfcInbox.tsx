@@ -9,6 +9,7 @@ import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { ListPagination } from "@/components/admin/ListPagination";
+import { formatDateTime } from "@/lib/displaySettings";
 
 export function ProcurementIfcInbox({ projectId }: { projectId: number }) {
   const { t, lang } = useI18n();
@@ -93,7 +94,7 @@ export function ProcurementIfcInbox({ projectId }: { projectId: number }) {
                   </h3>
                   <p className="text-sm text-muted-foreground">
                     {row.dossierCode} ·{" "}
-                    {row.releaseDate ? new Date(row.releaseDate).toLocaleString(lang) : "—"}
+                    {row.releaseDate ? formatDateTime(row.releaseDate, lang) : "—"}
                   </p>
                 </div>
                 <p className="text-sm">
@@ -138,7 +139,7 @@ export function ProcurementIfcInbox({ projectId }: { projectId: number }) {
               {row.acknowledgedAt ? (
                 <p className="text-sm">
                   {t("procurement.ifc.receivedAt", {
-                    date: new Date(row.acknowledgedAt).toLocaleString(lang),
+                    date: formatDateTime(row.acknowledgedAt, lang),
                   })}
                 </p>
               ) : (

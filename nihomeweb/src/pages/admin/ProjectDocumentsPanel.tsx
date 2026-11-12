@@ -1,7 +1,7 @@
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Download,
   ExternalLink,
@@ -35,6 +35,7 @@ import {
   type ProjectDocumentResponse,
   type ProjectDocumentSyncStatus,
 } from "@/services/adminApi";
+import { formatDateTime as formatDateTimeInZone } from "@/lib/displaySettings";
 
 const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const MAX_FILES = 20;
@@ -107,16 +108,8 @@ export default function ProjectDocumentsPanel({
     designProjectId,
   );
 
-  const dateTimeFormat = useMemo(
-    () =>
-      new Intl.DateTimeFormat(lang, {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }),
-    [lang],
-  );
   const formatDateTime = (value?: string | null) =>
-    value ? dateTimeFormat.format(new Date(value)) : "—";
+    value ? formatDateTimeInZone(value, lang, { dateStyle: "medium", timeStyle: "short" }) : "—";
 
   const load = useCallback(async () => {
     setLoading(true);

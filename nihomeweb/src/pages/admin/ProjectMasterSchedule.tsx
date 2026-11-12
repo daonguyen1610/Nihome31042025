@@ -42,6 +42,8 @@ import {
   type SaveProjectScheduleItemRequest,
 } from "@/services/adminApi";
 import { useToast } from "@/hooks/use-toast";
+import { formatDate, formatDate as formatDateInZone } from "@/lib/displaySettings";
+import { todayIsoDate } from "@/lib/displaySettings";
 
 interface ProjectMasterScheduleProps {
   projectId: number;
@@ -96,8 +98,7 @@ const SCHEDULE_STATUS_TONE = {
 } as const;
 
 function localDateToday() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  return todayIsoDate();
 }
 
 function dayNumber(value?: string | null): number | null {
@@ -232,18 +233,18 @@ export const ProjectMasterSchedule = ({
   const { t, lang } = useI18n();
   const { has } = usePermissions();
   const { toast } = useToast();
-  const dateFormat = useMemo(() => new Intl.DateTimeFormat(lang), [lang]);
   const monthLabel = useMemo(() => {
-    const short = new Intl.DateTimeFormat(lang, { month: "short", timeZone: "UTC" });
-    return (date: Date) => (lang === "vi" ? `T${date.getUTCMonth() + 1}` : short.format(date));
+    return (date: Date) =>
+      lang === "vi"
+        ? `T${date.getUTCMonth() + 1}`
+        : formatDate(date, lang, { month: "short", timeZone: "UTC" });
   }, [lang]);
   const formatScheduleDate = useCallback(
     (value?: string | null) => {
       if (!value) return "—";
-      const date = new Date(`${value.slice(0, 10)}T00:00:00`);
-      return Number.isNaN(date.getTime()) ? "—" : dateFormat.format(date);
+      return formatDateInZone(value, lang);
     },
-    [dateFormat],
+    [lang],
   );
   const formatDuration = useCallback(
     (days: number | null) => {

@@ -33,6 +33,10 @@ import { extractApiError } from "@/lib/apiError";
 import { usePermissions } from "@/hooks/usePermissions";
 import SurveyMediaPanel from "./SurveyMediaPanel";
 import SurveyConditionsPanel from "./SurveyConditionsPanel";
+import {
+  formatDate as formatDateInZone,
+  formatDateTime as formatDateTimeInZone,
+} from "@/lib/displaySettings";
 
 // ---------------------------- shared ----------------------------
 
@@ -111,7 +115,7 @@ const AdminSurveyDetail = () => {
     (iso?: string | null) => {
       if (!iso) return "—";
       try {
-        return new Date(iso).toLocaleDateString(lang);
+        return formatDateInZone(iso, lang);
       } catch {
         return iso;
       }
@@ -123,7 +127,7 @@ const AdminSurveyDetail = () => {
     (iso?: string | null) => {
       if (!iso) return "—";
       try {
-        return new Date(iso).toLocaleString(lang);
+        return formatDateTimeInZone(iso, lang);
       } catch {
         return iso;
       }

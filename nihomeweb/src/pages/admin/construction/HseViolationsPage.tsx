@@ -61,6 +61,7 @@ import {
   type OperationalProjectResponse,
   type UpdateHseViolationRequest,
 } from "@/services/adminApi";
+import { toDateTimeLocalValue, formatDateTime } from "@/lib/displaySettings";
 
 const STATUSES: HseViolationStatus[] = [
   "Draft",
@@ -97,18 +98,10 @@ interface HseForm {
 type FormMode = "create" | "edit" | "correct";
 type DecisionAction = "reject" | "cancel" | "remediate" | null;
 
-/** Server dates are stored in UTC but serialized without an offset. */
-const parseStoredUtc = (value: string) =>
-  new Date(/[zZ]|[+-]\d{2}:?\d{2}$/.test(value) ? value : `${value}Z`);
-
-const toLocalInputValue = (value: string) => {
-  const date = parseStoredUtc(value);
-  const pad = (part: number) => String(part).padStart(2, "0");
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-};
+const toLocalInputValue = (value: string) => toDateTimeLocalValue(value);
 
 const emptyForm = (): HseForm => ({
-  occurredAt: toLocalInputValue(new Date().toISOString()),
+  occurredAt: toDateTimeLocalValue(new Date()),
   location: "",
   category: "",
   severity: "Low",
@@ -140,7 +133,7 @@ const fromRecord = (row: HseViolationResponse): HseForm => ({
 });
 
 const dateTime = (value: string | null | undefined, lang: string) =>
-  value ? parseStoredUtc(value).toLocaleString(lang) : "-";
+  value ? formatDateTime(value, lang) : "-";
 
 export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps) => {
   const uiError = useUiError();

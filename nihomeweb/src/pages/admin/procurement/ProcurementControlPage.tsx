@@ -114,6 +114,8 @@ import MaterialRequestListToolbar from "./MaterialRequestListToolbar";
 import MaterialAlertsWorkspace from "./MaterialAlertsWorkspace";
 import WarehouseWorkspace from "./WarehouseWorkspace";
 import ConstructionResourcesWorkspace from "./ConstructionResourcesWorkspace";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
+import { getActiveCurrency } from "@/lib/numberFormat";
 
 const ProcurementControlPage = () => {
   const uiError = useUiError();
@@ -222,7 +224,7 @@ const ProcurementControlPage = () => {
   const [alertTotal, setAlertTotal] = useState(0);
   const [alertRefreshToken, setAlertRefreshToken] = useState(0);
 
-  const [boqCurrency, setBoqCurrency] = useState("VND");
+  const boqCurrency = getActiveCurrency();
   const [boqUpstreamContractId, setBoqUpstreamContractId] = useState(0);
   const [boqLines, setBoqLines] = useState<BoqLineDraft[]>([emptyBoqLine()]);
   const [boqList, setBoqList] = useState<ProjectBoqRevisionListResponse>({
@@ -273,7 +275,6 @@ const ProcurementControlPage = () => {
 
   const number = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }), [lang]);
   const money = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 0 }), [lang]);
-  const date = useMemo(() => new Intl.DateTimeFormat(lang, { dateStyle: "medium" }), [lang]);
 
   useEffect(() => {
     projectIdRef.current = projectId;
@@ -676,14 +677,14 @@ const ProcurementControlPage = () => {
       {t(`procurement.status.${value}`)}
     </Badge>
   );
-  const formatDate = (value?: string | null) => (value ? date.format(new Date(value)) : "—");
+  const formatDate = (value?: string | null) =>
+    value ? formatDateInZone(value, lang, { dateStyle: "medium" }) : "—";
 
   const openDialog = (kind: Exclude<DialogKind, null>) => {
     dialogTriggerRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     setFormError(null);
     if (kind === "boq") {
-      setBoqCurrency("VND");
       setBoqUpstreamContractId(0);
       setBoqLines([emptyBoqLine()]);
     }
@@ -1542,7 +1543,6 @@ const ProcurementControlPage = () => {
                   !["Draft", "Cancelled"].includes(contract.status),
               )}
               currency={boqCurrency}
-              setCurrency={setBoqCurrency}
               lines={boqLines}
               setLines={setBoqLines}
               t={t}

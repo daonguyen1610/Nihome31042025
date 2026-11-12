@@ -52,6 +52,7 @@ import {
   type TenderStatisticsParams,
   type UserListItemResponse,
 } from "@/services/adminApi";
+import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const ALL_VALUE = "__all__";
 
@@ -81,7 +82,7 @@ const emptyCreate = (): CreateTenderRequest => ({
 const formatDate = (iso?: string | null, lang: string = "vi") => {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleDateString(lang);
+    return formatDateInZone(iso, lang);
   } catch {
     return iso;
   }

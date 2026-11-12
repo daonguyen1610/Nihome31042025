@@ -50,7 +50,9 @@ export function extractApiError(
               ? "people.legalMemberInvalid"
               : data.code === "PUNCH_DESIGN_MEMBER_INVALID"
                 ? "people.designMemberInvalid"
-                : null;
+                : data.code === "WORK_PACKAGE_NOT_COMPLETABLE"
+                  ? "workPackages.error.notCompletable"
+                  : null;
       if (key) return translate(key);
     }
     if ("errors" in data && data.errors && typeof data.errors === "object") {

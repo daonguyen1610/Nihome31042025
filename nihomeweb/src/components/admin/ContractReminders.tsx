@@ -7,6 +7,7 @@ import { extractApiError } from "@/lib/apiError";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { formatDate } from "@/lib/displaySettings";
 
 export default function ContractReminders({
   contractId,
@@ -31,9 +32,7 @@ export default function ContractReminders({
     previewVersion.current += 1;
     setPreview(null);
   };
-  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(
-    new Date(),
-  );
+  const today = formatDate(new Date(), "en-CA");
   useEffect(() => {
     let active = true;
     setLoading(true);

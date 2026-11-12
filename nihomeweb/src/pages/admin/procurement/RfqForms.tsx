@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
 import { calculateRfqCommercialPreview } from "@/lib/rfqCommercial";
+import { getActiveCurrency } from "@/lib/numberFormat";
 import type {
   RfqBatchAwardDraft,
   RfqBidDraft,
@@ -265,8 +266,7 @@ export function RfqBidForm({
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState("");
-  const [currency, setCurrency] = useState("VND");
-  const [exchangeRateToVnd, setExchangeRateToVnd] = useState("1");
+  const currency = getActiveCurrency();
   const [freightAmount, setFreightAmount] = useState("0");
   const [discountPercent, setDiscountPercent] = useState("0");
   const [discountAmount, setDiscountAmount] = useState("0");
@@ -280,7 +280,7 @@ export function RfqBidForm({
     discountPercent,
     discountAmount,
     vatPercent,
-    exchangeRateToVnd,
+    "1",
   );
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -312,12 +312,7 @@ export function RfqBidForm({
       setError(t("rfq.validation.price"));
       return;
     }
-    if (
-      !/^[A-Z]{3}$/.test(currency) ||
-      Number(exchangeRateToVnd) <= 0 ||
-      (currency === "VND" && Number(exchangeRateToVnd) !== 1) ||
-      (Number(discountPercent) > 0 && Number(discountAmount) > 0)
-    ) {
+    if (Number(discountPercent) > 0 && Number(discountAmount) > 0) {
       setError(t("rfq.validation.commercial"));
       return;
     }
@@ -331,7 +326,7 @@ export function RfqBidForm({
       lines,
       documentIds,
       currency,
-      exchangeRateToVnd: Number(exchangeRateToVnd),
+      exchangeRateToVnd: 1,
       freightAmount: Number(freightAmount),
       discountPercent: Number(discountPercent),
       discountAmount: Number(discountAmount),
@@ -401,29 +396,9 @@ export function RfqBidForm({
             />
           </RfqField>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
           <RfqField label={t("rfq.field.currency")}>
-            <Input
-              required
-              maxLength={3}
-              value={currency}
-              onChange={(e) => {
-                const value = e.target.value.toUpperCase();
-                setCurrency(value);
-                if (value === "VND") setExchangeRateToVnd("1");
-              }}
-            />
-          </RfqField>
-          <RfqField label={t("rfq.field.exchangeRate")}>
-            <Input
-              required
-              type="number"
-              min="0.00000001"
-              step="0.00000001"
-              disabled={currency === "VND"}
-              value={exchangeRateToVnd}
-              onChange={(e) => setExchangeRateToVnd(e.target.value)}
-            />
+            <p className="pt-2 text-sm font-medium">{currency}</p>
           </RfqField>
           <RfqField label={t("rfq.field.freight")}>
             <Input

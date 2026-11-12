@@ -36,6 +36,27 @@ const baselineDocumentFields = [
   ["budgetBaselineDocumentId", "budgetBaselineReference"],
 ] as const;
 
+function preparationSnapshot(preparation: ConstructionPreparationResponse) {
+  return JSON.stringify({
+    ...Object.fromEntries(
+      baselineDocumentFields.flatMap(([documentField, referenceField]) => [
+        [documentField, preparation[documentField]],
+        [referenceField, preparation[referenceField]],
+      ]),
+    ),
+    budgetBaselineLocked: preparation.budgetBaselineLocked,
+    siteHandoverRequired: preparation.siteHandoverRequired,
+    siteHandoverComplete: preparation.siteHandoverComplete,
+    siteHandoverDocumentId: preparation.siteHandoverDocumentId,
+    methodStatementRequired: preparation.methodStatementRequired,
+    methodStatementApproved: preparation.methodStatementApproved,
+    methodStatementDocumentId: preparation.methodStatementDocumentId,
+    hsePlanRequired: preparation.hsePlanRequired,
+    hsePlanApproved: preparation.hsePlanApproved,
+    hsePlanDocumentId: preparation.hsePlanDocumentId,
+  });
+}
+
 export function CmPreparationSection({ projectId }: { projectId: number }) {
   const { t } = useI18n();
   const uiError = useUiError();
@@ -46,6 +67,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
   const canOpenDocuments = has(ADMIN_PERMS.operationalProjects);
   const canUploadDocuments = has(ADMIN_PERMS.operationalProjectsManage);
   const [preparation, setPreparation] = useState<ConstructionPreparationResponse | null>(null);
+  const savedPreparationSnapshot = useRef("");
   const [projectDocuments, setProjectDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [uploading, setUploading] = useState(false);
@@ -59,6 +81,9 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
     let active = true;
     setLoading(true);
     setError(null);
+    setPreparation(null);
+    savedPreparationSnapshot.current = "";
+    setPendingFiles([]);
     void Promise.all([
       adminApi.getConstructionPreparation(projectId).catch((cause) => {
         if ((cause as { response?: { status?: number } }).response?.status === 404) return null;
@@ -68,7 +93,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
     ])
       .then(([prep, documentsList]) => {
         if (!active) return;
-        setPreparation(
+        const loadedPreparation: ConstructionPreparationResponse =
           // 204 No Content arrives as an empty body; treat it as "not created yet".
           prep?.data && typeof prep.data === "object"
             ? prep.data
@@ -102,8 +127,9 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                 missingConditions: [],
                 readinessSnapshotJson: null,
                 rowVersion: "",
-              },
-        );
+              };
+        savedPreparationSnapshot.current = preparationSnapshot(loadedPreparation);
+        setPreparation(loadedPreparation);
         setProjectDocuments(
           (documentsList.data ?? []).filter(
             (document) =>
@@ -126,6 +152,12 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
 
   const patchPreparation = (patch: Partial<ConstructionPreparationResponse>) =>
     setPreparation((current) => (current ? { ...current, ...patch } : current));
+
+  const hasUnsavedChanges =
+    preparation != null && preparationSnapshot(preparation) !== savedPreparationSnapshot.current;
+  const hasMissingBaselineReferences =
+    preparation != null &&
+    baselineDocumentFields.some(([, referenceField]) => !preparation[referenceField].trim());
 
   const selectUploadFiles = (files: File[]) => {
     for (const file of files) {
@@ -208,6 +240,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
         rowVersion: preparation.rowVersion,
       });
       setPreparation(data);
+      savedPreparationSnapshot.current = preparationSnapshot(data);
       toast({ title: t("construction.cm.saved") });
     } catch (cause) {
       toast({
@@ -227,6 +260,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
         ? await adminApi.startConstruction(projectId, preparation.rowVersion)
         : await adminApi.evaluateConstructionReadiness(projectId, preparation.rowVersion);
       setPreparation(data);
+      savedPreparationSnapshot.current = preparationSnapshot(data);
       toast({ title: t(start ? "construction.cm.started" : "construction.cm.evaluated") });
     } catch (cause) {
       toast({
@@ -279,6 +313,26 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
               <p className="max-w-3xl text-sm text-muted-foreground">
                 {t("construction.cm.actionGuide")}
               </p>
+              {hasUnsavedChanges && (
+                <p
+                  data-testid="cm-preparation-unsaved"
+                  role="status"
+                  aria-live="polite"
+                  className="text-sm font-medium text-warning-strong"
+                >
+                  {t("construction.cm.unsavedChanges")}
+                </p>
+              )}
+              {canManage && hasMissingBaselineReferences && (
+                <p
+                  data-testid="cm-preparation-missing-references"
+                  role="status"
+                  aria-live="polite"
+                  className="text-sm text-warning-strong"
+                >
+                  {t("construction.cm.baselineRequiredBeforeSave")}
+                </p>
+              )}
               <div className="flex flex-wrap gap-2">
                 <Button asChild variant="outline">
                   <Link to="/admin/construction/cm/schedule?tab=tasks">
@@ -286,14 +340,19 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                   </Link>
                 </Button>
                 {canManage && (
-                  <Button disabled={acting} onClick={() => void savePreparation()}>
+                  <Button
+                    data-testid="cm-preparation-save"
+                    disabled={acting || !hasUnsavedChanges || hasMissingBaselineReferences}
+                    onClick={() => void savePreparation()}
+                  >
                     <Save className="mr-2 h-4 w-4" />
-                    {t("common.save")}
+                    {t("construction.cm.savePreparation")}
                   </Button>
                 )}
                 <Button
                   variant="outline"
-                  disabled={acting}
+                  data-testid="cm-preparation-evaluate"
+                  disabled={acting || hasUnsavedChanges || hasMissingBaselineReferences}
                   onClick={() => void readinessAction(false)}
                 >
                   <RefreshCcw className="mr-2 h-4 w-4" />
@@ -301,8 +360,11 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                 </Button>
                 {canStart && (
                   <Button
+                    data-testid="cm-preparation-start"
                     disabled={
                       acting ||
+                      hasUnsavedChanges ||
+                      hasMissingBaselineReferences ||
                       preparation.status !== "ReadyToStart" ||
                       !preparation.readinessSnapshotJson
                     }
@@ -462,57 +524,66 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                 {t("construction.cm.projectRequirementsGuide")}
               </p>
               {(
-                ["siteHandoverRequired", "methodStatementRequired", "hsePlanRequired"] as const
-              ).map((field) => (
-                <div
-                  key={field}
-                  className="flex items-start justify-between gap-3 rounded-lg border p-3"
-                >
-                  <div className="space-y-1">
-                    <Label htmlFor={field}>{t(`construction.cm.${field}`)}</Label>
-                    <p className="text-xs text-muted-foreground">
-                      {t(`construction.cm.${field}Help`)}
-                    </p>
+                [
+                  {
+                    requiredField: "siteHandoverRequired",
+                    evidenceField: "siteHandoverDocumentId",
+                    labelKey: "siteHandoverDocumentLabel",
+                  },
+                  {
+                    requiredField: "methodStatementRequired",
+                    evidenceField: "methodStatementDocumentId",
+                    labelKey: "methodStatementDocumentLabel",
+                  },
+                  {
+                    requiredField: "hsePlanRequired",
+                    evidenceField: "hsePlanDocumentId",
+                    labelKey: "hsePlanDocumentLabel",
+                  },
+                ] as const
+              ).map(({ requiredField, evidenceField, labelKey }) => (
+                <div key={requiredField} className="space-y-3 rounded-lg border p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <Label htmlFor={requiredField}>{t(`construction.cm.${requiredField}`)}</Label>
+                      <p className="text-xs text-muted-foreground">
+                        {t(`construction.cm.${requiredField}Help`)}
+                      </p>
+                    </div>
+                    <Switch
+                      id={requiredField}
+                      className="mt-0.5 shrink-0"
+                      checked={preparation[requiredField]}
+                      disabled={!canManage}
+                      onCheckedChange={(checked) =>
+                        patchPreparation({
+                          [requiredField]: checked,
+                          ...(!checked
+                            ? {
+                                [evidenceField]: null,
+                                ...(requiredField === "siteHandoverRequired"
+                                  ? { siteHandoverComplete: false }
+                                  : requiredField === "methodStatementRequired"
+                                    ? { methodStatementApproved: false }
+                                    : { hsePlanApproved: false }),
+                              }
+                            : {}),
+                        })
+                      }
+                    />
                   </div>
-                  <Switch
-                    id={field}
-                    className="mt-0.5 shrink-0"
-                    checked={preparation[field]}
-                    disabled={!canManage}
-                    onCheckedChange={(checked) => patchPreparation({ [field]: checked })}
-                  />
+                  {preparation[requiredField] && (
+                    <DocumentSelect
+                      id={evidenceField}
+                      label={t(`construction.cm.${labelKey}`)}
+                      value={preparation[evidenceField]}
+                      documents={projectDocuments}
+                      disabled={!canManage}
+                      onChange={(value) => patchPreparation({ [evidenceField]: value })}
+                    />
+                  )}
                 </div>
               ))}
-              {preparation.siteHandoverRequired && (
-                <DocumentSelect
-                  id="siteHandoverDocumentId"
-                  label={t("construction.cm.siteHandoverDocumentLabel")}
-                  value={preparation.siteHandoverDocumentId}
-                  documents={projectDocuments}
-                  disabled={!canManage}
-                  onChange={(value) => patchPreparation({ siteHandoverDocumentId: value })}
-                />
-              )}
-              {preparation.methodStatementRequired && (
-                <DocumentSelect
-                  id="methodStatementDocumentId"
-                  label={t("construction.cm.methodStatementDocumentLabel")}
-                  value={preparation.methodStatementDocumentId}
-                  documents={projectDocuments}
-                  disabled={!canManage}
-                  onChange={(value) => patchPreparation({ methodStatementDocumentId: value })}
-                />
-              )}
-              {preparation.hsePlanRequired && (
-                <DocumentSelect
-                  id="hsePlanDocumentId"
-                  label={t("construction.cm.hsePlanDocumentLabel")}
-                  value={preparation.hsePlanDocumentId}
-                  documents={projectDocuments}
-                  disabled={!canManage}
-                  onChange={(value) => patchPreparation({ hsePlanDocumentId: value })}
-                />
-              )}
             </fieldset>
             <section className="space-y-3" aria-labelledby="cm-verified-status">
               <h3 id="cm-verified-status" className="font-semibold">
@@ -538,9 +609,18 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                     <dd>
                       <Badge variant="outline">
                         {t(
-                          preparation[field]
-                            ? "construction.cm.verifiedMet"
-                            : "construction.cm.verifiedNotMet",
+                          field !== "budgetBaselineLocked" &&
+                            !preparation[
+                              field === "siteHandoverComplete"
+                                ? "siteHandoverRequired"
+                                : field === "methodStatementApproved"
+                                  ? "methodStatementRequired"
+                                  : "hsePlanRequired"
+                            ]
+                            ? "construction.cm.verifiedNotRequired"
+                            : preparation[field]
+                              ? "construction.cm.verifiedMet"
+                              : "construction.cm.verifiedNotMet",
                         )}
                       </Badge>
                     </dd>
