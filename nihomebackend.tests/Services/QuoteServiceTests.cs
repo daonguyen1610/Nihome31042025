@@ -177,6 +177,52 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_UsesThePricingCatalogCurrency()
+    {
+        _db.SiteSettings.Add(new SiteSettings { CurrencyCode = "USD", UsdVndRate = 25_000m });
+        await _db.SaveChangesAsync();
+        var (user, opportunity) = await SeedOpportunityAsync();
+
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            MaterialRateCatalogId = _rateCatalogId,
+            PricingEffectiveDate = _pricingDate,
+            VatPercent = 0m,
+        }, user.Id, canManage: true);
+
+        Assert.Equal("VND", created.Currency);
+        Assert.Equal(10_000_000m, created.UnitPricePerSqm);
+        Assert.Equal(1_000_000_000m, created.GrandTotal);
+    }
+
+    [Fact]
+    public async Task Update_AdoptsTheCurrencyOfTheAppliedPricingCatalog()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var created = await _sut.CreateAsync(
+            NewUnitCostRequest(opportunity.Id), user.Id, canManage: true);
+        Assert.Equal("VND", created.Currency);
+
+        var (usdCatalog, _) = await SeedApprovedRateRevisionAsync(
+            MaterialRateCatalogType.InvestmentRate, currency: "USD");
+        var updated = await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        {
+            RowVersion = created.RowVersion,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            MaterialRateCatalogId = usdCatalog.Id,
+            PricingEffectiveDate = _pricingDate,
+            VatPercent = 8m,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.Equal("USD", updated!.Currency);
+        Assert.Equal(10_000_000m, updated.UnitPricePerSqm);
+    }
+
+    [Fact]
     public async Task BasicDraft_SelectsOutputMethodAfterApprovedProcurementOffer()
     {
         var (owner, opportunity) = await SeedOpportunityAsync();
@@ -1827,13 +1873,14 @@ public class QuoteServiceTests : IDisposable
     }
 
     private async Task<(MaterialRateCatalog Catalog, MaterialRateRevision Revision)> SeedApprovedRateRevisionAsync(
-        MaterialRateCatalogType catalogType)
+        MaterialRateCatalogType catalogType, string currency = "VND")
     {
         var catalog = new MaterialRateCatalog
         {
             CatalogType = catalogType,
             Code = $"{catalogType.ToString().ToUpperInvariant()}-{Guid.NewGuid():N}"[..30],
             Name = $"{catalogType} test catalog",
+            Currency = currency,
             IsActive = true,
             CreatedByUserId = 1,
             UpdatedByUserId = 1,

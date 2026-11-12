@@ -35,7 +35,7 @@
   { "key": "opportunities.field.name", "category": "opportunities", "vi": "Tên cơ hội", "en": "Opportunity name", "zh": "商机名称", "ja": "商談名" },
   { "key": "opportunities.field.customer", "category": "opportunities", "vi": "Khách hàng", "en": "Customer", "zh": "客户", "ja": "顧客" },
   { "key": "opportunities.field.owner", "category": "opportunities", "vi": "Sales phụ trách", "en": "Sales owner", "zh": "负责销售", "ja": "担当営業" },
-  { "key": "opportunities.field.estimatedValue", "category": "opportunities", "vi": "Giá trị dự kiến (VND)", "en": "Estimated value (VND)", "zh": "预估金额 (VND)", "ja": "予想金額 (VND)" },
+  { "key": "opportunities.field.estimatedValue", "category": "opportunities", "vi": "Giá trị dự kiến", "en": "Estimated value", "zh": "预估金额", "ja": "予想金額" },
   { "key": "opportunities.field.winProbability", "category": "opportunities", "vi": "Xác suất chốt (%)", "en": "Win probability (%)", "zh": "成交率 (%)", "ja": "受注確度 (%)" },
   { "key": "opportunities.field.expectedCloseDate", "category": "opportunities", "vi": "Ngày dự kiến chốt", "en": "Expected close date", "zh": "预计成交日", "ja": "予定クロージング日" },
   { "key": "opportunities.field.stage", "category": "opportunities", "vi": "Giai đoạn", "en": "Stage", "zh": "阶段", "ja": "フェーズ" },

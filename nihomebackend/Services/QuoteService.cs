@@ -244,7 +244,7 @@ public class QuoteService(
             OwnerUserId = ownerId,
             Method = method,
             Version = 1,
-            Currency = await SystemCurrency.ResolveAsync(db, ct),
+            Currency = rate?.Currency ?? boqRevision?.Currency ?? await SystemCurrency.ResolveAsync(db, ct),
             AreaSqm = method == QuoteMethod.UnitCost ? request.AreaSqm : null,
             UnitPricePerSqm = method == QuoteMethod.UnitCost ? appliedUnitPrice : null,
             PackageDescription = method == QuoteMethod.UnitCost
@@ -361,12 +361,17 @@ public class QuoteService(
             ? await ResolveUpdatedBoqRevisionAsync(quote, request, ct)
             : null;
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
+        var pricingCurrency = rate?.Currency ?? boqRevision?.Currency;
         if (!isBasicDraft || inputPriceOffer is not null)
             ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice, request.Items,
                 request.DiscountPercent, request.VatPercent);
         if (method == QuoteMethod.UnitCost) request.UnitPricePerSqm = appliedUnitPrice;
 
         var changes = DetectChanges(quote, request, method);
+        if (pricingCurrency is not null && quote.Currency != pricingCurrency)
+        {
+            changes = new QuoteChangeSet(Any: true, Material: true);
+        }
         if (rate is not null && (quote.MaterialRateRevisionId != rate.Revision.Id ||
             quote.PricingEffectiveDate != rate.EffectiveDate ||
             quote.CatalogUnitPricePerSqm != rate.CatalogUnitPrice ||
@@ -426,6 +431,7 @@ public class QuoteService(
 
         quote.OwnerUserId = request.OwnerUserId ?? quote.OwnerUserId;
         quote.Method = method;
+        if (pricingCurrency is not null) quote.Currency = pricingCurrency;
         quote.AreaSqm = quote.Method == QuoteMethod.UnitCost ? request.AreaSqm : null;
         quote.UnitPricePerSqm = quote.Method == QuoteMethod.UnitCost ? request.UnitPricePerSqm : null;
         quote.PackageDescription = quote.Method == QuoteMethod.UnitCost
@@ -1161,12 +1167,16 @@ public class QuoteService(
         DateOnly EffectiveDate,
         decimal CatalogUnitPrice,
         decimal AppliedUnitPrice,
+        string Currency,
         QuoteRateSource Source,
         string? OverrideReason,
         int? OverrideByUserId,
         DateTime? OverrideAt);
 
-    private sealed record ResolvedBoqRevision(MaterialRateRevision Revision, DateOnly EffectiveDate);
+    private sealed record ResolvedBoqRevision(
+        MaterialRateRevision Revision,
+        DateOnly EffectiveDate,
+        string Currency);
 
     private async Task<ResolvedRate> ResolveNewRateAsync(
         int? catalogId,
@@ -1230,11 +1240,12 @@ public class QuoteService(
         var catalogUnitPrice = RoundMoney(revision.TotalRatePerSqm);
         if (catalogUnitPrice <= 0)
             throw new QuoteOperationException("Phiên bản đơn giá có hiệu lực phải có tổng đơn giá/m² lớn hơn 0.");
+        var currency = DisplaySettings.NormalizeCurrencyOrDefault(revision.Catalog.Currency);
 
         var appliedUnitPrice = requestedUnitPrice ?? catalogUnitPrice;
         if (appliedUnitPrice == catalogUnitPrice)
             return new ResolvedRate(revision, effectiveDate, catalogUnitPrice, appliedUnitPrice,
-                QuoteRateSource.Catalog, null, null, null);
+                currency, QuoteRateSource.Catalog, null, null, null);
 
         if (!canOverrideRate)
             throw new QuoteOperationException("Không có quyền ghi đè đơn giá danh mục.");
@@ -1242,7 +1253,7 @@ public class QuoteService(
         if (reason is null || reason.Length is < 10 or > 500 || !ContainsVietnamese(reason))
             throw new QuoteOperationException("Lý do ghi đè đơn giá phải bằng tiếng Việt và dài từ 10 đến 500 ký tự.");
         return new ResolvedRate(revision, effectiveDate, catalogUnitPrice, appliedUnitPrice,
-            QuoteRateSource.Override, reason, callerUserId, DateTime.UtcNow);
+            currency, QuoteRateSource.Override, reason, callerUserId, DateTime.UtcNow);
     }
 
     private async Task<ResolvedBoqRevision?> ResolveUpdatedBoqRevisionAsync(
@@ -1275,7 +1286,8 @@ public class QuoteService(
                 {
                     throw new QuoteOperationException("Danh mục đã chọn không phải danh mục đơn giá BOQ.");
                 }
-                return new ResolvedBoqRevision(existing, request.PricingEffectiveDate.Value);
+                return new ResolvedBoqRevision(existing, request.PricingEffectiveDate.Value,
+                    DisplaySettings.NormalizeCurrencyOrDefault(existing.Catalog.Currency));
             }
         }
 
@@ -1313,7 +1325,8 @@ public class QuoteService(
             .FirstOrDefaultAsync(ct)
             ?? throw new QuoteOperationException("Không có phiên bản danh mục BOQ đã duyệt có hiệu lực cho ngày đã chọn.");
 
-        return new ResolvedBoqRevision(revision, effectiveDate.Value);
+        return new ResolvedBoqRevision(revision, effectiveDate.Value,
+            DisplaySettings.NormalizeCurrencyOrDefault(revision.Catalog.Currency));
     }
 
     private static bool ContainsVietnamese(string value) => value.Any(character =>
