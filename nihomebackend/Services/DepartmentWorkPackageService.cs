@@ -270,8 +270,8 @@ public sealed partial class DepartmentWorkPackageService(
             SourceTenderId = request.SourceTenderId,
             DepartmentRoleGroupId = request.DepartmentRoleGroupId,
             LeadUserId = request.LeadUserId,
-            PlannedStart = request.PlannedStart?.ToUniversalTime(),
-            PlannedEnd = request.PlannedEnd?.ToUniversalTime(),
+            PlannedStart = AsUtcDate(request.PlannedStart),
+            PlannedEnd = AsUtcDate(request.PlannedEnd),
             CreatedAt = now,
             CreatedByUserId = callerUserId,
             UpdatedAt = now,
@@ -336,11 +336,11 @@ public sealed partial class DepartmentWorkPackageService(
             var deadline = await db.Tenders.AsNoTracking()
                 .Where(item => item.Id == entity.SourceTenderId)
                 .Select(item => item.SubmissionDeadline).SingleAsync(ct);
-            if (request.PlannedEnd.Value.ToUniversalTime() > deadline)
+            if (AsUtcDate(request.PlannedEnd.Value) > AsUtcDate(deadline))
                 throw Error("Ngày kết thúc nhóm hồ sơ không được sau hạn nộp thầu.");
             if (entity.Tasks.Any(task => task.Status != WorkTaskStatus.Cancelled &&
-                    (task.PlannedStart < request.PlannedStart.Value.ToUniversalTime() ||
-                     task.PlannedEnd > request.PlannedEnd.Value.ToUniversalTime())))
+                    (task.PlannedStart < AsUtcDate(request.PlannedStart.Value) ||
+                     task.PlannedEnd > AsUtcDate(request.PlannedEnd.Value))))
                 throw Error("Khoảng thời gian kế hoạch phải bao gồm các đầu việc đang có.");
         }
         if (entity.Kind == WorkPackageKind.Internal && request.ContractId.HasValue)
@@ -353,8 +353,8 @@ public sealed partial class DepartmentWorkPackageService(
         entity.Description = TrimOrNull(request.Description);
         entity.ContractId = request.ContractId;
         entity.Status = status;
-        entity.PlannedStart = request.PlannedStart?.ToUniversalTime();
-        entity.PlannedEnd = request.PlannedEnd?.ToUniversalTime();
+        entity.PlannedStart = AsUtcDate(request.PlannedStart);
+        entity.PlannedEnd = AsUtcDate(request.PlannedEnd);
         entity.CompletedAt = status == WorkPackageStatus.Completed ? DateTime.UtcNow : null;
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
@@ -395,8 +395,8 @@ public sealed partial class DepartmentWorkPackageService(
             ApproverUserId = request.ApproverUserId,
             KpiDefinitionId = request.KpiDefinitionId,
             ProjectScheduleNodeId = request.ProjectScheduleNodeId,
-            PlannedStart = request.PlannedStart.ToUniversalTime(),
-            PlannedEnd = request.PlannedEnd.ToUniversalTime(),
+            PlannedStart = AsUtcDate(request.PlannedStart),
+            PlannedEnd = AsUtcDate(request.PlannedEnd),
             CreatedAt = now,
             CreatedByUserId = callerUserId,
             UpdatedAt = now,
@@ -450,8 +450,8 @@ public sealed partial class DepartmentWorkPackageService(
         task.ApproverUserId = request.ApproverUserId;
         task.KpiDefinitionId = request.KpiDefinitionId;
         task.ProjectScheduleNodeId = request.ProjectScheduleNodeId;
-        task.PlannedStart = request.PlannedStart.ToUniversalTime();
-        task.PlannedEnd = request.PlannedEnd.ToUniversalTime();
+        task.PlannedStart = AsUtcDate(request.PlannedStart);
+        task.PlannedEnd = AsUtcDate(request.PlannedEnd);
         task.UpdatedAt = DateTime.UtcNow;
         task.UpdatedByUserId = callerUserId;
         SyncTaskLinks(task, request);
@@ -644,7 +644,7 @@ public sealed partial class DepartmentWorkPackageService(
                 .SingleOrDefaultAsync(ct) ?? throw Error("Gói thầu nguồn không tồn tại.");
             if (tender.Status != TenderStatus.Preparing)
                 throw Error("Chỉ được lập hoặc bổ sung Kế hoạch đấu thầu khi Gói thầu đang chuẩn bị.");
-            if (request.PlannedEnd.Value.ToUniversalTime() > tender.SubmissionDeadline)
+            if (AsUtcDate(request.PlannedEnd.Value) > AsUtcDate(tender.SubmissionDeadline))
                 throw Error("Ngày kết thúc nhóm hồ sơ không được sau hạn nộp thầu.");
             if (await db.DepartmentWorkPackages.AsNoTracking().AnyAsync(item =>
                     item.SourceTenderId == request.SourceTenderId &&
@@ -771,8 +771,8 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Ngày kết thúc đầu việc không được trước ngày bắt đầu.");
         if (package.OperationalProjectId.HasValue)
             await ValidateProjectScheduleNodeAsync(package.OperationalProjectId.Value, request.ProjectScheduleNodeId,
-                DateOnly.FromDateTime(request.PlannedStart.ToUniversalTime()),
-                DateOnly.FromDateTime(request.PlannedEnd.ToUniversalTime()), ct);
+                DateOnly.FromDateTime(AsUtcDate(request.PlannedStart)),
+                DateOnly.FromDateTime(AsUtcDate(request.PlannedEnd)), ct);
         else if (request.ProjectScheduleNodeId.HasValue)
             throw Error("Chỉ đầu việc thuộc dự án vận hành mới được liên kết với mốc WBS của tiến độ tổng thể.");
         if (request.ApproverUserId == request.AssigneeUserId)
@@ -785,8 +785,8 @@ public sealed partial class DepartmentWorkPackageService(
             var verifierId = request.ApproverUserId ?? package.LeadUserId;
             if (verifierId == request.AssigneeUserId)
                 throw Error("Đầu việc Kế hoạch đấu thầu phải có người duyệt độc lập khác người phụ trách.");
-            if (package.PlannedStart.HasValue && request.PlannedStart < package.PlannedStart.Value ||
-                package.PlannedEnd.HasValue && request.PlannedEnd > package.PlannedEnd.Value)
+            if (package.PlannedStart.HasValue && AsUtcDate(request.PlannedStart) < AsUtcDate(package.PlannedStart.Value) ||
+                package.PlannedEnd.HasValue && AsUtcDate(request.PlannedEnd) > AsUtcDate(package.PlannedEnd.Value))
                 throw Error("Thời gian đầu việc phải nằm trong khoảng thời gian của nhóm hồ sơ đấu thầu.");
         }
         if (package.Purpose == WorkPackagePurpose.LegalPermitting)
@@ -1137,15 +1137,17 @@ public sealed partial class DepartmentWorkPackageService(
         return new DisplayClock(zone, DateOnly.FromDateTime(DisplaySettings.TodayIn(zone)));
     }
 
-    private static DateOnly DisplayDate(DateTime value, DisplayClock clock) =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(
-            DateTime.SpecifyKind(value, DateTimeKind.Utc), clock.Zone));
+    /// <summary>Planned dates are calendar dates stored at UTC midnight.</summary>
+    private static DateTime AsUtcDate(DateTime value) =>
+        DateTime.SpecifyKind(value.Date, DateTimeKind.Utc);
+
+    private static DateTime? AsUtcDate(DateTime? value) => value.HasValue ? AsUtcDate(value.Value) : null;
 
     private static (bool IsOverdue, int? OverdueDays) OverdueState(
         DateTime? plannedEnd, DisplayClock clock, bool isTerminal)
     {
         if (isTerminal || plannedEnd is null) return (false, null);
-        var days = clock.Today.DayNumber - DisplayDate(plannedEnd.Value, clock).DayNumber;
+        var days = clock.Today.DayNumber - DateOnly.FromDateTime(AsUtcDate(plannedEnd.Value)).DayNumber;
         return days > 0 ? (true, days) : (false, null);
     }
 

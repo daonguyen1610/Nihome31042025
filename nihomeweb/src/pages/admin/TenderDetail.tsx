@@ -107,10 +107,14 @@ const CHECKLIST_STATUSES: TenderChecklistItemStatus[] = [
 
 const DEADLINE_ALERT_DAYS = 3;
 
-const formatDate = (iso?: string | null, lang: string = "vi"): string => {
+const formatDate = (
+  iso?: string | null,
+  lang: string = "vi",
+  options?: Intl.DateTimeFormatOptions,
+): string => {
   if (!iso) return "—";
   try {
-    return formatDateInZone(iso, lang);
+    return formatDateInZone(iso, lang, options);
   } catch {
     return iso;
   }
@@ -1277,7 +1281,8 @@ const TenderPlanTab = ({
             </div>
             <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
               <span>
-                {formatDate(item.plannedStart, lang)} → {formatDate(item.plannedEnd, lang)}
+                {formatDate(item.plannedStart, lang, { timeZone: "UTC" })} →{" "}
+                {formatDate(item.plannedEnd, lang, { timeZone: "UTC" })}
               </span>
               <span>{item.progressPercent}%</span>
               <span>

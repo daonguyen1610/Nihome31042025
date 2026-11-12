@@ -325,8 +325,9 @@ const DepartmentWorkPackages = () => {
                 <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
                   <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
                   <span>
-                    {t("workPackages.field.timeline")}: {formatDate(detail.plannedStart, lang)} →{" "}
-                    {formatDate(detail.plannedEnd, lang)}
+                    {t("workPackages.field.timeline")}:{" "}
+                    {formatDate(detail.plannedStart, lang, { timeZone: "UTC" })} →{" "}
+                    {formatDate(detail.plannedEnd, lang, { timeZone: "UTC" })}
                   </span>
                 </p>
                 <p className="text-sm text-muted-foreground">
@@ -720,8 +721,9 @@ const DepartmentWorkPackages = () => {
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {task.assigneeName} · {formatDate(task.plannedStart, lang)} →{" "}
-                          {formatDate(task.plannedEnd, lang)}
+                          {task.assigneeName} ·{" "}
+                          {formatDate(task.plannedStart, lang, { timeZone: "UTC" })} →{" "}
+                          {formatDate(task.plannedEnd, lang, { timeZone: "UTC" })}
                         </p>
                         {(task.blockingPredecessorTaskIds ?? []).length > 0 && (
                           <p className="text-sm text-amber-700">
