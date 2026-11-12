@@ -336,6 +336,38 @@
     "ja": "このページにアクセスする権限がありません。"
   },
   {
+    "key": "forbidden.recovery",
+    "category": "forbidden",
+    "vi": "Bạn chưa có quyền truy cập khu vực này. Hãy đăng xuất rồi đăng nhập bằng tài khoản có quyền phù hợp, hoặc nhờ quản trị viên xem xét quyền truy cập.",
+    "en": "You do not have access to this area. Sign out and use an account with the right access, or ask an administrator to review your permissions.",
+    "zh": "您没有访问此区域的权限。请先退出，再使用具有相应权限的账户登录；或者请管理员检查您的访问权限。",
+    "ja": "このエリアへのアクセス権がありません。ログアウトして適切な権限を持つアカウントでログインするか、管理者にアクセス権を確認してもらってください。"
+  },
+  {
+    "key": "forbidden.switchAccount",
+    "category": "forbidden",
+    "vi": "Đăng xuất và đổi tài khoản",
+    "en": "Sign out and switch account",
+    "zh": "退出并切换账户",
+    "ja": "ログアウトしてアカウントを切り替える"
+  },
+  {
+    "key": "forbidden.switchingAccount",
+    "category": "forbidden",
+    "vi": "Đang đăng xuất…",
+    "en": "Signing out…",
+    "zh": "正在退出…",
+    "ja": "ログアウト中…"
+  },
+  {
+    "key": "forbidden.profile",
+    "category": "forbidden",
+    "vi": "Về hồ sơ của tôi",
+    "en": "Go to my profile",
+    "zh": "前往我的个人资料",
+    "ja": "プロフィールに戻る"
+  },
+  {
     "key": "forbidden.back",
     "category": "forbidden",
     "vi": "Về trang quản trị",
