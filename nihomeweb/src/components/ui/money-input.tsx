@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 import { formatVnd, parseVnd, parseVndDecimal } from "@/lib/numberFormat";
+import { formatNumber } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
 
 type MoneyInputProps = {
@@ -36,18 +37,26 @@ export const MoneyInput = ({
   className,
   decimalScale = 0,
   showZero = false,
-  formatValue = formatVnd,
+  formatValue,
   preferDecimalComma = false,
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
   "data-testid": testId,
 }: MoneyInputProps) => {
-  // formatVnd renders an em dash for null/NaN, which suits a display but not a
+  // Whole amounts use locale grouping so parseVnd reads back exactly the
+  // number the user sees; decimal-aware fields keep the currency format.
+  const formatRef = useCallback(
+    (amount: number) => (formatValue ?? (decimalScale > 0 ? formatVnd : formatNumber))(amount),
+    [formatValue, decimalScale],
+  );
+
+  // Amounts render an em dash for null/NaN, which suits a display but not a
   // field — nobody can backspace a dash away. Empty stays empty here.
+
   const display = useCallback(
-    (amount: number) => (amount || (showZero && amount === 0) ? formatValue(amount) : ""),
-    [formatValue, showZero],
+    (amount: number) => (amount || (showZero && amount === 0) ? formatRef(amount) : ""),
+    [formatRef, showZero],
   );
 
   const [text, setText] = useState(() => display(value));

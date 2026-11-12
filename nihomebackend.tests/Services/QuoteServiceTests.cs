@@ -152,6 +152,31 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_CapturesTheActiveCurrency_AndKeepsItWhenTheSettingChanges()
+    {
+        _db.SiteSettings.Add(new SiteSettings { CurrencyCode = "USD", UsdVndRate = 25_000m });
+        await _db.SaveChangesAsync();
+        var (user, opportunity) = await SeedOpportunityAsync();
+
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            DraftOnly = true,
+        }, user.Id, canManage: true);
+
+        Assert.Equal("USD", created.Currency);
+        var stored = await _db.Quotes.SingleAsync(quote => quote.Id == created.Id);
+        Assert.Equal("USD", stored.Currency);
+
+        var settings = await _db.SiteSettings.SingleAsync();
+        settings.CurrencyCode = "VND";
+        await _db.SaveChangesAsync();
+
+        var detail = await _sut.GetAsync(created.Id, user.Id, canSeeAll: true);
+        Assert.Equal("USD", detail!.Currency);
+    }
+
+    [Fact]
     public async Task BasicDraft_SelectsOutputMethodAfterApprovedProcurementOffer()
     {
         var (owner, opportunity) = await SeedOpportunityAsync();

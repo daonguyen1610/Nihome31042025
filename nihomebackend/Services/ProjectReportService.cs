@@ -137,6 +137,7 @@ public sealed class ProjectReportService(
             .Where(milestone => contractIds.Contains(milestone.ContractId))
             .ToListAsync(ct);
 
+        var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var cmControl = await cmPortfolio.GetAsync(projectIds, callerUserId, ct);
         var response = new ProjectReportResponse
         {
@@ -182,7 +183,9 @@ public sealed class ProjectReportService(
                     quotes,
                     contracts,
                     appendices,
-                    milestones),
+                    milestones,
+                    displayCurrency,
+                    usdVndRate),
                 UnavailableMetrics = BuildUnavailableMetrics(),
             });
         }
@@ -382,7 +385,9 @@ public sealed class ProjectReportService(
         IReadOnlyCollection<Quote> allQuotes,
         IReadOnlyCollection<Contract> allContracts,
         IReadOnlyCollection<ContractAppendix> allAppendices,
-        IReadOnlyCollection<ContractPaymentMilestone> allMilestones)
+        IReadOnlyCollection<ContractPaymentMilestone> allMilestones,
+        string displayCurrency,
+        decimal usdVndRate)
     {
         var quotes = allQuotes.Where(item => item.OperationalProjectId == projectId)
             .Where(item => InRange(DateOnly.FromDateTime(item.CreatedAt), query)).ToList();
@@ -397,21 +402,29 @@ public sealed class ProjectReportService(
                 projectContractIds.Contains(item.ContractId) && item.DueDate.HasValue)
             .Where(item => InRange(DateOnly.FromDateTime(item.DueDate!.Value), query)).ToList();
         var contractValues = projectContracts.ToDictionary(item => item.Id, item => item.Value);
-        var approvedDelta = appendices.Sum(item => item.ValueDelta);
+        var contractCurrencies = projectContracts.ToDictionary(item => item.Id, item => item.Currency);
+        decimal InDisplayCurrency(string? currency, decimal amount) =>
+            MoneyDisplay.Convert(amount, currency, displayCurrency, usdVndRate);
+        var approvedDelta = appendices.Sum(item =>
+            InDisplayCurrency(contractCurrencies.GetValueOrDefault(item.ContractId), item.ValueDelta));
+        var contractBaseValue = contracts.Sum(item => InDisplayCurrency(item.Currency, item.Value));
 
         return new ProjectReportContractualFinanceResponse
         {
-            QuoteGrandTotal = quotes.Sum(item => item.GrandTotal),
+            QuoteGrandTotal = quotes.Sum(item => InDisplayCurrency(item.Currency, item.GrandTotal)),
             QuoteTotalsByStatus = Enum.GetValues<QuoteStatus>()
                 .ToDictionary(status => status.ToString(),
-                    status => quotes.Where(item => item.Status == status).Sum(item => item.GrandTotal)),
-            ContractBaseValue = contracts.Sum(item => item.Value),
+                    status => quotes.Where(item => item.Status == status)
+                        .Sum(item => InDisplayCurrency(item.Currency, item.GrandTotal))),
+            ContractBaseValue = contractBaseValue,
             ApprovedVariationOrderDelta = approvedDelta,
-            ContractCurrentValue = contracts.Sum(item => item.Value) + approvedDelta,
+            ContractCurrentValue = contractBaseValue + approvedDelta,
             MilestoneScheduledValuesByStatus = Enum.GetValues<PaymentMilestoneStatus>()
                 .ToDictionary(status => status.ToString(), status => milestones
                     .Where(item => item.Status == status)
-                    .Sum(item => Math.Round(contractValues[item.ContractId] * item.PercentValue / 100m, 2))),
+                    .Sum(item => InDisplayCurrency(
+                        contractCurrencies.GetValueOrDefault(item.ContractId),
+                        Math.Round(contractValues[item.ContractId] * item.PercentValue / 100m, 2)))),
         };
     }
 

@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Pencil, Save } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -109,7 +109,7 @@ export const ContractHeader = ({
             {t("contracts.detail.header.baseValue")}
           </div>
           <div className="mt-1 text-lg font-semibold text-foreground">
-            {formatVndWithSymbol(contract.value)}
+            {formatMoney(contract.value, contract.currency)}
           </div>
         </div>
         <div className="rounded-lg bg-muted/30 p-3">
@@ -127,7 +127,7 @@ export const ContractHeader = ({
             )}
           >
             {contract.approvedVoTotal > 0 ? "+" : ""}
-            {formatVndWithSymbol(contract.approvedVoTotal)}
+            {formatMoney(contract.approvedVoTotal, contract.currency)}
           </div>
         </div>
         <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
@@ -135,7 +135,7 @@ export const ContractHeader = ({
             {t("contracts.detail.header.currentValue")}
           </div>
           <div className="mt-1 text-lg font-bold text-emerald-900">
-            {formatVndWithSymbol(contract.currentValue)}
+            {formatMoney(contract.currentValue, contract.currency)}
           </div>
         </div>
       </div>

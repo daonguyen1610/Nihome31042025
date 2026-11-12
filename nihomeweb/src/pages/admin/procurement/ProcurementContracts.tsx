@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { formatVnd } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import type { ContractResponse } from "@/services/adminApi";
 
 export default function ProcurementContracts({
@@ -74,7 +74,9 @@ export default function ProcurementContracts({
                       </td>
                       <td className="p-2">{row.vendorName ?? row.vendorCode}</td>
                       <td className="p-2">{t(`contracts.status.${row.status}`)}</td>
-                      <td className="p-2 text-right tabular-nums">{formatVnd(row.currentValue)}</td>
+                      <td className="p-2 text-right tabular-nums">
+                        {formatMoney(row.currentValue, row.currency)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>

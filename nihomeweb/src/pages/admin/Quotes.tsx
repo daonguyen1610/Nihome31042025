@@ -25,7 +25,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { formatVnd, formatVndWithSymbol, parseVnd } from "@/lib/numberFormat";
+import { parseVnd } from "@/lib/numberFormat";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,7 +58,7 @@ import {
   type QuoteStatus,
   type DeletionImpactResponse,
 } from "@/services/adminApi";
-import { formatDate } from "@/lib/displaySettings";
+import { formatDate, formatMoney, formatNumber } from "@/lib/displaySettings";
 
 // -------- Static styling --------
 
@@ -405,7 +405,7 @@ const AdminQuotes = () => {
             aria-label={t("quotes.filter.minValue")}
             inputMode="numeric"
             placeholder={t("quotes.filter.minValue")}
-            value={minValue ? formatVnd(Number(minValue)) : ""}
+            value={minValue ? formatNumber(Number(minValue), lang) : ""}
             onChange={(e) => setMinValue(String(parseVnd(e.target.value) || ""))}
           />
         </div>
@@ -414,7 +414,7 @@ const AdminQuotes = () => {
             aria-label={t("quotes.filter.maxValue")}
             inputMode="numeric"
             placeholder={t("quotes.filter.maxValue")}
-            value={maxValue ? formatVnd(Number(maxValue)) : ""}
+            value={maxValue ? formatNumber(Number(maxValue), lang) : ""}
             onChange={(e) => setMaxValue(String(parseVnd(e.target.value) || ""))}
           />
         </div>
@@ -475,7 +475,7 @@ const AdminQuotes = () => {
                       <Td className="whitespace-nowrap text-right font-medium">
                         {r.status === "Draft" && r.grandTotal === 0
                           ? t("quotes.inputPrice.pricePending")
-                          : formatVndWithSymbol(r.grandTotal)}
+                          : formatMoney(r.grandTotal, r.currency)}
                       </Td>
                       <Td>
                         <StatusCell status={r.status} expiring={r.isExpiringSoon} t={t} />
@@ -540,7 +540,7 @@ const AdminQuotes = () => {
                     <div className="whitespace-nowrap text-sm font-semibold">
                       {r.status === "Draft" && r.grandTotal === 0
                         ? t("quotes.inputPrice.pricePending")
-                        : formatVndWithSymbol(r.grandTotal)}
+                        : formatMoney(r.grandTotal, r.currency)}
                     </div>
                   </div>
                   <div className="mb-2 flex items-center justify-between text-xs text-muted-foreground">

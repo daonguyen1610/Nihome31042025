@@ -24,7 +24,6 @@ import {
 } from "@/components/ui/dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useI18n } from "@/lib/i18n";
-import { getActiveCurrency } from "@/lib/numberFormat";
 import { extractApiError } from "@/lib/apiError";
 import { adminApi, type OperationalProjectListItemResponse } from "@/services/adminApi";
 import {
@@ -44,7 +43,7 @@ import {
   RfqField,
   rfqSelectClass,
 } from "./RfqForms";
-import { formatDateTime } from "@/lib/displaySettings";
+import { formatDateTime, formatMoney } from "@/lib/displaySettings";
 
 const statuses: RfqStatus[] = [
   "Draft",
@@ -196,8 +195,6 @@ function RfqWorkspace({
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const settledSearch = useDebouncedValue(filter.search);
   const filterJson = JSON.stringify({ ...filter, search: settledSearch });
-  const number = new Intl.NumberFormat(lang, { maximumFractionDigits: 4 });
-  const currency = getActiveCurrency();
   const quantity = new Intl.NumberFormat(lang, { maximumFractionDigits: 6 });
   const date = (value: string | null) => (value ? formatDateTime(value, lang) : "—");
   useEffect(() => {
@@ -777,15 +774,10 @@ function RfqWorkspace({
                             >
                               {cell ? (
                                 <>
-                                  <div>
-                                    {number.format(cell.unitPrice)} {bid!.currency}
-                                  </div>
+                                  <div>{formatMoney(cell.unitPrice, bid!.currency)}</div>
                                   <div className="text-xs">
-                                    {number.format(cell.unitPriceVnd)} {currency}
-                                  </div>
-                                  <div className="text-xs">
-                                    {t("rfq.field.total")}: {number.format(cell.amountVnd)}{" "}
-                                    {currency}
+                                    {t("rfq.field.total")}:{" "}
+                                    {formatMoney(cell.amountVnd, bid!.currency)}
                                   </div>
                                 </>
                               ) : (
@@ -806,12 +798,7 @@ function RfqWorkspace({
                           <td key={v.id} className={`p-3 ${bid?.isLowest ? "bg-emerald-50" : ""}`}>
                             {bid ? (
                               <>
-                                <strong>
-                                  {number.format(bid.totalOriginal)} {bid.currency}
-                                </strong>
-                                <p className="text-xs">
-                                  {number.format(bid.total)} {currency}
-                                </p>
+                                <strong>{formatMoney(bid.totalOriginal, bid.currency)}</strong>
                                 <p>{!bid.isComplete && t("rfq.partial")}</p>
                                 <p>{!bid.isEligible && t("rfq.ineligible")}</p>
                                 <p className="mt-2">
@@ -848,8 +835,7 @@ function RfqWorkspace({
                       </Link>
                       <span>
                         {" "}
-                        · {award.vendorName} · {number.format(award.originalValue)} {award.currency}{" "}
-                        / {number.format(award.valueVnd)} {currency}
+                        · {award.vendorName} · {formatMoney(award.originalValue, award.currency)}
                       </span>
                     </div>
                   ))
@@ -982,7 +968,7 @@ function RfqWorkspace({
                 <details key={bid.id} className="rounded-lg border p-3">
                   <summary className="cursor-pointer text-sm font-medium">
                     {detail.vendors.find((v) => v.id === bid.vendorId)?.name} · #{bid.revision} ·{" "}
-                    {number.format(bid.total)} {detail.currency} ·{" "}
+                    {formatMoney(bid.totalOriginal, bid.currency)} ·{" "}
                     {bid.withdrawnAt
                       ? t("rfq.withdrawn")
                       : bid.isCurrent
@@ -1004,8 +990,8 @@ function RfqWorkspace({
                     {bid.lines.map((line) => (
                       <p key={line.rfqLineId}>
                         {detail.lines.find((l) => l.id === line.rfqLineId)?.itemCode}:{" "}
-                        {number.format(line.unitPrice)} · {number.format(line.amount)}{" "}
-                        {detail.currency}
+                        {formatMoney(line.unitPrice, bid.currency)} ·{" "}
+                        {formatMoney(line.amount, bid.currency)}
                       </p>
                     ))}
                     {canManage &&

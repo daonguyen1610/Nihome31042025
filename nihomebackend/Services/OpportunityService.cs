@@ -46,9 +46,11 @@ public class OpportunityService(
         if (pageSize < 1) pageSize = 1;
         if (pageSize > MaxPageSize) pageSize = MaxPageSize;
 
+        var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var query = BuildFilteredQuery(
             callerUserId, canSeeAll, stage, customerId, ownerUserId,
-            expectedCloseFrom, expectedCloseTo, minValue, maxValue, search);
+            expectedCloseFrom, expectedCloseTo, minValue, maxValue, search,
+            displayCurrency, usdVndRate);
 
         if (quoteEligibleOnly)
         {
@@ -99,14 +101,14 @@ public class OpportunityService(
         decimal? maxValue = null,
         CancellationToken ct = default)
     {
+        var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var query = BuildFilteredQuery(
             callerUserId, canSeeAll,
             stage: null, customerId, ownerUserId,
-            expectedCloseFrom, expectedCloseTo, minValue, maxValue, search: null);
+            expectedCloseFrom, expectedCloseTo, minValue, maxValue, search: null,
+            displayCurrency, usdVndRate);
 
         var rows = await query
-            .OrderBy(o => o.ExpectedCloseDate ?? DateTime.MaxValue)
-            .ThenByDescending(o => o.EstimatedValue)
             .Select(o => new
             {
                 Opportunity = o,
@@ -114,6 +116,14 @@ public class OpportunityService(
                 OwnerName = o.Owner != null ? o.Owner.FullName : null,
             })
             .ToListAsync(ct);
+
+        // Ordering by the display value keeps mixed-currency columns sorted by
+        // the number the board is actually showing.
+        rows = rows
+            .OrderBy(r => r.Opportunity.ExpectedCloseDate ?? DateTime.MaxValue)
+            .ThenByDescending(r => MoneyDisplay.Convert(
+                r.Opportunity.EstimatedValue, r.Opportunity.Currency, displayCurrency, usdVndRate))
+            .ToList();
 
         var byStage = rows
             .GroupBy(r => r.Opportunity.Stage)
@@ -127,7 +137,8 @@ public class OpportunityService(
             {
                 Stage = stage,
                 Count = bucket.Count,
-                TotalValue = bucket.Sum(r => r.Opportunity.EstimatedValue),
+                TotalValue = bucket.Sum(r => MoneyDisplay.Convert(
+                    r.Opportunity.EstimatedValue, r.Opportunity.Currency, displayCurrency, usdVndRate)),
                 Items = bucket
                     .Select(r => Map(r.Opportunity, r.CustomerName, r.OwnerName, activities: null))
                     .ToList(),
@@ -291,6 +302,7 @@ public class OpportunityService(
             OperationalProjectId = request.OperationalProjectId,
             OwnerUserId = ownerId,
             EstimatedValue = request.EstimatedValue,
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             WinProbability = request.WinProbability,
             ExpectedCloseDate = request.ExpectedCloseDate,
             Stage = request.Stage,
@@ -697,7 +709,9 @@ public class OpportunityService(
         DateTime? expectedCloseTo,
         decimal? minValue,
         decimal? maxValue,
-        string? search)
+        string? search,
+        string displayCurrency,
+        decimal usdVndRate)
     {
         var query = db.Opportunities.AsNoTracking()
             .Include(o => o.OperationalProject)
@@ -729,13 +743,18 @@ public class OpportunityService(
         {
             query = query.Where(o => o.ExpectedCloseDate <= expectedCloseTo.Value);
         }
+        // Filters are entered in the display currency; compare them against each
+        // opportunity's stored value brought to the same currency.
+        var rate = usdVndRate > 0 ? usdVndRate : SiteSettings.DefaultUsdVndRate;
         if (minValue.HasValue)
         {
-            query = query.Where(o => o.EstimatedValue >= minValue.Value);
+            var minVnd = MoneyDisplay.Convert(minValue.Value, displayCurrency, "VND", rate);
+            query = query.Where(o => (o.Currency == "USD" ? o.EstimatedValue * rate : o.EstimatedValue) >= minVnd);
         }
         if (maxValue.HasValue)
         {
-            query = query.Where(o => o.EstimatedValue <= maxValue.Value);
+            var maxVnd = MoneyDisplay.Convert(maxValue.Value, displayCurrency, "VND", rate);
+            query = query.Where(o => (o.Currency == "USD" ? o.EstimatedValue * rate : o.EstimatedValue) <= maxVnd);
         }
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -845,6 +864,7 @@ public class OpportunityService(
             OwnerUserId = op.OwnerUserId,
             OwnerName = ownerName,
             EstimatedValue = op.EstimatedValue,
+            Currency = op.Currency,
             WinProbability = op.WinProbability,
             ExpectedCloseDate = op.ExpectedCloseDate,
             Stage = op.Stage,

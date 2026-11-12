@@ -80,7 +80,7 @@ import {
   type ProjectScheduleItemResponse,
   type UpdateConstructionTaskRequest,
 } from "@/services/adminApi";
-import { formatDate as formatDateInZone } from "@/lib/displaySettings";
+import { formatDate as formatDateInZone, todayIsoDate } from "@/lib/displaySettings";
 
 const CONSTRUCTION_STATUSES: ConstructionTaskStatus[] = [
   "Planned",
@@ -96,7 +96,7 @@ interface UserOption extends PersonIdentity {
   fullName: string;
 }
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => todayIsoDate();
 const isoAfter = (base: string, days: number) => {
   const d = new Date(base);
   d.setDate(d.getDate() + days);

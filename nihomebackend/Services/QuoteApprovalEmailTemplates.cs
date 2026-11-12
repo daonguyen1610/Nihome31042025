@@ -8,7 +8,7 @@ public sealed record QuoteApprovalTemplate(string Subject, string Body);
 
 public static class QuoteApprovalEmailTemplates
 {
-    public static readonly string[] Tokens = ["recipientName", "senderName", "quoteCode", "quoteVersion", "grandTotal", "validUntil", "quoteUrl"];
+    public static readonly string[] Tokens = ["recipientName", "senderName", "quoteCode", "quoteVersion", "grandTotal", "currency", "validUntil", "quoteUrl"];
     public const string DefaultSubject = "NICON – Duyệt báo giá {{quoteCode}}";
     public static string DefaultBody => EmailTemplateBaseline.Wrap(
         "YÊU CẦU DUYỆT BÁO GIÁ · {{quoteCode}}",
@@ -19,7 +19,7 @@ public static class QuoteApprovalEmailTemplates
           <div style="font-size:12px;font-weight:700;color:#64748b">THÔNG TIN BÁO GIÁ</div>
           <p style="margin:8px 0 0;font-size:16px;font-weight:700;line-height:24px">{{quoteCode}} · Phiên bản {{quoteVersion}}</p>
           <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#64748b">Tổng giá trị</p>
-          <p style="margin:4px 0 0;font-size:18px;font-weight:700;line-height:26px">{{grandTotal}} VND</p>
+          <p style="margin:4px 0 0;font-size:18px;font-weight:700;line-height:26px">{{grandTotal}} {{currency}}</p>
           <p style="margin:12px 0 0;font-size:13px;line-height:20px;color:#64748b">Hiệu lực đến</p>
           <p style="margin:4px 0 0;font-size:14px;font-weight:700;line-height:22px">{{validUntil}}</p>
         </div>

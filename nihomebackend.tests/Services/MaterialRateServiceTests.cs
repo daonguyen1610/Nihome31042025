@@ -578,6 +578,28 @@ public class MaterialRateServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateCatalogAsync_KeepsStoredCurrencyAfterSettingsChange()
+    {
+        var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 1, 1));
+        await ImportValidAsync(catalog.Id, revision.Id, "A");
+        await _sut.ApproveAsync(catalog.Id, revision.Id, null, 1);
+        _db.SiteSettings.Add(new SiteSettings { CurrencyCode = "USD" });
+        await _db.SaveChangesAsync();
+
+        var updated = await _sut.UpdateCatalogAsync(catalog.Id, new UpsertMaterialRateCatalogRequest
+        {
+            CatalogType = catalog.CatalogType,
+            Code = catalog.Code,
+            Name = "Tên danh mục đã sửa",
+            IsActive = true,
+        }, 1);
+
+        Assert.NotNull(updated);
+        Assert.Equal("Tên danh mục đã sửa", updated!.Name);
+        Assert.Equal("VND", (await _db.MaterialRateCatalogs.FindAsync(catalog.Id))!.Currency);
+    }
+
+    [Fact]
     public async Task ApprovedRevision_IsImmutableToCsvImport()
     {
         var (catalog, revision) = await CreateDraftAsync(new DateOnly(2026, 1, 1));

@@ -67,8 +67,11 @@ public class Contract : IConcurrencyTracked
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
 
-    /// <summary>Face value in VND (base amount, before VO adjustments).</summary>
+    /// <summary>Face value in <see cref="Currency"/> (base amount, before VO adjustments).</summary>
     public decimal Value { get; set; }
+
+    /// <summary>ISO 4217 code captured when the contract was created; all amounts are stored in it.</summary>
+    public string Currency { get; set; } = SiteSettings.DefaultCurrencyCode;
 
     /// <summary>Free-text scope of work (rich-text HTML is fine — sanitised at render time).</summary>
     public string? ScopeOfWork { get; set; }

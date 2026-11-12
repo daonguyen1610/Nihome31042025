@@ -411,11 +411,14 @@ export interface UpdateMapEmbedRequest {
 export interface DisplaySettingsResponse {
   timeZoneId: string;
   currency: "VND" | "USD";
+  /** VND per 1 USD used to convert recorded amounts for display. */
+  usdVndRate: number;
 }
 
 export interface UpdateDisplaySettingsRequest {
   timeZoneId: string;
   currency: "VND" | "USD";
+  usdVndRate: number;
 }
 
 export interface TimeZoneOption {

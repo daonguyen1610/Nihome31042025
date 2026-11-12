@@ -88,6 +88,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             ["quoteCode"] = quote.Code,
             ["quoteVersion"] = quote.Version.ToString(CultureInfo.InvariantCulture),
             ["grandTotal"] = quote.GrandTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")),
+            ["currency"] = quote.Currency,
             ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
             ["quoteUrl"] = $"{origin}/admin/quotes/{quote.Id}",
         };
@@ -181,6 +182,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             ["quoteCode"] = quote.Code,
             ["quoteVersion"] = quote.Version.ToString(CultureInfo.InvariantCulture),
             ["grandTotal"] = quote.GrandTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")),
+            ["currency"] = quote.Currency,
             ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
             ["decisionLabel"] = approved ? "Đã phê duyệt" : "Từ chối",
             ["decisionNote"] = string.IsNullOrWhiteSpace(note) ? "—" : note.Trim(),

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock, Globe2, RefreshCw, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useI18n } from "@/lib/i18n";
@@ -28,6 +29,7 @@ const DisplaySettingsTab = () => {
   const [saved, setSaved] = useState<DisplaySettingsResponse | null>(null);
   const [timeZoneId, setTimeZoneId] = useState("");
   const [currency, setCurrency] = useState<DisplaySettingsResponse["currency"]>("VND");
+  const [usdVndRate, setUsdVndRate] = useState("25000");
   const [timeZones, setTimeZones] = useState<TimeZoneOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -44,6 +46,7 @@ const DisplaySettingsTab = () => {
       setSaved(display.data);
       setTimeZoneId(display.data.timeZoneId);
       setCurrency(display.data.currency);
+      setUsdVndRate(String(display.data.usdVndRate));
       setTimeZones(zones.data);
     } catch {
       setFailed(true);
@@ -61,7 +64,13 @@ const DisplaySettingsTab = () => {
     [timeZones],
   );
 
-  const dirty = saved !== null && (timeZoneId !== saved.timeZoneId || currency !== saved.currency);
+  const parsedRate = Number(usdVndRate);
+  const rateValid = Number.isFinite(parsedRate) && parsedRate > 0;
+  const dirty =
+    saved !== null &&
+    (timeZoneId !== saved.timeZoneId ||
+      currency !== saved.currency ||
+      parsedRate !== saved.usdVndRate);
 
   const preview = useMemo(() => {
     try {
@@ -76,14 +85,19 @@ const DisplaySettingsTab = () => {
   }, [lang, timeZoneId]);
 
   const save = async () => {
-    if (!dirty) return;
+    if (!dirty || !rateValid) return;
     setSaving(true);
     try {
-      const payload: UpdateDisplaySettingsRequest = { timeZoneId, currency };
+      const payload: UpdateDisplaySettingsRequest = {
+        timeZoneId,
+        currency,
+        usdVndRate: parsedRate,
+      };
       const { data } = await adminApi.updateDisplaySettings(payload);
       setSaved(data);
       setTimeZoneId(data.timeZoneId);
       setCurrency(data.currency);
+      setUsdVndRate(String(data.usdVndRate));
       applyDisplaySettings(data);
       toast({ title: t("settings.saved") });
     } catch {
@@ -182,9 +196,38 @@ const DisplaySettingsTab = () => {
             </p>
           </fieldset>
 
+          <div className="space-y-2">
+            <Label htmlFor="display-rate">{t("settings.display.exchangeRate")}</Label>
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">1 USD =</span>
+              <Input
+                id="display-rate"
+                type="number"
+                min={1}
+                step={1}
+                inputMode="decimal"
+                value={usdVndRate}
+                onChange={(event) => setUsdVndRate(event.target.value)}
+                disabled={!canManage || saving}
+                aria-invalid={!rateValid}
+                aria-describedby={rateValid ? "display-rate-hint" : "display-rate-error"}
+                className="max-w-40 text-right tabular-nums"
+              />
+              <span className="text-sm text-muted-foreground">VND</span>
+            </div>
+            <p id="display-rate-hint" className="text-xs text-muted-foreground">
+              {t("settings.display.exchangeRateHint")}
+            </p>
+            {rateValid ? null : (
+              <p id="display-rate-error" role="alert" className="text-xs text-destructive">
+                {t("settings.display.exchangeRateInvalid")}
+              </p>
+            )}
+          </div>
+
           <div className="flex flex-wrap items-center gap-3 border-t pt-4">
             {canManage ? (
-              <Button onClick={() => void save()} disabled={saving || !dirty}>
+              <Button onClick={() => void save()} disabled={saving || !dirty || !rateValid}>
                 <Save className="mr-1.5 h-4 w-4" />
                 {saving ? t("common.saving") : t("common.save")}
               </Button>
@@ -201,6 +244,7 @@ const DisplaySettingsTab = () => {
                   if (!saved) return;
                   setTimeZoneId(saved.timeZoneId);
                   setCurrency(saved.currency);
+                  setUsdVndRate(String(saved.usdVndRate));
                 }}
                 disabled={saving}
               >

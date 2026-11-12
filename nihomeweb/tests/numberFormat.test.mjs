@@ -7,7 +7,7 @@ const source = await readFile(new URL("../src/lib/numberFormat.ts", import.meta.
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const { parseVndDecimal } = await import(
+const { formatVnd, parseVndDecimal, setActiveCurrency } = await import(
   "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
 );
 
@@ -36,4 +36,15 @@ test("existing currency fields retain their separator interpretation", () => {
   assert.equal(parseVndDecimal("85,000"), 85000);
   assert.equal(parseVndDecimal("85.000,50"), 85000.5);
   assert.equal(parseVndDecimal("85,000.50"), 85000.5);
+});
+
+test("empty amounts keep the placeholder in every currency", () => {
+  for (const currency of ["VND", "USD"]) {
+    setActiveCurrency(currency);
+    for (const value of ["", "   ", null, undefined, Number.NaN]) {
+      assert.equal(formatVnd(value), "—", `${currency} ${String(value)}`);
+    }
+    assert.equal(formatVnd("1500.5"), currency === "USD" ? "1,501" : "1.500,5");
+  }
+  setActiveCurrency("VND");
 });

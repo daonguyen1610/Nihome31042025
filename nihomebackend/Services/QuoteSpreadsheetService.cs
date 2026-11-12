@@ -198,7 +198,7 @@ public sealed class QuoteSpreadsheetService(TranslationService translations) : I
             (text("quotes.excel.subtotal", "Tạm tính"), quote.Subtotal),
             ($"{text("quotes.excel.discount", "Chiết khấu")} ({quote.DiscountPercent:0.##}%)", -discountAmount),
             ($"{text("quotes.excel.vat", "VAT")} ({quote.VatPercent:0.##}%)", vatAmount),
-            (text("quotes.excel.grandTotal", "TỔNG CỘNG"), quote.GrandTotal),
+            ($"{text("quotes.excel.grandTotal", "TỔNG CỘNG")} ({quote.Currency})", quote.GrandTotal),
         };
 
         for (var index = 0; index < rows.Length; index++)

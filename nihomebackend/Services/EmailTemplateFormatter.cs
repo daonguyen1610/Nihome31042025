@@ -18,6 +18,7 @@ public static partial class EmailTemplateFormatter
             "discountPercent",
             "vatPercent",
             "grandTotal",
+            "currency",
             "validUntil"],
         StringComparer.OrdinalIgnoreCase);
 
@@ -53,7 +54,7 @@ public static partial class EmailTemplateFormatter
           <div style="margin:12px 0 0;font-size:14px;line-height:23px;white-space:pre-line">{{quoteLines}}</div>
         </div>
         <p style="margin:18px 0 8px;font-size:13px;color:#64748b">Chiết khấu {{discountPercent}}% · VAT {{vatPercent}}%</p>
-        <div style="padding:16px;background:#fff1f2;color:#9f1239;font-size:18px;font-weight:700">Tổng giá trị: {{grandTotal}} VND</div>
+        <div style="padding:16px;background:#fff1f2;color:#9f1239;font-size:18px;font-weight:700">Tổng giá trị: {{grandTotal}} {{currency}}</div>
         <p style="margin:18px 0 0;font-size:13px;color:#475569">Báo giá có hiệu lực đến {{validUntil}}.</p>
         <p style="margin:22px 0 0;font-size:14px">Trân trọng,<br />NICON</p>
         """,

@@ -23,14 +23,13 @@ import {
   ActionButton,
 } from "./procurementShared";
 import { Translate } from "./procurementValues";
-import { formatDate } from "@/lib/displaySettings";
+import { formatDate, formatMoney } from "@/lib/displaySettings";
 
 export const BoqPanel = ({
   rows,
   canManage,
   canApprove,
   status,
-  money,
   t,
   onCreate,
   onSubmit,
@@ -41,7 +40,6 @@ export const BoqPanel = ({
   canManage: boolean;
   canApprove: boolean;
   status: (value: string) => ReactNode;
-  money: Intl.NumberFormat;
   t: Translate;
   onCreate: () => void;
   onSubmit: (row: ProjectBoqRevisionListItemResponse) => void;
@@ -89,9 +87,7 @@ export const BoqPanel = ({
                   </td>
                   <td className="px-3 py-3">{status(row.status)}</td>
                   <td className="px-3 py-3">{row.lineCount}</td>
-                  <td className="px-3 py-3">
-                    {money.format(row.costTotal)} {row.currency}
-                  </td>
+                  <td className="px-3 py-3">{formatMoney(row.costTotal, row.currency)}</td>
                   <td className="px-3 py-3">{row.preparedByName ?? `#${row.preparedByUserId}`}</td>
                   <td className="px-3 py-3">
                     <div className="flex flex-wrap gap-2">
@@ -151,7 +147,7 @@ export const BoqPanel = ({
             >
               <Datum label={t("procurement.field.lines")}>{row.lineCount}</Datum>
               <Datum label={t("procurement.field.total")}>
-                {money.format(row.costTotal)} {row.currency}
+                {formatMoney(row.costTotal, row.currency)}
               </Datum>
               <Datum label={t("procurement.field.preparedBy")}>
                 {row.preparedByName ?? `#${row.preparedByUserId}`}

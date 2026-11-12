@@ -168,7 +168,9 @@ public sealed partial class MaterialRateService(
         {
             throw new MaterialRateOperationException($"Mã danh mục đơn giá '{code}' đã tồn tại.");
         }
-        var currency = await SystemCurrency.ResolveAsync(db, ct);
+        // Keep the catalog's stored currency: a settings change must not relabel
+        // historical approved prices, and editing must not require a match.
+        var currency = catalog.Currency;
         if (catalog.Revisions.Any(revision => revision.Status is MaterialRateRevisionStatus.Approved or MaterialRateRevisionStatus.Retired) &&
             (!string.Equals(catalog.Code, code, StringComparison.Ordinal) ||
              !string.Equals(catalog.Currency, currency, StringComparison.Ordinal) ||

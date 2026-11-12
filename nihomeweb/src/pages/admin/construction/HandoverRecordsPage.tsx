@@ -82,6 +82,7 @@ import {
 import {
   formatDate as formatDateInZone,
   formatDateTime as formatDateTimeInZone,
+  todayIsoDate,
 } from "@/lib/displaySettings";
 
 const HANDOVER_STATUSES: HandoverStatus[] = [
@@ -112,7 +113,7 @@ const emptyForm = (): HandoverFormState => ({
   designProjectId: "",
   title: "",
   description: "",
-  plannedHandoverDate: new Date().toISOString().slice(0, 10),
+  plannedHandoverDate: todayIsoDate(),
   location: "",
   responsibleUserId: "",
   commissioningCompleted: false,

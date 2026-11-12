@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
-import { currencySymbol, formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -296,7 +296,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                           )}
                         >
                           {vo.valueDelta > 0 ? "+" : ""}
-                          {formatVndWithSymbol(vo.valueDelta)} (
+                          {formatMoney(vo.valueDelta, contract.currency)} (
                           {t(
                             vo.valueDelta > 0
                               ? "contracts.appendix.deltaPositive"
@@ -436,7 +436,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
               </FieldScope>
               <FieldScope>
                 <Label>
-                  {t("contracts.appendix.valueDelta")} ({currencySymbol()}) *
+                  {t("contracts.appendix.valueDelta")} ({contract.currency}) *
                 </Label>
                 <Input
                   type="number"

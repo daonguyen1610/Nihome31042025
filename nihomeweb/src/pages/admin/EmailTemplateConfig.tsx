@@ -65,6 +65,7 @@ const QUOTE_TOKENS = [
   "discountPercent",
   "vatPercent",
   "grandTotal",
+  "currency",
   "validUntil",
 ];
 const PROJECT_SCHEDULE_TOKENS = [

@@ -29,8 +29,11 @@ public class Opportunity : IConcurrencyTracked
     public int? OwnerUserId { get; set; }
     public ApplicationUser? Owner { get; set; }
 
-    /// <summary>Estimated deal value in VND (≥ 0).</summary>
+    /// <summary>Estimated deal value (≥ 0) in <see cref="Currency"/>.</summary>
     public decimal EstimatedValue { get; set; }
+
+    /// <summary>ISO 4217 code captured when the opportunity was created.</summary>
+    public string Currency { get; set; } = SiteSettings.DefaultCurrencyCode;
 
     /// <summary>Win probability 0-100 (%).</summary>
     public int WinProbability { get; set; }

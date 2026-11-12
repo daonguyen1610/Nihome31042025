@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import QuoteCatalogEmptyState from "@/components/admin/QuoteCatalogEmptyState";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import { roundQuoteMoney } from "@/lib/quoteTotals";
 import {
   adminApi,
@@ -222,7 +222,7 @@ const QuoteRateFields = ({
           <div>
             <dt className="text-xs text-muted-foreground">{t("quotes.field.catalogRate")}</dt>
             <dd className="font-medium">
-              {formatVnd(revision.totalRatePerSqm)} {revision.currency}/m²
+              {formatMoney(revision.totalRatePerSqm, revision.currency)}/m²
             </dd>
           </div>
           <div>

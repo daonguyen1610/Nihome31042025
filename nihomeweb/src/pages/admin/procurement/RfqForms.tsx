@@ -11,7 +11,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { useI18n } from "@/lib/i18n";
 import { extractApiError } from "@/lib/apiError";
 import { calculateRfqCommercialPreview } from "@/lib/rfqCommercial";
-import { getActiveCurrency } from "@/lib/numberFormat";
 import type {
   RfqBatchAwardDraft,
   RfqBidDraft,
@@ -266,7 +265,9 @@ export function RfqBidForm({
   const [documentIds, setDocumentIds] = useState<number[]>([]);
   const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadError, setUploadError] = useState("");
-  const currency = getActiveCurrency();
+  // Bids are priced in the RFQ's own currency, which the API stores on the
+  // bid; the system currency may have changed since the RFQ was issued.
+  const currency = detail.currency;
   const [freightAmount, setFreightAmount] = useState("0");
   const [discountPercent, setDiscountPercent] = useState("0");
   const [discountAmount, setDiscountAmount] = useState("0");

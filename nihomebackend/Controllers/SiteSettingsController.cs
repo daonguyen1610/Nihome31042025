@@ -197,7 +197,12 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     public async Task<IActionResult> GetDisplaySettings(CancellationToken ct)
     {
         var settings = await svc.GetDisplayAsync(ct);
-        return Ok(new { timeZoneId = settings.TimeZoneId, currency = settings.Currency });
+        return Ok(new
+        {
+            timeZoneId = settings.TimeZoneId,
+            currency = settings.Currency,
+            usdVndRate = settings.UsdVndRate,
+        });
     }
 
     /// <summary>Available time zones for the admin display settings screen.</summary>
@@ -228,9 +233,23 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
                 field = "currency",
                 message = "Tiền tệ chỉ hỗ trợ VND hoặc USD.",
             });
+        var currentRate = (await svc.GetDisplayAsync(ct)).UsdVndRate;
+        var rate = req.UsdVndRate ?? currentRate;
+        if (rate <= 0 || rate > 1_000_000_000m || decimal.Round(rate, 4) != rate)
+            return BadRequest(new
+            {
+                code = "DISPLAY_RATE_INVALID",
+                field = "usdVndRate",
+                message = "Tỷ giá phải lớn hơn 0 và tối đa 4 chữ số thập phân. Ví dụ: 25000.",
+            });
 
-        var settings = await svc.UpdateDisplayAsync(req.TimeZoneId!, req.Currency!, ct);
-        return Ok(new { timeZoneId = settings.TimeZoneId, currency = settings.Currency });
+        var settings = await svc.UpdateDisplayAsync(req.TimeZoneId!, req.Currency!, rate, ct);
+        return Ok(new
+        {
+            timeZoneId = settings.TimeZoneId,
+            currency = settings.Currency,
+            usdVndRate = settings.UsdVndRate,
+        });
     }
 
     /// <summary>Get the embedded Google Map URL used on the public Contact page.</summary>
@@ -255,4 +274,4 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 
 public sealed record UpdateContractUploadLimitRequest(int MaxFileSizeMb);
 
-public sealed record UpdateDisplaySettingsRequest(string? TimeZoneId, string? Currency);
+public sealed record UpdateDisplaySettingsRequest(string? TimeZoneId, string? Currency, decimal? UsdVndRate);

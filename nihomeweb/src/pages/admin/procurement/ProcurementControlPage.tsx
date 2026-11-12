@@ -1310,7 +1310,6 @@ const ProcurementControlPage = () => {
                       canManage={canManageBoq}
                       canApprove={canApproveBoq}
                       status={status}
-                      money={money}
                       t={t}
                       onCreate={() => openDialog("boq")}
                       onSubmit={(row) => submit("boq", row)}

@@ -396,6 +396,7 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     name: string;
     stage: OpportunityStage;
     estimatedValue: number;
+    currency: string;
     winProbability: number;
     expectedCloseDate?: string | null;
     customerName?: string | null;
@@ -415,6 +416,7 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     discountPercent: number;
     vatPercent: number;
     grandTotal: number;
+    currency: string;
     validUntil: string;
     isExpired: boolean;
     note?: string | null;
@@ -444,6 +446,7 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
     vendorName?: string | null;
     status: ContractStatus;
     value: number;
+    currency: string;
     approvedVoTotal: number;
     currentValue: number;
     paymentMilestoneCount: number;
@@ -848,6 +851,7 @@ export interface OperationalProjectTimelineItem {
   id: number;
   contractId: number;
   contractNumber: string;
+  currency: string;
   order: number;
   name: string;
   percentValue: number;
@@ -1210,6 +1214,7 @@ export interface ContractResponse {
   startDate?: string | null;
   endDate?: string | null;
   value: number;
+  currency: string;
   /** Σ of Approved VO deltas. Server-computed. */
   approvedVoTotal: number;
   /** value + approvedVoTotal. Server-computed. */

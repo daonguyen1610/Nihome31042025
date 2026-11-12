@@ -1,5 +1,5 @@
 import { useI18n } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -26,6 +26,7 @@ export interface EditInfoTabProps {
   classification: ContractClassificationOptions | null;
   lockDirection: boolean;
   error: string | null;
+  currency: string;
   onChange: (next: ContractEditForm) => void;
 }
 
@@ -36,6 +37,7 @@ export const EditInfoTab = ({
   classification,
   lockDirection,
   error,
+  currency,
   onChange,
 }: EditInfoTabProps) => {
   const { t } = useI18n();
@@ -227,7 +229,7 @@ export const EditInfoTab = ({
           value={form.value}
           onChange={(event) => onChange({ ...form, value: Number(event.target.value) || 0 })}
         />
-        <p className="text-xs text-muted-foreground">{formatVndWithSymbol(form.value)}</p>
+        <p className="text-xs text-muted-foreground">{formatMoney(form.value, currency)}</p>
       </div>
       <div className="space-y-1.5">
         <Label htmlFor="contract-detail-scope">{t("contracts.field.scope")}</Label>

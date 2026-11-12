@@ -48,6 +48,7 @@ public class QuoteVersionResponse
 {
     public int Version { get; set; }
     public string Method { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
@@ -89,6 +90,7 @@ public class QuoteResponse
 
     public string Method { get; set; } = string.Empty;
     public int Version { get; set; }
+    public string Currency { get; set; } = string.Empty;
 
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }
@@ -167,6 +169,7 @@ public class QuoteListItemResponse
     public int? ApprovalApproverUserId { get; set; }
     public int Version { get; set; }
     public string Method { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
     public decimal GrandTotal { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime ValidUntil { get; set; }

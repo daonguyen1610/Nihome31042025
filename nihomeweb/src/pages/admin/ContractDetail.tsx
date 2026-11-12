@@ -752,6 +752,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                   classification={classification}
                   lockDirection={scopedDirection !== undefined}
                   error={formError}
+                  currency={contract.currency}
                   onChange={setForm}
                 />
               </div>
@@ -790,6 +791,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
               <div className="space-y-3">
                 <EditScheduleTab
                   direction={contract.direction}
+                  currency={contract.currency}
                   value={form.value}
                   milestones={form.milestones}
                   onChange={(milestones) => setForm({ ...form, milestones })}
@@ -800,6 +802,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
               <div className="space-y-3" data-testid="contract-finance-schedule-form">
                 <EditScheduleTab
                   direction={contract.direction}
+                  currency={contract.currency}
                   value={contract.value}
                   milestones={scheduleDraft}
                   onChange={setScheduleDraft}

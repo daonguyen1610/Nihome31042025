@@ -82,8 +82,8 @@ import {
   type UpdateOperationalProjectRequest,
   type UserListItemResponse,
 } from "@/services/adminApi";
-import { formatDate as formatDateInZone } from "@/lib/displaySettings";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatDate as formatDateInZone, formatMoney } from "@/lib/displaySettings";
+import { formatVnd } from "@/lib/numberFormat";
 
 const statusClass: Record<OperationalProjectStatus, string> = {
   Planning: "border-sky-200 bg-sky-50 text-sky-700",
@@ -717,7 +717,7 @@ const OperationalProjects = () => {
                             )}
                           </div>
                           <p className="shrink-0 font-semibold text-primary">
-                            {formatVndWithSymbol(item.amount)}
+                            {formatMoney(item.amount, item.currency)}
                           </p>
                         </div>
                         <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
@@ -798,7 +798,7 @@ const OperationalProjects = () => {
                                   {t("opportunities.field.estimatedValue")}:
                                 </dt>
                                 <dd className="font-medium">
-                                  {formatVndWithSymbol(item.estimatedValue)}
+                                  {formatMoney(item.estimatedValue, item.currency)}
                                 </dd>
                               </div>
                               <div className="flex gap-2">
@@ -905,14 +905,14 @@ const OperationalProjects = () => {
                               <dt className="text-muted-foreground text-xs">
                                 {t("quotes.field.unitPrice")}
                               </dt>
-                              <dd>{formatVndWithSymbol(item.unitPricePerSqm)}/m²</dd>
+                              <dd>{formatMoney(item.unitPricePerSqm, item.currency)}/m²</dd>
                             </div>
                           )}
                           <div>
                             <dt className="text-muted-foreground text-xs">
                               {t("quotes.field.subtotal")}
                             </dt>
-                            <dd>{formatVndWithSymbol(item.subtotal)}</dd>
+                            <dd>{formatMoney(item.subtotal, item.currency)}</dd>
                           </div>
                           {item.discountPercent > 0 && (
                             <div>
@@ -933,7 +933,7 @@ const OperationalProjects = () => {
                               {t("quotes.field.grandTotal")}
                             </dt>
                             <dd className="font-semibold text-primary">
-                              {formatVndWithSymbol(item.grandTotal)}
+                              {formatMoney(item.grandTotal, item.currency)}
                             </dd>
                           </div>
                           <div>
@@ -1019,10 +1019,10 @@ const OperationalProjects = () => {
                                       <td className="py-1 pr-2 text-right">{line.quantity}</td>
                                       <td className="py-1 pr-2">{line.unit}</td>
                                       <td className="py-1 pr-2 text-right">
-                                        {formatVndWithSymbol(line.unitPrice)}
+                                        {formatMoney(line.unitPrice, item.currency)}
                                       </td>
                                       <td className="py-1 text-right font-medium">
-                                        {formatVndWithSymbol(line.amount)}
+                                        {formatMoney(line.amount, item.currency)}
                                       </td>
                                     </tr>
                                   ))}
@@ -1070,7 +1070,7 @@ const OperationalProjects = () => {
                       <ContractMetric
                         icon={ArrowDownToLine}
                         label={t("operationalProjects.contractSummary.upstream")}
-                        value={formatVndWithSymbol(detail.contractSummary.upstreamCurrentValue)}
+                        value={formatVnd(detail.contractSummary.upstreamCurrentValue)}
                         detail={t("operationalProjects.count.contractsWithValue", {
                           count: detail.contractSummary.upstreamContractCount,
                         })}
@@ -1078,7 +1078,7 @@ const OperationalProjects = () => {
                       <ContractMetric
                         icon={ArrowUpFromLine}
                         label={t("operationalProjects.contractSummary.downstream")}
-                        value={formatVndWithSymbol(detail.contractSummary.downstreamCurrentValue)}
+                        value={formatVnd(detail.contractSummary.downstreamCurrentValue)}
                         detail={t("operationalProjects.count.contractsWithValue", {
                           count: detail.contractSummary.downstreamContractCount,
                         })}
@@ -1087,7 +1087,7 @@ const OperationalProjects = () => {
                         icon={CircleDollarSign}
                         label={t("operationalProjects.contractSummary.paid")}
                         value={`${detail.contractSummary.paymentProgressPercent}%`}
-                        detail={`${formatVndWithSymbol(detail.contractSummary.paidPaymentAmount)} / ${formatVndWithSymbol(detail.contractSummary.scheduledPaymentAmount)}`}
+                        detail={`${formatVnd(detail.contractSummary.paidPaymentAmount)} / ${formatVnd(detail.contractSummary.scheduledPaymentAmount)}`}
                       />
                       <ContractMetric
                         icon={ShoppingCart}
@@ -1134,7 +1134,7 @@ const OperationalProjects = () => {
                               {t("contracts.field.value")}
                             </dt>
                             <dd className="font-semibold text-primary">
-                              {formatVndWithSymbol(item.currentValue)}
+                              {formatMoney(item.currentValue, item.currency)}
                             </dd>
                           </div>
                           {item.signedDate && (

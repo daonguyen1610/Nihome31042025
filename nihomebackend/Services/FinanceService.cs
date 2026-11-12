@@ -77,6 +77,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         var entity = new PaymentRequest
         {
             Code = await AllocatePaymentCodeAsync(ct),
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             CreatedByUserId = userId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -338,6 +339,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         var entity = new AccountingCorrection
         {
             Code = await AllocateCorrectionCodeAsync(ct),
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             RecordedByUserId = userId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -586,7 +588,6 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         entity.SupplierInvoiceNumber = request.SupplierInvoiceNumber.Trim();
         entity.InvoiceDate = request.InvoiceDate!.Value;
         entity.InvoiceAmount = request.InvoiceAmount;
-        entity.Currency = await SystemCurrency.ResolveAsync(db, ct);
         entity.ReceivedAt = request.ReceivedAt!.Value.ToUniversalTime();
         entity.AssignedAccountantUserId = request.AssignedAccountantUserId;
         entity.Attachments = request.Attachments.Select(item => new PaymentRequestAttachment
@@ -605,7 +606,6 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         entity.ReasonCode = request.ReasonCode.Trim().ToUpperInvariant();
         entity.OriginalValue = request.OriginalValue;
         entity.CorrectedValue = request.CorrectedValue;
-        entity.Currency = await SystemCurrency.ResolveAsync(db, ct);
         entity.Note = TrimOrNull(request.Note);
         entity.ResponsibleAccountantUserId = request.ResponsibleAccountantUserId;
     }

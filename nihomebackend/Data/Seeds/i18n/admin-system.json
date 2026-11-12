@@ -4098,10 +4098,10 @@
   {
     "key": "settings.display.currencyUsdHint",
     "category": "settings",
-    "vi": "Hai chữ số thập phân, ký hiệu $",
-    "en": "Two decimal places with the $ symbol",
-    "zh": "两位小数，带 $ 符号",
-    "ja": "小数2桁と $ 記号"
+    "vi": "Số nguyên, ký hiệu $",
+    "en": "Whole numbers with the $ symbol",
+    "zh": "整数，带 $ 符号",
+    "ja": "整数と $ 記号"
   },
   {
     "key": "settings.display.currencyHint",
@@ -4110,6 +4110,30 @@
     "en": "Every money value in the system uses {currency}. It can only be changed here.",
     "zh": "系统中的所有金额均使用 {currency}，且只能在此处更改。",
     "ja": "システム内のすべての金額は {currency} を使用します。変更はここでのみ行えます。"
+  },
+  {
+    "key": "settings.display.exchangeRate",
+    "category": "settings",
+    "vi": "Tỷ giá quy đổi",
+    "en": "Exchange rate",
+    "zh": "汇率",
+    "ja": "換算レート"
+  },
+  {
+    "key": "settings.display.exchangeRateHint",
+    "category": "settings",
+    "vi": "Dùng để quy đổi số tiền đã ghi nhận sang tiền tệ đang chọn và làm tròn đến đơn vị. Ví dụ: 2.500.000 ₫ = 100 $ khi 1 USD = 25.000 ₫.",
+    "en": "Converts recorded amounts to the selected currency and rounds to whole units. For example, ₫2,500,000 = $100 at ₫25,000 per USD.",
+    "zh": "用于将已记录金额换算为所选货币，并四舍五入到整数。例如：1 美元 = 25,000 越南盾时，2,500,000 越南盾 = 100 美元。",
+    "ja": "記録済みの金額を選択した通貨に換算し、整数に丸めます。例：1 USD = 25,000 VND のとき、2,500,000 VND = 100 USD。"
+  },
+  {
+    "key": "settings.display.exchangeRateInvalid",
+    "category": "settings",
+    "vi": "Tỷ giá phải lớn hơn 0.",
+    "en": "The exchange rate must be greater than 0.",
+    "zh": "汇率必须大于 0。",
+    "ja": "換算レートは 0 より大きい値を入力してください。"
   },
   {
     "key": "settings.display.saveError",

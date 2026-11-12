@@ -5,7 +5,6 @@ import { Link } from "react-router-dom";
 import { RefreshCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
 import { extractApiError } from "@/lib/apiError";
 import {
   adminApi,
@@ -13,7 +12,7 @@ import {
   type ContractExecutionProgressResponse,
   type ContractProgressSource,
 } from "@/services/adminApi";
-import { formatDateTime, formatNumber } from "@/lib/displaySettings";
+import { formatDateTime, formatMoney, formatNumber } from "@/lib/displaySettings";
 
 export default function ContractExecutionProgress({
   contract,
@@ -53,7 +52,7 @@ export default function ContractExecutionProgress({
     <div key={label} className="flex items-start justify-between gap-3 py-1.5">
       <dt className="text-sm text-muted-foreground">{key(label)}</dt>
       <dd className="shrink-0 text-sm font-semibold tabular-nums">
-        {money ? formatVndWithSymbol(value) : formatNumber(value, lang)}
+        {money ? formatMoney(value, contract.currency) : formatNumber(value, lang)}
       </dd>
     </div>
   );

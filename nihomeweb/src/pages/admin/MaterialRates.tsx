@@ -50,7 +50,8 @@ import { useBulkSelection } from "@/hooks/useBulkSelection";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd, getActiveCurrency } from "@/lib/numberFormat";
+import { getActiveCurrency } from "@/lib/numberFormat";
+import { formatMoney, todayIsoDate } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
 import {
   adminApi,
@@ -81,7 +82,7 @@ const emptyCatalog = (catalogType: MaterialRateCatalogType): UpsertMaterialRateC
   isActive: true,
 });
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayIsoDate();
 const formatFileSize = (bytes: number) =>
   bytes < 1024 * 1024
     ? `${Math.max(1, Math.round(bytes / 1024))} KB`
@@ -1201,12 +1202,12 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                             {revision.effectiveFrom} → {revision.effectiveTo || "∞"}
                           </p>
                           <p className="mt-1 text-sm font-semibold">
-                            {formatVnd(
+                            {formatMoney(
                               catalogType === "Boq"
                                 ? revision.totalAmount
                                 : revision.totalRatePerSqm,
-                            )}{" "}
-                            {revision.currency}
+                              revision.currency,
+                            )}
                             {catalogType === "InvestmentRate" ? "/m²" : ""}
                           </p>
                         </button>
@@ -1233,12 +1234,12 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                               )}
                             </p>
                             <p className="text-lg font-bold text-primary">
-                              {formatVnd(
+                              {formatMoney(
                                 catalogType === "Boq"
                                   ? selectedRevision.totalAmount
                                   : selectedRevision.totalRatePerSqm,
-                              )}{" "}
-                              {selectedRevision.currency}
+                                selectedRevision.currency,
+                              )}
                               {catalogType === "InvestmentRate" ? "/m²" : ""}
                             </p>
                           </div>
@@ -1445,12 +1446,12 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                                   </div>
                                 </div>
                                 <p className="whitespace-nowrap text-sm font-bold">
-                                  {formatVnd(
+                                  {formatMoney(
                                     catalogType === "Boq"
                                       ? selectedRevision.totalAmount
                                       : selectedRevision.totalRatePerSqm,
-                                  )}{" "}
-                                  {selectedRevision.currency}
+                                    selectedRevision.currency,
+                                  )}
                                   {catalogType === "InvestmentRate" ? "/m²" : ""}
                                 </p>
                               </div>
@@ -1621,10 +1622,16 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                                                 {line.quantity}
                                               </td>
                                               <td className="px-2 py-2 text-right">
-                                                {formatVnd(line.unitRate)}
+                                                {formatMoney(
+                                                  line.unitRate,
+                                                  selectedRevision.currency,
+                                                )}
                                               </td>
                                               <td className="px-2 py-2 text-right font-medium">
-                                                {formatVnd(line.amountPerSqm)}
+                                                {formatMoney(
+                                                  line.amountPerSqm,
+                                                  selectedRevision.currency,
+                                                )}
                                               </td>
                                             </>
                                           ) : (
@@ -1633,13 +1640,19 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                                                 {line.normPerSqm}
                                               </td>
                                               <td className="px-2 py-2 text-right">
-                                                {formatVnd(line.unitRate)}
+                                                {formatMoney(
+                                                  line.unitRate,
+                                                  selectedRevision.currency,
+                                                )}
                                               </td>
                                               <td className="px-2 py-2 text-right">
                                                 {line.wastePercent}%
                                               </td>
                                               <td className="px-2 py-2 text-right font-medium">
-                                                {formatVnd(line.amountPerSqm)}
+                                                {formatMoney(
+                                                  line.amountPerSqm,
+                                                  selectedRevision.currency,
+                                                )}
                                               </td>
                                             </>
                                           )}
@@ -1686,13 +1699,16 @@ const AdminMaterialRates = ({ catalogType = "InvestmentRate" }: AdminMaterialRat
                                       <div className="flex justify-between gap-2">
                                         <span className="font-medium">{line.materialName}</span>
                                         <span className="font-semibold">
-                                          {formatVnd(line.amountPerSqm)}
+                                          {formatMoney(
+                                            line.amountPerSqm,
+                                            selectedRevision.currency,
+                                          )}
                                         </span>
                                       </div>
                                       <p className="text-xs text-muted-foreground">
                                         {catalogType === "Boq"
-                                          ? `${line.materialCode} · ${line.quantity} ${line.unit} · ${formatVnd(line.unitRate)}`
-                                          : `${line.materialCode} · ${line.normPerSqm} ${line.unit}/m² · ${formatVnd(line.unitRate)} · ${line.wastePercent}%`}
+                                          ? `${line.materialCode} · ${line.quantity} ${line.unit} · ${formatMoney(line.unitRate, selectedRevision.currency)}`
+                                          : `${line.materialCode} · ${line.normPerSqm} ${line.unit}/m² · ${formatMoney(line.unitRate, selectedRevision.currency)} · ${line.wastePercent}%`}
                                       </p>
                                       {canEditLines && (
                                         <div className="mt-3 flex justify-end gap-2 border-t pt-2">

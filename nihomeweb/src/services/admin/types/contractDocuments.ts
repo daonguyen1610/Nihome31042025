@@ -123,6 +123,7 @@ export interface OpportunityResponse {
   ownerUserId?: number;
   ownerName?: string;
   estimatedValue: number;
+  currency: string;
   winProbability: number;
   expectedCloseDate?: string;
   stage: OpportunityStage;

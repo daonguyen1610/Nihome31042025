@@ -59,6 +59,8 @@ public class ContractService(
             if (pageSize > MaxPageSize) pageSize = MaxPageSize;
         }
 
+        var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
+        var rate = usdVndRate > 0 ? usdVndRate : SiteSettings.DefaultUsdVndRate;
         var query = db.Contracts.AsNoTracking().AsQueryable();
 
         if (!canSeeAll)
@@ -91,17 +93,21 @@ public class ContractService(
             var upperBound = endTo.Value.Date.AddDays(1);
             query = query.Where(c => c.EndDate != null && c.EndDate < upperBound);
         }
+        // Filters are entered in the display currency; compare them against the
+        // contract's current value brought to the same currency.
         if (valueMin.HasValue)
         {
-            query = query.Where(c => c.Value + (db.ContractAppendices
+            var minVnd = MoneyDisplay.Convert(valueMin.Value, displayCurrency, "VND", rate);
+            query = query.Where(c => (c.Currency == "USD" ? rate : 1m) * (c.Value + (db.ContractAppendices
                 .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
-                .Sum(v => (decimal?)v.ValueDelta) ?? 0m) >= valueMin.Value);
+                .Sum(v => (decimal?)v.ValueDelta) ?? 0m)) >= minVnd);
         }
         if (valueMax.HasValue)
         {
-            query = query.Where(c => c.Value + (db.ContractAppendices
+            var maxVnd = MoneyDisplay.Convert(valueMax.Value, displayCurrency, "VND", rate);
+            query = query.Where(c => (c.Currency == "USD" ? rate : 1m) * (c.Value + (db.ContractAppendices
                 .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
-                .Sum(v => (decimal?)v.ValueDelta) ?? 0m) <= valueMax.Value);
+                .Sum(v => (decimal?)v.ValueDelta) ?? 0m)) <= maxVnd);
         }
 
         if (!string.IsNullOrWhiteSpace(search))
@@ -115,11 +121,17 @@ public class ContractService(
         var total = await query.CountAsync(ct);
         var today = DateTime.UtcNow.Date;
         var dueSoonUpperBound = today.AddDays(EndingSoonDays + 1);
-        var totalBaseValue = total == 0 ? 0m : await query.SumAsync(c => c.Value, ct);
-        var totalApprovedVoValue = await db.ContractAppendices
-            .Where(v => v.Status == ContractAppendixStatus.Approved && query.Any(c => c.Id == v.ContractId))
-            .SumAsync(v => (decimal?)v.ValueDelta, ct) ?? 0m;
-        var totalCurrentValue = totalBaseValue + totalApprovedVoValue;
+        // Each contract keeps its own currency; convert every current value to
+        // the display currency before summing so the summary is meaningful.
+        var valueRows = await query.Select(c => new
+        {
+            c.Currency,
+            Current = c.Value + (db.ContractAppendices
+                .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
+                .Sum(v => (decimal?)v.ValueDelta) ?? 0m),
+        }).ToListAsync(ct);
+        var totalCurrentValue = valueRows.Sum(row =>
+            MoneyDisplay.Convert(row.Current, row.Currency, displayCurrency, rate));
         var overdueContractCount = await query.CountAsync(c => db.ContractPaymentMilestones.Any(m =>
             m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid && m.DueDate != null && m.DueDate < today), ct);
         var dueSoonContractCount = await query.CountAsync(c => db.ContractPaymentMilestones.Any(m =>
@@ -136,12 +148,12 @@ public class ContractService(
                 ? query.OrderByDescending(c => c.EndDate ?? DateTime.MinValue)
                 : query.OrderBy(c => c.EndDate ?? DateTime.MaxValue),
             "value" => descending
-                ? query.OrderByDescending(c => c.Value + (db.ContractAppendices
+                ? query.OrderByDescending(c => (c.Currency == "USD" ? rate : 1m) * (c.Value + (db.ContractAppendices
                     .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
-                    .Sum(v => (decimal?)v.ValueDelta) ?? 0m))
-                : query.OrderBy(c => c.Value + (db.ContractAppendices
+                    .Sum(v => (decimal?)v.ValueDelta) ?? 0m)))
+                : query.OrderBy(c => (c.Currency == "USD" ? rate : 1m) * (c.Value + (db.ContractAppendices
                     .Where(v => v.ContractId == c.Id && v.Status == ContractAppendixStatus.Approved)
-                    .Sum(v => (decimal?)v.ValueDelta) ?? 0m)),
+                    .Sum(v => (decimal?)v.ValueDelta) ?? 0m))),
             "updatedat" => descending
                 ? query.OrderByDescending(c => c.UpdatedAt)
                 : query.OrderBy(c => c.UpdatedAt),
@@ -502,6 +514,7 @@ public class ContractService(
             StartDate = req.StartDate,
             EndDate = req.EndDate,
             Value = req.Value,
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             ScopeOfWork = string.IsNullOrWhiteSpace(req.ScopeOfWork) ? null : req.ScopeOfWork,
             Note = string.IsNullOrWhiteSpace(req.Note) ? null : req.Note.Trim(),
             CreatedByUserId = callerUserId,
@@ -1813,6 +1826,7 @@ public class ContractService(
             StartDate = entity.StartDate,
             EndDate = entity.EndDate,
             Value = entity.Value,
+            Currency = entity.Currency,
             ApprovedVoTotal = approvedVoTotal,
             CurrentValue = currentValue,
             NextPaymentDueDate = nextPaymentDueDate,

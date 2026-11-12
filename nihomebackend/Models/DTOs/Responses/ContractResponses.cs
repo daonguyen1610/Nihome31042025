@@ -68,6 +68,7 @@ public class ContractResponse
     public DateTime? EndDate { get; set; }
 
     public decimal Value { get; set; }
+    public string Currency { get; set; } = string.Empty;
 
     /// <summary>Sum of <see cref="ContractAppendixStatus.Approved"/> VO
     /// deltas. Computed by the service — never persisted.</summary>

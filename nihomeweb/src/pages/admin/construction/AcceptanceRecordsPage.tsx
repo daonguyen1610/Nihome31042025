@@ -87,6 +87,7 @@ import {
 import {
   formatDate as formatDateInZone,
   formatDateTime as formatDateTimeInZone,
+  todayIsoDate,
 } from "@/lib/displaySettings";
 
 const ACCEPTANCE_STATUSES: AcceptanceStatus[] = [
@@ -209,7 +210,7 @@ export function AcceptanceRecordsPanel({
     title: "",
     description: "",
     constructionTaskId: "",
-    acceptanceDate: new Date().toISOString().slice(0, 10),
+    acceptanceDate: todayIsoDate(),
     location: "",
     participants: "",
     findings: "",
@@ -353,7 +354,7 @@ export function AcceptanceRecordsPanel({
       title: "",
       description: "",
       constructionTaskId: "",
-      acceptanceDate: new Date().toISOString().slice(0, 10),
+      acceptanceDate: todayIsoDate(),
       location: "",
       participants: "",
       findings: "",

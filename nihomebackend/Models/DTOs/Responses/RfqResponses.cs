@@ -54,7 +54,7 @@ public sealed record RfqMaterialRequestOptionResponse(int LineId, int MaterialRe
     string MaterialRequestCode, int ProjectBoqLineId, decimal RequestedQuantity,
     decimal AlreadyAllocatedQuantity, decimal RemainingQuantity);
 public sealed record VendorPortalRfqResponse(string Code, string Title, DateTime DueAt,
-    string VendorName, IReadOnlyList<VendorPortalRfqLineResponse> Lines,
+    string Currency, string VendorName, IReadOnlyList<VendorPortalRfqLineResponse> Lines,
     IReadOnlyList<VendorPortalRfqDocumentResponse> Documents, bool CanSubmit);
 public sealed record VendorPortalRfqLineResponse(int Id, string ItemCode, string Description,
     string Unit, decimal Quantity);

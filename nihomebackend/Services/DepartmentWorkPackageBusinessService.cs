@@ -45,6 +45,7 @@ public sealed partial class DepartmentWorkPackageService
         var offer = new ProcurementInputPriceOffer
         {
             WorkPackageId = packageId,
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             CreatedAt = now,
             CreatedByUserId = callerUserId,
             UpdatedAt = now,
@@ -312,7 +313,6 @@ public sealed partial class DepartmentWorkPackageService
     {
         offer.VendorId = request.VendorId;
         offer.SupplierReference = request.SupplierReference.Trim();
-        offer.Currency = await SystemCurrency.ResolveAsync(db, ct);
         offer.ValidUntil = request.ValidUntil.ToUniversalTime();
         offer.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         offer.Lines = request.Lines.Select((line, index) =>

@@ -31,6 +31,9 @@ public class Quote : IConcurrencyTracked
     /// <summary>Version number; starts at 1, bumps whenever the quote is edited after Approved.</summary>
     public int Version { get; set; } = 1;
 
+    /// <summary>ISO 4217 code captured when the quote was created; all amounts are stored in it.</summary>
+    public string Currency { get; set; } = SiteSettings.DefaultCurrencyCode;
+
     // --- Unit-cost mode fields (nullable when Method=Boq) ---
     public decimal? AreaSqm { get; set; }
     public decimal? UnitPricePerSqm { get; set; }

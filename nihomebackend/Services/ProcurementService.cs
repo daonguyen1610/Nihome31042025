@@ -267,6 +267,7 @@ public sealed class ProcurementService(
         var entity = new ProjectBoqRevision
         {
             OperationalProjectId = projectId,
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             RevisionNumber = nextRevision,
             PreparedByUserId = userId,
             CreatedAt = DateTime.UtcNow,
@@ -1175,7 +1176,6 @@ public sealed class ProcurementService(
     private async Task ApplyBoqAsync(ProjectBoqRevision entity, ProjectBoqRevisionRequest request, CancellationToken ct)
     {
         entity.UpstreamContractId = request.UpstreamContractId;
-        entity.Currency = await SystemCurrency.ResolveAsync(db, ct);
         entity.SourceTenderEstimateRevisionId = request.SourceTenderEstimateRevisionId;
         entity.SourceContractAppendixId = request.SourceContractAppendixId;
         entity.Lines = request.Lines.Select((line, index) => new ProjectBoqLine
