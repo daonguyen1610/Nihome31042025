@@ -14,8 +14,7 @@
     "check:a11y": "node tools/check-field-associations.mjs",
     "test:unit": "node --test tests/apiError.test.mjs tests/numberFormat.test.mjs tests/people.test.mjs tests/financeReview.test.mjs tests/pagination.test.mjs tests/designTokens.test.mjs tests/uiSafety.test.mjs tests/constructionProjectSelection.test.mjs",
     "test:e2e": "playwright test",
-    "test:e2e:smoke": "PLAYWRIGHT_SUITE=smoke playwright test",
-    "test:e2e:full": "PLAYWRIGHT_SUITE=full playwright test",
+    "test:e2e:smoke": "playwright test",
     "test:e2e:install": "playwright install --with-deps chromium"
   },
   "dependencies": {

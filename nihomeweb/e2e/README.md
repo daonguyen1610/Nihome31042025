@@ -1,8 +1,26 @@
-# End-to-end tests (Playwright)
+# Playwright browser tests
 
-The repository currently has one Playwright project named `e2e`. It runs Chromium desktop tests matching `e2e/smoke/**/*.spec.ts` against the integrated Docker application. There is no committed full/nightly suite or sharded Playwright project set.
+The Playwright project runs Chromium against the Docker Compose application. CI
+uses two independent shards; each shard has its own database and runs with one
+worker because some existing specs update shared seeded records.
 
-The smoke directory currently covers public rendering, authentication, permission-driven admin routes, CRM, design, permitting, construction workflows, and deployment contracts. Treat file/test counts as snapshots because parameterized role matrices expand at runtime.
+## Test boundaries
+
+- Keep end-to-end cases focused on real business behavior through the browser
+  and integrated API/database. API setup is acceptable for prerequisites; use
+  the browser for the action and verify the durable result through the API.
+- Use meaningful, generated NICON scenario data and seeded master data. Never
+  use production customer records, credentials, or real email delivery.
+- Keep endpoint stubs for deliberate network-failure injection only. Tests
+  that replace successful business API responses are UI contract checks, not
+  end-to-end evidence; migrate them to a separate frontend test layer.
+- Do not run viewport matrices, geometry assertions, or screenshot layout
+  checks in this project. Review responsive presentation manually in Chrome.
+- Do not use direct SQL to force a business state that the UI/API workflow is
+  meant to produce. Prefer a supported workflow or verify the preceding step.
+
+The existing suite still contains mock-backed UI checks and old layout checks
+that have not yet been migrated. Do not add more of either kind to `smoke/`.
 
 ## Running locally
 
@@ -18,33 +36,25 @@ npm run test:e2e:install
 BASE_URL=http://localhost:5043 npx playwright test
 
 # Run one feature.
-BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-handover.spec.ts --workers=1
+BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-precontract-department-controls.spec.ts --workers=1
 ```
 
-The `test:e2e:smoke` and `test:e2e:full` package scripts currently set `PLAYWRIGHT_SUITE`, but `playwright.config.ts` does not consume that variable; both therefore select the same smoke specs. Prefer `npx playwright test` until those scripts/configuration are simplified or a real full suite is added.
+CI builds the backend image with a shard-scoped BuildKit cache, then starts the
+already-built image with the isolated E2E mailbox overlay. The image cache is an
+optimization only; readiness still verifies that the running backend reports
+the current commit SHA.
 
 ## Layout
 
 ```text
 e2e/
   fixtures/         shared browser login and API helpers
-  smoke/            all currently executed specs
+  smoke/            currently executed browser checks
 ```
-
-Playwright is configured with full parallelism and four CI workers. Specs that mutate shared seeded roles or records must use unique data, isolate cleanup, or run serially to avoid cross-worker interference.
-
-## Test layering
-
-- Unit tests prove isolated service rules, validation matrices, and helpers.
-- Backend integration tests prove HTTP contracts, model binding, authorization, and persistence round-trips.
-- Playwright should prove browser rendering, navigation, downloads, responsive interactions, and deployment-only wiring.
-
-Some existing smoke specs still make API-only CRUD or RBAC assertions. That is known layering debt: move assertions that `HttpClient` can prove into `nihomebackend.integration.tests` rather than copying that pattern into new browser specs.
-
-## Project handover smoke
-
-The NIH-144 smoke test signs in through the real browser and verifies that an authorized user can render the localized handover workspace without leaking raw translation keys. The broader role-to-route contract is covered by `admin-rbac-matrix.spec.ts`; handover service and HTTP edge cases remain in backend test projects.
 
 ## Test credentials
 
-Seeded role accounts are defined by backend seeders and mirrored in `e2e/fixtures/auth.ts`. Read credentials from those development sources rather than duplicating them in documentation, and never use deterministic test accounts in an exposed production environment.
+Seeded role accounts are defined by backend seeders and mirrored in
+`e2e/fixtures/auth.ts`. Read credentials from those development sources rather
+than duplicating them in documentation, and never use deterministic test
+accounts in an exposed production environment.

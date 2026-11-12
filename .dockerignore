@@ -10,6 +10,9 @@ node_modules
 deployment-config/
 nihomebackend.tests
 nihomebackend.integration.tests
+nihomeweb/e2e
+nihomeweb/tests
+nihomeweb/playwright.config.ts
 **/.DS_Store
 docs
 **/playwright-report
