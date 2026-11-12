@@ -289,6 +289,7 @@ jobs:
         env:
           BASE_URL: http://localhost:5043
           MAIL_SINK_URL: http://127.0.0.1:8025
+          E2E_SQL_CONTAINER: nihome31042025-sqlserver
         run: npx playwright test --shard=${{ matrix.shard }}/2
 
       - name: Publish Playwright results to PR check

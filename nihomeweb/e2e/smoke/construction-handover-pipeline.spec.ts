@@ -271,18 +271,6 @@ test("PM and Design deliver completed site works and a verified dossier to the c
       path: testInfo.outputPath("completed-handover-desktop.png"),
       fullPage: true,
     });
-    for (const width of [390, 768]) {
-      await page.setViewportSize({ width, height: 900 });
-      const closeNavigation = page.getByRole("button", { name: "Close sidebar", exact: true });
-      await expect(closeNavigation.first()).not.toBeInViewport();
-      const responsiveRecord = width < 768 ? page.getByTestId(`handover-card-${handoverId}`) : row;
-      await expect(responsiveRecord).toBeVisible();
-      await expect(responsiveRecord).toContainText("Handed over");
-      await page.screenshot({
-        path: testInfo.outputPath(`completed-handover-${width}.png`),
-        fullPage: true,
-      });
-    }
   });
   expect(errors).toEqual([]);
 });

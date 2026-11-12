@@ -1449,9 +1449,16 @@ BUILD_SHA=$(git rev-parse HEAD) docker compose \
   -f docker-compose.yaml -f docker-compose-e2e.yaml up -d --build
 cd nihomeweb
 BASE_URL=http://localhost:5043 MAIL_SINK_URL=http://127.0.0.1:8025 \
+  E2E_SQL_CONTAINER=nihome31042025-sqlserver \
   npx playwright test e2e/smoke/direct-contract-from-opportunity.spec.ts \
   e2e/smoke/quote-email-delivery.spec.ts
 ```
+
+Specs that use SQL-only fixture setup require `E2E_SQL_CONTAINER` to name the
+test stack's SQL container explicitly. There is no default: an unset value fails
+closed so a custom `BASE_URL` cannot accidentally direct fixture writes or
+cleanup into the shared development database. For an isolated Compose project,
+set it to that project's SQL container name.
 
 The test uses a unique `example.test` recipient and verifies the captured
 message and persisted quote status. Do not use production SMTP settings for

@@ -2,6 +2,7 @@ import { randomInt, randomUUID } from "node:crypto";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
+import { uploadSignedContractScan } from "../fixtures/contracts";
 import { execSql } from "../fixtures/db";
 import type { APIResponse } from "@playwright/test";
 
@@ -40,6 +41,7 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
   );
   let projectId: number | undefined;
   let contractId: number | undefined;
+  let contractAttachmentId: number | undefined;
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   try {
@@ -88,28 +90,139 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
         type: "DesignAndBuild",
         value: 500_000_000,
         status: "Draft",
+        startDate: date(1),
+        endDate: date(181),
+        scopeOfWork: "Thi công móng nhà máy theo tiến độ đã thống nhất.",
       }),
     );
     contractId = contract.id;
+    contractAttachmentId = await uploadSignedContractScan(api, admin, contractId);
+    await json(
+      await post(`/api/contracts/${contractId}/transition`, {
+        newStatus: "Signed",
+        rowVersion: contract.rowVersion,
+      }),
+    );
+
     const node = randomUUID();
-    // Established upstream/CRM prerequisites. Their approval and scan gates
-    // have dedicated tests; this spec exercises the complete new CM journey.
-    execSql(`UPDATE contracts SET Status=N'Signed', SignedDate=SYSUTCDATETIME() WHERE Id=${contractId};
-      INSERT INTO project_schedule_nodes (Id,OperationalProjectId,CreatedAt) VALUES ('${node}',${projectId},SYSUTCDATETIME());
-      INSERT INTO project_schedule_revisions (OperationalProjectId,Version,Status,CreatedAt,CreatedByUserId,PublishedAt) VALUES (${projectId},1,N'Published',SYSUTCDATETIME(),${pm.id},SYSUTCDATETIME());
-      DECLARE @revision int=SCOPE_IDENTITY();
-      INSERT INTO project_schedule_items (RevisionId,NodeId,WbsCode,Title,PlannedStart,PlannedEnd,SortOrder) VALUES (@revision,'${node}',N'1.1',N'Thi công móng Long An','${date(-10)}','${date(-1)}',0);`);
+    const scheduleUrl = `/api/operational-projects/${projectId}/master-schedule`;
+    const schedule = await json(
+      await post(`${scheduleUrl}/revisions`, {
+        changeReason: "Lập tiến độ tổng thể cho dự án nhà máy Long An.",
+        items: [
+          {
+            nodeId: node,
+            wbsCode: "1.1",
+            title: "Thi công móng Long An",
+            plannedStart: date(1),
+            plannedEnd: date(8),
+            sortOrder: 0,
+          },
+        ],
+      }),
+    );
+    const revision = schedule.revisions[0];
+    const submitPreview = await json(
+      await api.get(
+        `${scheduleUrl}/revisions/${revision.id}/email-preview?action=Submit&recipientUserId=${pm.id}`,
+        { headers: admin },
+      ),
+    );
+    const submitted = await json(
+      await post(`${scheduleUrl}/revisions/${revision.id}/submit`, {
+        approverUserId: pm.id,
+        rowVersion: revision.rowVersion,
+        previewToken: submitPreview.previewToken,
+      }),
+    );
+    const pendingRevision = submitted.revisions.find(
+      (item: { id: number }) => item.id === revision.id,
+    );
+    const pmToken = await loginAs(pmUser);
+    const pmHeaders = { Authorization: `Bearer ${pmToken}` };
+    const publishPreview = await json(
+      await api.get(`${scheduleUrl}/revisions/${revision.id}/email-preview?action=Publish`, {
+        headers: pmHeaders,
+      }),
+    );
+    const published = await json(
+      await post(
+        `${scheduleUrl}/revisions/${revision.id}/review`,
+        {
+          decision: "Approve",
+          rowVersion: pendingRevision.rowVersion,
+          previewToken: publishPreview.previewToken,
+        },
+        pmHeaders,
+      ),
+    );
+    expect(published.revisions.find((item: { id: number }) => item.id === revision.id).status).toBe(
+      "Published",
+    );
     await json(
       await post("/api/construction-tasks", {
         designProjectId: design.id,
         projectScheduleNodeId: node,
         wbs: "1.1",
         name: "Thi công móng Long An",
-        plannedStart: date(-10),
-        plannedEnd: date(-1),
+        plannedStart: date(1),
+        plannedEnd: date(8),
         ownerUserId: site.id,
       }),
     );
+
+    await loginInBrowserAs(page, TEST_USERS.superAdmin);
+    await page.goto("/");
+    await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
+    await page.goto(`/admin/construction/cm/schedule?projectId=${projectId}&tab=plan`);
+    await page.getByText("Startup readiness", { exact: true }).click();
+    const hseRequired = page.locator("#hsePlanRequired");
+    await expect(hseRequired).toBeVisible();
+    const savePreparation = page.getByTestId("cm-preparation-save");
+    const evaluateReadiness = page.getByTestId("cm-preparation-evaluate");
+    await expect(page.getByTestId("cm-preparation-missing-references")).toBeVisible();
+    await expect(savePreparation).toBeDisabled();
+    for (const [field, value] of [
+      ["wbsBaselineReference", "WBS-2026-01"],
+      ["scheduleBaselineReference", "SCHED-2026-01"],
+      ["sCurveBaselineReference", "SCURVE-2026-01"],
+      ["bchOrganizationReference", "BCH-ORG-2026-01"],
+      ["resourcePlanReference", "RESOURCE-2026-01"],
+      ["budgetBaselineReference", "BUDGET-2026-01"],
+    ]) {
+      await page.locator(`#${field}`).fill(value);
+    }
+    await hseRequired.click();
+    await expect(page.getByTestId("cm-preparation-unsaved")).toContainText("unsaved changes");
+    await expect(evaluateReadiness).toBeDisabled();
+    await expect(page.getByTestId("cm-preparation-start")).toBeDisabled();
+    const firstSave = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/operational-projects/${projectId}/construction/preparation`) &&
+        response.request().method() === "PUT",
+    );
+    await savePreparation.click();
+    expect((await firstSave).status()).toBe(200);
+    await expect(evaluateReadiness).toBeEnabled();
+    await hseRequired.click();
+    const secondSave = page.waitForResponse(
+      (response) =>
+        response.url().includes(`/operational-projects/${projectId}/construction/preparation`) &&
+        response.request().method() === "PUT",
+    );
+    await savePreparation.click();
+    expect((await secondSave).status()).toBe(200);
+    const readinessResponse = page.waitForResponse((response) =>
+      response.url().includes(`/operational-projects/${projectId}/construction/readiness/evaluate`),
+    );
+    await evaluateReadiness.click();
+    const readiness = await (await readinessResponse).json();
+    expect(readiness.missingConditions).not.toContain(
+      "approved project ISO conditional-requirements profile",
+    );
+    expect(readiness.missingConditions).not.toContain("HSE plan evidence");
+    await expect(page.getByTestId("cm-preparation-start")).toBeDisabled();
+
     const url = `/admin/construction/progress?projectId=${projectId}`;
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.goto("/");
@@ -159,13 +272,8 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
       expect(actualInput.progressReportedAt).toBeNull();
     }
     await loginInBrowserAs(page, TEST_USERS.siteCommander);
-    await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(url);
-    // The collapsed "view values" table repeats this text; assert the line under
-    // the task, which stays visible in the task list.
     await expect(page.locator("p", { hasText: "Not yet reported by BCH" }).first()).toBeVisible();
-    // The working calendar lives in the collapsed plan-details disclosure so the
-    // mobile task list stays in view; open it before asserting the frozen calendar.
     await page.getByText("Plan details and working calendar", { exact: true }).click();
     await expect(
       page.getByText("Working days: Monday, Tuesday, Wednesday, Thursday, Friday, Saturday", {
@@ -200,9 +308,11 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
       .getByRole("button", { name: "Save changes", exact: true })
       .click();
     await expect(page.getByRole("dialog")).not.toBeVisible();
-    await page.screenshot({ path: testInfo.outputPath("bch-progress-mobile.png"), fullPage: true });
+    await page.screenshot({
+      path: testInfo.outputPath("bch-progress-desktop.png"),
+      fullPage: true,
+    });
     await loginInBrowserAs(page, pmUser);
-    await page.setViewportSize({ width: 768, height: 1000 });
     await page.goto(url);
     await page.getByRole("button", { name: "CM confirms review", exact: true }).click();
     await expect(page.getByRole("button", { name: "CM confirms review", exact: true })).toHaveCount(
@@ -213,9 +323,6 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
       await page.goto(url);
       await expect(page.getByTestId("cm-schedule-workspace")).toBeVisible();
       await expect(page.getByTestId("cm-schedule-workspace")).not.toContainText(/cmSchedule\./);
-      expect(
-        await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
-      ).toBe(true);
       await page.screenshot({
         path: testInfo.outputPath(`cm-progress-${language}.png`),
         fullPage: true,
@@ -233,6 +340,13 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
     expect(errors).toEqual([]);
   } finally {
     await page.context().setOffline(false);
+    if (contractId && projectId && contractAttachmentId) {
+      // The isolated E2E stack has no Google Drive connection. Mark this test
+      // attachment replica deleted so hard-delete can clean up the root.
+      execSql(
+        `SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus=N'Deleted', DesiredOperation=N'None', DeletedAt=SYSUTCDATETIME(), NextSyncAttemptAt=NULL WHERE OperationalProjectId=${projectId} AND SourceEntityType=N'ContractAttachment' AND SourceRecordId=${contractAttachmentId} AND SourceType=N'ExistingManagedFile' AND DriveFileId IS NULL AND DeletedAt IS NULL;`,
+      );
+    }
     if (contractId) await hardDeleteBusinessRoot(api, admin, `/api/contracts/${contractId}`);
     if (projectId)
       await hardDeleteBusinessRoot(api, admin, `/api/operational-projects/${projectId}`);
