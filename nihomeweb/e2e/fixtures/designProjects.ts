@@ -75,6 +75,25 @@ export async function createDesignProject(
   throw new Error(`Design project creation still conflicted after 5 attempts: ${lastError}`);
 }
 
+/**
+ * The construction workspaces scope their pages by operational project, so a
+ * test that creates a design project needs the operational project it was
+ * created under to open the right scope directly.
+ */
+export async function getOperationalProjectId(
+  api: APIRequestContext,
+  headers: Record<string, string>,
+  designProjectId: number,
+): Promise<number> {
+  const response = await api.get(`/api/design-projects/${designProjectId}`, { headers });
+  if (!response.ok()) {
+    throw new Error(
+      `Design project lookup failed (${response.status()}): ${await response.text()}`,
+    );
+  }
+  return (await response.json()).operationalProjectId as number;
+}
+
 interface ApproveDesignStageOptions {
   headers: Record<string, string>;
   projectId: number;

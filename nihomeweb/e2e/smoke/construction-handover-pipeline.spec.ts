@@ -109,7 +109,9 @@ test("PM and Design deliver completed site works and a verified dossier to the c
     );
     expect(completed.status).toBe("Completed");
 
-    await openProjectPage("diary");
+    // Diaries are confirmed from the CM review scope; the BCH portal only
+    // submits them.
+    await openProjectPage("cm/schedule?tab=diary");
     await page.getByTestId("diary-new").click();
     await page
       .getByTestId("diary-new-work")

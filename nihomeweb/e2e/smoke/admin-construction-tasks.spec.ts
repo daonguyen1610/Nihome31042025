@@ -1,5 +1,9 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+import {
+  createDesignProject,
+  createOwnCustomer,
+  getOperationalProjectId,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-141 M4 Gantt end-to-end. Real-user path through the running
@@ -46,31 +50,26 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
       customerId,
     });
 
-    // ---------- 2. Open the Gantt page + filter to this project ----------
+    // ---------- 2. Open the Gantt page scoped to this project ----------
+    const operationalProjectId = await getOperationalProjectId(api, authHeader, projectId);
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/construction/tasks`, { waitUntil: "networkidle" });
-    await page.evaluate(() => {
-      const region = document.querySelector('[aria-label*="Notifications ("]');
-      region?.remove();
-    });
-    await expect(page.getByTestId("construction-tasks-page")).toBeVisible();
-
-    // Filter combobox = first role=combobox on the page. Page loads
-    // showing "All projects"; we pick the project we just created so
-    // the list scope matches and the create dialog defaults to it.
-    const projectFilter = page.locator('button[role="combobox"]').first();
+    // The CM/BCH workspaces scope by operational project; deep-link into the
+    // created scope instead of relying on which project the shell preselects.
     await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes("/api/construction-tasks") &&
           r.url().includes(`designProjectId=${projectId}`),
       ),
-      (async () => {
-        await projectFilter.click();
-        await page.getByRole("option", { name: new RegExp(`E2E-GANTT ${projSuffix}`) }).click();
-      })(),
+      page.goto(`${baseURL}/admin/construction/tasks?projectId=${operationalProjectId}`, {
+        waitUntil: "networkidle",
+      }),
     ]);
-    await expect(projectFilter).toContainText(new RegExp(`E2E-GANTT ${projSuffix}`));
+    await page.evaluate(() => {
+      const region = document.querySelector('[aria-label*="Notifications ("]');
+      region?.remove();
+    });
+    await expect(page.getByTestId("construction-tasks-page")).toBeVisible();
 
     // ---------- 3. Create a task via the dialog ----------
     await page.getByTestId("construction-new").click();

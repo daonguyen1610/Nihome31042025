@@ -99,6 +99,44 @@ interface RoleExpectation {
 const denied = (allowed: readonly Path[]): Path[] =>
   ALL_ADMIN_PATHS.filter((p) => !allowed.includes(p));
 
+/**
+ * Legacy construction paths keep the permission gate and redirect to the
+ * canonical CM/BCH workspace, so the address bar settles on the destination.
+ * The URL assertion accepts either the requested path or its documented
+ * destination instead of pinning the obsolete address.
+ */
+const LEGACY_DESTINATIONS: Record<string, string[]> = {
+  "/admin/construction/tasks": ["/admin/construction/cm/schedule"],
+  "/admin/construction/progress": ["/admin/construction/cm/schedule"],
+  "/admin/construction/diary": ["/admin/construction/bch/operations"],
+  "/admin/construction/punchlist": [
+    "/admin/construction/cm/quality",
+    "/admin/construction/bch/qa-qc",
+  ],
+  "/admin/construction/hse": ["/admin/construction/cm/safety", "/admin/construction/bch/qa-qc"],
+  "/admin/construction/acceptance": [
+    "/admin/construction/cm/quality",
+    "/admin/construction/bch/qa-qc",
+  ],
+  "/admin/construction/asbuilt": ["/admin/construction/cm/quality"],
+  "/admin/construction/handover": ["/admin/construction/cm/quality"],
+  "/admin/construction/bch/resource-requests": ["/admin/construction/bch/operations"],
+  "/admin/construction/cm": [
+    "/admin/construction/cm/schedule",
+    "/admin/construction/cm/commercial",
+    "/admin/construction/cm/quality",
+    "/admin/construction/cm/safety",
+    "/admin/construction/cm/contracts",
+  ],
+};
+
+const reachableUrl = (path: string): RegExp => {
+  const alternatives = [path, ...(LEGACY_DESTINATIONS[path] ?? [])].map((entry) =>
+    entry.replace(/\//g, "\\/"),
+  );
+  return new RegExp(`(${alternatives.join("|")})(\\?|$)`);
+};
+
 const matrix: RoleExpectation[] = [
   {
     user: TEST_USERS.superAdmin,
@@ -211,6 +249,8 @@ const matrix: RoleExpectation[] = [
       "/admin/construction/asbuilt",
       "/admin/construction/asbuilt-categories",
       "/admin/construction/handover",
+      // The BCH QA/QC portal hosts the punch/acceptance tabs these roles reach.
+      "/admin/construction/bch/qa-qc",
     ],
   },
   {
@@ -259,6 +299,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-projects",
       "/admin/operational-projects",
       "/admin/reports/projects",
       "/admin/construction/tasks",
@@ -323,6 +364,8 @@ const matrix: RoleExpectation[] = [
       "/admin/construction/asbuilt",
       "/admin/construction/asbuilt-categories",
       "/admin/construction/handover",
+      // The BCH QA/QC portal hosts the punch/acceptance tabs these roles reach.
+      "/admin/construction/bch/qa-qc",
     ],
   },
   ...[TEST_USERS.architect, TEST_USERS.mepEngineer, TEST_USERS.structuralEngineer].map(
@@ -345,6 +388,8 @@ const matrix: RoleExpectation[] = [
         "/admin/construction/asbuilt",
         "/admin/construction/asbuilt-categories",
         "/admin/construction/handover",
+        // The BCH QA/QC portal hosts the punch/acceptance tabs these roles reach.
+        "/admin/construction/bch/qa-qc",
       ],
     }),
   ),
@@ -476,9 +521,7 @@ test.describe("Phase 6 — RBAC matrix per seeded role", () => {
       for (const path of c.allowed) {
         await loginInBrowserAs(page, c.user);
         await page.goto(path);
-        await expect(page, `${c.user.role} should reach ${path}`).toHaveURL(
-          new RegExp(path.replace(/\//g, "\\/") + "(\\?|$)"),
-        );
+        await expect(page, `${c.user.role} should reach ${path}`).toHaveURL(reachableUrl(path));
         await expect(
           page.locator("text=/^403$/"),
           `${c.user.role} on ${path} unexpectedly hit Forbidden`,
@@ -539,6 +582,15 @@ const MATRIX_PATH_EXCLUSIONS = new Set<string>([
   // Pure redirects — RequirePermission wraps a <Navigate />, no real page.
   "/admin/project-categories",
   "/admin/slideshow",
+  // Canonical CM/BCH workspaces share the permission gates of their covered
+  // legacy routes (/admin/construction/tasks, /progress, /punchlist,
+  // /acceptance, /asbuilt, /handover, /bch/resource-requests, /cm).
+  "/admin/construction/bch/operations",
+  "/admin/construction/cm/commercial",
+  "/admin/construction/cm/contracts",
+  "/admin/construction/cm/quality",
+  "/admin/construction/cm/safety",
+  "/admin/construction/cm/schedule",
   // /admin/posts redirects to /admin/activities; no independent permission gate.
   "/admin/posts",
   // Catalog subtype views share the crm.material-rates.view gate covered by the base route.

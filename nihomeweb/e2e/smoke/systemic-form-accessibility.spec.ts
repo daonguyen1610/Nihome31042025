@@ -21,7 +21,7 @@ test("construction project filter uses its visible field label", async ({
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
   await page.goto("/admin/construction/tasks");
-  const project = page.getByRole("combobox", { name: /^Project$/i }).first();
+  const project = page.getByRole("combobox", { name: /^Operational project$/i }).first();
   await expect(project).toBeVisible();
   const id = await project.getAttribute("id");
   expect(id).toBeTruthy();

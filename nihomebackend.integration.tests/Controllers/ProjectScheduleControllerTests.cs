@@ -162,6 +162,19 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
         queuedApproval.Status.Should().BeOneOf(
             ProjectScheduleEmail.PendingStatus, ProjectScheduleEmail.SentStatus);
 
+        // The approval notice is only valid while the revision waits for its
+        // approver, so approving cancels a still-pending notice. Deliver it
+        // first, then verify a decision does not revoke a delivered message.
+        using (var scope = Factory.Services.CreateScope())
+        {
+            await scope.ServiceProvider.GetRequiredService<ProjectScheduleEmailService>()
+                .SendPendingAsync(CancellationToken.None);
+        }
+        var deliveredApproval = await WithDbAsync(db => db.ProjectScheduleEmails.AsNoTracking()
+            .SingleAsync(item => item.RevisionId == revisionId));
+        deliveredApproval.Status.Should().Be(ProjectScheduleEmail.SentStatus);
+        deliveredApproval.SentAt.Should().NotBeNull();
+
         await AuthenticateAsync("SALES_MANAGER");
         using var publicationPreviewResponse = await Client.GetAsync(
             $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Publish");

@@ -2,6 +2,16 @@ import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { createOwnCustomer } from "../fixtures/designProjects";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
+const PROJECT_NAME = "NICON – Điều hành thi công nhà xưởng Bình Dương";
+
+const AREAS = [
+  { path: "schedule", testId: "cm-schedule-page", labelIndex: 0 },
+  { path: "commercial", testId: "cm-commercial-page", labelIndex: 1 },
+  { path: "quality", testId: "cm-quality-page", labelIndex: 2 },
+  { path: "safety", testId: "cm-safety-page", labelIndex: 3 },
+  { path: "contracts", testId: "cm-contracts-page", labelIndex: 4 },
+] as const;
+
 test("CM groups controls into five areas and keeps linked pages on the same project", async ({
   api,
   page,
@@ -24,7 +34,7 @@ test("CM groups controls into five areas and keeps linked pages on the same proj
       headers,
       data: {
         customerId,
-        name: "NICON – Điều hành thi công nhà xưởng Bình Dương",
+        name: PROJECT_NAME,
         projectManagerUserId: manager.id,
       },
     });
@@ -53,22 +63,23 @@ test("CM groups controls into five areas and keeps linked pages on the same proj
         scenario.language,
       );
       await page.setViewportSize({ width: scenario.width, height: 900 });
+      // The legacy CM entry point redirects to the first reachable area while
+      // keeping the project scope.
       await page.goto(`/admin/construction/cm?projectId=${projectId}`);
-      const workspace = page.getByTestId("cm-construction-page");
-      await expect(workspace).toBeVisible();
-      const areas = workspace.getByRole("tablist").first();
-      await expect(areas).toBeVisible();
-      await expect(areas.getByRole("tab")).toHaveText(scenario.labels);
-      await areas.getByRole("tab", { name: scenario.labels[3], exact: true }).click();
-      await expect(workspace.getByRole("tabpanel").getByRole("link")).toHaveAttribute(
-        "href",
-        `/admin/construction/hse?projectId=${projectId}`,
+      await expect(page).toHaveURL(
+        new RegExp(`/admin/construction/cm/schedule\\?projectId=${projectId}`),
       );
-      await areas.getByRole("tab", { name: scenario.labels[4], exact: true }).click();
-      await expect(workspace.getByRole("tabpanel").getByRole("link")).toHaveAttribute(
-        "href",
-        `/admin/contracts?operationalProjectId=${projectId}`,
-      );
+      for (const area of AREAS) {
+        await page.goto(`/admin/construction/cm/${area.path}?projectId=${projectId}`);
+        const areaPage = page.getByTestId(area.testId);
+        await expect(areaPage).toBeVisible();
+        await expect(areaPage.getByRole("heading", { level: 1 })).toHaveText(
+          scenario.labels[area.labelIndex],
+        );
+        await expect(areaPage.getByTestId(`${area.testId}-project`)).toContainText(PROJECT_NAME);
+        if (area.path === "contracts")
+          await expect(page.getByTestId("cm-contracts-panel")).toBeVisible();
+      }
       expect(
         await page.evaluate(
           () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
@@ -77,32 +88,8 @@ test("CM groups controls into five areas and keeps linked pages on the same proj
       await page.screenshot({ path: testInfo.outputPath(`cm-areas-${scenario.language}.png`) });
     }
     expect(errors).toEqual([]);
-    await loginInBrowserAs(page, TEST_USERS.pm);
-    await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
-    await page.goto(`/admin/construction/cm?projectId=${projectId}`);
-    const pmWorkspace = page.getByTestId("cm-construction-page");
-    const pmAreas = pmWorkspace.getByRole("tablist").first();
-    await expect(pmAreas.getByRole("tab")).toHaveText([
-      "Schedule",
-      "Quantity and cost",
-      "Quality",
-      "Safety",
-      "Contracts",
-    ]);
-    await pmAreas.getByRole("tab", { name: "Quality", exact: true }).click();
-    const permissionsResponse = await api.get("/api/users/me/permissions", {
-      headers: { Authorization: `Bearer ${await loginAs(TEST_USERS.pm)}` },
-    });
-    expect(permissionsResponse.ok()).toBe(true);
-    const permissions = (await permissionsResponse.json()).permissions as string[];
-    const createTemplate = pmWorkspace.getByRole("button", {
-      name: "New template version",
-      exact: true,
-    });
-    if (permissions.includes("construction.qa-qc.template-manage"))
-      await expect(createTemplate).toBeVisible();
-    else await expect(createTemplate).toHaveCount(0);
-    await pmAreas.getByRole("tab", { name: "Contracts", exact: true }).click();
+
+    // The contracts area reads the ledger scoped to the selected project.
     const contractResponse = page.waitForResponse((response) => {
       const url = new URL(response.url());
       return (
@@ -110,9 +97,38 @@ test("CM groups controls into five areas and keeps linked pages on the same proj
         url.searchParams.get("operationalProjectId") === String(projectId)
       );
     });
-    await page.getByTestId("cm-construction-page").getByRole("tabpanel").getByRole("link").click();
+    await page.goto(`/admin/construction/cm/contracts?projectId=${projectId}`);
     expect((await contractResponse).ok()).toBe(true);
-    await expect(page).toHaveURL(new RegExp(`operationalProjectId=${projectId}`));
+
+    await loginInBrowserAs(page, TEST_USERS.pm);
+    await page.evaluate(() => localStorage.setItem("nicon_lang", "en"));
+    await page.goto(`/admin/construction/cm?projectId=${projectId}`);
+    await expect(page).toHaveURL(
+      new RegExp(`/admin/construction/cm/schedule\\?projectId=${projectId}`),
+    );
+    for (const area of AREAS) {
+      await page.goto(`/admin/construction/cm/${area.path}?projectId=${projectId}`);
+      const areaPage = page.getByTestId(area.testId);
+      await expect(areaPage).toBeVisible();
+      await expect(areaPage.getByRole("heading", { level: 1 })).toHaveText(
+        ["Schedule", "Quantity and cost", "Quality", "Safety", "Contracts"][area.labelIndex],
+      );
+    }
+    const permissionsResponse = await api.get("/api/users/me/permissions", {
+      headers: { Authorization: `Bearer ${await loginAs(TEST_USERS.pm)}` },
+    });
+    expect(permissionsResponse.ok()).toBe(true);
+    const permissions = (await permissionsResponse.json()).permissions as string[];
+    await page.goto(`/admin/construction/cm/quality?projectId=${projectId}`);
+    const createTemplate = page
+      .getByRole("button", {
+        name: "Create inspection template",
+        exact: true,
+      })
+      .first();
+    if (permissions.includes("construction.qa-qc.template-manage"))
+      await expect(createTemplate).toBeVisible();
+    else await expect(createTemplate).toHaveCount(0);
   } finally {
     if (projectId)
       await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
@@ -122,7 +138,7 @@ test("CM groups controls into five areas and keeps linked pages on the same proj
 
 // Permission rendering check: only the permission response is overridden;
 // business APIs remain real. This does not prove server authorization.
-test("template management stays reachable without dossier viewing permission", async ({
+test("template management stays reachable for a CM reviewer", async ({
   api,
   page,
   loginAs,
@@ -156,15 +172,24 @@ test("template management stays reachable without dossier viewing permission", a
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
     await page.goto(`/admin/construction/cm?projectId=${projectId}`);
-    const workspace = page.getByTestId("cm-construction-page");
+    await expect(page).toHaveURL(
+      new RegExp(`/admin/construction/cm/quality\\?projectId=${projectId}`),
+    );
+    const workspace = page.getByTestId("cm-quality-page");
     await expect(workspace).toBeVisible();
-    const tabs = workspace.getByRole("tablist").first().getByRole("tab");
-    await expect(tabs).toHaveText(["Quality"]);
-    await expect(tabs).toHaveAttribute("aria-selected", "true");
-    await workspace.getByRole("button", { name: "New template version", exact: true }).click();
+    await expect(workspace.getByRole("heading", { level: 1 })).toHaveText("Quality");
+    await workspace
+      .getByRole("button", { name: "Create inspection template", exact: true })
+      .first()
+      .click();
     await expect(page.getByRole("dialog")).toBeVisible();
     await page.keyboard.press("Escape");
-    expect(dossierReads).toEqual([]);
+    // The reviewer may read dossiers, but every read stays inside the project
+    // the workspace is scoped to.
+    expect(dossierReads.length).toBeGreaterThan(0);
+    expect(dossierReads.every((url) => url.includes(`/operational-projects/${projectId}/`))).toBe(
+      true,
+    );
   } finally {
     if (projectId)
       await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);

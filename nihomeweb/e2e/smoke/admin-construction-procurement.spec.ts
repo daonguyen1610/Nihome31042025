@@ -262,7 +262,10 @@ test("CM source drill-down hydrates a project outside the first project page", a
                 code: `PJ-FIRST-${index + 1}`,
                 name: `Assigned project ${index + 1}`,
               }))
-            : [{ id: 201, code: "PJ-SECOND-PAGE", name: "Another assigned project" }],
+            : [
+                { id: 201, code: "PJ-SECOND-PAGE", name: "Another assigned project" },
+                { id: 501, code: "PJ-ANPHU", name: "NICON An Phu structural works" },
+              ],
         total: 201,
         page: pageNumber,
         pageSize: 200,
