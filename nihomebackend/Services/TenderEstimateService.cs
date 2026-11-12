@@ -199,7 +199,7 @@ public sealed class TenderEstimateService(AppDbContext db, IUtf8CsvParser csvPar
         {
             TenderId = tenderId,
             VersionNumber = versionNumber,
-            Currency = "VND",
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             VatPercent = commonVat.Value,
             CostSubtotal = costSubtotal,
             BidSubtotal = bidSubtotal,

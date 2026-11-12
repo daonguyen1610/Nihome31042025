@@ -300,6 +300,74 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DisplaySettings_ArePublic_AndFallBackToVietnamDefaults()
+    {
+        var body = await ReadJsonAsync(await Client.GetAsync("/api/site-settings/display"));
+        body.GetProperty("timeZoneId").GetString().Should().Be("Asia/Ho_Chi_Minh");
+        body.GetProperty("currency").GetString().Should().Be("VND");
+    }
+
+    [Fact]
+    public async Task DisplaySettings_OnlyManagersCanChange_AndUnsupportedValuesAreRejected()
+    {
+        const string path = "/api/site-settings/display";
+        (await Client.PutAsJsonAsync(path, new { timeZoneId = "Asia/Tokyo", currency = "USD" }))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.PutAsJsonAsync(path, new { timeZoneId = "Asia/Tokyo", currency = "USD" }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var original = await ReadJsonAsync(await Client.GetAsync(path));
+        var originalTimeZone = original.GetProperty("timeZoneId").GetString();
+        var originalCurrency = original.GetProperty("currency").GetString();
+        try
+        {
+            var timeZone = await Client.PutAsJsonAsync(path,
+                new { timeZoneId = "Mars/Olympus_Mons", currency = "VND" });
+            timeZone.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(timeZone)).GetProperty("code").GetString()
+                .Should().Be("DISPLAY_TIMEZONE_INVALID");
+
+            var currency = await Client.PutAsJsonAsync(path,
+                new { timeZoneId = "Asia/Ho_Chi_Minh", currency = "EUR" });
+            currency.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(currency)).GetProperty("code").GetString()
+                .Should().Be("DISPLAY_CURRENCY_INVALID");
+
+            var updated = await Client.PutAsJsonAsync(path,
+                new { timeZoneId = "Asia/Tokyo", currency = "usd" });
+            updated.StatusCode.Should().Be(HttpStatusCode.OK);
+            var saved = await ReadJsonAsync(await Client.GetAsync(path));
+            saved.GetProperty("timeZoneId").GetString().Should().Be("Asia/Tokyo");
+            saved.GetProperty("currency").GetString().Should().Be("USD");
+        }
+        finally
+        {
+            await Client.PutAsJsonAsync(path,
+                new { timeZoneId = originalTimeZone, currency = originalCurrency });
+        }
+    }
+
+    [Fact]
+    public async Task TimeZones_RequireViewPermission_AndAlwaysListVietnam()
+    {
+        (await Client.GetAsync("/api/site-settings/time-zones"))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        (await Client.GetAsync("/api/site-settings/time-zones"))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var zones = await ReadJsonAsync(await Client.GetAsync("/api/site-settings/time-zones"));
+        zones.EnumerateArray().Should().Contain(zone =>
+            zone.GetProperty("id").GetString() == "Asia/Ho_Chi_Minh");
+    }
+
+    [Fact]
     public async Task GetGoogleDriveStatus_WithoutAuth_ReturnsUnauthorized()
     {
         (await Client.GetAsync("/api/site-settings/google-drive/status"))

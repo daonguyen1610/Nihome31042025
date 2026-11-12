@@ -8,6 +8,7 @@
   { "key": "projectReports.emptyPortfolio", "category": "projectReports", "vi": "Không có dự án khả dụng trong phạm vi truy cập và bộ lọc hiện tại.", "en": "No accessible projects match the current filters.", "zh": "当前筛选条件下没有可访问的项目。", "ja": "現在のフィルターに一致するアクセス可能なプロジェクトはありません。" },
   { "key": "projectReports.emptyProject", "category": "projectReports", "vi": "Không có dữ liệu báo cáo cho dự án đã chọn.", "en": "No report data is available for the selected project.", "zh": "所选项目没有可用的报告数据。", "ja": "選択したプロジェクトのレポートデータはありません。" },
   { "key": "projectReports.partialData", "category": "projectReports", "vi": "Dữ liệu một phần", "en": "Partial data", "zh": "部分数据", "ja": "一部データ" },
+  { "key": "projectReports.partialDataHelp", "category": "projectReports", "vi": "Một số hạng mục chưa có dữ liệu hoặc bạn không có quyền xem; mở rộng để xem chi tiết.", "en": "Some sections have no data yet or require access you do not have; expand for details.", "zh": "部分栏位暂无数据或需要额外权限；展开查看详情。", "ja": "一部の項目はデータ未登録か閲覧権限がありません。展開して詳細をご確認ください。" },
   { "key": "projectReports.openProject", "category": "projectReports", "vi": "Mở hồ sơ dự án", "en": "Open project record", "zh": "打开项目档案", "ja": "プロジェクト記録を開く" },
   { "key": "projectReports.customer", "category": "projectReports", "vi": "Khách hàng", "en": "Customer", "zh": "客户", "ja": "顧客" },
   { "key": "projectReports.manager", "category": "projectReports", "vi": "Quản lý dự án", "en": "Project manager", "zh": "项目经理", "ja": "プロジェクトマネージャー" },

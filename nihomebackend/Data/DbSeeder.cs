@@ -30,6 +30,8 @@ public static class DbSeeder
         {
             db.SiteSettings.Add(new SiteSettings
             {
+                DisplayTimeZoneId = SiteSettings.DefaultTimeZoneId,
+                CurrencyCode = SiteSettings.DefaultCurrencyCode,
                 CmScheduleEmailSubjectTemplate = CmScheduleMailService.DefaultSubject,
                 CmScheduleEmailBodyTemplate = CmScheduleMailService.DefaultBody,
                 SiteName = SiteName,
@@ -101,6 +103,16 @@ public static class DbSeeder
             if (existingSettings.Address == "92 Đường 56, Bình Trưng, Hồ Chí Minh 700000, Vietnam")
             {
                 existingSettings.Address = SiteAddress;
+                updated = true;
+            }
+            if (string.IsNullOrWhiteSpace(existingSettings.DisplayTimeZoneId))
+            {
+                existingSettings.DisplayTimeZoneId = SiteSettings.DefaultTimeZoneId;
+                updated = true;
+            }
+            if (string.IsNullOrWhiteSpace(existingSettings.CurrencyCode))
+            {
+                existingSettings.CurrencyCode = SiteSettings.DefaultCurrencyCode;
                 updated = true;
             }
             if (string.IsNullOrWhiteSpace(existingSettings.MapEmbedUrl))

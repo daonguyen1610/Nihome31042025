@@ -3990,5 +3990,149 @@
     "en": "Paragraphs separated by blank lines. Images are shown as [IMAGE: /path.jpg] — translate only the text paragraphs; keep image/video lines unchanged.",
     "zh": "段落之间用空行分隔。图片显示为 [IMAGE: /path.jpg] —— 只翻译文字段落，图片/视频行请保持不变。",
     "ja": "段落は空行で区切ります。画像は [IMAGE: /path.jpg] の形式で表示されます — テキスト段落のみ翻訳し、画像/動画の行はそのままにしてください。"
+  },
+  {
+    "key": "settings.display.tab",
+    "category": "settings",
+    "vi": "Hiển thị",
+    "en": "Display",
+    "zh": "显示",
+    "ja": "表示"
+  },
+  {
+    "key": "settings.display.title",
+    "category": "settings",
+    "vi": "Múi giờ và tiền tệ",
+    "en": "Time zone and currency",
+    "zh": "时区和货币",
+    "ja": "タイムゾーンと通貨"
+  },
+  {
+    "key": "settings.display.description",
+    "category": "settings",
+    "vi": "Thiết lập dùng chung cho toàn hệ thống: mọi ngày giờ và giá trị tiền tệ đều hiển thị theo lựa chọn tại đây.",
+    "en": "System-wide settings: every date, time and money value follows the choice made here.",
+    "zh": "全系统设置：所有日期、时间和金额均按此处的选择显示。",
+    "ja": "システム全体の設定です。すべての日付・時刻・金額はここでの選択に従って表示されます。"
+  },
+  {
+    "key": "settings.display.timeZone",
+    "category": "settings",
+    "vi": "Múi giờ hiển thị",
+    "en": "Display time zone",
+    "zh": "显示时区",
+    "ja": "表示タイムゾーン"
+  },
+  {
+    "key": "settings.display.timeZonePlaceholder",
+    "category": "settings",
+    "vi": "Chọn múi giờ",
+    "en": "Select a time zone",
+    "zh": "选择时区",
+    "ja": "タイムゾーンを選択"
+  },
+  {
+    "key": "settings.display.timeZoneSearch",
+    "category": "settings",
+    "vi": "Tìm múi giờ...",
+    "en": "Search time zones...",
+    "zh": "搜索时区...",
+    "ja": "タイムゾーンを検索..."
+  },
+  {
+    "key": "settings.display.timeZoneEmpty",
+    "category": "settings",
+    "vi": "Không tìm thấy múi giờ phù hợp.",
+    "en": "No matching time zone.",
+    "zh": "没有匹配的时区。",
+    "ja": "一致するタイムゾーンがありません。"
+  },
+  {
+    "key": "settings.display.timeZoneHint",
+    "category": "settings",
+    "vi": "Áp dụng cho mọi ngày giờ trong hệ thống. Mặc định là Asia/Ho_Chi_Minh (UTC+07:00).",
+    "en": "Applies to every date and time in the system. Defaults to Asia/Ho_Chi_Minh (UTC+07:00).",
+    "zh": "适用于系统中的所有日期和时间。默认为 Asia/Ho_Chi_Minh (UTC+07:00)。",
+    "ja": "システム内のすべての日付と時刻に適用されます。既定は Asia/Ho_Chi_Minh (UTC+07:00) です。"
+  },
+  {
+    "key": "settings.display.preview",
+    "category": "settings",
+    "vi": "Thời gian hiện tại: {value}",
+    "en": "Current time: {value}",
+    "zh": "当前时间：{value}",
+    "ja": "現在時刻: {value}"
+  },
+  {
+    "key": "settings.display.currency",
+    "category": "settings",
+    "vi": "Tiền tệ",
+    "en": "Currency",
+    "zh": "货币",
+    "ja": "通貨"
+  },
+  {
+    "key": "settings.display.currencyVnd",
+    "category": "settings",
+    "vi": "Việt Nam đồng (VND)",
+    "en": "Vietnamese đồng (VND)",
+    "zh": "越南盾 (VND)",
+    "ja": "ベトナムドン (VND)"
+  },
+  {
+    "key": "settings.display.currencyVndHint",
+    "category": "settings",
+    "vi": "Số nguyên, ký hiệu ₫",
+    "en": "Whole numbers with the ₫ symbol",
+    "zh": "整数，带 ₫ 符号",
+    "ja": "整数と ₫ 記号"
+  },
+  {
+    "key": "settings.display.currencyUsd",
+    "category": "settings",
+    "vi": "Đô la Mỹ (USD)",
+    "en": "US dollar (USD)",
+    "zh": "美元 (USD)",
+    "ja": "米ドル (USD)"
+  },
+  {
+    "key": "settings.display.currencyUsdHint",
+    "category": "settings",
+    "vi": "Hai chữ số thập phân, ký hiệu $",
+    "en": "Two decimal places with the $ symbol",
+    "zh": "两位小数，带 $ 符号",
+    "ja": "小数2桁と $ 記号"
+  },
+  {
+    "key": "settings.display.currencyHint",
+    "category": "settings",
+    "vi": "Mọi giá trị tiền tệ trên toàn hệ thống sẽ dùng {currency}. Chỉ có thể thay đổi tại đây.",
+    "en": "Every money value in the system uses {currency}. It can only be changed here.",
+    "zh": "系统中的所有金额均使用 {currency}，且只能在此处更改。",
+    "ja": "システム内のすべての金額は {currency} を使用します。変更はここでのみ行えます。"
+  },
+  {
+    "key": "settings.display.saveError",
+    "category": "settings",
+    "vi": "Chưa lưu được thiết lập hiển thị. Hãy thử lại.",
+    "en": "Could not save display settings. Try again.",
+    "zh": "无法保存显示设置。请重试。",
+    "ja": "表示設定を保存できませんでした。再試行してください。"
+  },
+  {
+    "key": "settings.display.loadError",
+    "category": "settings",
+    "vi": "Chưa tải được thiết lập hiển thị. Hãy thử lại.",
+    "en": "Could not load display settings. Try again.",
+    "zh": "无法加载显示设置。请重试。",
+    "ja": "表示設定を読み込めませんでした。再試行してください。"
+  },
+  {
+    "key": "settings.display.managePermissionRequired",
+    "category": "settings",
+    "vi": "Bạn cần quyền quản lý cài đặt để thay đổi thiết lập này.",
+    "en": "You need settings management permission to change this.",
+    "zh": "您需要设置管理权限才能更改此设置。",
+    "ja": "この設定を変更するには設定管理権限が必要です。"
   }
 ]

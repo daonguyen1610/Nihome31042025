@@ -22,6 +22,28 @@ public class SiteSettingsService(AppDbContext db)
         return await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
     }
 
+    public async Task<(string TimeZoneId, string Currency)> GetDisplayAsync(CancellationToken ct = default)
+    {
+        var settings = await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct);
+        return (
+            DisplaySettings.CanonicalTimeZoneId(settings?.DisplayTimeZoneId),
+            DisplaySettings.NormalizeCurrencyOrDefault(settings?.CurrencyCode));
+    }
+
+    public async Task<(string TimeZoneId, string Currency)> UpdateDisplayAsync(
+        string timeZoneId,
+        string currency,
+        CancellationToken ct = default)
+    {
+        var settings = await db.SiteSettings.FirstOrDefaultAsync(ct)
+            ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
+        settings.DisplayTimeZoneId = DisplaySettings.CanonicalTimeZoneId(timeZoneId);
+        settings.CurrencyCode = DisplaySettings.NormalizeCurrency(currency);
+        settings.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        return (settings.DisplayTimeZoneId, settings.CurrencyCode);
+    }
+
     public async Task<decimal> UpdateCmScheduleThresholdAsync(decimal threshold, CancellationToken ct)
     {
         var settings = await db.SiteSettings.FirstAsync(ct);
