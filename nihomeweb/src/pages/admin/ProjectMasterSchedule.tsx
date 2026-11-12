@@ -1007,7 +1007,7 @@ export const ProjectMasterSchedule = ({
             {t("scheduleUx.changeReasonHint")}
           </p>
         </div>
-        <div className="-mx-4 overflow-x-auto border-y sm:mx-0">
+        <div className="-mx-4 overflow-x-auto border-y [contain:layout] sm:mx-0">
           <table className="w-full min-w-[900px] text-sm">
             <caption className="sr-only">{t("scheduleUx.editSchedule")}</caption>
             <thead>
@@ -1762,7 +1762,7 @@ export const ProjectMasterSchedule = ({
                       </div>
                     )}
 
-                    <div className="-mx-4 overflow-x-auto border-y sm:mx-0">
+                    <div className="-mx-4 overflow-x-auto border-y [contain:layout] sm:mx-0">
                       <table className="w-full min-w-[1000px] table-fixed text-sm">
                         <caption className="sr-only">
                           {t("operationalProjects.schedule.title")} — {t("scheduleUx.items")}:{" "}

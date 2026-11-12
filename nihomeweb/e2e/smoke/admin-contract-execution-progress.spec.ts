@@ -168,6 +168,15 @@ test("execution panel handles restricted, empty, retry and translated source pre
       },
     });
   });
+  await page.route(/\/api\/(?:v1\/)?operational-projects\/\d+$/, (route) =>
+    route.fulfill({
+      json: {
+        id: Number(new URL(route.request().url()).pathname.split("/").pop()),
+        designProjectId: null,
+        designProjects: [],
+      },
+    }),
+  );
   await page.route("**/construction/qs-references", (route) =>
     route.fulfill({ json: { contracts: [], approvedBoqRevisions: [] } }),
   );
@@ -201,16 +210,10 @@ test("execution panel handles restricted, empty, retry and translated source pre
     response.url().includes(`/operational-projects/${projectA}/construction/qs-batches`),
   );
   await panel.getByRole("link", { name: /QS-STRUCTURE-01/ }).click();
-  await qsLoaded;
-  // Let the QS response render while the shell still waits for its project list.
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
-      ),
-  );
-  await expect(page.getByTestId("qs-row-92")).toHaveCount(0);
+  // The QS workspace resolves its project from the shell's project list before
+  // it loads batches, so release the deferred list response first.
   releaseProjects();
+  await qsLoaded;
   await expect(page.getByTestId("qs-row-92")).toHaveAttribute("data-scrolled-to-source", "true");
   await expect(page.getByTestId("qs-row-92")).toBeInViewport();
   await page.getByTestId("qs-page-project").click();

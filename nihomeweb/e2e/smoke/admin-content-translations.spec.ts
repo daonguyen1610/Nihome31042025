@@ -50,6 +50,7 @@ const entityTypes = [
   { type: "MasterDataOption", label: "Master data options", fields: ["Name"] },
   { type: "ClientLogo", label: "Client logos", fields: ["Name"] },
   { type: "RoleGroup", label: "Role groups", fields: ["Name"] },
+  { type: "QaQcTemplate", label: "QA/QC templates", fields: ["Name"] },
 ] as const;
 
 const authorizationHeaders = (token: string) => ({ Authorization: `Bearer ${token}` });

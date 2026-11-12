@@ -125,15 +125,15 @@ export function ConstructionWorkspaceShell({
               ariaLabel={t("construction.common.operationalProject")}
               value={selectedProjectId == null ? "" : String(selectedProjectId)}
               onChange={(value) =>
-                setSearchParams(
-                  (current) => {
-                    const next = new URLSearchParams(current);
-                    next.set("projectId", value);
-                    next.delete("designProjectId");
-                    return next;
-                  },
-                  { replace: true },
-                )
+                setSearchParams((current) => {
+                  const next = new URLSearchParams(current);
+                  next.set("projectId", value);
+                  next.delete("designProjectId");
+                  // These filters point at records under the project being
+                  // left behind, so they would hide the new project's rows.
+                  next.delete("contractId");
+                  return next;
+                })
               }
               options={projects.map((project) => ({
                 value: String(project.id),

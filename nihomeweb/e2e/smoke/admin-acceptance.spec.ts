@@ -1,5 +1,9 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+import {
+  createDesignProject,
+  createOwnCustomer,
+  getOperationalProjectId,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-143 M4 Partial Acceptance — real-user path through the running
@@ -49,26 +53,25 @@ test.describe("NIH-143 — Partial acceptance (real-user flow)", () => {
       },
     });
     expect(taskResponse.ok(), await taskResponse.text()).toBeTruthy();
+    const operationalProjectId = await getOperationalProjectId(api, authHeader, projectId);
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/construction/acceptance`, { waitUntil: "networkidle" });
-    await page.evaluate(() => {
-      const region = document.querySelector('[aria-label*="Notifications ("]');
-      region?.remove();
-    });
-    await expect(page.getByTestId("acceptance-page")).toBeVisible();
-
-    const projectFilter = page.locator('button[role="combobox"]').first();
+    // The CM/BCH workspaces scope by operational project; deep-link into the
+    // created scope instead of relying on which project the shell preselects.
     await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes("/api/acceptance-records") &&
           r.url().includes(`designProjectId=${projectId}`),
       ),
-      (async () => {
-        await projectFilter.click();
-        await page.getByRole("option", { name: new RegExp(`E2E-ACC ${projSuffix}`) }).click();
-      })(),
+      page.goto(`${baseURL}/admin/construction/acceptance?projectId=${operationalProjectId}`, {
+        waitUntil: "networkidle",
+      }),
     ]);
+    await page.evaluate(() => {
+      const region = document.querySelector('[aria-label*="Notifications ("]');
+      region?.remove();
+    });
+    await expect(page.getByTestId("acceptance-page")).toBeVisible();
 
     await page.getByTestId("acceptance-new").click();
     await page.waitForSelector('[data-testid="acceptance-form-title"]');

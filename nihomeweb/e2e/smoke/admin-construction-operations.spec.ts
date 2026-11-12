@@ -30,6 +30,19 @@ test("BCH resource workspace renders the assigned project on mobile", async ({
       }),
     }),
   );
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: projectId,
+        code: "NICON-M4-01",
+        name: "Nhà xưởng NICON Bình Dương",
+        designProjectId: null,
+        designProjects: [],
+      }),
+    }),
+  );
   await page.route(
     new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/construction/resource-requests$`),
     (route) =>
@@ -126,6 +139,55 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
       }),
     }),
   );
+  await page.route(new RegExp(`/api/(?:v1/)?operational-projects/${projectId}$`), (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        id: projectId,
+        code: "NICON-QA-01",
+        name: "Nhà xưởng NICON Bình Dương",
+        designProjectId: null,
+        designProjects: [{ id: 9102, projectCode: "E2E-QA", name: "E2E QA design project" }],
+      }),
+    }),
+  );
+  await page.route(
+    new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents(\\?.*)?$`),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([{ id: 3001, originalFileName: "lab-result.pdf" }]),
+      }),
+  );
+  await page.route(/\/api\/(?:v1\/)?ifc-releases\?.*/, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({
+        total: 1,
+        page: 1,
+        pageSize: 100,
+        statusCounts: { Released: 1 },
+        items: [
+          {
+            id: 2001,
+            designProjectId: 9102,
+            designProjectCode: "E2E-QA",
+            releaseNumber: "IFC-FOUNDATION-01",
+            title: "Móng",
+            releaseDate: "2026-09-01T00:00:00Z",
+            status: "Released",
+            items: [],
+            recipients: [],
+            createdAt: "2026-09-01T00:00:00Z",
+            updatedAt: "2026-09-01T00:00:00Z",
+          },
+        ],
+      }),
+    }),
+  );
   await page.route(
     new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/construction/qa-qc/templates$`),
     (route) =>
@@ -141,7 +203,16 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
             nameVi: "Hồ sơ chất lượng vật liệu",
             nameZh: "材料质量档案",
             nameJa: "材料品質記録",
-            schemaJson: "{}",
+            schemaJson: JSON.stringify({
+              schemaVersion: 1,
+              items: [
+                {
+                  code: "QA-01",
+                  title: "Kiểm tra cốt thép",
+                  acceptanceCriteria: "Đúng bản vẽ và biên bản nghiệm thu.",
+                },
+              ],
+            }),
             isPublished: true,
             rowVersion: "AAAAAAAAAAE=",
           },
@@ -180,7 +251,7 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
 
   await page.goto(`${appUrl}/admin/construction/bch/qa-qc`, { waitUntil: "networkidle" });
   await expect(page.getByTestId("qa-qc-page")).toBeVisible();
-  await expect(page.getByTestId("qa-qc-evidence-4001")).toContainText("3001");
+  await expect(page.getByTestId("qa-qc-evidence-4001")).toContainText("lab-result.pdf");
   await expect(page.getByTestId("qa-qc-evidence-4001")).toContainText(
     /Kết quả thí nghiệm|Laboratory result/,
   );
@@ -188,10 +259,12 @@ test("BCH QA/QC form sends a type for each evidence document on mobile", async (
   await page.getByTestId("qa-qc-template").click();
   await page.getByRole("option", { name: /Hồ sơ chất lượng vật liệu/ }).click();
   await page.locator("#qa-wbs").fill("WBS-FOUNDATION-01");
-  await page.locator("#qa-ifc").fill("2001");
+  await page.getByTestId("qa-qc-ifc-release").click();
+  await page.getByRole("option", { name: /IFC-FOUNDATION-01/ }).click();
   await page.locator("#qa-title").fill("Kiểm tra bê tông móng");
   await page.getByTestId("qa-add-evidence").click();
-  await page.getByTestId("qa-evidence-document-0").fill("3001");
+  await page.getByTestId("qa-evidence-document-0").click();
+  await page.getByRole("option", { name: /lab-result\.pdf/ }).click();
   await page.getByTestId("qa-evidence-type-0").click();
   await page.getByRole("option", { name: /Kết quả thí nghiệm|Laboratory result/ }).click();
   await page.getByTestId("qa-qc-save").click();

@@ -54,6 +54,9 @@ export default defineConfig(({ mode }) => ({
           "/api": process.env.VITE_API_PROXY_TARGET,
           "/files": process.env.VITE_API_PROXY_TARGET,
           "/images": process.env.VITE_API_PROXY_TARGET,
+          // Seeded static assets are served by the backend in CI; proxy them
+          // here too so local E2E exercises the same paths.
+          "/process-assets": process.env.VITE_API_PROXY_TARGET,
         }
       : undefined,
     hmr: {

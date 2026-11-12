@@ -1,5 +1,9 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
-import { createDesignProject, createOwnCustomer } from "../fixtures/designProjects";
+import {
+  createDesignProject,
+  createOwnCustomer,
+  getOperationalProjectId,
+} from "../fixtures/designProjects";
 
 /**
  * NIH-145 M4 As-built dossier end-to-end. Real path through the
@@ -38,26 +42,25 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
       customerId,
     });
 
+    const operationalProjectId = await getOperationalProjectId(api, authHeader, projectId);
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.goto(`${baseURL}/admin/construction/asbuilt`, { waitUntil: "networkidle" });
-    await page.evaluate(() => {
-      const region = document.querySelector('[aria-label*="Notifications ("]');
-      region?.remove();
-    });
-    await expect(page.getByTestId("asbuilt-page")).toBeVisible();
-
-    const projectFilter = page.locator('button[role="combobox"]').first();
+    // The CM/BCH workspaces scope by operational project; deep-link into the
+    // created scope instead of relying on which project the shell preselects.
     await Promise.all([
       page.waitForResponse(
         (r) =>
           r.url().includes("/api/as-built-documents") &&
           r.url().includes(`designProjectId=${projectId}`),
       ),
-      (async () => {
-        await projectFilter.click();
-        await page.getByRole("option", { name: new RegExp(`E2E-AB ${projSuffix}`) }).click();
-      })(),
+      page.goto(`${baseURL}/admin/construction/asbuilt?projectId=${operationalProjectId}`, {
+        waitUntil: "networkidle",
+      }),
     ]);
+    await page.evaluate(() => {
+      const region = document.querySelector('[aria-label*="Notifications ("]');
+      region?.remove();
+    });
+    await expect(page.getByTestId("asbuilt-page")).toBeVisible();
 
     // Create a Drawing document
     await page.getByTestId("asbuilt-new").click();
