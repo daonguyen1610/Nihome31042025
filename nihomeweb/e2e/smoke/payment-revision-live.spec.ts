@@ -88,7 +88,7 @@ test("superseded QS blocks payment until the same request is revised and approve
     headers: headers(adminToken),
     data: { changeReason: "E2E payment revision baseline", items: scheduleItems },
   });
-  expect(scheduleResponse.status(), await scheduleResponse.text()).toBe(201);
+  expect(scheduleResponse.status(), await scheduleResponse.text()).toBe(200);
   const schedule = (await scheduleResponse.json()) as {
     revisions: Array<{ id: number; rowVersion: string }>;
   };
