@@ -1,9 +1,13 @@
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
-import { loadDisplaySettings } from "./lib/displaySettings";
+import { loadDisplaySettings, subscribeDisplaySettings } from "./lib/displaySettings";
 import "./index.css";
 
-// Render immediately with the Vietnam + VND defaults. The loader always
-// resolves and App re-renders once the admin settings arrive.
+const root = createRoot(document.getElementById("root")!);
+const render = () => root.render(<App />);
+
+// Paint immediately with the Vietnam + VND defaults, then re-render the tree
+// once the admin settings arrive or change.
+render();
+subscribeDisplaySettings(render);
 void loadDisplaySettings();
-createRoot(document.getElementById("root")!).render(<App />);
