@@ -27,10 +27,9 @@ export function currencySymbol(code: CurrencyCode = activeCurrency): string {
 }
 
 const vndFormatter = new Intl.NumberFormat("vi-VN");
-const usdFormatter = new Intl.NumberFormat("en-US", {
-  minimumFractionDigits: 2,
-  maximumFractionDigits: 2,
-});
+// Amounts convert to whole units when the currency changes, so USD is shown
+// without fractional digits rather than as 100.00.
+const usdFormatter = new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 });
 
 function formatDecimalString(value: string): string | null {
   const match = /^(-?)(\d+)(?:\.(\d+))?$/.exec(value.trim());
@@ -54,7 +53,7 @@ function formatDecimalString(value: string): string | null {
 }
 
 function formatUsd(value: number | string | null | undefined): string {
-  if (value == null) return "—";
+  if (value == null || (typeof value === "string" && !value.trim())) return "—";
   const numeric = typeof value === "string" ? Number(value) : value;
   return Number.isFinite(numeric) ? usdFormatter.format(numeric) : "—";
 }

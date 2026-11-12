@@ -2,7 +2,7 @@ import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { FieldScope } from "@/components/ui/field-scope";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { personOption } from "@/lib/people";
 import { SearchableSelect, type SearchableSelectOption } from "@/components/ui/searchable-select";
 import {
@@ -60,7 +60,14 @@ import {
   type UserListItemResponse,
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
-import { dateTimeLocalToIso, formatDateTime, toDateTimeLocalValue } from "@/lib/displaySettings";
+import {
+  dateTimeLocalToIso,
+  formatDateTime,
+  formatMoney,
+  normalizeCurrency,
+  todayIsoDate,
+  toDateTimeLocalValue,
+} from "@/lib/displaySettings";
 import { getActiveCurrency } from "@/lib/numberFormat";
 
 type Translate = (key: string, params?: Record<string, string | number>) => string;
@@ -89,7 +96,7 @@ const emptyPayment = () => ({
   contractPaymentMilestoneId: 0,
   constructionQsBatchId: 0,
   supplierInvoiceNumber: "",
-  invoiceDate: new Date().toISOString().slice(0, 10),
+  invoiceDate: todayIsoDate(),
   invoiceAmount: 0,
   currency: getActiveCurrency(),
   receivedAt: currentLocalDateTime(),
@@ -180,7 +187,6 @@ const FinanceControlPage = () => {
   });
   const [correctionForm, setCorrectionForm] = useState(emptyCorrection);
 
-  const money = useMemo(() => new Intl.NumberFormat(lang, { maximumFractionDigits: 2 }), [lang]);
   const defaultTab = canViewPayments ? "payments" : canViewPeriods ? "periods" : "corrections";
 
   const loadFinance = useCallback(async () => {
@@ -319,7 +325,8 @@ const FinanceControlPage = () => {
       supplierInvoiceNumber: row.supplierInvoiceNumber,
       invoiceDate: row.invoiceDate.slice(0, 10),
       invoiceAmount: row.invoiceAmount,
-      currency: getActiveCurrency(),
+      // Edits stay in the record's own currency; the API keeps it on save.
+      currency: normalizeCurrency(row.currency),
       receivedAt: toLocalDateTime(row.receivedAt),
       assignedAccountantUserId: row.assignedAccountantUserId,
       attachments: row.attachments.map((item) => ({
@@ -522,7 +529,6 @@ const FinanceControlPage = () => {
                   currentUserId={currentUserId}
                   busy={busy}
                   status={status}
-                  money={money}
                   formatDate={formatDate}
                   t={t}
                   onCreate={() => openCreate("payment")}
@@ -578,7 +584,6 @@ const FinanceControlPage = () => {
                   currentUserId={currentUserId}
                   busy={busy}
                   status={status}
-                  money={money}
                   formatDate={formatDate}
                   t={t}
                   onCreate={() => openCreate("correction")}
@@ -783,7 +788,6 @@ const PaymentsPanel = ({
   currentUserId,
   busy,
   status,
-  money,
   formatDate,
   t,
   onCreate,
@@ -799,7 +803,6 @@ const PaymentsPanel = ({
   currentUserId?: number;
   busy: boolean;
   status: (value: string) => ReactNode;
-  money: Intl.NumberFormat;
   formatDate: (value?: string | null) => string;
   t: Translate;
   onCreate: () => void;
@@ -846,7 +849,7 @@ const PaymentsPanel = ({
               )}
               <Data label={t("finance.field.vendor")}>{row.vendorName}</Data>
               <Data label={t("finance.field.amount")}>
-                {money.format(row.invoiceAmount)} {row.currency}
+                {formatMoney(row.invoiceAmount, row.currency)}
               </Data>
               <Data label={t("finance.field.invoiceDate")}>{formatDate(row.invoiceDate)}</Data>
               <Data label={t("finance.field.receivedAt")}>{formatDate(row.receivedAt)}</Data>
@@ -888,7 +891,7 @@ const PaymentsPanel = ({
                       </p>
                       <p>{revision.supplierInvoiceNumber}</p>
                       <p>
-                        {money.format(revision.invoiceAmount)} {revision.currency} · QS #
+                        {formatMoney(revision.invoiceAmount, revision.currency)} · QS #
                         {revision.constructionQsBatchId ?? "-"}
                       </p>
                       <p className="text-muted-foreground">
@@ -1132,7 +1135,6 @@ const CorrectionsPanel = ({
   currentUserId,
   busy,
   status,
-  money,
   formatDate,
   t,
   onCreate,
@@ -1146,7 +1148,6 @@ const CorrectionsPanel = ({
   currentUserId?: number;
   busy: boolean;
   status: (value: string) => ReactNode;
-  money: Intl.NumberFormat;
   formatDate: (value?: string | null) => string;
   t: Translate;
   onCreate: () => void;
@@ -1190,13 +1191,13 @@ const CorrectionsPanel = ({
                 {row.responsibleAccountantName ?? `#${row.responsibleAccountantUserId}`}
               </Data>
               <Data label={t("finance.field.originalValue")}>
-                {money.format(row.originalValue)} {row.currency}
+                {formatMoney(row.originalValue, row.currency)}
               </Data>
               <Data label={t("finance.field.correctedValue")}>
-                {money.format(row.correctedValue)} {row.currency}
+                {formatMoney(row.correctedValue, row.currency)}
               </Data>
               <Data label={t("finance.field.delta")}>
-                {money.format(row.correctedValue - row.originalValue)} {row.currency}
+                {formatMoney(row.correctedValue - row.originalValue, row.currency)}
               </Data>
             </dl>
             {row.note && <p className="mt-3 text-sm">{row.note}</p>}

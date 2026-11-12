@@ -13,6 +13,7 @@ const compiled = ts.transpileModule(source, {
 globalThis.setActiveCurrency = () => {};
 const {
   applyDisplaySettings,
+  convertToDisplayCurrency,
   dateTimeLocalToIso,
   formatDate,
   getDisplaySettings,
@@ -43,6 +44,44 @@ test("field options replace the helper defaults; zone-only options keep them", (
     formatDate("2026-03-02", "en", { dateStyle: "medium", timeZone: "UTC" }),
     "Mar 2, 2026",
   );
+});
+
+test("bare midnight values stay on their calendar date behind UTC", () => {
+  applyDisplaySettings({ timeZoneId: "America/New_York", currency: "VND" });
+  assert.equal(formatDate("2026-03-02T00:00:00", "en"), "3/2/2026");
+  assert.equal(formatDate("2026-03-02T00:00:00Z", "en"), "3/1/2026");
+  assert.equal(formatDate("2026-03-02", "en"), "3/2/2026");
+  applyDisplaySettings({ timeZoneId: "Asia/Ho_Chi_Minh", currency: "VND" });
+});
+
+test("recorded amounts convert to the active currency and round to whole units", () => {
+  applyDisplaySettings({
+    timeZoneId: "Asia/Ho_Chi_Minh",
+    currency: "USD",
+    usdVndRate: 25_000,
+  });
+  assert.equal(convertToDisplayCurrency(2_500_000, "VND"), 100);
+  assert.equal(convertToDisplayCurrency(2_512_500, "VND"), 101);
+  assert.equal(convertToDisplayCurrency(100, "USD"), 100);
+  assert.equal(convertToDisplayCurrency(2_500_000, null), 2_500_000);
+
+  applyDisplaySettings({
+    timeZoneId: "Asia/Ho_Chi_Minh",
+    currency: "VND",
+    usdVndRate: 25_000,
+  });
+  assert.equal(convertToDisplayCurrency(100, "USD"), 2_500_000);
+  assert.equal(convertToDisplayCurrency(2_500_000, "VND"), 2_500_000);
+});
+
+test("an unusable exchange rate falls back to 25,000", () => {
+  applyDisplaySettings({
+    timeZoneId: "Asia/Ho_Chi_Minh",
+    currency: "USD",
+    usdVndRate: 0,
+  });
+  assert.equal(getDisplaySettings().usdVndRate, 25_000);
+  applyDisplaySettings({ timeZoneId: "Asia/Ho_Chi_Minh", currency: "VND" });
 });
 
 test("invalid datetime-local text is rejected instead of silently shifted", () => {

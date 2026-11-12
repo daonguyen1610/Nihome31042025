@@ -37,6 +37,7 @@ public class OpportunityResponse
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public decimal EstimatedValue { get; set; }
+    public string Currency { get; set; } = string.Empty;
     public int WinProbability { get; set; }
     public DateTime? ExpectedCloseDate { get; set; }
     public OpportunityStage Stage { get; set; }

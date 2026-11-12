@@ -106,7 +106,7 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
         db.OperationalProjectMembers.Any(m => m.OperationalProjectId == projectId && m.UserId == u.Id && m.EndedAt == null));
 
     private IQueryable<ProjectBoqRevision> ApprovedBoqs(int projectId) => db.ProjectBoqRevisions.AsNoTracking()
-        .Where(x => x.OperationalProjectId == projectId && x.Status == ProjectBoqRevisionStatus.Approved && x.Currency == "VND");
+        .Where(x => x.OperationalProjectId == projectId && x.Status == ProjectBoqRevisionStatus.Approved);
 
     public async Task<RfqReferenceResponse> ReferencesAsync(int projectId, CancellationToken ct)
     {
@@ -145,7 +145,7 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
         Require(request.DueAt.Kind != DateTimeKind.Unspecified && request.DueAt.ToUniversalTime() > DateTime.UtcNow, "Due date must include a timezone and be in the future, e.g. 2026-12-01T09:00:00Z.");
         Require(await Owners(projectId).AnyAsync(x => x.Id == request.OwnerUserId, ct), "Owner must be an active Procurement member of this project.");
         var revision = await ApprovedBoqs(projectId).Include(x => x.Lines).SingleOrDefaultAsync(x => x.Id == request.SourceBoqRevisionId, ct);
-        Require(revision is not null, "Source BOQ must be approved, use VND, and belong to this project.");
+        Require(revision is not null, "Source BOQ must be approved and belong to this project.");
         Require(request.VendorIds.Count is > 0 and <= 100 && request.VendorIds.Distinct().Count() == request.VendorIds.Count,
             "Invite 1 to 100 different active vendors.");
         var vendors = await db.Vendors.Where(x => request.VendorIds.Contains(x.Id) && x.IsActive &&
@@ -277,7 +277,7 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
             .Select(x => new VendorPortalRfqDocumentResponse(x.ProjectDocumentId, x.ProjectDocument.OriginalFileName))
             .ToListAsync(ct);
         return new VendorPortalRfqResponse(invitation.Rfq.Code, invitation.Rfq.Title,
-            Utc(invitation.Rfq.DueAt), invitation.VendorName,
+            Utc(invitation.Rfq.DueAt), invitation.Rfq.Currency, invitation.VendorName,
             invitation.Rfq.Lines.OrderBy(x => x.Id).Select(x =>
                 new VendorPortalRfqLineResponse(x.Id, x.ItemCode, x.Description, x.Unit, x.Quantity)).ToList(),
             packageDocuments, invitation.Rfq.DueAt >= DateTime.UtcNow);
@@ -405,7 +405,7 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
         foreach (var line in request.Lines)
             Require(sources.ContainsKey(line.RfqLineId) && line.UnitPrice >= 0 && decimal.Round(line.UnitPrice, 4) == line.UnitPrice,
                 "Unit price must be non-negative, use at most 4 decimal places, and refer to a line in this RFQ.");
-        var currency = await SystemCurrency.ResolveAsync(db, ct);
+        var currency = entity.Currency;
         Require(request.DiscountPercent == 0m || request.DiscountAmount == 0m,
             "Use either a discount percent or a discount amount, not both.");
         var bid = new RfqBid

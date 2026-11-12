@@ -5,6 +5,7 @@ public class SiteSettings
     public const int DefaultContractMaxFileSizeMb = 100;
     public const string DefaultTimeZoneId = "Asia/Ho_Chi_Minh";
     public const string DefaultCurrencyCode = "VND";
+    public const decimal DefaultUsdVndRate = 25_000m;
 
     public int Id { get; set; }
 
@@ -13,6 +14,9 @@ public class SiteSettings
 
     /// <summary>ISO 4217 code applied to every money value in the system.</summary>
     public string CurrencyCode { get; set; } = DefaultCurrencyCode;
+
+    /// <summary>VND per 1 USD, used to convert recorded amounts for display.</summary>
+    public decimal UsdVndRate { get; set; } = DefaultUsdVndRate;
 
     public decimal CmScheduleDelayThresholdPercent { get; set; } = 5m;
 

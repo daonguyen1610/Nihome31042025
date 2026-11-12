@@ -17,6 +17,7 @@ public static class QuoteApprovalDecisionEmailTemplates
         "quoteCode",
         "quoteVersion",
         "grandTotal",
+        "currency",
         "validUntil",
         "decisionLabel",
         "decisionNote",
@@ -35,7 +36,7 @@ public static class QuoteApprovalDecisionEmailTemplates
           <p style="margin:8px 0 0;font-size:18px;font-weight:700;line-height:26px">{{decisionLabel}}</p>
           <p style="margin:16px 0 0;font-size:16px;font-weight:700;line-height:24px">{{quoteCode}} · Phiên bản {{quoteVersion}}</p>
           <p style="margin:16px 0 0;font-size:13px;line-height:20px;color:#64748b">Tổng giá trị</p>
-          <p style="margin:4px 0 0;font-size:18px;font-weight:700;line-height:26px">{{grandTotal}} VND</p>
+          <p style="margin:4px 0 0;font-size:18px;font-weight:700;line-height:26px">{{grandTotal}} {{currency}}</p>
           <p style="margin:12px 0 0;font-size:13px;line-height:20px;color:#64748b">Hiệu lực đến</p>
           <p style="margin:4px 0 0;font-size:14px;font-weight:700;line-height:22px">{{validUntil}}</p>
           <p style="margin:12px 0 0;font-size:13px;line-height:20px;color:#64748b">Ghi chú của người duyệt</p>

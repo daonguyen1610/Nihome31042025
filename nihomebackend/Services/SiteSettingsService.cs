@@ -22,26 +22,30 @@ public class SiteSettingsService(AppDbContext db)
         return await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync();
     }
 
-    public async Task<(string TimeZoneId, string Currency)> GetDisplayAsync(CancellationToken ct = default)
+    public async Task<(string TimeZoneId, string Currency, decimal UsdVndRate)> GetDisplayAsync(
+        CancellationToken ct = default)
     {
         var settings = await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct);
         return (
             DisplaySettings.CanonicalTimeZoneId(settings?.DisplayTimeZoneId),
-            DisplaySettings.NormalizeCurrencyOrDefault(settings?.CurrencyCode));
+            DisplaySettings.NormalizeCurrencyOrDefault(settings?.CurrencyCode),
+            settings?.UsdVndRate > 0 ? settings.UsdVndRate : SiteSettings.DefaultUsdVndRate);
     }
 
-    public async Task<(string TimeZoneId, string Currency)> UpdateDisplayAsync(
+    public async Task<(string TimeZoneId, string Currency, decimal UsdVndRate)> UpdateDisplayAsync(
         string timeZoneId,
         string currency,
+        decimal usdVndRate,
         CancellationToken ct = default)
     {
         var settings = await db.SiteSettings.FirstOrDefaultAsync(ct)
             ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
         settings.DisplayTimeZoneId = DisplaySettings.CanonicalTimeZoneId(timeZoneId);
         settings.CurrencyCode = DisplaySettings.NormalizeCurrency(currency);
+        settings.UsdVndRate = usdVndRate;
         settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        return (settings.DisplayTimeZoneId, settings.CurrencyCode);
+        return (settings.DisplayTimeZoneId, settings.CurrencyCode, settings.UsdVndRate);
     }
 
     public async Task<decimal> UpdateCmScheduleThresholdAsync(decimal threshold, CancellationToken ct)

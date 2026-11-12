@@ -2264,6 +2264,13 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)")
+                        .HasDefaultValue("VND");
+
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
@@ -7055,6 +7062,13 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)")
+                        .HasDefaultValue("VND");
+
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
@@ -8837,6 +8851,13 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)")
+                        .HasDefaultValue("VND");
+
                     b.Property<decimal>("DiscountPercent")
                         .HasColumnType("decimal(5,2)");
 
@@ -10541,6 +10562,12 @@ namespace nihomebackend.Migrations
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<decimal>("UsdVndRate")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)")
+                        .HasDefaultValue(25000m);
 
                     b.Property<string>("WorkPackageApprovalEmailBodyTemplate")
                         .HasColumnType("nvarchar(max)");

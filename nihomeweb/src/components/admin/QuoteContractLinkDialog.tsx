@@ -24,7 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { useI18n } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import { adminApi, type ContractResponse } from "@/services/adminApi";
 
 interface QuoteSide {
@@ -98,7 +98,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
             eligible.map((contract) => ({
               id: contract.id,
               label: contract.contractNumber,
-              detail: `${t(`contracts.status.${contract.status}`)} · ${formatVndWithSymbol(contract.currentValue)}`,
+              detail: `${t(`contracts.status.${contract.status}`)} · ${formatMoney(contract.currentValue, contract.currency)}`,
             })),
           );
         } else {
@@ -113,7 +113,7 @@ const QuoteContractLinkDialog = (props: QuoteContractLinkDialogProps) => {
             eligible.map((quote) => ({
               id: quote.id,
               label: quote.code,
-              detail: `${t(`quotes.status.${quote.status}`)} · ${formatVndWithSymbol(quote.grandTotal)}`,
+              detail: `${t(`quotes.status.${quote.status}`)} · ${formatMoney(quote.grandTotal, quote.currency)}`,
             })),
           );
         }

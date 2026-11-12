@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { Link2 } from "lucide-react";
 import ContractSourceLeads from "@/components/admin/ContractSourceLeads";
 import { useI18n } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { type ContractResponse } from "@/services/adminApi";
@@ -55,7 +55,7 @@ export const InfoTab = ({
     [t("contracts.field.signedDate"), formatDate(contract.signedDate)],
     [t("contracts.field.startDate"), formatDate(contract.startDate)],
     [t("contracts.field.endDate"), formatDate(contract.endDate)],
-    [t("contracts.field.value"), `${formatVndWithSymbol(contract.value)}`],
+    [t("contracts.field.value"), `${formatMoney(contract.value, contract.currency)}`],
   ];
 
   return (

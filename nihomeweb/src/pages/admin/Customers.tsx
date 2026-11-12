@@ -75,8 +75,7 @@ import {
   type UpdateCustomerRequest,
   type UpsertCustomerContactRequest,
 } from "@/services/adminApi";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
-import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatDate, formatDateTime, formatMoney } from "@/lib/displaySettings";
 import { formatTime } from "@/lib/displaySettings";
 
 const TYPES: CustomerType[] = ["Individual", "Company"];
@@ -1911,7 +1910,7 @@ const AdminCustomers = () => {
                               key={opportunity.id}
                               title={opportunity.name}
                               subtitle={`${t(`opportunities.stage.${opportunity.stage}`)} · ${opportunity.winProbability}%`}
-                              value={formatVndWithSymbol(opportunity.estimatedValue)}
+                              value={formatMoney(opportunity.estimatedValue, opportunity.currency)}
                               href={`/admin/opportunities?open=${opportunity.id}`}
                             />
                           ))}
@@ -1933,7 +1932,7 @@ const AdminCustomers = () => {
                               key={quote.id}
                               title={quote.code}
                               subtitle={`${t(`quotes.status.${quote.status}`)} · V${quote.version}`}
-                              value={formatVndWithSymbol(quote.grandTotal)}
+                              value={formatMoney(quote.grandTotal, quote.currency)}
                               href={`/admin/quotes/${quote.id}`}
                             />
                           ))}
@@ -1955,7 +1954,7 @@ const AdminCustomers = () => {
                               key={contract.id}
                               title={contract.contractNumber}
                               subtitle={t(`contracts.status.${contract.status}`)}
-                              value={formatVndWithSymbol(contract.currentValue)}
+                              value={formatMoney(contract.currentValue, contract.currency)}
                               href={`/admin/contracts/${contract.id}`}
                             />
                           ))}

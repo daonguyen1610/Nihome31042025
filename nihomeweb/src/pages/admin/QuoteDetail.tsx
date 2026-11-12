@@ -47,7 +47,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
-import { formatFileSize, formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatFileSize } from "@/lib/numberFormat";
 import {
   calculateQuoteLineAmount,
   calculateQuoteTotals,
@@ -95,7 +95,7 @@ import {
   type InputPriceOfferResponse,
   type DepartmentWorkPackageResponse,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatDate, formatDateTime, formatMoney } from "@/lib/displaySettings";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
@@ -1069,7 +1069,7 @@ const AdminQuoteDetail = () => {
             {t("quotes.field.grandTotal")}
           </dt>
           <dd className="truncate text-base font-semibold">
-            {formatVndWithSymbol(quote.grandTotal)}
+            {formatMoney(quote.grandTotal, quote.currency)}
           </dd>
         </div>
         <div className="min-w-0">
@@ -1159,7 +1159,7 @@ const AdminQuoteDetail = () => {
                         {approvedInputOffers.map((offer) => (
                           <SelectItem key={offer.id} value={String(offer.id)}>
                             {offer.vendorName} · {offer.supplierReference} ·{" "}
-                            {formatVnd(offer.grandTotal)} {offer.currency}
+                            {formatMoney(offer.grandTotal, offer.currency)}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -1268,6 +1268,7 @@ const AdminQuoteDetail = () => {
                     onChange={updateBoqRow}
                     onBulkEntry={() => setBoqBulkEntryOpen(true)}
                     t={t}
+                    currency={quote.currency}
                   />
                 </div>
               )}
@@ -1321,7 +1322,7 @@ const AdminQuoteDetail = () => {
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">{t("quotes.field.subtotal")}</span>
                 <span className="font-medium">
-                  {formatVndWithSymbol(preview?.subtotal ?? quote.subtotal)}
+                  {formatMoney(preview?.subtotal ?? quote.subtotal, quote.currency)}
                 </span>
               </div>
               <div className="flex items-center justify-between text-muted-foreground">
@@ -1336,7 +1337,7 @@ const AdminQuoteDetail = () => {
               <div className="flex items-center justify-between">
                 <span className="font-semibold">{t("quotes.field.grandTotal")}</span>
                 <span className="text-lg font-bold text-primary">
-                  {formatVndWithSymbol(preview?.grandTotal ?? quote.grandTotal)}
+                  {formatMoney(preview?.grandTotal ?? quote.grandTotal, quote.currency)}
                 </span>
               </div>
               <p className="break-words text-xs italic text-muted-foreground">
@@ -1503,7 +1504,7 @@ const AdminQuoteDetail = () => {
                         )}
                       </div>
                       <div className="text-right">
-                        <div className="font-medium">{formatVndWithSymbol(v.grandTotal)}</div>
+                        <div className="font-medium">{formatMoney(v.grandTotal, v.currency)}</div>
                         <div className="text-xs text-muted-foreground">
                           {formatDateTime(v.capturedAt)}
                         </div>
@@ -1512,7 +1513,7 @@ const AdminQuoteDetail = () => {
                     <div className="mt-1 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
                       <span>
                         {t(`quotes.method.${v.method}`)} · {t("quotes.field.subtotal")}{" "}
-                        {formatVnd(v.subtotal)} · VAT {v.vatPercent}%
+                        {formatMoney(v.subtotal, v.currency)} · VAT {v.vatPercent}%
                       </span>
                       <span className="font-medium text-primary">{t("quotes.version.view")}</span>
                     </div>
@@ -1883,7 +1884,7 @@ const QuoteVersionDetails = ({
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">
           {t("quotes.field.subtotal")}
         </dt>
-        <dd className="font-medium">{formatVndWithSymbol(version.subtotal)}</dd>
+        <dd className="font-medium">{formatMoney(version.subtotal, version.currency)}</dd>
       </div>
       <div>
         <dt className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -1912,7 +1913,9 @@ const QuoteVersionDetails = ({
             {t("quotes.field.unitPricePerSqm")}
           </div>
           <div className="font-medium">
-            {version.unitPricePerSqm != null ? formatVndWithSymbol(version.unitPricePerSqm) : "—"}
+            {version.unitPricePerSqm != null
+              ? formatMoney(version.unitPricePerSqm, version.currency)
+              : "—"}
           </div>
         </div>
         <div className="sm:col-span-2">
@@ -1949,9 +1952,11 @@ const QuoteVersionDetails = ({
                   <td className="px-2 py-2 font-medium">{item.name}</td>
                   <td className="px-2 py-2">{item.unit}</td>
                   <td className="px-2 py-2 text-right">{item.quantity}</td>
-                  <td className="px-2 py-2 text-right">{formatVndWithSymbol(item.unitPrice)}</td>
+                  <td className="px-2 py-2 text-right">
+                    {formatMoney(item.unitPrice, version.currency)}
+                  </td>
                   <td className="px-2 py-2 text-right font-medium">
-                    {formatVndWithSymbol(item.amount)}
+                    {formatMoney(item.amount, version.currency)}
                   </td>
                 </tr>
               ))}
@@ -1964,7 +1969,7 @@ const QuoteVersionDetails = ({
               <div className="flex items-start justify-between gap-2">
                 <span className="font-medium">{item.name}</span>
                 <span className="whitespace-nowrap font-semibold">
-                  {formatVndWithSymbol(item.amount)}
+                  {formatMoney(item.amount, version.currency)}
                 </span>
               </div>
               {item.itemCode && (
@@ -1973,7 +1978,7 @@ const QuoteVersionDetails = ({
                 </div>
               )}
               <div className="text-xs text-muted-foreground">
-                {item.quantity} {item.unit} × {formatVndWithSymbol(item.unitPrice)}
+                {item.quantity} {item.unit} × {formatMoney(item.unitPrice, version.currency)}
               </div>
             </li>
           ))}
@@ -1984,7 +1989,7 @@ const QuoteVersionDetails = ({
     <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-4">
       <span className="font-semibold">{t("quotes.field.grandTotal")}</span>
       <span className="text-xl font-bold text-primary">
-        {formatVndWithSymbol(version.grandTotal)}
+        {formatMoney(version.grandTotal, version.currency)}
       </span>
     </div>
   </div>
@@ -2000,6 +2005,7 @@ type RateProvenanceValue = Pick<
   | "unitPricePerSqm"
   | "rateSource"
   | "rateOverrideReason"
+  | "currency"
 >;
 
 const RateProvenance = ({
@@ -2032,14 +2038,16 @@ const RateProvenance = ({
       <dt className="text-xs text-muted-foreground">{t("quotes.field.catalogRate")}</dt>
       <dd className="font-medium">
         {value.catalogUnitPricePerSqm != null
-          ? `${formatVndWithSymbol(value.catalogUnitPricePerSqm)}/m²`
+          ? `${formatMoney(value.catalogUnitPricePerSqm, value.currency)}/m²`
           : "—"}
       </dd>
     </div>
     <div>
       <dt className="text-xs text-muted-foreground">{t("quotes.field.appliedRate")}</dt>
       <dd className="font-medium">
-        {value.unitPricePerSqm != null ? `${formatVndWithSymbol(value.unitPricePerSqm)}/m²` : "—"}
+        {value.unitPricePerSqm != null
+          ? `${formatMoney(value.unitPricePerSqm, value.currency)}/m²`
+          : "—"}
       </dd>
     </div>
     <div>
@@ -2063,6 +2071,7 @@ const BoqTable = ({
   onChange,
   onBulkEntry,
   t,
+  currency,
 }: {
   form: UpdateQuoteRequest;
   editing: boolean;
@@ -2071,6 +2080,7 @@ const BoqTable = ({
   onChange: (idx: number, patch: Partial<QuoteItemInput>) => void;
   onBulkEntry: () => void;
   t: (k: string) => string;
+  currency: string;
 }) => {
   const items = form.items ?? [];
   return (
@@ -2177,7 +2187,7 @@ const BoqTable = ({
                     />
                   </td>
                   <td className="px-2 py-1 text-right font-medium">
-                    {formatVndWithSymbol(amount)}
+                    {formatMoney(amount, currency)}
                   </td>
                   {editing && (
                     <td className="px-2 py-1 text-right">
@@ -2280,7 +2290,7 @@ const BoqTable = ({
                   </div>
                   <div className="flex items-center justify-between rounded bg-muted/30 px-2 py-1 text-sm">
                     <span className="text-muted-foreground">{t("quotes.boq.amount")}</span>
-                    <span className="font-semibold">{formatVndWithSymbol(amount)}</span>
+                    <span className="font-semibold">{formatMoney(amount, currency)}</span>
                   </div>
                 </>
               ) : (
@@ -2295,11 +2305,11 @@ const BoqTable = ({
                       )}
                     </div>
                     <div className="whitespace-nowrap text-sm font-semibold">
-                      {formatVndWithSymbol(amount)}
+                      {formatMoney(amount, currency)}
                     </div>
                   </div>
                   <div className="text-xs text-muted-foreground">
-                    {row.quantity} {row.unit} × {formatVndWithSymbol(row.unitPrice)}
+                    {row.quantity} {row.unit} × {formatMoney(row.unitPrice, currency)}
                   </div>
                 </>
               )}

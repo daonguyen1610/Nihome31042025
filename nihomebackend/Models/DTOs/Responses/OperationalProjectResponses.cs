@@ -88,6 +88,7 @@ public class OperationalProjectOpportunityResponse
     public string Name { get; set; } = string.Empty;
     public string Stage { get; set; } = string.Empty;
     public decimal EstimatedValue { get; set; }
+    public string Currency { get; set; } = string.Empty;
     public int WinProbability { get; set; }
     public DateTime? ExpectedCloseDate { get; set; }
     public string? CustomerName { get; set; }
@@ -109,6 +110,7 @@ public class OperationalProjectQuoteResponse
     public decimal DiscountPercent { get; set; }
     public decimal VatPercent { get; set; }
     public decimal GrandTotal { get; set; }
+    public string Currency { get; set; } = string.Empty;
     public DateTime ValidUntil { get; set; }
     public bool IsExpired { get; set; }
     public string? Note { get; set; }
@@ -143,6 +145,7 @@ public class OperationalProjectContractResponse
     public string? VendorName { get; set; }
     public string Status { get; set; } = string.Empty;
     public decimal Value { get; set; }
+    public string Currency { get; set; } = string.Empty;
     public decimal ApprovedVoTotal { get; set; }
     public decimal CurrentValue { get; set; }
     public int PaymentMilestoneCount { get; set; }
@@ -188,6 +191,7 @@ public class OperationalProjectTimelineItemResponse
     public int Id { get; set; }
     public int ContractId { get; set; }
     public string ContractNumber { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
     public int Order { get; set; }
     public string Name { get; set; } = string.Empty;
     public decimal PercentValue { get; set; }

@@ -759,6 +759,41 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateInputPriceOffer_KeepsTheStoredCurrencyAfterSettingsChange()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);
+        var offer = await _service.AddInputPriceOfferAsync(package.Id, new UpsertInputPriceOfferRequest
+        {
+            VendorId = _vendor.Id,
+            SupplierReference = "AP-MEP-2026-043",
+            Currency = "VND",
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            Lines =
+            [
+                new() { ItemCode = "MEP-CABLE-01", Description = "Cáp điện chống cháy", Unit = "m", Quantity = 100, UnitPrice = 85000, VatPercent = 10, SortOrder = 1 },
+            ],
+        }, _procurementLead.Id);
+        _db.SiteSettings.Add(new SiteSettings { CurrencyCode = "USD" });
+        await _db.SaveChangesAsync();
+
+        var updated = await _service.UpdateInputPriceOfferAsync(package.Id, offer.Id, new UpsertInputPriceOfferRequest
+        {
+            VendorId = _vendor.Id,
+            SupplierReference = "AP-MEP-2026-043",
+            Currency = "USD",
+            ValidUntil = DateTime.UtcNow.AddDays(45),
+            Lines =
+            [
+                new() { ItemCode = "MEP-CABLE-01", Description = "Cáp điện chống cháy", Unit = "m", Quantity = 100, UnitPrice = 90000, VatPercent = 10, SortOrder = 1 },
+            ],
+        }, _procurementLead.Id);
+
+        Assert.NotNull(updated);
+        var stored = await _db.ProcurementInputPriceOffers.SingleAsync(item => item.Id == offer.Id);
+        Assert.Equal("VND", stored.Currency);
+    }
+
+    [Fact]
     public async Task QuoteLinkedInputPricing_RejectsDuplicateActiveRequest_ButAllowsReplacementAfterCancellation()
     {
         var opportunity = new Opportunity

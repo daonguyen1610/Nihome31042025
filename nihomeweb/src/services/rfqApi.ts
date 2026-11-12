@@ -207,6 +207,7 @@ export interface VendorPortalRfq {
   code: string;
   title: string;
   dueAt: string;
+  currency: string;
   vendorName: string;
   canSubmit: boolean;
   lines: { id: number; itemCode: string; description: string; unit: string; quantity: number }[];

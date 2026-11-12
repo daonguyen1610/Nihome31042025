@@ -10,7 +10,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { formatVndWithSymbol } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,7 +73,7 @@ export const ScheduleTab = ({
                 </div>
                 <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span>
-                    {m.percentValue}% • {formatVndWithSymbol(m.amount)}
+                    {m.percentValue}% • {formatMoney(m.amount, contract.currency)}
                   </span>
                   <span>
                     • {t("contracts.milestone.dueDate")}: {formatDate(m.dueDate)}
@@ -171,6 +171,7 @@ export const ScheduleTab = ({
 
 export interface EditScheduleTabProps {
   value: number;
+  currency: string;
   direction: ContractDirection;
   milestones: MilestoneDraft[];
   onChange: (milestones: MilestoneDraft[]) => void;
@@ -178,6 +179,7 @@ export interface EditScheduleTabProps {
 
 export const EditScheduleTab = ({
   value,
+  currency,
   direction,
   milestones,
   onChange,
@@ -309,7 +311,7 @@ export const EditScheduleTab = ({
                       patch(index, { percentValue: Number(event.target.value) || 0 })
                     }
                   />
-                  <p className="text-xs text-muted-foreground">≈ {formatVndWithSymbol(amount)}</p>
+                  <p className="text-xs text-muted-foreground">≈ {formatMoney(amount, currency)}</p>
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor={`milestone-due-${index}`}>

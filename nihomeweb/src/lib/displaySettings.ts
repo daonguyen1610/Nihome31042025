@@ -10,21 +10,25 @@
  */
 import { useSyncExternalStore } from "react";
 import api from "@/lib/api";
-import { setActiveCurrency, type CurrencyCode } from "@/lib/numberFormat";
+import { formatVndWithSymbol, setActiveCurrency, type CurrencyCode } from "@/lib/numberFormat";
 
 export const DEFAULT_TIME_ZONE = "Asia/Ho_Chi_Minh";
 export const DEFAULT_CURRENCY: CurrencyCode = "VND";
+/** VND per 1 USD used to convert recorded amounts to the active currency. */
+export const DEFAULT_USD_VND_RATE = 25_000;
 
 export type DisplaySettings = {
   timeZoneId: string;
   currency: CurrencyCode;
   language: string;
+  usdVndRate: number;
 };
 
 export const DEFAULT_DISPLAY_SETTINGS: DisplaySettings = {
   timeZoneId: DEFAULT_TIME_ZONE,
   currency: DEFAULT_CURRENCY,
   language: "vi",
+  usdVndRate: DEFAULT_USD_VND_RATE,
 };
 
 let current: DisplaySettings = DEFAULT_DISPLAY_SETTINGS;
@@ -57,16 +61,29 @@ function isValidTimeZone(id: string): boolean {
   }
 }
 
+function normalizeRate(rate: number | null | undefined): number {
+  return typeof rate === "number" && Number.isFinite(rate) && rate > 0
+    ? rate
+    : DEFAULT_USD_VND_RATE;
+}
+
 /** Apply time zone + currency. Unknown values fall back to the defaults. */
 export function applyDisplaySettings(next: {
   timeZoneId?: string | null;
   currency?: string | null;
+  usdVndRate?: number | null;
 }): void {
   const requested = next.timeZoneId?.trim();
   const timeZoneId = requested && isValidTimeZone(requested) ? requested : DEFAULT_TIME_ZONE;
   const currency = normalizeCurrency(next.currency);
-  if (current.timeZoneId === timeZoneId && current.currency === currency) return;
-  current = { ...current, timeZoneId, currency };
+  const usdVndRate = normalizeRate(next.usdVndRate);
+  if (
+    current.timeZoneId === timeZoneId &&
+    current.currency === currency &&
+    current.usdVndRate === usdVndRate
+  )
+    return;
+  current = { ...current, timeZoneId, currency, usdVndRate };
   setActiveCurrency(currency);
   emit();
 }
@@ -84,12 +101,18 @@ export function setDisplayLanguage(language: string): void {
  */
 export async function loadDisplaySettings(): Promise<DisplaySettings> {
   try {
-    const { data } = await api.get<{ timeZoneId?: string | null; currency?: string | null }>(
-      "/site-settings/display",
-    );
+    const { data } = await api.get<{
+      timeZoneId?: string | null;
+      currency?: string | null;
+      usdVndRate?: number | null;
+    }>("/site-settings/display");
     applyDisplaySettings(data);
   } catch {
-    applyDisplaySettings({ timeZoneId: DEFAULT_TIME_ZONE, currency: DEFAULT_CURRENCY });
+    applyDisplaySettings({
+      timeZoneId: DEFAULT_TIME_ZONE,
+      currency: DEFAULT_CURRENCY,
+      usdVndRate: DEFAULT_USD_VND_RATE,
+    });
   }
   return current;
 }
@@ -117,10 +140,17 @@ export function localeFor(language?: string | null): string {
 export type DateInput = Date | string | number | null | undefined;
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const BARE_MIDNIGHT = /^\d{4}-\d{2}-\d{2}T00:00(?::00(?:\.0+)?)?$/;
 const HAS_ZONE = /(?:[zZ]|[+-]\d{2}:?\d{2})$/;
 
-function isDateOnly(value: DateInput): boolean {
-  return typeof value === "string" && DATE_ONLY.test(value.trim());
+/**
+ * Date-only strings and bare UTC-midnight values are calendar dates, not
+ * instants: the API serializes unspecified date fields at midnight UTC.
+ */
+function isCalendarValue(value: DateInput): boolean {
+  if (typeof value !== "string") return false;
+  const text = value.trim();
+  return DATE_ONLY.test(text) || BARE_MIDNIGHT.test(text);
 }
 
 /**
@@ -187,7 +217,7 @@ function formatWith(
   const date = toDate(value);
   if (!date) return EMPTY_DATE;
   const merged = withDefaults(options, defaults);
-  const timeZone = merged.timeZone ?? (isDateOnly(value) ? "UTC" : current.timeZoneId);
+  const timeZone = merged.timeZone ?? (isCalendarValue(value) ? "UTC" : current.timeZoneId);
   try {
     return new Intl.DateTimeFormat(localeFor(language), { ...merged, timeZone }).format(date);
   } catch {
@@ -249,6 +279,34 @@ export function formatNumber(
   const numeric = typeof value === "string" ? Number(value) : value;
   if (!Number.isFinite(numeric)) return "—";
   return new Intl.NumberFormat(localeFor(language), options).format(numeric);
+}
+
+/**
+ * Convert an amount recorded in `currency` to the active display currency,
+ * rounded to whole units. A missing currency means the amount predates
+ * per-record currency tracking and is already in the active currency.
+ */
+export function convertToDisplayCurrency(amount: number, currency?: string | null): number {
+  if (!Number.isFinite(amount) || !currency) return amount;
+  const from = normalizeCurrency(currency);
+  if (from === current.currency) return amount;
+  const rate = current.usdVndRate > 0 ? current.usdVndRate : DEFAULT_USD_VND_RATE;
+  const converted = current.currency === "USD" ? amount / rate : amount * rate;
+  return Math.round(converted);
+}
+
+/**
+ * Format an amount recorded in `currency` after converting it to the active
+ * currency. Two million five hundred thousand đồng reads as "100 $" when USD
+ * is active at the configured rate.
+ */
+export function formatMoney(
+  value: number | string | null | undefined,
+  currency?: string | null,
+): string {
+  const numeric = typeof value === "string" ? Number(value) : value;
+  if (numeric == null || !Number.isFinite(numeric)) return "—";
+  return formatVndWithSymbol(convertToDisplayCurrency(numeric, currency));
 }
 
 function zonedParts(date: Date, extra: Intl.DateTimeFormatOptions) {

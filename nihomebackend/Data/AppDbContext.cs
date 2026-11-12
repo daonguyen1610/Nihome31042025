@@ -375,6 +375,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasMaxLength(80).HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultTimeZoneId);
         modelBuilder.Entity<SiteSettings>().Property(x => x.CurrencyCode)
             .HasMaxLength(3).HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultCurrencyCode);
+        modelBuilder.Entity<SiteSettings>().Property(x => x.UsdVndRate)
+            .HasPrecision(18, 4).HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultUsdVndRate);
         modelBuilder.Entity<SiteSettings>().Property(s => s.ContractMaxFileSizeMb)
             .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultContractMaxFileSizeMb);
 
@@ -817,6 +819,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(o => o.LostNote).HasMaxLength(2000);
             b.Property(o => o.Note).HasMaxLength(4000);
             b.Property(o => o.EstimatedValue).HasColumnType("decimal(18,2)");
+            b.Property(o => o.Currency).HasMaxLength(3).IsRequired()
+                .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultCurrencyCode);
             b.HasOne(o => o.Customer)
                 .WithMany()
                 .HasForeignKey(o => o.CustomerId)
@@ -879,6 +883,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(q => q.DiscountPercent).HasColumnType("decimal(5,2)");
             b.Property(q => q.VatPercent).HasColumnType("decimal(5,2)");
             b.Property(q => q.GrandTotal).HasColumnType("decimal(18,2)");
+            b.Property(q => q.Currency).HasMaxLength(3).IsRequired()
+                .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultCurrencyCode);
             b.HasOne(q => q.Opportunity)
                 .WithMany()
                 .HasForeignKey(q => q.OpportunityId)
@@ -1032,6 +1038,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasDefaultValue(ContractType.Unclassified);
             b.Property(c => c.Status).HasConversion<string>().HasMaxLength(30);
             b.Property(c => c.Value).HasColumnType("decimal(18,2)");
+            b.Property(c => c.Currency).HasMaxLength(3).IsRequired()
+                .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultCurrencyCode);
             b.Property(c => c.ScopeOfWork).HasColumnType("nvarchar(max)");
             b.Property(c => c.Note).HasMaxLength(4000);
             b.HasOne(c => c.Customer)

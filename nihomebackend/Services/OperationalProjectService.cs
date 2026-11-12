@@ -178,7 +178,8 @@ public class OperationalProjectService(
                             MidpointRounding.AwayFromZero)),
                     group.Where(milestone => milestone.Status == PaymentMilestoneStatus.Paid)
                         .Sum(milestone => milestone.PercentValue)));
-        var response = Map(project, approvedVoTotals, milestoneSummaries);
+        var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
+        var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
             role.Member.OperationalProjectId == id && role.Member.UserId == callerUserId &&
             role.Member.DesignProjectId == null && role.Member.EndedAt == null && role.EndedAt == null &&
@@ -215,6 +216,7 @@ public class OperationalProjectService(
                 item.Id,
                 item.ContractId,
                 item.Contract.ContractNumber,
+                item.Contract.Currency,
                 item.Order,
                 item.Name,
                 item.PercentValue,
@@ -237,6 +239,7 @@ public class OperationalProjectService(
                 Id = item.Id,
                 ContractId = item.ContractId,
                 ContractNumber = item.ContractNumber,
+                Currency = item.Currency,
                 Order = item.Order,
                 Name = item.Name,
                 PercentValue = item.PercentValue,
@@ -779,15 +782,21 @@ public class OperationalProjectService(
     private static OperationalProjectResponse Map(
         OperationalProject project,
         IReadOnlyDictionary<int, decimal> approvedVoTotals,
-        IReadOnlyDictionary<int, ContractPaymentSummary> milestoneSummaries)
+        IReadOnlyDictionary<int, ContractPaymentSummary> milestoneSummaries,
+        string displayCurrency,
+        decimal usdVndRate)
     {
         var activeContracts = project.Contracts
             .Where(contract => contract.Status != ContractStatus.Cancelled)
             .ToList();
+        // Project cards roll several contracts together; convert each contract's
+        // figure to the display currency before summing mixed-currency totals.
+        decimal InDisplayCurrency(Contract contract, decimal amount) =>
+            MoneyDisplay.Convert(amount, contract.Currency, displayCurrency, usdVndRate);
         var scheduledPaymentAmount = activeContracts.Sum(contract =>
-            milestoneSummaries.GetValueOrDefault(contract.Id)?.ScheduledAmount ?? 0m);
+            InDisplayCurrency(contract, milestoneSummaries.GetValueOrDefault(contract.Id)?.ScheduledAmount ?? 0m));
         var paidPaymentAmount = activeContracts.Sum(contract =>
-            milestoneSummaries.GetValueOrDefault(contract.Id)?.PaidAmount ?? 0m);
+            InDisplayCurrency(contract, milestoneSummaries.GetValueOrDefault(contract.Id)?.PaidAmount ?? 0m));
 
         return new OperationalProjectResponse
         {
@@ -843,11 +852,11 @@ public class OperationalProjectService(
                 UpstreamContractCount = activeContracts.Count(contract => contract.Direction == ContractDirection.Upstream),
                 UpstreamCurrentValue = activeContracts
                 .Where(contract => contract.Direction == ContractDirection.Upstream)
-                .Sum(contract => CurrentContractValue(contract, approvedVoTotals)),
+                .Sum(contract => InDisplayCurrency(contract, CurrentContractValue(contract, approvedVoTotals))),
                 DownstreamContractCount = activeContracts.Count(contract => contract.Direction == ContractDirection.Downstream),
                 DownstreamCurrentValue = activeContracts
                 .Where(contract => contract.Direction == ContractDirection.Downstream)
-                .Sum(contract => CurrentContractValue(contract, approvedVoTotals)),
+                .Sum(contract => InDisplayCurrency(contract, CurrentContractValue(contract, approvedVoTotals))),
                 ScheduledPaymentAmount = scheduledPaymentAmount,
                 PaidPaymentAmount = paidPaymentAmount,
                 PaymentProgressPercent = scheduledPaymentAmount == 0m
@@ -862,6 +871,7 @@ public class OperationalProjectService(
                 Name = item.Name,
                 Stage = item.Stage.ToString(),
                 EstimatedValue = item.EstimatedValue,
+                Currency = item.Currency,
                 WinProbability = item.WinProbability,
                 ExpectedCloseDate = item.ExpectedCloseDate,
                 CustomerName = item.Customer?.Name,
@@ -885,6 +895,7 @@ public class OperationalProjectService(
                 DiscountPercent = item.DiscountPercent,
                 VatPercent = item.VatPercent,
                 GrandTotal = item.GrandTotal,
+                Currency = item.Currency,
                 ValidUntil = item.ValidUntil,
                 IsExpired = item.ValidUntil < DateTime.UtcNow && item.Status != QuoteStatus.CustomerApproved && item.Status != QuoteStatus.Cancelled,
                 Note = item.Note,
@@ -928,6 +939,7 @@ public class OperationalProjectService(
                 VendorName = item.Vendor?.CompanyName,
                 Status = item.Status.ToString(),
                 Value = item.Value,
+                Currency = item.Currency,
                 SignedDate = item.SignedDate,
                 StartDate = item.StartDate,
                 EndDate = item.EndDate,

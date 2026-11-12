@@ -39,7 +39,7 @@ import {
   type ProjectBoqRevisionRequest,
   type ProjectBoqRevisionResponse,
 } from "@/services/adminApi";
-import { formatDateTime } from "@/lib/displaySettings";
+import { formatDateTime, formatMoney } from "@/lib/displaySettings";
 import { getActiveCurrency } from "@/lib/numberFormat";
 
 type BoqLineDraft = ProjectBoqRevisionRequest["lines"][number] & { draftId: string };
@@ -79,7 +79,8 @@ const BoqRevisionDetailPage = () => {
   const [editOpen, setEditOpen] = useState(false);
   const [decision, setDecision] = useState<boolean | null>(null);
   const [decisionReason, setDecisionReason] = useState("");
-  const currency = getActiveCurrency();
+  // Editing keeps the revision's own currency; the API preserves it on save.
+  const currency = boq?.currency ?? getActiveCurrency();
   const [upstreamContractId, setUpstreamContractId] = useState(0);
   const [upstreamContracts, setUpstreamContracts] = useState<ContractResponse[]>([]);
   const [lines, setLines] = useState<BoqLineDraft[]>([emptyLine()]);
@@ -249,12 +250,7 @@ const BoqRevisionDetailPage = () => {
     value
       ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" })
       : t("procurement.boq.detail.notAvailable");
-  const money = (value: number, valueCurrency: string) =>
-    new Intl.NumberFormat(lang, {
-      style: "currency",
-      currency: valueCurrency,
-      maximumFractionDigits: 2,
-    }).format(value);
+  const money = (value: number, valueCurrency: string) => formatMoney(value, valueCurrency);
 
   if (loading)
     return (

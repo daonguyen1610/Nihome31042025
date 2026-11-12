@@ -79,6 +79,27 @@ public class OpportunityServiceTests : IDisposable
             canManage: true));
     }
 
+    [Fact]
+    public async Task CreateAsync_CapturesTheActiveCurrency()
+    {
+        _db.SiteSettings.Add(new SiteSettings { CurrencyCode = "USD", UsdVndRate = 25_000m });
+        await _db.SaveChangesAsync();
+        var user = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(user.Id);
+
+        var created = await _sut.CreateAsync(new CreateOpportunityRequest
+        {
+            Name = "New deal",
+            CustomerId = customer.Id,
+            EstimatedValue = 100,
+            WinProbability = 20,
+        }, user.Id, canManage: true);
+
+        Assert.Equal("USD", created.Currency);
+        Assert.Equal("USD", (await _db.Opportunities.SingleAsync(
+            opportunity => opportunity.Id == created.Id)).Currency);
+    }
+
     [Theory]
     [InlineData(OpportunityStage.Qualification)]
     [InlineData(OpportunityStage.Proposal)]

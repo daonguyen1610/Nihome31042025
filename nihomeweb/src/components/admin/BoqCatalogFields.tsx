@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/select";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd } from "@/lib/numberFormat";
+import { formatMoney } from "@/lib/displaySettings";
 import {
   adminApi,
   type MaterialRateCatalogResponse,
@@ -191,7 +191,7 @@ const BoqCatalogFields = ({
             <div className="col-span-2 min-w-0 md:col-span-1">
               <dt className="text-xs text-muted-foreground">{t("quotes.boqCatalog.total")}</dt>
               <dd className="break-words font-medium">
-                {formatVnd(revision.totalAmount)} {revision.currency}
+                {formatMoney(revision.totalAmount, revision.currency)}
               </dd>
             </div>
           </dl>

@@ -80,13 +80,14 @@ import {
 import {
   formatDate as formatDateInZone,
   formatDateTime as formatDateTimeInZone,
+  todayIsoDate,
 } from "@/lib/displaySettings";
 
 const DIARY_STATUSES: SiteDiaryStatus[] = ["Draft", "Submitted", "Confirmed"];
 
 type ConfirmKind = "submit" | "confirm" | "reopen" | "delete" | null;
 
-const todayIso = () => new Date().toISOString().slice(0, 10);
+const todayIso = () => todayIsoDate();
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   if (!iso) return "—";

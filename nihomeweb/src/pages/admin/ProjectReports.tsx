@@ -672,10 +672,12 @@ export default function ProjectReports() {
   const projectOptions = portfolioQuery.data?.projects ?? activeQuery.data?.projects ?? [];
   const canExport = has(ADMIN_PERMS.projectReportsExport);
 
-  const generatedAt = useMemo(() => {
-    const value = activeQuery.data?.generatedAtUtc;
-    return value ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" }) : null;
-  }, [activeQuery.data?.generatedAtUtc, lang]);
+  // Format at render time so the configured zone is applied even when the
+  // settings resolve after the report query.
+  const generatedAtValue = activeQuery.data?.generatedAtUtc;
+  const generatedAt = generatedAtValue
+    ? formatDateTime(generatedAtValue, lang, { dateStyle: "medium", timeStyle: "short" })
+    : null;
 
   const updateFilter = (key: "project" | "from" | "to", value: string) => {
     setSearchParams(

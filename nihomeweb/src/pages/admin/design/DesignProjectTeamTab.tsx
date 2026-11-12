@@ -78,7 +78,11 @@ import {
   type UpsertOperationalProjectAssignmentRequest,
   type UpsertOperationalProjectMemberRequest,
 } from "@/services/adminApi";
-import { formatDateTime, formatDate as formatDateInZone } from "@/lib/displaySettings";
+import {
+  formatDateTime,
+  formatDate as formatDateInZone,
+  todayIsoDate,
+} from "@/lib/displaySettings";
 
 interface Props {
   operationalProjectId?: number | null;
@@ -102,7 +106,7 @@ interface AssignmentForm extends UpsertOperationalProjectAssignmentRequest {
   plannedEnd: string | null;
 }
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => todayIsoDate();
 const toDateValue = (value?: string | null) => value?.slice(0, 10) ?? "";
 const toUtcDate = (value?: string | null) => (value ? `${value.slice(0, 10)}T00:00:00.000Z` : null);
 const optional = (value?: string | null) => value?.trim() || null;

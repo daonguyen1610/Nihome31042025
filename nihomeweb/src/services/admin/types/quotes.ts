@@ -59,6 +59,7 @@ export interface QuoteApprovalLogResponse {
 export interface QuoteVersionResponse {
   version: number;
   method: QuoteMethod;
+  currency: string;
   areaSqm?: number;
   unitPricePerSqm?: number;
   packageDescription?: string;
@@ -98,6 +99,7 @@ export interface QuoteResponse {
   ownerName?: string;
   method: QuoteMethod;
   version: number;
+  currency: string;
   areaSqm?: number;
   unitPricePerSqm?: number;
   packageDescription?: string;
@@ -164,6 +166,7 @@ export interface QuoteListItemResponse {
   approvalApproverUserId?: number | null;
   version: number;
   method: QuoteMethod;
+  currency: string;
   grandTotal: number;
   status: QuoteStatus;
   validUntil: string;

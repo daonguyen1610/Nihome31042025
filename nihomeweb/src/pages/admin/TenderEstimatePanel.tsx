@@ -27,6 +27,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
+import { formatMoney } from "@/lib/displaySettings";
 import {
   adminApi,
   type CsvImportError,
@@ -73,7 +74,7 @@ export default function TenderEstimatePanel({
   onTenderChanged,
 }: Props) {
   const uiError = useUiError();
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { toast } = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [revisions, setRevisions] = useState<TenderEstimateRevisionResponse[]>([]);
@@ -127,12 +128,7 @@ export default function TenderEstimatePanel({
     readiness?.canSubmit === true;
   const terminal = ["Won", "Lost", "Cancelled"].includes(tender.status);
 
-  const money = (value: number, currency: string) =>
-    new Intl.NumberFormat(lang, {
-      style: "currency",
-      currency,
-      maximumFractionDigits: 0,
-    }).format(value);
+  const money = (value: number, currency: string) => formatMoney(value, currency);
 
   const downloadTemplate = async () => {
     setBusy(true);

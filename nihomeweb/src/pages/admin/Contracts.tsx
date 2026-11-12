@@ -64,7 +64,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
-import { formatDate as formatDateInZone } from "@/lib/displaySettings";
+import { formatDate as formatDateInZone, formatMoney } from "@/lib/displaySettings";
 import { todayIsoDate } from "@/lib/displaySettings";
 
 // Number of days before end-date that triggers the red "ending soon" badge.
@@ -1645,10 +1645,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           {t("contracts.field.currentValue")}
                         </dt>
                         <dd className="font-semibold">
-                          {formatVnd(row.currentValue)}
+                          {formatMoney(row.currentValue, row.currency)}
                           {row.approvedVoTotal !== 0 && (
                             <span className="ml-1 font-normal text-muted-foreground">
-                              ({t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)})
+                              ({t("contracts.field.voShort")}{" "}
+                              {formatMoney(row.approvedVoTotal, row.currency)})
                             </span>
                           )}
                         </dd>
@@ -1667,7 +1668,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             </dt>
                             <dd>
                               {row.nextPaymentDueDate
-                                ? `${formatDate(row.nextPaymentDueDate, lang)} · ${formatVnd(row.nextPaymentAmount ?? 0)}`
+                                ? `${formatDate(row.nextPaymentDueDate, lang)} · ${formatMoney(row.nextPaymentAmount ?? 0, row.currency)}`
                                 : "—"}
                             </dd>
                             <dt className="text-muted-foreground">
@@ -1677,7 +1678,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                                   : "contracts.field.outstandingScheduledAmount",
                               )}
                             </dt>
-                            <dd>{formatVnd(row.outstandingScheduledAmount)}</dd>
+                            <dd>{formatMoney(row.outstandingScheduledAmount, row.currency)}</dd>
                           </>
                         )}
                         {row.ownerName && (
@@ -1845,10 +1846,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-right font-semibold">
-                          <div>{formatVnd(row.currentValue)}</div>
+                          <div>{formatMoney(row.currentValue, row.currency)}</div>
                           {row.approvedVoTotal !== 0 && (
                             <div className="text-[11px] font-normal text-muted-foreground">
-                              {t("contracts.field.voShort")} {formatVnd(row.approvedVoTotal)}
+                              {t("contracts.field.voShort")}{" "}
+                              {formatMoney(row.approvedVoTotal, row.currency)}
                             </div>
                           )}
                         </td>
@@ -1864,7 +1866,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                                       : "text-muted-foreground"
                                   }
                                 >
-                                  {formatVnd(row.nextPaymentAmount ?? 0)}
+                                  {formatMoney(row.nextPaymentAmount ?? 0, row.currency)}
                                 </div>
                               </>
                             ) : (

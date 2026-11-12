@@ -29,7 +29,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
-import { formatVnd, formatVndWithSymbol, parseVnd } from "@/lib/numberFormat";
+import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { isOpportunityOverdue } from "@/lib/opportunityDates";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
 import { PageLoading, PageError } from "@/components/PageState";
@@ -75,7 +75,7 @@ import {
   type QuoteListItemResponse,
   type UpdateOpportunityRequest,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/displaySettings";
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
 const SIGNED_CONTRACT_REQUIRED_CODE = "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED";
@@ -934,7 +934,7 @@ const AdminOpportunities = () => {
                             {t("opportunities.field.estimatedValue")}
                           </dt>
                           <dd className="tabular-nums font-medium">
-                            {formatVnd(o.estimatedValue)}
+                            {formatMoney(o.estimatedValue, o.currency)}
                           </dd>
                         </div>
                         <div>
@@ -1048,7 +1048,7 @@ const AdminOpportunities = () => {
                           {o.customerName ?? customerLabel.get(o.customerId) ?? `#${o.customerId}`}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-right tabular-nums">
-                          {formatVnd(o.estimatedValue)}
+                          {formatMoney(o.estimatedValue, o.currency)}
                         </td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs">{o.winProbability}%</td>
                         <td className="whitespace-nowrap px-3 py-3 text-xs">
@@ -1177,7 +1177,7 @@ const AdminOpportunities = () => {
                           </div>
                           <div className="mt-1 flex items-center justify-between">
                             <span className="tabular-nums font-medium">
-                              {formatVnd(o.estimatedValue)}
+                              {formatMoney(o.estimatedValue, o.currency)}
                             </span>
                             <span className="text-muted-foreground">{o.winProbability}%</span>
                           </div>
@@ -1305,7 +1305,9 @@ const AdminOpportunities = () => {
                 <Label>{t("opportunities.field.estimatedValue")}</Label>
                 <Input
                   inputMode="numeric"
-                  value={createForm.estimatedValue ? formatVnd(createForm.estimatedValue) : ""}
+                  value={
+                    createForm.estimatedValue ? formatNumber(createForm.estimatedValue, lang) : ""
+                  }
                   onChange={(e) =>
                     setCreateForm({ ...createForm, estimatedValue: parseVnd(e.target.value) })
                   }
@@ -1444,7 +1446,7 @@ const AdminOpportunities = () => {
                         {t("opportunities.field.estimatedValue")}
                       </dt>
                       <dd className="mt-1 break-words text-base font-semibold tabular-nums text-foreground">
-                        {formatVndWithSymbol(detail.estimatedValue)}
+                        {formatMoney(detail.estimatedValue, detail.currency)}
                       </dd>
                     </div>
                     <div>
@@ -1650,7 +1652,9 @@ const AdminOpportunities = () => {
                           <div className="text-xs text-muted-foreground">
                             {t("opportunities.field.estimatedValue")}
                           </div>
-                          <div className="tabular-nums">{formatVnd(detail.estimatedValue)}</div>
+                          <div className="tabular-nums">
+                            {formatMoney(detail.estimatedValue, detail.currency)}
+                          </div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">
@@ -1819,7 +1823,9 @@ const AdminOpportunities = () => {
                               <Input
                                 inputMode="numeric"
                                 value={
-                                  editForm.estimatedValue ? formatVnd(editForm.estimatedValue) : ""
+                                  editForm.estimatedValue
+                                    ? formatNumber(editForm.estimatedValue, lang)
+                                    : ""
                                 }
                                 onChange={(e) =>
                                   setEditForm({
@@ -2025,7 +2031,9 @@ const AdminOpportunities = () => {
                                 <Badge variant="outline">
                                   {t(`quotes.status.${quote.status}`)}
                                 </Badge>
-                                <span className="tabular-nums">{formatVnd(quote.grandTotal)}</span>
+                                <span className="tabular-nums">
+                                  {formatMoney(quote.grandTotal, quote.currency)}
+                                </span>
                               </div>
                             </li>
                           ))}

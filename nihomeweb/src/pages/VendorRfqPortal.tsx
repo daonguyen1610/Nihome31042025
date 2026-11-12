@@ -12,7 +12,6 @@ import { useI18n } from "@/lib/i18n";
 import { calculateRfqCommercialPreview } from "@/lib/rfqCommercial";
 import { rfqApi, saveRfqDownload, type VendorPortalRfq } from "@/services/rfqApi";
 import { formatDateTime } from "@/lib/displaySettings";
-import { getActiveCurrency } from "@/lib/numberFormat";
 
 export default function VendorRfqPortal() {
   const uiError = useUiError();
@@ -31,7 +30,8 @@ export default function VendorRfqPortal() {
     validUntil: string;
   } | null>(null);
   const [prices, setPrices] = useState<Record<number, string>>({});
-  const currency = getActiveCurrency();
+  // Quote in the RFQ's own currency, not whatever the system now displays.
+  const currency = rfq?.currency ?? "";
   const [leadTime, setLeadTime] = useState("0");
   const [paymentTerms, setPaymentTerms] = useState("");
   const [validUntil, setValidUntil] = useState("");

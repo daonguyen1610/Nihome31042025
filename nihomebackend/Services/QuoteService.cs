@@ -77,8 +77,9 @@ public class QuoteService(
         if (pageSize < 1) pageSize = 1;
         if (pageSize > MaxPageSize) pageSize = MaxPageSize;
 
+        var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var q = BuildFiltered(callerUserId, canSeeAll, status, opportunityId, customerId, ownerUserId,
-            createdFrom, createdTo, minValue, maxValue, search);
+            createdFrom, createdTo, minValue, maxValue, search, displayCurrency, usdVndRate);
 
         var total = await q.CountAsync(ct);
 
@@ -116,6 +117,7 @@ public class QuoteService(
                 ApprovalApproverUserId = r.Quote.ApprovalApproverUserId,
                 Version = r.Quote.Version,
                 Method = r.Quote.Method.ToString(),
+                Currency = r.Quote.Currency,
                 GrandTotal = r.Quote.GrandTotal,
                 Status = r.Quote.Status.ToString(),
                 ValidUntil = r.Quote.ValidUntil,
@@ -242,6 +244,7 @@ public class QuoteService(
             OwnerUserId = ownerId,
             Method = method,
             Version = 1,
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             AreaSqm = method == QuoteMethod.UnitCost ? request.AreaSqm : null,
             UnitPricePerSqm = method == QuoteMethod.UnitCost ? appliedUnitPrice : null,
             PackageDescription = method == QuoteMethod.UnitCost
@@ -667,10 +670,11 @@ public class QuoteService(
             .FirstOrDefault(contact => !string.IsNullOrWhiteSpace(contact.Email));
         var culture = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
         var amount = quote.GrandTotal.ToString("N0", culture);
+        var currency = quote.Currency;
         var details = quote.Method == QuoteMethod.Boq
             ? string.Join("\n", quote.Items.OrderBy(item => item.SortOrder).Select(item =>
-                $"- {item.Name}: {item.Quantity:N2} {item.Unit} × {item.UnitPrice.ToString("N0", culture)} VND = {item.Amount.ToString("N0", culture)} VND"))
-            : $"Diện tích: {quote.AreaSqm:N2} m²; đơn giá: {quote.UnitPricePerSqm?.ToString("N0", culture)} VND/m².";
+                $"- {item.Name}: {item.Quantity:N2} {item.Unit} × {item.UnitPrice.ToString("N0", culture)} {currency} = {item.Amount.ToString("N0", culture)} {currency}"))
+            : $"Diện tích: {quote.AreaSqm:N2} m²; đơn giá: {quote.UnitPricePerSqm?.ToString("N0", culture)} {currency}/m².";
         var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {
             ["customerName"] = customer.Name,
@@ -680,6 +684,7 @@ public class QuoteService(
             ["discountPercent"] = quote.DiscountPercent.ToString(culture),
             ["vatPercent"] = quote.VatPercent.ToString(culture),
             ["grandTotal"] = amount,
+            ["currency"] = currency,
             ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", culture),
         };
         var (subject, body) = EmailTemplateFormatter.BuildQuoteEmail(
@@ -865,6 +870,7 @@ public class QuoteService(
                 {
                     Version = s.VersionNumber,
                     Method = s.Method.ToString(),
+                    Currency = quote.Currency,
                     AreaSqm = s.AreaSqm,
                     UnitPricePerSqm = s.UnitPricePerSqm,
                     PackageDescription = s.PackageDescription,
@@ -895,6 +901,7 @@ public class QuoteService(
         {
             Version = quote.Version,
             Method = quote.Method.ToString(),
+            Currency = quote.Currency,
             AreaSqm = quote.AreaSqm,
             UnitPricePerSqm = quote.UnitPricePerSqm,
             PackageDescription = quote.PackageDescription,
@@ -1059,6 +1066,10 @@ public class QuoteService(
         }
     }
 
+    /// <summary>Vietnamese reading of the currency for "bằng chữ" totals.</summary>
+    private static string CurrencyWords(string? currency) =>
+        string.Equals(currency, "USD", StringComparison.OrdinalIgnoreCase) ? "đô la Mỹ" : "đồng";
+
     private static bool IsNonTerminal(QuoteStatus s) =>
         s is not QuoteStatus.CustomerApproved
           and not QuoteStatus.Rejected
@@ -1068,7 +1079,8 @@ public class QuoteService(
         int callerUserId, bool canSeeAll,
         QuoteStatus? status, int? opportunityId, int? customerId, int? ownerUserId,
         DateTime? createdFrom, DateTime? createdTo,
-        decimal? minValue, decimal? maxValue, string? search)
+        decimal? minValue, decimal? maxValue, string? search,
+        string displayCurrency, decimal usdVndRate)
     {
         var q = db.Quotes.AsNoTracking().AsQueryable();
         if (!canSeeAll) q = q.Where(x => x.OwnerUserId == callerUserId ||
@@ -1080,8 +1092,23 @@ public class QuoteService(
         if (customerId.HasValue) q = q.Where(x => x.Opportunity.CustomerId == customerId.Value);
         if (createdFrom.HasValue) q = q.Where(x => x.CreatedAt >= createdFrom.Value);
         if (createdTo.HasValue) q = q.Where(x => x.CreatedAt <= createdTo.Value);
-        if (minValue.HasValue) q = q.Where(x => x.GrandTotal >= minValue.Value);
-        if (maxValue.HasValue) q = q.Where(x => x.GrandTotal <= maxValue.Value);
+        // Filters are entered in the display currency; compare them against each
+        // quote's stored amount brought to the same currency.
+        var minVnd = minValue.HasValue
+            ? MoneyDisplay.Convert(minValue.Value, displayCurrency, "VND", usdVndRate)
+            : (decimal?)null;
+        var maxVnd = maxValue.HasValue
+            ? MoneyDisplay.Convert(maxValue.Value, displayCurrency, "VND", usdVndRate)
+            : (decimal?)null;
+        var rate = usdVndRate > 0 ? usdVndRate : SiteSettings.DefaultUsdVndRate;
+        if (minVnd.HasValue)
+        {
+            q = q.Where(x => (x.Currency == "USD" ? x.GrandTotal * rate : x.GrandTotal) >= minVnd.Value);
+        }
+        if (maxVnd.HasValue)
+        {
+            q = q.Where(x => (x.Currency == "USD" ? x.GrandTotal * rate : x.GrandTotal) <= maxVnd.Value);
+        }
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -1597,6 +1624,7 @@ public class QuoteService(
         OwnerName = q.Owner?.FullName,
         Method = q.Method.ToString(),
         Version = q.Version,
+        Currency = q.Currency,
         AreaSqm = q.AreaSqm,
         UnitPricePerSqm = q.UnitPricePerSqm,
         PackageDescription = q.PackageDescription,
@@ -1619,7 +1647,7 @@ public class QuoteService(
         DiscountPercent = q.DiscountPercent,
         VatPercent = q.VatPercent,
         GrandTotal = q.GrandTotal,
-        GrandTotalInWords = VietnameseNumberFormatter.ToWords(q.GrandTotal),
+        GrandTotalInWords = VietnameseNumberFormatter.ToWords(q.GrandTotal, CurrencyWords(q.Currency)),
         Status = q.Status.ToString(),
         ValidUntil = q.ValidUntil,
         IsExpired = IsNonTerminal(q.Status) && q.ValidUntil < DateTime.UtcNow,

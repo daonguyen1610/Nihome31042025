@@ -194,24 +194,23 @@ const AdminSurveyDetail = () => {
     if (targetMediaId != null) setActiveTab("media");
   }, [targetMediaId]);
 
-  const infoRows: [string, string][] = useMemo(() => {
-    if (!survey) return [];
-    return [
-      [t("surveys.field.location"), survey.location],
-      [
-        t("surveys.field.constructionType"),
-        survey.constructionTypeLabel ?? survey.constructionTypeCode ?? "—",
-      ],
-      [t("surveys.field.surveyDate"), formatDate(survey.surveyDate)],
-      [t("surveys.field.surveyor"), survey.surveyorName ?? "—"],
-      [t("surveys.field.linkedProject"), survey.linkedProjectName ?? "—"],
-      [t("surveys.field.linkedOpportunity"), survey.linkedOpportunityName ?? "—"],
-      [t("surveys.field.operationalProject"), survey.operationalProjectName ?? "—"],
-      [t("surveys.detail.info.createdAt"), formatDateTime(survey.createdAt)],
-      [t("surveys.detail.info.updatedAt"), formatDateTime(survey.updatedAt)],
-      [t("surveys.detail.info.lastSyncedAt"), formatDateTime(survey.lastSyncedAt)],
-    ];
-  }, [survey, t, formatDate, formatDateTime]);
+  const infoRows: [string, string][] = survey
+    ? [
+        [t("surveys.field.location"), survey.location],
+        [
+          t("surveys.field.constructionType"),
+          survey.constructionTypeLabel ?? survey.constructionTypeCode ?? "—",
+        ],
+        [t("surveys.field.surveyDate"), formatDate(survey.surveyDate)],
+        [t("surveys.field.surveyor"), survey.surveyorName ?? "—"],
+        [t("surveys.field.linkedProject"), survey.linkedProjectName ?? "—"],
+        [t("surveys.field.linkedOpportunity"), survey.linkedOpportunityName ?? "—"],
+        [t("surveys.field.operationalProject"), survey.operationalProjectName ?? "—"],
+        [t("surveys.detail.info.createdAt"), formatDateTime(survey.createdAt)],
+        [t("surveys.detail.info.updatedAt"), formatDateTime(survey.updatedAt)],
+        [t("surveys.detail.info.lastSyncedAt"), formatDateTime(survey.lastSyncedAt)],
+      ]
+    : [];
 
   if (!isValidId) {
     return (

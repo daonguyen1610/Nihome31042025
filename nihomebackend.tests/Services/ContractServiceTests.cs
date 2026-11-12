@@ -192,6 +192,31 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Create_CapturesTheActiveCurrency()
+    {
+        _db.SiteSettings.Add(new SiteSettings { CurrencyCode = "USD", UsdVndRate = 25_000m });
+        _db.SaveChanges();
+
+        var created = await _sut.CreateAsync(Req(), callerUserId: 1, canReassignOwner: true);
+
+        Assert.Equal("USD", created.Currency);
+        Assert.Equal("USD", _db.Contracts.Single(contract => contract.Id == created.Id).Currency);
+    }
+
+    [Fact]
+    public async Task List_ConvertsMixedCurrencyValuesToTheDisplayCurrency()
+    {
+        await _sut.CreateAsync(Req(value: 2_500_000m), 1, canReassignOwner: true);
+        _db.SiteSettings.Add(new SiteSettings { CurrencyCode = "USD", UsdVndRate = 25_000m });
+        _db.SaveChanges();
+        await _sut.CreateAsync(Req(value: 200m), 1, canReassignOwner: true);
+
+        var list = await _sut.ListAsync(callerUserId: 1, canSeeAll: true);
+
+        Assert.Equal(300m, list.TotalCurrentValue);
+    }
+
+    [Fact]
     public async Task Create_QuoteAlreadyUsedByLiveContract_RejectsDuplicate()
     {
         var firstRequest = Req();

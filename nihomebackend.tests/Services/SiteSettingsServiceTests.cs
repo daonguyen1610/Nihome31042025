@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
@@ -51,6 +52,29 @@ public class SiteSettingsServiceTests : IDisposable
         Assert.NotNull(result);
         Assert.Equal("Nihome", result!.SiteName);
         Assert.Equal("hr@nihome.vn", result.NotificationEmail);
+    }
+
+    [Fact]
+    public async Task GetDisplayAsync_ReturnsTheDefaultExchangeRate_WhenUnset()
+    {
+        SeedSettings();
+
+        var display = await _sut.GetDisplayAsync();
+
+        Assert.Equal(SiteSettings.DefaultUsdVndRate, display.UsdVndRate);
+    }
+
+    [Fact]
+    public async Task UpdateDisplayAsync_PersistsCurrencyAndExchangeRate()
+    {
+        SeedSettings();
+
+        var updated = await _sut.UpdateDisplayAsync("Asia/Ho_Chi_Minh", "USD", 26_100m);
+        var stored = await _db.SiteSettings.SingleAsync();
+
+        Assert.Equal("USD", stored.CurrencyCode);
+        Assert.Equal(26_100m, stored.UsdVndRate);
+        Assert.Equal(26_100m, updated.UsdVndRate);
     }
 
     [Fact]

@@ -4,11 +4,11 @@ import { Button } from "@/components/ui/button";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { useUiError } from "@/hooks/useUiError";
 import { useI18n } from "@/lib/i18n";
-import { formatVnd } from "@/lib/numberFormat";
 import { collectLookupPages } from "@/lib/pagination";
 import { contractsApi } from "@/services/admin/contractsApi";
 import type { ContractResponse } from "@/services/adminApi";
-import { formatDate } from "@/lib/displaySettings";
+import { convertToDisplayCurrency, formatDate, formatMoney } from "@/lib/displaySettings";
+import { formatVnd } from "@/lib/numberFormat";
 
 export function CmContractsPanel({ projectId }: { projectId: number }) {
   const { t, lang } = useI18n();
@@ -46,7 +46,11 @@ export function CmContractsPanel({ projectId }: { projectId: number }) {
   const upstreamRows = committedRows.filter((row) => row.direction === "Upstream");
   const downstreamRows = committedRows.filter((row) => row.direction === "Downstream");
   const totalValue = (contracts: ContractResponse[]) =>
-    contracts.reduce((total, contract) => total + contract.currentValue, 0);
+    contracts.reduce(
+      (total, contract) =>
+        total + convertToDisplayCurrency(contract.currentValue, contract.currency),
+      0,
+    );
 
   return (
     <section className="space-y-4" data-testid="cm-contracts-panel">
@@ -129,7 +133,9 @@ export function CmContractsPanel({ projectId }: { projectId: number }) {
                     <td className="p-3 tabular-nums">
                       {row.signedDate ? formatDate(row.signedDate, lang, { timeZone: "UTC" }) : "—"}
                     </td>
-                    <td className="p-3 text-right tabular-nums">{formatVnd(row.currentValue)}</td>
+                    <td className="p-3 text-right tabular-nums">
+                      {formatMoney(row.currentValue, row.currency)}
+                    </td>
                   </tr>
                 ))}
               </tbody>
