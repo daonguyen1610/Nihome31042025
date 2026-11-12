@@ -50,7 +50,7 @@ public sealed partial class DepartmentWorkPackageService
             UpdatedAt = now,
             UpdatedByUserId = callerUserId,
         };
-        ApplyOffer(offer, request);
+        await ApplyOfferAsync(offer, request, ct);
         db.ProcurementInputPriceOffers.Add(offer);
         TouchPackage(package, callerUserId, now);
         await CrmConcurrency.SaveChangesAsync(db, ct);
@@ -73,7 +73,7 @@ public sealed partial class DepartmentWorkPackageService
         CrmConcurrency.Apply(db, offer, request.RowVersion);
         db.ProcurementInputPriceLines.RemoveRange(offer.Lines);
         offer.Lines.Clear();
-        ApplyOffer(offer, request);
+        await ApplyOfferAsync(offer, request, ct);
         offer.Status = InputPriceOfferStatus.Draft;
         offer.DecisionReason = null;
         offer.SubmittedAt = null;
@@ -308,11 +308,11 @@ public sealed partial class DepartmentWorkPackageService
             throw Error("Giá đầu vào đã được báo giá tham chiếu và không thể sửa; hãy tạo chào giá mới.");
     }
 
-    private static void ApplyOffer(ProcurementInputPriceOffer offer, UpsertInputPriceOfferRequest request)
+    private async Task ApplyOfferAsync(ProcurementInputPriceOffer offer, UpsertInputPriceOfferRequest request, CancellationToken ct)
     {
         offer.VendorId = request.VendorId;
         offer.SupplierReference = request.SupplierReference.Trim();
-        offer.Currency = request.Currency.Trim().ToUpperInvariant();
+        offer.Currency = await SystemCurrency.ResolveAsync(db, ct);
         offer.ValidUntil = request.ValidUntil.ToUniversalTime();
         offer.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         offer.Lines = request.Lines.Select((line, index) =>

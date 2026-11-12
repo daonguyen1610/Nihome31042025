@@ -2204,5 +2204,37 @@
     "en": "Not applicable",
     "zh": "不适用",
     "ja": "対象外"
+  },
+  {
+    "key": "construction.cm.savePreparation",
+    "category": "construction",
+    "vi": "Lưu hồ sơ chuẩn bị",
+    "en": "Save preparation",
+    "zh": "保存准备资料",
+    "ja": "準備資料を保存"
+  },
+  {
+    "key": "construction.cm.unsavedChanges",
+    "category": "construction",
+    "vi": "Có thay đổi chưa lưu. Hãy lưu trước khi đánh giá điều kiện khởi công.",
+    "en": "You have unsaved changes. Save them before evaluating readiness.",
+    "zh": "有未保存的更改。请先保存，再评估开工条件。",
+    "ja": "未保存の変更があります。着工条件を評価する前に保存してください。"
+  },
+  {
+    "key": "construction.cm.verifiedNotRequired",
+    "category": "construction",
+    "vi": "Không yêu cầu",
+    "en": "Not required",
+    "zh": "不要求",
+    "ja": "不要"
+  },
+  {
+    "key": "construction.cm.baselineRequiredBeforeSave",
+    "category": "construction",
+    "vi": "Nhập đủ 6 tham chiếu WBS, tiến độ, S-Curve, tổ chức BCH, kế hoạch nguồn lực và ngân sách để lưu hoặc đánh giá điều kiện khởi công.",
+    "en": "Enter all six references—WBS, schedule, S-curve, site team, resource plan, and budget—to save or evaluate readiness.",
+    "zh": "请填写全部6项引用信息——WBS、进度、S曲线、现场团队、资源计划和预算——以保存或评估开工条件。",
+    "ja": "保存または着工条件を評価するには、WBS、工程、Sカーブ、現場体制、資源計画、予算の6つの参照をすべて入力してください。"
   }
 ]

@@ -455,6 +455,12 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
 
         (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
         await _db.SaveChangesAsync();
+
+        var active = await _service.GetAsync(package.Id, _pm.Id, true);
+        Assert.Contains("TASKS_NOT_COMPLETED", active!.CompletionBlockers);
+        Assert.Equal([predecessor.Id], active.Tasks.Single(task => task.Id == dependent.Id).BlockingPredecessorTaskIds);
+        Assert.Empty(active.Tasks.Single(task => task.Id == predecessor.Id).BlockingPredecessorTaskIds);
+
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
             _service.UpdateProgressAsync(package.Id, dependent.Id, new UpdateDepartmentWorkTaskProgressRequest
             {
@@ -477,6 +483,39 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         }, _warehouseStaff.Id);
 
         Assert.Equal("InProgress", started!.Status);
+        var ready = await _service.GetAsync(package.Id, _pm.Id, true);
+        Assert.Empty(ready!.Tasks.Single(task => task.Id == dependent.Id).BlockingPredecessorTaskIds);
+    }
+
+    [Fact]
+    public async Task Overdue_UsesConfiguredTimeZoneAndSkipsClosedWork()
+    {
+        _db.SiteSettings.Add(new SiteSettings { DisplayTimeZoneId = "Asia/Ho_Chi_Minh" });
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.PlannedStart = DateTime.UtcNow.AddDays(-10);
+        request.PlannedEnd = DateTime.UtcNow.AddDays(-2);
+        var package = await _service.CreateAsync(request, _pm.Id);
+        var taskRequest = TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-01");
+        taskRequest.PlannedStart = DateTime.UtcNow.AddDays(-8);
+        taskRequest.PlannedEnd = DateTime.UtcNow.AddDays(-3);
+        await _service.AddTaskAsync(package.Id, taskRequest, _procurementLead.Id);
+
+        var planned = await _service.GetAsync(package.Id, _pm.Id, true);
+        Assert.True(planned!.IsOverdue);
+        Assert.True(planned.OverdueDays > 0);
+        Assert.True(planned.Tasks.Single().IsOverdue);
+        Assert.True(planned.Tasks.Single().OverdueDays > 0);
+
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        await _db.SaveChangesAsync();
+        (await _db.DepartmentWorkTasks.SingleAsync(item => item.WorkPackageId == package.Id)).Status =
+            WorkTaskStatus.Cancelled;
+        await _db.SaveChangesAsync();
+
+        var closed = await _service.GetAsync(package.Id, _pm.Id, true);
+        Assert.False(closed!.Tasks.Single().IsOverdue);
+        Assert.Null(closed.Tasks.Single().OverdueDays);
     }
 
     [Fact]
@@ -516,6 +555,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
             }, _pm.Id));
 
         Assert.Contains("duyệt độc lập", error.Message);
+        Assert.Equal("WORK_PACKAGE_NOT_COMPLETABLE", error.Code);
         Assert.Equal(WorkPackageStatus.Active, entity.Status);
         Assert.Equal(WorkTaskStatus.Completed, entity.Tasks.Single().Status);
     }

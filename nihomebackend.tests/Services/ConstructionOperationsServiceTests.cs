@@ -74,6 +74,50 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Optional_project_requirements_do_not_block_construction_readiness()
+    {
+        _db.ConstructionPreparations.Add(new ConstructionPreparation
+        {
+            OperationalProjectId = ProjectId,
+            Version = 1,
+            SiteHandoverRequired = false,
+            MethodStatementRequired = false,
+            HsePlanRequired = false,
+        });
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.GetPreparationAsync(ProjectId, default);
+
+        Assert.NotNull(response);
+        Assert.DoesNotContain("approved project ISO conditional-requirements profile", response.MissingConditions);
+        Assert.DoesNotContain("site handover evidence", response.MissingConditions);
+        Assert.DoesNotContain("approved method statement evidence", response.MissingConditions);
+        Assert.DoesNotContain("approved HSE plan evidence", response.MissingConditions);
+    }
+
+    [Fact]
+    public async Task Required_project_requirement_still_needs_its_evidence()
+    {
+        _db.ConstructionPreparations.Add(new ConstructionPreparation
+        {
+            OperationalProjectId = ProjectId,
+            Version = 1,
+            SiteHandoverRequired = true,
+            MethodStatementRequired = false,
+            HsePlanRequired = false,
+        });
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.GetPreparationAsync(ProjectId, default);
+
+        Assert.NotNull(response);
+        Assert.Contains("site handover evidence", response.MissingConditions);
+        Assert.DoesNotContain("approved project ISO conditional-requirements profile", response.MissingConditions);
+        Assert.DoesNotContain("approved method statement evidence", response.MissingConditions);
+        Assert.DoesNotContain("approved HSE plan evidence", response.MissingConditions);
+    }
+
+    [Fact]
     public async Task Resource_request_requires_independent_cm_reviewer()
     {
         var created = await _sut.CreateResourceAsync(ProjectId, EquipmentRequest(), BchUserId, default);

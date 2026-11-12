@@ -10457,6 +10457,20 @@ namespace nihomebackend.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
+                    b.Property<string>("CurrencyCode")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)")
+                        .HasDefaultValue("VND");
+
+                    b.Property<string>("DisplayTimeZoneId")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(80)
+                        .HasColumnType("nvarchar(80)")
+                        .HasDefaultValue("Asia/Ho_Chi_Minh");
+
                     b.Property<bool>("EnableOtpForForgotPassword")
                         .HasColumnType("bit");
 

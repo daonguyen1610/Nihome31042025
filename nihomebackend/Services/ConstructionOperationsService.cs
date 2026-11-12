@@ -666,8 +666,6 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         if (!HasEvidence(item.BchOrganizationDocumentId, activeEvidenceIds)) missing.Add("approved BCH organization evidence");
         if (!HasEvidence(item.ResourcePlanDocumentId, activeEvidenceIds)) missing.Add("approved resource plan evidence");
         if (!HasEvidence(item.BudgetBaselineDocumentId, activeEvidenceIds)) missing.Add("locked budget baseline");
-        if (!item.SiteHandoverRequired || !item.MethodStatementRequired || !item.HsePlanRequired)
-            missing.Add("approved project ISO conditional-requirements profile");
         if (!await db.Contracts.AnyAsync(x => x.OperationalProjectId == projectId && x.Direction == ContractDirection.Upstream && (x.Type == ContractType.Construction || x.Type == ContractType.DesignAndBuild || x.Type == ContractType.PermitAndConstruction || x.Type == ContractType.DesignPermitAndConstruction) && x.Status != ContractStatus.Draft && x.Status != ContractStatus.Cancelled && x.SignedDate != null, ct)) missing.Add("signed upstream construction contract");
         if (!await db.IfcReleases.AnyAsync(x => x.DesignProject.OperationalProjectId == projectId && x.Status == IfcReleaseStatus.Released, ct)) missing.Add("released IFC");
         var permitEvidenceExists = await db.PermitChecklistItems.AnyAsync(x => x.OperationalProjectId == projectId, ct);

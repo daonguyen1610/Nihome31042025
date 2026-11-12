@@ -56,12 +56,13 @@ public sealed partial class DepartmentWorkPackageService(
         var rows = await packages.OrderByDescending(item => item.UpdatedAt).ThenByDescending(item => item.Id)
             .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
         var admin = await IsAdministratorAsync(callerUserId, ct);
+        var clock = await DisplayClockAsync(ct);
         return new DepartmentWorkPackageListResponse
         {
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
-            Items = rows.Select(item => MapPackage(item, callerUserId, admin)).ToList(),
+            Items = rows.Select(item => MapPackage(item, callerUserId, admin, clock)).ToList(),
         };
     }
 
@@ -107,7 +108,8 @@ public sealed partial class DepartmentWorkPackageService(
     {
         var item = await BaseQuery().SingleOrDefaultAsync(package => package.Id == id, ct);
         if (item is null || !await CanViewAsync(item, callerUserId, canViewAll, ct)) return null;
-        var response = MapPackage(item, callerUserId, await IsAdministratorAsync(callerUserId, ct));
+        var response = MapPackage(item, callerUserId, await IsAdministratorAsync(callerUserId, ct),
+            await DisplayClockAsync(ct));
         var emails = await db.WorkPackageApprovalEmails.AsNoTracking()
             .Where(email => email.WorkPackageId == id).OrderByDescending(email => email.Id).Take(50)
             .Select(email => new
@@ -970,6 +972,8 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Gói thầu đã có kết quả cuối hoặc đã hủy; không thể sửa kế hoạch và đầu việc.");
     }
 
+    private const string NotCompletableCode = "WORK_PACKAGE_NOT_COMPLETABLE";
+
     private static void ValidatePackageTransition(DepartmentWorkPackage package, WorkPackageStatus status)
     {
         if (status == package.Status) return;
@@ -986,16 +990,21 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error($"Không thể chuyển nhóm công việc từ {package.Status} sang {status}.");
         if (status == WorkPackageStatus.Completed)
         {
-            if (package.Tasks.Count == 0) throw Error("Nhóm công việc phải có ít nhất một đầu việc trước khi hoàn thành.");
+            if (package.Tasks.Count == 0)
+                throw Error("Nhóm công việc phải có ít nhất một đầu việc trước khi hoàn thành.",
+                    NotCompletableCode);
             if (IsTenderPlanningPackage(package) &&
                 package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
-                throw Error("Mọi đầu việc trong Kế hoạch đấu thầu phải được người duyệt độc lập xác nhận trước khi đóng nhóm.");
+                throw Error("Mọi đầu việc trong Kế hoạch đấu thầu phải được người duyệt độc lập xác nhận trước khi đóng nhóm.",
+                    NotCompletableCode);
             if (package.Purpose == WorkPackagePurpose.LegalPermitting &&
                 package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
-                throw Error("Mọi giấy phép phải được người duyệt độc lập xác nhận trước khi đóng gói Pháp lý.");
+                throw Error("Mọi giấy phép phải được người duyệt độc lập xác nhận trước khi đóng gói Pháp lý.",
+                    NotCompletableCode);
             if (package.Tasks.Any(task => task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress ||
                 RequiresIndependentVerification(package, task.KpiDefinitionId) && task.Status != WorkTaskStatus.Verified))
-                throw Error("Mọi đầu việc phải hoàn tất; đầu việc thuộc luồng có duyệt phải được xác nhận trước khi đóng nhóm.");
+                throw Error("Mọi đầu việc phải hoàn tất; đầu việc thuộc luồng có duyệt phải được xác nhận trước khi đóng nhóm.",
+                    NotCompletableCode);
         }
         if (status == WorkPackageStatus.Cancelled && package.Tasks.Any(task => task.Status == WorkTaskStatus.Verified))
             throw Error("Không thể hủy nhóm công việc đã có bằng chứng KPI được xác nhận.");
@@ -1096,7 +1105,8 @@ public sealed partial class DepartmentWorkPackageService(
     }
 
     private async Task<DepartmentWorkPackageResponse> LoadAndMapAsync(int id, int callerUserId, bool admin, CancellationToken ct)
-        => MapPackage(await BaseQuery().SingleAsync(item => item.Id == id, ct), callerUserId, admin);
+        => MapPackage(await BaseQuery().SingleAsync(item => item.Id == id, ct), callerUserId, admin,
+            await DisplayClockAsync(ct));
 
     private async Task<DepartmentWorkTaskResponse> LoadTaskAsync(int taskId, int callerUserId, bool admin, CancellationToken ct)
     {
@@ -1107,15 +1117,50 @@ public sealed partial class DepartmentWorkPackageService(
             .Include(item => item.CcUsers).Include(item => item.Predecessors)
             .SingleAsync(item => item.Id == taskId, ct);
         var hasSubtasks = await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(item => item.ParentTaskId == taskId, ct);
-        return MapTask(task, callerUserId, admin, task.WorkPackage.LeadUserId, hasSubtasks);
+        var predecessorIds = task.Predecessors.Select(link => link.PredecessorTaskId).ToList();
+        var taskStatuses = await db.DepartmentWorkTasks.AsNoTracking()
+            .Where(item => predecessorIds.Contains(item.Id))
+            .ToDictionaryAsync(item => item.Id, item => item.Status, ct);
+        return MapTask(task, callerUserId, admin, task.WorkPackage.LeadUserId, hasSubtasks,
+            await DisplayClockAsync(ct), taskStatuses);
     }
 
-    private static DepartmentWorkPackageResponse MapPackage(DepartmentWorkPackage item, int callerUserId, bool admin)
+    /// <summary>
+    /// The configured display time zone plus today's calendar date in it. Overdue
+    /// work is evaluated in the same zone the UI renders dates in.
+    /// </summary>
+    private async Task<DisplayClock> DisplayClockAsync(CancellationToken ct)
+    {
+        var timeZoneId = await db.SiteSettings.AsNoTracking()
+            .Select(settings => settings.DisplayTimeZoneId).FirstOrDefaultAsync(ct);
+        var zone = DisplaySettings.ResolveTimeZone(timeZoneId);
+        return new DisplayClock(zone, DateOnly.FromDateTime(DisplaySettings.TodayIn(zone)));
+    }
+
+    private static DateOnly DisplayDate(DateTime value, DisplayClock clock) =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(
+            DateTime.SpecifyKind(value, DateTimeKind.Utc), clock.Zone));
+
+    private static (bool IsOverdue, int? OverdueDays) OverdueState(
+        DateTime? plannedEnd, DisplayClock clock, bool isTerminal)
+    {
+        if (isTerminal || plannedEnd is null) return (false, null);
+        var days = clock.Today.DayNumber - DisplayDate(plannedEnd.Value, clock).DayNumber;
+        return days > 0 ? (true, days) : (false, null);
+    }
+
+    private sealed record DisplayClock(TimeZoneInfo Zone, DateOnly Today);
+
+    private static DepartmentWorkPackageResponse MapPackage(
+        DepartmentWorkPackage item, int callerUserId, bool admin, DisplayClock clock)
     {
         var activeTasks = item.Tasks.Where(task => task.Status != WorkTaskStatus.Cancelled).ToList();
         var parentIds = item.Tasks.Where(task => task.ParentTaskId.HasValue)
             .Select(task => task.ParentTaskId!.Value).ToHashSet();
         var leafTasks = activeTasks.Where(task => !parentIds.Contains(task.Id)).ToList();
+        var taskStatuses = item.Tasks.ToDictionary(task => task.Id, task => task.Status);
+        var overdue = OverdueState(item.PlannedEnd, clock,
+            item.Status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled);
         return new DepartmentWorkPackageResponse
         {
             Id = item.Id,
@@ -1156,6 +1201,9 @@ public sealed partial class DepartmentWorkPackageService(
             PlannedEnd = item.PlannedEnd,
             CompletedAt = item.CompletedAt,
             ProgressPercent = leafTasks.Count == 0 ? 0 : (int)Math.Round(leafTasks.Average(task => task.ProgressPercent)),
+            IsOverdue = overdue.IsOverdue,
+            OverdueDays = overdue.OverdueDays,
+            CompletionBlockers = PackageCompletionBlockers(item),
             CanManagePackage = IsTenderMutable(item) && (admin ||
                 (item.Kind == WorkPackageKind.Internal && item.CreatedByUserId == callerUserId &&
                     item.LeadUserId == callerUserId) ||
@@ -1166,7 +1214,7 @@ public sealed partial class DepartmentWorkPackageService(
             CanAssignTasks = IsTenderMutable(item) && (admin || item.LeadUserId == callerUserId),
             RowVersion = CrmConcurrency.Encode(item.RowVersion),
             Tasks = item.Tasks.OrderBy(task => task.WbsCode).ThenBy(task => task.Id)
-                .Select(task => MapTask(task, callerUserId, admin, item.LeadUserId, parentIds.Contains(task.Id))).ToList(),
+                .Select(task => MapTask(task, callerUserId, admin, item.LeadUserId, parentIds.Contains(task.Id), clock, taskStatuses)).ToList(),
             InputPriceOffers = item.InputPriceOffers.OrderByDescending(offer => offer.UpdatedAt)
                 .Select(MapInputPriceOffer).ToList(),
             FinanceReview = item.FinanceReview is null ? null : MapFinanceReview(item.FinanceReview),
@@ -1178,9 +1226,13 @@ public sealed partial class DepartmentWorkPackageService(
         int callerUserId,
         bool admin,
         int packageLeadUserId,
-        bool hasSubtasks)
+        bool hasSubtasks,
+        DisplayClock clock,
+        IReadOnlyDictionary<int, WorkTaskStatus> taskStatuses)
     {
         var verifier = task.ApproverUserId ?? packageLeadUserId;
+        var overdue = OverdueState(task.PlannedEnd, clock,
+            task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Verified or WorkTaskStatus.Cancelled);
         return new DepartmentWorkTaskResponse
         {
             Id = task.Id,
@@ -1211,10 +1263,18 @@ public sealed partial class DepartmentWorkPackageService(
             VerifiedByUserId = task.VerifiedByUserId,
             CcUserIds = task.CcUsers.Select(item => item.UserId).ToList(),
             PredecessorTaskIds = task.Predecessors.Select(item => item.PredecessorTaskId).ToList(),
+            BlockingPredecessorTaskIds = task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress
+                ? task.Predecessors
+                    .Where(link => !taskStatuses.TryGetValue(link.PredecessorTaskId, out var status) ||
+                        status is not (WorkTaskStatus.Completed or WorkTaskStatus.Verified))
+                    .Select(link => link.PredecessorTaskId).ToList()
+                : [],
             CanUpdateProgress = !hasSubtasks && IsTenderMutable(task.WorkPackage) && (admin || task.AssigneeUserId == callerUserId),
             CanVerify = !hasSubtasks && IsTenderMutable(task.WorkPackage) && RequiresIndependentVerification(task.WorkPackage, task.KpiDefinitionId) &&
                 task.Status == WorkTaskStatus.Completed &&
                 task.AssigneeUserId != callerUserId && (admin || verifier == callerUserId),
+            IsOverdue = overdue.IsOverdue,
+            OverdueDays = overdue.OverdueDays,
             RowVersion = CrmConcurrency.Encode(task.RowVersion),
         };
     }
@@ -1225,6 +1285,31 @@ public sealed partial class DepartmentWorkPackageService(
     private static bool IsTenderPlanningPackage(DepartmentWorkPackage package) =>
         package.SourceTenderId.HasValue &&
         package.Purpose is WorkPackagePurpose.TenderPlanning or WorkPackagePurpose.General;
+
+    /// <summary>
+    /// Machine-readable reasons the package cannot be closed yet, mirroring
+    /// <see cref="ValidatePackageTransition"/>. The UI disables the close action
+    /// and explains each reason instead of letting the request fail.
+    /// </summary>
+    private static List<string> PackageCompletionBlockers(DepartmentWorkPackage package)
+    {
+        var blockers = new List<string>();
+        if (package.Tasks.Count == 0)
+        {
+            blockers.Add("NO_TASKS");
+            return blockers;
+        }
+        if (IsTenderPlanningPackage(package) && package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
+            blockers.Add("TENDER_TASKS_NOT_VERIFIED");
+        if (package.Purpose == WorkPackagePurpose.LegalPermitting &&
+            package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
+            blockers.Add("LEGAL_PERMITS_NOT_VERIFIED");
+        if (blockers.Count == 0 && package.Tasks.Any(task =>
+                task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress ||
+                RequiresIndependentVerification(package, task.KpiDefinitionId) && task.Status != WorkTaskStatus.Verified))
+            blockers.Add("TASKS_NOT_COMPLETED");
+        return blockers;
+    }
 
     private static bool RequiresIndependentVerification(DepartmentWorkPackage package, int? kpiDefinitionId) =>
         package.Kind == WorkPackageKind.Project || kpiDefinitionId.HasValue || IsTenderPlanningPackage(package) ||
@@ -1276,7 +1361,8 @@ public sealed partial class DepartmentWorkPackageService(
     }
 
     private static string? TrimOrNull(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
-    private static DepartmentWorkPackageOperationException Error(string message) => new(message);
+    private static DepartmentWorkPackageOperationException Error(string message, string? code = null) =>
+        new(message, code);
     private static DepartmentWorkPackageScopeException ScopeError() =>
         new("Không tìm thấy nhóm công việc hoặc bạn không có quyền thao tác.");
 }

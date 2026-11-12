@@ -188,6 +188,51 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         EnableOtpForForgotPassword = settings.EnableOtpForForgotPassword
     };
 
+    /// <summary>
+    /// Public display settings used by every client so dates, times and money
+    /// values follow one configured time zone and currency.
+    /// </summary>
+    [HttpGet("display")]
+    [AllowAnonymous]
+    public async Task<IActionResult> GetDisplaySettings(CancellationToken ct)
+    {
+        var settings = await svc.GetDisplayAsync(ct);
+        return Ok(new { timeZoneId = settings.TimeZoneId, currency = settings.Currency });
+    }
+
+    /// <summary>Available time zones for the admin display settings screen.</summary>
+    [HttpGet("time-zones")]
+    [Authorize]
+    [RequirePermission("system.settings", "view")]
+    public IActionResult GetTimeZones() => Ok(DisplaySettings.ListTimeZones());
+
+    /// <summary>Update the system-wide display time zone and currency.</summary>
+    [HttpPut("display")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public async Task<IActionResult> UpdateDisplaySettings(
+        [FromBody] UpdateDisplaySettingsRequest req,
+        CancellationToken ct)
+    {
+        if (!DisplaySettings.TryResolveTimeZone(req.TimeZoneId, out _))
+            return BadRequest(new
+            {
+                code = "DISPLAY_TIMEZONE_INVALID",
+                field = "timeZoneId",
+                message = "Múi giờ không hợp lệ. Chọn một múi giờ trong danh sách hệ thống.",
+            });
+        if (!DisplaySettings.IsSupportedCurrency(req.Currency))
+            return BadRequest(new
+            {
+                code = "DISPLAY_CURRENCY_INVALID",
+                field = "currency",
+                message = "Tiền tệ chỉ hỗ trợ VND hoặc USD.",
+            });
+
+        var settings = await svc.UpdateDisplayAsync(req.TimeZoneId!, req.Currency!, ct);
+        return Ok(new { timeZoneId = settings.TimeZoneId, currency = settings.Currency });
+    }
+
     /// <summary>Get the embedded Google Map URL used on the public Contact page.</summary>
     [HttpGet("map-embed")]
     [AllowAnonymous]
@@ -209,3 +254,5 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
 }
 
 public sealed record UpdateContractUploadLimitRequest(int MaxFileSizeMb);
+
+public sealed record UpdateDisplaySettingsRequest(string? TimeZoneId, string? Currency);

@@ -3,8 +3,16 @@ namespace NihomeBackend.Models;
 public class SiteSettings
 {
     public const int DefaultContractMaxFileSizeMb = 100;
+    public const string DefaultTimeZoneId = "Asia/Ho_Chi_Minh";
+    public const string DefaultCurrencyCode = "VND";
 
     public int Id { get; set; }
+
+    /// <summary>IANA time zone used for every displayed date and time.</summary>
+    public string DisplayTimeZoneId { get; set; } = DefaultTimeZoneId;
+
+    /// <summary>ISO 4217 code applied to every money value in the system.</summary>
+    public string CurrencyCode { get; set; } = DefaultCurrencyCode;
 
     public decimal CmScheduleDelayThresholdPercent { get; set; } = 5m;
 

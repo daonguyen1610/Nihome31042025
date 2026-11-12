@@ -371,6 +371,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<SiteSettings>().HasKey(settings => settings.Id);
         modelBuilder.Entity<SiteSettings>().Property(s => s.MapEmbedUrl).HasMaxLength(1000);
         modelBuilder.Entity<SiteSettings>().Property(x => x.CmScheduleDelayThresholdPercent).HasPrecision(9, 4).HasDefaultValue(5m);
+        modelBuilder.Entity<SiteSettings>().Property(x => x.DisplayTimeZoneId)
+            .HasMaxLength(80).HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultTimeZoneId);
+        modelBuilder.Entity<SiteSettings>().Property(x => x.CurrencyCode)
+            .HasMaxLength(3).HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultCurrencyCode);
         modelBuilder.Entity<SiteSettings>().Property(s => s.ContractMaxFileSizeMb)
             .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultContractMaxFileSizeMb);
 

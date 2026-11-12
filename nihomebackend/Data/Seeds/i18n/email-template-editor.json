@@ -278,5 +278,13 @@
     "en": "Open project",
     "zh": "打开项目",
     "ja": "プロジェクトを開く"
+  },
+  {
+    "key": "emailTemplate.editor.loadFailed",
+    "category": "emailTemplates",
+    "vi": "Không thể tải cấu hình email. Vui lòng thử lại.",
+    "en": "Could not load the email configuration. Please try again.",
+    "zh": "无法加载邮件配置，请重试。",
+    "ja": "メール設定を読み込めませんでした。もう一度お試しください。"
   }
 ]

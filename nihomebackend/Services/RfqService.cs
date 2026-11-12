@@ -1,5 +1,4 @@
 using System.Data;
-using System.Globalization;
 using System.Net;
 using System.Security.Cryptography;
 using System.Text;
@@ -19,9 +18,6 @@ public sealed class RfqService(AppDbContext db, INotificationService notificatio
     IEmailService email, IConfiguration configuration, ILogger<RfqService> logger,
     IProjectDocumentService documents)
 {
-    private static readonly HashSet<string> SupportedCurrencyCodes = CultureInfo.GetCultures(CultureTypes.SpecificCultures)
-        .Select(culture => new RegionInfo(culture.Name).ISOCurrencySymbol)
-        .Append("VND").ToHashSet(StringComparer.Ordinal);
     // Take an update lock before reading mutable state to avoid shared-lock
     // conversion deadlocks between concurrent awards or bid transitions.
     private IQueryable<Rfq> MutableRoots() => db.Database.IsSqlServer()
@@ -409,10 +405,7 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
         foreach (var line in request.Lines)
             Require(sources.ContainsKey(line.RfqLineId) && line.UnitPrice >= 0 && decimal.Round(line.UnitPrice, 4) == line.UnitPrice,
                 "Unit price must be non-negative, use at most 4 decimal places, and refer to a line in this RFQ.");
-        var currency = request.Currency.Trim().ToUpperInvariant();
-        Require(SupportedCurrencyCodes.Contains(currency), "Bid currency must be a supported ISO 4217 code, for example VND or USD.");
-        Require(currency != "VND" || request.ExchangeRateToVnd == 1m,
-            "The VND exchange rate must equal 1.");
+        var currency = await SystemCurrency.ResolveAsync(db, ct);
         Require(request.DiscountPercent == 0m || request.DiscountAmount == 0m,
             "Use either a discount percent or a discount amount, not both.");
         var bid = new RfqBid
@@ -425,7 +418,7 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
             Note = Trim(request.Note),
             SubmittedByUserId = actor,
             Currency = currency,
-            ExchangeRateToVnd = request.ExchangeRateToVnd,
+            ExchangeRateToVnd = 1m,
             FreightAmount = request.FreightAmount,
             DiscountPercent = request.DiscountPercent,
             DiscountAmount = request.DiscountAmount,

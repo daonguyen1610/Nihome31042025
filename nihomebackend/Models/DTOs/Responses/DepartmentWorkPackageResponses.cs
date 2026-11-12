@@ -39,6 +39,9 @@ public sealed class DepartmentWorkPackageResponse
     public DateTime? PlannedEnd { get; set; }
     public DateTime? CompletedAt { get; set; }
     public int ProgressPercent { get; set; }
+    public bool IsOverdue { get; set; }
+    public int? OverdueDays { get; set; }
+    public List<string> CompletionBlockers { get; set; } = new();
     public bool CanManagePackage { get; set; }
     public bool CanAssignTasks { get; set; }
     public string RowVersion { get; set; } = string.Empty;
@@ -134,8 +137,11 @@ public sealed class DepartmentWorkTaskResponse
     public int? VerifiedByUserId { get; set; }
     public List<int> CcUserIds { get; set; } = new();
     public List<int> PredecessorTaskIds { get; set; } = new();
+    public List<int> BlockingPredecessorTaskIds { get; set; } = new();
     public bool CanUpdateProgress { get; set; }
     public bool CanVerify { get; set; }
+    public bool IsOverdue { get; set; }
+    public int? OverdueDays { get; set; }
     public string RowVersion { get; set; } = string.Empty;
 }
 

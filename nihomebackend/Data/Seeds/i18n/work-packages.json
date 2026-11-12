@@ -49,6 +49,7 @@
   {"key":"workPackages.field.participants","category":"work-packages","vi":"Phòng ban phối hợp","en":"Participating departments","zh":"参与部门","ja":"参加部門"},
   {"key":"workPackages.field.lead","category":"work-packages","vi":"Người chủ trì phòng","en":"Department lead","zh":"部门负责人","ja":"部門責任者"},
   {"key":"workPackages.field.start","category":"work-packages","vi":"Ngày bắt đầu","en":"Start date","zh":"开始日期","ja":"開始日"},
+  {"key":"workPackages.field.timeline","category":"work-packages","vi":"Thời gian kế hoạch","en":"Planned timeline","zh":"计划时间","ja":"予定期間"},
   {"key":"workPackages.field.end","category":"work-packages","vi":"Ngày kết thúc","en":"End date","zh":"结束日期","ja":"終了日"},
   {"key":"workPackages.field.description","category":"work-packages","vi":"Mô tả / kết quả cần bàn giao","en":"Description / deliverable","zh":"描述 / 交付成果","ja":"説明 / 成果物"},
   {"key":"workPackages.field.wbs","category":"work-packages","vi":"Mã WBS","en":"WBS code","zh":"WBS编号","ja":"WBSコード"},
@@ -112,6 +113,7 @@
   {"key":"workPackages.toast.verified","category":"work-packages","vi":"Đã xác nhận đầu việc đủ điều kiện KPI","en":"Task verified for KPI scoring","zh":"任务已确认可计入KPI","ja":"KPI評価対象として確認しました"},
   {"key":"workPackages.error.load","category":"work-packages","vi":"Không thể tải nhóm công việc.","en":"Could not load work packages.","zh":"无法加载工作包。","ja":"作業パッケージを読み込めませんでした。"},
   {"key":"workPackages.error.save","category":"work-packages","vi":"Không thể lưu thay đổi.","en":"Could not save changes.","zh":"无法保存更改。","ja":"変更を保存できませんでした。"}
+  ,{"key":"workPackages.error.notCompletable","category":"work-packages","vi":"Chưa thể đóng nhóm công việc: còn đầu việc chưa hoàn tất hoặc chưa được người duyệt độc lập xác nhận.","en":"This work package cannot be closed yet: some tasks are unfinished or still need independent verification.","zh":"暂时无法关闭该工作包：仍有任务未完成或未通过独立确认。","ja":"作業パッケージをまだ完了できません。未完了のタスク、または独立承認待ちのタスクがあります。"}
   ,{"key":"workPackages.field.purpose","category":"work-packages","vi":"Mục đích nghiệp vụ","en":"Business purpose","zh":"业务用途","ja":"業務目的"}
   ,{"key":"workPackages.purpose.General","category":"work-packages","vi":"Công việc chung","en":"General work","zh":"一般工作","ja":"一般業務"}
   ,{"key":"workPackages.purpose.ProcurementInputPricing","category":"work-packages","vi":"Cung ứng báo giá đầu vào","en":"Procurement input pricing","zh":"采购输入报价","ja":"調達原価見積"}
@@ -173,5 +175,16 @@
   {"key":"workPackages.validation.leadRequired","category":"work-packages","vi":"Người chủ trì phòng: chọn người chủ trì thuộc phòng ban nhận việc.","en":"Department lead: select a lead from the receiving department.","zh":"部门负责人：请选择接收部门的负责人。","ja":"部門責任者: 受入部門の責任者を選択してください。"},
   {"key":"workPackages.validation.datesRequired","category":"work-packages","vi":"Kế hoạch đấu thầu: chọn cả ngày bắt đầu và ngày kết thúc.","en":"Tender plan: select both a start date and an end date.","zh":"投标计划：请选择开始日期和结束日期。","ja":"入札計画: 開始日と終了日を選択してください。"},
   {"key":"workPackages.validation.dateOrder","category":"work-packages","vi":"Ngày kết thúc: chọn ngày bằng hoặc sau ngày bắt đầu.","en":"End date: select a date on or after the start date.","zh":"结束日期：请选择开始日期当天或之后的日期。","ja":"終了日: 開始日以降の日付を選択してください。"},
-  {"key":"workPackages.validation.description","category":"work-packages","vi":"Mô tả: nhập tối đa 4.000 ký tự.","en":"Description: enter no more than 4,000 characters.","zh":"描述：请输入不超过 4,000 个字符。","ja":"説明: 4,000 文字以内で入力してください。"}
+  {"key":"workPackages.validation.description","category":"work-packages","vi":"Mô tả: nhập tối đa 4.000 ký tự.","en":"Description: enter no more than 4,000 characters.","zh":"描述：请输入不超过 4,000 个字符。","ja":"説明: 4,000 文字以内で入力してください。"},
+  {"key":"workPackages.overdue.badge","category":"work-packages","vi":"Quá hạn {count} ngày","en":"Overdue by {count} days","zh":"逾期 {count} 天","ja":"{count} 日超過"},
+  {"key":"workPackages.overdue.badgeOne","category":"work-packages","vi":"Quá hạn 1 ngày","en":"Overdue by 1 day","zh":"逾期 1 天","ja":"1 日超過"},
+  {"key":"workPackages.overdue.today","category":"work-packages","vi":"Đến hạn hôm nay","en":"Due today","zh":"今天到期","ja":"本日締切"},
+  {"key":"workPackages.overdue.help","category":"work-packages","vi":"Đến hạn theo múi giờ hệ thống; đầu việc đã hoàn tất hoặc đã hủy không tính quá hạn.","en":"Deadline is measured in the system time zone; completed or cancelled tasks are not counted as overdue.","zh":"截止时间按系统时区计算；已完成或已取消的任务不计逾期。","ja":"期限はシステムのタイムゾーンで判定します。完了済みまたはキャンセル済みのタスクは超過に含めません。"},
+  {"key":"workPackages.blockers.title","category":"work-packages","vi":"Chưa thể đóng nhóm việc","en":"Cannot close the package yet","zh":"暂不能关闭工作包","ja":"まだ作業パッケージを完了できません"},
+  {"key":"workPackages.blockers.NO_TASKS","category":"work-packages","vi":"Nhóm việc phải có ít nhất một đầu việc.","en":"The package needs at least one task.","zh":"工作包至少需要一个任务。","ja":"作業パッケージには少なくとも1つのタスクが必要です。"},
+  {"key":"workPackages.blockers.TASKS_NOT_COMPLETED","category":"work-packages","vi":"Mọi đầu việc phải hoàn tất trước khi đóng nhóm.","en":"Every task must be finished before the package can close.","zh":"关闭工作包前，所有任务必须完成。","ja":"完了する前に、すべてのタスクを終える必要があります。"},
+  {"key":"workPackages.blockers.TENDER_TASKS_NOT_VERIFIED","category":"work-packages","vi":"Mọi đầu việc Kế hoạch đấu thầu phải được người duyệt độc lập xác nhận.","en":"Every tender-plan task must be verified by an independent approver.","zh":"投标计划的每个任务都必须由独立审批人确认。","ja":"入札計画のすべてのタスクは独立した承認者による確認が必要です。"},
+  {"key":"workPackages.blockers.LEGAL_PERMITS_NOT_VERIFIED","category":"work-packages","vi":"Mọi giấy phép phải được người duyệt độc lập xác nhận.","en":"Every permit must be verified by an independent approver.","zh":"每份许可证都必须由独立审批人确认。","ja":"すべての許可証は独立した承認者による確認が必要です。"},
+  {"key":"workPackages.blockers.predecessors","category":"work-packages","vi":"Chờ hoàn thành công tác tiên quyết: {tasks}","en":"Waiting for prerequisite tasks: {tasks}","zh":"等待前置任务完成：{tasks}","ja":"先行タスクの完了待ち: {tasks}"},
+  {"key":"workPackages.blockers.completeTask","category":"work-packages","vi":"Chưa thể hoàn thành: công tác tiên quyết chưa xong.","en":"Cannot complete yet: prerequisite tasks are unfinished.","zh":"暂不能完成：前置任务尚未完成。","ja":"まだ完了できません: 先行タスクが未完了です。"}
 ]

@@ -81,7 +81,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
-        ApplyPayment(entity, request);
+        await ApplyPaymentAsync(entity, request, ct);
         entity.Events.Add(NewPaymentEvent(null, PaymentRequestStatus.Draft, userId, null));
         db.PaymentRequests.Add(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
@@ -103,7 +103,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         db.PaymentRequestAttachments.RemoveRange(entity.Attachments);
         entity.Attachments.Clear();
-        ApplyPayment(entity, request);
+        await ApplyPaymentAsync(entity, request, ct);
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetPaymentAsync(id, ct);
@@ -342,7 +342,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
-        ApplyCorrection(entity, request);
+        await ApplyCorrectionAsync(entity, request, ct);
         db.AccountingCorrections.Add(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
@@ -358,7 +358,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             throw new FinanceOperationException("Chỉ được sửa bút toán điều chỉnh ở trạng thái Nháp.");
         await ValidateCorrectionAsync(request, ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
-        ApplyCorrection(entity, request);
+        await ApplyCorrectionAsync(entity, request, ct);
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetCorrectionAsync(id, ct);
@@ -577,7 +577,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             throw new FinanceOperationException("Đường dẫn chứng từ phải là đường dẫn tương đối theo máy chủ.");
     }
 
-    private static void ApplyPayment(PaymentRequest entity, PaymentRequestUpsertRequest request)
+    private async Task ApplyPaymentAsync(PaymentRequest entity, PaymentRequestUpsertRequest request, CancellationToken ct)
     {
         entity.ContractId = request.ContractId;
         entity.VendorId = request.VendorId;
@@ -586,7 +586,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         entity.SupplierInvoiceNumber = request.SupplierInvoiceNumber.Trim();
         entity.InvoiceDate = request.InvoiceDate!.Value;
         entity.InvoiceAmount = request.InvoiceAmount;
-        entity.Currency = request.Currency.Trim().ToUpperInvariant();
+        entity.Currency = await SystemCurrency.ResolveAsync(db, ct);
         entity.ReceivedAt = request.ReceivedAt!.Value.ToUniversalTime();
         entity.AssignedAccountantUserId = request.AssignedAccountantUserId;
         entity.Attachments = request.Attachments.Select(item => new PaymentRequestAttachment
@@ -596,7 +596,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         }).ToList();
     }
 
-    private static void ApplyCorrection(AccountingCorrection entity, AccountingCorrectionUpsertRequest request)
+    private async Task ApplyCorrectionAsync(AccountingCorrection entity, AccountingCorrectionUpsertRequest request, CancellationToken ct)
     {
         entity.OperationalProjectId = request.OperationalProjectId;
         entity.AccountingPeriodId = request.AccountingPeriodId;
@@ -605,7 +605,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         entity.ReasonCode = request.ReasonCode.Trim().ToUpperInvariant();
         entity.OriginalValue = request.OriginalValue;
         entity.CorrectedValue = request.CorrectedValue;
-        entity.Currency = request.Currency.Trim().ToUpperInvariant();
+        entity.Currency = await SystemCurrency.ResolveAsync(db, ct);
         entity.Note = TrimOrNull(request.Note);
         entity.ResponsibleAccountantUserId = request.ResponsibleAccountantUserId;
     }

@@ -141,7 +141,7 @@ public sealed partial class MaterialRateService(
             Code = code,
             Name = request.Name.Trim(),
             Description = Clean(request.Description),
-            Currency = request.Currency.Trim().ToUpperInvariant(),
+            Currency = await SystemCurrency.ResolveAsync(db, ct),
             IsActive = request.IsActive,
             CreatedAt = now,
             CreatedByUserId = userId,
@@ -168,7 +168,7 @@ public sealed partial class MaterialRateService(
         {
             throw new MaterialRateOperationException($"Mã danh mục đơn giá '{code}' đã tồn tại.");
         }
-        var currency = request.Currency.Trim().ToUpperInvariant();
+        var currency = await SystemCurrency.ResolveAsync(db, ct);
         if (catalog.Revisions.Any(revision => revision.Status is MaterialRateRevisionStatus.Approved or MaterialRateRevisionStatus.Retired) &&
             (!string.Equals(catalog.Code, code, StringComparison.Ordinal) ||
              !string.Equals(catalog.Currency, currency, StringComparison.Ordinal) ||
