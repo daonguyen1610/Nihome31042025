@@ -215,6 +215,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build E2E backend image with layer cache
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./nihomebackend/Dockerfile
+          load: true
+          tags: nihome31042025-backend:latest
+          build-args: |
+            BUILD_SHA=${{ github.sha }}
+          cache-from: type=gha,scope=nihome-e2e-backend-shard-${{ matrix.shard }}
+          cache-to: type=gha,scope=nihome-e2e-backend-shard-${{ matrix.shard }},mode=max,ignore-error=true
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
@@ -243,7 +258,7 @@ jobs:
         if: steps.playwright-cache.outputs.cache-hit == 'true'
 
       - name: Start full stack
-        run: docker compose up -d --build
+        run: docker compose up -d
 
       - name: Wait for backend readiness
         run: |

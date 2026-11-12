@@ -9,11 +9,12 @@ RUN npm run build
 
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS backend-build
 
-ARG BUILD_SHA=local
 COPY --from=web-build /usr/local/ /usr/local/
 WORKDIR /src
-COPY . .
+COPY nihomebackend/nihomebackend.csproj nihomebackend/
 RUN dotnet restore nihomebackend/nihomebackend.csproj
+COPY . .
+ARG BUILD_SHA=local
 RUN dotnet publish nihomebackend/nihomebackend.csproj \
     --configuration Release \
     --no-restore \
