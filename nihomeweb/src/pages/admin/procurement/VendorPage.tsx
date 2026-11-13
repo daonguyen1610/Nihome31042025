@@ -52,6 +52,8 @@ import VendorForm from "./VendorForm";
 
 const TYPES: VendorType[] = ["Supplier", "SubContractor", "Both"];
 
+const ACTIVE_VENDOR = "border-emerald-200 bg-emerald-50 text-emerald-700";
+
 export default function VendorPage() {
   const uiError = useUiError();
   const { t } = useI18n();
@@ -220,10 +222,10 @@ export default function VendorPage() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="space-y-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold sm:text-3xl">{t("proc.vendors.title")}</h1>
+            <h1 className="text-2xl font-semibold">{t("proc.vendors.title")}</h1>
             <p className="text-sm text-muted-foreground">{t("proc.vendors.subtitle")}</p>
           </div>
           <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:flex-nowrap">
@@ -367,7 +369,14 @@ export default function VendorPage() {
                         </p>
                       </td>
                       <td className="px-4 py-4">
-                        <Badge variant={vendor.isActive ? "default" : "secondary"}>
+                        <Badge
+                          variant="outline"
+                          className={
+                            vendor.isActive
+                              ? `whitespace-nowrap ${ACTIVE_VENDOR}`
+                              : "whitespace-nowrap"
+                          }
+                        >
                           {t(
                             vendor.isActive
                               ? "proc.vendors.status.active"
@@ -410,7 +419,7 @@ export default function VendorPage() {
                                 size="icon"
                                 title={t("common.delete")}
                                 aria-label={`${t("common.delete")}: ${vendor.companyName}`}
-                                className="h-11 w-11 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                className="h-11 w-11 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                 onClick={(event) => {
                                   event.stopPropagation();
                                   void openDelete(vendor);
@@ -449,8 +458,12 @@ export default function VendorPage() {
                         </p>
                       </div>
                       <Badge
-                        className="shrink-0"
-                        variant={vendor.isActive ? "default" : "secondary"}
+                        className={
+                          vendor.isActive
+                            ? `shrink-0 whitespace-nowrap ${ACTIVE_VENDOR}`
+                            : "shrink-0 whitespace-nowrap"
+                        }
+                        variant="outline"
                       >
                         {t(
                           vendor.isActive
@@ -491,7 +504,7 @@ export default function VendorPage() {
                           {t("common.edit")}
                         </Button>
                         <Button
-                          className="min-h-11 min-w-24 flex-1 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                          className="min-h-11 min-w-24 flex-1 text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                           variant="ghost"
                           size="sm"
                           onClick={() => void openDelete(vendor)}

@@ -253,7 +253,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="space-y-5">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h1 className="text-2xl font-semibold">
@@ -366,7 +366,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                 <section className="overflow-x-auto border-y">
                   <table className="w-full min-w-[900px] text-sm">
                     <thead>
-                      <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                      <tr className="border-b text-left text-xs font-medium text-muted-foreground">
                         <th className="px-3 py-3">{t("kpi.metric")}</th>
                         <th className="px-3 py-3">{t("kpi.source")}</th>
                         <th className="px-3 py-3">{t("kpi.weight")}</th>
@@ -492,7 +492,7 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
             <div className="overflow-x-auto">
               <table className="block w-full text-sm xl:table xl:min-w-[1200px]">
                 <thead className="hidden xl:table-header-group">
-                  <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                  <tr className="border-b text-left text-xs font-medium text-muted-foreground">
                     <th className="px-3 py-3">{t("kpi.metric")}</th>
                     <th className="px-3 py-3">{t("kpi.role")}</th>
                     <th className="px-3 py-3">{t("kpi.weight")}</th>

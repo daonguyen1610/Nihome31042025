@@ -3,17 +3,7 @@ import { getUiError } from "@/lib/apiError";
 import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import {
-  Download,
-  FileArchive,
-  Loader2,
-  Pencil,
-  Plus,
-  RefreshCcw,
-  Search,
-  Trash2,
-  Upload,
-} from "lucide-react";
+import { Download, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2, Upload } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
@@ -28,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
@@ -111,7 +100,6 @@ const CapabilityDocuments = () => {
   const [search, setSearch] = useState("");
 
   const [tags, setTags] = useState<MasterDataOption[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -133,12 +121,6 @@ const CapabilityDocuments = () => {
       const { data } = await adminApi.listCapabilityDocuments(params);
       setRows(data.items);
       setTotal(data.total);
-      // Drop any selection that fell off the current page.
-      setSelectedIds((prev) => {
-        const next = new Set<number>();
-        for (const r of data.items) if (prev.has(r.id)) next.add(r.id);
-        return next;
-      });
     } catch (err) {
       setError(uiError(err));
     } finally {
@@ -428,46 +410,7 @@ const CapabilityDocuments = () => {
   // preview footer can invoke as a shortcut.
   const [previewRow, setPreviewRow] = useState<CapabilityDocumentResponse | null>(null);
 
-  // -------- ZIP download --------
-  const downloadZip = async () => {
-    if (selectedIds.size === 0) return;
-    setBusy(true);
-    try {
-      const { data } = await adminApi.downloadCapabilityDocumentsZip(Array.from(selectedIds));
-      const url = URL.createObjectURL(data as unknown as Blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = `capability-documents-${Date.now()}.zip`;
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      URL.revokeObjectURL(url);
-    } catch (err) {
-      toast({
-        title: t("common.error"),
-        description: uiError(err),
-        variant: "destructive",
-      });
-    } finally {
-      setBusy(false);
-    }
-  };
-
   // -------- helpers --------
-  const toggleAll = (checked: boolean) => {
-    if (!checked) return setSelectedIds(new Set());
-    setSelectedIds(new Set(rows.map((r) => r.id)));
-  };
-  const toggleOne = (id: number, checked: boolean) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      if (checked) next.add(id);
-      else next.delete(id);
-      return next;
-    });
-  };
-  const allSelected = rows.length > 0 && rows.every((r) => selectedIds.has(r.id));
-
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   const expiryLabel = (state: CapabilityDocumentExpiryState) => t(`capDocs.expiry.${state}`);
@@ -667,21 +610,6 @@ const CapabilityDocuments = () => {
           </Select>
         </div>
 
-        {/* Bulk actions */}
-        {selectedIds.size > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border bg-muted/30 px-3 py-2 text-sm">
-            <span className="text-muted-foreground">
-              {selectedIds.size} / {rows.length}
-            </span>
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="outline" onClick={downloadZip} disabled={busy}>
-                <FileArchive className="mr-2 h-4 w-4" />
-                {t("capDocs.action.downloadZip")}
-              </Button>
-            </div>
-          </div>
-        )}
-
         {/* List */}
         {loading ? (
           <PageLoading />
@@ -695,21 +623,9 @@ const CapabilityDocuments = () => {
           <>
             {/* Mobile / tablet card view (<lg) */}
             <div className="grid gap-3 lg:hidden">
-              {rows.length > 1 && (
-                <label className="flex items-center gap-2 rounded-md border bg-card px-3 py-2 text-sm text-muted-foreground">
-                  <Checkbox checked={allSelected} onCheckedChange={(v) => toggleAll(Boolean(v))} />
-                  <span>{allSelected ? t("capDocs.deselectAll") : t("capDocs.selectAll")}</span>
-                </label>
-              )}
               {rows.map((r) => (
                 <article key={r.id} className="rounded-lg border bg-card p-3 shadow-sm">
                   <header className="flex items-start gap-2">
-                    <span onClick={(e) => e.stopPropagation()} className="mt-1 shrink-0">
-                      <Checkbox
-                        checked={selectedIds.has(r.id)}
-                        onCheckedChange={(v) => toggleOne(r.id, Boolean(v))}
-                      />
-                    </span>
                     <div className="min-w-0 flex-1">
                       <button
                         type="button"
@@ -770,12 +686,6 @@ const CapabilityDocuments = () => {
               <table className="w-full min-w-[1000px] text-sm">
                 <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
                   <tr>
-                    <th className="w-10 px-3 py-2">
-                      <Checkbox
-                        checked={allSelected}
-                        onCheckedChange={(v) => toggleAll(Boolean(v))}
-                      />
-                    </th>
                     <th className="min-w-[240px] px-3 py-2">{t("capDocs.field.name")}</th>
                     <th className="min-w-[140px] px-3 py-2">{t("capDocs.field.tag")}</th>
                     <th className="whitespace-nowrap px-3 py-2">{t("capDocs.field.issuedDate")}</th>
@@ -789,12 +699,6 @@ const CapabilityDocuments = () => {
                 <tbody>
                   {rows.map((r) => (
                     <tr key={r.id} className="border-t align-top hover:bg-muted/50">
-                      <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
-                        <Checkbox
-                          checked={selectedIds.has(r.id)}
-                          onCheckedChange={(v) => toggleOne(r.id, Boolean(v))}
-                        />
-                      </td>
                       <td className="min-w-[240px] px-3 py-2">
                         <button
                           type="button"

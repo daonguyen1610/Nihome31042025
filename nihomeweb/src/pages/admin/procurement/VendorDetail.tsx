@@ -122,7 +122,7 @@ export default function VendorDetail() {
 
   const value = (label: string, content?: string | null) => (
     <div>
-      <dt className="text-xs font-medium uppercase text-muted-foreground">{label}</dt>
+      <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
       <dd className="mt-1 break-words text-sm">{content || t("common.noData")}</dd>
     </div>
   );
@@ -133,7 +133,7 @@ export default function VendorDetail() {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="space-y-5">
         <Button variant="ghost" className="gap-2 px-0" onClick={() => navigate("/admin/vendors")}>
           <ArrowLeft className="h-4 w-4" />
           {t("proc.vendors.backToList")}
@@ -148,7 +148,14 @@ export default function VendorDetail() {
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h1 className="text-2xl font-semibold">{vendor.companyName}</h1>
-                  <Badge variant={vendor.isActive ? "default" : "secondary"}>
+                  <Badge
+                    variant="outline"
+                    className={
+                      vendor.isActive
+                        ? "whitespace-nowrap border-emerald-200 bg-emerald-50 text-emerald-700"
+                        : "whitespace-nowrap"
+                    }
+                  >
                     {t(
                       vendor.isActive
                         ? "proc.vendors.status.active"

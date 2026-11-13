@@ -173,7 +173,7 @@ const AdminContacts = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("contacts.title")}</h1>
@@ -354,7 +354,7 @@ const AdminContacts = () => {
                       onClick={() => setPendingDelete(active)}
                       title={t("common.delete")}
                       aria-label={t("common.delete")}
-                      className="text-destructive hover:text-destructive"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -362,7 +362,7 @@ const AdminContacts = () => {
                 </div>
 
                 <h3 className="mb-3 text-lg font-semibold">{active.subject}</h3>
-                <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                <p className="mb-2 text-xs font-medium text-muted-foreground">
                   {t("contacts.content")}
                 </p>
                 <p className="mb-6 whitespace-pre-wrap rounded-md bg-muted p-4 leading-relaxed">
@@ -371,7 +371,7 @@ const AdminContacts = () => {
 
                 {active.replyContent && (
                   <div className="mb-6">
-                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-green-700">
+                    <p className="mb-2 text-xs font-medium text-green-700">
                       {t("contacts.replyContent")}
                     </p>
                     <p className="whitespace-pre-wrap rounded-md border border-green-200 bg-green-50 p-4 leading-relaxed text-green-900">

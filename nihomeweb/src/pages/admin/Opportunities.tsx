@@ -743,7 +743,7 @@ const AdminOpportunities = () => {
   // ---------- render ----------
   return (
     <AdminLayout>
-      <div className="space-y-6 p-6">
+      <div className="space-y-6">
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">{t("opportunities.title")}</h1>
@@ -999,7 +999,7 @@ const AdminOpportunities = () => {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                             onClick={() => void handleDelete(o.id)}
                             title={t("common.delete")}
                             aria-label={t("common.delete")}
@@ -1128,6 +1128,7 @@ const AdminOpportunities = () => {
                                 }}
                                 title={t("common.delete")}
                                 aria-label={t("common.delete")}
+                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

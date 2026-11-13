@@ -293,104 +293,111 @@ const DepartmentWorkPackages = () => {
         )}
         {detail ? (
           <>
-            <div className="flex min-w-0 flex-col gap-4" data-testid="work-package-detail-header">
-              <div className="min-w-0 w-full space-y-2">
-                <Button variant="ghost" asChild className="-ml-3">
-                  <Link data-testid="work-package-back" to={detailBackTarget}>
-                    <ArrowLeft className="mr-2 h-4 w-4" />
-                    {t("workPackages.back")}
-                  </Link>
-                </Button>
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="min-w-0 max-w-full text-2xl font-bold [overflow-wrap:anywhere]">
-                    {detail.code} · {detail.name}
-                  </h1>
-                  <Badge className={statusTone[detail.status]} variant="outline">
-                    {t(`workPackages.status.${detail.status}`)}
-                  </Badge>
-                  <Badge variant="secondary">{t(`workPackages.purpose.${detail.purpose}`)}</Badge>
-                  {detail.isOverdue && (
-                    <Badge
-                      className="border-rose-200 bg-rose-50 text-rose-700"
-                      variant="outline"
-                      title={t("workPackages.overdue.help")}
-                    >
-                      <AlertTriangle className="mr-1 h-3.5 w-3.5" />
-                      {(detail.overdueDays ?? 0) === 1
-                        ? t("workPackages.overdue.badgeOne")
-                        : t("workPackages.overdue.badge", { count: detail.overdueDays ?? 0 })}
+            <div className="min-w-0 space-y-4" data-testid="work-package-detail-header">
+              <Button variant="ghost" asChild className="-ml-3">
+                <Link data-testid="work-package-back" to={detailBackTarget}>
+                  <ArrowLeft className="mr-2 h-4 w-4" />
+                  {t("workPackages.back")}
+                </Link>
+              </Button>
+              <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="min-w-0 space-y-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <h1 className="min-w-0 max-w-full text-2xl font-bold [overflow-wrap:anywhere]">
+                      {detail.code} · {detail.name}
+                    </h1>
+                    <Badge className={statusTone[detail.status]} variant="outline">
+                      {t(`workPackages.status.${detail.status}`)}
                     </Badge>
+                    <Badge variant="secondary">{t(`workPackages.purpose.${detail.purpose}`)}</Badge>
+                    {detail.isOverdue && (
+                      <Badge
+                        className="border-rose-200 bg-rose-50 text-rose-700"
+                        variant="outline"
+                        title={t("workPackages.overdue.help")}
+                      >
+                        <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                        {(detail.overdueDays ?? 0) === 1
+                          ? t("workPackages.overdue.badgeOne")
+                          : t("workPackages.overdue.badge", { count: detail.overdueDays ?? 0 })}
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
+                    <span>
+                      {t("workPackages.field.timeline")}:{" "}
+                      {formatDate(detail.plannedStart, lang, { timeZone: "UTC" })} →{" "}
+                      {formatDate(detail.plannedEnd, lang, { timeZone: "UTC" })}
+                    </span>
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {detail.description || t("workPackages.noDescription")}
+                  </p>
+                  {detail.sourceQuoteId && (
+                    <Link
+                      className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
+                      to={`/admin/quotes/${detail.sourceQuoteId}`}
+                    >
+                      {t("workPackages.field.sourceQuote")}: {detail.sourceQuoteCode}
+                    </Link>
                   )}
                 </div>
-                <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
-                  <span>
-                    {t("workPackages.field.timeline")}:{" "}
-                    {formatDate(detail.plannedStart, lang, { timeZone: "UTC" })} →{" "}
-                    {formatDate(detail.plannedEnd, lang, { timeZone: "UTC" })}
-                  </span>
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {detail.description || t("workPackages.noDescription")}
-                </p>
-                {detail.sourceQuoteId && (
-                  <Link
-                    className="inline-flex items-center gap-1 text-sm text-primary hover:underline"
-                    to={`/admin/quotes/${detail.sourceQuoteId}`}
-                  >
-                    {t("workPackages.field.sourceQuote")}: {detail.sourceQuoteCode}
-                  </Link>
-                )}
-              </div>
-              <div className="flex min-w-0 flex-wrap gap-2 [&_button]:h-auto [&_button]:min-h-10 [&_button]:whitespace-normal">
-                {canManage && detail.canManagePackage && detail.status !== "Cancelled" && (
-                  <Button
-                    data-testid="work-package-edit"
-                    variant="outline"
-                    onClick={() => void openEditPackage()}
-                  >
-                    {t("common.edit")}
-                  </Button>
-                )}
-                {canManage && detail.canManagePackage && detail.status === "Completed" && (
-                  <Button onClick={() => void transitionPackage("Active")}>
-                    <RotateCcw className="mr-2 h-4 w-4" />
-                    {t("workPackages.action.reopen")}
-                  </Button>
-                )}
-                {canManage && detail.canManagePackage && (
-                  <Button variant="destructive" onClick={() => void previewDelete()}>
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    {t("common.delete")}
-                  </Button>
-                )}
-                {detail.canManagePackage && detail.status === "Planned" && (
-                  <Button onClick={() => void transitionPackage("Active")}>
-                    {t("workPackages.action.start")}
-                  </Button>
-                )}
-                {detail.canManagePackage && detail.status === "Active" && (
-                  <Button
-                    onClick={() => void transitionPackage("Completed")}
-                    disabled={detail.completionBlockers.length > 0}
-                    aria-describedby={
-                      detail.completionBlockers.length > 0
-                        ? "work-package-completion-blockers"
-                        : undefined
-                    }
-                  >
-                    {t("workPackages.action.completePackage")}
-                  </Button>
-                )}
-                {canAssign &&
-                  detail.canAssignTasks &&
-                  detail.purpose !== "LegalPermitting" &&
-                  !["Completed", "Cancelled"].includes(detail.status) && (
-                    <Button onClick={() => openTask()}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      {t("workPackages.action.addTask")}
+                <div className="flex min-w-0 flex-wrap gap-2 lg:shrink-0 lg:justify-end [&_button]:h-auto [&_button]:min-h-10 [&_button]:whitespace-normal">
+                  {canManage && detail.canManagePackage && detail.status !== "Cancelled" && (
+                    <Button
+                      data-testid="work-package-edit"
+                      variant="outline"
+                      onClick={() => void openEditPackage()}
+                    >
+                      {t("common.edit")}
                     </Button>
                   )}
+                  {canManage && detail.canManagePackage && detail.status === "Completed" && (
+                    <Button onClick={() => void transitionPackage("Active")}>
+                      <RotateCcw className="mr-2 h-4 w-4" />
+                      {t("workPackages.action.reopen")}
+                    </Button>
+                  )}
+                  {canManage && detail.canManagePackage && (
+                    <Button
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => void previewDelete()}
+                    >
+                      <Trash2 className="mr-2 h-4 w-4" />
+                      {t("common.delete")}
+                    </Button>
+                  )}
+                  {detail.canManagePackage && detail.status === "Planned" && (
+                    <Button onClick={() => void transitionPackage("Active")}>
+                      {t("workPackages.action.start")}
+                    </Button>
+                  )}
+                  {detail.canManagePackage && detail.status === "Active" && (
+                    <Button
+                      variant="outline"
+                      onClick={() => void transitionPackage("Completed")}
+                      disabled={detail.completionBlockers.length > 0}
+                      aria-describedby={
+                        detail.completionBlockers.length > 0
+                          ? "work-package-completion-blockers"
+                          : undefined
+                      }
+                    >
+                      {t("workPackages.action.completePackage")}
+                    </Button>
+                  )}
+                  {canAssign &&
+                    detail.canAssignTasks &&
+                    detail.purpose !== "LegalPermitting" &&
+                    !["Completed", "Cancelled"].includes(detail.status) && (
+                      <Button className="w-full sm:w-auto" onClick={() => openTask()}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        {t("workPackages.action.addTask")}
+                      </Button>
+                    )}
+                </div>
               </div>
               {detail.status === "Active" && detail.completionBlockers.length > 0 && (
                 <div
@@ -775,6 +782,7 @@ const DepartmentWorkPackages = () => {
                           task.canUpdateProgress &&
                           ["Planned", "InProgress"].includes(task.status) && (
                             <Button
+                              variant="outline"
                               size="sm"
                               onClick={() => void progressTask(task, true)}
                               disabled={(task.blockingPredecessorTaskIds ?? []).length > 0}
@@ -1025,10 +1033,10 @@ const DepartmentWorkPackages = () => {
                     ))}
                   </select>
                 </div>
-                <div className="flex items-end">
+                <div className="flex items-end xl:col-span-2 xl:col-start-3 xl:justify-end">
                   <Button
                     variant="outline"
-                    className="w-full"
+                    className="w-full sm:w-auto"
                     disabled={
                       !search &&
                       !departmentFilter &&
@@ -1054,10 +1062,12 @@ const DepartmentWorkPackages = () => {
                     state={{ workPackageListPath: location.pathname }}
                     className="min-w-0 rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <Badge variant="outline">{item.code}</Badge>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" className="whitespace-nowrap">
+                        {item.code}
+                      </Badge>
                       <Badge
-                        className={cn("shrink-0 whitespace-nowrap", statusTone[item.status])}
+                        className={cn("whitespace-nowrap", statusTone[item.status])}
                         variant="outline"
                       >
                         {t(`workPackages.status.${item.status}`)}
