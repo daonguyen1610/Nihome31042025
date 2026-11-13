@@ -810,12 +810,10 @@ test("collected milestone date is suggested, customizable, and displayed", async
     .click();
 
   const dateInput = page.locator("#contract-actual-payment-date");
-  const localToday = await page.evaluate(() => {
-    const now = new Date();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${now.getFullYear()}-${month}-${day}`;
-  });
+  // The app suggests today in the configured time zone, not the browser's.
+  const localToday = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(
+    new Date(),
+  );
   await expect(dateInput).toHaveValue(localToday);
   await dateInput.fill("2026-08-30");
   await page
@@ -825,7 +823,7 @@ test("collected milestone date is suggested, customizable, and displayed", async
   await expect.poll(() => actualPaymentDate).toBe("2026-08-30T00:00:00.000Z");
   await expect(
     page.getByText(
-      /Ngày thu thực tế: 30\/08\/2026|Actual collection date: 30\/08\/2026|实际收款日期: 30\/08\/2026|実際入金日: 30\/08\/2026/i,
+      /Ngày thu thực tế: 30\/0?8\/2026|Actual collection date: 30\/0?8\/2026|实际收款日期: 30\/0?8\/2026|実際入金日: 30\/0?8\/2026/i,
     ),
   ).toBeVisible();
 

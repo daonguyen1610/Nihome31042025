@@ -172,7 +172,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
       }
       await expect(
         page.getByRole("region", { name: "Bid comparison matrix", exact: true }),
-      ).toContainText("3,600,000 VND");
+      ).toContainText("3.600.000 ₫");
       await page.getByRole("button", { name: "Start evaluation / stop bids", exact: true }).click();
       await expect(
         page.getByRole("button", { name: "Submit quote revision", exact: true }),
@@ -379,7 +379,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
         await page.reload();
         await expect(invoice()).toContainText(outcome);
         await expect(invoice()).toContainText(contractNumber);
-        await expect(invoice()).toContainText("3,600,000");
+        await expect(invoice()).toContainText("3.600.000 ₫");
         await page.screenshot({
           path: testInfo.outputPath(`04-invoice-${outcome}.png`),
           fullPage: true,
@@ -393,7 +393,7 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
         .click();
       await expect(invoice()).toContainText("Paid");
       await expect(invoice()).toContainText(contractNumber);
-      await expect(invoice()).toContainText("3,600,000");
+      await expect(invoice()).toContainText("3.600.000 ₫");
       await page.reload();
       await expect(invoice()).toContainText("Paid");
       await page.screenshot({ path: testInfo.outputPath("03-paid-invoice.png"), fullPage: true });

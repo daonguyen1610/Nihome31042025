@@ -1104,7 +1104,8 @@ public class QuotesControllerTests : IntegrationTestBase
         sheet.Cell("D17").DataType.Should().Be(XLDataType.Number);
         sheet.Cell("E17").DataType.Should().Be(XLDataType.Number);
         sheet.Cell("F17").DataType.Should().Be(XLDataType.Number);
-        sheet.CellsUsed().Select(cell => cell.GetFormattedString()).Should().Contain("GRAND TOTAL");
+        // The quote is priced from a VND catalog, so its total is stated in VND.
+        sheet.CellsUsed().Select(cell => cell.GetFormattedString()).Should().Contain("GRAND TOTAL (VND)");
 
         Client.DefaultRequestHeaders.Authorization = null;
         (await Client.GetAsync($"/api/quotes/{quoteId}/export.xlsx"))
@@ -1169,7 +1170,8 @@ public class QuotesControllerTests : IntegrationTestBase
         sheet.Cell("E17").GetValue<decimal>().Should().Be(1_450_000.25m);
         sheet.Cell("F17").GetValue<decimal>().Should().Be(36_975_006.38m);
         sheet.Cell("A18").GetString().Should().Be("BOQ-02");
-        sheet.CellsUsed().Select(cell => cell.GetFormattedString()).Should().Contain("TỔNG CỘNG");
+        sheet.CellsUsed().Select(cell => cell.GetFormattedString())
+            .Should().Contain($"TỔNG CỘNG ({quote.GetProperty("currency").GetString()})");
         sheet.CellsUsed().Where(cell => cell.DataType == XLDataType.Number)
             .Select(cell => cell.GetValue<decimal>()).Should().Contain(quote.GetProperty("grandTotal").GetDecimal());
     }

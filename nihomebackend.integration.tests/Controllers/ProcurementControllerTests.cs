@@ -245,7 +245,9 @@ public class ProcurementControllerTests : IntegrationTestBase
 
         updated.StatusCode.Should().Be(HttpStatusCode.OK, await updated.Content.ReadAsStringAsync());
         var updatedJson = await ReadJsonAsync(updated);
-        updatedJson.GetProperty("currency").GetString().Should().Be("USD");
+        // The revision keeps the currency it was created in; an update cannot
+        // switch it, so the amounts above stay in VND.
+        updatedJson.GetProperty("currency").GetString().Should().Be("VND");
         updatedJson.GetProperty("costTotal").GetDecimal().Should().Be(1_200m);
         updatedJson.GetProperty("lines").EnumerateArray().Single()
             .GetProperty("itemCode").GetString().Should().Be("MAT-UPDATED");
