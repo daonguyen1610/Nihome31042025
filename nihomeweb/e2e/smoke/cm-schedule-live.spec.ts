@@ -114,7 +114,10 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
             nodeId: node,
             wbsCode: "1.1",
             title: "Thi công móng Long An",
-            plannedStart: date(1),
+            // Started three days ago so the plan is ahead of the 20% reported
+            // below and the snapshot counts as delayed, which the recovery
+            // step requires.
+            plannedStart: date(-3),
             plannedEnd: date(8),
             sortOrder: 0,
           },
@@ -165,7 +168,7 @@ test("CM baseline approval, BCH offline retry and independent recovery work on C
         projectScheduleNodeId: node,
         wbs: "1.1",
         name: "Thi công móng Long An",
-        plannedStart: date(1),
+        plannedStart: date(-3),
         plannedEnd: date(8),
         ownerUserId: site.id,
       }),

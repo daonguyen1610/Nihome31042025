@@ -5,7 +5,6 @@ export interface RfqCommercialPreview {
   taxable: number;
   vat: number;
   totalOriginal: number;
-  totalVnd: number;
 }
 
 const round4 = (value: number) => Math.round((value + Number.EPSILON) * 10_000) / 10_000;
@@ -17,7 +16,6 @@ export function calculateRfqCommercialPreview(
   discountPercent: string,
   discountAmount: string,
   vatPercent: string,
-  exchangeRateToVnd: string,
 ): RfqCommercialPreview {
   const subtotal = round4(
     Object.entries(prices).reduce(
@@ -33,6 +31,5 @@ export function calculateRfqCommercialPreview(
   const taxable = round4(Math.max(0, subtotal + freightValue - discount));
   const vat = round4((taxable * (Number(vatPercent) || 0)) / 100);
   const totalOriginal = round4(taxable + vat);
-  const totalVnd = round4(totalOriginal * (Number(exchangeRateToVnd) || 0));
-  return { subtotal, freight: freightValue, discount, taxable, vat, totalOriginal, totalVnd };
+  return { subtotal, freight: freightValue, discount, taxable, vat, totalOriginal };
 }

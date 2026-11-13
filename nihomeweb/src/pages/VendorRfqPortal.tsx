@@ -25,7 +25,6 @@ export default function VendorRfqPortal() {
   const [submission, setSubmission] = useState<{
     submittedAt: string;
     totalOriginal: number;
-    totalVnd: number;
     currency: string;
     validUntil: string;
   } | null>(null);
@@ -90,7 +89,6 @@ export default function VendorRfqPortal() {
       discountPercent,
       discountAmount,
       vatPercent,
-      "1",
     );
     try {
       await rfqApi.portalBid(token, {
@@ -109,7 +107,6 @@ export default function VendorRfqPortal() {
       setSubmission({
         submittedAt: new Date().toISOString(),
         totalOriginal: preview.totalOriginal,
-        totalVnd: preview.totalVnd,
         currency,
         validUntil: new Date(validUntil).toISOString(),
       });
@@ -149,7 +146,6 @@ export default function VendorRfqPortal() {
     discountPercent,
     discountAmount,
     vatPercent,
-    "1",
   );
   if (submission)
     return (
@@ -173,12 +169,6 @@ export default function VendorRfqPortal() {
               <dt className="text-muted-foreground">{t("rfq.commercial.totalOriginal")}</dt>
               <dd className="font-semibold">
                 {number.format(submission.totalOriginal)} {submission.currency}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">{t("rfq.commercial.totalVnd")}</dt>
-              <dd className="font-semibold">
-                {number.format(submission.totalVnd)} {currency}
               </dd>
             </div>
           </dl>
@@ -413,12 +403,6 @@ function PortalCommercialPreview({
           <dt className="text-muted-foreground">{t("rfq.commercial.totalOriginal")}</dt>
           <dd className="font-semibold">
             {number(preview.totalOriginal)} {currency}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">{t("rfq.commercial.totalVnd")}</dt>
-          <dd className="font-semibold">
-            {number(preview.totalVnd)} {currency}
           </dd>
         </div>
       </dl>

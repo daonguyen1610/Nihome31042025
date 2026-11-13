@@ -148,7 +148,6 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
     [InlineData("inactive-vendor")]
     [InlineData("cross-project-boq")]
     [InlineData("unapproved-boq")]
-    [InlineData("currency")]
     [InlineData("empty-lines")]
     [InlineData("duplicate-line")]
     [InlineData("cross-project-line")]
@@ -171,7 +170,6 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
             case "inactive-vendor": await WithDbAsync(async db => { (await db.Vendors.FindAsync(fixture.VendorId))!.IsActive = false; await db.SaveChangesAsync(); }); break;
             case "cross-project-boq": draft.SourceBoqRevisionId = (await SeedAsync()).RevisionId; break;
             case "unapproved-boq": await WithDbAsync(async db => { (await db.ProjectBoqRevisions.FindAsync(fixture.RevisionId))!.Status = ProjectBoqRevisionStatus.Draft; await db.SaveChangesAsync(); }); break;
-            case "currency": await WithDbAsync(async db => { (await db.ProjectBoqRevisions.FindAsync(fixture.RevisionId))!.Currency = "USD"; await db.SaveChangesAsync(); }); break;
             case "empty-lines": draft.Lines.Clear(); break;
             case "duplicate-line": draft.Lines.Add(draft.Lines[0]); break;
             case "cross-project-line": draft.Lines[0].ProjectBoqLineId = (await SeedAsync()).LineIds[0]; break;
@@ -448,7 +446,7 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
     }
 
     [Fact]
-    public async Task VendorPortal_TokenScopesReadAndCreatesImmutableForeignCurrencyRevision()
+    public async Task VendorPortal_TokenScopesReadAndCreatesBidInRfqCurrency()
     {
         var fixture = await SeedAsync();
         var fileId = await AddDocumentAsync(fixture.ProjectId);
@@ -507,10 +505,12 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
         var stored = await WithDbAsync(db => db.RfqBids.AsNoTracking().SingleAsync(x =>
             x.RfqId == detail.Header.Id && x.VendorId == fixture.OtherVendorId));
         stored.SubmittedViaPortal.Should().BeTrue();
-        stored.Currency.Should().Be("USD");
-        stored.ExchangeRateToVnd.Should().Be(25_000m);
+        // The bid quotes in the RFQ's own currency; the request's currency and
+        // exchange rate are ignored so every bid in the RFQ is comparable.
+        stored.Currency.Should().Be("VND");
+        stored.ExchangeRateToVnd.Should().Be(1m);
         stored.TotalOriginal.Should().BeGreaterThan(stored.Subtotal);
-        stored.Total.Should().Be(stored.TotalOriginal * 25_000m);
+        stored.Total.Should().Be(stored.TotalOriginal);
         (await WithDbAsync(db => db.Set<RfqEvent>().AsNoTracking().CountAsync(x =>
             x.RfqId == detail.Header.Id && x.Action == "portal-bid-submitted"))).Should().Be(1);
         (await WithDbAsync(db => db.Set<RfqEvent>().AsNoTracking().CountAsync(x =>

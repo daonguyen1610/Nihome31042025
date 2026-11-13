@@ -1,6 +1,6 @@
 import { expect, test } from "@playwright/test";
 
-test("vendor token portal submits a foreign-currency quotation", async ({ page, baseURL }) => {
+test("vendor token portal quotes in the RFQ currency", async ({ page, baseURL }) => {
   const token = "secure-vendor-token";
   let submitted: Record<string, unknown> | null = null;
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
@@ -24,6 +24,7 @@ test("vendor token portal submits a foreign-currency quotation", async ({ page, 
           code: "RFQ-PORTAL-001",
           title: "Factory cable package",
           dueAt: "2035-01-01T09:00:00Z",
+          currency: "USD",
           vendorName: "International Cable Supplier",
           canSubmit: true,
           lines: [
@@ -41,6 +42,7 @@ test("vendor token portal submits a foreign-currency quotation", async ({ page, 
         code: "RFQ-PORTAL-001",
         title: "Factory cable package",
         dueAt: "2035-01-01T09:00:00Z",
+        currency: "USD",
         vendorName: "International Cable Supplier",
         canSubmit: true,
         lines: [
@@ -58,8 +60,10 @@ test("vendor token portal submits a foreign-currency quotation", async ({ page, 
   await page.getByRole("button", { name: /cable-specification\.pdf/ }).click();
   expect((await downloadPromise).suggestedFilename()).toBe("cable-specification.pdf");
   await page.getByLabel("Unit price CABLE-01").fill("2.5");
-  await page.getByLabel("Currency").fill("USD");
-  await page.getByLabel("Exchange rate to VND").fill("25000");
+  // The quotation currency comes from the RFQ and cannot be edited here.
+  await expect(page.getByText("USD", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("Currency")).toHaveCount(0);
+  await expect(page.getByLabel("Exchange rate to VND")).toHaveCount(0);
   await page.getByLabel("Delivery lead time").fill("7");
   await page.getByLabel("Freight").fill("10");
   await page.getByLabel("Discount (%)").fill("5");
@@ -67,19 +71,15 @@ test("vendor token portal submits a foreign-currency quotation", async ({ page, 
   await expect(page.getByRole("region", { name: "Commercial total preview" })).toContainText(
     "272.25 USD",
   );
-  await expect(page.getByRole("region", { name: "Commercial total preview" })).toContainText(
-    "6,806,250 VND",
-  );
   await page.getByLabel("Quote valid until").fill("2035-01-02T09:00");
   await page.getByLabel("Payment terms").fill("Net 30 after inspected delivery");
   await page.getByRole("button", { name: "Submit quotation" }).click();
 
   await expect(page.getByRole("heading", { name: "Quotation submitted" })).toBeVisible();
   await expect(page.getByText("272.25 USD", { exact: true })).toBeVisible();
-  await expect(page.getByText("6,806,250 VND", { exact: true })).toBeVisible();
   expect(submitted).toMatchObject({
     currency: "USD",
-    exchangeRateToVnd: 25000,
+    exchangeRateToVnd: 1,
     freightAmount: 10,
     discountPercent: 5,
     vatPercent: 10,

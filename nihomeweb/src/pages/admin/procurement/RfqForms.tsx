@@ -281,7 +281,6 @@ export function RfqBidForm({
     discountPercent,
     discountAmount,
     vatPercent,
-    "1",
   );
   function submit(event: FormEvent) {
     event.preventDefault();
@@ -572,12 +571,6 @@ function CommercialPreview({
           <dt className="text-muted-foreground">{t("rfq.commercial.totalOriginal")}</dt>
           <dd className="font-semibold">
             {number(preview.totalOriginal)} {currency}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">{t("rfq.commercial.totalVnd")}</dt>
-          <dd className="font-semibold">
-            {number(preview.totalVnd)} {currency}
           </dd>
         </div>
       </dl>

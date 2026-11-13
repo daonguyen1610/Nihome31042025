@@ -24,12 +24,14 @@ test("opportunity header labels its currency and stays readable on smaller scree
     await page.goto(`/admin/opportunities/${opportunityId}`);
     const dialog = page.getByTestId("opportunity-detail-dialog");
     const heading = dialog.getByRole("heading", { level: 2 });
-    await expect(dialog.getByText("10.220.235.598 ₫", { exact: true })).toBeVisible();
+    // The value appears both in the header summary and in the detail grid.
+    const value = dialog.getByText("10.220.235.598 ₫", { exact: true }).first();
+    await expect(value).toBeVisible();
     await expect(heading).toHaveText(name);
     for (const width of [390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       await expect(heading).toBeVisible();
-      await expect(dialog.getByText("10.220.235.598 ₫", { exact: true })).toBeVisible();
+      await expect(value).toBeVisible();
       await expect
         .poll(() => dialog.evaluate((element) => element.scrollWidth <= element.clientWidth))
         .toBe(true);

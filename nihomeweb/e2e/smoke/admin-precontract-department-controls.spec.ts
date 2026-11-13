@@ -251,7 +251,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
       offer.grandTotal as number,
     );
     await expect(
-      offerCard.getByText(new RegExp(`${grouped.replace(/\./g, "\\.")} VND`)).first(),
+      offerCard.getByText(new RegExp(`${grouped.replace(/\./g, "\\.")} ₫`)).first(),
     ).toBeVisible();
 
     await offerCard.getByRole("button", { name: "Gửi duyệt" }).click();
