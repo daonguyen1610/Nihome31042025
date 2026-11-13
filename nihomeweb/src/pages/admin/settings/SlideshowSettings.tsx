@@ -1,7 +1,7 @@
 import { FieldScope, FieldControl } from "@/components/ui/field-scope";
 import { useConfirm } from "@/components/ui/confirmation";
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Images, Pencil, Plus, Save, Trash2, Upload } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -12,6 +12,7 @@ import {
 } from "@/services/adminApi";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
+import SettingsSection from "./SettingsSection";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -84,6 +85,7 @@ const SlideshowSettings = () => {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [draft, setDraft] = useState<Draft>(emptyDraft);
+  const editorRef = useRef<HTMLDivElement>(null);
 
   const loadSlides = useCallback(async () => {
     setLoading(true);
@@ -109,7 +111,27 @@ const SlideshowSettings = () => {
 
   const resetDraft = () => setDraft(emptyDraft);
 
-  const editSlide = (slide: SlideshowAdminResponse) => setDraft(mapSlideToDraft(slide));
+  // The editor sits under the list, so choosing a slide has to bring it back
+  // into view for the change to be visible.
+  const showEditor = () => {
+    window.requestAnimationFrame(() => {
+      const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      editorRef.current?.scrollIntoView({
+        block: "start",
+        behavior: reduceMotion ? "auto" : "smooth",
+      });
+    });
+  };
+
+  const startNewSlide = () => {
+    resetDraft();
+    showEditor();
+  };
+
+  const editSlide = (slide: SlideshowAdminResponse) => {
+    setDraft(mapSlideToDraft(slide));
+    showEditor();
+  };
 
   const handleUploadFile = async (file: File) => {
     const looksLikeVideo = file.type.startsWith("video/") || isVideoUrl(file.name);
@@ -227,258 +249,267 @@ const SlideshowSettings = () => {
     clearSelection();
   }, [clearSelection]);
 
-  if (loading) return <PageLoading />;
-  if (error) return <PageError message={error} onRetry={loadSlides} />;
-
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        <section className="rounded-lg border bg-card p-6 xl:col-span-3">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <div>
-              <h2 className="text-lg font-semibold">{t("set.slideshow.title")}</h2>
-              <p className="mt-1 text-xs text-muted-foreground">{t("set.slideshow.desc")}</p>
+    <SettingsSection
+      sectionKey="slideshow"
+      icon={Images}
+      title={t("set.slideshow")}
+      description={t("set.slideshow.desc")}
+    >
+      {loading ? (
+        <PageLoading />
+      ) : error ? (
+        <PageError message={error} onRetry={loadSlides} />
+      ) : (
+        <div className="space-y-8">
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <h3 className="text-sm font-medium">{t("set.slideshow.listTitle")}</h3>
+              <Button type="button" size="sm" variant="outline" onClick={startNewSlide}>
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                {t("common.new")}
+              </Button>
             </div>
-            <Button type="button" size="sm" variant="outline" onClick={resetDraft}>
-              <Plus className="mr-1.5 h-3.5 w-3.5" />
-              {t("common.new")}
-            </Button>
+
+            {slides.length === 0 ? (
+              <PageEmpty message={t("common.noData")} />
+            ) : (
+              <>
+                <BulkActionBar
+                  selectedCount={selectedIds.size}
+                  bulkDeleting={bulkDeleting}
+                  onClear={clearSelection}
+                  onBulkDelete={() => void handleBulkDelete()}
+                />
+                <div className="mb-2 flex items-center gap-2 px-1 text-xs text-muted-foreground">
+                  <Checkbox
+                    checked={
+                      allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
+                    }
+                    onCheckedChange={(v) => toggleAllVisible(v === true)}
+                    aria-label={t("common.selectAll")}
+                  />
+                  <span>{t("common.selectAll")}</span>
+                </div>
+                <div className="divide-y">
+                  {slides.map((slide) => (
+                    <div
+                      key={slide.id}
+                      className="flex flex-col gap-3 py-3 first:pt-0 last:pb-0 sm:flex-row sm:items-center"
+                    >
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <Checkbox
+                          checked={selectedIds.has(slide.id)}
+                          onCheckedChange={(v) => toggleOne(slide.id, v === true)}
+                          aria-label={`${t("common.selectItem")} · ${slide.title}`}
+                        />
+                      </div>
+                      <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-32">
+                        {isVideoUrl(slide.imageUrl) ? (
+                          <video
+                            src={slide.imageUrl}
+                            className="h-full w-full object-cover"
+                            muted
+                            playsInline
+                            preload="metadata"
+                          />
+                        ) : (
+                          <img
+                            src={slide.imageUrl}
+                            alt={slide.title}
+                            className="h-full w-full object-cover"
+                            onError={(e) =>
+                              ((e.target as HTMLImageElement).src = "/placeholder.svg")
+                            }
+                          />
+                        )}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{slide.title}</p>
+                        <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                          slug: {slide.slug} · sort: {slide.sortOrder} ·{" "}
+                          {slide.isActive
+                            ? t("set.slideshow.statusActive")
+                            : t("set.slideshow.statusInactive")}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => editSlide(slide)}
+                        >
+                          <Pencil className="mr-1 h-3.5 w-3.5" />
+                          {t("common.edit")}
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => removeSlide(slide)}
+                        >
+                          <Trash2 className="mr-1 h-3.5 w-3.5" />
+                          {t("common.delete")}
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
 
-          {slides.length === 0 ? (
-            <PageEmpty message={t("common.noData")} />
-          ) : (
-            <>
-              <BulkActionBar
-                selectedCount={selectedIds.size}
-                bulkDeleting={bulkDeleting}
-                onClear={clearSelection}
-                onBulkDelete={() => void handleBulkDelete()}
-              />
-              <div className="mb-2 flex items-center gap-2 px-1 text-xs text-muted-foreground">
-                <Checkbox
-                  checked={
-                    allVisibleSelected ? true : someVisibleSelected ? "indeterminate" : false
-                  }
-                  onCheckedChange={(v) => toggleAllVisible(v === true)}
-                  aria-label={t("common.selectAll")}
+          <div ref={editorRef} className="min-w-0 scroll-mt-24 border-t pt-6">
+            <h3 className="text-sm font-medium">{titleHint}</h3>
+            <p className="mb-4 mt-1 text-sm text-muted-foreground">
+              {t("set.slideshow.editorDesc")}
+            </p>
+
+            <div className="max-w-2xl space-y-4">
+              <FieldRow label={`${t("set.slideshow.fieldTitle")} *`}>
+                <Input
+                  value={draft.title}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
+                  placeholder={t("set.slideshow.placeholderTitle")}
                 />
-                <span>{t("common.selectAll")}</span>
-              </div>
-              <div className="space-y-3">
-                {slides.map((slide) => (
-                  <div
-                    key={slide.id}
-                    className="flex flex-col gap-3 rounded-lg border bg-background p-3 sm:flex-row sm:items-center"
-                  >
-                    <div onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedIds.has(slide.id)}
-                        onCheckedChange={(v) => toggleOne(slide.id, v === true)}
-                        aria-label={`${t("common.selectItem")} · ${slide.title}`}
-                      />
-                    </div>
-                    <div className="aspect-video w-full shrink-0 overflow-hidden rounded-lg bg-muted sm:w-32">
-                      {isVideoUrl(slide.imageUrl) ? (
-                        <video
-                          src={slide.imageUrl}
-                          className="h-full w-full object-cover"
-                          muted
-                          playsInline
-                          preload="metadata"
-                        />
-                      ) : (
-                        <img
-                          src={slide.imageUrl}
-                          alt={slide.title}
-                          className="h-full w-full object-cover"
-                          onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                        />
-                      )}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium">{slide.title}</p>
-                      <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                        slug: {slide.slug} · sort: {slide.sortOrder} ·{" "}
-                        {slide.isActive
-                          ? t("set.slideshow.statusActive")
-                          : t("set.slideshow.statusInactive")}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => editSlide(slide)}
-                      >
-                        <Pencil className="mr-1 h-3.5 w-3.5" />
-                        {t("common.edit")}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="text-destructive hover:text-destructive"
-                        onClick={() => removeSlide(slide)}
-                      >
-                        <Trash2 className="mr-1 h-3.5 w-3.5" />
-                        {t("common.delete")}
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-        </section>
+              </FieldRow>
 
-        <section className="rounded-lg border bg-card p-6 xl:col-span-2">
-          <h2 className="text-lg font-semibold">{titleHint}</h2>
-          <p className="mb-5 mt-1 text-xs text-muted-foreground">{t("set.slideshow.editorDesc")}</p>
+              <FieldRow label={t("set.slideshow.fieldSlug")}>
+                <Input
+                  value={draft.slug}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, slug: e.target.value }))}
+                  placeholder={t("set.slideshow.placeholderSlug")}
+                />
+              </FieldRow>
 
-          <div className="space-y-4">
-            <FieldRow label={`${t("set.slideshow.fieldTitle")} *`}>
-              <Input
-                value={draft.title}
-                onChange={(e) => setDraft((prev) => ({ ...prev, title: e.target.value }))}
-                placeholder={t("set.slideshow.placeholderTitle")}
-              />
-            </FieldRow>
-
-            <FieldRow label={t("set.slideshow.fieldSlug")}>
-              <Input
-                value={draft.slug}
-                onChange={(e) => setDraft((prev) => ({ ...prev, slug: e.target.value }))}
-                placeholder={t("set.slideshow.placeholderSlug")}
-              />
-            </FieldRow>
-
-            <div className="grid grid-cols-2 gap-3">
-              <FieldRow label={t("set.slideshow.fieldMediaType")}>
-                <FieldControl>
-                  <select
-                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                    value={draft.mediaKind}
+              <div className="grid grid-cols-2 gap-3">
+                <FieldRow label={t("set.slideshow.fieldMediaType")}>
+                  <FieldControl>
+                    <select
+                      className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                      value={draft.mediaKind}
+                      onChange={(e) =>
+                        setDraft((prev) => ({ ...prev, mediaKind: e.target.value as MediaKind }))
+                      }
+                    >
+                      <option value="image">{t("set.slideshow.mediaTypeImage")}</option>
+                      <option value="video">{t("set.slideshow.mediaTypeVideo")}</option>
+                    </select>
+                  </FieldControl>
+                </FieldRow>
+                <FieldRow label={t("set.slideshow.fieldSortOrder")}>
+                  <Input
+                    type="number"
+                    value={draft.sortOrder}
                     onChange={(e) =>
-                      setDraft((prev) => ({ ...prev, mediaKind: e.target.value as MediaKind }))
+                      setDraft((prev) => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))
                     }
-                  >
-                    <option value="image">{t("set.slideshow.mediaTypeImage")}</option>
-                    <option value="video">{t("set.slideshow.mediaTypeVideo")}</option>
-                  </select>
-                </FieldControl>
-              </FieldRow>
-              <FieldRow label={t("set.slideshow.fieldSortOrder")}>
+                  />
+                </FieldRow>
+              </div>
+
+              <FieldRow label={t("set.slideshow.fieldSubtitle")}>
                 <Input
-                  type="number"
-                  value={draft.sortOrder}
-                  onChange={(e) =>
-                    setDraft((prev) => ({ ...prev, sortOrder: Number(e.target.value) || 0 }))
-                  }
+                  value={draft.subtitle ?? ""}
+                  onChange={(e) => setDraft((prev) => ({ ...prev, subtitle: e.target.value }))}
+                  placeholder={t("set.slideshow.placeholderSubtitle")}
                 />
               </FieldRow>
-            </div>
 
-            <FieldRow label={t("set.slideshow.fieldSubtitle")}>
-              <Input
-                value={draft.subtitle ?? ""}
-                onChange={(e) => setDraft((prev) => ({ ...prev, subtitle: e.target.value }))}
-                placeholder={t("set.slideshow.placeholderSubtitle")}
-              />
-            </FieldRow>
+              <div className="grid grid-cols-2 gap-3">
+                <FieldRow label={t("set.slideshow.fieldLinkText")}>
+                  <Input
+                    value={draft.linkText ?? ""}
+                    onChange={(e) => setDraft((prev) => ({ ...prev, linkText: e.target.value }))}
+                    placeholder={t("set.slideshow.placeholderLinkText")}
+                  />
+                </FieldRow>
+                <FieldRow label={t("set.slideshow.fieldLinkUrl")}>
+                  <Input
+                    value={draft.linkUrl ?? ""}
+                    onChange={(e) => setDraft((prev) => ({ ...prev, linkUrl: e.target.value }))}
+                    placeholder={t("set.slideshow.placeholderLinkUrl")}
+                  />
+                </FieldRow>
+              </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <FieldRow label={t("set.slideshow.fieldLinkText")}>
-                <Input
-                  value={draft.linkText ?? ""}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, linkText: e.target.value }))}
-                  placeholder={t("set.slideshow.placeholderLinkText")}
+              <label className="inline-flex items-center gap-2 text-sm font-medium">
+                <Checkbox
+                  checked={draft.isActive}
+                  onCheckedChange={(v) => setDraft((prev) => ({ ...prev, isActive: v === true }))}
                 />
-              </FieldRow>
-              <FieldRow label={t("set.slideshow.fieldLinkUrl")}>
-                <Input
-                  value={draft.linkUrl ?? ""}
-                  onChange={(e) => setDraft((prev) => ({ ...prev, linkUrl: e.target.value }))}
-                  placeholder={t("set.slideshow.placeholderLinkUrl")}
-                />
-              </FieldRow>
-            </div>
-
-            <label className="inline-flex items-center gap-2 text-sm font-medium">
-              <Checkbox
-                checked={draft.isActive}
-                onCheckedChange={(v) => setDraft((prev) => ({ ...prev, isActive: v === true }))}
-              />
-              {t("set.slideshow.fieldIsActive")}
-            </label>
-
-            <div className="space-y-3">
-              <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-accent hover:text-accent-foreground">
-                <Upload className="h-4 w-4" />
-                {uploading ? t("set.slideshow.uploading") : t("set.slideshow.uploadButton")}
-                <input
-                  type="file"
-                  className="hidden"
-                  disabled={uploading}
-                  accept="image/*,video/mp4,video/webm,video/quicktime,video/x-m4v"
-                  onChange={onPickFile}
-                />
+                {t("set.slideshow.fieldIsActive")}
               </label>
 
-              <details>
-                <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
-                  {t("media.url.toggleWithVideo")}
-                </summary>
-                <Input
-                  aria-label={t("set.slideshow.fieldMediaUrl")}
-                  className="mt-2"
-                  value={draft.imageUrl}
-                  onChange={(e) =>
-                    setDraft((prev) => ({
-                      ...prev,
-                      imageUrl: e.target.value,
-                      mediaKind: getMediaKind(e.target.value),
-                    }))
-                  }
-                  placeholder={t("set.slideshow.placeholderMediaUrl")}
-                />
-              </details>
+              <div className="space-y-3">
+                <label className="inline-flex w-full cursor-pointer items-center justify-center gap-2 rounded-md border border-input bg-background px-4 py-2.5 text-sm font-medium shadow-sm transition hover:bg-accent hover:text-accent-foreground">
+                  <Upload className="h-4 w-4" />
+                  {uploading ? t("set.slideshow.uploading") : t("set.slideshow.uploadButton")}
+                  <input
+                    type="file"
+                    className="hidden"
+                    disabled={uploading}
+                    accept="image/*,video/mp4,video/webm,video/quicktime,video/x-m4v"
+                    onChange={onPickFile}
+                  />
+                </label>
 
-              {draft.imageUrl && (
-                <div className="aspect-video overflow-hidden rounded-lg bg-muted">
-                  {draft.mediaKind === "video" ? (
-                    <video
-                      src={draft.imageUrl}
-                      className="h-full w-full object-cover"
-                      controls
-                      preload="metadata"
-                    />
-                  ) : (
-                    <img
-                      src={draft.imageUrl}
-                      alt={draft.title || t("set.slideshow.previewAlt")}
-                      className="h-full w-full object-cover"
-                      onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
-                    />
-                  )}
-                </div>
-              )}
+                <details>
+                  <summary className="cursor-pointer select-none text-xs text-muted-foreground hover:text-foreground">
+                    {t("media.url.toggleWithVideo")}
+                  </summary>
+                  <Input
+                    aria-label={t("set.slideshow.fieldMediaUrl")}
+                    className="mt-2"
+                    value={draft.imageUrl}
+                    onChange={(e) =>
+                      setDraft((prev) => ({
+                        ...prev,
+                        imageUrl: e.target.value,
+                        mediaKind: getMediaKind(e.target.value),
+                      }))
+                    }
+                    placeholder={t("set.slideshow.placeholderMediaUrl")}
+                  />
+                </details>
+
+                {draft.imageUrl && (
+                  <div className="aspect-video overflow-hidden rounded-lg bg-muted">
+                    {draft.mediaKind === "video" ? (
+                      <video
+                        src={draft.imageUrl}
+                        className="h-full w-full object-cover"
+                        controls
+                        preload="metadata"
+                      />
+                    ) : (
+                      <img
+                        src={draft.imageUrl}
+                        alt={draft.title || t("set.slideshow.previewAlt")}
+                        className="h-full w-full object-cover"
+                        onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
+                      />
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <Button
+                type="button"
+                disabled={saving || uploading}
+                onClick={saveSlide}
+                className="w-full sm:w-auto"
+              >
+                <Save className="mr-1.5 h-4 w-4" />
+                {draft.id ? t("form.update") : t("form.create")}
+              </Button>
             </div>
-
-            <Button
-              type="button"
-              disabled={saving || uploading}
-              onClick={saveSlide}
-              className="w-full"
-            >
-              <Save className="mr-1.5 h-4 w-4" />
-              {draft.id ? t("form.update") : t("form.create")}
-            </Button>
           </div>
-        </section>
-      </div>
-    </div>
+        </div>
+      )}
+    </SettingsSection>
   );
 };
 

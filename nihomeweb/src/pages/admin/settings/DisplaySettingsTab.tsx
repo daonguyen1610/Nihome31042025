@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Clock, Globe2, RefreshCw, Save } from "lucide-react";
+import { Clock, Globe2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageError, PageLoading } from "@/components/PageState";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
@@ -15,6 +16,7 @@ import type {
   UpdateDisplaySettingsRequest,
 } from "@/services/admin/types/content";
 import { applyDisplaySettings, localeFor } from "@/lib/displaySettings";
+import SettingsSection from "./SettingsSection";
 
 const CURRENCIES: { value: DisplaySettingsResponse["currency"]; labelKey: string }[] = [
   { value: "VND", labelKey: "settings.display.currencyVnd" },
@@ -112,27 +114,18 @@ const DisplaySettingsTab = () => {
   };
 
   return (
-    <section className="max-w-2xl rounded-lg border bg-card p-6">
-      <div className="flex items-center gap-2 border-b pb-4">
-        <Globe2 className="h-5 w-5 text-primary" />
-        <div>
-          <h2 className="text-lg font-semibold">{t("settings.display.title")}</h2>
-          <p className="mt-1 text-sm text-muted-foreground">{t("settings.display.description")}</p>
-        </div>
-      </div>
-
+    <SettingsSection
+      sectionKey="display"
+      icon={Globe2}
+      title={t("settings.display.title")}
+      description={t("settings.display.description")}
+    >
       {loading ? (
-        <p className="pt-5 text-sm text-muted-foreground">{t("common.loading")}</p>
+        <PageLoading />
       ) : failed ? (
-        <div className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center">
-          <p className="text-sm text-muted-foreground">{t("settings.display.loadError")}</p>
-          <Button type="button" size="sm" variant="outline" onClick={load}>
-            <RefreshCw className="mr-1.5 h-4 w-4" />
-            {t("common.retry")}
-          </Button>
-        </div>
+        <PageError message={t("settings.display.loadError")} onRetry={load} />
       ) : (
-        <div className="space-y-6 pt-5">
+        <div className="max-w-2xl space-y-6">
           <div className="space-y-2">
             <Label htmlFor="display-time-zone">{t("settings.display.timeZone")}</Label>
             <SearchableSelect
@@ -254,7 +247,7 @@ const DisplaySettingsTab = () => {
           </div>
         </div>
       )}
-    </section>
+    </SettingsSection>
   );
 };
 

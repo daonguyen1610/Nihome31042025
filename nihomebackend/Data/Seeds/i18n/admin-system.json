@@ -2184,6 +2184,14 @@
     "ja": "スライドタイトル"
   },
   {
+    "key": "set.slideshow.listTitle",
+    "category": "set",
+    "vi": "Danh sách slide",
+    "en": "Slides",
+    "zh": "幻灯片列表",
+    "ja": "スライド一覧"
+  },
+  {
     "key": "set.slideshow.loadError",
     "category": "set",
     "vi": "Không thể tải slideshow",
@@ -2510,6 +2518,30 @@
     "en": "Show public job positions.",
     "zh": "显示公开招聘职位。",
     "ja": "公開求人情報を表示。"
+  },
+  {
+    "key": "settings.general.tab",
+    "category": "settings",
+    "vi": "Cài đặt chung",
+    "en": "General settings",
+    "zh": "常规设置",
+    "ja": "一般設定"
+  },
+  {
+    "key": "settings.sections",
+    "category": "settings",
+    "vi": "Các mục cài đặt",
+    "en": "Settings sections",
+    "zh": "设置分区",
+    "ja": "設定セクション"
+  },
+  {
+    "key": "settings.security.desc",
+    "category": "settings",
+    "vi": "Kiểm soát xác thực OTP cho đăng ký và khôi phục mật khẩu.",
+    "en": "Control OTP verification for registration and password recovery.",
+    "zh": "控制注册与找回密码的 OTP 验证。",
+    "ja": "登録とパスワード再設定の OTP 認証を管理します。"
   },
   {
     "key": "settings.map.loadError",
