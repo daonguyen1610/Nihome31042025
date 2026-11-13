@@ -725,7 +725,7 @@ const AdminDesignProjects = () => {
                             variant="ghost"
                             size="sm"
                             disabled={!canDelete}
-                            className="text-rose-700 hover:bg-rose-50 hover:text-rose-800 disabled:text-muted-foreground"
+                            className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive disabled:text-muted-foreground"
                             onClick={() => void openDelete(r)}
                           >
                             <Trash2 className="mr-1 h-3.5 w-3.5" />
@@ -763,7 +763,7 @@ const AdminDesignProjects = () => {
                         className="cursor-pointer transition-colors hover:bg-muted/70"
                         onClick={() => openDetail(r.id)}
                       >
-                        <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                        <td className="whitespace-nowrap px-3 py-2 font-mono text-xs text-muted-foreground">
                           {r.projectCode}
                         </td>
                         <td className="px-3 py-2 font-medium text-foreground">
@@ -810,7 +810,7 @@ const AdminDesignProjects = () => {
                                   size="sm"
                                   disabled={!canDelete}
                                   aria-label={t("common.delete")}
-                                  className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                  className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                                   onClick={() => void openDelete(r)}
                                 >
                                   <Trash2 className="h-4 w-4" />

@@ -439,7 +439,7 @@ const AdminQuotes = () => {
           {/* Desktop table (xl+ only — sidebar-open laptops still cramp a
               9-col table at lg, so we defer to xl to avoid horizontal scroll). */}
           <div className="hidden overflow-x-auto rounded-lg border bg-card xl:block">
-            <table className="w-full min-w-[900px] divide-y text-sm">
+            <table className="w-full min-w-[1080px] divide-y text-sm">
               <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
                 <tr>
                   <Th>{t("quotes.field.code")}</Th>
@@ -450,7 +450,9 @@ const AdminQuotes = () => {
                   <Th>{t("quotes.field.validUntil")}</Th>
                   <Th>{t("quotes.field.owner")}</Th>
                   <Th className="text-right">{t("quotes.field.version")}</Th>
-                  <Th className="w-[220px] text-right">&nbsp;</Th>
+                  <Th className="sticky right-0 z-10 min-w-36 bg-muted/40 text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]">
+                    &nbsp;
+                  </Th>
                 </tr>
               </thead>
               <tbody className="divide-y">
@@ -470,8 +472,8 @@ const AdminQuotes = () => {
                           {r.code}
                         </Link>
                       </Td>
-                      <Td>{r.opportunityName ?? "—"}</Td>
-                      <Td>{r.customerName ?? "—"}</Td>
+                      <Td className="min-w-40">{r.opportunityName ?? "—"}</Td>
+                      <Td className="min-w-40">{r.customerName ?? "—"}</Td>
                       <Td className="whitespace-nowrap text-right font-medium">
                         {r.status === "Draft" && r.grandTotal === 0
                           ? t("quotes.inputPrice.pricePending")
@@ -483,9 +485,12 @@ const AdminQuotes = () => {
                       <Td className="whitespace-nowrap text-muted-foreground">
                         {formatDate(r.validUntil)}
                       </Td>
-                      <Td>{r.ownerName ?? "—"}</Td>
+                      <Td className="whitespace-nowrap">{r.ownerName ?? "—"}</Td>
                       <Td className="text-right">V{r.version}</Td>
-                      <Td className="text-right" onClick={(e) => e.stopPropagation()}>
+                      <Td
+                        className="sticky right-0 z-10 min-w-36 bg-card text-right shadow-[-8px_0_12px_-10px_rgba(0,0,0,0.25)]"
+                        onClick={(e) => e.stopPropagation()}
+                      >
                         <RowActions
                           row={r}
                           canManage={canManage}
@@ -692,7 +697,7 @@ const AdminQuotes = () => {
 // -------- small local presentation helpers --------
 
 const Th = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <th className={cn("px-3 py-2 text-left font-medium tracking-wide", className)}>{children}</th>
+  <th className={cn("whitespace-nowrap px-3 py-2 text-left font-medium", className)}>{children}</th>
 );
 
 const Td = ({
@@ -753,7 +758,10 @@ const RowActions = ({
     <Button
       variant="ghost"
       size="sm"
-      className={cn("h-8 px-2", opts.danger && "text-destructive hover:text-destructive")}
+      className={cn(
+        "h-8 px-2 text-muted-foreground hover:text-foreground",
+        opts.danger && "hover:bg-destructive/10 hover:text-destructive",
+      )}
       title={label}
       onClick={onClick}
       disabled={pending}
@@ -784,7 +792,7 @@ const RowActions = ({
         asChild
         variant="ghost"
         size="sm"
-        className="h-8 px-2"
+        className="h-8 px-2 text-muted-foreground hover:text-foreground"
         title={t("common.edit")}
         disabled={pending}
       >

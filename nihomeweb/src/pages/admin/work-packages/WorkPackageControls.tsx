@@ -432,7 +432,7 @@ export const Summary = ({
   href?: string;
 }) => (
   <div className="rounded-xl border bg-card p-4">
-    <div className="mb-2 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="mb-2 flex items-center gap-2 text-xs font-medium text-muted-foreground">
       <span className="[&>svg]:h-4 [&>svg]:w-4">{icon}</span>
       {label}
     </div>

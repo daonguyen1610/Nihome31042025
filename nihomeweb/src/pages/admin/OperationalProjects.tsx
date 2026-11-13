@@ -27,6 +27,7 @@ import {
   Users,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
+import { cn } from "@/lib/utils";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import ProjectDocumentsPanel from "@/pages/admin/ProjectDocumentsPanel";
 import { ProjectMasterSchedule } from "@/pages/admin/ProjectMasterSchedule";
@@ -1289,16 +1290,18 @@ const OperationalProjects = () => {
             </Button>
           </div>
 
-          <ListPagination
-            page={page}
-            pageSize={100}
-            total={total}
-            onPageChange={setPage}
-            disabled={loading}
-          />
-          <p className="text-sm text-muted-foreground">
-            {t("operationalProjects.total", { count: total })}
-          </p>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-sm text-muted-foreground">
+              {t("operationalProjects.total", { count: total })}
+            </p>
+            <ListPagination
+              page={page}
+              pageSize={100}
+              total={total}
+              onPageChange={setPage}
+              disabled={loading}
+            />
+          </div>
           {loading ? (
             <PageLoading />
           ) : error ? (
@@ -1320,11 +1323,14 @@ const OperationalProjects = () => {
                     onClick={() => navigate(`/admin/operational-projects/${project.id}`)}
                   >
                     <div className="flex items-start justify-between gap-3">
-                      <div>
+                      <div className="min-w-0">
                         <p className="font-mono text-xs text-muted-foreground">{project.code}</p>
                         <h2 className="mt-1 font-semibold">{project.name}</h2>
                       </div>
-                      <Badge variant="outline" className={statusClass[project.status]}>
+                      <Badge
+                        variant="outline"
+                        className={cn("shrink-0 whitespace-nowrap", statusClass[project.status])}
+                      >
                         {t(`operationalProjects.status.${project.status}`)}
                       </Badge>
                     </div>

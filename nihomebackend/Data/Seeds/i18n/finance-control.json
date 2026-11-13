@@ -11,6 +11,10 @@
   {"key":"finance.payments.description","category":"finance","vi":"Theo dõi hóa đơn nhà cung cấp từ tiếp nhận đến thanh toán hoặc hủy.","en":"Track supplier invoices from receipt through payment or cancellation.","zh":"跟踪供应商发票从接收到付款或取消的全过程。","ja":"仕入先請求書を受領から支払または取消まで追跡します。"},
   {"key":"finance.payments.create","category":"finance","vi":"Tạo đề nghị","en":"Create request","zh":"创建申请","ja":"申請を作成"},
   {"key":"finance.payments.empty","category":"finance","vi":"Chưa có đề nghị thanh toán.","en":"No payment requests exist.","zh":"尚无付款申请。","ja":"支払申請はありません。"},
+  {"key":"finance.field.status","category":"finance","vi":"Trạng thái","en":"Status","zh":"状态","ja":"ステータス"},
+  {"key":"finance.payments.search","category":"finance","vi":"Tìm mã, số hóa đơn, nhà cung cấp","en":"Search code, invoice, or vendor","zh":"搜索编号、发票或供应商","ja":"番号・請求書番号・仕入先で検索"},
+  {"key":"finance.payments.allStatuses","category":"finance","vi":"Tất cả trạng thái","en":"All statuses","zh":"全部状态","ja":"すべてのステータス"},
+  {"key":"finance.payments.noMatches","category":"finance","vi":"Không có đề nghị nào khớp bộ lọc.","en":"No payment requests match these filters.","zh":"没有符合筛选条件的付款申请。","ja":"条件に一致する支払申請はありません。"},
   {"key":"finance.periods.title","category":"finance","vi":"Kỳ kế toán","en":"Accounting periods","zh":"会计期间","ja":"会計期間"},
   {"key":"finance.periods.description","category":"finance","vi":"Mở kỳ theo tháng, bắt đầu quy trình đóng và đóng sổ với lý do được ghi nhận.","en":"Create monthly periods, start closing, and close the books with a recorded reason.","zh":"创建月度期间、启动关账并记录原因完成关账。","ja":"月次期間を作成し、締め処理を開始して理由を記録した上で締めます。"},
   {"key":"finance.periods.create","category":"finance","vi":"Tạo kỳ","en":"Create period","zh":"创建期间","ja":"期間を作成"},
@@ -112,6 +116,7 @@
   {"key":"finance.lookup.noDownstreamQs","category":"finance","vi":"Không gắn QS (ví dụ tạm ứng)","en":"No QS link (for example, an advance)","zh":"不关联QS（例如预付款）","ja":"QS連携なし（前払いなど）"},
   {"key":"finance.lookup.qsUnavailable","category":"finance","vi":"QS không còn hợp lệ; chọn QS khác","en":"QS no longer eligible; choose another","zh":"QS已不再符合条件；请选择其他QS","ja":"QSが無効になりました。別のQSを選択してください"},
   {"key":"finance.field.revision","category":"finance","vi":"Phiên bản","en":"Revision","zh":"修订版","ja":"改訂版"},
+  {"key":"finance.field.decisionReason","category":"finance","vi":"Lý do quyết định","en":"Decision reason","zh":"决策原因","ja":"判断理由"},
   {"key":"finance.field.priorRevisions","category":"finance","vi":"Phiên bản trước","en":"Earlier revisions","zh":"历史修订版","ja":"過去の改訂版"},
   {"key":"finance.lookup.optionalId","category":"finance","vi":"ID không bắt buộc","en":"Optional ID","zh":"可选 ID","ja":"任意のID"},
   {"key":"finance.lookup.accountant","category":"finance","vi":"Chọn kế toán đang hoạt động","en":"Choose an active accountant","zh":"选择在职会计","ja":"有効な経理担当者を選択"},
@@ -146,5 +151,5 @@
   {"key":"finance.success.correctionApprove","category":"finance","vi":"Đã phê duyệt bút toán điều chỉnh.","en":"Accounting correction approved.","zh":"会计调整已批准。","ja":"会計修正を承認しました。"},
   {"key":"finance.success.correctionReject","category":"finance","vi":"Đã từ chối bút toán điều chỉnh.","en":"Accounting correction rejected.","zh":"会计调整已拒绝。","ja":"会計修正を却下しました。"},
   {"key":"finance.success.correctionReverse","category":"finance","vi":"Đã đảo bút toán điều chỉnh.","en":"Accounting correction reversed.","zh":"会计调整已冲销。","ja":"会計修正を取り消しました。"},
-  {"key": "finance.payments.referencesEmpty", "category": "finance", "vi": "Cần có hợp đồng đối tác đã ký và kế toán đang hoạt động để tạo đề nghị thanh toán.", "en": "A signed downstream contract and an active accountant are required to create a payment request.", "zh": "创建付款申请需要已签署的下游合同和在职会计。", "ja": "支払申請には署名済みの下流契約と有効な会計担当者が必要です。"}
+  {"key":"finance.payments.referencesEmpty","category":"finance","vi":"Cần có hợp đồng đối tác đã ký và kế toán đang hoạt động để tạo đề nghị thanh toán.","en":"A signed downstream contract and an active accountant are required to create a payment request.","zh":"创建付款申请需要已签署的下游合同和在职会计。","ja":"支払申請には署名済みの下流契約と有効な会計担当者が必要です。"}
 ]

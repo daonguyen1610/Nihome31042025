@@ -1041,7 +1041,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   if (!initialLoaded && loading && !sourceContractId && !prefillOpportunityId) {
     return (
       <AdminLayout>
-        <div className="p-4 sm:p-6">
+        <div>
           <PageLoading />
         </div>
       </AdminLayout>
@@ -1050,7 +1050,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   if (error && !dialogOpen && !sourceContractId && !prefillOpportunityId) {
     return (
       <AdminLayout>
-        <div className="p-4 sm:p-6">
+        <div>
           <PageError message={error} onRetry={() => void load()} />
         </div>
       </AdminLayout>
@@ -1059,7 +1059,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold">
@@ -1718,7 +1718,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <table className="w-full min-w-[1000px] divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
+                    <th className="min-w-56 px-3 py-3 text-left font-medium">
                       {t("contracts.field.number")}
                     </th>
                     <th className="min-w-[220px] px-3 py-3 text-left font-medium">
@@ -1780,12 +1780,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         onMouseLeave={() => setHoveredContractId(null)}
                       >
                         <td
-                          className="whitespace-nowrap px-3 py-3 font-mono text-xs"
+                          className="min-w-56 px-3 py-3 align-top font-mono text-xs"
                           onClick={(event) => event.stopPropagation()}
                         >
                           <Link
                             to={detailUrl(row.id)}
-                            className="inline-flex items-center gap-1 text-primary hover:underline"
+                            className="inline-flex items-start gap-1 break-all text-primary hover:underline"
                           >
                             {row.contractNumber}
                             <ExternalLink className="h-3 w-3 opacity-70" />

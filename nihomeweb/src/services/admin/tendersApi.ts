@@ -71,8 +71,6 @@ export const tendersApi = {
     api.get<DeletionImpactResponse>(`/capability-documents/${id}/deletion-impact`),
   deleteCapabilityDocument: (id: number, body: ConfirmDeletionRequest) =>
     api.delete<HardDeleteOperationResult>(`/capability-documents/${id}`, { data: body }),
-  downloadCapabilityDocumentsZip: (ids: number[]) =>
-    api.post<Blob>(`/capability-documents/download-zip`, { ids }, { responseType: "blob" }),
   getTenderStatistics: (params: TenderStatisticsParams, signal?: AbortSignal) =>
     api.get<TenderStatisticsResponse>("/tenders/statistics", { params, signal }),
   getTenderReportPreparers: () =>

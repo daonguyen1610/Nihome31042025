@@ -246,14 +246,14 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
   return (
     <>
       <section className="space-y-4">
-        <div className="flex flex-wrap items-center justify-end gap-2">
-          {canManage && (
+        {canManage && rows.length > 0 && (
+          <div className="flex flex-wrap items-center justify-end gap-2">
             <Button onClick={openCreate} data-testid="resource-new">
               <Plus className="mr-2 h-4 w-4" />
               {t("construction.resource.new")}
             </Button>
-          )}
-        </div>
+          </div>
+        )}
         {loading ? (
           <PageLoading />
         ) : error ? (

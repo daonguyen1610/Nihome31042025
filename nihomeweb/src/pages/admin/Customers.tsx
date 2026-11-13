@@ -701,12 +701,12 @@ const AdminCustomers = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("customers.title")}</h1>
             <p className="text-sm text-muted-foreground">{t("customers.subtitle")}</p>
-            <p className="text-xs text-muted-foreground italic mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               {(canSeeAll ? t("customers.totalCount") : t("customers.myScopeCount")).replace(
                 "{count}",
                 total.toString(),
@@ -925,7 +925,7 @@ const AdminCustomers = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                           onClick={() => void handleDelete(c.id)}
                           title={t("common.delete")}
                           aria-label={t("common.delete")}
@@ -1067,6 +1067,7 @@ const AdminCustomers = () => {
                                 }}
                                 title={t("common.delete")}
                                 aria-label={t("common.delete")}
+                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>
@@ -1742,6 +1743,7 @@ const AdminCustomers = () => {
                               onClick={() => void handleDeleteContact(c)}
                               title={t("common.delete")}
                               aria-label={t("common.delete")}
+                              className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>
@@ -2085,6 +2087,7 @@ const AdminCustomers = () => {
                                 onClick={() => void handleDeleteDocument(document.id)}
                                 title={t("common.delete")}
                                 aria-label={t("common.delete")}
+                                className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                               >
                                 <Trash2 className="h-4 w-4" />
                               </Button>

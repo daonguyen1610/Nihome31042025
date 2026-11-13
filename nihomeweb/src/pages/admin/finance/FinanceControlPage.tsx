@@ -11,11 +11,11 @@ import {
   Check,
   CircleDollarSign,
   FileClock,
-  Landmark,
   Pencil,
   Plus,
   RefreshCw,
   RotateCcw,
+  Search,
   Send,
   ShieldCheck,
   X,
@@ -62,6 +62,7 @@ import {
 import { useAppSelector } from "@/store";
 import {
   dateTimeLocalToIso,
+  formatDate as formatCalendarDate,
   formatDateTime,
   formatMoney,
   normalizeCurrency,
@@ -130,6 +131,17 @@ const statusClass: Record<string, string> = {
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Reversed: "border-rose-200 bg-rose-50 text-rose-700",
 };
+
+const ALL_STATUSES = "all";
+const PAYMENT_STATUSES = [
+  "Draft",
+  "UnderValidation",
+  "ReadyForApproval",
+  "Approved",
+  "Paid",
+  "Rejected",
+  "Cancelled",
+] as const;
 
 const hostRelativePath = (value: string) =>
   value.startsWith("/") &&
@@ -277,7 +289,16 @@ const FinanceControlPage = () => {
     </Badge>
   );
   const formatDate = (value?: string | null) =>
-    value ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" }) : "-";
+    value
+      ? formatDateTime(value, lang, {
+          day: "2-digit",
+          month: "2-digit",
+          year: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      : "-";
+  const formatDay = (value?: string | null) => (value ? formatCalendarDate(value, lang) : "-");
 
   const runMutation = async (
     operation: () => Promise<unknown>,
@@ -471,14 +492,10 @@ const FinanceControlPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 p-4 sm:p-6">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-primary">
-              <Landmark className="h-5 w-5" />
-              <span className="text-xs font-semibold uppercase">{t("nav.finance")}</span>
-            </div>
-            <h1 className="mt-1 text-2xl font-semibold">{t("finance.title")}</h1>
+      <div className="space-y-5">
+        <header className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="text-2xl font-semibold">{t("finance.title")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t("finance.subtitle")}</p>
           </div>
           <Button
@@ -530,6 +547,7 @@ const FinanceControlPage = () => {
                   busy={busy}
                   status={status}
                   formatDate={formatDate}
+                  formatDay={formatDay}
                   t={t}
                   onCreate={() => openCreate("payment")}
                   onEdit={openEditPayment}
@@ -559,6 +577,7 @@ const FinanceControlPage = () => {
                   busy={busy}
                   status={status}
                   formatDate={formatDate}
+                  formatDay={formatDay}
                   t={t}
                   onCreate={() => openCreate("period")}
                   onStart={(row) =>
@@ -789,6 +808,7 @@ const PaymentsPanel = ({
   busy,
   status,
   formatDate,
+  formatDay,
   t,
   onCreate,
   onEdit,
@@ -804,245 +824,327 @@ const PaymentsPanel = ({
   busy: boolean;
   status: (value: string) => ReactNode;
   formatDate: (value?: string | null) => string;
+  formatDay: (value?: string | null) => string;
   t: Translate;
   onCreate: () => void;
   onEdit: (row: PaymentRequestResponse) => void;
   onSubmit: (row: PaymentRequestResponse) => void;
   onValidate: (row: PaymentRequestResponse) => void;
   onAction: (target: ActionTarget) => void;
-}) => (
-  <section>
-    <PanelHeader
-      title={t("finance.payments.title")}
-      description={t("finance.payments.description")}
-      action={
-        canManage && (
-          <Button onClick={onCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            {t("finance.payments.create")}
-          </Button>
-        )
-      }
-    />
-    {rows.length === 0 ? (
-      <PageEmpty message={t("finance.payments.empty")} />
-    ) : (
-      <div className="grid gap-4 xl:grid-cols-2">
-        {rows.map((row) => (
-          <article className="rounded-md border p-4" key={row.id}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h3 className="font-semibold">{row.code}</h3>
-                <p className="text-sm text-muted-foreground">{row.supplierInvoiceNumber}</p>
-                <p className="text-xs text-muted-foreground">
-                  {t("finance.field.revision")} {row.revisionNumber ?? 1}
-                </p>
-              </div>
-              {status(row.status)}
+}) => {
+  const [query, setQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>(ALL_STATUSES);
+  const needle = query.trim().toLowerCase();
+  const visibleRows = rows.filter((row) => {
+    if (statusFilter !== ALL_STATUSES && row.status !== statusFilter) return false;
+    if (!needle) return true;
+    return [row.code, row.supplierInvoiceNumber, row.vendorName, row.contractNumber].some((value) =>
+      value?.toLowerCase().includes(needle),
+    );
+  });
+
+  return (
+    <section>
+      <PanelHeader
+        title={t("finance.payments.title")}
+        description={t("finance.payments.description")}
+        action={
+          canManage && (
+            <Button onClick={onCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              {t("finance.payments.create")}
+            </Button>
+          )
+        }
+      />
+      {rows.length === 0 ? (
+        <PageEmpty message={t("finance.payments.empty")} />
+      ) : (
+        <div className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative flex-1 sm:max-w-sm">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                aria-label={t("finance.payments.search")}
+                className="pl-9"
+                placeholder={t("finance.payments.search")}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+              />
             </div>
-            <dl className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
-              <Data label={t("finance.field.contract")}>{row.contractNumber}</Data>
-              {row.constructionQsBatchId && (
-                <Data label={t("finance.field.downstreamQs")}>
-                  {row.constructionQsCode ?? `#${row.constructionQsBatchId}`}
-                </Data>
-              )}
-              <Data label={t("finance.field.vendor")}>{row.vendorName}</Data>
-              <Data label={t("finance.field.amount")}>
-                {formatMoney(row.invoiceAmount, row.currency)}
-              </Data>
-              <Data label={t("finance.field.invoiceDate")}>{formatDate(row.invoiceDate)}</Data>
-              <Data label={t("finance.field.receivedAt")}>{formatDate(row.receivedAt)}</Data>
-              <Data label={t("finance.field.accountant")}>
-                {row.assignedAccountantName ?? `#${row.assignedAccountantUserId}`}
-              </Data>
-            </dl>
-            {row.attachments.length > 0 && (
-              <div className="mt-4 border-t pt-3">
-                <p className="text-xs font-medium uppercase text-muted-foreground">
-                  {t("finance.field.attachments")}
-                </p>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {row.attachments.map((item) => (
-                    <a
-                      className="text-sm text-primary underline-offset-4 hover:underline"
-                      href={item.filePath}
-                      target="_blank"
-                      rel="noreferrer noopener"
-                      key={item.id}
-                    >
-                      {item.fileName}
-                    </a>
-                  ))}
-                </div>
-              </div>
-            )}
-            {(row.revisions?.length ?? 0) > 0 && (
-              <details className="mt-4 border-t pt-3">
-                <summary className="cursor-pointer text-sm font-medium">
-                  {t("finance.field.priorRevisions")} ({row.revisions.length})
-                </summary>
-                <ol className="mt-3 space-y-3">
-                  {row.revisions.map((revision) => (
-                    <li className="rounded border p-3 text-sm" key={revision.revisionNumber}>
-                      <p className="font-medium">
-                        {t("finance.field.revision")} {revision.revisionNumber} ·{" "}
-                        {t(`finance.status.${revision.status}`)}
-                      </p>
-                      <p>{revision.supplierInvoiceNumber}</p>
-                      <p>
-                        {formatMoney(revision.invoiceAmount, revision.currency)} · QS #
-                        {revision.constructionQsBatchId ?? "-"}
-                      </p>
-                      <p className="text-muted-foreground">
-                        {formatDate(revision.capturedAt)} · {revision.revisionReason}
-                      </p>
-                      {revision.attachments.map((attachment) => (
-                        <a
-                          key={attachment.id}
-                          href={attachment.filePath}
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="mr-3 text-primary underline-offset-4 hover:underline"
-                        >
-                          {attachment.fileName}
-                        </a>
-                      ))}
-                    </li>
-                  ))}
-                </ol>
-              </details>
-            )}
-            <details className="mt-4 border-t pt-3">
-              <summary className="cursor-pointer text-sm font-medium">
-                {t("finance.field.timeline")} ({row.events.length})
-              </summary>
-              <ol className="mt-3 space-y-3 border-l pl-4">
-                {row.events.map((event) => (
-                  <li key={event.id}>
-                    <div className="flex flex-wrap items-center gap-2">
-                      {event.fromStatus && (
-                        <span className="text-xs text-muted-foreground">
-                          {t(`finance.status.${event.fromStatus}`)} {"->"}
-                        </span>
-                      )}
-                      {status(event.toStatus)}
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {event.changedByName ?? `#${event.changedByUserId}`} ·{" "}
-                      {formatDate(event.changedAt)}
-                    </p>
-                    {event.reason && <p className="mt-1 text-sm">{event.reason}</p>}
-                  </li>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="sm:w-56" aria-label={t("finance.field.status")}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value={ALL_STATUSES}>{t("finance.payments.allStatuses")}</SelectItem>
+                {PAYMENT_STATUSES.map((value) => (
+                  <SelectItem key={value} value={value}>
+                    {t(`finance.status.${value}`)}
+                  </SelectItem>
                 ))}
-              </ol>
-            </details>
-            {row.decisionReason && (
-              <p className="mt-3 border-l-2 border-amber-400 pl-3 text-sm">{row.decisionReason}</p>
-            )}
-            <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
-              {canManage && row.status === "Draft" && (
-                <ActionButton
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => onEdit(row)}
-                  icon={<Pencil className="mr-2 h-4 w-4" />}
-                >
-                  {t("finance.action.edit")}
-                </ActionButton>
-              )}
-              {canManage &&
-                (row.status === "Rejected" ||
-                  (Boolean(row.constructionQsBatchId) &&
-                    ["UnderValidation", "ReadyForApproval", "Approved"].includes(row.status))) && (
-                  <ActionButton
-                    variant="outline"
-                    disabled={busy}
-                    onClick={() =>
-                      onAction({ kind: "paymentRevise", id: row.id, rowVersion: row.rowVersion })
-                    }
-                    icon={<RotateCcw className="mr-2 h-4 w-4" />}
-                  >
-                    {t("finance.action.paymentRevise")}
-                  </ActionButton>
-                )}
-              {canManage && row.status === "Draft" && (
-                <ActionButton
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() => onSubmit(row)}
-                  icon={<Send className="mr-2 h-4 w-4" />}
-                >
-                  {t("finance.action.submit")}
-                </ActionButton>
-              )}
-              {canManage &&
-                row.status === "UnderValidation" &&
-                row.assignedAccountantUserId === currentUserId && (
-                  <ActionButton
-                    variant="outline"
-                    disabled={busy || row.attachments.length === 0}
-                    onClick={() => onValidate(row)}
-                    icon={<ShieldCheck className="mr-2 h-4 w-4" />}
-                  >
-                    {t("finance.action.validate")}
-                  </ActionButton>
-                )}
-              {canApprove &&
-                row.status === "ReadyForApproval" &&
-                row.assignedAccountantUserId !== currentUserId && (
-                  <ActionButton
-                    disabled={busy}
-                    onClick={() =>
-                      onAction({ kind: "paymentApprove", id: row.id, rowVersion: row.rowVersion })
-                    }
-                    icon={<Check className="mr-2 h-4 w-4" />}
-                  >
-                    {t("finance.action.approve")}
-                  </ActionButton>
-                )}
-              {canApprove && ["UnderValidation", "ReadyForApproval"].includes(row.status) && (
-                <ActionButton
-                  variant="destructive"
-                  disabled={busy}
-                  onClick={() =>
-                    onAction({ kind: "paymentReject", id: row.id, rowVersion: row.rowVersion })
-                  }
-                  icon={<X className="mr-2 h-4 w-4" />}
-                >
-                  {t("finance.action.reject")}
-                </ActionButton>
-              )}
-              {canPay && row.status === "Approved" && (
-                <ActionButton
-                  disabled={busy}
-                  onClick={() =>
-                    onAction({ kind: "paymentPay", id: row.id, rowVersion: row.rowVersion })
-                  }
-                  icon={<Banknote className="mr-2 h-4 w-4" />}
-                >
-                  {t("finance.action.pay")}
-                </ActionButton>
-              )}
-              {canApprove && row.status === "Approved" && (
-                <ActionButton
-                  variant="outline"
-                  disabled={busy}
-                  onClick={() =>
-                    onAction({ kind: "paymentCancel", id: row.id, rowVersion: row.rowVersion })
-                  }
-                  icon={<X className="mr-2 h-4 w-4" />}
-                >
-                  {t("finance.action.cancelPayment")}
-                </ActionButton>
-              )}
+              </SelectContent>
+            </Select>
+          </div>
+
+          {visibleRows.length === 0 ? (
+            <PageEmpty message={t("finance.payments.noMatches")} />
+          ) : (
+            <div className="space-y-3">
+              {visibleRows.map((row) => (
+                <article className="rounded-lg border bg-card" key={row.id}>
+                  <div className="flex flex-col gap-3 p-4 sm:p-5">
+                    <header className="flex flex-wrap items-start justify-between gap-x-6 gap-y-2">
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="font-semibold tabular-nums">{row.code}</h3>
+                          {(row.revisionNumber ?? 1) > 1 && (
+                            <span className="text-xs text-muted-foreground">
+                              {t("finance.field.revision")} {row.revisionNumber}
+                            </span>
+                          )}
+                          {status(row.status)}
+                        </div>
+                        <p className="mt-1 text-sm text-muted-foreground">
+                          {row.supplierInvoiceNumber}
+                        </p>
+                      </div>
+                      <p className="text-xl font-semibold tabular-nums tracking-tight">
+                        {formatMoney(row.invoiceAmount, row.currency)}
+                      </p>
+                    </header>
+                    <dl className="grid grid-cols-2 gap-x-6 gap-y-3 lg:grid-cols-3">
+                      <Data label={t("finance.field.contract")}>{row.contractNumber}</Data>
+                      {row.constructionQsBatchId && (
+                        <Data label={t("finance.field.downstreamQs")}>
+                          {row.constructionQsCode ?? `#${row.constructionQsBatchId}`}
+                        </Data>
+                      )}
+                      <Data label={t("finance.field.vendor")}>{row.vendorName}</Data>
+                      <Data label={t("finance.field.invoiceDate")}>
+                        {formatDay(row.invoiceDate)}
+                      </Data>
+                      <Data label={t("finance.field.receivedAt")}>
+                        {formatDate(row.receivedAt)}
+                      </Data>
+                      <Data label={t("finance.field.accountant")}>
+                        {row.assignedAccountantName ?? `#${row.assignedAccountantUserId}`}
+                      </Data>
+                    </dl>
+                    {row.attachments.length > 0 && (
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                        <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          {t("finance.field.attachments")}
+                        </span>
+                        {row.attachments.map((item) => (
+                          <a
+                            className="text-primary underline-offset-4 hover:underline"
+                            href={item.filePath}
+                            target="_blank"
+                            rel="noreferrer noopener"
+                            key={item.id}
+                          >
+                            {item.fileName}
+                          </a>
+                        ))}
+                      </div>
+                    )}
+                    {(row.revisions?.length ?? 0) > 0 && (
+                      <details className="border-t pt-3">
+                        <summary className="cursor-pointer text-sm font-medium">
+                          {t("finance.field.priorRevisions")} ({row.revisions.length})
+                        </summary>
+                        <ol className="mt-3 divide-y">
+                          {row.revisions.map((revision) => (
+                            <li
+                              className="py-3 text-sm first:pt-0 last:pb-0"
+                              key={revision.revisionNumber}
+                            >
+                              <p className="font-medium">
+                                {t("finance.field.revision")} {revision.revisionNumber} ·{" "}
+                                {t(`finance.status.${revision.status}`)}
+                              </p>
+                              <p>{revision.supplierInvoiceNumber}</p>
+                              <p>
+                                {formatMoney(revision.invoiceAmount, revision.currency)} · QS #
+                                {revision.constructionQsBatchId ?? "-"}
+                              </p>
+                              <p className="text-muted-foreground">
+                                {formatDate(revision.capturedAt)} · {revision.revisionReason}
+                              </p>
+                              {revision.attachments.map((attachment) => (
+                                <a
+                                  key={attachment.id}
+                                  href={attachment.filePath}
+                                  target="_blank"
+                                  rel="noreferrer noopener"
+                                  className="mr-3 text-primary underline-offset-4 hover:underline"
+                                >
+                                  {attachment.fileName}
+                                </a>
+                              ))}
+                            </li>
+                          ))}
+                        </ol>
+                      </details>
+                    )}
+                    <details className="border-t pt-3">
+                      <summary className="cursor-pointer text-sm font-medium">
+                        {t("finance.field.timeline")} ({row.events.length})
+                      </summary>
+                      <ol className="mt-3 space-y-3 border-l pl-4">
+                        {row.events.map((event) => (
+                          <li key={event.id}>
+                            <div className="flex flex-wrap items-center gap-2">
+                              {event.fromStatus && (
+                                <span className="text-xs text-muted-foreground">
+                                  {t(`finance.status.${event.fromStatus}`)} {"->"}
+                                </span>
+                              )}
+                              {status(event.toStatus)}
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {event.changedByName ?? `#${event.changedByUserId}`} ·{" "}
+                              {formatDate(event.changedAt)}
+                            </p>
+                            {event.reason && <p className="mt-1 text-sm">{event.reason}</p>}
+                          </li>
+                        ))}
+                      </ol>
+                    </details>
+                    {row.decisionReason && (
+                      <div className="rounded-md bg-muted/50 px-3 py-2">
+                        <p className="text-xs font-medium text-muted-foreground">
+                          {t("finance.field.decisionReason")}
+                        </p>
+                        <p className="mt-0.5 text-sm">{row.decisionReason}</p>
+                      </div>
+                    )}
+                    <div className="flex flex-wrap justify-end gap-2 border-t pt-3 empty:hidden">
+                      {canManage && row.status === "Draft" && (
+                        <ActionButton
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() => onEdit(row)}
+                          icon={<Pencil className="mr-2 h-4 w-4" />}
+                        >
+                          {t("finance.action.edit")}
+                        </ActionButton>
+                      )}
+                      {canManage &&
+                        (row.status === "Rejected" ||
+                          (Boolean(row.constructionQsBatchId) &&
+                            ["UnderValidation", "ReadyForApproval", "Approved"].includes(
+                              row.status,
+                            ))) && (
+                          <ActionButton
+                            variant="outline"
+                            disabled={busy}
+                            onClick={() =>
+                              onAction({
+                                kind: "paymentRevise",
+                                id: row.id,
+                                rowVersion: row.rowVersion,
+                              })
+                            }
+                            icon={<RotateCcw className="mr-2 h-4 w-4" />}
+                          >
+                            {t("finance.action.paymentRevise")}
+                          </ActionButton>
+                        )}
+                      {canManage && row.status === "Draft" && (
+                        <ActionButton
+                          disabled={busy}
+                          onClick={() => onSubmit(row)}
+                          icon={<Send className="mr-2 h-4 w-4" />}
+                        >
+                          {t("finance.action.submit")}
+                        </ActionButton>
+                      )}
+                      {canManage &&
+                        row.status === "UnderValidation" &&
+                        row.assignedAccountantUserId === currentUserId && (
+                          <ActionButton
+                            disabled={busy || row.attachments.length === 0}
+                            onClick={() => onValidate(row)}
+                            icon={<ShieldCheck className="mr-2 h-4 w-4" />}
+                          >
+                            {t("finance.action.validate")}
+                          </ActionButton>
+                        )}
+                      {canApprove &&
+                        row.status === "ReadyForApproval" &&
+                        row.assignedAccountantUserId !== currentUserId && (
+                          <ActionButton
+                            disabled={busy}
+                            onClick={() =>
+                              onAction({
+                                kind: "paymentApprove",
+                                id: row.id,
+                                rowVersion: row.rowVersion,
+                              })
+                            }
+                            icon={<Check className="mr-2 h-4 w-4" />}
+                          >
+                            {t("finance.action.approve")}
+                          </ActionButton>
+                        )}
+                      {canApprove &&
+                        ["UnderValidation", "ReadyForApproval"].includes(row.status) && (
+                          <ActionButton
+                            variant="outline"
+                            className="text-destructive hover:text-destructive"
+                            disabled={busy}
+                            onClick={() =>
+                              onAction({
+                                kind: "paymentReject",
+                                id: row.id,
+                                rowVersion: row.rowVersion,
+                              })
+                            }
+                            icon={<X className="mr-2 h-4 w-4" />}
+                          >
+                            {t("finance.action.reject")}
+                          </ActionButton>
+                        )}
+                      {canPay && row.status === "Approved" && (
+                        <ActionButton
+                          disabled={busy}
+                          onClick={() =>
+                            onAction({ kind: "paymentPay", id: row.id, rowVersion: row.rowVersion })
+                          }
+                          icon={<Banknote className="mr-2 h-4 w-4" />}
+                        >
+                          {t("finance.action.pay")}
+                        </ActionButton>
+                      )}
+                      {canApprove && row.status === "Approved" && (
+                        <ActionButton
+                          variant="outline"
+                          disabled={busy}
+                          onClick={() =>
+                            onAction({
+                              kind: "paymentCancel",
+                              id: row.id,
+                              rowVersion: row.rowVersion,
+                            })
+                          }
+                          icon={<X className="mr-2 h-4 w-4" />}
+                        >
+                          {t("finance.action.cancelPayment")}
+                        </ActionButton>
+                      )}
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
-          </article>
-        ))}
-      </div>
-    )}
-  </section>
-);
+          )}
+        </div>
+      )}
+    </section>
+  );
+};
 
 const PeriodsPanel = ({
   rows,
@@ -1050,6 +1152,7 @@ const PeriodsPanel = ({
   busy,
   status,
   formatDate,
+  formatDay,
   t,
   onCreate,
   onStart,
@@ -1060,6 +1163,7 @@ const PeriodsPanel = ({
   busy: boolean;
   status: (value: string) => ReactNode;
   formatDate: (value?: string | null) => string;
+  formatDay: (value?: string | null) => string;
   t: Translate;
   onCreate: () => void;
   onStart: (row: AccountingPeriodResponse) => void;
@@ -1091,15 +1195,20 @@ const PeriodsPanel = ({
               {status(row.status)}
             </div>
             <dl className="mt-4 grid grid-cols-2 gap-3">
-              <Data label={t("finance.field.periodStart")}>{formatDate(row.periodStartUtc)}</Data>
-              <Data label={t("finance.field.periodEnd")}>{formatDate(row.periodEndUtc)}</Data>
+              <Data label={t("finance.field.periodStart")}>{formatDay(row.periodStartUtc)}</Data>
+              <Data label={t("finance.field.periodEnd")}>{formatDay(row.periodEndUtc)}</Data>
               <Data label={t("finance.field.closingAt")}>{formatDate(row.closingAt)}</Data>
               <Data label={t("finance.field.closedAt")}>{formatDate(row.closedAt)}</Data>
             </dl>
             {row.closeReason && (
-              <p className="mt-3 border-l-2 border-input pl-3 text-sm">{row.closeReason}</p>
+              <div className="mt-3 rounded-md bg-muted/50 px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {t("finance.field.decisionReason")}
+                </p>
+                <p className="mt-0.5 text-sm">{row.closeReason}</p>
+              </div>
             )}
-            <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t pt-3">
               {canClose && row.status === "Open" && (
                 <ActionButton
                   variant="outline"
@@ -1230,9 +1339,14 @@ const CorrectionsPanel = ({
               </ol>
             </details>
             {row.decisionReason && (
-              <p className="mt-3 border-l-2 border-amber-400 pl-3 text-sm">{row.decisionReason}</p>
+              <div className="mt-3 rounded-md bg-muted/50 px-3 py-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {t("finance.field.decisionReason")}
+                </p>
+                <p className="mt-0.5 text-sm">{row.decisionReason}</p>
+              </div>
             )}
-            <div className="mt-4 flex flex-wrap gap-2 border-t pt-3">
+            <div className="mt-4 flex flex-wrap justify-end gap-2 border-t pt-3">
               {canManage && row.status === "Draft" && !row.reversalOfCorrectionId && (
                 <ActionButton
                   variant="outline"
@@ -1261,7 +1375,8 @@ const CorrectionsPanel = ({
                       {t("finance.action.approve")}
                     </ActionButton>
                     <ActionButton
-                      variant="destructive"
+                      variant="outline"
+                      className="text-destructive hover:text-destructive"
                       disabled={busy}
                       onClick={() =>
                         onAction({
@@ -1278,7 +1393,8 @@ const CorrectionsPanel = ({
                 )}
               {canReverse && row.status === "Approved" && !row.reversalOfCorrectionId && (
                 <ActionButton
-                  variant="destructive"
+                  variant="outline"
+                  className="text-destructive hover:text-destructive"
                   disabled={busy}
                   onClick={() =>
                     onAction({ kind: "correctionReverse", id: row.id, rowVersion: row.rowVersion })

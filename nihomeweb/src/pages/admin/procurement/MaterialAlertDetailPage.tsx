@@ -130,7 +130,7 @@ const MaterialAlertDetailPage = () => {
   if (error || !alert)
     return (
       <AdminLayout>
-        <div className="p-4 sm:p-6">
+        <div>
           <PageError
             message={error ?? t("procurement.alerts.detail.notFound")}
             onRetry={() => void load()}
@@ -166,7 +166,7 @@ const MaterialAlertDetailPage = () => {
 
   return (
     <AdminLayout>
-      <main className="space-y-6 p-4 sm:p-6">
+      <div className="space-y-6">
         <nav
           aria-label={t("procurement.alerts.detail.context")}
           className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"
@@ -366,7 +366,7 @@ const MaterialAlertDetailPage = () => {
             </ol>
           </section>
         </div>
-      </main>
+      </div>
 
       <Dialog
         open={dialogOpen}

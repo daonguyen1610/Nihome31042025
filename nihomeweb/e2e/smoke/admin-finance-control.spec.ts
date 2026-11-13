@@ -305,7 +305,7 @@ test("finance control renders payments, periods, corrections, and payment histor
   await expect(page.getByText("Administrator").first()).toBeVisible();
 
   await page.getByRole("tab", { name: /Kỳ kế toán|Periods|会计期间|会計期間/i }).click();
-  await expect(page.getByText("08/2026")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "08/2026" })).toBeVisible();
   await page.getByRole("tab", { name: /Điều chỉnh|Corrections|调整|修正/i }).click();
   await expect(page.getByText("AC-000001")).toBeVisible();
 

@@ -337,7 +337,7 @@ const MaterialRequestDetailPage = () => {
   if (error || !request)
     return (
       <AdminLayout>
-        <div className="p-4 sm:p-6">
+        <div>
           <PageError
             message={error ?? t("procurement.request.detail.notFound")}
             onRetry={() => void load()}
@@ -378,7 +378,7 @@ const MaterialRequestDetailPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-6 p-4 sm:p-6">
+      <div className="space-y-6">
         <nav
           aria-label={t("procurement.request.detail.context")}
           className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground"

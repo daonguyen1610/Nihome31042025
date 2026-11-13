@@ -888,7 +888,7 @@ const AdminPermits = () => {
 
             {/* Desktop table */}
             <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm lg:block">
-              <table className="min-w-full text-sm">
+              <table className="min-w-[1024px] text-sm">
                 <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2">{t("permits.field.project")}</th>
@@ -907,7 +907,7 @@ const AdminPermits = () => {
                   {rows.map((r) => (
                     <tr key={r.id} className="transition-colors hover:bg-muted/70">
                       <td className="px-3 py-2 text-foreground">
-                        <div className="font-mono text-xs text-muted-foreground">
+                        <div className="whitespace-nowrap font-mono text-xs text-muted-foreground">
                           {r.operationalProjectCode ?? "—"}
                         </div>
                         <div className="text-foreground">{r.operationalProjectName ?? "—"}</div>
@@ -924,10 +924,12 @@ const AdminPermits = () => {
                       <td className="px-3 py-2 text-foreground">{r.ownerName ?? "—"}</td>
                       <td className="px-3 py-2 text-foreground">{r.approverName ?? "—"}</td>
                       <td className="px-3 py-2 text-foreground">
-                        <div className="min-w-24">
-                          <div className="mb-1 flex justify-between text-xs">
-                            <span>{r.workTaskStatus ?? "—"}</span>
-                            <span>{r.progressPercent}%</span>
+                        <div className="min-w-28">
+                          <div className="mb-1 flex justify-between gap-2 text-xs">
+                            <span className="whitespace-nowrap">{r.workTaskStatus ?? "—"}</span>
+                            <span className="whitespace-nowrap tabular-nums">
+                              {r.progressPercent}%
+                            </span>
                           </div>
                           <div className="h-1.5 overflow-hidden rounded bg-muted">
                             <div

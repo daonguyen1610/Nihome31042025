@@ -1013,14 +1013,10 @@ const ProcurementControlPage = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-5 p-4 sm:p-6">
+      <div className="space-y-5">
         <header className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
           <div>
-            <div className="flex items-center gap-2 text-primary">
-              <ShoppingCart className="h-5 w-5" />
-              <span className="text-xs font-semibold uppercase">{t("nav.procurement")}</span>
-            </div>
-            <h1 className="mt-1 text-2xl font-semibold">{t("procurement.title")}</h1>
+            <h1 className="text-2xl font-semibold">{t("procurement.title")}</h1>
             <p className="mt-1 text-sm text-muted-foreground">{t("procurement.subtitle")}</p>
           </div>
           <div className="grid w-full grid-cols-[minmax(0,1fr)_44px] items-end gap-2 lg:max-w-xl">

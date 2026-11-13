@@ -491,12 +491,12 @@ const AdminLeads = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("leads.title")}</h1>
             <p className="text-sm text-muted-foreground">{t("leads.subtitle")}</p>
-            <p className="text-xs text-muted-foreground italic mt-1">
+            <p className="mt-1 text-xs text-muted-foreground">
               {(canSeeAll ? t("leads.totalCount") : t("leads.myScopeCount")).replace(
                 "{count}",
                 total.toString(),
@@ -699,7 +699,7 @@ const AdminLeads = () => {
                       }}
                       title={t("common.delete")}
                       aria-label={t("common.delete")}
-                      className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
@@ -799,6 +799,7 @@ const AdminLeads = () => {
                           }}
                           title={t("common.delete")}
                           aria-label={t("common.delete")}
+                          className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                         >
                           <Trash2 className="h-4 w-4" />
                         </Button>
