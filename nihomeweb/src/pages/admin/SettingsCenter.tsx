@@ -1,9 +1,14 @@
 import { useConfirm } from "@/components/ui/confirmation";
+import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   ExternalLink,
+  FileText,
+  Gauge,
+  Globe2,
   HardDrive,
+  Images,
   LogOut,
   Map as MapIcon,
   RefreshCw,
@@ -24,6 +29,9 @@ import CmSchedulePolicy from "./settings/CmSchedulePolicy";
 import DisplaySettingsTab from "./settings/DisplaySettingsTab";
 import SlideshowSettings from "./settings/SlideshowSettings";
 import GoogleDriveConfigurationForm from "./settings/GoogleDriveConfigurationForm";
+import SettingsSection from "./settings/SettingsSection";
+import { settingsSectionId } from "./settings/settingsSectionIds";
+import { PageError, PageLoading } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { parseVnd } from "@/lib/numberFormat";
@@ -31,24 +39,35 @@ import { formatNumber } from "@/lib/displaySettings";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cn } from "@/lib/utils";
 
-// Tabs are limited to features that actually persist through a real backend
-// endpoint. Company info, feature-flag toggles, generic social/SEO/security
-// settings and thumbnail media settings used to live here but were
-// localStorage-only mocks; they were removed because they violated the
+// Every setting here persists through a real backend endpoint. Company info,
+// feature-flag toggles and generic social/SEO toggles used to live here but
+// were localStorage-only mocks; they were removed because they violated the
 // "no dead code / no hardcode" rule.
-type Tab = "display" | "cm-schedule" | "security" | "contracts" | "slideshow" | "map" | "drive";
+type Tab = "general" | "drive";
+type SectionKey = "display" | "cm-schedule" | "security" | "contracts" | "map" | "slideshow";
 type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
-  { key: "display", labelKey: "settings.display.tab" },
-  { key: "cm-schedule", labelKey: "cmSchedule.policyTitle" },
-  { key: "security", labelKey: "settings.tab.security" },
-  { key: "contracts", labelKey: "settings.contractUploads.tab" },
-  { key: "slideshow", labelKey: "set.slideshow" },
-  { key: "map", labelKey: "settings.map.tab" },
+  { key: "general", labelKey: "settings.general.tab" },
   { key: "drive", labelKey: "settings.drive.tab" },
 ];
+
+// Order follows how often each setting is touched, not the old tab order.
+const sections: { key: SectionKey; labelKey: string; icon: LucideIcon }[] = [
+  { key: "display", labelKey: "settings.display.tab", icon: Globe2 },
+  { key: "cm-schedule", labelKey: "cmSchedule.policyTitle", icon: Gauge },
+  { key: "security", labelKey: "settings.tab.security", icon: ShieldCheck },
+  { key: "contracts", labelKey: "settings.contractUploads.tab", icon: FileText },
+  { key: "map", labelKey: "settings.map.tab", icon: MapIcon },
+  { key: "slideshow", labelKey: "set.slideshow", icon: Images },
+];
+
+const isTab = (value: string | null): value is Tab => value === "general" || value === "drive";
+
+const isSectionKey = (value: string | null): value is SectionKey =>
+  sections.some((section) => section.key === value);
 
 const DRIVE_STATUS_KEYS: Record<GoogleDriveAdminStatusResponse["status"], string> = {
   Disabled: "settings.drive.status.disabled",
@@ -94,15 +113,23 @@ const OtpToggleControl = ({
   savingLabel: string;
   onToggle: (value: boolean) => void;
 }) => (
-  <div className="flex items-start gap-4 rounded-lg border bg-muted/40 px-4 py-4">
-    <div className="pt-0.5">
-      <Switch checked={enabled} onCheckedChange={onToggle} disabled={disabled} aria-label={label} />
-    </div>
+  <div className="flex items-start justify-between gap-6 py-4 first:pt-0 last:pb-0">
     <div className="min-w-0">
       <p className="text-sm font-medium">{label}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{description}</p>
-      {saving && <p className="mt-2 text-xs font-medium text-primary">{savingLabel}</p>}
+      <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      {saving && (
+        <p role="status" className="mt-1 text-xs font-medium text-primary">
+          {savingLabel}
+        </p>
+      )}
     </div>
+    <Switch
+      checked={enabled}
+      onCheckedChange={onToggle}
+      disabled={disabled}
+      aria-label={label}
+      className="mt-0.5 shrink-0"
+    />
   </div>
 );
 
@@ -162,23 +189,18 @@ const SecurityTab = () => {
   };
 
   return (
-    <section className="rounded-lg border bg-card p-6">
-      <div className="flex items-center gap-2 border-b pb-4">
-        <ShieldCheck className="h-5 w-5 text-primary" />
-        <h2 className="text-lg font-semibold">{t("set.otp.securityTitle")}</h2>
-      </div>
-
+    <SettingsSection
+      sectionKey="security"
+      icon={ShieldCheck}
+      title={t("settings.tab.security")}
+      description={t("settings.security.desc")}
+    >
       {otpLoading ? (
-        <p className="pt-5 text-sm text-muted-foreground">{t("set.otp.loading")}</p>
+        <PageLoading />
       ) : otpLoadFailed || !otpSettings ? (
-        <div className="flex flex-col gap-3 pt-5 sm:flex-row sm:items-center">
-          <p className="text-sm text-muted-foreground">{t("set.otp.loadError")}</p>
-          <Button type="button" size="sm" variant="outline" onClick={loadOtpSettings}>
-            {t("common.retry")}
-          </Button>
-        </div>
+        <PageError message={t("set.otp.loadError")} onRetry={loadOtpSettings} />
       ) : (
-        <div className="grid grid-cols-1 gap-4 pt-5 xl:grid-cols-2">
+        <div className="max-w-2xl divide-y">
           <OtpToggleControl
             label={t("set.otp.registrationLabel")}
             description={t("set.otp.registrationDesc")}
@@ -199,7 +221,7 @@ const SecurityTab = () => {
           />
         </div>
       )}
-    </section>
+    </SettingsSection>
   );
 };
 
@@ -261,24 +283,19 @@ const MapTab = () => {
   const previewUrl = savedUrl || url.trim();
 
   return (
-    <div className="space-y-4">
-      <section className="rounded-lg border bg-card p-6">
-        <div className="mb-5 flex items-center gap-3 border-b pb-4">
-          <MapIcon className="h-5 w-5 text-primary" />
-          <div>
-            <h2 className="text-lg font-semibold">{t("settings.map.title")}</h2>
-            <p className="mt-1 text-xs text-muted-foreground">{t("settings.map.urlHint")}</p>
-          </div>
-        </div>
-
-        {loading ? (
-          <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
-        ) : (
-          <div className="space-y-4">
+    <SettingsSection
+      sectionKey="map"
+      icon={MapIcon}
+      title={t("settings.map.title")}
+      description={t("settings.map.urlHint")}
+    >
+      {loading ? (
+        <PageLoading />
+      ) : (
+        <div className="space-y-6">
+          <div className="max-w-2xl space-y-3">
             <div className="space-y-1.5">
-              <Label htmlFor="map-embed-url" className="text-xs">
-                {t("settings.map.url")}
-              </Label>
+              <Label htmlFor="map-embed-url">{t("settings.map.url")}</Label>
               <Input
                 id="map-embed-url"
                 value={url}
@@ -287,34 +304,34 @@ const MapTab = () => {
                 className="h-9"
               />
             </div>
-            <div className="flex items-center gap-3">
-              <Button onClick={save} disabled={saving || url === savedUrl}>
-                <Save className="mr-1.5 h-4 w-4" /> {saving ? t("common.saving") : t("common.save")}
-              </Button>
+            <Button onClick={save} disabled={saving || url === savedUrl}>
+              <Save className="mr-1.5 h-4 w-4" /> {saving ? t("common.saving") : t("common.save")}
+            </Button>
+          </div>
+
+          <div className="border-t pt-5">
+            <h3 className="text-sm font-medium">{t("settings.map.preview")}</h3>
+            <div className="mt-3">
+              {previewUrl ? (
+                <iframe
+                  key={previewUrl}
+                  src={previewUrl}
+                  title={t("settings.map.preview")}
+                  className="h-96 w-full rounded-lg border"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              ) : (
+                <div className="flex h-96 w-full items-center justify-center rounded-lg border border-dashed bg-muted/40 text-sm text-muted-foreground">
+                  {t("settings.map.previewEmpty")}
+                </div>
+              )}
             </div>
           </div>
-        )}
-      </section>
-
-      <section className="rounded-lg border bg-card p-6">
-        <h3 className="mb-4 text-base font-semibold">{t("settings.map.preview")}</h3>
-        {previewUrl ? (
-          <iframe
-            key={previewUrl}
-            src={previewUrl}
-            title="Map preview"
-            className="h-96 w-full rounded-lg border"
-            loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            allowFullScreen
-          />
-        ) : (
-          <div className="flex h-96 w-full items-center justify-center rounded-lg border border-dashed bg-muted/40 text-sm text-muted-foreground">
-            {t("settings.map.previewEmpty")}
-          </div>
-        )}
-      </section>
-    </div>
+        </div>
+      )}
+    </SettingsSection>
   );
 };
 
@@ -693,15 +710,16 @@ const ContractUploadTab = () => {
   };
 
   return (
-    <section className="max-w-2xl rounded-lg border bg-card p-6">
-      <h2 className="text-lg font-semibold">{t("settings.contractUploads.title")}</h2>
-      <p className="mt-2 text-sm text-muted-foreground">
-        {t("settings.contractUploads.description")}
-      </p>
+    <SettingsSection
+      sectionKey="contracts"
+      icon={FileText}
+      title={t("settings.contractUploads.title")}
+      description={t("settings.contractUploads.description")}
+    >
       {loading ? (
-        <p className="mt-5 text-sm text-muted-foreground">{t("set.otp.loading")}</p>
+        <PageLoading />
       ) : (
-        <div className="mt-5 space-y-3">
+        <div className="max-w-2xl space-y-3">
           <Label htmlFor="contract-upload-limit">{t("settings.contractUploads.label")}</Label>
           <Input
             id="contract-upload-limit"
@@ -740,31 +758,119 @@ const ContractUploadTab = () => {
           </div>
         </div>
       )}
-    </section>
+    </SettingsSection>
   );
 };
 
 const SettingsCenter = () => {
   const { t } = useI18n();
   const [searchParams, setSearchParams] = useSearchParams();
-  const currentTab = searchParams.get("tab");
-  const initialTab = tabs.some((tab) => tab.key === currentTab) ? (currentTab as Tab) : "security";
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const rawTab = searchParams.get("tab");
+  // Older links named the tab after the section they opened. Keep them working
+  // by folding that tab into the general sheet and remembering the section.
+  const legacySection = isSectionKey(rawTab) ? rawTab : null;
+  const requestedSection = searchParams.get("section");
+  const targetSection = isSectionKey(requestedSection) ? requestedSection : legacySection;
+  const activeTab: Tab = rawTab === "drive" ? "drive" : "general";
+  const [activeSection, setActiveSection] = useState<SectionKey>(targetSection ?? "display");
 
   useEffect(() => {
-    if (tabs.some((tab) => tab.key === currentTab)) {
-      setActiveTab(currentTab as Tab);
-    }
-  }, [currentTab]);
+    if (!legacySection) return;
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", "general");
+    next.set("section", legacySection);
+    setSearchParams(next, { replace: true });
+  }, [legacySection, searchParams, setSearchParams]);
 
-  const onChangeTab = (tab: string) => {
-    setActiveTab(tab as Tab);
-    setSearchParams({ tab });
+  useEffect(() => {
+    if (activeTab !== "general" || !targetSection) return;
+    const target = document.getElementById(settingsSectionId(targetSection));
+    if (!target) return;
+    setActiveSection(targetSection);
+
+    // Sections above the target fill in as their settings load, pushing it
+    // down; keep it anchored while the sheet changes size, and hand scrolling
+    // back the moment the user takes over.
+    let cancelled = false;
+    let timer: number | undefined;
+    const align = () => {
+      if (!cancelled) target.scrollIntoView({ block: "start", behavior: "instant" });
+    };
+    const scheduleAlign = () => {
+      window.clearTimeout(timer);
+      timer = window.setTimeout(align, 50);
+    };
+    const sheet = target.parentElement;
+    const resizeObserver = sheet ? new ResizeObserver(scheduleAlign) : null;
+    if (sheet) resizeObserver?.observe(sheet);
+    const stop = () => {
+      cancelled = true;
+      resizeObserver?.disconnect();
+      window.clearTimeout(timer);
+    };
+    for (const event of ["wheel", "touchstart", "keydown"] as const)
+      window.addEventListener(event, stop, { passive: true, once: true });
+    const giveUp = window.setTimeout(stop, 6000);
+    align();
+    return () => {
+      cancelled = true;
+      window.clearTimeout(giveUp);
+      window.clearTimeout(timer);
+      resizeObserver?.disconnect();
+      for (const event of ["wheel", "touchstart", "keydown"] as const)
+        window.removeEventListener(event, stop);
+    };
+  }, [activeTab, targetSection]);
+
+  useEffect(() => {
+    if (activeTab !== "general") return;
+    let frame = 0;
+    // The nav marks the last section whose heading has passed under the sticky
+    // admin header, so the highlight always names what is being read.
+    const update = () => {
+      frame = 0;
+      let current: SectionKey = sections[0].key;
+      for (const { key } of sections) {
+        const element = document.getElementById(settingsSectionId(key));
+        if (element && element.getBoundingClientRect().top <= 104) current = key;
+      }
+      setActiveSection(current);
+    };
+    const requestUpdate = () => {
+      if (frame) return;
+      frame = window.requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", requestUpdate, { passive: true });
+    window.addEventListener("resize", requestUpdate);
+    return () => {
+      window.removeEventListener("scroll", requestUpdate);
+      window.removeEventListener("resize", requestUpdate);
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [activeTab]);
+
+  const goToSection = (key: SectionKey) => {
+    setActiveSection(key);
+    document
+      .getElementById(settingsSectionId(key))
+      ?.scrollIntoView({ block: "start", behavior: "instant" });
+    const next = new URLSearchParams(searchParams);
+    next.set("tab", "general");
+    next.set("section", key);
+    setSearchParams(next, { replace: true });
+  };
+
+  const onChangeTab = (value: string) => {
+    if (!isTab(value)) return;
+    setSearchParams(value === "drive" ? { tab: "drive" } : {}, { replace: true });
+    if (value === "general") setActiveSection("display");
+    window.scrollTo({ top: 0 });
   };
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="mx-auto w-full max-w-6xl space-y-5">
         <header>
           <h1 className="text-2xl font-semibold">{t("settings.title")}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{t("settings.centerDesc")}</p>
@@ -780,13 +886,48 @@ const SettingsCenter = () => {
           </TabsList>
         </Tabs>
 
-        {activeTab === "display" && <DisplaySettingsTab />}
-        {activeTab === "cm-schedule" && <CmSchedulePolicy />}
-        {activeTab === "security" && <SecurityTab />}
-        {activeTab === "contracts" && <ContractUploadTab />}
-        {activeTab === "slideshow" && <SlideshowSettings />}
-        {activeTab === "map" && <MapTab />}
-        {activeTab === "drive" && <DriveTab />}
+        {activeTab === "general" ? (
+          <div className="grid gap-5 lg:grid-cols-[13rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+            <aside className="min-w-0 lg:self-start">
+              <nav aria-label={t("settings.sections")}>
+                <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-0.5 lg:overflow-visible lg:pb-0">
+                  {sections.map(({ key, labelKey, icon: Icon }) => {
+                    const active = activeSection === key;
+                    return (
+                      <li key={key} className="shrink-0 lg:w-full">
+                        <button
+                          type="button"
+                          onClick={() => goToSection(key)}
+                          aria-current={active ? "location" : undefined}
+                          className={cn(
+                            "flex w-full items-center gap-2.5 whitespace-nowrap rounded-md px-3 py-2 text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            active
+                              ? "bg-primary/10 font-medium text-primary"
+                              : "text-muted-foreground hover:bg-muted hover:text-foreground",
+                          )}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                          {t(labelKey)}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </nav>
+            </aside>
+
+            <div className="min-w-0 rounded-xl border bg-card">
+              <DisplaySettingsTab />
+              <CmSchedulePolicy />
+              <SecurityTab />
+              <ContractUploadTab />
+              <MapTab />
+              <SlideshowSettings />
+            </div>
+          </div>
+        ) : (
+          <DriveTab />
+        )}
       </div>
     </AdminLayout>
   );

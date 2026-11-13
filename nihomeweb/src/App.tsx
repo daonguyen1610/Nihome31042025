@@ -755,7 +755,9 @@ const App = () => (
                     <Route element={<RequirePermission code={ADMIN_PERMS.settings} />}>
                       <Route
                         path="/admin/slideshow"
-                        element={<Navigate to="/admin/settings?tab=slideshow" replace />}
+                        element={
+                          <Navigate to="/admin/settings?tab=general&section=slideshow" replace />
+                        }
                       />
                     </Route>
                     <Route element={<RequirePermission code={ADMIN_PERMS.about} />}>
