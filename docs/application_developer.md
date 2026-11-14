@@ -50,7 +50,7 @@ This guide covers development setup, configuration, database management, build a
 | Microsoft.EntityFrameworkCore.SqlServer             | 8.0.4   |
 | Microsoft.EntityFrameworkCore.Design                | 8.0.4   |
 | Microsoft.AspNetCore.Authentication.JwtBearer       | 8.0.0   |
-| AutoMapper                                         | 15.1.1  |
+| AutoMapper                                         | 15.1.4  |
 | MailKit                                            | 4.16.0  |
 | Swashbuckle.AspNetCore                             | 6.5.0   |
 
