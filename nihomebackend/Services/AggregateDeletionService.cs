@@ -361,6 +361,9 @@ internal static class AggregateDeletionService
             .Where(item => item.OperationalProjectId == projectId && item.Status != ProjectBoqRevisionStatus.Approved)
             .ToListAsync(ct);
         db.ProjectBoqRevisions.RemoveRange(removableBoqs);
+        db.ProjectInvestmentRateRevisions.RemoveRange(await db.ProjectInvestmentRateRevisions
+            .Where(item => item.OperationalProjectId == projectId && item.Status != ProjectInvestmentRateStatus.Approved)
+            .ToListAsync(ct));
 
         var deletedDocuments = await db.ProjectDocuments
             .Where(item => item.OperationalProjectId == projectId)

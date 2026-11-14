@@ -48,6 +48,7 @@ public sealed class DepartmentWorkPackageResponse
     public List<DepartmentWorkTaskResponse> Tasks { get; set; } = new();
     public List<InputPriceOfferResponse> InputPriceOffers { get; set; } = new();
     public List<WorkPackageBoqWorkbookResponse> BoqWorkbooks { get; set; } = new();
+    public List<WorkPackageInvestmentRateResponse> InvestmentRates { get; set; } = new();
     public FinanceReviewResponse? FinanceReview { get; set; }
     public List<WorkPackageApprovalEmailResponse> ApprovalEmails { get; set; } = new();
 }
@@ -222,4 +223,62 @@ public sealed class WorkPackageBoqWorkbookResponse
     public DateTime? RejectedAt { get; set; }
     public string? DecisionReason { get; set; }
     public string RowVersion { get; set; } = string.Empty;
+}
+
+/// <summary>A filled investment-rate (suất đầu tư) form uploaded in an input-price work package.</summary>
+public sealed class WorkPackageInvestmentRateResponse
+{
+    public int Id { get; set; }
+    public int RevisionNumber { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string TemplateCode { get; set; } = string.Empty;
+    public string SourceFileName { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public decimal ConvertedAreaSqm { get; set; }
+    public decimal RatePerSqm { get; set; }
+    public decimal Total { get; set; }
+    public List<InvestmentRateAreaLineResponse> Areas { get; set; } = new();
+    public List<InvestmentRateGroupLineResponse> Groups { get; set; } = new();
+    public int PreparedByUserId { get; set; }
+    public string? PreparedByName { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public string? DecisionReason { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
+}
+
+public sealed class InvestmentRateAreaLineResponse
+{
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal ActualArea { get; set; }
+    public decimal Factor { get; set; }
+    public decimal ConvertedArea { get; set; }
+    public string? Note { get; set; }
+}
+
+public sealed class InvestmentRateGroupLineResponse
+{
+    public string Code { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public decimal Material { get; set; }
+    public decimal Labour { get; set; }
+    public decimal Equipment { get; set; }
+    public decimal RatePerSqm { get; set; }
+    public string? Specification { get; set; }
+}
+
+/// <summary>What an investment-rate form contains, shown before the upload is confirmed.</summary>
+public sealed class InvestmentRateWorkbookPreviewResponse
+{
+    public string TemplateCode { get; set; } = string.Empty;
+    public string SourceHash { get; set; } = string.Empty;
+    public decimal ConvertedAreaSqm { get; set; }
+    public decimal RatePerSqm { get; set; }
+    public decimal Total { get; set; }
+    public List<InvestmentRateAreaLineResponse> Areas { get; set; } = new();
+    public List<InvestmentRateGroupLineResponse> Groups { get; set; } = new();
 }

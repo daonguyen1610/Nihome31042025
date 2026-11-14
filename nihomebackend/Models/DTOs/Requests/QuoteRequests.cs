@@ -60,6 +60,9 @@ public class CreateQuoteRequest
     // --- BOQ mode: lines come from the project's latest approved BOQ revision ---
     public int? ProjectBoqRevisionId { get; set; }
 
+    // --- Unit-cost mode: area and rate from the project's latest approved investment-rate form ---
+    public int? ProjectInvestmentRateRevisionId { get; set; }
+
     // Rejected for BOQ quotes; kept so a client still sending lines gets a clear error.
     public List<QuoteItemInput> Items { get; set; } = new();
 
@@ -99,6 +102,8 @@ public class UpdateQuoteRequest : IConcurrencyRequest
     public string? PackageDescription { get; set; }
 
     public int? ProjectBoqRevisionId { get; set; }
+
+    public int? ProjectInvestmentRateRevisionId { get; set; }
 
     public List<QuoteItemInput> Items { get; set; } = new();
 

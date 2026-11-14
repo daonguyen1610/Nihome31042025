@@ -577,6 +577,123 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         (await WithDbAsync(db => db.ProjectBoqRevisions.CountAsync(item => item.SourceWorkPackageId == packageId))).Should().Be(2);
     }
 
+    // 15/11/2026: the investment-rate (suất đầu tư) form is uploaded and approved in the same package
+    // and prices the project's unit-cost quotes.
+    [Fact]
+    public async Task WorkPackageInvestmentRate_ApprovedInThePackage_PricesTheUnitCostQuote()
+    {
+        var scope = await SeedScopeAsync();
+        await LoginAsync("SALES_MANAGER");
+        var draft = await PostAsync("/api/quotes", new { opportunityId = scope.OpportunityId, draftOnly = true });
+        var quoteId = Id(draft);
+        var packageId = Id(await PostAsync("/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "ProcurementInputPricing",
+            name = "Suất đầu tư nhà xưởng An Phú",
+            operationalProjectId = scope.ProjectId,
+            sourceOpportunityId = scope.OpportunityId,
+            sourceQuoteId = quoteId,
+            departmentRoleGroupId = scope.ProcurementGroupId,
+            leadUserId = scope.ProcurementLeadUserId,
+        }));
+        var basePath = $"/api/work-packages/{packageId}/investment-rates";
+
+        await LoginAsync("PROCUREMENT");
+        using var templateResponse = await Client.GetAsync("/api/investment-rate-templates/SDT-NHA-XUONG/file");
+        templateResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var template = await templateResponse.Content.ReadAsByteArrayAsync();
+
+        // A blank form is kept as a Draft but cannot be sent for approval.
+        var blank = await UploadRateAsync(basePath, template);
+        blank.GetProperty("ratePerSqm").GetDecimal().Should().Be(0m);
+        using (var preview = await SendAsync(HttpMethod.Post, $"{basePath}/{Id(blank)}/approval-email-preview", new { }))
+            (await preview.Content.ReadAsStringAsync()).Should().Contain("lớn hơn 0");
+
+        var rate = await UploadRateAsync(basePath, FillFactoryRate(template));
+        rate.GetProperty("revisionNumber").GetInt32().Should().Be(2);
+        rate.GetProperty("convertedAreaSqm").GetDecimal().Should().Be(5300m);
+        rate.GetProperty("ratePerSqm").GetDecimal().Should().Be(1_800_000m);
+        rate.GetProperty("groups").GetArrayLength().Should().Be(12);
+        var rateId = Id(rate);
+
+        rate = await SubmitForApprovalAsync($"{basePath}/{rateId}", rate);
+        rate.GetProperty("status").GetString().Should().Be("Submitted");
+        await RejectAsync($"{basePath}/{rateId}/decision", new { approved = true, rowVersion = Version(rate) }, HttpStatusCode.NotFound);
+
+        await LoginAsync("SUPER_ADMIN");
+        rate = await PostAsync($"{basePath}/{rateId}/decision", new { approved = true, rowVersion = Version(rate) });
+        rate.GetProperty("status").GetString().Should().Be("Approved");
+
+        await LoginAsync("PROCUREMENT");
+        (await ReadAsync($"/api/work-packages/{packageId}")).GetProperty("investmentRates").EnumerateArray()
+            .Select(item => item.GetProperty("status").GetString()).Should().Equal("Approved", "Draft");
+        using (var file = await Client.GetAsync($"{basePath}/{rateId}/file"))
+            file.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Sales prices the unit-cost quote from it without a supplier offer.
+        await LoginAsync("SALES_MANAGER");
+        var latest = (await ReadAsync($"/api/quotes/{quoteId}/project-investment-rate")).GetProperty("latest");
+        latest.GetProperty("revisionId").GetInt32().Should().Be(rateId);
+        var quote = await WriteAsync(HttpMethod.Put, $"/api/quotes/{quoteId}", new
+        {
+            rowVersion = Version(draft),
+            method = "UnitCost",
+            projectInvestmentRateRevisionId = rateId,
+            areaSqm = 5300m,
+            discountPercent = 0m,
+            vatPercent = 8m,
+        });
+        quote.GetProperty("rateSource").GetString().Should().Be("ProjectRate");
+        quote.GetProperty("unitPricePerSqm").GetDecimal().Should().Be(1_800_000m);
+        quote.GetProperty("subtotal").GetDecimal().Should().Be(9_540_000_000m);
+
+        // Another department cannot upload into this package.
+        await LoginAsync("DESIGN");
+        using var form = RateForm(template, "x");
+        using var foreign = await Client.PostAsync($"{basePath}/preview", form);
+        foreign.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
+    }
+
+    private static byte[] FillFactoryRate(byte[] template)
+    {
+        using var book = new XLWorkbook(new MemoryStream(template));
+        var sheet = book.Worksheet("Suat dau tu");
+        sheet.Cell("E12").Value = 5000;
+        sheet.Cell("E14").Value = 600;
+        sheet.Cell("E20").Value = 150000;
+        sheet.Cell("F20").Value = 50000;
+        sheet.Cell("E22").Value = 1200000;
+        sheet.Cell("F22").Value = 300000;
+        sheet.Cell("G22").Value = 100000;
+        using var output = new MemoryStream();
+        book.SaveAs(output);
+        return output.ToArray();
+    }
+
+    private static MultipartFormDataContent RateForm(byte[] bytes, string? sourceHash)
+    {
+        var form = new MultipartFormDataContent
+        {
+            { new ByteArrayContent(bytes), "file", "SDT-Nha-xuong-An-Phu.xlsx" },
+            { new StringContent("SDT-NHA-XUONG"), "templateCode" },
+        };
+        if (sourceHash != null) form.Add(new StringContent(sourceHash), "sourceHash");
+        return form;
+    }
+
+    private async Task<JsonElement> UploadRateAsync(string basePath, byte[] bytes)
+    {
+        using var previewForm = RateForm(bytes, null);
+        using var preview = await Client.PostAsync($"{basePath}/preview", previewForm);
+        preview.StatusCode.Should().Be(HttpStatusCode.OK, await preview.Content.ReadAsStringAsync());
+        var hash = (await ReadJsonAsync(preview)).GetProperty("sourceHash").GetString();
+        using var importForm = RateForm(bytes, hash);
+        using var created = await Client.PostAsync(basePath, importForm);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        return await ReadJsonAsync(created);
+    }
+
     private static byte[] FillPccc(byte[] template, bool priced)
     {
         using var book = new XLWorkbook(new MemoryStream(template));

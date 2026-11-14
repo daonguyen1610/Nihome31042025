@@ -198,6 +198,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IDesignProjectService, DesignProjectService>();
         services.AddScoped<IBusinessDocumentStorageService, BusinessDocumentStorageService>();
         services.AddScoped<ProjectBoqWorkbookService>();
+        services.AddScoped<InvestmentRateWorkbookService>();
         services.AddScoped<IPermitChecklistService, PermitChecklistService>();
         services.AddScoped<ILegalActivationService, LegalActivationService>();
         services.AddScoped<LegalChecklistTemplateService>();

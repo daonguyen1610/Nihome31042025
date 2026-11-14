@@ -111,7 +111,10 @@ public sealed partial class DepartmentWorkPackageService(
         var response = MapPackage(item, callerUserId, await IsAdministratorAsync(callerUserId, ct),
             await DisplayClockAsync(ct));
         if (item.Purpose == WorkPackagePurpose.ProcurementInputPricing)
+        {
             response.BoqWorkbooks = await ListBoqWorkbooksAsync(id, ct);
+            response.InvestmentRates = await ListInvestmentRatesAsync(id, ct);
+        }
         var emails = await db.WorkPackageApprovalEmails.AsNoTracking()
             .Where(email => email.WorkPackageId == id).OrderByDescending(email => email.Id).Take(50)
             .Select(email => new

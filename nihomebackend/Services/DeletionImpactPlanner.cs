@@ -480,6 +480,14 @@ internal static class DeletionImpactPlanner
             db.ProjectBoqRevisions.Where(item => item.OperationalProjectId == projectId &&
                 item.Status == ProjectBoqRevisionStatus.Approved), item => item.Id,
             item => $"BOQ-{item.RevisionNumber}", ct);
+        await AddAsync(items, "operations.investmentRateDrafts", DeletionImpactActions.Delete,
+            db.ProjectInvestmentRateRevisions.Where(item => item.OperationalProjectId == projectId &&
+                item.Status != ProjectInvestmentRateStatus.Approved), item => item.Id,
+            item => $"SDT-{item.RevisionNumber}", ct);
+        await AddAsync(items, "operations.investmentRatesApproved", DeletionImpactActions.Block,
+            db.ProjectInvestmentRateRevisions.Where(item => item.OperationalProjectId == projectId &&
+                item.Status == ProjectInvestmentRateStatus.Approved), item => item.Id,
+            item => $"SDT-{item.RevisionNumber}", ct);
         await AddAsync(items, "operations.procurementContractLines", DeletionImpactActions.Block,
             db.ContractLines.Where(item => item.Contract.OperationalProjectId == projectId), item => item.Id,
             item => item.ProjectBoqLine.ItemCode, ct);

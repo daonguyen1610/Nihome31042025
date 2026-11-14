@@ -163,6 +163,7 @@ public static class ReferencedManagedFiles
         await AddJsonValuesAsync(db.AcceptanceRecords.Select(x => x.Documents));
         await AddValuesAsync(db.AsBuiltDocuments.Select(x => x.FileUrl));
         await AddValuesAsync(db.ProjectBoqRevisions.Select(x => x.SourceWorkbookPath));
+        await AddValuesAsync(db.ProjectInvestmentRateRevisions.Select(x => (string?)x.SourceWorkbookPath));
         await AddJsonValuesAsync(db.HandoverRecords.Select(x => x.Documents));
         await AddJsonValuesAsync(db.HseViolations.Select(x => x.EvidenceDocumentsJson));
 

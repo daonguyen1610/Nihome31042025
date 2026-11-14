@@ -1,0 +1,346 @@
+[
+  {
+    "key": "investmentRateWorkbook.template.factory",
+    "category": "procurement",
+    "vi": "Suất đầu tư nhà xưởng, kho (khung thép)",
+    "en": "Investment rate: factory & warehouse (steel frame)",
+    "zh": "投资指标：厂房、仓库（钢结构）",
+    "ja": "投資単価：工場・倉庫（鉄骨造）"
+  },
+  {
+    "key": "investmentRateWorkbook.template.office",
+    "category": "procurement",
+    "vi": "Suất đầu tư văn phòng, nhà điều hành (BTCT)",
+    "en": "Investment rate: office & administration building (RC)",
+    "zh": "投资指标：办公楼、行政楼（钢筋混凝土）",
+    "ja": "投資単価：事務所・管理棟（RC造）"
+  },
+  {
+    "key": "investmentRateWorkbook.template.fitOut",
+    "category": "procurement",
+    "vi": "Suất đầu tư hoàn thiện nội thất",
+    "en": "Investment rate: interior fit-out",
+    "zh": "投资指标：室内装修",
+    "ja": "投資単価：内装仕上げ"
+  },
+  {
+    "key": "workPackages.inputPricing.investmentRate",
+    "category": "work-packages",
+    "vi": "Suất đầu tư (file Excel)",
+    "en": "Investment rate (Excel file)",
+    "zh": "投资指标（Excel 文件）",
+    "ja": "投資単価（Excelファイル）"
+  },
+  {
+    "key": "investmentRate.hint",
+    "category": "work-packages",
+    "vi": "Tải mẫu suất đầu tư, nhập diện tích và đơn giá theo m² trong Excel rồi upload. Người phụ trách nhóm duyệt; bản duyệt mới nhất là đơn giá cho báo giá theo suất đầu tư của dự án.",
+    "en": "Download an investment-rate form, enter areas and prices per m² in Excel, then upload it. The package lead approves it; the latest approved file prices the project's unit-cost quotes.",
+    "zh": "下载投资指标模板，在 Excel 中填写面积和每平方米单价后上传。由工作包负责人审批；最新批准的文件用于项目按单方造价的报价。",
+    "ja": "投資単価様式をダウンロードし、Excelで面積とm²単価を入力してアップロードします。担当リーダーが承認し、最新の承認済みファイルが案件のm²単価見積に使われます。"
+  },
+  {
+    "key": "investmentRate.library",
+    "category": "work-packages",
+    "vi": "Mẫu suất đầu tư",
+    "en": "Investment-rate forms",
+    "zh": "投资指标模板",
+    "ja": "投資単価様式"
+  },
+  {
+    "key": "investmentRate.empty",
+    "category": "work-packages",
+    "vi": "Chưa có file suất đầu tư nào.",
+    "en": "No investment-rate file yet.",
+    "zh": "尚无投资指标文件。",
+    "ja": "投資単価ファイルはまだありません。"
+  },
+  {
+    "key": "investmentRate.upload",
+    "category": "work-packages",
+    "vi": "Upload suất đầu tư",
+    "en": "Upload investment rate",
+    "zh": "上传投资指标",
+    "ja": "投資単価をアップロード"
+  },
+  {
+    "key": "investmentRate.created",
+    "category": "work-packages",
+    "vi": "Đã lưu suất đầu tư ở trạng thái Nháp.",
+    "en": "Investment rate saved as a draft.",
+    "zh": "投资指标已保存为草稿。",
+    "ja": "投資単価を下書きとして保存しました。"
+  },
+  {
+    "key": "investmentRate.download",
+    "category": "work-packages",
+    "vi": "Tải file",
+    "en": "Download file",
+    "zh": "下载文件",
+    "ja": "ファイルをダウンロード"
+  },
+  {
+    "key": "investmentRate.reference",
+    "category": "work-packages",
+    "vi": "Suất đầu tư R{revision}",
+    "en": "Investment rate R{revision}",
+    "zh": "投资指标 R{revision}",
+    "ja": "投資単価 R{revision}"
+  },
+  {
+    "key": "investmentRate.field.convertedArea",
+    "category": "work-packages",
+    "vi": "Diện tích quy đổi",
+    "en": "Converted area",
+    "zh": "折算面积",
+    "ja": "換算面積"
+  },
+  {
+    "key": "investmentRate.field.rate",
+    "category": "work-packages",
+    "vi": "Suất đầu tư",
+    "en": "Investment rate",
+    "zh": "投资指标",
+    "ja": "投資単価"
+  },
+  {
+    "key": "investmentRate.field.total",
+    "category": "work-packages",
+    "vi": "Giá trị dự toán (chưa VAT)",
+    "en": "Estimated value (excl. VAT)",
+    "zh": "估算金额（不含增值税）",
+    "ja": "見積金額（税抜）"
+  },
+  {
+    "key": "investmentRate.field.material",
+    "category": "work-packages",
+    "vi": "Vật tư",
+    "en": "Material",
+    "zh": "材料",
+    "ja": "材料"
+  },
+  {
+    "key": "investmentRate.field.labour",
+    "category": "work-packages",
+    "vi": "Nhân công",
+    "en": "Labour",
+    "zh": "人工",
+    "ja": "労務"
+  },
+  {
+    "key": "investmentRate.field.equipment",
+    "category": "work-packages",
+    "vi": "Máy, thiết bị",
+    "en": "Equipment",
+    "zh": "机械设备",
+    "ja": "機械・設備"
+  },
+  {
+    "key": "investmentRate.showGroups",
+    "category": "work-packages",
+    "vi": "Xem {count} nhóm công việc",
+    "en": "Show {count} work groups",
+    "zh": "查看 {count} 个工作组",
+    "ja": "{count}件の工種を表示"
+  },
+  {
+    "key": "investmentRate.hideGroups",
+    "category": "work-packages",
+    "vi": "Ẩn nhóm công việc",
+    "en": "Hide work groups",
+    "zh": "隐藏工作组",
+    "ja": "工種を隠す"
+  },
+  {
+    "key": "investmentRate.missingValues",
+    "category": "work-packages",
+    "vi": "Chưa có diện tích quy đổi hoặc đơn giá/m². Nhập đủ trong Excel rồi upload lại trước khi gửi duyệt.",
+    "en": "The converted area or the price per m² is missing. Complete them in Excel and upload again before sending for approval.",
+    "zh": "缺少折算面积或每平方米单价。请在 Excel 中补全后重新上传，再提交审批。",
+    "ja": "換算面積またはm²単価がありません。Excelで入力して再アップロードしてから承認申請してください。"
+  },
+  {
+    "key": "investmentRate.dialog.title",
+    "category": "work-packages",
+    "vi": "Upload suất đầu tư",
+    "en": "Upload investment rate",
+    "zh": "上传投资指标",
+    "ja": "投資単価をアップロード"
+  },
+  {
+    "key": "investmentRate.dialog.hint",
+    "category": "work-packages",
+    "vi": "Chọn mẫu theo loại công trình, tải mẫu nếu chưa có, điền số liệu trong Excel rồi chọn file để kiểm tra trước khi lưu.",
+    "en": "Choose the form for the building type, download it if needed, fill it in Excel, then choose the file to check it before saving.",
+    "zh": "选择对应建筑类型的模板，如需可先下载，在 Excel 中填写后选择文件进行检查再保存。",
+    "ja": "建物種別の様式を選び、必要ならダウンロードしてExcelで入力し、保存前にファイルを選んで検証します。"
+  },
+  {
+    "key": "investmentRate.dialog.template",
+    "category": "work-packages",
+    "vi": "Mẫu suất đầu tư",
+    "en": "Investment-rate form",
+    "zh": "投资指标模板",
+    "ja": "投資単価様式"
+  },
+  {
+    "key": "investmentRate.dialog.downloadTemplate",
+    "category": "work-packages",
+    "vi": "Tải mẫu",
+    "en": "Download form",
+    "zh": "下载模板",
+    "ja": "様式をダウンロード"
+  },
+  {
+    "key": "investmentRate.dialog.previewTitle",
+    "category": "work-packages",
+    "vi": "Kết quả kiểm tra",
+    "en": "Check result",
+    "zh": "检查结果",
+    "ja": "検証結果"
+  },
+  {
+    "key": "investmentRate.dialog.zeroHint",
+    "category": "work-packages",
+    "vi": "File chưa có diện tích quy đổi hoặc đơn giá/m². Có thể lưu Nháp, nhưng phải nhập đủ trước khi gửi duyệt.",
+    "en": "The file has no converted area or price per m² yet. It can be saved as a draft but must be completed before approval.",
+    "zh": "文件尚无折算面积或每平方米单价。可以保存为草稿，但提交审批前必须补全。",
+    "ja": "換算面積またはm²単価が未入力です。下書き保存はできますが、承認申請前に入力が必要です。"
+  },
+  {
+    "key": "investmentRate.templates.title",
+    "category": "material-rates",
+    "vi": "Mẫu Excel suất đầu tư",
+    "en": "Investment-rate Excel forms",
+    "zh": "投资指标 Excel 模板",
+    "ja": "投資単価のExcel様式"
+  },
+  {
+    "key": "investmentRate.templates.help",
+    "category": "material-rates",
+    "vi": "Tải mẫu theo loại công trình, nhập diện tích và đơn giá theo m², rồi upload trong Nhóm công việc → Báo giá đầu vào → Suất đầu tư.",
+    "en": "Download the form for the building type, enter areas and prices per m², then upload it under Work package → Input pricing → Investment rate.",
+    "zh": "按建筑类型下载模板，填写面积和每平方米单价，然后在 工作包 → 进货报价 → 投资指标 中上传。",
+    "ja": "建物種別の様式をダウンロードし、面積とm²単価を入力して、作業パッケージ → 仕入見積 → 投資単価でアップロードします。"
+  },
+  {
+    "key": "quotes.rateSource.ProjectRate",
+    "category": "quotes",
+    "vi": "Suất đầu tư dự án",
+    "en": "Project investment rate",
+    "zh": "项目投资指标",
+    "ja": "案件の投資単価"
+  },
+  {
+    "key": "quotes.projectRate.title",
+    "category": "quotes",
+    "vi": "Suất đầu tư dự án đã duyệt",
+    "en": "Approved project investment rate",
+    "zh": "已批准的项目投资指标",
+    "ja": "承認済みの案件投資単価"
+  },
+  {
+    "key": "quotes.projectRate.summary",
+    "category": "quotes",
+    "vi": "R{revision} · {file}: {rate} ₫/m², diện tích quy đổi {area} m²",
+    "en": "R{revision} · {file}: {rate} ₫/m², converted area {area} m²",
+    "zh": "R{revision} · {file}：{rate} ₫/m²，折算面积 {area} m²",
+    "ja": "R{revision} · {file}：{rate} ₫/m²、換算面積 {area} m²"
+  },
+  {
+    "key": "quotes.projectRate.apply",
+    "category": "quotes",
+    "vi": "Áp dụng suất đầu tư dự án",
+    "en": "Apply project investment rate",
+    "zh": "应用项目投资指标",
+    "ja": "案件の投資単価を適用"
+  },
+  {
+    "key": "quotes.projectRate.applied",
+    "category": "quotes",
+    "vi": "Đơn giá/m² lấy từ suất đầu tư dự án R{revision}; diện tích đã điền theo diện tích quy đổi trong file.",
+    "en": "The price per m² comes from project investment rate R{revision}; the area is filled from the file's converted area.",
+    "zh": "每平方米单价取自项目投资指标 R{revision}；面积按文件中的折算面积填写。",
+    "ja": "m²単価は案件投資単価R{revision}から取得し、面積はファイルの換算面積を入力しました。"
+  },
+  {
+    "key": "quotes.projectRate.useCatalog",
+    "category": "quotes",
+    "vi": "Dùng danh mục đơn giá công ty",
+    "en": "Use a company rate catalog",
+    "zh": "使用公司单价目录",
+    "ja": "会社の単価カタログを使う"
+  },
+  {
+    "key": "quotes.projectRate.newer",
+    "category": "quotes",
+    "vi": "Suất đầu tư dự án đã có bản duyệt mới hơn (R{revision}). Áp dụng lại trước khi gửi duyệt.",
+    "en": "A newer approved project investment rate exists (R{revision}). Apply it again before sending for approval.",
+    "zh": "已有更新的已批准项目投资指标（R{revision}）。提交审批前请重新应用。",
+    "ja": "より新しい承認済み案件投資単価（R{revision}）があります。承認申請前に再適用してください。"
+  },
+  {
+    "key": "deletionImpact.item.operations.investmentRateDrafts",
+    "category": "deletion-impact",
+    "vi": "Suất đầu tư dự án chưa duyệt",
+    "en": "Unapproved project investment rates",
+    "zh": "未批准的项目投资指标",
+    "ja": "未承認の案件投資単価"
+  },
+  {
+    "key": "deletionImpact.item.operations.investmentRatesApproved",
+    "category": "deletion-impact",
+    "vi": "Suất đầu tư dự án đã duyệt",
+    "en": "Approved project investment rates",
+    "zh": "已批准的项目投资指标",
+    "ja": "承認済みの案件投資単価"
+  },
+  {
+    "key": "boqWorkbook.error.notInvestmentRateForm",
+    "category": "procurement",
+    "vi": "File không phải mẫu suất đầu tư của NICON. Tải mẫu trong danh sách rồi nhập lại số liệu.",
+    "en": "This is not a NICON investment-rate form. Download a form from the list and enter the data there.",
+    "zh": "该文件不是 NICON 投资指标模板。请从列表下载模板并重新填写。",
+    "ja": "NICONの投資単価様式ではありません。一覧から様式をダウンロードして入力し直してください。"
+  },
+  {
+    "key": "boqWorkbook.error.wrongInvestmentRateTemplate",
+    "category": "procurement",
+    "vi": "File thuộc mẫu suất đầu tư khác. Chọn đúng mẫu đã dùng để điền file.",
+    "en": "The file belongs to another investment-rate form. Choose the form the file was filled from.",
+    "zh": "文件属于其他投资指标模板。请选择填写该文件所用的模板。",
+    "ja": "別の投資単価様式のファイルです。入力に使った様式を選択してください。"
+  },
+  {
+    "key": "boqWorkbook.error.factorRange",
+    "category": "procurement",
+    "vi": "Hệ số quy đổi phải từ 0% đến 300%.",
+    "en": "The conversion factor must be between 0% and 300%.",
+    "zh": "折算系数必须在 0% 到 300% 之间。",
+    "ja": "換算係数は0%から300%の間にしてください。"
+  },
+  {
+    "key": "boqWorkbook.error.codeRequired",
+    "category": "procurement",
+    "vi": "Nhóm công việc chưa có mã. Nhập một mã riêng cho mỗi nhóm.",
+    "en": "The work group has no code. Give each group its own code.",
+    "zh": "工作组没有编码。请为每个组填写唯一编码。",
+    "ja": "工種にコードがありません。工種ごとに固有のコードを入力してください。"
+  },
+  {
+    "key": "boqWorkbook.error.duplicateCode",
+    "category": "procurement",
+    "vi": "Mã nhóm công việc bị trùng. Mỗi nhóm cần một mã riêng.",
+    "en": "The work group code is repeated. Each group needs its own code.",
+    "zh": "工作组编码重复。每个组需要唯一编码。",
+    "ja": "工種コードが重複しています。工種ごとに固有のコードが必要です。"
+  },
+  {
+    "key": "boqWorkbook.error.noInvestmentRateGroups",
+    "category": "procurement",
+    "vi": "Bảng suất đầu tư chưa có nhóm công việc nào.",
+    "en": "The investment-rate table has no work groups.",
+    "zh": "投资指标表中没有工作组。",
+    "ja": "投資単価表に工種がありません。"
+  }
+]

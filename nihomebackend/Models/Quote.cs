@@ -43,6 +43,9 @@ public class Quote : IConcurrencyTracked
     // BOQ quotes copy their lines from the project's approved root BOQ revision.
     public int? ProjectBoqRevisionId { get; set; }
     public ProjectBoqRevision? ProjectBoqRevision { get; set; }
+    // Unit-cost quotes may take area and rate from the project's approved investment-rate form.
+    public int? ProjectInvestmentRateRevisionId { get; set; }
+    public ProjectInvestmentRateRevision? ProjectInvestmentRateRevision { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;
@@ -144,6 +147,7 @@ public class QuoteVersionSnapshot
     public string? PackageDescription { get; set; }
     public int? MaterialRateRevisionId { get; set; }
     public int? ProjectBoqRevisionId { get; set; }
+    public int? ProjectInvestmentRateRevisionId { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;
@@ -175,6 +179,8 @@ public enum QuoteRateSource
     Catalog = 1,
     Override = 2,
     CatalogReference = 3,
+    // Area and rate from the project's approved investment-rate form.
+    ProjectRate = 4,
 }
 
 public enum QuoteStatus
