@@ -151,6 +151,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<ProjectBoqRevision> ProjectBoqRevisions => Set<ProjectBoqRevision>();
     public DbSet<ProjectBoqLine> ProjectBoqLines => Set<ProjectBoqLine>();
+    public DbSet<ProjectBoqSheet> ProjectBoqSheets => Set<ProjectBoqSheet>();
     public DbSet<MaterialRequest> MaterialRequests => Set<MaterialRequest>();
     public DbSet<MaterialRequestLine> MaterialRequestLines => Set<MaterialRequestLine>();
     public DbSet<ContractLine> ContractLines => Set<ContractLine>();
@@ -893,6 +894,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .WithMany(p => p.Quotes)
                 .HasForeignKey(q => q.OperationalProjectId)
                 .OnDelete(DeleteBehavior.SetNull);
+            b.HasOne(q => q.ProjectBoqRevision)
+                .WithMany()
+                .HasForeignKey(q => q.ProjectBoqRevisionId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.HasOne(q => q.Owner)
                 .WithMany()
                 .HasForeignKey(q => q.OwnerUserId)
@@ -944,11 +949,12 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         {
             b.ToTable("quote_items");
             b.HasKey(i => i.Id);
-            b.Property(i => i.ItemCode).HasMaxLength(60);
-            b.Property(i => i.Name).HasMaxLength(300).IsRequired();
-            b.Property(i => i.Unit).HasMaxLength(30).IsRequired();
-            b.Property(i => i.Quantity).HasColumnType("decimal(18,4)");
-            b.Property(i => i.UnitPrice).HasColumnType("decimal(18,2)");
+            // Sized like project_boq_lines: BOQ quote lines are copied from the project BOQ.
+            b.Property(i => i.ItemCode).HasMaxLength(80);
+            b.Property(i => i.Name).HasMaxLength(500).IsRequired();
+            b.Property(i => i.Unit).HasMaxLength(50).IsRequired();
+            b.Property(i => i.Quantity).HasColumnType("decimal(18,6)");
+            b.Property(i => i.UnitPrice).HasColumnType("decimal(18,4)");
             b.Property(i => i.Amount).HasColumnType("decimal(18,2)");
             b.HasOne(i => i.Quote)
                 .WithMany(q => q.Items)
@@ -1641,6 +1647,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(item => item.CostTotal).HasPrecision(18, 4);
             b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.TemplateCode).HasMaxLength(50);
+            b.Property(item => item.SourceFileName).HasMaxLength(255);
+            b.Property(item => item.SourceSha256).HasMaxLength(64);
+            b.Property(item => item.SourceWorkbookPath).HasMaxLength(500);
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.OperationalProject).WithMany(project => project.BoqRevisions)
                 .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
@@ -1650,6 +1660,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(item => item.SourceTenderEstimateRevisionId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.SourceContractAppendix).WithMany()
                 .HasForeignKey(item => item.SourceContractAppendixId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.SourceWorkPackage).WithMany()
+                .HasForeignKey(item => item.SourceWorkPackageId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.PreparedBy).WithMany()
                 .HasForeignKey(item => item.PreparedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.SubmittedBy).WithMany()
@@ -1675,7 +1687,21 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(item => item.Amount).HasPrecision(18, 4);
             b.HasOne(item => item.ProjectBoqRevision).WithMany(revision => revision.Lines)
                 .HasForeignKey(item => item.ProjectBoqRevisionId).OnDelete(DeleteBehavior.Cascade);
+            b.Property(item => item.SheetName).HasMaxLength(31);
+            b.Property(item => item.Stt).HasMaxLength(30);
+            b.Property(item => item.GroupName).HasMaxLength(500);
             b.HasIndex(item => new { item.ProjectBoqRevisionId, item.ItemCode }).IsUnique();
+            b.HasIndex(item => new { item.ProjectBoqRevisionId, item.SortOrder });
+        });
+
+        modelBuilder.Entity<ProjectBoqSheet>(b =>
+        {
+            b.ToTable("project_boq_sheets");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Name).HasMaxLength(31).IsRequired();
+            b.Property(item => item.Total).HasPrecision(18, 4);
+            b.HasOne(item => item.ProjectBoqRevision).WithMany(revision => revision.Sheets)
+                .HasForeignKey(item => item.ProjectBoqRevisionId).OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(item => new { item.ProjectBoqRevisionId, item.SortOrder });
         });
 

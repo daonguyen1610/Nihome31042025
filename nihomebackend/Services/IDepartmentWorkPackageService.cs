@@ -34,4 +34,10 @@ public interface IDepartmentWorkPackageService
     Task<FinanceReviewResponse> SaveFinanceReviewAsync(int packageId, UpsertFinanceReviewRequest request, int callerUserId, CancellationToken ct = default);
     Task<FinanceReviewResponse?> SubmitFinanceReviewAsync(int packageId, SubmitBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
     Task<FinanceReviewResponse?> DecideFinanceReviewAsync(int packageId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<int> RequireBoqUploadProjectAsync(int packageId, int callerUserId, CancellationToken ct = default);
+    Task<WorkPackageBoqWorkbookResponse> RecordBoqUploadAsync(int packageId, int revisionId, int callerUserId, CancellationToken ct = default);
+    Task<int?> FindVisibleBoqProjectAsync(int packageId, int revisionId, int callerUserId, bool canViewAll, CancellationToken ct = default);
+    Task<WorkPackageApprovalPreview> PreviewBoqApprovalEmailAsync(int packageId, int revisionId, int callerUserId, CancellationToken ct = default, WorkPackageApprovalRecipientsRequest? recipients = null);
+    Task<WorkPackageBoqWorkbookResponse?> SubmitBoqWorkbookAsync(int packageId, int revisionId, SubmitBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<WorkPackageBoqWorkbookResponse?> DecideBoqWorkbookAsync(int packageId, int revisionId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
 }

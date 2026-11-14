@@ -187,14 +187,12 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
         });
         opportunityResponse.EnsureSuccessStatusCode();
         var opportunityId = (await ReadJsonAsync(opportunityResponse)).GetProperty("id").GetInt32();
+        var boqId = await SeedApprovedProjectBoqAsync(opportunityId, ("LOT", "Concurrency item", "lot", 1m, 500_000_000m));
         using var created = await manager.PostAsJsonAsync("/api/quotes", new
         {
             opportunityId,
             method = "Boq",
-            items = new[]
-            {
-                new { name = "Concurrency item", unit = "lot", quantity = 1m, unitPrice = 500_000_000m },
-            },
+            projectBoqRevisionId = boqId,
             discountPercent = 0m,
             vatPercent = 8m,
         });
@@ -210,20 +208,14 @@ public class CrmMultiUserConcurrencyTests : IntegrationTestBase
             new
             {
                 rowVersion,
-                items = new[]
-                {
-                    new { name = "Concurrency item", unit = "lot", quantity = 1m, unitPrice = 500_000_000m },
-                },
+                projectBoqRevisionId = boqId,
                 discountPercent = 0m,
                 vatPercent = 8m,
                 note = "Quote manager winner",
             },
             new
             {
-                items = new[]
-                {
-                    new { name = "Concurrency item", unit = "lot", quantity = 1m, unitPrice = 500_000_000m },
-                },
+                projectBoqRevisionId = boqId,
                 discountPercent = 0m,
                 vatPercent = 8m,
                 note = "Quote admin winner",

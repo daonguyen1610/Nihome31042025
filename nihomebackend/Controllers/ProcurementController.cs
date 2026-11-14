@@ -172,6 +172,17 @@ public sealed class ProcurementController(
             service.DecideBoqRevisionAsync(projectId, id, request, userId, ct), ct);
     }
 
+    [HttpPost("boq-revisions/{id:int}/contract")]
+    [RequirePermission("proc.boq", "approve")]
+    [Idempotency("proc.boq.contract", requireKey: true)]
+    public Task<ActionResult<ProjectBoqRevisionResponse>> ConvertBoqToContract(
+        int projectId, int id, [FromBody] ProjectBoqContractRequest request, CancellationToken ct)
+    {
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        return ExecuteNullable(projectId, id, EntityTypes.ProjectBoqRevision, "proc.boq.contract", userId =>
+            service.ConvertTenderBoqToContractAsync(projectId, id, request, userId, ct), ct);
+    }
+
     [HttpPost("material-requests")]
     [RequirePermission("proc.material-requests", "manage")]
     [Idempotency("proc.material-requests.create", requireKey: true)]
@@ -419,6 +430,7 @@ public sealed class ProcurementController(
             return created ? StatusCode(StatusCodes.Status201Created, result) : Ok(result);
         }
         catch (ProcurementOperationException exception) { return BadRequest(new { message = exception.Message }); }
+        catch (BoqWorkbookException exception) { return BadRequest(new { exception.Code, messageKey = $"boqWorkbook.error.{exception.Code}", exception.Limit }); }
     }
 
     private async Task<ActionResult<T>> ExecuteNullable<T>(
@@ -435,6 +447,7 @@ public sealed class ProcurementController(
             return Ok(result);
         }
         catch (ProcurementOperationException exception) { return BadRequest(new { message = exception.Message }); }
+        catch (BoqWorkbookException exception) { return BadRequest(new { exception.Code, messageKey = $"boqWorkbook.error.{exception.Code}", exception.Limit }); }
     }
 
     private void Audit(string action, string resourceType, int projectId, object value) => audit.Log(new AuditEvent

@@ -55,7 +55,20 @@ public sealed class ProjectBoqRevisionResponse
     public DateTime CreatedAt { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string RowVersion { get; set; } = string.Empty;
+    public string? TemplateCode { get; set; }
+    public string? SourceFileName { get; set; }
+    public bool HasWorkbook { get; set; }
+    public int? SourceWorkPackageId { get; set; }
+    public List<ProjectBoqSheetResponse> Sheets { get; set; } = [];
     public List<ProjectBoqLineResponse> Lines { get; set; } = [];
+}
+
+public sealed class ProjectBoqSheetResponse
+{
+    public string Name { get; set; } = string.Empty;
+    public int ItemCount { get; set; }
+    public int MissingPriceCount { get; set; }
+    public decimal Total { get; set; }
 }
 
 public sealed class ProjectBoqLineResponse
@@ -67,6 +80,11 @@ public sealed class ProjectBoqLineResponse
     public decimal ApprovedQuantity { get; set; }
     public decimal BudgetUnitPrice { get; set; }
     public decimal Amount { get; set; }
+    public string? SheetName { get; set; }
+    public int? SourceRow { get; set; }
+    public string? Stt { get; set; }
+    public string? GroupName { get; set; }
+    public bool PriceMissing { get; set; }
 }
 
 public class MaterialRequestResponse

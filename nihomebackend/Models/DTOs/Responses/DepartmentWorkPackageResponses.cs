@@ -47,6 +47,7 @@ public sealed class DepartmentWorkPackageResponse
     public string RowVersion { get; set; } = string.Empty;
     public List<DepartmentWorkTaskResponse> Tasks { get; set; } = new();
     public List<InputPriceOfferResponse> InputPriceOffers { get; set; } = new();
+    public List<WorkPackageBoqWorkbookResponse> BoqWorkbooks { get; set; } = new();
     public FinanceReviewResponse? FinanceReview { get; set; }
     public List<WorkPackageApprovalEmailResponse> ApprovalEmails { get; set; } = new();
 }
@@ -199,4 +200,26 @@ public sealed class DepartmentWorkPackageHistoryResponse
     public DateTime ChangedAt { get; set; }
     public int ChangedByUserId { get; set; }
     public string ChangedByName { get; set; } = string.Empty;
+}
+
+/// <summary>A filled customer BOQ form uploaded in an input-price work package.</summary>
+public sealed class WorkPackageBoqWorkbookResponse
+{
+    public int Id { get; set; }
+    public int RevisionNumber { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string? TemplateCode { get; set; }
+    public string? SourceFileName { get; set; }
+    public string Currency { get; set; } = string.Empty;
+    public decimal Total { get; set; }
+    public int LineCount { get; set; }
+    public int MissingPriceCount { get; set; }
+    public int PreparedByUserId { get; set; }
+    public string? PreparedByName { get; set; }
+    public DateTime CreatedAt { get; set; }
+    public DateTime? SubmittedAt { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public DateTime? RejectedAt { get; set; }
+    public string? DecisionReason { get; set; }
+    public string RowVersion { get; set; } = string.Empty;
 }

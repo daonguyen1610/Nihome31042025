@@ -60,6 +60,56 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
         response.StatusCode.Should().Be(System.Net.HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
     }
 
+    /// <summary>
+    /// Approves a new tender BOQ revision for the opportunity's project: BOQ quotes copy their
+    /// lines from the latest approved project BOQ. Returns the revision id.
+    /// </summary>
+    protected Task<int> SeedApprovedProjectBoqAsync(
+        int opportunityId, params (string Code, string Name, string Unit, decimal Quantity, decimal UnitPrice)[] lines) =>
+        WithDbAsync(async db =>
+        {
+            var opportunity = await db.Opportunities.SingleAsync(item => item.Id == opportunityId);
+            if (!opportunity.OperationalProjectId.HasValue)
+            {
+                // Opportunities created directly have no project; a BOQ quote needs one.
+                var project = new OperationalProject
+                {
+                    Code = $"PJ-QBOQ-{Guid.NewGuid():N}"[..28],
+                    Name = "Dự án báo giá BOQ",
+                    CustomerId = opportunity.CustomerId,
+                };
+                db.OperationalProjects.Add(project);
+                await db.SaveChangesAsync();
+                opportunity.OperationalProjectId = project.Id;
+                await db.SaveChangesAsync();
+            }
+            var projectId = opportunity.OperationalProjectId!.Value;
+            var preparer = await db.Users.OrderBy(user => user.Id).Select(user => user.Id).FirstAsync();
+            var revision = new ProjectBoqRevision
+            {
+                OperationalProjectId = projectId,
+                RevisionNumber = await db.ProjectBoqRevisions.CountAsync(item => item.OperationalProjectId == projectId) + 1,
+                Status = ProjectBoqRevisionStatus.TenderApproved,
+                PreparedByUserId = preparer,
+                ApprovedByUserId = preparer,
+                ApprovedAt = DateTime.UtcNow,
+                Lines = lines.Select((line, index) => new ProjectBoqLine
+                {
+                    ItemCode = line.Code,
+                    Description = line.Name,
+                    Unit = line.Unit,
+                    ApprovedQuantity = line.Quantity,
+                    BudgetUnitPrice = line.UnitPrice,
+                    Amount = decimal.Round(line.Quantity * line.UnitPrice, 4, MidpointRounding.AwayFromZero),
+                    SortOrder = index + 1,
+                }).ToList(),
+            };
+            revision.CostTotal = revision.Lines.Sum(line => line.Amount);
+            db.ProjectBoqRevisions.Add(revision);
+            await db.SaveChangesAsync();
+            return revision.Id;
+        });
+
     protected Task<(int Id, string RowVersion)> SeedPublishedLegalTemplateAsync() => WithDbAsync(async db =>
     {
         var template = new LegalChecklistTemplate

@@ -1,0 +1,802 @@
+[
+  {
+    "key": "boqWorkbook.template.pcccCanHo",
+    "category": "procurement",
+    "vi": "Báo giá PCCC căn hộ dịch vụ",
+    "en": "Serviced-apartment fire protection quotation",
+    "zh": "服务式公寓消防报价",
+    "ja": "サービスアパート消防見積"
+  },
+  {
+    "key": "boqWorkbook.template.thietKeXinPhep",
+    "category": "procurement",
+    "vi": "Báo giá thiết kế, xin phép",
+    "en": "Design and permit quotation",
+    "zh": "设计及报建报价",
+    "ja": "設計・許認可見積"
+  },
+  {
+    "key": "boqWorkbook.template.nhaXuong",
+    "category": "procurement",
+    "vi": "Báo giá xây dựng nhà xưởng",
+    "en": "Factory construction quotation",
+    "zh": "厂房建设报价",
+    "ja": "工場建設見積"
+  },
+  {
+    "key": "boqWorkbook.template.xayDungMe",
+    "category": "procurement",
+    "vi": "Báo giá xây dựng, cơ điện (ME) & PCCC",
+    "en": "Construction, M&E and fire protection quotation",
+    "zh": "建筑、机电及消防报价",
+    "ja": "建築・設備（ME）・消防見積"
+  },
+  {
+    "key": "boqWorkbook.template.tronGoi",
+    "category": "procurement",
+    "vi": "Báo giá trọn gói thiết kế, xin phép & thi công",
+    "en": "Lump-sum design, permit and construction quotation",
+    "zh": "设计、报批及施工总价报价",
+    "ja": "設計・許認可・施工一括見積"
+  },
+  {
+    "key": "boqWorkbook.template.csaWork",
+    "category": "procurement",
+    "vi": "Báo giá phần xây dựng (CSA)",
+    "en": "Civil, structural and architectural (CSA) quotation",
+    "zh": "土建、结构及建筑（CSA）报价",
+    "ja": "土木・構造・建築（CSA）見積"
+  },
+  {
+    "key": "boqWorkbook.upload",
+    "category": "procurement",
+    "vi": "Upload BOQ từ Excel",
+    "en": "Upload BOQ from Excel",
+    "zh": "从 Excel 上传工程量清单",
+    "ja": "ExcelからBOQをアップロード"
+  },
+  {
+    "key": "boqWorkbook.uploadOnProject",
+    "category": "procurement",
+    "vi": "Upload BOQ tại trang Dự án",
+    "en": "Upload BOQ on the project page",
+    "zh": "在项目页面上传BOQ",
+    "ja": "プロジェクト画面でBOQをアップロード"
+  },
+  {
+    "key": "boqWorkbook.projectSection.title",
+    "category": "procurement",
+    "vi": "BOQ dự án",
+    "en": "Project BOQ",
+    "zh": "项目BOQ",
+    "ja": "プロジェクトBOQ"
+  },
+  {
+    "key": "boqWorkbook.projectSection.hint",
+    "category": "procurement",
+    "vi": "Mỗi dự án có một BOQ gốc: BOQ dự thầu, khi ký hợp đồng thì thành BOQ hợp đồng. Cung ứng upload BOQ trong nhóm công việc yêu cầu giá đầu vào và người phụ trách nhóm duyệt; các phòng có quyền cùng xem tại đây.",
+    "en": "Each project has one root BOQ: the tender BOQ, which becomes the contract BOQ once the contract is signed. Procurement uploads it in the input-price work package and the package lead approves it; permitted departments view it here.",
+    "zh": "每个项目有一份基准BOQ：投标BOQ，合同签订后成为合同BOQ。采购部在进货报价工作组中上传，由工作组负责人审批；有权限的部门在此查看。",
+    "ja": "各プロジェクトには基準BOQが1つあります。入札BOQは契約締結後に契約BOQになります。購買部が仕入見積のワークパッケージでアップロードし、担当者が承認します。権限のある部門はここで閲覧します。"
+  },
+  {
+    "key": "boqWorkbook.title",
+    "category": "procurement",
+    "vi": "Upload BOQ của dự án",
+    "en": "Upload project BOQ",
+    "zh": "上传项目工程量清单",
+    "ja": "案件BOQのアップロード"
+  },
+  {
+    "key": "boqWorkbook.hint",
+    "category": "procurement",
+    "vi": "Tải đúng mẫu BOQ, điền khối lượng và đơn giá trong Excel, lưu lại rồi upload. Mỗi lần xác nhận tạo một phiên bản Nháp mới; các phiên bản cũ được giữ làm lịch sử.",
+    "en": "Download the matching BOQ form, enter quantities and prices in Excel, save it and upload it. Each confirmation creates a new Draft revision; older revisions stay as history.",
+    "zh": "下载对应的清单模板，在 Excel 中填写工程量和单价，保存后上传。每次确认都会创建新的草稿版本，旧版本保留为历史。",
+    "ja": "該当するBOQ様式をダウンロードし、Excelで数量と単価を入力して保存し、アップロードします。確定ごとに新しい下書き改訂が作成され、旧改訂は履歴として残ります。"
+  },
+  {
+    "key": "boqWorkbook.template",
+    "category": "procurement",
+    "vi": "Mẫu BOQ",
+    "en": "BOQ form",
+    "zh": "清单模板",
+    "ja": "BOQ様式"
+  },
+  {
+    "key": "boqWorkbook.chooseTemplate",
+    "category": "procurement",
+    "vi": "Chọn mẫu BOQ",
+    "en": "Choose a BOQ form",
+    "zh": "选择清单模板",
+    "ja": "BOQ様式を選択"
+  },
+  {
+    "key": "boqWorkbook.download",
+    "category": "procurement",
+    "vi": "Tải mẫu Excel",
+    "en": "Download Excel form",
+    "zh": "下载 Excel 模板",
+    "ja": "Excel様式をダウンロード"
+  },
+  {
+    "key": "boqWorkbook.contract",
+    "category": "procurement",
+    "vi": "Hợp đồng đầu ra",
+    "en": "Upstream contract",
+    "zh": "上游合同",
+    "ja": "上流契約"
+  },
+  {
+    "key": "boqWorkbook.tenderStage",
+    "category": "procurement",
+    "vi": "Chưa có hợp đồng (BOQ dự thầu)",
+    "en": "No contract yet (tender BOQ)",
+    "zh": "尚无合同（投标清单）",
+    "ja": "契約なし（入札BOQ）"
+  },
+  {
+    "key": "boqWorkbook.file",
+    "category": "procurement",
+    "vi": "File BOQ đã điền",
+    "en": "Completed BOQ file",
+    "zh": "已填写的清单文件",
+    "ja": "入力済みBOQファイル"
+  },
+  {
+    "key": "boqWorkbook.select",
+    "category": "procurement",
+    "vi": "Kéo thả file Excel vào đây hoặc bấm để chọn",
+    "en": "Drop the Excel file here or click to choose",
+    "zh": "将 Excel 文件拖到此处或点击选择",
+    "ja": "Excelファイルをここにドロップするかクリックして選択"
+  },
+  {
+    "key": "boqWorkbook.fileLimit",
+    "category": "procurement",
+    "vi": "Excel .xlsx · tối đa 20 MB",
+    "en": "Excel .xlsx · up to 20 MB",
+    "zh": "Excel .xlsx · 最大 20 MB",
+    "ja": "Excel .xlsx · 最大20 MB"
+  },
+  {
+    "key": "boqWorkbook.validate",
+    "category": "procurement",
+    "vi": "Kiểm tra file",
+    "en": "Validate file",
+    "zh": "校验文件",
+    "ja": "ファイルを検証"
+  },
+  {
+    "key": "boqWorkbook.confirm",
+    "category": "procurement",
+    "vi": "Xác nhận tạo phiên bản Nháp",
+    "en": "Confirm and create Draft",
+    "zh": "确认并创建草稿",
+    "ja": "確定して下書きを作成"
+  },
+  {
+    "key": "boqWorkbook.previewTitle",
+    "category": "procurement",
+    "vi": "Kết quả kiểm tra — chưa lưu",
+    "en": "Validation result — not saved yet",
+    "zh": "校验结果 — 尚未保存",
+    "ja": "検証結果 — 未保存"
+  },
+  {
+    "key": "boqWorkbook.sheet",
+    "category": "procurement",
+    "vi": "Sheet",
+    "en": "Sheet",
+    "zh": "工作表",
+    "ja": "シート"
+  },
+  {
+    "key": "boqWorkbook.items",
+    "category": "procurement",
+    "vi": "Hạng mục đã nhập",
+    "en": "Items entered",
+    "zh": "已填写分项",
+    "ja": "入力済み項目"
+  },
+  {
+    "key": "boqWorkbook.skipped",
+    "category": "procurement",
+    "vi": "Chưa nhập khối lượng",
+    "en": "No quantity yet",
+    "zh": "未填工程量",
+    "ja": "数量未入力"
+  },
+  {
+    "key": "boqWorkbook.missingPrices",
+    "category": "procurement",
+    "vi": "Chưa có đơn giá",
+    "en": "No unit price",
+    "zh": "无单价",
+    "ja": "単価未設定"
+  },
+  {
+    "key": "boqWorkbook.missingUnits",
+    "category": "procurement",
+    "vi": "Chưa có ĐVT",
+    "en": "No unit",
+    "zh": "无单位",
+    "ja": "単位なし"
+  },
+  {
+    "key": "boqWorkbook.total",
+    "category": "procurement",
+    "vi": "Tổng tiền",
+    "en": "Total",
+    "zh": "合计",
+    "ja": "合計"
+  },
+  {
+    "key": "boqWorkbook.skippedHint",
+    "category": "procurement",
+    "vi": "Dòng chưa nhập khối lượng không được lưu thành dòng BOQ.",
+    "en": "Rows without a quantity are not saved as BOQ lines.",
+    "zh": "未填工程量的行不会保存为清单行。",
+    "ja": "数量のない行はBOQ行として保存されません。"
+  },
+  {
+    "key": "boqWorkbook.missingPriceHint",
+    "category": "procurement",
+    "vi": "Có hạng mục chưa có đơn giá: vẫn lưu được bản Nháp, nhưng phải nhập đủ giá và upload lại trước khi gửi duyệt.",
+    "en": "Some items have no unit price: the Draft can be saved, but enter all prices and upload again before submitting.",
+    "zh": "部分分项没有单价：可以保存草稿，但提交前必须补齐单价并重新上传。",
+    "ja": "単価未設定の項目があります。下書きは保存できますが、提出前に全単価を入力して再アップロードしてください。"
+  },
+  {
+    "key": "boqWorkbook.missingUnitHint",
+    "category": "procurement",
+    "vi": "Có hạng mục chưa có ĐVT. Hãy kiểm tra lại trong file.",
+    "en": "Some items have no unit. Please check the file.",
+    "zh": "部分分项没有单位，请检查文件。",
+    "ja": "単位のない項目があります。ファイルを確認してください。"
+  },
+  {
+    "key": "boqWorkbook.issuesTitle",
+    "category": "procurement",
+    "vi": "File có {count} lỗi, chưa lưu dữ liệu nào. Sửa các ô dưới đây trong Excel, lưu lại rồi kiểm tra lại.",
+    "en": "The file has {count} problems and nothing was saved. Fix the cells below in Excel, save and validate again.",
+    "zh": "文件有 {count} 处错误，未保存任何数据。请在 Excel 中修正以下单元格，保存后重新校验。",
+    "ja": "ファイルに {count} 件の問題があり、何も保存されていません。以下のセルをExcelで修正し、保存して再検証してください。"
+  },
+  {
+    "key": "boqWorkbook.issuesMore",
+    "category": "procurement",
+    "vi": "Đang hiển thị {shown} lỗi đầu tiên trong {count} lỗi.",
+    "en": "Showing the first {shown} of {count} problems.",
+    "zh": "显示前 {shown} 处，共 {count} 处。",
+    "ja": "{count} 件中、最初の {shown} 件を表示しています。"
+  },
+  {
+    "key": "boqWorkbook.issueCell",
+    "category": "procurement",
+    "vi": "Sheet “{sheet}” · ô {cell}",
+    "en": "Sheet “{sheet}” · cell {cell}",
+    "zh": "工作表“{sheet}” · 单元格 {cell}",
+    "ja": "シート「{sheet}」・セル {cell}"
+  },
+  {
+    "key": "boqWorkbook.issueSheet",
+    "category": "procurement",
+    "vi": "Sheet “{sheet}”",
+    "en": "Sheet “{sheet}”",
+    "zh": "工作表“{sheet}”",
+    "ja": "シート「{sheet}」"
+  },
+  {
+    "key": "boqWorkbook.created",
+    "category": "procurement",
+    "vi": "Đã tạo phiên bản Nháp từ file BOQ.",
+    "en": "Draft revision created from the BOQ file.",
+    "zh": "已根据清单文件创建草稿版本。",
+    "ja": "BOQファイルから下書き改訂を作成しました。"
+  },
+  {
+    "key": "boqWorkbook.sheetsTitle",
+    "category": "procurement",
+    "vi": "Các sheet trong file BOQ",
+    "en": "Sheets in the BOQ file",
+    "zh": "清单文件中的工作表",
+    "ja": "BOQファイルのシート"
+  },
+  {
+    "key": "boqWorkbook.sheetsHint",
+    "category": "procurement",
+    "vi": "Web hiển thị giá trị tổng của từng sheet; chi tiết xem trong file Excel.",
+    "en": "The web shows each sheet's total; open the Excel file for details.",
+    "zh": "网页显示各工作表合计，详情请查看 Excel 文件。",
+    "ja": "Webには各シートの合計を表示します。詳細はExcelファイルをご覧ください。"
+  },
+  {
+    "key": "boqWorkbook.downloadWorkbook",
+    "category": "procurement",
+    "vi": "Tải file BOQ",
+    "en": "Download BOQ file",
+    "zh": "下载清单文件",
+    "ja": "BOQファイルをダウンロード"
+  },
+  {
+    "key": "boqWorkbook.sourceFile",
+    "category": "procurement",
+    "vi": "File nguồn: {file}",
+    "en": "Source file: {file}",
+    "zh": "源文件：{file}",
+    "ja": "元ファイル：{file}"
+  },
+  {
+    "key": "boqWorkbook.readOnlyHint",
+    "category": "procurement",
+    "vi": "Dòng của BOQ từ file không sửa trên web. Sửa trong Excel rồi upload thành phiên bản mới.",
+    "en": "Lines of an uploaded BOQ are not edited on the web. Edit in Excel and upload a new revision.",
+    "zh": "上传清单的行不能在网页上修改。请在 Excel 中修改后上传新版本。",
+    "ja": "アップロードしたBOQの行はWebで編集できません。Excelで編集し新しい改訂としてアップロードしてください。"
+  },
+  {
+    "key": "procurement.status.TenderApproved",
+    "category": "procurement",
+    "vi": "Đã duyệt (dự thầu)",
+    "en": "Approved (tender)",
+    "zh": "已批准（投标）",
+    "ja": "承認済み（入札）"
+  },
+  {
+    "key": "boqWorkbook.error.template",
+    "category": "procurement",
+    "vi": "Mẫu BOQ không hợp lệ. Chọn lại mẫu trong danh sách.",
+    "en": "Invalid BOQ form. Choose a form from the list.",
+    "zh": "清单模板无效，请从列表中重新选择。",
+    "ja": "BOQ様式が無効です。一覧から選択してください。"
+  },
+  {
+    "key": "boqWorkbook.error.file",
+    "category": "procurement",
+    "vi": "File không đọc được. Chọn file Excel .xlsx hợp lệ, tối đa 20 MB.",
+    "en": "The file cannot be read. Choose a valid Excel .xlsx file up to 20 MB.",
+    "zh": "无法读取文件。请选择有效的 Excel .xlsx 文件，最大 20 MB。",
+    "ja": "ファイルを読み取れません。20 MB以下の有効な.xlsxファイルを選択してください。"
+  },
+  {
+    "key": "boqWorkbook.error.unsafeFile",
+    "category": "procurement",
+    "vi": "File chứa macro, liên kết ngoài hoặc kết nối dữ liệu. Dùng file tải từ mẫu BOQ rồi nhập lại dữ liệu.",
+    "en": "The file contains macros, external links or data connections. Use the downloaded BOQ form and enter the data there.",
+    "zh": "文件包含宏、外部链接或数据连接。请使用下载的清单模板重新填写。",
+    "ja": "マクロ・外部リンク・データ接続が含まれています。ダウンロードしたBOQ様式に入力し直してください。"
+  },
+  {
+    "key": "boqWorkbook.error.contract",
+    "category": "procurement",
+    "vi": "Hợp đồng đã chọn phải là hợp đồng đầu ra đã ký, còn hiệu lực và thuộc dự án này. Chọn hợp đồng khác hoặc để BOQ dự thầu.",
+    "en": "The selected contract must be a signed, active upstream contract of this project. Choose another one or keep a tender BOQ.",
+    "zh": "所选合同必须是本项目已签署且有效的上游合同。请另选或保留为投标清单。",
+    "ja": "選択した契約は、この案件の署名済みで有効な上流契約である必要があります。別の契約を選ぶか入札BOQのままにしてください。"
+  },
+  {
+    "key": "boqWorkbook.error.changedFile",
+    "category": "procurement",
+    "vi": "File đã thay đổi sau khi kiểm tra. Bấm Kiểm tra file lại trước khi xác nhận.",
+    "en": "The file changed after validation. Validate it again before confirming.",
+    "zh": "文件在校验后已更改。请重新校验后再确认。",
+    "ja": "検証後にファイルが変更されました。確定前に再検証してください。"
+  },
+  {
+    "key": "boqWorkbook.error.invalidRows",
+    "category": "procurement",
+    "vi": "File có lỗi dữ liệu; chưa lưu gì.",
+    "en": "The file has data problems; nothing was saved.",
+    "zh": "文件存在数据错误，未保存任何内容。",
+    "ja": "データに問題があり、何も保存されていません。"
+  },
+  {
+    "key": "boqWorkbook.error.noRows",
+    "category": "procurement",
+    "vi": "File chưa có hạng mục nào được nhập khối lượng. Nhập khối lượng vào cột KL rồi upload lại.",
+    "en": "No item has a quantity yet. Enter quantities in the quantity column and upload again.",
+    "zh": "尚无分项填写工程量。请在工程量列填写后重新上传。",
+    "ja": "数量が入力された項目がありません。数量列に入力して再アップロードしてください。"
+  },
+  {
+    "key": "boqWorkbook.error.sheetMissing",
+    "category": "procurement",
+    "vi": "Thiếu sheet này so với mẫu. Dùng đúng mẫu BOQ đã chọn và không đổi tên sheet.",
+    "en": "This sheet from the form is missing. Use the selected BOQ form and keep its sheet names.",
+    "zh": "缺少模板中的此工作表。请使用所选模板并保留工作表名称。",
+    "ja": "様式のこのシートがありません。選択したBOQ様式を使い、シート名を変更しないでください。"
+  },
+  {
+    "key": "boqWorkbook.error.unknownSheet",
+    "category": "procurement",
+    "vi": "Sheet này không có trong mẫu nên sẽ không được đọc. Xóa sheet hoặc chuyển dữ liệu vào sheet của mẫu.",
+    "en": "This sheet is not in the form, so it cannot be read. Delete it or move its data into a form sheet.",
+    "zh": "此工作表不在模板中，无法读取。请删除或将数据移到模板工作表。",
+    "ja": "このシートは様式にないため読み取れません。削除するか様式のシートへ移してください。"
+  },
+  {
+    "key": "boqWorkbook.error.headerMismatch",
+    "category": "procurement",
+    "vi": "Tiêu đề cột khác mẫu đã chọn. Kiểm tra đã chọn đúng mẫu và không sửa dòng tiêu đề.",
+    "en": "The column heading differs from the selected form. Check the form choice and keep the heading rows.",
+    "zh": "列标题与所选模板不同。请确认模板选择正确且未修改标题行。",
+    "ja": "列見出しが選択した様式と異なります。様式の選択を確認し、見出し行を変更しないでください。"
+  },
+  {
+    "key": "boqWorkbook.error.totalRowMissing",
+    "category": "procurement",
+    "vi": "Không tìm thấy dòng tổng cộng của sheet. Giữ nguyên dòng tổng trong mẫu.",
+    "en": "The sheet's grand total row was not found. Keep the total row from the form.",
+    "zh": "未找到工作表的合计行。请保留模板中的合计行。",
+    "ja": "シートの合計行が見つかりません。様式の合計行を残してください。"
+  },
+  {
+    "key": "boqWorkbook.error.totalMismatch",
+    "category": "procurement",
+    "vi": "Tổng cộng trong file khác tổng các dòng hạng mục. Kiểm tra công thức tổng, có thể dòng mới nằm ngoài vùng cộng.",
+    "en": "The file's grand total differs from the sum of its items. Check the total formula; a new row may be outside its range.",
+    "zh": "文件合计与各分项之和不一致。请检查合计公式，新增行可能不在求和范围内。",
+    "ja": "ファイルの合計が項目の合計と一致しません。合計の数式を確認してください。新しい行が範囲外の可能性があります。"
+  },
+  {
+    "key": "boqWorkbook.error.amountMismatch",
+    "category": "procurement",
+    "vi": "Thành tiền khác Khối lượng × Đơn giá. Sửa lại công thức hoặc giá trị.",
+    "en": "The amount differs from quantity × unit price. Fix the formula or value.",
+    "zh": "金额与工程量 × 单价不一致。请修正公式或数值。",
+    "ja": "金額が数量×単価と一致しません。数式または値を修正してください。"
+  },
+  {
+    "key": "boqWorkbook.error.amountRequired",
+    "category": "procurement",
+    "vi": "Hạng mục có đơn giá nhưng chưa có Thành tiền. Giữ công thức trong cột Thành tiền.",
+    "en": "The item has a price but no amount. Keep the formula in the amount column.",
+    "zh": "分项有单价但没有金额。请保留金额列的公式。",
+    "ja": "単価はありますが金額がありません。金額列の数式を残してください。"
+  },
+  {
+    "key": "boqWorkbook.error.formulaError",
+    "category": "procurement",
+    "vi": "Ô có lỗi Excel (ví dụ #REF!, #VALUE!). Sửa công thức hoặc nhập giá trị.",
+    "en": "The cell has an Excel error (for example #REF!, #VALUE!). Fix the formula or enter a value.",
+    "zh": "单元格存在 Excel 错误（如 #REF!、#VALUE!）。请修正公式或填写数值。",
+    "ja": "セルにExcelエラー（#REF!、#VALUE!など）があります。数式を修正するか値を入力してください。"
+  },
+  {
+    "key": "boqWorkbook.error.formulaNotCalculated",
+    "category": "procurement",
+    "vi": "Công thức chưa được tính. Mở file bằng Excel, lưu lại rồi upload.",
+    "en": "The formula has not been calculated. Open the file in Excel, save it and upload again.",
+    "zh": "公式尚未计算。请用 Excel 打开并保存后再上传。",
+    "ja": "数式が計算されていません。Excelで開いて保存し、再度アップロードしてください。"
+  },
+  {
+    "key": "boqWorkbook.error.number",
+    "category": "procurement",
+    "vi": "Ô này phải là số Excel, không phải chữ. Ví dụ: 1311,5.",
+    "en": "This cell must be an Excel number, not text. Example: 1,311.5.",
+    "zh": "此单元格必须是 Excel 数字而不是文本。例如：1,311.5。",
+    "ja": "このセルは文字列ではなくExcelの数値にしてください。例：1,311.5。"
+  },
+  {
+    "key": "boqWorkbook.error.negative",
+    "category": "procurement",
+    "vi": "Số không được âm.",
+    "en": "The number cannot be negative.",
+    "zh": "数字不能为负。",
+    "ja": "負の数は入力できません。"
+  },
+  {
+    "key": "boqWorkbook.error.maximum",
+    "category": "procurement",
+    "vi": "Số vượt quá giới hạn 999.999.999.999.",
+    "en": "The number exceeds the limit of 999,999,999,999.",
+    "zh": "数字超过上限 999,999,999,999。",
+    "ja": "数値が上限999,999,999,999を超えています。"
+  },
+  {
+    "key": "boqWorkbook.error.length",
+    "category": "procurement",
+    "vi": "Nội dung dài quá {limit} ký tự.",
+    "en": "The text is longer than {limit} characters.",
+    "zh": "内容超过 {limit} 个字符。",
+    "ja": "内容が{limit}文字を超えています。"
+  },
+  {
+    "key": "boqWorkbook.error.descriptionRequired",
+    "category": "procurement",
+    "vi": "Hạng mục có khối lượng nhưng chưa có tên.",
+    "en": "The item has a quantity but no description.",
+    "zh": "分项有工程量但没有名称。",
+    "ja": "数量はありますが項目名がありません。"
+  },
+  {
+    "key": "boqWorkbook.error.sttRequired",
+    "category": "procurement",
+    "vi": "Dòng có khối lượng nhưng chưa có STT là số. Nhập STT để hệ thống nhận là hạng mục.",
+    "en": "The row has a quantity but no numeric STT. Enter one so it counts as an item.",
+    "zh": "该行有工程量但序号不是数字。请填写序号以识别为分项。",
+    "ja": "数量がありますが番号が数値ではありません。項目として扱うため番号を入力してください。"
+  },
+  {
+    "key": "boqWorkbook.error.missingPrices",
+    "category": "procurement",
+    "vi": "Còn {limit} hạng mục chưa có đơn giá. Nhập đủ giá trong Excel và upload thành phiên bản mới rồi gửi duyệt.",
+    "en": "{limit} items still have no unit price. Enter the prices in Excel, upload a new revision and submit that.",
+    "zh": "仍有 {limit} 个分项没有单价。请在 Excel 中补齐单价，上传新版本后再提交。",
+    "ja": "単価未設定の項目が{limit}件あります。Excelで入力し、新しい改訂をアップロードして提出してください。"
+  },
+  {
+    "key": "boqWorkbook.error.workbookReadOnly",
+    "category": "procurement",
+    "vi": "BOQ từ file không sửa trên web. Sửa trong Excel rồi upload thành phiên bản mới.",
+    "en": "An uploaded BOQ is not edited on the web. Edit it in Excel and upload a new revision.",
+    "zh": "上传的清单不能在网页上修改。请在 Excel 中修改后上传新版本。",
+    "ja": "アップロードしたBOQはWebで編集できません。Excelで編集し新しい改訂をアップロードしてください。"
+  },
+  {
+    "key": "boqWorkbook.tenderLinesTitle",
+    "category": "procurement",
+    "vi": "Các dòng BOQ dự thầu",
+    "en": "Tender BOQ lines",
+    "zh": "投标清单行",
+    "ja": "入札BOQの行"
+  },
+  {
+    "key": "boqWorkbook.tenderLinesHint",
+    "category": "procurement",
+    "vi": "Khối lượng và đơn giá lấy từ file. BOQ dự thầu không dùng làm hạn mức vật tư; chỉ BOQ gắn hợp đồng đã ký mới làm hạn mức.",
+    "en": "Quantities and prices come from the file. A tender BOQ is not a material allowance; only a BOQ linked to a signed contract is.",
+    "zh": "工程量和单价来自文件。投标清单不作为材料限额，只有关联已签合同的清单才作为限额。",
+    "ja": "数量と単価はファイルから取得します。入札BOQは資材枠になりません。署名済み契約に紐づくBOQのみが資材枠になります。"
+  },
+  {
+    "key": "boqLibrary.title",
+    "category": "procurement",
+    "vi": "Thư viện mẫu BOQ",
+    "en": "BOQ form library",
+    "zh": "BOQ模板库",
+    "ja": "BOQテンプレートライブラリ"
+  },
+  {
+    "key": "boqLibrary.subtitle",
+    "category": "procurement",
+    "vi": "Mẫu BOQ giữ nguyên định dạng file của khách hàng. Mỗi mẫu là một thư mục, mỗi sheet là một mục con.",
+    "en": "BOQ forms keep the customer's own file layout. Each form is a folder and each sheet is an item inside it.",
+    "zh": "BOQ模板保留客户原有文件格式。每个模板为一个文件夹，每个工作表为其中一项。",
+    "ja": "BOQテンプレートは顧客ファイルの書式をそのまま保持します。各テンプレートはフォルダー、各シートはその中の項目です。"
+  },
+  {
+    "key": "boqLibrary.step.download",
+    "category": "procurement",
+    "vi": "Chọn mẫu đúng loại hồ sơ và tải file Excel.",
+    "en": "Pick the form for the job and download the Excel file.",
+    "zh": "选择对应的模板并下载Excel文件。",
+    "ja": "案件に合うテンプレートを選び、Excelファイルをダウンロードします。"
+  },
+  {
+    "key": "boqLibrary.step.fill",
+    "category": "procurement",
+    "vi": "Điền khối lượng và đơn giá trong Excel, giữ nguyên tên sheet và dòng tiêu đề.",
+    "en": "Fill quantities and unit prices in Excel; keep sheet names and heading rows.",
+    "zh": "在Excel中填写数量和单价，保留工作表名称和标题行。",
+    "ja": "Excelで数量と単価を入力します。シート名と見出し行は変更しないでください。"
+  },
+  {
+    "key": "boqLibrary.step.upload",
+    "category": "procurement",
+    "vi": "Upload file đã điền trong nhóm công việc Yêu cầu báo giá đầu vào.",
+    "en": "Upload the filled file in the input-price request work package.",
+    "zh": "在“进货报价请求”工作组中上传已填写的文件。",
+    "ja": "記入済みファイルを仕入見積依頼のワークパッケージでアップロードします。"
+  },
+  {
+    "key": "boqLibrary.tree",
+    "category": "procurement",
+    "vi": "Danh sách mẫu BOQ",
+    "en": "BOQ forms",
+    "zh": "BOQ模板列表",
+    "ja": "BOQテンプレート一覧"
+  },
+  {
+    "key": "boqLibrary.expand",
+    "category": "procurement",
+    "vi": "Mở thư mục",
+    "en": "Expand",
+    "zh": "展开",
+    "ja": "展開"
+  },
+  {
+    "key": "boqLibrary.collapse",
+    "category": "procurement",
+    "vi": "Thu gọn thư mục",
+    "en": "Collapse",
+    "zh": "收起",
+    "ja": "折りたたむ"
+  },
+  {
+    "key": "boqLibrary.itemCount",
+    "category": "procurement",
+    "vi": "{count} hạng mục",
+    "en": "{count} items",
+    "zh": "{count}个条目",
+    "ja": "{count}項目"
+  },
+  {
+    "key": "boqLibrary.summarySheet",
+    "category": "procurement",
+    "vi": "Sheet tổng hợp",
+    "en": "Summary sheet",
+    "zh": "汇总表",
+    "ja": "集計シート"
+  },
+  {
+    "key": "boqLibrary.summaryHint",
+    "category": "procurement",
+    "vi": "Sheet tổng hợp hoặc trang bìa, cộng số liệu từ các sheet khác. Xem chi tiết trong file Excel.",
+    "en": "A summary or cover sheet that adds up the other sheets. See the Excel file for details.",
+    "zh": "汇总表或封面，汇总其他工作表的数据。详情请查看Excel文件。",
+    "ja": "他のシートを集計する集計シートまたは表紙です。詳細はExcelファイルをご覧ください。"
+  },
+  {
+    "key": "boqLibrary.outlineHint",
+    "category": "procurement",
+    "vi": "Cấu trúc sheet trong mẫu: nhóm, hạng mục và dòng cộng. Khối lượng và đơn giá được điền trong file.",
+    "en": "Sheet structure in the form: groups, items and total rows. Quantities and prices are filled in the file.",
+    "zh": "模板中的工作表结构：分组、条目和合计行。数量和单价在文件中填写。",
+    "ja": "テンプレートのシート構成：グループ、項目、合計行。数量と単価はファイルに入力します。"
+  },
+  {
+    "key": "boqLibrary.empty",
+    "category": "procurement",
+    "vi": "Chưa có mẫu BOQ nào.",
+    "en": "No BOQ forms yet.",
+    "zh": "暂无BOQ模板。",
+    "ja": "BOQテンプレートはまだありません。"
+  },
+  {
+    "key": "boqLibrary.download",
+    "category": "procurement",
+    "vi": "Tải mẫu Excel",
+    "en": "Download Excel form",
+    "zh": "下载Excel模板",
+    "ja": "Excelテンプレートをダウンロード"
+  },
+  {
+    "key": "boqWorkbook.error.workPackageReview",
+    "category": "procurement",
+    "vi": "BOQ này được gửi duyệt và duyệt trong nhóm công việc yêu cầu báo giá đầu vào.",
+    "en": "This BOQ is submitted and approved in its input-price request work package.",
+    "zh": "此BOQ在进货报价请求工作组中提交和审批。",
+    "ja": "このBOQは仕入見積依頼のワークパッケージで申請・承認します。"
+  },
+  {
+    "key": "boqWorkbook.error.notTender",
+    "category": "procurement",
+    "vi": "Chỉ BOQ dự thầu đã duyệt mới chuyển được thành BOQ hợp đồng.",
+    "en": "Only an approved tender BOQ can become the contract BOQ.",
+    "zh": "只有已批准的投标工程量清单才能转为合同工程量清单。",
+    "ja": "合同BOQにできるのは承認済みの入札BOQだけです。"
+  },
+  {
+    "key": "boqWorkbook.error.notLatestTender",
+    "category": "procurement",
+    "vi": "Dự án có BOQ dự thầu đã duyệt mới hơn. Hãy chuyển bản mới nhất.",
+    "en": "The project has a newer approved tender BOQ. Convert the latest one.",
+    "zh": "该项目有更新的已批准投标清单，请转换最新版本。",
+    "ja": "より新しい承認済み入札BOQがあります。最新版を変換してください。"
+  },
+  {
+    "key": "boqWorkbook.error.contractBoqExists",
+    "category": "procurement",
+    "vi": "Dự án đã có BOQ hợp đồng. Thay đổi sau hợp đồng cần upload BOQ hợp đồng mới để PM duyệt.",
+    "en": "The project already has a contract BOQ. Upload a new contract BOQ for the PM to approve instead.",
+    "zh": "该项目已有合同工程量清单。合同后的变更请上传新的合同清单供项目经理审批。",
+    "ja": "この案件には既に契約BOQがあります。契約後の変更は新しい契約BOQをアップロードしてPMの承認を受けてください。"
+  },
+  {
+    "key": "boqWorkbook.contractConvert.action",
+    "category": "procurement",
+    "vi": "Chuyển thành BOQ hợp đồng",
+    "en": "Make it the contract BOQ",
+    "zh": "转为合同工程量清单",
+    "ja": "契約BOQにする"
+  },
+  {
+    "key": "boqWorkbook.contractConvert.title",
+    "category": "procurement",
+    "vi": "Chuyển BOQ dự thầu thành BOQ hợp đồng",
+    "en": "Turn the tender BOQ into the contract BOQ",
+    "zh": "将投标清单转为合同清单",
+    "ja": "入札BOQを契約BOQにする"
+  },
+  {
+    "key": "boqWorkbook.contractConvert.hint",
+    "category": "procurement",
+    "vi": "Trúng thầu: giữ nguyên file và các dòng của bản này, gắn với hợp đồng đầu ra đã ký. Sau khi chuyển, BOQ thành hạn mức cho yêu cầu vật tư, RFQ và kho.",
+    "en": "Won the tender: this revision keeps its file and lines and is linked to the signed upstream contract. It then becomes the allowance for material requests, RFQs and the warehouse.",
+    "zh": "中标：本版本保留文件和明细，并关联已签署的上游合同。转换后成为材料申请、询价和仓库的限额。",
+    "ja": "落札：この版のファイルと明細はそのままで、署名済みの上流契約に紐付けます。変換後は資材請求・RFQ・倉庫の上限になります。"
+  },
+  {
+    "key": "boqWorkbook.contractConvert.confirm",
+    "category": "procurement",
+    "vi": "Chuyển thành BOQ hợp đồng",
+    "en": "Convert",
+    "zh": "确认转换",
+    "ja": "変換する"
+  },
+  {
+    "key": "boqWorkbook.contractConvert.done",
+    "category": "procurement",
+    "vi": "BOQ đã thành BOQ hợp đồng",
+    "en": "The BOQ is now the contract BOQ",
+    "zh": "已转为合同工程量清单",
+    "ja": "契約BOQになりました"
+  },
+  {
+    "key": "boqWorkbook.contractConvert.noContract",
+    "category": "procurement",
+    "vi": "Dự án chưa có hợp đồng đầu ra đã ký. Ký hợp đồng (có bản scan) trước khi chuyển.",
+    "en": "The project has no signed upstream contract yet. Sign the contract (with its scan) first.",
+    "zh": "项目尚无已签署的上游合同。请先签署合同（附扫描件）。",
+    "ja": "署名済みの上流契約がまだありません。先に契約（スキャン付き）を締結してください。"
+  },
+  {
+    "key": "boqWorkbook.contractUpload",
+    "category": "procurement",
+    "vi": "Upload BOQ hợp đồng",
+    "en": "Upload contract BOQ",
+    "zh": "上传合同工程量清单",
+    "ja": "契約BOQをアップロード"
+  },
+  {
+    "key": "boqWorkbook.contractRequired",
+    "category": "procurement",
+    "vi": "Chọn hợp đồng đầu ra đã ký cho BOQ hợp đồng.",
+    "en": "Choose the signed upstream contract for this contract BOQ.",
+    "zh": "请为合同清单选择已签署的上游合同。",
+    "ja": "契約BOQの署名済み上流契約を選んでください。"
+  },
+  {
+    "key": "workPackageBoq.title",
+    "category": "procurement",
+    "vi": "BOQ báo giá đầu vào",
+    "en": "Input-price BOQ",
+    "zh": "进货报价BOQ",
+    "ja": "仕入見積BOQ"
+  },
+  {
+    "key": "workPackageBoq.hint",
+    "category": "procurement",
+    "vi": "Upload file BOQ đã điền khối lượng và đơn giá. Khi người phụ trách nhóm duyệt, file này thành BOQ dự thầu của dự án để báo giá áp dụng. Tải mẫu tại",
+    "en": "Upload the BOQ file filled with quantities and prices. Once the package lead approves it, it becomes the project's tender BOQ that quotes apply. Get the forms from the",
+    "zh": "上传已填写数量和单价的BOQ文件。工作组负责人批准后，它将成为项目的投标BOQ供报价使用。模板可在此下载：",
+    "ja": "数量と単価を入力したBOQファイルをアップロードします。担当者が承認すると、見積に適用するプロジェクトの入札BOQになります。テンプレートの入手先："
+  },
+  {
+    "key": "workPackageBoq.library",
+    "category": "procurement",
+    "vi": "Thư viện mẫu BOQ",
+    "en": "BOQ form library",
+    "zh": "BOQ模板库",
+    "ja": "BOQテンプレートライブラリ"
+  },
+  {
+    "key": "workPackageBoq.empty",
+    "category": "procurement",
+    "vi": "Chưa upload BOQ nào cho yêu cầu này.",
+    "en": "No BOQ uploaded for this request yet.",
+    "zh": "此请求尚未上传BOQ。",
+    "ja": "この依頼にはまだBOQがアップロードされていません。"
+  },
+  {
+    "key": "workPackageBoq.missingPrices",
+    "category": "procurement",
+    "vi": "Còn {count} hạng mục chưa có đơn giá. Nhập đủ giá trong Excel rồi upload lại trước khi gửi duyệt.",
+    "en": "{count} items still have no unit price. Fill the prices in Excel and upload again before submitting.",
+    "zh": "还有{count}个条目没有单价。请在Excel中补全单价并重新上传后再提交。",
+    "ja": "{count}項目に単価がありません。Excelで単価を入力し再アップロードしてから申請してください。"
+  }
+]

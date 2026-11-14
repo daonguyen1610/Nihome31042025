@@ -92,7 +92,7 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
             opportunityId,
             method = "Boq",
             packageDescription = "Factory shell design and construction",
-            items = new[] { new { itemCode = "FACTORY", name = "Factory shell", unit = "m2", quantity = 100m, unitPrice = 1_000_000m } },
+            projectBoqRevisionId = await SeedApprovedProjectBoqAsync(opportunityId, ("FACTORY", "Factory shell", "m2", 100m, 1_000_000m)),
             discountPercent = 5m,
             vatPercent = 8m,
         });
@@ -112,7 +112,8 @@ public sealed class CrmBusinessPipelineTests(NihomeWebApplicationFactory factory
                 rowVersion = Version(quote),
                 discountPercent = 5m,
                 vatPercent = 8m,
-                items = new[] { new { itemCode = "FACTORY", name = "Factory shell revised scope", unit = "m2", quantity = 100m, unitPrice = 900_000m } },
+                // The revised scope is a newer approved project BOQ applied to the same quote.
+                projectBoqRevisionId = await SeedApprovedProjectBoqAsync(opportunityId, ("FACTORY", "Factory shell revised scope", "m2", 100m, 900_000m)),
             });
             Id(quote).Should().Be(originalQuoteId);
             quote.GetProperty("version").GetInt32().Should().Be(2);

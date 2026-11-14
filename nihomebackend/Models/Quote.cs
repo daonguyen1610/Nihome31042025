@@ -40,6 +40,9 @@ public class Quote : IConcurrencyTracked
     public string? PackageDescription { get; set; }
     public int? MaterialRateRevisionId { get; set; }
     public MaterialRateRevision? MaterialRateRevision { get; set; }
+    // BOQ quotes copy their lines from the project's approved root BOQ revision.
+    public int? ProjectBoqRevisionId { get; set; }
+    public ProjectBoqRevision? ProjectBoqRevision { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;
@@ -140,6 +143,7 @@ public class QuoteVersionSnapshot
     public decimal? UnitPricePerSqm { get; set; }
     public string? PackageDescription { get; set; }
     public int? MaterialRateRevisionId { get; set; }
+    public int? ProjectBoqRevisionId { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public QuoteRateSource RateSource { get; set; } = QuoteRateSource.Override;

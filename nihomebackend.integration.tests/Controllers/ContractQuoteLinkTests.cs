@@ -115,12 +115,12 @@ public sealed class ContractQuoteLinkTests(NihomeWebApplicationFactory factory) 
         return new Deal(converted.GetProperty("convertedCustomerId").GetInt32(), opportunityId, projectId);
     }
 
-    private Task<JsonElement> CreateQuoteAsync(int opportunityId, decimal unitPrice) =>
-        WriteAsync(HttpMethod.Post, "/api/quotes", new
+    private async Task<JsonElement> CreateQuoteAsync(int opportunityId, decimal unitPrice) =>
+        await WriteAsync(HttpMethod.Post, "/api/quotes", new
         {
             opportunityId,
             method = "Boq",
-            items = new[] { new { itemCode = "KHO", name = "Kho lạnh panel", unit = "m2", quantity = 1000m, unitPrice } },
+            projectBoqRevisionId = await SeedApprovedProjectBoqAsync(opportunityId, ("KHO", "Kho lạnh panel", "m2", 1000m, unitPrice)),
             vatPercent = 8m,
         });
 

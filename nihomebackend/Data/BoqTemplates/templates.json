@@ -1,0 +1,1451 @@
+{
+  "templates": [
+    {
+      "code": "PCCC-CAN-HO",
+      "nameKey": "boqWorkbook.template.pcccCanHo",
+      "file": "BOQ-PCCC-Can-ho-dich-vu.xlsx",
+      "currency": "VND",
+      "amountTolerance": 1,
+      "sheets": [
+        {
+          "name": "ptct",
+          "headers": {
+            "A14": "STT",
+            "B14": "DANH MỤC VẬT TƯ",
+            "D15": "ĐVT",
+            "E15": "KL",
+            "F15": "ĐƠN GIÁ",
+            "G15": "THÀNH TIỀN"
+          },
+          "firstRow": 15,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "F",
+          "amountColumn": "G",
+          "subtotalPrefix": "CỘNG",
+          "totalLabel": "CỘNG ( A + B + C)"
+        }
+      ]
+    },
+    {
+      "code": "THIET-KE-XIN-PHEP",
+      "nameKey": "boqWorkbook.template.thietKeXinPhep",
+      "file": "BOQ-Thiet-ke-xin-phep.xlsx",
+      "currency": "VND",
+      "amountTolerance": 1,
+      "sheets": [
+        {
+          "name": "Bao gia",
+          "headers": {
+            "A28": "Stt ID",
+            "B28": "Nội dung công việc",
+            "E28": "Đơn vị/ Unit",
+            "F28": "Khối lượng/ Quantity",
+            "G28": "Đơn giá/ Price (VND)",
+            "H28": "Thành tiền/ Amount (VND)"
+          },
+          "firstRow": 29,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "descriptionFirstLine": true,
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "amountColumn": "H",
+          "subtotalPrefix": "Tổng cộng",
+          "totalLabel": "Tổng cộng trước VAT (B+C)"
+        }
+      ]
+    },
+    {
+      "code": "NHA-XUONG",
+      "nameKey": "boqWorkbook.template.nhaXuong",
+      "file": "BOQ-Nha-xuong.xlsx",
+      "currency": "VND",
+      "amountTolerance": 1,
+      "ignoredSheets": [
+        "Cover",
+        "Cover 1",
+        "00.Tổng Hợp"
+      ],
+      "sheets": [
+        {
+          "name": "1.Công Tác Tạm",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 7,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "2.Nhà Xưởng & Văn Phòng",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 28,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "3.Nhà Bảo Trì, Rang Đậu, BB",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 25,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "4.Nhà BB Thuỷ Tinh, Carton",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 25,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "5.Nhà Lò Hơi & Nén Khí",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 25,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "6.Nhà Để Xe Máy",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 26,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "7.Nhà Nghỉ Giữa Ca",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 23,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "8.Nhà Bảo Vệ 1",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 23,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "9.Nhà Bảo Vệ 2",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 23,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "10.Nhà Rác, Phòng Điện",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 23,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "11.Bể Nước Ngầm PCCC",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 20,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "12.Bể Nước Ngầm Xả Nguội",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 20,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "13.Bể Nước Ngầm RO ",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 20,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "14.Bể XLNT",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 19,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "15.Hàng Rào & Cổng",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 26,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "B.Hạ Tầng Kỹ Thuật",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 14,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "C1. Hệ Thống Plumbing",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 11,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "C2.Hệ Thống XLNT",
+          "headers": {
+            "A4": "NO / STT",
+            "B4": "WORK SCOPE / CÔNG VIỆC",
+            "D4": "UNIT/ ĐƠN VỊ",
+            "E4": "QUANTITY / KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 12,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "totalCell": "J6"
+        },
+        {
+          "name": "C3.Hệ Thống PCCC ",
+          "headers": {
+            "A4": "NO",
+            "B4": "DESCRIPTION MÔ TẢ",
+            "D4": "UNIT ĐƠN VỊ",
+            "E4": "Q'TY KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 15,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "subtotalPrefix": "[ Sub - total ]",
+          "totalCell": "J7"
+        },
+        {
+          "name": "C4.Hệ Thống Điện & Điện Nhẹ ",
+          "headers": {
+            "A4": "No. STT",
+            "B4": "DESCRIPTION MÔ TẢ",
+            "D4": "UNIT ĐƠN VỊ",
+            "E4": "Q'TY KHỐI LƯỢNG",
+            "I5": "UNIT PRICE / TỔNG ĐƠN GIÁ",
+            "J4": "AMOUNT / THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 17,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "I",
+          "amountColumn": "J",
+          "itemsWithoutStt": true,
+          "subtotalPrefix": "[ Sub - total ]",
+          "totalCell": "J7",
+          "totalDecimals": -5
+        }
+      ]
+    },
+    {
+      "code": "XAY-DUNG-ME",
+      "nameKey": "boqWorkbook.template.xayDungMe",
+      "file": "BOQ-Xay-dung-ME-PCCC.xlsx",
+      "currency": "VND",
+      "amountTolerance": 1,
+      "ignoredSheets": [
+        "TỔNG HỢP"
+      ],
+      "sheets": [
+        {
+          "name": "CP chuẩn bị",
+          "headers": {
+            "A7": "Stt",
+            "B7": "HẠNG MỤC THI CÔNG",
+            "C7": "ĐVT",
+            "D7": "KHỐI LƯỢNG",
+            "E7": "ĐƠN GIÁ ( VNĐ)",
+            "F7": "THÀNH TIỀN (VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "D",
+          "unitPriceColumn": "E",
+          "amountColumn": "F",
+          "totalLabel": "TỔNG GIÁ TRỊ TRƯỚC THUẾ",
+          "measurementRows": true
+        },
+        {
+          "name": "San lấp",
+          "headers": {
+            "A8": "STT",
+            "B8": "NỘI DUNG CÔNG VIỆC",
+            "C8": "ĐVT",
+            "D8": "KHỐI LƯỢNG",
+            "E9": "Vật Tư",
+            "F9": "NC&MTC",
+            "I9": "Tổng"
+          },
+          "firstRow": 10,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "D",
+          "unitPriceColumn": "E",
+          "extraPriceColumns": [
+            "F"
+          ],
+          "amountColumn": "I",
+          "totalLabel": "CỘNG GIÁ TRỊ TRƯỚC THUẾ",
+          "measurementRows": true
+        },
+        {
+          "name": "Cọc",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "F6": "KHỐI LƯỢNG",
+            "G7": "Vật tư",
+            "H7": "NC&MTC",
+            "K7": "Tổng"
+          },
+          "firstRow": 8,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H"
+          ],
+          "amountColumn": "K",
+          "totalLabel": "CỘNG GIÁ TRỊ TRƯỚC THUẾ",
+          "measurementRows": true
+        },
+        {
+          "name": "Xưởng",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "H6": "K. lượng",
+            "I7": "Vật tư ",
+            "J7": "NC&MTC",
+            "M6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "H",
+          "unitPriceColumn": "I",
+          "extraPriceColumns": [
+            "J"
+          ],
+          "amountColumn": "M",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "VP",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "D6": "K. lượng",
+            "E7": "Vật tư ",
+            "F7": "NC&NTC",
+            "I6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "D",
+          "unitPriceColumn": "E",
+          "extraPriceColumns": [
+            "F"
+          ],
+          "amountColumn": "I",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Lò Hơi",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC&MTC",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Trạm điện",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC ",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Tổng",
+          "measurementRows": true
+        },
+        {
+          "name": "Nhà Bảo Vệ",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "D6": "K. lượng",
+            "E7": "Vật tư ",
+            "F7": "NC&NTC",
+            "I6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "D",
+          "unitPriceColumn": "E",
+          "extraPriceColumns": [
+            "F"
+          ],
+          "amountColumn": "I",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Cổng+HR",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC&NTC",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 8,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Bể PCCC",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC&NTC",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Bể XLNT",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC&NTC",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Hạ tầng",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC&NTC",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "NUOC MUA",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC&NTC",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "NUOC THAI",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "C6": "ĐVT",
+            "I6": "K. lượng",
+            "J7": "Vật tư ",
+            "K7": "NC&NTC",
+            "N6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "I",
+          "unitPriceColumn": "J",
+          "extraPriceColumns": [
+            "K"
+          ],
+          "amountColumn": "N",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Điện nước",
+          "headers": {
+            "A6": "STT",
+            "B6": "NỘI DUNG CÔNG VIỆC",
+            "E6": "ĐVT",
+            "F6": "K. lượng",
+            "G7": "Vật tư ",
+            "H7": "NC&NTC",
+            "K6": "Tổng cộng \n(VNĐ)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H"
+          ],
+          "amountColumn": "K",
+          "subtotalPrefix": "Tổng",
+          "totalLabel": "Cộng trước thuế",
+          "measurementRows": true
+        },
+        {
+          "name": "Thang hàng",
+          "headers": {
+            "A6": "STT",
+            "B6": "DIỄN GIẢI",
+            "C6": "ĐVT",
+            "D6": "SL",
+            "E6": "ĐƠN GIÁ",
+            "F6": "THÀNH TIỀN  "
+          },
+          "firstRow": 7,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "D",
+          "unitPriceColumn": "E",
+          "amountColumn": "F",
+          "totalLabel": "CỘNG TRƯỚC THUẾ",
+          "measurementRows": true
+        },
+        {
+          "name": "PCCC",
+          "headers": {
+            "A6": "STT",
+            "B6": "DIỄN GIẢI",
+            "D6": "ĐVT",
+            "E6": "SL",
+            "F6": "ĐƠN GIÁ",
+            "G6": "THÀNH TIỀN  "
+          },
+          "firstRow": 7,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "E",
+          "unitPriceColumn": "F",
+          "amountColumn": "G",
+          "specColumn": "C",
+          "totalLabel": "CỘNG TRƯỚC THUẾ",
+          "measurementRows": true
+        }
+      ]
+    },
+    {
+      "code": "TRON-GOI",
+      "nameKey": "boqWorkbook.template.tronGoi",
+      "file": "BOQ-Tron-goi.xlsx",
+      "currency": "VND",
+      "amountTolerance": 1,
+      "ignoredSheets": [
+        "Cover ",
+        "Total ",
+        "Summary "
+      ],
+      "sheets": [
+        {
+          "name": "Design and permit",
+          "headers": {
+            "A7": "STT\nNo.",
+            "B7": "Diễn Giải\nInterpretation",
+            "E7": "Đơn Vị\nUnit",
+            "F7": "Khối Lượng\nQuantity",
+            "G7": "Đơn Giá \nPrice (VND)",
+            "H7": "Thành tiền \nTotal amount (VND)"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "amountColumn": "H",
+          "totalLabel": "TỔNG CỘNG GIÁ TRỊ :\nTOTAL VALUE:",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "Prelim",
+          "headers": {
+            "A5": "STT/ No",
+            "B5": "Diễn Giải / Description",
+            "E5": "Đơn vị/ Unit",
+            "F5": "Khối lượng/ Qty",
+            "G5": "Đơn Giá / Unit Price (VND)",
+            "H5": "Thành Tiền / Amount (VND)"
+          },
+          "firstRow": 6,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "amountColumn": "H",
+          "totalLabel": "Tổng cộng/ Total (I)",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "1. San lấp",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "F6": "KL TỔNG\nQ'TY",
+            "G7": "VẬT TƯ\nRATE MATERIALS",
+            "H7": "NHÂN CÔNG\nRATE LABOUR",
+            "I7": "MMTB\nRATE EQUIPMENT",
+            "K7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 9,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H",
+            "I"
+          ],
+          "amountColumn": "K",
+          "totalCell": "K8",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "Cọc BTCT D300",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "K6": "KL TỔNG\nQ'TY",
+            "L7": "VẬT TƯ\nRATE MATERIALS",
+            "M7": "NHÂN CÔNG\nRATE LABOUR",
+            "N7": "MMTB\nRATE EQUIPMENT",
+            "P7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 15,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "M",
+            "N"
+          ],
+          "amountColumn": "P",
+          "totalCell": "P8",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        },
+        {
+          "name": "01 Nhà Xưởng 01+02",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "K6": "KL TỔNG\nQ'TY",
+            "L7": "VẬT TƯ\nRATE MATERIALS",
+            "M7": "NHÂN CÔNG\nRATE LABOUR",
+            "N7": "MMTB\nRATE EQUIPMENT",
+            "P7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 23,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "M",
+            "N"
+          ],
+          "amountColumn": "P",
+          "totalCell": "P8",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        },
+        {
+          "name": " 02 Văn Phòng 01+02",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "K6": "KL TỔNG\nQ'TY",
+            "L7": "VẬT TƯ\nRATE MATERIALS",
+            "M7": "NHÂN CÔNG\nRATE LABOUR",
+            "N7": "MMTB\nRATE EQUIPMENT",
+            "P7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 24,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "M",
+            "N"
+          ],
+          "amountColumn": "P",
+          "totalCell": "P8",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        },
+        {
+          "name": "03 NHÀ BẢO VỆ 01 &02",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "K6": "KL TỔNG\nQ'TY",
+            "L7": "VẬT TƯ\nRATE MATERIALS",
+            "M7": "NHÂN CÔNG\nRATE LABOUR",
+            "N7": "MMTB\nRATE EQUIPMENT",
+            "P7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 8,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "M",
+            "N"
+          ],
+          "amountColumn": "P",
+          "totalCell": "P8",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        },
+        {
+          "name": "04 NHÀ XE",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "K6": "KL TỔNG\nQ'TY",
+            "L7": "VẬT TƯ\nRATE MATERIALS",
+            "M7": "NHÂN CÔNG\nRATE LABOUR",
+            "N7": "MMTB\nRATE EQUIPMENT",
+            "P7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 18,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "M",
+            "N"
+          ],
+          "amountColumn": "P",
+          "totalCell": "P8",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        },
+        {
+          "name": "05 BỂ PCCC & NHÀ BƠM",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "F6": "KL TỔNG\nQ'TY",
+            "G7": "VẬT TƯ\nRATE MATERIALS",
+            "H7": "NHÂN CÔNG\nRATE LABOUR",
+            "I7": "MMTB\nRATE EQUIPMENT",
+            "K7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 18,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H",
+            "I"
+          ],
+          "amountColumn": "K",
+          "totalCell": "K8",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "07 BẢNG HIỆU+ CỔNG ",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "F6": "KL TỔNG\nQ'TY",
+            "G7": "VẬT TƯ\nRATE MATERIALS",
+            "H7": "NHÂN CÔNG\nRATE LABOUR",
+            "I7": "MMTB\nRATE EQUIPMENT",
+            "K7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 19,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H",
+            "I"
+          ],
+          "amountColumn": "K",
+          "totalCell": "K8",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "08 GIAOTHONG",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "K6": "KL TỔNG\nQ'TY",
+            "L7": "VẬT TƯ\nRATE MATERIALS",
+            "M7": "NHÂN CÔNG\nRATE LABOUR",
+            "N7": "MMTB\nRATE EQUIPMENT",
+            "P7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 12,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "M",
+            "N"
+          ],
+          "amountColumn": "P",
+          "totalCell": "P8",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        },
+        {
+          "name": "09 Hàng Rào ",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "F6": "KL TỔNG\nQ'TY",
+            "G7": "VẬT TƯ\nRATE MATERIALS",
+            "H7": "NHÂN CÔNG\nRATE LABOUR",
+            "I7": "MMTB\nRATE EQUIPMENT",
+            "K7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 17,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H",
+            "I"
+          ],
+          "amountColumn": "K",
+          "totalCell": "K8",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "10 THOÁT NƯỚC MƯA",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "Đvt\nUnit",
+            "F6": "KL TỔNG\nQ'TY",
+            "G7": "VẬT TƯ\nRATE MATERIALS",
+            "H7": "NHÂN CÔNG\nRATE LABOUR",
+            "I7": "MMTB\nRATE EQUIPMENT",
+            "K7": "THÀNH TIỀN\nAMOUNT TOTAL"
+          },
+          "firstRow": 13,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H",
+            "I"
+          ],
+          "amountColumn": "K",
+          "totalCell": "K8",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "Fire Fighting ",
+          "headers": {
+            "A3": "STT\nNO.",
+            "B3": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E3": "ĐVT\nUNIT",
+            "F3": "KHỐI LƯỢNG \nQ'TY",
+            "G4": "VẬT TƯ \nMATERIAL",
+            "H4": "NHÂN CÔNG \nLABOR",
+            "J3": "THÀNH TIỀN (VNĐ)\nAMOUNT "
+          },
+          "firstRow": 5,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H"
+          ],
+          "amountColumn": "J",
+          "specColumn": "C",
+          "totalLabel": "TỔNG CỘNG ( Chưa bao gồm thuế VAT  )\nTOTAL (Excluding VAT)",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "Electric X1",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "ĐVT\nUNIT",
+            "F6": "KHỐI LƯỢNG \nQ'TY",
+            "G7": "VẬT TƯ \nMATERIAL",
+            "H7": "NHÂN CÔNG \nLABOR",
+            "J6": "THÀNH TIỀN (VNĐ)\nAMOUNT "
+          },
+          "firstRow": 8,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H"
+          ],
+          "amountColumn": "J",
+          "totalLabel": "TỔNG CỘNG ( Chưa bao gồm thuế VAT  )\nTOTAL (Excluding VAT)",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "Electric X2",
+          "headers": {
+            "A6": "STT\nNO.",
+            "B6": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E6": "ĐVT\nUNIT",
+            "F6": "KHỐI LƯỢNG \nQ'TY",
+            "G7": "VẬT TƯ \nMATERIAL",
+            "H7": "NHÂN CÔNG \nLABOR",
+            "J6": "THÀNH TIỀN (VNĐ)\nAMOUNT "
+          },
+          "firstRow": 8,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H"
+          ],
+          "amountColumn": "J",
+          "totalLabel": "TỔNG CỘNG ( Chưa bao gồm thuế VAT  )\nTOTAL (Excluding VAT)",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "HVAC ",
+          "headers": {
+            "A5": "STT\nNO.",
+            "B5": "TÊN CÔNG VIỆC VÀ DIỄN GIẢI\nDESCRIPTION",
+            "E5": "ĐVT\nUNIT",
+            "F5": "KHỐI LƯỢNG \nQ'TY",
+            "G6": "VẬT TƯ \nMATERIAL",
+            "H6": "NHÂN CÔNG \nLABOR",
+            "J5": "THÀNH TIỀN (VNĐ)\nAMOUNT "
+          },
+          "firstRow": 7,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "E",
+          "quantityColumn": "F",
+          "unitPriceColumn": "G",
+          "extraPriceColumns": [
+            "H"
+          ],
+          "amountColumn": "J",
+          "totalLabel": "TỔNG (CHƯA GỒM VAT)",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "CTN ",
+          "headers": {
+            "A3": "STT",
+            "B3": "Tên thiết bị - Vật tư",
+            "G3": "Đơn vị Tính",
+            "H3": "Tổng số lượng",
+            "I4": "Vật tư",
+            "J4": "Nhân công",
+            "M3": "Tổng cộng"
+          },
+          "firstRow": 6,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "G",
+          "quantityColumn": "H",
+          "unitPriceColumn": "I",
+          "extraPriceColumns": [
+            "J"
+          ],
+          "amountColumn": "M",
+          "totalLabel": "Cộng:",
+          "itemsWithoutStt": true
+        }
+      ]
+    },
+    {
+      "code": "CSA-WORK",
+      "nameKey": "boqWorkbook.template.csaWork",
+      "file": "BOQ-CSA-Work.xlsx",
+      "currency": "VND",
+      "amountTolerance": 1,
+      "ignoredSheets": [
+        "01.BÌA",
+        "Total Amount ",
+        " COST SUMMARY"
+      ],
+      "sheets": [
+        {
+          "name": "Bill 1- Premilinary & General",
+          "headers": {
+            "A4": "No.",
+            "B4": "DESCRIPTION",
+            "C4": "UNIT",
+            "D4": "Q'TY",
+            "E4": "PRICE",
+            "F4": "AMOUNT "
+          },
+          "firstRow": 6,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "C",
+          "quantityColumn": "D",
+          "unitPriceColumn": "E",
+          "amountColumn": "F",
+          "totalCell": "F5",
+          "itemsWithoutStt": true
+        },
+        {
+          "name": "Bill 2-Main building works",
+          "headers": {
+            "A4": "No.",
+            "B4": "DESCRIPTION",
+            "D4": "Unit",
+            "K4": "Q'TY",
+            "L4": "MATERIAL",
+            "N4": "LABOUR & EQUIPMENT",
+            "P4": "TOTAL COST(VND)",
+            "Q5": "AMOUNT "
+          },
+          "firstRow": 13,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "N"
+          ],
+          "amountColumn": "Q",
+          "totalCell": "Q6",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        },
+        {
+          "name": "Bill 3-External works",
+          "headers": {
+            "A4": "No.",
+            "B4": "DESCRIPTION",
+            "D4": "Unit",
+            "K4": "Q'TY",
+            "L4": "MATERIAL",
+            "N4": "LABOUR & EQUIPMENT",
+            "P4": "TOTAL COST(VND)",
+            "Q5": "AMOUNT "
+          },
+          "firstRow": 14,
+          "sttColumn": "A",
+          "descriptionColumn": "B",
+          "unitColumn": "D",
+          "quantityColumn": "K",
+          "unitPriceColumn": "L",
+          "extraPriceColumns": [
+            "N"
+          ],
+          "amountColumn": "Q",
+          "totalCell": "Q6",
+          "itemsWithoutStt": true,
+          "measurementRows": true,
+          "measurementColumn": "J"
+        }
+      ]
+    }
+  ]
+}
