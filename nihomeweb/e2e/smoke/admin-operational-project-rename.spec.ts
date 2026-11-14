@@ -124,6 +124,18 @@ test("authorized manager changes the project code and retries Drive rename", asy
     new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/documents$`),
     (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
   );
+  // The project page lists the project's BOQ revisions for users with BOQ access.
+  await page.route(
+    new RegExp(
+      `/api/(?:v1/)?operational-projects/${projectId}/procurement/boq-revisions(?:\\?.*)?$`,
+    ),
+    (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ total: 0, page: 1, pageSize: 20, items: [] }),
+      }),
+  );
   await page.route(
     new RegExp(`/api/(?:v1/)?operational-projects/${projectId}/team/history$`),
     (route) => route.fulfill({ status: 200, contentType: "application/json", body: "[]" }),
