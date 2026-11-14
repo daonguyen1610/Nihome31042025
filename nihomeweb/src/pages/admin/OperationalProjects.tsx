@@ -66,6 +66,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { newIdempotencyKey } from "@/lib/api";
+import { ProjectBoqSection } from "@/components/admin/ProjectBoqSection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -599,6 +600,8 @@ const OperationalProjects = () => {
             projectStart={detail.startDate}
             projectEnd={detail.endDate}
           />
+
+          {has(ADMIN_PERMS.procurement) && <ProjectBoqSection projectId={detail.id} />}
 
           {detail.latestCodeChange && detail.latestCodeChange.status !== "NotRequired" && (
             <div className="rounded-lg border bg-card p-3 text-sm">

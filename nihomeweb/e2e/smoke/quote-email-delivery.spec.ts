@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { execSql } from "../fixtures/db";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
+import { approveProjectBoq } from "../fixtures/projectBoq";
 
 const mailSinkUrl = process.env.MAIL_SINK_URL;
 
@@ -77,15 +78,21 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
         opportunityId,
         method: "Boq",
         packageDescription: "Cải tạo văn phòng và hệ thống MEP Minh Châu",
-        items: [
-          {
-            itemCode: "CT-01",
-            name: "Thi công hoàn thiện văn phòng",
-            unit: "m2",
-            quantity: 500,
-            unitPrice: 1_500_000,
-          },
-        ],
+        projectBoqRevisionId: (
+          await approveProjectBoq(
+            api,
+            { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+            projectId,
+            [
+              {
+                name: "Thi công hoàn thiện văn phòng",
+                unit: "m2",
+                quantity: 500,
+                unitPrice: 1_500_000,
+              },
+            ],
+          )
+        ).id,
         vatPercent: 8,
       },
     });

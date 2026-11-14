@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { approveProjectBoq } from "../fixtures/projectBoq";
 
 /**
  * MoM §5 (meeting 2026-10-03) pre-contract cross-department controls, driven in
@@ -608,6 +609,13 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await page.setViewportSize({ width: 1440, height: 900 });
     await page.getByRole("link", { name: "Xem yêu cầu giá đầu vào" }).click();
     await expect(page).toHaveURL(new RegExp(`/admin/work-packages/${pricePackageId}$`));
+    // QS has turned the supplier prices into the project's approved tender BOQ.
+    const projectBoq = await approveProjectBoq(
+      api,
+      { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+      projectId,
+      [{ name: "Kết cấu thép mạ kẽm nhúng nóng", unit: "kg", quantity: 12500, unitPrice: 28900 }],
+    );
     await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
     await page.getByTestId("quote-edit").click();
     await expect(page.getByTestId("quote-output-method")).toBeVisible();
@@ -618,23 +626,25 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await page.getByRole("option", { name: new RegExp(`BG-VINA-${suffix}`) }).click();
     await page.getByTestId("quote-output-method").click();
     await page.getByRole("option", { name: /BOQ|Bảng khối lượng/i }).click();
-    await page.getByRole("button", { name: /Thêm dòng/i }).click();
-    const outputLine = page.getByRole("table").first().locator("tbody tr").first();
-    const outputFields = outputLine.locator("input");
-    await outputFields.nth(0).fill("KC-THEP-01");
-    await outputFields.nth(1).fill("Kết cấu thép mạ kẽm nhúng nóng");
-    await outputFields.nth(2).fill("kg");
-    await outputFields.nth(3).fill("12500");
-    await outputFields.nth(4).fill("28900");
+    // Lines come only from the approved project BOQ; there is no manual row entry.
+    const boqSource = page.getByTestId("quote-project-boq");
+    await expect(boqSource).toContainText("R1");
+    await expect(boqSource).toContainText("361.250.000");
+    await expect(page.getByRole("button", { name: /Thêm dòng|Nhập nhiều dòng/i })).toHaveCount(0);
+    await boqSource.getByTestId("quote-project-boq-apply").click();
+    await expect(page.getByTestId("quote-boq-lines")).toContainText("chép từ BOQ dự án");
     await shot("s5-05-bao-gia-chon-gia-dau-vao.png");
     await page.getByRole("button", { name: "Lưu thay đổi" }).first().click();
     await expect
       .poll(async () => {
         const saved = await call("salesManager", "get", `/api/quotes/${quoteId}`);
-        return saved.inputPriceOfferId;
+        return [saved.inputPriceOfferId, saved.projectBoqRevisionId, saved.subtotal];
       })
-      .toBe(offer.id);
+      .toEqual([offer.id, projectBoq.id, 361_250_000]);
     await expect(page.getByText(`BG-VINA-${suffix}`).first()).toBeVisible();
+    await expect(page.getByTestId("quote-boq-lines")).toContainText(
+      "Kết cấu thép mạ kẽm nhúng nóng",
+    );
 
     // ---- The quote still cannot reach the customer: Finance has not reviewed.
     const quoteBeforeSubmit = await call("salesManager", "get", `/api/quotes/${quoteId}`);

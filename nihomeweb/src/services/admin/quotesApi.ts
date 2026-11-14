@@ -13,17 +13,14 @@ import type {
   SendQuoteEmailRequest,
   ExtendQuoteValidityRequest,
   QuoteDocumentResponse,
+  QuoteProjectBoq,
   MaterialRateCatalogType,
   MaterialRateCatalogResponse,
   UpsertMaterialRateCatalogRequest,
   MaterialRateRevisionResponse,
   CreateMaterialRateRevisionRequest,
   UpsertInvestmentRateLineRequest,
-  UpsertBoqMaterialRateLineRequest,
   MaterialRateImportResponse,
-  BoqImportTemplateResponse,
-  BoqWorkbookPreviewResponse,
-  BoqWorkbookSheetPreviewResponse,
 } from "./types/quotes";
 import type {
   DeletionImpactResponse,
@@ -50,6 +47,8 @@ export const quotesApi = {
   },
   getQuote: (id: number) => api.get<QuoteResponse>(`/quotes/${id}`),
   getQuoteVersions: (id: number) => api.get<QuoteVersionsResponse>(`/quotes/${id}/versions`),
+  getQuoteProjectBoq: (id: number) =>
+    api.get<{ latest: QuoteProjectBoq | null }>(`/quotes/${id}/project-boq`),
   exportQuoteSpreadsheet: (id: number, lang: string) =>
     api.get<Blob>(`/quotes/${id}/export.xlsx`, { params: { lang }, responseType: "blob" }),
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
@@ -167,75 +166,12 @@ export const quotesApi = {
     api.delete<MaterialRateRevisionResponse>(
       `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/investment-lines/${lineId}`,
     ),
-  createBoqMaterialRateLine: (
-    catalogId: number,
-    revisionId: number,
-    body: UpsertBoqMaterialRateLineRequest,
-  ) =>
-    api.post<MaterialRateRevisionResponse>(
-      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines`,
-      body,
-    ),
-  updateBoqMaterialRateLine: (
-    catalogId: number,
-    revisionId: number,
-    lineId: number,
-    body: UpsertBoqMaterialRateLineRequest,
-  ) =>
-    api.put<MaterialRateRevisionResponse>(
-      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`,
-      body,
-    ),
-  deleteBoqMaterialRateLine: (catalogId: number, revisionId: number, lineId: number) =>
-    api.delete<MaterialRateRevisionResponse>(
-      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/lines/${lineId}`,
-    ),
   importMaterialRateRevision: (catalogId: number, revisionId: number, file: File) => {
     const formData = new FormData();
     formData.append("file", file);
     return api.post<MaterialRateImportResponse>(
       `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/import`,
       formData,
-    );
-  },
-  listBoqImportTemplates: () =>
-    api.get<BoqImportTemplateResponse[]>("/material-rate-catalogs/boq-import-templates"),
-  createBoqImportTemplate: (body: Omit<BoqImportTemplateResponse, "id" | "isSystem">) =>
-    api.post<BoqImportTemplateResponse>("/material-rate-catalogs/boq-import-templates", body),
-  previewBoqWorkbook: (catalogId: number, revisionId: number, file: File) => {
-    const data = new FormData();
-    data.append("file", file);
-    return api.post<BoqWorkbookPreviewResponse>(
-      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/preview`,
-      data,
-    );
-  },
-  importBoqWorkbook: (
-    catalogId: number,
-    revisionId: number,
-    file: File,
-    sourceHash: string,
-    mappings: BoqWorkbookSheetPreviewResponse[],
-  ) => {
-    const data = new FormData();
-    const selectedMappings = mappings
-      .filter((mapping) => mapping.include)
-      .map((mapping) => ({
-        sheetName: mapping.name,
-        include: true,
-        headerRow: mapping.headerRow,
-        itemCodeColumn: mapping.itemCodeColumn,
-        descriptionColumn: mapping.descriptionColumn,
-        unitColumn: mapping.unitColumn,
-        quantityColumn: mapping.quantityColumn,
-        unitPriceColumn: mapping.unitPriceColumn,
-      }));
-    data.append("file", file);
-    data.append("sourceHash", sourceHash);
-    data.append("mappingsJson", JSON.stringify(selectedMappings));
-    return api.post<MaterialRateRevisionResponse>(
-      `/material-rate-catalogs/${catalogId}/revisions/${revisionId}/boq-workbook/import`,
-      data,
     );
   },
   approveMaterialRateRevision: (catalogId: number, revisionId: number, note?: string) =>

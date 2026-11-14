@@ -256,7 +256,7 @@ test("BOQ list filters, sorts, paginates, and exports within the selected projec
 
   await page.locator("#boq-search").fill("");
   await page.locator("#boq-status").click();
-  await page.getByRole("option", { name: /Đã duyệt|Approved|已批准|承認済/i }).click();
+  await page.getByRole("option", { name: /^(Đã duyệt|Approved|已批准|承認済み)$/i }).click();
   await expect(table.locator("tbody tr")).toHaveCount(6);
   await expect(table.getByText(/Nháp|Draft|草稿|下書き/i)).toHaveCount(0);
 

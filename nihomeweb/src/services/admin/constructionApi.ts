@@ -1,3 +1,4 @@
+import type { WorkPackageApprovalPreview } from "./types/content";
 import api from "@/lib/api";
 import { withIdempotencyKey } from "@/lib/api";
 import { withIfMatch } from "@/lib/api";
@@ -40,6 +41,11 @@ import type {
   ProjectBoqRevisionListResponse,
   ProjectBoqRevisionResponse,
   ProjectBoqRevisionRequest,
+  BoqLibraryTemplate,
+  BoqLibrarySheetOutline,
+  BoqTemplateResponse,
+  ProjectBoqWorkbookPreviewResponse,
+  WorkPackageBoqWorkbook,
   MaterialRequestUpsertRequest,
   MaterialRequestResponse,
   MaterialRequestDetailResponse,
@@ -205,6 +211,109 @@ export const constructionApi = {
     api.get<ProjectBoqRevisionResponse>(
       `/operational-projects/${projectId}/procurement/boq-revisions/${id}`,
     ),
+  listBoqLibrary: () => api.get<BoqLibraryTemplate[]>("/boq-templates"),
+  downloadBoqLibraryFile: (code: string) =>
+    api.get<Blob>(`/boq-templates/${code}/file`, { responseType: "blob" }),
+  getBoqLibrarySheet: (code: string, sheet: string) =>
+    api.get<BoqLibrarySheetOutline>(`/boq-templates/${code}/sheets/${encodeURIComponent(sheet)}`),
+  getBoqTemplates: (projectId: number) =>
+    api.get<BoqTemplateResponse[]>(`/operational-projects/${projectId}/procurement/boq-templates`),
+  downloadBoqTemplate: (projectId: number, code: string) =>
+    api.get<Blob>(`/operational-projects/${projectId}/procurement/boq-templates/${code}/file`, {
+      responseType: "blob",
+    }),
+  previewWorkPackageBoq: (packageId: number, templateCode: string, file: File) => {
+    const form = new FormData();
+    form.append("templateCode", templateCode);
+    form.append("file", file);
+    return api.post<ProjectBoqWorkbookPreviewResponse>(
+      `/work-packages/${packageId}/boq-workbooks/preview`,
+      form,
+    );
+  },
+  importWorkPackageBoq: (
+    packageId: number,
+    body: { templateCode: string; file: File; sourceHash: string },
+  ) => {
+    const form = new FormData();
+    form.append("templateCode", body.templateCode);
+    form.append("file", body.file);
+    form.append("sourceHash", body.sourceHash);
+    return api.post<WorkPackageBoqWorkbook>(`/work-packages/${packageId}/boq-workbooks`, form);
+  },
+  downloadWorkPackageBoq: (packageId: number, id: number) =>
+    api.get<Blob>(`/work-packages/${packageId}/boq-workbooks/${id}/file`, { responseType: "blob" }),
+  previewWorkPackageBoqApproval: (
+    packageId: number,
+    id: number,
+    recipients?: { toEmail: string; ccEmails: string[] },
+  ) =>
+    api.post<WorkPackageApprovalPreview>(
+      `/work-packages/${packageId}/boq-workbooks/${id}/approval-email-preview`,
+      recipients,
+    ),
+  submitWorkPackageBoq: (
+    packageId: number,
+    id: number,
+    rowVersion: string,
+    idempotencyKey: string,
+    previewToken: string,
+  ) =>
+    api.post<WorkPackageBoqWorkbook>(
+      `/work-packages/${packageId}/boq-workbooks/${id}/submit`,
+      { rowVersion, previewToken },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  decideWorkPackageBoq: (
+    packageId: number,
+    id: number,
+    approved: boolean,
+    reason: string | null,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<WorkPackageBoqWorkbook>(
+      `/work-packages/${packageId}/boq-workbooks/${id}/decision`,
+      { approved, reason, rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  previewProjectBoqWorkbook: (projectId: number, templateCode: string, file: File) => {
+    const form = new FormData();
+    form.append("templateCode", templateCode);
+    form.append("file", file);
+    return api.post<ProjectBoqWorkbookPreviewResponse>(
+      `/operational-projects/${projectId}/procurement/boq-workbooks/preview`,
+      form,
+    );
+  },
+  importProjectBoqWorkbook: (
+    projectId: number,
+    body: { templateCode: string; file: File; sourceHash: string; upstreamContractId?: number },
+  ) => {
+    const form = new FormData();
+    form.append("templateCode", body.templateCode);
+    form.append("file", body.file);
+    form.append("sourceHash", body.sourceHash);
+    if (body.upstreamContractId) form.append("upstreamContractId", String(body.upstreamContractId));
+    return api.post<ProjectBoqRevisionResponse>(
+      `/operational-projects/${projectId}/procurement/boq-workbooks`,
+      form,
+    );
+  },
+  downloadBoqWorkbook: (projectId: number, id: number) =>
+    api.get<Blob>(`/operational-projects/${projectId}/procurement/boq-revisions/${id}/workbook`, {
+      responseType: "blob",
+    }),
   createProjectBoqRevision: (projectId: number, body: ProjectBoqRevisionRequest) =>
     postIdempotent<ProjectBoqRevisionResponse>(
       `/operational-projects/${projectId}/procurement/boq-revisions`,
@@ -236,6 +345,16 @@ export const constructionApi = {
     postIdempotent<ProjectBoqRevisionResponse>(
       `/operational-projects/${projectId}/procurement/boq-revisions/${id}/decision`,
       { approved, rowVersion, reason },
+    ),
+  convertProjectBoqToContract: (
+    projectId: number,
+    id: number,
+    upstreamContractId: number,
+    rowVersion: string,
+  ) =>
+    postIdempotent<ProjectBoqRevisionResponse>(
+      `/operational-projects/${projectId}/procurement/boq-revisions/${id}/contract`,
+      { upstreamContractId, rowVersion },
     ),
   createMaterialRequest: (projectId: number, body: MaterialRequestUpsertRequest) =>
     postIdempotent<MaterialRequestResponse>(

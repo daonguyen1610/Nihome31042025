@@ -1,4 +1,4 @@
-import type { QuoteItemInput, QuoteMethod } from "@/services/adminApi";
+import type { QuoteMethod } from "@/services/adminApi";
 
 export interface QuoteTotals {
   subtotal: number;
@@ -8,18 +8,11 @@ export interface QuoteTotals {
 }
 
 export type QuoteValidationIssue =
-  | "unitCostRequired"
-  | "boqRequired"
-  | "boqInvalidRow"
-  | "boqPrecision"
-  | "numericPrecision"
-  | "percentRange"
-  | "amountTooLarge";
+  "unitCostRequired" | "numericPrecision" | "percentRange" | "amountTooLarge";
 
 // Browser numbers must stay inside their exact-integer range; the API keeps
 // the wider decimal(18,*) database guard as the final authority.
 export const MAX_QUOTE_MONEY = Number.MAX_SAFE_INTEGER;
-export const MAX_QUOTE_QUANTITY = 99_999_999_999_999;
 
 type DecimalInput = number | string;
 
@@ -51,15 +44,6 @@ const centsToNumber = (cents: bigint): number => Number(cents) / 100;
 export const roundQuoteMoney = (value: number): number =>
   centsToNumber(divideRoundHalfAwayFromZero(toScaledInteger(value, 4), 100n));
 
-const calculateQuoteLineAmountCents = (quantity: DecimalInput, unitPrice: DecimalInput): bigint =>
-  divideRoundHalfAwayFromZero(
-    toScaledInteger(quantity, 4) * toScaledInteger(unitPrice, 2),
-    10_000n,
-  );
-
-export const calculateQuoteLineAmount = (quantity: DecimalInput, unitPrice: DecimalInput): number =>
-  centsToNumber(calculateQuoteLineAmountCents(quantity, unitPrice));
-
 const hasScale = (value: DecimalInput, scale: number): boolean => {
   if (typeof value === "string") {
     const match = /^\d+(?:\.(\d+))?$/.exec(value.trim());
@@ -68,13 +52,11 @@ const hasScale = (value: DecimalInput, scale: number): boolean => {
   return Number.isFinite(value) && Number(value.toFixed(scale)) === value;
 };
 
-const isFiniteDecimal = (value: DecimalInput): boolean =>
-  typeof value === "string" ? /^-?\d+(?:\.\d+)?$/.test(value.trim()) : Number.isFinite(value);
-
 export const calculateQuoteTotals = (
   method: QuoteMethod,
   values: {
-    items?: QuoteItemInput[];
+    // BOQ quotes take their subtotal from the approved project BOQ revision.
+    boqSubtotal?: number | null;
     areaSqm?: number | null;
     unitPricePerSqm?: number | null;
     discountPercent: number;
@@ -83,9 +65,7 @@ export const calculateQuoteTotals = (
 ): QuoteTotals => {
   const subtotalCents =
     method === "Boq"
-      ? (values.items ?? []).reduce((sum, item) => {
-          return sum + calculateQuoteLineAmountCents(item.quantity, item.unitPrice);
-        }, 0n)
+      ? toScaledInteger(values.boqSubtotal ?? 0, 2)
       : divideRoundHalfAwayFromZero(
           toScaledInteger(values.areaSqm ?? 0, 2) * toScaledInteger(values.unitPricePerSqm ?? 0, 2),
           100n,
@@ -116,7 +96,7 @@ export const calculateQuoteTotals = (
 export const validateQuoteValues = (
   method: QuoteMethod,
   values: {
-    items?: QuoteItemInput[];
+    boqSubtotal?: number | null;
     areaSqm?: number | null;
     unitPricePerSqm?: number | null;
     discountPercent: number;
@@ -152,35 +132,6 @@ export const validateQuoteValues = (
       values.areaSqm > MAX_QUOTE_MONEY ||
       values.unitPricePerSqm > MAX_QUOTE_MONEY ||
       values.areaSqm * values.unitPricePerSqm > MAX_QUOTE_MONEY
-    ) {
-      return "amountTooLarge";
-    }
-  } else {
-    const items = values.items ?? [];
-    if (items.length === 0) return "boqRequired";
-    if (
-      items.some(
-        (item) =>
-          !item.name.trim() ||
-          !item.unit.trim() ||
-          !isFiniteDecimal(item.quantity) ||
-          !isFiniteDecimal(item.unitPrice) ||
-          Number(item.quantity) <= 0 ||
-          Number(item.unitPrice) < 0,
-      )
-    ) {
-      return "boqInvalidRow";
-    }
-    if (items.some((item) => !hasScale(item.quantity, 4) || !hasScale(item.unitPrice, 2))) {
-      return "boqPrecision";
-    }
-    if (
-      items.some(
-        (item) =>
-          Number(item.quantity) > MAX_QUOTE_QUANTITY ||
-          Number(item.unitPrice) > MAX_QUOTE_MONEY ||
-          Number(item.quantity) * Number(item.unitPrice) > MAX_QUOTE_MONEY,
-      )
     ) {
       return "amountTooLarge";
     }

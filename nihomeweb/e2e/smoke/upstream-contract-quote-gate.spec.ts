@@ -1,6 +1,7 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 import { submitAndApproveQuote } from "../fixtures/quoteApproval";
+import { approveProjectBoq } from "../fixtures/projectBoq";
 
 test("customer contract form permits an agreed value without a quote", async ({
   loginInBrowserAs,
@@ -40,6 +41,7 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
   const suffix = Math.random().toString(36).slice(2, 10);
   let customerId = 0;
+  let projectId = 0;
   let opportunityId = 0;
   let quoteId = 0;
 
@@ -60,11 +62,19 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
     expect(customerResponse.status(), await customerResponse.text()).toBe(201);
     customerId = (await customerResponse.json()).id as number;
 
+    const projectResponse = await api.post("/api/operational-projects", {
+      headers,
+      data: { name: `Văn phòng Minh Châu ${suffix}`, customerId },
+    });
+    expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+    projectId = (await projectResponse.json()).id as number;
+
     const opportunityResponse = await api.post("/api/opportunities", {
       headers,
       data: {
         name: `Cải tạo văn phòng Minh Châu ${suffix}`,
         customerId,
+        operationalProjectId: projectId,
         estimatedValue: 750_000_000,
         winProbability: 45,
       },
@@ -92,15 +102,21 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
         opportunityId,
         method: "Boq",
         packageDescription: "Cải tạo văn phòng và hệ thống MEP Minh Châu",
-        items: [
-          {
-            itemCode: "CT-01",
-            name: "Thi công hoàn thiện văn phòng",
-            unit: "m2",
-            quantity: 500,
-            unitPrice: 1_500_000,
-          },
-        ],
+        projectBoqRevisionId: (
+          await approveProjectBoq(
+            api,
+            { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` },
+            projectId,
+            [
+              {
+                name: "Thi công hoàn thiện văn phòng",
+                unit: "m2",
+                quantity: 500,
+                unitPrice: 1_500_000,
+              },
+            ],
+          )
+        ).id,
         vatPercent: 8,
       },
     });
@@ -155,6 +171,8 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
     if (opportunityId)
       await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    if (projectId)
+      await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
     if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
   }
 });

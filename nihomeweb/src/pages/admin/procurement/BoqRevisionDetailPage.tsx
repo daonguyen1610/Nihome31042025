@@ -3,7 +3,17 @@ import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useEffect, useState } from "react";
-import { ArrowLeft, Check, Edit3, Plus, Send, Trash2, X } from "lucide-react";
+import {
+  ArrowLeft,
+  Check,
+  Download,
+  Edit3,
+  FileSignature,
+  Plus,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react";
 import { Link, useParams } from "react-router-dom";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -30,6 +40,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
+import { boqWorkbookProblem, saveBlob } from "@/lib/boqWorkbook";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -57,6 +68,7 @@ const statusClass: Record<string, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
   Submitted: "border-sky-200 bg-sky-50 text-sky-700",
   Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  TenderApproved: "border-teal-200 bg-teal-50 text-teal-700",
   Rejected: "border-rose-200 bg-rose-50 text-rose-700",
 };
 
@@ -84,6 +96,8 @@ const BoqRevisionDetailPage = () => {
   const [upstreamContractId, setUpstreamContractId] = useState(0);
   const [upstreamContracts, setUpstreamContracts] = useState<ContractResponse[]>([]);
   const [lines, setLines] = useState<BoqLineDraft[]>([emptyLine()]);
+  const [contractOpen, setContractOpen] = useState(false);
+  const [contractId, setContractId] = useState(0);
 
   const load = async () => {
     if (!Number.isInteger(projectId) || projectId < 1 || !Number.isInteger(boqId) || boqId < 1) {
@@ -205,9 +219,28 @@ const BoqRevisionDetailPage = () => {
       setBoq(response.data);
       toast({ title: t("procurement.success.boqSubmitted") });
     } catch (reason) {
+      const problem = await boqWorkbookProblem(reason, t);
       toast({
         title: t("common.error"),
-        description: uiError(reason),
+        description: "message" in problem ? problem.message : uiError(reason),
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const downloadWorkbook = async () => {
+    if (!boq) return;
+    setBusy(true);
+    try {
+      const { data } = await adminApi.downloadBoqWorkbook(projectId, boq.id);
+      saveBlob(data, boq.sourceFileName ?? `BOQ-R${boq.revisionNumber}.xlsx`);
+    } catch (reason) {
+      const problem = await boqWorkbookProblem(reason, t);
+      toast({
+        title: t("common.error"),
+        description: "message" in problem ? problem.message : uiError(reason),
         variant: "destructive",
       });
     } finally {
@@ -246,6 +279,28 @@ const BoqRevisionDetailPage = () => {
     }
   };
 
+  const convertToContract = async () => {
+    if (!boq || !contractId) return;
+    setBusy(true);
+    setFormError(null);
+    try {
+      const response = await adminApi.convertProjectBoqToContract(
+        projectId,
+        boq.id,
+        contractId,
+        boq.rowVersion,
+      );
+      setBoq(response.data);
+      setContractOpen(false);
+      toast({ title: t("boqWorkbook.contractConvert.done") });
+    } catch (reason) {
+      const problem = await boqWorkbookProblem(reason, t);
+      setFormError("message" in problem ? problem.message : uiError(reason));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const dateTime = (value?: string | null) =>
     value
       ? formatDateTime(value, lang, { dateStyle: "medium", timeStyle: "short" })
@@ -270,7 +325,12 @@ const BoqRevisionDetailPage = () => {
       </AdminLayout>
     );
 
-  const editable = canManage && (boq.status === "Draft" || boq.status === "Rejected");
+  const editable =
+    canManage && !boq.hasWorkbook && (boq.status === "Draft" || boq.status === "Rejected");
+  // A BOQ uploaded in an input-price work package is submitted and decided in that package.
+  const reviewedHere = !boq.sourceWorkPackageId;
+  // An uploaded BOQ without a contract is a tender BOQ, so its lines are not material allowances.
+  const tenderBoq = boq.hasWorkbook && !boq.upstreamContractId;
   const lifecycle = [
     { label: t("procurement.boq.history.created"), value: boq.createdAt },
     { label: t("procurement.boq.history.submitted"), value: boq.submittedAt },
@@ -328,13 +388,27 @@ const BoqRevisionDetailPage = () => {
                 {t("common.edit")}
               </Button>
             )}
-            {canManage && (boq.status === "Draft" || boq.status === "Rejected") && (
+            {canManage && reviewedHere && (boq.status === "Draft" || boq.status === "Rejected") && (
               <Button onClick={() => void submit()} disabled={busy}>
                 <Send className="mr-2 h-4 w-4" />
                 {t("procurement.action.submit")}
               </Button>
             )}
-            {canApprove && boq.status === "Submitted" && (
+            {canApprove && boq.status === "TenderApproved" && (
+              <Button
+                onClick={() => {
+                  setFormError(null);
+                  setContractId(upstreamContracts.length === 1 ? upstreamContracts[0].id : 0);
+                  setContractOpen(true);
+                }}
+                disabled={busy}
+                data-testid="boq-contract-convert"
+              >
+                <FileSignature className="mr-2 h-4 w-4" />
+                {t("boqWorkbook.contractConvert.action")}
+              </Button>
+            )}
+            {canApprove && reviewedHere && boq.status === "Submitted" && (
               <>
                 <Button
                   onClick={() => {
@@ -384,13 +458,68 @@ const BoqRevisionDetailPage = () => {
           <Datum label={t("procurement.boq.detail.lastUpdated")} value={dateTime(boq.updatedAt)} />
         </section>
 
+        {boq.hasWorkbook && (
+          <section
+            aria-labelledby="boq-sheets-heading"
+            className="space-y-3 border-b pb-6"
+            data-testid="boq-workbook-sheets"
+          >
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 id="boq-sheets-heading" className="text-lg font-semibold">
+                  {t("boqWorkbook.sheetsTitle")}
+                </h2>
+                <p className="text-sm text-muted-foreground">{t("boqWorkbook.sheetsHint")}</p>
+                {boq.sourceFileName && (
+                  <p className="mt-1 break-all text-xs text-muted-foreground">
+                    {t("boqWorkbook.sourceFile", { file: boq.sourceFileName })}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                data-testid="boq-workbook-download"
+                onClick={() => void downloadWorkbook()}
+                disabled={busy}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {t("boqWorkbook.downloadWorkbook")}
+              </Button>
+            </div>
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {(boq.sheets ?? []).map((sheet) => (
+                <li key={sheet.name} className="rounded-lg border p-3 text-sm">
+                  <p className="break-words font-medium">{sheet.name}</p>
+                  <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+                    <dt className="text-muted-foreground">{t("boqWorkbook.items")}</dt>
+                    <dd className="text-right tabular-nums">{sheet.itemCount}</dd>
+                    <dt className="text-muted-foreground">{t("boqWorkbook.missingPrices")}</dt>
+                    <dd className="text-right tabular-nums">{sheet.missingPriceCount}</dd>
+                    <dt className="text-muted-foreground">{t("boqWorkbook.total")}</dt>
+                    <dd className="text-right font-semibold tabular-nums">
+                      {money(sheet.total, boq.currency)}
+                    </dd>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+            {(boq.status === "Draft" || boq.status === "Rejected") && (
+              <p className="text-xs text-muted-foreground">{t("boqWorkbook.readOnlyHint")}</p>
+            )}
+          </section>
+        )}
+
         <section aria-labelledby="boq-lines-heading" className="space-y-3">
           <div>
             <h2 id="boq-lines-heading" className="text-lg font-semibold">
-              {t("procurement.boq.detail.linesTitle")}
+              {t(tenderBoq ? "boqWorkbook.tenderLinesTitle" : "procurement.boq.detail.linesTitle")}
             </h2>
             <p className="text-sm text-muted-foreground">
-              {t("procurement.boq.detail.linesDescription")}
+              {t(
+                tenderBoq
+                  ? "boqWorkbook.tenderLinesHint"
+                  : "procurement.boq.detail.linesDescription",
+              )}
             </p>
           </div>
           <div className="grid gap-3 xl:hidden">
@@ -594,6 +723,63 @@ const BoqRevisionDetailPage = () => {
             </Button>
             <Button onClick={() => void save()} disabled={busy}>
               {busy ? t("common.saving") : t("common.save")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={contractOpen}
+        onOpenChange={(open) => {
+          if (!busy) setContractOpen(open);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("boqWorkbook.contractConvert.title")}</DialogTitle>
+            <DialogDescription>{t("boqWorkbook.contractConvert.hint")}</DialogDescription>
+          </DialogHeader>
+          {upstreamContracts.length === 0 ? (
+            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              {t("boqWorkbook.contractConvert.noContract")}
+            </p>
+          ) : (
+            <div className="space-y-2">
+              <Label htmlFor="boq-contract-convert-contract">
+                {t("procurement.field.upstreamContract")}
+              </Label>
+              <Select
+                value={contractId ? String(contractId) : ""}
+                onValueChange={(value) => setContractId(Number(value))}
+              >
+                <SelectTrigger id="boq-contract-convert-contract">
+                  <SelectValue placeholder={t("procurement.boq.selectSignedContract")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {upstreamContracts.map((contract) => (
+                    <SelectItem key={contract.id} value={String(contract.id)}>
+                      {contract.contractNumber}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {formError && (
+            <p className="text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setContractOpen(false)} disabled={busy}>
+              {t("common.cancel")}
+            </Button>
+            <Button
+              onClick={() => void convertToContract()}
+              disabled={busy || !contractId}
+              data-testid="boq-contract-convert-confirm"
+            >
+              {t("boqWorkbook.contractConvert.confirm")}
             </Button>
           </DialogFooter>
         </DialogContent>

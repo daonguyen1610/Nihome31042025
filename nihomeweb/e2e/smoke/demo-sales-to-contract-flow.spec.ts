@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import path from "node:path";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { approveProjectBoq } from "../fixtures/projectBoq";
 
 /**
  * Business pipeline behind the 2026-10 demo fixes, driven through the real
@@ -139,29 +140,24 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     opportunityId,
     method: "Boq",
     packageDescription: "Thiết kế và thi công nhà máy chế biến Sao Mai — giai đoạn 1",
-    items: [
-      {
-        itemCode: "MONG-01",
-        name: "Móng bê tông cốt thép M250",
-        unit: "m3",
-        quantity: 320,
-        unitPrice: 2_850_000,
-      },
-      {
-        itemCode: "KC-02",
-        name: "Kết cấu thép tiền chế nhà xưởng",
-        unit: "kg",
-        quantity: 54_000,
-        unitPrice: 21_500,
-      },
-      {
-        itemCode: "MAI-03",
-        name: "Mái tôn cách nhiệt PU 50mm",
-        unit: "m2",
-        quantity: 4_800,
-        unitPrice: 385_000,
-      },
-    ],
+    // QS uploads and the PM approves the project BOQ; the quote takes its lines from it.
+    projectBoqRevisionId: (
+      await approveProjectBoq(
+        api,
+        { Authorization: `Bearer ${await token("superAdmin")}` },
+        projectId,
+        [
+          { name: "Móng bê tông cốt thép M250", unit: "m3", quantity: 320, unitPrice: 2_850_000 },
+          {
+            name: "Kết cấu thép tiền chế nhà xưởng",
+            unit: "kg",
+            quantity: 54_000,
+            unitPrice: 21_500,
+          },
+          { name: "Mái tôn cách nhiệt PU 50mm", unit: "m2", quantity: 4_800, unitPrice: 385_000 },
+        ],
+      )
+    ).id,
     discountPercent: 2,
     vatPercent: 8,
   });
@@ -335,15 +331,14 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
     opportunityId: tenderOpportunityId,
     method: "Boq",
     packageDescription: "Thi công kho lạnh Long Hậu theo kết quả trúng thầu",
-    items: [
-      {
-        itemCode: "KL-01",
-        name: "Panel cách nhiệt kho lạnh",
-        unit: "m2",
-        quantity: 3200,
-        unitPrice: 720000,
-      },
-    ],
+    projectBoqRevisionId: (
+      await approveProjectBoq(
+        api,
+        { Authorization: `Bearer ${await token("superAdmin")}` },
+        tenderOpportunity.operationalProjectId as number,
+        [{ name: "Panel cách nhiệt kho lạnh", unit: "m2", quantity: 3200, unitPrice: 720000 }],
+      )
+    ).id,
     discountPercent: 0,
     vatPercent: 8,
   });
