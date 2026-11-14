@@ -410,7 +410,8 @@ const matrix: RoleExpectation[] = [
   {
     // QS: content.projects.view + processes.view + crm.quotes.view +
     // crm.tenders.view (read-only access to approved quotes / tenders
-    // for takeoff / cost tracking).
+    // for takeoff / cost tracking) + proc.boq.{view|manage}, which owns the
+    // project BOQ upload since the 31/10/2026 meeting and opens Procurement control.
     user: TEST_USERS.qs,
     allowed: [
       "/admin",
@@ -420,6 +421,7 @@ const matrix: RoleExpectation[] = [
       "/admin/tenders",
       "/admin/contracts",
       "/admin/vendors",
+      "/admin/procurement-control",
       "/admin/operational-projects",
       "/admin/work-packages",
       "/admin/kpi",
@@ -431,10 +433,12 @@ const matrix: RoleExpectation[] = [
     ],
   },
   {
+    // PROCUREMENT: crm.material-rates.view opens the BOQ template library.
     user: TEST_USERS.procurement,
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/material-rates",
       "/admin/contracts",
       "/admin/vendors",
       "/admin/procurement-control",
