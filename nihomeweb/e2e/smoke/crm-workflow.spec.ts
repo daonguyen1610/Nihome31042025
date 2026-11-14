@@ -148,7 +148,10 @@ test.describe("CRM workflow navigation", () => {
     await expect(page.getByRole("link", { name: /lead|tiềm năng/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /khách hàng|customer/i })).toBeVisible();
     await expect(page.getByRole("link", { name: /cơ hội|opportunit/i })).toBeVisible();
-    await expect(page.getByRole("link", { name: /báo giá|quote/i })).toBeVisible();
+    await expect(page.getByRole("link", { name: /^(báo giá|quotes)$/i })).toBeVisible();
+    await expect(
+      page.getByRole("link", { name: /^(mẫu báo giá|quote templates)$/i }),
+    ).toBeVisible();
     await expect(page.getByRole("link", { name: /hợp đồng|contract/i })).toBeVisible();
 
     expect(jsErrors).toHaveLength(0);
