@@ -601,7 +601,7 @@ Cung ứng tải mẫu ở thư viện, điền Excel và upload trong nhóm cô
 giá đầu vào; người phụ trách nhóm (khác người upload) duyệt qua luồng email duyệt
 của nhóm. BOQ được duyệt thành BOQ dự thầu của dự án và là nguồn dòng cho báo giá.
 
-**Implemented — thư viện mẫu BOQ (13/11/2026):** trang Định mức & đơn giá → BOQ
+**Implemented — thư viện mẫu BOQ (13/11/2026):** trang Mẫu báo giá → BOQ
 chỉ còn là thư viện mẫu theo định dạng file khách, dạng cây Mẫu → Sheet, xem cấu
 trúc sheet và tải mẫu; không còn phiên bản, không nhập liệu. Cung ứng (và Trưởng
 phòng Cung ứng) được xem trang để tải mẫu, điền Excel và upload trong nhóm công

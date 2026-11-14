@@ -1,5 +1,5 @@
 [
-  {"key":"nav.materialRates","category":"nav","vi":"Định mức & đơn giá vật liệu","en":"Material norms & rates","zh":"材料定额与单价","ja":"材料基準・単価"},
+  {"key":"nav.materialRates","category":"nav","vi":"Mẫu báo giá","en":"Quote templates","zh":"报价模板","ja":"見積テンプレート"},
   {"key":"materialRates.title","category":"materialRates","vi":"Danh mục đơn giá vật liệu","en":"Material rate catalogs","zh":"材料单价目录","ja":"材料単価カタログ"},
   {"key":"materialRates.catalogType.navigation","category":"materialRates","vi":"Loại danh mục đơn giá","en":"Rate catalog type","zh":"单价目录类型","ja":"単価カタログ種別"},
   {"key":"materialRates.quoteReturn.pending","category":"materialRates","vi":"Bạn đang chuẩn bị đơn giá cho một báo giá. Tạo danh mục, nhập dữ liệu và phê duyệt phiên bản, sau đó quay lại báo giá.","en":"You are preparing rates for a quote. Create the catalog, enter its lines and approve the revision, then return to the quote.","zh":"您正在为报价准备单价。请创建目录、录入数据并批准版本，然后返回报价。","ja":"見積用の単価を準備中です。カタログ作成・明細入力・版の承認後、見積に戻ってください。"},
