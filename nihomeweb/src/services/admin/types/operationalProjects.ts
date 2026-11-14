@@ -1,4 +1,4 @@
-import type { WorkPackageBoqWorkbook } from "./procurement";
+import type { WorkPackageBoqWorkbook, WorkPackageInvestmentRate } from "./procurement";
 import type { OpportunityStage } from "./opportunities";
 import type { QuoteStatus, QuoteMethod } from "./quotes";
 import type { ContractStatus } from "./contracts";
@@ -119,6 +119,7 @@ export interface DepartmentWorkPackageResponse {
   tasks: DepartmentWorkTaskResponse[];
   inputPriceOffers: InputPriceOfferResponse[];
   boqWorkbooks: WorkPackageBoqWorkbook[];
+  investmentRates?: WorkPackageInvestmentRate[];
   financeReview?: FinanceReviewResponse | null;
   approvalEmails: {
     id: number;

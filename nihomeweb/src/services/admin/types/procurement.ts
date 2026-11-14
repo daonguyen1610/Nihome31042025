@@ -43,6 +43,65 @@ export interface WorkPackageBoqWorkbook {
   rowVersion: string;
 }
 
+export interface InvestmentRateAreaLine {
+  name: string;
+  description?: string | null;
+  actualArea: number;
+  factor: number;
+  convertedArea: number;
+  note?: string | null;
+}
+
+export interface InvestmentRateGroupLine {
+  code: string;
+  name: string;
+  description?: string | null;
+  material: number;
+  labour: number;
+  equipment: number;
+  ratePerSqm: number;
+  specification?: string | null;
+}
+
+/** A filled investment-rate (suất đầu tư) form uploaded in an input-price work package. */
+export interface WorkPackageInvestmentRate {
+  id: number;
+  revisionNumber: number;
+  status: "Draft" | "Submitted" | "Approved" | "Rejected";
+  templateCode: string;
+  sourceFileName: string;
+  currency: string;
+  convertedAreaSqm: number;
+  ratePerSqm: number;
+  total: number;
+  areas: InvestmentRateAreaLine[];
+  groups: InvestmentRateGroupLine[];
+  preparedByUserId: number;
+  preparedByName?: string | null;
+  createdAt: string;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  decisionReason?: string | null;
+  rowVersion: string;
+}
+
+export interface InvestmentRateWorkbookPreview {
+  templateCode: string;
+  sourceHash: string;
+  convertedAreaSqm: number;
+  ratePerSqm: number;
+  total: number;
+  areas: InvestmentRateAreaLine[];
+  groups: InvestmentRateGroupLine[];
+}
+
+export interface InvestmentRateTemplate {
+  code: string;
+  nameKey: string;
+  file: string;
+}
+
 export interface BoqLibraryTemplate {
   code: string;
   nameKey: string;

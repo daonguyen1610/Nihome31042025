@@ -23,7 +23,7 @@ import {
 
 const selectClass = "h-10 w-full min-w-0 rounded-md border bg-background px-3 text-sm";
 
-function ProblemView({ problem }: { problem: BoqWorkbookProblem }) {
+export function BoqWorkbookProblemView({ problem }: { problem: BoqWorkbookProblem }) {
   const { t } = useI18n();
   if ("message" in problem)
     return (
@@ -261,7 +261,7 @@ export function BoqWorkbookUploadDialog({
               </Button>
             </div>
           )}
-          {problem && <ProblemView problem={problem} />}
+          {problem && <BoqWorkbookProblemView problem={problem} />}
           {preview && (
             <section className="space-y-3 rounded-lg border p-3" data-testid="boq-workbook-preview">
               <h3 className="text-sm font-semibold">{t("boqWorkbook.previewTitle")}</h3>
