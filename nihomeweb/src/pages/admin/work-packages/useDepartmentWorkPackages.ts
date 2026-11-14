@@ -254,6 +254,7 @@ export function useDepartmentWorkPackages() {
     | (WorkPackageApprovalPreview & {
         packageId: number;
         offerId?: number;
+        boqId?: number;
         rowVersion: string;
         idempotencyKey: string;
       })
@@ -1210,15 +1211,25 @@ export function useDepartmentWorkPackages() {
       setSaving(false);
     }
   };
-  const previewApproval = async (rowVersion: string, offerId?: number) => {
+  const fetchApprovalPreview = (
+    packageId: number,
+    offerId?: number,
+    boqId?: number,
+    recipients?: { toEmail: string; ccEmails: string[] },
+  ) =>
+    boqId
+      ? adminApi.previewWorkPackageBoqApproval(packageId, boqId, recipients)
+      : adminApi.previewWorkPackageApprovalEmail(packageId, offerId, recipients);
+  const previewApproval = async (rowVersion: string, offerId?: number, boqId?: number) => {
     if (!detail || approvalBusy) return;
     setApprovalBusy(true);
     try {
-      const { data } = await adminApi.previewWorkPackageApprovalEmail(detail.id, offerId);
+      const { data } = await fetchApprovalPreview(detail.id, offerId, boqId);
       setApprovalPreview({
         ...data,
         packageId: detail.id,
         offerId,
+        boqId,
         rowVersion,
         idempotencyKey: newIdempotencyKey(),
       });
@@ -1251,9 +1262,10 @@ export function useDepartmentWorkPackages() {
     setApprovalBusy(true);
     setApprovalError("");
     try {
-      const { data } = await adminApi.previewWorkPackageApprovalEmail(
+      const { data } = await fetchApprovalPreview(
         approvalPreview.packageId,
         approvalPreview.offerId,
+        approvalPreview.boqId,
         { toEmail: approvalTo.trim(), ccEmails: ccAddresses },
       );
       setApprovalPreview({ ...approvalPreview, ...data, idempotencyKey: newIdempotencyKey() });
@@ -1270,16 +1282,25 @@ export function useDepartmentWorkPackages() {
     if (!approvalPreview || approvalBusy || approvalDirty || !recipientsValid) return;
     setApprovalBusy(true);
     try {
-      const { packageId: id, offerId, rowVersion, previewToken, idempotencyKey } = approvalPreview;
-      if (offerId)
+      const {
+        packageId: id,
+        offerId,
+        boqId,
+        rowVersion,
+        previewToken,
+        idempotencyKey,
+      } = approvalPreview;
+      if (boqId)
+        await adminApi.submitWorkPackageBoq(id, boqId, rowVersion, idempotencyKey, previewToken);
+      else if (offerId)
         await adminApi.submitInputPriceOffer(id, offerId, rowVersion, idempotencyKey, previewToken);
       else await adminApi.submitFinanceReview(id, rowVersion, idempotencyKey, previewToken);
       setApprovalPreview(null);
       setApprovalFeedback({ message: t("approvalEmail.queued"), failed: false });
       setApprovalTracking({
         packageId: id,
-        recordId: offerId ?? detail!.financeReview!.id,
-        type: offerId ? "InputPriceOffer" : "FinanceReview",
+        recordId: boqId ?? offerId ?? detail!.financeReview!.id,
+        type: boqId ? "ProjectBoqRevision" : offerId ? "InputPriceOffer" : "FinanceReview",
       });
       toast({ title: t("approvalEmail.queued") });
       await load();
@@ -1304,6 +1325,29 @@ export function useDepartmentWorkPackages() {
       await adminApi.decideInputPriceOffer(
         detail.id,
         offerId,
+        approved,
+        reason,
+        rowVersion,
+        newIdempotencyKey(),
+      );
+      await load();
+    } catch (cause) {
+      toast({
+        variant: "destructive",
+        title: uiError(cause, t("workPackages.error.save")),
+      });
+    }
+  };
+  const submitBoq = (boqId: number, rowVersion: string) =>
+    previewApproval(rowVersion, undefined, boqId);
+  const decideBoq = async (boqId: number, approved: boolean, rowVersion: string) => {
+    if (!detail) return;
+    const reason = approved ? null : window.prompt(t("workPackages.decision.reason"));
+    if (!approved && !reason?.trim()) return;
+    try {
+      await adminApi.decideWorkPackageBoq(
+        detail.id,
+        boqId,
         approved,
         reason,
         rowVersion,
@@ -1487,6 +1531,8 @@ export function useDepartmentWorkPackages() {
     refreshApprovalPreview,
     confirmApproval,
     decidePriceOffer,
+    submitBoq,
+    decideBoq,
     saveFinanceReview,
     submitFinanceReview,
     decideFinanceReview,

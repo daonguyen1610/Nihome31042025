@@ -671,6 +671,12 @@ const ProcurementControlPage = () => {
     [workspace],
   );
   const ratingContracts = contracts.filter((contract) => contract.vendorId != null);
+  const signedUpstreamContracts = contracts.filter(
+    (contract) =>
+      contract.direction === "Upstream" &&
+      contract.signedDate &&
+      !["Draft", "Cancelled"].includes(contract.status),
+  );
 
   const status = (value: string) => (
     <Badge variant="outline" className={statusClass[value] ?? ""}>
@@ -1230,11 +1236,13 @@ const ProcurementControlPage = () => {
                         <SelectItem value="all">
                           {t("procurement.boq.filter.allStatuses")}
                         </SelectItem>
-                        {["Draft", "Submitted", "Approved", "Rejected"].map((value) => (
-                          <SelectItem value={value} key={value}>
-                            {t(`procurement.status.${value}`)}
-                          </SelectItem>
-                        ))}
+                        {["Draft", "Submitted", "Approved", "TenderApproved", "Rejected"].map(
+                          (value) => (
+                            <SelectItem value={value} key={value}>
+                              {t(`procurement.status.${value}`)}
+                            </SelectItem>
+                          ),
+                        )}
                       </SelectContent>
                     </Select>
                   </div>
@@ -1531,12 +1539,7 @@ const ProcurementControlPage = () => {
             <BoqForm
               upstreamContractId={boqUpstreamContractId}
               setUpstreamContractId={setBoqUpstreamContractId}
-              upstreamContracts={contracts.filter(
-                (contract) =>
-                  contract.direction === "Upstream" &&
-                  contract.signedDate &&
-                  !["Draft", "Cancelled"].includes(contract.status),
-              )}
+              upstreamContracts={signedUpstreamContracts}
               currency={boqCurrency}
               lines={boqLines}
               setLines={setBoqLines}

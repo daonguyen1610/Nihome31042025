@@ -37,6 +37,7 @@ import {
   Users,
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
+import { WorkPackageBoqSection } from "@/components/admin/WorkPackageBoqSection";
 import type { WorkPackageApprovalPreview, DeletionImpactResponse } from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -230,6 +231,8 @@ const DepartmentWorkPackages = () => {
     refreshApprovalPreview,
     confirmApproval,
     decidePriceOffer,
+    submitBoq,
+    decideBoq,
     saveFinanceReview,
     submitFinanceReview,
     decideFinanceReview,
@@ -449,6 +452,21 @@ const DepartmentWorkPackages = () => {
                 href={detail.contractId ? `/admin/contracts/${detail.contractId}` : undefined}
               />
             </div>
+
+            {detail.purpose === "ProcurementInputPricing" && (
+              <WorkPackageBoqSection
+                packageId={detail.id}
+                open={!["Completed", "Cancelled"].includes(detail.status)}
+                boqs={detail.boqWorkbooks ?? []}
+                canProgress={canProgress}
+                // Only the package lead or an administrator decides, never the uploader.
+                canVerify={canVerifyBusiness && detail.canAssignTasks}
+                currentUserId={currentUserId}
+                onChanged={() => void load()}
+                onSubmit={(boq) => void submitBoq(boq.id, boq.rowVersion)}
+                onDecide={(boq, approved) => void decideBoq(boq.id, approved, boq.rowVersion)}
+              />
+            )}
 
             {detail.purpose === "ProcurementInputPricing" && (
               <section className="rounded-xl border bg-card">
@@ -847,7 +865,12 @@ const DepartmentWorkPackages = () => {
                           {email.recordType === "InputPriceOffer"
                             ? detail.inputPriceOffers.find((offer) => offer.id === email.recordId)
                                 ?.supplierReference
-                            : t(`workPackages.purpose.${detail.purpose}`)}
+                            : email.recordType === "ProjectBoqRevision"
+                              ? `BOQ R${
+                                  detail.boqWorkbooks?.find((boq) => boq.id === email.recordId)
+                                    ?.revisionNumber ?? ""
+                                }`
+                              : t(`workPackages.purpose.${detail.purpose}`)}
                         </p>
                         <p className="break-all text-muted-foreground">{email.toEmail}</p>
                         {(email.ccEmails?.length ?? 0) > 0 && (

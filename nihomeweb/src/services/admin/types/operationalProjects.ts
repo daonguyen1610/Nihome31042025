@@ -1,3 +1,4 @@
+import type { WorkPackageBoqWorkbook } from "./procurement";
 import type { OpportunityStage } from "./opportunities";
 import type { QuoteStatus, QuoteMethod } from "./quotes";
 import type { ContractStatus } from "./contracts";
@@ -117,6 +118,7 @@ export interface DepartmentWorkPackageResponse {
   rowVersion: string;
   tasks: DepartmentWorkTaskResponse[];
   inputPriceOffers: InputPriceOfferResponse[];
+  boqWorkbooks: WorkPackageBoqWorkbook[];
   financeReview?: FinanceReviewResponse | null;
   approvalEmails: {
     id: number;

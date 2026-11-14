@@ -1,5 +1,3 @@
-import type { BoqConfiguration, BoqEntryRow } from "@/components/admin/BoqConfiguredEntry";
-
 export type QuoteMethod = "UnitCost" | "Boq";
 
 export const QUOTE_METHODS: QuoteMethod[] = ["UnitCost", "Boq"];
@@ -108,6 +106,8 @@ export interface QuoteResponse {
   materialRateCatalogCode?: string | null;
   materialRateCatalogName?: string | null;
   materialRateRevisionVersion?: number | null;
+  projectBoqRevisionId?: number | null;
+  projectBoqRevisionNumber?: number | null;
   pricingEffectiveDate?: string | null;
   catalogUnitPricePerSqm?: number | null;
   rateSource: "Catalog" | "Override" | "CatalogReference";
@@ -217,11 +217,25 @@ export interface UpdateQuoteRequest {
   pricingEffectiveDate?: string | null;
   rateOverrideReason?: string | null;
   packageDescription?: string;
+  // BOQ quotes copy their lines from this approved project BOQ revision.
+  projectBoqRevisionId?: number | null;
   items?: QuoteItemInput[];
   discountPercent: number;
   vatPercent: number;
   validUntil?: string | null;
   note?: string;
+}
+
+export interface QuoteProjectBoq {
+  revisionId: number;
+  revisionNumber: number;
+  status: string;
+  currency: string;
+  total: number;
+  lineCount: number;
+  approvedAt?: string | null;
+  upstreamContractNumber?: string | null;
+  sourceFileName?: string | null;
 }
 
 export interface QuoteWorkflowRequest {
@@ -277,8 +291,6 @@ export type MaterialRateRevisionStatus = "Draft" | "Approved" | "Rejected" | "Re
 export type MaterialRateCatalogType = "InvestmentRate" | "Boq";
 
 export interface MaterialRateCatalogResponse {
-  boqConfiguration?: BoqConfiguration | null;
-  boqConfigurationHash?: string | null;
   id: number;
   catalogType: MaterialRateCatalogType;
   code: string;
@@ -305,7 +317,6 @@ export interface MaterialRateLineResponse {
 }
 
 export interface MaterialRateRevisionResponse {
-  boqRows?: BoqEntryRow[];
   id: number;
   catalogId: number;
   catalogType: MaterialRateCatalogType;
@@ -329,41 +340,6 @@ export interface MaterialRateRevisionResponse {
   lines: MaterialRateLineResponse[];
 }
 
-export interface BoqImportTemplateResponse {
-  id: number;
-  name: string;
-  isSystem: boolean;
-  headerRow: number;
-  itemCodeColumn?: number | null;
-  descriptionColumn: number;
-  unitColumn: number;
-  quantityColumn: number;
-  unitPriceColumn: number;
-}
-
-export interface BoqWorkbookSheetPreviewResponse {
-  name: string;
-  order: number;
-  isHidden: boolean;
-  headerRow?: number | null;
-  itemCodeColumn?: number | null;
-  descriptionColumn?: number | null;
-  unitColumn?: number | null;
-  quantityColumn?: number | null;
-  unitPriceColumn?: number | null;
-  candidateCount: number;
-  warnings: string[];
-  columns: Array<{ number: number; label: string }>;
-  previewRows: Array<{ rowNumber: number; cells: Record<number, string> }>;
-  include?: boolean;
-}
-
-export interface BoqWorkbookPreviewResponse {
-  sourceFileName: string;
-  sourceHash: string;
-  sheets: BoqWorkbookSheetPreviewResponse[];
-}
-
 export interface UpsertMaterialRateCatalogRequest {
   catalogType: MaterialRateCatalogType;
   code: string;
@@ -377,14 +353,6 @@ export interface CreateMaterialRateRevisionRequest {
   effectiveFrom: string;
   effectiveTo?: string | null;
   note?: string | null;
-}
-
-export interface UpsertBoqMaterialRateLineRequest {
-  itemCode: string;
-  itemName: string;
-  unit: string;
-  quantity: string;
-  unitPrice: string;
 }
 
 export interface UpsertInvestmentRateLineRequest {

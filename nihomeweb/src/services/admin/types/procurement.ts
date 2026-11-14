@@ -9,6 +9,75 @@ export interface ProjectBoqLineResponse {
   approvedQuantity: number;
   budgetUnitPrice: number;
   amount: number;
+  sheetName?: string | null;
+  sourceRow?: number | null;
+  stt?: string | null;
+  groupName?: string | null;
+  priceMissing?: boolean;
+}
+
+export interface ProjectBoqSheetResponse {
+  name: string;
+  itemCount: number;
+  missingPriceCount: number;
+  total: number;
+}
+
+export interface WorkPackageBoqWorkbook {
+  id: number;
+  revisionNumber: number;
+  status: string;
+  templateCode?: string | null;
+  sourceFileName?: string | null;
+  currency: string;
+  total: number;
+  lineCount: number;
+  missingPriceCount: number;
+  preparedByUserId: number;
+  preparedByName?: string | null;
+  createdAt: string;
+  submittedAt?: string | null;
+  approvedAt?: string | null;
+  rejectedAt?: string | null;
+  decisionReason?: string | null;
+  rowVersion: string;
+}
+
+export interface BoqLibraryTemplate {
+  code: string;
+  nameKey: string;
+  file: string;
+  sheets: { name: string; isData: boolean; itemCount: number }[];
+}
+
+export interface BoqLibrarySheetOutline {
+  name: string;
+  isData: boolean;
+  itemCount: number;
+  rows: {
+    row: number;
+    stt?: string | null;
+    description: string;
+    unit?: string | null;
+    kind: "group" | "item" | "subtotal" | "total";
+  }[];
+}
+
+export interface BoqTemplateResponse {
+  code: string;
+  nameKey: string;
+  file: string;
+}
+
+export interface ProjectBoqWorkbookPreviewResponse {
+  templateCode: string;
+  sourceHash: string;
+  sheets: (ProjectBoqSheetResponse & { skippedCount: number; missingUnitCount: number })[];
+  itemCount: number;
+  skippedCount: number;
+  missingPriceCount: number;
+  missingUnitCount: number;
+  total: number;
 }
 
 export interface ProjectBoqRevisionResponse {
@@ -32,6 +101,11 @@ export interface ProjectBoqRevisionResponse {
   createdAt: string;
   updatedAt: string;
   rowVersion: string;
+  templateCode?: string | null;
+  sourceFileName?: string | null;
+  hasWorkbook?: boolean;
+  sourceWorkPackageId?: number | null;
+  sheets?: ProjectBoqSheetResponse[];
   lines: ProjectBoqLineResponse[];
 }
 

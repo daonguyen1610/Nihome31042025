@@ -5,6 +5,7 @@ import JSZip from "jszip";
 import { createApprovedInvestmentRate, retireInvestmentRate } from "../fixtures/materialRate";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 import { submitAndApproveQuote } from "../fixtures/quoteApproval";
+import { approveProjectBoq } from "../fixtures/projectBoq";
 
 const DOCX_CONTENT = "NIH-430 DOCX preview evidence";
 const UNSAFE_LINK_TEXT = "Unsafe DOCX link";
@@ -277,8 +278,11 @@ test.describe.serial("quote document management", () => {
 
     const token = await loginAs(TEST_USERS.salesManager);
     const headers = { Authorization: `Bearer ${token}` };
+    // QS-side setup: the project BOQ is uploaded and approved by an account with BOQ rights.
+    const boqHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
     const unique = Date.now().toString();
     let customerId = 0;
+    let projectId = 0;
     let opportunityId = 0;
     let quoteId = 0;
 
@@ -300,11 +304,19 @@ test.describe.serial("quote document management", () => {
       expect(customerResponse.status(), await customerResponse.text()).toBe(201);
       customerId = (await customerResponse.json()).id as number;
 
+      const projectResponse = await api.post("/api/operational-projects", {
+        headers,
+        data: { name: `NIH-430 BOQ Project ${unique}`, customerId },
+      });
+      expect(projectResponse.status(), await projectResponse.text()).toBe(201);
+      projectId = (await projectResponse.json()).id as number;
+
       const opportunityResponse = await api.post("/api/opportunities", {
         headers,
         data: {
           name: `NIH-430 BOQ Opportunity ${unique}`,
           customerId,
+          operationalProjectId: projectId,
           estimatedValue: 600_000_000,
           winProbability: 60,
         },
@@ -317,24 +329,12 @@ test.describe.serial("quote document management", () => {
         data: {
           opportunityId,
           method: "Boq",
-          items: [
-            {
-              itemCode: "FOUND-V1",
-              name: "Foundation V1",
-              unit: "m3",
-              quantity: 2,
-              unitPrice: 1_000_000,
-              sortOrder: 1,
-            },
-            {
-              itemCode: "STEEL-V1",
-              name: "Steel V1",
-              unit: "kg",
-              quantity: 10,
-              unitPrice: 20_000,
-              sortOrder: 2,
-            },
-          ],
+          projectBoqRevisionId: (
+            await approveProjectBoq(api, boqHeaders, projectId, [
+              { name: "Foundation V1", unit: "m3", quantity: 2, unitPrice: 1_000_000 },
+              { name: "Steel V1", unit: "kg", quantity: 10, unitPrice: 20_000 },
+            ])
+          ).id,
           discountPercent: 0,
           vatPercent: 8,
         },
@@ -355,16 +355,12 @@ test.describe.serial("quote document management", () => {
       const updateResponse = await api.put(`/api/quotes/${quoteId}`, {
         headers,
         data: {
-          items: [
-            {
-              itemCode: "FOUND-V2",
-              name: "Foundation V2",
-              unit: "m3",
-              quantity: 3,
-              unitPrice: 1_100_000,
-              sortOrder: 1,
-            },
-          ],
+          // QS revised the BOQ; Sales applies the newer approved revision.
+          projectBoqRevisionId: (
+            await approveProjectBoq(api, boqHeaders, projectId, [
+              { name: "Foundation V2", unit: "m3", quantity: 3, unitPrice: 1_100_000 },
+            ])
+          ).id,
           discountPercent: 5,
           vatPercent: 10,
         },
@@ -387,10 +383,10 @@ test.describe.serial("quote document management", () => {
       const versionOneDialog = page.getByRole("dialog").filter({ hasText: "Foundation V1" });
       await expect(versionOneDialog).toBeVisible();
       await expect(
-        versionOneDialog.locator("li:visible").filter({ hasText: "FOUND-V1" }),
+        versionOneDialog.locator("li:visible").filter({ hasText: "S01-R0016" }),
       ).toContainText("Foundation V1");
       await expect(
-        versionOneDialog.locator("li:visible").filter({ hasText: "STEEL-V1" }),
+        versionOneDialog.locator("li:visible").filter({ hasText: "S01-R0017" }),
       ).toContainText("Steel V1");
       await expect(versionOneDialog.locator("input, textarea, select")).toHaveCount(0);
       await versionOneDialog
@@ -402,7 +398,7 @@ test.describe.serial("quote document management", () => {
       const versionTwoDialog = page.getByRole("dialog").filter({ hasText: "Foundation V2" });
       await expect(versionTwoDialog).toBeVisible();
       await expect(
-        versionTwoDialog.locator("li:visible").filter({ hasText: "FOUND-V2" }),
+        versionTwoDialog.locator("li:visible").filter({ hasText: "S01-R0016" }),
       ).toContainText("Foundation V2");
       await expect(versionTwoDialog.getByText(/Hiện tại|Current|当前|現行/i)).toBeVisible();
       await expect(versionTwoDialog.locator("input, textarea, select")).toHaveCount(0);
@@ -410,6 +406,8 @@ test.describe.serial("quote document management", () => {
       if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
       if (opportunityId)
         await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+      if (projectId)
+        await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
       if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
     }
   });

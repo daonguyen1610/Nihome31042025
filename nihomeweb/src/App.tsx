@@ -75,6 +75,7 @@ const OpportunityDesignCreate = lazy(() => import("./pages/admin/OpportunityDesi
 const AdminQuotes = lazy(() => import("./pages/admin/Quotes.tsx"));
 const AdminQuoteDetail = lazy(() => import("./pages/admin/QuoteDetail.tsx"));
 const AdminMaterialRates = lazy(() => import("./pages/admin/MaterialRates.tsx"));
+const BoqTemplateLibrary = lazy(() => import("./pages/admin/BoqTemplateLibrary.tsx"));
 const AdminCapabilityDocuments = lazy(() => import("./pages/admin/CapabilityDocuments.tsx"));
 const AdminTenders = lazy(() => import("./pages/admin/Tenders.tsx"));
 const AdminTenderDetail = lazy(() => import("./pages/admin/TenderDetail.tsx"));
@@ -404,12 +405,9 @@ const App = () => (
                       <Route path="/admin/material-rates" element={<AdminMaterialRates />} />
                       <Route
                         path="/admin/material-rates/investment"
-                        element={<AdminMaterialRates catalogType="InvestmentRate" />}
+                        element={<AdminMaterialRates />}
                       />
-                      <Route
-                        path="/admin/material-rates/boq"
-                        element={<AdminMaterialRates catalogType="Boq" />}
-                      />
+                      <Route path="/admin/material-rates/boq" element={<BoqTemplateLibrary />} />
                     </Route>
                     <Route element={<RequirePermission code={ADMIN_PERMS.capabilityDocs} />}>
                       <Route

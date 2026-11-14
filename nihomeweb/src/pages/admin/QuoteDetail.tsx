@@ -9,7 +9,6 @@ import {
   Ban,
   Calendar,
   CheckCheck,
-  ListPlus,
   Download,
   FileText,
   History,
@@ -34,8 +33,7 @@ import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { personOption } from "@/lib/people";
 import { selectQuoteFinanceReview } from "@/lib/financeReview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
-import BoqBulkEntryDialog from "@/components/admin/BoqBulkEntryDialog";
-import BoqCatalogFields from "@/components/admin/BoqCatalogFields";
+import { QuoteProjectBoqSource } from "@/components/admin/QuoteProjectBoqSource";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
@@ -48,13 +46,8 @@ import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize } from "@/lib/numberFormat";
-import {
-  calculateQuoteLineAmount,
-  calculateQuoteTotals,
-  validateQuoteValues,
-} from "@/lib/quoteTotals";
+import { calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
-import { normalizeBoqSortOrder } from "@/lib/boqItems";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -83,8 +76,9 @@ import {
   type QuoteEmailPreviewResponse,
   type QuoteApprovalCandidate,
   type QuoteApprovalPreview,
-  type QuoteItemInput,
+  type QuoteItemResponse,
   type QuoteMethod,
+  type QuoteProjectBoq,
   type QuoteResponse,
   type QuoteStatus,
   type QuoteVersionResponse,
@@ -154,14 +148,8 @@ function toFormState(q: QuoteResponse): UpdateQuoteRequest {
     pricingEffectiveDate: q.pricingEffectiveDate ?? null,
     rateOverrideReason: q.rateOverrideReason ?? null,
     packageDescription: q.packageDescription ?? "",
-    items: q.items.map((i) => ({
-      itemCode: i.itemCode ?? null,
-      name: i.name,
-      unit: i.unit,
-      quantity: i.quantity,
-      unitPrice: i.unitPrice,
-      sortOrder: i.sortOrder,
-    })),
+    projectBoqRevisionId: q.projectBoqRevisionId ?? null,
+    items: [],
     discountPercent: q.discountPercent,
     vatPercent: q.vatPercent,
     validUntil: q.validUntil,
@@ -173,8 +161,9 @@ function toFormState(q: QuoteResponse): UpdateQuoteRequest {
 function computePreview(
   method: "UnitCost" | "Boq",
   form: UpdateQuoteRequest,
+  boqSubtotal: number,
 ): { subtotal: number; grandTotal: number } {
-  return calculateQuoteTotals(method, form);
+  return calculateQuoteTotals(method, { ...form, boqSubtotal });
 }
 
 // -------- Component --------
@@ -216,11 +205,12 @@ const AdminQuoteDetail = () => {
   const [effectiveRevision, setEffectiveRevision] = useState<MaterialRateRevisionResponse | null>(
     null,
   );
-  // Currency of the BOQ catalog last applied to the item table. BOQ items keep
-  // the catalog's amounts verbatim, so the quote adopts that currency on save.
-  const [boqCurrency, setBoqCurrency] = useState<string | null>(null);
   const [exportingSpreadsheet, setExportingSpreadsheet] = useState(false);
-  const [boqBulkEntryOpen, setBoqBulkEntryOpen] = useState(false);
+  // The approved project BOQ applied in this edit session but not saved yet.
+  const [pendingBoq, setPendingBoq] = useState<QuoteProjectBoq | null>(null);
+  // The project's latest approved BOQ: undefined while loading, null when there is none.
+  const [projectBoq, setProjectBoq] = useState<QuoteProjectBoq | null | undefined>(undefined);
+  const [projectBoqError, setProjectBoqError] = useState<string | null>(null);
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -259,6 +249,14 @@ const AdminQuoteDetail = () => {
       const { data } = await adminApi.getQuote(quoteId);
       setQuote(data);
       setForm(toFormState(data));
+      setProjectBoqError(null);
+      adminApi
+        .getQuoteProjectBoq(quoteId)
+        .then((response) => setProjectBoq(response.data.latest))
+        .catch((reason) => {
+          setProjectBoq(null);
+          setProjectBoqError(extractApiError(reason));
+        });
       setInputOffersUnavailable(false);
       // Show requests tied to this quote. Keep legacy opportunity-level offers
       // selectable so existing quotes can still be priced after this change.
@@ -363,65 +361,18 @@ const AdminQuoteDetail = () => {
     }
   }, [quoteId, uiError]);
 
-  // ---------- BOQ helpers ----------
+  // ---------- BOQ source ----------
 
-  const addBoqRow = () => {
+  const applyProjectBoq = (revision: QuoteProjectBoq) => {
     if (!form) return;
-    const items = [...(form.items ?? [])];
-    items.push({
-      itemCode: null,
-      name: "",
-      unit: "",
-      quantity: 0,
-      unitPrice: 0,
-      sortOrder: items.length + 1,
-    });
-    setForm({ ...form, items });
-  };
-  const removeBoqRow = (idx: number) => {
-    if (!form) return;
-    const items = [...(form.items ?? [])];
-    items.splice(idx, 1);
-    setForm({ ...form, items: normalizeBoqSortOrder(items) });
-  };
-  const updateBoqRow = (idx: number, patch: Partial<QuoteItemInput>) => {
-    if (!form) return;
-    const items = [...(form.items ?? [])];
-    items[idx] = { ...items[idx], ...patch };
-    setForm({ ...form, items });
-  };
-  const appendBulkBoqItems = (newItems: QuoteItemInput[]) => {
-    if (!form) return;
-    const existingItems = form.items ?? [];
-    const items = normalizeBoqSortOrder([...existingItems, ...newItems]);
-    setForm({ ...form, items });
-    toast({ title: t("quotes.bulk.ok"), description: `+${newItems.length}` });
+    setPendingBoq(revision);
+    setForm({ ...form, projectBoqRevisionId: revision.revisionId });
   };
 
-  const applyBoqCatalog = async (revision: MaterialRateRevisionResponse, pricingDate: string) => {
-    if (!form) return;
-    if (
-      (form.items?.length ?? 0) > 0 &&
-      !(await confirmAction(t("quotes.boqCatalog.replaceConfirm"), { destructive: false }))
-    )
-      return;
-    setBoqCurrency(revision.currency);
-    setForm({
-      ...form,
-      materialRateCatalogId: revision.catalogId,
-      pricingEffectiveDate: pricingDate,
-      unitPricePerSqm: null,
-      rateOverrideReason: null,
-      items: revision.lines.map((line, index) => ({
-        itemCode: line.materialCode,
-        name: line.materialName,
-        unit: line.unit,
-        quantity: line.quantity,
-        unitPrice: line.unitRate,
-        sortOrder: index + 1,
-      })),
-    });
-  };
+  const boqSubtotal =
+    pendingBoq && form?.projectBoqRevisionId === pendingBoq.revisionId
+      ? pendingBoq.total
+      : (quote?.subtotal ?? 0);
 
   // ---------- save + workflow ----------
 
@@ -435,7 +386,12 @@ const AdminQuoteDetail = () => {
       });
       return;
     }
-    if (quote.grandTotal === 0 && !form.inputPriceOfferId) {
+    // The approved project BOQ is itself approved input pricing for a BOQ quote.
+    if (
+      quote.grandTotal === 0 &&
+      !form.inputPriceOfferId &&
+      !(form.method === "Boq" && form.projectBoqRevisionId)
+    ) {
       toast({
         title: t("common.error"),
         description: t("quotes.validation.inputPriceRequired"),
@@ -443,7 +399,15 @@ const AdminQuoteDetail = () => {
       });
       return;
     }
-    const validationIssue = validateQuoteValues(form.method, form);
+    if (form.method === "Boq" && !form.projectBoqRevisionId) {
+      toast({
+        title: t("common.error"),
+        description: t("quotes.projectBoq.required"),
+        variant: "destructive",
+      });
+      return;
+    }
+    const validationIssue = validateQuoteValues(form.method, { ...form, boqSubtotal });
     if (validationIssue) {
       toast({
         title: t("common.error"),
@@ -491,12 +455,17 @@ const AdminQuoteDetail = () => {
     try {
       const { data } = await adminApi.updateQuote(quote.id, {
         ...form,
+        // A BOQ quote copies its lines from the project BOQ on the server.
+        ...(form.method === "Boq"
+          ? { materialRateCatalogId: null, pricingEffectiveDate: null, items: [] }
+          : { projectBoqRevisionId: null }),
         packageDescription: form.packageDescription?.trim() || undefined,
         note: form.note?.trim() || undefined,
         validUntil: form.validUntil || null,
       });
       setQuote(data);
       setForm(toFormState(data));
+      setPendingBoq(null);
       setEditing(false);
       toast({ title: t("quotes.updated") });
       // If we're viewing the Versions tab, refresh it too.
@@ -745,8 +714,8 @@ const AdminQuoteDetail = () => {
 
   const preview = useMemo(() => {
     if (!quote || !form?.method) return null;
-    return computePreview(form.method, form);
-  }, [quote, form]);
+    return computePreview(form.method, form, boqSubtotal);
+  }, [quote, form, boqSubtotal]);
 
   // -------- render --------
 
@@ -770,11 +739,16 @@ const AdminQuoteDetail = () => {
     );
   if (!quote || !form) return null;
 
-  // Amounts in the edit form come verbatim from the selected catalog, so the
-  // form's currency follows that catalog until the save adopts it.
+  // Amounts in the edit form come verbatim from the selected catalog or project BOQ, so
+  // the form's currency follows that source until the save adopts it.
+  const appliedBoq =
+    pendingBoq && form.projectBoqRevisionId === pendingBoq.revisionId ? pendingBoq : null;
   const previewCurrency =
-    (editing ? (form.method === "Boq" ? boqCurrency : effectiveRevision?.currency) : null) ??
-    quote.currency;
+    (editing
+      ? form.method === "Boq"
+        ? appliedBoq?.currency
+        : effectiveRevision?.currency
+      : null) ?? quote.currency;
 
   const workflowKinds = WORKFLOW_BY_STATUS[quote.status];
   const awaitingInputPrice = quote.status === "Draft" && quote.grandTotal === 0;
@@ -783,7 +757,10 @@ const AdminQuoteDetail = () => {
     quote.status === "Rejected" ||
     quote.status === "Cancelled";
   const showEditToggle =
-    canManage && !editing && !isTerminal && (!awaitingInputPrice || approvedInputOffers.length > 0);
+    canManage &&
+    !editing &&
+    !isTerminal &&
+    (!awaitingInputPrice || approvedInputOffers.length > 0 || projectBoq != null);
   const primaryInputPackage =
     inputPricePackages.find((item) => item.status !== "Completed") ?? inputPricePackages[0];
   const primaryFinancePackage = selectQuoteFinanceReview(financeReviewPackages, quote.version);
@@ -915,6 +892,7 @@ const AdminQuoteDetail = () => {
                 variant="outline"
                 onClick={() => {
                   setForm(toFormState(quote));
+                  setPendingBoq(null);
                   setEditing(false);
                 }}
               >
@@ -1008,7 +986,7 @@ const AdminQuoteDetail = () => {
           {t(
             inputOffersUnavailable
               ? "quotes.inputPrice.unavailable"
-              : approvedInputOffers.length > 0
+              : approvedInputOffers.length > 0 || projectBoq != null
                 ? "quotes.inputPrice.readyForOutput"
                 : "quotes.inputPrice.awaitingApproval",
           )}
@@ -1206,6 +1184,7 @@ const AdminQuoteDetail = () => {
                           pricingEffectiveDate: null,
                           rateOverrideReason: null,
                           packageDescription: "",
+                          projectBoqRevisionId: null,
                           items: [],
                         })
                       }
@@ -1268,23 +1247,25 @@ const AdminQuoteDetail = () => {
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {editing ? (
-                    <BoqCatalogFields
-                      key={`${quote.id}:${form.materialRateCatalogId ?? "manual"}:${form.pricingEffectiveDate ?? "none"}`}
-                      catalogId={form.materialRateCatalogId}
-                      pricingDate={form.pricingEffectiveDate}
-                      onApply={applyBoqCatalog}
-                    />
-                  ) : quote.materialRateCatalogId ? (
+                  <QuoteProjectBoqSource
+                    latest={projectBoq}
+                    error={projectBoqError}
+                    projectId={quote.operationalProjectId}
+                    currentRevisionNumber={quote.projectBoqRevisionNumber}
+                    selectedRevisionId={form.projectBoqRevisionId}
+                    savedRevisionId={quote.projectBoqRevisionId}
+                    editing={editing}
+                    onApply={applyProjectBoq}
+                  />
+                  {!editing && quote.materialRateCatalogId ? (
                     <RateProvenance value={quote} t={t} />
                   ) : null}
                   <BoqTable
-                    form={form}
-                    editing={editing}
-                    onAdd={addBoqRow}
-                    onRemove={removeBoqRow}
-                    onChange={updateBoqRow}
-                    onBulkEntry={() => setBoqBulkEntryOpen(true)}
+                    items={
+                      pendingBoq && form.projectBoqRevisionId === pendingBoq.revisionId
+                        ? null
+                        : quote.items
+                    }
                     t={t}
                     currency={previewCurrency}
                   />
@@ -1759,12 +1740,6 @@ const AdminQuoteDetail = () => {
         </DialogContent>
       </Dialog>
 
-      <BoqBulkEntryDialog
-        open={boqBulkEntryOpen}
-        onOpenChange={setBoqBulkEntryOpen}
-        onConfirm={appendBulkBoqItems}
-      />
-
       <DeletionImpactDialog
         open={deleteOpen}
         impact={deleteImpact}
@@ -2085,265 +2060,98 @@ const RateProvenance = ({
   </dl>
 );
 
+// Lines are copied from the approved project BOQ and are read-only on the quote.
+// `items` is null while a newly applied BOQ revision waits to be saved.
 const BoqTable = ({
-  form,
-  editing,
-  onAdd,
-  onRemove,
-  onChange,
-  onBulkEntry,
+  items,
   t,
   currency,
 }: {
-  form: UpdateQuoteRequest;
-  editing: boolean;
-  onAdd: () => void;
-  onRemove: (idx: number) => void;
-  onChange: (idx: number, patch: Partial<QuoteItemInput>) => void;
-  onBulkEntry: () => void;
+  items: QuoteItemResponse[] | null;
   t: (k: string) => string;
   currency: string;
-}) => {
-  const items = form.items ?? [];
-  return (
-    <div className="rounded-lg border bg-card">
-      <div className="flex items-center justify-between border-b bg-muted/30 p-2 text-xs uppercase tracking-wide text-muted-foreground">
-        <span>{t("quotes.boq.title")}</span>
-        {editing && (
-          <div className="flex gap-1.5">
-            <Button
-              size="sm"
-              variant="ghost"
-              className="h-7 px-2"
-              data-testid="boq-bulk-entry-open"
-              onClick={onBulkEntry}
-            >
-              <ListPlus className="mr-1 h-3.5 w-3.5" />
-              {t("quotes.boq.bulkEntry")}
-            </Button>
-            <Button size="sm" variant="outline" className="h-7 px-2" onClick={onAdd}>
-              <Plus className="mr-1 h-3.5 w-3.5" />
-              {t("quotes.boq.addRow")}
-            </Button>
-          </div>
-        )}
-      </div>
-      <div className="border-b bg-sky-50 px-3 py-2 text-xs leading-relaxed text-sky-900">
-        {t("quotes.boq.materialRateHint")} {t("quotes.boq.materialRateExistingQuote")}{" "}
-        <Link className="font-medium underline underline-offset-2" to="/admin/material-rates/boq">
-          {t("quotes.boq.openMaterialRates")}
-        </Link>
-      </div>
-
-      {/* Desktop table (md+). */}
-      <div className="hidden overflow-x-auto md:block">
-        <table className="w-full min-w-[560px] divide-y text-sm">
-          <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="hidden w-24 px-2 py-1.5 text-left font-medium lg:table-cell">
-                {t("quotes.boq.code")}
-              </th>
-              <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
-              <th className="w-16 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
-              <th className="w-24 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
-              <th className="w-32 px-2 py-1.5 text-right font-medium">
-                {t("quotes.boq.unitPrice")}
-                <span className="ml-1 font-normal normal-case text-muted-foreground">
-                  ({currency})
-                </span>
-              </th>
-              <th className="w-32 px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
-              {editing && <th className="w-10 px-2 py-1.5" />}
-            </tr>
-          </thead>
-          <tbody className="divide-y">
-            {items.map((row, idx) => {
-              const amount = calculateQuoteLineAmount(row.quantity, row.unitPrice);
-              return (
-                <tr key={idx}>
-                  <td className="hidden px-2 py-1 lg:table-cell">
-                    <Input
-                      aria-label={t("quotes.boq.code")}
-                      className="h-8"
-                      value={row.itemCode ?? ""}
-                      disabled={!editing}
-                      onChange={(e) => onChange(idx, { itemCode: e.target.value || null })}
-                    />
-                  </td>
-                  <td className="px-2 py-1">
-                    <Input
-                      aria-label={t("quotes.boq.name")}
-                      className="h-8"
-                      value={row.name}
-                      disabled={!editing}
-                      onChange={(e) => onChange(idx, { name: e.target.value })}
-                    />
-                  </td>
-                  <td className="px-2 py-1">
-                    <Input
-                      aria-label={t("quotes.boq.unit")}
-                      className="h-8"
-                      value={row.unit}
-                      disabled={!editing}
-                      onChange={(e) => onChange(idx, { unit: e.target.value })}
-                    />
-                  </td>
-                  <td className="px-2 py-1">
-                    <Input
-                      aria-label={t("quotes.boq.qty")}
-                      className="h-8 text-right"
-                      inputMode="decimal"
-                      value={row.quantity}
-                      disabled={!editing}
-                      onChange={(e) => onChange(idx, { quantity: Number(e.target.value) || 0 })}
-                    />
-                  </td>
-                  <td className="px-2 py-1">
-                    <Input
-                      aria-label={`${t("quotes.boq.unitPrice")} (${currency})`}
-                      className="h-8 text-right"
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={0.01}
-                      value={row.unitPrice || ""}
-                      disabled={!editing}
-                      onChange={(e) => onChange(idx, { unitPrice: Number(e.target.value) })}
-                    />
-                  </td>
-                  <td className="px-2 py-1 text-right font-medium">
-                    {formatMoney(amount, currency)}
-                  </td>
-                  {editing && (
-                    <td className="px-2 py-1 text-right">
-                      <Button
-                        aria-label={t("common.delete")}
-                        variant="ghost"
-                        size="sm"
-                        data-testid={`boq-remove-desktop-${idx}`}
-                        className="h-7 px-1 text-destructive hover:text-destructive"
-                        onClick={() => onRemove(idx)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
-            {items.length === 0 && (
-              <tr>
-                <td
-                  colSpan={editing ? 7 : 6}
-                  className="px-2 py-6 text-center text-muted-foreground"
-                >
-                  {t("quotes.validation.boqRequired")}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Mobile card list (<md). Every row becomes a stacked card so no
-          horizontal scroll is required on narrow screens. Fields stay
-          editable when the parent is in edit mode. */}
-      <ul className="divide-y md:hidden">
-        {items.length === 0 && (
-          <li className="p-4 text-center text-sm text-muted-foreground">
-            {t("quotes.validation.boqRequired")}
-          </li>
-        )}
-        {items.map((row, idx) => {
-          const amount = calculateQuoteLineAmount(row.quantity, row.unitPrice);
-          return (
-            <li key={idx} className="space-y-2 p-3">
-              {editing ? (
-                <>
-                  <div className="grid grid-cols-[1fr,auto] items-start gap-2">
-                    <Input
-                      aria-label={t("quotes.boq.name")}
-                      className="h-9 text-sm font-medium"
-                      placeholder={t("quotes.boq.name")}
-                      value={row.name}
-                      onChange={(e) => onChange(idx, { name: e.target.value })}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 px-2 text-destructive hover:text-destructive"
-                      onClick={() => onRemove(idx)}
-                      aria-label={t("quotes.action.delete")}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
-                    <Input
-                      aria-label={t("quotes.boq.code")}
-                      className="h-9"
-                      placeholder={t("quotes.boq.code")}
-                      value={row.itemCode ?? ""}
-                      onChange={(e) => onChange(idx, { itemCode: e.target.value || null })}
-                    />
-                    <Input
-                      aria-label={t("quotes.boq.unit")}
-                      className="h-9"
-                      placeholder={t("quotes.boq.unit")}
-                      value={row.unit}
-                      onChange={(e) => onChange(idx, { unit: e.target.value })}
-                    />
-                    <Input
-                      aria-label={t("quotes.boq.qty")}
-                      className="h-9 text-right"
-                      inputMode="decimal"
-                      placeholder={t("quotes.boq.qty")}
-                      value={row.quantity}
-                      onChange={(e) => onChange(idx, { quantity: Number(e.target.value) || 0 })}
-                    />
-                    <Input
-                      aria-label={`${t("quotes.boq.unitPrice")} (${currency})`}
-                      className="h-9 text-right"
-                      type="number"
-                      inputMode="decimal"
-                      min={0}
-                      step={0.01}
-                      placeholder={t("quotes.boq.unitPrice")}
-                      value={row.unitPrice || ""}
-                      onChange={(e) => onChange(idx, { unitPrice: Number(e.target.value) })}
-                    />
-                  </div>
-                  <div className="flex items-center justify-between rounded bg-muted/30 px-2 py-1 text-sm">
-                    <span className="text-muted-foreground">{t("quotes.boq.amount")}</span>
-                    <span className="font-semibold">{formatMoney(amount, currency)}</span>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">{row.name}</div>
-                      {row.itemCode && (
-                        <div className="text-xs text-muted-foreground">
-                          {t("quotes.boq.code")}: {row.itemCode}
-                        </div>
-                      )}
-                    </div>
-                    <div className="whitespace-nowrap text-sm font-semibold">
-                      {formatMoney(amount, currency)}
-                    </div>
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {row.quantity} {row.unit} × {formatMoney(row.unitPrice, currency)}
-                  </div>
-                </>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+}) => (
+  <div className="rounded-lg border bg-card" data-testid="quote-boq-lines">
+    <div className="border-b bg-muted/30 p-2 text-xs uppercase tracking-wide text-muted-foreground">
+      {t("quotes.boq.title")}
     </div>
-  );
-};
+    {items === null ? (
+      <p className="p-4 text-sm text-muted-foreground">{t("quotes.projectBoq.pendingSave")}</p>
+    ) : items.length === 0 ? (
+      <p className="p-4 text-center text-sm text-muted-foreground">
+        {t("quotes.projectBoq.noLines")}
+      </p>
+    ) : (
+      <>
+        {/* Desktop table (md+). */}
+        <div className="hidden overflow-x-auto md:block">
+          <table className="w-full min-w-[560px] divide-y text-sm">
+            <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
+              <tr>
+                <th className="hidden w-24 px-2 py-1.5 text-left font-medium lg:table-cell">
+                  {t("quotes.boq.code")}
+                </th>
+                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
+                <th className="w-16 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
+                <th className="w-24 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
+                <th className="w-32 px-2 py-1.5 text-right font-medium">
+                  {t("quotes.boq.unitPrice")}
+                  <span className="ml-1 font-normal normal-case text-muted-foreground">
+                    ({currency})
+                  </span>
+                </th>
+                <th className="w-32 px-2 py-1.5 text-right font-medium">
+                  {t("quotes.boq.amount")}
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y">
+              {items.map((row) => (
+                <tr key={row.id}>
+                  <td className="hidden px-2 py-1.5 text-muted-foreground lg:table-cell">
+                    {row.itemCode}
+                  </td>
+                  <td className="px-2 py-1.5">{row.name}</td>
+                  <td className="px-2 py-1.5">{row.unit}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">{row.quantity}</td>
+                  <td className="px-2 py-1.5 text-right tabular-nums">
+                    {formatMoney(row.unitPrice, currency)}
+                  </td>
+                  <td className="px-2 py-1.5 text-right font-medium tabular-nums">
+                    {formatMoney(row.amount, currency)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        {/* Mobile card list (<md): every row becomes a stacked card. */}
+        <ul className="divide-y md:hidden">
+          {items.map((row) => (
+            <li key={row.id} className="space-y-1 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="break-words text-sm font-medium">{row.name}</div>
+                  {row.itemCode && (
+                    <div className="text-xs text-muted-foreground">
+                      {t("quotes.boq.code")}: {row.itemCode}
+                    </div>
+                  )}
+                </div>
+                <div className="whitespace-nowrap text-sm font-semibold">
+                  {formatMoney(row.amount, currency)}
+                </div>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {row.quantity} {row.unit} × {formatMoney(row.unitPrice, currency)}
+              </div>
+            </li>
+          ))}
+        </ul>
+      </>
+    )}
+  </div>
+);
 
 export default AdminQuoteDetail;
