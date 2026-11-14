@@ -435,6 +435,25 @@ giá nhà cung cấp / thầu phụ** nhập tay theo từng nhà cung cấp. M�
 thao tác và danh sách riêng; cách gửi duyệt và duyệt không đổi.
 BOQ upload ở đây không gửi duyệt hay duyệt được từ Procurement control.
 
+Từ 15/11/2026 khung **Báo giá đầu vào** có thêm phần **Suất đầu tư (file
+Excel)**, nằm giữa BOQ dự án và báo giá nhà cung cấp. Bấm **Upload suất đầu tư**,
+chọn mẫu theo loại công trình (nhà xưởng, kho; văn phòng, nhà điều hành; hoàn
+thiện nội thất), tải mẫu nếu chưa có, rồi điền Excel:
+- Mục A: diện tích thực từng hạng mục và hệ số quy đổi.
+- Mục B: đơn giá theo m² diện tích quy đổi cho từng nhóm công việc, tách vật tư,
+  nhân công, máy.
+
+Có thể chèn thêm dòng trong mỗi bảng (phía trên dòng tổng). Hệ thống tự tính lại
+từ các ô nhập, không dựa vào số Excel đã tính sẵn, và báo đúng ô nếu sai. Mỗi
+lần upload là một phiên bản R1, R2…; chỉ gửi duyệt được khi diện tích quy đổi và
+đơn giá/m² lớn hơn 0. Người phụ trách nhóm (khác người upload) duyệt như với BOQ.
+
+Khi lập báo giá **Suất đầu tư**, nếu dự án có suất đầu tư đã duyệt, bấm **Áp dụng
+suất đầu tư dự án**: diện tích lấy theo diện tích quy đổi, đơn giá/m² lấy từ file
+và không sửa tay được. Báo giá chỉ gửi duyệt được khi dùng bản duyệt mới nhất.
+Vẫn có thể chọn **Dùng danh mục đơn giá công ty** để quay lại cách cũ. Mẫu Excel
+cũng có ở trang **Mẫu báo giá → Suất đầu tư**.
+
 Mẫu **Báo giá xây dựng nhà xưởng** (14/11/2026) giữ đủ 23 sheet theo file GNF.
 Chỉ điền khối lượng (cột E) và đơn giá vật liệu, nhân công, thiết bị (cột F, G,
 H); không sửa công thức ở cột I, J và các dòng tổng. Hệ thống đọc 20 sheet hạng
