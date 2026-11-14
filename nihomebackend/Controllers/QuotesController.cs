@@ -68,6 +68,17 @@ public class QuotesController(
         return Ok(found);
     }
 
+    [HttpGet("{id:int}/project-boq")]
+    [RequirePermission("crm.quotes", "view")]
+    public async Task<ActionResult<QuoteProjectBoqLookupResponse>> ProjectBoq(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
+        var found = await svc.GetProjectBoqAsync(id, userId.Value, canSeeAll, ct);
+        return found is null ? NotFound() : Ok(found);
+    }
+
     [HttpGet("{id:int}/versions")]
     [RequirePermission("crm.quotes", "view")]
     public async Task<ActionResult<QuoteVersionsResponse>> Versions(int id, CancellationToken ct)

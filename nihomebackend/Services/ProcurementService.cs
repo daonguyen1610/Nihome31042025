@@ -1,4 +1,5 @@
 using System.Data;
+using System.Globalization;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -259,16 +260,11 @@ public sealed class ProcurementService(
         await EnsureProjectAsync(projectId, mutable: true, ct);
         await ValidateBoqAsync(projectId, request, ct);
         await using var transaction = await BeginSerializableAsync(ct);
-        var revisions = db.Database.IsSqlServer()
-            ? db.ProjectBoqRevisions.FromSqlRaw("SELECT * FROM [project_boq_revisions] WITH (UPDLOCK)")
-            : db.ProjectBoqRevisions;
-        var nextRevision = (await revisions.Where(item => item.OperationalProjectId == projectId)
-            .MaxAsync(item => (int?)item.RevisionNumber, ct) ?? 0) + 1;
         var entity = new ProjectBoqRevision
         {
             OperationalProjectId = projectId,
             Currency = await SystemCurrency.ResolveAsync(db, ct),
-            RevisionNumber = nextRevision,
+            RevisionNumber = await NextBoqRevisionNumberAsync(projectId, ct),
             PreparedByUserId = userId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
@@ -281,6 +277,91 @@ public sealed class ProcurementService(
         return response;
     }
 
+    private async Task<int> NextBoqRevisionNumberAsync(int projectId, CancellationToken ct)
+    {
+        var revisions = db.Database.IsSqlServer()
+            ? db.ProjectBoqRevisions.FromSqlRaw("SELECT * FROM [project_boq_revisions] WITH (UPDLOCK)")
+            : db.ProjectBoqRevisions;
+        return (await revisions.Where(item => item.OperationalProjectId == projectId)
+            .MaxAsync(item => (int?)item.RevisionNumber, ct) ?? 0) + 1;
+    }
+
+    public async Task EnsureBoqUploadAllowedAsync(int projectId, int? upstreamContractId, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: true, ct);
+        if (upstreamContractId.HasValue && !await IsValidUpstreamContractAsync(projectId, upstreamContractId.Value, ct))
+            throw new BoqWorkbookException("contract");
+    }
+
+    // A repeated confirm of the same file returns the Draft it already created.
+    public async Task<ProjectBoqRevisionResponse?> FindDraftWorkbookRevisionAsync(
+        int projectId, string templateCode, string sha256, int? upstreamContractId, CancellationToken ct = default,
+        int? sourceWorkPackageId = null)
+    {
+        var id = await db.ProjectBoqRevisions.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId && item.Status == ProjectBoqRevisionStatus.Draft &&
+                item.TemplateCode == templateCode && item.SourceSha256 == sha256 && item.UpstreamContractId == upstreamContractId &&
+                item.SourceWorkPackageId == sourceWorkPackageId)
+            .Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
+        return id.HasValue ? await GetBoqAsync(projectId, id.Value, ct) : null;
+    }
+
+    public async Task<ProjectBoqRevisionResponse> CreateBoqRevisionFromWorkbookAsync(
+        int projectId, ProjectBoqWorkbookImport import, int userId, CancellationToken ct = default)
+    {
+        await using var transaction = await BeginSerializableAsync(ct);
+        var parsed = import.Parsed;
+        var entity = new ProjectBoqRevision
+        {
+            OperationalProjectId = projectId,
+            RevisionNumber = await NextBoqRevisionNumberAsync(projectId, ct),
+            UpstreamContractId = import.UpstreamContractId,
+            SourceWorkPackageId = import.SourceWorkPackageId,
+            Currency = import.Template.Currency,
+            PreparedByUserId = userId,
+            TemplateCode = import.Template.Code,
+            SourceFileName = import.FileName,
+            SourceSha256 = parsed.Sha256,
+            SourceWorkbookPath = import.WorkbookPath,
+            CreatedAt = DateTime.UtcNow,
+            UpdatedAt = DateTime.UtcNow,
+            CostTotal = parsed.Lines.Sum(line => line.Amount),
+            Lines = parsed.Lines.Select((line, index) => new ProjectBoqLine
+            {
+                ItemCode = line.ItemCode,
+                Description = line.Description,
+                Unit = line.Unit,
+                ApprovedQuantity = line.Quantity,
+                BudgetUnitPrice = line.UnitPrice ?? 0,
+                Amount = line.Amount,
+                SortOrder = index,
+                SheetName = line.SheetName,
+                SourceRow = line.SourceRow,
+                Stt = line.Stt,
+                GroupName = line.GroupName,
+                PriceMissing = !line.UnitPrice.HasValue,
+            }).ToList(),
+            Sheets = parsed.Sheets.Select((sheet, index) => new ProjectBoqSheet
+            {
+                Name = sheet.Name,
+                ItemCount = sheet.ItemCount,
+                MissingPriceCount = sheet.MissingPriceCount,
+                Total = sheet.Total,
+                SortOrder = index,
+            }).ToList(),
+        };
+        db.ProjectBoqRevisions.Add(entity);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        var response = (await GetBoqAsync(projectId, entity.Id, ct))!;
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return response;
+    }
+
+    public Task<string?> GetBoqWorkbookPathAsync(int projectId, int id, CancellationToken ct = default) =>
+        db.ProjectBoqRevisions.AsNoTracking()
+            .Where(item => item.Id == id && item.OperationalProjectId == projectId)
+            .Select(item => item.SourceWorkbookPath).SingleOrDefaultAsync(ct);
+
     public async Task<ProjectBoqRevisionResponse?> UpdateBoqRevisionAsync(
         int projectId, int id, ProjectBoqRevisionRequest request, int userId, CancellationToken ct = default)
     {
@@ -290,6 +371,8 @@ public sealed class ProcurementService(
         if (entity is null) return null;
         if (entity.Status is not (ProjectBoqRevisionStatus.Draft or ProjectBoqRevisionStatus.Rejected))
             throw new ProcurementOperationException("Chỉ được sửa BOQ ở trạng thái Nháp hoặc Bị từ chối.");
+        // Lines of an uploaded BOQ must keep matching its stored workbook.
+        if (entity.SourceWorkbookPath != null) throw new BoqWorkbookException("workbookReadOnly");
         await ValidateBoqAsync(projectId, request, ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         db.ProjectBoqLines.RemoveRange(entity.Lines);
@@ -312,10 +395,13 @@ public sealed class ProcurementService(
         var entity = await db.ProjectBoqRevisions.Include(item => item.Lines)
             .SingleOrDefaultAsync(item => item.Id == id && item.OperationalProjectId == projectId, ct);
         if (entity is null) return null;
+        if (entity.SourceWorkPackageId.HasValue) throw new BoqWorkbookException("workPackageReview");
         if (entity.Status == ProjectBoqRevisionStatus.Submitted) return await GetBoqAsync(projectId, id, ct);
         if (entity.Status is not (ProjectBoqRevisionStatus.Draft or ProjectBoqRevisionStatus.Rejected))
             throw new ProcurementOperationException("BOQ không thể được gửi từ trạng thái hiện tại.");
         if (entity.Lines.Count == 0) throw new ProcurementOperationException("BOQ phải có ít nhất một dòng.");
+        var unpriced = entity.Lines.Count(line => line.PriceMissing);
+        if (unpriced > 0) throw new BoqWorkbookException("missingPrices", limit: unpriced.ToString(CultureInfo.InvariantCulture));
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         entity.Status = ProjectBoqRevisionStatus.Submitted;
         entity.SubmittedAt = DateTime.UtcNow;
@@ -334,7 +420,11 @@ public sealed class ProcurementService(
         var entity = await db.ProjectBoqRevisions.SingleOrDefaultAsync(item =>
             item.Id == id && item.OperationalProjectId == projectId, ct);
         if (entity is null) return null;
-        if (entity.Status == (request.Approved ? ProjectBoqRevisionStatus.Approved : ProjectBoqRevisionStatus.Rejected))
+        if (entity.SourceWorkPackageId.HasValue) throw new BoqWorkbookException("workPackageReview");
+        var approvedStatus = entity.SourceWorkbookPath != null && entity.UpstreamContractId == null
+            ? ProjectBoqRevisionStatus.TenderApproved
+            : ProjectBoqRevisionStatus.Approved;
+        if (entity.Status == (request.Approved ? approvedStatus : ProjectBoqRevisionStatus.Rejected))
             return await GetBoqAsync(projectId, id, ct);
         if (entity.Status != ProjectBoqRevisionStatus.Submitted)
             throw new ProcurementOperationException("Chỉ BOQ đã gửi mới có thể được phê duyệt hoặc từ chối.");
@@ -342,7 +432,7 @@ public sealed class ProcurementService(
             throw new ProcurementOperationException("Lý do từ chối BOQ phải có ít nhất 3 ký tự.");
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         var now = DateTime.UtcNow;
-        entity.Status = request.Approved ? ProjectBoqRevisionStatus.Approved : ProjectBoqRevisionStatus.Rejected;
+        entity.Status = request.Approved ? approvedStatus : ProjectBoqRevisionStatus.Rejected;
         entity.ApprovedAt = request.Approved ? now : null;
         entity.ApprovedByUserId = request.Approved ? userId : null;
         entity.RejectedAt = request.Approved ? null : now;
@@ -351,7 +441,36 @@ public sealed class ProcurementService(
         entity.UpdatedAt = now;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         await NotifyBoqDecisionAsync(entity, userId, ct);
-        if (request.Approved) await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
+        if (entity.Status == ProjectBoqRevisionStatus.Approved) await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
+        return await GetBoqAsync(projectId, id, ct);
+    }
+
+    // MoM 31/10: the won tender BOQ becomes the contract BOQ without a new file. Only the latest approved
+    // tender BOQ of a project with no contract BOQ yet; later contract changes are new uploaded revisions.
+    public async Task<ProjectBoqRevisionResponse?> ConvertTenderBoqToContractAsync(
+        int projectId, int id, ProjectBoqContractRequest request, int userId, CancellationToken ct = default)
+    {
+        await EnsureProjectAsync(projectId, mutable: true, ct);
+        var entity = await db.ProjectBoqRevisions.SingleOrDefaultAsync(item =>
+            item.Id == id && item.OperationalProjectId == projectId, ct);
+        if (entity is null) return null;
+        if (entity.Status == ProjectBoqRevisionStatus.Approved && entity.UpstreamContractId == request.UpstreamContractId)
+            return await GetBoqAsync(projectId, id, ct);
+        if (entity.Status != ProjectBoqRevisionStatus.TenderApproved) throw new BoqWorkbookException("notTender");
+        if (await db.ProjectBoqRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
+                item.Status == ProjectBoqRevisionStatus.Approved, ct))
+            throw new BoqWorkbookException("contractBoqExists");
+        if (await db.ProjectBoqRevisions.AnyAsync(item => item.OperationalProjectId == projectId &&
+                item.Status == ProjectBoqRevisionStatus.TenderApproved && item.RevisionNumber > entity.RevisionNumber, ct))
+            throw new BoqWorkbookException("notLatestTender");
+        if (!await IsValidUpstreamContractAsync(projectId, request.UpstreamContractId, ct))
+            throw new BoqWorkbookException("contract");
+        CrmConcurrency.Apply(db, entity, request.RowVersion);
+        entity.UpstreamContractId = request.UpstreamContractId;
+        entity.Status = ProjectBoqRevisionStatus.Approved;
+        entity.UpdatedAt = DateTime.UtcNow;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        await EvaluateAlertsBestEffortAsync(projectId, userId, ct);
         return await GetBoqAsync(projectId, id, ct);
     }
 
@@ -395,7 +514,7 @@ public sealed class ProcurementService(
         {
             await notifications.NotifyFromTemplateAsync(
                 entity.PreparedByUserId,
-                entity.Status == ProjectBoqRevisionStatus.Approved ? BoqApprovedTemplate : BoqRejectedTemplate,
+                entity.Status == ProjectBoqRevisionStatus.Rejected ? BoqRejectedTemplate : BoqApprovedTemplate,
                 new Dictionary<string, string>
                 {
                     ["revision"] = $"R{entity.RevisionNumber}",
@@ -1139,16 +1258,18 @@ public sealed class ProcurementService(
         return await GetRatingAsync(projectId, id, ct);
     }
 
-    private async Task ValidateBoqAsync(int projectId, ProjectBoqRevisionRequest request, CancellationToken ct)
-    {
-        var validContract = await db.Contracts.AsNoTracking().AnyAsync(contract =>
-            contract.Id == request.UpstreamContractId &&
+    private Task<bool> IsValidUpstreamContractAsync(int projectId, int contractId, CancellationToken ct) =>
+        db.Contracts.AsNoTracking().AnyAsync(contract =>
+            contract.Id == contractId &&
             contract.OperationalProjectId == projectId &&
             contract.Direction == ContractDirection.Upstream &&
             contract.SignedDate != null &&
             contract.Status != ContractStatus.Draft &&
             contract.Status != ContractStatus.Cancelled, ct);
-        if (!validContract)
+
+    private async Task ValidateBoqAsync(int projectId, ProjectBoqRevisionRequest request, CancellationToken ct)
+    {
+        if (!await IsValidUpstreamContractAsync(projectId, request.UpstreamContractId, ct))
             throw new ProcurementOperationException("Execution BOQ phải gắn với hợp đồng đầu ra đã ký, còn hiệu lực và thuộc đúng Dự án.");
         var codes = request.Lines.Select(item => item.ItemCode.Trim().ToUpperInvariant()).ToList();
         if (codes.Count != codes.Distinct(StringComparer.OrdinalIgnoreCase).Count())
@@ -1631,6 +1752,7 @@ public sealed class ProcurementService(
 
     private IQueryable<ProjectBoqRevision> BoqQuery() => db.ProjectBoqRevisions.AsNoTracking()
         .Include(item => item.PreparedBy).Include(item => item.UpstreamContract)
+        .Include(item => item.Sheets)
         .Include(item => item.Lines.OrderBy(line => line.SortOrder));
 
     private IQueryable<ProjectBoqRevision> ApplyBoqListFilters(
@@ -1766,6 +1888,17 @@ public sealed class ProcurementService(
         CreatedAt = item.CreatedAt,
         UpdatedAt = item.UpdatedAt,
         RowVersion = CrmConcurrency.Encode(item.RowVersion),
+        TemplateCode = item.TemplateCode,
+        SourceFileName = item.SourceFileName,
+        HasWorkbook = item.SourceWorkbookPath != null,
+        SourceWorkPackageId = item.SourceWorkPackageId,
+        Sheets = item.Sheets.OrderBy(sheet => sheet.SortOrder).Select(sheet => new ProjectBoqSheetResponse
+        {
+            Name = sheet.Name,
+            ItemCount = sheet.ItemCount,
+            MissingPriceCount = sheet.MissingPriceCount,
+            Total = sheet.Total,
+        }).ToList(),
         Lines = item.Lines.Select(line => new ProjectBoqLineResponse
         {
             Id = line.Id,
@@ -1775,6 +1908,11 @@ public sealed class ProcurementService(
             ApprovedQuantity = line.ApprovedQuantity,
             BudgetUnitPrice = line.BudgetUnitPrice,
             Amount = line.Amount,
+            SheetName = line.SheetName,
+            SourceRow = line.SourceRow,
+            Stt = line.Stt,
+            GroupName = line.GroupName,
+            PriceMissing = line.PriceMissing,
         }).ToList(),
     };
 

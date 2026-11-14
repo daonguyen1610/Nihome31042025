@@ -52,7 +52,6 @@ public class QuoteService(
     private const int DefaultValidityDays = 30;
     private const int ExpiringSoonDays = 3;
     private const decimal MaxMoney = 9_999_999_999_999_999.99m;
-    private const decimal MaxQuantity = 99_999_999_999_999.9999m;
     private static readonly SemaphoreSlim QuoteCodeGate = new(1, 1);
 
     // ------------------------------ List / Get ------------------------------
@@ -137,6 +136,7 @@ public class QuoteService(
             .Include(q => q.Opportunity).ThenInclude(o => o.Customer)
             .Include(q => q.Owner)
             .Include(q => q.MaterialRateRevision).ThenInclude(revision => revision!.Catalog)
+            .Include(q => q.ProjectBoqRevision)
             .Include(q => q.InputPriceOffer).ThenInclude(offer => offer!.Vendor)
             .Include(q => q.Items)
             .Include(q => q.ApprovalLogs).ThenInclude(l => l.By)
@@ -148,6 +148,34 @@ public class QuoteService(
             quote.ApprovalApproverUserId != callerUserId)
             return null;
         return Map(quote);
+    }
+
+    // Sales has no procurement permission, so the quote exposes the BOQ it may apply.
+    public async Task<QuoteProjectBoqLookupResponse?> GetProjectBoqAsync(
+        int id, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    {
+        var quote = await db.Quotes.AsNoTracking().Where(q => q.Id == id)
+            .Select(q => new { q.OperationalProjectId, q.OwnerUserId, q.ApprovalApproverUserId })
+            .SingleOrDefaultAsync(ct);
+        if (quote is null) return null;
+        if (!canSeeAll && quote.OwnerUserId != callerUserId && quote.ApprovalApproverUserId != callerUserId)
+            return null;
+        if (!quote.OperationalProjectId.HasValue) return new QuoteProjectBoqLookupResponse();
+        var latest = await ApprovedProjectBoqs(quote.OperationalProjectId.Value)
+            .OrderByDescending(revision => revision.RevisionNumber)
+            .Select(revision => new QuoteProjectBoqResponse
+            {
+                RevisionId = revision.Id,
+                RevisionNumber = revision.RevisionNumber,
+                Status = revision.Status.ToString(),
+                Currency = revision.Currency,
+                Total = revision.CostTotal,
+                LineCount = revision.Lines.Count,
+                ApprovedAt = revision.ApprovedAt,
+                UpstreamContractNumber = revision.UpstreamContract != null ? revision.UpstreamContract.ContractNumber : null,
+                SourceFileName = revision.SourceFileName,
+            }).FirstOrDefaultAsync(ct);
+        return new QuoteProjectBoqLookupResponse { Latest = latest };
     }
 
     // ------------------------------ Create / Update ------------------------------
@@ -208,13 +236,14 @@ public class QuoteService(
             ? await ResolveNewRateAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate,
                 request.UnitPricePerSqm, request.RateOverrideReason, callerUserId, canOverrideRate, ct)
             : null;
-        var boqRevision = !request.DraftOnly && method == QuoteMethod.Boq
-            ? await ResolveBoqRevisionAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate, required: false, ct)
+        if (method == QuoteMethod.Boq) RejectBoqLineSources(request.MaterialRateCatalogId, request.Items);
+        var projectBoq = !request.DraftOnly && method == QuoteMethod.Boq
+            ? await ResolveProjectBoqAsync(opportunity.OperationalProjectId, request.ProjectBoqRevisionId, null, ct)
             : null;
         var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, opportunity.OperationalProjectId, null, ct);
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
         if (!request.DraftOnly)
-            ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice, request.Items,
+            ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice,
                 request.DiscountPercent, request.VatPercent);
 
         var ownerId = request.OwnerUserId ?? opportunity.OwnerUserId ?? callerUserId;
@@ -244,18 +273,18 @@ public class QuoteService(
             OwnerUserId = ownerId,
             Method = method,
             Version = 1,
-            Currency = rate?.Currency ?? boqRevision?.Currency ?? await SystemCurrency.ResolveAsync(db, ct),
+            Currency = rate?.Currency ?? projectBoq?.Currency ?? await SystemCurrency.ResolveAsync(db, ct),
             AreaSqm = method == QuoteMethod.UnitCost ? request.AreaSqm : null,
             UnitPricePerSqm = method == QuoteMethod.UnitCost ? appliedUnitPrice : null,
             PackageDescription = method == QuoteMethod.UnitCost
                 ? request.PackageDescription?.Trim()
                 : null,
-            MaterialRateRevisionId = rate?.Revision.Id ?? boqRevision?.Revision.Id,
+            MaterialRateRevisionId = rate?.Revision.Id,
             InputPriceOfferId = inputPriceOffer?.Id,
             InputPriceSnapshotJson = inputPriceOffer is null ? null : SerializeInputPriceOffer(inputPriceOffer),
-            PricingEffectiveDate = rate?.EffectiveDate ?? boqRevision?.EffectiveDate,
+            PricingEffectiveDate = rate?.EffectiveDate,
             CatalogUnitPricePerSqm = rate?.CatalogUnitPrice,
-            RateSource = rate?.Source ?? (boqRevision is not null ? QuoteRateSource.CatalogReference : QuoteRateSource.Override),
+            RateSource = rate?.Source ?? QuoteRateSource.Override,
             RateOverrideReason = !request.DraftOnly && method == QuoteMethod.UnitCost && rate is null
                 ? "Giá nhập trực tiếp theo quy trình hiện hành."
                 : rate?.OverrideReason,
@@ -272,7 +301,7 @@ public class QuoteService(
             UpdatedByUserId = callerUserId,
         };
 
-        ApplyItems(quote, method, request.Items);
+        if (projectBoq is not null) ApplyProjectBoq(quote, projectBoq);
         RecomputeTotals(quote);
 
         db.Quotes.Add(quote);
@@ -338,32 +367,37 @@ public class QuoteService(
 
         var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, quote.OperationalProjectId, quote.Id, ct);
         var isBasicDraft = quote.Status == QuoteStatus.Draft && quote.GrandTotal == 0;
+        // An approved project BOQ (uploaded and approved in the input-price work package) is itself
+        // approved input pricing; ResolveProjectBoqAsync below accepts only the latest approved revision.
+        var hasApprovedInput = inputPriceOffer is not null ||
+            request.Method == QuoteMethod.Boq && request.ProjectBoqRevisionId.HasValue;
         if (request.Method.HasValue && !Enum.IsDefined(request.Method.Value))
             throw new QuoteOperationException("Phương thức báo giá không hợp lệ.");
         if (!isBasicDraft && request.Method.HasValue && request.Method.Value != quote.Method)
             throw new QuoteOperationException("Không thể đổi phương thức của báo giá đã lập giá đầu ra.");
-        if (isBasicDraft && request.Method.HasValue && inputPriceOffer is null)
-            throw new QuoteOperationException("Cần báo giá đầu vào đã duyệt trước khi chọn phương thức báo giá đầu ra.");
+        if (isBasicDraft && request.Method.HasValue && !hasApprovedInput)
+            throw new QuoteOperationException("Cần báo giá đầu vào hoặc BOQ dự án đã duyệt trước khi chọn phương thức báo giá đầu ra.");
         if (isBasicDraft && inputPriceOffer is not null && !request.Method.HasValue)
             throw new QuoteOperationException("Hãy chọn phương thức báo giá đầu ra.");
         var method = request.Method ?? quote.Method;
-        if (isBasicDraft && inputPriceOffer is null &&
+        if (isBasicDraft && !hasApprovedInput &&
             (request.AreaSqm.HasValue || request.UnitPricePerSqm.HasValue ||
              request.MaterialRateCatalogId.HasValue || request.PricingEffectiveDate.HasValue ||
              !string.IsNullOrWhiteSpace(request.PackageDescription) ||
              !string.IsNullOrWhiteSpace(request.RateOverrideReason) ||
              request.Items.Count > 0 || request.DiscountPercent != 0 || request.VatPercent != 8))
             throw new QuoteOperationException("Cần chọn báo giá đầu vào đã duyệt trước khi nhập giá đầu ra.");
-        var rate = method == QuoteMethod.UnitCost && (!isBasicDraft || inputPriceOffer is not null)
+        var rate = method == QuoteMethod.UnitCost && (!isBasicDraft || hasApprovedInput)
             ? await ResolveUpdatedRateAsync(quote, request, callerUserId, canOverrideRate, ct)
             : null;
-        var boqRevision = method == QuoteMethod.Boq && (!isBasicDraft || inputPriceOffer is not null)
-            ? await ResolveUpdatedBoqRevisionAsync(quote, request, ct)
+        if (method == QuoteMethod.Boq) RejectBoqLineSources(request.MaterialRateCatalogId, request.Items);
+        var projectBoq = method == QuoteMethod.Boq && (!isBasicDraft || hasApprovedInput)
+            ? await ResolveProjectBoqAsync(quote.OperationalProjectId, request.ProjectBoqRevisionId, quote.ProjectBoqRevisionId, ct)
             : null;
         var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
-        var pricingCurrency = rate?.Currency ?? boqRevision?.Currency;
-        if (!isBasicDraft || inputPriceOffer is not null)
-            ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice, request.Items,
+        var pricingCurrency = rate?.Currency ?? projectBoq?.Currency;
+        if (!isBasicDraft || hasApprovedInput)
+            ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice,
                 request.DiscountPercent, request.VatPercent);
         if (method == QuoteMethod.UnitCost) request.UnitPricePerSqm = appliedUnitPrice;
 
@@ -377,11 +411,6 @@ public class QuoteService(
             quote.CatalogUnitPricePerSqm != rate.CatalogUnitPrice ||
             quote.RateSource != rate.Source ||
             quote.RateOverrideReason != rate.OverrideReason))
-        {
-            changes = new QuoteChangeSet(Any: true, Material: true);
-        }
-        if (boqRevision is not null && (quote.MaterialRateRevisionId != boqRevision.Revision.Id ||
-            quote.PricingEffectiveDate != boqRevision.EffectiveDate))
         {
             changes = new QuoteChangeSet(Any: true, Material: true);
         }
@@ -449,15 +478,18 @@ public class QuoteService(
             quote.RateOverrideByUserId = rate.OverrideByUserId;
             quote.RateOverrideAt = rate.OverrideAt;
         }
-        else if (boqRevision is not null)
+        else if (projectBoq is not null)
         {
-            quote.MaterialRateRevisionId = boqRevision.Revision.Id;
-            quote.PricingEffectiveDate = boqRevision.EffectiveDate;
+            // Lines now come from the project BOQ, so a legacy catalog reference no longer applies.
+            quote.MaterialRateRevisionId = null;
+            quote.PricingEffectiveDate = null;
             quote.CatalogUnitPricePerSqm = null;
-            quote.RateSource = QuoteRateSource.CatalogReference;
+            quote.RateSource = QuoteRateSource.Override;
             quote.RateOverrideReason = null;
             quote.RateOverrideByUserId = null;
             quote.RateOverrideAt = null;
+            db.QuoteItems.RemoveRange(quote.Items);
+            ApplyProjectBoq(quote, projectBoq);
         }
         quote.DiscountPercent = request.DiscountPercent;
         quote.VatPercent = request.VatPercent;
@@ -465,15 +497,6 @@ public class QuoteService(
         quote.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         quote.UpdatedAt = now;
         quote.UpdatedByUserId = callerUserId;
-
-        // Rebuild items only for BOQ, and only when the set actually differs —
-        // rebuilding for nothing reissues every line's id.
-        if (quote.Method == QuoteMethod.Boq && !BoqItemsEqual(quote.Items, request.Items))
-        {
-            db.QuoteItems.RemoveRange(quote.Items);
-            quote.Items = new List<QuoteItem>();
-            ApplyItems(quote, quote.Method, request.Items);
-        }
 
         // Always recompute: discount or VAT can move while the lines stand still.
         RecomputeTotals(quote);
@@ -497,6 +520,7 @@ public class QuoteService(
     public async Task<QuoteResponse?> SubmitAsync(int id, QuoteWorkflowRequest req, int caller, bool canManage, bool canSeeAll, CancellationToken ct = default)
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền gửi duyệt báo giá.");
+        await EnsureProjectBoqCurrentAsync(id, ct);
         await approvalEmails.QueueAsync(id, req.ApproverUserId ?? 0, req.RowVersion,
             req.PreviewToken, caller, canSeeAll, ct);
         return await TransitionAsync(id, caller, canSeeAll,
@@ -1173,11 +1197,6 @@ public class QuoteService(
         int? OverrideByUserId,
         DateTime? OverrideAt);
 
-    private sealed record ResolvedBoqRevision(
-        MaterialRateRevision Revision,
-        DateOnly EffectiveDate,
-        string Currency);
-
     private async Task<ResolvedRate> ResolveNewRateAsync(
         int? catalogId,
         DateOnly? effectiveDate,
@@ -1254,79 +1273,6 @@ public class QuoteService(
             throw new QuoteOperationException("Lý do ghi đè đơn giá phải bằng tiếng Việt và dài từ 10 đến 500 ký tự.");
         return new ResolvedRate(revision, effectiveDate, catalogUnitPrice, appliedUnitPrice,
             currency, QuoteRateSource.Override, reason, callerUserId, DateTime.UtcNow);
-    }
-
-    private async Task<ResolvedBoqRevision?> ResolveUpdatedBoqRevisionAsync(
-        Quote quote,
-        UpdateQuoteRequest request,
-        CancellationToken ct)
-    {
-        if (!request.MaterialRateCatalogId.HasValue)
-        {
-            return null;
-        }
-        if (!request.PricingEffectiveDate.HasValue)
-        {
-            throw new QuoteOperationException("Báo giá BOQ phải chọn ngày áp dụng khi sử dụng danh mục BOQ.");
-        }
-
-        if (quote.MaterialRateRevisionId.HasValue &&
-            quote.PricingEffectiveDate == request.PricingEffectiveDate)
-        {
-            var existingCatalogId = await db.MaterialRateRevisions.AsNoTracking()
-                .Where(revision => revision.Id == quote.MaterialRateRevisionId.Value)
-                .Select(revision => (int?)revision.CatalogId)
-                .SingleOrDefaultAsync(ct);
-            if (existingCatalogId == request.MaterialRateCatalogId)
-            {
-                var existing = await db.MaterialRateRevisions.AsNoTracking()
-                    .Include(revision => revision.Catalog)
-                    .FirstAsync(revision => revision.Id == quote.MaterialRateRevisionId.Value, ct);
-                if (existing.Catalog.CatalogType != MaterialRateCatalogType.Boq)
-                {
-                    throw new QuoteOperationException("Danh mục đã chọn không phải danh mục đơn giá BOQ.");
-                }
-                return new ResolvedBoqRevision(existing, request.PricingEffectiveDate.Value,
-                    DisplaySettings.NormalizeCurrencyOrDefault(existing.Catalog.Currency));
-            }
-        }
-
-        return await ResolveBoqRevisionAsync(
-            request.MaterialRateCatalogId,
-            request.PricingEffectiveDate,
-            required: true,
-            ct);
-    }
-
-    private async Task<ResolvedBoqRevision?> ResolveBoqRevisionAsync(
-        int? catalogId,
-        DateOnly? effectiveDate,
-        bool required,
-        CancellationToken ct)
-    {
-        if (!catalogId.HasValue)
-        {
-            if (required || effectiveDate.HasValue)
-                throw new QuoteOperationException("Báo giá BOQ phải chọn danh mục đơn giá BOQ.");
-            return null;
-        }
-        if (!effectiveDate.HasValue)
-            throw new QuoteOperationException("Báo giá BOQ phải chọn ngày áp dụng đơn giá.");
-
-        var revision = await db.MaterialRateRevisions.AsNoTracking()
-            .Include(item => item.Catalog)
-            .Where(item => item.CatalogId == catalogId.Value &&
-                item.Catalog.CatalogType == MaterialRateCatalogType.Boq && item.Catalog.IsActive &&
-                item.Status == MaterialRateRevisionStatus.Approved &&
-                item.EffectiveFrom <= effectiveDate.Value &&
-                (!item.EffectiveTo.HasValue || item.EffectiveTo.Value >= effectiveDate.Value))
-            .OrderByDescending(item => item.EffectiveFrom)
-            .ThenByDescending(item => item.Version)
-            .FirstOrDefaultAsync(ct)
-            ?? throw new QuoteOperationException("Không có phiên bản danh mục BOQ đã duyệt có hiệu lực cho ngày đã chọn.");
-
-        return new ResolvedBoqRevision(revision, effectiveDate.Value,
-            DisplaySettings.NormalizeCurrencyOrDefault(revision.Catalog.Currency));
     }
 
     private static bool ContainsVietnamese(string value) => value.Any(character =>
@@ -1406,7 +1352,7 @@ public class QuoteService(
         }
         else
         {
-            material |= !BoqItemsEqual(quote.Items, request.Items);
+            material |= quote.ProjectBoqRevisionId != request.ProjectBoqRevisionId;
         }
 
         material |= quote.DiscountPercent != request.DiscountPercent;
@@ -1425,73 +1371,69 @@ public class QuoteService(
         return new QuoteChangeSet(Any: material || cosmetic, Material: material);
     }
 
-    private static bool BoqItemsEqual(
-        IReadOnlyCollection<QuoteItem> current,
-        IReadOnlyCollection<QuoteItemInput> incoming)
+    private static void RejectBoqLineSources(int? catalogId, List<QuoteItemInput>? items)
     {
-        if (current.Count != incoming.Count) return false;
-
-        // SortOrder takes part in the comparison — reordering lines is a real
-        // change, the customer sees it on the printed quote.
-        //
-        // But it has to be normalised first. ApplyItems assigns
-        // `SortOrder = i.SortOrder == 0 ? ++sort : i.SortOrder`, so the frontend may
-        // send all zeroes and let the backend number them. Comparing those zeroes
-        // against the stored 1..n would make every save look changed — the very bug
-        // this guard exists to fix.
-        var normalised = new List<(string? Code, string Name, string Unit, decimal Qty, decimal Price, int Sort)>();
-        var running = 0;
-        foreach (var item in incoming)
-        {
-            running++;
-            normalised.Add((
-                string.IsNullOrWhiteSpace(item.ItemCode) ? null : item.ItemCode.Trim(),
-                item.Name?.Trim() ?? string.Empty,
-                item.Unit?.Trim() ?? string.Empty,
-                item.Quantity,
-                item.UnitPrice,
-                item.SortOrder == 0 ? running : item.SortOrder));
-        }
-
-        var left = current.OrderBy(i => i.SortOrder).ToList();
-        var right = normalised.OrderBy(i => i.Sort).ToList();
-
-        for (var i = 0; i < left.Count; i++)
-        {
-            var a = left[i];
-            var b = right[i];
-            if (a.SortOrder != b.Sort) return false;
-            if (!string.Equals(a.Name?.Trim(), b.Name, StringComparison.Ordinal)) return false;
-            if (!string.Equals(a.Unit?.Trim(), b.Unit, StringComparison.Ordinal)) return false;
-            if (!string.Equals(
-                    string.IsNullOrWhiteSpace(a.ItemCode) ? null : a.ItemCode.Trim(),
-                    b.Code,
-                    StringComparison.Ordinal)) return false;
-            if (a.Quantity != b.Qty) return false;
-            if (a.UnitPrice != b.Price) return false;
-        }
-
-        return true;
+        if (catalogId.HasValue)
+            throw new QuoteOperationException("Báo giá BOQ không dùng danh mục đơn giá; số liệu lấy từ BOQ dự án đã duyệt.");
+        if (items is { Count: > 0 })
+            throw new QuoteOperationException("Dòng báo giá BOQ lấy từ BOQ dự án đã duyệt, không nhập tay.");
     }
 
-    private static void ApplyItems(Quote quote, QuoteMethod method, List<QuoteItemInput> inputs)
+    private IQueryable<ProjectBoqRevision> ApprovedProjectBoqs(int projectId) =>
+        db.ProjectBoqRevisions.AsNoTracking().Where(revision => revision.OperationalProjectId == projectId &&
+            (revision.Status == ProjectBoqRevisionStatus.Approved || revision.Status == ProjectBoqRevisionStatus.TenderApproved));
+
+    // Returns the revision to copy, or null when the quote keeps the revision it already has.
+    private async Task<ProjectBoqRevision?> ResolveProjectBoqAsync(
+        int? projectId, int? requestedId, int? currentId, CancellationToken ct)
     {
-        if (method != QuoteMethod.Boq) return;
-        int sort = 0;
-        foreach (var i in inputs)
-        {
-            var amount = RoundMoney(i.Quantity * i.UnitPrice);
-            quote.Items.Add(new QuoteItem
+        if (!requestedId.HasValue)
+            throw new QuoteOperationException("Báo giá BOQ phải lấy số liệu từ BOQ dự án đã duyệt.");
+        if (requestedId == currentId) return null;
+        if (!projectId.HasValue)
+            throw new QuoteOperationException("Báo giá phải gắn Dự án trước khi lấy BOQ dự án.");
+        var latest = await ApprovedProjectBoqs(projectId.Value).Include(revision => revision.Lines)
+            .OrderByDescending(revision => revision.RevisionNumber).FirstOrDefaultAsync(ct)
+            ?? throw new QuoteOperationException("Dự án chưa có BOQ đã duyệt. Cung ứng upload BOQ trong nhóm công việc yêu cầu giá đầu vào để người phụ trách nhóm duyệt.");
+        if (latest.Id != requestedId)
+            throw new QuoteOperationException($"Chỉ áp dụng được BOQ dự án đã duyệt mới nhất (R{latest.RevisionNumber}).");
+        if (!string.Equals(latest.Currency, "VND", StringComparison.OrdinalIgnoreCase))
+            throw new QuoteOperationException("Báo giá chỉ lập bằng VND; BOQ dự án dùng tiền tệ khác.");
+        if (latest.Lines.Count == 0)
+            throw new QuoteOperationException("BOQ dự án đã duyệt không có dòng nào.");
+        return latest;
+    }
+
+    private static void ApplyProjectBoq(Quote quote, ProjectBoqRevision revision)
+    {
+        quote.ProjectBoqRevisionId = revision.Id;
+        quote.Items = revision.Lines.OrderBy(line => line.SortOrder).ThenBy(line => line.Id)
+            .Select((line, index) => new QuoteItem
             {
-                ItemCode = string.IsNullOrWhiteSpace(i.ItemCode) ? null : i.ItemCode.Trim(),
-                Name = i.Name.Trim(),
-                Unit = i.Unit.Trim(),
-                Quantity = i.Quantity,
-                UnitPrice = i.UnitPrice,
-                Amount = amount,
-                SortOrder = i.SortOrder == 0 ? ++sort : i.SortOrder,
-            });
-        }
+                ItemCode = line.ItemCode,
+                Name = line.Description,
+                Unit = line.Unit,
+                Quantity = line.ApprovedQuantity,
+                UnitPrice = line.BudgetUnitPrice,
+                Amount = RoundMoney(line.Amount),
+                SortOrder = index + 1,
+            }).ToList();
+    }
+
+    // A quote sent for approval must carry the numbers of the latest approved project BOQ.
+    private async Task EnsureProjectBoqCurrentAsync(int quoteId, CancellationToken ct)
+    {
+        var quote = await db.Quotes.AsNoTracking().Where(item => item.Id == quoteId)
+            .Select(item => new { item.Method, item.ProjectBoqRevisionId, item.OperationalProjectId })
+            .SingleOrDefaultAsync(ct);
+        if (quote is null || quote.Method != QuoteMethod.Boq) return;
+        if (!quote.ProjectBoqRevisionId.HasValue || !quote.OperationalProjectId.HasValue)
+            throw new QuoteOperationException("Báo giá BOQ phải lấy số liệu từ BOQ dự án đã duyệt. Hãy áp dụng BOQ dự án trước khi gửi duyệt.");
+        var latest = await ApprovedProjectBoqs(quote.OperationalProjectId.Value)
+            .OrderByDescending(revision => revision.RevisionNumber)
+            .Select(revision => new { revision.Id, revision.RevisionNumber }).FirstAsync(ct);
+        if (latest.Id != quote.ProjectBoqRevisionId)
+            throw new QuoteOperationException($"BOQ dự án đã có bản duyệt mới hơn (R{latest.RevisionNumber}). Hãy áp dụng lại trước khi gửi duyệt.");
     }
 
     private static void RecomputeTotals(Quote quote)
@@ -1512,7 +1454,6 @@ public class QuoteService(
         QuoteMethod method,
         decimal? area,
         decimal? unitPrice,
-        List<QuoteItemInput> items,
         decimal discountPercent,
         decimal vatPercent)
     {
@@ -1532,34 +1473,7 @@ public class QuoteService(
             if (area > MaxMoney || unitPrice > MaxMoney || area > MaxMoney / unitPrice)
                 throw new QuoteOperationException("Suất đầu tư: giá trị Báo giá vượt giới hạn lưu trữ.");
         }
-        else
-        {
-            if (items.Any(i => i is null))
-                throw new QuoteOperationException("BOQ: dòng hạng mục không hợp lệ.");
-            if (items.Count == 0)
-                throw new QuoteOperationException("BOQ: phải có ít nhất 1 dòng hạng mục.");
-            if (items.Any(i => string.IsNullOrWhiteSpace(i.Name) || string.IsNullOrWhiteSpace(i.Unit)))
-                throw new QuoteOperationException("BOQ: tên hạng mục và đơn vị không được để trống.");
-            if (items.Any(i => i.Quantity <= 0 || i.UnitPrice < 0))
-                throw new QuoteOperationException("BOQ: khối lượng phải lớn hơn 0 và đơn giá không được âm.");
-            if (items.Any(i => !HasScale(i.Quantity, 4) || !HasScale(i.UnitPrice, 2)))
-                throw new QuoteOperationException("BOQ: khối lượng tối đa 4 số lẻ và đơn giá tối đa 2 số lẻ, ví dụ 1,2345 và 1500000,25.");
-            if (items.Any(i => i.Quantity > MaxQuantity || i.UnitPrice > MaxMoney))
-                throw new QuoteOperationException("BOQ: khối lượng hoặc đơn giá vượt giới hạn lưu trữ.");
-            if (items.Any(i => i.UnitPrice > 0 && i.Quantity > MaxMoney / i.UnitPrice))
-                throw new QuoteOperationException("BOQ: thành tiền hạng mục vượt giới hạn lưu trữ.");
-            decimal subtotal = 0;
-            foreach (var item in items)
-            {
-                var amount = decimal.Round(
-                    item.Quantity * item.UnitPrice,
-                    2,
-                    MidpointRounding.AwayFromZero);
-                if (amount > MaxMoney - subtotal)
-                    throw new QuoteOperationException("BOQ: tổng tiền trước thuế vượt giới hạn lưu trữ.");
-                subtotal += amount;
-            }
-        }
+        // BOQ lines are copied from the approved project BOQ; RecomputeTotals bounds their sum.
     }
 
     private static decimal RoundMoney(decimal value)
@@ -1583,6 +1497,7 @@ public class QuoteService(
         UnitPricePerSqm = q.UnitPricePerSqm,
         PackageDescription = q.PackageDescription,
         MaterialRateRevisionId = q.MaterialRateRevisionId,
+        ProjectBoqRevisionId = q.ProjectBoqRevisionId,
         InputPriceOfferId = q.InputPriceOfferId,
         InputPriceSnapshotJson = q.InputPriceSnapshotJson,
         PricingEffectiveDate = q.PricingEffectiveDate,
@@ -1650,6 +1565,8 @@ public class QuoteService(
         MaterialRateCatalogCode = q.MaterialRateRevision?.Catalog?.Code,
         MaterialRateCatalogName = q.MaterialRateRevision?.Catalog?.Name,
         MaterialRateRevisionVersion = q.MaterialRateRevision?.Version,
+        ProjectBoqRevisionId = q.ProjectBoqRevisionId,
+        ProjectBoqRevisionNumber = q.ProjectBoqRevision?.RevisionNumber,
         PricingEffectiveDate = q.PricingEffectiveDate,
         CatalogUnitPricePerSqm = q.CatalogUnitPricePerSqm,
         RateSource = q.RateSource.ToString(),

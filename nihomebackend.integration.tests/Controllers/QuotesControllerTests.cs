@@ -133,16 +133,18 @@ public class QuotesControllerTests : IntegrationTestBase
         var firstOpportunityId = await CreateOpportunityAsync();
         var secondOpportunityId = await CreateOpportunityAsync();
 
-        Task<HttpResponseMessage> CreateQuote(int opportunityId) => Client.PostAsJsonAsync("/api/quotes", new
+        var firstBoqId = await SeedApprovedProjectBoqAsync(firstOpportunityId, ("ITEM", "Concurrent item", "item", 1m, 100m));
+        var secondBoqId = await SeedApprovedProjectBoqAsync(secondOpportunityId, ("ITEM", "Concurrent item", "item", 1m, 100m));
+        Task<HttpResponseMessage> CreateQuote(int opportunityId, int boqId) => Client.PostAsJsonAsync("/api/quotes", new
         {
             opportunityId,
             method = "Boq",
-            items = new[] { new { name = "Concurrent item", unit = "item", quantity = 1m, unitPrice = 100m } },
+            projectBoqRevisionId = boqId,
             discountPercent = 0m,
             vatPercent = 10m,
         });
 
-        var responses = await Task.WhenAll(CreateQuote(firstOpportunityId), CreateQuote(secondOpportunityId));
+        var responses = await Task.WhenAll(CreateQuote(firstOpportunityId, firstBoqId), CreateQuote(secondOpportunityId, secondBoqId));
 
         responses.Should().OnlyContain(response => response.StatusCode == HttpStatusCode.Created);
         var codes = await Task.WhenAll(responses.Select(async response =>
@@ -176,42 +178,44 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Boq_CreateReopenUpdateAndApprove_PreservesTotalsAndItems()
+    public async Task Boq_CreateReopenApplyNewerBoqAndApprove_PreservesTotalsAndItems()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var oppId = await CreateOpportunityAsync();
+        var firstBoqId = await SeedApprovedProjectBoqAsync(oppId,
+            ("BOQ-01", "Concrete", "m3", 2.5m, 100m), ("BOQ-02", "Steel", "kg", 3m, 50m));
         var create = await Client.PostAsJsonAsync("/api/quotes", new
         {
             opportunityId = oppId,
             method = "Boq",
-            items = new[]
-            {
-                new { itemCode = "BOQ-01", name = "Concrete", unit = "m3", quantity = 2.5m, unitPrice = 100m },
-                new { itemCode = "BOQ-02", name = "Steel", unit = "kg", quantity = 3m, unitPrice = 50m },
-            },
+            projectBoqRevisionId = firstBoqId,
             discountPercent = 10m,
             vatPercent = 8m,
         });
 
-        create.StatusCode.Should().Be(HttpStatusCode.Created);
+        create.StatusCode.Should().Be(HttpStatusCode.Created, await create.Content.ReadAsStringAsync());
         var created = await ReadJsonAsync(create);
         created.GetProperty("subtotal").GetDecimal().Should().Be(400m);
         created.GetProperty("grandTotal").GetDecimal().Should().Be(388.8m);
         created.GetProperty("items").GetArrayLength().Should().Be(2);
+        created.GetProperty("projectBoqRevisionNumber").GetInt32().Should().Be(1);
 
         var quoteId = created.GetProperty("id").GetInt32();
-        var reopened = await Client.GetAsync($"/api/quotes/{quoteId}");
-        reopened.EnsureSuccessStatusCode();
-        var reopenedBody = await ReadJsonAsync(reopened);
+        var reopenedBody = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
         reopenedBody.GetProperty("items")[0].GetProperty("itemCode").GetString().Should().Be("BOQ-01");
+
+        // QS revised the BOQ: Sales sees the newer approved revision and applies it.
+        var newerBoqId = await SeedApprovedProjectBoqAsync(oppId, ("BOQ-01", "Concrete", "m3", 4m, 100m));
+        var lookup = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/project-boq"));
+        lookup.GetProperty("latest").GetProperty("revisionId").GetInt32().Should().Be(newerBoqId);
+        lookup.GetProperty("latest").GetProperty("total").GetDecimal().Should().Be(400m);
+        lookup.GetProperty("latest").GetProperty("status").GetString().Should().Be("TenderApproved");
+        (await SubmitWithApprovalAsync(quoteId)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var update = await Client.PutAsJsonAsync($"/api/quotes/{quoteId}", new
         {
-            rowVersion = reopenedBody.GetProperty("rowVersion").GetString(),
-            items = new[]
-            {
-                new { itemCode = "BOQ-01", name = "Concrete", unit = "m3", quantity = 4m, unitPrice = 100m },
-            },
+            rowVersion = (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"))).GetProperty("rowVersion").GetString(),
+            projectBoqRevisionId = newerBoqId,
             discountPercent = 0m,
             vatPercent = 10m,
         });
@@ -220,6 +224,7 @@ public class QuotesControllerTests : IntegrationTestBase
         updated.GetProperty("subtotal").GetDecimal().Should().Be(400m);
         updated.GetProperty("grandTotal").GetDecimal().Should().Be(440m);
         updated.GetProperty("items").GetArrayLength().Should().Be(1);
+        updated.GetProperty("projectBoqRevisionNumber").GetInt32().Should().Be(2);
 
         var submit = await SubmitWithApprovalAsync(quoteId);
         submit.EnsureSuccessStatusCode();
@@ -233,77 +238,24 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Boq_CreateWithCatalogRevision_ReturnsCatalogProvenance()
-    {
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        var opportunityId = await CreateOpportunityAsync();
-        var catalog = await CreateBoqRateCatalogAsync();
-
-        var response = await Client.PostAsJsonAsync("/api/quotes", new
-        {
-            opportunityId,
-            method = "Boq",
-            materialRateCatalogId = catalog.CatalogId,
-            pricingEffectiveDate = "2026-09-01",
-            items = new[]
-            {
-                new { itemCode = "BOQ-CAT-01", name = "Concrete", unit = "m3", quantity = 2.5m, unitPrice = 160m },
-            },
-            discountPercent = 0m,
-            vatPercent = 10m,
-        });
-
-        response.StatusCode.Should().Be(HttpStatusCode.Created);
-        var body = await ReadJsonAsync(response);
-        body.GetProperty("method").GetString().Should().Be("Boq");
-        body.GetProperty("materialRateCatalogId").GetInt32().Should().Be(catalog.CatalogId);
-        body.GetProperty("materialRateRevisionId").GetInt32().Should().Be(catalog.RevisionId);
-        body.GetProperty("materialRateCatalogCode").GetString().Should().Be(catalog.Code);
-        body.GetProperty("materialRateCatalogName").GetString().Should().Be(catalog.Name);
-        body.GetProperty("materialRateRevisionVersion").GetInt32().Should().Be(1);
-        body.GetProperty("pricingEffectiveDate").GetString().Should().Be("2026-09-01");
-        body.GetProperty("rateSource").GetString().Should().Be("CatalogReference");
-        body.GetProperty("rateOverrideReason").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
-        body.GetProperty("subtotal").GetDecimal().Should().Be(400m);
-        body.GetProperty("grandTotal").GetDecimal().Should().Be(440m);
-        body.GetProperty("items")[0].GetProperty("itemCode").GetString().Should().Be("BOQ-CAT-01");
-    }
-
-    [Fact]
-    public async Task Boq_InvalidOrOverflowingRows_AreRejected()
+    public async Task Boq_WithoutApprovedProjectBoqOrWithCatalogOrManualLines_IsRejected()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var oppId = await CreateOpportunityAsync();
+        var catalog = await CreateBoqRateCatalogAsync();
 
-        (await Client.PostAsJsonAsync("/api/quotes", new
-        {
-            opportunityId = oppId,
-            method = "Boq",
-            items = Array.Empty<object>(),
-        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.PostAsJsonAsync("/api/quotes", new { opportunityId = oppId, method = "Boq" }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        (await Client.PostAsJsonAsync("/api/quotes", new
+        var boqId = await SeedApprovedProjectBoqAsync(oppId, ("BOQ-01", "Concrete", "m3", 1m, 100m));
+        foreach (var payload in new object[]
         {
-            opportunityId = oppId,
-            method = "Boq",
-            items = new[]
-            {
-                new { name = "Overflow", unit = "item", quantity = 99_999_999_999_999m, unitPrice = 99_999_999_999_999m },
-            },
-        })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
-        foreach (var item in new object[]
-        {
-            new { name = "Quantity scale", unit = "m2", quantity = 1.00001m, unitPrice = 100m },
-            new { name = "Price scale", unit = "m2", quantity = 1m, unitPrice = 100.001m },
+            new { opportunityId = oppId, method = "Boq", projectBoqRevisionId = boqId, materialRateCatalogId = catalog.CatalogId, pricingEffectiveDate = "2026-09-01" },
+            new { opportunityId = oppId, method = "Boq", projectBoqRevisionId = boqId, items = new[] { new { name = "Wall", unit = "m2", quantity = 10m, unitPrice = 20m } } },
         })
         {
-            (await Client.PostAsJsonAsync("/api/quotes", new
-            {
-                opportunityId = oppId,
-                method = "Boq",
-                items = new[] { item },
-            })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var response = await Client.PostAsJsonAsync("/api/quotes", payload);
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
 
         foreach (var payload in new[]
@@ -326,6 +278,28 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ProjectBoqLookup_FollowsQuoteVisibility()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var oppId = await CreateOpportunityAsync();
+        var boqId = await SeedApprovedProjectBoqAsync(oppId, ("BOQ-01", "Concrete", "m3", 1m, 100m));
+        var quote = await ReadJsonAsync(await Client.PostAsJsonAsync("/api/quotes", new
+        {
+            opportunityId = oppId,
+            method = "Boq",
+            projectBoqRevisionId = boqId,
+        }));
+        var quoteId = quote.GetProperty("id").GetInt32();
+
+        Client.DefaultRequestHeaders.Authorization = null;
+        (await Client.GetAsync($"/api/quotes/{quoteId}/project-boq")).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/quotes/{quoteId}/project-boq")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "DESIGN"));
+        (await Client.GetAsync($"/api/quotes/{quoteId}/project-boq")).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
     public async Task Boq_CreateRetryWithSameKey_DoesNotDuplicateQuote()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
@@ -334,7 +308,7 @@ public class QuotesControllerTests : IntegrationTestBase
         {
             opportunityId = oppId,
             method = "Boq",
-            items = new[] { new { name = "Wall", unit = "m2", quantity = 10m, unitPrice = 20m } },
+            projectBoqRevisionId = await SeedApprovedProjectBoqAsync(oppId, ("WALL", "Wall", "m2", 10m, 20m)),
             discountPercent = 0m,
             vatPercent = 8m,
         };
@@ -1130,27 +1104,9 @@ public class QuotesControllerTests : IntegrationTestBase
         {
             opportunityId,
             method = "Boq",
-            items = new[]
-            {
-                new
-                {
-                    itemCode = "BOQ-01",
-                    name = "Bê tông móng M300",
-                    unit = "m3",
-                    quantity = 25.5m,
-                    unitPrice = 1_450_000.25m,
-                    sortOrder = 1,
-                },
-                new
-                {
-                    itemCode = "BOQ-02",
-                    name = "Sơn nội thất",
-                    unit = "m2",
-                    quantity = 1234.56m,
-                    unitPrice = 85_000.5m,
-                    sortOrder = 2,
-                },
-            },
+            projectBoqRevisionId = await SeedApprovedProjectBoqAsync(opportunityId,
+                ("BOQ-01", "Bê tông móng M300", "m3", 25.5m, 1_450_000.25m),
+                ("BOQ-02", "Sơn nội thất", "m2", 1234.56m, 85_000.5m)),
             discountPercent = 5m,
             vatPercent = 10m,
         });

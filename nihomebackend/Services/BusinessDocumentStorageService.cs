@@ -11,6 +11,7 @@ public enum BusinessDocumentArea
     Permits,
     WorkTasks,
     ProjectTeam,
+    Boq,
 }
 
 public class BusinessDocumentStorageException(string message) : Exception(message)
@@ -48,6 +49,7 @@ public class BusinessDocumentStorageService(IWebHostEnvironment env) : IBusiness
             [BusinessDocumentArea.Permits] = "permits",
             [BusinessDocumentArea.WorkTasks] = "work-tasks",
             [BusinessDocumentArea.ProjectTeam] = "project-team",
+            [BusinessDocumentArea.Boq] = "boq",
         };
 
     public async Task<BusinessDocumentUploadResponse> StoreAsync(

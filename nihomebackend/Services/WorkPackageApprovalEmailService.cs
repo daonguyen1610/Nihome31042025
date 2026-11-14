@@ -39,7 +39,12 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
             ["recipientName"] = recipient.FullName ?? recipient.Email,
             ["workPackageCode"] = package.Code,
             ["workPackageName"] = package.Name,
-            ["recordType"] = recordType == "InputPriceOffer" ? "Báo giá đầu vào" : "Hồ sơ rà soát tài chính",
+            ["recordType"] = recordType switch
+            {
+                "InputPriceOffer" => "Báo giá đầu vào",
+                "ProjectBoqRevision" => "BOQ báo giá đầu vào",
+                _ => "Hồ sơ rà soát tài chính",
+            },
             ["recordReference"] = reference,
             ["senderName"] = sender.FullName ?? sender.Email,
             ["workPackageUrl"] = $"{GetPublicOrigin()}/admin/work-packages/{package.Id}",
@@ -182,9 +187,12 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
                 }
                 catch (Exception error) when (error is JsonException or DepartmentWorkPackageOperationException)
                 { validAddresses = false; ccEmails = []; }
-                var submitted = message.RecordType == "InputPriceOffer"
-                    ? await db.ProcurementInputPriceOffers.AnyAsync(item => item.Id == message.RecordId && item.WorkPackageId == message.WorkPackageId && item.Status == InputPriceOfferStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct)
-                    : await db.DepartmentFinanceReviews.AnyAsync(item => item.Id == message.RecordId && item.WorkPackageId == message.WorkPackageId && item.Status == FinanceReviewStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct);
+                var submitted = message.RecordType switch
+                {
+                    "InputPriceOffer" => await db.ProcurementInputPriceOffers.AnyAsync(item => item.Id == message.RecordId && item.WorkPackageId == message.WorkPackageId && item.Status == InputPriceOfferStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct),
+                    "ProjectBoqRevision" => await db.ProjectBoqRevisions.AnyAsync(item => item.Id == message.RecordId && item.SourceWorkPackageId == message.WorkPackageId && item.Status == ProjectBoqRevisionStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct),
+                    _ => await db.DepartmentFinanceReviews.AnyAsync(item => item.Id == message.RecordId && item.WorkPackageId == message.WorkPackageId && item.Status == FinanceReviewStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct),
+                };
                 message.Status = validAddresses && submitted && recipient is { IsActive: true } &&
                     message.WorkPackage.LeadUserId == recipient.Id && recipient.Id != message.AuthorUserId &&
                     !string.IsNullOrWhiteSpace(recipient.Email) &&

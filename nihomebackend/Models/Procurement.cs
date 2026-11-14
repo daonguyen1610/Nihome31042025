@@ -29,10 +29,31 @@ public sealed class ProjectBoqRevision : IConcurrencyTracked
     public string? DecisionReason { get; set; }
     public DateTime? SupersededAt { get; set; }
     public DateTime? FinalSelectedAt { get; set; }
+    public string? TemplateCode { get; set; }
+    public string? SourceFileName { get; set; }
+    public string? SourceSha256 { get; set; }
+    public string? SourceWorkbookPath { get; set; }
+    // Uploaded in an input-price work package; submitted and decided there, not in Procurement control.
+    public int? SourceWorkPackageId { get; set; }
+    public DepartmentWorkPackage? SourceWorkPackage { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public byte[] RowVersion { get; set; } = [];
     public List<ProjectBoqLine> Lines { get; set; } = [];
+    public List<ProjectBoqSheet> Sheets { get; set; } = [];
+}
+
+// One worksheet of an uploaded BOQ, kept so every sheet stays visible even with no filled lines.
+public sealed class ProjectBoqSheet
+{
+    public int Id { get; set; }
+    public int ProjectBoqRevisionId { get; set; }
+    public ProjectBoqRevision ProjectBoqRevision { get; set; } = null!;
+    public string Name { get; set; } = string.Empty;
+    public int ItemCount { get; set; }
+    public int MissingPriceCount { get; set; }
+    public decimal Total { get; set; }
+    public int SortOrder { get; set; }
 }
 
 public sealed class ProjectBoqLine
@@ -47,6 +68,11 @@ public sealed class ProjectBoqLine
     public decimal BudgetUnitPrice { get; set; }
     public decimal Amount { get; set; }
     public int SortOrder { get; set; }
+    public string? SheetName { get; set; }
+    public int? SourceRow { get; set; }
+    public string? Stt { get; set; }
+    public string? GroupName { get; set; }
+    public bool PriceMissing { get; set; }
 }
 
 public sealed class MaterialRequest : IConcurrencyTracked
@@ -218,6 +244,8 @@ public enum ProjectBoqRevisionStatus
     Submitted = 1,
     Approved = 2,
     Rejected = 3,
+    // Approved tender BOQ with no signed contract: published, but never an MR/warehouse allowance.
+    TenderApproved = 4,
 }
 
 public enum MaterialRequestStatus

@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using System.Text.Json;
+using ClosedXML.Excel;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
@@ -137,11 +138,8 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             method = "Boq",
             packageDescription = "Gói cơ điện nhà máy theo giá đầu vào Cung ứng",
             inputPriceOfferId = offerId,
-            items = new[]
-            {
-                new { itemCode = "MEP-CABLE-01", name = "Cáp điện Cu/XLPE 4x25mm2", unit = "m",
-                    quantity = 320m, unitPrice = 480_000m },
-            },
+            projectBoqRevisionId = await SeedApprovedProjectBoqAsync(scope.OpportunityId,
+                ("MEP-CABLE-01", "Cáp điện Cu/XLPE 4x25mm2", "m", 320m, 480_000m)),
             discountPercent = 0m,
             vatPercent = 8m,
         });
@@ -158,10 +156,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             rowVersion = quote.GetProperty("rowVersion").GetString(),
             method = "Boq",
             inputPriceOfferId = pendingOfferId,
-            items = new[]
-            {
-                new { itemCode = "MEP-TRAY-01", name = "Máng cáp thép mạ kẽm", unit = "m", quantity = 180m, unitPrice = 300_000m },
-            },
+            projectBoqRevisionId = quote.GetProperty("projectBoqRevisionId").GetInt32(),
             vatPercent = 8m,
         });
         rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -315,11 +310,7 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             rowVersion = await VersionAsync($"/api/quotes/{quoteId}"),
             discountPercent = 5m,
             vatPercent = 8m,
-            items = new[]
-            {
-                new { itemCode = "MEP-CABLE-01", name = "Cáp điện Cu/XLPE 4x25mm2", unit = "m",
-                    quantity = 320m, unitPrice = 480_000m },
-            },
+            projectBoqRevisionId = (await ReadAsync($"/api/quotes/{quoteId}")).GetProperty("projectBoqRevisionId").GetInt32(),
         });
         versioned.GetProperty("version").GetInt32().Should().Be(2);
         versioned.GetProperty("status").GetString().Should().Be("Draft");
@@ -514,6 +505,115 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
 
     // ---------- fixture ----------
 
+    // 13/11/2026: Procurement uploads the filled customer BOQ form in its input-price work package;
+    // the package lead (not the uploader) approves it there and it becomes the project's tender BOQ.
+    [Fact]
+    public async Task WorkPackageBoq_UploadedByProcurementAndApprovedInThePackage_BecomesTheProjectTenderBoq()
+    {
+        var scope = await SeedScopeAsync();
+        await LoginAsync("SALES_MANAGER");
+        var quoteId = Id(await PostAsync("/api/quotes", new { opportunityId = scope.OpportunityId, draftOnly = true }));
+        var packageId = Id(await PostAsync("/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "ProcurementInputPricing",
+            name = "Báo giá đầu vào hệ thống PCCC",
+            operationalProjectId = scope.ProjectId,
+            sourceOpportunityId = scope.OpportunityId,
+            sourceQuoteId = quoteId,
+            departmentRoleGroupId = scope.ProcurementGroupId,
+            leadUserId = scope.ProcurementLeadUserId,
+        }));
+        var basePath = $"/api/work-packages/{packageId}/boq-workbooks";
+
+        // Procurement takes the form from the library and fills it in Excel.
+        await LoginAsync("PROCUREMENT");
+        using var templateResponse = await Client.GetAsync("/api/boq-templates/PCCC-CAN-HO/file");
+        var template = await templateResponse.Content.ReadAsByteArrayAsync();
+        var unpriced = await UploadBoqAsync(basePath, FillPccc(template, priced: false));
+        unpriced.GetProperty("missingPriceCount").GetInt32().Should().Be(1);
+        using (var preview = await SendAsync(HttpMethod.Post, $"{basePath}/{Id(unpriced)}/approval-email-preview", new { }))
+            (await preview.Content.ReadAsStringAsync()).Should().Contain("chưa có đơn giá");
+
+        var boq = await UploadBoqAsync(basePath, FillPccc(template, priced: true));
+        boq.GetProperty("revisionNumber").GetInt32().Should().Be(2);
+        boq.GetProperty("total").GetDecimal().Should().Be(39_550_000m);
+        var revisionId = Id(boq);
+        (await WithDbAsync(db => db.ProjectBoqRevisions.SingleAsync(item => item.Id == revisionId)))
+            .Should().Match<ProjectBoqRevision>(item => item.SourceWorkPackageId == packageId && item.OperationalProjectId == scope.ProjectId);
+
+        // The Procurement control path cannot decide a work-package BOQ.
+        await LoginAsync("SUPER_ADMIN");
+        await RejectAsync($"/api/operational-projects/{scope.ProjectId}/procurement/boq-revisions/{revisionId}/submit",
+            new { rowVersion = Version(boq) }, HttpStatusCode.BadRequest);
+
+        await LoginAsync("PROCUREMENT");
+        boq = await SubmitForApprovalAsync($"{basePath}/{revisionId}", boq);
+        boq.GetProperty("status").GetString().Should().Be("Submitted");
+        // The uploader is not the package lead, so the decision stays out of reach.
+        await RejectAsync($"{basePath}/{revisionId}/decision", new { approved = true, rowVersion = Version(boq) }, HttpStatusCode.NotFound);
+
+        await LoginAsync("SUPER_ADMIN");
+        boq = await PostAsync($"{basePath}/{revisionId}/decision", new { approved = true, rowVersion = Version(boq) });
+        boq.GetProperty("status").GetString().Should().Be("TenderApproved");
+
+        await LoginAsync("PROCUREMENT");
+        var detail = await ReadAsync($"/api/work-packages/{packageId}");
+        detail.GetProperty("boqWorkbooks").EnumerateArray().Select(item => item.GetProperty("status").GetString())
+            .Should().Equal("TenderApproved", "Draft");
+        using (var file = await Client.GetAsync($"{basePath}/{revisionId}/file"))
+            file.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Sales sees it as the project BOQ the quote applies.
+        await LoginAsync("SALES_MANAGER");
+        (await ReadAsync($"/api/quotes/{quoteId}/project-boq")).GetProperty("latest").GetProperty("revisionId")
+            .GetInt32().Should().Be(revisionId);
+
+        // Another department cannot upload into this package.
+        await LoginAsync("DESIGN");
+        using var form = BoqForm(FillPccc(template, priced: true), "x");
+        using var foreign = await Client.PostAsync($"{basePath}/preview", form);
+        foreign.StatusCode.Should().BeOneOf(HttpStatusCode.NotFound, HttpStatusCode.Forbidden);
+        (await WithDbAsync(db => db.ProjectBoqRevisions.CountAsync(item => item.SourceWorkPackageId == packageId))).Should().Be(2);
+    }
+
+    private static byte[] FillPccc(byte[] template, bool priced)
+    {
+        using var book = new XLWorkbook(new MemoryStream(template));
+        var sheet = book.Worksheet("ptct");
+        sheet.Cell("E17").Value = 50;
+        sheet.Cell("F17").Value = 420000;
+        sheet.Cell("E32").Value = 70;
+        if (priced) sheet.Cell("F32").Value = 265000;
+        book.RecalculateAllFormulas();
+        using var output = new MemoryStream();
+        book.SaveAs(output, new SaveOptions { EvaluateFormulasBeforeSaving = true });
+        return output.ToArray();
+    }
+
+    private static MultipartFormDataContent BoqForm(byte[] bytes, string? sourceHash)
+    {
+        var form = new MultipartFormDataContent
+        {
+            { new ByteArrayContent(bytes), "file", "BOQ-PCCC-dau-vao.xlsx" },
+            { new StringContent("PCCC-CAN-HO"), "templateCode" },
+        };
+        if (sourceHash != null) form.Add(new StringContent(sourceHash), "sourceHash");
+        return form;
+    }
+
+    private async Task<JsonElement> UploadBoqAsync(string basePath, byte[] bytes)
+    {
+        using var previewForm = BoqForm(bytes, null);
+        using var preview = await Client.PostAsync($"{basePath}/preview", previewForm);
+        preview.StatusCode.Should().Be(HttpStatusCode.OK, await preview.Content.ReadAsStringAsync());
+        var hash = (await ReadJsonAsync(preview)).GetProperty("sourceHash").GetString();
+        using var importForm = BoqForm(bytes, hash);
+        using var created = await Client.PostAsync(basePath, importForm);
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        return await ReadJsonAsync(created);
+    }
+
     private sealed record Scope(
         int ProjectId, int OpportunityId, int CustomerId, int VendorId, string VendorName,
         int ProcurementGroupId, int FinanceGroupId, int ProcurementLeadUserId, int FinanceLeadUserId);
@@ -681,11 +781,8 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
             opportunityId = scope.OpportunityId,
             method = "Boq",
             packageDescription = "Thi công hệ thống cơ điện nhà máy",
-            items = new[]
-            {
-                new { itemCode = "MEP-CABLE-01", name = "Cáp điện Cu/XLPE 4x25mm2", unit = "m",
-                    quantity = 320m, unitPrice = 480_000m },
-            },
+            projectBoqRevisionId = await SeedApprovedProjectBoqAsync(scope.OpportunityId,
+                ("MEP-CABLE-01", "Cáp điện Cu/XLPE 4x25mm2", "m", 320m, 480_000m)),
             discountPercent = 0m,
             vatPercent = 8m,
         });

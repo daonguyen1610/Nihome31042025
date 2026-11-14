@@ -40,6 +40,9 @@ public sealed partial class DepartmentWorkPackageService
             permit.WorkTaskId = null;
         foreach (var checklist in await db.TenderChecklistItems.Where(item => item.WorkTaskId.HasValue && taskIds.Contains(item.WorkTaskId.Value)).ToListAsync(ct))
             checklist.WorkTaskId = null;
+        // An uploaded BOQ belongs to the project and outlives the package it came from.
+        foreach (var revision in await db.ProjectBoqRevisions.Where(item => item.SourceWorkPackageId == id).ToListAsync(ct))
+            revision.SourceWorkPackageId = null;
         foreach (var document in await DeletionImpactPlanner.WorkPackageDocuments(db, id).ToListAsync(ct))
         {
             document.SourceEntityType = null;

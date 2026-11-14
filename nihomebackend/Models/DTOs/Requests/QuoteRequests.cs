@@ -57,7 +57,10 @@ public class CreateQuoteRequest
     [StringLength(2000)]
     public string? PackageDescription { get; set; }
 
-    // --- BOQ mode (required when Method=Boq) ---
+    // --- BOQ mode: lines come from the project's latest approved BOQ revision ---
+    public int? ProjectBoqRevisionId { get; set; }
+
+    // Rejected for BOQ quotes; kept so a client still sending lines gets a clear error.
     public List<QuoteItemInput> Items { get; set; } = new();
 
     [Range(0, 100)]
@@ -94,6 +97,8 @@ public class UpdateQuoteRequest : IConcurrencyRequest
 
     [StringLength(2000)]
     public string? PackageDescription { get; set; }
+
+    public int? ProjectBoqRevisionId { get; set; }
 
     public List<QuoteItemInput> Items { get; set; } = new();
 

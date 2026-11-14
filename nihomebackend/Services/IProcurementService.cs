@@ -12,9 +12,14 @@ public interface IProcurementService
     Task<IReadOnlyList<ProjectBoqRevisionListItemResponse>> ExportBoqRevisionsAsync(int projectId, ProjectBoqRevisionListQuery query, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> GetBoqRevisionAsync(int projectId, int id, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse> CreateBoqRevisionAsync(int projectId, ProjectBoqRevisionRequest request, int userId, CancellationToken ct = default);
+    Task EnsureBoqUploadAllowedAsync(int projectId, int? upstreamContractId, CancellationToken ct = default);
+    Task<ProjectBoqRevisionResponse?> FindDraftWorkbookRevisionAsync(int projectId, string templateCode, string sha256, int? upstreamContractId, CancellationToken ct = default, int? sourceWorkPackageId = null);
+    Task<ProjectBoqRevisionResponse> CreateBoqRevisionFromWorkbookAsync(int projectId, ProjectBoqWorkbookImport import, int userId, CancellationToken ct = default);
+    Task<string?> GetBoqWorkbookPathAsync(int projectId, int id, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> UpdateBoqRevisionAsync(int projectId, int id, ProjectBoqRevisionRequest request, int userId, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> SubmitBoqRevisionAsync(int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default);
     Task<ProjectBoqRevisionResponse?> DecideBoqRevisionAsync(int projectId, int id, ProcurementDecisionRequest request, int userId, CancellationToken ct = default);
+    Task<ProjectBoqRevisionResponse?> ConvertTenderBoqToContractAsync(int projectId, int id, ProjectBoqContractRequest request, int userId, CancellationToken ct = default);
     Task<MaterialRequestResponse> CreateMaterialRequestAsync(int projectId, MaterialRequestUpsertRequest request, int userId, CancellationToken ct = default);
     Task<MaterialRequestResponse?> UpdateMaterialRequestAsync(int projectId, int id, MaterialRequestUpsertRequest request, int userId, CancellationToken ct = default);
     Task<MaterialRequestResponse?> SubmitMaterialRequestAsync(int projectId, int id, ProcurementTransitionRequest request, int userId, CancellationToken ct = default);
@@ -40,3 +45,7 @@ public interface IProcurementService
 }
 
 public sealed class ProcurementOperationException(string message) : Exception(message);
+
+public sealed record ProjectBoqWorkbookImport(
+    BoqTemplate Template, string FileName, string WorkbookPath, int? UpstreamContractId, BoqWorkbookParseResult Parsed,
+    int? SourceWorkPackageId = null);

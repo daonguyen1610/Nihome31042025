@@ -104,6 +104,8 @@ public class QuoteResponse
     public string? MaterialRateCatalogCode { get; set; }
     public string? MaterialRateCatalogName { get; set; }
     public int? MaterialRateRevisionVersion { get; set; }
+    public int? ProjectBoqRevisionId { get; set; }
+    public int? ProjectBoqRevisionNumber { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public string RateSource { get; set; } = QuoteRateSource.Override.ToString();
@@ -190,4 +192,23 @@ public class QuoteVersionsResponse
 {
     public int QuoteId { get; set; }
     public List<QuoteVersionResponse> Versions { get; set; } = new();
+}
+
+/// <summary>The project BOQ a BOQ quote can take its lines from: the latest approved revision.</summary>
+public class QuoteProjectBoqResponse
+{
+    public int RevisionId { get; set; }
+    public int RevisionNumber { get; set; }
+    public string Status { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public decimal Total { get; set; }
+    public int LineCount { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public string? UpstreamContractNumber { get; set; }
+    public string? SourceFileName { get; set; }
+}
+
+public class QuoteProjectBoqLookupResponse
+{
+    public QuoteProjectBoqResponse? Latest { get; set; }
 }

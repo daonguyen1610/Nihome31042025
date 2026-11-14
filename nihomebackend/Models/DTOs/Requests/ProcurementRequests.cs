@@ -57,6 +57,14 @@ public sealed class ProcurementDecisionRequest : IConcurrencyRequest
     public string? RowVersion { get; set; }
 }
 
+// Links an approved tender BOQ to the signed upstream contract; the same revision becomes the contract BOQ.
+public sealed class ProjectBoqContractRequest : IConcurrencyRequest
+{
+    [Range(1, int.MaxValue)]
+    public int UpstreamContractId { get; set; }
+    public string? RowVersion { get; set; }
+}
+
 public sealed class ProcurementTransitionRequest : IConcurrencyRequest
 {
     [MaxLength(2000)]

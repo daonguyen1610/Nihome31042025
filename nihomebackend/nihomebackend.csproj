@@ -52,6 +52,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Data/Seeds/boq-categories.json" LogicalName="nihomebackend.Data.Seeds.boq-categories.json" />
+    <EmbeddedResource Include="Data/BoqTemplates/*" LogicalName="nihomebackend.Data.BoqTemplates.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Data/Seeds/i18n/*.json" LogicalName="nihomebackend.Data.Seeds.i18n.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Data/Seeds/content/*.json" LogicalName="nihomebackend.Data.Seeds.content.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Data/Seeds/master-data/*.json" LogicalName="nihomebackend.Data.Seeds.master-data.%(Filename)%(Extension)" />

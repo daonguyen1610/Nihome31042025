@@ -1286,10 +1286,7 @@ public class TendersControllerTests : IntegrationTestBase
             opportunityId,
             method = "Boq",
             packageDescription = "Giá chào thi công nhà xưởng sau trúng thầu",
-            items = new[]
-            {
-                new { itemCode = "XM-01", name = "Thi công kết cấu nhà xưởng", unit = "m2", quantity = 1000m, unitPrice = 1_075_000m },
-            },
+            projectBoqRevisionId = await SeedApprovedProjectBoqAsync(opportunityId, ("XM-01", "Thi công kết cấu nhà xưởng", "m2", 1000m, 1_075_000m)),
             vatPercent = 8m,
         });
         quoteResponse.StatusCode.Should().Be(HttpStatusCode.Created, await quoteResponse.Content.ReadAsStringAsync());

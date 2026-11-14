@@ -127,6 +127,35 @@ public class QuoteServiceTests : IDisposable
         Assert.Equal(QuoteStatus.Draft, (await _db.Quotes.SingleAsync(q => q.Id == created.Id)).Status);
     }
 
+    // 13/11/2026: the BOQ approved in the input-price work package is approved input pricing.
+    [Fact]
+    public async Task BasicDraft_PricesFromTheApprovedProjectBoqWithoutASupplierOffer()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var draft = await _sut.CreateAsync(new CreateQuoteRequest { OpportunityId = opportunity.Id, DraftOnly = true },
+            user.Id, canManage: true);
+
+        // Without an approved project BOQ the method still waits for input pricing.
+        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(draft.Id, new UpdateQuoteRequest
+        {
+            RowVersion = draft.RowVersion,
+            Method = QuoteMethod.Boq,
+        }, user.Id, canManage: true, canSeeAll: true));
+
+        var boq = await SeedApprovedProjectBoqAsync(opportunity.OperationalProjectId!.Value, user.Id,
+            ("Đầu báo khói", "cái", 50m, 420_000m));
+        var priced = await _sut.UpdateAsync(draft.Id, new UpdateQuoteRequest
+        {
+            RowVersion = draft.RowVersion,
+            Method = QuoteMethod.Boq,
+            ProjectBoqRevisionId = boq.Id,
+            VatPercent = 8m,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.Null(priced!.InputPriceOfferId);
+        Assert.Equal(("Boq", boq.Id, 21_000_000m), (priced.Method, priced.ProjectBoqRevisionId, priced.Subtotal));
+    }
+
     [Fact]
     public async Task BasicDraft_RejectsPricingInCreatePayload()
     {
@@ -286,6 +315,8 @@ public class QuoteServiceTests : IDisposable
         };
         _db.ProcurementInputPriceOffers.Add(offer);
         await _db.SaveChangesAsync();
+        var boq = await SeedApprovedProjectBoqAsync(opportunity.OperationalProjectId!.Value, owner.Id,
+            ("Thép kết cấu", "kg", 100m, 30_000m));
 
         var wrongQuote = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.UpdateAsync(
             otherDraft.Id, new UpdateQuoteRequest
@@ -293,10 +324,7 @@ public class QuoteServiceTests : IDisposable
                 RowVersion = otherDraft.RowVersion,
                 Method = QuoteMethod.Boq,
                 InputPriceOfferId = offer.Id,
-                Items =
-                [
-                    new QuoteItemInput { Name = "Thép kết cấu", Unit = "kg", Quantity = 100, UnitPrice = 30_000 },
-                ],
+                ProjectBoqRevisionId = boq.Id,
             }, owner.Id, canManage: true, canSeeAll: true));
         Assert.Contains("Báo giá khác", wrongQuote.Message);
         Assert.Null((await _db.Quotes.SingleAsync(item => item.Id == otherDraft.Id)).InputPriceOfferId);
@@ -305,27 +333,14 @@ public class QuoteServiceTests : IDisposable
             {
                 RowVersion = draft.RowVersion,
                 InputPriceOfferId = offer.Id,
-                Items =
-                [
-                    new QuoteItemInput { Name = "Thép kết cấu", Unit = "kg", Quantity = 100, UnitPrice = 30_000 },
-                ],
+                ProjectBoqRevisionId = boq.Id,
             }, owner.Id, canManage: true, canSeeAll: true));
         var priced = await _sut.UpdateAsync(draft.Id, new UpdateQuoteRequest
         {
             RowVersion = draft.RowVersion,
             Method = QuoteMethod.Boq,
             InputPriceOfferId = offer.Id,
-            Items =
-            [
-                new QuoteItemInput
-                {
-                    ItemCode = "THEP-01",
-                    Name = "Thép kết cấu",
-                    Unit = "kg",
-                    Quantity = 100,
-                    UnitPrice = 30_000,
-                },
-            ],
+            ProjectBoqRevisionId = boq.Id,
         }, owner.Id, canManage: true, canSeeAll: true);
 
         Assert.Equal(offer.Id, priced!.InputPriceOfferId);
@@ -497,41 +512,43 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task CreateAsync_Boq_SumsItemAmountsAndRoundsCorrectly()
+    public async Task CreateAsync_Boq_CopiesTheApprovedProjectBoqLinesAndSumsThem()
     {
         var (user, opp) = await SeedOpportunityAsync();
+        var boq = await SeedApprovedProjectBoqAsync(opp.OperationalProjectId!.Value, user.Id,
+            ("Bê tông", "m3", 12m, 1_200_000m), ("Cốt thép", "kg", 850m, 25_000m));
 
         var resp = await _sut.CreateAsync(new CreateQuoteRequest
         {
             OpportunityId = opp.Id,
             Method = QuoteMethod.Boq,
+            ProjectBoqRevisionId = boq.Id,
             DiscountPercent = 0m,
             VatPercent = 10m,
-            Items = new()
-            {
-                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 12m, UnitPrice = 1_200_000m },
-                new QuoteItemInput { Name = "Cốt thép", Unit = "kg", Quantity = 850m, UnitPrice = 25_000m },
-            },
         }, user.Id, canManage: true);
 
         // 12 × 1.2M = 14.4M ; 850 × 25k = 21.25M ; subtotal = 35.65M ; vat 10% → grand 39.215M
+        Assert.Equal(boq.Id, resp.ProjectBoqRevisionId);
+        Assert.Equal(1, resp.ProjectBoqRevisionNumber);
         Assert.Equal(35_650_000m, resp.Subtotal);
         Assert.Equal(39_215_000m, resp.GrandTotal);
-        Assert.Equal(2, resp.Items.Count);
-        Assert.Equal(14_400_000m, resp.Items[0].Amount);
+        Assert.Equal(["S01-R0016", "S01-R0017"], resp.Items.Select(item => item.ItemCode));
+        Assert.Equal(("Bê tông", "m3", 12m, 14_400_000m), (resp.Items[0].Name, resp.Items[0].Unit, resp.Items[0].Quantity, resp.Items[0].Amount));
     }
 
     [Fact]
-    public async Task CreateAsync_Boq_WithoutItems_Throws()
+    public async Task CreateAsync_Boq_WithoutProjectBoq_Throws()
     {
         var (user, opp) = await SeedOpportunityAsync();
 
-        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
         {
             OpportunityId = opp.Id,
             Method = QuoteMethod.Boq,
-            Items = new(),
         }, user.Id, canManage: true));
+
+        Assert.Contains("BOQ dự án đã duyệt", exception.Message);
+        Assert.Empty(_db.Quotes);
     }
 
     [Fact]
@@ -553,97 +570,49 @@ public class QuoteServiceTests : IDisposable
         Assert.Empty(_db.Quotes);
     }
 
-    [Fact]
-    public async Task CreateAndUpdateAsync_BoqCatalogPreservesRevisionProvenanceAndEditableCopiedItems()
-    {
-        var (user, opportunity) = await SeedOpportunityAsync();
-        var (catalog, revision) = await SeedApprovedRateRevisionAsync(MaterialRateCatalogType.Boq);
-        var created = await _sut.CreateAsync(new CreateQuoteRequest
-        {
-            OpportunityId = opportunity.Id,
-            Method = QuoteMethod.Boq,
-            MaterialRateCatalogId = catalog.Id,
-            PricingEffectiveDate = _pricingDate,
-            DiscountPercent = 0m,
-            VatPercent = 10m,
-            Items =
-            [
-                new QuoteItemInput
-                {
-                    ItemCode = "PACKAGE",
-                    Name = "Gói tiêu chuẩn",
-                    Unit = "m2",
-                    Quantity = 10m,
-                    UnitPrice = 1_500_000m,
-                    SortOrder = 1,
-                },
-            ],
-        }, user.Id, canManage: true);
-        var createdRateSource = created.RateSource;
-
-        var updated = await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
-        {
-            MaterialRateCatalogId = catalog.Id,
-            PricingEffectiveDate = _pricingDate,
-            DiscountPercent = 0m,
-            VatPercent = 10m,
-            ValidUntil = created.ValidUntil,
-            Items =
-            [
-                new QuoteItemInput
-                {
-                    ItemCode = "PACKAGE",
-                    Name = "Gói tiêu chuẩn đã chỉnh sửa",
-                    Unit = "m2",
-                    Quantity = 12m,
-                    UnitPrice = 1_600_000m,
-                    SortOrder = 1,
-                },
-            ],
-        }, user.Id, canManage: true, canSeeAll: true);
-
-        Assert.NotNull(updated);
-        Assert.Equal(revision.Id, updated!.MaterialRateRevisionId);
-        Assert.Equal(catalog.Id, updated.MaterialRateCatalogId);
-        Assert.Equal(_pricingDate, updated.PricingEffectiveDate);
-        Assert.Equal("CatalogReference", updated.RateSource);
-        Assert.Null(updated.RateOverrideReason);
-        var item = Assert.Single(updated.Items);
-        Assert.Equal("PACKAGE", item.ItemCode);
-        Assert.Equal("Gói tiêu chuẩn đã chỉnh sửa", item.Name);
-        Assert.Equal(12m, item.Quantity);
-        Assert.Equal(1_600_000m, item.UnitPrice);
-        Assert.Equal(19_200_000m, item.Amount);
-        Assert.Equal(21_120_000m, updated.GrandTotal);
-        Assert.Equal("CatalogReference", createdRateSource);
-        Assert.Null(created.RateOverrideReason);
-    }
-
     [Theory]
-    [InlineData(1.00001, 100)]
-    [InlineData(1, 100.001)]
-    public async Task CreateAsync_BoqRejectsValuesThatExceedStoredDecimalScale(
-        decimal quantity,
-        decimal unitPrice)
+    [InlineData("catalog")]
+    [InlineData("lines")]
+    [InlineData("draftBoq")]
+    [InlineData("olderRevision")]
+    [InlineData("otherProject")]
+    public async Task CreateAsync_Boq_AcceptsOnlyTheLatestApprovedBoqOfItsProject(string scenario)
     {
         var (user, opportunity) = await SeedOpportunityAsync();
+        var projectId = opportunity.OperationalProjectId!.Value;
+        var (catalog, _) = await SeedApprovedRateRevisionAsync(MaterialRateCatalogType.Boq);
+        var older = await SeedApprovedProjectBoqAsync(projectId, user.Id, ("Bê tông", "m3", 10m, 1_000_000m));
+        var latest = await SeedApprovedProjectBoqAsync(projectId, user.Id, ("Bê tông", "m3", 12m, 1_000_000m));
+        var draft = await SeedApprovedProjectBoqAsync(projectId, user.Id, ("Bê tông", "m3", 14m, 1_000_000m));
+        draft.Status = ProjectBoqRevisionStatus.Draft;
+        var (_, otherOpportunity) = await SeedOpportunityAsync();
+        var other = await SeedApprovedProjectBoqAsync(otherOpportunity.OperationalProjectId!.Value, user.Id, ("Thép", "kg", 1m, 1m));
+        await _db.SaveChangesAsync();
 
-        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
         {
             OpportunityId = opportunity.Id,
             Method = QuoteMethod.Boq,
-            Items =
-            [
-                new QuoteItemInput
-                {
-                    Name = "Hạng mục kiểm thử",
-                    Unit = "m2",
-                    Quantity = quantity,
-                    UnitPrice = unitPrice,
-                },
-            ],
+            ProjectBoqRevisionId = scenario switch
+            {
+                "draftBoq" => draft.Id,
+                "olderRevision" => older.Id,
+                "otherProject" => other.Id,
+                _ => latest.Id,
+            },
+            MaterialRateCatalogId = scenario == "catalog" ? catalog.Id : null,
+            PricingEffectiveDate = scenario == "catalog" ? _pricingDate : null,
+            Items = scenario == "lines"
+                ? [new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 1m, UnitPrice = 1m }]
+                : [],
         }, user.Id, canManage: true));
 
+        Assert.Contains(scenario switch
+        {
+            "catalog" => "không dùng danh mục",
+            "lines" => "không nhập tay",
+            _ => "mới nhất (R2)",
+        }, exception.Message);
         Assert.Empty(_db.Quotes);
     }
 
@@ -651,21 +620,14 @@ public class QuoteServiceTests : IDisposable
     public async Task CreateAsync_BoqRoundsMidpointAwayFromZeroUsingPersistedValues()
     {
         var (user, opportunity) = await SeedOpportunityAsync();
+        var boq = await SeedApprovedProjectBoqAsync(opportunity.OperationalProjectId!.Value, user.Id,
+            ("Hạng mục làm tròn", "m2", 1.005m, 1m));
 
         var result = await _sut.CreateAsync(new CreateQuoteRequest
         {
             OpportunityId = opportunity.Id,
             Method = QuoteMethod.Boq,
-            Items =
-            [
-                new QuoteItemInput
-                {
-                    Name = "Hạng mục làm tròn",
-                    Unit = "m2",
-                    Quantity = 1.005m,
-                    UnitPrice = 1m,
-                },
-            ],
+            ProjectBoqRevisionId = boq.Id,
             DiscountPercent = 0m,
             VatPercent = 0m,
         }, user.Id, canManage: true);
@@ -704,44 +666,6 @@ public class QuoteServiceTests : IDisposable
         Assert.Empty(_db.Quotes);
     }
 
-    [Theory]
-    [InlineData(MaterialRateCatalogType.InvestmentRate, MaterialRateRevisionStatus.Approved, true, "2026-09-01")]
-    [InlineData(MaterialRateCatalogType.Boq, MaterialRateRevisionStatus.Draft, true, "2026-09-01")]
-    [InlineData(MaterialRateCatalogType.Boq, MaterialRateRevisionStatus.Approved, false, "2026-09-01")]
-    [InlineData(MaterialRateCatalogType.Boq, MaterialRateRevisionStatus.Approved, true, "2027-01-01")]
-    public async Task CreateAsync_BoqCatalogRejectsWrongTypeUnavailableOrIneffectiveRevision(
-        MaterialRateCatalogType catalogType,
-        MaterialRateRevisionStatus status,
-        bool isActive,
-        string pricingDate)
-    {
-        var (user, opportunity) = await SeedOpportunityAsync();
-        var (catalog, revision) = await SeedApprovedRateRevisionAsync(catalogType);
-        catalog.IsActive = isActive;
-        revision.Status = status;
-        await _db.SaveChangesAsync();
-
-        await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
-        {
-            OpportunityId = opportunity.Id,
-            Method = QuoteMethod.Boq,
-            MaterialRateCatalogId = catalog.Id,
-            PricingEffectiveDate = DateOnly.Parse(pricingDate),
-            Items =
-            [
-                new QuoteItemInput
-                {
-                    Name = "Hạng mục kiểm thử",
-                    Unit = "m2",
-                    Quantity = 1m,
-                    UnitPrice = 100m,
-                },
-            ],
-        }, user.Id, canManage: true));
-
-        Assert.Empty(_db.Quotes);
-    }
-
     // ---------------- Workflow state machine ----------------
 
     [Fact]
@@ -772,21 +696,58 @@ public class QuoteServiceTests : IDisposable
     public async Task Submit_BoqWithItems_Succeeds()
     {
         var (user, opp) = await SeedOpportunityAsync();
+        var boq = await SeedApprovedProjectBoqAsync(opp.OperationalProjectId!.Value, user.Id, ("Bê tông", "m3", 10m, 1_000_000m));
         var created = await _sut.CreateAsync(new CreateQuoteRequest
         {
             OpportunityId = opp.Id,
             Method = QuoteMethod.Boq,
+            ProjectBoqRevisionId = boq.Id,
             DiscountPercent = 0m,
             VatPercent = 10m,
-            Items = new()
-            {
-                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10, UnitPrice = 1_000_000 },
-            },
         }, user.Id, canManage: true);
 
         var resp = await _sut.SubmitAsync(created.Id, new(), user.Id, true, true);
         Assert.NotNull(resp);
         Assert.Equal("PendingApproval", resp!.Status);
+    }
+
+    [Fact]
+    public async Task Submit_BoqAfterANewerProjectBoqIsApproved_IsRejectedBeforeAnyEmail()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var projectId = opp.OperationalProjectId!.Value;
+        var boq = await SeedApprovedProjectBoqAsync(projectId, user.Id, ("Bê tông", "m3", 10m, 1_000_000m));
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opp.Id,
+            Method = QuoteMethod.Boq,
+            ProjectBoqRevisionId = boq.Id,
+        }, user.Id, canManage: true);
+        await SeedApprovedProjectBoqAsync(projectId, user.Id, ("Bê tông", "m3", 11m, 1_000_000m));
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() =>
+            _sut.SubmitAsync(created.Id, new(), user.Id, true, true));
+
+        Assert.Contains("bản duyệt mới hơn (R2)", exception.Message);
+        Assert.Equal(QuoteStatus.Draft, (await _db.Quotes.SingleAsync(q => q.Id == created.Id)).Status);
+        _approvalEmails.Verify(service => service.QueueAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Submit_LegacyBoqQuoteWithoutProjectBoq_IsRejected()
+    {
+        var (user, created) = await SeedApprovedBoqQuoteAsync();
+        var tracked = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
+        tracked.Status = QuoteStatus.Draft;
+        tracked.ProjectBoqRevisionId = null;
+        await _db.SaveChangesAsync();
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() =>
+            _sut.SubmitAsync(created.Id, new(), user.Id, true, true));
+
+        Assert.Contains("Hãy áp dụng BOQ dự án", exception.Message);
     }
 
     [Fact]
@@ -1677,11 +1638,7 @@ public class QuoteServiceTests : IDisposable
             VatPercent = created.VatPercent,
             ValidUntil = created.ValidUntil,
             Note = created.Note,
-            Items =
-            [
-                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m, SortOrder = 1 },
-                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m, SortOrder = 2 },
-            ],
+            ProjectBoqRevisionId = created.ProjectBoqRevisionId,
         }, user.Id, canManage: true, canSeeAll: true);
 
         var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
@@ -1746,51 +1703,29 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task UpdateAsync_ReorderingBoqLines_BumpsVersion()
+    public async Task UpdateAsync_ApplyingANewerProjectBoq_BumpsVersionAndReplacesLines()
     {
         var (user, created) = await SeedApprovedBoqQuoteAsync();
+        var projectId = (await _db.Quotes.SingleAsync(q => q.Id == created.Id)).OperationalProjectId!.Value;
+        var newer = await SeedApprovedProjectBoqAsync(projectId, user.Id,
+            ("Bê tông", "m3", 10m, 1_500_000m), ("Thép", "kg", 500m, 20_000m), ("Gạch", "viên", 2000m, 3_000m));
 
-        // Same lines, swapped order. The customer sees that on the printed quote,
-        // so it counts as a real change.
-        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
+        var updated = await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
         {
             DiscountPercent = created.DiscountPercent,
             VatPercent = created.VatPercent,
             ValidUntil = created.ValidUntil,
             Note = created.Note,
-            Items =
-            [
-                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m, SortOrder = 1 },
-                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m, SortOrder = 2 },
-            ],
+            ProjectBoqRevisionId = newer.Id,
         }, user.Id, canManage: true, canSeeAll: true);
 
         var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
         Assert.Equal(2, after.Version);
-    }
-
-    [Fact]
-    public async Task UpdateAsync_AddingBoqLine_BumpsVersion()
-    {
-        var (user, created) = await SeedApprovedBoqQuoteAsync();
-
-        await _sut.UpdateAsync(created.Id, new UpdateQuoteRequest
-        {
-            DiscountPercent = created.DiscountPercent,
-            VatPercent = created.VatPercent,
-            ValidUntil = created.ValidUntil,
-            Note = created.Note,
-            Items =
-            [
-                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m, SortOrder = 1 },
-                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m, SortOrder = 2 },
-                new QuoteItemInput { Name = "Gạch", Unit = "viên", Quantity = 2000m, UnitPrice = 3_000m, SortOrder = 3 },
-            ],
-        }, user.Id, canManage: true, canSeeAll: true);
-
-        var after = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
-        Assert.Equal(2, after.Version);
+        Assert.Equal(newer.Id, after.ProjectBoqRevisionId);
         Assert.Equal(3, await _db.QuoteItems.CountAsync(i => i.QuoteId == created.Id));
+        Assert.Equal(31_000_000m, updated!.Subtotal);
+        var snapshot = await _db.QuoteVersionSnapshots.SingleAsync(item => item.QuoteId == created.Id);
+        Assert.Equal(created.ProjectBoqRevisionId, snapshot.ProjectBoqRevisionId);
     }
 
     private async Task<ApplicationUser> SeedUserAsync()
@@ -1928,23 +1863,50 @@ public class QuoteServiceTests : IDisposable
     private async Task<(ApplicationUser owner, QuoteResponse quote)> SeedApprovedBoqQuoteAsync()
     {
         var (user, opp) = await SeedOpportunityAsync();
+        var boq = await SeedApprovedProjectBoqAsync(opp.OperationalProjectId!.Value, user.Id,
+            ("Bê tông", "m3", 10m, 1_500_000m), ("Thép", "kg", 500m, 20_000m));
         var created = await _sut.CreateAsync(new CreateQuoteRequest
         {
             OpportunityId = opp.Id,
             Method = QuoteMethod.Boq,
+            ProjectBoqRevisionId = boq.Id,
             DiscountPercent = 0m,
             VatPercent = 8m,
-            Items =
-            [
-                new QuoteItemInput { Name = "Bê tông", Unit = "m3", Quantity = 10m, UnitPrice = 1_500_000m },
-                new QuoteItemInput { Name = "Thép", Unit = "kg", Quantity = 500m, UnitPrice = 20_000m },
-            ],
         }, user.Id, canManage: true);
 
         var tracked = await _db.Quotes.SingleAsync(q => q.Id == created.Id);
         tracked.Status = QuoteStatus.Approved;
         await _db.SaveChangesAsync();
         return (user, created);
+    }
+
+    // An approved tender BOQ of the project; each call adds the next revision number.
+    private async Task<ProjectBoqRevision> SeedApprovedProjectBoqAsync(
+        int projectId, int userId, params (string Name, string Unit, decimal Quantity, decimal UnitPrice)[] lines)
+    {
+        var revision = new ProjectBoqRevision
+        {
+            OperationalProjectId = projectId,
+            RevisionNumber = await _db.ProjectBoqRevisions.CountAsync(item => item.OperationalProjectId == projectId) + 1,
+            Status = ProjectBoqRevisionStatus.TenderApproved,
+            PreparedByUserId = userId,
+            ApprovedByUserId = userId,
+            ApprovedAt = DateTime.UtcNow,
+            Lines = lines.Select((line, index) => new ProjectBoqLine
+            {
+                ItemCode = $"S01-R{index + 16:0000}",
+                Description = line.Name,
+                Unit = line.Unit,
+                ApprovedQuantity = line.Quantity,
+                BudgetUnitPrice = line.UnitPrice,
+                Amount = decimal.Round(line.Quantity * line.UnitPrice, 4, MidpointRounding.AwayFromZero),
+                SortOrder = index + 1,
+            }).ToList(),
+        };
+        revision.CostTotal = revision.Lines.Sum(line => line.Amount);
+        _db.ProjectBoqRevisions.Add(revision);
+        await _db.SaveChangesAsync();
+        return revision;
     }
 
     private async Task<(ApplicationUser owner, Quote quote)> SeedApprovedReadyQuoteAsync()
