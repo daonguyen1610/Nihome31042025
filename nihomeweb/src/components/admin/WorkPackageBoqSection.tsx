@@ -11,8 +11,8 @@ import { useI18n } from "@/lib/i18n";
 import { formatVnd } from "@/lib/numberFormat";
 import { adminApi, type WorkPackageBoqWorkbook } from "@/services/adminApi";
 
-// Procurement uploads the filled BOQ form here; the package lead approves it and it becomes
-// the project's tender BOQ that quotes apply.
+// The BOQ half of the work package's input-pricing panel: Procurement uploads the filled BOQ form
+// here; the package lead approves it and it becomes the project's tender BOQ that quotes apply.
 export function WorkPackageBoqSection({
   packageId,
   open,
@@ -48,10 +48,10 @@ export function WorkPackageBoqSection({
   };
 
   return (
-    <section className="rounded-xl border bg-card" data-testid="work-package-boq">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
+    <div data-testid="work-package-boq">
+      <div className="flex flex-wrap items-center justify-between gap-3 border-b bg-muted/20 px-4 py-3">
         <div className="min-w-0 flex-[1_1_18rem]">
-          <h2 className="font-semibold">{t("workPackageBoq.title")}</h2>
+          <h3 className="text-sm font-semibold">{t("workPackages.inputPricing.boq")}</h3>
           <p className="text-sm text-muted-foreground">
             {t("workPackageBoq.hint")}{" "}
             <Link
@@ -63,14 +63,18 @@ export function WorkPackageBoqSection({
           </p>
         </div>
         {canProgress && open && (
-          <Button onClick={() => setUploadOpen(true)} data-testid="work-package-boq-upload">
+          <Button
+            size="sm"
+            onClick={() => setUploadOpen(true)}
+            data-testid="work-package-boq-upload"
+          >
             <FileUp className="mr-2 h-4 w-4" />
             {t("boqWorkbook.upload")}
           </Button>
         )}
       </div>
       {boqs.length === 0 ? (
-        <p className="p-8 text-center text-sm text-muted-foreground">{t("workPackageBoq.empty")}</p>
+        <p className="p-6 text-center text-sm text-muted-foreground">{t("workPackageBoq.empty")}</p>
       ) : (
         <ul className="divide-y">
           {boqs.map((boq) => (
@@ -149,6 +153,6 @@ export function WorkPackageBoqSection({
           onChanged();
         }}
       />
-    </section>
+    </div>
   );
 }

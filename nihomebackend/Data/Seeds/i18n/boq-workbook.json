@@ -760,14 +760,6 @@
     "ja": "契約BOQの署名済み上流契約を選んでください。"
   },
   {
-    "key": "workPackageBoq.title",
-    "category": "procurement",
-    "vi": "BOQ báo giá đầu vào",
-    "en": "Input-price BOQ",
-    "zh": "进货报价BOQ",
-    "ja": "仕入見積BOQ"
-  },
-  {
     "key": "workPackageBoq.hint",
     "category": "procurement",
     "vi": "Upload file BOQ đã điền khối lượng và đơn giá. Khi người phụ trách nhóm duyệt, file này thành BOQ dự thầu của dự án để báo giá áp dụng. Tải mẫu tại",

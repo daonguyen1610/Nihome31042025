@@ -86,7 +86,7 @@ test("procurement uploads the filled BOQ in its work package and the lead approv
   await loginInBrowserAs(page, TEST_USERS.procurement);
   await page.goto(`/admin/work-packages/${packageId}`, { waitUntil: "networkidle" });
   const section = page.getByTestId("work-package-boq");
-  await expect(section).toContainText("Input-price BOQ");
+  await expect(section).toContainText("Project BOQ (Excel file)");
   await expect(section.getByRole("link", { name: "BOQ form library" })).toHaveAttribute(
     "href",
     "/admin/material-rates/boq",
