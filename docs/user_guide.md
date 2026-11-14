@@ -419,7 +419,7 @@ department's job; the purpose ties the package to the source quotation or
 tender and controls which actions the page offers.
 
 **BOQ báo giá đầu vào trong nhóm công việc (13/11/2026).** Trong nhóm công việc
-**Yêu cầu giá đầu vào**, mục **BOQ báo giá đầu vào** cho nhân viên Cung ứng tải
+**Yêu cầu giá đầu vào**, phần **BOQ dự án (file Excel)** cho nhân viên Cung ứng tải
 mẫu từ **Thư viện mẫu BOQ**, điền khối lượng và đơn giá trong Excel, rồi chọn
 **Upload BOQ từ Excel**: chọn mẫu, kiểm tra file (lỗi chỉ ra từng sheet/ô) và
 xác nhận. Mỗi lần upload là một phiên bản R1, R2… của BOQ dự án, có thể tải lại
@@ -428,6 +428,11 @@ nhóm rồi xác nhận. Người phụ trách nhóm (hoặc quản trị viên)
 **Duyệt** hoặc **Từ chối** kèm lý do. BOQ được duyệt thành BOQ dự thầu của dự án
 (không làm hạn mức vật tư) và là nguồn dòng cho báo giá BOQ. Nhân viên thấy nhóm
 công việc khi được người phụ trách giao task trong nhóm hoặc là thành viên dự án.
+
+Từ 14/11/2026 hai nguồn giá đầu vào nằm chung một khung **Báo giá đầu vào**:
+phần trên là **BOQ dự án (file Excel)** cho cả công trình, phần dưới là **Báo
+giá nhà cung cấp / thầu phụ** nhập tay theo từng nhà cung cấp. Mỗi phần có nút
+thao tác và danh sách riêng; cách gửi duyệt và duyệt không đổi.
 BOQ upload ở đây không gửi duyệt hay duyệt được từ Procurement control.
 
 Mẫu **Báo giá xây dựng nhà xưởng** (14/11/2026) giữ đủ 23 sheet theo file GNF.
@@ -655,7 +660,7 @@ not itself a CRM customer quotation.
 #### 3.1.4 Direct Quotation
 
 Create quotations using an approved material-rate revision or a preliminary
-BOQ. **Material norms & rates** has separate **Investment rate** and **BOQ**
+BOQ. **Quote templates** has separate **Investment rate** and **BOQ**
 pages. For catalogs without category field settings, download the localized Excel form from the intended page, open the
 **Entry** sheet, and retain its column names and order. Investment-rate forms
 use material code/name, unit, norm per m², unit rate, and waste percentage; BOQ
@@ -672,7 +677,7 @@ a full-file re-import for small corrections. Approved, Rejected, and Retired
 revisions remain read-only. Approve non-overlapping effective revisions before
 use.
 
-**BOQ form library (13/11/2026).** **Material norms & rates → BOQ** is now a
+**BOQ form library (13/11/2026).** **Quote templates → BOQ** is now a
 read-only library of the customer-format BOQ forms. Each form is a folder and
 each sheet a child item; selecting a sheet shows its groups, items and total
 rows, and **Download Excel form** returns the form file unchanged. There are no
@@ -759,7 +764,7 @@ approving follow the same quotation workflow and project/owner permissions.
 Retrying the same create request with its idempotency key does not create a
 duplicate quotation.
 
-Prepare reusable BOQ data under **Material norms & rates → BOQ**, not from a
+Prepare reusable BOQ data under **Quote templates → BOQ**, not from a
 quotation detail. Create or select a catalog and a Draft revision. For a new
 workbook, download the standard NICON form. For an existing NICON workbook,
 choose **Import multi-sheet BOQ**, preview every sheet in workbook order, select
