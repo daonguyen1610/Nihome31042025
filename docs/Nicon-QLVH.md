@@ -687,6 +687,9 @@ Quản lý giá đầu vào, lựa chọn NCC/thầu phụ, hạn mức thực h
   provenance và xác nhận; không hard-code mẫu khách hàng.
 
 **Implemented — nhập BOQ theo danh mục cấu hình (yêu cầu 17/10/2026):**
+_Cập nhật 14/11/2026: đã gỡ giao diện. Cung ứng tải mẫu BOQ từ thư viện mẫu
+và upload trong nhóm công việc yêu cầu giá đầu vào. API và bảng dữ liệu vẫn
+giữ đến khi có migration gỡ bỏ._
 Danh mục đơn giá BOQ hiện có giữ bộ sheet/trường riêng; không tạo một module
 “loại BOQ” trùng với danh mục. Có sáu cấu hình ban đầu rút từ sáu workbook nguồn
 có cấu trúc khác nhau (manifest `Data/Seeds/boq-categories.json`); các nhóm
@@ -931,7 +934,7 @@ tới khi chủ sở hữu nghiệp vụ chấp thuận các quyết định tư
 | 3 | Dự án dùng chung | Partial | Operational Project, work package, task, dependency, CC và thông báo đã có; Q-01 đến Q-03 còn mở. |
 | 4 | Thiết kế trước hợp đồng | Implemented | Design Project và công việc thiết kế không phụ thuộc hợp đồng đã ký. |
 | 5 | Liên phòng ban trước hợp đồng | Implemented | Procurement input, Finance review và gate báo giá/nộp thầu đã có. |
-| 6 | BOQ | Partial | Có preview/mapping nhiều sheet; persistence chưa giữ hierarchy và provenance từng dòng. |
+| 6 | BOQ | Partial | Danh mục đơn giá có preview/mapping nhiều sheet. BOQ theo Dự án đã có upload theo mẫu giữ nguyên layout khách, lỗi theo ô, đối chiếu tổng, lưu file gốc, sheet/dòng nguồn và duyệt dự thầu tách khỏi hạn mức MR/kho; đã có mẫu PCCC căn hộ dịch vụ, thiết kế, xin phép, xây dựng nhà xưởng (GNF), xây dựng, cơ điện (ME) & PCCC trọn gói thiết kế, xin phép & thi công và phần xây dựng CSA; đã có chuyển dự thầu sang hợp đồng; chưa có so sánh gốc/kế hoạch/thực tế. |
 | 7 | Đấu thầu | Implemented | Kế hoạch, hồ sơ, năng lực, estimate, review, submission snapshot và kết quả đã có. |
 | 8 | Thiết kế chi tiết | Partial | Schedule/review/Drive và liên kết Vendor/HĐ Downstream bằng stable ID đã có; nhập `.mpp` đầy đủ và markup theo file còn là mục tiêu. |
 | 9 | Pháp lý | Partial | Có activation wizard, permit workflow và risk view; chưa tự sinh danh sách áp dụng vì template loại/quy mô công trình là Q-09. |

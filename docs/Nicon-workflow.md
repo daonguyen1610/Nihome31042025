@@ -565,14 +565,50 @@ provenance, người xác nhận và không hard-code tên sheet từ file mẫu
 Dòng tiêu đề nhóm, tiêu đề cột lặp và tổng phụ không được tính thành dòng đơn
 giá; dòng chi tiết phải có tên, đơn vị, khối lượng dương và đơn giá không âm.
 
-Workbook BOQ khách hàng được nhập tại Draft revision của material-rate catalog.
-Quote BOQ chỉ áp dụng revision Approved phù hợp và lưu snapshot để lập báo giá;
-không có luồng import workbook trực tiếp vào Quote. Bảng nhập nhiều dòng hoặc
-thêm từng dòng tại Quote chỉ bổ sung ngoại lệ cục bộ, không thay đổi catalog và
-không thay thế quy trình chuẩn hoá workbook. Không dùng vùng nhập text/clipboard
-tự do cho BOQ của Quote.
+**Quyết định họp 31/10/2026:** mỗi Dự án có một BOQ gốc; BOQ dự thầu chuyển thành
+BOQ hợp đồng khi trúng thầu mà không tạo file mới. Phòng CM lập bản kế hoạch,
+BCH lập bản thực tế, và hệ thống so sánh ba bản. Mỗi sheet là một hạng mục và
+phải hiển thị đủ; sheet tổng cộng lại từ các sheet con. Web có thể chỉ hiện giá
+trị tổng, nhưng khối lượng và đơn giá phải liên kết được với module khác. Quyết
+định này thay thế cách tách BOQ dự thầu khỏi Execution BOQ ở bảng trên khi đã
+triển khai xong; đến lúc đó, Tender Estimate hiện có vẫn hoạt động song song.
 
-**Implemented — luồng chọn danh mục → nhập đúng trường (17/10/2026):**
+**Partial — upload BOQ theo Dự án:** mẫu giữ nguyên layout file khách, kiểm tra
+theo sheet/ô, lưu file gốc và ghi dòng vào `ProjectBoqLine`. BOQ chưa có hợp đồng
+được duyệt ở trạng thái `TenderApproved`, không làm hạn mức MR/kho. Hiện có
+mẫu PCCC căn hộ dịch vụ, mẫu báo giá thiết kế, xin phép, mẫu xây dựng nhà
+xưởng (GNF, 20 sheet hạng mục, 14/11/2026), mẫu xây dựng, cơ điện (ME) &
+PCCC (17 sheet hạng mục, giá vật tư + nhân công, 14/11/2026), mẫu trọn gói
+thiết kế, xin phép & thi công (18 sheet hạng mục, giá vật tư + nhân công + MMTB,
+14/11/2026) và mẫu phần xây dựng CSA (3 Bill, khối lượng cộng từ dòng diễn giải,
+giá vật tư + nhân công & thiết bị, 14/11/2026). Từ 13/11/2026 Cung
+ứng upload BOQ trong nhóm công việc yêu cầu giá đầu vào và người phụ trách nhóm
+duyệt; mục **BOQ dự án** trên trang Dự án chỉ hiển thị danh sách; Procurement
+control không còn lối upload. BOQ dự án đã duyệt cũng được tính là giá đầu vào
+đã duyệt cho báo giá BOQ. Từ 14/11/2026 PM chuyển BOQ dự thầu đã duyệt thành BOQ
+hợp đồng và Cung ứng upload BOQ hợp đồng trên trang Dự án. Chưa có bản kế hoạch,
+bản thực tế và so sánh ba bản.
+
+**Implemented — báo giá BOQ lấy từ BOQ gốc (quyết định 08/11/2026):** báo giá
+phương thức BOQ chép toàn bộ dòng và tổng trước VAT từ BOQ dự án đã duyệt mới
+nhất (dự thầu hoặc hợp đồng); dòng khoá, không nhập tay, không lấy từ
+material-rate catalog. Chiết khấu, VAT, hiệu lực nhập trên báo giá. Có BOQ duyệt
+mới hơn thì phải áp dụng lại mới gửi duyệt được. Material-rate catalog BOQ chỉ còn
+là thư viện đơn giá tham khảo.
+
+**Implemented — upload BOQ trong nhóm công việc báo giá đầu vào (13/11/2026):**
+Cung ứng tải mẫu ở thư viện, điền Excel và upload trong nhóm công việc yêu cầu
+giá đầu vào; người phụ trách nhóm (khác người upload) duyệt qua luồng email duyệt
+của nhóm. BOQ được duyệt thành BOQ dự thầu của dự án và là nguồn dòng cho báo giá.
+
+**Implemented — thư viện mẫu BOQ (13/11/2026):** trang Định mức & đơn giá → BOQ
+chỉ còn là thư viện mẫu theo định dạng file khách, dạng cây Mẫu → Sheet, xem cấu
+trúc sheet và tải mẫu; không còn phiên bản, không nhập liệu. Cung ứng (và Trưởng
+phòng Cung ứng) được xem trang để tải mẫu, điền Excel và upload trong nhóm công
+việc yêu cầu báo giá đầu vào. Luồng danh mục dưới đây không còn mở từ giao diện;
+dữ liệu cũ được giữ.
+
+**Thay bằng thư viện mẫu từ 13/11/2026 — luồng chọn danh mục → nhập đúng trường (17/10/2026):**
 
 1. Vào danh mục đơn giá BOQ; chọn một cấu hình mẫu đã có hoặc tạo danh mục mới.
    Nếu cần bộ trường khác, sao chép cấu trúc rồi sửa sheet/field và nhãn bốn

@@ -74,6 +74,10 @@ outgoing quote. Changing the role or permissions after submission blocks the
 queued approval email from delivery. CC addresses are limited to active
 project-team members who can view the quote within their own scope.
 
+`PROCUREMENT` and `PROCUREMENT_MANAGER` hold `crm.material-rates.view` so they
+can download BOQ forms from the read-only BOQ template library; migration
+`GrantProcurementBoqTemplateLibrary` adds it to existing roles where missing.
+
 ### NICON role groups and permission baselines
 
 The current implementation assigns business roles to six seeded groups:
@@ -336,7 +340,7 @@ scope; legacy construction screens retain their existing permission families.
 | PM Phòng CM | Publish baselines; review QA/QC, schedule, HSE, MR, QS, and VO across assigned projects | Creating field evidence on behalf of BCH or self-approving a record the PM authored |
 | Chỉ huy trưởng | Coordinate one assigned site; submit/approve BCH-internal work | CM level-2 approval or portfolio-wide access |
 | Kỹ sư hiện trường / QA-QC | Daily logs, quality evidence, IFC-based inspection, Punchlist handling | QS approval, budget unlock, or CM review |
-| QS công trường | Prepare Upstream/Downstream quantity and acceptance batches | Final payment approval or independent CM review of the same batch |
+| QS công trường | Prepare Upstream/Downstream quantity and acceptance batches; upload and submit the project's root BOQ (`proc.boq.view/manage`) | Final payment approval, independent CM review of the same batch, or approving a BOQ |
 | Cán bộ HSE | Record inspections and violations for the assigned site | Deleting confirmed violations or closing CM corrective actions |
 | Thủ kho | Receive, issue, and allocate approved site inventory | Approving the originating resource request or changing BOQ limits |
 | Procurement / Kế toán | Act on approved handoffs within their own module | Editing Module 4 evidence or bypassing required CM review |
