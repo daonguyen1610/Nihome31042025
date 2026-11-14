@@ -418,6 +418,60 @@ screen. Set the package's **Business purpose** to the one that matches the
 department's job; the purpose ties the package to the source quotation or
 tender and controls which actions the page offers.
 
+**BOQ báo giá đầu vào trong nhóm công việc (13/11/2026).** Trong nhóm công việc
+**Yêu cầu giá đầu vào**, mục **BOQ báo giá đầu vào** cho nhân viên Cung ứng tải
+mẫu từ **Thư viện mẫu BOQ**, điền khối lượng và đơn giá trong Excel, rồi chọn
+**Upload BOQ từ Excel**: chọn mẫu, kiểm tra file (lỗi chỉ ra từng sheet/ô) và
+xác nhận. Mỗi lần upload là một phiên bản R1, R2… của BOQ dự án, có thể tải lại
+file. Khi đủ đơn giá, chọn **Gửi duyệt**, xem trước email tới người phụ trách
+nhóm rồi xác nhận. Người phụ trách nhóm (hoặc quản trị viên), khác người upload,
+**Duyệt** hoặc **Từ chối** kèm lý do. BOQ được duyệt thành BOQ dự thầu của dự án
+(không làm hạn mức vật tư) và là nguồn dòng cho báo giá BOQ. Nhân viên thấy nhóm
+công việc khi được người phụ trách giao task trong nhóm hoặc là thành viên dự án.
+BOQ upload ở đây không gửi duyệt hay duyệt được từ Procurement control.
+
+Mẫu **Báo giá xây dựng nhà xưởng** (14/11/2026) giữ đủ 23 sheet theo file GNF.
+Chỉ điền khối lượng (cột E) và đơn giá vật liệu, nhân công, thiết bị (cột F, G,
+H); không sửa công thức ở cột I, J và các dòng tổng. Hệ thống đọc 20 sheet hạng
+mục, bỏ qua trang bìa và sheet **00.Tổng Hợp**, và đối chiếu tổng từng sheet với
+ô tổng ở đầu sheet. Tổng BOQ là tổng các dòng hạng mục (chi phí trực tiếp); chi
+phí gián tiếp và làm tròn trên sheet Tổng hợp không tính vào tổng BOQ.
+
+Mẫu **Báo giá xây dựng, cơ điện (ME) & PCCC** (14/11/2026) giữ 18 sheet theo
+file BOQ base, kể cả khối lượng mẫu: sửa khối lượng theo dự án, điền đơn giá
+**Vật tư** và **NC&MTC**; hệ thống lưu đơn giá là tổng hai cột và thành tiền
+theo cột **Tổng cộng**. Các dòng diễn giải khối lượng không có STT (F1, M1,
+"Trừ ô cửa"…) không phải hạng mục; nếu điền đơn giá vào dòng không có STT, hệ
+thống báo lỗi thiếu STT. Ở sheet **PCCC**, tên hạng mục ghép thêm quy cách (ví
+dụ "Ống kẽm D168 x 3.96mm"). Sheet **TỔNG HỢP** tự cộng từ các sheet nhưng
+không được đọc; tổng BOQ là tổng các dòng, chưa gồm VAT.
+
+Mẫu **Báo giá trọn gói thiết kế, xin phép & thi công** (14/11/2026) giữ 21 sheet
+đang hiển thị của file Trọn gói, kể cả khối lượng mẫu. Điền đơn giá **Vật tư**,
+**Nhân công** và **MMTB** (sheet MEP có Vật tư và Nhân công; sheet Design and
+permit và Prelim có một cột đơn giá); hệ thống lưu đơn giá là tổng các cột và
+thành tiền theo cột **Thành tiền**. Hạng mục không cần STT (sheet Điện, phần kết
+cấu thép); các dòng diễn giải kích thước (SL, dài, rộng, cao, KL) không phải hạng
+mục. Hệ thống đọc 18 sheet, bỏ qua **Cover**, **Total** và **Summary** (hai sheet
+tổng tự cộng từ các sheet); tổng BOQ là tổng các dòng, chưa gồm VAT.
+
+Mẫu **Báo giá phần xây dựng (CSA)** (14/11/2026) gồm 3 Bill: chuẩn bị & yêu cầu
+chung, công trình chính, hạ tầng ngoài nhà. Khối lượng hạng mục ở Bill 2 và Bill
+3 tự cộng từ các dòng diễn giải kích thước (đang ẩn) bên dưới; hạng mục chưa có
+dòng diễn giải và các dòng trọn gói ở Bill 1 cần tự nhập khối lượng. Điền đơn giá
+**Material** và **Labour & Equipment** (Bill 1 có một cột **Price**); hệ thống lưu
+đơn giá là tổng hai cột. Bìa, **Total Amount** và **Cost Summary** tự cộng nhưng
+không được đọc; tổng BOQ là tổng các dòng, chưa gồm VAT 8%.
+
+**BOQ hợp đồng (14/11/2026).** Khi trúng thầu và hợp đồng đầu ra đã ký, PM (hoặc
+BGĐ) mở BOQ dự thầu đã duyệt mới nhất, chọn **Chuyển thành BOQ hợp đồng**, chọn
+hợp đồng đã ký rồi xác nhận. Bản này giữ nguyên file và các dòng, không tạo file
+mới, và từ đó làm hạn mức cho yêu cầu vật tư, RFQ và kho. Mỗi dự án chỉ chuyển
+được một lần. Khi BOQ hợp đồng khác BOQ dự thầu, hoặc khi có thay đổi sau hợp
+đồng, Cung ứng/QS chọn **Upload BOQ hợp đồng** ở mục BOQ của trang Dự án, chọn
+hợp đồng đã ký và file đã điền. Hệ thống tạo phiên bản nháp mới; Cung ứng/QS
+**Gửi duyệt** ở trang chi tiết BOQ và PM **Duyệt**.
+
 **Bắt đầu báo giá đầu ra.** Kinh doanh tạo Báo giá mới bằng Cơ hội đã gắn
 Dự án và ghi chú cơ bản. Hệ thống tạo bản nháp chưa có
 giá và mở trang chi tiết. Tại đây chọn **Yêu cầu giá đầu vào** để giao nhóm
@@ -617,6 +671,17 @@ manual rows. These actions recalculate the revision total immediately, avoiding
 a full-file re-import for small corrections. Approved, Rejected, and Retired
 revisions remain read-only. Approve non-overlapping effective revisions before
 use.
+
+**BOQ form library (13/11/2026).** **Material norms & rates → BOQ** is now a
+read-only library of the customer-format BOQ forms. Each form is a folder and
+each sheet a child item; selecting a sheet shows its groups, items and total
+rows, and **Download Excel form** returns the form file unchanged. There are no
+catalog versions or data entry on this page. Procurement downloads a form here,
+fills quantities and unit prices in Excel and uploads the file in the
+input-price request work package. Procurement and the Head of Procurement can
+open the page. The BOQ catalog screens described below are no longer reachable
+from the menu; their data is kept.
+
 **BOQ with category-specific fields.** Six initial category forms are based on
 customer workbooks: Design/Permit, Factory/MEP/Fire, Serviced Apartment Fire,
 CSA/Building Systems, Integrated Factory and Turnkey (manifest:
@@ -645,8 +710,8 @@ sheet. Fields shown and saved always belong to the selected category and sheet.
 Reference sheets (such as project scale/material specifications) do not feed
 prices. Enter checked total quantity and total unit price explicitly; stored
 component prices and dimensions do not automatically calculate them. Approved
-catalog prices continue to feed Quote snapshots; this does not turn a Quote BOQ
-into an approved Execution BOQ allowance. Configured catalogs are deactivated
+catalog prices are a rate reference only; BOQ quotations take their lines from
+the project BOQ. Configured catalogs are deactivated
 rather than permanently deleted. The source workbooks are discovery evidence;
 the new downloads are normalized safe entry templates, not copies of their
 external links, formulas or full presentation layout.
@@ -673,28 +738,26 @@ If no active catalog exists, the quote form shows the three setup steps instead
 of an empty list and links to the matching catalog page. That page opens the
 create dialog and shows **Back to the quote** until the revision is approved;
 the link returns to the same quote form. Users without catalog permission are
-asked to contact a QS or the sales manager. A BOQ quotation can still be
-entered manually without a catalog only for a quote-specific exception;
-reusable BOQ data belongs in the BOQ catalog.
+asked to contact a QS or the sales manager.
 
-For a BOQ quotation, either select an active BOQ catalog and pricing date or add
-rows manually. Applying an Approved effective BOQ revision replaces the current
-rows after confirmation, copies its items into the quote, and retains catalog,
-revision, and date provenance. The copied name, unit, quantity, and unit price
-remain editable without changing the approved catalog revision; the quote marks
-this source as an editable catalog reference rather than an exact catalog price.
-BOQ quantities support up to four decimal places and unit prices up to two. To
-add quote-specific exception rows, open **Enter multiple rows** and enter each
-value under its explicit code, item, unit, quantity, and unit-price column. Add
-or remove rows inside the table and correct every validation error before
-confirming. This action does not import a workbook or update the catalog. The
-form previews each calculation basis and the
-subtotal, discount, VAT, and grand total before saving. Blank rows, quantities
-at or below zero, negative prices, invalid percentages, and values above the
-supported accounting range are rejected in both the browser and API. Reopening
-or editing a BOQ preserves its item set; submitting and approving follow the
-same quotation workflow and project/owner permissions. Retrying the same create
-request with its idempotency key does not create a duplicate quotation.
+A BOQ quotation takes its lines and subtotal from the project's root BOQ
+(3.5.3): Procurement uploads it in the input-price work package and the package
+lead approves it. An approved project BOQ also counts as approved input pricing,
+so a new quote can choose the BOQ method without a supplier offer. In the
+quote's **Project BOQ** panel, Sales sees the latest approved revision (tender
+or contract) with its line count and total before VAT, and selects **Apply this
+BOQ**; saving copies every line. Lines cannot be added, edited or typed in on
+the quote, and the BOQ rate catalog is not a quote source. To change quantities
+or prices, QS uploads a new BOQ revision; once approved, Sales applies it again,
+which creates a new quote version when the quote was already approved or sent.
+Discount, VAT and validity stay on the quote. A quote cannot be submitted while
+the project has a newer approved BOQ than the one it uses; the panel shows a
+warning. If the project has no approved BOQ, the panel links to the project page.
+Quotes created earlier from catalog or typed lines stay readable but must apply
+the project BOQ before they are saved or submitted again. Submitting and
+approving follow the same quotation workflow and project/owner permissions.
+Retrying the same create request with its idempotency key does not create a
+duplicate quotation.
 
 Prepare reusable BOQ data under **Material norms & rates → BOQ**, not from a
 quotation detail. Create or select a catalog and a Draft revision. For a new
@@ -717,9 +780,9 @@ standard form.
 Confirmation atomically replaces the selected Draft revision's lines and stores
 the source filename, SHA-256 hash, mapping, actor, and time. A changed file,
 invalid mapping, duplicate code, or invalid row leaves the revision unchanged.
-Approve the revision through the normal catalog lifecycle, then apply that
-approved revision to a BOQ quotation. Workbook import never edits a quotation
-directly.
+Approve the revision through the normal catalog lifecycle. The catalog is a
+reusable rate reference; BOQ quotations take their lines from the project BOQ,
+not from the catalog.
 
 | Page | Functions |
 |------|-----------|
@@ -1767,6 +1830,40 @@ processing continue through their existing workflows.
 | Interactive Comparison Matrix | Multi-vendor matrix with auto-highlight |
 
 #### 3.5.3 Material BOQ Management
+
+**Upload a project BOQ from Excel.** Since 13/11/2026 Procurement uploads the
+BOQ in the input-price request work package (3.0.2) and the package lead approves
+it there. The **Project BOQ** section below the project's master schedule only
+lists every revision with its status; departments with BOQ access open a revision
+from there. Procurement control has no upload entry. The steps below describe the
+upload dialog, which is the same in the work package.
+
+1. Choose the BOQ form and select **Download Excel form**. The file keeps the
+   layout NICON already uses; only project details and quantities are blank.
+2. Fill quantities and unit prices in Excel and save the file. Keep the sheet
+   names, heading rows and total row. Rows left without a quantity are not saved
+   as BOQ lines.
+3. Choose the upstream contract, or keep **No contract yet (tender BOQ)**.
+4. Add the file and select **Validate file**. Nothing is saved yet. The result
+   shows each sheet's items, skipped rows, missing prices and units, and total,
+   or lists each problem with its sheet, cell and how to fix it.
+5. Select **Confirm and create Draft**. Each confirmation creates a new revision
+   and older revisions stay as history.
+
+The revision page lists the sheets with their totals, and **Download BOQ file**
+returns the uploaded workbook for the details. Uploaded lines are not edited on
+the web: change the file and upload a new revision. A revision with missing
+unit prices stays a Draft until a fully priced file is uploaded.
+
+An approved tender BOQ shows **Approved (tender)**. It is published for
+departments to read, but it is not a material allowance. Only a BOQ linked to a
+signed contract becomes the allowance. To move a won tender BOQ to the contract,
+upload the file again and choose the contract. The current forms are the
+serviced-apartment fire protection quotation and the design and permit
+quotation; the other forms are being added one at a time. In the design and
+permit form, only the fee tables (survey/design and permits) become BOQ lines,
+named by the first line of each description; the site-scale table and VAT rows
+stay in the file. Enter 0 as the unit price of a free item.
 
 Create material BOQ by project and construction work item. Define maximum allowable quantities (norms) per project. Link BOQ to construction schedule. Track BOQ amendments. Support Excel import for bulk data entry.
 

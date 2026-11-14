@@ -2543,6 +2543,12 @@ conflict entry until an authorized user confirms **Keep both**.
 
 ### 7.10.2 BOQ catalog workbook intake
 
+Since 14/11/2026 no screen calls the APIs in 7.10.2 and 7.10.3. The catalog
+workbook dialog and the configured-category entry were removed from
+`/admin/material-rates`. Procurement now uses the template library (7.10.5)
+and the work-package upload (7.10.6). The APIs and tables remain until a
+migration retires them.
+
 Multi-sheet customer workbooks are normalized into Draft BOQ material-rate
 revisions through `/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook`.
 `preview` detects candidate header/column mappings without persistence. `import`
@@ -2608,6 +2614,227 @@ MaterialRateServiceTests and boq-configured-entry.spec.ts. Browser tests isolate
 UI writes, while integration tests own real HTTP/auth/persistence and rejection
 integrity. Keep Playwright output outside the watched frontend directory.
 
+### 7.10.4 Project BOQ workbook upload
+
+A BOQ workbook belongs to the Operational Project and creates a
+`ProjectBoqRevision`, so its lines keep the `ProjectBoqLine` identity that
+Material Request, RFQ, warehouse, alert and QS records already reference.
+This path is separate from the rate-catalog intake in 7.10.2 and 7.10.3.
+
+Since 13/11/2026 the UI upload entry is the input-price work package (7.10.6);
+`ProjectBoqSection` on the Operational Project page (`#project-boq`) is a
+read-only list and Procurement control has no upload link. The project-scoped
+preview/import routes below remain for API use. QS keeps `proc.boq.view` and
+`proc.boq.manage` from migration `20261108100000_GrantQsProjectBoqPermissions`.
+A BOQ quote whose basic draft has no approved supplier offer may still choose the
+BOQ method when it names the latest approved project BOQ (`QuoteService`
+`hasApprovedInput`). Migration `20261113160000_SyncWorkPackageBoqGuidance`
+updates the two guidance texts in existing databases only while they still hold
+the earlier seed value.
+
+Each template is an edited copy of one customer workbook in
+`Data/BoqTemplates/`, embedded in the assembly and listed in
+`Data/BoqTemplates/templates.json`. The download returns the stored file byte
+for byte, so sheet names, columns, merged cells, styles and formulas stay as
+the customer uses them. A template profile states the sheets, expected header
+cells, first row, STT/description/unit/quantity/price/amount columns, subtotal
+prefix, grand-total label, currency and amount tolerance. Customer originals
+in `docs/Nicon/BOQ/` are evidence only and are never read at runtime. Delivered
+templates: `PCCC-CAN-HO` (one sheet, `ptct`) and `THIET-KE-XIN-PHEP` (one
+sheet, `Bao gia`; reads the survey/design and permit fee tables from row 29 up
+to `Tổng cộng trước VAT (B+C)`, so the site-scale table above them and the VAT
+rows below are not lines), `NHA-XUONG` (GNF factory BOQ, 23 sheets: the
+cover, `Cover 1` and `00.Tổng Hợp` are `ignoredSheets`; the 20 building and
+system sheets are read) and `XAY-DUNG-ME` (factory construction, M&E and fire
+protection base BOQ, 18 sheets: `TỔNG HỢP` is ignored; the 17 work sheets are
+read and keep the base quantities) and `TRON-GOI` (lump-sum design, permit and
+construction quotation, 21 sheets: `Cover `, `Total ` and `Summary ` are
+ignored; the 18 design, preliminaries, construction and M&E sheets are read and
+keep the quotation's quantities) and `CSA-WORK` (civil, structural and
+architectural BOQ, 6 sheets: `01.BÌA`, `Total Amount ` and ` COST SUMMARY` are
+ignored; the three bills are read). `descriptionFirstLine` takes only the first line of a
+multi-line description as the item name; the scope text stays in the stored
+file. For layouts with the sheet total above the rows, `totalCell` names that
+cell instead of a total label, and `totalDecimals` applies Excel ROUND digits to
+the item sum before comparing (GNF C4 uses -5). `itemsWithoutStt` replaces the
+whole-number STT rule for layouts that number headings and leave items blank:
+a row is an item when its unit-price or amount cell is filled (value or
+formula) and it has a unit or a quantity; a heading may then carry a count
+(for example 41 manholes) without an error. The GNF template was built from the
+customer file with external links, about 33,000 stray defined names and the
+calculation chain removed, project quantities, prices and location cleared,
+nine total formulas that left out item rows corrected, and four item rows given
+the missing price and amount formulas (sheet 2 rows 93 and 244, sheet 3 row 119,
+C1 row 61).
+
+The ME base splits each unit price into material and labour/machine columns:
+`extraPriceColumns` lists the columns added to `unitPriceColumn`, and the
+line's unit price is the sum of all of them, blank only when every one is blank
+(`amountColumn` is the row total). `measurementRows` covers quantities broken
+down under an item (count × length × width × height, openings deducted with
+negative counts): an unnumbered row whose measured cell is filled is neither an
+item nor a heading and its quantity is not read; a price on one is
+`sttRequired`. The measured cell is the quantity column unless
+`measurementColumn` names another (Trọn gói: `KL` beside `KL TỔNG`). An
+unnumbered label is a measurement row too when the previous row is one, or
+when the next rows, past further unnumbered labels, are ("Nhà Văn Phòng 02",
+"Tầng 1", then sizes).
+`specColumn` appends a column to the item name (the PCCC sheet's pipe sizes,
+"Ống kẽm D168 x 3.96mm"). The total label is also matched in the STT column
+(`CP chuẩn bị` writes it in column A). The ME template was built from the
+customer file with 22 external links, 16,391 stray defined names and the
+calculation chain removed, 420 unit prices linked to a deleted rate sheet
+(`=#REF!*#REF!`) cleared, missing amount formulas added on 35 item rows, the
+stray STT removed from three `Xưởng` door-size rows (379, 386, 390), five text
+"0" quantities in `Điện nước` stored as numbers, and the summary sheet linked
+to each sheet total. ClosedXML cannot recalculate this workbook in reasonable
+time, so tests write stored results straight into the sheet XML
+(`BoqWorkbookPatch` in the unit tests).
+
+The Trọn gói template mixes five layouts: design and permit fees and
+preliminaries (one price column), construction sheets with material, labour
+and machine prices and the sheet total in row 8 (`totalCell` `P8` or `K8`,
+`firstRow` after the per-sheet summary lines), M&E sheets with material and
+labour and a total label at the bottom, and the water-supply sheet with its
+total label `Cộng:` in the STT column. Every sheet uses `itemsWithoutStt`,
+because electrical and steel-structure items are unnumbered while section
+headings carry numbers. It was built from the customer file with six external
+links, the stray defined names and the calculation chain removed; the 13 hidden
+sheets (earlier versions holding earlier prices, outside the summary and
+referenced by nothing) dropped; project name, address and date cleared;
+previous-round amounts cleared (`Summary ` column `đợt trước`, column K of the
+Nhà Xưởng and Văn Phòng summary lines, unit prices left in Thoát nước mưa rows
+15-17 and Bể PCCC row 55); about 80 unit-total formulas that left out the
+machine or labour price rewritten as material + labour + machines; amount
+formulas added on every row with a unit that lacked one; the Thoát nước mưa
+section B total, the Bể PCCC rebar total and the Bể PCCC sheet total corrected
+to include the item rows they left out; the negative Bể PCCC backfill quantity
+(F33) wrapped in `MAX(0, …)`; "free" moved from the Design and permit price
+column to its note; the broken hidden stage-2 block of `Prelim` cleared; and
+the summary lines linked to each sheet total.
+
+The CSA WORK customer file came as a blank BOQ: the three bills had units and
+measured rows (No × L × W × H × HS = KL, hidden under each item) but no item
+quantity, price, amount or total. The template, built with the same raw XML
+approach (39 external links, about 10,000 defined names and the calculation
+chain removed; the 11 hidden sheets, which held earlier prices, dropped;
+project name, address, quotation number and client name cleared), sets each
+item's `Q'TY` (K) to the sum of the KL (J) of its measured rows for the 135
+items that have them, adds material, labour & equipment, unit total and amount
+formulas (M = K×L, O = K×N, P = L+N, Q = M+O) on every row with a unit, adds
+`SUBTOTAL` totals on every building (C.01-C.06, IN.01-IN.07), section (I, II…)
+and sub-section (*) heading, links the summary lines at the top of each bill,
+and puts the bill total in Q6, which ` COST SUMMARY` already pointed at. Bill 1
+gets amount = quantity × price; its lump-sum quantities stay blank. Five
+measured office rows with 0 in the unit column were cleared, and the item
+numbers 1-3 of Bill 3 rows 38-40, formatted as dates, were given the item
+number style.
+
+Routes are relative to `/api/operational-projects/{projectId}/procurement`:
+
+| Method / route | Permission | Contract |
+|---|---|---|
+| GET boq-templates | proc.boq.view | Template code, name key, file name |
+| GET boq-templates/{code}/file | proc.boq.view | The stored template file |
+| POST boq-workbooks/preview | proc.boq.manage | Multipart `templateCode`, `file`; returns per-sheet summary and `sourceHash`; no persistence |
+| POST boq-workbooks | proc.boq.manage | Multipart `templateCode`, `file`, `sourceHash`, optional `upstreamContractId`; creates a Draft revision |
+| GET boq-revisions/{id}/workbook | proc.boq.view | The uploaded file |
+| POST boq-revisions/{id}/contract | proc.boq.approve | JSON `upstreamContractId`, `rowVersion`; turns the approved tender BOQ into the contract BOQ |
+
+All routes also require project visibility. Upload limits are 20 MB, 500 ZIP
+parts and 200 MB expanded; macros, external links and data connections are
+rejected. Formula results are read from values Excel stored and are never
+recalculated.
+
+`ProjectBoqWorkbookParser` reads rows from the profile's first row to the
+grand-total row. A row with a whole-number STT is an item, a row starting with
+the subtotal prefix is a subtotal, and other text rows name the current group.
+An item with no quantity is counted as skipped and creates no line. A line
+keeps the amount the workbook stored once it matches quantity × price, so lines
+add up to the sheet total when the sheet rounds each amount. Item codes
+are `S{sheet:00}-R{row:0000}` and change if rows are inserted, so they are not
+stable across revisions. Rejections return `boqWorkbook.error.invalidRows`
+with `issueCount` and up to 200 `issues` (`code`, `messageKey`, `sheet`,
+`cell`, `limit`). Checks cover sheets and headers, number cells, negative and
+oversized values, Excel errors, uncalculated formulas, a quantity on a row with
+no numeric STT, amount against quantity × price (an amount cell holding "-"
+counts as 0), and the grand total against
+the item sum, both within the template tolerance. A blank unit only raises a
+warning count until NICON decides the rule.
+
+The stored file uses `BusinessDocumentArea.Boq`, and
+`SourceWorkbookPath` is included in `ReferencedManagedFiles`. Revisions keep the
+template code, file name and SHA-256; repeating a confirm for the same Draft
+file returns the existing revision. Uploaded lines cannot be edited through
+`PUT boq-revisions/{id}` (`workbookReadOnly`), and a revision with unpriced
+lines cannot be submitted (`missingPrices`).
+
+A revision uploaded without `upstreamContractId` is a tender BOQ. Approval sets
+`TenderApproved`, which is outside every `Approved` query, so it never becomes
+the MR, RFQ, warehouse or QS allowance. A revision linked to a signed contract
+follows the normal `Approved` path.
+
+Since 14/11/2026 (MoM 31/10: "trúng thầu thì chuyển thành BOQ hợp đồng, không
+tạo file mới") `POST boq-revisions/{id}/contract`
+(`ProcurementService.ConvertTenderBoqToContractAsync`) links the latest
+`TenderApproved` revision to a signed upstream contract and sets it to
+`Approved` in place. The revision number, file, lines and tender approval
+(`ApprovedAt`/`ApprovedByUserId`) stay; the controller audit event
+`proc.boq.contract` records who converted it. Errors use
+`boqWorkbook.error.{code}`: `notTender`, `notLatestTender` (a newer approved
+tender exists), `contractBoqExists` (the project already has an `Approved`
+BOQ; later changes are uploaded revisions) and `contract`. A repeat with the
+same contract returns the revision. Material alerts are re-evaluated after the
+conversion. On the UI, `BoqRevisionDetailPage` shows **Make it the contract
+BOQ** to `proc.boq.approve` holders (PM, BGD). `ProjectBoqSection` offers
+**Upload contract BOQ** to `proc.boq.manage` + `crm.contracts.view` holders when
+the project has a signed upstream contract. The project-target upload dialog
+requires the contract, so tender BOQs come only from the work package (7.10.6).
+The detail page hides submit and decision buttons for revisions with
+`sourceWorkPackageId`, which are reviewed in their package. Regression coverage:
+`ProjectBoqWorkbooksControllerTests` (conversion) and `contract-boq.spec.ts`.
+
+Migration `AddProjectBoqWorkbooks` adds nullable revision and line columns,
+`project_boq_lines.PriceMissing` (default false) and the `project_boq_sheets`
+table, with no backfill. Down removes them, so uploaded revisions lose their
+sheet list and file link; export those files first.
+
+Regression coverage: ProjectBoqWorkbookParserTests,
+ProjectBoqWorkbooksControllerTests and the live `boq-workbook-upload.spec.ts`.
+
+### 7.10.5 BOQ template library
+
+`/admin/material-rates/boq` renders `BoqTemplateLibrary`, a read-only tree of
+the templates in `Data/BoqTemplates/templates.json` (template → workbook sheets).
+`BoqTemplatesController` (`/api/boq-templates`, `crm.material-rates.view`, not
+project-scoped) lists templates with their sheets and item counts, returns the
+stored file, and returns one sheet's outline. `ProjectBoqWorkbookParser.Outline`
+reads rows with the same rules as `Parse` (whole-number STT = item, subtotal
+prefix = subtotal, other text = group, total label ends the sheet; repeated
+column headings are skipped); sheets outside the profile are listed without
+rows. `ProjectBoqTemplateCatalog.Outline` caches each outline because templates
+are embedded. Migration `20261113100000_GrantProcurementBoqTemplateLibrary`
+grants `crm.material-rates.view` to existing Procurement and Head of
+Procurement roles where missing. The old BOQ catalog UI (`MaterialRates` with
+`catalogType="Boq"`, configured entry, workbook import) is no longer routed;
+its API and data remain.
+
+### 7.10.6 BOQ upload in the input-price work package
+
+`WorkPackageBoqWorkbooksController` (`/api/work-packages/{id}/boq-workbooks`)
+previews, imports, downloads, submits and decides a BOQ inside a
+`ProcurementInputPricing` work package. Upload and submit need
+`work.packages.progress` and membership of the package's department; download
+needs `work.packages.view` and package visibility; decisions need
+`work.packages.verify` and must come from the package lead or an administrator
+other than the uploader. Imports reuse `ProjectBoqWorkbookService` and store
+`ProjectBoqRevision.SourceWorkPackageId` (migration `AddWorkPackageBoqSource`).
+Submission reuses `WorkPackageApprovalEmailService` with record type
+`ProjectBoqRevision`; approval sets `TenderApproved`. Procurement control submit
+and decision reject such revisions with `boqWorkbook.error.workPackageReview`.
+Deleting a work package clears the link and keeps the BOQ. The package detail
+response lists them in `boqWorkbooks`.
+
 ### 7.11 BOQ Quotation Integrity
 
 Material-rate catalogs are discriminated as `InvestmentRate` or `Boq`; existing
@@ -2623,6 +2850,22 @@ decimal places respectively so persisted amounts remain reproducible. The
 rows to those scales and reconciles persisted BOQ quote and snapshot totals.
 Back up the database before deployment: its `Down` operation restores source
 labels but cannot restore discarded extra decimal precision or former totals.
+
+**Project BOQ source (08/11/2026).** A BOQ quote now copies its lines from the
+project's latest approved `ProjectBoqRevision` (`Approved` or `TenderApproved`,
+highest revision number). Create/update take `projectBoqRevisionId`; the server
+rejects `materialRateCatalogId` and any `items` for BOQ quotes, copies each
+`ProjectBoqLine` (description, unit, quantity, unit price, amount rounded to
+2 decimals) and stores `Quote.ProjectBoqRevisionId`; snapshots keep it too.
+Applying a different revision is a material change (new version after
+approval); sending the same id keeps the lines. Submit is refused, before the
+approval email is queued, when a BOQ quote has no project BOQ or a newer
+approved revision exists. `GET /api/quotes/{id}/project-boq` (`crm.quotes.view`
+and quote scope) returns the latest approved revision for Sales, who has no
+`proc.boq` access. Migration `AddQuoteProjectBoqSource` adds the reference and
+widens `quote_items` to the project BOQ sizes (code 80, name 500, unit 50,
+quantity 18,6, price 18,4). The catalog-reference text below describes quotes
+created before this change.
 
 BOQ quotations use the same server calculation on create and update: each line
 amount is `quantity × unit price`, subtotal is the sum of rounded line amounts,
