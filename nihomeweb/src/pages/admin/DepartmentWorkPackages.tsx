@@ -454,37 +454,40 @@ const DepartmentWorkPackages = () => {
             </div>
 
             {detail.purpose === "ProcurementInputPricing" && (
-              <WorkPackageBoqSection
-                packageId={detail.id}
-                open={!["Completed", "Cancelled"].includes(detail.status)}
-                boqs={detail.boqWorkbooks ?? []}
-                canProgress={canProgress}
-                // Only the package lead or an administrator decides, never the uploader.
-                canVerify={canVerifyBusiness && detail.canAssignTasks}
-                currentUserId={currentUserId}
-                onChanged={() => void load()}
-                onSubmit={(boq) => void submitBoq(boq.id, boq.rowVersion)}
-                onDecide={(boq, approved) => void decideBoq(boq.id, approved, boq.rowVersion)}
-              />
-            )}
-
-            {detail.purpose === "ProcurementInputPricing" && (
-              <section className="rounded-xl border bg-card">
-                <div className="flex flex-wrap items-center justify-between gap-3 border-b p-4">
-                  <div>
-                    <h2 className="font-semibold">{t("workPackages.inputPrice.title")}</h2>
-                    <p className="text-sm text-muted-foreground">
-                      {t("workPackages.inputPrice.help")}
-                    </p>
-                  </div>
+              // One panel for both input-price sources: the project BOQ workbook and the
+              // per-supplier offers.
+              <section
+                className="overflow-hidden rounded-xl border bg-card"
+                data-testid="work-package-input-pricing"
+              >
+                <div className="border-b p-4">
+                  <h2 className="font-semibold">{t("workPackages.inputPricing.title")}</h2>
+                  <p className="text-sm text-muted-foreground">
+                    {t("workPackages.inputPrice.help")}
+                  </p>
+                </div>
+                <WorkPackageBoqSection
+                  packageId={detail.id}
+                  open={!["Completed", "Cancelled"].includes(detail.status)}
+                  boqs={detail.boqWorkbooks ?? []}
+                  canProgress={canProgress}
+                  // Only the package lead or an administrator decides, never the uploader.
+                  canVerify={canVerifyBusiness && detail.canAssignTasks}
+                  currentUserId={currentUserId}
+                  onChanged={() => void load()}
+                  onSubmit={(boq) => void submitBoq(boq.id, boq.rowVersion)}
+                  onDecide={(boq, approved) => void decideBoq(boq.id, approved, boq.rowVersion)}
+                />
+                <div className="flex flex-wrap items-center justify-between gap-3 border-y bg-muted/20 px-4 py-3">
+                  <h3 className="text-sm font-semibold">{t("workPackages.inputPricing.offers")}</h3>
                   {canProgress && !["Completed", "Cancelled"].includes(detail.status) && (
-                    <Button onClick={() => openPriceOffer()}>
+                    <Button size="sm" onClick={() => openPriceOffer()}>
                       <Plus className="mr-2 h-4 w-4" />
                       {t("workPackages.inputPrice.add")}
                     </Button>
                   )}
                 </div>
-                <div className="divide-y">
+                <div className="divide-y" data-testid="work-package-input-offers">
                   {detail.inputPriceOffers.map((offer) => (
                     <article key={offer.id} className="space-y-3 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -577,7 +580,7 @@ const DepartmentWorkPackages = () => {
                     </article>
                   ))}
                   {detail.inputPriceOffers.length === 0 && (
-                    <p className="p-8 text-center text-sm text-muted-foreground">
+                    <p className="p-6 text-center text-sm text-muted-foreground">
                       {t("workPackages.inputPrice.empty")}
                     </p>
                   )}
