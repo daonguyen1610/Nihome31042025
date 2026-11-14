@@ -40,4 +40,10 @@ public interface IDepartmentWorkPackageService
     Task<WorkPackageApprovalPreview> PreviewBoqApprovalEmailAsync(int packageId, int revisionId, int callerUserId, CancellationToken ct = default, WorkPackageApprovalRecipientsRequest? recipients = null);
     Task<WorkPackageBoqWorkbookResponse?> SubmitBoqWorkbookAsync(int packageId, int revisionId, SubmitBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
     Task<WorkPackageBoqWorkbookResponse?> DecideBoqWorkbookAsync(int packageId, int revisionId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<int> RequireInvestmentRateUploadProjectAsync(int packageId, int callerUserId, CancellationToken ct = default);
+    Task<WorkPackageInvestmentRateResponse> RecordInvestmentRateUploadAsync(int packageId, int revisionId, int callerUserId, CancellationToken ct = default);
+    Task<bool> CanViewInvestmentRateAsync(int packageId, int revisionId, int callerUserId, bool canViewAll, CancellationToken ct = default);
+    Task<WorkPackageApprovalPreview> PreviewInvestmentRateApprovalEmailAsync(int packageId, int revisionId, int callerUserId, CancellationToken ct = default, WorkPackageApprovalRecipientsRequest? recipients = null);
+    Task<WorkPackageInvestmentRateResponse?> SubmitInvestmentRateAsync(int packageId, int revisionId, SubmitBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
+    Task<WorkPackageInvestmentRateResponse?> DecideInvestmentRateAsync(int packageId, int revisionId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default);
 }

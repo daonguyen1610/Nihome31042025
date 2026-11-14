@@ -43,6 +43,7 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
             {
                 "InputPriceOffer" => "Báo giá đầu vào",
                 "ProjectBoqRevision" => "BOQ báo giá đầu vào",
+                DepartmentWorkPackageService.InvestmentRateRecordType => "Suất đầu tư báo giá đầu vào",
                 _ => "Hồ sơ rà soát tài chính",
             },
             ["recordReference"] = reference,
@@ -191,6 +192,7 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
                 {
                     "InputPriceOffer" => await db.ProcurementInputPriceOffers.AnyAsync(item => item.Id == message.RecordId && item.WorkPackageId == message.WorkPackageId && item.Status == InputPriceOfferStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct),
                     "ProjectBoqRevision" => await db.ProjectBoqRevisions.AnyAsync(item => item.Id == message.RecordId && item.SourceWorkPackageId == message.WorkPackageId && item.Status == ProjectBoqRevisionStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct),
+                    DepartmentWorkPackageService.InvestmentRateRecordType => await db.ProjectInvestmentRateRevisions.AnyAsync(item => item.Id == message.RecordId && item.SourceWorkPackageId == message.WorkPackageId && item.Status == ProjectInvestmentRateStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct),
                     _ => await db.DepartmentFinanceReviews.AnyAsync(item => item.Id == message.RecordId && item.WorkPackageId == message.WorkPackageId && item.Status == FinanceReviewStatus.Submitted && item.SubmittedAt == message.CreatedAt, ct),
                 };
                 message.Status = validAddresses && submitted && recipient is { IsActive: true } &&

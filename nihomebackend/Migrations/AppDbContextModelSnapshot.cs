@@ -8364,6 +8364,130 @@ namespace nihomebackend.Migrations
                     b.ToTable("project_drive_folders", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ProjectInvestmentRateRevision", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("ApprovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ApprovedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("AreaLinesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<decimal>("ConvertedAreaSqm")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("nvarchar(3)");
+
+                    b.Property<string>("DecisionReason")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<string>("GroupLinesJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("PreparedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RatePerSqm")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("decimal(18,4)");
+
+                    b.Property<DateTime?>("RejectedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("RejectedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("RevisionNumber")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<string>("SourceFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("nvarchar(255)");
+
+                    b.Property<string>("SourceSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("nvarchar(64)");
+
+                    b.Property<int?>("SourceWorkPackageId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceWorkbookPath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<DateTime?>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("SubmittedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TemplateCode")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("nvarchar(50)");
+
+                    b.Property<decimal>("Total")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("PreparedByUserId");
+
+                    b.HasIndex("RejectedByUserId");
+
+                    b.HasIndex("SourceWorkPackageId");
+
+                    b.HasIndex("SubmittedByUserId");
+
+                    b.HasIndex("OperationalProjectId", "RevisionNumber")
+                        .IsUnique();
+
+                    b.HasIndex("OperationalProjectId", "Status", "RevisionNumber");
+
+                    b.ToTable("project_investment_rate_revisions", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleEmail", b =>
                 {
                     b.Property<int>("Id")
@@ -8976,6 +9100,9 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("ProjectBoqRevisionId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ProjectInvestmentRateRevisionId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("RateOverrideAt")
                         .HasColumnType("datetime2");
 
@@ -9057,6 +9184,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("OwnerUserId");
 
                     b.HasIndex("ProjectBoqRevisionId");
+
+                    b.HasIndex("ProjectInvestmentRateRevisionId");
 
                     b.HasIndex("Status");
 
@@ -9326,6 +9455,9 @@ namespace nihomebackend.Migrations
                         .HasColumnType("date");
 
                     b.Property<int?>("ProjectBoqRevisionId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("ProjectInvestmentRateRevisionId")
                         .HasColumnType("int");
 
                     b.Property<int>("QuoteId")
@@ -14790,6 +14922,47 @@ namespace nihomebackend.Migrations
                     b.Navigation("OperationalProject");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.ProjectInvestmentRateRevision", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.OperationalProject", "OperationalProject")
+                        .WithMany()
+                        .HasForeignKey("OperationalProjectId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "PreparedBy")
+                        .WithMany()
+                        .HasForeignKey("PreparedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("RejectedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.DepartmentWorkPackage", "SourceWorkPackage")
+                        .WithMany()
+                        .HasForeignKey("SourceWorkPackageId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("SubmittedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.Navigation("OperationalProject");
+
+                    b.Navigation("PreparedBy");
+
+                    b.Navigation("SourceWorkPackage");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.ProjectScheduleEmail", b =>
                 {
                     b.HasOne("NihomeBackend.Models.CmScheduleBaseline", "CmScheduleBaseline")
@@ -15004,6 +15177,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("ProjectBoqRevisionId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("NihomeBackend.Models.ProjectInvestmentRateRevision", "ProjectInvestmentRateRevision")
+                        .WithMany()
+                        .HasForeignKey("ProjectInvestmentRateRevisionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("ApprovalApprover");
 
                     b.Navigation("InputPriceOffer");
@@ -15017,6 +15195,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("Owner");
 
                     b.Navigation("ProjectBoqRevision");
+
+                    b.Navigation("ProjectInvestmentRateRevision");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.QuoteApprovalEmail", b =>

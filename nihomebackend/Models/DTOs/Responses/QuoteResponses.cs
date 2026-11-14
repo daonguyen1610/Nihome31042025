@@ -106,6 +106,8 @@ public class QuoteResponse
     public int? MaterialRateRevisionVersion { get; set; }
     public int? ProjectBoqRevisionId { get; set; }
     public int? ProjectBoqRevisionNumber { get; set; }
+    public int? ProjectInvestmentRateRevisionId { get; set; }
+    public int? ProjectInvestmentRateRevisionNumber { get; set; }
     public DateOnly? PricingEffectiveDate { get; set; }
     public decimal? CatalogUnitPricePerSqm { get; set; }
     public string RateSource { get; set; } = QuoteRateSource.Override.ToString();
@@ -211,4 +213,23 @@ public class QuoteProjectBoqResponse
 public class QuoteProjectBoqLookupResponse
 {
     public QuoteProjectBoqResponse? Latest { get; set; }
+}
+
+// The latest approved investment-rate form of the quote's project, which a unit-cost quote may apply.
+public class QuoteProjectInvestmentRateResponse
+{
+    public int RevisionId { get; set; }
+    public int RevisionNumber { get; set; }
+    public string TemplateCode { get; set; } = string.Empty;
+    public string SourceFileName { get; set; } = string.Empty;
+    public string Currency { get; set; } = string.Empty;
+    public decimal ConvertedAreaSqm { get; set; }
+    public decimal RatePerSqm { get; set; }
+    public decimal Total { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+}
+
+public class QuoteProjectInvestmentRateLookupResponse
+{
+    public QuoteProjectInvestmentRateResponse? Latest { get; set; }
 }

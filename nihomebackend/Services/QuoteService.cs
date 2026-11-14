@@ -137,6 +137,7 @@ public class QuoteService(
             .Include(q => q.Owner)
             .Include(q => q.MaterialRateRevision).ThenInclude(revision => revision!.Catalog)
             .Include(q => q.ProjectBoqRevision)
+            .Include(q => q.ProjectInvestmentRateRevision)
             .Include(q => q.InputPriceOffer).ThenInclude(offer => offer!.Vendor)
             .Include(q => q.Items)
             .Include(q => q.ApprovalLogs).ThenInclude(l => l.By)
@@ -178,6 +179,40 @@ public class QuoteService(
         return new QuoteProjectBoqLookupResponse { Latest = latest };
     }
 
+    // Sales has no work-package access, so the quote exposes the investment-rate form it may apply.
+    public async Task<QuoteProjectInvestmentRateLookupResponse?> GetProjectInvestmentRateAsync(
+        int id, int callerUserId, bool canSeeAll, CancellationToken ct = default)
+    {
+        var quote = await db.Quotes.AsNoTracking().Where(q => q.Id == id)
+            .Select(q => new { q.OperationalProjectId, q.OwnerUserId, q.ApprovalApproverUserId })
+            .SingleOrDefaultAsync(ct);
+        if (quote is null) return null;
+        if (!canSeeAll && quote.OwnerUserId != callerUserId && quote.ApprovalApproverUserId != callerUserId)
+            return null;
+        if (!quote.OperationalProjectId.HasValue) return new QuoteProjectInvestmentRateLookupResponse();
+        var latest = await ApprovedProjectInvestmentRates(quote.OperationalProjectId.Value)
+            .OrderByDescending(revision => revision.RevisionNumber)
+            .Select(revision => new QuoteProjectInvestmentRateResponse
+            {
+                RevisionId = revision.Id,
+                RevisionNumber = revision.RevisionNumber,
+                TemplateCode = revision.TemplateCode,
+                SourceFileName = revision.SourceFileName,
+                Currency = revision.Currency,
+                ConvertedAreaSqm = revision.ConvertedAreaSqm,
+                RatePerSqm = revision.RatePerSqm,
+                Total = revision.Total,
+                ApprovedAt = revision.ApprovedAt,
+            }).FirstOrDefaultAsync(ct);
+        if (latest is not null)
+        {
+            // The quote stores area and rate in whole currency-cent precision.
+            latest.ConvertedAreaSqm = RoundMoney(latest.ConvertedAreaSqm);
+            latest.RatePerSqm = RoundMoney(latest.RatePerSqm);
+        }
+        return new QuoteProjectInvestmentRateLookupResponse { Latest = latest };
+    }
+
     // ------------------------------ Create / Update ------------------------------
 
     public async Task<QuoteResponse> CreateAsync(
@@ -194,7 +229,7 @@ public class QuoteService(
             throw new QuoteOperationException("Phương thức báo giá không hợp lệ.");
         if (request.DraftOnly && (request.Method.HasValue || request.AreaSqm.HasValue || request.UnitPricePerSqm.HasValue ||
             request.MaterialRateCatalogId.HasValue || request.InputPriceOfferId.HasValue ||
-            request.PricingEffectiveDate.HasValue || !string.IsNullOrWhiteSpace(request.RateOverrideReason) ||
+            request.ProjectInvestmentRateRevisionId.HasValue || request.PricingEffectiveDate.HasValue || !string.IsNullOrWhiteSpace(request.RateOverrideReason) ||
             !string.IsNullOrWhiteSpace(request.PackageDescription) || request.Items.Count > 0 ||
             request.DiscountPercent != 0 || request.VatPercent != 8))
             throw new QuoteOperationException("Báo giá mới chỉ nhận thông tin cơ bản; hãy yêu cầu giá đầu vào trước khi lập giá đầu ra.");
@@ -232,7 +267,11 @@ public class QuoteService(
 
         var now = DateTime.UtcNow;
         var method = request.Method ?? QuoteMethod.UnitCost;
-        var rate = !request.DraftOnly && method == QuoteMethod.UnitCost
+        var projectRate = !request.DraftOnly && method == QuoteMethod.UnitCost
+            ? await ResolveProjectInvestmentRateAsync(opportunity.OperationalProjectId,
+                request.ProjectInvestmentRateRevisionId, null, ct)
+            : null;
+        var rate = !request.DraftOnly && method == QuoteMethod.UnitCost && projectRate is null
             ? await ResolveNewRateAsync(request.MaterialRateCatalogId, request.PricingEffectiveDate,
                 request.UnitPricePerSqm, request.RateOverrideReason, callerUserId, canOverrideRate, ct)
             : null;
@@ -241,7 +280,9 @@ public class QuoteService(
             ? await ResolveProjectBoqAsync(opportunity.OperationalProjectId, request.ProjectBoqRevisionId, null, ct)
             : null;
         var inputPriceOffer = await ResolveInputPriceOfferAsync(request.InputPriceOfferId, opportunity.OperationalProjectId, null, ct);
-        var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
+        var appliedUnitPrice = projectRate is not null
+            ? RoundMoney(projectRate.RatePerSqm)
+            : rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
         if (!request.DraftOnly)
             ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice,
                 request.DiscountPercent, request.VatPercent);
@@ -273,19 +314,20 @@ public class QuoteService(
             OwnerUserId = ownerId,
             Method = method,
             Version = 1,
-            Currency = rate?.Currency ?? projectBoq?.Currency ?? await SystemCurrency.ResolveAsync(db, ct),
+            Currency = rate?.Currency ?? projectRate?.Currency ?? projectBoq?.Currency ?? await SystemCurrency.ResolveAsync(db, ct),
             AreaSqm = method == QuoteMethod.UnitCost ? request.AreaSqm : null,
             UnitPricePerSqm = method == QuoteMethod.UnitCost ? appliedUnitPrice : null,
             PackageDescription = method == QuoteMethod.UnitCost
                 ? request.PackageDescription?.Trim()
                 : null,
             MaterialRateRevisionId = rate?.Revision.Id,
+            ProjectInvestmentRateRevisionId = projectRate?.Id,
             InputPriceOfferId = inputPriceOffer?.Id,
             InputPriceSnapshotJson = inputPriceOffer is null ? null : SerializeInputPriceOffer(inputPriceOffer),
             PricingEffectiveDate = rate?.EffectiveDate,
             CatalogUnitPricePerSqm = rate?.CatalogUnitPrice,
-            RateSource = rate?.Source ?? QuoteRateSource.Override,
-            RateOverrideReason = !request.DraftOnly && method == QuoteMethod.UnitCost && rate is null
+            RateSource = rate?.Source ?? (projectRate is not null ? QuoteRateSource.ProjectRate : QuoteRateSource.Override),
+            RateOverrideReason = !request.DraftOnly && method == QuoteMethod.UnitCost && rate is null && projectRate is null
                 ? "Giá nhập trực tiếp theo quy trình hiện hành."
                 : rate?.OverrideReason,
             RateOverrideByUserId = rate?.OverrideByUserId,
@@ -369,8 +411,10 @@ public class QuoteService(
         var isBasicDraft = quote.Status == QuoteStatus.Draft && quote.GrandTotal == 0;
         // An approved project BOQ (uploaded and approved in the input-price work package) is itself
         // approved input pricing; ResolveProjectBoqAsync below accepts only the latest approved revision.
+        // So is the project's approved investment-rate form for a unit-cost quote.
         var hasApprovedInput = inputPriceOffer is not null ||
-            request.Method == QuoteMethod.Boq && request.ProjectBoqRevisionId.HasValue;
+            request.Method == QuoteMethod.Boq && request.ProjectBoqRevisionId.HasValue ||
+            request.Method == QuoteMethod.UnitCost && request.ProjectInvestmentRateRevisionId.HasValue;
         if (request.Method.HasValue && !Enum.IsDefined(request.Method.Value))
             throw new QuoteOperationException("Phương thức báo giá không hợp lệ.");
         if (!isBasicDraft && request.Method.HasValue && request.Method.Value != quote.Method)
@@ -380,6 +424,7 @@ public class QuoteService(
         if (isBasicDraft && inputPriceOffer is not null && !request.Method.HasValue)
             throw new QuoteOperationException("Hãy chọn phương thức báo giá đầu ra.");
         var method = request.Method ?? quote.Method;
+        if (method == QuoteMethod.Boq) request.ProjectInvestmentRateRevisionId = null;
         if (isBasicDraft && !hasApprovedInput &&
             (request.AreaSqm.HasValue || request.UnitPricePerSqm.HasValue ||
              request.MaterialRateCatalogId.HasValue || request.PricingEffectiveDate.HasValue ||
@@ -387,15 +432,24 @@ public class QuoteService(
              !string.IsNullOrWhiteSpace(request.RateOverrideReason) ||
              request.Items.Count > 0 || request.DiscountPercent != 0 || request.VatPercent != 8))
             throw new QuoteOperationException("Cần chọn báo giá đầu vào đã duyệt trước khi nhập giá đầu ra.");
-        var rate = method == QuoteMethod.UnitCost && (!isBasicDraft || hasApprovedInput)
+        var projectRate = method == QuoteMethod.UnitCost && (!isBasicDraft || hasApprovedInput)
+            ? await ResolveProjectInvestmentRateAsync(quote.OperationalProjectId,
+                request.ProjectInvestmentRateRevisionId, quote.ProjectInvestmentRateRevisionId, ct)
+            : null;
+        if (method == QuoteMethod.UnitCost && projectRate is null && quote.ProjectInvestmentRateRevisionId.HasValue &&
+            !request.MaterialRateCatalogId.HasValue)
+            throw new QuoteOperationException("Báo giá Suất đầu tư phải lấy đơn giá từ suất đầu tư dự án hoặc danh mục đơn giá.");
+        var rate = method == QuoteMethod.UnitCost && (!isBasicDraft || hasApprovedInput) && projectRate is null
             ? await ResolveUpdatedRateAsync(quote, request, callerUserId, canOverrideRate, ct)
             : null;
         if (method == QuoteMethod.Boq) RejectBoqLineSources(request.MaterialRateCatalogId, request.Items);
         var projectBoq = method == QuoteMethod.Boq && (!isBasicDraft || hasApprovedInput)
             ? await ResolveProjectBoqAsync(quote.OperationalProjectId, request.ProjectBoqRevisionId, quote.ProjectBoqRevisionId, ct)
             : null;
-        var appliedUnitPrice = rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
-        var pricingCurrency = rate?.Currency ?? projectBoq?.Currency;
+        var appliedUnitPrice = projectRate is not null
+            ? RoundMoney(projectRate.RatePerSqm)
+            : rate?.AppliedUnitPrice ?? request.UnitPricePerSqm;
+        var pricingCurrency = rate?.Currency ?? projectRate?.Currency ?? projectBoq?.Currency;
         if (!isBasicDraft || hasApprovedInput)
             ValidateMethodPayload(method, request.AreaSqm, appliedUnitPrice,
                 request.DiscountPercent, request.VatPercent);
@@ -468,7 +522,19 @@ public class QuoteService(
             : null;
         quote.InputPriceOfferId = inputPriceOffer?.Id;
         quote.InputPriceSnapshotJson = inputPriceOffer is null ? null : SerializeInputPriceOffer(inputPriceOffer);
-        if (rate is not null)
+        quote.ProjectInvestmentRateRevisionId = projectRate?.Id;
+        if (projectRate is not null)
+        {
+            // Area and rate come from the project's form, so a catalog reference no longer applies.
+            quote.MaterialRateRevisionId = null;
+            quote.PricingEffectiveDate = null;
+            quote.CatalogUnitPricePerSqm = null;
+            quote.RateSource = QuoteRateSource.ProjectRate;
+            quote.RateOverrideReason = null;
+            quote.RateOverrideByUserId = null;
+            quote.RateOverrideAt = null;
+        }
+        else if (rate is not null)
         {
             quote.MaterialRateRevisionId = rate.Revision.Id;
             quote.PricingEffectiveDate = rate.EffectiveDate;
@@ -521,6 +587,7 @@ public class QuoteService(
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền gửi duyệt báo giá.");
         await EnsureProjectBoqCurrentAsync(id, ct);
+        await EnsureProjectInvestmentRateCurrentAsync(id, ct);
         await approvalEmails.QueueAsync(id, req.ApproverUserId ?? 0, req.RowVersion,
             req.PreviewToken, caller, canSeeAll, ct);
         return await TransitionAsync(id, caller, canSeeAll,
@@ -1349,6 +1416,7 @@ public class QuoteService(
             material |= N(quote.AreaSqm) != N(request.AreaSqm);
             material |= N(quote.UnitPricePerSqm) != N(request.UnitPricePerSqm);
             material |= S(quote.PackageDescription) != S(request.PackageDescription);
+            material |= quote.ProjectInvestmentRateRevisionId != request.ProjectInvestmentRateRevisionId;
         }
         else
         {
@@ -1402,6 +1470,46 @@ public class QuoteService(
         if (latest.Lines.Count == 0)
             throw new QuoteOperationException("BOQ dự án đã duyệt không có dòng nào.");
         return latest;
+    }
+
+    private IQueryable<ProjectInvestmentRateRevision> ApprovedProjectInvestmentRates(int projectId) =>
+        db.ProjectInvestmentRateRevisions.AsNoTracking().Where(revision => revision.OperationalProjectId == projectId &&
+            revision.Status == ProjectInvestmentRateStatus.Approved);
+
+    // The project's form a unit-cost quote prices from: the one it already uses, or else the latest approved one.
+    private async Task<ProjectInvestmentRateRevision?> ResolveProjectInvestmentRateAsync(
+        int? projectId, int? requestedId, int? currentId, CancellationToken ct)
+    {
+        if (!requestedId.HasValue) return null;
+        if (requestedId == currentId)
+            return await db.ProjectInvestmentRateRevisions.AsNoTracking().SingleAsync(revision => revision.Id == currentId, ct);
+        if (!projectId.HasValue)
+            throw new QuoteOperationException("Báo giá phải gắn Dự án trước khi lấy suất đầu tư dự án.");
+        var latest = await ApprovedProjectInvestmentRates(projectId.Value)
+            .OrderByDescending(revision => revision.RevisionNumber).FirstOrDefaultAsync(ct)
+            ?? throw new QuoteOperationException("Dự án chưa có suất đầu tư đã duyệt. Cung ứng upload file suất đầu tư trong nhóm công việc yêu cầu giá đầu vào để người phụ trách nhóm duyệt.");
+        if (latest.Id != requestedId)
+            throw new QuoteOperationException($"Chỉ áp dụng được suất đầu tư dự án đã duyệt mới nhất (R{latest.RevisionNumber}).");
+        if (!string.Equals(latest.Currency, "VND", StringComparison.OrdinalIgnoreCase))
+            throw new QuoteOperationException("Báo giá chỉ lập bằng VND; suất đầu tư dự án dùng tiền tệ khác.");
+        if (RoundMoney(latest.RatePerSqm) <= 0)
+            throw new QuoteOperationException("Suất đầu tư dự án đã duyệt phải có đơn giá/m² lớn hơn 0.");
+        return latest;
+    }
+
+    // A quote sent for approval must carry the rate of the latest approved investment-rate form.
+    private async Task EnsureProjectInvestmentRateCurrentAsync(int quoteId, CancellationToken ct)
+    {
+        var quote = await db.Quotes.AsNoTracking().Where(item => item.Id == quoteId)
+            .Select(item => new { item.Method, item.ProjectInvestmentRateRevisionId, item.OperationalProjectId })
+            .SingleOrDefaultAsync(ct);
+        if (quote is not { Method: QuoteMethod.UnitCost, ProjectInvestmentRateRevisionId: not null, OperationalProjectId: not null })
+            return;
+        var latest = await ApprovedProjectInvestmentRates(quote.OperationalProjectId.Value)
+            .OrderByDescending(revision => revision.RevisionNumber)
+            .Select(revision => new { revision.Id, revision.RevisionNumber }).FirstAsync(ct);
+        if (latest.Id != quote.ProjectInvestmentRateRevisionId)
+            throw new QuoteOperationException($"Suất đầu tư dự án đã có bản duyệt mới hơn (R{latest.RevisionNumber}). Hãy áp dụng lại trước khi gửi duyệt.");
     }
 
     private static void ApplyProjectBoq(Quote quote, ProjectBoqRevision revision)
@@ -1498,6 +1606,7 @@ public class QuoteService(
         PackageDescription = q.PackageDescription,
         MaterialRateRevisionId = q.MaterialRateRevisionId,
         ProjectBoqRevisionId = q.ProjectBoqRevisionId,
+        ProjectInvestmentRateRevisionId = q.ProjectInvestmentRateRevisionId,
         InputPriceOfferId = q.InputPriceOfferId,
         InputPriceSnapshotJson = q.InputPriceSnapshotJson,
         PricingEffectiveDate = q.PricingEffectiveDate,
@@ -1567,6 +1676,8 @@ public class QuoteService(
         MaterialRateRevisionVersion = q.MaterialRateRevision?.Version,
         ProjectBoqRevisionId = q.ProjectBoqRevisionId,
         ProjectBoqRevisionNumber = q.ProjectBoqRevision?.RevisionNumber,
+        ProjectInvestmentRateRevisionId = q.ProjectInvestmentRateRevisionId,
+        ProjectInvestmentRateRevisionNumber = q.ProjectInvestmentRateRevision?.RevisionNumber,
         PricingEffectiveDate = q.PricingEffectiveDate,
         CatalogUnitPricePerSqm = q.CatalogUnitPricePerSqm,
         RateSource = q.RateSource.ToString(),

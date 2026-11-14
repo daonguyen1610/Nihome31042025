@@ -43,6 +43,8 @@ public sealed partial class DepartmentWorkPackageService
         // An uploaded BOQ belongs to the project and outlives the package it came from.
         foreach (var revision in await db.ProjectBoqRevisions.Where(item => item.SourceWorkPackageId == id).ToListAsync(ct))
             revision.SourceWorkPackageId = null;
+        foreach (var revision in await db.ProjectInvestmentRateRevisions.Where(item => item.SourceWorkPackageId == id).ToListAsync(ct))
+            revision.SourceWorkPackageId = null;
         foreach (var document in await DeletionImpactPlanner.WorkPackageDocuments(db, id).ToListAsync(ct))
         {
             document.SourceEntityType = null;

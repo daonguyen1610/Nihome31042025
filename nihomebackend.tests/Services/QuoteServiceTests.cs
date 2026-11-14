@@ -156,6 +156,99 @@ public class QuoteServiceTests : IDisposable
         Assert.Equal(("Boq", boq.Id, 21_000_000m), (priced.Method, priced.ProjectBoqRevisionId, priced.Subtotal));
     }
 
+    // 15/11/2026: the investment-rate form approved in the input-price work package prices unit-cost quotes.
+    [Fact]
+    public async Task BasicDraft_PricesFromTheApprovedProjectInvestmentRate()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var draft = await _sut.CreateAsync(new CreateQuoteRequest { OpportunityId = opportunity.Id, DraftOnly = true },
+            user.Id, canManage: true);
+        var rate = await SeedApprovedProjectRateAsync(opportunity.OperationalProjectId!.Value, user.Id, 1250.5m, 8_460_000.4m);
+
+        var priced = await _sut.UpdateAsync(draft.Id, new UpdateQuoteRequest
+        {
+            RowVersion = draft.RowVersion,
+            Method = QuoteMethod.UnitCost,
+            ProjectInvestmentRateRevisionId = rate.Id,
+            AreaSqm = 1250.5m,
+            UnitPricePerSqm = 1m, // The form's rate wins over a typed price.
+            VatPercent = 8m,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.Null(priced!.InputPriceOfferId);
+        Assert.Equal((rate.Id, 1, "ProjectRate"), (priced.ProjectInvestmentRateRevisionId, priced.ProjectInvestmentRateRevisionNumber, priced.RateSource));
+        Assert.Equal(8_460_000.4m, priced.UnitPricePerSqm);
+        Assert.Null(priced.MaterialRateRevisionId);
+        Assert.Equal(10_579_230_500.20m, priced.Subtotal);
+
+        // Switching back to a company catalog drops the project form.
+        var catalog = await _sut.UpdateAsync(draft.Id, new UpdateQuoteRequest
+        {
+            RowVersion = priced.RowVersion,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            MaterialRateCatalogId = _rateCatalogId,
+            PricingEffectiveDate = _pricingDate,
+            VatPercent = 8m,
+        }, user.Id, canManage: true, canSeeAll: true, canOverrideRate: false);
+        Assert.Equal((null, "Catalog", 10_000_000m), (catalog!.ProjectInvestmentRateRevisionId, catalog.RateSource, catalog.UnitPricePerSqm));
+    }
+
+    [Fact]
+    public async Task UnitCost_AcceptsOnlyTheLatestApprovedProjectInvestmentRate()
+    {
+        var (user, opportunity) = await SeedOpportunityAsync();
+        var projectId = opportunity.OperationalProjectId!.Value;
+        var first = await SeedApprovedProjectRateAsync(projectId, user.Id, 100m, 5_000_000m);
+        await SeedApprovedProjectRateAsync(projectId, user.Id, 100m, 5_500_000m);
+        var draft = await SeedApprovedProjectRateAsync(projectId, user.Id, 100m, 6_000_000m);
+        draft.Status = ProjectInvestmentRateStatus.Draft;
+        await _db.SaveChangesAsync();
+
+        var older = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            ProjectInvestmentRateRevisionId = first.Id,
+        }, user.Id, canManage: true));
+        var unapproved = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opportunity.Id,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            ProjectInvestmentRateRevisionId = draft.Id,
+        }, user.Id, canManage: true));
+
+        Assert.Contains("mới nhất (R2)", older.Message);
+        Assert.Contains("mới nhất (R2)", unapproved.Message);
+    }
+
+    [Fact]
+    public async Task Submit_UnitCostAfterANewerProjectInvestmentRateIsApproved_IsRejectedBeforeAnyEmail()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var projectId = opp.OperationalProjectId!.Value;
+        var rate = await SeedApprovedProjectRateAsync(projectId, user.Id, 100m, 5_000_000m);
+        var created = await _sut.CreateAsync(new CreateQuoteRequest
+        {
+            OpportunityId = opp.Id,
+            Method = QuoteMethod.UnitCost,
+            AreaSqm = 100m,
+            ProjectInvestmentRateRevisionId = rate.Id,
+        }, user.Id, canManage: true);
+        Assert.Equal(500_000_000m, created.Subtotal);
+        await SeedApprovedProjectRateAsync(projectId, user.Id, 100m, 5_200_000m);
+
+        var exception = await Assert.ThrowsAsync<QuoteOperationException>(() =>
+            _sut.SubmitAsync(created.Id, new(), user.Id, true, true));
+
+        Assert.Contains("bản duyệt mới hơn (R2)", exception.Message);
+        _approvalEmails.Verify(service => service.QueueAsync(
+            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     [Fact]
     public async Task BasicDraft_RejectsPricingInCreatePayload()
     {
@@ -1905,6 +1998,32 @@ public class QuoteServiceTests : IDisposable
         };
         revision.CostTotal = revision.Lines.Sum(line => line.Amount);
         _db.ProjectBoqRevisions.Add(revision);
+        await _db.SaveChangesAsync();
+        return revision;
+    }
+
+    // An approved investment-rate form of the project; each call adds the next revision number.
+    private async Task<ProjectInvestmentRateRevision> SeedApprovedProjectRateAsync(
+        int projectId, int userId, decimal convertedArea, decimal ratePerSqm)
+    {
+        var number = await _db.ProjectInvestmentRateRevisions.CountAsync(item => item.OperationalProjectId == projectId) + 1;
+        var revision = new ProjectInvestmentRateRevision
+        {
+            OperationalProjectId = projectId,
+            RevisionNumber = number,
+            Status = ProjectInvestmentRateStatus.Approved,
+            TemplateCode = "SDT-NHA-XUONG",
+            SourceFileName = $"SDT-Nha-xuong-R{number}.xlsx",
+            SourceSha256 = new string('a', 64),
+            SourceWorkbookPath = $"/uploads/boq/sdt-r{number}.xlsx",
+            ConvertedAreaSqm = convertedArea,
+            RatePerSqm = ratePerSqm,
+            Total = decimal.Round(convertedArea * ratePerSqm, 2),
+            PreparedByUserId = userId,
+            ApprovedByUserId = userId,
+            ApprovedAt = DateTime.UtcNow,
+        };
+        _db.ProjectInvestmentRateRevisions.Add(revision);
         await _db.SaveChangesAsync();
         return revision;
     }

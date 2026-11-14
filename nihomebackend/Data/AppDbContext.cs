@@ -150,6 +150,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<RfqAwardMaterialRequestAllocation> RfqAwardMaterialRequestAllocations => Set<RfqAwardMaterialRequestAllocation>();
     public DbSet<Vendor> Vendors => Set<Vendor>();
     public DbSet<ProjectBoqRevision> ProjectBoqRevisions => Set<ProjectBoqRevision>();
+    public DbSet<ProjectInvestmentRateRevision> ProjectInvestmentRateRevisions => Set<ProjectInvestmentRateRevision>();
     public DbSet<ProjectBoqLine> ProjectBoqLines => Set<ProjectBoqLine>();
     public DbSet<ProjectBoqSheet> ProjectBoqSheets => Set<ProjectBoqSheet>();
     public DbSet<MaterialRequest> MaterialRequests => Set<MaterialRequest>();
@@ -897,6 +898,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasOne(q => q.ProjectBoqRevision)
                 .WithMany()
                 .HasForeignKey(q => q.ProjectBoqRevisionId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(q => q.ProjectInvestmentRateRevision)
+                .WithMany()
+                .HasForeignKey(q => q.ProjectInvestmentRateRevisionId)
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasOne(q => q.Owner)
                 .WithMany()
@@ -1673,6 +1678,38 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(item => new { item.OperationalProjectId, item.RevisionNumber }).IsUnique();
             b.HasIndex(item => item.UpstreamContractId);
             b.HasIndex(item => new { item.OperationalProjectId, item.Status, item.ApprovedAt });
+        });
+
+        modelBuilder.Entity<ProjectInvestmentRateRevision>(b =>
+        {
+            b.ToTable("project_investment_rate_revisions");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(item => item.TemplateCode).HasMaxLength(50).IsRequired();
+            b.Property(item => item.SourceFileName).HasMaxLength(255).IsRequired();
+            b.Property(item => item.SourceSha256).HasMaxLength(64).IsRequired();
+            b.Property(item => item.SourceWorkbookPath).HasMaxLength(500).IsRequired();
+            b.Property(item => item.Currency).HasMaxLength(3).IsRequired();
+            b.Property(item => item.ConvertedAreaSqm).HasPrecision(18, 4);
+            b.Property(item => item.RatePerSqm).HasPrecision(18, 4);
+            b.Property(item => item.Total).HasPrecision(18, 2);
+            b.Property(item => item.DecisionReason).HasMaxLength(2000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.OperationalProject).WithMany()
+                .HasForeignKey(item => item.OperationalProjectId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.SourceWorkPackage).WithMany()
+                .HasForeignKey(item => item.SourceWorkPackageId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.PreparedBy).WithMany()
+                .HasForeignKey(item => item.PreparedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<ApplicationUser>().WithMany()
+                .HasForeignKey(item => item.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<ApplicationUser>().WithMany()
+                .HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<ApplicationUser>().WithMany()
+                .HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.OperationalProjectId, item.RevisionNumber }).IsUnique();
+            b.HasIndex(item => new { item.OperationalProjectId, item.Status, item.RevisionNumber });
+            b.HasIndex(item => item.SourceWorkPackageId);
         });
 
         modelBuilder.Entity<ProjectBoqLine>(b =>

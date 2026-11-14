@@ -25,6 +25,7 @@ public interface IQuoteService
 
     Task<QuoteResponse?> GetAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
     Task<QuoteProjectBoqLookupResponse?> GetProjectBoqAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
+    Task<QuoteProjectInvestmentRateLookupResponse?> GetProjectInvestmentRateAsync(int id, int callerUserId, bool canSeeAll, CancellationToken ct = default);
 
     Task<QuoteResponse> CreateAsync(
         CreateQuoteRequest request,

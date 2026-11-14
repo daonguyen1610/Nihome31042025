@@ -304,7 +304,7 @@ public static partial class ProjectBoqWorkbookParser
     [GeneratedRegex(@"\s+")]
     private static partial Regex Spaces();
 
-    private static void EnsureSafe(byte[] content)
+    internal static void EnsureSafe(byte[] content)
     {
         try
         {
