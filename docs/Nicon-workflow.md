@@ -601,6 +601,15 @@ Cung ứng tải mẫu ở thư viện, điền Excel và upload trong nhóm cô
 giá đầu vào; người phụ trách nhóm (khác người upload) duyệt qua luồng email duyệt
 của nhóm. BOQ được duyệt thành BOQ dự thầu của dự án và là nguồn dòng cho báo giá.
 
+**Implemented — suất đầu tư theo file Excel (15/11/2026):**
+- Có 3 mẫu chung: nhà xưởng, văn phòng, hoàn thiện nội thất.
+- Cung ứng tải mẫu ở Mẫu báo giá → Suất đầu tư, điền diện tích quy đổi và đơn
+  giá/m² theo nhóm công việc, rồi upload trong nhóm công việc yêu cầu giá đầu vào
+  (phần Suất đầu tư của khung Báo giá đầu vào).
+- Người phụ trách nhóm duyệt.
+- Bản duyệt mới nhất là giá đầu vào cho báo giá Suất đầu tư của dự án: Kinh doanh
+  áp dụng để lấy diện tích và đơn giá/m², không cần chọn danh mục công ty.
+
 **Implemented — thư viện mẫu BOQ (13/11/2026):** trang Mẫu báo giá → BOQ
 chỉ còn là thư viện mẫu theo định dạng file khách, dạng cây Mẫu → Sheet, xem cấu
 trúc sheet và tải mẫu; không còn phiên bản, không nhập liệu. Cung ứng (và Trưởng
