@@ -14,6 +14,7 @@ import type {
   ExtendQuoteValidityRequest,
   QuoteDocumentResponse,
   QuoteProjectBoq,
+  QuoteProjectInvestmentRate,
   MaterialRateCatalogType,
   MaterialRateCatalogResponse,
   UpsertMaterialRateCatalogRequest,
@@ -49,6 +50,8 @@ export const quotesApi = {
   getQuoteVersions: (id: number) => api.get<QuoteVersionsResponse>(`/quotes/${id}/versions`),
   getQuoteProjectBoq: (id: number) =>
     api.get<{ latest: QuoteProjectBoq | null }>(`/quotes/${id}/project-boq`),
+  getQuoteProjectInvestmentRate: (id: number) =>
+    api.get<{ latest: QuoteProjectInvestmentRate | null }>(`/quotes/${id}/project-investment-rate`),
   exportQuoteSpreadsheet: (id: number, lang: string) =>
     api.get<Blob>(`/quotes/${id}/export.xlsx`, { params: { lang }, responseType: "blob" }),
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),

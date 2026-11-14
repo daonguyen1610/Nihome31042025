@@ -30,7 +30,7 @@ interface QuoteRateFieldsProps {
   pricingDate?: string | null;
   unitPrice?: number | null;
   overrideReason?: string | null;
-  rateSource?: "Catalog" | "Override" | "CatalogReference";
+  rateSource?: "Catalog" | "Override" | "CatalogReference" | "ProjectRate";
   /** Currency the applied rate is stored in when no catalog revision is resolved yet. */
   currency?: string | null;
   canOverride: boolean;

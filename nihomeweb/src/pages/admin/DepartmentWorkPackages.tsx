@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { WorkPackageBoqSection } from "@/components/admin/WorkPackageBoqSection";
+import { WorkPackageInvestmentRateSection } from "@/components/admin/WorkPackageInvestmentRateSection";
 import type { WorkPackageApprovalPreview, DeletionImpactResponse } from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -233,6 +234,8 @@ const DepartmentWorkPackages = () => {
     decidePriceOffer,
     submitBoq,
     decideBoq,
+    submitInvestmentRate,
+    decideInvestmentRate,
     saveFinanceReview,
     submitFinanceReview,
     decideFinanceReview,
@@ -477,6 +480,20 @@ const DepartmentWorkPackages = () => {
                   onChanged={() => void load()}
                   onSubmit={(boq) => void submitBoq(boq.id, boq.rowVersion)}
                   onDecide={(boq, approved) => void decideBoq(boq.id, approved, boq.rowVersion)}
+                />
+                <WorkPackageInvestmentRateSection
+                  packageId={detail.id}
+                  open={!["Completed", "Cancelled"].includes(detail.status)}
+                  rates={detail.investmentRates ?? []}
+                  canProgress={canProgress}
+                  // Only the package lead or an administrator decides, never the uploader.
+                  canVerify={canVerifyBusiness && detail.canAssignTasks}
+                  currentUserId={currentUserId}
+                  onChanged={() => void load()}
+                  onSubmit={(rate) => void submitInvestmentRate(rate.id, rate.rowVersion)}
+                  onDecide={(rate, approved) =>
+                    void decideInvestmentRate(rate.id, approved, rate.rowVersion)
+                  }
                 />
                 <div className="flex flex-wrap items-center justify-between gap-3 border-y bg-muted/20 px-4 py-3">
                   <h3 className="text-sm font-semibold">{t("workPackages.inputPricing.offers")}</h3>
@@ -873,7 +890,14 @@ const DepartmentWorkPackages = () => {
                                   detail.boqWorkbooks?.find((boq) => boq.id === email.recordId)
                                     ?.revisionNumber ?? ""
                                 }`
-                              : t(`workPackages.purpose.${detail.purpose}`)}
+                              : email.recordType === "ProjectInvestmentRateRevision"
+                                ? t("investmentRate.reference", {
+                                    revision:
+                                      detail.investmentRates?.find(
+                                        (rate) => rate.id === email.recordId,
+                                      )?.revisionNumber ?? "",
+                                  })
+                                : t(`workPackages.purpose.${detail.purpose}`)}
                         </p>
                         <p className="break-all text-muted-foreground">{email.toEmail}</p>
                         {(email.ccEmails?.length ?? 0) > 0 && (

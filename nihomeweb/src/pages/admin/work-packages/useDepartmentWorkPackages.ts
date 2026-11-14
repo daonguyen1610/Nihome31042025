@@ -255,6 +255,7 @@ export function useDepartmentWorkPackages() {
         packageId: number;
         offerId?: number;
         boqId?: number;
+        rateId?: number;
         rowVersion: string;
         idempotencyKey: string;
       })
@@ -1216,20 +1217,29 @@ export function useDepartmentWorkPackages() {
     offerId?: number,
     boqId?: number,
     recipients?: { toEmail: string; ccEmails: string[] },
+    rateId?: number,
   ) =>
-    boqId
-      ? adminApi.previewWorkPackageBoqApproval(packageId, boqId, recipients)
-      : adminApi.previewWorkPackageApprovalEmail(packageId, offerId, recipients);
-  const previewApproval = async (rowVersion: string, offerId?: number, boqId?: number) => {
+    rateId
+      ? adminApi.previewWorkPackageInvestmentRateApproval(packageId, rateId, recipients)
+      : boqId
+        ? adminApi.previewWorkPackageBoqApproval(packageId, boqId, recipients)
+        : adminApi.previewWorkPackageApprovalEmail(packageId, offerId, recipients);
+  const previewApproval = async (
+    rowVersion: string,
+    offerId?: number,
+    boqId?: number,
+    rateId?: number,
+  ) => {
     if (!detail || approvalBusy) return;
     setApprovalBusy(true);
     try {
-      const { data } = await fetchApprovalPreview(detail.id, offerId, boqId);
+      const { data } = await fetchApprovalPreview(detail.id, offerId, boqId, undefined, rateId);
       setApprovalPreview({
         ...data,
         packageId: detail.id,
         offerId,
         boqId,
+        rateId,
         rowVersion,
         idempotencyKey: newIdempotencyKey(),
       });
@@ -1267,6 +1277,7 @@ export function useDepartmentWorkPackages() {
         approvalPreview.offerId,
         approvalPreview.boqId,
         { toEmail: approvalTo.trim(), ccEmails: ccAddresses },
+        approvalPreview.rateId,
       );
       setApprovalPreview({ ...approvalPreview, ...data, idempotencyKey: newIdempotencyKey() });
       setApprovalTo(data.toEmail);
@@ -1286,11 +1297,20 @@ export function useDepartmentWorkPackages() {
         packageId: id,
         offerId,
         boqId,
+        rateId,
         rowVersion,
         previewToken,
         idempotencyKey,
       } = approvalPreview;
-      if (boqId)
+      if (rateId)
+        await adminApi.submitWorkPackageInvestmentRate(
+          id,
+          rateId,
+          rowVersion,
+          idempotencyKey,
+          previewToken,
+        );
+      else if (boqId)
         await adminApi.submitWorkPackageBoq(id, boqId, rowVersion, idempotencyKey, previewToken);
       else if (offerId)
         await adminApi.submitInputPriceOffer(id, offerId, rowVersion, idempotencyKey, previewToken);
@@ -1299,8 +1319,14 @@ export function useDepartmentWorkPackages() {
       setApprovalFeedback({ message: t("approvalEmail.queued"), failed: false });
       setApprovalTracking({
         packageId: id,
-        recordId: boqId ?? offerId ?? detail!.financeReview!.id,
-        type: boqId ? "ProjectBoqRevision" : offerId ? "InputPriceOffer" : "FinanceReview",
+        recordId: rateId ?? boqId ?? offerId ?? detail!.financeReview!.id,
+        type: rateId
+          ? "ProjectInvestmentRateRevision"
+          : boqId
+            ? "ProjectBoqRevision"
+            : offerId
+              ? "InputPriceOffer"
+              : "FinanceReview",
       });
       toast({ title: t("approvalEmail.queued") });
       await load();
@@ -1348,6 +1374,29 @@ export function useDepartmentWorkPackages() {
       await adminApi.decideWorkPackageBoq(
         detail.id,
         boqId,
+        approved,
+        reason,
+        rowVersion,
+        newIdempotencyKey(),
+      );
+      await load();
+    } catch (cause) {
+      toast({
+        variant: "destructive",
+        title: uiError(cause, t("workPackages.error.save")),
+      });
+    }
+  };
+  const submitInvestmentRate = (rateId: number, rowVersion: string) =>
+    previewApproval(rowVersion, undefined, undefined, rateId);
+  const decideInvestmentRate = async (rateId: number, approved: boolean, rowVersion: string) => {
+    if (!detail) return;
+    const reason = approved ? null : window.prompt(t("workPackages.decision.reason"));
+    if (!approved && !reason?.trim()) return;
+    try {
+      await adminApi.decideWorkPackageInvestmentRate(
+        detail.id,
+        rateId,
         approved,
         reason,
         rowVersion,
@@ -1533,6 +1582,8 @@ export function useDepartmentWorkPackages() {
     decidePriceOffer,
     submitBoq,
     decideBoq,
+    submitInvestmentRate,
+    decideInvestmentRate,
     saveFinanceReview,
     submitFinanceReview,
     decideFinanceReview,

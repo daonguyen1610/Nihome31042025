@@ -68,7 +68,7 @@ export interface QuoteVersionResponse {
   materialRateRevisionVersion?: number | null;
   pricingEffectiveDate?: string | null;
   catalogUnitPricePerSqm?: number | null;
-  rateSource: "Catalog" | "Override" | "CatalogReference";
+  rateSource: "Catalog" | "Override" | "CatalogReference" | "ProjectRate";
   rateOverrideReason?: string | null;
   rateOverrideByUserId?: number | null;
   rateOverrideAt?: string | null;
@@ -108,9 +108,11 @@ export interface QuoteResponse {
   materialRateRevisionVersion?: number | null;
   projectBoqRevisionId?: number | null;
   projectBoqRevisionNumber?: number | null;
+  projectInvestmentRateRevisionId?: number | null;
+  projectInvestmentRateRevisionNumber?: number | null;
   pricingEffectiveDate?: string | null;
   catalogUnitPricePerSqm?: number | null;
-  rateSource: "Catalog" | "Override" | "CatalogReference";
+  rateSource: "Catalog" | "Override" | "CatalogReference" | "ProjectRate";
   rateOverrideReason?: string | null;
   rateOverrideByUserId?: number | null;
   rateOverrideAt?: string | null;
@@ -219,6 +221,8 @@ export interface UpdateQuoteRequest {
   packageDescription?: string;
   // BOQ quotes copy their lines from this approved project BOQ revision.
   projectBoqRevisionId?: number | null;
+  // Unit-cost quotes may take area and rate from this approved project investment-rate form.
+  projectInvestmentRateRevisionId?: number | null;
   items?: QuoteItemInput[];
   discountPercent: number;
   vatPercent: number;
@@ -236,6 +240,19 @@ export interface QuoteProjectBoq {
   approvedAt?: string | null;
   upstreamContractNumber?: string | null;
   sourceFileName?: string | null;
+}
+
+/** The quote project's latest approved investment-rate form, which a unit-cost quote may apply. */
+export interface QuoteProjectInvestmentRate {
+  revisionId: number;
+  revisionNumber: number;
+  templateCode: string;
+  sourceFileName: string;
+  currency: string;
+  convertedAreaSqm: number;
+  ratePerSqm: number;
+  total: number;
+  approvedAt?: string | null;
 }
 
 export interface QuoteWorkflowRequest {

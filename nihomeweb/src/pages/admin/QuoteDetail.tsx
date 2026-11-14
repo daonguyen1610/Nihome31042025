@@ -34,6 +34,7 @@ import { personOption } from "@/lib/people";
 import { selectQuoteFinanceReview } from "@/lib/financeReview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { QuoteProjectBoqSource } from "@/components/admin/QuoteProjectBoqSource";
+import { QuoteProjectRateSource } from "@/components/admin/QuoteProjectRateSource";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
@@ -79,6 +80,7 @@ import {
   type QuoteItemResponse,
   type QuoteMethod,
   type QuoteProjectBoq,
+  type QuoteProjectInvestmentRate,
   type QuoteResponse,
   type QuoteStatus,
   type QuoteVersionResponse,
@@ -149,6 +151,7 @@ function toFormState(q: QuoteResponse): UpdateQuoteRequest {
     rateOverrideReason: q.rateOverrideReason ?? null,
     packageDescription: q.packageDescription ?? "",
     projectBoqRevisionId: q.projectBoqRevisionId ?? null,
+    projectInvestmentRateRevisionId: q.projectInvestmentRateRevisionId ?? null,
     items: [],
     discountPercent: q.discountPercent,
     vatPercent: q.vatPercent,
@@ -211,6 +214,9 @@ const AdminQuoteDetail = () => {
   // The project's latest approved BOQ: undefined while loading, null when there is none.
   const [projectBoq, setProjectBoq] = useState<QuoteProjectBoq | null | undefined>(undefined);
   const [projectBoqError, setProjectBoqError] = useState<string | null>(null);
+  // The project's latest approved investment-rate form, or null when it has none (or it failed to load:
+  // a unit-cost quote can still price from a company catalog).
+  const [projectRate, setProjectRate] = useState<QuoteProjectInvestmentRate | null>(null);
 
   const [versions, setVersions] = useState<QuoteVersionsResponse | null>(null);
   const [versionsLoading, setVersionsLoading] = useState(false);
@@ -257,6 +263,10 @@ const AdminQuoteDetail = () => {
           setProjectBoq(null);
           setProjectBoqError(extractApiError(reason));
         });
+      adminApi
+        .getQuoteProjectInvestmentRate(quoteId)
+        .then((response) => setProjectRate(response.data.latest))
+        .catch(() => setProjectRate(null));
       setInputOffersUnavailable(false);
       // Show requests tied to this quote. Keep legacy opportunity-level offers
       // selectable so existing quotes can still be priced after this change.
@@ -386,11 +396,14 @@ const AdminQuoteDetail = () => {
       });
       return;
     }
-    // The approved project BOQ is itself approved input pricing for a BOQ quote.
+    // The approved project BOQ (or investment-rate form) is itself approved input pricing.
+    const usesProjectRate =
+      form.method === "UnitCost" && Boolean(form.projectInvestmentRateRevisionId);
     if (
       quote.grandTotal === 0 &&
       !form.inputPriceOfferId &&
-      !(form.method === "Boq" && form.projectBoqRevisionId)
+      !(form.method === "Boq" && form.projectBoqRevisionId) &&
+      !usesProjectRate
     ) {
       toast({
         title: t("common.error"),
@@ -416,7 +429,7 @@ const AdminQuoteDetail = () => {
       });
       return;
     }
-    if (form.method === "UnitCost") {
+    if (form.method === "UnitCost" && !usesProjectRate) {
       if (!form.materialRateCatalogId || !form.pricingEffectiveDate) {
         toast({
           title: t("common.error"),
@@ -457,8 +470,19 @@ const AdminQuoteDetail = () => {
         ...form,
         // A BOQ quote copies its lines from the project BOQ on the server.
         ...(form.method === "Boq"
-          ? { materialRateCatalogId: null, pricingEffectiveDate: null, items: [] }
-          : { projectBoqRevisionId: null }),
+          ? {
+              materialRateCatalogId: null,
+              pricingEffectiveDate: null,
+              projectInvestmentRateRevisionId: null,
+              items: [],
+            }
+          : usesProjectRate
+            ? {
+                projectBoqRevisionId: null,
+                materialRateCatalogId: null,
+                pricingEffectiveDate: null,
+              }
+            : { projectBoqRevisionId: null }),
         packageDescription: form.packageDescription?.trim() || undefined,
         note: form.note?.trim() || undefined,
         validUntil: form.validUntil || null,
@@ -760,7 +784,10 @@ const AdminQuoteDetail = () => {
     canManage &&
     !editing &&
     !isTerminal &&
-    (!awaitingInputPrice || approvedInputOffers.length > 0 || projectBoq != null);
+    (!awaitingInputPrice ||
+      approvedInputOffers.length > 0 ||
+      projectBoq != null ||
+      projectRate != null);
   const primaryInputPackage =
     inputPricePackages.find((item) => item.status !== "Completed") ?? inputPricePackages[0];
   const primaryFinancePackage = selectQuoteFinanceReview(financeReviewPackages, quote.version);
@@ -986,7 +1013,7 @@ const AdminQuoteDetail = () => {
           {t(
             inputOffersUnavailable
               ? "quotes.inputPrice.unavailable"
-              : approvedInputOffers.length > 0 || projectBoq != null
+              : approvedInputOffers.length > 0 || projectBoq != null || projectRate != null
                 ? "quotes.inputPrice.readyForOutput"
                 : "quotes.inputPrice.awaitingApproval",
           )}
@@ -1185,6 +1212,7 @@ const AdminQuoteDetail = () => {
                           rateOverrideReason: null,
                           packageDescription: "",
                           projectBoqRevisionId: null,
+                          projectInvestmentRateRevisionId: null,
                           items: [],
                         })
                       }
@@ -1217,7 +1245,41 @@ const AdminQuoteDetail = () => {
                       />
                     </FormField>
                   </div>
-                  {editing ? (
+                  {editing && projectRate && (
+                    <QuoteProjectRateSource
+                      latest={projectRate}
+                      selectedRevisionId={form.projectInvestmentRateRevisionId}
+                      savedRevisionId={quote.projectInvestmentRateRevisionId}
+                      savedRevisionNumber={quote.projectInvestmentRateRevisionNumber}
+                      onApply={(rate) =>
+                        setForm((current) =>
+                          current
+                            ? {
+                                ...current,
+                                projectInvestmentRateRevisionId: rate.revisionId,
+                                areaSqm: rate.convertedAreaSqm,
+                                unitPricePerSqm: rate.ratePerSqm,
+                                materialRateCatalogId: null,
+                                pricingEffectiveDate: null,
+                                rateOverrideReason: null,
+                              }
+                            : current,
+                        )
+                      }
+                      onUseCatalog={() =>
+                        setForm((current) =>
+                          current
+                            ? {
+                                ...current,
+                                projectInvestmentRateRevisionId: null,
+                                unitPricePerSqm: null,
+                              }
+                            : current,
+                        )
+                      }
+                    />
+                  )}
+                  {editing && form.projectInvestmentRateRevisionId ? null : editing ? (
                     <QuoteRateFields
                       catalogId={form.materialRateCatalogId}
                       pricingDate={form.pricingEffectiveDate}

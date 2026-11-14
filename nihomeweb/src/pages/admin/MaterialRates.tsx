@@ -27,6 +27,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import { readQuoteReturnTo } from "@/lib/quoteCatalogSetup";
 import { BulkActionBar } from "@/components/admin/BulkActionBar";
 import { MaterialRatesNav } from "@/components/admin/MaterialRatesNav";
+import { InvestmentRateTemplateLibrary } from "@/components/admin/InvestmentRateTemplateLibrary";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -785,6 +786,8 @@ const AdminMaterialRates = () => {
         )}
 
         <MaterialRatesNav active={"investment"} />
+
+        <InvestmentRateTemplateLibrary />
 
         <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
           <div className="border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-4 sm:px-5">

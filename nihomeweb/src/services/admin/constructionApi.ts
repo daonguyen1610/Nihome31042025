@@ -46,6 +46,9 @@ import type {
   BoqTemplateResponse,
   ProjectBoqWorkbookPreviewResponse,
   WorkPackageBoqWorkbook,
+  WorkPackageInvestmentRate,
+  InvestmentRateWorkbookPreview,
+  InvestmentRateTemplate,
   MaterialRequestUpsertRequest,
   MaterialRequestResponse,
   MaterialRequestDetailResponse,
@@ -279,6 +282,80 @@ export const constructionApi = {
   ) =>
     api.post<WorkPackageBoqWorkbook>(
       `/work-packages/${packageId}/boq-workbooks/${id}/decision`,
+      { approved, reason, rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  listInvestmentRateTemplates: () =>
+    api.get<InvestmentRateTemplate[]>("/investment-rate-templates"),
+  downloadInvestmentRateTemplate: (code: string) =>
+    api.get<Blob>(`/investment-rate-templates/${code}/file`, { responseType: "blob" }),
+  previewWorkPackageInvestmentRate: (packageId: number, templateCode: string, file: File) => {
+    const form = new FormData();
+    form.append("templateCode", templateCode);
+    form.append("file", file);
+    return api.post<InvestmentRateWorkbookPreview>(
+      `/work-packages/${packageId}/investment-rates/preview`,
+      form,
+    );
+  },
+  importWorkPackageInvestmentRate: (
+    packageId: number,
+    body: { templateCode: string; file: File; sourceHash: string },
+  ) => {
+    const form = new FormData();
+    form.append("templateCode", body.templateCode);
+    form.append("file", body.file);
+    form.append("sourceHash", body.sourceHash);
+    return api.post<WorkPackageInvestmentRate>(
+      `/work-packages/${packageId}/investment-rates`,
+      form,
+    );
+  },
+  downloadWorkPackageInvestmentRate: (packageId: number, id: number) =>
+    api.get<Blob>(`/work-packages/${packageId}/investment-rates/${id}/file`, {
+      responseType: "blob",
+    }),
+  previewWorkPackageInvestmentRateApproval: (
+    packageId: number,
+    id: number,
+    recipients?: { toEmail: string; ccEmails: string[] },
+  ) =>
+    api.post<WorkPackageApprovalPreview>(
+      `/work-packages/${packageId}/investment-rates/${id}/approval-email-preview`,
+      recipients,
+    ),
+  submitWorkPackageInvestmentRate: (
+    packageId: number,
+    id: number,
+    rowVersion: string,
+    idempotencyKey: string,
+    previewToken: string,
+  ) =>
+    api.post<WorkPackageInvestmentRate>(
+      `/work-packages/${packageId}/investment-rates/${id}/submit`,
+      { rowVersion, previewToken },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
+  decideWorkPackageInvestmentRate: (
+    packageId: number,
+    id: number,
+    approved: boolean,
+    reason: string | null,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<WorkPackageInvestmentRate>(
+      `/work-packages/${packageId}/investment-rates/${id}/decision`,
       { approved, reason, rowVersion },
       {
         headers: {
