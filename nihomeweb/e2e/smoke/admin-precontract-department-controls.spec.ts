@@ -223,7 +223,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
     const packageId = Number(page.url().split("/").pop());
     await expect(page.getByText("Cung ứng báo giá đầu vào").first()).toBeVisible();
     await expect(
-      page.getByRole("heading", { name: "Báo giá đầu vào từ nhà cung cấp / thầu phụ" }),
+      page.getByRole("heading", { name: "Báo giá nhà cung cấp / thầu phụ" }),
     ).toBeVisible();
 
     // ---- Cung ứng records the supplier offer on the same work package.
