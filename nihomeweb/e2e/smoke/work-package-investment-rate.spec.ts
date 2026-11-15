@@ -215,7 +215,10 @@ test("the lead approves the investment rate and the unit-cost quote applies it",
   await expect(source.getByTestId("quote-project-rate-applied")).toBeVisible();
   await expect(page.getByTestId("quote-rate-catalog")).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("quote-project-rate.png"), fullPage: true });
-  await page.getByRole("button", { name: /^(Save|Save changes)$/ }).first().click();
+  await page
+    .getByRole("button", { name: /^(Save|Save changes)$/ })
+    .first()
+    .click();
   await expect
     .poll(async () => {
       const saved = await (await api.get(`/api/quotes/${quoteId}`, { headers })).json();
