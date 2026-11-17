@@ -75,7 +75,7 @@ import {
   type UpdateCustomerRequest,
   type UpsertCustomerContactRequest,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime, formatMoney } from "@/lib/displaySettings";
+import { formatDate, formatDateTime, formatMoney, todayIsoDate } from "@/lib/displaySettings";
 import { formatTime } from "@/lib/displaySettings";
 
 const TYPES: CustomerType[] = ["Individual", "Company"];
@@ -170,6 +170,7 @@ const AdminCustomers = () => {
 
   const [activityType, setActivityType] = useState<CustomerActivityType>("Call");
   const [activityContent, setActivityContent] = useState("");
+  const [activityFollowUp, setActivityFollowUp] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
 
   const [documents, setDocuments] = useState<CustomerDocumentResponse[]>([]);
@@ -393,6 +394,7 @@ const AdminCustomers = () => {
     setEditForm(null);
     setContactForm(null);
     setActivityContent("");
+    setActivityFollowUp("");
     setDocuments([]);
     setDocumentsError(null);
     setOpportunities([]);
@@ -630,10 +632,12 @@ const AdminCustomers = () => {
       await adminApi.addCustomerActivity(detail.id, {
         type: activityType,
         content: activityContent.trim(),
+        followUpDate: activityFollowUp || undefined,
       });
       const { data } = await adminApi.getCustomer(detail.id);
       setDetail(data);
       setActivityContent("");
+      setActivityFollowUp("");
     } catch (err) {
       toast({
         title: t("common.error"),
@@ -1504,6 +1508,11 @@ const AdminCustomers = () => {
                               content: a.content,
                               createdByName: a.createdByName,
                               at: a.occurredAt,
+                              note: a.followUpDate
+                                ? t("customers.activity.followUpOn", {
+                                    date: formatDate(a.followUpDate),
+                                  })
+                                : null,
                             }))}
                           />
                         )}
@@ -1536,6 +1545,26 @@ const AdminCustomers = () => {
                                 rows={2}
                                 className="flex-1"
                               />
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                              <Label htmlFor="customer-activity-follow-up" className="text-xs">
+                                {t("customers.activity.followUpDate")}
+                              </Label>
+                              <Input
+                                id="customer-activity-follow-up"
+                                type="date"
+                                min={todayIsoDate()}
+                                value={activityFollowUp}
+                                onChange={(e) => setActivityFollowUp(e.target.value)}
+                                aria-describedby="customer-activity-follow-up-help"
+                                className="h-9 w-full sm:w-44"
+                              />
+                              <span
+                                id="customer-activity-follow-up-help"
+                                className="text-xs text-muted-foreground"
+                              >
+                                {t("customers.activity.followUpHelp")}
+                              </span>
                             </div>
                             <Button
                               size="sm"

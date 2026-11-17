@@ -293,17 +293,24 @@ public class CustomersController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
-        var response = await svc.AddActivityAsync(id, request, userId.Value, canSeeAll, ct);
-        if (response is null) return NotFound();
-
-        audit.Log(new AuditEvent
+        try
         {
-            Action = "customer.activity.create",
-            ResourceType = EntityTypes.CustomerActivity,
-            ResourceId = response.Id.ToString(),
-            Message = $"Activity ({response.Type}) added to customer #{id}.",
-        });
-        return CreatedAtAction(nameof(Get), new { id }, response);
+            var response = await svc.AddActivityAsync(id, request, userId.Value, canSeeAll, ct);
+            if (response is null) return NotFound();
+
+            audit.Log(new AuditEvent
+            {
+                Action = "customer.activity.create",
+                ResourceType = EntityTypes.CustomerActivity,
+                ResourceId = response.Id.ToString(),
+                Message = $"Activity ({response.Type}) added to customer #{id}.",
+            });
+            return CreatedAtAction(nameof(Get), new { id }, response);
+        }
+        catch (CustomerOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     // ------- Documents -------

@@ -350,5 +350,21 @@
     "en": "Lead {{leadName}} was due for a response on {{dueDate}}. Contact the customer and update the lead status.",
     "zh": "线索 {{leadName}} 的回复期限为 {{dueDate}}。请联系客户并更新线索状态。",
     "ja": "リード {{leadName}} の回答期限は {{dueDate}} です。顧客に連絡し、リードの状態を更新してください。"
+  },
+  {
+    "key": "notification.crm.customer.follow-up-due.title",
+    "category": "notification",
+    "vi": "Đến hạn gọi lại/thăm khách",
+    "en": "Customer follow-up due",
+    "zh": "客户回访到期",
+    "ja": "顧客フォローアップの期日です"
+  },
+  {
+    "key": "notification.crm.customer.follow-up-due.body",
+    "category": "notification",
+    "vi": "Hôm nay ({{dueDate}}) là ngày hẹn chăm sóc {{customerName}}: {{summary}}. Hãy liên hệ khách và ghi lại kết quả.",
+    "en": "Today ({{dueDate}}) is the follow-up date for {{customerName}}: {{summary}}. Contact the customer and record the outcome.",
+    "zh": "今天（{{dueDate}}）是回访 {{customerName}} 的日期：{{summary}}。请联系客户并记录结果。",
+    "ja": "本日（{{dueDate}}）は {{customerName}} のフォローアップ日です：{{summary}}。顧客に連絡し、結果を記録してください。"
   }
 ]

@@ -215,6 +215,12 @@
       "module": "crm.leads",
       "channel": "InApp",
       "adminDescription": "Nhắc người phụ trách khi Lead đến hạn phản hồi mà chưa xử lý xong."
+    },
+    {
+      "code": "crm.customer.follow-up-due",
+      "module": "crm.customers",
+      "channel": "InApp",
+      "adminDescription": "Nhắc người ghi lịch sử chăm sóc khi đến ngày gọi lại hoặc thăm khách hàng."
     }
   ]
 }
