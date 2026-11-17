@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { DEFAULT_REMINDER_DAYS, ReminderDaysField } from "@/components/admin/ReminderDaysField";
 import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { FieldScope } from "@/components/ui/field-scope";
@@ -74,6 +75,7 @@ const emptyCreate = (): CreateTenderRequest => ({
   invitationSource: "",
   invitationPortalUrl: "",
   submissionDeadline: "",
+  deadlineReminderDays: DEFAULT_REMINDER_DAYS,
   preparerUserId: null,
   infoSource: "",
   note: "",
@@ -254,6 +256,7 @@ const AdminTenders = () => {
         invitationReceivedByUserId: data.invitationReceivedByUserId,
         invitationPortalUrl: data.invitationPortalUrl ?? "",
         submissionDeadline: data.submissionDeadline,
+        deadlineReminderDays: data.deadlineReminderDays,
         preparerUserId: data.preparerUserId ?? null,
         infoSource: data.infoSource ?? "",
         note: data.note ?? "",
@@ -315,6 +318,7 @@ const AdminTenders = () => {
           invitationReceivedByUserId: form.invitationReceivedByUserId ?? null,
           invitationPortalUrl: form.invitationPortalUrl?.trim() || null,
           submissionDeadline: form.submissionDeadline,
+          deadlineReminderDays: form.deadlineReminderDays,
           preparerUserId: form.preparerUserId ?? null,
           infoSource: form.infoSource?.trim() || null,
           note: form.note?.trim() || null,
@@ -331,6 +335,7 @@ const AdminTenders = () => {
           invitationSource: form.invitationSource.trim(),
           invitationPortalUrl: form.invitationPortalUrl?.trim() || null,
           submissionDeadline: form.submissionDeadline,
+          deadlineReminderDays: form.deadlineReminderDays,
           preparerUserId: form.preparerUserId ?? null,
           infoSource: form.infoSource?.trim() || null,
           note: form.note?.trim() || null,
@@ -871,6 +876,14 @@ const AdminTenders = () => {
                   type="datetime-local"
                   value={toDateTimeInputValue(form.submissionDeadline)}
                   onChange={(e) => setForm({ ...form, submissionDeadline: e.target.value })}
+                  disabled={editLocked}
+                />
+              </FieldScope>
+              <FieldScope>
+                <ReminderDaysField
+                  id="tender-deadline-reminder-days"
+                  value={form.deadlineReminderDays ?? DEFAULT_REMINDER_DAYS}
+                  onChange={(days) => setForm({ ...form, deadlineReminderDays: days })}
                   disabled={editLocked}
                 />
               </FieldScope>

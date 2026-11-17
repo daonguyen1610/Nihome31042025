@@ -159,6 +159,40 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DeadlineReminderDays_DefaultsToThreeAndKeepsUserChoiceIncludingZero()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var id = await CreateTenderAsync("Gói thầu nhà máy An Phú " + Guid.NewGuid().ToString("N")[..6]);
+        (await ReadJsonAsync(await Client.GetAsync($"/api/tenders/{id}")))
+            .GetProperty("deadlineReminderDays").GetInt32().Should().Be(3);
+        var deadline = DateTime.UtcNow.AddDays(20);
+
+        var tooFar = await Client.PutAsJsonAsync($"/api/tenders/{id}", new
+        {
+            name = "Gói thầu nhà máy An Phú",
+            submissionDeadline = deadline,
+            deadlineReminderDays = 400,
+        });
+        tooFar.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var onTheDay = await Client.PutAsJsonAsync($"/api/tenders/{id}", new
+        {
+            name = "Gói thầu nhà máy An Phú",
+            submissionDeadline = deadline,
+            deadlineReminderDays = 0,
+        });
+        onTheDay.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(onTheDay)).GetProperty("deadlineReminderDays").GetInt32().Should().Be(0);
+        var omitted = await Client.PutAsJsonAsync($"/api/tenders/{id}", new
+        {
+            name = "Gói thầu nhà máy An Phú",
+            submissionDeadline = deadline,
+        });
+        omitted.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == id)))
+            .DeadlineReminderDays.Should().Be(0, "an older client that omits the field keeps the chosen value");
+    }
+
+    [Fact]
     public async Task Update_WhilePreparing_BlankNameIsBadRequestAndPreservesTender()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

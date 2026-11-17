@@ -34,6 +34,10 @@ public class CreateTenderRequest
     [Required]
     public DateTime SubmissionDeadline { get; set; }
 
+    /// <summary>Days before the deadline to remind (0 = on the day). Omit to keep the current value.</summary>
+    [Range(0, ReminderDefaults.MaxDaysBefore)]
+    public int? DeadlineReminderDays { get; set; }
+
     public int? PreparerUserId { get; set; }
 
     [StringLength(200)]
@@ -73,6 +77,10 @@ public class UpdateTenderRequest
 
     [Required]
     public DateTime SubmissionDeadline { get; set; }
+
+    /// <summary>Days before the deadline to remind (0 = on the day). Omit to keep the current value.</summary>
+    [Range(0, ReminderDefaults.MaxDaysBefore)]
+    public int? DeadlineReminderDays { get; set; }
 
     public int? PreparerUserId { get; set; }
 

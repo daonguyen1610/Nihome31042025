@@ -162,6 +162,7 @@ public class TenderService(
                 CustomerName = r.Tender.Customer.Name,
                 OpeningDate = r.Tender.OpeningDate,
                 SubmissionDeadline = r.Tender.SubmissionDeadline,
+                DeadlineReminderDays = r.Tender.DeadlineReminderDays,
                 PreparerUserId = r.Tender.PreparerUserId,
                 PreparerName = r.Tender.Preparer?.FullName,
                 Status = r.Tender.Status.ToString(),
@@ -284,6 +285,7 @@ public class TenderService(
             InvitationReceivedByUserId = invitationReceivedByUserId,
             InvitationPortalUrl = ValidateOptionalHttpUrl(request.InvitationPortalUrl),
             SubmissionDeadline = request.SubmissionDeadline,
+            DeadlineReminderDays = request.DeadlineReminderDays ?? ReminderDefaults.DaysBefore,
             PreparerUserId = effectivePreparerId,
             InfoSource = TrimOrNull(request.InfoSource),
             Note = TrimOrNull(request.Note),
@@ -375,6 +377,7 @@ public class TenderService(
             if (request.InvitationPortalUrl is not null)
                 entity.InvitationPortalUrl = ValidateOptionalHttpUrl(request.InvitationPortalUrl);
             entity.SubmissionDeadline = request.SubmissionDeadline;
+            if (request.DeadlineReminderDays.HasValue) entity.DeadlineReminderDays = request.DeadlineReminderDays.Value;
             entity.PreparerUserId = request.PreparerUserId;
             entity.InfoSource = TrimOrNull(request.InfoSource);
             // An omitted field must not unlink the shared project: submission and
@@ -1573,6 +1576,7 @@ public class TenderService(
             InvitationReceivedByName = t.InvitationReceivedByUser?.FullName,
             InvitationPortalUrl = t.InvitationPortalUrl,
             SubmissionDeadline = t.SubmissionDeadline,
+            DeadlineReminderDays = t.DeadlineReminderDays,
             PreparerUserId = t.PreparerUserId,
             PreparerName = t.Preparer?.FullName,
             InfoSource = t.InfoSource,

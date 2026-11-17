@@ -17,4 +17,7 @@ public static class CrmDueReminderKinds
 {
     public const string LeadResponse = "lead.response";
     public const string CustomerFollowUp = "customer.follow-up";
+    public const string TenderDeadline = "tender.deadline";
+    public const string TenderChecklistItem = "tender.checklist-item";
+    public const string QuoteExpiry = "quote.expiry";
 }

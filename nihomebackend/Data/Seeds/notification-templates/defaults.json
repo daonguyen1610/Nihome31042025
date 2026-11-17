@@ -221,6 +221,24 @@
       "module": "crm.customers",
       "channel": "InApp",
       "adminDescription": "Nhắc người ghi lịch sử chăm sóc khi đến ngày gọi lại hoặc thăm khách hàng."
+    },
+    {
+      "code": "crm.tender.deadline-due",
+      "module": "crm.tenders",
+      "channel": "InApp",
+      "adminDescription": "Nhắc người chuẩn bị thầu trước hạn nộp theo số ngày cấu hình trên gói thầu."
+    },
+    {
+      "code": "crm.tender.checklist-due",
+      "module": "crm.tenders",
+      "channel": "InApp",
+      "adminDescription": "Nhắc người phụ trách mục hồ sơ thầu vào ngày hạn nội bộ nếu mục chưa xong."
+    },
+    {
+      "code": "crm.quote.expiry-due",
+      "module": "crm.quotes",
+      "channel": "InApp",
+      "adminDescription": "Nhắc người phụ trách báo giá trước khi báo giá hết hiệu lực theo số ngày cấu hình."
     }
   ]
 }

@@ -127,6 +127,42 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ExpiryReminderDays_ChangeOnSentQuoteKeepsTheSameVersion()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var created = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        created.GetProperty("expiryReminderDays").GetInt32().Should().Be(3);
+        await WithDbAsync(async db =>
+        {
+            var quote = await db.Quotes.SingleAsync(item => item.Id == quoteId);
+            quote.Status = QuoteStatus.SentToCustomer;
+            await db.SaveChangesAsync();
+        });
+        var sent = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var version = sent.GetProperty("version").GetInt32();
+
+        var res = await Client.PutAsJsonAsync($"/api/quotes/{quoteId}", new
+        {
+            rowVersion = sent.GetProperty("rowVersion").GetString(),
+            method = sent.GetProperty("method").GetString(),
+            areaSqm = sent.GetProperty("areaSqm").GetDecimal(),
+            unitPricePerSqm = sent.GetProperty("unitPricePerSqm").GetDecimal(),
+            materialRateCatalogId = sent.GetProperty("materialRateCatalogId").GetInt32(),
+            pricingEffectiveDate = sent.GetProperty("pricingEffectiveDate").GetString(),
+            discountPercent = sent.GetProperty("discountPercent").GetDecimal(),
+            vatPercent = sent.GetProperty("vatPercent").GetDecimal(),
+            expiryReminderDays = 7,
+        });
+
+        res.StatusCode.Should().Be(HttpStatusCode.OK, await res.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(res);
+        body.GetProperty("expiryReminderDays").GetInt32().Should().Be(7);
+        body.GetProperty("version").GetInt32().Should().Be(version, "a reminder setting does not change the price");
+        body.GetProperty("status").GetString().Should().Be("SentToCustomer");
+    }
+
+    [Fact]
     public async Task Create_Concurrently_AssignsDistinctCodes()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

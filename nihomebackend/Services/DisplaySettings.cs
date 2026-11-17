@@ -54,11 +54,15 @@ public static class DisplaySettings
     public static TimeZoneInfo VietnamTimeZone { get; } = CreateVietnamTimeZone();
 
     /// <summary>Today's date in the configured display time zone, so due dates match what users see.</summary>
-    public static async Task<DateOnly> TodayAsync(AppDbContext db, CancellationToken ct)
+    public static async Task<DateOnly> TodayAsync(AppDbContext db, CancellationToken ct) =>
+        DateOnly.FromDateTime(TodayIn(await ZoneAsync(db, ct)));
+
+    /// <summary>The configured display time zone, for turning stored UTC instants into business dates.</summary>
+    public static async Task<TimeZoneInfo> ZoneAsync(AppDbContext db, CancellationToken ct)
     {
         var timeZoneId = await db.SiteSettings.AsNoTracking()
             .Select(settings => settings.DisplayTimeZoneId).FirstOrDefaultAsync(ct);
-        return DateOnly.FromDateTime(TodayIn(ResolveTimeZone(timeZoneId)));
+        return ResolveTimeZone(timeZoneId);
     }
 
     public static DateTime UtcNowIn(TimeZoneInfo zone) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);

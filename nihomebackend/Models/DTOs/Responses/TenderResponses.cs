@@ -104,6 +104,7 @@ public class TenderResponse
     public string? InvitationReceivedByName { get; set; }
     public string? InvitationPortalUrl { get; set; }
     public DateTime SubmissionDeadline { get; set; }
+    public int DeadlineReminderDays { get; set; }
 
     public int? PreparerUserId { get; set; }
     public string? PreparerName { get; set; }
@@ -184,6 +185,7 @@ public class TenderListItemResponse
 
     public DateTime? OpeningDate { get; set; }
     public DateTime SubmissionDeadline { get; set; }
+    public int DeadlineReminderDays { get; set; }
 
     public int? PreparerUserId { get; set; }
     public string? PreparerName { get; set; }

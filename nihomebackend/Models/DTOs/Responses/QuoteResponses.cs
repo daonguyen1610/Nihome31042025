@@ -121,6 +121,7 @@ public class QuoteResponse
 
     public string Status { get; set; } = string.Empty;
     public DateTime ValidUntil { get; set; }
+    public int ExpiryReminderDays { get; set; }
     /// <summary>Effective flag — true when Status non-terminal and ValidUntil &lt; now.</summary>
     public bool IsExpired { get; set; }
     public string? Note { get; set; }
@@ -175,6 +176,7 @@ public class QuoteListItemResponse
     public decimal GrandTotal { get; set; }
     public string Status { get; set; } = string.Empty;
     public DateTime ValidUntil { get; set; }
+    public int ExpiryReminderDays { get; set; }
     public bool IsExpiringSoon { get; set; }
     public DateTime UpdatedAt { get; set; }
     public string RowVersion { get; set; } = string.Empty;

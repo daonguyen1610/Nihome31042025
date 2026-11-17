@@ -166,6 +166,161 @@ public sealed class CrmDueReminderServiceTests : IDisposable
         Assert.Equal(1, await db.CustomerActivities.CountAsync(item => item.CustomerId == customer.Id));
     }
 
+    // ---------------- Tender deadlines, dossier items and quote expiry ----------------
+
+    private static readonly TimeZoneInfo Zone = DisplaySettings.VietnamTimeZone;
+
+    /// <summary>10:00 local time on the business day <paramref name="offsetDays"/> from today, as UTC.</summary>
+    private static DateTime LocalMorningUtc(int offsetDays) =>
+        TimeZoneInfo.ConvertTimeToUtc(DisplaySettings.TodayIn(Zone).AddDays(offsetDays).AddHours(10), Zone);
+
+    [Theory]
+    [InlineData(3, 0, true)]
+    [InlineData(3, 3, true)]
+    [InlineData(3, 4, false)]
+    [InlineData(0, 0, true)]
+    [InlineData(0, 1, false)]
+    [InlineData(7, -1, false)]
+    public void IsInReminderWindow_StartsNDaysAheadAndEndsOnTheDueDate(int daysBefore, int daysUntilDue, bool expected)
+    {
+        Assert.Equal(expected, CrmDueReminderService.IsInReminderWindow(Today.AddDays(daysUntilDue), daysBefore, Today));
+    }
+
+    [Fact]
+    public async Task TenderDeadlines_RemindPreparerOnceInsideTheirOwnWindow()
+    {
+        var preparer = User("0911777001", active: true);
+        var customer = Customer("Công ty CP Nhà máy An Phú", CustomerRelationshipStatus.InProgress, preparer);
+        var dueSoon = Tender("TD-AP-01", "Nhà máy may An Phú – Quế Võ", customer, preparer, preparer, LocalMorningUtc(2), 3);
+        Tender("TD-AP-02", "Chưa tới cửa sổ nhắc", customer, preparer, preparer, LocalMorningUtc(5), 3);
+        Tender("TD-AP-03", "Đã nộp", customer, preparer, preparer, LocalMorningUtc(1), 3, TenderStatus.Submitted);
+        var onTheDay = Tender("TD-AP-04", "Nhắc đúng ngày", customer, preparer, preparer, LocalMorningUtc(0), 0);
+
+        await service.NotifyTenderDeadlinesAsync(Zone, CancellationToken.None);
+        await service.NotifyTenderDeadlinesAsync(Zone, CancellationToken.None);
+
+        notifications.Verify(item => item.NotifyFromTemplateAsync(
+            preparer.Id, CrmDueReminderService.TenderTemplateCode,
+            It.Is<IDictionary<string, string>>(data => data["code"] == "TD-AP-01" && data["name"] == "Nhà máy may An Phú – Quế Võ"),
+            "Tender", dueSoon.Id, $"/admin/tenders/{dueSoon.Id}", "vi"), Times.Once);
+        notifications.Verify(item => item.NotifyFromTemplateAsync(
+            preparer.Id, CrmDueReminderService.TenderTemplateCode, It.IsAny<IDictionary<string, string>>(),
+            "Tender", onTheDay.Id, It.IsAny<string>(), "vi"), Times.Once);
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task TenderDeadlines_FallBackToInvitationReceiverWhenPreparerLeft()
+    {
+        var receiver = User("0911777002", active: true);
+        var formerPreparer = User("0911777003", active: false);
+        var customer = Customer("Showroom Thành Đạt", CustomerRelationshipStatus.Prospect, receiver);
+        var tender = Tender("TD-TD-01", "Showroom Quận 3", customer, formerPreparer, receiver, LocalMorningUtc(1), 3);
+
+        await service.NotifyTenderDeadlinesAsync(Zone, CancellationToken.None);
+
+        notifications.Verify(item => item.NotifyFromTemplateAsync(
+            receiver.Id, CrmDueReminderService.TenderTemplateCode, It.IsAny<IDictionary<string, string>>(),
+            "Tender", tender.Id, It.IsAny<string>(), "vi"), Times.Once);
+    }
+
+    [Fact]
+    public async Task TenderChecklistItems_RemindOwnerOrPreparerOnUnfinishedItemsDueToday()
+    {
+        var preparer = User("0911777004", active: true);
+        var owner = User("0911777005", active: true);
+        var customer = Customer("Gia dụng Tân Phúc", CustomerRelationshipStatus.InProgress, preparer);
+        var tender = Tender("TD-TP-01", "Cải tạo trụ sở Tân Phúc", customer, preparer, preparer, LocalMorningUtc(10), 3);
+        var owned = ChecklistItem(tender, "Hồ sơ năng lực", owner, LocalMorningUtc(0), TenderChecklistItemStatus.Preparing);
+        var unowned = ChecklistItem(tender, "Bảo lãnh dự thầu", null, LocalMorningUtc(0), TenderChecklistItemStatus.NotStarted);
+        ChecklistItem(tender, "Đã xong", owner, LocalMorningUtc(0), TenderChecklistItemStatus.Done);
+        ChecklistItem(tender, "Chưa tới hạn", owner, LocalMorningUtc(2), TenderChecklistItemStatus.NotStarted);
+
+        await service.NotifyTenderChecklistItemsAsync(Zone, CancellationToken.None);
+
+        notifications.Verify(item => item.NotifyFromTemplateAsync(
+            owner.Id, CrmDueReminderService.TenderChecklistTemplateCode,
+            It.Is<IDictionary<string, string>>(data => data["item"] == "Hồ sơ năng lực" && data["code"] == "TD-TP-01"),
+            "Tender", tender.Id, It.IsAny<string>(), "vi"), Times.Once);
+        notifications.Verify(item => item.NotifyFromTemplateAsync(
+            preparer.Id, CrmDueReminderService.TenderChecklistTemplateCode,
+            It.Is<IDictionary<string, string>>(data => data["item"] == "Bảo lãnh dự thầu"),
+            "Tender", tender.Id, It.IsAny<string>(), "vi"), Times.Once);
+        notifications.VerifyNoOtherCalls();
+        Assert.Equal(2, await db.CrmDueReminders.CountAsync(item => item.Kind == CrmDueReminderKinds.TenderChecklistItem &&
+            (item.EntityId == owned.Id || item.EntityId == unowned.Id)));
+    }
+
+    [Fact]
+    public async Task QuoteExpiries_RemindOwnerOfApprovedOrSentQuotesInsideTheirWindow()
+    {
+        var owner = User("0911777006", active: true);
+        var sent = Quote("BG-2026-0101", owner, QuoteStatus.SentToCustomer, LocalMorningUtc(2), 3);
+        Quote("BG-2026-0102", owner, QuoteStatus.Draft, LocalMorningUtc(1), 3);
+        Quote("BG-2026-0103", owner, QuoteStatus.Approved, LocalMorningUtc(2), 0);
+
+        await service.NotifyQuoteExpiriesAsync(Zone, CancellationToken.None);
+        await service.NotifyQuoteExpiriesAsync(Zone, CancellationToken.None);
+
+        notifications.Verify(item => item.NotifyFromTemplateAsync(
+            owner.Id, CrmDueReminderService.QuoteTemplateCode,
+            It.Is<IDictionary<string, string>>(data => data["code"] == "BG-2026-0101"),
+            "Quote", sent.Id, $"/admin/quotes/{sent.Id}", "vi"), Times.Once);
+        notifications.VerifyNoOtherCalls();
+    }
+
+    private Tender Tender(string code, string name, Customer customer, ApplicationUser preparer, ApplicationUser receiver,
+        DateTime deadlineUtc, int reminderDays, TenderStatus status = TenderStatus.Preparing)
+    {
+        var tender = new Tender
+        {
+            Code = code,
+            Name = name,
+            CustomerId = customer.Id,
+            InvitationReceivedByUserId = receiver.Id,
+            InvitationSource = "Email chủ đầu tư",
+            PreparerUserId = preparer.Id,
+            SubmissionDeadline = deadlineUtc,
+            DeadlineReminderDays = reminderDays,
+            Status = status,
+        };
+        db.Tenders.Add(tender);
+        db.SaveChanges();
+        return tender;
+    }
+
+    private TenderChecklistItem ChecklistItem(Tender tender, string title, ApplicationUser? owner, DateTime deadlineUtc,
+        TenderChecklistItemStatus status)
+    {
+        var item = new TenderChecklistItem
+        {
+            TenderId = tender.Id,
+            Title = title,
+            OwnerUserId = owner?.Id,
+            InternalDeadline = deadlineUtc,
+            Status = status,
+        };
+        db.TenderChecklistItems.Add(item);
+        db.SaveChanges();
+        return item;
+    }
+
+    private Quote Quote(string code, ApplicationUser owner, QuoteStatus status, DateTime validUntilUtc, int reminderDays)
+    {
+        var quote = new Quote
+        {
+            Code = code,
+            OpportunityId = 1,
+            OwnerUserId = owner.Id,
+            Status = status,
+            ValidUntil = validUntilUtc,
+            ExpiryReminderDays = reminderDays,
+        };
+        db.Quotes.Add(quote);
+        db.SaveChanges();
+        return quote;
+    }
+
     public void Dispose() => db.Dispose();
 
     private ApplicationUser User(string phone, bool active)

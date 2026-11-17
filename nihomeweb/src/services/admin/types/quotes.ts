@@ -125,6 +125,7 @@ export interface QuoteResponse {
   grandTotalInWords: string;
   status: QuoteStatus;
   validUntil: string;
+  expiryReminderDays: number;
   isExpired: boolean;
   note?: string;
   submittedAt?: string;
@@ -170,6 +171,7 @@ export interface QuoteListItemResponse {
   grandTotal: number;
   status: QuoteStatus;
   validUntil: string;
+  expiryReminderDays: number;
   isExpiringSoon: boolean;
   updatedAt: string;
   rowVersion: string;
@@ -203,6 +205,8 @@ export interface CreateQuoteRequest {
   discountPercent: number;
   vatPercent: number;
   validUntil?: string | null;
+  /** Days before validUntil to remind the owner (0 = on the day). */
+  expiryReminderDays?: number;
   note?: string;
 }
 
@@ -223,6 +227,8 @@ export interface UpdateQuoteRequest {
   discountPercent: number;
   vatPercent: number;
   validUntil?: string | null;
+  /** Days before validUntil to remind the owner (0 = on the day). */
+  expiryReminderDays?: number;
   note?: string;
 }
 

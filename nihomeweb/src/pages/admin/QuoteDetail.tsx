@@ -35,6 +35,7 @@ import { selectQuoteFinanceReview } from "@/lib/financeReview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { QuoteProjectBoqSource } from "@/components/admin/QuoteProjectBoqSource";
 import { QuoteProgressPanel } from "@/components/admin/QuoteProgressPanel";
+import { DEFAULT_REMINDER_DAYS, ReminderDaysField } from "@/components/admin/ReminderDaysField";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
@@ -154,6 +155,7 @@ function toFormState(q: QuoteResponse): UpdateQuoteRequest {
     discountPercent: q.discountPercent,
     vatPercent: q.vatPercent,
     validUntil: q.validUntil,
+    expiryReminderDays: q.expiryReminderDays,
     note: q.note ?? "",
   };
 }
@@ -1316,6 +1318,12 @@ const AdminQuoteDetail = () => {
                     }
                   />
                 </FormField>
+                <ReminderDaysField
+                  id="quote-expiry-reminder-days"
+                  value={form.expiryReminderDays ?? DEFAULT_REMINDER_DAYS}
+                  disabled={!editing}
+                  onChange={(days) => setForm({ ...form, expiryReminderDays: days })}
+                />
                 <FormField label={t("quotes.field.note")}>
                   <Input
                     value={form.note ?? ""}

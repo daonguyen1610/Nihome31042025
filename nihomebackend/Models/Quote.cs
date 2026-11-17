@@ -64,6 +64,9 @@ public class Quote : IConcurrencyTracked
     /// <summary>Expiry timestamp; when passed and not terminal, quote surfaces as Expired.</summary>
     public DateTime ValidUntil { get; set; } = DateTime.UtcNow.AddDays(30);
 
+    /// <summary>How many days before <see cref="ValidUntil"/> the owner is reminded; 0 = on the day.</summary>
+    public int ExpiryReminderDays { get; set; } = ReminderDefaults.DaysBefore;
+
     public string? Note { get; set; }
 
     // --- Workflow timestamps ---

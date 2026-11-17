@@ -46,6 +46,9 @@ public class Tender : IConcurrencyTracked
     /// <summary>Submission deadline (deadline nộp) — hard requirement, must be &gt; now on create.</summary>
     public DateTime SubmissionDeadline { get; set; }
 
+    /// <summary>How many days before <see cref="SubmissionDeadline"/> the preparer is reminded; 0 = on the day.</summary>
+    public int DeadlineReminderDays { get; set; } = ReminderDefaults.DaysBefore;
+
     /// <summary>Sales owner responsible for preparing the bid. Nullable while unassigned.</summary>
     public int? PreparerUserId { get; set; }
     public ApplicationUser? Preparer { get; set; }
