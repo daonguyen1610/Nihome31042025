@@ -37,6 +37,25 @@ export function PageError({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
+/** Non-blocking warning for data the page can live without, e.g. dropdown options. */
+export function InlineWarning({ message, onRetry }: { message: string; onRetry?: () => void }) {
+  const { t } = useI18n();
+  return (
+    <div
+      className="flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+      role="alert"
+    >
+      <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
+      <span className="min-w-0 flex-1">{message}</span>
+      {onRetry && (
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+          {t("common.retry")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 export function PageEmpty({ message, action }: { message: string; action?: ReactNode }) {
   return (
     <div className="flex min-h-40 flex-col items-center justify-center gap-3 rounded-lg border border-dashed bg-muted/20 px-4 py-10 text-center text-sm text-muted-foreground">

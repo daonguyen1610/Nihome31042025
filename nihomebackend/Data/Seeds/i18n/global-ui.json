@@ -14,5 +14,13 @@
     "en": "The selection list could not be fully loaded. Reload the page before continuing.",
     "zh": "未能完整加载选项列表。请刷新页面后再继续。",
     "ja": "選択肢をすべて読み込めませんでした。ページを再読み込みしてから続行してください。"
+  },
+  {
+    "key": "common.lookupLoadFailed",
+    "category": "common",
+    "vi": "Không tải được danh sách để chọn, nên một số ô chọn và bộ lọc đang trống. Hãy bấm Thử lại.",
+    "en": "Some selection lists could not be loaded, so a few dropdowns and filters are empty. Press Retry.",
+    "zh": "部分选项列表未能加载，因此一些下拉框和筛选项为空。请点击重试。",
+    "ja": "一部の選択肢を読み込めなかったため、いくつかのドロップダウンとフィルターが空です。再試行を押してください。"
   }
 ]
