@@ -630,5 +630,133 @@
     "en": "Posts management",
     "zh": "文章管理",
     "ja": "投稿管理"
+  },
+  {
+    "key": "dash.funnel.title",
+    "category": "dash",
+    "vi": "Phễu kinh doanh",
+    "en": "Sales funnel",
+    "zh": "销售漏斗",
+    "ja": "営業ファネル"
+  },
+  {
+    "key": "dash.funnel.range",
+    "category": "dash",
+    "vi": "Khoảng thời gian",
+    "en": "Period",
+    "zh": "时间范围",
+    "ja": "期間"
+  },
+  {
+    "key": "dash.funnel.range30",
+    "category": "dash",
+    "vi": "30 ngày qua",
+    "en": "Last 30 days",
+    "zh": "最近 30 天",
+    "ja": "過去 30 日"
+  },
+  {
+    "key": "dash.funnel.range90",
+    "category": "dash",
+    "vi": "90 ngày qua",
+    "en": "Last 90 days",
+    "zh": "最近 90 天",
+    "ja": "過去 90 日"
+  },
+  {
+    "key": "dash.funnel.rangeYear",
+    "category": "dash",
+    "vi": "Năm nay",
+    "en": "This year",
+    "zh": "今年",
+    "ja": "今年"
+  },
+  {
+    "key": "dash.funnel.scopeAll",
+    "category": "dash",
+    "vi": "Toàn bộ nhân viên",
+    "en": "All staff",
+    "zh": "全部员工",
+    "ja": "全担当者"
+  },
+  {
+    "key": "dash.funnel.scopeOwn",
+    "category": "dash",
+    "vi": "Chỉ hồ sơ của bạn",
+    "en": "Your records only",
+    "zh": "仅您的记录",
+    "ja": "自分の記録のみ"
+  },
+  {
+    "key": "dash.funnel.conversionRate",
+    "category": "dash",
+    "vi": "Tỉ lệ Lead chuyển đổi",
+    "en": "Lead conversion rate",
+    "zh": "线索转化率",
+    "ja": "リード転換率"
+  },
+  {
+    "key": "dash.funnel.winRate",
+    "category": "dash",
+    "vi": "Tỉ lệ thắng Cơ hội",
+    "en": "Opportunity win rate",
+    "zh": "商机赢单率",
+    "ja": "商談成約率"
+  },
+  {
+    "key": "dash.funnel.open",
+    "category": "dash",
+    "vi": "Cơ hội đang theo",
+    "en": "Open opportunities",
+    "zh": "进行中的商机",
+    "ja": "進行中の商談"
+  },
+  {
+    "key": "dash.funnel.step.leads",
+    "category": "dash",
+    "vi": "Lead mới",
+    "en": "New leads",
+    "zh": "新线索",
+    "ja": "新規リード"
+  },
+  {
+    "key": "dash.funnel.step.converted",
+    "category": "dash",
+    "vi": "Lead đã chuyển đổi",
+    "en": "Converted leads",
+    "zh": "已转化线索",
+    "ja": "転換済みリード"
+  },
+  {
+    "key": "dash.funnel.step.opportunities",
+    "category": "dash",
+    "vi": "Cơ hội mới",
+    "en": "New opportunities",
+    "zh": "新商机",
+    "ja": "新規商談"
+  },
+  {
+    "key": "dash.funnel.step.won",
+    "category": "dash",
+    "vi": "Cơ hội thắng",
+    "en": "Won opportunities",
+    "zh": "赢单商机",
+    "ja": "成約した商談"
+  },
+  {
+    "key": "dash.funnel.step.contracts",
+    "category": "dash",
+    "vi": "Hợp đồng khách đã ký",
+    "en": "Signed customer contracts",
+    "zh": "已签客户合同",
+    "ja": "締結済み顧客契約"
+  },
+  {
+    "key": "dash.funnel.help",
+    "category": "dash",
+    "vi": "Tính trên Lead và Cơ hội tạo trong kỳ; hợp đồng tính theo ngày ký. Tỉ lệ thắng = thắng / (thắng + thua).",
+    "en": "Counts leads and opportunities created in the period; contracts by signing date. Win rate = won / (won + lost).",
+    "zh": "按期间内创建的线索和商机统计；合同按签订日期统计。赢单率 = 赢单 /（赢单 + 输单）。",
+    "ja": "期間内に作成されたリードと商談を集計し、契約は締結日で集計します。成約率 = 成約 /（成約 + 失注）。"
   }
 ]

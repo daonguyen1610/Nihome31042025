@@ -11,6 +11,7 @@ import type {
   UnconvertLeadResponse,
   CreateLeadActivityRequest,
   LeadActivityResponse,
+  SalesFunnelResponse,
 } from "./types/leads";
 import type {
   DeletionImpactResponse,
@@ -57,6 +58,8 @@ import type {
 import { uploadBusinessDocument } from "./helpers";
 
 export const crmApi = {
+  getSalesFunnel: (params: { from?: string; to?: string } = {}) =>
+    api.get<SalesFunnelResponse>("/reports/sales-funnel", { params }),
   listLeads: (params: LeadListParams = {}) => {
     const query = new URLSearchParams();
     if (params.status) query.append("status", params.status);

@@ -132,3 +132,19 @@ export interface UpsertMasterDataOptionRequest {
   isActive: boolean;
   sortOrder: number;
 }
+
+/** Lead → opportunity → won → signed contract counts for records created in [from, to]. */
+export interface SalesFunnelResponse {
+  from: string;
+  to: string;
+  includesAllOwners: boolean;
+  leadsCreated: number;
+  leadsConverted: number;
+  opportunitiesCreated: number;
+  opportunitiesOpen: number;
+  opportunitiesWon: number;
+  opportunitiesLost: number;
+  contractsSigned: number;
+  leadConversionRate: number | null;
+  winRate: number | null;
+}

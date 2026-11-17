@@ -13,11 +13,15 @@ import {
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import { getCurrentUser } from "@/lib/auth";
+import { usePermissions } from "@/hooks/usePermissions";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
+import { SalesFunnelPanel } from "@/components/admin/SalesFunnelPanel";
 import { useActivities, useProjects, useJobPositions } from "@/hooks/useContentApi";
 
 const Dashboard = () => {
   const { t } = useI18n();
   const user = getCurrentUser();
+  const { has } = usePermissions();
   const { data: activities } = useActivities();
   const { data: projects } = useProjects();
   const { data: jobPositions } = useJobPositions();
@@ -194,6 +198,8 @@ const Dashboard = () => {
             </Link>
           ))}
         </div>
+
+        {has(ADMIN_PERMS.opportunities) && <SalesFunnelPanel />}
 
         {/* Charts row */}
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
