@@ -34,6 +34,7 @@ import { personOption } from "@/lib/people";
 import { selectQuoteFinanceReview } from "@/lib/financeReview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { QuoteProjectBoqSource } from "@/components/admin/QuoteProjectBoqSource";
+import { QuoteProgressPanel } from "@/components/admin/QuoteProgressPanel";
 import QuoteRateFields from "@/components/admin/QuoteRateFields";
 import QuoteContractLinkDialog from "@/components/admin/QuoteContractLinkDialog";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
@@ -958,6 +959,15 @@ const AdminQuoteDetail = () => {
           )}
         </div>
       </div>
+
+      <QuoteProgressPanel
+        status={quote.status}
+        grandTotal={quote.grandTotal}
+        financeApproved={
+          primaryFinancePackage?.financeReview?.status === "Approved" &&
+          primaryFinancePackage.financeReview.reviewedQuoteVersion === quote.version
+        }
+      />
 
       {quote.approvalApproverUserId && (
         <section
