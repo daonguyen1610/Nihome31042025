@@ -20,7 +20,12 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 
-type ConfirmationOptions = { destructive?: boolean; onConfirm?: () => void };
+type ConfirmationOptions = {
+  destructive?: boolean;
+  /** Label of the confirm button; defaults to "Delete", or "Confirm" when not destructive. */
+  confirmLabel?: string;
+  onConfirm?: () => void;
+};
 type Confirm = (message: string, options?: ConfirmationOptions) => Promise<boolean>;
 type PendingConfirmation = {
   message: string;
@@ -102,7 +107,10 @@ export function ConfirmationProvider({ children }: { children: ReactNode }) {
                 finish(true);
               }}
             >
-              {t(pending?.options.destructive === false ? "common.confirmAction" : "common.delete")}
+              {pending?.options.confirmLabel ??
+                t(
+                  pending?.options.destructive === false ? "common.confirmAction" : "common.delete",
+                )}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

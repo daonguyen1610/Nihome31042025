@@ -50,6 +50,7 @@ import {
 import { translateError, useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/ui/confirmation";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
@@ -126,6 +127,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const { has } = usePermissions();
   const effective = project.effectivePermissions;
   const canCreate = effective?.canCreate ?? has(ADMIN_PERMS.designShopManage);
@@ -431,10 +433,21 @@ export const ShopDrawingTab = ({ project }: Props) => {
   // -------- transitions --------
   const [transitioning, setTransitioning] = useState<number | null>(null);
   const transition = async (row: ShopDrawingResponse, next: ShopDrawingStatus) => {
+    // Rejected is final for a shop drawing; a new revision is needed afterwards.
+    if (
+      next === "Rejected" &&
+      !(await confirm(t("shopDrawing.confirmReject", { title: row.title }), {
+        destructive: true,
+        confirmLabel: t("shopDrawing.status.Rejected"),
+      }))
+    )
+      return;
     setTransitioning(row.id);
     try {
       await adminApi.transitionShopDrawing(row.id, { status: next });
-      toast({ title: t("shopDrawing.transitioned") });
+      toast({
+        title: t("shopDrawing.transitionedTo", { status: t(`shopDrawing.status.${next}`) }),
+      });
       await fetchRows();
     } catch (err) {
       toast({

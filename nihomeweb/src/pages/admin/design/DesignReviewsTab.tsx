@@ -1,4 +1,6 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/ui/confirmation";
 import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -71,11 +73,21 @@ const sourceTypeByStage: Record<DesignReviewStage, string> = {
   ShopDrawing: "ShopDrawing",
 };
 
+/** Button labels reused as the confirm label of each irreversible review step. */
+const REVIEW_ACTION_LABELS = {
+  internal: "designProjects.reviews.submitInternal",
+  client: "designProjects.reviews.submitClient",
+  approve: "designProjects.reviews.approve",
+  changes: "designProjects.reviews.changes",
+  reject: "designProjects.reviews.reject",
+} as const;
 export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId }: Props) => {
   const uiError = useUiError();
   const projectId = project?.id ?? recipientProjectId ?? 0;
   const operationalProjectId = project?.operationalProjectId;
   const { t, lang } = useI18n();
+  const { toast } = useToast();
+  const confirm = useConfirm();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const { has } = usePermissions();
   const isDesignManager =
@@ -298,6 +310,15 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
     review: DesignReviewResponse,
     action: "internal" | "comment" | "consolidate" | "client" | "approve" | "changes" | "reject",
   ) => {
+    // These steps freeze the revision or record the client's answer and cannot be undone.
+    if (
+      ["internal", "client", "approve", "changes", "reject"].includes(action) &&
+      !(await confirm(t(`designProjects.reviews.confirm.${action}`, { title: review.title }), {
+        destructive: action === "reject",
+        confirmLabel: t(REVIEW_ACTION_LABELS[action as keyof typeof REVIEW_ACTION_LABELS]),
+      }))
+    )
+      return;
     setBusy(review.id);
     setError(null);
     const note = notes[review.id]?.trim() ?? "";
@@ -344,6 +365,7 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       setNotes((current) => ({ ...current, [review.id]: "" }));
       if (action === "comment")
         setCommentDocumentIds((current) => ({ ...current, [review.id]: "general" }));
+      toast({ title: t(`designProjects.reviews.done.${action}`) });
       await load();
     } catch (reason) {
       setError(actionableError(reason));
