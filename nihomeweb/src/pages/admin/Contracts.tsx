@@ -1438,24 +1438,20 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <div className="min-w-0 space-y-1 sm:col-span-2 lg:col-span-2">
                 <span className="text-xs">{t("contracts.filter.valueRange")}</span>
                 <div className="flex gap-1">
-                  <Input
-                    type="number"
-                    min={0}
-                    value={valueMin}
-                    onChange={(e) => {
-                      setValueMin(e.target.value);
+                  <MoneyInput
+                    value={Number(valueMin) || 0}
+                    onChange={(value) => {
+                      setValueMin(value ? String(value) : "");
                       setPage(1);
                     }}
                     aria-label={t("contracts.filter.valueMin")}
                     placeholder={t("contracts.filter.min")}
                     className="h-9 min-w-0 flex-1"
                   />
-                  <Input
-                    type="number"
-                    min={0}
-                    value={valueMax}
-                    onChange={(e) => {
-                      setValueMax(e.target.value);
+                  <MoneyInput
+                    value={Number(valueMax) || 0}
+                    onChange={(value) => {
+                      setValueMax(value ? String(value) : "");
                       setPage(1);
                     }}
                     aria-label={t("contracts.filter.valueMax")}

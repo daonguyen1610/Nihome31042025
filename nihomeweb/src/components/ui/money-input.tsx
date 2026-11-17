@@ -14,6 +14,9 @@ type MoneyInputProps = {
   showZero?: boolean;
   formatValue?: (value: number) => string;
   preferDecimalComma?: boolean;
+  /** Accept a leading minus sign, e.g. a contract appendix that lowers the value. */
+  allowNegative?: boolean;
+  placeholder?: string;
   "aria-label"?: string;
   "aria-invalid"?: boolean;
   "aria-describedby"?: string;
@@ -39,6 +42,8 @@ export const MoneyInput = ({
   showZero = false,
   formatValue,
   preferDecimalComma = false,
+  allowNegative = false,
+  placeholder,
   "aria-label": ariaLabel,
   "aria-invalid": ariaInvalid,
   "aria-describedby": ariaDescribedBy,
@@ -73,7 +78,8 @@ export const MoneyInput = ({
   const read = (raw: string): number => {
     const parsed =
       decimalScale > 0 ? parseVndDecimal(raw, decimalScale, preferDecimalComma) : parseVnd(raw);
-    return Number.isFinite(parsed) ? parsed : decimalScale > 0 ? Number.NaN : 0;
+    if (!Number.isFinite(parsed)) return decimalScale > 0 ? Number.NaN : 0;
+    return allowNegative && raw.trim().startsWith("-") ? -parsed : parsed;
   };
 
   return (
@@ -86,6 +92,7 @@ export const MoneyInput = ({
       inputMode={decimalScale > 0 ? "decimal" : "numeric"}
       className={cn("text-right tabular-nums", className)}
       data-testid={testId}
+      placeholder={placeholder}
       value={text}
       onFocus={() => setFocused(true)}
       onChange={(e) => {
