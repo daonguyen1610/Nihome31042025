@@ -150,7 +150,7 @@ const AdminProjects = () => {
       <div className="space-y-4 p-4 sm:p-6">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-2xl font-semibold">{t("proj.title")}</h1>
+            <h1 className="text-2xl font-semibold">{t("nav.websiteProjects")}</h1>
             <p className="text-xs italic text-muted-foreground">
               {filtered.length} {t("common.showing")}
             </p>
