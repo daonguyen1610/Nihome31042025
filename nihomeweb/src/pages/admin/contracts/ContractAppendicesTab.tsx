@@ -19,7 +19,8 @@ import {
 } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
-import { formatMoney } from "@/lib/displaySettings";
+import { formatMoney, formatNumber } from "@/lib/displaySettings";
+import { MoneyInput } from "@/components/ui/money-input";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -438,12 +439,13 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                 <Label>
                   {t("contracts.appendix.valueDelta")} ({contract.currency}) *
                 </Label>
-                <Input
-                  type="number"
-                  step="1"
-                  value={draft.valueDelta}
-                  onChange={(e) => setDraft({ ...draft, valueDelta: e.target.value })}
-                  placeholder="45000000"
+                <MoneyInput
+                  allowNegative
+                  value={Number(draft.valueDelta) || 0}
+                  onChange={(value) =>
+                    setDraft({ ...draft, valueDelta: value ? String(value) : "" })
+                  }
+                  placeholder={formatNumber(45_000_000)}
                 />
               </FieldScope>
               <FieldScope>

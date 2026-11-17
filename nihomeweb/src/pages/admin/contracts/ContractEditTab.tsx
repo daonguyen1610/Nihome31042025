@@ -1,6 +1,7 @@
 import { useI18n } from "@/lib/i18n";
 import { formatMoney } from "@/lib/displaySettings";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -222,12 +223,10 @@ export const EditInfoTab = ({
 
       <div className="space-y-1.5">
         <Label htmlFor="contract-detail-value">{t("contracts.field.value")} *</Label>
-        <Input
+        <MoneyInput
           id="contract-detail-value"
-          type="number"
-          min={0}
           value={form.value}
-          onChange={(event) => onChange({ ...form, value: Number(event.target.value) || 0 })}
+          onChange={(value) => onChange({ ...form, value })}
         />
         <p className="text-xs text-muted-foreground">{formatMoney(form.value, currency)}</p>
       </div>

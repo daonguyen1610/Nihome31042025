@@ -37,6 +37,7 @@ import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Slider } from "@/components/ui/slider";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
@@ -851,27 +852,25 @@ const AdminOpportunities = () => {
           </FieldScope>
           <FieldScope>
             <Label className="text-xs">{t("opportunities.filter.minValue")}</Label>
-            <Input
-              type="number"
-              min={0}
-              value={minValue}
-              onChange={(e) => {
-                setMinValue(e.target.value);
+            <MoneyInput
+              value={Number(minValue) || 0}
+              onChange={(value) => {
+                setMinValue(value ? String(value) : "");
                 setPage(1);
               }}
+              aria-label={t("opportunities.filter.minValue")}
               className="h-9"
             />
           </FieldScope>
           <FieldScope>
             <Label className="text-xs">{t("opportunities.filter.maxValue")}</Label>
-            <Input
-              type="number"
-              min={0}
-              value={maxValue}
-              onChange={(e) => {
-                setMaxValue(e.target.value);
+            <MoneyInput
+              value={Number(maxValue) || 0}
+              onChange={(value) => {
+                setMaxValue(value ? String(value) : "");
                 setPage(1);
               }}
+              aria-label={t("opportunities.filter.maxValue")}
               className="h-9"
             />
           </FieldScope>
