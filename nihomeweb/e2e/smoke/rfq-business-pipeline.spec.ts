@@ -249,7 +249,8 @@ for (const outcome of ["Paid", "Rejected", "Cancelled"] as const) {
             { exact: true },
           ),
         ).toBeVisible();
-        await expect(page.locator("#contract-detail-value")).toHaveValue("3500000");
+        // The value field formats amounts with thousand separators (3.500.000 / 3,500,000).
+        await expect(page.locator("#contract-detail-value")).toHaveValue(/^3[.,]500[.,]000$/);
         await page.getByRole("button", { name: "Cancel", exact: true }).click();
         await page.reload();
         await expect(page.getByRole("main")).toContainText(/3[.,]600[.,]000/);
