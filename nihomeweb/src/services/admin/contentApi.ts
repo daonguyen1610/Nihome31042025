@@ -283,4 +283,6 @@ export const contentApi = {
   markContactReplied: (id: number) =>
     api.patch<ContactMessageResponse>(`/contacts/${id}/mark-replied`),
   deleteContact: (id: number) => api.delete(`/contacts/${id}`),
+  createLeadFromContact: (id: number) =>
+    api.post<{ leadId: number; created: boolean }>(`/contacts/${id}/lead`),
 };

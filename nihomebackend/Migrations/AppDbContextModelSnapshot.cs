@@ -2208,6 +2208,9 @@ namespace nihomebackend.Migrations
                     b.Property<bool>("IsReplied")
                         .HasColumnType("bit");
 
+                    b.Property<int?>("LeadId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Message")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
@@ -2233,6 +2236,8 @@ namespace nihomebackend.Migrations
                         .HasColumnType("datetime2");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("LeadId");
 
                     b.ToTable("contact_messages", (string)null);
                 });
@@ -13009,6 +13014,14 @@ namespace nihomebackend.Migrations
                     b.Navigation("ConstructionTask");
 
                     b.Navigation("IfcReleaseItem");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.ContactMessage", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Lead", null)
+                        .WithMany()
+                        .HasForeignKey("LeadId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.Contract", b =>

@@ -3495,6 +3495,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         modelBuilder.Entity<ContactMessage>().ToTable("contact_messages");
         modelBuilder.Entity<ContactMessage>().HasKey(c => c.Id);
+        modelBuilder.Entity<ContactMessage>()
+            .HasOne<Lead>().WithMany().HasForeignKey(c => c.LeadId).OnDelete(DeleteBehavior.SetNull);
 
         // i18n tables
         modelBuilder.Entity<Translation>().ToTable("translations");

@@ -508,4 +508,6 @@ export interface ContactMessageResponse {
   replyContent?: string;
   repliedAt?: string;
   createdAt: string;
+  /** Lead created from this message, if any. */
+  leadId?: number | null;
 }

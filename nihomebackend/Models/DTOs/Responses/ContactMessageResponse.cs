@@ -12,4 +12,5 @@ public class ContactMessageResponse
     public string? ReplyContent { get; set; }
     public DateTime? RepliedAt { get; set; }
     public DateTime CreatedAt { get; set; }
+    public int? LeadId { get; set; }
 }

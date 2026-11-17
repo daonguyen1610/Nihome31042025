@@ -13,4 +13,7 @@ public class ContactMessage
     public DateTime? RepliedAt { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    /// <summary>Lead created from this website message, so it is never turned into a lead twice.</summary>
+    public int? LeadId { get; set; }
 }
