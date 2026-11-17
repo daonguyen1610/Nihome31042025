@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
-import { formatVnd, parseVnd, parseVndDecimal } from "@/lib/numberFormat";
+import { formatVnd, parseVnd, parseVndDecimal, withTypedSign } from "@/lib/numberFormat";
 import { formatNumber } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
 
@@ -79,7 +79,7 @@ export const MoneyInput = ({
     const parsed =
       decimalScale > 0 ? parseVndDecimal(raw, decimalScale, preferDecimalComma) : parseVnd(raw);
     if (!Number.isFinite(parsed)) return decimalScale > 0 ? Number.NaN : 0;
-    return allowNegative && raw.trim().startsWith("-") ? -parsed : parsed;
+    return allowNegative ? withTypedSign(raw, parsed) : parsed;
   };
 
   return (

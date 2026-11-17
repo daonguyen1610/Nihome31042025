@@ -7,7 +7,7 @@ const source = await readFile(new URL("../src/lib/numberFormat.ts", import.meta.
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const { formatVnd, parseVndDecimal, setActiveCurrency } = await import(
+const { formatVnd, parseVnd, parseVndDecimal, setActiveCurrency, withTypedSign } = await import(
   "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
 );
 
@@ -47,4 +47,12 @@ test("empty amounts keep the placeholder in every currency", () => {
     assert.equal(formatVnd("1500.5"), currency === "USD" ? "1,501" : "1.500,5");
   }
   setActiveCurrency("VND");
+});
+
+test("money fields that allow decreases keep a typed minus sign", () => {
+  assert.equal(withTypedSign("-20.000.000", parseVnd("-20.000.000")), -20_000_000);
+  assert.equal(withTypedSign("  -45000000 ", parseVnd("  -45000000 ")), -45_000_000);
+  assert.equal(withTypedSign("20.000.000", parseVnd("20.000.000")), 20_000_000);
+  // A lone minus while typing is still zero, never "-0".
+  assert.ok(Object.is(withTypedSign("-", parseVnd("-")), 0));
 });

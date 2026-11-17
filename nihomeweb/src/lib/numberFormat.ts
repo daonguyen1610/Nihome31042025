@@ -88,6 +88,15 @@ export function formatFileSize(bytes: number): string {
  * that accept the value into a numeric field should coerce NaN → 0 or
  * flag validation.
  */
+/**
+ * Applies a leading minus sign typed in a money field to the parsed amount.
+ * parseVnd keeps digits only, so fields that allow decreases (e.g. a contract
+ * appendix lowering the value) restore the sign here.
+ */
+export function withTypedSign(input: string, amount: number): number {
+  return input.trim().startsWith("-") && amount > 0 ? -amount : amount;
+}
+
 export function parseVnd(input: string): number {
   if (!input) return 0;
   const digitsOnly = input.replace(/[^0-9]/g, "");
