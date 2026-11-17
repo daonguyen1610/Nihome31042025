@@ -40,9 +40,6 @@ public class Lead : IConcurrencyTracked
     /// <summary>Date by which sales must respond to the lead (NICON "deadline phản hồi").</summary>
     public DateOnly? ResponseDueDate { get; set; }
 
-    /// <summary>When the owner was reminded about <see cref="ResponseDueDate"/>; reset when the date changes.</summary>
-    public DateTime? ResponseDueNotifiedAt { get; set; }
-
     // Conversion outcome — populated by /convert action. Nullable FKs because
     // Customer/Opportunity entities land in later phases.
     public DateTime? ConvertedAt { get; set; }

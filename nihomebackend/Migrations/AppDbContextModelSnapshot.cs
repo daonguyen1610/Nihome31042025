@@ -2836,6 +2836,36 @@ namespace nihomebackend.Migrations
                     b.ToTable("contract_reminders", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.CrmDueReminder", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("date");
+
+                    b.Property<int>("EntityId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<DateTime>("SentAt")
+                        .HasColumnType("datetime2");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Kind", "EntityId", "DueDate")
+                        .IsUnique();
+
+                    b.ToTable("crm_due_reminders", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.Customer", b =>
                 {
                     b.Property<int>("Id")
@@ -2942,9 +2972,6 @@ namespace nihomebackend.Migrations
                     b.Property<DateOnly?>("FollowUpDate")
                         .HasColumnType("date");
 
-                    b.Property<DateTime?>("FollowUpNotifiedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
 
@@ -2959,9 +2986,9 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("CustomerId");
 
-                    b.HasIndex("OccurredAt");
+                    b.HasIndex("FollowUpDate");
 
-                    b.HasIndex("FollowUpDate", "FollowUpNotifiedAt");
+                    b.HasIndex("OccurredAt");
 
                     b.ToTable("customer_activities", (string)null);
                 });
@@ -5592,9 +5619,6 @@ namespace nihomebackend.Migrations
                     b.Property<DateOnly?>("ResponseDueDate")
                         .HasColumnType("date");
 
-                    b.Property<DateTime?>("ResponseDueNotifiedAt")
-                        .HasColumnType("datetime2");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -5630,13 +5654,13 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("OwnerUserId");
 
+                    b.HasIndex("ResponseDueDate");
+
                     b.HasIndex("SegmentCode");
 
                     b.HasIndex("SourceCode");
 
                     b.HasIndex("Status");
-
-                    b.HasIndex("ResponseDueDate", "ResponseDueNotifiedAt");
 
                     b.ToTable("leads", (string)null);
                 });

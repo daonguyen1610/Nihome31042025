@@ -584,7 +584,7 @@ public class CustomerService(
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == customerId, ct);
         if (customer is null) return null;
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return null;
-        if (request.FollowUpDate < DisplaySettings.VietnamToday())
+        if (request.FollowUpDate < await DisplaySettings.TodayAsync(db, ct))
             throw new CustomerOperationException("Ngày nhắc gọi lại/thăm phải từ hôm nay trở đi.");
 
         var activity = new CustomerActivity

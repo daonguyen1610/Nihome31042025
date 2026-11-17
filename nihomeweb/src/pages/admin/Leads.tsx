@@ -48,7 +48,7 @@ import {
   type CustomerDuplicateDetail,
   type DeletionImpactResponse,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime } from "@/lib/displaySettings";
+import { formatDate, formatDateTime, todayIsoDate } from "@/lib/displaySettings";
 import { formatTime } from "@/lib/displaySettings";
 
 const STATUSES: LeadStatus[] = [
@@ -945,6 +945,7 @@ const AdminLeads = () => {
               <Input
                 id="lead-create-response-due"
                 type="date"
+                min={todayIsoDate()}
                 value={createForm.responseDueDate ?? ""}
                 onChange={(e) => setCreateForm({ ...createForm, responseDueDate: e.target.value })}
                 aria-describedby="lead-create-response-due-help"
@@ -1114,6 +1115,7 @@ const AdminLeads = () => {
                       <Input
                         id="lead-edit-response-due"
                         type="date"
+                        min={todayIsoDate()}
                         value={editForm.responseDueDate ?? ""}
                         onChange={(event) =>
                           setEditForm({ ...editForm, responseDueDate: event.target.value })

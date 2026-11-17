@@ -57,6 +57,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     // CRM — M1 chain (Lead → Customer → Opportunity → Quote/Bid → Contract)
     public DbSet<Lead> Leads => Set<Lead>();
+    public DbSet<CrmDueReminder> CrmDueReminders => Set<CrmDueReminder>();
     public DbSet<LeadActivity> LeadActivities => Set<LeadActivity>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<CustomerContact> CustomerContacts => Set<CustomerContact>();
@@ -546,6 +547,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
         modelBuilder.Entity<WorkflowConfig>().HasIndex(w => new { w.Module, w.Action }).IsUnique();
         modelBuilder.Entity<WorkflowConfig>().HasIndex(w => w.Module);
 
+        modelBuilder.Entity<CrmDueReminder>(b =>
+        {
+            b.ToTable("crm_due_reminders");
+            b.HasKey(r => r.Id);
+            b.Property(r => r.Kind).HasMaxLength(40).IsRequired();
+            b.HasIndex(r => new { r.Kind, r.EntityId, r.DueDate }).IsUnique();
+        });
+
         modelBuilder.Entity<Lead>(b =>
         {
             b.ToTable("leads");
@@ -562,7 +571,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(l => l.SourceCode);
             b.HasIndex(l => l.SegmentCode);
             b.HasIndex(l => l.CreatedAt);
-            b.HasIndex(l => new { l.ResponseDueDate, l.ResponseDueNotifiedAt });
+            b.HasIndex(l => l.ResponseDueDate);
             b.HasOne(l => l.Owner)
                 .WithMany()
                 .HasForeignKey(l => l.OwnerUserId)
@@ -744,7 +753,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasKey(a => a.Id);
             b.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
             b.Property(a => a.Content).HasMaxLength(4000).IsRequired();
-            b.HasIndex(a => new { a.FollowUpDate, a.FollowUpNotifiedAt });
+            b.HasIndex(a => a.FollowUpDate);
             b.HasOne(a => a.Customer)
                 .WithMany(c => c.Activities)
                 .HasForeignKey(a => a.CustomerId)

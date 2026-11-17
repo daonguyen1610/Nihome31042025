@@ -1058,7 +1058,7 @@ public class CustomersControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
         var id = await CreateIndividualCustomerAsync("Chị Hạnh - nhà phố Gò Vấp");
-        var today = DisplaySettings.VietnamToday();
+        var today = await WithDbAsync(db => DisplaySettings.TodayAsync(db, CancellationToken.None));
 
         var past = await Client.PostAsJsonAsync($"/api/customers/{id}/activities", new
         {

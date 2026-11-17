@@ -93,12 +93,13 @@ public class LeadService(
             })
             .ToListAsync(ct);
 
+        var today = await DisplaySettings.TodayAsync(db, ct);
         return new LeadListResponse
         {
             Total = total,
             Page = page,
             PageSize = pageSize,
-            Items = rows.Select(r => MapLead(r.Lead, r.OwnerName, activities: null)).ToList(),
+            Items = rows.Select(r => MapLead(r.Lead, r.OwnerName, activities: null, today)).ToList(),
         };
     }
 
@@ -118,7 +119,8 @@ public class LeadService(
             return null; // hide existence from other Sales users
         }
 
-        return MapLead(lead, lead.Owner?.FullName, lead.Activities);
+        var today = await DisplaySettings.TodayAsync(db, ct);
+        return MapLead(lead, lead.Owner?.FullName, lead.Activities, today);
     }
 
     public async Task<LeadResponse> CreateAsync(
@@ -160,6 +162,8 @@ public class LeadService(
             await EnsureOwnerCanManageLeadsAsync(ownerId.Value, ct);
         }
 
+        var today = await DisplaySettings.TodayAsync(db, ct);
+        EnsureResponseDateNotPast(request.ResponseDueDate, today);
         var now = DateTime.UtcNow;
         var lead = new Lead
         {
@@ -191,7 +195,7 @@ public class LeadService(
             ? await db.Users.AsNoTracking().Where(u => u.Id == ownerId.Value).Select(u => u.FullName).FirstOrDefaultAsync(ct)
             : null;
 
-        return MapLead(lead, owner, activities: null);
+        return MapLead(lead, owner, activities: null, today);
     }
 
     public async Task<LeadResponse?> UpdateAsync(
@@ -257,6 +261,7 @@ public class LeadService(
             await EnsureOwnerCanManageLeadsAsync(newOwnerId.Value, ct);
         }
 
+        var today = await DisplaySettings.TodayAsync(db, ct);
         lead.Name = request.Name.Trim();
         lead.CompanyName = string.IsNullOrWhiteSpace(request.CompanyName) ? null : request.CompanyName.Trim();
         lead.Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim();
@@ -268,9 +273,9 @@ public class LeadService(
         lead.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         if (lead.ResponseDueDate != request.ResponseDueDate)
         {
-            // A new date deserves its own reminder.
+            // Only a newly chosen date must lie ahead; an unchanged past date may stay overdue.
+            EnsureResponseDateNotPast(request.ResponseDueDate, today);
             lead.ResponseDueDate = request.ResponseDueDate;
-            lead.ResponseDueNotifiedAt = null;
         }
         lead.UpdatedAt = DateTime.UtcNow;
         lead.UpdatedByUserId = callerUserId;
@@ -286,7 +291,7 @@ public class LeadService(
             ? await db.Users.AsNoTracking().Where(u => u.Id == newOwnerId.Value).Select(u => u.FullName).FirstOrDefaultAsync(ct)
             : null;
 
-        return MapLead(lead, ownerName, activities: null);
+        return MapLead(lead, ownerName, activities: null, today);
     }
 
     public async Task<DeletionImpactResponse?> GetDeletionImpactAsync(
@@ -557,7 +562,8 @@ public class LeadService(
             await transaction.CommitAsync(ct);
         }
 
-        return MapLead(lead, lead.Owner?.FullName, activities: null);
+        var today = await DisplaySettings.TodayAsync(db, ct);
+        return MapLead(lead, lead.Owner?.FullName, activities: null, today);
     }
 
     public async Task<LeadActivityResponse?> AddActivityAsync(
@@ -681,12 +687,13 @@ public class LeadService(
         CrmConcurrency.Apply(db, lead, rowVersion);
         await CrmConcurrency.SaveChangesAsync(db, ct);
 
+        var today = await DisplaySettings.TodayAsync(db, ct);
         return new UnconvertLeadResponse
         {
             Outcome = outcome,
             KeptCustomerId = keptCustomerId,
             KeptOpportunityId = keptOpportunityId,
-            Lead = MapLead(lead, lead.Owner?.FullName, activities: null),
+            Lead = MapLead(lead, lead.Owner?.FullName, activities: null, today),
         };
     }
 
@@ -983,7 +990,13 @@ public class LeadService(
         }
     }
 
-    private static LeadResponse MapLead(Lead lead, string? ownerName, IEnumerable<LeadActivity>? activities)
+    private static void EnsureResponseDateNotPast(DateOnly? responseDueDate, DateOnly today)
+    {
+        if (responseDueDate < today)
+            throw new LeadOperationException("Hạn phản hồi phải từ hôm nay trở đi. Hãy kiểm tra lại ngày đã nhập.");
+    }
+
+    private static LeadResponse MapLead(Lead lead, string? ownerName, IEnumerable<LeadActivity>? activities, DateOnly today)
     {
         return new LeadResponse
         {
@@ -999,7 +1012,7 @@ public class LeadService(
             OwnerName = ownerName,
             Note = lead.Note,
             ResponseDueDate = lead.ResponseDueDate,
-            ResponseOverdue = LeadResponseDeadline.IsOverdue(lead.Status, lead.ResponseDueDate, DisplaySettings.VietnamToday()),
+            ResponseOverdue = LeadResponseDeadline.IsOverdue(lead.Status, lead.ResponseDueDate, today),
             ConvertedAt = lead.ConvertedAt,
             ConvertedCustomerId = lead.ConvertedCustomerId,
             ConvertedOpportunityId = lead.ConvertedOpportunityId,
