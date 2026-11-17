@@ -243,7 +243,7 @@ Before finishing a form or write endpoint, identify each field's invalid-value r
 ## Core business alignment
 
 All implementation decisions that affect business behavior must comply with
-`docs/Nicon-QLVH.md`, `docs/Nicon_BreakTask_v1.xlsx`, `docs/Nicon-workflow.md`,
+`docs/Nicon_BreakTask_v1.xlsx`, `docs/user_guide.md`,
 and the customer evidence retained under `docs/Nicon/`. The canonical Markdown
 documents define the current working contract; `docs/Nicon/` provides the
 auditable source material used to interpret and validate it.
@@ -303,8 +303,7 @@ auditable source material used to interpret and validate it.
 
 ## Module 4 construction and acceptance rules
 
-Treat the Module 4 contract in `docs/Nicon-QLVH.md`, `docs/Nicon-workflow.md`,
-and `docs/application_developer.md` as mandatory for construction work.
+Treat the Module 4 contract in `docs/application_developer.md` as mandatory for construction work.
 
 - Preserve the two-stage lifecycle: Phòng CM prepares the project after the
   Upstream D&B/construction contract is signed; BCH and Phòng CM then operate
@@ -419,15 +418,12 @@ Use this rule: pure logic → unit; HTTP/auth/persistence contract → integrati
 
 ## Documentation and quality checks
 
-Keep the root of `docs/` limited to these six canonical files plus the curated
+Keep the root of `docs/` limited to these canonical files plus the curated
 `docs/Nicon/` customer-evidence directory:
 
 - `application_developer.md` — setup, architecture, API contracts, migrations, operations, and testing guidance.
 - `Nicon_BreakTask_v1.xlsx` — authoritative customer task breakdown.
-- `Nicon-QLVH.md` — authoritative customer business requirements.
-- `Nicon-workflow.md` — authoritative customer workflows.
 - `user_guide.md` — delivered user workflows and operating instructions.
-- `users-rbac.md` — roles, permissions, and access behavior.
 
 `docs/Nicon/` may contain only customer-provided or customer-derived source
 evidence organized as follows:

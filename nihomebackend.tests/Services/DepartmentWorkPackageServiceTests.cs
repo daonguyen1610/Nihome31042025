@@ -1140,7 +1140,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         await _db.SaveChangesAsync();
         var originalHistoryCount = await _db.DepartmentWorkPackageHistory.CountAsync();
 
-        // Nicon-QLVH: a final tender result locks editing. Reopening its plan
+        // Customer requirement: a final tender result locks editing. Reopening its plan
         // through the generic work-package endpoint must not bypass that lock.
         await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
             _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest

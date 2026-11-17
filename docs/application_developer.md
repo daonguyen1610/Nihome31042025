@@ -1,346 +1,240 @@
-# NICON Platform -- Application Developer Guide
+# NICON Platform — Hướng dẫn phát triển ứng dụng
 
 Version 1.1
 
-Last Updated: 24 October 2026
+Last Updated: 17/11/2026
 
 ---
 
-## Table of Contents
+## Mục lục
 
-1. [Overview](#1-overview)
-2. [System Requirements](#2-system-requirements)
-3. [Architecture](#3-architecture)
-4. [Getting Started](#4-getting-started)
-5. [Configuration](#5-configuration)
-6. [Database](#6-database)
-7. [Backend Development](#7-backend-development)
-8. [Frontend Development](#8-frontend-development)
-9. [Testing](#9-testing)
-10. [Deployment](#10-deployment)
-11. [Troubleshooting](#11-troubleshooting)
-12. [Kế hoạch hoàn thiện theo yêu cầu NICON](#12-kế-hoạch-hoàn-thiện-theo-yêu-cầu-nicon)
-
----
-
-## 1. Overview
-
-Nihome is a full-stack design-and-build operations platform. In addition to public content and recruitment, the implemented application includes authentication, dynamic RBAC, CRM, quotations/tenders/contracts, three-phase design control, permitting, construction execution, acceptance, as-built records, punch lists, and project handover. The backend uses ASP.NET Core 8 and Entity Framework Core 8; the frontend uses React 18, TypeScript, and Vite; persistence uses SQL Server 2022.
-
-This guide covers development setup, configuration, database management, build and test procedures, and deployment.
-
----
-
-## 2. System Requirements
-
-### Software Dependencies
-
-| Component        | Technology                        | Version   |
-|------------------|-----------------------------------|-----------|
-| Backend Runtime  | .NET SDK                          | 8.0       |
-| Frontend Runtime | Node.js                           | 20 in CI; 22 in the development image |
-| Database         | Microsoft SQL Server              | 2022      |
-| Containerization | Docker and Docker Compose         | Latest    |
-| PDF fonts        | Noto Sans and Noto Sans CJK       | OS package or configured path |
-
-### Backend Packages
-
-| Package                                            | Version |
-|----------------------------------------------------|---------|
-| Microsoft.EntityFrameworkCore.SqlServer             | 8.0.4   |
-| Microsoft.EntityFrameworkCore.Design                | 8.0.4   |
-| Microsoft.AspNetCore.Authentication.JwtBearer       | 8.0.0   |
-| AutoMapper                                         | 15.1.4  |
-| MailKit                                            | 4.16.0  |
-| Swashbuckle.AspNetCore                             | 6.5.0   |
-
-### Frontend Packages
-
-| Package            | Purpose                  |
-|--------------------|--------------------------|
-| React 18           | UI framework             |
-| TypeScript          | Type safety              |
-| Vite               | Build tool               |
-| Tailwind CSS       | Styling                  |
-| shadcn/ui (Radix)  | UI component library     |
-| React Router       | Client-side routing      |
-| Redux              | State management         |
-| Playwright         | Browser E2E testing      |
+1. [Tổng quan](#1-tổng-quan)
+2. [Kiến trúc](#2-kiến-trúc)
+3. [Khởi chạy môi trường](#3-khởi-chạy-môi-trường)
+4. [Cấu hình](#4-cấu-hình)
+5. [Cơ sở dữ liệu](#5-cơ-sở-dữ-liệu)
+6. [Quy ước backend](#6-quy-ước-backend)
+7. [Xoá vĩnh viễn aggregate (Permanent Aggregate Deletion)](#7-xoá-vĩnh-viễn-aggregate-permanent-aggregate-deletion)
+8. [CRM, báo giá, đấu thầu và hợp đồng](#8-crm-báo-giá-đấu-thầu-và-hợp-đồng)
+9. [Dự án vận hành và gói công việc](#9-dự-án-vận-hành-và-gói-công-việc)
+10. [BOQ](#10-boq)
+11. [Cung ứng: nhà cung cấp, MR, kho, cảnh báo, RFQ, IFC](#11-cung-ứng-nhà-cung-cấp-mr-kho-cảnh-báo-rfq-ifc)
+12. [Thiết kế và pháp lý](#12-thiết-kế-và-pháp-lý)
+13. [Thi công và Module 4](#13-thi-công-và-module-4)
+14. [Báo cáo và KPI](#14-báo-cáo-và-kpi)
+15. [Dữ liệu tham chiếu của NICON](#15-dữ-liệu-tham-chiếu-của-nicon)
+16. [Frontend](#16-frontend)
+17. [Kiểm thử](#17-kiểm-thử)
+18. [Triển khai](#18-triển-khai)
+19. [Xử lý sự cố](#19-xử-lý-sự-cố)
+20. [Kế hoạch hoàn thiện theo yêu cầu NICON](#20-kế-hoạch-hoàn-thiện-theo-yêu-cầu-nicon)
 
 ---
 
-## 3. Architecture
+## 1. Tổng quan
 
-### System Diagram
+Đây là nền tảng quản lý vận hành Design & Build của NICON. Ngoài website công
+khai và tuyển dụng, ứng dụng có xác thực, RBAC động, CRM, báo giá/đấu thầu/hợp
+đồng, thiết kế ba giai đoạn, pháp lý, thi công, nghiệm thu, hồ sơ hoàn công,
+punch list và bàn giao công trình.
+
+Tài liệu dành cho developer: cài đặt, cấu hình, database, quy ước code, hợp
+đồng API theo module, kiểm thử, triển khai và kế hoạch hoàn thiện. Hướng dẫn
+người dùng nằm ở `docs/user_guide.md`; hiện vật gốc của khách hàng (biên bản
+họp, PRD, ISO, BOQ, tiến độ) ở `docs/Nicon/` (xem [mục 15](#15-dữ-liệu-tham-chiếu-của-nicon)).
+Khi tài liệu và code khác nhau, controller/DTO và test là nguồn xác định hành vi thực tế.
+
+| Thành phần | Công nghệ | Phiên bản |
+|---|---|---|
+| Backend | .NET SDK, ASP.NET Core, EF Core | 8.0 |
+| Frontend | Node.js; React 18 + TypeScript + Vite | Node 20 trên CI, 22 trong image dev |
+| Database | SQL Server | 2022 |
+| Container | Docker, Docker Compose | bản hiện hành |
+| Font PDF | Noto Sans, Noto Sans CJK | gói OS hoặc đường dẫn cấu hình |
+
+Gói backend chính: `Microsoft.EntityFrameworkCore.SqlServer` và `.Design`
+8.0.4, `Microsoft.AspNetCore.Authentication.JwtBearer` 8.0.0, `AutoMapper`
+15.1.4, `MailKit` 4.16.0, `Swashbuckle.AspNetCore` 6.5.0. Frontend dùng
+Tailwind CSS, shadcn/ui (Radix), React Router, Redux (trạng thái đăng nhập) và
+Playwright cho E2E.
+
+---
+
+## 2. Kiến trúc
 
 ```
-+-------------------+        +-------------------+        +-------------------+
-|                   |  HTTP  |                   |   EF    |                   |
-|  React Frontend   +------->+  ASP.NET Core 8   +-------->+  SQL Server 2022  |
-|  (Vite + TS)      |  API   |  Web API          |  Core   |                   |
-|                   |        |                   |        |                   |
-+-------------------+        +--------+----------+        +-------------------+
-                                      |
-                                      | SMTP
-                                      v
-                              +-------+--------+
-                              |  Mail Server   |
-                              +----------------+
+React (Vite + TS) --HTTP/API--> ASP.NET Core 8 Web API --EF Core--> SQL Server 2022
+                                         |
+                                         +--SMTP--> Mail server
+                                         +--OAuth/Drive API v3--> Google Drive
 ```
-
-### Project Structure
 
 ```
 Nihome31042025/
-  docker-compose.yaml          -- Container orchestration
-  docker-compose-e2e.yaml      -- E2E overlay with a local mail sink
+  docker-compose.yaml          -- runtime stack
+  docker-compose-dev.yaml      -- dev stack có watch/HMR
+  docker-compose-e2e.yaml      -- overlay E2E kèm hộp thư giả lập
   nihomebackend/               -- ASP.NET Core 8 Web API
-    Controllers/               -- API endpoint controllers (thin)
-    Data/                      -- Database context, migrations, seeders
-      Seeds/                   -- Embedded JSON seed data files
-    Models/                    -- Entity models and DTOs
-    Services/                  -- Business logic layer
-    Extensions/                -- Startup and middleware extensions
-    Mappings/                  -- AutoMapper profiles
-    Migrations/                -- EF Core migration files
-    Constants/                 -- Shared constants (EntityTypes)
-    Localization/              -- Localization resources
-    wwwroot/                   -- Static file serving (uploaded images)
-  nihomeweb/                   -- React + TypeScript frontend
-    src/
-      pages/                   -- Page components
-      components/              -- Reusable UI components
-        admin/                 -- Admin-specific components
-        layout/                -- Layout components (Nav, Footer)
-        ui/                    -- Base UI components (shadcn)
-      services/                -- API client services
-      hooks/                   -- Custom React hooks
-      lib/                     -- Utility functions
-      store/                   -- Redux state management
-  nihomebackend.tests/         -- Backend unit tests
-    Controllers/               -- Controller tests
-    Services/                  -- Service tests
-    Mappings/                  -- AutoMapper profile tests
-    Helpers/                   -- Test helper utilities
-  docs/                        -- Documentation
+    Controllers/ Services/ Models/ Mappings/ Extensions/
+    Data/ (DbContext, seeder; Seeds/ là JSON nhúng; BoqTemplates/)
+    Migrations/ Constants/ Localization/ wwwroot/
+  nihomebackend.tests/         -- unit test (Controllers, Services, Mappings, Helpers)
+  nihomebackend.integration.tests/
+  nihomeweb/src/               -- pages, components (admin, layout, ui), services, hooks, lib, store
+  nihomeweb/e2e/smoke/         -- Playwright spec
+  tools/                       -- script SQL, kiểm tra translation key
+  docs/
 ```
 
-### Design Principles
+Nguyên tắc thiết kế:
 
-- Controllers remain thin; all business logic resides in service classes.
-- Dependency injection is used throughout the backend.
-- DTOs are used for all API communication; entity models are never exposed directly.
-- Content entities use slug-based routing for SEO-friendly URLs.
-- Complex nested data (content paragraphs, gallery images, requirements) is stored as JSON columns.
-- Entity translations are restricted by the metadata registry in `TranslationsController`; only registered entity fields and the `en`, `zh`, and `ja` target languages are writable. Besides long-form content, the registry covers user-managed name-only catalogs — employment types, recruitment dropdown options, master-data options, and client logos — whose `Name` is translated while the CRUD screens keep editing the Vietnamese source.
-- Structured entity translations are validated recursively against their Vietnamese source JSON shape before persistence.
-- Localized categories retain direct language columns for public-query compatibility. Source-copy fallback values are not completion evidence; an `entity_translations` marker records explicit source-identical translations.
-- Role-group labels retain their existing translation keys for runtime and legacy
-  API compatibility. Content translation management updates those same keys.
-  New source-copy placeholders are marked in `entity_translations`, so source
-  edits preserve existing translations, even those identical to the source, and
-  update only explicitly marked placeholders.
-  Legacy group writes containing target-language names require translation
-  management permission in addition to role management permission. Group keys
-  are excluded from the UI-translation list; generic pair, bulk and key-delete
-  APIs reject them with `role_group_translation_use_content` so callers use the
-  content-translation API instead.
-- SOLID principles are followed where practical.
+- Controller mỏng: nhận request, kiểm tra đầu vào, gọi service, trả DTO. Logic
+  nghiệp vụ nằm trong service, đăng ký qua DI. Không bao giờ trả entity.
+- Content entity public định tuyến bằng slug. Dữ liệu lồng nhau (đoạn nội dung,
+  gallery, requirements) lưu cột JSON dạng string (`ContentJson`,
+  `SectionsJson`).
+- Dịch nội dung: chỉ field đã đăng ký trong metadata registry của
+  `TranslationsController` và ngôn ngữ đích `en`, `zh`, `ja` mới được ghi.
+  Registry gồm cả catalog chỉ có `Name` (loại hình việc làm, dropdown tuyển
+  dụng, master data, logo khách hàng): bản dịch lưu cho `Name`, còn màn CRUD
+  vẫn sửa bản tiếng Việt gốc. Bản dịch có cấu trúc được validate đệ quy theo
+  shape JSON của bản tiếng Việt trước khi lưu.
+- Category đã bản địa hoá giữ cột ngôn ngữ riêng để tương thích truy vấn public.
+  Giá trị fallback copy từ nguồn không chứng minh đã dịch; marker trong
+  `entity_translations` ghi nhận bản dịch cố ý giống nguồn.
+- Nhãn role group giữ translation key cũ. Placeholder copy từ nguồn được đánh
+  dấu trong `entity_translations`, nên khi sửa nguồn chỉ placeholder đã đánh dấu
+  bị cập nhật, bản dịch thật (kể cả trùng nguồn) được giữ. Ghi group kèm tên
+  ngôn ngữ đích qua API cũ cần thêm quyền quản lý bản dịch. Group key không nằm
+  trong danh sách UI translation; API pair, bulk và key-delete từ chối bằng
+  `role_group_translation_use_content`.
 
 ---
 
-## 4. Getting Started
+## 3. Khởi chạy môi trường
 
-### 4.1 Running with Docker Compose (Recommended)
-
-Docker Compose provisions SQL Server, the backend API, and all dependencies in a single command.
+### 3.1 Runtime stack (Docker Compose)
 
 ```bash
-docker compose up -d
+docker compose up -d                          # khởi động
+docker compose down                           # dừng
+docker compose up --build                     # build lại sau khi đổi source/dependency
+docker compose down -v && docker compose up --build -d   # xoá volume, làm lại từ đầu
 ```
 
-Services started:
+| Service | Container | Port |
+|---|---|---|
+| Backend API + SPA | `nihome31042025-backend` | 5043 |
+| SQL Server | `nihome31042025-sqlserver` | 1433 |
 
-| Service          | Container Name              | Port  |
-|------------------|-----------------------------|-------|
-| Backend API      | nihome31042025-backend      | 5043  |
-| SQL Server       | nihome31042025-sqlserver    | 1433  |
+Image build Vite và bản release ASP.NET ở các stage riêng rồi chạy binary đã
+publish trên image runtime. Không có service frontend riêng: port 5043 phục vụ
+cả SPA và API, port 8080 chỉ dùng khi chạy Vite trên host. Mọi thay đổi source
+cần rebuild image. `.dockerignore` loại `test-results` và `TestResults` (kể cả
+thư mục lồng nhau); để output chạy test ngoài build context.
 
-Docker builds the Vite application and the ASP.NET release binary in separate
-stages, then runs the published binary from the ASP.NET runtime image. There is
-no separate frontend Compose service: port `5043` serves both the SPA and API.
-Rebuild the image after source changes. Port `8080` is used only when running
-Vite separately on the host.
-`.dockerignore` excludes both `test-results` and `TestResults` directories,
-including nested .NET test output and audit harness artifacts. Keep run output
-outside the build context so it neither invalidates source layers nor enters
-the intermediate image's `COPY . .` step.
+Image backend cài và kiểm tra font Noto Latin/CJK cho xuất PDF. Môi trường
+không dùng container có thể chỉ định font bằng `NIHOME_PDF_FONT_LATIN_PATH`,
+`NIHOME_PDF_FONT_JA_PATH`, `NIHOME_PDF_FONT_ZH_PATH`; với file TTC đặt thêm biến
+`_INDEX` tương ứng (số nguyên không âm). Mặc định đã bao Docker, Windows IIS và
+macOS. Backend dừng khởi động nếu thiếu hoặc cấu hình sai font của bất kỳ ngôn
+ngữ bắt buộc nào.
 
-To stop all services:
+### 3.2 Lệnh backend và dev stack
 
-```bash
-docker compose down
-```
-
-To rebuild containers after dependency changes:
-
-```bash
-docker compose up --build
-```
-
-The backend image installs and verifies the Latin and CJK Noto fonts used by
-PDF exports. Non-container deployments can override font discovery with
-`NIHOME_PDF_FONT_LATIN_PATH`, `NIHOME_PDF_FONT_JA_PATH`, and
-`NIHOME_PDF_FONT_ZH_PATH`. For TTC files, set the corresponding `_INDEX`
-variable to the required non-negative collection index. The defaults cover the
-Docker image, Windows IIS, and common macOS font locations. Backend startup
-fails before serving traffic when any required language font is unavailable or
-misconfigured.
-
-To remove all volumes and start fresh:
-
-```bash
-docker compose down -v
-docker compose up --build -d
-```
-
-### 4.2 Running Backend Commands
-
-Repository backend and database commands run in Docker. The Compose backend
-uses the ASP.NET runtime image and has no SDK or file watcher; source edits
-require an image rebuild. Compile the application through its build stage:
+Image runtime không có SDK hay file watcher. Biên dịch qua build stage:
 
 ```bash
 docker compose build nihomeBackend
 ```
 
-Run formatting, focused tests and EF tooling in a separate .NET SDK container
-with the repository mounted/copied at the solution root. Include the unit and
-integration projects for whole-solution format verification. Use the Compose
-network for SQL tests and isolated test databases; the runtime container is
-not an SDK substitute.
+Format, test và EF tooling chạy trong một container .NET SDK riêng, mount repo
+ở gốc solution, gồm cả project unit và integration khi verify format toàn
+solution. Test SQL dùng mạng Compose và database test cô lập.
 
-For source-watching development, use the standalone `docker-compose-dev.yaml`
-instead of the runtime Compose file. It runs two independent development loops:
-the backend image contains .NET SDK 8 and PDF fonts and runs
-`dotnet watch --no-hot-reload` from `/app`; the Node 22 frontend service runs
-Vite with HMR. Restart-on-change avoids Roslyn Hot Reload instability in the
-Linux development container. Frontend source
-changes no longer trigger an ASP.NET rebuild or a production web build. Vite
-proxies `/api`, `/files` and `/images` to the backend, so the application stays
-at `http://localhost:5043`; direct backend/Swagger access is available at
-`http://localhost:5044`. Linux dependency/build caches, managed files,
-uploaded/process images and file quarantine use named volumes. The backend
-image supplies the tracked design/as-built sample PDFs to initialize a new
-managed-file volume. The development SQL Server is capped at 1 GiB so the C#
-compiler and Vite have enough memory inside Docker Desktop; production Compose
-does not apply this development-only cap. Native file events are used by
-default to avoid expensive source-tree polling. On a host where bind-mount
-events are unavailable, set `DOTNET_USE_POLLING_FILE_WATCHER=1` and
-`CHOKIDAR_USEPOLLING=true` before starting the dev stack.
-Startup removes only obsolete mixed-case NuGet import files left in the
-persistent backend `obj` volume by the former `NihomeBackend.csproj` name; this
-prevents duplicate `MSB4011` imports without discarding the remaining cache.
-Run `docker compose -f docker-compose-dev.yaml up -d --build`. The development
-connection string and SQL `MSSQL_SA_PASSWORD` use the same fixed local password
-as the standard Compose setup. An existing SQL volume must already use that
-password; changing environment settings does not reset a persisted login. Both Compose
-files publish the application on port 5043 and reuse the SQL/key volumes by
-default, so stop the runtime stack before starting the development stack. The
-dev backend's additional port 5044 is for direct API and Swagger access. The
-dev image has a separate tag and does not replace the published runtime image.
-When reusing a database with uploads, back up and copy its matching managed
-files/images into the development volumes before startup. Database metadata
-and file storage must belong to the same dataset. A fresh project/database must
-use fresh file volumes; never expose a different dataset's uploads to cleanup.
+Để sửa code có watch, dùng `docker-compose-dev.yaml` (không dùng chung với
+runtime stack):
 
-Administrators set the maximum size of each contract or appendix file under
-`/admin/settings?tab=contracts`. The value is persisted in `site_settings`
-(`ContractMaxFileSizeMb`), defaults to 100 MiB for existing data, and accepts
-whole numbers from 1 to 5,120 MiB (5 GiB). Each upload reads the current
-administrator value; the transport and managed contract-document inspection
-allow up to 5 GiB. Multipart buffering needs temporary disk space in addition
-to permanent storage. Reverse proxies must allow a request body of at least
-5,126 MiB and sufficient upload time for the deployment's connection speeds.
-Other upload endpoints retain their own limits. The settings API uses
-`GET/PUT /api/site-settings/contract-uploads` with `system.settings.view/manage`.
+```bash
+docker compose -f docker-compose-dev.yaml up -d --build
+```
 
-### 4.2.1 Swagger Access
+- Backend: image có .NET SDK 8 và font PDF, chạy `dotnet watch --no-hot-reload`
+  từ `/app` (restart khi đổi file để tránh lỗi Roslyn Hot Reload trên Linux).
+- Frontend: Node 22 chạy Vite HMR, proxy `/api`, `/files`, `/images` về backend.
+  Ứng dụng vẫn ở `http://localhost:5043`; backend và Swagger truy cập trực tiếp
+  qua `http://localhost:5044`. Sửa frontend không kích hoạt rebuild ASP.NET.
+- Cache build, managed files, ảnh upload/process và quarantine nằm trong named
+  volume. Volume managed-file mới được khởi tạo bằng các PDF mẫu thiết kế/hoàn
+  công có trong image backend.
+- SQL Server dev bị giới hạn 1 GiB để compiler và Vite đủ RAM trong Docker
+  Desktop; production không áp giới hạn này.
+- Mặc định dùng native file events. Nếu bind mount không phát event, đặt
+  `DOTNET_USE_POLLING_FILE_WATCHER=1` và `CHOKIDAR_USEPOLLING=true` trước khi
+  khởi động.
+- Lúc khởi động, dev backend chỉ xoá các file NuGet import viết hoa/thường lẫn
+  lộn còn sót từ tên cũ `NihomeBackend.csproj` trong volume `obj`, tránh lỗi
+  trùng import `MSB4011`.
+- Connection string và `MSSQL_SA_PASSWORD` dùng cùng mật khẩu local cố định với
+  runtime stack. Volume SQL có sẵn phải đang dùng mật khẩu đó; đổi biến môi
+  trường không reset login đã lưu.
+- Hai stack cùng publish port 5043 và mặc định dùng chung volume SQL/key: dừng
+  runtime stack trước khi bật dev stack. Image dev có tag riêng.
+- Database và volume file phải thuộc cùng một bộ dữ liệu. Khi dùng lại database
+  có upload, backup và copy file/ảnh tương ứng vào volume dev trước khi khởi
+  động. Database mới phải đi với volume file mới; không để worker dọn dẹp nhìn
+  thấy upload của bộ dữ liệu khác.
 
-Swagger is enabled only when the backend runs in the `Development` environment.
+### 3.3 Swagger
 
-For the standard Docker Compose development setup, use:
+Chỉ bật khi backend chạy môi trường `Development`:
 
-- Swagger UI: `http://localhost:5043/swagger`
+- Swagger UI: `http://localhost:5043/swagger` (dev stack: port 5044)
 - OpenAPI JSON: `http://localhost:5043/swagger/v1/swagger.json`
-- API base path: `http://localhost:5043/api`
+- API base: `http://localhost:5043/api`
 
-### 4.3 Running the Frontend Locally
+### 3.4 Chạy frontend trên host
 
 ```bash
 cd nihomeweb
 npm install
-npm run dev
+npm run dev     # http://localhost:8080
 ```
 
-The development server starts on `http://localhost:8080`. Set `VITE_API_URL` when it must call a backend on another origin; Vite does not define an API proxy.
+Khi chạy Vite trực tiếp trên host và backend ở origin khác, đặt `VITE_API_URL`.
 
-### 4.4 Building for Production
-
-Backend:
+### 3.5 Build production
 
 ```bash
-docker exec nihome31042025-backend dotnet build -c Release
+docker compose build nihomeBackend   # backend (image runtime không có SDK)
+cd nihomeweb && npm run build        # frontend, output ở nihomeweb/dist/
 ```
 
-Frontend:
-
-```bash
-cd nihomeweb
-npm run build
-```
-
-The frontend build output is placed in `nihomeweb/dist/` and is served as static files by the ASP.NET backend in production.
+Khi triển khai, backend phục vụ SPA đã build như static file. Gói release cho
+IIS được tạo bằng `auto-deployment.sh` (xem [18.2](#182-checklist-production)).
 
 ---
 
-## 5. Configuration
+## 4. Cấu hình
 
-### 5.1 Application Settings
+Cấu hình backend (kể cả logging cho cả hai runtime) nằm trong
+`nihomebackend/appsettings.json` và `appsettings.Development.json`.
 
-Application configuration, including logging for both runtimes, is managed
-through `appsettings.json` and `appsettings.Development.json` in the
-`nihomebackend/` directory.
-
-#### Database Connection
-
-From a separate Docker container that is not attached to the Compose network:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=host.docker.internal,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;"
-  }
-}
-```
-
-From a tool running directly on the host:
-
-```json
-{
-  "ConnectionStrings": {
-    "DefaultConnection": "Server=localhost,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;"
-  }
-}
-```
-
-From the backend or another service on the Compose network:
+### 4.1 Database
 
 ```
-Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;
+Server=<host>,1433;Database=NihomeDB;User Id=sa;Password=<development-password>;TrustServerCertificate=True;
 ```
 
-#### JWT Configuration
+| Chạy từ | `<host>` |
+|---|---|
+| Công cụ trên máy host | `localhost` |
+| Service trong mạng Compose | `sqlserver` |
+| Container riêng, không gắn mạng Compose | `host.docker.internal` (nếu nền tảng hỗ trợ) |
+
+Key cấu hình: `ConnectionStrings:DefaultConnection`.
+
+### 4.2 JWT, SMTP, CORS
 
 ```json
 {
@@ -350,275 +244,217 @@ Server=sqlserver,1433;Database=NihomeDB;User Id=sa;Password=<development-passwor
     "AccessTokenMinutes": 10080,
     "RefreshTokenDays": 30,
     "ActiveKeyId": "key2",
-    "Keys": {
-      "key1": "<base64-encoded-key>",
-      "key2": "<base64-encoded-key>"
-    }
-  }
-}
-```
-
-Access tokens expire after 7 days (10080 minutes). Refresh tokens expire after 30 days. Two signing keys are supported for key rotation; the `ActiveKeyId` field determines which key signs new tokens.
-
-#### SMTP Configuration
-
-```json
-{
+    "Keys": { "key1": "<base64-encoded-key>", "key2": "<base64-encoded-key>" }
+  },
   "Smtp": {
-    "Host": "mail9005.maychuemail.com",
-    "Port": 465,
-    "UseSsl": true,
-    "UseStartTls": false,
-    "Username": "<email-username>",
-    "Password": "<email-password>",
-    "FromName": "Nihome",
-    "FromEmail": "noreply@nihome.vn"
-  }
-}
-```
-
-#### CORS Configuration
-
-```json
-{
+    "Host": "mail9005.maychuemail.com", "Port": 465, "UseSsl": true, "UseStartTls": false,
+    "Username": "<email-username>", "Password": "<email-password>",
+    "FromName": "Nihome", "FromEmail": "noreply@nihome.vn"
+  },
   "Frontend": {
-    "AllowedOrigins": [
-      "http://localhost:8080",
-      "http://127.0.0.1:8080"
-    ]
+    "AllowedOrigins": ["http://localhost:8080", "http://127.0.0.1:8080"]
   }
 }
 ```
 
-#### Structured JSON Logging
+- Access token sống 7 ngày (10080 phút), refresh token 30 ngày. Hai khoá ký hỗ
+  trợ xoay vòng; `ActiveKeyId` chọn khoá ký token mới. Refresh token chỉ dùng
+  một lần.
+- `Frontend:AllowedOrigins` phải khớp chính xác origin (giao thức và port).
+- `Frontend:PublicBaseUrl`: origin HTTPS public dùng để dựng link trong email
+  (ví dụ `/admin/work-packages/{id}`). Compose local chấp nhận HTTP localhost.
+  Khi thiếu, chỉ origin nằm trong `AllowedOrigins` hoặc origin loopback của
+  request mới được dùng làm link.
 
-The `Logging` sections in `appsettings.json` and
-`appsettings.Development.json` are the source of truth for backend log levels
-and backend/frontend logging identity fields. ASP.NET reads them at runtime;
-Vite reads the `Logging:Frontend` values from the same files at build time.
+### 4.3 Logging JSON
 
-Every application log is emitted as one JSON object with this contract:
+Section `Logging` trong hai file appsettings là nguồn duy nhất cho log level và
+định danh log của backend lẫn frontend: ASP.NET đọc lúc chạy, Vite đọc
+`Logging:Frontend` lúc build. Mỗi log là một object JSON trên một dòng:
 
 ```json
 {
   "logger": "nihomebackend/Services/ExampleService.cs",
   "message": "date=\"2026-10-13T08:30:00.0000000+00:00\", process_id=\"314\", Example message",
   "properties": {
-    "api_name": "Example.Get",
-    "app_name": "NihomeBackend",
-    "correlation_id": "request-123",
-    "message_type": "api_request"
+    "api_name": "Example.Get", "app_name": "NihomeBackend",
+    "correlation_id": "request-123", "message_type": "api_request"
   },
   "severity": "INFO",
   "thread": ".NET TP Worker"
 }
 ```
 
-For application `ILogger<T>` categories, `logger` is the logical repository
-source path derived from the .NET category. Classes declared in a differently
-named source file must be listed in `Logging:Json:SourcePathOverrides`.
-Framework categories that do not have a repository source file retain their
-category name. Structured message-template values are retained under
-`properties` with snake-case keys in addition to the four required identity
-fields. Browser code must use
-`createLogger(source)` from `nihomeweb/src/lib/logger.ts`; browser process and
-thread values are represented by a generated browser-session id and
-`browser-main` because the browser does not expose OS process/thread ids.
+- Với category `ILogger<T>`, `logger` là đường dẫn source suy từ category. Class
+  nằm trong file khác tên phải khai báo ở `Logging:Json:SourcePathOverrides`.
+  Category framework không có file source giữ nguyên tên category.
+- Giá trị của message template nằm trong `properties` với key snake_case, ngoài
+  bốn field định danh bắt buộc.
+- Code browser phải dùng `createLogger(source)` trong
+  `nihomeweb/src/lib/logger.ts`. Browser không có process/thread id thật nên dùng
+  id phiên browser và `browser-main`.
+- Frontend gắn `X-Correlation-Id` riêng cho mỗi request. Backend validate, tự
+  tạo id an toàn nếu thiếu/sai, trả lại trong response header và đưa vào logging
+  scope. `HttpContext.TraceIdentifier` vẫn là request id, không bị thay. Log lỗi
+  API ở frontend dùng lại correlation id để truy vết chung với backend. Log nền
+  không có request dùng correlation id theo process.
 
-The frontend adds a unique `X-Correlation-Id` to each API request. The backend
-validates it, creates a safe id when it is absent or invalid, exposes the
-normalized id in the response header, and places it in the logging scope for
-all downstream controller and service logs. The server-generated
-`HttpContext.TraceIdentifier` remains the unique request id and is not replaced
-by a client correlation id. The frontend API error logger reuses the request or
-response correlation id so browser and backend failures can be queried
-together. Background logs use a process-scoped correlation fallback when no
-request or activity exists. Deployment log collectors should parse one JSON
-object per console line.
+### 4.4 Biến môi trường và volume Compose
 
-### 5.2 Docker Compose Environment Variables
+| Biến | Giá trị | Mục đích |
+|---|---|---|
+| `ASPNETCORE_ENVIRONMENT` | `Development` | Profile môi trường |
+| `ASPNETCORE_URLS` | `http://0.0.0.0:5043` | Địa chỉ Kestrel |
+| `ConnectionStrings__DefaultConnection` | chuỗi kết nối tới `sqlserver` | Database |
+| `BUILD_SHA` | `$(git rev-parse HEAD)` | Ghi vào `buildSha` của health |
 
-The following environment variables are set in `docker-compose.yaml`:
+Health (`/api/system/health`) trả `buildSha`; CI chỉ coi stack đã sẵn sàng khi
+giá trị này khớp commit đang checkout, tránh để process cũ vượt qua bước
+readiness E2E. `docker-compose-e2e.yaml` thêm service `smtpSink` (không relay)
+và ghi đè `EmailSettings__*`.
 
-| Variable                              | Value                          | Purpose                              |
-|---------------------------------------|--------------------------------|--------------------------------------|
-| `ASPNETCORE_ENVIRONMENT`              | Development                    | Runtime environment profile          |
-| `ASPNETCORE_URLS`                     | http://0.0.0.0:5043            | Kestrel binding address              |
-| `ConnectionStrings__DefaultConnection`| SQL Server connection string   | Database connection (container name) |
+| Volume | Mount | Mục đích |
+|---|---|---|
+| `data_protection_keys` | `/root/.aspnet/DataProtection-Keys` | Key ring ASP.NET Data Protection |
+| `sqlserver_data` | `/var/opt/mssql` | Dữ liệu SQL Server |
+| `work_task_files` | `wwwroot/files/business-documents/work-tasks` | File đính kèm của task |
 
-The backend image builds the frontend and publishes the ASP.NET application in
-multi-stage Docker builds. Compose runs that immutable published assembly. The
-health response exposes `buildSha`; CI accepts readiness only when it matches
-the checked-out commit, preventing an old process from passing E2E readiness.
-`docker-compose-e2e.yaml` adds the non-relaying `smtpSink` and overrides
-`EmailSettings__*` for browser delivery tests.
+Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ liệu nghiệp vụ.
 
-### 5.3 Docker Compose Volumes
+### 4.5 Cấu hình nghiệp vụ trong `site_settings`
 
-Named volumes preserve application keys and SQL Server data:
-
-| Volume                  | Mount Point          | Purpose                                     |
-|-------------------------|----------------------|---------------------------------------------|
-| `data_protection_keys`  | `/root/.aspnet/DataProtection-Keys` | Preserve ASP.NET data-protection keys |
-| `sqlserver_data`        | `/var/opt/mssql`     | Preserve SQL Server data                      |
+- `ContractMaxFileSizeMb`: dung lượng tối đa mỗi file hợp đồng/phụ lục, sửa tại
+  `/admin/settings?tab=contracts`. Mặc định 100 MiB, nhận số nguyên 1–5.120 MiB
+  (5 GiB). Mỗi lần upload đọc giá trị hiện hành; transport và bước kiểm tra
+  file hợp đồng cho phép tối đa 5 GiB. Multipart cần thêm dung lượng đĩa tạm.
+  Reverse proxy phải cho body ít nhất 5.126 MiB và đủ thời gian upload. API:
+  `GET/PUT /api/site-settings/contract-uploads` với `system.settings.view/manage`.
+  Các endpoint upload khác giữ giới hạn riêng.
+- Template email: xem [6.3](#63-email-ứng-dụng).
+- Google Drive: cấu hình trong database, xem [18.3](#183-google-drive-trên-iis).
 
 ---
 
-## 6. Database
+## 5. Cơ sở dữ liệu
 
-### 6.1 Overview
+### 5.1 Tổng quan và schema
 
-The platform uses SQL Server 2022 with Entity Framework Core 8 as the ORM. The database is named `NihomeDB`. EF Core is configured with split-query behavior and a 60-second command timeout.
+Database `NihomeDB`, EF Core 8 dùng split query và command timeout 60 giây.
+`AppDbContext` và model snapshot là nguồn chuẩn của schema.
 
-### 6.2 Schema
-
-`AppDbContext` and the model snapshot are authoritative. The grouped inventory
-below prevents this guide from implying that the earlier short table was the
-complete operational schema.
-
-| Domain | Main aggregates/tables |
+| Miền | Aggregate/bảng chính |
 |---|---|
-| Identity and control | users, refresh/OTP, RBAC roles/permissions, notifications/templates, audit, idempotency, hard-delete operations |
-| Public content | activities/categories, news/categories, public projects/categories, services, slideshow, logos, about, processes, recruitment, contacts, settings, translations |
-| CRM/pre-design | leads/activities, customers/contacts/activities/documents, opportunities/activities, quotes/items/versions/approvals/documents, material-rate catalogs/revisions/lines, tenders/checklists/estimates, surveys/media/conditions/checklists |
-| Shared project | operational projects, project members/roles/assignments/history, project documents/folders, project reports/read models |
+| Định danh và kiểm soát | users, refresh/OTP, RBAC roles/permissions, notifications/templates, audit, idempotency, hard-delete operations |
+| Nội dung public | activities/categories, news/categories, public projects/categories, services, slideshow, logos, about, processes, recruitment, contacts, settings, translations |
+| CRM/tiền thiết kế | leads, customers/contacts/documents, opportunities, quotes/items/versions/approvals/documents, material-rate catalogs/revisions/lines, tenders/checklists/estimates, surveys/media |
+| Dự án chung | operational projects, members/roles/assignments/history, project documents/folders, project reports |
+| Hợp đồng | contracts, payment milestones/events, appendices/VO, attachments, contract lines |
+| Thiết kế/pháp lý | design projects, concept options, basic documents, shop drawings, drawing revisions, IFC releases/items/recipients, design schedule, permit checklist items |
+| Thi công | construction tasks/dependencies, site diaries, punch items, HSE, acceptance, as-built, handover |
+| Cung ứng | vendors, BOQ revisions/lines, material requests, RFQ (lines/invitations/bids/events/awards), receipts/issues, vendor ratings, material alerts |
+| Tài chính/KPI | payment requests, accounting periods/corrections, KPI definitions/periods/snapshots |
+| Drive | Google Drive credential, project document catalog, folder bindings, trạng thái đồng bộ |
 
-| Contracts | contracts, payment milestones/events, appendices/VOs, attachments and contract lines |
-| Design/legal | design projects, concept options, basic documents, shop drawings, drawing revisions, IFC releases/items/recipients, design schedule phases/tasks/dependencies/history, permit checklist items |
-| Construction | construction tasks/dependencies, site diaries, punch items, HSE violations/events, acceptance records, as-built categories/documents, handover records/history |
-| Procurement | vendors/uploads, BOQ revisions/lines, material requests/lines, RFQs/lines/invitations/bids/bid lines/events/awards, receipts/issues/lines, vendor ratings, material alerts/events |
-| Finance/KPI | payment requests/events/attachments, accounting periods/corrections, KPI definitions/periods/snapshots |
-| Drive integration | Google Drive credential, project document catalog, project-folder bindings and synchronization state |
+Quy tắc dữ liệu cần nhớ:
 
-Assignment handover preserves the original KPI identity and records the previous
-assignment ID on the replacement. Repeated handovers to the same member get
-distinct identities. The `AllowAssignmentHandover` migration changes the unique
-assignment index; its rollback cannot recreate the old unique index if repeated
-member/work-key combinations exist. Resolve those conflicts with an approved
-data-preservation plan before attempting rollback.
+- `projects` (website public), `operational_projects` (dự án nội bộ trung tâm)
+  và `design_projects` (luồng thiết kế) cùng tồn tại có chủ đích. Không join theo
+  tên/mã, không dùng bảng này thay bảng kia; chỉ đi theo foreign key.
+- Bàn giao assignment giữ định danh KPI gốc và ghi ID assignment trước đó lên
+  bản thay thế; bàn giao lặp lại cho cùng người tạo định danh riêng. Migration
+  `AllowAssignmentHandover` đổi unique index; rollback không tạo lại được index
+  cũ nếu đã có cặp member/work-key trùng, phải có kế hoạch bảo toàn dữ liệu được
+  duyệt trước.
 
-The coexistence of public `projects`, central `operational_projects`, and
-specialized `design_projects` is intentional. Never join them by name/code or
-use one as a substitute for another; follow explicit foreign keys.
+Index đáng chú ý: unique `users.Phone`, `refresh_tokens.Token`; `Slug` unique
+trên `activities`, `news_articles`, `projects`, `service_items`,
+`slideshow_items`; unique `activity_categories.Name`; unique (`Key`,
+`LanguageCode`) của `translations`; unique (`EntityType`, `EntityId`,
+`FieldName`, `LanguageCode`) của `entity_translations`; `handover_records`
+unique theo `DesignProjectId` và `HandoverCode`.
 
-### 6.3 Selected Key Indexes
+### 5.2 Migration
 
-- `users`: Unique index on `Phone`
-- `refresh_tokens`: Unique index on `Token`
-- `registration_otp`: Index on `PhoneNumber`
-- `activities`, `news_articles`, `projects`, `service_items`, `slideshow_items`: Unique index on `Slug`
-- `activity_categories`: Unique index on `Name`
-- `translations`: Unique composite index on (`Key`, `LanguageCode`)
-- `entity_translations`: Unique composite index on (`EntityType`, `EntityId`, `FieldName`, `LanguageCode`)
-- `process_documents`: Index on `GroupKey`
-- `handover_records`: Unique indexes on `DesignProjectId` and `HandoverCode`; index on (`Status`, `PlannedHandoverDate`)
-- `handover_status_history`: Index on (`HandoverRecordId`, `ChangedAt`)
-
-### 6.4 Entity Framework Migrations
-
-All schema changes must go through EF Core migrations. Never modify the schema directly.
-
-The current development image does not install `dotnet-ef`, so `docker exec ... dotnet ef` is not a working command until a pinned tool manifest or image installation is added. Generate and review migrations with a .NET 8 SDK environment that has `dotnet-ef` 8.x installed, while keeping database work containerized. The intended commands from the backend project directory are:
+Mọi thay đổi schema đi qua EF Core migration, không sửa schema trực tiếp. Không
+viết tay metadata migration hay model snapshot: sinh bằng EF trong container
+.NET 8 SDK có `dotnet-ef` 8.x (image dev hiện chưa cài, nên
+`docker exec ... dotnet ef` chưa chạy được), đọc lại migration và snapshot rồi
+mới áp dụng.
 
 ```bash
 dotnet ef migrations add <MigrationName>
-```
-
-Apply pending migrations:
-
-```bash
 dotnet ef database update
-```
-
-Remove the last unapplied migration:
-
-```bash
-dotnet ef migrations remove
-```
-
-Generate a SQL script for review:
-
-```bash
-dotnet ef migrations script
-```
-
-List all migrations and their status:
-
-```bash
+dotnet ef migrations remove        # chỉ migration cuối chưa áp dụng
+dotnet ef migrations script        # sinh SQL để review (thêm --idempotent khi deploy)
 dotnet ef migrations list
 ```
 
-Always review migration files before applying them.
+Quy tắc chung cho mọi migration có dữ liệu:
 
-Do not hand-author migration metadata or the model snapshot. Generate migrations with EF Core in the provisioned Docker-based .NET 8 SDK tooling environment, review the generated migration and snapshot, and only then apply them.
+- Rehearse script trên bản restore của backup giống production trước cửa sổ
+  bảo trì; backup ngay trước khi áp dụng.
+- Không backfill bằng suy đoán (tên, khách hàng, ngày). Dữ liệu cũ không đủ
+  bằng chứng giữ null/chưa phân loại.
+- Nếu `Down` xoá dữ liệu mới (lịch sử, snapshot, link), export trước khi
+  rollback; nhiều migration chủ động từ chối rollback khi đã có dữ liệu thật.
+- Không gỡ một migration đã chạy ở môi trường nào đó. Không rollback bằng cách
+  xoá volume.
 
-The project handover schema is introduced by `AddHandoverRecords` and hardened by `AddHandoverConcurrency`. The latter adds SQL Server `rowversion` to prevent silent lost updates. Both migrations must be applied before deploying the NIH-144 application build.
+Startup tự chạy `Database.Migrate()` và seed (trừ môi trường `IntegrationTests`).
+`AddHandoverRecords` và `AddHandoverConcurrency` (thêm `rowversion` chống mất
+cập nhật) phải có trước bản build NIH-144.
 
-### 6.5 Data Seeding
+### 5.3 Seed dữ liệu
 
-Application startup applies pending migrations and then runs the baseline seed
-pipeline: users/settings, content, UI and entity translations, RBAC catalog/roles,
-master data, workflows, notification templates, and deterministic business-role
-users. Development-only sample CRM/design/construction data is enabled by the
-startup host only in the `Development` environment; integration tests create
-their own business fixtures explicitly.
+Startup áp dụng migration rồi chạy pipeline seed nền: users/settings, nội dung,
+UI và entity translations, RBAC catalog/roles, master data, workflow,
+notification templates và tài khoản theo vai trò nghiệp vụ. Dữ liệu mẫu CRM/
+thiết kế/thi công chỉ seed ở môi trường `Development`
+(`includeDevelopmentSamples`); integration test tự tạo fixture.
 
-For a SQL-only reset of the CRM, Design, Procurement, Finance, Legal,
-Construction, and Analytics records, open `tools/sqlserver_business_data_purge.sql`
-in a SQL Server query editor and run the entire script. Set `@ExpectedDatabase`
-to the exact selected database name (`NihomeDB` locally or the configured
-deployment database name), and set `@ExpectedSchema` to the application schema
-(`dbo` locally; the observed deployment schema is `niconNew`). Keep
-`@Execute = 0` for the first run to inspect the table scope, row counts, and
-foreign-key dependencies. Tables in other schemas are counted but left alone.
-Stop backend writes and take a verified SQL backup before rerunning with
-`@Execute = 1`. The script keeps users, permissions, settings, translations,
-website content, audit history, and EF migration history. Managed files and
-Google Drive objects remain; clean those separately through their owning
-workflows if needed. New or unclassified tables stop the script until its scope
-is reviewed. Development hosts seed sample business records at startup, so keep
-them stopped after a reset unless sample data is intentionally wanted.
+- Activities, news, projects backfill theo slug, giữ chỉnh sửa của admin.
+  Process documents và logos đối soát cộng dồn: khôi phục dòng chuẩn bị thiếu,
+  không xoá dòng tự tạo, không ghi đè giá trị admin.
+- Process document chuẩn có `SeedKey` nullable (filtered unique index), suy từ
+  process group và URL asset chuẩn đầu tiên nên đổi tiêu đề/thứ tự không đổi
+  định danh. Dòng không có `SeedKey` thuộc về admin. Metadata ảnh/file chỉ được
+  backfill khi tiêu đề chuẩn chưa đổi.
+- Workflow manifest được validate trước khi lưu; định nghĩa lỗi, thứ tự bước
+  trùng/sai hoặc role duyệt không tồn tại làm startup thất bại thay vì âm thầm
+  nới lỏng chuỗi duyệt.
+- Asset process nằm ngoài git ở `nihomebackend/wwwroot/process-assets/`
+  (`images/`, `files/`), nguồn chuẩn là bản backup; phải có trên server thì URL
+  trong `processes.json` mới mở được.
+- UI translation mặc định nằm ở `nihomebackend/Data/Seeds/i18n/` (bốn ngôn ngữ,
+  embedded). `TranslationSeeder` chỉ thêm key thiếu, điền category trống và giữ
+  bản sửa của admin. Muốn đổi câu chữ của key đã seed: thêm giá trị `old` cạnh
+  bản mới trong entry i18n và viết data migration chỉ cập nhật khi giá trị DB
+  còn đúng giá trị cũ (ví dụ `SyncConstructionGuidanceTranslations`).
+  `GET /api/translations/{lang}` có cache theo process nên cần restart backend
+  sau migration.
+- Tài khoản `SUPER_ADMIN`, `ADMIN` và các role nghiệp vụ được tạo cố định trong
+  `DbSeeder`, `BusinessRoleUserSeeder`, `TestDataSeeder` (integration) và
+  fixture Playwright. Không chép credential vào tài liệu vận hành. Production
+  phải đổi mật khẩu hoặc vô hiệu các tài khoản này trước khi mở truy cập.
 
-Content behavior is entity-specific. Activities, news, and projects are slug-based backfills that preserve administrator edits. Process documents and logos are also reconciled additively: missing canonical rows are restored without deleting custom rows or overwriting administrator-managed values. Translation, RBAC, master-data, workflow, and notification files are embedded resources.
+Xoá dữ liệu nghiệp vụ bằng SQL (CRM, Thiết kế, Cung ứng, Tài chính, Pháp lý, Thi
+công, Analytics): mở `tools/sqlserver_business_data_purge.sql` trong SQL editor
+và chạy cả script.
 
-UI translation defaults live in `nihomebackend/Data/Seeds/i18n/` for all four
-supported languages. `TranslationSeeder` adds missing keys, fills blank
-categories, and preserves administrator edits. When changing a default, add
-an `old` value beside the current translation in the same i18n entry and a
-data migration guarded by that exact previous value. Existing databases
-receive the new wording without overwriting edits in `/admin/translations`.
+1. Đặt `@ExpectedDatabase` đúng tên database (`NihomeDB` ở local) và
+   `@ExpectedSchema` (`dbo` ở local; schema thấy được trên deployment là
+   `niconNew`).
+2. Lần đầu giữ `@Execute = 0` để xem phạm vi bảng, số dòng và phụ thuộc FK.
+   Bảng ở schema khác chỉ được đếm.
+3. Dừng ghi từ backend, backup đã kiểm tra, rồi chạy lại với `@Execute = 1`.
 
-#### Process Document Seeder Identity
+Script giữ users, permissions, settings, translations, nội dung website, audit
+và lịch sử EF migration. File managed và object trên Drive không bị xoá. Bảng
+mới chưa phân loại làm script dừng cho tới khi được review. Host Development
+seed lại dữ liệu mẫu khi khởi động, nên giữ backend tắt sau khi reset nếu không
+muốn có dữ liệu mẫu.
 
-Canonical process rows carry an internal nullable `SeedKey` with a filtered unique index. The key is derived from the process group and its first canonical asset URL, so manifest or administrator title and sort-order changes do not alter identity. On the first startup after the migration, existing canonical rows are identified by their canonical title or seeded asset URLs and assigned that identity. Rows without a seed identity remain administrator-owned and are not deleted or repurposed.
-
-Missing image and file metadata is backfilled only while the canonical title remains unchanged. Workflow manifests are validated before persistence; malformed definitions, invalid or duplicate step orders, and unknown approver roles fail startup rather than silently weakening an approval chain.
-
-#### Static Asset Files for Process Documents
-
-Physical image and file assets are stored outside the database and served as static files:
-
-```
-nihomebackend/wwwroot/process-assets/
-  images/     -- JPEG/PNG images referenced by ImagesJson
-  files/      -- DOC/PDF/etc files referenced by FilesJson
-```
-
-These files must be present on the server before the URLs in `processes.json` can resolve. They are not tracked in git (binary files); the authoritative source is a backup archive. In development, copy the contents of the backup to `nihomebackend/wwwroot/process-assets/`.
-
-Translation seed files are embedded resources under `Data/Seeds/i18n/`.
-
-#### Seeded Accounts
-
-The backend seeders create deterministic `SUPER_ADMIN`, `ADMIN`, and selected business-role accounts for development and automated tests. Current identifiers are defined in `DbSeeder`, `BusinessRoleUserSeeder`, integration `TestDataSeeder`, and Playwright fixtures; do not duplicate credentials in operational documentation.
-
-The startup path gates demo/sample business data to Development. Production
-deployment must still rotate or disable deterministic development accounts before
-the application is exposed.
-
-### 6.6 Verifying the Database
-
-Connect to SQL Server running in Docker:
+### 5.4 Kiểm tra database
 
 ```bash
 docker run --platform linux/amd64 -it --rm \
@@ -627,106 +463,44 @@ docker run --platform linux/amd64 -it --rm \
   /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P "<development-password>"
 ```
 
-List all databases:
-
 ```sql
 SELECT name FROM sys.databases;
-GO
-```
-
-List all tables:
-
-```sql
 SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE = 'BASE TABLE';
-GO
-```
-
-Describe a table:
-
-```sql
 SELECT COLUMN_NAME, DATA_TYPE, IS_NULLABLE, CHARACTER_MAXIMUM_LENGTH
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME = 'YourTableName';
-GO
-```
-
-Show indexes on a table:
-
-```sql
+  FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_NAME = 'YourTableName';
 EXEC sp_helpindex 'YourTableName';
 GO
 ```
 
----
+### 5.5 Migration lịch sử về Operational Project (NIH-465)
 
-### 6.7 Operational Project Historical Migration
+<a id="67-operational-project-historical-migration"></a>
 
-#### Historical migration scope
+Migration `20260907021500_ReconcileOperationalProjectBackfill` gắn các dòng
+`DesignProject`, `Contract`, `Opportunity`, `Quote` cũ vào aggregate
+`OperationalProject`. `Project` của website không thuộc phạm vi. Migration giữ
+nguyên dòng nguồn và lịch sử, chỉ điền `OperationalProjectId` còn thiếu, chỉ
+tạo project mới khi không kế thừa được từ cùng chuỗi nghiệp vụ, không gộp hay
+xoá project có sẵn.
 
-NIH-465 reconciles historical `DesignProject`, `Contract`, `Opportunity`, and
-`Quote` rows into the internal `OperationalProject` aggregate. Public website
-`Project` content is explicitly outside this migration.
+Thứ tự ưu tiên:
 
-The migration preserves source rows and history. It updates only missing
-`OperationalProjectId` values and creates an Operational Project only when no
-existing project can be inherited from the same business chain. It does not
-merge or delete existing Operational Projects.
+1. Design Project kế thừa project của Contract.
+2. Design Project chưa có project → tạo `PJ-MIG-DP-{id}`; Contract kế thừa.
+3. Opportunity kế thừa project duy nhất mà Contract/Quote của nó đang dùng.
+4. Opportunity chưa có → tạo `PJ-MIG-OP-{id}`; Quote/Contract kế thừa.
+5. Contract trực tiếp không có nguồn → tạo `PJ-MIG-CT-{id}`.
 
-#### Mapping Rules
+Project kế thừa phải cùng Customer. Nhiều ứng viên, map chéo khách hàng, FK
+hỏng, chuỗi không khớp hoặc trùng mã đều làm migration dừng (`THROW 51020` đến
+`51029`) và rollback trong transaction; sửa dữ liệu nguồn, không tắt kiểm tra
+hay sửa migration để bỏ qua dòng lỗi. Mã cố định và guard `NOT EXISTS` cho phép
+chạy lại.
 
-The migration uses deterministic source precedence:
-
-1. A Design Project inherits its Contract's existing Operational Project.
-2. A missing Design Project project is created as `PJ-MIG-DP-{id}`; its Contract
-   then inherits that project.
-3. An Opportunity inherits the single project already used by its Contracts or
-   Quotes.
-4. A missing Opportunity project is created as `PJ-MIG-OP-{id}`; its Quotes and
-   Contracts then inherit that project.
-5. A direct Contract with no project source is created as `PJ-MIG-CT-{id}`.
-
-Every inherited project must belong to the same Customer. Multiple project
-candidates, cross-customer mappings, broken foreign keys, chain mismatches, and
-deterministic code collisions block the migration instead of being guessed.
-The stable codes and `NOT EXISTS` guards make the data statements rerunnable.
-
-#### Pre-Deployment Rehearsal
-
-Back up the target database and restore it under a temporary database name.
-Generate the migration script, review it, and apply it to that copy before the
-production maintenance window. This rehearses the exact migration instead of
-maintaining a separate SQL implementation that can drift from it.
-
-The migration itself is the validation boundary. It aborts and rolls back when
-it finds broken source references, cross-customer relationships, multiple
-project candidates, deterministic-code collisions, changed source counts,
-unmapped rows, or post-migration chain inconsistencies. Save the migration output
-and before/after source counts as deployment evidence. Resolve any reported
-`THROW 51020` through `THROW 51029` condition in the source data; do not disable
-the checks or edit the migration to skip affected rows.
-
-After a successful rehearsal, verify that all historical rows are mapped:
-
-```sql
-SELECT 'DesignProject' EntityType, COUNT(*) TotalRows,
-   COUNT(OperationalProjectId) MappedRows FROM design_projects
-UNION ALL
-SELECT 'Contract', COUNT(*), COUNT(OperationalProjectId) FROM contracts
-UNION ALL
-SELECT 'Opportunity', COUNT(*), COUNT(OperationalProjectId) FROM opportunities
-UNION ALL
-SELECT 'Quote', COUNT(*), COUNT(OperationalProjectId) FROM quotes;
-```
-
-For each row, `TotalRows` and `MappedRows` must match. Run production deployment
-with application writes stopped, and take a second backup immediately after the
-post-migration check passes. If writes resume, prefer a reviewed forward
-correction; restoring the earlier backup would discard later transactions.
-
-#### Deployment
-
-Confirm the backend container with `docker compose ps`, then generate and review
-the idempotent SQL script before applying it:
+Triển khai: rehearse trên bản restore, lưu output và số dòng trước/sau làm bằng
+chứng, dừng ghi của ứng dụng khi chạy production, rồi backup lần hai ngay sau
+khi kiểm tra đạt. Nếu đã cho ghi lại, ưu tiên sửa tiến (forward correction) vì
+restore backup cũ sẽ mất giao dịch mới.
 
 ```bash
 docker exec <backend-container> dotnet ef migrations script \
@@ -735,3734 +509,2028 @@ docker exec <backend-container> dotnet ef migrations script \
 docker exec <backend-container> dotnet ef database update
 ```
 
-EF Core runs the migration in a transaction. The migration records source row
-counts, performs the backfill, and aborts if source counts change, any historical
-row remains unmapped, or post-migration customer and chain integrity fails.
+```sql
+SELECT 'DesignProject' EntityType, COUNT(*) TotalRows, COUNT(OperationalProjectId) MappedRows FROM design_projects
+UNION ALL SELECT 'Contract', COUNT(*), COUNT(OperationalProjectId) FROM contracts
+UNION ALL SELECT 'Opportunity', COUNT(*), COUNT(OperationalProjectId) FROM opportunities
+UNION ALL SELECT 'Quote', COUNT(*), COUNT(OperationalProjectId) FROM quotes;
+```
 
-Run the source-count query again after deployment. All four source groups must
-have matching total and mapped counts.
-
-#### Rollback and Compatibility
-
-The migration has no destructive schema operation, but its data links cannot be
-removed safely after downstream modules begin using them. If deployment fails,
-the migration transaction rolls back automatically. If a rollback is required
-after a successful deployment, stop writes and restore the pre-deployment
-database backup; do not null project IDs or delete generated projects manually.
-
-Existing API routes and DTO fields are unchanged. Nullable project fields remain
-wire-compatible for current clients; this historical migration does not impose
-new runtime `NOT NULL` constraints. Runtime enforcement for every new Contract
-to belong to exactly one Operational Project remains owned by NIH-466.
+`TotalRows` phải bằng `MappedRows` ở cả bốn nhóm. Sau khi deploy thành công mà
+cần rollback: dừng ghi và restore backup trước deploy; không tự null project ID
+hay xoá project đã sinh. Route và DTO không đổi; field project nullable vẫn
+tương thích. Ràng buộc runtime "mỗi Contract mới thuộc đúng một Operational
+Project" thuộc NIH-466.
 
 ---
 
-## 7. Backend Development
+## 6. Quy ước backend
 
-### 7.1 Code Organization
-
-The backend follows a layered architecture:
+### 6.1 Tổ chức code
 
 ```
-Controller (thin) --> Service (business logic) --> DbContext (data access)
+Controller (mỏng) --> Service (nghiệp vụ) --> AppDbContext (dữ liệu)
 ```
 
-- **Controllers**: Accept HTTP requests, validate input, delegate to services, return DTOs.
-- **Services**: Contain all business logic. Each content entity has a dedicated service.
-- **Models**: Divided into entities (database models) and DTOs (request/response models).
-- **Mappings**: AutoMapper profiles for entity-to-DTO conversion.
-- **Extensions**: Startup configuration (DI registration, CORS, middleware).
-
-### 7.2 Services Overview
-
-| Service                    | Purpose                                                  |
-|----------------------------|----------------------------------------------------------|
-| `JwtService`               | Generate JWT access tokens with user claims              |
-| `RefreshTokenService`      | Manage refresh token lifecycle (create, validate, revoke)|
-| `PasswordService`          | Hash and verify passwords using Identity framework       |
-| `OtpService`               | Generate, verify, and manage OTP codes                   |
-| `EmailService`             | Send emails via SMTP using MailKit                       |
-| `EmailTemplateFormatter`   | Format email templates with placeholder substitution     |
-| `EmailTemplateBaseline`     | Apply the code-defined NICON email shell while preserving each event's message content |
-| `TimeService`              | Centralized UTC time provider                            |
-| `HostedImageService`       | Background service for image management                  |
-| `OrphanedManagedFileCleanupService` | Quarantines unreferenced managed images/files after 24 hours, restores newly referenced files, and purges only after another 24-hour retention window |
-| `ActivityService`          | CRUD for activities with slug lookup and language support |
-| `ActivityCategoryService`  | CRUD for activity categories                             |
-| `NewsService`              | CRUD for news articles with language support              |
-| `ProjectService`           | CRUD for projects with slug lookup                       |
-| `OperationalProjectService` | Scoped central-project CRUD, lifecycle, aggregation, code allocation, and concurrency |
-| `ServiceItemService`       | CRUD for services with slug lookup                       |
-| `SlideshowService`         | CRUD for slideshow items with filtering                  |
-| `AboutSectionService`      | CRUD for profile/about page sections and structured data |
-| `JobPositionService`       | CRUD for job positions                                   |
-| `JobApplicationService`    | Submit, list, and manage job applications                |
-| `ContactMessageService`    | Submit, list, and reply to contact messages              |
-| `LogoService`              | CRUD for logos grouped by type                           |
-| `ProcessService`           | CRUD for process documents grouped by category           |
-| `SiteSettingsService`      | Get and update site settings and email templates         |
-| `TranslationService`       | Manage static UI translations                            |
-| `EntityTranslationService` | Manage dynamic content translations (polymorphic)        |
-| `HandoverRecordService`    | Project handover scoping, validation, readiness derivation, lifecycle, and optimistic concurrency |
-
-Project assignment attachments remain referenced until `StorageDeletedAt` is set,
-including soft-deleted metadata awaiting storage cleanup. Design/Operational
-Project deletion includes their metadata and paths in the impact token and
-quarantines owned assignment files through the durable deletion operation before
-removing the aggregate. Invalid or externally shared attachment paths block the
-plan. A stale plan leaves both metadata and binary files unchanged.
-
-The orphan cleanup worker runs every six hours. It scans managed local paths
-under `/images/upload`, `/images/processes`, and `/files`, while excluding the
-hard-delete workflow's own quarantine. An unreferenced file must be at least
-24 hours old before it is atomically moved to `.managed-file-quarantine`
-outside `wwwroot`. The worker re-reads active database references immediately
-before the move and again afterward; a newly referenced file is restored to
-its original path. An unreferenced quarantined file is permanently purged only
-after a further 24-hour retention period and another reference check. Invalid
-reference data or symlink/reparse-point paths stop the operation safely rather
-than risking deletion outside the managed roots.
-
-### 7.3 Adding a New Entity
-
-To add a new content entity:
-
-1. Create the entity model in `Models/`.
-2. Create request and response DTOs in `Models/`.
-3. Add a `DbSet` in `Data/AppDbContext.cs` and configure the table in `OnModelCreating`.
-4. Generate and review a migration using the Docker-based .NET 8 SDK tooling environment described in section 6.4.
-5. Create a service class in `Services/`.
-6. Create a controller in `Controllers/`.
-7. Add AutoMapper mappings in `Mappings/AutoMapperProfile.cs`.
-8. Register the service in `Extensions/ServiceCollectionExtensions.cs`.
-9. Add unit tests for isolated logic and integration tests for HTTP, authorization, and persistence contracts at the appropriate test layer.
-
-### 7.4 Conventions
-
-- Use `async/await` for all I/O operations.
-- Use `AsNoTracking()` for read-only queries.
-- Return DTOs from controllers, never entity models.
-- Use meaningful HTTP status codes (200, 201, 204, 400, 401, 403, 404, 409, 500).
-- Validate input at the controller level.
-- Keep controllers under 20 lines per action method where possible.
-- JSON columns use string serialization (e.g., `ContentJson`, `SectionsJson`).
-
-### 7.5 Procurement Vendor API
-
-The procurement vendor slice stores supplier and subcontractor profiles in `procurement_vendors`. Vendor codes are trimmed and normalized to uppercase; vendor codes and normalized company names are unique. A vendor requires at least one valid phone number or email address. Use `IsActive` to retain a vendor for historical reporting while preventing new downstream Contracts. Detail responses include related Contracts, Operational Projects, Vendor Ratings, responsible update metadata, and the Vendor-scoped audit timeline.
-
-Both `/api/vendors` and `/api/v1/vendors` expose the same controller:
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `GET` | `/api/vendors` | `proc.vendors.view` | Search, filter, sort, and paginate vendors |
-| `GET` | `/api/vendors/{id}` | `proc.vendors.view` | Read vendor details and audit metadata |
-| `POST` | `/api/vendors` | `proc.vendors.manage` | Create an active vendor |
-| `PUT` | `/api/vendors/{id}` | `proc.vendors.manage` | Update profile data or active status |
-| `GET` | `/api/vendors/{id}/deletion-impact` | `proc.vendors.manage` | Preview Contract, Rating, Payment Request, and file impact |
-| `DELETE` | `/api/vendors/{id}` | `proc.vendors.manage` | Start the confirmed durable hard-delete operation |
-| `DELETE` | `/api/business-documents/vendors` | `proc.vendors.manage` | Discard an uploaded document only while no Vendor references it |
-
-Duplicate normalized codes or company names return `409`; invalid contact or file references return `400`; missing records return `404`. Create and update operations write `vendor.create` and `vendor.update` audit events. Vendor deletion follows the repository hard-delete convention: Contracts, Vendor Ratings, Payment Requests, shared files, and unsafe files block deletion; an owned managed capability file is quarantined and purged by the durable operation. `proc.vendors.export` controls the frontend export action but does not grant API read access by itself.
-
-Vendor capability uploads return an opaque claim token. A create or update that
-uses the managed path must submit the matching token; the server claims the file
-in the same database write as the Vendor. Cancelled forms discard pending tokens,
-and the cleanup worker removes unclaimed uploads older than 24 hours. Claimed
-uploads cannot be discarded or claimed by another Vendor.
-
-### 7.6 Permit Checklist API
-
-Permit creation is an explicit Operational Project workflow. An eligible
-Upstream `Design`, `Construction`, or `DesignAndBuild` Contract cannot transition
-from `Signed` to `InProgress` through the generic transition endpoint; it returns
-`LEGAL_ACTIVATION_REQUIRED`. The PM/Admin must confirm the Legal wizard. Creating
-or ensuring a `DesignProject` never auto-generates permits.
-
-The activation transaction creates or reuses the project's single
-`LegalPermitting` work package, creates one task per selected permit, records
-dependencies and audit history, creates the Contract activation record, and
-then changes the Contract status. Validation or concurrency failure rolls back
-the entire operation. `ContractLegalActivation.ContractId` is unique for retry
-protection; the package is unique by `(OperationalProjectId, LegalPermitting)`;
-permit type is unique per Operational Project; and `WorkTaskId` is an optional
-unique compatibility link. `DesignProjectId` remains nullable for legacy reads.
-
-Activation/setup routes:
-
-| Method | Route | Permission plus service scope | Purpose |
-|--------|-------|-------------------------------|---------|
-| `GET` | `/api/contracts/{id}/legal-activation-preview` | `crm.contracts.view`; project PM/Admin | Read-only eligibility, active permit types, existing package, and active project members |
-| `POST` | `/api/contracts/{id}/activate-with-legal` | `crm.contracts.view`; project PM/Admin; idempotency key and row version | Atomically activate Contract and create/reuse Legal configuration |
-| `GET` | `/api/operational-projects/{id}/legal-setup` | `permit.checklists.manage`; project PM/Admin | Preview setup for legacy/already-active projects |
-| `POST` | `/api/operational-projects/{id}/legal-setup` | `permit.checklists.manage`; project PM/Admin; idempotency key | Create/reuse package and link legacy permits without changing Contract status |
-
-Legal checklist template routes:
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `GET` | `/api/legal-checklist-templates?publishedOnly=true` | `permit.templates.view` | List definitions; omit filter for all versions |
-| `GET` | `/api/legal-checklist-templates/{id}` | `permit.templates.view` | Read definition, items, authors, reviewer, approval reference and row version |
-| `POST` | `/api/legal-checklist-templates` | `permit.templates.manage` | Create Draft; required idempotency key |
-| `PUT` | `/api/legal-checklist-templates/{id}` | `permit.templates.manage` | Edit Draft with row version |
-| `POST` | `/api/legal-checklist-templates/{id}/versions` | `permit.templates.manage` | Clone a Published/Retired version into a new Draft; row version and idempotency key |
-| `POST` | `/api/legal-checklist-templates/{id}/publish` | `permit.templates.publish` | Independent CM/Admin review; row version, approval reference and idempotency key |
-| `POST` | `/api/legal-checklist-templates/{id}/retire` | `permit.templates.publish` | Stop new application without changing project snapshots; row version and idempotency key |
-
-Template input includes an immutable ASCII `Code` (1–60 letters/digits/`-`/`_`,
-starting with a letter/digit), required `NameVi/Name/NameZh/NameJa` (200 characters)
-and `ScopeVi/Scope/ScopeZh/ScopeJa` (2,000 characters). The ordered `Items` list
-contains 1–100 unique active `permit_type` codes and `IsRequired`; at least one
-item must be required. Publication requires a nonblank `ApprovalReference` of
-at most 1,000 characters. The creator and every editor of that version cannot
-publish it. Contributor IDs are retained with the JSON definition independently
-of general audit-log retention. `Draft → Published → Retired` is server-enforced; published content
-is immutable. There is no template hard-delete endpoint.
-
-Activation/setup preview now includes `Templates`, `AppliedTemplate`,
-`WorkPackageRowVersion`, existing package lead/dates, and template application
-actor/time. Both writes accept `TemplateId`, `TemplateRowVersion`, and
-`WorkPackageRowVersion`. New packages require a Published template and matching
-template version. Every setup/activation that reuses an existing package
-requires its matching row version, including packages with an applied snapshot.
-Stale requests return HTTP `409` without changing the dossier or activating
-another contract (`CONCURRENCY_CONFLICT` for contract activation;
-`crm_concurrency_conflict` from the global handler for project setup).
-Confirmed schedule/lead changes record
-`UpdatedByLegalSetup` history with before/after values and actor. A project with a snapshot keeps using it, including
-after template retirement; another template is rejected. Required items must
-already have a linked task or be included for creation/linking in the request.
-Omission returns `LEGAL_REQUIRED_PERMITS_MISSING` before any write.
-
-Setup cannot modify a Completed or Cancelled package (`LEGAL_PACKAGE_CLOSED`).
-A second contract may reuse a Completed package read-only when its snapshot is
-already applied, required items are linked and the request changes neither the
-template, lead, dates nor task set. This records only the new contract activation;
-it does not reopen or touch the legal dossier. Cancelled packages cannot be reused.
-New tasks may depend on an existing configured permit from the same Operational
-Project without resubmitting that permit. Unknown, unlinked and other-project
-predecessors are rejected; new-task dependency cycles remain invalid.
-
-The Legal package stores the immutable template snapshot and application audit;
-permit responses expose `IsRequired`. Existing projects are not assigned a
-template by migration. Applying one preserves existing package schedule/lead,
-permit state, files and tasks; newly linked/created tasks must fit the existing
-package schedule. Existing untemplated packages can continue to operate. The
-Generic `/api/work-packages` creation rejects `LegalPermitting`, preventing a
-new untemplated package from bypassing the specialist setup workflow. The
-flag controls checklist inclusion, not the construction gate's stage-specific
-permit requirements. Q-09/D-04 remain CM/NICON-owned decisions; demo templates
-are Draft only. After a concurrency conflict, refresh keeps local draft input;
-users review current data before confirming a retry.
-
-Migration `20261022111459_AddLegalChecklistTemplates` is additive: nullable
-package snapshot/source columns, a template table and `IsRequired=false` for
-legacy permits. It does not backfill business classifications. Before rollback,
-back up new template/snapshot data and stop application writes; `Down` removes
-the new feature data/columns, retaining the original permit/task/file records.
-Do not roll back after real template usage without a reviewed preservation plan.
-
-Both `/api/permits` and `/api/v1/permits` expose the same controller:
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `GET` | `/api/permits` | `permit.checklists.view` | Filter, paginate, and read the permit risk summary |
-| `GET` | `/api/permits/{id}` | `permit.checklists.view` | Read one checklist item |
-| `GET` | `/api/permits/{id}/history` | `permit.checklists.view` | Read authority-state/document audit history |
-| `POST` | `/api/permits` | `permit.checklists.manage` | Retired with `410 LEGAL_SETUP_REQUIRED`; use Legal setup |
-| `PATCH` | `/api/permits/{id}` | `permit.checklists.view` plus project actor scope | Update authority status, agency, dates, or notes; linked assignment/schedule stay task-owned |
-| `POST` | `/api/permits/{id}/documents/{kind}` | `permit.checklists.view` plus project actor scope | Upload submitted or issued evidence under source module `Legal` |
-| `DELETE` | `/api/permits/{id}` | `permit.checklists.manage` | Blocked with `409`; use aggregate-safe configuration/deletion workflow |
-| `POST` | `/api/permits/design-project/{projectId}/ensure` | `permit.checklists.manage` | Retired with `410 LEGAL_SETUP_REQUIRED` |
-
-Authority transitions are server locked: `Submitted`, `UnderReview`, and
-`NeedMoreDocs` require a submission date and submitted-package file; `Issued`
-requires an issue date and issued-permit file plus
-`permit.checklists.mark-issued`. Files are catalogued in `LegalPermits` beneath
-`03_Xin_phep_Phap_ly` with `ProjectDocumentSourceModule.Legal`.
-
-The linked `DepartmentWorkTask` owns assignee, approver, plan, progress, and
-dependencies. The assignee may submit `Completed` only when the permit is
-`Issued` with its required evidence. Verification performs
-`Completed → Verified`; a return requires a reason and performs
-`Completed → InProgress` without changing the authority status.
-
-### 7.7 Permanent Aggregate Deletion
-
-#### Objective
-
-Allow authorized users to permanently remove aggregate roots, including seeded
-or demo records, without hiding dependent data or causing partial deletion.
-
-#### Permanent-delete API contract
-
-Each supported aggregate exposes:
-
-1. `GET /api/{resource}/{id}/deletion-impact`
-2. `DELETE /api/{resource}/{id}` with `planToken`, `confirmation`, and a
-  mandatory `rowVersion` when the root supports optimistic concurrency
-
-The preview returns the root label and confirmation code, a deterministic plan
-token, the total affected count, whether deletion is currently allowed, and
-dependent groups classified as:
-
-- `Delete`: aggregate-owned records removed with the root.
-- `Unlink`: independent records or external resources preserved after their
-  binding to the root is removed.
-- `Block`: data that must be safely cleaned before the root can be deleted.
-
-The server recomputes the impact and creates the durable operation in one
-serializable transaction, commits it, and only then starts processing. For
-Opportunity, Quote, and Contract, `rowVersion` is mandatory: a missing or malformed
-token returns `400 Bad Request`, while a stale token or changed plan returns
-`409 Conflict`. Invalid confirmation or an active blocker returns
-`400 Bad Request`. Rejected requests must leave the root and all dependencies
-unchanged and must not emit a success/request audit.
-
-The deterministic plan includes every business-significant direct and nested
-dependent identifier. Adding or removing a nested child after preview therefore
-invalidates the submitted token.
-
-When execution includes managed local files or Nicon-owned Google Drive items,
-the delete endpoint creates a durable hard-delete operation. The operation and
-its items are independent records identified by a GUID; they do not hold foreign
-keys to the aggregate root. Only one unresolved operation may exist for a
-resource type and resource ID.
-
-The endpoint returns:
-
-- `204 No Content` only after external cleanup, the registered database
-  finalizer, and quarantine purge have all completed.
-- `202 Accepted` with the operation ID and current status when durable work is
-  still pending, retrying, or requires manual action.
-
-Clients may safely poll the operation result. A durable operation is not proof
-that the root has been deleted until its status is `Completed`.
-
-#### Execution Rules
-
-- Controllers authorize and translate domain outcomes to HTTP responses.
-- Services validate the plan, confirmation, concurrency, and blockers.
-- Aggregate deletion services own dependency ordering and file staging.
-- Managed files are cleaned through the project-document workflow before their
-  parent project can be removed.
-- Local managed files must use host-relative paths under an explicit private
-  storage root. Execution moves them atomically to a same-volume hard-delete
-  quarantine before any irreversible step when the parent durable operation
-  owns their deletion. Project-dependent files are the exception below and are
-  deleted only by their source module's manual cleanup workflow.
-- Design and Operational Project deletion never removes dependent local or Drive
-  files automatically. Every remaining file blocks parent deletion and includes
-  a link to its owning detail or document page. The user must delete the source
-  record or project document through that module's authorized workflow; its
-  existing synchronization service then removes the Drive replica safely. The
-  parent can be deleted only after those file dependencies are fully cleaned.
-  Failed Drive-delete sidecars remain blockers and can be manually retried by
-  an authorized Operational Project manager even after automatic retries are
-  exhausted.
-- Operational Project deletion includes the application's verified project
-  folder tree in the durable plan after source-file cleanup. It inventories all
-  children (including trashed items). Trashed replicas matching a deleted owned
-  document's instance, replica key and generation enter the durable file plan
-  before their parent folders; execution rejects replicas restored from trash.
-  Empty path folders are deleted before their project root, with emptiness
-  rechecked at execution. Unknown/imported/shared contents and folders with
-  independent CRM files block deletion. A Drive outage
-  remains visible and retryable; the database root survives until cleanup is
-  complete. Stored operation items preserve the original plan across partial
-  remote deletion. Design-only deletion preserves the shared Operational Project
-  folder; non-migrated Survey bindings retain their existing unlink behavior.
-- A migrated plan may permanently delete a Drive file or folder only when its
-  metadata proves current Nicon `InstanceId` ownership, every caller-supplied
-  expected app property matches, the expected parent matches when supplied,
-  and Drive reports that the connected account owns and can delete the item.
-  Imported, shared, mismatched, or unknown-origin items are blockers and must
-  never be permanently deleted. A missing Drive item is an idempotent success.
-- Independent CRM records such as opportunities, quotes, and contracts are
-  unlinked rather than deleted with an Operational Project. Their local and
-  Drive files are preserved; only project-bound synchronization metadata is
-  removed with the deleted Operational Project.
-- Tender checklist uploads under `/files/tenders` are aggregate-owned and are
-  quarantined and purged with the Tender. Checklist references to Capability
-  Documents are unlinked while the shared document and file survive. Any
-  non-library checklist file outside `/files/tenders` blocks deletion rather
-  than being silently orphaned.
-- Quote documents under `/files/quotes` are aggregate-owned and are quarantined
-  and purged with the Quote. Opportunities that reference the Quote are unlinked
-  and preserved; any Contract reference blocks Quote deletion. A Quote
-  project-document sidecar is eligible
-  only when it is an exact CRM `QuoteDocument`/`file` binding to the normalized
-  Quote path, has stable Nicon ownership with no conflict or active processing
-  lease, and is either fully synced with complete Drive ownership metadata or
-  already terminally deleted without a Drive file ID. The durable operation
-  permanently deletes eligible Drive replicas using verified app properties,
-  then preserves and terminalizes their sidecar records. Imported, shared,
-  ambiguous, incomplete, mismatched, or unstable sidecars block deletion.
-- Opportunity activities and translations are aggregate-owned. Quotes block
-  Opportunity deletion; Contracts, Surveys, converted Leads, and winning
-  Tenders are independent roots that are unlinked and preserved.
-- Contract milestones, attachments, appendices, and files under
-  `/files/contracts/` are aggregate-owned. Linked Design Projects are unlinked
-  and preserved. Deletion is blocked when a path is unsafe or shared, or when
-  the Contract is the last qualifying contract for a Won Opportunity. Exact
-  Nicon-owned CRM sidecars for `ContractAttachment` and `ContractAppendix` use
-  the same safety checks as Quote sidecars: ambiguous, conflicting, claimed,
-  pending, mismatched, imported, or duplicate Drive identities block deletion.
-  The durable operation verifies ownership metadata and permanently deletes
-  safe synced Drive replicas before the finalizer terminalizes and preserves
-  their sidecars; the finalizer never queues a background Drive delete.
-- Survey checklist results and site conditions are aggregate-owned. Survey
-  Media must be removed through its own managed-file workflow before the Survey
-  can be deleted. An external Drive folder binding is unlinked and preserved.
-  Survey management scope is `crm.surveys.manage.all`, assigned surveyor,
-  survey creator, Operational Project manager, or Operational Project creator.
-- Capability Document versions and files under `/files/capability/` are
-  aggregate-owned. Unsafe or shared paths block deletion. Tender checklist
-  references block deletion until the shared document is detached explicitly.
-- Customer contacts, activities, documents, translations, and files under the
-  exact `/files/customers/{customerId}/` root are aggregate-owned. Converted
-  Lead and Project Document metadata links are cleared while those records are
-  preserved. Opportunities, Tenders, Contracts, Design Projects, and
-  Operational Projects are independent required roots and block Customer
-  deletion until handled through their own authorized workflows. Undoing a
-  Lead conversion always preserves its Customer and removes the project that
-  conversion opened only when its deletion-impact plan lists nothing but that
-  opportunity; Customers can only be
-  permanently removed through this preview-and-confirm contract.
-- Exactly one success audit is written by the durable operation processor in
-  the same save that marks the operation `Completed`, after database
-  finalization and quarantine purge. Request, validation-failure, and
-  pre-completion success audits are not emitted.
-- Hard-deleted seeded roots write a durable tombstone. Opportunity uses its
-  exact seeded name, Contract its `HD-SAMPLE-` number, Survey its `SV-SAMPLE-`
-  code, Tender its exact `TD-SAMPLE-` code, and Capability Document its managed
-  path when the description begins `[SAMPLE_CAP]`. Seed reruns filter roots and
-  dependents before insertion and skip Capability physical-file self-healing
-  for tombstoned paths.
-
-#### Durable Operation Lifecycle
-
-Operations move through `Preparing`, `Ready`, `Processing`, `Completed`,
-`Failed`, or `ManualActionRequired`:
-
-1. A domain service validates authorization, confirmation, concurrency,
-  blockers, and the current deterministic plan before creating the operation.
-2. The processor quarantines local files, then permanently deletes only verified
-  owned Drive items.
-3. After external cleanup, a resource handler registered by resource type runs
-  the idempotent database finalizer. Delegate-only finalizers are not allowed
-  because they cannot survive application restart.
-4. The processor purges quarantined local files, then atomically writes the
-  idempotent completion audit and marks the operation `Completed`.
-
-Failures before the first Drive deletion restore quarantined files and may be
-retried with conservative backoff. Once a Drive deletion or database finalizer
-begins, rollback is no longer safe: the operation remains in forward recovery
-until remaining idempotent steps complete. Ownership mismatches and exhausted
-retries move to `ManualActionRequired`; operators must resolve the blocker and
-explicitly retry. Resource handlers must use the operation ID as an idempotency
-key because a restart can occur after the database commit but before the item is
-marked complete.
-
-#### Frontend Rules
-
-Use the shared deletion-impact dialog to load the preview, show categorized
-counts and examples, disable deletion while blockers exist, and require the
-exact typed confirmation. Refresh the relevant list/detail state after success.
-Do not implement aggregate deletion as parallel per-row API calls.
-
-Business-data blockers should include an internal resolution URL when a filtered
-ADMIN list exists and internal detail links for the displayed blocker examples.
-The shared dialog opens those destinations in a new tab so the user can resolve
-dependencies without losing the current deletion preview. The filtered list link
-is shown only when additional blockers are not represented by the detail links.
-The link is a navigation convenience only; access, record scope, and available
-actions on the destination page follow the existing RBAC matrix for that module.
-
-All display text and dependency labels are backend-seeded content translations
-with Vietnamese, English, Chinese, and Japanese values.
-
-#### Verification
-
-Use integration tests for HTTP authorization, model binding, preview accuracy,
-stale plans, row-version conflicts, blockers, persistence, unlinking, and
-unchanged state after rejection. Use browser tests only for dialog rendering,
-typed confirmation, blocker visibility, and successful UI refresh.
-
-#### Current Rollout
-
-The durable operation, local quarantine, verified Drive deletion, registry, and
-retry foundation is available for domain adoption. Design Project, Operational
-Project, Lead, Customer, Tender, Quote, Opportunity, Contract, Survey, Vendor,
-and Capability Document use the durable backend flow and shared frontend polling
-dialog. Owner-scoped resources also enforce scope again during finalization.
-Bulk deletion is disabled on these root pages until a server-side batch
-preview-and-confirm contract is available. Other root pages must still be
-migrated separately before the repository-wide hard-delete rollout is complete.
-
-### 7.8 Customer Documents and Contract Ownership
-
-#### Contract execution progress
-
-`GET /api/contracts/{id}/execution-progress` (also `/api/v1/...`) requires
-`crm.contracts.view` and the existing Contract owner/project/direction read
-scope. Inaccessible or missing Contracts return `404`. The response deliberately
-has no combined completion percentage. It contains independent `work`, `qs`,
-`payment` measures and UTC `calculatedAt`.
-
-`work` is null without `work.packages.view`; otherwise it reuses the work-package
-list's owner/creator/assignee/approver/CC/project/admin visibility rules.
-Only `DepartmentWorkPackage.ContractId == contract.Id` qualifies. Package counts
-include cancellations, reported separately; task counts exclude cancelled
-packages and split Completed, Verified and Cancelled tasks. Completed and Verified
-are disjoint. Counts cover all qualifying records; only the ten most recently
-updated package links are previewed. This is not a WBS-weighted progress measure.
-
-`qs` is null without `construction.qs.view` or access to the Contract's
-Operational Project. Count only dossiers matching Contract ID, Operational
-Project ID and Upstream/Downstream direction. All-history count is separate from
-pending CM review and current approved count. Current approved means CmApproved,
-Active record state, active lineage and not a Reversal record; replaced/reversed
-predecessors and reversal records do not count as effective approvals. Preview
-the ten most recently updated sources; do not sum certified amounts or infer a
-completion rate. QS links select the project, filter by Contract and anchor the
-source dossier in the existing QS workspace. Changing projects clears that filter.
-Source anchoring runs when the dossier mounts, including when the project list
-loads after the QS records; regression coverage delays that project response.
-
-`payment` uses the same Contract-visible schedule as the detail page: milestone
-count, Paid/Requested counts, scheduled amount and amount of Paid milestones.
-Each line uses rounded `Contract.Value * PercentValue / 100`, matching the base
-Contract schedule. It is not a cash ledger, does not claim actual receipts or
-disbursements, and excludes VO adjustments handled outside this schedule.
-
-No schema/write contract changes, notifications or lifecycle transitions are
-introduced. Project-only Construction Tasks/Acceptance records are not attributed
-to a Contract. Null restricted-source states differ from authorized empty counts.
-Sources refresh on Contract changes and manual refresh. Verification lives in
-`ContractExecutionProgressTests` and `admin-contract-execution-progress.spec.ts`.
-
-#### Contract source Lead traceability
-
-`GET /api/contracts/{id}/source-leads` (also `/api/v1/contracts/{id}/source-leads`)
-requires both `crm.contracts.view` and `crm.leads.view`. Existing Contract
-owner/project/direction access still applies; inaccessible or missing Contracts
-return `404`. Lead scope is checked independently: without `crm.leads.view.all`,
-only Leads assigned to the caller are returned. Contract portfolio or project
-access does not widen Lead access.
-
-The response is an ordered array of `{ id, name, convertedAt }`. For Upstream
-Contracts, trace `Contract.OpportunityId` to converted Leads whose
-`ConvertedOpportunityId` and `ConvertedCustomerId` match and whose `ConvertedAt`
-is present. Return every visible match, ordered by conversion timestamp and ID;
-never pick an arbitrary first Lead or infer a source from a shared customer or
-project. Downstream Contracts and direct Contracts without a source Opportunity
-return an empty array. No new editable Lead field, schema, or backfill is needed.
-Unconversion/unlinking is reflected on the next read; existing conversion and
-deletion safeguards remain authoritative. The DTO excludes contact details and
-internal notes. No email, notification or other write side effect is introduced.
-
-The Contract information tab displays source Lead links, conversion dates,
-loading/retry and a scope-aware empty state only for users with Lead view
-permission. Link navigation remains protected by the existing Lead detail API.
-Focused verification: `ContractSourceLeadsTests` and
-`admin-contract-source-leads.spec.ts`.
-
-Legal-representative assignments through the Customer contact upsert are
-serialized per Customer aggregate. An in-process gate covers concurrent
-requests handled by one application instance, while a transaction-owned SQL
-Server application lock coordinates multiple instances. This keeps the
-filtered unique index and the Company invariant aligned: a Company always has
-exactly one legal-representative contact when two authorized actors assign
-replacements concurrently.
-
-Customer document metadata is stored in `customer_documents`; files are stored under the owning customer's dedicated web-root directory. The endpoints reuse customer owner scoping and existing CRM permissions:
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `GET` | `/api/customers/{id}/documents` | `crm.customers.view` | List documents for an accessible customer |
-| `GET` | `/api/customers/{id}/documents/{documentId}/content` | `crm.customers.view` | Preview or download an accessible document |
-| `POST` | `/api/customers/{id}/documents` | `crm.customers.manage` | Upload PDF, Word, Excel, or image files up to 20 MB |
-| `DELETE` | `/api/customers/{id}/documents/{documentId}` | `crm.customers.manage` | Delete document metadata and its managed file |
-
-Quote document metadata is stored in `quote_documents`; physical files are stored under `nihomebackend/wwwroot/files/quotes/{quoteId}/` and use the same 20 MB and extension rules. Access follows quote owner scoping, with `crm.quotes.view.all` allowing cross-owner access. Clients retrieve bytes through the authenticated content route; direct requests to `/files/quotes/...` are blocked before static-file middleware:
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `GET` | `/api/quotes/{id}/documents` | `crm.quotes.view` | List documents for an accessible quote |
-| `GET` | `/api/quotes/{id}/documents/{documentId}/content` | `crm.quotes.view` | Preview or download an accessible document |
-| `POST` | `/api/quotes/{id}/documents` | `crm.quotes.manage` | Upload PDF, Word, Excel, or image files up to 20 MB |
-| `DELETE` | `/api/quotes/{id}/documents/{documentId}` | `crm.quotes.manage` | Delete document metadata and its managed file |
-
-The quote creation picker uses
-`GET /api/opportunities?quoteEligibleOnly=true&search=...`. Search and owner
-scope are evaluated by the server before paging. The eligibility filter mirrors
-quote creation rules: it excludes Lost Opportunities and Won Opportunities
-that already reference a winning quote. The picker fetches at most 50 matching
-rows per search and separately resolves a URL-preselected Opportunity so a
-direct Create quote action remains stable beyond the first page.
-
-Quote delivery uses `GET /api/quotes/{id}/email-preview` (`crm.quotes.send`)
-to prefill the customer's primary contact email and a quote-specific subject
-and body. The subject/body come from the editable quote template in
-`site_settings` (`GET/PUT /api/site-settings/email-templates`, guarded by
-`system.settings.view/manage`), with seeded defaults for existing instances.
-The HTML template supports `customerName`, `quoteCode`,
-`opportunityName`, `quoteLines`, `discountPercent`, `vatPercent`, `grandTotal`,
-and `validUntil` tokens. The body must contain `quoteLines` and `grandTotal`;
-template updates are limited to 200 subject and 8000 body characters.
-The default uses a branded card layout. Quote HTML is restricted to basic
-structural tags and safe inline styles; dynamic values are HTML-encoded.
-`EmailTemplateBaseline` defines the common NICON HTML shell in code for new
-automated emails. Each workflow retains its own editable subject, variables,
-and message body through `GET/PUT /api/site-settings/email-templates` and its
-specialized template endpoints. The server applies the baseline when rendering
-new messages and previews. Previously queued HTML snapshots are not rewritten
-when the code baseline changes.
-Quote email bodies must use valid safe HTML. The send dialog previews the
-rendered message in an isolated iframe, and the submitted body is validated
-before SMTP delivery.
-
-Decision emails pin the submitting account in `QuoteApprovalEmail.RecipientUserId`
-and recheck that account, its current email, and its
-record-level quote visibility immediately before delivery. If identity or access
-changes while queued, the existing `NeedsReview` state prevents delivery.
-
-Migration `20261107113000_PinQuoteDecisionRecipient` adds a nullable recipient ID.
-Drain pending decision notifications before deploying when possible. Pending
-legacy decisions without a verifiable identity move to `NeedsReview`; request
-emails and sent history remain unchanged. Rollback drops the ID column and does
-not automatically requeue messages held for review.
-
-Internal quote approval is one step with one selected Head of Procurement
-(`PROCUREMENT_MANAGER`; updated per the 30 October 2026 note and 31 October
-confirmation). `GET /api/quotes/{id}/approval-candidates` returns active
-users with that role, `crm.quotes.approve`, `crm.quotes.view`, a valid email,
-and a different identity from the caller. `POST /api/quotes/{id}/approval-email-preview` accepts
-`approverUserId` and current `rowVersion`; it returns To, rendered subject/HTML
-and eligible CC addresses plus a protected 15-minute `previewToken`.
-CC includes active members of the quote's operational project only when they
-can view that quote (owner or `crm.quotes.view.all`). `POST /api/quotes/{id}/submit`
-requires the same approver, row version and token. The server rerenders and
-checks the quote, recipient, CC list, template and token before changing Draft to
-PendingApproval and queuing a `quote_approval_emails` row in one save. Only
-that Procurement Manager, and never the submitter, may call `approve` or
-`reject-internal`. The worker sends pending snapshots through `IEmailService`
-and records `Sent` or `NeedsReview`; the quote response exposes the approver
-and latest delivery state. A failed/uncertain send is not called successful.
-Template GET/PUT is `/api/site-settings/quote-approval-template` under
-`system.settings.view/manage`, on the **Email duyệt Báo giá** tab. Supported
-variables: `recipientName`, `senderName`, `quoteCode`, `quoteVersion`,
-`grandTotal`, `validUntil`, `quoteUrl`. The body must include `quoteCode` and
-`<a href="{{quoteUrl}}">`; values are HTML-encoded. Existing pending quotes
-without an approver need manual business reconciliation before a decision.
-
-Contract renewal/end-date and work package approval defaults use the same
-600px NICON card, red header and safe inline HTML styles as quote emails.
-`DbSeeder` persists these defaults for new settings and upgrades each missing
-or exact legacy body independently on startup. Custom subjects/bodies are
-preserved; confirmed contract reminders and queued approval messages are not
-rewritten. Reverting the code does not revert a body already saved in settings;
-restore its previous HTML through the authorized template settings API if needed.
-
-`GET /api/quotes/{id}/export.xlsx?lang=vi` (`crm.quotes.view`) returns the
-localized quotation workbook. Supported languages are `vi`, `en`, `zh`, and
-`ja`. The workbook contains typed date and numeric cells for the quote header,
-BOQ or unit-cost rows, discount, VAT, and total; draft or pending quotations
-are marked preliminary.
-`POST /api/quotes/{id}/send` requires `toEmail`, `subject`,
-`body`, `languageCode`, and the current `rowVersion`. The server validates the address and
-content, permits subject/body edits only with `crm.quotes.manage`, and sends
-through the configured SMTP service with the generated `.xlsx` quotation
-attached before recording `SentToCustomer`.
-The recipient can be changed to another valid address by an authorized sender;
-the system does not prove mailbox ownership.
-SMTP failure leaves the quote in `Approved`; no email is sent by a status-only
-request. A durable email outbox is not yet part of this workflow, so an
-external delivery followed by a concurrent status conflict still needs manual
-reconciliation.
-
-Contract renewal/end-date emails use a separate durable schedule, not the
-internal payment-milestone notifications. Migration
-`20261020162316_AddContractReminderEmails` adds `contract_reminders` and four
-nullable template columns on `site_settings`; existing data is unchanged.
-Rollback is blocked while schedules/history or edited templates exist; export
-and explicitly remove that data before an intentional downgrade. Do not remove
-a migration already applied to an environment.
-
-| Method | Route | Contract |
-| --- | --- | --- |
-| GET | `/api/contracts/{id}/reminders` | Existing Contract view scope; newest 100 records |
-| POST | `/api/contracts/{id}/reminders/preview` | Contract manage + owner/view-all; `{kind: "Renewal" or "End", reminderDate: "yyyy-MM-dd", contactId?: positive integer}` |
-| POST | `/api/contracts/{id}/reminders` | Same write scope; `{previewToken}` confirms the rendered preview |
-| POST | `/api/contracts/{id}/reminders/{reminderId}/cancel` | Same write scope; only Scheduled can be cancelled |
-| GET/PUT | `/api/site-settings/contract-reminder-templates` | Settings view/manage; `renewalSubject`, `renewalBody`, `endSubject`, `endBody` |
-
-Reminder dates are Vietnam calendar dates, today or later. Preview requires an
-Upstream contract in Signed/InProgress/OnHold with an end date and a valid stored
-customer-contact email (maximum 254 characters). The primary contact is suggested
-first. Preview tokens are protected, bound to actor/contract/recipient/date and
-rendered content, and expire in 15 minutes. Scheduling revalidates the context
-and templates. Replaying the same accepted token returns its existing record;
-only one Scheduled/Sending reminder per contract/type is allowed. A serializable
-transaction covers scheduling/cancellation and claiming a due delivery.
-
-Template subjects contain 1–200 characters on one line; HTML bodies contain
-1–8,000 characters, use the same safe HTML allowlist as quotation emails, and
-must contain `{{contractNumber}}` and `{{endDate}}`. Supported variables are
-`{{customerName}}` (customer display name), `{{contractNumber}}` and `{{endDate}}`
-(`dd/MM/yyyy`). Unknown/malformed variables are rejected. Body values are HTML
-encoded server-side. Rendered subject/body limits are 200/16,000 characters.
-Saved schedules retain the approved rendered content when templates change.
-
-`ContractReminderWorker` polls every five minutes, including overdue schedules
-after downtime. Before SMTP it rechecks contract eligibility, unchanged customer,
-contract number/end date/contact email, scheduler account/permissions/scope, and
-pending aggregate deletion. Changed context becomes NeedsReview without sending.
-The worker commits Sending before SMTP, then saves Sent and a customer-care Email
-entry together after SMTP acceptance. Sent means SMTP acceptance, not inbox
-delivery. SMTP errors become NeedsReview/DELIVERY_UNCERTAIN; neither that state nor
-Sending is automatically retried. A crash after claiming or SMTP acceptance can
-leave Sending: an operator must reconcile SMTP logs before any new delivery.
-Stop the sender during manual reconciliation; preserve the original snapshot,
-attempt timestamps and audit evidence. Scheduled cancellation never retracts an
-email already handed to SMTP. Permanent deletion discloses schedules/history,
-invalidates stale plans on state changes, and blocks Sending records.
-Contract direction changes also check persisted `ContractReminder.AttemptedAt`:
-any non-null attempt locks direction permanently, including Sending or uncertain
-delivery. The existing serializable contract update and reminder claim serialize
-that boundary; no new schema is required. A rejected direction edit returns
-`CONTRACT_REMINDER_DIRECTION_LOCKED` and preserves the row/version/history.
-
-Focused validation: `ContractReminderServiceTests`, `ContractRemindersTests`,
-and `e2e/smoke/contract-reminder-email.spec.ts` (live Compose SQL/SMTP, opt in with
-`MAIL_SINK_URL=http://127.0.0.1:8025`; no real customer mail). Use headed slow mode
-with `PLAYWRIGHT_SLOW_MO=1500` and `--headed --workers=1` for visual review.
-
-The browser-to-SMTP delivery E2E uses an opt-in, non-relaying local mailbox.
-`docker-compose-e2e.yaml` overlays `docker-compose.yaml` and adds the
-`smtpSink` service, so one file starts the whole stack with the backend email
-settings pointed at the mailbox:
-
-```bash
-BUILD_SHA=$(git rev-parse HEAD) docker compose \
-  -f docker-compose.yaml -f docker-compose-e2e.yaml up -d --build
-cd nihomeweb
-BASE_URL=http://localhost:5043 MAIL_SINK_URL=http://127.0.0.1:8025 \
-  E2E_SQL_CONTAINER=nihome31042025-sqlserver \
-  npx playwright test e2e/smoke/direct-contract-from-opportunity.spec.ts \
-  e2e/smoke/quote-email-delivery.spec.ts
-```
-
-Specs that use SQL-only fixture setup require `E2E_SQL_CONTAINER` to name the
-test stack's SQL container explicitly. There is no default: an unset value fails
-closed so a custom `BASE_URL` cannot accidentally direct fixture writes or
-cleanup into the shared development database. For an isolated Compose project,
-set it to that project's SQL container name.
-
-The test uses a unique `example.test` recipient and verifies the captured
-message and persisted quote status. Do not use production SMTP settings for
-this test. When finished, restore the normal backend configuration with
-`docker compose up -d --force-recreate nihomeBackend`; then stop and remove the
-test-only mailbox with `docker compose -f docker-compose.yaml -f docker-compose-e2e.yaml stop smtpSink`
-and `docker compose -f docker-compose.yaml -f docker-compose-e2e.yaml rm -f smtpSink`.
-
-The CI `e2e` job sets `COMPOSE_FILE=docker-compose.yaml:docker-compose-e2e.yaml` and
-`MAIL_SINK_URL=http://127.0.0.1:8025`, so `quote-email-delivery.spec.ts` runs
-there instead of skipping, and no customer address is ever mailed from CI.
-
-Each Tender records the invitation receipt time (required and earlier than the
-submission deadline), source, receiving user, optional customer reference, and
-an invitation portal URL or uploaded invitation documents. Every uploaded file
-stores its size, media type, and SHA-256 digest. Each checklist row points to a
-current evidence revision while retaining every earlier direct-upload or
-capability-library revision. Users with
-`crm.tenders.manage` may assign an active user whose active role also has that
-permission. A changed assignment emits one `tender.checklist.assigned`
-notification with a direct Tender link; an unchanged assignment is idempotent.
-Internal deadlines are date-based, may not be before the current date, and may
-not be after the Tender submission date. These rules are enforced by the
-service as well as the form. Only the `TemplateCode=capability` row may attach
-an existing capability document; every other row uses a direct upload. A row
-cannot move to `Done` or `Submitted` until its required evidence is present.
-`Done` records the preparer; a different user must move each required row to
-`Submitted` as its independent verification. The Tender submission gate
-revalidates that verification, the evidence type, and the file metadata.
-Direct uploads are stored
-under `wwwroot/files/tenders/`; capability-library attachments retain their
-managed capability path. A capability document or retained version cannot be
-deleted while either the current checklist row or its evidence history
-references it. Checklist work may continue after the first `Submitted` state
-for an explicit supplementary submission; terminal `Won`, `Lost`, and
-`Cancelled` Tenders remain locked. The seven standard
-rows include tender drawings as optional by default; users may add package-
-specific rows, mark rows required by the invitation, or mark an optional row
-`NotApplicable` with a reason. Standard rows cannot be deleted. Submission
-creates a numbered immutable `TenderSubmission` snapshot containing the exact
-evidence revisions and checksums, approved estimate content, completed planning
-content, approved Finance review content, submission channel, receipt reference,
-actor, and time. Adding replacement evidence resets that row's verification and
-does not alter earlier snapshots. The Tender's first `SubmittedAt` is immutable.
-The legacy backfill creates a `LegacyUnknown` snapshot only when a successful
-`tender.transition` audit proves the historical Submitted transition and uses
-that audit timestamp. It does not infer submission from `UpdatedAt`; rows
-without auditable evidence remain unbackfilled instead of receiving invented
-history.
-If a direct upload cannot be attached because the Tender or row is missing,
-terminal, persistence fails, or the physical copy is interrupted, the newly
-written or partial file is removed.
-
-#### Tender win-rate reporting
-
-`GET /api/tenders/statistics` (also `/api/v1/tenders/statistics`) requires
-`crm.tenders.view`, matching the existing cross-record Tender list scope.
-`GET /api/tenders/report-customers` and `report-preparers` use the same
-permission and return distinct options referenced by Tenders, including
-historical preparers, without requiring user-management permission.
-
-Optional `fromDate` and `toDate` must be supplied together as ordered ISO dates
-(for example `2026-08-01` and `2026-08-31`), inclusive in Vietnam time (UTC+7).
-`fromDate` must be after `0001-01-01`. Optional `customerId`/`preparerUserId`
-must be positive integers. Invalid filters return `400`; omitting both dates
-reports all periods. The list accepts these filters and `submittedOnly=true`
-for paginated reconciliation, preserving its normal behavior when omitted.
-
-`TenderReporting.FirstSubmissions` selects `TenderSubmission.Sequence == 1`
-within the UTC half-open period. Count each Tender once, including auditable
-`LegacyUnknown` submissions. Rate is `100 * Won / submitted cohort`, rounded
-to two decimal places, null when empty. Pending results and cancellations after
-submission remain in the denominator; cancellations before submission do not.
-List status/search/pagination filters never change the report denominator.
-Use current status: older cohorts may change when results arrive. KPI uses the
-same submission selector for its employee/period; locked snapshots do not change.
-
-The response has `submittedCount`, `wonCount`, `lostCount`, `pendingCount`,
-`cancelledCount`, nullable percentage `winRate`, UTC `calculatedAt`, and
-`missingSubmissionCount`. The latter is independent of dates, scoped by customer
-and preparer: Submitted/Won/Lost records, or cancelled records with `SubmittedAt`,
-lacking a first-submission event cannot be assigned to a period. Exclude and
-disclose them; never invent production dates. Marked synthetic demo Tenders have
-idempotent `Sample`/`LegacyUnknown` evidence; this does not backfill user records.
-No schema migration is required.
-
-Focused checks: `TenderStatisticsControllerTests` (permission, validation,
-Vietnam boundaries, resubmission, current results, zero/empty, missing evidence
-and drill-down), `SampleCrmDataSeederTests` (demo idempotency), and
-`admin-tender-statistics.spec.ts` (browser filters, reconciliation, recovery,
-localization and responsive rendering).
-
-Every new Tender requires an existing `OperationalProjectId` belonging to the
-same Customer. Tender planning reuses `DepartmentWorkPackage` with
-`SourceTenderId`, `Purpose=TenderPlanning`, and one Project work package per
-responsible department. Its tasks carry department, assignee, independent
-approver, planned dates, predecessors, progress, concurrency and history.
-Legacy rows that already have `Purpose=General` and a `SourceTenderId` remain
-read/submission compatible; new Tender plans must use `TenderPlanning`. A Tender-plan package
-cannot become `Completed` until every task is `Verified`; a Tender cannot become
-`Submitted` until at least one non-cancelled plan package exists and every such
-package is complete. This is the server-side gate for planning, dossier
-preparation and internal review; the Tender checklist remains the authoritative
-file/dossier checklist rather than a second planning model.
-Updating a Tender plan preserves the required start/end dates, the submission
-deadline and every non-cancelled task's date range. Final `Won`, `Lost` and
-`Cancelled` results also lock package edits/reopening, task assignment, progress
-and verification through the generic work-package APIs. Response capability
-flags expose these records as read-only.
-The checklist row with `TemplateCode=capability` must reference a
-`CapabilityDocumentId`; direct upload is rejected and submission rechecks this
-invariant. Other project-specific checklist rows require direct uploads and
-reject capability-library references.
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `GET` | `/api/tenders/assignee-options` | `crm.tenders.manage` | List active users whose active role can manage Tender checklist work |
-| `POST` | `/api/tenders/{id}/checklist` | `crm.tenders.manage` | Add a package-specific required or optional dossier row while Preparing |
-| `DELETE` | `/api/tenders/{id}/checklist/{itemId}` | `crm.tenders.manage` | Delete an empty package-specific row; standard rows cannot be deleted |
-| `PATCH` | `/api/tenders/{id}/checklist/{itemId}` | `crm.tenders.manage` | Update checklist status, owner, or internal deadline while mutable |
-| `POST` | `/api/tenders/{id}/checklist/{itemId}/upload` | `crm.tenders.manage` | Upload and replace the row's current file |
-| `POST` | `/api/tenders/{id}/checklist/attach-from-library` | `crm.tenders.manage` | Attach an existing capability document to the selected row |
-| `GET` | `/api/tenders/{id}/checklist/{itemId}/content` | `crm.tenders.view` | Preview or download the file referenced by that Tender row |
-| `POST` | `/api/tenders/{id}/invitation-documents` | `crm.tenders.manage` | Upload a checksummed invitation document |
-| `GET` | `/api/tenders/{id}/readiness` | `crm.tenders.view` | Return actionable planning, dossier, estimate, and Finance blockers and record first-achieved milestones |
-| `POST` | `/api/tenders/{id}/submit` | `crm.tenders.submit` | Require an idempotency key, channel, concurrency token, and all readiness gates; persist the next immutable submission revision |
-| `POST` | `/api/tenders/{id}/transition` (`Submitted`) | `crm.tenders.submit` | Rejected with `400`; all submission clients must use `/submit` so idempotency and concurrency are mandatory |
-
-`POST /api/tenders/{id}/mark-won` (`crm.tenders.mark-result`) takes either
-`opportunityId` (an opportunity of the tender's customer) or
-`createOpportunity: true`, never both; otherwise it returns `400`. Creating
-opens, in the same transaction as the Won result, an opportunity in
-`Negotiation` valued at the latest approved estimate revision's
-`GrandBidTotal` on the Tender's existing Operational Project. It never creates a
-second project root. Contract creation remains an explicit action from the Won
-result after negotiation.
-
-Sequential codes (`PJ-`, `TD-`, `SV-`) are the highest numeric suffix in use
-plus one (`SequentialCodes`), never a row count, so deleted rows do not cause
-collisions. Project codes and lead-conversion projects share the per-year SQL
-Server application lock in `OperationalProjectCodeAllocator`; a concurrent
-tender insert that still hits the unique index retries with the next code.
-`GET /api/operational-projects/code-suggestion` returns the current proposed
-operational-project code for authorized creators. `POST /api/operational-projects`
-accepts an optional creation-time `code`; a supplied value is normalized to
-uppercase, validated against the safe 2–40 character code format and rejected
-when already used. Omitting it preserves automatic allocation for integrations
-and conversion flows. `PUT /api/operational-projects/{id}` deliberately has no
-code field. A later change uses the dedicated
-`PATCH /api/operational-projects/{id}/code` endpoint, requires
-`operations.projects.rename`, a reason, and the current row version, and writes
-immutable old/new-code history in the same transaction. Existing foreign keys
-remain stable because modules link by `OperationalProjectId`. When Drive
-bindings exist, a durable worker renames the existing project root folder
-without replacing its Drive ID; status and failure details are returned in
-`latestCodeChange`, and `POST .../{id}/code/drive-retry` safely requeues the
-latest failed job.
-
-`GET /api/operational-projects/{id}/team/history` combines team events with
-persisted code changes, newest first, under the existing project-view check.
-Code entries use `entityType=ProjectCode`, `action=Renamed`, and typed
-`oldCode`, `newCode`, `reason` fields, plus the original actor and timestamp.
-Entry IDs are scoped by entity type; clients must use both for identity.
-Existing code changes appear without backfill or duplicate audit writes.
-The shared team panel displays these entries and refreshes after a successful
-code change on the Operational Project detail page.
-
-`POST /api/contracts/{id}/link-quote` (`crm.contracts.manage`, idempotent,
-concurrency-checked) attaches an `Approved`, `SentToCustomer`, or
-`CustomerApproved` quote to an upstream contract that is not cancelled or
-completed. The quote must match the contract's customer, opportunity, and
-project, the contract must have no source quote yet, and no other live
-contract may use the quote; the contract's empty opportunity is filled from
-the quote. Creating a contract with a quote, or changing its quote, applies
-the same approved-status rule. An `Approved` or `SentToCustomer` quote must
-also be within its validity period; `CustomerApproved` is terminal. An
-`Upstream` contract may instead be created from an Opportunity with an
-already-agreed value and no quote. This is the second confirmed business path,
-not a legacy-data exception. A won tender's approved estimate does not replace
-an optional CRM customer quotation.
-`Downstream` supplier/subcontractor contracts cannot reference a CRM customer
-quote.
-The quote deletion-impact plan blocks deletion while any contract references
-the quote; deleting it must not silently detach a contract's source.
-Opportunity detail includes `quoteId` on each linked contract so the Sales UI
-does not offer a quote already used by a non-cancelled contract.
-
-Contract creation derives `OwnerUserId` from the selected customer's `OwnerUserId`. An authorized explicit owner takes precedence; if the customer is unassigned, the caller is used as the fallback. Sales users cannot create or move a contract into another salesperson's customer scope. Opportunity and quote references must belong to the selected customer, and a supplied quote must belong to the supplied opportunity.
-
-Contract create/update requests that include a source quote and omit
-`OpportunityId` derive the opportunity from that quote before validating the
-references and terminal-opportunity invariant. An explicitly conflicting
-opportunity is rejected. Existing records are not backfilled on reads or at
-startup; saving a contract with its source quote revalidates the relationship.
-Removing only the opportunity while retaining its source quote therefore keeps
-the quote's opportunity linked. To unlink both sources, clear both references;
-the existing rule still rejects removing the final qualifying contract from a
-Contract-signed opportunity.
-To investigate historical records, run this read-only query against the intended
-database in its backend/database container and review results before making any
-data correction. Do not infer a relationship from customer/project names.
+- Models chia entity và DTO request/response; Mappings là profile AutoMapper;
+  Extensions đăng ký DI, CORS, middleware.
+- Dùng `async/await` cho mọi I/O, `AsNoTracking()` cho truy vấn chỉ đọc.
+- Status code: 200, 201, 204, 400, 401, 403, 404, 409, 500. Action controller
+  nên dưới 20 dòng.
+
+Service hạ tầng đáng chú ý:
+
+| Service | Vai trò |
+|---|---|
+| `JwtService`, `RefreshTokenService`, `PasswordService`, `OtpService` | Token, refresh token, hash mật khẩu (Identity), OTP |
+| `EmailService`, `EmailTemplateFormatter`, `EmailTemplateBaseline` | Gửi SMTP qua MailKit, thay placeholder, khung HTML NICON chung |
+| `TimeService` | Nguồn thời gian UTC tập trung |
+| `OrphanedManagedFileCleanupService` | Dọn file managed không còn tham chiếu (xem [6.4](#64-file-managed-và-tài-liệu-nghiệp-vụ)) |
+| `OperationalProjectService` | CRUD, vòng đời, rollup, cấp mã và concurrency của dự án trung tâm |
+| `HandoverRecordService` | Scope, validate, readiness, vòng đời và optimistic concurrency của bàn giao |
+| `TranslationService`, `EntityTranslationService` | UI translation tĩnh và bản dịch nội dung động |
+
+Thêm một entity nội dung mới:
+
+1. Entity và DTO trong `Models/`.
+2. `DbSet` trong `Data/AppDbContext.cs`, cấu hình bảng trong `OnModelCreating`.
+3. Sinh và review migration ([5.2](#52-migration)).
+4. Service trong `Services/`, controller trong `Controllers/`, mapping trong
+   `Mappings/AutoMapperProfile.cs`.
+5. Đăng ký service ở `Extensions/ServiceCollectionExtensions.cs`.
+6. Unit test cho logic tách biệt, integration test cho HTTP, phân quyền và
+   persistence.
+
+### 6.2 Quy tắc ghi dùng chung
+
+Các module bên dưới chỉ ghi phần khác biệt; mặc định áp dụng:
+
+- **Idempotency.** Thao tác tạo và chuyển trạng thái nhận header
+  `Idempotency-Key` (1–120 ký tự; thiếu, rỗng hoặc dài hơn trả `400`). Gửi lại
+  cùng key và cùng payload trả response đã lưu; cùng key khác payload trả `409`.
+  Khi replay, server kiểm lại scope hiện tại, nên người đã mất quyền không lấy
+  lại được response cũ. Client giữ key khi thử lại cùng payload sau lỗi không
+  chắc chắn, đổi key khi payload đổi.
+- **Concurrency.** Cập nhật và chuyển trạng thái gửi `rowVersion` trong body
+  hoặc header `If-Match`; response chi tiết trả ETag. Thiếu hoặc sai định dạng
+  trả `400`, body và header mâu thuẫn trả `400`, bản cũ trả `409` (thường là
+  `crm_concurrency_conflict` qua global handler). Client tải lại dữ liệu và giữ
+  bản nháp người dùng đang nhập.
+- **Phạm vi truy cập.** Ngoài permission toàn cục, service kiểm scope bản ghi
+  (owner, thành viên dự án qua `IProjectAccessService`, phòng ban). Bản ghi
+  ngoài scope hoặc không tồn tại trả `404` để không lộ sự tồn tại; thiếu đăng
+  nhập `401`; thiếu permission `403`. Permission `*.view.all` chỉ mở rộng phạm vi
+  đọc, không cấp quyền ghi.
+- **Tách người làm và người duyệt.** Người tạo/trình không tự duyệt bản ghi của
+  mình; server kiểm, UI chỉ ẩn nút.
+- **Từ chối không để lại dấu vết.** Thao tác bị từ chối không đổi bản ghi gốc,
+  phụ thuộc, lịch sử, file hay notification (trừ audit/record từ chối được phép).
+- **Audit.** Mọi chuyển trạng thái ghi audit chuẩn với actor, đối tượng và kết
+  quả. Notification gửi sau commit, best effort, không rollback giao dịch đã lưu.
+- **Khoá SQL.** Kiểm tra phụ thuộc chạy trong transaction serializable; luồng có
+  tranh chấp dùng SQL Server application lock thuộc transaction (RFQ, kho, cấp
+  mã, hồ sơ Concept, đại diện pháp luật của Customer). Timeout khoá trả conflict;
+  client tải lại rồi thử lại.
+
+### 6.3 Email ứng dụng
+
+Mọi email ứng dụng mới hoặc thay đổi phải có template sửa được tại
+`/admin/email-templates`, hợp đồng biến rõ ràng, preview thật trước khi gửi,
+render và HTML-encode ở server, permission gửi và sửa template tách riêng.
+Notification nội bộ không tự động cần email.
+
+Quy tắc template (GET/PUT cần `system.settings.view` / `system.settings.manage`):
+
+- Subject 1–200 ký tự, một dòng. Body HTML 1–8.000 ký tự, chỉ thẻ cấu trúc cơ
+  bản và inline style an toàn theo allowlist dùng chung. Biến viết
+  `{{variableName}}`; biến lạ hoặc sai cú pháp bị từ chối. Sau render: subject
+  tối đa 200, body tối đa 16.000 ký tự. Giá trị động được HTML-encode ở server.
+- `EmailTemplateBaseline` định nghĩa khung HTML NICON trong code (card 600px,
+  header đỏ) và áp khi render email/preview mới; snapshot đã xếp hàng không bị
+  viết lại. `DbSeeder` lưu default cho settings mới và nâng cấp từng body còn
+  thiếu hoặc còn đúng bản cũ; body đã tuỳ chỉnh được giữ. Revert code không
+  revert body đã lưu; muốn khôi phục thì PUT lại HTML cũ qua API template.
+
+| Template | API | Biến | Body bắt buộc chứa |
+|---|---|---|---|
+| Gửi báo giá cho khách | `/api/site-settings/email-templates` | `customerName`, `quoteCode`, `opportunityName`, `quoteLines`, `discountPercent`, `vatPercent`, `grandTotal`, `validUntil` | `quoteLines`, `grandTotal` |
+| Duyệt báo giá nội bộ (tab **Email duyệt Báo giá**) | `/api/site-settings/quote-approval-template` | `recipientName`, `senderName`, `quoteCode`, `quoteVersion`, `grandTotal`, `validUntil`, `quoteUrl` | `quoteCode`, `<a href="{{quoteUrl}}">` |
+| Nhắc gia hạn/kết thúc HĐ (`renewalSubject`, `renewalBody`, `endSubject`, `endBody`) | `/api/site-settings/contract-reminder-templates` | `customerName`, `contractNumber`, `endDate` (`dd/MM/yyyy`) | `{{contractNumber}}`, `{{endDate}}` |
+| Duyệt gói công việc (tab **Duyệt nhóm công việc**) | `/api/site-settings/work-package-approval-template` | `recipientName`, `workPackageCode`, `workPackageName`, `recordType`, `recordReference`, `senderName`, `workPackageUrl` | `{{workPackageCode}}`, `{{recordReference}}`, `<a href="{{workPackageUrl}}">` |
+| Duyệt/ban hành tiến độ tổng | `POST /api/site-settings/email-templates/project-schedule/preview` (`system.settings.manage`, chỉ render, không lưu/gửi) | — | — |
+
+Template tuỳ chỉnh cũ của gói công việc được chèn link khi tải (trong bộ nhớ),
+nội dung gốc giữ nguyên. Body built-in cũ của email tiến độ được thay bằng layout
+NICON hiện tại khi đọc; body tuỳ chỉnh không đổi.
+
+Luồng gửi:
+
+1. Client gọi endpoint preview; server render đúng nội dung sẽ gửi và trả
+   `previewToken` được bảo vệ, hết hạn sau 15 phút, gắn với người gọi, ngữ cảnh,
+   bản ghi/phiên bản, người nhận (To/CC) và nội dung đã render.
+2. Thao tác gửi/trình kèm `previewToken`. Server render lại; token thiếu, hết hạn
+   hoặc nội dung đã đổi thì từ chối trước khi đổi trạng thái, người dùng phải
+   preview lại.
+3. Dòng email xếp hàng commit cùng chuyển trạng thái nghiệp vụ trong một
+   transaction. Worker claim (`Sending`) trước khi gọi SMTP.
+4. `Sent` nghĩa là SMTP đã nhận, không phải đã vào hộp thư. Lỗi SMTP hoặc ngữ
+   cảnh đổi (người nhận, quyền, trạng thái) chuyển `NeedsReview` mà không gửi.
+   `Sending` và `NeedsReview` không tự thử lại (trừ email tiến độ tổng, xem
+   [9.1](#91-api-dự-án-vận-hành)). Crash sau khi claim có thể để lại `Sending`:
+   kiểm log SMTP trước mọi khôi phục thủ công, không reset mù.
+
+### 6.4 File managed và tài liệu nghiệp vụ
+
+Form permit, nhà cung cấp, nghiệm thu từng phần, hoàn công và bàn giao cho phép
+chọn file local ngoài field URL ngoài. File lưu ở
+`wwwroot/files/business-documents/{area}/` với tên sinh tự động, tối đa 20 MB,
+đuôi `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.png`, `.jpg`, `.jpeg`.
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `POST` | `/api/business-documents/vendors` | `proc.vendors.manage` | Upload hồ sơ năng lực nhà cung cấp |
+| `DELETE` | `/api/business-documents/vendors` | `proc.vendors.manage` | Huỷ file đã upload khi chưa Vendor nào tham chiếu |
+| `POST` | `/api/business-documents/acceptance` | `construction.acceptance.manage` | Upload tài liệu nghiệm thu từng phần |
+| `POST` | `/api/business-documents/as-built` | `construction.asbuilt.manage` | Upload hồ sơ hoàn công |
+| `POST` | `/api/business-documents/handover` | `construction.handover.manage` | Upload tài liệu bàn giao |
+| `POST` | `/api/permits/{id}/documents/{kind}` | `permit.checklists.view` + scope dự án | Upload `SubmittedPackage` hoặc `IssuedPermit` |
+| `GET` | `/api/vendors/{id}/capability-file/content` | `proc.vendors.view` | Đọc file của vendor đã lưu |
+| `GET` | `/api/acceptance-records/{id}/documents/{fileName}/content` | `construction.acceptance.view` | Đọc trong scope dự án |
+| `GET` | `/api/as-built-documents/{id}/content` | `construction.asbuilt.view` | Đọc file hồ sơ hoàn công |
+| `GET` | `/api/handover-records/{id}/documents/{fileName}/content` | `construction.handover.view` | Đọc trong scope dự án |
+| `GET` | `/api/permits/{id}/documents/{fileName}/content` | `permit.checklists.view` | Đọc file hồ sơ nộp/giấy phép |
+
+Quy tắc:
+
+- Số lượng file theo field hiện có: vendor và hoàn công một đường dẫn, nghiệm
+  thu và bàn giao tối đa 20, permit một file hồ sơ nộp và một file giấy phép.
+- Không có endpoint đọc chung theo area + tên file. Request đọc phải chỉ ra một
+  bản ghi đã lưu mà metadata tham chiếu đúng đường dẫn host-relative đó, rồi áp
+  scope của module. URL HTTP(S) ngoài vẫn được hỗ trợ và không bị coi là file
+  managed.
+- Request static trực tiếp vào `/files/quotes`, `/files/customers`,
+  `/files/contracts`, `/files/capability`, `/files/tenders`,
+  `/files/business-documents`, `/files/design` trả `404` trước static-file
+  middleware. React lấy byte qua route có xác thực dưới dạng Blob, nên upload
+  hai bước chưa xem trước được cho tới khi metadata được lưu.
+- Thay hoặc gỡ tham chiếu file của Contract, Design, Vendor, Acceptance,
+  As-Built, Handover, Permit chỉ xoá file cũ sau khi database lưu thành công.
+  Upload Basic Design và Detail Design kiểm giai đoạn đang hoạt động của dự án ở
+  service.
+- Chỉ kiểm đuôi file và giới hạn 20 MB; quét malware và kiểm chữ ký file đầy đủ
+  vẫn là việc hardening khi triển khai.
+- Customer, quote, contract có luồng tài liệu riêng; site diary và punch list
+  chưa có hợp đồng tài liệu đầy đủ nên chưa hỗ trợ.
+
+Worker `OrphanedManagedFileCleanupService` chạy mỗi 6 giờ trên `/images/upload`,
+`/images/processes` và mọi thư mục con của `/files` (trừ quarantine của
+hard-delete). File không còn tham chiếu và đã quá 24 giờ được chuyển nguyên tử
+vào `.managed-file-quarantine` (ngoài `wwwroot`). Worker đọc lại tham chiếu
+ngay trước và sau khi chuyển; file được tham chiếu lại thì trả về chỗ cũ. File
+trong quarantine chỉ bị xoá hẳn sau thêm 24 giờ và một lần kiểm tham chiếu nữa.
+JSON tham chiếu lỗi, validate thất bại hoặc đường dẫn symlink/reparse-point làm
+worker dừng phần xoá.
+
+File đính kèm assignment của dự án còn được coi là đang tham chiếu cho tới khi có
+`StorageDeletedAt`, kể cả metadata đã soft-delete chờ dọn. Xoá Design/Operational
+Project đưa metadata và đường dẫn của chúng vào impact token và quarantine qua
+durable operation; đường dẫn sai hoặc dùng chung chặn kế hoạch xoá.
+
+---
+
+<a id="77-permanent-aggregate-deletion"></a>
+
+## 7. Xoá vĩnh viễn aggregate (Permanent Aggregate Deletion)
+
+Hard delete là thao tác nghiệp vụ, không phải `DbSet.Remove`. Mọi root có nút xoá
+cho người dùng phải theo hợp đồng dưới đây, kể cả bản ghi seed/demo, để không
+xoá dở dang hoặc che giấu dữ liệu phụ thuộc.
+
+### 7.1 Hợp đồng API
+
+1. `GET /api/{resource}/{id}/deletion-impact` trả nhãn root, mã xác nhận, plan
+   token tất định, tổng số ảnh hưởng, có được xoá hay không và các nhóm phụ thuộc:
+   - `Delete`: dữ liệu thuộc aggregate, xoá cùng root.
+   - `Unlink`: bản ghi độc lập hoặc tài nguyên ngoài, chỉ gỡ liên kết.
+   - `Block`: phải xử lý sạch trước khi xoá root.
+2. `DELETE /api/{resource}/{id}` (body `ConfirmDeletionRequest`) gửi
+   `planToken`, `confirmation` và `rowVersion` (bắt buộc khi root có optimistic
+   concurrency).
+
+Plan gồm mọi ID phụ thuộc có ý nghĩa nghiệp vụ, trực tiếp lẫn lồng nhau; thêm
+hoặc bớt một con sau khi preview làm token cũ mất hiệu lực. Server tính lại
+impact và tạo durable operation trong cùng một transaction serializable, commit,
+rồi mới xử lý.
+
+| Tình huống | Kết quả |
+|---|---|
+| Opportunity/Quote/Contract thiếu hoặc sai định dạng `rowVersion` | `400` |
+| `rowVersion` cũ hoặc plan đã đổi | `409` |
+| Sai mã xác nhận hoặc còn blocker | `400` |
+| Hoàn tất cleanup ngoài, finalizer DB và purge quarantine | `204` |
+| Durable operation còn pending/retry/cần xử lý tay | `202` kèm operation ID và trạng thái |
+
+Request bị từ chối giữ nguyên root và phụ thuộc, không ghi audit. Client có thể
+poll kết quả an toàn; operation chỉ chứng minh root đã xoá khi ở `Completed`.
+
+### 7.2 Quy tắc thực thi
+
+- Controller phân quyền và dịch kết quả sang HTTP. Service kiểm plan, xác nhận,
+  concurrency và blocker. Service xoá của từng aggregate chịu thứ tự phụ thuộc
+  và staging file.
+- Khi có file local managed hoặc item Drive do NICON sở hữu, endpoint tạo
+  durable operation (định danh GUID, không có FK tới root). Mỗi resource type +
+  ID chỉ có một operation chưa xong.
+- File local phải là đường dẫn host-relative dưới storage root riêng; được
+  chuyển nguyên tử vào quarantine cùng volume trước mọi bước không đảo ngược.
+- Chỉ xoá vĩnh viễn item Drive khi metadata chứng minh thuộc `InstanceId` NICON
+  hiện tại, mọi app property kỳ vọng khớp, parent khớp (nếu có) và Drive xác
+  nhận tài khoản đang kết nối sở hữu và được xoá. Item import, chia sẻ, không
+  khớp hoặc không rõ nguồn là blocker. Item đã mất trên Drive coi như xoá thành
+  công (idempotent).
+- Đúng một audit thành công, do processor ghi trong cùng lần lưu đánh dấu
+  `Completed`, sau finalizer và purge. Không audit lúc nhận request, lúc lỗi
+  validate hay trước khi hoàn tất.
+- Root seed bị xoá ghi tombstone để seed không tạo lại: Opportunity theo đúng tên
+  seed, Contract theo số `HD-SAMPLE-`, Survey theo mã `SV-SAMPLE-`, Tender theo mã
+  `TD-SAMPLE-`, Capability Document theo đường dẫn managed khi mô tả bắt đầu
+  `[SAMPLE_CAP]`. Seed lọc root và phụ thuộc trước khi chèn và bỏ qua tự phục hồi
+  file Capability đã tombstone.
+- Chính sách đồng bộ xoá Drive (hai chiều) nằm trong plan; đổi cấu hình làm plan
+  cũ mất hiệu lực (xem [18.3](#183-google-drive-trên-iis)).
+
+### 7.3 Quy tắc theo aggregate
+
+| Root | Xoá cùng root | Gỡ liên kết, giữ lại | Chặn xoá |
+|---|---|---|---|
+| Design Project / Operational Project | Dữ liệu sở hữu (gói công việc, cảnh báo vật tư, lịch thiết kế, link bản vẽ của task...) | CRM độc lập (Opportunity, Quote, Contract) cùng file local/Drive của chúng; chỉ metadata đồng bộ gắn dự án bị xoá | Mọi file phụ thuộc còn lại (local hoặc Drive), có link tới trang chi tiết nguồn; RFQ |
+| Tender | Upload checklist dưới `/files/tenders` (quarantine + purge) | Tham chiếu tới Capability Document | File checklist ngoài thư viện nằm ngoài `/files/tenders` |
+| Quote | File dưới `/files/quotes`; replica Drive đủ điều kiện | Opportunity tham chiếu | Bất kỳ Contract nào tham chiếu |
+| Opportunity | Activities, translations | Contract, Survey, Lead đã convert, Tender thắng | Quote; continuation opportunity |
+| Contract | Milestones, attachments, appendices, file dưới `/files/contracts/`, care history, replica Drive đủ điều kiện | Design Project liên kết | Đường dẫn không an toàn/dùng chung; Contract là hợp đồng đủ điều kiện cuối cùng của Opportunity Won; quan hệ continuation hai chiều; reminder đang `Sending` |
+| Survey | Checklist results, site conditions | Binding thư mục Drive ngoài | Survey Media chưa xoá qua luồng file riêng |
+| Capability Document | Versions, file dưới `/files/capability/` | — | Đường dẫn không an toàn/dùng chung; tham chiếu từ checklist Tender (kể cả lịch sử evidence) |
+| Customer | Contacts, activities, documents, translations, file dưới `/files/customers/{customerId}/` | Link metadata của Lead đã convert và Project Document | Opportunity, Tender, Contract, Design Project, Operational Project |
+| Vendor | File hồ sơ năng lực managed | — | Contract, Vendor Rating, Payment Request, file dùng chung/không an toàn, RFQ |
+| Work package | Xem [9.2](#92-gói-công-việc-phòng-ban-department-work-package) | | |
+
+Chi tiết thêm:
+
+- Design/Operational Project không bao giờ tự xoá file phụ thuộc. Người dùng xoá
+  bản ghi nguồn hoặc project document qua luồng có quyền của module đó; service
+  đồng bộ hiện có sẽ xoá replica Drive an toàn. Sidecar xoá Drive thất bại vẫn
+  là blocker; quản lý Operational Project có quyền có thể thử lại thủ công kể cả
+  khi đã hết lượt tự động.
+- Xoá Operational Project đưa cây thư mục dự án đã xác minh vào plan sau khi dọn
+  file nguồn, kiểm kê cả item trong thùng rác. Replica trong thùng rác khớp
+  instance, replica key và generation của tài liệu đã xoá được đưa vào plan
+  trước thư mục cha; replica đã khôi phục khỏi thùng rác bị từ chối. Thư mục rỗng
+  xoá trước root (kiểm lại rỗng khi thực thi). Nội dung không rõ, import, chia sẻ
+  hoặc thư mục có file CRM độc lập chặn xoá. Drive lỗi thì root DB còn nguyên tới
+  khi dọn xong. Xoá Design Project giữ thư mục dùng chung của Operational
+  Project; binding Survey chưa migrate giữ hành vi unlink cũ.
+- Sidecar project-document của Quote, `ContractAttachment`, `ContractAppendix`
+  chỉ đủ điều kiện khi là binding CRM chính xác tới đường dẫn đã chuẩn hoá, sở
+  hữu NICON ổn định, không conflict/processing lease, và hoặc đã sync đủ metadata
+  sở hữu Drive, hoặc đã xoá xong không còn Drive file ID. Operation xoá replica
+  bằng app property đã xác minh rồi giữ và kết thúc sidecar; finalizer không xếp
+  hàng xoá Drive nền. Sidecar import, chia sẻ, mơ hồ, thiếu, không khớp, đang
+  pending hoặc trùng định danh Drive chặn xoá.
+- Scope quản lý Survey: `crm.surveys.manage.all`, người khảo sát được giao, người
+  tạo survey, quản lý hoặc người tạo Operational Project.
+- Huỷ convert Lead luôn giữ Customer, và chỉ xoá project mà lần convert đó mở
+  khi impact plan của project chỉ còn đúng opportunity đó. Customer chỉ xoá được
+  qua hợp đồng preview-and-confirm này.
+- Resource có owner kiểm lại scope ở bước finalize.
+
+### 7.4 Vòng đời durable operation
+
+Trạng thái: `Preparing`, `Ready`, `Processing`, `Completed`, `Failed`,
+`ManualActionRequired`.
+
+1. Domain service kiểm quyền, xác nhận, concurrency, blocker và plan hiện tại
+   rồi mới tạo operation.
+2. Processor quarantine file local, rồi xoá vĩnh viễn các item Drive đã xác minh.
+3. Resource handler đăng ký theo resource type chạy finalizer DB idempotent.
+   Không dùng finalizer kiểu delegate vì không sống sót qua restart.
+4. Processor purge quarantine, rồi ghi audit hoàn tất và đánh dấu `Completed`
+   trong cùng một lần lưu.
+
+Lỗi trước lần xoá Drive đầu tiên khôi phục file quarantine và có thể thử lại với
+backoff thận trọng. Từ khi đã xoá Drive hoặc chạy finalizer, không rollback được
+nữa: operation chỉ đi tiếp tới khi các bước idempotent còn lại xong. Sai sở hữu
+hoặc hết lượt thử chuyển `ManualActionRequired`; operator xử lý blocker rồi chủ
+động retry. Handler dùng operation ID làm idempotency key vì restart có thể xảy
+ra sau commit DB nhưng trước khi item được đánh dấu xong.
+
+### 7.5 Frontend
+
+- Dùng dialog dùng chung `DeletionImpactDialog`: tải preview, hiển thị số lượng
+  và ví dụ theo nhóm, khoá nút xoá khi còn blocker, bắt gõ đúng mã xác nhận,
+  poll operation và làm mới list/detail sau khi xong. Không xoá aggregate bằng
+  nhiều lệnh API song song theo từng dòng.
+- Blocker nghiệp vụ nên kèm URL danh sách ADMIN đã lọc (khi có) và link chi tiết
+  cho các ví dụ; dialog mở ở tab mới để giữ preview. Link danh sách chỉ hiện khi
+  còn blocker không có link chi tiết. Link chỉ để điều hướng; quyền ở trang đích
+  theo RBAC của module đó.
+- Nhãn hiển thị và nhãn phụ thuộc là content translation do backend seed đủ bốn
+  ngôn ngữ.
+- Xoá hàng loạt bị tắt trên các trang root cho tới khi có hợp đồng preview-and-
+  confirm theo lô ở server.
+
+### 7.6 Kiểm thử và phạm vi hiện tại
+
+Integration test bao phủ phân quyền HTTP, model binding, độ chính xác preview,
+plan cũ, xung đột row version, blocker, persistence, unlink và trạng thái không
+đổi khi bị từ chối. Browser test chỉ cho render dialog, gõ xác nhận, hiển thị
+blocker và làm mới UI.
+
+Đã dùng luồng durable và dialog polling: Design Project, Operational Project,
+Lead, Customer, Tender, Quote, Opportunity, Contract, Survey, Vendor, Capability
+Document. Các trang root khác phải được chuyển riêng trước khi coi hard delete
+toàn repo hoàn tất. Quy tắc riêng cho hồ sơ thiết kế ở
+[12.4](#124-xoá-hồ-sơ-thiết-kế), cho bản ghi con thi công ở
+[13.1](#131-bố-cục-workspace-thi-công-frontend).
+
+---
+
+## 8. CRM, báo giá, đấu thầu và hợp đồng
+
+Hầu hết controller có alias `/api/v1/...` cùng hành vi với `/api/...`.
+
+### 8.1 Customer và Lead
+
+| Method | Route | Permission | Ghi chú |
+|---|---|---|---|
+| `GET` | `/api/customers/{id}/documents` | `crm.customers.view` | Customer trong scope owner |
+| `GET` | `/api/customers/{id}/documents/{documentId}/content` | `crm.customers.view` | Xem/tải |
+| `POST` | `/api/customers/{id}/documents` | `crm.customers.manage` | PDF, Word, Excel, ảnh; tối đa 20 MB |
+| `DELETE` | `/api/customers/{id}/documents/{documentId}` | `crm.customers.manage` | Xoá metadata và file managed |
+
+Metadata lưu ở `customer_documents`, file ở thư mục riêng của Customer.
+
+Gán người đại diện pháp luật qua upsert contact được tuần tự hoá theo từng
+Customer: gate trong process cho một instance, SQL application lock thuộc
+transaction cho nhiều instance. Nhờ đó filtered unique index và bất biến "Company
+luôn có đúng một contact đại diện pháp luật" giữ đúng khi hai người cùng thay.
+
+`GET /api/contracts/{id}/source-leads` cần cả `crm.contracts.view` và
+`crm.leads.view`, cộng scope đọc Contract (Contract không truy cập được trả
+`404`). Scope Lead kiểm riêng: không có `crm.leads.view.all` thì chỉ trả Lead
+giao cho người gọi; quyền Contract/dự án không mở rộng quyền Lead. Response là
+mảng `{ id, name, convertedAt }`: với Contract Upstream, lấy mọi Lead đã convert
+có `ConvertedOpportunityId` = `Contract.OpportunityId`, `ConvertedCustomerId`
+khớp và có `ConvertedAt`, sắp theo thời điểm convert rồi ID. Không chọn bừa một
+Lead, không suy từ customer/project chung. Contract Downstream hoặc không có
+Opportunity trả mảng rỗng. DTO không có thông tin liên hệ hay ghi chú nội bộ. Tab
+thông tin Contract chỉ hiện mục này cho người có quyền xem Lead. Test:
+`ContractSourceLeadsTests`, `admin-contract-source-leads.spec.ts`.
+
+### 8.2 Báo giá
+
+Tài liệu báo giá lưu ở `quote_documents`, file ở
+`nihomebackend/wwwroot/files/quotes/{quoteId}/`, cùng giới hạn 20 MB và đuôi file
+như Customer. Truy cập theo owner, `crm.quotes.view.all` cho xem chéo owner.
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `/api/quotes/{id}/documents` | `crm.quotes.view` | Danh sách tài liệu |
+| `GET` | `/api/quotes/{id}/documents/{documentId}/content` | `crm.quotes.view` | Xem/tải |
+| `POST` | `/api/quotes/{id}/documents` | `crm.quotes.manage` | Upload |
+| `DELETE` | `/api/quotes/{id}/documents/{documentId}` | `crm.quotes.manage` | Xoá |
+| `GET` | `/api/opportunities?quoteEligibleOnly=true&search=...` | — | Picker tạo báo giá |
+| `GET` | `/api/quotes/{id}/email-preview` | `crm.quotes.send` | Điền sẵn email liên hệ chính, subject, body |
+| `POST` | `/api/quotes/{id}/send` | `crm.quotes.send` | Gửi kèm file `.xlsx` |
+| `GET` | `/api/quotes/{id}/export.xlsx?lang=vi` | `crm.quotes.view` | Workbook báo giá `vi`/`en`/`zh`/`ja` |
+| `GET` | `/api/quotes/{id}/approval-candidates` | — | Người duyệt hợp lệ |
+| `POST` | `/api/quotes/{id}/approval-email-preview` | — | Preview email duyệt |
+| `POST` | `/api/quotes/{id}/submit` | — | Draft → PendingApproval |
+| `POST` | `/api/quotes/{id}/approve`, `/reject-internal` | `crm.quotes.approve` | Chỉ người duyệt được chọn |
+| `GET` | `/api/quotes/{id}/project-boq` | `crm.quotes.view` + scope | BOQ dự án đã duyệt mới nhất cho Sales |
+
+Picker: server áp search và owner scope trước khi phân trang; loại Opportunity
+Lost và Opportunity Won đã có báo giá thắng. Picker lấy tối đa 50 dòng mỗi lần
+tìm và tải riêng Opportunity được chọn sẵn từ URL.
+
+Tạo báo giá: `POST /api/quotes` nhận `draftOnly: true` cho luồng Sales hiện tại.
+Opportunity phải thuộc một Operational Project; payload chỉ có field cơ bản, không
+có `method`; tạo Draft giá trị 0. Lần cập nhật giá đầu tiên qua
+`PUT /api/quotes/{id}` bắt buộc chọn `method` và một input price offer đã duyệt,
+còn hạn, cùng dự án (riêng phương thức BOQ xem [10.6](#106-báo-giá-boq)). Hợp đồng
+tạo kèm giá cũ vẫn giữ cho tích hợp và test lịch sử. Sales không tạo báo giá cho
+Opportunity của owner khác. Gửi lại `Idempotency-Key` trả response tạo ban đầu.
+
+Duyệt nội bộ (một bước, một Trưởng phòng Cung ứng `PROCUREMENT_MANAGER`; theo ghi
+chú 30/10/2026 và xác nhận 31/10/2026):
+
+- `approval-candidates` trả user đang hoạt động có role đó, có
+  `crm.quotes.approve`, `crm.quotes.view`, email hợp lệ và khác người gọi.
+- `approval-email-preview` nhận `approverUserId` và `rowVersion`, trả To,
+  subject/HTML đã render, các CC hợp lệ và `previewToken` 15 phút. CC là thành
+  viên đang hoạt động của dự án vận hành có quyền xem báo giá (owner hoặc
+  `crm.quotes.view.all`).
+- `submit` cần cùng approver, row version và token; server render và kiểm lại báo
+  giá, người nhận, CC, template, token rồi đổi trạng thái và xếp hàng dòng
+  `quote_approval_emails` trong một lần lưu. Chỉ người duyệt đó (không phải người
+  trình) gọi `approve`/`reject-internal`.
+- Email quyết định ghim người trình ở `QuoteApprovalEmail.RecipientUserId`; ngay
+  trước khi gửi kiểm lại tài khoản, email hiện tại và quyền xem báo giá, đổi thì
+  chuyển `NeedsReview`. Migration `20261107113000_PinQuoteDecisionRecipient`:
+  quyết định cũ chưa xác minh được người nhận chuyển `NeedsReview`; nên xả hàng
+  chờ trước khi deploy; rollback xoá cột và không tự xếp lại email.
+- Báo giá đang chờ duyệt mà chưa có approver cần đối soát nghiệp vụ thủ công.
+
+Gửi cho khách: `send` cần `toEmail`, `subject`, `body`, `languageCode`,
+`rowVersion`. Chỉ `crm.quotes.manage` được sửa subject/body; người gửi có quyền
+được đổi sang địa chỉ hợp lệ khác (hệ thống không xác minh chủ hộp thư). Body
+phải là HTML an toàn; dialog preview trong iframe cô lập. Gửi thành công mới ghi
+`SentToCustomer`; SMTP lỗi giữ `Approved`. Request chỉ đổi trạng thái không gửi
+email. Chưa có outbox bền cho luồng này: gửi xong mà gặp xung đột trạng thái thì
+phải đối soát tay. Điều kiện Finance trước khi gửi ở
+[9.3](#93-kiểm-soát-liên-phòng-trước-hợp-đồng). Workbook xuất có ô ngày/số đúng
+kiểu; báo giá Draft hoặc Pending ghi là sơ bộ.
+
+### 8.3 Đấu thầu
+
+Mỗi Tender mới bắt buộc có `OperationalProjectId` cùng Customer. Tender ghi thời
+điểm nhận thư mời (bắt buộc, trước hạn nộp), nguồn, người nhận, mã tham chiếu
+khách (tuỳ chọn), và URL cổng mời thầu hoặc tài liệu mời thầu upload. Mỗi file
+upload lưu kích thước, media type, SHA-256.
+
+Checklist hồ sơ:
+
+- Bảy dòng chuẩn (bản vẽ thầu mặc định là tuỳ chọn), không xoá được. Có thể thêm
+  dòng riêng của gói, đánh dấu bắt buộc theo thư mời, hoặc đặt dòng tuỳ chọn là
+  `NotApplicable` kèm lý do.
+- Chỉ dòng `TemplateCode=capability` gắn Capability Document có sẵn (bắt buộc
+  `CapabilityDocumentId`, từ chối upload trực tiếp); dòng khác chỉ nhận upload
+  trực tiếp vào `wwwroot/files/tenders/`. Lúc nộp kiểm lại bất biến này.
+- Mỗi dòng trỏ tới revision bằng chứng hiện tại và giữ mọi revision cũ. Thêm bằng
+  chứng mới reset xác minh của dòng.
+- `crm.tenders.manage` giao việc cho user đang hoạt động có role cũng có quyền
+  đó; đổi người nhận phát một notification `tender.checklist.assigned` (giữ
+  nguyên thì không phát). Hạn nội bộ theo ngày, không trước hôm nay, không sau hạn
+  nộp thầu (service kiểm, không chỉ form).
+- Dòng chỉ sang `Done`/`Submitted` khi có bằng chứng. `Done` ghi người chuẩn bị;
+  một người khác chuyển từng dòng bắt buộc sang `Submitted` như bước xác minh độc
+  lập. Gate nộp thầu kiểm lại xác minh, loại bằng chứng và metadata file.
+- Capability Document hoặc version còn được dòng hiện tại hay lịch sử bằng chứng
+  tham chiếu thì không xoá được.
+- Upload trực tiếp thất bại (Tender/dòng không còn, terminal, lỗi lưu, copy dở)
+  thì xoá file vừa ghi.
+- Sau `Submitted` vẫn làm tiếp checklist cho lần nộp bổ sung; `Won`, `Lost`,
+  `Cancelled` khoá hoàn toàn.
+
+Kế hoạch dự thầu dùng `DepartmentWorkPackage` với `SourceTenderId`,
+`Purpose=TenderPlanning`, mỗi phòng chủ trì một gói (quy tắc ở
+[9.3](#93-kiểm-soát-liên-phòng-trước-hợp-đồng)). Gói chỉ `Completed` khi mọi task
+`Verified`; Tender chỉ `Submitted` khi có ít nhất một gói không huỷ và mọi gói như
+vậy đã hoàn thành. Đây là gate server cho lập kế hoạch, chuẩn bị hồ sơ và rà
+soát nội bộ; checklist vẫn là danh mục file/hồ sơ chuẩn. Cập nhật kế hoạch giữ
+ngày bắt đầu/kết thúc, hạn nộp và khoảng ngày của task không huỷ. Kết quả `Won`,
+`Lost`, `Cancelled` khoá sửa/mở lại gói, giao task, tiến độ và xác minh qua API
+work-package chung; capability flag trả read-only. Dữ liệu cũ `Purpose=General`
+có `SourceTenderId` vẫn đọc và qua gate được, ghi mới phải dùng `TenderPlanning`.
+
+Nộp thầu tạo snapshot `TenderSubmission` đánh số, bất biến: revision và checksum
+bằng chứng, nội dung dự toán đã duyệt, kế hoạch đã hoàn thành (metadata, task
+WBS/nội dung/nguồn lực/người/ngày/tiến độ/xác minh/CC/phụ thuộc), Finance review
+đã duyệt (checklist, phát hiện, quyết định, người, phiên bản concurrency), kênh
+nộp, mã biên nhận, người và thời điểm. Field snapshot chỉ cộng thêm; snapshot cũ
+thưa không backfill từ dữ liệu hiện tại. `SubmittedAt` đầu tiên bất biến. Backfill
+chỉ tạo snapshot `LegacyUnknown` khi có audit `tender.transition` thành công
+chứng minh lần Submitted (dùng thời điểm audit); không suy từ `UpdatedAt`.
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `/api/tenders/assignee-options` | `crm.tenders.manage` | User có thể nhận việc checklist |
+| `POST` | `/api/tenders/{id}/checklist` | `crm.tenders.manage` | Thêm dòng riêng khi Preparing |
+| `DELETE` | `/api/tenders/{id}/checklist/{itemId}` | `crm.tenders.manage` | Xoá dòng riêng còn trống |
+| `PATCH` | `/api/tenders/{id}/checklist/{itemId}` | `crm.tenders.manage` | Trạng thái, người làm, hạn nội bộ |
+| `POST` | `/api/tenders/{id}/checklist/{itemId}/upload` | `crm.tenders.manage` | Upload thay file hiện tại |
+| `POST` | `/api/tenders/{id}/checklist/attach-from-library` | `crm.tenders.manage` | Gắn Capability Document |
+| `GET` | `/api/tenders/{id}/checklist/{itemId}/content` | `crm.tenders.view` | Xem/tải file của dòng |
+| `POST` | `/api/tenders/{id}/invitation-documents` | `crm.tenders.manage` | Upload tài liệu mời thầu có checksum |
+| `GET` | `/api/tenders/{id}/readiness` | `crm.tenders.view` | Blocker kế hoạch, hồ sơ, dự toán, Finance; ghi mốc đạt lần đầu |
+| `POST` | `/api/tenders/{id}/submit` | `crm.tenders.submit` | Bắt buộc idempotency key, kênh, concurrency token, mọi gate |
+| `POST` | `/api/tenders/{id}/transition` (`Submitted`) | `crm.tenders.submit` | Trả `400`; mọi client phải dùng `/submit` |
+| `POST` | `/api/tenders/{id}/mark-won` | `crm.tenders.mark-result` | Xem dưới |
+
+`mark-won` nhận hoặc `opportunityId` (của cùng Customer) hoặc
+`createOpportunity: true`, không được cả hai (`400`). Tạo mới thì trong cùng
+transaction mở Opportunity ở `Negotiation`, giá trị bằng `GrandBidTotal` của
+revision dự toán đã duyệt mới nhất, trên Operational Project sẵn có của Tender;
+không tạo root dự án thứ hai. Tạo hợp đồng vẫn là thao tác riêng sau đàm phán.
+
+Thống kê tỷ lệ trúng thầu: `GET /api/tenders/statistics`,
+`/api/tenders/report-customers`, `/api/tenders/report-preparers`
+(`crm.tenders.view`; hai route sau trả lựa chọn đã dùng, kể cả người chuẩn bị cũ,
+không cần quyền quản lý user).
+
+- `fromDate`/`toDate` tuỳ chọn nhưng phải đi cặp, đúng thứ tự, ISO date, tính trọn
+  ngày theo giờ Việt Nam (UTC+7); `fromDate` sau `0001-01-01`. `customerId`,
+  `preparerUserId` là số nguyên dương. Sai thì `400`. List nhận cùng bộ lọc và
+  `submittedOnly=true` để đối soát.
+- Cohort: `TenderReporting.FirstSubmissions` chọn `TenderSubmission.Sequence == 1`
+  trong kỳ (UTC half-open), mỗi Tender một lần, kể cả `LegacyUnknown`.
+  `winRate = 100 * Won / cohort`, làm tròn 2 chữ số, null khi rỗng. Đang chờ kết
+  quả và huỷ sau khi nộp vẫn ở mẫu số; huỷ trước khi nộp thì không. Bộ lọc
+  status/search/phân trang của list không đổi mẫu số. Dùng trạng thái hiện tại nên
+  cohort cũ có thể đổi khi có kết quả; KPI dùng cùng selector, snapshot đã khoá
+  không đổi.
+- Response: `submittedCount`, `wonCount`, `lostCount`, `pendingCount`,
+  `cancelledCount`, `winRate`, `calculatedAt` (UTC), `missingSubmissionCount`
+  (bản ghi Submitted/Won/Lost hoặc huỷ có `SubmittedAt` nhưng thiếu sự kiện nộp
+  đầu, không gán kỳ được; loại ra và công bố, không bịa ngày).
+- Test: `TenderStatisticsControllerTests`, `SampleCrmDataSeederTests`,
+  `admin-tender-statistics.spec.ts`.
+
+### 8.4 Hợp đồng: tạo, nguồn và trạng thái
+
+- Hợp đồng mới luôn `Draft`; create/update từ chối mọi cách vượt state machine.
+  Đổi trạng thái chỉ qua `POST /api/contracts/{id}/transition`.
+- Draft → Signed cần attachment `SignedScan` của chính hợp đồng đó; thiếu trả
+  `400` `CONTRACT_SIGNED_SCAN_REQUIRED` và không đổi gì. Attachment Supporting hoặc
+  scan của hợp đồng khác không tính. Hợp đồng Signed cũ không có scan không bị hạ
+  cấp. Signed trở đi cần ngày ký, ngày bắt đầu không trước ngày ký, ngày kết thúc
+  không trước ngày bắt đầu.
+- Contract Upstream thiết kế/thi công/D&B không thể Signed → InProgress qua
+  transition chung (trả `LEGAL_ACTIVATION_REQUIRED`); xem
+  [12.5](#125-kích-hoạt-pháp-lý-và-permit).
+- `OwnerUserId` lấy từ `OwnerUserId` của Customer; owner chỉ định rõ (có quyền) được
+  ưu tiên; Customer chưa có owner thì dùng người gọi. Sales không tạo hoặc chuyển
+  hợp đồng sang scope khách hàng của người khác.
+- Opportunity và Quote phải cùng Customer; Quote phải thuộc Opportunity đã chọn.
+  Request có Quote mà thiếu `OpportunityId` thì suy Opportunity từ Quote trước khi
+  validate; Opportunity mâu thuẫn bị từ chối. Bỏ Opportunity mà giữ Quote thì
+  Opportunity của Quote vẫn được giữ; muốn gỡ cả hai phải xoá cả hai tham chiếu.
+  Không gỡ được hợp đồng đủ điều kiện cuối cùng của Opportunity đã ký.
+- Hai đường tạo hợp đồng Upstream đều hợp lệ (xác nhận 16/10): từ Quote đã duyệt,
+  hoặc từ Opportunity có giá trị đã thoả thuận, không cần Quote. Dự toán của Tender
+  thắng không thay cho báo giá CRM. Hợp đồng Downstream không tham chiếu báo giá
+  CRM.
+- `POST /api/contracts/{id}/link-quote` (`crm.contracts.manage`, idempotent, có
+  concurrency) gắn Quote `Approved`, `SentToCustomer` hoặc `CustomerApproved` vào
+  hợp đồng Upstream chưa huỷ/hoàn thành, chưa có Quote nguồn. Quote phải khớp
+  Customer, Opportunity, dự án và chưa được hợp đồng còn hiệu lực nào dùng;
+  Opportunity trống của hợp đồng được điền từ Quote. Tạo hoặc đổi Quote cũng theo
+  quy tắc này; `Approved`/`SentToCustomer` còn phải trong thời hạn hiệu lực.
+- Hợp đồng Upstream có Quote nguồn chỉ được ký khi có Finance commercial review đã
+  duyệt cho đúng phiên bản Quote hiện tại ([9.3](#93-kiểm-soát-liên-phòng-trước-hợp-đồng)).
+- Kiểm dữ liệu cũ (chỉ đọc, chạy trong container backend/database đúng môi trường,
+  review trước khi sửa; không suy quan hệ theo tên):
 
 ```sql
 SELECT c.Id AS ContractId, c.QuoteId, c.OpportunityId AS ContractOpportunityId,
        q.OpportunityId AS QuoteOpportunityId
-FROM contracts AS c
-JOIN quotes AS q ON q.Id = c.QuoteId
+FROM contracts AS c JOIN quotes AS q ON q.Id = c.QuoteId
 WHERE c.OpportunityId IS NULL OR c.OpportunityId <> q.OpportunityId;
 ```
 
-`GET /api/contracts` and its `/api/v1` alias require
-`crm.contracts.view`. The list accepts `status`, `direction`, `type`,
+### 8.5 Hợp đồng: danh sách, phạm vi đọc và Finance
+
+`GET /api/contracts` (`crm.contracts.view`) nhận `status`, `direction`, `type`,
 `vendorId`, `ownerUserId`, `customerId`, `operationalProjectId`, `search`,
-`signedFrom`, `signedTo`, `endFrom`, `endTo`, `valueMin`, `valueMax`, `page`, `pageSize`, `sortBy`,
-and `sortDirection`. Supported sort fields are `signedDate` (default),
-`endDate`, `value`, `contractNumber`, and `updatedAt`; an unknown field falls
-back to signed date, and direction defaults to descending. Value filters and
-the `value` sort use current value (`Value + approved VO deltas`). The response
-adds portfolio totals, direction-neutral overdue/due-soon milestone counts,
-and each row's next unpaid milestone and scheduled outstanding amount. List and
-detail responses expose nullable `sourceTenderId`, `sourceTenderCode`, and
-`sourceTenderName` fields when the linked opportunity came from a won tender;
-the values are derived from a won Tender's `WonOpportunityId` rather than
-duplicated on the Contract record. If legacy data links multiple won tenders to
-the same opportunity, the most recently closed tender is returned.
-In an
-Upstream scope these amounts are receivables; in a Downstream scope they are
-payment obligations. `GET /api/contracts/filter-options`
-returns complete owner, customer, and Operational Project choices from the
-caller's visible contract scope; it is not capped by unrelated list pagination.
-`GET /api/contracts/export-data` applies the same filters, sorting, and scope in
-one server query so CSV export is not assembled from a changing set of pages.
-Callers without
-`crm.contracts.view.all` remain owner-scoped. The Accountant role has read-only
-`crm.contracts.view.upstream.all` and `crm.contracts.view.downstream.all` access
-because Finance must reconcile both receivables and payables across the same
-complete Operational Project portfolio exposed by
-`operations.projects.view.all`. That project permission and the matching
-direction permission are both required before ownership is bypassed. The
-bypass applies only when the list explicitly requests `direction=Upstream` or
-`direction=Downstream`, or when a read-only detail endpoint resolves to the
-matching direction. An unscoped list remains owner-scoped, and neither scoped
-permission grants contract mutation rights.
-
-New contracts are always created as `Draft`; create and update reject attempts
-to bypass the contract state machine. Status changes must use
-`POST /api/contracts/{id}/transition`. Moving from Draft to Signed requires a
-`SignedScan` attachment belonging to that Contract. A missing scan returns
-`400` with code `CONTRACT_SIGNED_SCAN_REQUIRED` and leaves the Contract unchanged;
-Supporting attachments and scans on other Contracts do not satisfy this gate.
-The UI opens Documents with localized upload guidance. Existing Signed rows
-without a scan are not downgraded; the existing execution/Legal activation gates
-still apply when starting work. This gate does not introduce a new scan-retention
-or attachment-deletion policy. Signed and later active states require a
-signed date, the planned start cannot precede signing, and the end cannot
-precede the start. Payment-schedule updates round-trip milestone IDs and patch
-editable schedule fields in place, preserving finance references and milestone
-history. Processed milestones and milestones referenced by payment requests
-cannot be removed through schedule editing; status, accountant, request time,
-and actual payment date remain controlled by the milestone-status endpoint.
-
-The five-minute contract milestone worker emits the one-time
-`crm.contract.milestone-due` notification when an unpaid Upstream collection
-milestone reaches its due date. It notifies the active contract owner and
-responsible accountant, stores `DueNotificationSentAt` atomically, and clears
-that marker when the due date changes. Upstream-only classification metadata
-omits the downstream vendor catalogue.
-
-The canonical shared Contract registry and all master-data mutations are
-available at `/admin/contracts`. Finance exposes two read-only projections of
-those same Contract IDs: `/admin/finance/contracts` for Upstream receivables and
-`/admin/finance/input-contracts` for Downstream payables. Selecting a Finance
-row opens the canonical `/admin/contracts/{id}` record and carries a validated
-`returnTo` value so users return to the same Finance filters, sort, and page.
-The former Finance `/{id}` URLs redirect to that canonical record for bookmark
-compatibility; they no longer render a second detail UI. Header, legal status,
-attachments, and VO mutations remain governed by `crm.contracts.manage`.
-Financial schedule ownership is separate: `PUT /api/contracts/{id}/milestones`
-updates only milestone schedule fields, while
-`PATCH /api/contracts/{id}/milestones/{milestoneId}/status` controls the
-responsible accountant, request state, and actual collection/payment date.
-Either `crm.contracts.manage` or `finance.payments.manage` may call those two
-endpoints, but direction and Operational Project visibility are rechecked on
-the server. A Finance permission therefore never elevates Contract header
-access. Both Finance
-views show current value, approved VO
-impact, the next unpaid milestone, and
-overdue/due-soon summaries with receivable/payable wording appropriate to their
-direction. Server pagination and the dedicated server-side export query keep CSV
-scope and filters identical to the screen without truncating at the current page
-or the 100-row API limit.
-
-Payment Request discovery and workflow are also Operational Project scoped.
-`GET /api/finance/payment-references` and `GET /api/finance/payment-requests`
-return only projects visible through `IProjectAccessService`; create, update,
-submit, validate, decide, pay, and cancel recheck the selected Contract's actual
-project before mutation. A scoped finance permission therefore requires active
-project membership (or project manager/creator scope), while
-`operations.projects.view.all` enables the authorized finance portfolio.
-Payment creation may link one approved, active Downstream QS batch to the same
-Contract and Operational Project through `ConstructionQsBatchId`. The finance
-reference response lists eligible QS batches for accessible Downstream contracts.
-The service rechecks the QS direction, CM approval, active lineage, Contract and
-project at create/update, validation and approval. An absent QS link remains
-valid for advances or other stages whose document rules are still to be agreed;
-this link alone does not certify an ISO payment dossier or authorize payment.
-The Finance screen uses the authorized `PUT /finance/payment-requests/{id}` for
-Draft edits with the current row version and preserves attachment, milestone
-and QS selections. Invoice date validation compares the date of `ReceivedAt`
-in the `Asia/Ho_Chi_Minh` business timezone, including when the UTC timestamp
-falls on the preceding day. A superseded QS is shown as unavailable in the editor.
-`POST /finance/payment-requests/{id}/revise` requires `finance.payments.manage`,
-a reason, idempotency key and current row version. It applies to submitted,
-rejected or approved but unpaid requests. Submitted and approved requests can
-be revised when their linked QS is no longer eligible; rejected requests can
-be revised to correct their dossier. The operation snapshots the prior
-revision and attachments, increments the revision number on the same request,
-keeps the invoice identity, clears previous review/approval actors and returns
-the current version to Draft. The new Draft must be edited and pass submission,
-accounting validation and independent approval again. The pay endpoint checks
-QS eligibility inside a serializable transaction and blocks payment when the
-linked QS has been superseded. Historical revisions are returned read-only in
-the Payment Request response; the vendor/invoice uniqueness rule remains global.
-Migration `AddPaymentRequestRevisions` backfills existing requests as revision 1
-and refuses rollback after revision history exists, so audit data is not dropped
-silently.
-For approval, the service also rejects an actor who created, submitted,
-validated, or was assigned as accountant on the same Payment Request, even if
-that actor has `finance.payments.approve`. This follows the separate maker,
-accounting-check, and approval steps in [ISO `TQT` 5.1](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>)
-and the distinct signature positions on [MH-M04](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/MH-M04-DE NGHI THANH TOAN.xlsx>).
-It does not establish the still-open four-package document matrix or
-delegated-approver policy.
-
-#### Contract customer-care history
-
-The customer-care slice implements `Nicon_BreakTask_v1.xlsx`, `Nicon!A62:D62`.
-It is distinct from the Contract audit timeline and the Customer-wide activity
-history: entries belong to exactly one Upstream Contract and are never inferred
-from another Contract belonging to the same Customer.
-
-`GET /api/contracts/{id}/care-activities?page=1&pageSize=20` requires
-`crm.contracts.view` and the existing Contract read scope. It returns
-`total`, `page`, `pageSize` and `items`, ordered by occurrence descending and ID
-descending. Page size is clamped to 1–100. Each item includes Contract ID,
-interaction type, content, UTC occurrence time, server-recorded creator and
-creation time. Project and Finance read scopes do not grant write authority.
-
-`POST /api/contracts/{id}/care-activities` requires `crm.contracts.manage`,
-Contract ownership or `crm.contracts.view.all`, and an `Idempotency-Key`.
-The body contains required `type` (`Call`, `Email`, `Meeting`, `Note`), required
-`content` (1–4,000 characters, trimmed), and optional `occurredAt` (an ISO
-timestamp normalized to UTC; defaults to server UTC now). Other Customer activity
-types are rejected. Replays recheck current ownership before returning cached
-data. Missing/inaccessible Contracts return 404; Downstream Contracts return
-400. The Contract registry exposes an append-only Customer care tab; the
-Finance projection remains read-only. Entries do not change Contract terms,
-VOs, milestones or payment state, and do not schedule renewal reminders.
-As confirmed by the user on 20 October 2026, Contract direction cannot change
-once customer-care history exists. The Contract update endpoint enforces this
-inside its serializable transaction and returns HTTP 400 with
-`CONTRACT_CARE_DIRECTION_LOCKED`; rejected updates preserve the Contract and
-its readable history. Adding an entry rechecks direction and owner scope in
-a serializable transaction. Contracts without care history retain their
-existing reclassification rules.
-
-Migration `AddContractCareActivities` adds an indexed, Contract-owned table.
-There is no historical backfill because Customer-wide notes cannot safely be
-attributed to one Contract. Permanent deletion discloses and deletes these
-entries in the existing aggregate transaction; adding an entry invalidates an
-older deletion plan. The Customer and other Contracts' histories are preserved.
-Rollback is blocked while the table contains history; export and resolve that
-history through an approved data-retention plan before rollback. Sample
-`HD-SAMPLE-003` demonstrates owner follow-up for the An Phú factory; other
-sample Contracts retain the empty state.
-
-Focused API coverage: `ContractCareActivitiesTests`. Seed and cleanup regression
-coverage: `SampleContractSeederTests`, `BusinessRootHardDeleteHandlerTests`.
-Browser coverage: `admin-contract-care.spec.ts` (requires the live Compose stack).
-
-#### Contract continuation provenance
-
-User-authorized policy dated 22/10/2026 supports Renewal and Expansion from an
-Upstream contract with a signed date and status Signed/InProgress/OnHold/Completed.
-This is an implementation decision delegated by the user, not a NICON meeting
-confirmation. See the CRM contract in `Nicon-QLVH.md`.
-
-Migration `20261021171128_AddContractContinuations` adds nullable
-`SourceContractId`, `ContinuationKind` (20) and `ContinuationReason` (2000) to
-Contracts and Opportunities. Foreign keys restrict source deletion. Existing
-records remain unlinked; do not infer provenance from names, customer or dates.
-Rollback refuses to remove populated relationships: export and explicitly
-reconcile them before any intentional downgrade. Rehearse migration against a
-copy before production deployment; no production execution is implied here.
-
-Existing create routes accept optional continuation fields plus
-`sourceContractRowVersion`. Source requires contracts view and owner/view-all
-scope independently of opportunity permissions. An opportunity-derived contract
-also requires opportunity view and owner/view-all scope. Kind is Renewal or
-Expansion, reason is trimmed and required (1–2000 characters), and source is
-same-customer. A quote-only create resolves the source opportunity too. Existing
-quote approval, exclusivity, project and customer checks still apply. The new
-contract inherits provenance from a continuation opportunity and always starts
-Draft; Lost pursuits cannot generate a contract. No signed evidence, payment,
-VO, QS, care or reminder records are copied. Provenance cannot be changed in
-update/link-quote paths. Relations also prevent changing contract customer or
-direction and prevent changing a continuation opportunity's customer.
-
-Continuation creates require `Idempotency-Key`. Serializable transactions
-protect source-version/eligibility/deletion checks and persistence. The create
-idempotency guard rechecks source visibility before replay. The browser retains
-the key for an unchanged payload after an uncertain request failure; changed
-payloads use a new key. Creating a second pursuit intentionally uses a new key.
-Closing the create dialog consumes its initiation query parameters. The source
-form opens before source loading completes, exposes a retry on failure, and
-supports explicit source-version refresh without replacing entered deal terms.
-Validation errors are announced and focused. The reason uses a multiline field.
-
-`GET /api/contracts/{id}/continuations` requires contracts view and owner/view-all
-scope. It returns accessible source/successor contracts and successor
-opportunities, with each module's permission and ownership checked separately,
-newest 100 per collection, plus supported kinds. It does not disclose hidden
-record names or totals. Negotiation/loss uses the existing opportunity lifecycle.
-Contract deletion impact includes both directions of contract provenance and
-outgoing continuation opportunities as Block. Continuation opportunity deletion
-is also Block; plan fingerprints include the new edges. No related root is
-cascaded or silently unlinked. The demo seeds An Phú's expansion pursuit and
-independent draft `HD-SAMPLE-CONT-001` without modifying existing user records.
-The unique draft contract number identifies this seeded pair on reruns; pursuit
-names are neither unique keys nor evidence of seed ownership. Renaming the
-seeded pursuit or creating another pursuit with the same name must not recreate
-the pair or stop startup. New pairs are persisted together in one SaveChanges,
-after the source's operational-project relationships have been linked.
-
-Focused regression: `ContractContinuationsTests`, `ContractsControllerTests`,
-`ContractQuoteLinkTests`, `OpportunitiesControllerTests`, and the live Compose
-browser spec `contract-continuations.spec.ts`.
-The browser spec covers 390/768/1440px, cancel/reopen, keyboard navigation,
-source-data failure/retry on an already loaded route, stale-source recovery,
-money formatting, long reasons and vi/en/zh/ja rendering. It does not establish
-offline availability for uncached application bundles.
-
-### 7.9 Operational Business Documents
-
-Permit, procurement vendor, partial acceptance, as-built dossier, and project handover forms support local document selection in addition to their existing external URL fields. Managed files are stored under `wwwroot/files/business-documents/{area}/` with generated names. Each file is limited to 20 MB and must use `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.png`, `.jpg`, or `.jpeg`.
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `POST` | `/api/business-documents/vendors` | `proc.vendors.manage` | Upload a vendor capability document |
-| `POST` | `/api/business-documents/acceptance` | `construction.acceptance.manage` | Upload a partial-acceptance document |
-| `POST` | `/api/business-documents/as-built` | `construction.asbuilt.manage` | Upload an as-built dossier document |
-| `POST` | `/api/business-documents/handover` | `construction.handover.manage` | Upload a project-handover document |
-| `POST` | `/api/permits/{id}/documents/{kind}` | `permit.checklists.manage` | Upload and assign `SubmittedPackage` or `IssuedPermit` to a permit |
-| `GET` | `/api/vendors/{id}/capability-file/content` | `proc.vendors.view` | Read the managed file referenced by a persisted vendor |
-| `GET` | `/api/acceptance-records/{id}/documents/{fileName}/content` | `construction.acceptance.view` | Read a referenced document within the record's project scope |
-| `GET` | `/api/as-built-documents/{id}/content` | `construction.asbuilt.view` | Read the managed file referenced by a persisted dossier |
-| `GET` | `/api/handover-records/{id}/documents/{fileName}/content` | `construction.handover.view` | Read a referenced document within the record's project scope |
-| `GET` | `/api/permits/{id}/documents/{fileName}/content` | `permit.checklists.view` | Read a managed submitted or issued permit document |
-
-The existing field cardinality remains authoritative: vendor and as-built records store one path, acceptance and handover records store up to 20 paths, and permits store one submitted-package path plus one issued-permit path. Managed content is never served by a generic area-and-filename endpoint. A content request must identify a persisted resource whose metadata exactly references the managed host-relative path; Acceptance and Handover additionally reuse their established caller/project visibility rules. External HTTP(S) document URLs remain supported and are never treated as managed files.
-
-Direct static requests under `/files/quotes`, `/files/customers`, `/files/contracts`, `/files/capability`, `/files/tenders`, `/files/business-documents`, and `/files/design` return `404` before static-file middleware. The React client obtains private bytes through authenticated resource routes and Blob responses. Newly staged two-step uploads are therefore unavailable until their metadata is saved; edit forms do not offer a managed preview until the current record references that path.
-
-Replacing or removing persisted Contract, Design, Vendor, Acceptance, As-Built, Handover, and Permit references deletes the previous managed file only after successful database persistence. Basic Design and Detail Design uploads also enforce the parent project's active stage in the backend service. The orphan-file worker reconciles cancelled or abandoned two-step uploads every six hours. It covers `/images/upload`, `/images/processes`, and all subdirectories under `/files`; hard-delete quarantine is excluded because the durable hard-delete worker owns it. An unreferenced local file older than 24 hours is first moved to the non-public `.managed-file-quarantine` directory. The worker restores it if an active reference appears and permanently purges it only after another 24 hours without a reference. Reference discovery is repeated immediately before mutation and after quarantine moves; malformed active JSON, failed reference validation, or symlink/reparse-point paths stop destructive processing. Allowed extensions and the 20 MB limit are enforced, but malware scanning and full file-signature validation remain deployment hardening work.
-
-Customer, quote, and contract files keep their dedicated document workflows. Design-project document upload is tracked separately. Site diaries and punch lists are excluded because they do not currently expose a complete persisted document contract. Every Survey requires an Operational Project, and its media is synchronized only through that project's catalog and Drive worker.
-
-### 7.10 Central Operational Project API
-
-`OperationalProject` is the internal aggregate shared across the NICON modules;
-it must not be confused with public portfolio content or the three-phase
-`DesignProject`. The API is available at `/api/operational-projects` and
-`/api/v1/operational-projects`:
-
-| Method | Path | Permission | Purpose |
-|---|---|---|---|
-| `GET` | `/api/operational-projects` | `operations.projects.view` | List the caller's project scope with filters and rollup counts |
-| `GET` | `/api/operational-projects/{id}` | `operations.projects.view` | Read the customer, opportunity, quote, contract, and design rollup |
-| `GET` | `/api/operational-projects/{id}/timeline` | `operations.projects.view` | Read payment milestones from every Contract in the caller's project scope |
-| `GET` | `/api/operational-projects/{id}/master-schedule` | Authorized project member or linked department/Design task assignee; published revisions only except managers and assigned approver | Read master schedule and eligible approver choices |
-| `POST` | `/api/operational-projects/{id}/master-schedule/revisions` | `operations.projects.manage` | Create a WBS revision draft; requires idempotency key |
-| `PUT` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}` | `operations.projects.manage` | Replace an editable draft/rejected revision; requires idempotency key |
-| `POST` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/submit` | `operations.projects.manage` | Assign the eligible CRM/PM approver and submit with row-version; requires idempotency key |
-| `POST` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/review` | Assigned approver only | Approve/publish or return with reason and row-version; requires idempotency key |
-| `GET` | `/api/operational-projects/{id}/master-schedule/revisions/{revisionId}/email-preview` | Project access and `operations.projects.manage` for `Submit`; assigned approver for `Publish` | Render actual emails and recipients with a 15-minute confirmation token; no send |
-| `GET` | `/api/operational-projects/{id}/master-schedule/emails/needs-review` | Assigned project manager | List failed emails with the stored recipient and rendered content |
-| `POST` | `/api/operational-projects/{id}/master-schedule/emails/{emailId}/resolve` | Assigned project manager | Record `ConfirmReceived` or `Retry` after checking with the recipient |
-| `GET` | `/api/operational-projects/document-categories` | `operations.projects.view` | Read the server-defined upload categories and Drive paths |
-| `GET` | `/api/operational-projects/{id}/documents` | `operations.projects.view` | List the caller's project document catalog |
-| `GET` | `/api/operational-projects/{id}/documents/{documentId}/content` | `operations.projects.view` | Download private document content through project scope |
-| `POST` | `/api/operational-projects/{id}/documents` | `operations.projects.manage` | Upload a private project document of at most 100 MiB |
-| `POST` | `/api/operational-projects/{id}/documents/{documentId}/retry` | `operations.projects.manage` | Retry an eligible pending synchronization attempt |
-| `POST` | `/api/operational-projects/{id}/documents/{documentId}/classify` | `operations.projects.manage` | Classify an unclassified Drive import |
-| `POST` | `/api/operational-projects/{id}/documents/{documentId}/resolve-conflict` | `operations.projects.manage` | Confirm that both concurrent versions must be retained |
-| `DELETE` | `/api/operational-projects/{id}/documents/{documentId}` | `operations.projects.manage` | Queue deletion of a manual upload or Drive import |
-| `POST` | `/api/operational-projects` | `operations.projects.manage` | Create a planning project with a generated `PJ-YYYY-NNNN` code |
-| `PUT` | `/api/operational-projects/{id}` | `operations.projects.manage` | Update metadata or perform an allowed lifecycle transition |
-| `PATCH` | `/api/operational-projects/{id}/code` | `operations.projects.rename` | Change a project code with reason, row-version concurrency, history, and durable Drive rename status |
-| `POST` | `/api/operational-projects/{id}/code/drive-retry` | `operations.projects.rename` | Requeue the latest failed Drive folder rename without creating a new folder |
-| `DELETE` | `/api/operational-projects/{id}` | `operations.projects.manage` | Delete an empty Planning project only |
-
-#### WBS identity and entry rules
-
-The master schedule is the project's source of WBS identity. `NodeId` is the
-stable relationship key across revisions; `WbsCode` is an editable display code
-and snapshot. The API requires a nonblank code of at most 80 characters and
-rejects case-insensitive duplicates within one revision. The UI suggests a
-code from the item's position in the hierarchy and updates descendant prefixes
-when a parent code changes; users may edit the suggestion before submission.
-Department work-package task codes are similarly suggested from sibling tasks,
-remain editable, and must be unique within their package (case-insensitive).
-
-Construction resource requests, QA/QC dossiers, and QS batches now accept and
-return optional `projectScheduleNodeId`. New records must select a node in the
-latest published revision for the same Operational Project; the server resolves
-the authoritative code from that revision and ignores a client-supplied code.
-Updates to linked records must select a valid current node. A legacy record with
-no resolvable node may retain its existing code while editing other fields, but
-cannot change its WBS until a published node is selected. Publishing a revision
-that removes a referenced node is rejected. The migration links legacy records
-only when their code maps to exactly one stable node across published revisions;
-ambiguous or unmatched records retain their original code and null node link.
-Rollback drops only the new nullable links and leaves WBS codes intact.
-
-There is no approved universal NICON WBS numbering pattern or project-type
-template yet (D-03 remains an open decision). Do not add a fixed regular
-expression, default project template, or business-managed format until NICON
-confirms it. The current generator is a convenience; required, length,
-uniqueness, parent-child identity, and published-schedule membership are the
-enforced rules.
-
-Schedule approval and publication notifications create rows in
-`project_schedule_emails` instead of calling SMTP inside the request.
-`POST /api/site-settings/email-templates/project-schedule/preview` requires
-`system.settings.manage` and renders an unsaved, validated subject/body with
-sample values through the same server formatter used for delivery. It does not
-send or save an email.
-`GET /api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview`
-with `action=Submit&recipientUserId={userId}` or `action=Publish` renders the
-actual project, revision, recipient, and change summary through the same
-renderer that queues delivery. The response contains `emails[]` and a protected
-`previewToken` bound to the caller, action, revision version, recipient, and
-rendered email content. Send `previewToken` with `POST .../submit` or an
-`Approve` review. The server recomputes the message and rejects missing,
-expired, or changed previews before changing the revision or queueing email;
-the user must preview again. `Reject` review needs no email preview.
-Submission preview requires project access,
-`operations.projects.manage`, and an eligible approver; publication preview
-requires the assigned eligible approver. It does not enqueue an email.
-The previous built-in schedule body is replaced on read with the current
-NICON layout; other saved bodies remain unchanged.
-`ProjectScheduleEmailService.SendPendingAsync` runs every 15 seconds via
-`ProjectScheduleEmailWorker`, retries failed deliveries with exponential
-backoff (1, 2, 4, 8 minutes, then `NeedsReview` after five attempts), and
-records `LastError` without recipient or credential details. Rows stuck in
-`Sending` for 15 minutes are reclaimed after a crash. The change summary is
-truncated to 900 characters for `Notification.Body` (column limit 1,000), while
-the email body keeps the complete WBS difference in `nvarchar(max)`. Revision
-transitions and email queue rows commit together. After five failed attempts,
-the project's assigned manager receives an in-app alert. The manager can inspect
-the actual recipient and rendered email at
-`GET /api/operational-projects/{projectId}/master-schedule/emails/needs-review`,
-then record `ConfirmReceived` or `Retry` at
-`POST /api/operational-projects/{projectId}/master-schedule/emails/{emailId}/resolve`.
-The server checks project-manager ownership and the `NeedsReview` state, records
-`ReviewedByUserId` and `ReviewedAt`, and rejects duplicate decisions with 409.
-Retry preserves the original message and starts a new delivery attempt cycle.
-Administrators can inspect a read-only queue at
-`GET /api/site-settings/email-templates/project-schedule/needs-review`
-(`system.settings.view`). The endpoint returns the 100 most recent exhausted
-messages without email addresses or body content. Integration coverage:
-`ProjectScheduleControllerTests`; unit coverage: `ProjectScheduleEmailServiceTests`.
-
-The pre-contract Design handoff is
-`POST /api/opportunities/{id}/design-project` with a required design project
-`name` (1–300 characters) and optional `note` (up to 4,000 characters). It requires both
-`crm.opportunities.manage` and `operations.projects.manage`, applies the normal
-Opportunity owner/view-all scope, rejects Lost Opportunities and Opportunities
-without an Operational Project, and creates a Concept-stage Design Project with
-no Contract. The unique Operational Project relationship makes retries and
-concurrent clicks idempotent; the response includes `created` and the resulting
-`designProject`. The Opportunity create/edit forms expose the optional
-`operationalProjectId`; the Design form links a selected project through the
-concurrency-protected Opportunity update before calling the handoff. Opportunity
-responses expose `designProjectId` and
-`designProjectCode` so the UI replaces the create action with the existing-state
-action.
-
-Operational Projects do not expose aggregate archive or restore operations.
-The approved DEC-08 lifecycle decision retains the preview-and-confirm hard-delete
-convention as the only aggregate removal flow; `Completed` and `Cancelled` retain
-business history without hiding it as archived data. Document-level archive
-states, such as the As-Built lifecycle, remain independent and do not archive the
-owning Operational Project, its Contracts, audit records, or managed files.
-
-`operations.projects.view.all` removes owner scope but does not grant mutation
-permission. Update and delete requests use `rowversion`; the detail response
-also emits an ETag. `AddOperationalProjects` backfills existing design,
-contract, opportunity, and quote relationships before adding their foreign
-keys. The operational hierarchy and user workflow are documented in
-`docs/user_guide.md`. The deterministic historical reconciliation, dry-run,
-deployment checks, rollback plan, and API compatibility contract are documented
-in [Operational Project Historical Migration](#67-operational-project-historical-migration).
-
-### 7.10.1 Department work-package API
-
-`DepartmentWorkPackage` is the cross-department assignment aggregate. Project
-packages require an `OperationalProjectId`. General packages can target any
-active department (product-owner decision, 29 October 2026). Design and
-Construction keep their specialist aggregates for specialist records; a general
-package does not create a duplicate project wrapper. `ContractId` and
-`SourceOpportunityId` are optional references on the persisted Project kind.
-The public `kind` is `Project` when `ContractId` is null and `Contract` when it
-is set; existing records are classified without a schema migration. New
-`Contract` requests require a same-project contract. Legacy `Project` requests
-with `ContractId` remain accepted and return `Contract`, while the `kind=Project`
-list filter now excludes linked packages. Internal packages reject all
-business-root references. Endpoints are available at `/api/work-packages`
-and `/api/v1/work-packages`:
-
-`department_work_tasks.ParentTaskId` is a nullable self-reference added by
-`AddWorkTaskSubtasks`. New subtasks require an unfinished parent in the same
-package. The parent link is fixed after creation. Parent status and progress
-are persisted rollups of direct active children and propagated upward;
-package progress counts only leaf tasks. Parent tasks cannot receive direct
-progress or verification and cannot hold a KPI definition. Older task update
-requests may omit `parentTaskId` without unlinking an existing subtask.
-
-`AddWorkTaskAttachments` adds private task-file metadata. The work-task file
-area reuses the business-document 20 MB and extension checks, while static
-`/files/business-documents` access remains blocked. The API returns file
-metadata without a public path. A delete removes the host file before marking
-the attachment hidden; a failed cleanup remains retryable and blocks the
-package deletion plan. Attachments are not yet staged to the Project Drive
-registry. Back up the private `wwwroot/files/business-documents/work-tasks`
-directory alongside the database before deploying this migration. Docker
-Compose mounts `work_task_files` at that path; deployments outside Compose
-must provide equivalent persistent storage and include it in backups.
-
-The input-price editor uses persistent, associated labels and a responsive
-five-column desktop layout with stacked mobile fields. The dialog body scrolls
-independently of its header/footer. Its read-only line amount uses the existing
-pre-VAT quantity × unit-price display; the server remains authoritative for
-persisted decimal rounding and tax totals. Numeric ranges match
-`InputPriceLineRequest`; invalid values are identified next to the field.
-`MoneyInput` accepts an optional formatter and decimal-comma preference for
-these localized fields. Existing callers retain the default currency parsing.
-`quote-pricing-responsive-live.spec.ts` covers real offer persistence and layout
-at 320/390/768/1440px. Its sent-quotation rendering fixture sets only its own
-test quote to `SentToCustomer` in SQL; it does not test email delivery.
-
-| Method | Path | Permission | Purpose |
-|---|---|---|---|
-| `GET` | `/api/work-packages` | `work.packages.view` | List scoped Project/Contract/Internal packages with server filters |
-| `GET` | `/api/work-packages/options` | `work.packages.view` + `manage` or `assign` | Return active department, user, and work-KPI options |
-| `GET` | `/api/work-packages/{id}` | `work.packages.view` | Read package, tasks, access flags, and ETag |
-| `GET` | `/api/work-packages/{id}/history` | `work.packages.view` | Read immutable package/task change snapshots |
-| `POST` | `/api/work-packages` | `work.packages.manage` | Create a Project, Contract, or Internal package |
-| `PUT` | `/api/work-packages/{id}` | `work.packages.manage` | Update metadata, optional contract, or lifecycle |
-| `GET` | `/api/work-packages/{id}/deletion-impact` | `work.packages.manage` + management scope | Preview deletion, unlinking and blockers |
-| `DELETE` | `/api/work-packages/{id}` | Same management scope | Hard delete with code, planToken, rowVersion and idempotency key |
-| `POST` | `/api/work-packages/{id}/tasks` | `work.packages.assign` | Add a department task with WBS, dependencies, CC, and optional KPI |
-| `PUT` | `/api/work-packages/{id}/tasks/{taskId}` | `work.packages.assign` | Edit a non-terminal assignment |
-| `GET` | `/api/work-packages/{id}/tasks/{taskId}/attachments` | `work.packages.view` + package scope | List active private task files |
-| `POST` | `/api/work-packages/{id}/tasks/{taskId}/attachments` | `work.packages.view` + lead/assignee scope | Upload one multipart `file` with `Idempotency-Key`; the UI sends selected files individually |
-| `GET` | `/api/work-packages/{id}/tasks/{taskId}/attachments/{attachmentId}/content` | `work.packages.view` + package scope | Download a task file through authorization |
-| `DELETE` | `/api/work-packages/{id}/tasks/{taskId}/attachments/{attachmentId}` | `work.packages.view` + lead/assignee scope; lead may clean closed packages | Clean a task file and mark it deleted; retry after a cleanup conflict |
-| `PUT` | `/api/work-packages/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Record monotonic assignee progress |
-| `POST` | `/api/work-packages/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Independently verify a completed KPI task |
-| `POST` | `/api/work-packages/{id}/input-price-offers` | `work.packages.progress` | Add a supplier/subcontractor input price offer to a Procurement pricing package |
-| `PUT` | `/api/work-packages/{id}/input-price-offers/{offerId}` | `work.packages.progress` | Edit a Draft/Rejected input price offer |
-| `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/approval-email-preview` | `work.packages.progress` + department scope | Render the approval email and issue a 15-minute confirmation token |
-| `POST` | `/api/work-packages/{id}/finance-review/approval-email-preview` | Same permission and scope | Render the finance approval email |
-| `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/submit` | `work.packages.progress` | Submit an input price offer for independent approval |
-| `POST` | `/api/work-packages/{id}/input-price-offers/{offerId}/decision` | `work.packages.verify` | Approve or reject a submitted input price offer |
-| `PUT` | `/api/work-packages/{id}/finance-review` | `work.packages.progress` | Save the Finance – Accounting checklist (commercial or tender review) |
-| `POST` | `/api/work-packages/{id}/finance-review/submit` | `work.packages.progress` | Submit the finance review for independent approval |
-| `POST` | `/api/work-packages/{id}/finance-review/decision` | `work.packages.verify` | Approve or reject a submitted finance review |
-
-Approval notification email contract (user decision, 25 October 2026): both
-input-price and finance-review submissions require a server-rendered preview.
-POST the corresponding `approval-email-preview` endpoint, display `toEmail`,
-`subject` and sandboxed HTML `body`, then submit `previewToken` with the existing
-`rowVersion` and `Idempotency-Key`. Old clients must add this preview step.
-The token is bound to the submitting user, package context, record/version,
-recipient list (To/CC) and rendered template; it expires after 15 minutes. Changed content
-requires a new preview. A repeated submission of an already Submitted record
-returns the record without enqueuing another email.
-
-The assigned department lead must be active, independent of the record author,
-have `work.packages.verify` and a valid email per `ContactValidation`; otherwise
-submission is blocked without a state transition. Template editing requires
-`system.settings.manage`, separate from submission permission. GET/PUT
-`/api/site-settings/work-package-approval-template` uses settings view/manage.
-The editor is the **Duyệt nhóm công việc** tab beside **Báo giá** and the
-contract reminder tab at `/admin/email-templates`.
-
-Supported variables: `recipientName` (lead), `workPackageCode`,
-`workPackageName`, `recordType`, `recordReference` (supplier reference for
-input pricing; package code for finance), and `senderName`. Use
-`{{variableName}}`; the HTML must include `{{workPackageCode}}` and
-`{{recordReference}}`. Subject: 1–200 characters, no newlines. HTML: 1–8,000
-characters, the shared safe basic HTML/style allowlist, no unknown variables.
-Rendered subjects retain the 200-character limit; bodies allow up to 16,000.
-Dynamic body values are HTML-encoded on the server. Confirmed content is frozen.
-
-Migration `20261024174814_AddWorkPackageApprovalEmails` adds nullable settings
-columns and the owned `work_package_approval_emails` table. Submission, queued
-email and business history commit in one transaction. The 15-second worker
-claims before SMTP and checks the current recipient and submission generation.
-Delivery states: Pending, Sending, Sent, NeedsReview. Package detail returns
-`approvalEmails` (latest 50), allowing refresh to inspect delivery. Sending
-blocks permanent deletion; other email records are disclosed as owned deletes.
-An SMTP failure or context change is visible as NeedsReview. A crash after claim
-can leave Sending: inspect SMTP logs before any manual recovery. There is no
-automatic retry after a delivery attempt, since SMTP cannot prove exactly-once
-delivery after a disconnect. Do not reset Sending/NeedsReview blindly.
-Existing Submitted records are not retroactively mailed.
-
-Recipient selection (confirmed 25 October 2026): preview POST accepts optional
-`{ toEmail, ccEmails }`. An empty request defaults To to the assigned lead and
-CC to an empty array. To may be edited; this changes delivery only, not the
-approval actor or independent-lead eligibility. Every address is required when
-present, trimmed, limited to 150 characters, checked by ContactValidation and
-parsed as one mailbox. CC permits up to 20 addresses; duplicates (case-insensitive)
-and addresses equal to To are removed. The server returns the normalized list
-and binds it into previewToken. Submission cannot override the token recipients.
-After editing To/CC, update the preview before confirming.
-The editable approval-email body must include a link using
-`<a href="{{workPackageUrl}}">...</a>` alongside `{{workPackageCode}}` and
-`{{recordReference}}`. Preview and queued To/CC email share the rendered
-`/admin/work-packages/{id}` URL. Set `Frontend:PublicBaseUrl` to the public
-HTTPS origin in deployed environments; localhost HTTP is accepted for local
-Compose. Without this setting, only a configured allowed frontend origin or
-a loopback request origin can supply the link. Older customized templates
-receive the link in memory when loaded, preserving their original content.
-
-Migration `20261024183305_AddWorkPackageEmailRecipients` adds CcEmailsJson
-(default `[]`) and LeadEmail (backfilled from historical ToEmail). The worker
-rechecks the independent lead against LeadEmail, not the editable To address,
-and sends one SMTP message with To and CC headers/envelope recipients. Detail
-responses include ccEmails. The page shows a persistent queued confirmation and
-polls delivery for up to two minutes, showing Sent/NeedsReview with a toast and
-inline feedback. This does not equate SMTP acceptance with inbox delivery.
-Rollback of this migration loses CC and lead snapshots: stop the worker, export
-pending recipient lists and review them before deploying the old sender.
-
-Rollback: stop the approval worker before deploying the previous assembly.
-Downgrading the migration drops queued messages/delivery history and the new
-custom template fields, so export this evidence first. Existing quotation and
-contract reminder templates are unaffected. Never roll back by dropping volumes.
-
-Completed packages can return to `Active` through PUT. This clears package
-`CompletedAt` and records a `Reopened` history snapshot. Existing task progress,
-KPI verification and approved business records remain intact; their individual
-edit guards still apply. Cancelled packages remain terminal.
-
-Package deletion recomputes its plan in a serializable transaction. It deletes
-owned tasks, CC/dependencies, participants, history, input offers/lines, finance
-reviews and translations. Independent permit/tender checklist records survive
-with task links cleared; parent Project, Contract, Opportunity, Quote and Tender
-records survive. Used input pricing (including quotation version snapshots),
-sent quotations consuming commercial review, tender submissions using finance
-approval/planning, contract legal activations and
-remaining source files block deletion. Files must be cleaned in their owning
-module; this API deletes no local or Drive content. Cleaned document metadata
-survives with source entity/id cleared. Wrong code, missing/stale rowVersion,
-changed plans and blockers reject without partial writes. Success returns 204.
-No schema migration is required.
-
-All writes require an idempotency key. Updates, progress, and verification also
-require `rowversion` through `If-Match` or the request body. Contextual actor
-rules are enforced in the service in addition to permission middleware. Task
-dependencies must remain within one package and acyclic; an Active package and
-completed predecessors are required before progress begins.
-Internal package creation requires both `work.packages.manage` and
-`work.packages.assign`, and the caller must be the selected lead in the same
-role group. This prevents a view/progress-only staff role from promoting itself
-to department lead.
-
-Internal packages persist all participating role groups. Every task persists
-one responsible role group and validates its assignee and optional approver
-against that group. Package/task mutation and its history snapshot commit in
-one database transaction; notification delivery occurs after commit and
-remains retry-safe through the notification service.
-
-The migration `AddDepartmentWorkPackages` adds package, task, dependency, CC,
-and history tables. Operational Project deletion classifies owned packages as
-`Delete`; Contract and Opportunity deletion classify their optional references
-as `Unlink`. KPI metric `VerifiedWorkTaskCount` reads only independently
-verified tasks assigned to the evaluated user in the requested period. Seeded
-definitions are inactive by default so installations must configure targets and
-rebalance weights before activation.
-
-#### Pre-contract department controls (MoM §5)
-
-The `DepartmentWorkPackage.Purpose` discriminator selects the pre-contract
-business flow. Each purpose is bound to
-one receiving department and one source record so the cross-department handoff is
-auditable:
-
-- `ProcurementInputPricing` requires the `PROCUREMENT` role group and a
-  `SourceOpportunityId`. It carries `ProcurementInputPriceOffer` records with
-  lines, vendor, supplier reference, currency and validity.
-- `FinanceCommercialReview` requires the `FINANCE` role group and a
-  `SourceQuoteId`; `FinanceTenderReview` requires the `FINANCE` role group and a
-  `SourceTenderId`.
-- `TenderPlanning` requires `SourceTenderId`, the Tender's Operational Project,
-  a responsible active role group, and package dates no later than the submission
-  deadline. Unlike generic project packages it may coordinate any department;
-  it does not replace that department's specialist aggregate. One non-cancelled
-  package per Tender and department is allowed. Every task requires an independent
-  verifier and must be `Verified` before the package can complete; KPI linkage is
-  optional for these planning tasks.
-- All pre-contract purposes reject `ContractId`: pre-contract work must not hang off an
-  executed contract.
-
-`ProcurementInputPriceOffer` and `DepartmentFinanceReview` share one lifecycle:
-`Draft → Submitted → Approved | Rejected`. Editing is limited to `Draft` and
-`Rejected`; the author cannot decide their own record
-(`CreatedByUserId == callerUserId` is rejected server-side), an input price offer
-already referenced by a quote is immutable, and a rejected record requires a
-reason. Offers and reviews are returned with `rowVersion`, and all writes require
-an idempotency key plus `If-Match`/body `rowVersion`.
-
-Server-side gates that consume these records:
-
-- `QuoteService` send-to-customer requires an `Approved` `FinanceCommercialReview`
-  review in a non-cancelled package linked by `SourceQuoteId`, and the quote
-  must carry an `OperationalProjectId` so the review has a project to live
-  under. The review pins `ReviewedQuoteVersion` when Finance saves it, so a
-  quote re-versioned after a material post-approval edit needs a fresh review
-  before it can be sent.
-  Finance review responses, including reviews nested in `GET /api/work-packages`
-  and `GET /api/work-packages/{id}`, expose nullable `reviewedQuoteVersion`.
-  The quotation screen filters packages by `sourceQuoteId` and uses that value
-  to open a reusable review or offer a new request for a changed quotation.
-- `ContractService` reuses the same approved review of the source quote and
-  its current version before an Upstream contract with that quote can become
-  signed. This gate covers signed creation, update, status transition and
-  attaching a source quote to an already signed contract.
-- `QuoteService` resolves `inputPriceOfferId` only when the offer is `Approved`,
-  still valid, and belongs to a `ProcurementInputPricing` package of the quote's
-  project; the quote stores `InputPriceSnapshotJson` at link time.
-- `POST /api/quotes` accepts `draftOnly: true` for the current Sales creation
-  flow. The Opportunity must belong to an Operational Project, and the payload
-  contains only basic quote fields and omits `method`; the persisted method
-  uses an internal default until output pricing is prepared. It creates a
-  zero-value Draft. On its first pricing update, `PUT /api/quotes/{id}` requires
-  a selected `method` and an approved, unexpired input offer on the same
-  project; normal quote validation and the existing Draft to
-  PendingApproval submit gate then apply. The older priced-create contract is
-  retained for existing integrations and historical tests.
-- `TenderService` submission requires an `OperationalProjectId`, at least one
-  completed `TenderPlanning` package, and an `Approved` `FinanceTenderReview`
-  package linked by `SourceTenderId`. Legacy Tender plans stored as `General`
-  remain readable by the gate, but new writes must use `TenderPlanning`.
-- `ProcurementService` execution BOQ creation/update requires a same-project
-  `Upstream` contract that is signed and not draft/cancelled.
-
-The migration `AddPrecontractDepartmentControls` adds the offer, line and review
-tables plus the `Purpose` discriminator; every added column is nullable except
-`department_work_packages.Purpose`, which defaults to `General`.
-`AddFinanceReviewQuoteVersion` adds the nullable
-`department_finance_reviews.ReviewedQuoteVersion` used for the version pin.
-
-The Module 2 schedule is exposed beneath
-`/api/operational-projects/{id}/design-schedule` and remains separate from
-Module 4 construction tasks. Its lifecycle, validation, weighted roll-up,
-filter, concurrency, migration, and deletion contracts are documented in
-[Detail Design Schedule](#716-detail-design-schedule).
-
-An Operational Project supports multiple Design Projects. The collection is
-authoritative; singular legacy `designProjectId`/code fields return the oldest
-flow deterministically. A Contract retains at most one Design Project. Contract
-reads prefer the exact Contract link and only use an unbound same-project flow
-when it is unique. They never borrow another Contract's flow.
-
-`AllowMultipleDesignFlows` removes only the unique Operational Project/Design
-index. `ScopeDesignFlowTeamsAndSchedules` adds nullable member `DesignProjectId`
-and separates active membership and task-code uniqueness per flow. Root team
-members have a null flow ID. For a sole legacy Design, the migration clones
-Design participants into that flow, remaps schedule assignee/approver/CC and
-Design assignments, and retains root roles/history. Ambiguous existing multiple
-flows abort the backfill. Rehearse against a restored backup before deployment;
-take a fresh backup before applying. Down refuses scoped members or conflicting
-task codes, so rollback after use needs an explicit reconciliation or a backup
-restore rather than merging teams automatically.
-
-Design Team member writes and Design Project form writes synchronize the two
-legacy leadership fields (`ProjectManagerUserId` for Design Manager and
-`DesignLeadUserId`) with the flow-scoped Team roles. Team writes reject a second
-active holder of either role and serialize leadership changes per flow. Form
-changes end superseded Design leadership roles while preserving other roles and
-role history. The Operational Project Manager remains a separate root role.
-
-Dossier member permissions are persisted in
-`design_project_member_permissions` (one row per team member), introduced by
-`20261108140000_AddDesignProjectMemberPermissions`. The scoped team endpoint
-`PUT /api/operational-projects/{id}/team/members/{memberId}/design-permissions`
-accepts `canView`, `canCreate`, `canUpdate`, and `canDelete`. Only dossier team
-managers may change them; create/update/delete require view, and assigned
-Design Manager/primary Design Lead rights cannot be restricted through this
-endpoint. Detail responses expose `effectivePermissions`; lists and resource
-reads honor scoped View revocation before root membership. Approval/finalize/
-release permissions and the dedicated hard-delete capability remain additional
-server gates. The EF model snapshot includes the member-permission relationship
-and declares assignment collection navigations after their relationships; the
-focused `QuoteDecisionRecipientMigrationTests` check detects snapshot drift.
-
-Personnel-option DTOs carry organizational role code/name/translation key and
-department ID/translation key from the same authorized query. The shared
-frontend `personOption`, `SearchableSelect` and `PeopleChecklist` render and
-filter that identity; project members retain member IDs rather than user IDs
-for schedule fields. Each personnel control keeps its translated field label
-as its accessible name; generic picker hints must not override that label.
-Search inputs also have translated accessible names. Saved inactive schedule
-CC remain visible as remove-only chips; they cannot be selected for new work.
-User create, update and active-status responses include the same role and
-active-department identity as the subsequent detail read.
-Team-member eligibility also reflects account activation; deactivating a user
-does not erase or end their historical membership. The team response keeps
-`isActive` for membership state and exposes `isUserActive` separately; schedule
-assignment, approval and new CC choices require both states to be active.
-Global directory pickers paginate `/api/users` in batches
-of at most 100. Optional nonnegative `departmentId` filters that API on the
-server (`0`: no active department), intersecting with existing role/search.
-Narrow candidate endpoints preserve their existing eligibility and permissions.
-The Contract Finance action reuses the quotation's version-aware dossier
-selection (`selectQuoteFinanceReview`); package metadata recency cannot select
-an obsolete approved quote version. Package responses include
-`sourceQuoteVersion`, and Contract navigation reads all matching pages before
-selecting. If no eligible dossier remains, the action returns to the source
-quotation. This navigation does not authorize sending: the server's latest
-Finance-review/version gate remains authoritative.
-Historical directory options retain inactive users so existing assignments and
-owner filters remain identifiable; write services still enforce assignment
-eligibility. Unknown fallback identity uses unavailable-information copy rather
-than claiming an unassigned department. User department menus use the active
-role-group catalogue, matching the API's `departmentId=0` semantics. A negative
-department filter returns HTTP `400`, code `PEOPLE_DEPARTMENT_FILTER_INVALID`
-and field `departmentId`; the client asks the user to select a listed group or
-clear the filter.
-
-Legal preview, activation, setup and later legal-task reassignment use active
-shared-root team members (`DesignProjectId == null`). A Design-only membership
-does not confer eligibility for the Operational Project's Legal package.
-Punch Design responsibility belongs to the Punch's actual Design flow, its
-explicit Design Lead, or an active root member with a project-wide Design role;
-sibling-flow and root module-only roles do not confer responsibility.
-Invalid legal-task members return HTTP `400`, code `LEGAL_MEMBER_INVALID`, and
-field `assigneeUserId` or `approverUserId`. Invalid responsible designers return
-HTTP `400`, code `PUNCH_DESIGN_MEMBER_INVALID`, and field
-`responsibleDesignUserId`. The client keeps the form open and translates the
-instruction to choose an eligible member.
-
-The aggregate migration is incomplete by design. Construction Task, Site Diary,
-Punch Item, Acceptance, As-Built, Handover and Permit still persist
-`DesignProjectId`; HSE, Procurement, RFQ, Finance and project documents persist
-`OperationalProjectId`. New cross-module aggregates must use
-`OperationalProjectId`. Existing Design-Project-based APIs remain compatibility
-surfaces and must resolve a single owning Operational Project before they emit
-cross-module events. Do not add a nullable second project key without a data
-backfill, uniqueness rule, conflict policy, deployment rehearsal and rollback.
-
-The read-only timeline endpoint derives its entries from existing Contract
-payment milestones and does not copy or synchronize data. Each entry identifies
-its Contract, source, status, planned due date, latest update time, and amount.
-`ContractPaymentMilestone.ActualPaymentDate` stores the user-confirmed business
-date and is exposed as `actualDate`; the endpoint never substitutes `UpdatedAt`
-or retention-managed audit data. A `Paid` write requires this date, while moving
-to `Pending` or `Requested` clears it. Existing rows remain nullable because the
-migration intentionally does not invent or backfill historical payment dates.
-Calls are naturally idempotent, and projects outside the caller's scope return
-`404` without disclosing their existence.
-
-`ProjectDocument` is the project-scoped catalog and synchronization sidecar.
-Manual catalog uploads enter private host storage and the durable sync queue.
-SQL stores catalog, permission, workflow and Drive metadata. Authenticated
-content requests serve the staged host file until upload succeeds, then proxy
-Drive bytes after verified local-copy cleanup. OAuth credentials and raw Drive
-permissions are not exposed to the browser. Source-owned files retain their
-existing module storage and lifecycle as a compatibility bridge. Quote,
-Contract attachment/appendix, Basic Design, Shop
-Drawing, Permit, Acceptance, As-Built, Handover, and Operational
-Project-linked Survey writes stage sidecars in the same database transaction as
-their authoritative record and use the dedicated Survey category mapped to the
-configured `SurveyMedia` folder path. Such source-owned catalog rows cannot be deleted
-through the generic endpoint; users must remove or replace the file in its
-source module. The Survey folder correction migration reclassifies existing managed
-Survey sidecars, but no migration discovers or stages historical files that never had a sidecar.
-
-The current implementation is a supported hybrid subset, not completion of the
-expanded customer-wide Google Drive contract. Validate live upload, download,
-reconciliation, ownership and cleanup against the configured environment before
-claiming external transport works; metadata or mocked tests are insufficient.
-
-Design workspace persistence is also the durable folder-initialization intent:
-the Drive worker selects workspaces with missing Concept/Basic/Shop bindings,
-five projects per pass, rotating its cursor past failures. After reaching the
-end it wraps; a restart rediscovers missing bindings from SQL. No Drive call
-occurs inside the handoff transaction and no file/contract is required. Existing
-folder identities, configured paths and bindings are reused; initialization
-does not migrate Survey/CRM topology. Disabled/unwritable Drive pauses work.
-Failures are logged by project and missing bindings remain retryable. The
-cursor is an optimization; SQL workspace/binding state determines completion.
-
-Catalog list/download now admit active, started project members through a
-shared filtered query. Category permissions follow the owning modules:
-Concept/Basic/Shop use their corresponding `design.*.view`, permits use
-`permit.checklists.view`, construction evidence uses Acceptance/QA-QC/QS view,
-Survey uses `crm.surveys.view`, pre-design uses `crm.opportunities.view`,
-Procurement uses material/resource-request view, Finance uses
-`finance.payments.view`. Source-module permission is also required, except
-General which relies on category permission. Unclassified files remain outside
-member-only reads. Creator/PM/view-all behavior is preserved; membership does
-not widen mutation authorization. List and binary download apply the same
-predicate, including after assignment ends.
-
-Internal Design recipient eligibility uses `design.reviews.receive` on an
-active user/role, including custom roles; assignment to an individual review
-still controls access. Defaults and four-language labels are seeded through
-the normal RBAC catalog. Download UI parses bounded JSON error Blobs using
-the shared asynchronous helper so integrity conflicts retain server guidance.
-Pure helper regression tests run with `cd nihomeweb && npm run test:unit`.
-
-Both .NET test projects exclude `**/TestResults/**` from default MSBuild items.
-Generated `.cs` probes retained as test artifacts must not become compiled
-tests or inputs to solution format verification. Keep executable regressions
-under the normal tracked test directories.
-
-New tender submissions retain versioned JSON snapshots of plan metadata and
-task WBS/content/resources/actors/dates/progress/verification/CC/dependencies,
-plus Finance checklist/findings/decision/actors and concurrency versions.
-Snapshot fields are additive to existing submission JSON; old sparse snapshots
-remain historical evidence and are not backfilled using current source data.
-
-Relationship changes are reconciled only on an explicit update that changes the
-resolved Operational Project. Linking or reassigning an Opportunity, Contract,
-or Design Project stages its currently supported source files in the destination
-and queues old replicas for deletion; a missing `OperationalProjectId` in those
-update contracts preserves the existing relationship. Survey updates support
-explicit Opportunity unlinking through `LinkedOpportunityId = null`, but every
-Survey retains a required `OperationalProjectId`. Project reassignment queues
-old replicas for deletion and stages media in the destination project's Survey
-category. This event-driven behavior does not scan unrelated source records.
-
-Manual catalog uploads first persist their validated bytes in private host
-storage and a durable `Pending` record, including when Drive is disabled or
-unavailable. They remain downloadable through the authorized content endpoint.
-The worker pauses without consuming attempts until a writable Drive connection
-exists. After uploading a manual file, it reads the remote content back and
-compares byte count and SHA-256 before marking synchronization successful. The
-fenced remote receipt is retained before readback so a failed verification can
-still be followed by deletion of the remote replica. Downloads continue serving
-the staged source while verification is pending. After successful verification
-and synchronization, it removes the owned host copy and clears its path. Failed
-cleanup is retried from the synced record; mismatched content retains the
-original host file. Legacy source-managed files retain their source-module copy
-and lifecycle.
-Manual retry resets the bounded automatic retry budget for a failed/pending
-record; processing records and protected/frozen evidence remain guarded.
-
-The worker uses durable desired operations, bounded retries, claim tokens,
-generation fencing, SQL rowversion, and per-folder reconciliation leases.
-Automatic reconciliation selects up to ten due folder bindings per pass,
-ordered by their oldest `UpdatedAt` touch then ID, excluding active leases.
-Lease acquisition/release updates that touch even after a remote failure,
-so failed folders rotate behind waiting folders instead of repeatedly taking
-the first ten project slots. Successful folders retain the one-minute scan
-interval. Explicit project reconciliation still visits all its bindings.
-This changes scheduling only; category topology, permissions, file ownership
-and the existing per-folder lease/concurrency rules remain unchanged.
-Drive is authoritative for successfully synchronized manual catalog uploads
-and files created directly in managed folders: reconciliation catalogs them in
-their current category without downloading host copies, reflects remote edits,
-and marks remotely trashed files deleted. Native Google Workspace files remain
-metadata/link entries because Drive does not expose their native bytes through
-the normal download operation. For legacy source-owned sidecars only, external
-deletion queues restoration and concurrent remote edits preserve a separate
-conflict entry until an authorized user confirms **Keep both**.
-
-### 7.10.2 BOQ catalog workbook intake
-
-Since 14/11/2026 no screen calls the APIs in 7.10.2 and 7.10.3. The catalog
-workbook dialog and the configured-category entry were removed from
-`/admin/material-rates`. Procurement now uses the template library (7.10.5)
-and the work-package upload (7.10.6). The APIs and tables remain until a
-migration retires them.
-
-Multi-sheet customer workbooks are normalized into Draft BOQ material-rate
-revisions through `/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook`.
-`preview` detects candidate header/column mappings without persistence. `import`
-requires the same SHA-256 source hash and explicit per-sheet mappings, validates
-all selected rows, and atomically replaces the revision lines. Reusable mapping
-templates are listed and created at `/api/material-rate-catalogs/boq-import-templates`.
-Only callers with `crm.material-rates.manage` may preview, save templates, or
-import, and only BOQ revisions in `Draft` are mutable. Source filename, hash,
-mapping JSON, actor, and timestamp are retained on the revision. Quotes continue
-to consume only an approved effective catalog revision.
-
-### 7.10.3 Configured BOQ category entry
-
-Use the existing MaterialRateCatalog with CatalogType=Boq as the category.
-BoqConfigurationJson stores immutable-after-first-revision sheet/field settings;
-BoqRowsJson stores all typed entry values per revision. Priced entries project
-into existing MaterialRateLine records in the same transaction; reference sheets
-never become quote prices. Legacy catalogs have null configuration and retain
-existing behavior. Six source-derived profiles are seeded only when their code
-is absent; restart never overwrites user settings or creates pricing revisions.
-
-Routes below are relative to /api/material-rate-catalogs (also /api/v1):
-
-| Method / route | Permission | Contract |
+`signedFrom`, `signedTo`, `endFrom`, `endTo`, `valueMin`, `valueMax`, `page`,
+`pageSize`, `sortBy` (`signedDate` mặc định, `endDate`, `value`,
+`contractNumber`, `updatedAt`; giá trị lạ quay về signedDate), `sortDirection`
+(mặc định giảm dần). Lọc và sắp theo giá trị hiện tại (`Value` + delta VO đã
+duyệt). Response có tổng danh mục, số mốc quá hạn/sắp đến hạn, mốc chưa thanh toán
+kế tiếp và số tiền còn lại theo lịch của từng dòng; Upstream là phải thu,
+Downstream là phải trả. List/detail có `sourceTenderId`, `sourceTenderCode`,
+`sourceTenderName` suy từ `WonOpportunityId` của Tender thắng (nhiều Tender thì
+lấy cái đóng gần nhất). `GET /api/contracts/filter-options` trả đủ lựa chọn owner/
+customer/dự án trong scope; `GET /api/contracts/export-data` dùng cùng bộ lọc,
+sắp xếp, scope trong một truy vấn cho CSV.
+
+Phạm vi đọc: không có `crm.contracts.view.all` thì theo owner. Kế toán có
+`crm.contracts.view.upstream.all` và `crm.contracts.view.downstream.all` (chỉ đọc)
+để đối soát phải thu/phải trả trên cùng danh mục dự án của
+`operations.projects.view.all`. Cần cả quyền dự án và quyền theo hướng tương ứng,
+và chỉ có hiệu lực khi list lọc rõ `direction=Upstream`/`Downstream` hoặc detail
+đúng hướng đó; list không lọc hướng vẫn theo owner. Các quyền này không cho sửa.
+
+Sổ hợp đồng chuẩn và mọi thao tác sửa ở `/admin/contracts`. Finance có hai màn chỉ
+đọc trên cùng ID: `/admin/finance/contracts` (Upstream) và
+`/admin/finance/input-contracts` (Downstream); chọn dòng mở
+`/admin/contracts/{id}` kèm `returnTo` đã validate. URL Finance `/{id}` cũ
+redirect. Header, trạng thái pháp lý, attachment, VO do `crm.contracts.manage`.
+`PUT /api/contracts/{id}/milestones` (chỉ field lịch) và
+`PATCH /api/contracts/{id}/milestones/{milestoneId}/status` (kế toán phụ trách,
+trạng thái yêu cầu, ngày thu/chi thực tế) nhận `crm.contracts.manage` hoặc
+`finance.payments.manage`, server kiểm lại hướng và scope dự án; quyền Finance
+không nâng quyền header.
+
+Mốc thanh toán:
+
+- Cập nhật lịch giữ ID mốc, sửa tại chỗ để giữ tham chiếu tài chính và lịch sử.
+  Mốc đã xử lý hoặc đã có payment request không xoá được qua sửa lịch.
+- `ActualPaymentDate` là ngày nghiệp vụ người dùng xác nhận (trả về `actualDate`).
+  Ghi `Paid` bắt buộc ngày này; về `Pending`/`Requested` thì xoá. Dòng cũ để null,
+  không backfill.
+- Worker 5 phút phát `crm.contract.milestone-due` một lần khi mốc thu Upstream
+  chưa thanh toán đến hạn, gửi owner và kế toán phụ trách, lưu
+  `DueNotificationSentAt` nguyên tử và xoá dấu này khi đổi ngày đến hạn.
+
+Payment Request (`GET /api/finance/payment-references`,
+`GET /api/finance/payment-requests` và các thao tác create, update, submit,
+validate, decide, pay, cancel) theo scope Operational Project qua
+`IProjectAccessService`; mọi thao tác ghi kiểm lại dự án thật của Contract. Quyền
+finance có scope cần là thành viên dự án (hoặc PM/người tạo);
+`operations.projects.view.all` mở toàn danh mục.
+
+- Có thể gắn một QS batch Downstream đã CM duyệt, còn hiệu lực, cùng Contract và
+  dự án qua `ConstructionQsBatchId`; kiểm lại ở create/update, validate và
+  approve. Không gắn QS vẫn hợp lệ (tạm ứng, giai đoạn chưa chốt chứng từ); việc
+  gắn QS không chứng nhận bộ hồ sơ ISO hay cho phép chi.
+- Sửa Draft qua `PUT /finance/payment-requests/{id}` với row version hiện tại.
+  So ngày hoá đơn với ngày của `ReceivedAt` theo `Asia/Ho_Chi_Minh`.
+- `POST /finance/payment-requests/{id}/revise` (`finance.payments.manage`, lý do,
+  idempotency key, row version) cho yêu cầu submitted, rejected hoặc approved chưa
+  chi. Snapshot revision cũ và attachment, tăng số revision trên cùng request, giữ
+  hoá đơn, xoá người review/duyệt cũ, về Draft; phải qua lại submit, kiểm kế toán và
+  duyệt độc lập. Endpoint pay kiểm QS trong transaction serializable và chặn khi QS
+  đã bị thay thế. Ràng buộc unique vendor/hoá đơn vẫn toàn cục. Migration
+  `AddPaymentRequestRevisions` backfill revision 1 và từ chối rollback khi đã có
+  lịch sử revision.
+- Người tạo, trình, kiểm tra hoặc được giao làm kế toán của request không được
+  duyệt, kể cả có `finance.payments.approve` (theo ISO `TQT` 5.1 và các vị trí ký
+  riêng trên MH-M04). Chưa chốt ma trận chứng từ bốn loại gói và uỷ quyền duyệt.
+
+### 8.6 Hợp đồng: tiến độ thực hiện, nhắc hạn, chăm sóc, nối tiếp
+
+**Tiến độ thực hiện.** `GET /api/contracts/{id}/execution-progress`
+(`crm.contracts.view` + scope đọc Contract; không truy cập được trả `404`) trả ba
+thước đo độc lập `work`, `qs`, `payment` và `calculatedAt`; cố ý không có phần
+trăm tổng.
+
+- `work`: null nếu thiếu `work.packages.view`; dùng quy tắc hiển thị của list gói
+  công việc, chỉ gói có `ContractId` = hợp đồng. Đếm gói (huỷ tách riêng), task
+  (loại gói huỷ; Completed, Verified, Cancelled tách riêng và không chồng nhau),
+  xem trước 10 gói cập nhật gần nhất. Không phải tiến độ có trọng số WBS.
+- `qs`: null nếu thiếu `construction.qs.view` hoặc quyền vào dự án. Chỉ hồ sơ
+  khớp Contract, dự án và hướng. Tổng lịch sử, số chờ CM duyệt và số đang duyệt
+  hiệu lực (CmApproved, Active, lineage còn hiệu lực, không phải Reversal) tách
+  riêng; không cộng số tiền, không suy tỷ lệ hoàn thành. Link mở workspace QS đã
+  lọc theo Contract và neo hồ sơ nguồn.
+- `payment`: theo lịch mốc như trang chi tiết; mỗi dòng
+  `Contract.Value * PercentValue / 100` làm tròn. Không phải sổ tiền mặt, không
+  gồm điều chỉnh VO.
+- Null (bị giới hạn quyền) khác số 0 có quyền. Test:
+  `ContractExecutionProgressTests`, `admin-contract-execution-progress.spec.ts`.
+
+**Nhắc gia hạn/kết thúc** (lịch riêng, khác notification mốc thanh toán):
+
+| Method | Route | Điều kiện |
 |---|---|---|
-| PUT {id}/boq-configuration | crm.material-rates.manage | configuration + expectedUpdatedAt; rejects any existing revision |
-| GET {id}/configured-boq-template?language=vi | crm.material-rates.view | Localized .xlsx, hidden catalog/hash/language marker, row 1 keys, row 2 labels, data from row 3 |
-| POST {id}/configured-boq-preview | crm.material-rates.manage | Multipart file; returns sourceHash/configurationHash/validated rows without persistence |
-| PUT {id}/revisions/{revisionId}/configured-boq-rows | crm.material-rates.manage | rows + configurationHash + expectedUpdatedAt; Draft only |
-| POST {id}/revisions/{revisionId}/configured-boq-import | crm.material-rates.manage | Multipart file + sourceHash + expectedUpdatedAt; revalidates, confirms replacement atomically |
+| `GET` | `/api/contracts/{id}/reminders` | Scope xem Contract; 100 bản ghi mới nhất |
+| `POST` | `/api/contracts/{id}/reminders/preview` | Quản lý Contract + owner/view-all; `{kind: "Renewal"|"End", reminderDate: "yyyy-MM-dd", contactId?}` |
+| `POST` | `/api/contracts/{id}/reminders` | Như trên; `{previewToken}` |
+| `POST` | `/api/contracts/{id}/reminders/{reminderId}/cancel` | Như trên; chỉ huỷ được `Scheduled` |
+| `GET/PUT` | `/api/site-settings/contract-reminder-templates` | `system.settings.view/manage` |
 
-Schema limits: version 1; 1–40 sheets; each sheet 2–40 fields; lowercase stable
-keys (sheet <=20, field <=40); four nonblank names <=120 characters. Text values
-are trimmed, capped by MaxLength (1–2000); core code <=38, name <=300, unit <=30.
-Number values are invariant decimal strings in JSON, nonnegative, <=999999999999,
-with 0–4 decimal places (unit price <=2). Quantity of priced rows is positive;
-code matches letters/digits/dot/dash/underscore. A priced sheet must bind exactly
-one required Code/Name/Unit/Quantity/UnitPrice; reference sheets require Code/Name
-and cannot bind pricing quantity/unit price. Unknown fields/sheets are rejected.
-These rules are enforced by BoqConfigurationRules and the canonical line validator
-in MaterialRateService; the UI uses the same limits and shared number helpers.
+- Ngày nhắc theo lịch Việt Nam, từ hôm nay trở đi. Preview cần hợp đồng Upstream ở
+  Signed/InProgress/OnHold, có ngày kết thúc và email contact khách hợp lệ (tối đa
+  254 ký tự); gợi ý contact chính trước. Token gắn actor/hợp đồng/người nhận/ngày/
+  nội dung, 15 phút.
+- Gửi lại token đã chấp nhận trả bản ghi có sẵn; mỗi hợp đồng/loại chỉ một nhắc
+  `Scheduled`/`Sending`. Đặt lịch, huỷ và claim dùng transaction serializable.
+  Lịch đã lưu giữ nội dung đã duyệt khi template đổi.
+- `ContractReminderWorker` chạy 5 phút một lần, kể cả nhắc quá hạn sau downtime.
+  Trước SMTP kiểm lại điều kiện hợp đồng, khách, số HĐ/ngày kết thúc/email, tài
+  khoản và quyền người đặt lịch, xoá aggregate đang chờ. Đổi thì `NeedsReview`.
+  Ghi `Sending` trước SMTP; sau khi SMTP nhận thì lưu `Sent` cùng một mục chăm sóc
+  khách hàng loại Email. Lỗi SMTP: `NeedsReview`/`DELIVERY_UNCERTAIN`. Khi đối soát
+  tay, dừng sender, giữ snapshot, thời điểm thử và audit. Huỷ không thu hồi email đã
+  giao cho SMTP.
+- `ContractReminder.AttemptedAt` khác null thì khoá vĩnh viễn hướng hợp đồng
+  (`CONTRACT_REMINDER_DIRECTION_LOCKED`). Xoá vĩnh viễn công bố lịch/lịch sử và
+  chặn khi có `Sending`.
+- Migration `20261020162316_AddContractReminderEmails` thêm `contract_reminders` và
+  bốn cột template; rollback bị chặn khi đã có lịch/lịch sử hoặc template đã sửa.
+- Test: `ContractReminderServiceTests`, `ContractRemindersTests`,
+  `e2e/smoke/contract-reminder-email.spec.ts` (cần `MAIL_SINK_URL`, xem
+  [17.3](#173-e2e-gửi-email-qua-hộp-thư-giả-lập)).
 
-Workbook upload: <=20 MB, <=500 ZIP parts, <=200 MB expanded, <=10000 entries.
-Exact catalog marker/hash, sheet set and ordered field keys/localized labels
-must match. Numeric entry cells must be numeric; formulas, Excel errors, macro,
-external links and data connections are rejected. No formula evaluation or
-external fetching is needed. Component rates/dimensions remain entry fields;
-canonical totals use explicitly entered Quantity × UnitPrice. An empty workbook
-is rejected. Preview is not a save; import recomputes its checksum and validates
-again. A stale timestamp returns 409. SQL Server uses the existing revision
-application lock for writes; configuration changes use a serializable transaction.
-Legacy CSV/fixed-column/manual endpoints reject configured categories.
+**Lịch sử chăm sóc khách hàng** (`Nicon_BreakTask_v1.xlsx`, `Nicon!A62:D62`):
+thuộc đúng một hợp đồng Upstream, khác audit hợp đồng và lịch sử hoạt động của
+Customer.
 
-Migration AddConfiguredBoqEntries adds only two nullable nvarchar(max) columns;
-old rows need no backfill. The schema is immutable from the first revision, so
-no implicit schema migration can reinterpret existing data. Configured roots
-cannot use the legacy delete path; deactivate instead. Down removes configuration
-and extra/reference data, so export/backup these columns before rollback; priced
-line projections remain. Rehearse on a copy before production rollout.
+- `GET /api/contracts/{id}/care-activities?page=1&pageSize=20`
+  (`crm.contracts.view` + scope đọc) trả `total`, `page`, `pageSize`, `items`, mới
+  nhất trước; pageSize kẹp 1–100. Scope đọc của dự án/Finance không cho ghi.
+- `POST /api/contracts/{id}/care-activities` cần `crm.contracts.manage`, owner hoặc
+  `crm.contracts.view.all`, và `Idempotency-Key`. Body: `type` (`Call`, `Email`,
+  `Meeting`, `Note`), `content` (1–4.000 ký tự, trim), `occurredAt` tuỳ chọn (chuẩn
+  hoá UTC, mặc định giờ server). Downstream trả `400`. Chỉ thêm, không đổi điều
+  khoản/VO/mốc/thanh toán, không đặt lịch nhắc.
+- Theo xác nhận của người dùng ngày 20/10/2026: đã có lịch sử chăm sóc thì không
+  đổi hướng hợp đồng (`400` `CONTRACT_CARE_DIRECTION_LOCKED`).
+- Migration `AddContractCareActivities` không backfill (ghi chú cấp Customer không
+  gán được cho một hợp đồng); rollback bị chặn khi bảng có dữ liệu. Xoá hợp đồng
+  công bố và xoá các mục này; thêm mục làm plan cũ mất hiệu lực. Mẫu:
+  `HD-SAMPLE-003`. Test: `ContractCareActivitiesTests`,
+  `admin-contract-care.spec.ts`.
 
-Regression coverage: BoqCategorySeederTests, ConfiguredBoqControllerTests,
-MaterialRateServiceTests and boq-configured-entry.spec.ts. Browser tests isolate
-UI writes, while integration tests own real HTTP/auth/persistence and rejection
-integrity. Keep Playwright output outside the watched frontend directory.
+**Hợp đồng nối tiếp (gia hạn/mở rộng).** Chính sách do người dùng uỷ quyền ngày
+22/10/2026 (quyết định triển khai, không phải xác nhận trong họp NICON): Renewal và Expansion từ hợp đồng Upstream có ngày ký và trạng
+thái Signed/InProgress/OnHold/Completed.
 
-### 7.10.4 Project BOQ workbook upload
-
-A BOQ workbook belongs to the Operational Project and creates a
-`ProjectBoqRevision`, so its lines keep the `ProjectBoqLine` identity that
-Material Request, RFQ, warehouse, alert and QS records already reference.
-This path is separate from the rate-catalog intake in 7.10.2 and 7.10.3.
-
-Since 13/11/2026 the UI upload entry is the input-price work package (7.10.6);
-`ProjectBoqSection` on the Operational Project page (`#project-boq`) is a
-read-only list and Procurement control has no upload link. The project-scoped
-preview/import routes below remain for API use. QS keeps `proc.boq.view` and
-`proc.boq.manage` from migration `20261108100000_GrantQsProjectBoqPermissions`.
-A BOQ quote whose basic draft has no approved supplier offer may still choose the
-BOQ method when it names the latest approved project BOQ (`QuoteService`
-`hasApprovedInput`). Migration `20261113160000_SyncWorkPackageBoqGuidance`
-updates the two guidance texts in existing databases only while they still hold
-the earlier seed value.
-
-Each template is an edited copy of one customer workbook in
-`Data/BoqTemplates/`, embedded in the assembly and listed in
-`Data/BoqTemplates/templates.json`. The download returns the stored file byte
-for byte, so sheet names, columns, merged cells, styles and formulas stay as
-the customer uses them. A template profile states the sheets, expected header
-cells, first row, STT/description/unit/quantity/price/amount columns, subtotal
-prefix, grand-total label, currency and amount tolerance. Customer originals
-in `docs/Nicon/BOQ/` are evidence only and are never read at runtime. Delivered
-templates: `PCCC-CAN-HO` (one sheet, `ptct`) and `THIET-KE-XIN-PHEP` (one
-sheet, `Bao gia`; reads the survey/design and permit fee tables from row 29 up
-to `Tổng cộng trước VAT (B+C)`, so the site-scale table above them and the VAT
-rows below are not lines), `NHA-XUONG` (GNF factory BOQ, 23 sheets: the
-cover, `Cover 1` and `00.Tổng Hợp` are `ignoredSheets`; the 20 building and
-system sheets are read) and `XAY-DUNG-ME` (factory construction, M&E and fire
-protection base BOQ, 18 sheets: `TỔNG HỢP` is ignored; the 17 work sheets are
-read and keep the base quantities) and `TRON-GOI` (lump-sum design, permit and
-construction quotation, 21 sheets: `Cover `, `Total ` and `Summary ` are
-ignored; the 18 design, preliminaries, construction and M&E sheets are read and
-keep the quotation's quantities) and `CSA-WORK` (civil, structural and
-architectural BOQ, 6 sheets: `01.BÌA`, `Total Amount ` and ` COST SUMMARY` are
-ignored; the three bills are read). `descriptionFirstLine` takes only the first line of a
-multi-line description as the item name; the scope text stays in the stored
-file. For layouts with the sheet total above the rows, `totalCell` names that
-cell instead of a total label, and `totalDecimals` applies Excel ROUND digits to
-the item sum before comparing (GNF C4 uses -5). `itemsWithoutStt` replaces the
-whole-number STT rule for layouts that number headings and leave items blank:
-a row is an item when its unit-price or amount cell is filled (value or
-formula) and it has a unit or a quantity; a heading may then carry a count
-(for example 41 manholes) without an error. The GNF template was built from the
-customer file with external links, about 33,000 stray defined names and the
-calculation chain removed, project quantities, prices and location cleared,
-nine total formulas that left out item rows corrected, and four item rows given
-the missing price and amount formulas (sheet 2 rows 93 and 244, sheet 3 row 119,
-C1 row 61).
-
-The ME base splits each unit price into material and labour/machine columns:
-`extraPriceColumns` lists the columns added to `unitPriceColumn`, and the
-line's unit price is the sum of all of them, blank only when every one is blank
-(`amountColumn` is the row total). `measurementRows` covers quantities broken
-down under an item (count × length × width × height, openings deducted with
-negative counts): an unnumbered row whose measured cell is filled is neither an
-item nor a heading and its quantity is not read; a price on one is
-`sttRequired`. The measured cell is the quantity column unless
-`measurementColumn` names another (Trọn gói: `KL` beside `KL TỔNG`). An
-unnumbered label is a measurement row too when the previous row is one, or
-when the next rows, past further unnumbered labels, are ("Nhà Văn Phòng 02",
-"Tầng 1", then sizes).
-`specColumn` appends a column to the item name (the PCCC sheet's pipe sizes,
-"Ống kẽm D168 x 3.96mm"). The total label is also matched in the STT column
-(`CP chuẩn bị` writes it in column A). The ME template was built from the
-customer file with 22 external links, 16,391 stray defined names and the
-calculation chain removed, 420 unit prices linked to a deleted rate sheet
-(`=#REF!*#REF!`) cleared, missing amount formulas added on 35 item rows, the
-stray STT removed from three `Xưởng` door-size rows (379, 386, 390), five text
-"0" quantities in `Điện nước` stored as numbers, and the summary sheet linked
-to each sheet total. ClosedXML cannot recalculate this workbook in reasonable
-time, so tests write stored results straight into the sheet XML
-(`BoqWorkbookPatch` in the unit tests).
-
-The Trọn gói template mixes five layouts: design and permit fees and
-preliminaries (one price column), construction sheets with material, labour
-and machine prices and the sheet total in row 8 (`totalCell` `P8` or `K8`,
-`firstRow` after the per-sheet summary lines), M&E sheets with material and
-labour and a total label at the bottom, and the water-supply sheet with its
-total label `Cộng:` in the STT column. Every sheet uses `itemsWithoutStt`,
-because electrical and steel-structure items are unnumbered while section
-headings carry numbers. It was built from the customer file with six external
-links, the stray defined names and the calculation chain removed; the 13 hidden
-sheets (earlier versions holding earlier prices, outside the summary and
-referenced by nothing) dropped; project name, address and date cleared;
-previous-round amounts cleared (`Summary ` column `đợt trước`, column K of the
-Nhà Xưởng and Văn Phòng summary lines, unit prices left in Thoát nước mưa rows
-15-17 and Bể PCCC row 55); about 80 unit-total formulas that left out the
-machine or labour price rewritten as material + labour + machines; amount
-formulas added on every row with a unit that lacked one; the Thoát nước mưa
-section B total, the Bể PCCC rebar total and the Bể PCCC sheet total corrected
-to include the item rows they left out; the negative Bể PCCC backfill quantity
-(F33) wrapped in `MAX(0, …)`; "free" moved from the Design and permit price
-column to its note; the broken hidden stage-2 block of `Prelim` cleared; and
-the summary lines linked to each sheet total.
-
-The CSA WORK customer file came as a blank BOQ: the three bills had units and
-measured rows (No × L × W × H × HS = KL, hidden under each item) but no item
-quantity, price, amount or total. The template, built with the same raw XML
-approach (39 external links, about 10,000 defined names and the calculation
-chain removed; the 11 hidden sheets, which held earlier prices, dropped;
-project name, address, quotation number and client name cleared), sets each
-item's `Q'TY` (K) to the sum of the KL (J) of its measured rows for the 135
-items that have them, adds material, labour & equipment, unit total and amount
-formulas (M = K×L, O = K×N, P = L+N, Q = M+O) on every row with a unit, adds
-`SUBTOTAL` totals on every building (C.01-C.06, IN.01-IN.07), section (I, II…)
-and sub-section (*) heading, links the summary lines at the top of each bill,
-and puts the bill total in Q6, which ` COST SUMMARY` already pointed at. Bill 1
-gets amount = quantity × price; its lump-sum quantities stay blank. Five
-measured office rows with 0 in the unit column were cleared, and the item
-numbers 1-3 of Bill 3 rows 38-40, formatted as dates, were given the item
-number style.
-
-Routes are relative to `/api/operational-projects/{projectId}/procurement`:
-
-| Method / route | Permission | Contract |
-|---|---|---|
-| GET boq-templates | proc.boq.view | Template code, name key, file name |
-| GET boq-templates/{code}/file | proc.boq.view | The stored template file |
-| POST boq-workbooks/preview | proc.boq.manage | Multipart `templateCode`, `file`; returns per-sheet summary and `sourceHash`; no persistence |
-| POST boq-workbooks | proc.boq.manage | Multipart `templateCode`, `file`, `sourceHash`, optional `upstreamContractId`; creates a Draft revision |
-| GET boq-revisions/{id}/workbook | proc.boq.view | The uploaded file |
-| POST boq-revisions/{id}/contract | proc.boq.approve | JSON `upstreamContractId`, `rowVersion`; turns the approved tender BOQ into the contract BOQ |
-
-All routes also require project visibility. Upload limits are 20 MB, 500 ZIP
-parts and 200 MB expanded; macros, external links and data connections are
-rejected. Formula results are read from values Excel stored and are never
-recalculated.
-
-`ProjectBoqWorkbookParser` reads rows from the profile's first row to the
-grand-total row. A row with a whole-number STT is an item, a row starting with
-the subtotal prefix is a subtotal, and other text rows name the current group.
-An item with no quantity is counted as skipped and creates no line. A line
-keeps the amount the workbook stored once it matches quantity × price, so lines
-add up to the sheet total when the sheet rounds each amount. Item codes
-are `S{sheet:00}-R{row:0000}` and change if rows are inserted, so they are not
-stable across revisions. Rejections return `boqWorkbook.error.invalidRows`
-with `issueCount` and up to 200 `issues` (`code`, `messageKey`, `sheet`,
-`cell`, `limit`). Checks cover sheets and headers, number cells, negative and
-oversized values, Excel errors, uncalculated formulas, a quantity on a row with
-no numeric STT, amount against quantity × price (an amount cell holding "-"
-counts as 0), and the grand total against
-the item sum, both within the template tolerance. A blank unit only raises a
-warning count until NICON decides the rule.
-
-The stored file uses `BusinessDocumentArea.Boq`, and
-`SourceWorkbookPath` is included in `ReferencedManagedFiles`. Revisions keep the
-template code, file name and SHA-256; repeating a confirm for the same Draft
-file returns the existing revision. Uploaded lines cannot be edited through
-`PUT boq-revisions/{id}` (`workbookReadOnly`), and a revision with unpriced
-lines cannot be submitted (`missingPrices`).
-
-A revision uploaded without `upstreamContractId` is a tender BOQ. Approval sets
-`TenderApproved`, which is outside every `Approved` query, so it never becomes
-the MR, RFQ, warehouse or QS allowance. A revision linked to a signed contract
-follows the normal `Approved` path.
-
-Since 14/11/2026 (MoM 31/10: "trúng thầu thì chuyển thành BOQ hợp đồng, không
-tạo file mới") `POST boq-revisions/{id}/contract`
-(`ProcurementService.ConvertTenderBoqToContractAsync`) links the latest
-`TenderApproved` revision to a signed upstream contract and sets it to
-`Approved` in place. The revision number, file, lines and tender approval
-(`ApprovedAt`/`ApprovedByUserId`) stay; the controller audit event
-`proc.boq.contract` records who converted it. Errors use
-`boqWorkbook.error.{code}`: `notTender`, `notLatestTender` (a newer approved
-tender exists), `contractBoqExists` (the project already has an `Approved`
-BOQ; later changes are uploaded revisions) and `contract`. A repeat with the
-same contract returns the revision. Material alerts are re-evaluated after the
-conversion. On the UI, `BoqRevisionDetailPage` shows **Make it the contract
-BOQ** to `proc.boq.approve` holders (PM, BGD). `ProjectBoqSection` offers
-**Upload contract BOQ** to `proc.boq.manage` + `crm.contracts.view` holders when
-the project has a signed upstream contract. The project-target upload dialog
-requires the contract, so tender BOQs come only from the work package (7.10.6).
-The detail page hides submit and decision buttons for revisions with
-`sourceWorkPackageId`, which are reviewed in their package. Regression coverage:
-`ProjectBoqWorkbooksControllerTests` (conversion) and `contract-boq.spec.ts`.
-
-Migration `AddProjectBoqWorkbooks` adds nullable revision and line columns,
-`project_boq_lines.PriceMissing` (default false) and the `project_boq_sheets`
-table, with no backfill. Down removes them, so uploaded revisions lose their
-sheet list and file link; export those files first.
-
-Regression coverage: ProjectBoqWorkbookParserTests,
-ProjectBoqWorkbooksControllerTests and the live `boq-workbook-upload.spec.ts`.
-
-### 7.10.5 BOQ template library
-
-`/admin/material-rates/boq` renders `BoqTemplateLibrary`, a read-only tree of
-the templates in `Data/BoqTemplates/templates.json` (template → workbook sheets).
-`BoqTemplatesController` (`/api/boq-templates`, `crm.material-rates.view`, not
-project-scoped) lists templates with their sheets and item counts, returns the
-stored file, and returns one sheet's outline. `ProjectBoqWorkbookParser.Outline`
-reads rows with the same rules as `Parse` (whole-number STT = item, subtotal
-prefix = subtotal, other text = group, total label ends the sheet; repeated
-column headings are skipped); sheets outside the profile are listed without
-rows. `ProjectBoqTemplateCatalog.Outline` caches each outline because templates
-are embedded. Migration `20261113100000_GrantProcurementBoqTemplateLibrary`
-grants `crm.material-rates.view` to existing Procurement and Head of
-Procurement roles where missing. The old BOQ catalog UI (`MaterialRates` with
-`catalogType="Boq"`, configured entry, workbook import) is no longer routed;
-its API and data remain.
-
-### 7.10.6 BOQ upload in the input-price work package
-
-`WorkPackageBoqWorkbooksController` (`/api/work-packages/{id}/boq-workbooks`)
-previews, imports, downloads, submits and decides a BOQ inside a
-`ProcurementInputPricing` work package. Upload and submit need
-`work.packages.progress` and membership of the package's department; download
-needs `work.packages.view` and package visibility; decisions need
-`work.packages.verify` and must come from the package lead or an administrator
-other than the uploader. Imports reuse `ProjectBoqWorkbookService` and store
-`ProjectBoqRevision.SourceWorkPackageId` (migration `AddWorkPackageBoqSource`).
-Submission reuses `WorkPackageApprovalEmailService` with record type
-`ProjectBoqRevision`; approval sets `TenderApproved`. Procurement control submit
-and decision reject such revisions with `boqWorkbook.error.workPackageReview`.
-Deleting a work package clears the link and keeps the BOQ. The package detail
-response lists them in `boqWorkbooks`.
-
-### 7.11 BOQ Quotation Integrity
-
-Material-rate catalogs are discriminated as `InvestmentRate` or `Boq`; existing
-rows migrate to `InvestmentRate`. Unit-cost quote resolution only accepts an
-Approved effective Investment-rate revision. A BOQ catalog revision stores item
-code/name, unit, quantity, and unit price. Applying it copies editable quote
-items while persisting `MaterialRateRevisionId` and `PricingEffectiveDate` as
-provenance and `CatalogReference` as the source; the approved source revision
-remains immutable while copied quote rows may be edited. BOQ catalog quantity
-and unit-price inputs are limited to the Quote storage scales of four and two
-decimal places respectively so persisted amounts remain reproducible. The
-`NormalizeBoqCatalogReferenceSource` migration normalizes earlier BOQ catalog
-rows to those scales and reconciles persisted BOQ quote and snapshot totals.
-Back up the database before deployment: its `Down` operation restores source
-labels but cannot restore discarded extra decimal precision or former totals.
-
-**Project BOQ source (08/11/2026).** A BOQ quote now copies its lines from the
-project's latest approved `ProjectBoqRevision` (`Approved` or `TenderApproved`,
-highest revision number). Create/update take `projectBoqRevisionId`; the server
-rejects `materialRateCatalogId` and any `items` for BOQ quotes, copies each
-`ProjectBoqLine` (description, unit, quantity, unit price, amount rounded to
-2 decimals) and stores `Quote.ProjectBoqRevisionId`; snapshots keep it too.
-Applying a different revision is a material change (new version after
-approval); sending the same id keeps the lines. Submit is refused, before the
-approval email is queued, when a BOQ quote has no project BOQ or a newer
-approved revision exists. `GET /api/quotes/{id}/project-boq` (`crm.quotes.view`
-and quote scope) returns the latest approved revision for Sales, who has no
-`proc.boq` access. Migration `AddQuoteProjectBoqSource` adds the reference and
-widens `quote_items` to the project BOQ sizes (code 80, name 500, unit 50,
-quantity 18,6, price 18,4). The catalog-reference text below describes quotes
-created before this change.
-
-BOQ quotations use the same server calculation on create and update: each line
-amount is `quantity × unit price`, subtotal is the sum of rounded line amounts,
-discount is applied before VAT, and the grand total is rounded to two decimal
-places away from zero. The React create/edit preview mirrors this formula via
-`src/lib/quoteTotals.ts`; the API remains authoritative.
-
-Users with `crm.material-rates:manage` may create, update, and delete individual
-lines in a Draft `Boq` revision through nested revision routes. The service
-enforces trimmed field limits, case-insensitive item-code uniqueness, quantity
-scale four, unit-price scale two, and four-decimal line-amount rounding away
-from zero. Create appends sort order, update preserves it, and delete compacts
-the remaining order. Every mutation returns the refreshed revision so React
-uses server-calculated lines and totals. Investment-rate and non-Draft
-revisions reject these mutations. Material Rate revision and line decimal
-fields are serialized as JSON strings; clients must preserve those strings
-while editing and only convert at explicit numeric boundaries so JavaScript
-cannot silently alter supported decimal values.
-
-Users with `crm.material-rates:manage` may permanently delete a Material Rate
-catalog. The delete removes its revisions and lines as one aggregate. The API
-returns `409 Conflict` with `materialRates.catalog.deleteBlocked` when any
-current Quote or immutable Quote version snapshot references a revision, so
-pricing provenance cannot be removed. Historical `Retired` revisions remain
-readable, although the active management UI uses hard deletion instead of the
-retire action. The `crm.material-rates:manage` permission therefore includes
-irreversible catalog deletion, not only catalog editing and import. Bulk delete
-uses best-effort processing; successful IDs are cleared while failed IDs remain
-selected with their catalog names and localized API reasons for review or retry.
-
-The server rejects missing rows, blank names/units, non-positive quantities,
-negative prices, percentages outside 0–100, and values that cannot fit the SQL
-`decimal(18,*)` columns. A scoped Sales user cannot create a quotation for
-another owner's opportunity. `Idempotency-Key` replay returns the original
-create response without inserting another quotation, and BOQ version snapshots
-preserve the source line set after post-approval edits.
-
-### 7.12 Project Material Request List
-
-`GET /api/operational-projects/{projectId}/procurement/material-requests`
-requires `proc.material-requests.view` and returns `404` when the caller cannot
-access the Operational Project. The endpoint never returns requests from another
-project. It supports `search`, `status`, `siteRequesterUserId`,
-`responsibleSiteUserId`, `assignedProcurementUserId`, `requiredFrom`,
-`requiredTo`, `sortBy`, `sortDirection`, `page`, and `pageSize`; page size is
-limited to 100. Search covers request code, note, assigned users, and BOQ item
-code or description. Reversed date ranges are rejected.
-
-Each line includes requested quantity, net received quantity from posted and
-reversed warehouse receipts, approved BOQ quantity, and remaining BOQ quantity.
-Remaining quantity uses the same committed statuses as approval validation:
-Approved, Partially Fulfilled, and Fulfilled. The frontend exports all filtered
-pages through this endpoint, so exported data retains the selected project and
-filter scope.
-
-The response also includes `currentApprovedBoq`, a least-privilege context used
-to create Material Requests. It contains the current approved revision number
-and item identity, unit, approved quantity, and remaining quantity. It does not
-expose budget unit prices or BOQ totals, so a caller with Material Request
-permissions but without `proc.boq.view` can select valid items without gaining
-access to restricted BOQ financial data or revision history.
-
-`GET /api/operational-projects/{projectId}/procurement/material-requests/{id}`
-returns one project-scoped request with lifecycle timestamps and actors, net
-received quantities, BOQ allowance evidence, and least-privilege
-Customer/Project/Contract context. Contract context contains identity,
-classification, vendor, and status only; it does not expose contract values.
-This allows an MR-only role to use the detail page without requiring BOQ or
-Contract read permissions.
-
-Material Requests follow `Draft -> Submitted -> Approved | Rejected`, with
-Approved requests moving to `PartiallyFulfilled` or `Fulfilled` through posted
-warehouse receipts. Drafts are editable only by their requester. Create and
-update reject duplicate BOQ items, past required dates, non-project users,
-non-procurement assignees, obsolete BOQ revisions, non-positive quantities, and
-quantities above the remaining approved allowance. Approval repeats the
-allowance check inside a serializable transaction. Non-terminal requests may be
-cancelled with a reason of at least three characters.
-
-Mutations require an `Idempotency-Key`; update and transitions also carry the
-current row version and `If-Match`. Submit notifies the assigned procurement
-owner, decisions notify the requester, and cancellation notifies the other
-party. Audit entries use the Material Request ID and retain the Operational
-Project ID as metadata. The detail UI route is
-`/admin/procurement-control/projects/{projectId}/material-requests/{requestId}`.
-
-### 7.13 Project Warehouse Transactions
-
-Warehouse inventory remains a derived ledger under one Operational Project.
-`WarehouseReceipt` records inspected material against approved Material Request
-lines, while `WarehouseIssue` records allocation to a responsible site user and
-optional work-item code. Posted records are immutable; corrections create an
-offsetting reversal linked to the original record.
-
-`GET /api/operational-projects/{projectId}/procurement/warehouse-transactions`
-requires `proc.warehouse.view` and supports project-scoped search, receipt/issue
-type, status, responsible user, occurred-date range, sorting, and pagination.
-The response also returns current approved-BOQ stock rows with posted receipt,
-posted issue, and on-hand quantities after reversals. Client CSV export retrieves
-all pages using the same filter contract.
-
-Receipt and issue detail endpoints expose Customer, Operational Project, and
-least-privilege Contract context without contract values. Receipt lines include
-their Material Request and optional Contract source; issue lines include BOQ
-allowance and current stock evidence. Draft documents support idempotent `PUT`
-updates with row-version/`If-Match` concurrency. `POST .../post` affects stock;
-`POST .../reverse` requires a reason of at least three characters and creates an
-offsetting record. Every endpoint verifies Operational Project scope, and every
-mutation records the actual receipt or issue ID in the audit log.
-
-The current warehouse workflow is online-first. The customer requirement for
-offline field capture and automatic synchronization needs a shared application
-shell cache, durable client queue, stable offline identifiers, conflict policy,
-and sync observability. Those capabilities do not yet exist as a reusable web
-platform service; do not represent ordinary browser storage as completed
-offline support.
-
-### 7.14 Project Procurement BOQ
-
-Project procurement BOQs are revisioned operational records and are distinct
-from the reusable `Boq` material-rate catalogs described above. Every revision
-belongs to one Operational Project, contains case-insensitively unique material
-codes, and follows `Draft -> Submitted -> Approved | Rejected`. Only Draft and
-Rejected revisions are editable; editing a Rejected revision returns it to
-Draft. Approved revisions remain immutable because material requests and
-contract lines can use them as allowance evidence.
-
-All endpoints require the corresponding `proc.boq` permission and verify the
-caller's Operational Project scope before returning whether a revision exists:
-
-| Method | Route | Purpose |
-|--------|-------|---------|
-| `GET` | `/api/operational-projects/{projectId}/procurement/boq-revisions` | Search, filter, sort, and page project revisions |
-| `GET` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}` | Read one revision and its ordered material lines |
-| `GET` | `/api/operational-projects/{projectId}/procurement/boq-revisions/export` | Export the current project-scoped filter as CSV |
-| `POST` | `/api/operational-projects/{projectId}/procurement/boq-revisions` | Create the next Draft revision |
-| `PUT` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}` | Replace Draft or Rejected revision content |
-| `POST` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}/submit` | Submit a revision for approval |
-| `POST` | `/api/operational-projects/{projectId}/procurement/boq-revisions/{id}/decision` | Approve or reject a Submitted revision |
-
-Mutation requests use an `Idempotency-Key`; update and transition requests also
-carry the current row version and `If-Match` header. The server calculates each
-line amount as `approved quantity x budget unit price`, rounded to four decimal
-places away from zero, and persists the sum as the revision total. A submitted
-revision notifies the Project Manager. Approval or rejection notifies the
-preparer. Notification delivery is best effort and never rolls back a saved
-workflow transition.
-
-The list UI is `/admin/procurement-control`. Detail links use
-`/admin/procurement-control/projects/{projectId}/boq/{boqId}` and show the
-Customer, Operational Project, every related Contract, source references,
-ordered material lines, and lifecycle timestamps. Edit and transition actions
-are hidden unless the caller has the matching permission and the current state
-allows the action.
-
-### 7.15 Project Material Alerts
-
-Material alerts are a persistent projection of the approved BOQ, approved
-Material Request demand, and posted warehouse ledger. Users cannot create or
-manually resolve an alert. The service evaluates two rules by case-insensitive
-material code:
-
-- `OverBoq`: net posted issue quantity exceeds the current approved BOQ
-  allowance. The variance is `issued - BOQ allowance` and severity is Critical.
-- `Shortage`: approved demand not yet issued exceeds on-hand stock. Because
-  on-hand is `received - issued`, the shortage variance is equivalent to
-  `approved demand - received`. It is Critical when on-hand is zero or negative,
-  otherwise Warning.
-
-An alert follows `Open -> Acknowledged -> Resolved`. The assigned procurement
-user or Project Manager may acknowledge an Open alert with a 3–2,000 character
-response note. Acknowledgement does not clear the discrepancy. Resolution is
-automatic when source data no longer violates the rule, and a Resolved alert
-reopens automatically if the violation returns. Every detection, metric update,
-acknowledgement, resolution, and reopening appends a `MaterialAlertEvent`.
-
-BOQ approval, Material Request approval/cancellation, and warehouse
-post/reversal mutations evaluate alerts after the source transaction commits.
-Evaluation and notification delivery are best effort so projection failures do
-not roll back a valid procurement ledger mutation. Authorized users can run the
-idempotent `POST .../material-alerts/evaluate` endpoint to reconcile the
-projection after a transient failure.
-
-| Method | Route | Permission and purpose |
-|--------|-------|------------------------|
-| `GET` | `/api/operational-projects/{projectId}/procurement/material-alerts` | `proc.material-alerts.view`; project-scoped search, filters, sorting, counts, and pagination |
-| `GET` | `/api/operational-projects/{projectId}/procurement/material-alerts/{id}` | `proc.material-alerts.view`; detail, least-privilege contract context, and event history |
-| `POST` | `/api/operational-projects/{projectId}/procurement/material-alerts/evaluate` | `proc.material-alerts.manage`; reconcile source data idempotently |
-| `POST` | `/api/operational-projects/{projectId}/procurement/material-alerts/{id}/acknowledge` | `proc.material-alerts.manage`; acknowledge with row-version concurrency and idempotency |
-
-PM and Procurement roles can view and manage alerts. Warehouse can view them;
-BGD receives view through the existing view pattern. All endpoints also enforce
-Operational Project access and return 404 outside scope. Alert responses do not
-contain BOQ prices, negotiated prices, or Contract values. Detection notifies
-the assignee and Project Manager without duplicate delivery when they are the
-same user. Project hard-delete previews and removes alerts and their history as
-owned aggregate data.
+- Migration `20261021171128_AddContractContinuations` thêm `SourceContractId`,
+  `ContinuationKind` (20), `ContinuationReason` (2000) cho Contract và Opportunity;
+  FK chặn xoá nguồn. Không suy quan hệ cho dữ liệu cũ. Rollback từ chối khi đã có
+  quan hệ.
+- Route tạo có sẵn nhận thêm field nối tiếp và `sourceContractRowVersion`. Cần quyền
+  xem hợp đồng + owner/view-all trên nguồn (độc lập quyền Opportunity); tạo từ
+  Opportunity còn cần quyền xem Opportunity. Kind bắt buộc, lý do 1–2.000 ký tự,
+  nguồn cùng Customer. Hợp đồng mới luôn Draft, kế thừa nguồn từ Opportunity nối
+  tiếp; Opportunity Lost không sinh hợp đồng. Không copy bằng chứng ký, thanh toán,
+  VO, QS, chăm sóc, nhắc hạn. Không đổi nguồn qua update/link-quote; quan hệ chặn
+  đổi Customer/hướng của hợp đồng và Customer của Opportunity nối tiếp.
+- Tạo nối tiếp bắt buộc `Idempotency-Key`, transaction serializable; replay kiểm
+  lại quyền xem nguồn.
+- `GET /api/contracts/{id}/continuations` trả hợp đồng nguồn/kế tiếp và Opportunity
+  kế tiếp mà người gọi xem được (kiểm quyền từng module, mỗi nhóm tối đa 100), không
+  lộ tên hay tổng số bị ẩn.
+- Xoá: quan hệ nối tiếp hai chiều và Opportunity nối tiếp là Block; không cascade.
+- Demo `HD-SAMPLE-CONT-001` (định danh theo số hợp đồng, không theo tên pursuit).
+  Test: `ContractContinuationsTests`, `ContractsControllerTests`,
+  `ContractQuoteLinkTests`, `OpportunitiesControllerTests`,
+  `contract-continuations.spec.ts`.
 
 ---
 
-### 7.16 Detail Design Schedule
+## 9. Dự án vận hành và gói công việc
 
-#### Business Objective
+### 9.1 API dự án vận hành
 
-The detail-design schedule provides a Design-flow-scoped plan for the three design
-phases without changing or reusing Module 4 construction tasks. It records
-planned and actual dates, ownership, department, progress, milestones, and
-Finish-to-Start predecessor relationships, then derives traceable weighted
-progress for each phase and the complete design schedule.
+`OperationalProject` là root nghiệp vụ dùng chung cho mọi module; không nhầm với dự án
+website hay `DesignProject`. Route `/api/operational-projects` (và `/api/v1`):
 
-Each task stores one active `ApproverMemberId` distinct from the assignee,
-optional CC members, description, parent task, resource/subcontractor summary,
-and critical-path flag. Generic task updates cannot write `Completed`; the
-assignee calls `POST .../tasks/{id}/complete`, which records completion and
-automatically routes the task to `Pending` approval. Only the assigned approver
-can call `POST .../tasks/{id}/review`; rejection requires a reason and returns
-the task to `InProgress`. Both paths enforce row-version concurrency and retain
-history/notifications.
-
-An outsourced design task additionally stores both `VendorId` and
-`DownstreamContractId`; neither may be supplied alone. The server requires the
-contract to belong to the same Operational Project, match the vendor, have
-`Downstream` direction, use `Design` or `Subcontract` type, and not be
-cancelled. The internal assignee and independent Design Lead approver remain
-required, so the downstream party does not replace NICON accountability.
-The task dialog loads eligible pairs from
-`GET /api/operational-projects/{projectId}/design-schedule/outsource-options`;
-this endpoint uses `design.schedule.manage` plus project scope and does not
-require Design users to receive broad Vendor or Contract-list permissions.
-
-`AddProjectCodeAuditAndDesignVendors` adds these nullable task links and the
-versioned `operational_project_code_changes` queue/history table. Rehearse the
-migration script before deployment. Rollback removes the new links and code
-change history, so export that audit data first if an environment has already
-used project-code changes. The same migration removes only the previously
-shipped sensitive defaults from the `FINANCE` group baseline; it leaves any
-other administrator-added baseline permissions unchanged. Rollback restores
-those shipped defaults.
-
-Before applying `AddDesignApprovalWorkflow` to an environment with existing
-schedule tasks, assign every Design Project an active Design Lead or Design
-Manager who is also an active Operational Project member and differs from each
-task assignee. The migration backfills that member and deliberately aborts
-instead of inventing an approver when no valid assignment exists. Rehearse this
-preflight and the generated migration script against a production-like backup;
-the rollback drops approval/CC data and is therefore schema-reversible but not
-data-preserving for newly entered approval history.
-
-`EnsureDesignReviewEvidenceSnapshot` is a forward-only compatibility repair
-for environments that applied `AddDesignReviewWorkflow` before the immutable
-source snapshot columns were introduced. It adds only missing columns/indexes,
-backfills them from the linked Project Document, and aborts if any review
-evidence cannot be resolved. Generate and inspect the migration script, rehearse
-it against a production-like backup, and verify there are no unresolved review
-evidence rows before deployment. Its `Down` method is intentionally
-non-destructive; the owning `AddDesignReviewWorkflow` migration removes the
-review schema during a complete rollback.
-
-Design dossier circulation is exposed at
-`/api/design-projects/{projectId}/reviews`. A Design Manager creates a revision
-with designated internal recipients and Project Document IDs from the matching
-Design category. Recipients can only list their assigned reviews and comment
-while the review is internal. Notifications open
-`/admin/design-reviews/{projectId}?reviewId={reviewId}`. This recipient workspace
-loads only the scoped review API and review-specific downloads; it does not
-require the full Design Project response, recipient directory or project-wide
-document catalog. Legacy `?tab=reviews` links fall back to the same scoped view
-when project access is denied. Other project tabs retain their permission
-guard, and review access grants no additional project permission.
-Review-specific content downloads verify the actual bytes against that review's
-`Sha256Snapshot` before sending headers or file bytes. They buffer up to 64 KiB
-in memory, spill larger files into the non-public ASP.NET temporary directory,
-enforce the existing 100 MiB document limit and dispose the buffer on success,
-failure or cancellation. Changed bytes return `409 Conflict` even if catalog
-metadata has not yet reconciled; missing/invalid snapshot hashes, empty content
-and incomplete/unverifiable downloads also fail closed. An unassigned caller
-still gets `404` before storage is read. A mismatch never rewrites the snapshot,
-approval state or source file. Restore the reviewed content or create the
-appropriate new revision through the owning workflow. This integrity guard is
-Partial protection: it does not archive or recover historical bytes, and the
-historical storage/retention policy remains an open decision.
-`POST .../{reviewId}/comments` accepts an optional
-`projectDocumentId`; when present it must be one of that review's submitted
-documents. A missing/null ID keeps the existing dossier-level comment behavior.
-The response returns the ID with each comment. The nullable column and composite
-foreign key in `LinkDesignReviewCommentsToDocuments` retain old comments and
-prevent a file link to another review. Rehearse this migration against existing
-review data before deployment; rollback drops only the new file links. The
-Design Manager consolidates feedback, records submission to the client, and
-records the client decision. Concept finalization,
-Basic-to-Shop unlock, and IFC release require the latest matching review to be
-`ClientApproved`.
-
-Concept options additionally expose `GET/POST /api/concept-options/{id}/revisions`,
-artifact and checklist-waiver `POST/DELETE` under a revision, and feedback plus
-one-time response `POST` endpoints. Revision R00 is created with a new option.
-The draft binds typed Project Documents owned by that option; removing a binding
-does not delete the Project Document. Submission requires a synced, exact file
-set and the applicable checklist, then freezes the revision. Client feedback is
-attached only after client submission. New feedback requires `evidenceSource`
-(1–1000 characters); its verbatim comment is preserved. A response requires
-`outcome` (1–2000 characters) as well as the response text. Both are immutable
-after recording. Existing rows retain null source/outcome rather than invented
-evidence. Migration `AddConceptFeedbackEvidence` adds these nullable columns;
-new writes enforce the required fields at the API and service boundary.
-Rollback is blocked once evidence/outcome values exist. Concept evidence already
-frozen or submitted and recorded acceptance files cannot be queued for deletion
-through Project Documents; retain them and create a replacement revision.
-A replacement revision follows a
-changes-requested or rejected decision. Concept `ClientApproved` requires a
-separate synced signed TK-M03 Project Document, signer and signing date.
-Finalization checks that evidence on the latest revision and a filtered unique
-index permits only one finalized option per Design Project. Option status is
-also an optimistic concurrency token: a stale sibling update cannot discard the
-winner of a competing finalization. Migration
-`AddConceptDossierRevisions` backfills R00 and retains legacy review history;
-rehearse it against production-like data before deployment.
-
-Concept dossier edits, submission, client decisions, option transitions and
-manual document deletion use a transaction-owned SQL Server application lock
-(`concept-dossier-{optionId}`) acquired before reading the write guards. Keep new
-write paths on the same lock so a stale edit cannot change a frozen file set.
-Manual uploads receive distinct source slots, including Drive-only uploads
-whose local path is empty; several files can belong to the same option.
-Unsubmitted drafts do not supersede a submitted review for revision creation or
-finalization. A draft whose revision was already submitted elsewhere remains
-read-only reference history. The revision response includes `canCreateRevision`
-for the latest revision. For legacy R00 shared submissions without a selected
-revision, the service uses source snapshots and a changes/rejected decision (or
-legacy approval without signed acceptance) to permit a fresh revision. This
-does not convert historical shared approval into approval of an option: the new
-revision must complete the current submission and signed TK-M03 gates.
-Acceptance timestamps are returned with their UTC offset and displayed in the
-browser's local calendar. These corrections do not require a schema migration.
-
-Run `ConceptDossierConcurrencyTests` with `NICON_SQL_TEST_CONNECTION` set inside
-the backend container. Each case creates and deletes its own generated
-`NiconConceptTest_<guid>` database; the supplied catalog is never used for test
-data or cleanup. The Concept browser spec also uses `E2E_BACKEND_CONTAINER`
-(default `nihome31042025-backend`) alongside `E2E_SQL_CONTAINER` to prepare real
-local image/PDF fixtures. It exercises authorized downloads through the live
-Compose API without intercepting document responses; it does not prove live
-Google Drive availability.
-
-Permanent deletion of Concept, Basic Design, Shop Drawing and IFC records uses
-`GET /api/<resource>/{id}/deletion-impact` followed by `DELETE` with
-`ConfirmDeletionRequest`. The server recomputes the deterministic plan inside a
-serializable transaction. Only `Discarded` Concept, `Rejected` Basic/Shop and
-`Cancelled` IFC records are eligible. Active Project Documents, shared review
-evidence and IFC references block deletion; exclusive review history is deleted
-with a rejected dossier only while it has never been submitted to the client.
-Any review with `ClientSubmittedAt` blocks hard delete regardless of its later
-decision; corrections use the recorded client decision and a replacement
-revision instead. Bulk Shop Drawing deletion is intentionally disabled
-because every root requires an individual impact plan and typed confirmation.
-This is the implemented safety policy, not a confirmed resolution of NICON
-question Q-08. The controlling 03/10 baseline only confirms that failed-record
-deletion belongs to the highest permission tier and explicitly leaves deletion
-after client submission open.
-
-#### Actors and Permissions
-
-- A caller with `operations.projects.view` may read only an Operational Project
-  visible through `IProjectAccessService.CanViewOperationalProjectAsync`.
-- A caller with `design.schedule.manage` may initialize or mutate a schedule
-  only when `IProjectAccessService.CanManageDesignScheduleAsync` confirms that
-  the caller is the Operational or Design Project Manager, the Design Lead, or
-  has an active Project-wide or Design-module Project Manager/Design Lead team
-  assignment for that project. Discipline-only assignments remain read-only.
-- Administrative roles that hold both `design.schedule.manage` and
-  `operations.projects.view.all` may manage any existing project only when the
-  active system role is `ADMIN` or `SUPER_ADMIN`. Custom roles and portfolio
-  visibility by itself never enable schedule mutation or mutation controls.
-- Inaccessible projects, phases, and tasks return `404` to avoid disclosing
-  project existence. Missing authentication returns `401`; missing global
-  permission returns `403`.
-
-#### Lifecycle and Validation
-
-Initialization is explicit and idempotent. It requires a Design Project with a
-start date and deadline spanning at least three calendar days and exactly the
-canonical `Concept`, `BasicDesign`, and `ShopDrawing` phases. Phase weights must
-total 100. The service partitions the inclusive Design Project date interval
-deterministically into three contiguous, non-overlapping ranges. A partial or
-non-canonical existing baseline is rejected instead of being treated as
-initialized; the migration does not invent schedules for existing projects.
-
-Persisted statuses are `NotStarted`, `InProgress`, `Completed`, `OnHold`, and
-`WaitingForDepartment`. Allowed transitions are:
-
-| From | Allowed destinations |
-|---|---|
-| `NotStarted` | `InProgress`, `OnHold`, `WaitingForDepartment` |
-| `InProgress` | `Completed`, `OnHold`, `WaitingForDepartment` |
-| `OnHold` | `InProgress`, `WaitingForDepartment` |
-| `WaitingForDepartment` | `InProgress`, `OnHold` |
-| `Completed` | None |
-
-Repeating the current status is allowed. `NotStarted` requires zero progress and
-no actual dates. `InProgress` requires an actual start. `Completed` requires
-both actual dates and 100 percent progress. An actual end is forbidden for all
-other statuses. Planned and actual end dates cannot precede their corresponding
-start dates. Weights range from 1 through 100 and progress from 0 through 100.
-A phase update is rejected when its resulting three-phase weight total would no
-longer equal 100; weight redistribution requires an atomic contract and is not
-performed through separate phase updates.
-A milestone has `IsMilestone = true` and equal planned start and end dates.
-Overdue is derived at read time when planned end is before the current UTC date
-and status is not `Completed`; it is never persisted.
-
-Task departments must be active options in the `project-department` master-data
-category. The seeded options are Design, Architecture, Structural, MEP, and
-Interior, with Vietnamese, English, Chinese, and Japanese labels. An assignee
-must be an active user represented by a non-ended `OperationalProjectMember` in
-the same project. Every predecessor must be a task in the same project;
-self-dependencies and cycles are rejected before persistence.
-
-#### Progress Policy
-
-The policy identifier is `design-schedule-weighted-v1`. A phase baseline is
-ready only when it contains at least one task and task weights total exactly
-100. Its progress is:
-
-$$
-P_{phase} = \frac{\sum_i w_i p_i}{100}
-$$
-
-The project baseline is ready only when exactly three canonical phases exist,
-phase weights total 100, and every phase baseline is ready. Project progress is:
-
-$$
-P_{project} = \frac{\sum_j W_j P_j}{100}
-$$
-
-When a baseline is not ready, its rolled-up progress is `null`. Responses expose
-phase IDs, task IDs, weights, source progress values, and weighted values so the
-calculation is auditable. Filters affect the paged task list only; roll-up uses
-the complete schedule and therefore remains stable while browsing filtered
-results.
-
-#### Design-schedule API contract
-
-Both `/api/operational-projects/{projectId}/design-schedule` and its `/api/v1`
-alias expose the same controller.
-
-Supply `designProjectId` on schedule reads and in initialization requests.
-Omission is accepted only when the Operational Project has a single Design
-flow; multiple flows require explicit selection. Team list/history/candidate
-reads accept the same optional flow ID. Task parents, predecessors, assignee,
-approver and CC must belong to the selected flow. A sibling flow's task or
-member is rejected even when both share an Operational Project.
-
-| Method | Relative route | Permission | Purpose |
+| Method | Path (tương đối) | Permission | Mục đích |
 |---|---|---|---|
-| `GET` | `/` | `operations.projects.view` | Read phases, roll-up sources, and paged tasks |
-| `POST` | `/initialize` | `design.schedule.manage` plus project leadership | Create the canonical phase baseline |
-| `PUT` | `/phases/{phaseId}` | `design.schedule.manage` plus project leadership | Update phase dates, status, progress, and weight |
-| `POST` | `/phases/{phaseId}/tasks` | `design.schedule.manage` plus project leadership | Create a task or milestone in a phase |
-| `PUT` | `/tasks/{taskId}` | `design.schedule.manage` plus project leadership | Update a task and replace predecessor links |
+| `GET` | `/`, `/{id}`, `/{id}/timeline` | `operations.projects.view` | List theo scope; chi tiết (ETag); mốc thanh toán của các hợp đồng (chỉ đọc) |
+| `GET`/`POST`/`PUT` | `/code-suggestion`, `/`, `/{id}` | `operations.projects.manage` | Mã đề xuất; tạo dự án Planning (`PJ-YYYY-NNNN` hoặc `code` tuỳ chọn); sửa metadata/vòng đời (không sửa mã) |
+| `PATCH`/`POST` | `/{id}/code`, `/{id}/code/drive-retry` | `operations.projects.rename` | Đổi mã kèm lý do và lịch sử; thử lại đổi tên thư mục Drive |
+| `DELETE` | `/{id}` | `operations.projects.manage` | Theo [mục 7](#7-xoá-vĩnh-viễn-aggregate-permanent-aggregate-deletion) |
+| `GET` | `/{id}/team/history` | xem dự án | Sự kiện đội ngũ và lịch sử đổi mã |
+| `GET`/`POST`/`PUT` | `/{id}/master-schedule`, `.../revisions[/{revisionId}]`, `/submit`, `/review`, `/email-preview` | thành viên xem; `operations.projects.manage` soạn/trình; người duyệt được giao duyệt | Tiến độ tổng (WBS) |
+| `GET`/`POST` | `/{id}/master-schedule/emails/needs-review`, `.../{emailId}/resolve` | quản lý dự án được giao | Xử lý email tiến độ gửi lỗi |
+| `GET` | `/document-categories`, `/{id}/documents`, `.../{documentId}/content` | `operations.projects.view` | Danh mục, catalog, tải file riêng tư |
+| `POST`/`DELETE` | `/{id}/documents` (≤ 100 MiB), `.../retry`, `/classify`, `/resolve-conflict`, `/{documentId}` | `operations.projects.manage` | Upload, thử lại đồng bộ, phân loại file từ Drive, giữ cả hai phiên bản, xoá |
 
-Mutations require an `Idempotency-Key` containing 1 through 120 characters.
-Missing, blank, or oversized keys return `400`. Reusing a key with the same
-request replays the stored response; reusing it with a different request returns
-`409`.
-Updates require row version through the request body or `If-Match` header and
-emit an ETag. Missing or malformed tokens return `400`; conflicting body and
-header tokens return `400`. A stale write returns `409` and may be retried with the same
-idempotency key after obtaining the current row version. Successful mutations
-write both the standard audit event and a scalar schedule-history snapshot.
+**Mã dự án.** Mã `PJ-`, `TD-`, `SV-` lấy số lớn nhất đang dùng cộng một
+(`SequentialCodes`), không đếm dòng; cấp mã dự án dùng SQL application lock theo năm
+(`OperationalProjectCodeAllocator`). `code` khi tạo được viết hoa, dài 2–40 ký tự an toàn,
+không trùng. Đổi mã sau đó cần lý do và row version, ghi lịch sử cũ/mới bất biến; liên kết
+giữa module không đổi vì dùng `OperationalProjectId`; thư mục Drive gốc được đổi tên (giữ
+Drive ID), trạng thái ở `latestCodeChange`. Lịch sử mã có `entityType=ProjectCode`,
+`action=Renamed`; client định danh mục lịch sử bằng cả entity type và ID. Migration
+`AddProjectCodeAuditAndDesignVendors` (rollback mất lịch sử đổi mã) cũng gỡ các quyền nhạy
+cảm mặc định khỏi baseline nhóm `FINANCE`.
 
-The task query supports `phase`, `assigneeMemberId`, `departmentCode`, `status`,
-`plannedFrom`, `plannedTo`, `overdueOnly`, `page`, and `pageSize`. Date filtering
-uses inclusive interval overlap: a task matches when its planned end is on or
-after `plannedFrom` and its planned start is on or before `plannedTo`.
+**Vòng đời.** Không có archive/restore dự án (DEC-08); `Completed`/`Cancelled` giữ lịch sử,
+gỡ dự án chỉ qua xoá vĩnh viễn. Archive cấp tài liệu (như As-Built) không archive dự án.
 
-#### Compatibility and Deletion
+**WBS và tiến độ tổng.** `NodeId` là khoá ổn định qua các revision; `WbsCode` là mã hiển
+thị (bắt buộc, ≤ 80 ký tự, không trùng trong revision). UI gợi ý mã theo vị trí cây; mã task
+gói công việc cũng duy nhất trong gói. NICON chưa có mẫu đánh số WBS chung (D-03): không áp
+regex hay template cố định. Resource request, QA/QC, QS lưu `projectScheduleNodeId` thuộc
+revision đã ban hành mới nhất; server lấy mã từ revision, bỏ mã client gửi; không ban hành
+revision bỏ node đang được dùng. Dữ liệu cũ chỉ được link khi mã khớp đúng một node.
 
-The schedule uses dedicated `design_schedule_*` tables and does not alter,
-backfill, or reinterpret `construction_tasks` or its API. Deleting a Design
-Project reports schedule phases, tasks, dependencies, and history in the
-deletion-impact plan. Aggregate deletion removes dependency edges explicitly;
-the remaining schedule-owned rows are removed with their Design Project.
+Email trình/ban hành tiến độ tổng xếp hàng ở `project_schedule_emails` theo
+[6.3](#63-email-ứng-dụng) (preview `action=Submit&recipientUserId=...` hoặc
+`action=Publish`; `Reject` không cần). Khác các email khác, worker 15 giây tự thử lại sau
+1, 2, 4, 8 phút; sau 5 lần thì `NeedsReview` và báo quản lý dự án, người này kiểm với người
+nhận rồi ghi `ConfirmReceived` hoặc `Retry` (quyết định trùng trả `409`). Admin xem hàng
+đợi chỉ đọc tại `GET /api/site-settings/email-templates/project-schedule/needs-review`
+(`system.settings.view`, không lộ địa chỉ hay nội dung).
 
-Migration `AddDetailDesignSchedule` is additive: it creates four new tables,
-their foreign keys, indexes, row versions, and check constraints. It contains no
-data update or migration-time initialization and must be applied through the
-normal deployment gate only after backup and migration-script review.
+**Chuyển sang Thiết kế trước hợp đồng.** `POST /api/opportunities/{id}/design-project`
+(`name` 1–300, `note` ≤ 4.000; cần `crm.opportunities.manage` và
+`operations.projects.manage`) tạo Design Project giai đoạn Concept, không cần hợp đồng.
+Từ chối Opportunity Lost hoặc chưa có dự án; gọi lại idempotent (response có `created`).
 
-### 7.17 Project Operational Reports
+**Nhiều luồng thiết kế.** Một dự án có nhiều Design Project; một hợp đồng có tối đa một.
+Field số ít cũ trả luồng cũ nhất; đọc hợp đồng không mượn luồng của hợp đồng khác.
 
-#### Purpose and scope
+- Đội ngũ tách theo luồng (thành viên gốc có `DesignProjectId = null`). Mỗi luồng có một
+  Design Manager và một Design Lead, đồng bộ với `ProjectManagerUserId` và
+  `DesignLeadUserId`; PM của dự án là role gốc riêng.
+- Quyền hồ sơ từng thành viên: `PUT .../team/members/{memberId}/design-permissions`
+  (`canView`, `canCreate`, `canUpdate`, `canDelete`; chỉ quản lý đội đổi được; không hạn
+  chế được Design Manager/Lead chính). Duyệt, phát hành và xoá vẫn là gate riêng.
+- Pháp lý chỉ giao cho thành viên gốc (`LEGAL_MEMBER_INVALID`); trách nhiệm thiết kế của
+  Punch thuộc luồng của Punch (`PUNCH_DESIGN_MEMBER_INVALID`).
+- Giao việc, duyệt, CC mới cần cả membership (`isActive`) và tài khoản (`isUserActive`)
+  đang hoạt động. Picker user phân trang tối đa 100; `departmentId` âm trả `400`
+  `PEOPLE_DEPARTMENT_FILTER_INVALID`.
 
-Project reports are operational summaries bounded by `OperationalProjectId`.
-They do not calculate employee KPI scores. The API returns only projects that
-the caller can access through `IProjectAccessService`.
+**Ranh giới `DesignProjectId`.** Task thi công, nhật ký, Punch, nghiệm thu, hoàn công, bàn
+giao, permit còn lưu `DesignProjectId`; HSE, Cung ứng, RFQ, Tài chính, tài liệu dự án lưu
+`OperationalProjectId`. Aggregate liên module mới phải dùng `OperationalProjectId`; API cũ
+phải xác định đúng một dự án trước khi phát sự kiện liên module. Không thêm khoá dự án thứ
+hai khi chưa có backfill, quy tắc unique, chính sách xung đột, rehearsal và rollback.
 
-- `GET /api/reports/projects` returns a portfolio when `projectId` is omitted.
-- `GET /api/reports/projects?projectId={id}` returns one accessible project and
-  returns `404` when that project does not exist or is inaccessible.
-- `GET /api/reports/projects/export?format=xlsx|pdf&language=vi|en|zh|ja` uses
-  the same project and date filters, renders complete filtered results on the
-  server, and records an audit event with the filters and project count.
-- `from` and `to` are optional inclusive `DateOnly` values. A reversed range is
-  rejected with `400`.
+**Tài liệu dự án và Drive.** `ProjectDocument` là catalog và sidecar đồng bộ; SQL quyết
+định catalog, quyền và trạng thái.
 
-The response includes server-generated `generatedAtUtc` and `asOfUtc` values.
-Drill-downs contain only relative frontend routes and query strings.
+- Upload tay lưu bản host riêng tư và bản ghi `Pending` (kể cả khi Drive tắt); worker đẩy
+  lên Drive, đọc lại so byte và SHA-256 rồi mới xoá bản host. Lệch thì giữ bản host.
+- File của module nguồn (báo giá, hợp đồng, Basic Design, Shop Drawing, permit, nghiệm thu,
+  hoàn công, bàn giao, khảo sát) stage sidecar cùng transaction với bản ghi gốc và chỉ gỡ
+  được ở module nguồn. File lịch sử chưa có sidecar không được tự tìm.
+- Đổi dự án của Opportunity, Contract, Design Project, Survey chuyển file sang dự án mới và
+  xếp hàng xoá replica cũ. Survey luôn phải có dự án.
+- Quyền đọc theo category của module sở hữu (thiết kế `design.*.view`, pháp lý
+  `permit.checklists.view`, khảo sát `crm.surveys.view`, tiền thiết kế
+  `crm.opportunities.view`, tài chính `finance.payments.view`...) cộng quyền module nguồn;
+  file chưa phân loại không mở cho thành viên.
+- Drive là nguồn chuẩn cho file đã đồng bộ và file tạo thẳng trong thư mục managed: sửa từ
+  xa được phản ánh, file vào thùng rác thì đánh dấu xoá. Sửa đồng thời trên sidecar nguồn cũ
+  tạo mục xung đột tới khi người có quyền chọn **Keep both**.
+- Thư mục Concept/Basic/Shop được khởi tạo nền sau khi chuyển giao, không gọi Drive trong
+  transaction nghiệp vụ.
+- Đây là tập con, chưa hoàn tất hợp đồng Drive toàn khách hàng; phải kiểm trên môi trường
+  thật, mock không đủ.
 
-#### Permissions
+### 9.2 Gói công việc phòng ban (Department work-package)
 
-| Role | View | Export |
-| --- | --- | --- |
-| `SUPER_ADMIN`, `ADMIN` | Yes, through system-role wildcard defaults | Yes, through system-role wildcard defaults |
-| `BGD`, `ACCOUNTANT` | Yes, explicitly seeded | Yes, explicitly seeded |
-| `PM` | Yes, explicitly seeded and project-scoped | No |
-| Other business roles | No default grant | No default grant |
+`DepartmentWorkPackage` là aggregate giao việc liên phòng, route `/api/work-packages`
+(và `/api/v1`).
 
-`BGD` already has the broad `**.view` pattern, which covers
-`reports.projects.view`; it also receives an explicit
-`reports.projects.export` grant because export is deliberately separate.
+- Gói Project cần `OperationalProjectId`. `kind` trả về là `Contract` khi có
+  `ContractId`, ngược lại `Project` (không cần migration). Request `Contract` mới cần
+  hợp đồng cùng dự án; request `Project` cũ có `ContractId` vẫn nhận và trả
+  `Contract`; filter `kind=Project` loại gói có liên kết. Gói General nhắm mọi phòng
+  đang hoạt động (product owner, 29/10/2026); không tạo vỏ dự án trùng. Gói Internal
+  từ chối mọi tham chiếu root nghiệp vụ; tạo gói Internal cần cả
+  `work.packages.manage` và `work.packages.assign`, người gọi phải là lead được chọn
+  trong cùng role group. Gói Internal lưu mọi role group tham gia; mỗi task có một role
+  group phụ trách và kiểm assignee/approver theo nhóm đó.
+- Subtask (`department_work_tasks.ParentTaskId`, migration `AddWorkTaskSubtasks`):
+  cha chưa kết thúc, cùng gói, không đổi cha sau khi tạo. Trạng thái và tiến độ cha
+  là rollup của con trực tiếp; tiến độ gói chỉ tính task lá. Task cha không nhận tiến
+  độ/xác minh trực tiếp, không có KPI. Request cũ bỏ `parentTaskId` không gỡ liên kết.
+- Phụ thuộc trong cùng gói, không vòng; bắt đầu tiến độ cần gói Active và task trước đã
+  xong. Tiến độ người được giao đơn điệu tăng. Gói và lịch sử snapshot commit cùng
+  transaction.
+- Gói Completed về `Active` qua PUT: xoá `CompletedAt`, ghi snapshot `Reopened`, giữ
+  tiến độ/xác minh. Cancelled là trạng thái cuối.
+- File đính kèm task (`AddWorkTaskAttachments`): kiểm 20 MB và đuôi như tài liệu
+  nghiệp vụ, API không trả đường dẫn public. Xoá dọn file host trước rồi mới ẩn bản
+  ghi; dọn thất bại thì thử lại được và chặn plan xoá gói. Chưa stage lên Drive. Backup
+  thư mục `wwwroot/files/business-documents/work-tasks` cùng database.
+- KPI `VerifiedWorkTaskCount` chỉ đếm task được xác minh độc lập, giao cho người được
+  đánh giá, trong kỳ. Định nghĩa seed mặc định inactive.
 
-#### Available metrics
+| Method | Path | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `/api/work-packages` | `work.packages.view` | List có scope, lọc ở server |
+| `GET` | `/api/work-packages/options` | `view` + `manage` hoặc `assign` | Phòng, user, KPI công việc |
+| `GET` | `/api/work-packages/{id}`, `/{id}/history` | `work.packages.view` | Chi tiết, access flags, ETag; lịch sử bất biến |
+| `POST`/`PUT` | `/api/work-packages`, `/{id}` | `work.packages.manage` | Tạo/sửa gói, hợp đồng tuỳ chọn, vòng đời |
+| `GET`/`DELETE` | `/{id}/deletion-impact`, `/{id}` | `manage` + scope quản lý | Xoá cứng với mã, planToken, rowVersion, idempotency key |
+| `POST`/`PUT` | `/{id}/tasks`, `/{id}/tasks/{taskId}` | `work.packages.assign` | Thêm/sửa task (WBS, phụ thuộc, CC, KPI) chưa kết thúc |
+| `GET`/`POST`/`DELETE` | `/{id}/tasks/{taskId}/attachments[/{attachmentId}[/content]]` | `view` + scope gói (upload/xoá: lead/assignee; lead dọn được gói đã đóng) | Một file multipart `file` mỗi request kèm `Idempotency-Key` |
+| `PUT` | `/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Ghi tiến độ |
+| `POST` | `/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Xác minh độc lập task KPI đã xong |
+| `POST`/`PUT` | `/{id}/input-price-offers[/{offerId}]` | `work.packages.progress` | Thêm/sửa offer giá đầu vào (Draft/Rejected) |
+| `POST` | `/{id}/input-price-offers/{offerId}/approval-email-preview`, `/{id}/finance-review/approval-email-preview` | `progress` + scope phòng | Preview email duyệt, token 15 phút |
+| `POST` | `/{id}/input-price-offers/{offerId}/submit`, `/{id}/finance-review/submit` | `work.packages.progress` | Trình duyệt độc lập |
+| `POST` | `/{id}/input-price-offers/{offerId}/decision`, `/{id}/finance-review/decision` | `work.packages.verify` | Duyệt/từ chối |
+| `PUT` | `/{id}/finance-review` | `work.packages.progress` | Lưu checklist Tài chính – Kế toán |
+| (xem [10.4](#104-boq-trong-gói-giá-đầu-vào)) | `/{id}/boq-workbooks` | | BOQ trong gói giá đầu vào |
 
-- Project identity and manager/customer context.
-- Design weighted progress using `design-schedule-weighted-v1`. The value is
-  unavailable with `DESIGN_BASELINE_INCOMPLETE` until all three phase and task
-  baselines satisfy the existing weight rules.
-- Construction task counts by exact persisted status, overdue count, and
-  overdue rows. No averaged construction percentage is calculated.
-- Acceptance counts by exact persisted status and revision count, plus overdue
-  count. No acceptance ratio or first-pass rate is calculated.
-- Permit overdue, due-soon, and expiring counts and rows. Due soon and expiring
-  use a 30-day inclusive warning window from `asOfUtc`.
-- Quote totals, contract base value, approved VO delta, current contract value,
-  and milestone scheduled values by status. Milestone values use the signed
-  base contract value, matching existing contract semantics. They are labeled
-  **Contractual schedule** and are not cash, revenue, or receivables.
+Email duyệt (quyết định của người dùng 25/10/2026; quy tắc chung ở
+[6.3](#63-email-ứng-dụng)):
 
-#### Date filter bases
+- Trình offer giá đầu vào hoặc Finance review bắt buộc preview; client cũ phải thêm
+  bước này. Trình lại bản ghi đã Submitted trả bản ghi, không xếp email mới.
+- Lead phòng được giao phải đang hoạt động, khác tác giả, có `work.packages.verify`
+  và email hợp lệ theo `ContactValidation`; nếu không thì chặn trình.
+- Preview nhận `{ toEmail, ccEmails }` tuỳ chọn; rỗng thì To là lead, CC rỗng. Mỗi
+  địa chỉ trim, tối đa 150 ký tự, một mailbox; CC tối đa 20, bỏ trùng và bỏ địa chỉ
+  trùng To. Đổi To chỉ đổi nơi nhận, không đổi người duyệt. Danh sách chuẩn hoá được
+  gắn vào token; submit không ghi đè được.
+- Migration `20261024174814_AddWorkPackageApprovalEmails` (bảng
+  `work_package_approval_emails`, cột template) và
+  `20261024183305_AddWorkPackageEmailRecipients` (`CcEmailsJson` mặc định `[]`,
+  `LeadEmail` backfill từ `ToEmail`). Worker 15 giây kiểm lại lead theo `LeadEmail`
+  và generation trình, gửi một message có To và CC. Detail trả `approvalEmails` (50
+  dòng mới nhất) và `ccEmails`; UI poll trạng thái tối đa 2 phút. `Sending` chặn xoá
+  vĩnh viễn. Bản ghi Submitted cũ không được gửi bù.
+- Rollback: dừng worker trước khi deploy assembly cũ; export hàng chờ, lịch sử gửi và
+  danh sách người nhận vì `Down` xoá chúng.
 
-The inclusive date range applies independently to each source date rather than
-the project identity: construction planned end, acceptance date, permit target
-deadline or expiry, quote creation, contract signed date (or creation date when
-unsigned), approved VO decision date (or update date), and milestone due date.
-An in-range VO or milestone remains visible when its parent contract was signed
-before the range. Design progress is current-as-of because no historical
-baseline snapshots exist.
+Xoá gói: tính lại plan trong transaction serializable, xoá task, CC/phụ thuộc, người
+tham gia, lịch sử, offer/dòng, Finance review, translations. Checklist permit/tender
+độc lập được giữ và gỡ link task; Project, Contract, Opportunity, Quote, Tender giữ
+nguyên; BOQ của gói được giữ và gỡ link. Chặn khi: giá đầu vào đã dùng (kể cả snapshot
+phiên bản báo giá), báo giá đã gửi dùng commercial review, lần nộp thầu dùng Finance/
+kế hoạch, kích hoạt pháp lý của hợp đồng, file nguồn còn lại. API này không xoá file
+local hay Drive. Thành công trả `204`. Xoá Operational Project coi gói là `Delete`;
+xoá Contract/Opportunity coi tham chiếu là `Unlink`.
 
-#### Explicitly unavailable metrics
+### 9.3 Kiểm soát liên phòng trước hợp đồng
 
-The API and exports expose stable reason codes instead of synthetic zeroes:
+`DepartmentWorkPackage.Purpose` chọn luồng; mỗi purpose gắn một phòng nhận và một
+bản ghi nguồn (migration `AddPrecontractDepartmentControls`, `Purpose` mặc định
+`General`). Mọi purpose trước hợp đồng từ chối `ContractId`.
 
-| Metric | Reason code |
-| --- | --- |
-| Historical S-curve | `HISTORICAL_SNAPSHOTS_UNAVAILABLE` |
-| Weighted construction progress | `CONSTRUCTION_WEIGHTS_UNAVAILABLE` |
-| Acceptance ratios / first-pass | `ACCEPTANCE_OUTCOME_DATA_UNAVAILABLE` |
-| Actual cashflow, revenue, expenditure, P&L, receivables | `ACTUAL_FINANCE_LEDGER_UNAVAILABLE` |
-| Inventory | `INVENTORY_LEDGER_UNAVAILABLE` |
-| BOQ usage | `BOQ_USAGE_DATA_UNAVAILABLE` |
-| Vendor performance | `VENDOR_PERFORMANCE_DATA_UNAVAILABLE` |
+| Purpose | Phòng | Nguồn | Ghi chú |
+|---|---|---|---|
+| `ProcurementInputPricing` | `PROCUREMENT` | `SourceOpportunityId` | Chứa `ProcurementInputPriceOffer` (dòng, vendor, mã tham chiếu NCC, tiền tệ, hiệu lực) và BOQ upload |
+| `FinanceCommercialReview` | `FINANCE` | `SourceQuoteId` | Ghim `ReviewedQuoteVersion` khi lưu |
+| `FinanceTenderReview` | `FINANCE` | `SourceTenderId` | |
+| `TenderPlanning` | role group phụ trách đang hoạt động | `SourceTenderId` + dự án của Tender | Ngày gói không quá hạn nộp; mỗi Tender/phòng một gói không huỷ; mọi task cần người xác minh độc lập, KPI tuỳ chọn |
 
-A project without its design-linked construction, acceptance, or permit source
-returns the affected section as `Unavailable` with `SOURCE_NOT_CONFIGURED`.
-No schema migration or report snapshot table is introduced.
+Offer và Finance review dùng chung vòng đời `Draft → Submitted → Approved | Rejected`;
+chỉ sửa ở Draft/Rejected, từ chối cần lý do, tác giả không tự quyết
+(`CreatedByUserId == callerUserId` bị từ chối), offer đã được báo giá tham chiếu là
+bất biến.
 
-### 7.18 RFQ and Supplier Comparison
+Gate ở server:
 
-#### Business contract
+- Gửi báo giá cho khách (`QuoteService`) cần `FinanceCommercialReview` `Approved`
+  trong gói không huỷ có `SourceQuoteId`, và báo giá phải có `OperationalProjectId`.
+  Báo giá lên phiên bản mới sau khi sửa trọng yếu cần review mới. Response Finance
+  review (kể cả lồng trong `GET /api/work-packages`) có `reviewedQuoteVersion`;
+  package có `sourceQuoteVersion`. UI hợp đồng chọn hồ sơ theo phiên bản
+  (`selectQuoteFinanceReview`), không theo thời gian cập nhật.
+- Ký hợp đồng Upstream có Quote (`ContractService`): cùng điều kiện review cho phiên
+  bản hiện tại, áp ở tạo đã ký, update, transition và gắn Quote vào hợp đồng đã ký.
+- Gắn `inputPriceOfferId` vào báo giá chỉ khi offer `Approved`, còn hạn, thuộc gói
+  `ProcurementInputPricing` cùng dự án; báo giá lưu `InputPriceSnapshotJson`.
+- Nộp thầu (`TenderService`): có `OperationalProjectId`, ít nhất một gói
+  `TenderPlanning` đã xong và `FinanceTenderReview` `Approved`.
+- Tạo/sửa BOQ thi công (`ProcurementService`) cần hợp đồng Upstream cùng dự án đã ký,
+  không Draft/Cancelled.
 
-Sources: NIH-166 and NIH-174/175/176, including their September 7 acceptance
-comments; `Nicon-QLVH.md` Modules 5–6; `Nicon-workflow.md`;
-`Nicon_BreakTask_v1.xlsx` (RFQ list, create/edit, and comparison detail).
+Editor giá đầu vào: nhãn gắn với field, desktop 5 cột, mobile xếp dọc, thân dialog
+cuộn riêng; thành tiền chỉ để xem (server làm tròn và tính thuế). Khoảng giá trị theo
+`InputPriceLineRequest`. `MoneyInput` nhận formatter tuỳ chọn và dấu phẩy thập phân.
+Test: `quote-pricing-responsive-live.spec.ts` (320/390/768/1440px).
 
-The completed RFQ workflow uses the following contract:
+---
 
-- Each RFQ belongs to one Operational Project and retains that project's
-  Customer. A project can have many RFQs, vendors, and contracts.
-- Procurement selects lines and quantities from an approved VND Project BOQ.
-  Each quantity must fit its source line. At award, every Supply quantity is
-  manually allocated to approved, unfulfilled Material Request demand for the
-  same BOQ line. Subcontract allocations do not use Material Requests. The
-  transaction rejects incomplete RFQ coverage and Supply allocations above the
-  remaining requested quantity.
-- Each RFQ invites one or more active suppliers/subcontractors. The vendor
-  directory is shared master data; invitations and quotations belong to the RFQ.
-- Lowest valid VND-normalized prices are highlighted, including ties. Each RFQ
-  defines price, lead-time, approved vendor-rating and manually assessed
-  commercial weights totaling 100%. The score is advisory; selecting below the
-  highest score requires an override reason.
-- Procurement can record quotes, while vendors with valid email receive an
-  expiring random-token portal link. The public portal exposes only that
-  invitation's scope, provides secure downloads for RFQ package documents, and
-  accepts immutable quote revisions until the deadline.
-  Only a SHA-256 token hash is persisted. Failed email delivery is recorded and
-  authorized users can rotate tokens and resend invitations. The existing RFQ
-  owner remains the technical user FK for portal writes, while the bid read model
-  and `portal-bid-submitted` event attribute the action to the invited vendor.
-  `LastPortalAccessAt` is audit telemetry only; it does not extend token expiry.
-- An explicit atomic batch award allocates each RFQ line and quantity across one
-  or more eligible quotations. It creates one **Draft Downstream
-  Supply/Subcontract contract** per selected vendor and all corresponding BOQ
-  lines. Every RFQ quantity must be covered exactly; partial commits are not
-  allowed. The existing contract workflow handles signing, execution, and
-  payment; an RFQ award does not sign a contract.
-- Award-derived contract value, customer, project, vendor and classification
-  cannot be changed through the generic contract editor. Awarded lines cannot
-  be edited, appended or moved through procurement endpoints, including while
-  the contract is Draft. Draft coordination notes and the existing signing and
-  payment workflows remain available. Ordinary contracts without an RFQ award
-  retain their existing draft-editing behavior.
-- Each bid records a three-letter currency and a manually entered, immutable
-  exchange rate to VND. VND requires rate 1. Commercial totals apply either a
-  percentage or fixed discount, then add freight, then calculate VAT. Original
-  and converted totals are retained for evidence. Unit prices and line totals
-  use four decimals; quantity uses six; converted contract values round to two
-  decimals while contract line prices retain four decimals. Contract lines keep
-  the converted base negotiated unit price; the contract header also includes
-  proportional freight, discount and VAT. Reconcile that expected difference
-  through the immutable award commercial snapshot, not by editing awarded lines.
+## 10. BOQ
 
-The application route is `/admin/procurement-control/rfqs`, with `projectId`
-and optional `rfqId` query parameters. Customer → Project → RFQ → Contract
-context remains visible. List export is CSV; detail export is a JSON evidence
-bundle containing matrix lines, all quote revisions, commercial terms, files,
-history, and the award comparison snapshot.
+Năm loại BOQ không thay thế nhau:
 
-#### Actors and access
+| Hiện vật | Aggregate | Giới hạn được MR/kho? |
+|---|---|---|
+| BOQ báo giá sơ bộ | `Quote`/`QuoteItem` hoặc nguồn material-rate đã duyệt | Không |
+| Dự toán thầu | `TenderEstimateRevision` | Không |
+| Khối lượng thiết kế | Bằng chứng Design (aggregate riêng còn là Target) | Không, trừ khi được nâng thành revision thi công đã duyệt |
+| BOQ thi công | `ProjectBoqRevision`/`ProjectBoqLine` trạng thái `Approved` | Có |
+| BOQ quyết toán | Revision thi công đã duyệt cuối cùng sau khi dự án hoàn thành và VO đã duyệt | Báo cáo, quyết toán, KPI |
 
-| Capability | Default role grants |
+Mọi import hay nâng cấp ghi dự án, hiện vật/phiên bản nguồn, hash file, người import,
+thời điểm, kết quả preview và người duyệt. Không suy ra hạn mức tài chính/kho chỉ vì
+file Excel có chữ `BOQ` hay đến từ Module 2.
+
+### 10.1 BOQ dự án (Procurement BOQ)
+
+Revision thuộc một Operational Project, mã vật tư duy nhất không phân biệt hoa thường,
+vòng đời `Draft → Submitted → Approved | Rejected`; chỉ Draft/Rejected sửa được (sửa
+Rejected đưa về Draft). Approved bất biến vì MR và dòng hợp đồng dùng làm bằng chứng
+hạn mức. Thành tiền dòng = khối lượng duyệt × đơn giá dự toán, làm tròn 4 chữ số
+(away from zero); tổng lưu ở revision. Trình báo PM; quyết định báo người lập.
+
+Route `/api/operational-projects/{projectId}/procurement/` (quyền `proc.boq.*` tương
+ứng, kiểm scope dự án trước):
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `boq-revisions`, `boq-revisions/{id}`, `boq-revisions/export` | `proc.boq.view` | List, chi tiết, CSV |
+| `POST`/`PUT` | `boq-revisions`, `boq-revisions/{id}` | `proc.boq.manage` | Tạo Draft kế tiếp; thay nội dung Draft/Rejected (dòng từ workbook: `workbookReadOnly`) |
+| `POST` | `boq-revisions/{id}/submit`, `/decision` | `proc.boq.manage` / quyết định | Trình (thiếu giá: `missingPrices`); duyệt/từ chối |
+| `GET` | `boq-templates`, `boq-templates/{code}/file` | `proc.boq.view` | Danh sách mẫu, file mẫu |
+| `POST` | `boq-workbooks/preview` | `proc.boq.manage` | Multipart `templateCode`, `file`; tóm tắt theo sheet và `sourceHash`; không lưu |
+| `POST` | `boq-workbooks` | `proc.boq.manage` | `templateCode`, `file`, `sourceHash`, `upstreamContractId` tuỳ chọn; tạo Draft |
+| `GET` | `boq-revisions/{id}/workbook` | `proc.boq.view` | File đã upload |
+| `POST` | `boq-revisions/{id}/contract` | `proc.boq.approve` | `upstreamContractId`, `rowVersion`; chuyển BOQ thầu đã duyệt thành BOQ hợp đồng |
+
+UI: `/admin/procurement-control`, chi tiết
+`/admin/procurement-control/projects/{projectId}/boq/{boqId}`. Từ 13/11/2026 upload
+trên UI chỉ ở gói giá đầu vào (10.4); `ProjectBoqSection` (`#project-boq`) trên trang
+dự án chỉ đọc, ngoại trừ nút **Upload contract BOQ** cho người có `proc.boq.manage` +
+`crm.contracts.view` khi dự án có hợp đồng Upstream đã ký. QS có `proc.boq.view` và
+`proc.boq.manage` (`20261108100000_GrantQsProjectBoqPermissions`).
+
+BOQ thầu và BOQ hợp đồng:
+
+- Revision upload không có `upstreamContractId` là BOQ thầu; duyệt đặt
+  `TenderApproved`, nằm ngoài mọi truy vấn `Approved`, nên không bao giờ thành hạn mức
+  MR, RFQ, kho hay QS. Revision gắn hợp đồng đã ký đi theo `Approved` bình thường.
+- Từ 14/11/2026 (MoM 31/10: "trúng thầu thì chuyển thành BOQ hợp đồng, không tạo file
+  mới") `ConvertTenderBoqToContractAsync` gắn revision `TenderApproved` mới nhất với
+  hợp đồng Upstream đã ký và đặt `Approved` tại chỗ, giữ số revision, file, dòng và
+  thông tin duyệt thầu; audit `proc.boq.contract`. Lỗi `boqWorkbook.error.{code}`:
+  `notTender`, `notLatestTender`, `contractBoqExists` (dự án đã có BOQ `Approved`;
+  thay đổi sau là revision upload mới), `contract`. Gọi lại cùng hợp đồng trả revision.
+  Cảnh báo vật tư được đánh giá lại. Nút **Make it the contract BOQ** trên
+  `BoqRevisionDetailPage` cho người có `proc.boq.approve` (PM, BGD). Revision có
+  `sourceWorkPackageId` ẩn nút trình/quyết định vì được review trong gói.
+- Migration `AddProjectBoqWorkbooks` thêm cột nullable, `project_boq_lines.PriceMissing`
+  và bảng `project_boq_sheets`; `Down` làm revision mất danh sách sheet và link file
+  (export file trước).
+
+### 10.2 Workbook mẫu và parser
+
+Mỗi mẫu là bản đã làm sạch của một workbook khách hàng trong `Data/BoqTemplates/`
+(embedded, liệt kê ở `templates.json`). Download trả đúng từng byte, giữ sheet, cột,
+merge, style và công thức. File gốc trong `docs/Nicon/BOQ/` chỉ là bằng chứng, không
+được đọc lúc chạy.
+
+| Mã | Nội dung | Sheet đọc |
+|---|---|---|
+| `PCCC-CAN-HO` | PCCC căn hộ | `ptct` |
+| `THIET-KE-XIN-PHEP` | Khảo sát/thiết kế và phí xin phép | `Bao gia` từ dòng 29 tới `Tổng cộng trước VAT (B+C)` |
+| `NHA-XUONG` | BOQ nhà xưởng GNF, 23 sheet | 20 sheet hạng mục; bỏ cover, `Cover 1`, `00.Tổng Hợp` |
+| `XAY-DUNG-ME` | Xây dựng, M&E, PCCC nhà xưởng, 18 sheet | 17 sheet; bỏ `TỔNG HỢP` |
+| `TRON-GOI` | Trọn gói thiết kế, xin phép, thi công, 21 sheet | 18 sheet; bỏ `Cover `, `Total `, `Summary ` |
+| `CSA-WORK` | Civil/structural/architectural, 6 sheet | 3 bill; bỏ `01.BÌA`, `Total Amount `, ` COST SUMMARY` |
+
+Profile mẫu khai báo sheet, ô header kỳ vọng, dòng đầu, cột STT/mô tả/đơn vị/khối
+lượng/đơn giá/thành tiền, tiền tố dòng cộng phụ, nhãn tổng, tiền tệ và dung sai. Tuỳ
+chọn: `ignoredSheets`; `descriptionFirstLine` (chỉ lấy dòng đầu làm tên);
+`totalCell` (tổng nằm trên các dòng) với `totalDecimals` (số chữ số ROUND, ví dụ GNF
+C4 là -5); `itemsWithoutStt` (dòng là hạng mục khi có đơn giá hoặc thành tiền và có
+đơn vị hoặc khối lượng); `extraPriceColumns` (đơn giá = tổng các cột vật tư, nhân
+công, máy); `measurementRows` và `measurementColumn` (dòng diễn giải kích thước dưới
+hạng mục không phải hạng mục, khối lượng không đọc, có giá thì báo `sttRequired`);
+`specColumn` (nối cột quy cách vào tên). Nhãn tổng cũng được tìm ở cột STT.
+
+`ProjectBoqWorkbookParser` đọc từ dòng đầu tới dòng tổng: STT số nguyên là hạng mục,
+dòng bắt đầu bằng tiền tố cộng phụ là subtotal, dòng chữ khác là nhóm. Hạng mục không
+có khối lượng bị bỏ qua (đếm riêng). Dòng giữ thành tiền workbook đã lưu khi khớp
+khối lượng × đơn giá. Mã hạng mục `S{sheet:00}-R{row:0000}`, đổi khi chèn dòng nên
+không ổn định giữa các revision. Chỉ đọc kết quả công thức Excel đã lưu, không tính
+lại. Từ chối trả `boqWorkbook.error.invalidRows` với `issueCount` và tối đa 200
+`issues` (`code`, `messageKey`, `sheet`, `cell`, `limit`): sheet/header, ô số, số âm
+hoặc quá lớn, lỗi Excel, công thức chưa tính, khối lượng trên dòng không có STT,
+thành tiền lệch khối lượng × đơn giá (ô "-" tính là 0), tổng lệch tổng hạng mục (theo
+dung sai). Đơn vị trống chỉ đếm cảnh báo cho tới khi NICON chốt. Giới hạn upload:
+20 MB, 500 phần ZIP, 200 MB giải nén; từ chối macro, external link, data connection.
+File lưu `BusinessDocumentArea.Boq`, `SourceWorkbookPath` nằm trong
+`ReferencedManagedFiles`; xác nhận lại cùng file cho cùng Draft trả revision có sẵn.
+Test: `ProjectBoqWorkbookParserTests`, `ProjectBoqWorkbooksControllerTests`,
+`boq-workbook-upload.spec.ts`, `contract-boq.spec.ts`. Workbook ME quá nặng cho
+ClosedXML tính lại, nên test ghi kết quả thẳng vào XML (`BoqWorkbookPatch`).
+
+### 10.3 Thư viện mẫu
+
+`/admin/material-rates/boq` hiển thị `BoqTemplateLibrary`, cây chỉ đọc mẫu → sheet.
+`BoqTemplatesController` (`/api/boq-templates`, `crm.material-rates.view`, không theo
+dự án) trả danh sách mẫu kèm sheet và số hạng mục, file, và outline một sheet
+(`ProjectBoqWorkbookParser.Outline`, cùng quy tắc với `Parse`, bỏ header lặp; cache
+trong `ProjectBoqTemplateCatalog.Outline`). Migration
+`20261113100000_GrantProcurementBoqTemplateLibrary` cấp `crm.material-rates.view` cho
+role Cung ứng và Trưởng phòng Cung ứng còn thiếu.
+
+### 10.4 BOQ trong gói giá đầu vào
+
+`WorkPackageBoqWorkbooksController` (`/api/work-packages/{id}/boq-workbooks`) preview,
+import, download, trình và quyết định BOQ trong gói `ProcurementInputPricing`. Upload
+và trình cần `work.packages.progress` + thuộc phòng của gói; download cần
+`work.packages.view` + thấy gói; quyết định cần `work.packages.verify`, do lead của gói
+hoặc admin khác người upload. Import dùng lại `ProjectBoqWorkbookService`, lưu
+`ProjectBoqRevision.SourceWorkPackageId` (`AddWorkPackageBoqSource`). Trình dùng
+`WorkPackageApprovalEmailService` với record type `ProjectBoqRevision`; duyệt đặt
+`TenderApproved`. Procurement control từ chối trình/quyết định các revision này
+(`boqWorkbook.error.workPackageReview`). Detail gói trả `boqWorkbooks`.
+
+### 10.5 Material-rate catalog (API còn giữ)
+
+Catalog phân biệt `InvestmentRate` và `Boq` (dữ liệu cũ là `InvestmentRate`). Báo giá
+theo đơn giá chỉ nhận revision Investment-rate `Approved` đang hiệu lực.
+
+- Từ 14/11/2026 không màn nào gọi API nhập workbook catalog
+  (`/api/material-rate-catalogs/{catalogId}/revisions/{revisionId}/boq-workbook`
+  preview/import, `/api/material-rate-catalogs/boq-import-templates`) và nhập theo
+  category cấu hình (`PUT {id}/boq-configuration`,
+  `GET {id}/configured-boq-template?language=vi`, `POST {id}/configured-boq-preview`,
+  `PUT {id}/revisions/{revisionId}/configured-boq-rows`,
+  `POST {id}/revisions/{revisionId}/configured-boq-import`). API và bảng giữ tới khi
+  có migration gỡ. Các API này cần `crm.material-rates.manage` (template download cần
+  `.view`), chỉ sửa revision `Draft`, so `sourceHash`/`configurationHash`/
+  `expectedUpdatedAt` (cũ trả `409`). Category cấu hình (`BoqConfigurationJson`,
+  `BoqRowsJson`, migration `AddConfiguredBoqEntries`) không dùng được đường xoá cũ
+  (deactivate thay thế); `Down` xoá cấu hình và dữ liệu tham chiếu, export trước.
+  Giới hạn schema và workbook do `BoqConfigurationRules` và `MaterialRateService`
+  thực thi.
+- Người có `crm.material-rates:manage` tạo/sửa/xoá dòng trong revision `Boq` Draft
+  (trim, mã không trùng, khối lượng 4 chữ số, đơn giá 2 chữ số, thành tiền làm tròn 4
+  chữ số away from zero); mỗi thao tác trả revision đã tính lại. Field thập phân trả
+  dạng chuỗi JSON; client giữ chuỗi khi sửa, chỉ đổi số tại ranh giới rõ ràng.
+- Quyền đó gồm cả xoá vĩnh viễn catalog (revision và dòng là một aggregate). Bị
+  `409` `materialRates.catalog.deleteBlocked` khi báo giá hoặc snapshot phiên bản báo
+  giá tham chiếu revision. Xoá hàng loạt best effort: ID lỗi vẫn được chọn kèm lý do.
+- `NormalizeBoqCatalogReferenceSource` chuẩn hoá scale và đối soát tổng báo giá cũ;
+  `Down` không khôi phục được độ chính xác đã bỏ.
+
+### 10.6 Báo giá BOQ
+
+Từ 08/11/2026 báo giá BOQ copy dòng từ `ProjectBoqRevision` đã duyệt mới nhất của dự
+án (`Approved` hoặc `TenderApproved`, số revision cao nhất). Create/update nhận
+`projectBoqRevisionId`, từ chối `materialRateCatalogId` và `items`; mỗi
+`ProjectBoqLine` copy mô tả, đơn vị, khối lượng, đơn giá, thành tiền làm tròn 2 chữ
+số; lưu `Quote.ProjectBoqRevisionId` (snapshot cũng giữ). Đổi revision là thay đổi
+trọng yếu (phiên bản mới nếu đã duyệt). Trình bị từ chối (trước khi xếp email) khi
+chưa có BOQ dự án hoặc đã có revision duyệt mới hơn. Draft chưa có offer đã duyệt vẫn
+chọn được phương thức BOQ khi trỏ tới BOQ dự án đã duyệt mới nhất (`hasApprovedInput`).
+Migration `AddQuoteProjectBoqSource` mở rộng `quote_items` (mã 80, tên 500, đơn vị
+50, khối lượng 18,6, đơn giá 18,4). Báo giá trước thay đổi này dùng
+`MaterialRateRevisionId`, `PricingEffectiveDate`, `CatalogReference`.
+
+Công thức (server tạo và cập nhật, `src/lib/quoteTotals.ts` mô phỏng để preview): thành
+tiền = khối lượng × đơn giá; subtotal = tổng thành tiền đã làm tròn; chiết khấu trước
+VAT; tổng làm tròn 2 chữ số away from zero. Server từ chối dòng thiếu, tên/đơn vị
+trống, khối lượng ≤ 0, giá âm, phần trăm ngoài 0–100, giá trị vượt `decimal(18,*)`.
+Snapshot phiên bản giữ bộ dòng nguồn sau khi sửa.
+
+Dải tiêu thụ BOQ mục tiêu của PRD (85% vàng, 95% cam, >100% đỏ/chặn) phải cấu hình
+được và tính ở server; cho tới khi hợp đồng tính (hạn mức, khối lượng ròng, hoàn, quy
+đổi đơn vị, độ chính xác, hạn mức 0) được duyệt, giữ kiểm tra cứng từ chối MR vượt hạn
+mức còn lại.
+
+---
+
+## 11. Cung ứng: nhà cung cấp, MR, kho, cảnh báo, RFQ, IFC
+
+### 11.1 Nhà cung cấp
+
+Bảng `procurement_vendors` lưu nhà cung cấp và thầu phụ. Mã vendor được trim và viết
+hoa; mã và tên công ty đã chuẩn hoá là duy nhất (trùng trả `409`). Cần ít nhất một số
+điện thoại hoặc email hợp lệ. `IsActive=false` giữ vendor cho báo cáo lịch sử nhưng
+chặn tạo hợp đồng mới. Chi tiết trả hợp đồng, dự án, đánh giá vendor, người cập nhật
+và audit (`vendor.create`, `vendor.update`).
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `/api/vendors`, `/api/vendors/{id}` | `proc.vendors.view` | Tìm, lọc, sắp, phân trang (tối đa 100/trang); chi tiết |
+| `POST`/`PUT` | `/api/vendors`, `/api/vendors/{id}` | `proc.vendors.manage` | Tạo (active), sửa hồ sơ hoặc trạng thái |
+| `GET`/`DELETE` | `/api/vendors/{id}/deletion-impact`, `/api/vendors/{id}` | `proc.vendors.manage` | Xoá vĩnh viễn theo [mục 7](#7-xoá-vĩnh-viễn-aggregate-permanent-aggregate-deletion) |
+
+`proc.vendors.export` chỉ điều khiển nút xuất ở frontend, không tự cấp quyền đọc API.
+Upload hồ sơ năng lực trả claim token mờ; create/update dùng file đó phải gửi đúng
+token và server claim file trong cùng lần ghi Vendor. Form huỷ thì bỏ token; worker
+xoá upload chưa claim quá 24 giờ. Upload đã claim không huỷ được và không vendor khác
+claim được. UI: `/admin/vendors`, `/admin/vendors/:id`; CSV lấy mọi trang khớp bộ lọc
+(chưa có endpoint export riêng).
+
+### 11.2 Material Request (MR)
+
+`GET /api/operational-projects/{projectId}/procurement/material-requests`
+(`proc.material-requests.view`; ngoài scope dự án trả `404`) nhận `search`, `status`,
+`siteRequesterUserId`, `responsibleSiteUserId`, `assignedProcurementUserId`,
+`requiredFrom`, `requiredTo`, `sortBy`, `sortDirection`, `page`, `pageSize` (≤100);
+khoảng ngày ngược bị từ chối. Mỗi dòng có khối lượng yêu cầu, đã nhận ròng (phiếu
+nhập posted và hoàn), khối lượng BOQ duyệt và còn lại (tính theo các trạng thái đã
+cam kết Approved, PartiallyFulfilled, Fulfilled). `currentApprovedBoq` chỉ trả số
+revision, định danh vật tư, đơn vị, khối lượng duyệt và còn lại, không có đơn giá hay
+tổng, để người chỉ có quyền MR chọn đúng hạng mục mà không cần `proc.boq.view`. Chi
+tiết `/{id}` trả dấu thời gian/người theo vòng đời, bằng chứng hạn mức và ngữ cảnh
+Customer/Project/Contract tối thiểu (không có giá trị hợp đồng).
+
+- Vòng đời `Draft → Submitted → Approved | Rejected`; Approved chuyển
+  `PartiallyFulfilled`/`Fulfilled` chỉ qua phiếu nhập kho posted. Chỉ người yêu cầu
+  sửa Draft. Bản ghi chưa kết thúc huỷ được với lý do ≥ 3 ký tự.
+- Create/update từ chối hạng mục trùng, ngày cần trong quá khứ, user ngoài dự án,
+  người được giao không thuộc Cung ứng, revision BOQ cũ, khối lượng ≤ 0 và vượt hạn mức
+  còn lại. Duyệt kiểm lại hạn mức trong transaction serializable.
+- Trình báo người phụ trách cung ứng, quyết định báo người yêu cầu, huỷ báo bên còn
+  lại. UI chi tiết:
+  `/admin/procurement-control/projects/{projectId}/material-requests/{requestId}`.
+
+### 11.3 Nhập/xuất kho
+
+Tồn kho là sổ suy ra trong một Operational Project. `WarehouseReceipt` ghi vật tư đã
+kiểm theo dòng MR đã duyệt; `WarehouseIssue` cấp cho người phụ trách công trường kèm mã
+hạng mục tuỳ chọn. Phiếu posted bất biến; sửa bằng phiếu hoàn trỏ về phiếu gốc.
+
+- `GET .../procurement/warehouse-transactions` (`proc.warehouse.view`): tìm, loại
+  nhập/xuất, trạng thái, người phụ trách, khoảng ngày, sắp, phân trang; kèm tồn theo
+  BOQ duyệt hiện tại (đã nhập, đã xuất, tồn sau hoàn).
+- Draft sửa bằng `PUT` idempotent có row version; `POST .../post` tác động tồn;
+  `POST .../reverse` cần lý do ≥ 3 ký tự. Audit ghi ID phiếu thật.
+- Ghi kho tuần tự hoá bằng SQL application lock thuộc transaction (đánh đổi: ghi kho
+  tuần tự giữa các dự án), giữ kiểm tồn Serializable; list đọc với ReadCommitted.
+- Luồng kho đang online-first. Ghi nhận offline và tự đồng bộ cần app shell cache,
+  hàng đợi client bền, ID offline ổn định, chính sách xung đột và quan sát được; chưa
+  có. Không coi browser storage thông thường là hỗ trợ offline.
+
+### 11.4 Cảnh báo vật tư
+
+Projection bền từ BOQ duyệt, nhu cầu MR đã duyệt và sổ kho posted; người dùng không
+tạo hay tự đóng cảnh báo. So theo mã vật tư (không phân biệt hoa thường):
+
+- `OverBoq`: xuất ròng vượt hạn mức BOQ; chênh = xuất − hạn mức; mức Critical.
+- `Shortage`: nhu cầu đã duyệt chưa xuất vượt tồn; chênh = nhu cầu − đã nhận; Critical
+  khi tồn ≤ 0, còn lại Warning.
+
+Vòng đời `Open → Acknowledged → Resolved`. Người cung ứng được giao hoặc PM xác nhận
+cảnh báo Open với ghi chú 3–2.000 ký tự (không xoá chênh lệch). Resolved tự động khi
+dữ liệu hết vi phạm, tự mở lại khi vi phạm quay lại. Mỗi sự kiện ghi
+`MaterialAlertEvent`. Duyệt BOQ, duyệt/huỷ MR, post/hoàn phiếu kho đánh giá lại sau
+commit (best effort).
+
+| Method | Route (dưới `.../procurement/material-alerts`) | Permission |
+|---|---|---|
+| `GET` | `/`, `/{id}` | `proc.material-alerts.view` |
+| `POST` | `/evaluate` (đối soát idempotent), `/{id}/acknowledge` | `proc.material-alerts.manage` |
+
+PM và Cung ứng xem và quản lý; Kho xem; BGD xem qua pattern view. Response không có
+đơn giá BOQ, giá thương lượng hay giá trị hợp đồng. Báo người được giao và PM (không
+trùng nếu là một người). Xoá dự án xoá cảnh báo và lịch sử.
+
+<a id="718-rfq-and-supplier-comparison"></a>
+
+### 11.5 RFQ và so sánh báo giá nhà cung cấp
+
+Nguồn: NIH-166, NIH-174/175/176 (kèm ghi chú nghiệm thu 7/9) và
+`Nicon_BreakTask_v1.xlsx` (danh sách, tạo/sửa và so sánh RFQ).
+
+Hợp đồng nghiệp vụ:
+
+- RFQ thuộc một Operational Project và giữ Customer của dự án. Cung ứng chọn dòng và
+  khối lượng từ Project BOQ VND đã duyệt (không vượt dòng nguồn). Mời một hoặc nhiều
+  vendor đang hoạt động; danh mục vendor là master data dùng chung, lời mời và báo giá
+  thuộc RFQ.
+- Giá thấp nhất hợp lệ (quy VND) được tô sáng, kể cả đồng hạng; vendor inactive vẫn
+  hiện giá như bằng chứng nhưng không được tô. Trọng số giá, thời gian giao, điểm
+  đánh giá vendor đã duyệt và điểm thương mại chấm tay cộng đúng 100%. Điểm chỉ để
+  tham khảo; chọn dưới điểm cao nhất cần lý do.
+- Award theo lô là nguyên tử: phân bổ từng dòng và khối lượng cho một hoặc nhiều báo
+  giá hợp lệ, mỗi khối lượng RFQ phải được phủ chính xác. Với Supply, phân bổ thủ công
+  vào nhu cầu MR đã duyệt chưa đáp ứng của cùng dòng BOQ (không vượt); Subcontract
+  không dùng MR. Mỗi vendor được chọn sinh một hợp đồng **Draft Downstream
+  Supply/Subcontract**; award không ký hợp đồng. Phân bổ RFQ-MR là giữ chỗ mua hàng,
+  không đổi trạng thái MR (chỉ phiếu nhập posted mới làm vậy).
+- Giá trị, khách hàng, dự án, vendor, phân loại của hợp đồng sinh từ award không sửa
+  qua editor hợp đồng chung; dòng đã award không sửa/thêm/chuyển qua endpoint cung ứng,
+  kể cả khi Draft. Ghi chú Draft, ký và thanh toán vẫn dùng luồng có sẵn.
+- Bid ghi tiền tệ 3 chữ cái và tỷ giá sang VND nhập tay, bất biến (VND = 1). Tổng
+  thương mại: chiết khấu (phần trăm hoặc số tiền, không cả hai) → cộng vận chuyển →
+  VAT. Giữ cả tổng gốc và tổng quy đổi. Đơn giá và thành tiền 4 chữ số, khối lượng 6;
+  giá trị hợp đồng quy đổi làm tròn 2 chữ số, đơn giá dòng hợp đồng giữ 4. Dòng hợp
+  đồng giữ đơn giá gốc quy đổi; header gồm thêm vận chuyển, chiết khấu, VAT phân bổ.
+  Đối soát chênh lệch qua snapshot thương mại bất biến của award, không sửa dòng.
+
+| Quyền | Cấp mặc định |
 |---|---|
 | `proc.rfqs.view` | Procurement, PM, BGD, ADMIN, SUPER_ADMIN |
 | `proc.rfqs.manage` | Procurement, ADMIN, SUPER_ADMIN |
 | `proc.rfqs.export` | Procurement, BGD, ADMIN, SUPER_ADMIN |
 | `proc.rfqs.award` | BGD, ADMIN, SUPER_ADMIN |
 
-Every endpoint additionally checks existing project access rules. Missing or
-out-of-scope resources return 404; unauthenticated and functionally unauthorized
-requests return 401 and 403 respectively. Cached idempotency responses recheck
-project scope, so removing membership also revokes replay access. The UI hides
-unavailable actions; the server independently enforces them. New role grants
-are added by migration without resetting unrelated role customizations.
+Owner RFQ phải là user Cung ứng đang hoạt động và là thành viên dự án (kiểm khi tạo,
+phát hành, award). Dự án Completed/Cancelled từ chối ghi. Award kiểm lại vendor active,
+revision/hạn bid, trạng thái dự án, owner và BOQ duyệt hiện tại trong transaction; có
+BOQ duyệt mới hơn thì huỷ RFQ cũ và lập RFQ mới.
 
-The RFQ owner must be an active Procurement user and current project member.
-Creation, issue, and award validate that relationship. Completed/cancelled
-projects reject writes. Award rechecks vendor activity, bid revision/expiry,
-project state, owner, and current approved BOQ inside its transaction. A newer
-approved BOQ requires cancelling the old RFQ and preparing a new one.
-
-RFQ-to-MR allocation is a purchasing reservation/coverage record, not physical
-fulfillment. It does not change Material Request status; posted Warehouse
-Receipts remain the only source for `PartiallyFulfilled` and `Fulfilled`.
-
-#### Lifecycle and concurrency
-
-| State | Permitted actions |
+| Trạng thái | Được phép |
 |---|---|
-| Draft | Edit scope, attach package files, issue, cancel with reason |
-| Issued | Submit quote revisions until deadline, withdraw current quote with reason, start evaluation, cancel with reason |
-| UnderEvaluation | Score quotations, batch-allocate eligible lines to approved MR demand, award, cancel with reason |
-| Awarded | View evidence and all generated contracts; close RFQ |
-| Closed / Cancelled | Read/export evidence |
+| Draft | Sửa phạm vi, gắn file gói, phát hành, huỷ (có lý do) |
+| Issued | Nộp revision báo giá tới hạn, rút báo giá hiện tại (có lý do), bắt đầu đánh giá, huỷ |
+| UnderEvaluation | Chấm điểm, phân bổ MR theo lô, award, huỷ |
+| Awarded | Xem bằng chứng và hợp đồng sinh ra; đóng RFQ |
+| Closed / Cancelled | Đọc/xuất bằng chứng |
 
-Issue freezes BOQ line descriptions, quantities, units, and invitations, creates
-portal tokens, and attempts vendor email delivery after persistence commits.
-Starting evaluation explicitly stops further quote submissions, including when
-done before the deadline. A quote revision never overwrites an earlier one.
-The latest revision is current even if withdrawn; withdrawing it does not revive
-an older revision. Missing price cells remain missing, while zero means a quoted
-free item. A partial current quotation can be scored and selected only for lines
-it quoted; whole-package selection still requires a complete quotation. Expired,
-withdrawn, inactive-vendor and superseded quotations cannot be awarded. Quote
-validity must cover the RFQ deadline.
+- Phát hành đóng băng mô tả, khối lượng, đơn vị dòng BOQ và lời mời, tạo token cổng,
+  gửi email cho vendor sau commit. Bắt đầu đánh giá dừng nhận báo giá, kể cả trước hạn.
+- Revision báo giá không ghi đè bản cũ; bản mới nhất là hiện tại kể cả đã rút, rút
+  không làm sống lại bản cũ. Ô giá trống là thiếu, 0 là miễn phí. Báo giá thiếu dòng
+  chỉ được chọn cho dòng đã báo; chọn trọn gói cần báo giá đầy đủ. Báo giá hết hạn,
+  đã rút, vendor inactive hoặc bị thay thế không award được. Hiệu lực báo giá phải phủ
+  hạn RFQ.
+- Mọi thao tác ghi cần `Idempotency-Key`; sửa, chuyển trạng thái, bid, award và gắn
+  file cần `rowVersion`/`If-Match`. Root, lịch sử báo giá, snapshot award và hợp đồng
+  sinh ra commit trong một transaction.
+- SQL Server: update lock trên root RFQ và các collection con theo thứ tự cố định;
+  application lock thuộc transaction tách tạo RFQ khỏi các thao tác RFQ khác (tạo
+  tuần tự giữa các dự án). Cấp mã BOQ revision, MR, phiếu nhập/xuất, payment request
+  giữ range trước khi đọc số kế tiếp. Lock RFQ và phân bổ MR có timeout 15 giây; hết
+  giờ trả conflict, client tải lại số khả dụng rồi mới thử lại.
+- File dùng validate và vòng đời Drive của ProjectDocument, category `Procurement`:
+  upload thành tài liệu dự án trước, rồi gắn vào gói RFQ Draft hoặc revision báo giá.
+  Form bỏ dở không xoá tài liệu. File khác dự án, đã gắn, hoặc đang chờ xoá không gắn
+  được; tải file kiểm lại scope; bằng chứng đã gắn không xoá qua endpoint chung. Cần
+  Drive đã cấu hình để upload.
+- Phát hành và award báo owner và PM qua notification template; worker 5 phút đánh dấu
+  RFQ quá hạn (Issued/UnderEvaluation) và báo một lần (dấu và notification cùng
+  transaction).
+- RFQ không có hard delete; giữ bằng chứng qua huỷ. Xoá dự án, vendor được mời hoặc hợp
+  đồng đã award coi RFQ là blocker.
 
-Vendor responses include the read-only `isActive` flag. An inactive vendor's
-quoted amounts remain visible as historical evidence, but receive no lowest-price
-highlight even when tied with an active vendor. Valid lines in an active partial
-quotation still participate in line-price comparison; whole-package award
-eligibility remains separate.
+Route `/api/operational-projects/{projectId}/procurement/rfqs` (và `/api/v1`):
 
-Mutations require `Idempotency-Key`; updates, transitions, bids, award, and file
-attachment also require `rowVersion` or matching `If-Match`. Reusing a key with
-another payload or submitting stale state returns 409. Root changes, quotation
-history, award snapshot, and generated contract/lines commit transactionally.
-Rejected business operations leave them unchanged. Audit records include actor,
-project, RFQ, action, and resulting status. RFQ activity history is persisted
-alongside the operation.
-
-SQL Server mutations take update locks on the RFQ root and its owned collections
-in a fixed order. Serializable isolation remains in place for dependency checks.
-This prevents two RFQs from sharing an index gap while reading child history and
-then deadlocking when both append records. BOQ revision and MR/receipt/issue code
-allocation similarly reserve their ranges for update before reading the next
-number, as does the downstream payment-request code allocator. A transaction-owned
-SQL application lock excludes RFQ creation from concurrent RFQ mutations because
-EF inserts new children in a different order from existing-graph reads. Creation
-is serialized across projects; existing RFQ mutations share the gate and retain
-their root/child locks. Ordinary detail reads retain their existing query behavior.
-
-The joined warehouse flow also serializes its transactional writes with a
-transaction-owned SQL application lock. This prevents stock scans and document
-writes from taking conflicting root/child locks across projects while preserving
-Serializable stock validation. Warehouse list reads explicitly use ReadCommitted
-so they do not inherit a stronger isolation level from a reused connection.
-The tradeoff is serialized warehouse writes across projects; the validation below
-proves the tested workflow, not peak throughput or every possible database race.
-RFQ creation/mutation and project MR-allocation application locks use a 15-second
-timeout. A timeout returns a concurrency conflict; clients must reload current
-availability and retry instead of replaying stale quantities.
-
-#### Files and notifications
-
-Files use the existing ProjectDocument upload validation and Google Drive
-lifecycle under category `Procurement`. Uploads first become project documents;
-selecting a file attaches it to a draft RFQ package or a submitted quote revision.
-An abandoned form does not delete an uploaded project document: it remains
-available in the project's document library. Each linked file records RFQ source
-identity and package or vendor/revision slot. Cross-project, already-bound, and
-pending-deletion files cannot be attached. Downloads recheck RFQ/project scope.
-Linked evidence cannot be deleted through the generic document endpoint.
-
-Google Drive must be configured to upload; failures use the existing document
-service's cleanup behavior. No replacement file storage or vendor messaging
-integration is introduced.
-
-Issue and award notify the active RFQ owner and project PM through seeded in-app
-notification templates. A five-minute worker marks overdue issued/evaluating
-RFQs and notifies these recipients once. This marker is transactional with the
-notifications and does not invent another RFQ lifecycle state. Standard
-notification-template administration remains available. Issue and award
-delivery is best effort after the business transaction commits; delivery failure
-is logged and never reports that the persisted transition failed. The overdue
-worker keeps its marker and notification in one transaction so a failed delivery
-can retry on the next interval.
-
-RFQs retain purchasing evidence through cancellation rather than exposing a
-hard-delete operation. Project, invited vendor, and awarded contract deletion
-previews explicitly classify RFQs as blockers. These rules also apply to demo
-records. Removing the source project/vendor/contract must not erase RFQ history.
-
-#### API and field validation
-
-Base: `/api/operational-projects/{projectId}/procurement/rfqs`
-(also available under `/api/v1`).
-
-| Operation | Method / suffix |
+| Thao tác | Method / suffix |
 |---|---|
-| List / references / CSV export | GET `/`, `/references`, `/export` |
-| Detail / evidence export | GET `/{id}`, `/{id}/export` |
-| Create / edit | POST `/`, PUT `/{id}` |
-| Lifecycle | POST `/{id}/issue`, `/evaluate`, `/cancel`, `/close` |
-| Submit quote revision / withdraw | POST `/{id}/bids`, `/{id}/bids/{bidId}/withdraw` |
-| Score / batch award | POST `/{id}/bids/evaluate`, `/{id}/award-batch` |
-| Resend portal invitations | POST `/{id}/invitations/resend` |
-| Upload / attach existing file | POST `/documents/upload`, `/{id}/documents` |
-| Download RFQ file | GET `/{id}/documents/{documentId}/download` |
+| List / tham chiếu / CSV | GET `/`, `/references`, `/export` |
+| Chi tiết / gói bằng chứng JSON | GET `/{id}`, `/{id}/export` |
+| Tạo / sửa | POST `/`, PUT `/{id}` |
+| Vòng đời | POST `/{id}/issue`, `/evaluate`, `/cancel`, `/close` |
+| Nộp / rút báo giá | POST `/{id}/bids`, `/{id}/bids/{bidId}/withdraw` |
+| Chấm điểm / award theo lô | POST `/{id}/bids/evaluate`, `/{id}/award-batch` |
+| Gửi lại lời mời | POST `/{id}/invitations/resend` |
+| Upload / gắn file | POST `/documents/upload`, `/{id}/documents` |
+| Tải file | GET `/{id}/documents/{documentId}/download` |
 
-Public vendor portal endpoints are `GET /api/vendor-rfqs`,
-`POST /api/vendor-rfqs/bids`, and
-`GET /api/vendor-rfqs/documents/{documentId}/download`. The email URL stores the secret in the browser
-fragment; the SPA sends it in `X-RFQ-Portal-Token`, keeping it out of server URL
-logs and referrers. Tokens expire at the RFQ deadline and responses use
-`Cache-Control: no-store`. Public responses omit Customer, BOQ budget, competing
-quotations, users and internal history. Portal submissions require an idempotency
-key and revalidate RFQ state, deadline, vendor activity and commercial fields.
-The former `POST /{id}/award` whole-package endpoint returns 410 in deployed
-configuration. It can be enabled only in isolated compatibility test settings;
-production awards must use the batch endpoint and MR allocation contract.
+`POST /{id}/award` (award trọn gói cũ) trả `410` khi deploy; chỉ bật trong cấu hình test
+tương thích cô lập.
 
-`RfqRequests.cs` enforces shape, required fields, lengths, enums, and numeric
-ranges. `RfqService.cs` enforces the following business relationships. Forms
-mirror the editable constraints for feedback.
+Cổng vendor công khai: `GET /api/vendor-rfqs`, `POST /api/vendor-rfqs/bids`,
+`GET /api/vendor-rfqs/documents/{documentId}/download`. Token ngẫu nhiên nằm trong
+fragment URL email, SPA gửi qua header `X-RFQ-Portal-Token`; chỉ lưu SHA-256 của token.
+Token hết hạn ở hạn RFQ (`LastPortalAccessAt` chỉ là telemetry, không gia hạn);
+response `Cache-Control: no-store`, không chứa Customer, ngân sách BOQ, báo giá đối thủ,
+user hay lịch sử nội bộ. Nộp qua cổng cần idempotency key và kiểm lại trạng thái, hạn,
+vendor active, field thương mại. Gửi email lỗi được ghi lại; người có quyền xoay token
+và gửi lại. Ghi từ cổng dùng owner RFQ làm FK kỹ thuật, nhưng read model và sự kiện
+`portal-bid-submitted` ghi nhận vendor.
 
-| Field | Rule |
+Validate (`RfqRequests.cs` cho shape, `RfqService.cs` cho quan hệ):
+
+| Field | Quy tắc |
 |---|---|
-| Code, currency, project/customer, totals | Server generated or derived; not writable in RFQ requests |
-| Title | Required after trimming, maximum 200 characters |
-| BOQ revision | Approved VND revision in the selected project; award requires current approved revision |
-| Owner | Active Procurement member of the same project |
-| Due date | Future timestamp with timezone; issue requires it still be in the future |
-| Vendor IDs | 1–100 unique, active Supplier/SubContractor/Both IDs |
-| BOQ lines | 1–500 unique source lines from selected revision |
-| Quantity | Positive, ≤ approved quantity, ≤ 6 decimal places |
-| RFQ / quotation notes | Optional, trimmed, maximum 2000 characters |
-| Quote vendor | Active invited vendor of the same RFQ |
-| Quote lines | 1–500 unique RFQ line IDs; omitted lines remain missing |
-| Unit price | 0–999999999999.9999, ≤ 4 decimal places |
-| Line / quotation total | ≤ 99999999999999.9999 VND |
-| Delivery lead time | Whole days, 0–3650 |
-| Payment terms | Required after trimming, maximum 1000 characters |
-| Quote validity | Zoned timestamp, unexpired, on/after RFQ deadline |
-| Quote file IDs | 0–20 unique, unbound, available Procurement files in same project |
-| Scoring weights | Four values from 0–100 totaling exactly 100 |
-| Commercial score | 0–100 with 3–2,000 character evidence note |
-| Bid currency / FX | Three-letter code; positive manual rate; VND rate is 1 |
-| Commercial totals | Non-negative freight and VAT; discount is percentage or amount, not both |
-| Batch award | Current unwithdrawn bid line; every RFQ quantity covered exactly |
-| MR allocation | Required for Supply only; approved/partially fulfilled MR, same project and BOQ line, no over-allocation |
-| Contract type | Supply/Subcontract compatible with the selected vendor type |
-| Award/cancel/withdraw reason | 3–2000 characters after trimming |
-| Row version | Required existing 8-byte concurrency token for changes |
-| List query | Search ≤ 200 chars; valid status/owner/date range; whitelisted sort; page 1–1000000; page size 1–100 |
-
-Deadlines are stored and returned as UTC. UI date filters convert local start/end
-of day to UTC. CSV cells neutralize formula prefixes.
-
-#### Migration and demonstration
-
-`20260908134224_AddRfqBidComparison` adds seven tables, indexes, restrictive
-cross-aggregate foreign keys, and RFQ permission grants. It does not rewrite
-existing business data. Review deployment backups before rollback: `Down` drops
-RFQ evidence and removes this capability's permission assignments.
-
-`20260909050114_CompleteRfqWorkflow` adds scoring, invitation delivery metadata,
-commercial snapshots, split-award records and MR allocation records. Existing
-RFQs are backfilled with 50/20/20/10 scoring weights; existing bids are preserved
-as VND at rate 1 with their previous total copied to subtotal and original total.
-Rollback drops only the extension tables and columns, so back up split-award and
-portal-delivery evidence before downgrade.
-
-RFQ demo data is enabled only for the backend `Development` environment.
-Integration/E2E fixtures may also create their own isolated rows. Production
-startup does not create a `PJ-SAMPLE-RFQ` project or any other business sample
-rows. Production reference options come from the API, not hardcoded React
-values.
-
-### 7.19 KPI Framework and Source Evidence
-
-#### KPI scope
-
-The KPI platform currently implements 19 metric definitions in six scorecard
-groups: Sales, Tendering, Design, Site, Procurement, and Project Accounting.
-This is the delivered, source-backed subset of the target NICON 11-position
-framework; it must not be described as complete coverage of all 11 positions.
-Only metrics backed by structured source events are calculated. A missing
-source workflow is reported as `MissingData`; it is never converted to a zero
-score.
-
-#### Platform contract
-
-- One period exists per employee, year, and month.
-- Period boundaries use `Asia/Ho_Chi_Minh` and are stored as UTC.
-- Active definition weights cannot exceed 100% for a KPI position.
-- A period can be locked only when every active metric is `Available` and the
-  snapshot weights equal 100%.
-- Snapshots freeze the definition code, version, weight, target, scoring
-  direction, threshold, result, and source evidence.
-- A locked period is immutable and cannot be recalculated.
-- Automatic calculation runs daily at 01:00 Vietnam time. Authorized users may
-  also calculate manually.
-- A configured low-score threshold produces at most one notification per
-  employee and period.
-- `analytics.kpi.view` is own-scope. `view.all`, `manage`, and `export` grant
-  cross-user viewing, definition/period management, and export respectively.
-
-#### User interface routes
-
-- `/admin/kpi` is the KPI evaluation workspace. It selects the employee and
-  period, calculates scores, displays source evidence, exports results, and
-  locks complete periods.
-- `/admin/kpi/configuration` is the KPI definition workspace. It edits weights,
-  targets, direction, alert thresholds, and active state, and requires
-  `analytics.kpi.manage`.
-
-The evaluation route does not render or load definition configuration. The
-configuration route does not load employee dashboards or expose calculate,
-export, or period-lock actions.
-
-Both routes include an expandable, four-language usage guide. Evaluation
-explains the four-step workflow, data statuses, and irreversible period lock.
-Configuration explains each field and shows live readiness per role: active
-weight total, missing required targets, and whether the role is ready to score.
-The `RequiresTarget` flag is supplied by the backend definition contract so the
-frontend does not duplicate formula rules.
-
-#### Metric traceability
-
-| Position | Metric | Weight | Source | Status |
-| --- | --- | ---: | --- | --- |
-| Sales | Lead-to-contract conversion | 40% | Lead owner, creation and conversion events | Implemented |
-| Sales | New signed contract revenue | 40% | Upstream customer Contract owner, signed date and value | Implemented; target required |
-| Sales | First customer interaction time | 20% | Lead creation and first non-note activity | Implemented; target required |
-| Tendering | Tender win rate | 40% | Tender preparer, first submission date and current result | Implemented |
-| Tendering | On-time tender preparation | 30% | Tender checklist owner/deadline/completion | Implemented |
-| Tendering | Tender estimate accuracy | 30% | Approved tender estimate versus final execution BOQ | Implemented |
-| Design | On-time drawing delivery | 40% | Design schedule task assignee, planned/actual end | Implemented |
-| Design | First-pass drawing approval | 30% | Drawing owner, approval/release and revision count | Implemented |
-| Design | Site-reported design errors | 30% | Verified Punch Items with confirmed Design root cause | Implemented; target required |
-| Site | Construction progress variance | 30% | Construction task owner and planned/actual duration | Implemented; target required |
-| Site | Material waste rate | 30% | Excess posted warehouse issue quantity versus final BOQ allowance | Implemented; target required |
-| Site | First-pass acceptance | 20% | Acceptance creator, approval and revision count | Implemented |
-| Site | HSE violation count | 20% | Confirmed HSE violations attributed to the responsible site user | Implemented; target required |
-| Procurement | Purchase cost optimization | 40% | Final BOQ unit ceiling versus signed downstream Contract line cost | Implemented |
-| Procurement | Delivery time | 30% | Approved Material Request to final posted Warehouse Receipt | Implemented; target required |
-| Procurement | Vendor quality rating | 30% | PM-approved per-contract Vendor Rating | Implemented |
-| Project Accounting | On-time receivable collection | 40% | Due-month upstream milestones attributed to an accountant | Implemented |
-| Project Accounting | Partner payment processing time | 30% | Validated Payment Request to paid timestamp | Implemented; default target 72 hours |
-| Project Accounting | Financial data accuracy | 30% | Approved post-close Accounting Corrections | Implemented; default target 1 correction |
-
-#### KPI Source Evidence
-
-KPI sources must satisfy these rules:
-
-1. Store an explicit `OperationalProjectId`, responsible employee ID, event
-   timestamp, lifecycle status, creator/updater, and row version.
-2. Capture responsibility on the source event. Do not derive historical KPI
-   ownership from the employee's current role or the project's current team.
-3. Count only terminal business events such as `Approved`, `Confirmed`,
-   `Posted`, or `Paid`. Draft, rejected, cancelled, and deleted records are not
-   KPI evidence.
-4. Use a half-open Vietnam-time interval: event timestamp is greater than or
-   equal to period start and less than period end after conversion to UTC.
-5. Make approved or posted financial and inventory records immutable. Correct
-   them through a linked reversal or a new version, not an in-place edit.
-6. Require `Idempotency-Key` on creates and transitions, and row version or
-   `If-Match` on updates. Replayed requests return the original response;
-   conflicting payloads return `409`.
-7. Apply project visibility through `IProjectAccessService` in addition to the
-   global permission. An inaccessible project returns `404`.
-8. Write standard audit events for every transition. Evidence JSON stores the
-   source entity type, record IDs, source version, responsible user, and event
-   timestamp used by the calculation.
-9. A period with no qualifying denominator or no approved source records stays
-   `MissingData`. It is never scored as zero.
-10. A locked KPI snapshot remains immutable even if source records are later
-    corrected. Recalculation of locked periods requires a separately approved
-    reopen workflow.
-
-The implementation assumptions retained below describe the current code. They
-must not be presented as NICON-approved business decisions when they are absent
-from or conflict with the controlling 03/10 baseline. Consult the current
-controllers/DTOs for actual API behavior and `docs/Nicon-QLVH.md` for the target
-business contract.
-
-| Decision | Current implementation assumption |
-| --- | --- |
-| D-01 | The seed defines six functional permission groups: CRM, HR, Procurement, Construction, Design, and Finance. HR is separate from Finance; Legal currently uses the Construction permission group. These are technical access baselines, not an approved six-department organization chart. The 03/10 five-department structure and Procurement/Legal placement remain Q-04. |
-| D-02 | The latest approved execution BOQ is selected atomically as final when the Operational Project completes. VOs affect it only through an explicitly approved BOQ revision. |
-| D-03 | Verified Punch Items with confirmed Design root cause count equally against the responsible designer; severity is evidence, not a KPI weight. The fixer is not automatically the responsible designer. |
-| D-04 | Confirmed HSE violations count equally against the responsible site user. Draft, Reported, Rejected and Cancelled records and diary text do not count. |
-| D-05 | Material waste is `100 * max(net posted issues - final BOQ allowance, 0) / allowance`. Missing or zero allowance must not become a synthetic score. |
-| D-06 | Procurement delivery measures calendar hours from MR approval to the final posted receipt that completely fulfills the request. Partial receipts do not stop the clock. |
-| D-07 | One scorecard version per completed downstream contract; quality, schedule, cost and HSE have equal weights. Procurement prepares it; the project's PM approves it. One approved rating is a valid sample. |
-| D-08 | Receivable collection uses upstream milestones due in the month, attributed to the stored responsible accountant. Only full Paid status on/before the due date qualifies; unpaid overdue milestones fail. |
-| D-09 | Payment processing measures calendar hours from ValidatedAt to PaidAt, attributed to the assigned accountant. Time before validation, rejected requests and incomplete documents are excluded. |
-| D-10 | Each approved post-close accounting correction counts once against the original entry's responsible accountant. Reversing it preserves that count and adds no second count. |
-| D-11 | Deploy complete source workflows together. Numeric targets remain administrator configuration; periods cannot lock while any active metric lacks source data or configuration. |
-
-Sources retain explicit project, employee, actor, timestamp, status and version
-identities. HSE is separate from Punch Items. Receivable evidence extends
-`ContractPaymentMilestone` and its append-only events. Payables use
-`PaymentRequest`; post-close corrections use `AccountingPeriod` and
-`AccountingCorrection`, not generic audit rows. Procurement ratings require
-independent PM approval. Do not infer historical responsibility from current
-roles, teams or the user who happens to record a payment.
-
-Source migrations include `AddPunchRootCauseAttribution`,
-`AddReceivableAccountability`, `AddHseViolations`, `AddProcurementControlChain`
-and `AddFinanceControlWorkflows`. Existing unattributed Punch Items and
-milestones remain excluded until explicitly classified or assigned. Do not
-synthesize approved events or split historical contract values into lines.
-Opening-balance imports require source hash, importer, timestamp, preview,
-validation and explicit confirmation. A partial historical month is not a
-complete sample. KPI definitions/periods/snapshots have no user-facing hard-delete
-operation; deactivation preserves definitions and locked evidence.
-
-Validate source authorization, project scope, role separation, idempotency,
-stale writes, duplicate keys, immutable approvals, reversals and unchanged state
-after rejection through integration tests. Pure formulas, zero denominators,
-targets, weights, precision and Vietnam-time boundaries belong in unit tests.
-
-### 7.20 Construction workspace information architecture (frontend)
-
-The Construction menu is split by role, and each screen belongs to exactly one
-menu entry.
-
-| Group | Route | Content |
-|---|---|---|
-| Site Command Board (BCH) | `/admin/construction/bch/operations` | Tabs `resources` (`ResourceRequestsPanel`) and `diary` (`SiteDiaryPanel`) |
-| | `/admin/construction/bch/qa-qc` | Tabs `dossiers`, `punchlist`, `acceptance`, `hse`, each hidden without its view permission |
-| | `/admin/construction/bch/qs` | `QsBatchesPanel` |
-| CM Office | `/admin/construction/cm/schedule` | Tabs `plan` (`CmScheduleWorkspace` + `CmPreparationSection`), `tasks` (`ConstructionTasksPanel`), and `diary` (`SiteDiaryPanel`, review scope) |
-| | `/admin/construction/cm/commercial` | Tabs `resources` and `qs` |
-| | `/admin/construction/cm/quality` | Tabs `dossiers` (+ `QaQcTemplatesSection` for template managers), `punchlist`, `acceptance`, `asbuilt`, `handover` |
-| | `/admin/construction/cm/safety` | `HseViolationsPanel` |
-| | `/admin/construction/cm/contracts` | `CmContractsPanel` |
-
-Every portal and area page wraps its content in `ConstructionWorkspaceShell`.
-The shell owns page chrome (one header, no nested main frame), loads the
-operational project list, keeps `?projectId` in the URL, falls back to the
-first project and writes that fallback to the URL, resolves
-`adminApi.getOperationalProject(projectId)`, and passes
-`{ projectId, designProjectId, designProjects }` to its render-prop child.
-Retry after a failed load increments a reload key that both the project list
-and project-scope effects depend on.
-Resource, QA/QC and QS records persist against the operational project; diary,
-punch list, acceptance, as-built, handover and construction tasks persist
-against the design project. Area pages read `?designProjectId` when present and
-otherwise use the linked design project; when an operational project has more
-than one design project, `CmAreaPage` shows a bounded selector and keeps the
-choice in the URL.
-
-Business pages are exported as named panels — `ResourceRequestsPanel`,
-`QaQcDossiersPanel`, `QsBatchesPanel`, `HseViolationsPanel`, `SiteDiaryPanel`,
-`PunchListPanel`, `AcceptanceRecordsPanel`, `AsBuiltDocumentsPanel`,
-`HandoverRecordsPanel`, and `ConstructionTasksPanel`. Each takes either
-`projectId` (operational anchor) or `designProjectId` (design anchor) plus
-`scope: "execute" | "review"` from `constructionScope.ts`:
-
-- `scope` is the portal context (approval surface and copy), not a management
-  gate. Capabilities come from permission plus scope through
-  `useConstructionActions(scope, { manage, supervisor, approve })` in
-  `constructionScope.ts`:
-  - `canManage` requires the module's `manage`/`create` permission, or, in
-    `review` scope, the `cm-review` supervisor permission.
-  - `canApprove` is `review` scope only, so BCH never renders approve, reject,
-    confirm, verify, close, or complete even where a wildcard grants the action.
-  - Row editing and deletion require `canManage` and either supervisor context
-    or authorship (`canEditRow`).
-- CM therefore creates, updates, submits, deletes, and monitors records that
-  BCH executes, including records authored by BCH. BCH portals show create,
-  edit, submit, report, and remediate for the signed-in author's drafts.
-- The site diary is reachable from both BCH operations (execute) and the CM
-  schedule area (review). Confirm/reopen stays permission-based and
-  review-scoped; BCH cannot confirm.
-- Independent review remains enforced server-side; `ConstructionReviewActions`
-  renders the "different reviewer required" message when the current user
-  authored the record. A CM supervisor who edits a BCH draft does not become
-  its author, so `createdByUserId ≠ approverUserId` still holds.
-
-Resource requests, QA/QC dossiers, QS batches, and HSE violations expose
-`DELETE` endpoints behind the same manage/supervisor gate. Hard delete is
-limited to Draft and CmRejected records (HSE: Draft, Rejected, Cancelled);
-submitted, approved, and closed records must move through their status
-transitions. Deletes remove only the child record and never touch linked
-project documents, which are independent roots. The HSE delete action is
-`construction.hse.delete`; PM receives it through the grow-only wildcard
-reconciliation in `RbacSeeder`, while BCH roles only hold `hse.manage`.
-
-Tab state is stored in `?tab=` with `replace`, and hidden tabs are skipped when
-choosing the default. Tab visibility uses the view permission union of the
-route guard, while menu visibility uses reviewer permissions only.
-
-#### Construction development sample data
-
-`ConstructionSampleSeeder` runs only when `DbSeeder` is called with
-`includeDevelopmentSamples` (the Development environment) and seeds project
-`PJ-SAMPLE-003` so every CM and BCH screen has at least one record in each
-workflow state: one published preparation version with all baseline references,
-two published QA/QC templates, four QA/QC dossiers (`QA-SAMPLE-001`–`004`)
-covering CM-approved, pending, draft, and rejected, three QS batches
-(`QS-SAMPLE-001`–`003`) covering both directions and three statuses, and five
-HSE violations (`HSE-SAMPLE-001`–`005`) covering draft, reported, confirmed,
-remediated, and closed with their transition events. The seeder also grants the
-site commander, site QA/QC, and quantity surveyor membership of the project.
-Each block is idempotent by its own marker (sample code prefix or
-`WBS-BASELINE-ANPHU-R1`), so it never duplicates or rewrites existing rows; it
-also tolerates the missing sample project and returns without changes.
-Resource-request samples come from `SampleCrmDataSeeder` (`RR-SAMPLE-ANPHU-*`).
-Never rely on these codes in production logic; they exist for live UI review
-only.
-
-#### UI guidance and translation updates
-
-Form fields that a first-time user cannot infer carry a placeholder example and
-a one-line hint under the input. The hint is linked with `aria-describedby`, so
-the text is announced with the field and is never the only clue.
-
-`TranslationSeeder` only inserts missing keys. Changing the wording of an
-already-seeded key therefore needs both an `old` object beside the new value in
-the i18n entry and a guarded data migration (see
-`SyncConstructionGuidanceTranslations`), otherwise existing databases keep the
-old text. `GET /api/translations/{lang}` is served from a process cache, so a
-value change needs a backend restart even after the migration runs.
-
-Legacy URLs redirect through `ConstructionRedirect.tsx`, preserving all query
-parameters (except `area`) and the hash: `/construction/cm?area=` picks the
-first permitted area; `/progress` and `/tasks` go to the CM schedule;
-`/diary`, `/bch/resource-requests`, `/punchlist`, `/acceptance` and `/hse`
-resolve to the BCH portal or CM area based on reviewer permissions;
-`/asbuilt` and `/handover` go to the CM quality tabs.
-`/admin/construction/asbuilt-categories` remains a standalone route linked from
-the as-built panel.
-
-### 7.20 Module 4 Target Integration Contract
-
-This section records the target contract synthesized for the expanded
-Construction and Acceptance module. The 03/10 baseline confirms the CM/BCH
-split, resource requests, QA/QC and QS; detailed gates, matrices and templates
-remain subject to the open decisions in `docs/Nicon-QLVH.md`. It is not a claim
-that every item below is customer-approved or exists in the current API.
-
-#### CM schedule comparison API — Partial
-
-The `/api` and `/api/v1` route families expose
-`/operational-projects/{projectId}/construction/schedule`:
-
-| Method/path | Permission | Purpose |
-|---|---|---|
-| `GET /` | `construction.tasks.view` | CRM revision, linked/unlinked tasks, CM versions, snapshots, actual input values and eligible BCH members |
-| `POST /baselines` | `construction.cm-preparation.manage` | Create a numbered draft, bounded by the current published CRM revision |
-| `GET /baselines/{id}/email-preview` | same manage permission | Preview the rendered approval email before submission |
-| `POST /baselines/{id}/submit` | same manage permission | Queue the previewed email and request independent PM review |
-| `POST /baselines/{id}/decision` | `construction.cm-preparation.view` | Approve or reject as the assigned PM, with author/reviewer separation |
-| `POST /tasks/{taskId}/actual` | `construction.tasks.view` | BCH Site Manager updates the assigned task's progress with stale-write protection |
-| `POST /snapshots` | `construction.tasks.view` | Capture progress against the latest published CRM and CM versions; incomplete BCH reports do not create snapshots |
-| `GET /baselines/{baselineId}/report?period=day|month|year&throughDate=...` | `construction.tasks.view` | Return CRM/CM curve and period-end BCH snapshots; absent actual data is null |
-| `POST /snapshots/{id}/recovery` | `construction.tasks.view` | Add explanation and recovery plan to an over-threshold snapshot |
-| `POST /snapshots/{id}/review` | `construction.cm-preparation.manage` | Record the independent CM review of a recovery plan |
-
-Mutations use idempotency keys; baseline and snapshot transitions use row
-versions. On 2026-11-09 NICON delegated S-Curve decisions to the product owner.
-The owner decided that CM assigns 0–100 scope shares to WBS leaves totaling
-100%, records the scope/quantity/complexity basis (BOQ is not required), and PM
-independently approves; summary rows and milestones have zero share. A new
-baseline freezes its working weekdays and exception dates (default Monday–
-Saturday, Sunday off); legacy baselines use all seven days to preserve their
-calendar-day curve. Planned progress advances across working days. BCH actual
-comes from `ConstructionTask.ProgressPercent` and stores reporting actor/time.
-With a published CM baseline, both the legacy task-update/progress routes and
-the CM actual endpoint require the assigned Site Manager to have an active
-account and project membership that has started and has no end date. A retained
-baseline assignment does not grant reporting rights after membership ends.
-`20261109130000_SyncCmScheduleTranslations` upgrades the former calendar-duration
-guidance and scope-share/date labels in all four languages only when a stored
-value still matches its old default; administrator wording is preserved.
-Once per minute, a worker snapshots complete inputs and deduplicates identical
-inputs for that date. Incomplete reports skip snapshot creation; reports expose
-missing actuals as null, never 0% or an interpolated value. Monthly/yearly
-series use period-end values. Published baselines are immutable; changes create
-a new independently reviewed version. `delay = plan - actual` in percentage
-points; only values strictly above the configured threshold (default 5) queue
-one alert per baseline/date and require the Site Manager's explanation, recovery
-plan and due date. This decision was delegated by NICON, not newly confirmed
-directly by NICON. Portfolio S-Curve aggregation remains out of scope.
-
-#### Construction task drawing links
-
-`GET /api/construction-tasks/{id}/drawings` returns `version`, `linked` and
-`available`. Both this route and its `/api/v1` alias require
-`construction.tasks.view` and access to the task's project. Candidates are
-same-project Shop Drawings in a `Released` IFC packet with a release date;
-the drawing itself must still be `Released`. No draft drawing is returned.
-
-`PUT /api/construction-tasks/{id}/drawings` requires
-`construction.tasks.manage` and accepts
-`{ "version": "<GUID from GET>", "ifcReleaseItemIds": [123] }`.
-The list is required, may be empty to unlink, and permits at most 200 distinct
-positive IDs. Validation rejects missing, duplicate, foreign-project or
-unreleased IDs with 400 without changing links. A stale version returns 409;
-retrying the already-persisted desired set returns 200. EF checks the task's
-concurrency token and saves the link changes and actor/timestamps atomically.
-Concurrent additions that hit the unique link index and referenced records
-deleted during a save also return 409; SQL can insert link rows before checking
-the parent's version. Retrying the persisted selection returns 200 without
-duplicating links or changing the winning version.
-
-`ConstructionDrawingConcurrencyTests` exercises these interleavings on SQL Server
-using a generated `NiconDrawingTest_<GUID>` database and a save barrier. Set
-`NICON_SQL_TEST_CONNECTION` in an SDK container to a SQL Server connection with
-permission to create/drop test databases, then run
-`dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj --filter FullyQualifiedName~ConstructionDrawingConcurrencyTests`.
-The fixture replaces the supplied database name and only cleans up its generated
-catalog. Without the connection variable this SQL-specific test is skipped;
-InMemory tests do not establish SQL unique-index concurrency behavior.
-
-`GET /api/construction-tasks/{id}/drawings/{itemId}/content` uses construction
-view permission and project scope, and serves only a linked, released drawing
-through the existing managed-file resolver. Missing/unlinked files return 404.
-This does not grant access to draft design documents or design-management APIs.
-
-Links are children of the existing compatibility `ConstructionTask`, whose
-`DesignProjectId` resolves project access through its Operational Project; no
-new project aggregate is introduced. An IFC item is referenced by stable ID.
-The displayed R number is the last immutable drawing-revision metadata created
-on or before the IFC release date (R0 when none exists); it is not a file diff
-or a new versioned-file repository. Released Shop Drawing files remain locked
-by the existing design workflow. Removing a link does not delete its drawing,
-IFC packet or file. Project aggregate deletion includes the owned links in the
-impact plan and removes them before IFC items.
-
-Shop Drawing upload now rejects both `Released` status and membership in a
-released IFC packet. Status and file path are EF concurrency tokens, so an
-upload racing with IFC release cannot silently replace the issued file; the
-losing write returns 409 and upload cleanup preserves the original file.
-
-Migration `AddConstructionTaskDrawingLinks` adds the link table and a task
-concurrency token. Existing tasks start with no links; no label-based backfill
-is attempted. Rollback drops link data and the token, preserving tasks and
-drawings; export links before rollback if they must be retained.
-
-#### Delivered CM/BCH workflow slice
-
-`/admin/construction/cm` groups existing controls into five permission-filtered
-areas: Schedule (preparation), Quantity and cost (resource/QS reviews), Quality
-(dossiers and template tools), Safety and Contracts. The last two link to their
-existing pages using the selected Operational Project filter. Template management
-keeps its independent capability; lacking dossier view permission suppresses
-dossier/template-list reads, not the authorized template-create action. This is
-a navigation grouping and adds no schedule aggregation or authorization bypass.
-
-Procurement Control's Contract lines tab links to
-`/admin/contracts?direction=Downstream&operationalProjectId={id}` when the user
-has `crm.contracts.view`. The existing registry handles the direction/project
-filters and authorization; no new Contract store or mutation permission is added.
-
-The Operational Project route family
-`/api/operational-projects/{projectId}/construction` now exposes versioned CM
-preparation/readiness, typed resource requests, QA/QC templates and dossiers,
-and direction-explicit QS batches. Mutations require idempotency keys and use
-row-version concurrency. Permissions separate BCH create actions from CM
-review/start actions, and services reject author self-review. Material approval
-reuses `IProcurementService` in the same relational transaction to create and
-submit the existing Material Request; equipment/labour records stop at an
-explicit downstream-ready state.
-
-The readiness service verifies the signed Upstream construction contract,
-released IFC, required valid permits, preparation references, locked Budget
-Baseline, and any preparation flags for site handover, method statement and HSE
-plan. It persists the evaluated evidence snapshot and actor. Published
-preparations are superseded by a new draft rather than overwritten.
-
-QA/QC dossiers require a published multilingual template, a same-project
-released IFC packet, valid checklist JSON and active same-project Project
-Documents. Each evidence document retains its explicit classification; legacy
-document-ID payloads remain accepted without inferring a type from the file name.
-QS validates contract direction, dates, quantity-line totals,
-milestone/appendix/approved BOQ references, and governed superseding or reversal
-references. Submitted records are immutable except through the documented
-review/correction lifecycle.
-Generic and source-managed document deletion reject QA/QC and QS evidence
-links, including draft links. Creating or editing either dossier pins each
-active document's row version in the same transaction as its evidence links;
-a delete staged before that link commits fails concurrency rather than removing
-the file or its source record. Deleted or delete-pending documents cannot be
-newly attached. SQL Server regression tests cover both winning orders for
-create/update and manual/source-managed deletion.
-
-This is a partial delivery of the target below. The CM schedule slice persists
-versioned single-project WBS plans and scope shares, a frozen calendar, explicit
-BCH actual reporting and timestamps, period-end reports, independent PM review,
-and delay/recovery workflow. S-Curve decisions were delegated by NICON to the
-product owner on 2026-11-09; this is not new direct NICON approval. Portfolio
-S-Curve aggregation, Finance eligibility for Equipment/Labour, approved NICON
-ISO template content, legacy Design Project construction aggregates and
-offline/reconnect behavior remain outside this delivery.
-
-#### Procurement resource handoff API — Partial
-
-Both `/api` and `/api/v1` expose the following under
-`/operational-projects/{projectId}/procurement/construction-resources`:
-
-| Method/path | Permission | Contract |
-|---|---|---|
-| `GET /` | `proc.resource-requests.view` | CM-approved Equipment/Labour only; optional `type=Equipment|Labour` and `state=AwaitingContract|ContractLinked|Supplied`; project scope enforced |
-| `GET /contracts` | same view permission | Minimal same-project Downstream Supply/Subcontract references in Draft/Signed/InProgress |
-| `GET /documents` | `proc.resource-requests.manage` | Active same-project document IDs/names; pending deletion excluded |
-| `POST /contracts` | same manage permission | VendorId, Type, Value, optional ScopeOfWork; reuses ContractService and creates only a Downstream Draft owned by the actor, using the project's customer; requires an approved equipment/labour request |
-| `POST /{id}/contract` | same manage permission | ContractId and RowVersion; one contract per request, many requests per contract; relinking forbidden after supply |
-| `POST /{id}/supply` | same manage permission | DocumentId and RowVersion; requires Signed/InProgress contract, records server UTC time, actor and evidence |
-
-All POST operations require `Idempotency-Key`; link/supply accept the existing
-body/If-Match concurrency convention. Positive IDs, enum values and token format
-are validated; invalid transitions/references return 400, inaccessible projects
-or requests return 404, missing permissions return 403, stale versions return
-409. Draft Value is a non-negative decimal up to 9,007,199,254,740,991 (the web
-client's safe numeric range); optional scope is trimmed, max 20,000 characters.
-No supplied timestamp, actor, customer, project or direction is accepted from
-the draft/supply body. Contract identity cannot move while resource links exist.
-
-The original `HandoffStatus` remains compatible. New typed contract/supply
-fields and append-only handoff events are authoritative for this slice. A single
-SaveChanges writes each mutation and event within a relational serializable
-transaction; failed decisions do not create supply or Finance state. The web
-draft form retains its idempotency key when retrying the same payload after a
-lost response. Supply confirmation advances the evidence document's existing
-row version in the same transaction. A manual or managed-file deletion staged
-against its previous version fails with HTTP 409, rolling back the source
-metadata removal before physical cleanup. Existing references reject deletion
-with HTTP 400; Drive retry remains available. Contract/project deletion impact
-includes the new resource blockers. SQL concurrency regressions use
-`NICON_SQL_TEST_CONNECTION` to create and clean only generated
-`NiconEvidenceTest_<GUID>` databases; they never use the supplied catalog.
-
-`GET /reports/projects` adds `cmControl` per project: separate active approved QS
-directions, QA/QC and HSE counts/statuses/source links, generation timestamp and
-`periodPolicy=CurrentState`. Counts are records, not physical quantities or
-percent completion. These sources are not historical date-filter snapshots.
-Each approved, active QS source also carries its own certified amount and
-period; these are individual record facts, not an executed-value aggregate.
-Source-permission denial returns Unavailable, a null count and no links. Budget
-comparison remains Unavailable; no new financial formula is inferred.
-
-Migration `20261018063226_AddConstructionProcurementHandoff` adds nullable
-contract/supply fields, restrictive evidence/contract FKs and the history table.
-No existing request is backfilled as supplied. Inspect/generate its SQL and apply
-through the actual backend container before using the new API. A code rollback
-should retain the additive schema; `Down` drops supply/history data and requires
-backup and explicit operational approval once real records exist. SQL Server
-application/rollback rehearsal is still required when the Docker stack is
-available. Sample An Phu crane/crew requests demonstrate approved/pending work
-without fabricating supplied documents, payments or ISO templates.
-
-**Open decision / input gate:** the ISO pack was subsequently uploaded to
-`docs/Nicon/ISO/` on 20 October 2026. The earlier absence of source files is
-resolved; approved process/step mapping, package-specific payment exceptions,
-executed-value formula and reporting period are still missing. Do not publish
-production ISO templates or enable Phase 3/4 financial/baseline calculations
-until CM/FA/Product confirm those inputs. No fallback document list or formula
-is seeded.
-
-#### Kế hoạch hoàn thiện theo phản hồi NICON
-
-Kế hoạch được hợp nhất tại [mục 12](#12-kế-hoạch-hoàn-thiện-theo-yêu-cầu-nicon)
-để dùng chung phụ thuộc, điều kiện nghiệm thu và migration với CRM, Thiết kế,
-Drive và Tài chính. Các gói ISO/CM/BCH/FA tại đó là **Target**; các ma trận và
-công thức chưa được xác nhận vẫn là **Open decision**. Phản hồi nguồn tiếp nhận
-18/10/2026 và bộ ISO nhận 20/10/2026 tiếp tục là đầu vào; không coi việc lập kế
-hoạch là bằng chứng đã triển khai hoặc NICON đã nghiệm thu.
-
-#### Aggregate and ownership boundaries
-
-Customer clarification received on 18 October 2026 is retained in
-[NICON CM/ISO response](Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md).
-Each Operational Project has its own BCH; a person may concurrently belong to
-multiple project BCH teams. Membership never grants access to another project
-without that project's authorization. After CM approves an equipment/labour
-request, Procurement prepares the contract and supplies the site, then FA
-processes payment against the applicable dossier. These are confirmed target
-rules, not evidence that the downstream handoff is implemented.
-
-The NICON ISO pack is the confirmed template source for every process and step.
-The received source files are in `docs/Nicon/ISO/`; the inventory below is a
-source check, not an approved mandatory-form matrix. Ask NICON about individual
-missing forms and FA (chị K/Kiara) about payment-document gaps. Do not invent
-mandatory documents, package-specific exceptions or payment gates from file
-names alone.
-
-- An executed Upstream D&B/construction Contract starts CM preparation on the
-  existing Operational Project; it must not create a duplicate project.
-- The CM preparation plan owns the WBS baseline, critical path, Baseline
-  S-Curve, BCH organization, resource plan, and versioned Budget Baseline.
-- Field records belong to the project and identify their WBS item, reporting
-  date, author, BCH role, lifecycle status, and row version.
-- QA/QC documents, Punchlist items, HSE records, resource requests, QS batches,
-  and VO dossiers remain separate aggregates linked by stable IDs. Do not use
-  Drive paths, labels, or free text as relational keys.
-- Module 4 references Procurement suppliers/bids and Module 6 contracts,
-  milestones, payment dossiers, and VOs; it does not duplicate their masters.
-
-#### Workflow and controls
-
-1. CM publishes a construction baseline only after WBS, milestones, BCH roles,
-   resource plan, and Budget Baseline pass server validation.
-2. A signed Upstream D&B/construction Contract makes the project eligible for
-   CM preparation but does not authorize site start. The construction-start gate
-   also requires applicable IFC releases, valid required permits, published
-   schedule baseline, approved BCH/resource plan and locked Budget Baseline.
-   Site-handover, method-statement and HSE-plan evidence are template-controlled
-   conditions once NICON approves the ISO checklist.
-3. BCH submits field evidence from mobile. Draft/offline data is not approved
-   evidence and cannot trigger Procurement, payment, or KPI events.
-4. Over-limit or unplanned resource requests require an independent CM level-2
-   decision before Procurement. Rejection leaves BOQ commitments unchanged.
-5. Upstream and Downstream QS records use distinct directions and contract
-   links. Approved quantities are immutable; correction uses a superseding
-   version or reversal with full audit history.
-6. CM compares BCH-reported `ConstructionTask.ProgressPercent` with the
-   published Baseline S-Curve. On 09/11/2026 NICON delegated S-Curve rule
-   decisions to the product owner, who decided: CM assigns scope shares to WBS
-   leaves totaling 100%, records the scope/quantity/complexity basis (BOQ is not
-   required), and PM independently approves; summaries and milestones have no
-   share. Each version freezes a working
-   calendar (new baselines default Monday–Saturday, Sunday off, with explicit
-   non-working dates). Monthly/yearly points are period-end snapshots; do not
-   average or interpolate. Missing reports/snapshots are unavailable, not 0%.
-   Published baselines are immutable; edits require a new version and PM review.
-   The product owner confirmed on 24/10/2026 that delay is plan minus actual in
-   percentage points; only strictly above 5 points creates a red alert and
-   required recovery plan. These delegated decisions are not a new direct NICON
-   approval. Preserve inputs, reporter/time, calendar, baseline version, period
-   and result for reproducibility.
-7. The creator of an MR, QA/QC dossier, QS batch, HSE violation, or VO cannot
-   satisfy the independent CM review for that record. Enforce this server-side.
-   For HSE, both the creator and the reporting actor are barred from confirming
-   or rejecting their own report. Those requests return HTTP 400 with
-   `HSE_INDEPENDENT_REVIEW_REQUIRED`, `operation`, `projectId`, and `violationId`;
-   status, rowversion, and event history remain unchanged. The client localizes
-   the guidance and asks for another authorized reviewer. Existing HSE errors
-   retain their message response; this adds no role grants or schema changes.
-8. Completion/handover consumes approved acceptance, QA/QC, as-built,
-   commissioning, and blocking-Punchlist state; it never trusts a client-only
-   readiness flag.
-
-The confirmed CM portfolio scope is schedule, completed quantities with separate
-Upstream/Downstream acceptance, executed value versus estimate, QA/QC acceptance
-dossiers and safety. Reporting periods, executed-value definitions and calculation
-sources still need an agreed contract; do not combine accepted, committed and
-paid values into one undocumented metric.
-
-The target frontend separates three BCH work areas without creating three data
-silos:
-
-- **BCH Operations** owns typed resource requests and daily coordination.
-- **QA/QC** owns quality dossiers, IFC inspection evidence, Punchlist, diary,
-  and HSE records.
-- **Site QS** owns direction-explicit Upstream and Downstream quantity batches.
-
-All three use the same Operational Project, WBS/baseline identity, project team,
-document service, audit contract, and project access service. A route split must
-not duplicate project, supplier, contract, BOQ, or user masters.
-
-Use explicit BOQ provenance. The following are not interchangeable:
-
-| Business artifact | Current/target aggregate | May constrain MR/warehouse? |
-|---|---|---|
-| Preliminary quotation BOQ | `Quote`/`QuoteItem` or approved material-rate source | No |
-| Tender estimate | `TenderEstimateRevision`/lines | No |
-| Design quantity takeoff | Design evidence; dedicated governed aggregate remains target | No, unless promoted through an approved execution revision |
-| Execution BOQ | `ProjectBoqRevision`/`ProjectBoqLine` with `Approved` status | Yes; select the applicable approved revision atomically |
-| Final BOQ | Final approved execution revision after project completion and approved VO revisions | Reporting, closeout and KPI evidence |
-
-Every import or promotion records Operational Project, source artifact/version,
-file hash or equivalent provenance, importer, timestamp, preview result and the
-approver. Never infer a financial/warehouse allowance merely because an Excel
-file came from Module 2 or has `BOQ` in its name.
-
-The PRD target defines BOQ consumption bands at 85% (yellow), 95% (orange), and
-above 100% (red/block). Keep these configurable and server-calculated. The
-calculation must define approved allowance, net committed/issued quantity,
-reversals, unit conversions, decimal precision, and zero allowance. Until that
-contract is approved, preserve the current hard validation that rejects a
-Material Request above the remaining approved allowance; do not weaken it merely
-to display the target bands.
-
-#### Cross-module events and files
-
-| Source event | Required downstream effect |
+| Mã, tiền tệ, dự án/khách, tổng | Server sinh/suy, không ghi được |
+| Tiêu đề | Bắt buộc sau trim, ≤ 200 |
+| Revision BOQ | VND, Approved, cùng dự án; award cần revision hiện tại |
+| Hạn | Thời điểm tương lai có timezone; phát hành vẫn phải ở tương lai |
+| Vendor | 1–100 ID duy nhất, active, loại Supplier/SubContractor/Both |
+| Dòng BOQ / dòng báo giá | 1–500 dòng nguồn duy nhất; dòng bỏ qua là thiếu |
+| Khối lượng | > 0, ≤ khối lượng duyệt, ≤ 6 chữ số thập phân |
+| Ghi chú RFQ/báo giá | ≤ 2.000 sau trim |
+| Đơn giá | 0–999999999999.9999, ≤ 4 chữ số |
+| Thành tiền / tổng báo giá | ≤ 99999999999999.9999 VND |
+| Thời gian giao | Số ngày 0–3.650 |
+| Điều khoản thanh toán | Bắt buộc, ≤ 1.000 |
+| File báo giá | 0–20 file Procurement cùng dự án, chưa gắn |
+| Trọng số | Bốn giá trị 0–100, tổng đúng 100 |
+| Điểm thương mại | 0–100 kèm ghi chú 3–2.000 ký tự |
+| Lý do award/huỷ/rút | 3–2.000 sau trim |
+| Loại hợp đồng | Supply/Subcontract khớp loại vendor |
+| Row version | Token 8 byte bắt buộc khi thay đổi |
+| List | Search ≤ 200; sort trong whitelist; page 1–1000000; pageSize 1–100 |
+
+Hạn lưu và trả UTC; filter ngày ở UI quy đổi đầu/cuối ngày local sang UTC. Ô CSV vô
+hiệu hoá tiền tố công thức. UI `/admin/procurement-control/rfqs?projectId=...&rfqId=...`.
+
+Migration `20260908134224_AddRfqBidComparison` (7 bảng, FK hạn chế, quyền RFQ; `Down`
+xoá bằng chứng RFQ) và `20260909050114_CompleteRfqWorkflow` (chấm điểm, giao lời mời,
+snapshot thương mại, award tách, phân bổ MR; RFQ cũ backfill trọng số 50/20/20/10, bid
+cũ thành VND tỷ giá 1). Demo RFQ chỉ có ở `Development`; production không tạo
+`PJ-SAMPLE-RFQ`.
+
+### 11.6 Nhận IFC phía Cung ứng
+
+- `GET /api/operational-projects/{projectId}/procurement/ifc?page=1`: hộp 20 packet
+  `Released` gửi tới thành viên đang hoạt động hiện tại.
+- `POST .../ifc/{recipientId}/acknowledge` cần View + Acknowledge và `rowVersion`.
+  Lần nhận đầu lưu người/thời điểm (UTC có `Z`); gọi lại giữ giá trị đầu, không audit
+  lần hai.
+- `GET .../ifc/{recipientId}/items/{itemId}/content` chỉ phục vụ bản vẽ đã phát hành
+  sau khi đối chiếu SHA-256 với bằng chứng khách đã duyệt; thiếu/lệch trả `409`
+  `IFC_RELEASED_FILE_CHANGED`. Cung ứng không nhận đường dẫn file hay quyền Design rộng.
+- Phát hành đọc đúng file chính của bản vẽ và yêu cầu SHA-256 khớp snapshot khách đã
+  duyệt; file phụ không thay được. Thiếu/không đọc được: `400`
+  `IFC_PRIMARY_FILE_UNAVAILABLE`; chưa duyệt: `400` `IFC_PRIMARY_FILE_NOT_APPROVED`
+  (kèm `drawingCode`). Hash chỉ áp khi mọi file hợp lệ. Bản vẽ không có file giữ hành
+  vi phát hành chỉ metadata.
+- `GET /api/ifc-releases/procurement-recipients?designProjectId=...` trả thành viên dự án
+  hợp lệ; thêm người nhận nhận `recipientUserId` tuỳ chọn. Packet đã phát hành không
+  thêm người nhận.
+- Migration `20261108150000_AddProcurementIfcReceipt`: ID người nhận/người xác nhận,
+  SHA-256 item, rowversion; filtered unique index chống trùng người nhận nội bộ; chỉ cấp
+  hai quyền mặc định cho Cung ứng. Export dữ liệu nhận/hash trước khi `Down`; quyền
+  được giữ khi `Down`. Rehearse Up/Down/Up.
+- Test: `IfcReleasesControllerTests`, `ProcurementIfcConcurrencyTests` (cần
+  `NICON_SQL_TEST_CONNECTION`), `PermissionServiceTests`, `tests/apiError.test.mjs`,
+  `procurement-ifc-receipt-live.spec.ts`. Fixture SQL E2E dùng `sqlcmd -I` để bật
+  `QUOTED_IDENTIFIER`. Tab IFC mở bằng `tab=ifc` hoặc mặc định cho user chỉ có quyền IFC.
+
+---
+
+## 12. Thiết kế và pháp lý
+
+### 12.1 Lịch thiết kế chi tiết (Module 2)
+
+Lịch theo từng luồng Design cho ba giai đoạn, bảng `design_schedule_*` riêng, không
+đụng `construction_tasks` hay API của nó. Route
+`/api/operational-projects/{projectId}/design-schedule` (và `/api/v1`):
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `/` | `operations.projects.view` | Giai đoạn, nguồn rollup, task phân trang |
+| `POST` | `/initialize` | `design.schedule.manage` + lãnh đạo dự án | Tạo baseline ba giai đoạn |
+| `PUT` | `/phases/{phaseId}` | như trên | Ngày, trạng thái, tiến độ, trọng số giai đoạn |
+| `POST` | `/phases/{phaseId}/tasks` | như trên | Tạo task hoặc milestone |
+| `PUT` | `/tasks/{taskId}` | như trên | Sửa task, thay link predecessor |
+| `POST` | `/tasks/{id}/complete` | người được giao | Ghi hoàn thành, chuyển `Pending` chờ duyệt |
+| `POST` | `/tasks/{id}/review` | người duyệt được giao | Duyệt; từ chối cần lý do, về `InProgress` |
+| `GET` | `/outsource-options` | `design.schedule.manage` + scope dự án | Cặp vendor/hợp đồng hợp lệ cho task thuê ngoài |
+
+- Gửi `designProjectId` khi đọc và khởi tạo; chỉ được bỏ khi dự án có một luồng.
+  Cha, predecessor, assignee, approver, CC phải cùng luồng.
+- Quyền sửa: `CanManageDesignScheduleAsync` xác nhận người gọi là PM của Operational
+  hoặc Design Project, Design Lead, hoặc có assignment PM/Design Lead toàn dự án hoặc
+  module Design đang hiệu lực. Assignment chỉ theo bộ môn là chỉ đọc. Admin có cả
+  `design.schedule.manage` và `operations.projects.view.all` chỉ quản lý mọi dự án
+  khi system role là `ADMIN`/`SUPER_ADMIN`; role tuỳ chỉnh hay quyền xem toàn danh mục
+  không mở quyền sửa.
+- Khởi tạo tường minh, idempotent: Design Project cần ngày bắt đầu và hạn cách nhau ít
+  nhất 3 ngày, đúng ba giai đoạn `Concept`, `BasicDesign`, `ShopDrawing`, trọng số
+  tổng 100; chia khoảng ngày thành ba đoạn liên tiếp không chồng. Baseline thiếu hoặc
+  không chuẩn bị từ chối. Migration không tự tạo lịch cho dự án cũ.
+- Mỗi task có đúng một `ApproverMemberId` đang hoạt động khác người được giao, CC tuỳ
+  chọn, mô tả, task cha, tóm tắt nguồn lực/thầu phụ, cờ critical path. Update chung
+  không ghi được `Completed`.
+- Task thuê ngoài có cả `VendorId` và `DownstreamContractId` (không có một trong
+  hai). Hợp đồng phải cùng dự án, khớp vendor, hướng `Downstream`, loại `Design` hoặc
+  `Subcontract`, không huỷ. Người được giao nội bộ và Design Lead duyệt vẫn bắt buộc.
+
+| Từ | Được sang |
 |---|---|
-| Upstream Contract signed | Make CM preparation eligible once, idempotently |
-| IFC released | Expose only the released revision to construction users |
-| Resource request approved by CM | Hand off the typed request to Procurement without copying the BOQ |
-| Upstream QS approved | Make evidence available to the matching receivable/payment milestone |
-| Downstream QS approved | Make evidence available to the matching payable dossier |
-| VO approved | Version affected budget/BOQ references; never mutate the original baseline silently |
-| QA/QC document accepted | Synchronize the managed file to `04_Thi_cong_Nghiem_thu` and retain application metadata |
-| Progress variance over 5% | Create one deduplicated red alert per project/baseline/period until resolved or superseded |
+| `NotStarted` | `InProgress`, `OnHold`, `WaitingForDepartment` |
+| `InProgress` | `Completed`, `OnHold`, `WaitingForDepartment` |
+| `OnHold` | `InProgress`, `WaitingForDepartment` |
+| `WaitingForDepartment` | `InProgress`, `OnHold` |
+| `Completed` | — |
 
-For Downstream payments against accepted quantities, the target eligibility
-check matches the same vendor, contract, project, currency/amount basis, and
-covered quantity/period:
+Giữ nguyên trạng thái hiện tại thì hợp lệ. `NotStarted`: tiến độ 0, không có ngày thực
+tế. `InProgress`: có ngày bắt đầu thực tế. `Completed`: đủ hai ngày thực tế và 100%.
+Trạng thái khác không có ngày kết thúc thực tế. Ngày kết thúc không trước ngày bắt đầu.
+Trọng số 1–100, tiến độ 0–100; sửa một giai đoạn làm tổng ba trọng số khác 100 bị từ
+chối. Milestone có `IsMilestone = true` và ngày bắt đầu = kết thúc. Quá hạn tính lúc
+đọc (kết thúc kế hoạch trước ngày UTC hiện tại và chưa `Completed`), không lưu. Bộ môn
+phải là option đang hoạt động trong category master-data `project-department` (Design,
+Architecture, Structural, MEP, Interior; bốn ngôn ngữ). Assignee là user đang hoạt
+động có `OperationalProjectMember` chưa kết thúc trong dự án. Predecessor cùng dự án;
+tự phụ thuộc và vòng bị từ chối.
 
-1. a signed Downstream Contract or authorized appendix;
-2. a valid posted Warehouse Receipt, net of reversals, when the payable concerns
-   supplied material; and
-3. an approved Downstream QS acceptance batch for performed/accepted quantity.
+Tiến độ theo chính sách `design-schedule-weighted-v1`: giai đoạn sẵn sàng khi có ít
+nhất một task và trọng số task tổng 100, `P_phase = Σ(w_i·p_i)/100`; dự án sẵn sàng khi
+đủ ba giai đoạn, trọng số giai đoạn tổng 100 và mọi giai đoạn sẵn sàng,
+`P_project = Σ(W_j·P_j)/100`. Chưa sẵn sàng thì null. Response trả ID, trọng số, tiến
+độ nguồn và giá trị có trọng số để kiểm toán. Bộ lọc (`phase`, `assigneeMemberId`,
+`departmentCode`, `status`, `plannedFrom`, `plannedTo` theo giao khoảng, `overdueOnly`,
+`page`, `pageSize`) chỉ áp cho list; rollup luôn dùng toàn lịch.
 
-The exact applicability matrix for supply-only, labour-only, equipment, and
-mixed subcontract packages remains a product decision. The received purchasing
-procedure allows a supplier payment request before receipt against an order;
-the payment procedure and `TQT-M07` also contain advance requests. Whether,
-when and with which authorization/evidence these advances can enter Finance is
-an open FA/CM decision. Do not apply the accepted-quantity gate to them by
-default or treat missing receipt/QS as an automatic exemption. Do not invent a
-dummy receipt or QS record to satisfy matching. A failed match returns actionable
-differences and preserves Payment Request, ledger, notification, and audit state
-apart from the allowed rejection/audit record.
+Mỗi thao tác ghi tạo audit và snapshot lịch sử. Xoá Design Project báo giai đoạn, task,
+phụ thuộc, lịch sử trong impact plan. Migration `AddDetailDesignSchedule` chỉ thêm bảng.
+`AddDesignApprovalWorkflow`: trước khi áp cho môi trường đã có task, mỗi Design Project
+cần Design Lead hoặc Design Manager đang hoạt động, là thành viên dự án và khác từng
+assignee; migration dừng thay vì bịa người duyệt; rollback xoá dữ liệu duyệt/CC.
 
-External file writes use the existing durable document-operation pattern. The
-database transaction records authoritative metadata and an outbox/pending
-operation; a Drive failure must not falsely mark a dossier synchronized.
+### 12.2 Rà soát hồ sơ thiết kế
 
-#### Required validation
+Route `/api/design-projects/{projectId}/reviews`. Design Manager tạo revision với người
+nhận nội bộ được chỉ định và các Project Document ID thuộc category Design tương ứng.
+Đủ điều kiện nhận: user/role đang hoạt động có `design.reviews.receive` (kể cả role tuỳ
+chỉnh); việc được giao từng review vẫn quyết định quyền truy cập.
 
-- Unit tests: S-Curve variance, threshold boundary (5 percentage points is not > 5 points), budget
-  roll-up, BOQ remaining quantity, QS totals, and baseline version selection.
-- Integration tests: project/contract scope, BCH-versus-CM permissions,
-  separation of duties, lifecycle transitions, stale row versions,
-  idempotency, rejection with unchanged downstream state, and Upstream versus
-  Downstream payment linkage.
-- Integration tests for Drive cover pending, retry, conflict, and failure
-  states; mocked metadata alone is not evidence of successful external sync.
-- Browser tests cover the mobile BCH happy/negative paths and the CM desktop
-  review/alert paths, including loading, empty, error, offline/retry, and
-  responsive states.
+- Người nhận chỉ thấy review của mình và bình luận khi review còn nội bộ.
+  Notification mở `/admin/design-reviews/{projectId}?reviewId={reviewId}`, chỉ tải API
+  review và file của review đó; link cũ `?tab=reviews` rơi về cùng view khi không có
+  quyền dự án. Review không cấp thêm quyền dự án.
+- Tải file của review kiểm byte thật với `Sha256Snapshot` trước khi gửi header (đệm
+  64 KiB trong RAM, lớn hơn thì ra thư mục tạm ASP.NET, giới hạn 100 MiB). Lệch byte:
+  `409`; hash thiếu/sai, nội dung rỗng hoặc không xác minh được cũng thất bại. Người
+  không được giao nhận `404` trước khi đọc storage. Lệch không bao giờ ghi lại snapshot
+  hay trạng thái duyệt. Đây là bảo vệ Partial: chưa lưu trữ/khôi phục byte lịch sử,
+  chính sách lưu giữ còn mở.
+- `POST .../{reviewId}/comments` nhận `projectDocumentId` tuỳ chọn (phải thuộc tài
+  liệu đã trình của review đó); null là bình luận cấp hồ sơ
+  (`LinkDesignReviewCommentsToDocuments`).
+- Design Manager tổng hợp ý kiến, ghi trình khách và quyết định của khách. Chốt
+  Concept, mở Basic sang Shop và phát hành IFC cần review khớp gần nhất ở
+  `ClientApproved`.
+- `EnsureDesignReviewEvidenceSnapshot` là sửa tương thích chỉ đi tiếp: thêm cột/index
+  snapshot còn thiếu, backfill từ Project Document liên kết, dừng nếu có bằng chứng
+  không xác định được; `Down` không xoá gì.
 
-### 7.21 NICON Customer Reference Data
+### 12.3 Hồ sơ Concept
 
-#### Source inventory and precedence
+- `GET/POST /api/concept-options/{id}/revisions`, artifact và miễn checklist
+  (`POST/DELETE` dưới revision), phản hồi và phản hồi một lần (`POST`). R00 tạo cùng
+  option. Bản nháp gắn Project Document thuộc option; gỡ binding không xoá tài liệu.
+- Trình cần bộ file đã sync chính xác và checklist áp dụng, rồi đóng băng revision.
+  Phản hồi khách chỉ gắn sau khi trình khách; phản hồi mới cần `evidenceSource`
+  (1–1.000 ký tự), giữ nguyên văn bình luận; trả lời cần `outcome` (1–2.000). Cả hai bất
+  biến; dữ liệu cũ để null (`AddConceptFeedbackEvidence`, rollback bị chặn khi đã có
+  giá trị).
+- Revision thay thế đi sau quyết định yêu cầu sửa hoặc từ chối. `ClientApproved` cần
+  Project Document TK-M03 đã ký và sync, người ký, ngày ký; chốt kiểm bằng chứng đó trên
+  revision mới nhất. Filtered unique index cho phép một option được chốt mỗi Design
+  Project; trạng thái option là concurrency token. `AddConceptDossierRevisions` backfill
+  R00.
+- Mọi thao tác ghi hồ sơ Concept (sửa, trình, quyết định khách, chuyển trạng thái option,
+  xoá tài liệu tay) lấy SQL application lock `concept-dossier-{optionId}` trước khi đọc
+  guard; đường ghi mới phải dùng cùng lock. Bằng chứng đã đóng băng/đã trình và file
+  nghiệm thu không xoá được qua Project Documents. Response có `canCreateRevision`.
+  R00 dùng chung kiểu cũ không biến thành phê duyệt option; revision mới vẫn qua gate
+  trình và TK-M03.
+- Test `ConceptDossierConcurrencyTests` cần `NICON_SQL_TEST_CONNECTION`, mỗi case tạo/xoá
+  database `NiconConceptTest_<guid>` riêng. Spec browser Concept dùng
+  `E2E_BACKEND_CONTAINER` (mặc định `nihome31042025-backend`) và `E2E_SQL_CONTAINER`.
 
-`docs/Nicon/` is the customer-evidence location:
+### 12.4 Xoá hồ sơ thiết kế
 
-- the full PRD defines the eight-module scope, cross-functional handoffs,
-  eleven target positions, KPI weights, Drive tree, and UI expectations;
-- the workflow DOCX is historical context and is superseded where the canonical
-  `docs/Nicon-workflow.md` reflects later meeting decisions;
-- `MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md` is the
-  controlling business baseline for the current alignment. Other files in that
-  dated folder are supporting synthesis/snapshots and cannot silently close its
-  open questions;
-- schedule PDFs demonstrate real WBS hierarchies, durations, start/finish,
-  predecessors, parallel permit/design activities, milestones, and baselines;
-- `BOQ/` contains heterogeneous one-sheet and multi-sheet workbooks used to
-  discover import variability;
-- `ISO/` contains the customer-uploaded common document control, internal audit
-  and improvement processes plus detailed customer, tender, design,
-  construction, payment, purchasing, equipment and HR processes. All 170 files
-  received on 20 October 2026 were opened or classified: 108 Word files, 40
-  workbooks, three PDFs (two without `.pdf` suffix), two RAR archives and 17
-  Office lock/temporary files. These counts describe the upload, not approved
-  or usable template versions. The pack has no `D.5` folder; ask NICON whether
-  one is expected before calling the process set complete.
+Concept, Basic Design, Shop Drawing và IFC dùng `GET /api/<resource>/{id}/deletion-impact`
+rồi `DELETE` với `ConfirmDeletionRequest`. Chỉ Concept `Discarded`, Basic/Shop
+`Rejected`, IFC `Cancelled` đủ điều kiện. Project Document đang hoạt động, bằng chứng
+review dùng chung và tham chiếu IFC chặn xoá; lịch sử review riêng chỉ xoá cùng hồ sơ bị
+từ chối khi chưa từng trình khách. Review có `ClientSubmittedAt` luôn chặn hard delete.
+Xoá hàng loạt Shop Drawing bị tắt. Đây là chính sách an toàn đang áp, chưa phải lời giải
+đã xác nhận cho Q-08 (baseline 03/10 chỉ xác nhận xoá hồ sơ không đạt thuộc cấp quyền
+cao nhất và để mở việc xoá sau khi trình khách). Upload Shop Drawing từ chối khi
+`Released` hoặc thuộc packet IFC đã phát hành; trạng thái và đường dẫn file là
+concurrency token nên upload chạy đua với phát hành IFC trả `409` và giữ file gốc.
 
-Receipt and source mapping do not establish current ISO certification,
-conformity, signed release authorization or business acceptance. The source
-review does not verify signatures or certificates. Preserve customer originals;
-do not rename conflicting form codes or publish completed examples as blank
-production templates without the authorized NICON owner's confirmation.
+### 12.5 Kích hoạt pháp lý và permit
 
-The file-level ISO cross-check gives these source-to-workflow anchors:
+Tạo permit là luồng tường minh của Operational Project. Contract Upstream `Design`,
+`Construction` hoặc `DesignAndBuild` không chuyển `Signed → InProgress` qua transition
+chung (trả `LEGAL_ACTIVATION_REQUIRED`); PM/Admin phải xác nhận wizard Legal. Tạo
+`DesignProject` không tự sinh permit.
 
-| Source | Observed evidence | Mapping still needed |
+Transaction kích hoạt tạo hoặc dùng lại gói `LegalPermitting` duy nhất của dự án, tạo một
+task cho mỗi permit được chọn, ghi phụ thuộc và lịch sử, tạo bản ghi kích hoạt hợp đồng
+rồi mới đổi trạng thái hợp đồng; lỗi validate hoặc concurrency rollback toàn bộ. Unique:
+`ContractLegalActivation.ContractId`; gói theo (`OperationalProjectId`,
+`LegalPermitting`); loại permit theo dự án; `WorkTaskId` (tuỳ chọn). `DesignProjectId`
+nullable cho đọc dữ liệu cũ.
+
+| Method | Route | Permission + scope | Mục đích |
+|---|---|---|---|
+| `GET` | `/api/contracts/{id}/legal-activation-preview` | `crm.contracts.view`; PM/Admin dự án | Điều kiện, loại permit, gói hiện có, thành viên |
+| `POST` | `/api/contracts/{id}/activate-with-legal` | như trên; idempotency key, row version | Kích hoạt hợp đồng và cấu hình Legal nguyên tử |
+| `GET`/`POST` | `/api/operational-projects/{id}/legal-setup` | `permit.checklists.manage`; PM/Admin | Setup cho dự án cũ/đã kích hoạt, không đổi trạng thái hợp đồng |
+| `GET` | `/api/legal-checklist-templates?publishedOnly=true`, `/{id}` | `permit.templates.view` | List (bỏ filter để xem mọi version), chi tiết |
+| `POST`/`PUT` | `/api/legal-checklist-templates`, `/{id}` | `permit.templates.manage` | Tạo Draft (idempotency key), sửa Draft (row version) |
+| `POST` | `/api/legal-checklist-templates/{id}/versions` | `permit.templates.manage` | Clone bản Published/Retired thành Draft mới |
+| `POST` | `/api/legal-checklist-templates/{id}/publish`, `/retire` | `permit.templates.publish` | CM/Admin rà soát độc lập kèm mã phê duyệt; ngừng áp dụng mới |
+
+Template: `Code` ASCII bất biến (1–60 chữ/số/`-`/`_`, bắt đầu bằng chữ hoặc số);
+`NameVi/Name/NameZh/NameJa` (200) và `ScopeVi/Scope/ScopeZh/ScopeJa` (2.000) bắt buộc;
+`Items` có thứ tự, 1–100 mã `permit_type` đang hoạt động, không trùng, có `IsRequired`,
+ít nhất một mục bắt buộc. Publish cần `ApprovalReference` (≤ 1.000); người tạo và mọi
+người sửa version đó không được publish. `Draft → Published → Retired` do server thực
+thi; nội dung đã publish bất biến; không có hard delete template.
+
+Áp template khi setup/kích hoạt: preview trả `Templates`, `AppliedTemplate`,
+`WorkPackageRowVersion`, lead/ngày của gói, người/thời điểm áp template. Write nhận
+`TemplateId`, `TemplateRowVersion`, `WorkPackageRowVersion`. Gói mới cần template
+Published đúng version; dùng lại gói có sẵn luôn cần row version của gói. Bản cũ trả
+`409` (`CONCURRENCY_CONFLICT` cho kích hoạt, `crm_concurrency_conflict` cho setup).
+Dự án đã có snapshot tiếp tục dùng nó kể cả khi template retire; template khác bị từ
+chối. Mục bắt buộc phải đã có task hoặc được đưa vào request, nếu không trả
+`LEGAL_REQUIRED_PERMITS_MISSING` trước mọi ghi. Gói Completed/Cancelled không setup được
+(`LEGAL_PACKAGE_CLOSED`); hợp đồng thứ hai được dùng lại gói Completed chỉ đọc khi
+snapshot đã áp, mục bắt buộc đã link và request không đổi gì. Task mới được phụ thuộc
+permit đã cấu hình của cùng dự án; predecessor lạ, chưa link hoặc khác dự án bị từ chối.
+Đổi lịch/lead ghi `UpdatedByLegalSetup` kèm giá trị trước/sau. `/api/work-packages`
+chung từ chối tạo `LegalPermitting`. Cờ `IsRequired` điều khiển checklist, không phải
+yêu cầu permit theo giai đoạn của gate thi công. Q-09/D-04 vẫn do CM/NICON quyết; template
+demo chỉ ở Draft. Migration `20261022111459_AddLegalChecklistTemplates` chỉ thêm (permit
+cũ `IsRequired=false`, không backfill); không rollback sau khi đã dùng thật nếu chưa có
+kế hoạch bảo toàn.
+
+Route `/api/permits` (và `/api/v1/permits`):
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `/api/permits`, `/{id}`, `/{id}/history` | `permit.checklists.view` | Lọc, phân trang, tóm tắt rủi ro; chi tiết; lịch sử trạng thái cơ quan/tài liệu |
+| `PATCH` | `/api/permits/{id}` | `permit.checklists.view` + scope actor dự án | Trạng thái cơ quan, cơ quan, ngày, ghi chú |
+| `POST` | `/api/permits/{id}/documents/{kind}` | như trên | Upload bằng chứng nộp/cấp, nguồn module `Legal` |
+| `POST` | `/api/permits`, `/api/permits/design-project/{projectId}/ensure` | `permit.checklists.manage` | Đã ngừng: `410 LEGAL_SETUP_REQUIRED` |
+| `DELETE` | `/api/permits/{id}` | `permit.checklists.manage` | Bị chặn `409`; dùng luồng cấu hình/xoá an toàn theo aggregate |
+
+`Submitted`, `UnderReview`, `NeedMoreDocs` cần ngày nộp và file hồ sơ nộp; `Issued` cần
+ngày cấp, file giấy phép và `permit.checklists.mark-issued`. File nằm trong catalog
+`LegalPermits` dưới `03_Xin_phep_Phap_ly` (`ProjectDocumentSourceModule.Legal`).
+`DepartmentWorkTask` liên kết sở hữu assignee, approver, kế hoạch, tiến độ, phụ thuộc.
+Assignee chỉ trình `Completed` khi permit đã `Issued` đủ bằng chứng; xác minh chuyển
+`Completed → Verified`; trả về cần lý do và chuyển `Completed → InProgress` mà không
+đổi trạng thái cơ quan.
+
+---
+
+## 13. Thi công và Module 4
+
+### 13.1 Bố cục workspace thi công (frontend)
+
+Menu Thi công chia theo vai trò; mỗi màn thuộc đúng một mục menu.
+
+| Nhóm | Route | Nội dung |
 |---|---|---|
-| `D.1` customer (`KH`) | Customer list, customer information/confirmation, contract and complaint records | `KH-M01` labels both a client-list workbook here and an information-collection form in `D.2`; `KH-M02`'s process label differs from its file name. Confirm codes and pre-contract handoff |
-| `D.2` tender (`DT`) | Competitive quotation and tender paths, bid work assignment, supplier quotations and contract handoff | `DT-M02` is cited as a quotation but its file is named handoff record; referenced `DT-M03` is absent. Reconcile current tender gates with the older source |
-| `D.3` design (`TK`) | Preliminary, basic and technical design handoffs; `TK-M01`–`TK-M03` and appendices | Procedure also cites `TK-BM02`/`TK-BM03` or `KT-BM03` where files use `TK-M02`/`TK-M03`. Several `TK-M02` files are completed project handoffs, not blank templates. Match current design gates and released IFC rules; permit references do not settle the permit matrix |
-| `D.4` construction (`TC`) | Preparation `TC-M01`, shop/material submittals `TC-M04`–`TC-M06`, diary `TC-M08`/`TC-M09`, acceptance `TC-M24`, 19 workbooks under `TC-M28` | No counterparts were identified under referenced codes `TC-M02`, `TC-M23` and `TQT-M00` in the received files/archive entries; NICON must confirm equivalents or renamed forms. `NS1-M01` is cited for forming BCH but its file is a recruitment request. `TC-M15` names two different handoffs; the procedure's `TC-M21`/`TC-M22` labels are reversed in filenames. The `TC-M24` file here is a completed acceptance record. No separate sampling, lab-result, material-certificate, method-statement or HSE-plan form was identified; confirm applicability and source with NICON |
-| `D.6` payment (`TQT`) | Separate payment, subcontractor settlement and customer settlement; `TQT-M01`–`TQT-M09` and references to `MH`/`TC` forms | FA/CM must approve the four-package document matrix. No counterpart was identified under code `TC-M00`; NICON must confirm an equivalent or renamed form; this folder's `TC-M24` is a different handover form under the same code. `TC-M14`, `TC-M27` and `TC-M29` also appear in `D.4`. Conversion of `TQT-M04` exposes `=#REF!+C13` in `MAU GIA TRI PS!C20`; verify in Excel before reuse |
-| `D.7` purchasing (`MH`) and `D.8` equipment (`LK`) | `MH-M01`–`MH-M08` for requests, quotations, orders and supplier review; `LK-M01`–`LK-M08` for equipment receipt, issue and maintenance | `MH-M03` contains proposal/order sheets and a completed example. `MH-M04` payment request prints `MH-BM02` inside, the same internal code as `MH-M02` quotation request. The procedure permits a supplier payment request before receipt against an order; FA/CM must resolve that case separately from accepted-quantity matching |
-| `C.1` document control (`QTC-KSTLHS`) | §5.1: PTBP → ĐDCL → GĐ approval; TKISO identifies, distributes and retrieves superseded documents. §5.3: custodians and retention lists BM05/BM06. §5.4: GĐ authorizes destruction recorded in BM07 | Open decision — GĐ/ĐDCL/TKISO must confirm electronic delegation to CM/Admin, release/supersession and records retention/destruction policy. Product-level legal checklist publication does not implement or certify the full QTC workflow |
-| `C.2` internal audit and `C.3` improvement | Audit schedule/findings/corrective actions and nonconformity handling, with accompanying `BM` files | Confirm current ownership, severity and closure rules; these are source processes, not delivered audit modules |
-| `D.9`–`D.11` HR (`NS1`–`NS3`) | Recruitment/training, work reporting, leave and resignation records. `NS2` calls for daily/weekly/monthly reports reviewed by department heads and summarized for management; `NS2-M01` has 11 scored individual criteria | `NS1-M05`/`NS1-M06` are referenced for training but absent; `NS1-M03`/`NS1-M04` are PDFs without extensions. `NS2` does not define approval of each internal task or the software KPI calculation. Confirm current HR policy and access before mapping personal records |
+| Ban chỉ huy công trường (BCH) | `/admin/construction/bch/operations` | Tab `resources` (yêu cầu nguồn lực), `diary` (nhật ký) |
+| | `/admin/construction/bch/qa-qc` | Tab `dossiers`, `punchlist`, `acceptance`, `hse` (ẩn khi thiếu quyền xem) |
+| | `/admin/construction/bch/qs` | QS batch |
+| Phòng CM | `/admin/construction/cm/schedule` | Tab `plan` (tiến độ CM + chuẩn bị), `tasks`, `diary` (scope review) |
+| | `/admin/construction/cm/commercial` | Tab `resources`, `qs` |
+| | `/admin/construction/cm/quality` | Tab `dossiers` (kèm quản lý template QA/QC), `punchlist`, `acceptance`, `asbuilt`, `handover` |
+| | `/admin/construction/cm/safety` | HSE |
+| | `/admin/construction/cm/contracts` | Hợp đồng |
 
-The next mapping level is the **observed process step**, not a publishable
-checklist. References below are to the [TC construction procedure](<Nicon/ISO/D.Quy trình chi tiết/D.4. Quy trình thi công lắp đặt/Quy trình thi công lắp đặt.doc>),
-the [TQT payment procedure](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>)
-and the [MH purchasing procedure](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/Quy trình mua hàng, đánh giá NCC.doc>).
-The process documents name historical owners; they do not set current CM/FA
-approval permissions.
+- Mọi trang bọc trong `ConstructionWorkspaceShell`: giữ `?projectId` trên URL (mặc định
+  dự án đầu tiên), tải dự án và truyền `{ projectId, designProjectId, designProjects }`.
+  Resource, QA/QC, QS lưu theo Operational Project; nhật ký, punch list, nghiệm thu, hoàn
+  công, bàn giao, task thi công lưu theo Design Project (`?designProjectId`, có bộ chọn
+  khi dự án có nhiều luồng thiết kế).
+- Panel nhận `scope: "execute" | "review"` (`constructionScope.ts`). Scope là ngữ cảnh
+  portal, không phải gate quản lý: `useConstructionActions` cho `canManage` khi có quyền
+  `manage`/`create` của module hoặc, ở scope review, quyền giám sát `cm-review`;
+  `canApprove` chỉ ở scope review nên BCH không bao giờ thấy nút duyệt, từ chối, xác
+  nhận, xác minh, đóng, hoàn thành. Sửa/xoá dòng cần `canManage` và là giám sát hoặc
+  tác giả.
+- CM tạo, sửa, trình, xoá và giám sát bản ghi BCH thực hiện. Người giám sát CM sửa bản
+  nháp của BCH không trở thành tác giả, nên `createdByUserId ≠ approverUserId` vẫn giữ.
+  Server luôn kiểm review độc lập.
+- Resource request, hồ sơ QA/QC, QS batch, HSE có `DELETE` sau cùng gate. Chỉ xoá Draft
+  và CmRejected (HSE: Draft, Rejected, Cancelled); bản ghi khác phải đi qua chuyển trạng
+  thái. Xoá không đụng project document liên kết. Quyền xoá HSE
+  `construction.hse.delete`; PM nhận qua wildcard trong `RbacSeeder`, BCH chỉ có
+  `hse.manage`.
+- Tab lưu ở `?tab=` (replace), bỏ qua tab bị ẩn khi chọn mặc định. URL cũ đi qua
+  `ConstructionRedirect.tsx`, giữ query và hash.
+- Trường người dùng mới khó đoán có placeholder ví dụ và một dòng gợi ý gắn
+  `aria-describedby`.
+- Dữ liệu mẫu (`ConstructionSampleSeeder`, chỉ Development): dự án `PJ-SAMPLE-003` có
+  đủ trạng thái cho mọi màn CM/BCH (`QA-SAMPLE-*`, `QS-SAMPLE-*`, `HSE-SAMPLE-*`,
+  `WBS-BASELINE-ANPHU-R1`, `RR-SAMPLE-ANPHU-*`). Không dùng các mã này trong logic
+  production.
 
-| Source step | Files/records the procedure names | Mapping boundary to confirm |
+### 13.2 Phần đã triển khai
+
+**Tiến độ CM và so sánh với thực tế (Partial).** Route
+`/api/operational-projects/{projectId}/construction/schedule`:
+
+| Method/path | Permission | Mục đích |
 |---|---|---|
-| TC 1–4, preparation | `DT-M09`, `NS1-M01`, `TC-M02`, `TC-M01`, `TC-M04`–`TC-M06`, `TC-M25`; schedule, site survey, BCH structure, method and safety measures | No counterpart was identified under code `TC-M02`; confirm equivalents with NICON; `NS1-M01` file is a recruitment request. Identify the approved BCH, method and HSE evidence and project-type applicability before making a start gate mandatory. Current signed-contract/IFC/baseline/budget gate still governs. |
-| TC 8, field operation | `TC-M07`–`TC-M13`, `TC-M15`, `TC-M18`, `TC-M20`; the text also requires approved shop drawing, method and material sample before each work stage | Map each existing diary/QA/HSE record to one source step and released IFC revision; resolve the duplicate `TC-M15` code. No ISO S-Curve formula appears here. |
-| TC 10/12, acceptance | `TC-M28` internal work-stage sheets, `TC-M23` invitation, `TC-M24` acceptance and `TC-M22` defects | No counterpart was identified under code `TC-M23`; confirm equivalents with NICON; the `TC-M24` files are filled/different records. CM must select current blank forms and define which of the 19 `TC-M28` work types apply. |
-| TC 11/13 and TQT 5.1–5.3, settlement | `TQT-M00`, `MH-M04`, `TQT-M01`–`TQT-M06`, `TC-M14`, `TC-M27`, `TC-M29`; signed quantity, invoice and contract evidence are described at different stages | No counterparts were identified under codes `TQT-M00` and `TC-M00`; NICON must confirm equivalents or renamed forms. Keep Upstream and Downstream separate; TQT 5.2 cites `TQT-M02` for subcontractor settlement although the received file is labeled customer payment request. Confirm code/version and three-section dossier ownership. |
-| MH 1–6, purchase | `MH-M01` request, `MH-M02` quotation, `MH-M03` order, `MH-M04` payment request and receipt/invoice when goods arrive | The procedure allows payment request before receipt when the order requires it. Confirm advance authorization separately from accepted-quantity payment; current Procurement handoff supersedes the older Accounting-ordering role. |
+| `GET /` | `construction.tasks.view` | Revision CRM, task, phiên bản CM, snapshot, số liệu thực tế, thành viên BCH hợp lệ |
+| `POST /baselines` | `construction.cm-preparation.manage` | Tạo bản nháp đánh số, giới hạn bởi revision CRM đã ban hành |
+| `GET /baselines/{id}/email-preview`, `POST /baselines/{id}/submit` | như trên | Preview rồi trình PM duyệt độc lập |
+| `POST /baselines/{id}/decision` | `construction.cm-preparation.view` | PM được giao duyệt/từ chối, tách tác giả |
+| `POST /tasks/{taskId}/actual` | `construction.tasks.view` | Chỉ huy trưởng được giao cập nhật tiến độ thực tế |
+| `POST /snapshots` | `construction.tasks.view` | Chụp tiến độ; báo cáo BCH thiếu thì không tạo |
+| `GET /baselines/{baselineId}/report?period=day|month|year&throughDate=...` | `construction.tasks.view` | Đường cong CRM/CM và snapshot cuối kỳ |
+| `POST /snapshots/{id}/recovery` | `construction.tasks.view` | Giải trình và kế hoạch khắc phục khi chậm quá ngưỡng |
+| `POST /snapshots/{id}/review` | `construction.cm-preparation.manage` | CM rà soát kế hoạch khắc phục |
 
-For the four Downstream package types, the ISO supports these **discovery
-candidates**, not a mandatory document matrix:
+Quy tắc S-Curve (NICON uỷ quyền cho chủ sản phẩm ngày 09/11/2026; đây là quyết định được
+uỷ quyền, không phải phê duyệt trực tiếp mới của NICON):
 
-| Package | Candidate evidence found | Remaining FA/CM decision |
+- CM gán tỷ trọng 0–100 cho các hạng mục WBS lá, tổng 100%, ghi cơ sở (phạm vi/khối
+  lượng/độ phức tạp; không bắt buộc BOQ); PM duyệt độc lập. Dòng tổng hợp và milestone
+  có tỷ trọng 0.
+- Baseline mới đóng băng lịch làm việc (mặc định Thứ Hai–Thứ Bảy, nghỉ Chủ nhật, kèm
+  ngày nghỉ riêng); baseline cũ dùng đủ 7 ngày. Kế hoạch tăng theo ngày làm việc.
+- Thực tế lấy từ `ConstructionTask.ProgressPercent` do BCH báo, lưu người và thời điểm
+  báo. Khi đã có baseline CM ban hành, chỉ chỉ huy trưởng được giao, tài khoản đang hoạt
+  động và còn là thành viên dự án mới được báo.
+- Worker mỗi phút chụp snapshot khi dữ liệu đủ, bỏ trùng trong ngày. Thiếu báo cáo là
+  không có dữ liệu (null), không phải 0%, không nội suy. Tháng/năm dùng giá trị cuối kỳ.
+- Baseline đã ban hành bất biến; thay đổi tạo phiên bản mới, PM duyệt lại.
+- Chậm = kế hoạch − thực tế (điểm phần trăm, chủ sản phẩm xác nhận 24/10/2026). Chỉ khi
+  vượt **hơn** 5 điểm (5 điểm thì không) mới tạo một cảnh báo đỏ cho mỗi baseline/ngày
+  và buộc chỉ huy trưởng giải trình, lập kế hoạch khắc phục kèm hạn.
+- Tổng hợp S-Curve toàn danh mục dự án chưa thuộc phạm vi.
+
+**Liên kết bản vẽ cho task thi công.** `GET /api/construction-tasks/{id}/drawings`
+(`construction.tasks.view` + quyền dự án) trả `version`, `linked`, `available`: chỉ Shop
+Drawing cùng dự án đã `Released` trong packet IFC đã phát hành. `PUT` cùng route
+(`construction.tasks.manage`) nhận `{ "version": "<GUID>", "ifcReleaseItemIds": [...] }`
+(bắt buộc, có thể rỗng, tối đa 200 ID dương không trùng); ID sai trả `400`, version cũ
+trả `409`, gửi lại đúng tập đã lưu trả `200`. `GET .../drawings/{itemId}/content` chỉ phục
+vụ bản vẽ đã link và phát hành. Gỡ link không xoá bản vẽ hay file. Số R hiển thị là
+metadata revision cuối cùng trước ngày phát hành IFC (R0 nếu không có). Migration
+`AddConstructionTaskDrawingLinks`. Test SQL `ConstructionDrawingConcurrencyTests`:
+
+```bash
+dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj --filter FullyQualifiedName~ConstructionDrawingConcurrencyTests
+```
+
+**Chuẩn bị CM, yêu cầu nguồn lực, QA/QC, QS.** Route
+`/api/operational-projects/{projectId}/construction` có phiên bản chuẩn bị/readiness của
+CM, yêu cầu nguồn lực có loại, template và hồ sơ QA/QC, QS batch có hướng rõ ràng.
+
+- Readiness kiểm hợp đồng Upstream thi công đã ký, IFC đã phát hành, permit bắt buộc còn
+  hiệu lực, tham chiếu chuẩn bị, Budget Baseline đã khoá và các cờ bàn giao mặt bằng,
+  biện pháp thi công, kế hoạch HSE; lưu snapshot bằng chứng và người đánh giá.
+- Duyệt vật tư dùng lại `IProcurementService` trong cùng transaction để tạo và trình MR;
+  thiết bị/nhân công dừng ở trạng thái sẵn sàng chuyển Cung ứng.
+- Hồ sơ QA/QC cần template đa ngôn ngữ đã publish, packet IFC đã phát hành cùng dự án,
+  checklist hợp lệ và Project Document đang hoạt động cùng dự án; mỗi tài liệu giữ phân
+  loại rõ ràng. QS kiểm hướng hợp đồng, ngày, tổng dòng, tham chiếu mốc/phụ lục/BOQ duyệt
+  và chuỗi thay thế/hoàn. Bản đã trình bất biến, chỉ sửa qua vòng review/điều chỉnh.
+- Tài liệu là bằng chứng QA/QC hoặc QS (kể cả nháp) không xoá được; tạo/sửa hồ sơ ghim
+  row version của tài liệu nên lệnh xoá chạy đua sẽ lỗi concurrency.
+- Người tạo MR, hồ sơ QA/QC, QS batch, HSE hoặc VO không được tự duyệt. Với HSE, cả người
+  tạo và người báo cáo đều không được xác nhận/từ chối: trả `400`
+  `HSE_INDEPENDENT_REVIEW_REQUIRED` kèm `operation`, `projectId`, `violationId`.
+
+**Chuyển nguồn lực sang Cung ứng (Partial).** Route
+`/api/operational-projects/{projectId}/procurement/construction-resources`:
+
+| Method/path | Permission | Ý chính |
 |---|---|---|
-| Supply | `MH-M01`–`MH-M04`, order, received-goods record and invoice in MH/TQT; warehouse receipt applies to goods actually received | Required set by payment stage, approved quantity source, advance/retention and exceptions. |
-| Labour | `TC-M27`, `TC-M29`, `TQT-M05`/`TQT-M06` and approved site quantity in TC/TQT | Distinguish labour team from subcontractor and identify contract, payroll/attendance or acceptance evidence actually required. |
-| Equipment | `LK-M01`–`LK-M08` cover equipment handover, stock and maintenance; MH describes purchase/order | Decide purchase versus rental, supply period/usage evidence, ownership and which LK records apply; none alone proves payment eligibility. |
-| Mixed subcontract | TC/TQT contain work acceptance and subcontract settlement forms, but no separate mixed-package rule | Identify line-level material/labour/equipment evidence, allocation and payment gate without requiring a fake warehouse receipt. |
+| `GET /` | `proc.resource-requests.view` | Thiết bị/nhân công CM đã duyệt; lọc `type`, `state=AwaitingContract|ContractLinked|Supplied` |
+| `GET /contracts` | như trên | Hợp đồng Downstream Supply/Subcontract cùng dự án ở Draft/Signed/InProgress |
+| `GET /documents` | `proc.resource-requests.manage` | Tài liệu cùng dự án (trừ đang chờ xoá) |
+| `POST /contracts` | như trên | Tạo hợp đồng Downstream Draft từ yêu cầu đã duyệt (vendor, loại, giá trị, phạm vi) |
+| `POST /{id}/contract` | như trên | Gắn hợp đồng: một hợp đồng mỗi yêu cầu, nhiều yêu cầu mỗi hợp đồng; khoá sau khi cung cấp |
+| `POST /{id}/supply` | như trên | Xác nhận đã cung cấp kèm tài liệu; hợp đồng phải Signed/InProgress |
 
-The `TC` and `TQT` source procedures show effective dates in 2016 and 2020
-respectively. Their role names, submission weekdays and retention periods are
-historical source content, not automatically approved current product rules.
-The ISO answer-by-question review is recorded in `Nicon-QLVH.md` section 12:
-its historical process steps answer parts of the handoff, reporting and payment
-questions, while product permissions, matrices, formulas and migration rules
-remain open. In particular, the 11 individual scoring criteria in `NS2-M01`
-are distinct from the PRD's 11 target KPI positions, and the 5% retention or
-contract-example figures do not specify a schedule-variance alert formula.
-The older construction procedure starts from a tender result/approved price,
-while the current contract requires a signed Upstream contract and a separate
-server start gate; the older purchasing procedure assigns ordering to Accounting,
-while the later confirmed handoff assigns it to Procurement. Preserve the
-current canonical workflow pending explicit reconciliation. Several files are
-completed customer/project records, and some workbooks contain example sheets
-and formulas; none is automatically a blank publishable template. The inner
-`TC-M28` archive repeats the 19 extracted workbooks byte-for-byte; the outer
-construction archive largely repeats the folder, with one `01-Dao dat.xls`
-binary variant that has the same extracted cell text. The pack does not itself
-resolve the four-package payment matrix, the project-specific QA/QC checklist
-or current template versions. Several legacy `.xls` forms use font-dependent
-Vietnamese text and formatted ranges much wider than their populated cells;
-verify rendered labels and formulas in the source application before defining
-an import schema. Keep the existing document workflow and snapshot/version
-boundaries until the business owners confirm the mapping. Source examples:
-[construction](<Nicon/ISO/D.Quy trình chi tiết/D.4. Quy trình thi công lắp đặt/Quy trình thi công lắp đặt.doc>),
-[payment](<Nicon/ISO/D.Quy trình chi tiết/D.6. Quy trình thanh toán, quyết toán công trình/Quy trình thanh quyết toán.doc>),
-[purchasing](<Nicon/ISO/D.Quy trình chi tiết/D.7. Quy trình mua hàng, đánh giá nhà cung ứng, thầu phụ- co chinh sua/Quy trình mua hàng, đánh giá NCC.doc>).
+Giá trị Draft 0–9.007.199.254.740.991, phạm vi tối đa 20.000 ký tự. Không nhận thời
+điểm, người, khách, dự án hay hướng từ body. Sự kiện chuyển giao chỉ thêm, ghi cùng
+transaction serializable; tài liệu bằng chứng đã dùng không xoá được. Migration
+`20261018063226_AddConstructionProcurementHandoff` không backfill trạng thái đã cung cấp.
+`GET /reports/projects` thêm `cmControl` theo dự án (QS hai hướng, QA/QC, HSE đếm theo bản
+ghi, `periodPolicy=CurrentState`); không suy công thức tài chính mới.
 
-Source files are read-only evidence. Never rewrite, normalize, translate, or
-re-export them as an implementation side effect. Canonical docs summarize the
-approved contract; code and tests prove delivery status.
+<a id="720-module-4-target-integration-contract"></a>
 
-The PRD phrase "8 layers" is not a folder-count contract: its illustrated tree
-contains six numbered top-level business folders plus three Design subfolders.
-The current code exposes nine `ProjectDocumentCategory` values because Survey
-and CRM Pre-Design are separate categories. Current defaults are:
+### 13.3 Module 4 Target Integration Contract
 
-| Category | Current configured path |
+Đây là hợp đồng mục tiêu cho Thi công và Nghiệm thu, bắt buộc tham chiếu khi làm phần thi
+công. Baseline 03/10 xác nhận việc tách CM/BCH, yêu cầu nguồn lực, QA/QC và QS; gate,
+ma trận và template chi tiết vẫn chờ quyết định. Không có nghĩa mọi mục dưới đây đã có
+trong API.
+
+**Ranh giới nghiệp vụ** (phản hồi khách 18/10/2026,
+[NICON CM/ISO response](Nicon/MoMs/2026-10-18/NICON_Phan-hoi_CM_ISO.md)):
+
+- Hai giai đoạn: Phòng CM chuẩn bị dự án sau khi hợp đồng Upstream D&B/thi công được ký;
+  trong thi công, BCH và Phòng CM chạy song song.
+- Mỗi dự án có BCH riêng; một người có thể thuộc nhiều BCH, nhưng quyền ở dự án này không
+  mở quyền dự án khác.
+- Sau khi CM duyệt yêu cầu thiết bị/nhân công, Cung ứng lập hợp đồng và cung cấp cho công
+  trường, rồi Tài chính – Kế toán (FA) thanh toán theo hồ sơ áp dụng.
+- Hợp đồng đã ký mở bước chuẩn bị trên Operational Project sẵn có, không tạo dự án trùng.
+  Kế hoạch chuẩn bị của CM sở hữu WBS baseline, critical path, Baseline S-Curve, tổ chức
+  BCH, kế hoạch nguồn lực và Budget Baseline có phiên bản.
+- Bản ghi hiện trường thuộc dự án và ghi hạng mục WBS, ngày báo cáo, tác giả, vai trò
+  BCH, trạng thái, row version. QA/QC, Punchlist, HSE, yêu cầu nguồn lực, QS và VO là các
+  aggregate riêng nối bằng ID ổn định, không nối bằng đường dẫn Drive, nhãn hay text.
+  Module 4 tham chiếu nhà cung cấp/báo giá của Cung ứng và hợp đồng, mốc, hồ sơ thanh
+  toán, VO của Module 6, không sao chép master.
+- Bộ ISO của NICON là nguồn template cho mọi quy trình và bước (xem
+  [mục 15](#15-dữ-liệu-tham-chiếu-của-nicon)); không tự đặt chứng từ bắt buộc hay ngoại
+  lệ thanh toán chỉ dựa vào tên file.
+
+**Luồng và kiểm soát:**
+
+1. CM chỉ ban hành baseline khi WBS, mốc, vai trò BCH, kế hoạch nguồn lực và Budget
+   Baseline qua validate ở server.
+2. Hợp đồng đã ký chỉ cho phép chuẩn bị, chưa cho khởi công. Gate khởi công còn cần IFC
+   áp dụng đã phát hành, permit bắt buộc còn hiệu lực, baseline tiến độ đã ban hành, kế
+   hoạch BCH/nguồn lực đã duyệt và Budget Baseline đã khoá. Bàn giao mặt bằng, biện pháp
+   thi công, kế hoạch HSE theo checklist ISO khi NICON duyệt.
+3. BCH nộp bằng chứng hiện trường từ mobile. Dữ liệu nháp/offline không phải bằng chứng
+   đã duyệt, không kích hoạt Cung ứng, thanh toán hay KPI.
+4. Yêu cầu nguồn lực vượt mức hoặc ngoài kế hoạch cần CM cấp 2 duyệt độc lập trước khi
+   sang Cung ứng; từ chối không đổi cam kết BOQ.
+5. QS Upstream và Downstream tách hướng và liên kết hợp đồng. Khối lượng đã duyệt bất
+   biến; sửa bằng phiên bản thay thế hoặc bút toán hoàn có lịch sử.
+6. CM so tiến độ BCH báo với Baseline S-Curve theo quy tắc ở 13.2.
+7. Người tạo không tự duyệt bản ghi của mình (server thực thi).
+8. Hoàn thành/bàn giao dùng trạng thái nghiệm thu, QA/QC, hoàn công, chạy thử và Punchlist
+   chặn đã duyệt; không tin cờ sẵn sàng từ client.
+
+Phạm vi báo cáo CM đã xác nhận: tiến độ, khối lượng hoàn thành với nghiệm thu Upstream/
+Downstream riêng, giá trị thực hiện so dự toán, hồ sơ nghiệm thu QA/QC và an toàn. Kỳ báo
+cáo, định nghĩa giá trị thực hiện và nguồn tính còn phải thống nhất; không gộp giá trị
+nghiệm thu, cam kết và đã chi thành một chỉ số.
+
+Ba khu vực BCH (Vận hành, QA/QC, QS công trường) dùng chung dự án, WBS/baseline, đội ngũ,
+dịch vụ tài liệu, audit và kiểm soát truy cập; tách route không được nhân bản master dự
+án, nhà cung cấp, hợp đồng, BOQ hay user.
+
+| Sự kiện nguồn | Tác động bắt buộc |
+|---|---|
+| Hợp đồng Upstream đã ký | Mở chuẩn bị CM một lần, idempotent |
+| IFC phát hành | Chỉ revision đã phát hành hiện cho người thi công |
+| CM duyệt yêu cầu nguồn lực | Chuyển yêu cầu sang Cung ứng, không copy BOQ |
+| QS Upstream duyệt | Bằng chứng cho mốc phải thu tương ứng |
+| QS Downstream duyệt | Bằng chứng cho hồ sơ phải trả tương ứng |
+| VO duyệt | Tạo phiên bản ngân sách/BOQ bị ảnh hưởng, không sửa ngầm baseline gốc |
+| Tài liệu QA/QC được chấp nhận | Đồng bộ file vào `04_Thi_cong_Nghiem_thu`, giữ metadata |
+| Chậm tiến độ quá 5% | Một cảnh báo đỏ cho mỗi dự án/baseline/kỳ tới khi xử lý hoặc bị thay |
+
+Thanh toán Downstream theo khối lượng nghiệm thu (mục tiêu) đối chiếu cùng vendor, hợp
+đồng, dự án, cơ sở tiền tệ/số tiền và khối lượng/kỳ: (1) hợp đồng Downstream đã ký hoặc
+phụ lục được duyệt; (2) phiếu nhập kho posted (trừ hoàn) khi là vật tư; (3) QS Downstream
+đã duyệt cho khối lượng đã thực hiện. Ma trận áp dụng cho gói chỉ cung cấp, chỉ nhân công,
+thiết bị và thầu phụ hỗn hợp còn là quyết định sản phẩm. Quy trình mua hàng cho phép đề
+nghị thanh toán trước khi nhận hàng, quy trình thanh toán và `TQT-M07` có tạm ứng; tạm ứng
+có vào Tài chính hay không, khi nào, với uỷ quyền và chứng từ gì vẫn là quyết định mở của
+FA/CM. Không áp gate khối lượng cho tạm ứng mặc định, không coi thiếu phiếu nhập/QS là miễn
+trừ, không tạo phiếu nhập hay QS giả để khớp. Đối chiếu thất bại trả chênh lệch cụ thể và
+không đổi Payment Request, sổ, notification, audit (trừ bản ghi từ chối).
+
+Ghi file ra ngoài dùng mẫu thao tác tài liệu bền: transaction lưu metadata và thao tác
+chờ; Drive lỗi không được đánh dấu hồ sơ đã đồng bộ.
+
+Còn mở: bộ ISO đã nhận ngày 20/10/2026, nhưng ánh xạ quy trình/bước được duyệt, ngoại lệ
+thanh toán theo gói, công thức giá trị thực hiện và kỳ báo cáo vẫn thiếu. Không publish
+template ISO production hay bật tính toán tài chính/baseline giai đoạn 3–4 cho tới khi
+CM/FA/Product xác nhận; không seed danh sách chứng từ hay công thức tạm. Ngoài phạm vi hiện
+tại: tổng hợp S-Curve danh mục, điều kiện Tài chính cho thiết bị/nhân công, nội dung
+template ISO đã duyệt, aggregate thi công cũ theo Design Project và offline/kết nối lại.
+Kế hoạch hoàn thiện ở [mục 20](#20-kế-hoạch-hoàn-thiện-theo-yêu-cầu-nicon).
+
+Kiểm thử bắt buộc: unit cho chênh S-Curve, biên ngưỡng (5 điểm không phải > 5 điểm),
+rollup ngân sách, khối lượng BOQ còn lại, tổng QS, chọn phiên bản baseline; integration
+cho scope dự án/hợp đồng, quyền BCH và CM, tách người làm/duyệt, vòng đời, row version cũ,
+idempotency, từ chối không đổi trạng thái downstream, liên kết thanh toán Upstream/
+Downstream, và trạng thái Drive pending/retry/conflict/failure; browser cho luồng mobile
+BCH và review/cảnh báo desktop CM (loading, rỗng, lỗi, offline/retry, responsive).
+
+### 13.4 Bàn giao công trình
+
+Route `/api/handover-records` (và `/api/v1`); UI `/admin/construction/handover`
+(`HandoverRecordsPage.tsx`).
+
+| Method | Route | Permission | Mục đích |
+|---|---|---|---|
+| `GET` | `/api/handover-records`, `/export`, `/{id}` | `construction.handover.view` | List có lọc/sắp/phân trang và tổng hợp; CSV đầy đủ; chi tiết, readiness, lịch sử |
+| `POST` | `/api/handover-records` | `construction.handover.manage` | Tạo bản bàn giao duy nhất của dự án |
+| `PUT` | `/api/handover-records/{id}` | `construction.handover.manage` | Sửa khi Draft/Reopened |
+| `POST` | `/api/handover-records/{id}/status` | `construction.handover.manage` | Chuyển trạng thái chưa kết thúc |
+| `POST` | `/api/handover-records/{id}/complete` | `construction.handover.complete` | Hoàn thành khi sẵn sàng và đã ký |
+| `DELETE` | `/api/handover-records/{id}` | `construction.handover.manage` | Xoá vĩnh viễn ở mọi trạng thái |
+
+`view.all` mở đọc không giới hạn, `manage.all` mở ghi không giới hạn (độc lập nhau); chỉ
+có quyền cơ bản thì giới hạn ở bản ghi mình tạo/sở hữu và dự án mình quản lý/chủ trì.
+Lỗi nghiệp vụ `400`, ẩn/không có `404`, trùng hoặc ghi đồng thời `409`. Readiness tính ở
+server từ nghiệm thu từng phần đã duyệt, các hạng mục hoàn công bắt buộc đã duyệt, punch
+chưa xử lý, chạy thử và checklist; client chỉ hiển thị. Khoá duy nhất hiện là
+`DesignProjectId` (ranh giới tương thích); chuyển sang `OperationalProjectId` phải giữ bất
+biến một bàn giao, lịch sử, row version, tài liệu, scope, deep link và xử lý dự án thi
+công không có Design Project.
+
+---
+
+## 14. Báo cáo và KPI
+
+### 14.1 Báo cáo vận hành dự án
+
+Báo cáo tóm tắt theo `OperationalProjectId`, không tính điểm KPI, chỉ trả dự án người gọi
+được truy cập qua `IProjectAccessService`.
+
+- `GET /api/reports/projects`: danh mục khi bỏ `projectId`; `?projectId={id}` trả một
+  dự án hoặc `404`.
+- `GET /api/reports/projects/export?format=xlsx|pdf&language=vi|en|zh|ja`: cùng bộ lọc,
+  render đủ kết quả ở server, ghi audit kèm bộ lọc và số dự án.
+- `from`/`to` là `DateOnly` tuỳ chọn, tính trọn ngày; ngược thứ tự trả `400`. Khoảng
+  ngày áp riêng cho từng ngày nguồn: hạn kế hoạch task thi công, ngày nghiệm thu, hạn
+  hoặc ngày hết hạn permit, ngày tạo báo giá, ngày ký hợp đồng (chưa ký thì ngày tạo),
+  ngày quyết định VO, hạn mốc thanh toán. Tiến độ thiết kế là hiện tại vì chưa có snapshot
+  lịch sử. Response có `generatedAtUtc`, `asOfUtc`; drill-down chỉ là route tương đối.
+
+| Role | Xem | Xuất |
+|---|---|---|
+| `SUPER_ADMIN`, `ADMIN` | Có (wildcard) | Có |
+| `BGD`, `ACCOUNTANT` | Có (`reports.projects.view`) | Có (`reports.projects.export`) |
+| `PM` | Có, theo dự án | Không |
+| Role khác | Không mặc định | Không mặc định |
+
+Chỉ số có: định danh dự án, PM/khách; tiến độ thiết kế theo
+`design-schedule-weighted-v1` (chưa đủ baseline thì `DESIGN_BASELINE_INCOMPLETE`); số
+task thi công theo trạng thái và quá hạn (không tính % trung bình); số nghiệm thu theo
+trạng thái, số lần sửa, quá hạn (không tính tỷ lệ đạt lần đầu); permit quá hạn, sắp đến hạn,
+sắp hết hạn (cửa sổ 30 ngày); tổng báo giá, giá trị hợp đồng gốc, delta VO duyệt, giá trị
+hiện tại, giá trị mốc theo trạng thái (ghi nhãn **Contractual schedule**, không phải tiền
+mặt, doanh thu hay phải thu).
+
+Chỉ số chưa có trả mã lý do thay vì số 0 giả: `HISTORICAL_SNAPSHOTS_UNAVAILABLE`
+(S-curve lịch sử), `CONSTRUCTION_WEIGHTS_UNAVAILABLE`,
+`ACCEPTANCE_OUTCOME_DATA_UNAVAILABLE`, `ACTUAL_FINANCE_LEDGER_UNAVAILABLE` (dòng tiền,
+doanh thu, chi phí, P&L, phải thu thực tế), `INVENTORY_LEDGER_UNAVAILABLE`,
+`BOQ_USAGE_DATA_UNAVAILABLE`, `VENDOR_PERFORMANCE_DATA_UNAVAILABLE`. Dự án thiếu nguồn
+thi công/nghiệm thu/permit liên kết thiết kế trả phần đó `Unavailable` với
+`SOURCE_NOT_CONFIGURED`.
+
+<a id="719-kpi-framework-and-source-evidence"></a>
+
+### 14.2 KPI và bằng chứng nguồn
+
+KPI hiện có 19 chỉ số trong sáu nhóm (Kinh doanh, Đấu thầu, Thiết kế, Công trường, Cung
+ứng, Kế toán dự án). Đây là tập con có nguồn dữ liệu của khung 11 vị trí mục tiêu của
+NICON, không được mô tả là đã phủ đủ 11 vị trí. Chỉ số thiếu luồng nguồn là `MissingData`,
+không bao giờ thành điểm 0.
+
+- Một kỳ cho mỗi nhân viên/năm/tháng, ranh giới theo `Asia/Ho_Chi_Minh`, lưu UTC.
+- Tổng trọng số chỉ số đang hoạt động của một vị trí không quá 100%. Chỉ khoá kỳ khi mọi
+  chỉ số đang hoạt động là `Available` và tổng trọng số snapshot bằng 100%. Kỳ đã khoá bất
+  biến, không tính lại (mở lại cần luồng riêng được duyệt).
+- Snapshot đóng băng mã, phiên bản, trọng số, mục tiêu, chiều tính điểm, ngưỡng, kết quả
+  và bằng chứng nguồn.
+- Tự tính lúc 01:00 giờ Việt Nam hằng ngày; người có quyền tính tay được. Ngưỡng điểm thấp
+  phát tối đa một notification mỗi nhân viên/kỳ.
+- `analytics.kpi.view` chỉ xem của mình; `view.all`, `manage`, `export` lần lượt cho xem
+  người khác, quản lý định nghĩa/kỳ và xuất.
+- UI: `/admin/kpi` (chọn nhân viên/kỳ, tính, xem bằng chứng, xuất, khoá);
+  `/admin/kpi/configuration` (trọng số, mục tiêu, chiều, ngưỡng, bật/tắt; cần
+  `analytics.kpi.manage`; cờ `RequiresTarget` do backend cung cấp).
+
+| Vị trí | Chỉ số (trọng số) | Nguồn |
+|---|---|---|
+| Kinh doanh | Tỷ lệ Lead → hợp đồng (40%); doanh thu hợp đồng mới ký (40%, cần mục tiêu); thời gian tương tác đầu tiên (20%, cần mục tiêu) | Lead, hợp đồng Upstream, activity đầu tiên không phải ghi chú |
+| Đấu thầu | Tỷ lệ trúng (40%); chuẩn bị đúng hạn (30%); độ chính xác dự toán (30%) | Lần nộp đầu, checklist, dự toán duyệt so BOQ thi công cuối |
+| Thiết kế | Giao bản vẽ đúng hạn (40%); duyệt lần đầu (30%); lỗi thiết kế công trường báo (30%, cần mục tiêu) | Lịch thiết kế, revision bản vẽ, Punch đã xác minh có nguyên nhân Design |
+| Công trường | Chênh tiến độ (30%); hao hụt vật tư (30%); nghiệm thu lần đầu (20%); vi phạm HSE (20%) — các chỉ số trừ nghiệm thu cần mục tiêu | Task thi công, xuất kho so BOQ cuối, nghiệm thu, HSE đã xác nhận |
+| Cung ứng | Tối ưu chi phí mua (40%); thời gian giao (30%, cần mục tiêu); đánh giá chất lượng NCC (30%) | Đơn giá BOQ cuối so dòng hợp đồng Downstream, MR duyệt → phiếu nhập cuối, Vendor Rating PM duyệt |
+| Kế toán dự án | Thu đúng hạn (40%); thời gian xử lý thanh toán đối tác (30%, mặc định 72 giờ); độ chính xác số liệu (30%, mặc định 1 điều chỉnh) | Mốc Upstream theo kế toán phụ trách, Payment Request đã kiểm → đã chi, điều chỉnh sau khoá sổ |
+
+Quy tắc nguồn KPI:
+
+1. Lưu rõ `OperationalProjectId`, nhân viên chịu trách nhiệm, thời điểm sự kiện, trạng
+   thái, người tạo/sửa, row version. Trách nhiệm ghi tại sự kiện; không suy từ role hay
+   đội ngũ hiện tại, cũng không từ người tình cờ ghi nhận thanh toán.
+2. Chỉ đếm sự kiện kết thúc (`Approved`, `Confirmed`, `Posted`, `Paid`); nháp, từ chối,
+   huỷ, xoá không phải bằng chứng. Khoảng half-open giờ Việt Nam.
+3. Bản ghi tài chính/kho đã duyệt hoặc posted bất biến; sửa bằng hoàn hoặc phiên bản mới.
+4. Áp quy tắc ghi chung ([6.2](#62-quy-tắc-ghi-dùng-chung)) và audit; JSON bằng chứng lưu
+   loại thực thể, ID, phiên bản nguồn, người chịu trách nhiệm, thời điểm.
+5. Không có mẫu số hoặc bản ghi duyệt thì `MissingData`.
+
+Giả định triển khai hiện tại (chưa phải quyết định NICON khi baseline 03/10 không nêu hoặc
+mâu thuẫn):
+
+| Mã | Giả định |
+|---|---|
+| D-01 | Seed sáu nhóm quyền chức năng CRM, HR, Procurement, Construction, Design, Finance; Pháp lý dùng nhóm Construction. Không phải sơ đồ tổ chức đã duyệt; cơ cấu năm phòng và vị trí Cung ứng/Pháp lý là Q-04 |
+| D-02 | BOQ thi công duyệt mới nhất thành BOQ cuối khi dự án hoàn thành; VO chỉ ảnh hưởng qua revision BOQ được duyệt |
+| D-03 | Punch đã xác minh có nguyên nhân Design tính đều cho người thiết kế chịu trách nhiệm; người sửa không tự động là người chịu trách nhiệm |
+| D-04 | HSE đã xác nhận tính đều cho người phụ trách công trường; nháp, đã báo, từ chối, huỷ và nhật ký không tính |
+| D-05 | Hao hụt = `100 * max(xuất ròng − hạn mức BOQ cuối, 0) / hạn mức`; hạn mức thiếu hoặc 0 không cho điểm giả |
+| D-06 | Thời gian giao tính giờ lịch từ duyệt MR tới phiếu nhập cuối đáp ứng đủ |
+| D-07 | Mỗi hợp đồng Downstream hoàn thành một phiếu đánh giá; chất lượng, tiến độ, chi phí, HSE bằng trọng số; Cung ứng lập, PM dự án duyệt |
+| D-08 | Thu đúng hạn: mốc Upstream đến hạn trong tháng, chỉ `Paid` đủ vào/trước hạn mới đạt |
+| D-09 | Xử lý thanh toán tính giờ lịch từ `ValidatedAt` tới `PaidAt` theo kế toán được giao |
+| D-10 | Mỗi điều chỉnh sau khoá sổ được duyệt tính một lần cho kế toán của bút toán gốc; hoàn không tính thêm |
+| D-11 | Triển khai đủ luồng nguồn cùng lúc; mục tiêu số do admin cấu hình; kỳ không khoá được khi chỉ số thiếu nguồn hoặc cấu hình |
+
+Migration nguồn: `AddPunchRootCauseAttribution`, `AddReceivableAccountability`,
+`AddHseViolations`, `AddProcurementControlChain`, `AddFinanceControlWorkflows`. Punch và
+mốc cũ chưa phân loại/gán bị loại tới khi được xử lý; không tạo sự kiện duyệt giả hay chia
+giá trị hợp đồng cũ thành dòng. Import số dư đầu kỳ cần hash nguồn, người import, thời
+điểm, preview, validate và xác nhận. KPI không có hard delete; tắt định nghĩa vẫn giữ bằng
+chứng đã khoá.
+
+---
+
+## 15. Dữ liệu tham chiếu của NICON
+
+`docs/Nicon/` lưu hiện vật của khách, chỉ đọc: không đổi tên, chuẩn hoá, dịch hay xuất lại.
+
+- Biên bản `MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md` là baseline
+  nghiệp vụ hiện hành; các file khác cùng thư mục là tổng hợp hỗ trợ, không tự đóng câu
+  hỏi mở của baseline.
+- PRD đầy đủ mô tả tám module, các bước chuyển giao giữa phòng, 11 vị trí mục tiêu, trọng
+  số KPI, cây Drive và kỳ vọng UI. File workflow DOCX là bối cảnh lịch sử.
+- PDF tiến độ cho thấy WBS thật (phân cấp, thời lượng, phụ thuộc, việc pháp lý/thiết kế
+  song song, mốc, baseline). `BOQ/` gồm workbook một và nhiều sheet.
+- `ISO/` (nhận 20/10/2026, 170 file đã mở hoặc phân loại: 108 Word, 40 workbook, 3 PDF,
+  2 RAR, 17 file khoá/tạm) gồm quy trình kiểm soát tài liệu, đánh giá nội bộ, cải tiến và
+  các quy trình khách hàng, đấu thầu, thiết kế, thi công, thanh toán, mua hàng, thiết bị,
+  nhân sự. Không có thư mục `D.5`; hỏi NICON trước khi coi bộ quy trình là đủ.
+
+Nhận file không có nghĩa đã có chứng nhận ISO, phê duyệt phát hành hay nghiệm thu nghiệp
+vụ. Nhiều file là hồ sơ dự án đã điền hoặc có sheet ví dụ, không phải mẫu trắng; một số mã
+form trùng, thiếu hoặc lệch tên (ví dụ `TC-M02`, `TC-M23`, `TQT-M00`, `TC-M00`, `DT-M03`
+không tìm thấy; `TC-M15`, `TC-M24`, `KH-M01` có hai nghĩa; `NS1-M01` thực là phiếu tuyển
+dụng; `TQT-M04` có lỗi `=#REF!+C13`). Quy trình `TC` (2016) và `TQT` (2020) mang vai trò,
+lịch nộp và thời hạn lưu trữ cũ, không tự thành quy tắc hiện hành; quy trình mua hàng cũ
+giao đặt hàng cho Kế toán, còn luồng đã xác nhận giao cho Cung ứng. Giữ workflow hiện tại
+cho tới khi chủ nghiệp vụ xác nhận ánh xạ. Hỏi NICON về form thiếu và FA (chị K/Kiara) về
+chứng từ thanh toán.
+
+Ứng viên chứng từ cho bốn loại gói Downstream (chưa phải ma trận bắt buộc):
+
+| Gói | Ứng viên | FA/CM còn phải quyết |
+|---|---|---|
+| Cung cấp vật tư | `MH-M01`–`MH-M04`, đơn hàng, biên bản nhận hàng, hoá đơn; phiếu nhập kho cho hàng thực nhận | Bộ chứng từ theo đợt, nguồn khối lượng duyệt, tạm ứng/giữ lại, ngoại lệ |
+| Nhân công | `TC-M27`, `TC-M29`, `TQT-M05`/`TQT-M06`, khối lượng công trường duyệt | Phân biệt tổ đội và thầu phụ; chứng từ hợp đồng/chấm công/nghiệm thu cần thiết |
+| Thiết bị | `LK-M01`–`LK-M08` (bàn giao, tồn, bảo dưỡng) | Mua hay thuê, bằng chứng thời gian sử dụng, sở hữu |
+| Thầu phụ hỗn hợp | Biểu mẫu nghiệm thu và quyết toán thầu phụ trong TC/TQT | Bằng chứng theo dòng vật tư/nhân công/thiết bị, phân bổ, gate thanh toán không cần phiếu nhập giả |
+
+Kiểm soát tài liệu (`C.1`, `QTC-KSTLHS`): PTBP → ĐDCL → GĐ duyệt; TKISO phát hành và thu
+hồi; GĐ duyệt huỷ hồ sơ. Uỷ quyền điện tử cho CM/Admin, phát hành/thay thế và lưu trữ/huỷ
+vẫn là quyết định mở; việc publish checklist pháp lý trong sản phẩm không chứng nhận toàn
+bộ quy trình QTC. 11 tiêu chí chấm điểm cá nhân trong `NS2-M01` khác 11 vị trí KPI của PRD;
+mức giữ lại 5% trong hợp đồng mẫu không phải công thức cảnh báo tiến độ.
+
+Thư mục Drive (PRD "8 lớp" không phải số thư mục cố định; code có chín
+`ProjectDocumentCategory`):
+
+| Category | Đường dẫn |
 |---|---|
 | Survey | `01_Khao_sat` |
 | CRM Pre-Design | `01_CRM_PreDesign` |
@@ -4474,962 +2542,478 @@ and CRM Pre-Design are separate categories. Current defaults are:
 | Procurement | `05_Cung_ung_Vat_tu` |
 | Finance/Contracts | `06_Tai_chinh_Hop_dong` |
 
-The business target nests Survey beneath CRM Pre-Design. Treat the current two
-paths as a compatibility contract until an approved topology migration disables
-sync, drains active claims, inventories remote/local bindings, handles name and
-content conflicts, moves or rebinds files, verifies checksums, and provides
-rollback. Changing the configuration alone does not move historical files.
+Mục tiêu nghiệp vụ đặt Survey dưới CRM Pre-Design. Giữ hai đường dẫn hiện tại cho tới khi có
+migration topology được duyệt (tắt sync, xả claim, kiểm kê binding, xử lý xung đột, di
+chuyển/rebind, kiểm checksum, có rollback); đổi cấu hình không di chuyển file cũ.
 
-#### Schedule import boundary
+Ranh giới import:
 
-A schedule import must use an explicit parser profile/version and a preview
-before persistence. The normalized draft model retains source file hash,
-source row/task ID, task name, hierarchy/outline level, duration and unit,
-planned start/finish, milestone flag, predecessor links with relationship/lag,
-calendar, constraints when supported, and baseline fields. Validation rejects
-missing parent/predecessor references, cycles, invalid dates/durations, duplicate
-source IDs, and finish-before-start values.
-
-Import creates a Draft schedule version. Publishing is a separate authorized
-transition; it never silently replaces the active design or construction
-baseline. Re-import of the same file/profile is idempotent. A changed file must
-create a new version or an explicit diff, not overwrite actual progress.
-
-#### BOQ workbook import boundary
-
-The samples include cover/summary sheets, building and discipline sheets,
-single-sheet quotations, bilingual labels, formulas, merged cells, repeated or
-project-specific names, and material lists. Consequently:
-
-1. discover all visible and hidden sheets and preserve workbook/sheet order;
-2. classify sheets as ignored metadata, summary, or detail using a user-reviewed
-   mapping rather than a hardcoded name list;
-3. read cached formula results only when their provenance is retained and report
-   missing/stale cached values instead of recalculating with a different engine;
-4. normalize item code, description, unit, quantity, unit price, hierarchy and
-   optional discipline only after preview;
-5. validate precision, sign, required values, duplicate identity, merged-cell
-   ambiguity and totals by exact sheet/cell location;
-6. reconcile recognized detail totals with recognized summary totals and show
-   unexplained differences;
-7. persist source hash, importer, timestamp, parser/mapping version, per-sheet
-   decision and row-level outcome; and
-8. create a Draft revision only after explicit confirmation. Approval remains a
-   separate lifecycle action and the current approved BOQ remains unchanged on
-   any rejected or partial import.
-
-File-size, sheet-count, row-count, formula, macro/external-link, and processing
-time limits require explicit configuration and four-language validation
-messages. Unit tests own mapping/normalization and formula-value decisions;
-integration tests own upload/auth/scope/idempotency/persistence; representative
-fixture workbooks derived without customer-sensitive values cover single-sheet,
-multi-sheet, merged-cell, formula, duplicate, malformed, and partial-failure
-cases.
+- **Tiến độ:** profile parser có phiên bản và preview trước khi lưu; giữ hash file, ID
+  dòng/task nguồn, tên, cấp, thời lượng, ngày kế hoạch, milestone, predecessor (quan hệ,
+  lag), lịch, ràng buộc, baseline. Từ chối cha/predecessor thiếu, vòng, ngày/thời lượng
+  sai, ID trùng, kết thúc trước bắt đầu. Import tạo phiên bản Draft; ban hành là bước
+  riêng; import lại cùng file idempotent; file đổi tạo phiên bản mới, không ghi đè tiến độ
+  thực tế.
+- **Workbook BOQ:** nhận diện mọi sheet (kể cả ẩn) theo thứ tự; phân loại sheet bằng
+  mapping người dùng duyệt; chỉ đọc kết quả công thức đã lưu và báo thiếu/cũ thay vì tính
+  lại; chuẩn hoá sau preview; validate theo ô; đối chiếu tổng chi tiết với tổng hợp; lưu
+  hash, người import, thời điểm, phiên bản mapping và kết quả từng dòng; chỉ tạo Draft sau
+  khi xác nhận, BOQ đã duyệt không đổi khi import lỗi hay dở dang. Giới hạn dung lượng,
+  số sheet/dòng, công thức, macro và thời gian xử lý phải cấu hình rõ, có thông báo bốn
+  ngôn ngữ.
 
 ---
 
-## 8. Frontend Development
+## 16. Frontend
 
-### 8.1 Technology Stack
+- API gọi qua module có kiểu trong `src/services/`: `authApi.ts`, `contentApi.ts`;
+  `adminApi.ts` là facade tương thích phía trên các client `services/admin/*Api.ts` và
+  kiểu trong `services/admin/types/`. Mở rộng client của tính năng, không phình facade;
+  client chuyên biệt như `rbacApi.ts` vẫn là nguồn chuẩn.
+- Vị trí: tab chi tiết hợp đồng `pages/admin/contracts/`; gói công việc
+  `pages/admin/work-packages/`; form và panel cung ứng
+  `pages/admin/procurement/components/`. Nghiệp vụ nằm trong hook/client, trình bày ở
+  view.
+- Giao diện chính thức là **light** (chủ sản phẩm xác nhận). Dùng token ngữ nghĩa
+  (foreground, surface, border, primary), không dùng class slate/white cố định; khung
+  dark token không phải theme đã giao.
+- Nhãn: một control dùng `FieldScope` với `Label` và Input/Textarea/SelectTrigger/
+  SearchableSelect; có sẵn id thì dùng `htmlFor`/`id`. `FieldControl` chỉ để bọc control
+  native/tuỳ chỉnh. Mỗi dòng lặp có scope riêng; không lấy placeholder làm tên truy cập;
+  hint của picker không đè nhãn. `npm run check:a11y` kiểm liên kết nhãn.
+- `useConfirm` cho xác nhận đơn giản; xoá aggregate dùng `DeletionImpactDialog`.
+  `useUiError` giữ lý do validate/xung đột an toàn từ server, dịch lỗi mạng, ẩn lỗi nội bộ.
+  Tải file lỗi đọc JSON Blob có giới hạn qua helper dùng chung.
+- Danh sách hiển thị phân trang theo tổng thật (`ListPagination`, `useListPage`,
+  `useDebouncedValue`, `useRequestGuard` bỏ response cũ). `collectLookupPages` chỉ dùng
+  cho option tham chiếu: đi hết trang server, nhận `total`/`totalCount`, từ chối kết quả
+  thiếu.
+- Link tài liệu không chèn thẳng vào anchor: qua `src/lib/url.ts` (chỉ nhận đường dẫn
+  bắt đầu một `/` hoặc URL HTTP(S)).
+- Xuất CSV qua `src/lib/exportCsv.ts` và `AdminExportButton.tsx` (UTF-8 BOM, vô hiệu hoá
+  tiền tố công thức). Xuất phải giữ bộ lọc và thứ tự, đủ toàn bộ kết quả, tắt khi không có
+  dòng. Danh sách nhỏ xuất dữ liệu đã tải; danh sách vừa có thể lấy hết trang; dữ liệu lớn
+  hoặc cần phân quyền/audit dùng endpoint backend (ví dụ
+  `GET /api/as-built-documents/export`, `GET /api/handover-records/export`).
+- Khi reload, SPA lấy user qua `GET /users/me` với token hiện có; chỉ xoay refresh token
+  sau `401` của access token. Lỗi tạm thời giữ token và cho thử lại; phiên không hợp lệ
+  về trang đăng nhập.
 
-| Technology       | Purpose                            |
-|------------------|------------------------------------|
-| React 18         | UI framework                       |
-| TypeScript       | Type safety                        |
-| Vite             | Build and dev server               |
-| Tailwind CSS     | Utility-first CSS framework        |
-| shadcn/ui        | Radix-based component library      |
-| React Router     | Client-side routing                |
-| Redux            | Authentication state management    |
-| Playwright       | Browser E2E testing                |
-
-### 8.2 API Service Modules
-
-API calls are organized into typed modules under `src/services/`. `authApi.ts`
-owns authentication and `contentApi.ts` owns public content. `adminApi.ts` is a
-compatibility facade over feature clients in `services/admin/*Api.ts` and their
-contracts in `services/admin/types/`; existing callers retain their imports.
-Extend the owning feature client instead of growing the facade. Existing
-focused clients such as `rbacApi.ts` remain authoritative for their domains.
-
-Contract detail tabs live under `pages/admin/contracts/`; work-package controls
-and orchestration under `pages/admin/work-packages/`; procurement forms and
-panels under `pages/admin/procurement/components/`. Keep business operations in
-their owning hook/client and presentation in the corresponding feature view.
-
-The supported UI theme is **light**, as confirmed by the product owner. Use
-semantic foreground, surface, border and primary tokens instead of fixed slate
-or white classes. Dark token scaffolding is not a delivered theme or a promise
-of dark-mode support. Toasts and native form controls use the light scheme.
-
-For a single labelled control, use `FieldScope` with `Label` and the existing
-Input, Textarea, SelectTrigger or SearchableSelect. The scope supplies a unique
-React ID without changing the surrounding div, handlers or refs. Use explicit
-`htmlFor`/`id` when the control already has an identifier; keep the pair aligned.
-Use `FieldControl` only as an adapter for a native/custom control. Put a separate
-scope around each repeated row; group headings are text or legends, not orphan
-labels. Do not derive accessible names from placeholders.
-
-Use `useConfirm` for simple application confirmations; it localizes buttons,
-returns focus on cancellation and cancels pending requests on navigation. Keep
-aggregate deletion in `DeletionImpactDialog` with its existing server contract.
-Use `useUiError` at UI boundaries to preserve safe server validation/conflict
-reasons while localizing transport failures and hiding unexpected internals.
-Its stable callback does not reload a draft merely because the language changes.
-
-Visible record lists must render page controls using their actual returned
-totals. `ListPagination` and `useListPage` reset/clamp pages after filter or total
-changes; `useDebouncedValue` settles search input and `useRequestGuard` rejects
-obsolete responses. Use `collectLookupPages` for reference options, not visible
-business lists: it follows server pagination, handles `total`/`totalCount` and
-rejects incomplete responses instead of returning a silently truncated set.
-Design-document deep links locate their record within the current scoped query.
-
-### 8.3 Build Commands
-
-| Command              | Purpose                            |
-|----------------------|------------------------------------|
-| `npm run dev`        | Start development server           |
-| `npm run build`      | Production build                   |
-| `npm run build:dev`  | Development build                  |
-| `npm run lint`       | Run ESLint                         |
-| `npm run check:a11y` | Check source label associations    |
-| `npm run test:unit`  | Run focused frontend helper checks |
-| `npm run test:e2e`   | Run Playwright browser tests       |
-| `npm run preview`    | Preview production build locally   |
-
-### 8.4 Admin CSV Export
-
-Admin list exports are implemented on the frontend with `src/lib/exportCsv.ts` and `src/components/admin/AdminExportButton.tsx`. The helper writes UTF-8 BOM CSV output so Excel opens Vietnamese, Chinese, and Japanese text correctly without adding an `.xlsx` dependency.
-
-Export buttons must preserve the current filters and sort order, contain the complete filtered result rather than only the visible page, and remain disabled when there are no rows. Small, unpaginated lists can export loaded rows on the frontend. A bounded, low-volume list may retrieve all matching API pages before generating the file. High-volume exports and exports that require server-side authorization or audit records must use a dedicated backend endpoint. The as-built dossier follows the backend pattern through `GET /api/as-built-documents/export` and records the export in the audit log.
-
-The project handover list follows the same backend-export pattern through `GET /api/handover-records/export`. Its CSV includes a UTF-8 BOM, preserves active filters and sorting, records an audit event, and prefixes formula-like cell values so spreadsheet applications do not execute them.
-
-### 8.5 Project Handover Frontend
-
-The protected route is `/admin/construction/handover`. `HandoverRecordsPage.tsx` provides responsive list/card views, server-side filtering and pagination, CSV export, create/edit dialogs, readiness details, and lifecycle actions. Permission constants live in `src/lib/adminPermissions.ts`, and typed requests/responses live in `src/services/adminApi.ts`.
-
-Document values are not interpolated directly into anchors. Use the shared URL helper in `src/lib/url.ts`, which accepts host-relative paths beginning with a single `/` and absolute HTTP(S) URLs. Protocol-relative URLs, dangerous schemes, and malformed values remain non-clickable.
-
-### 8.6 Project Handover API Contract
-
-Both `/api/handover-records` and `/api/v1/handover-records` expose the same controller:
-
-| Method | Route | Permission | Purpose |
-|--------|-------|------------|---------|
-| `GET` | `/api/handover-records` | `construction.handover.view` | Filtered, sorted, paginated list and summary counts |
-| `GET` | `/api/handover-records/export` | `construction.handover.view` | Complete filtered CSV export |
-| `GET` | `/api/handover-records/{id}` | `construction.handover.view` | Detail, readiness, and status history |
-| `POST` | `/api/handover-records` | `construction.handover.manage` | Create the project's single handover record |
-| `PUT` | `/api/handover-records/{id}` | `construction.handover.manage` | Update Draft/Reopened data |
-| `POST` | `/api/handover-records/{id}/status` | `construction.handover.manage` | Perform non-final lifecycle transitions |
-| `POST` | `/api/handover-records/{id}/complete` | `construction.handover.complete` | Complete a ready, signed handover |
-| `DELETE` | `/api/handover-records/{id}` | `construction.handover.manage` | Permanently delete a record in any status |
-
-`view.all` controls unrestricted reads; `manage.all` independently controls unrestricted writes. A caller with only the base permission is scoped to records they created or own and projects they manage or lead. Business-rule failures return `400`, hidden/missing records return `404`, and duplicate or concurrent writes return `409` so clients can reload instead of overwriting newer data.
-
-Readiness is derived on the server from approved partial acceptance, required approved as-built categories, unresolved punch items, commissioning, and checklist completion. Clients must display this result and must not duplicate it as an authoritative frontend calculation.
-
-The current unique owner key is `DesignProjectId`; this is an explicit
-compatibility boundary, not the target aggregate. Resolve and authorize the
-owning Operational Project before cross-module access. A future migration to
-`OperationalProjectId` must preserve the one-handover invariant, status history,
-row versions, documents, scope rules and deep links, and must define how to
-handle a construction project with no Design Project before adding the new key.
-
-### 8.7 Procurement Vendor Frontend
-
-The protected routes are `/admin/vendors` and `/admin/vendors/:id`. The list provides server-side search, vendor-type and active-state filters, company-name sorting, pagination, and responsive table/card views. The create/edit dialog retains entered values when the API rejects a request. The detail page shows company, contact, document, status, and audit metadata and resolves persisted document links through `src/lib/url.ts` before rendering them.
-
-CSV export preserves the active filters and sort order. Because the vendor API currently caps pages at 100 rows and has no dedicated export endpoint, the client retrieves every matching page before passing the complete result to `src/lib/exportCsv.ts`. If vendor volume or export auditing requirements grow, replace this batching with an authorized backend export endpoint.
+| Lệnh | Mục đích |
+|---|---|
+| `npm run dev` / `build` / `build:dev` / `preview` | Dev server, build production/dev, xem bản build |
+| `npm run lint`, `npm run check:a11y` | ESLint, kiểm nhãn |
+| `npm run format`, `format:check` | Định dạng |
+| `npm run test:unit` | Kiểm thử helper |
+| `npm run test:e2e` | Playwright |
 
 ---
 
-## 9. Testing
+## 17. Kiểm thử
 
-### 9.1 Backend Tests
+### 17.1 Phân tầng
 
-Backend unit tests are located in `nihomebackend.tests/`.
+| Tầng | Chứng minh | Không chứng minh |
+|---|---|---|
+| Unit (`nihomebackend.tests`) | Logic, validate, công thức, ngưỡng, mapping | HTTP, quyền, persistence |
+| Integration (`nihomebackend.integration.tests/Controllers`) | Status code, model binding, phân quyền, middleware, persistence, trạng thái không đổi khi từ chối | Ràng buộc SQL, khoá, rollback (EF InMemory) |
+| SQL cô lập (`NICON_SQL_TEST_CONNECTION`) | Unique index, race, rollback thật; mỗi test tạo/xoá database riêng (`Nicon*Test_<GUID>`) | — |
+| Browser E2E (`nihomeweb/e2e/smoke`) | Render, luồng người dùng, wiring trên stack Compose | Request API thuần trong Playwright không phải bằng chứng thao tác UI |
 
-The Compose backend mounts only `nihomebackend/`, so sibling test projects are not available through `docker exec nihome31042025-backend`. CI runs the test projects in a .NET 8 SDK checkout:
+Drive, email và quyền sở hữu ngoài chỉ chứng minh được trên dịch vụ đã cấu hình; mock
+không chứng minh truyền tải. Ghi kết quả chạy và blocker ở task/PR hoặc artifact, không
+thêm báo cáo có ngày vào `docs/`. Mỗi luồng cần thử sai role/dự án/owner, field sai, nhảy
+trạng thái, thiếu lý do, version cũ, replay idempotent, payload xung đột, và đổi phụ thuộc
+sau khi form đã tải; browser kiểm lỗi/rỗng/đang tải/thử lại, giữ dữ liệu form, bàn phím,
+mobile/tablet, bản dịch và dữ liệu sau reload.
 
 ```bash
 dotnet test nihomebackend.tests/nihomebackend.tests.csproj
 dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj
 ```
 
-The test project structure:
+Chạy trong container .NET 8 SDK (backend Compose chỉ mount `nihomebackend/`). Cả hai
+project test loại `**/TestResults/**` khỏi MSBuild; giữ regression trong thư mục test được
+track.
 
-```
-nihomebackend.tests/
-  Controllers/     -- Controller unit tests
-  Services/        -- Service unit tests
-  Mappings/        -- AutoMapper profile tests
-  Helpers/         -- Test helper utilities
-```
-
-Unit tests cover isolated service logic, validation, branching, helpers, and mappings. HTTP status codes, model binding, authorization, middleware, and persistence round-trips belong in `nihomebackend.integration.tests`. Current integration tests use EF InMemory, so they do not prove SQL Server relational constraints or SQL Server-specific behavior.
-
-### 9.2 Browser E2E Tests
-
-Frontend behavior is validated through Playwright against the integrated Docker stack. Pure service logic and HTTP contracts belong in backend unit and integration tests respectively.
-
-The mobile BOQ version-history test uses a 90-second workflow timeout because
-approval waits for the request email and cleanup waits for the decision email
-before deleting the quote and its parents. These are separate outbox worker
-ticks; the suite default remains 30 seconds.
-
-The focused `admin-navigation.spec.ts` checks client-side navigation from Roles,
-browser Back/Forward and unsaved permission drafts across refetches. Verify
-rendered destination content as well as the URL: a changed URL alone does not
-prove navigation completed. The Roles editor combines query data with a stable
-function before synchronizing drafts; do not depend on the raw `useQueries`
-result array in a state-writing effect, because its identity changes per render.
+### 17.2 Browser E2E
 
 ```bash
 docker compose up -d --build
 cd nihomeweb
 BASE_URL=http://localhost:5043 npx playwright test
+CI=1 BASE_URL=http://localhost:5043 npx playwright test --shard=1/2   # tái hiện shard CI
 ```
 
-CI runs for pull requests against every target branch, including stacked PRs;
-push-triggered runs remain limited to `main`. CI divides the browser suite into
-two Playwright shards. Each shard starts an
-isolated Docker Compose stack and runs with one worker because browser specs
-share seeded SQL data and some deliberately exercise mutable RBAC and
-configuration records. This preserves deterministic cleanup while the two
-isolated databases run concurrently. Reproduce either CI shard locally with:
+- CI chạy cho mọi pull request (kể cả PR chồng) và push lên `main`; chia hai shard, mỗi
+  shard một stack Compose riêng với một worker vì spec dùng chung dữ liệu seed và thay đổi
+  RBAC/cấu hình.
+- Spec có fixture SQL bắt buộc `E2E_SQL_CONTAINER` (không có mặc định, tránh ghi nhầm vào
+  database dev dùng chung).
+- Luồng Design duyệt bằng chứng cần Google Drive đã kết nối; nếu chưa, spec báo skip.
+  Skip không phải bằng chứng Drive chạy đúng.
+- Kiểm điều hướng phải xem nội dung trang đích, không chỉ URL. Test lịch sử BOQ trên mobile
+  có timeout 90 giây vì chờ hai lượt worker email.
+- Output Playwright để ngoài thư mục frontend (ví dụ `--output=/tmp/...`) để watcher không
+  restart backend. Spec tiêu biểu: `admin-asbuilt.spec.ts`, `admin-handover.spec.ts`,
+  `crm-business-pipeline.spec.ts`, `construction-handover-pipeline.spec.ts`,
+  `rfq-business-pipeline.spec.ts`.
+
+### 17.3 E2E gửi email qua hộp thư giả lập
 
 ```bash
+BUILD_SHA=$(git rev-parse HEAD) docker compose \
+  -f docker-compose.yaml -f docker-compose-e2e.yaml up -d --build
 cd nihomeweb
-CI=1 BASE_URL=http://localhost:5043 npx playwright test --shard=1/2
-CI=1 BASE_URL=http://localhost:5043 npx playwright test --shard=2/2
+BASE_URL=http://localhost:5043 MAIL_SINK_URL=http://127.0.0.1:8025 \
+  E2E_SQL_CONTAINER=nihome31042025-sqlserver \
+  npx playwright test e2e/smoke/direct-contract-from-opportunity.spec.ts \
+  e2e/smoke/quote-email-delivery.spec.ts
 ```
 
-Design browser flows that approve durable evidence, including Basic Design
-and recipient review, require a connected Google Drive. They check the live
-Drive status before creating test data and report a skip when it is not
-connected; a failed status request remains a test failure. A skipped run is
-not evidence of a passing Drive workflow. Run these specs against a connected
-Compose stack to validate synchronization, recipient access and file downloads.
+Dùng người nhận `example.test`, không bao giờ dùng SMTP production. Xem chậm:
+`PLAYWRIGHT_SLOW_MO=1500` với `--headed --workers=1`. Xong thì khôi phục backend bằng
+`docker compose up -d --force-recreate nihomeBackend`, rồi
+`docker compose -f docker-compose.yaml -f docker-compose-e2e.yaml stop smtpSink` và
+`... rm -f smtpSink`. Job CI `e2e` đặt
+`COMPOSE_FILE=docker-compose.yaml:docker-compose-e2e.yaml` và `MAIL_SINK_URL`.
 
-### 9.3 Manual As-Built Smoke Test
-
-With the Docker Compose stack running, open `http://localhost:5043/login` and sign in with the development `SUPER_ADMIN` account defined by the current backend seeder or Playwright auth fixture. Then open **Admin > Construction > As-Built Records**, or navigate directly to `http://localhost:5043/admin/construction/asbuilt`.
-
-1. Select an existing design project and confirm the summary cards and document list load without an error.
-2. Create a uniquely titled **Drawing** document and confirm it appears with **Draft** status.
-3. Search for the title, change the category/status filters, and select **Recently updated** sorting. Confirm the displayed rows match each selection.
-4. Export the filtered list and confirm a file named `as-built-documents-YYYY-MM-DD.csv` downloads and contains the created document.
-5. Open the document, submit it, and approve it. Confirm the lifecycle history shows each transition and the approved-category completeness count increases.
-6. Confirm the approved document is read-only, then archive it and verify its final status.
-7. Repeat the page check at mobile and tablet widths; filters and records must remain readable without horizontal page overflow.
-
-For the authorization check, sign in as the seeded `SALE` account defined by the current business-role seeder or Playwright auth fixture and confirm the page is forbidden. If this account can access the page, inspect its assigned role before reporting a product defect: a long-lived local database may contain customized user-role assignments. Do not change the expected deny behavior or reset persistent data without reviewing those assignments.
-
-The focused automated equivalent is:
+### 17.4 Kiểm tra tĩnh và thủ công
 
 ```bash
-cd nihomeweb
-BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-asbuilt.spec.ts --grep "SUPER_ADMIN" --output=/tmp/nihome-playwright-asbuilt
-```
-
-Writing Playwright artifacts to `/tmp` prevents the backend file watcher from restarting when the frontend directory is mounted into the development container.
-
-### 9.4 Manual Project Handover Smoke Test
-
-With the stack running, sign in as `SUPER_ADMIN` and open `http://localhost:5043/admin/construction/handover`.
-
-1. Confirm the list, summary, filters, sorting, pagination, and responsive card/table layouts render.
-2. Create a Draft record for a project without an existing handover; add commissioning data, checklist items, a safe document URL, and a signatory.
-3. Confirm readiness reflects approved partial acceptance, required as-built approvals, unresolved punch items, commissioning, and checklist completion.
-4. Mark the record ready and complete it. Confirm completion is unavailable without a signatory and that the detail view records the actual date and status history.
-5. Reopen the record and confirm it becomes editable; verify a stale concurrent update returns HTTP `409` and requires a reload.
-6. Export CSV and confirm the file contains all filtered rows, not only the visible page.
-
-The focused browser check is:
-
-```bash
-cd nihomeweb
-BASE_URL=http://localhost:5043 npx playwright test e2e/smoke/admin-handover.spec.ts --workers=1 --output=/tmp/nihome-playwright-handover
-```
-
-### 9.5 Linting
-
-Backend:
-
-```bash
-docker exec nihome31042025-backend dotnet format --no-restore --verify-no-changes
-```
-
-Run after dependencies have been restored in the backend container. Compose
-allocates 1 GB of shared memory to this service because Roslyn's temporary
-memory-mapped storage can exhaust Docker's default 64 MB and crash with an
-`AccessViolationException`. After changing `shm_size`, recreate the backend with
-`docker compose up -d --no-deps nihomeBackend`; restarting it does not apply the
-new allocation.
-
-Frontend:
-
-```bash
-cd nihomeweb
-npm run lint
-```
-
-Translation keys:
-
-```bash
+docker exec nihome31042025-backend dotnet format --no-restore --verify-no-changes   # container có SDK
+cd nihomeweb && npm run lint
 python tools/translation_keys/check_translation_keys.py
 python -m unittest discover -s tools/translation_keys -p "test_*.py"
 ```
 
-The checker scans frontend/backend literal keys, dynamic key families and keys
-derived from notification, master-data and RBAC seeds. It also verifies that
-every seed row has Vietnamese, English, Chinese and Japanese values. Missing
-keys are printed in a summary and detail table and return exit code `1`;
-repository/read errors return `2`. The CI `translations (missing keys)` job
-publishes the Markdown table to the GitHub Job Summary before enforcing the
-exit code, so a failed check retains the complete actionable list.
-
-### 9.6 Quality Check Summary
-
-| Check              | Command                              |
-|--------------------|--------------------------------------|
-| Backend build      | `docker compose build nihomeBackend` (runtime image has no SDK) |
-| Frontend build     | `npm run build`                      |
-| Backend tests      | `dotnet test nihomebackend.tests/nihomebackend.tests.csproj` in CI or an SDK test environment |
-| Backend integration tests | `dotnet test nihomebackend.integration.tests/nihomebackend.integration.tests.csproj` |
-| Browser E2E tests  | `cd nihomeweb && BASE_URL=http://localhost:5043 npx playwright test` |
-| Backend lint       | `docker exec nihome31042025-backend dotnet format --verify-no-changes` |
-| Frontend lint      | `cd nihomeweb && npm run lint`       |
-| Translation keys  | `python tools/translation_keys/check_translation_keys.py` |
-| Docker full build  | `docker compose up --build`          |
+- Container chạy `dotnet format` cần `shm_size` 1 GB (mặc định 64 MB làm Roslyn crash
+  `AccessViolationException`); đổi `shm_size` phải recreate bằng
+  `docker compose up -d --no-deps nihomeBackend`.
+- Script translation quét key ở frontend/backend và key từ seed notification, master data,
+  RBAC, kiểm đủ bốn ngôn ngữ. Thiếu key trả exit `1`, lỗi đọc trả `2`; job CI
+  `translations (missing keys)` đăng bảng lên GitHub Job Summary.
+- Smoke thủ công: đăng nhập `SUPER_ADMIN` tại `http://localhost:5043/login`, đi qua
+  `/admin/construction/asbuilt` (tạo, lọc, xuất `as-built-documents-YYYY-MM-DD.csv`, trình,
+  duyệt, archive) và `/admin/construction/handover` (tạo, readiness, hoàn thành cần người
+  ký, mở lại, `409` khi sửa đồng thời, xuất CSV đủ dòng). Tài khoản `SALE` phải bị chặn;
+  nếu không, kiểm role được gán trong database lâu năm trước khi báo lỗi.
+- Sau sửa cuối, chỉ chạy nhóm test liên quan, không mặc định full suite. Thiếu môi trường
+  thì ghi Not Run, không lấy kết quả cũ thay thế. Thay đổi chỉ tài liệu không cần khởi động
+  Docker hay chạy test code.
 
 ---
 
-### 9.7 Business Pipeline Validation
+## 18. Triển khai
 
-Validate all eight business modules and public/identity/shared operations.
-Customer entry paths include Design & Build, design-first with later construction,
-competitive tender and consultation/quotation. Preserve Customer → Operational
-Project → Contract/Design Project identity through each supported handoff; do not
-seed unrelated intermediate records and call that a complete pipeline.
+### 18.1 Môi trường dev
 
-| Area | Joined behavior to validate | Existing test entry points |
-| --- | --- | --- |
-| CRM | Qualification/conversion, quotation approval, tender outcomes, signing and project inheritance | `CrmBusinessPipelineTests`, `crm-business-pipeline.spec.ts` |
-| Design and permits | Concept → Basic → Shop Drawing → IFC release/acknowledgment, scoped legal checklist | `DesignPermitIfcPipelineTests`, `DetailDesignScheduleControllerTests` |
-| Construction | Tasks/diaries, acceptance rejection/revision, punch verification, as-built readiness, handover completion/reopen | `ConstructionHandoverPipelineTests`, `construction-handover-pipeline.spec.ts` |
-| Procurement | Approved BOQ → demand approval → receipts/issues/reversals → source evidence | `ProcurementBusinessPipelineTests` |
-| RFQ and finance | Tender/BOQ provenance → quote revisions/withdrawals → award → signed downstream contract → warehouse → Paid/Rejected/Cancelled invoice | `RfqProcurementPipelineTests`, `rfq-business-pipeline.spec.ts` |
-| RFQ display | Active/inactive vendors, zero versus missing prices, responsive comparison and translated counts | `RfqsControllerTests`, `rfq-active-vendor-highlighting.spec.ts`, `admin-rfqs.spec.ts` |
-| Reports and KPI | Created business events appear in read models; missing sources remain unavailable; frozen snapshots and supported reversals are respected | Project report, KPI and source-workflow tests |
-| Shared/public | Public enquiry/application → authorized staff handling; permission revocation, file access and aggregate cleanup | Contact, recruitment, RBAC, document and hard-delete tests |
+`docker compose up --build -d`; backend 5043, SQL 1433 (`sqlserver_data`). Kiểm
+`/api/system/health` có `buildSha` đúng revision.
 
-Integration classes live under `nihomebackend.integration.tests/Controllers`;
-browser scenarios live under `nihomeweb/e2e/smoke`. These are starting points for
-review, not a claim that every possible scenario has executable coverage.
+### 18.2 Checklist production
 
-For each workflow, test wrong role/project/owner, invalid fields, denied state
-skips, required reasons, stale versions, idempotent replay and conflicting
-payloads. Change dependencies after form load (membership, vendor activity, BOQ
-approval or required evidence) and verify rejection leaves state, history and
-bindings unchanged. Use ordinary business roles to prove handoffs. In browsers,
-check error/empty/loading/retry states, retained form values, keyboard access,
-mobile/tablet layout, translations and persistence after reload.
+1. Đổi mọi mật khẩu mặc định; đổi hoặc tắt tài khoản seed.
+2. Xoay khoá ký JWT.
+3. `ASPNETCORE_ENVIRONMENT=Production`; không bật Swagger bằng cách chuyển sang
+   Development.
+4. CORS chỉ cho domain frontend production; đặt `Frontend:PublicBaseUrl`.
+5. Dùng secrets manager cho credential database, SMTP, JWT. Bật HTTPS.
+6. Không dùng `sa`; tạo user SQL riêng quyền hạn chế.
+7. Thu thập log JSON (mỗi dòng một object) và giám sát.
+8. Review script migration; startup tự chạy `Database.Migrate()` và seed.
+9. Build bằng `auto-deployment.sh` → `deployment-config/output/publish-release.zip`
+   (backend + SPA cho IIS, kèm `web.config`). `NIHOMEWEB_DIST_PATH` ghi đè thư mục SPA;
+   thư mục không tồn tại thì startup lỗi.
+10. Job publish trên CI hiện chưa khai báo phụ thuộc vào build, test, E2E và security;
+    kiểm các job đó đã qua trước khi dùng artifact.
+11. Kiểm font PDF: trên IIS cài Arial, Microsoft YaHei, Meiryo cho tài khoản application
+    pool hoặc đặt các biến `NIHOME_PDF_FONT_*` (và `_INDEX` cho TTC).
+12. Ghi revision/`buildSha` và phiên bản migration khi deploy; smoke rồi UAT với NICON.
 
-Pure logic belongs in unit tests; HTTP/auth/persistence belongs in integration;
-rendering and deployed-stack wiring belong in browser E2E. API-only Playwright
-requests are not proof of browser interaction. InMemory EF does not prove SQL
-constraints, locking or transaction rollback. Concurrent awards, warehouse
-posting/reversal and failure recovery need isolated SQL execution. Live Drive,
-email and external ownership/cleanup require configured services; mocks cannot
-prove transport. Record actual run results and blockers in the task/PR or test
-artifacts rather than adding dated reports under `docs/`.
+### 18.3 Google Drive trên IIS
 
-Do not infer unsupported behavior from conceptual workflow diagrams: automatic
-exchange-rate feeds, invoice matching,
-actual finance ledgers, offline synchronization, automatic permit approval and
-public-contact-to-CRM conversion require their own implemented contracts and
-verification. Passing a global suite proves its assertions, not exhaustive
-customer-scenario coverage.
+Đồng bộ tài liệu dùng Google Drive API v3 với OAuth user. Toàn bộ cấu hình nghiệp vụ ở
+**Settings > Google Drive**, lưu trong dòng `google_drive_credentials`; client secret và
+refresh token được mã hoá bằng Data Protection, chỉ ghi, không bao giờ trả qua API.
+Không đưa giá trị OAuth vào config trong git, log hay ảnh chụp. Không có cấu hình thì coi
+như tắt, worker không gọi Drive. Drive settings cố ý không đọc từ `appsettings.json` hay
+`GoogleDrive__*`; chỉ đường dẫn key ring nằm ở hạ tầng.
 
----
+Tạo OAuth credential: trong Google Cloud Console bật **Google Drive API**; Auth Platform
+audience External (khi Testing, thêm tài khoản sở hữu thư mục làm test user); chỉ scope
+`https://www.googleapis.com/auth/drive`; tạo client **Web application** (Desktop không
+dùng được); đăng ký đúng callback, ví dụ
+`https://nicon.example.com/api/site-settings/google-drive/oauth/callback`; lấy
+`<FOLDER_ID>` của thư mục gốc. Không tạo refresh token thủ công. Trước khi dùng thật, đưa
+app sang Production (token ở chế độ Testing có hạn).
 
-## 10. Deployment
+Sau khi giải nén gói trên IIS:
 
-### 10.1 Docker Compose Development
+1. Đặt `DataProtection:KeysPath` (hoặc `DataProtection__KeysPath`) tới thư mục bền, ví dụ
+   `D:\NiconSecrets\DataProtection-Keys`, chỉ application pool và admin có quyền Modify.
+   Mất key ring thì secret trong SQL không giải mã được, phải nhập lại secret và kết nối
+   lại.
+2. Người có `system.settings.manage` nhập OAuth client, callback, đường dẫn trả về nội bộ,
+   thư mục gốc, `InstanceId` (ổn định, duy nhất mỗi môi trường), tên ứng dụng, đường dẫn
+   các thư mục nghiệp vụ, chế độ tương thích, chu kỳ polling, chính sách đồng bộ xoá và
+   trạng thái bật. Để trống secret thì giữ secret cũ; đổi client ID/secret xoá kết nối hiện
+   có.
+3. Bấm **Connect Google Drive** (popup; callback kiểm state, PKCE, quyền admin và quyền ghi
+   thư mục gốc). Kiểm trạng thái `Connected`, upload thử. Cấu hình có hiệu lực ngay, không
+   cần recycle.
 
-```bash
-docker compose up --build -d
-```
+| Trạng thái | Nghĩa |
+|---|---|
+| `Connected` | Đã xác thực, thư mục gốc tồn tại và được thêm file |
+| `ReadOnly` | Thấy thư mục nhưng không được thêm |
+| `InvalidRoot` | `RootFolderId` không phải thư mục hoặc nằm trong thùng rác |
+| `ReconnectRequired` | Refresh token thiếu, hết hạn, bị thu hồi hoặc không giải mã được; admin kết nối lại |
+| `Unavailable` | Lỗi xác thực hoặc truy cập thư mục |
 
-Services and ports:
+- `FrontendReturnUrl` phải là đường dẫn nội bộ `/admin/` (không backslash, fragment, ký tự
+  điều khiển), mặc định quay về `/admin/settings?tab=drive`.
+- Đổi tài khoản: **Disconnect** rồi **Connect**, hoặc **Switch Google account**. NICON xoá
+  credential local trước khi yêu cầu Google thu hồi; thu hồi lỗi thì admin nhận hướng dẫn
+  thu hồi tay.
+- Đổi topology khi đã có binding: lưu tắt đồng bộ, chờ hết `Processing`, lưu thư mục gốc/
+  định danh/đường dẫn mới khi vẫn tắt, rồi bật lại ở lần lưu riêng. Server từ chối đổi
+  topology khi đang xử lý hoặc binding đang bật. File cũ trên Drive không tự di chuyển.
+  Bản nâng cấp từ cấu hình cũ khởi động ở trạng thái tắt; admin nhập lại và kết nối lại
+  trong cửa sổ bảo trì.
+- Chính sách xoá: **Web → Drive** mặc định tắt (xoá trên web giữ file và thư mục Drive);
+  bật thì xoá tài liệu đưa replica đã xác minh vào thùng rác Drive, xoá aggregate chỉ xoá
+  item qua kiểm sở hữu. **Drive → Web** mặc định bật (file Drive mất thì đánh dấu bản ghi
+  đã xoá). Cả hai nằm trong plan xoá aggregate. Chia sẻ/đồng bộ quyền Drive tắt cho tới khi
+  IT cung cấp mapping nhóm được duyệt.
+- Upload tay bắt buộc `Idempotency-Key`; fingerprint tính trên field và byte file (không
+  theo boundary), nên retry cùng ý định tạo tối đa một dòng catalog và một file Drive.
+  Form giữ key khi lỗi, đổi key khi đổi file, category hoặc dự án. Scope dự án kiểm trước.
+- Mỗi tài liệu tối đa ba lần claim tự động mỗi vòng; **Retry** (kể cả sau lần ba) reset
+  vòng. Đang `Processing` thì không retry hay xoá được. Đồng bộ tắt hoặc thư mục gốc không
+  ghi được thì không claim, không tốn lượt. Ứng dụng dừng giữa chừng thì lease hết hạn tiếp
+  tục đúng lần thử đó. Upload sidecar cũ có heartbeat 5 phút; mất claim thì huỷ request
+  Drive, generation fencing chặn hoàn tất cũ; file trùng replica key và generation do race
+  được đưa vào thùng rác, giữ bản SQL đang trỏ.
+- Docker dev: lưu cấu hình qua UI với callback loopback, key ring nằm ở volume
+  `data_protection_keys`; áp dụng bằng
+  `docker compose up -d --build --force-recreate nihomeBackend`.
 
-| Service     | Port | Notes                                          |
-|-------------|------|------------------------------------------------|
-| Backend API | 5043 | Hot-reload enabled in development               |
-| SQL Server  | 1433 | Data persisted in `sqlserver_data` Docker volume |
+### 18.4 Dữ liệu demo
 
-The backend container mounts source directories as volumes for hot-reload. Named volumes isolate `node_modules`, `bin`, `obj`, and NuGet packages to avoid host/container conflicts.
-
-### 10.2 Production Checklist
-
-Before deploying to production:
-
-1. Change all default user passwords.
-2. Rotate JWT signing keys and update `appsettings.json`.
-3. Set `ASPNETCORE_ENVIRONMENT` to `Production`.
-4. Configure CORS to allow only the production frontend domain.
-5. Use a secrets manager for sensitive configuration (database credentials, SMTP credentials, JWT keys).
-6. Enable HTTPS with a valid TLS certificate.
-7. Review and restrict the SQL Server `sa` account; create a dedicated application user with limited permissions.
-8. Configure log aggregation and monitoring.
-9. Review migration scripts and account for the current startup behavior, which automatically runs `Database.Migrate()` and seeding outside `IntegrationTests`.
-10. Build the release with `auto-deployment.sh`; it publishes the backend and compiled SPA into `deployment-config/output/publish-release.zip` for IIS hosting.
-11. Confirm the CI publish job is gated by required build, test, E2E, and security jobs before relying on its release artifact; the current workflow does not declare those dependencies.
-12. Verify PDF fonts before switching traffic. Docker builds enforce Noto Sans and Noto Sans CJK automatically. On Windows IIS, install Arial, Microsoft YaHei, and Meiryo for the application-pool account, or configure the `NIHOME_PDF_FONT_LATIN_PATH`, `NIHOME_PDF_FONT_ZH_PATH`, and `NIHOME_PDF_FONT_JA_PATH` environment variables. Set the matching `_INDEX` variable when a configured file is a TrueType collection.
-
-The production artifact includes `web.config` for the ASP.NET Core Module and serves the compiled SPA from `wwwroot`. `NIHOMEWEB_DIST_PATH` can override the frontend distribution directory at runtime; startup fails if the configured directory does not exist. Swagger is Development-only and should not be enabled by switching production to the Development environment.
-
-### 10.3 Google Drive credentials on IIS
-
-Project document synchronization uses Google Drive API v3 with OAuth user authorization. All Google Drive business configuration is managed from **Settings > Google Drive** and stored in the singleton `google_drive_credentials` row. The backend encrypts the write-only client secret and OAuth refresh token with separate ASP.NET Core Data Protection purposes. Neither value is returned by the Admin API. Never put Google passwords or OAuth values in source-controlled configuration, logs, screenshots, or support messages. A missing settings row is treated as disabled, and workers perform no Drive I/O until an administrator enables a valid configuration.
-
-#### Create the OAuth credential
-
-1. In [Google Cloud Console](https://console.cloud.google.com/), select the Nicon project and enable **Google Drive API**.
-2. Configure Google Auth Platform with an External audience. While the app is in Testing, add the Google account that owns the target Drive folder as a test user.
-3. Add only the `https://www.googleapis.com/auth/drive` scope.
-4. Create a **Web application** OAuth client. A Desktop client is insufficient for a deployed HTTPS callback.
-5. Register the exact backend callback, for example `https://nicon.example.com/api/site-settings/google-drive/oauth/callback`, as an authorized redirect URI.
-6. Keep its client ID and client secret private for entry on the Admin page. Do not create or copy a refresh token manually.
-7. Copy `<FOLDER_ID>` from `https://drive.google.com/drive/folders/<FOLDER_ID>` for the root that will contain Nicon project folders.
-
-After extracting `publish-release.zip` on IIS:
-
-1. Set `DataProtection:KeysPath` in protected deployed configuration, or `DataProtection__KeysPath` in the application-pool environment, to a durable directory such as `D:\\NiconSecrets\\DataProtection-Keys`.
-2. Grant Modify access on that directory only to the IIS application-pool identity and responsible administrators. The key ring must survive application recycle and deployment; losing it makes encrypted SQL secrets unreadable and requires entering the client secret and reconnecting.
-3. Sign in with `system.settings.manage`, open **Settings > Google Drive**, enter and save the OAuth identity, exact callback URI, internal Admin return path, root folder, stable deployment instance ID, application name, all business folder paths, Drive compatibility mode, polling interval, deletion synchronization policy, and enabled state. Blank client-secret input preserves the stored secret; changing the client ID or secret clears the existing OAuth connection.
-4. Select **Connect Google Drive**. Nicon opens Google's sign-in and consent screen in a popup and closes it after the callback. The callback validates state, PKCE, current Admin permission, and root-folder write capability before saving the connection.
-5. Confirm status is `Connected`, then perform a controlled project upload. Saved settings are loaded dynamically; application recycle is not required to enable, disable, or update the integration.
-
-To use another account, select **Disconnect** and then **Connect Google Drive**, or select **Switch Google account** to perform those steps in sequence. Nicon clears the local credential before asking Google to revoke it, then opens Google's account chooser. A failed provider revocation does not retain local Nicon access; the administrator receives a warning with instructions for manual revocation. Cancelling or failing the replacement authorization leaves Nicon disconnected. Disconnecting Nicon does not sign the user out of their broader Google browser session.
-
-`InstanceId` must be stable and unique per deployment; it prevents one Nicon environment from claiming another environment's Drive replicas. Folder paths form the centralized registry beneath `RootFolderId` and are resolved segment by segment. Google Drive settings are intentionally not bound from `appsettings.json` or `GoogleDrive__*` environment variables. Only the Data Protection key-ring path remains deployment infrastructure because storing it in the encrypted database would create a decryption bootstrap cycle.
-
-`FrontendReturnUrl` must remain an internal `/admin/` path, without backslashes,
-fragments or control characters, including when saving disabled drafts. The
-OAuth result redirect revalidates persisted legacy values and falls back to
-`/admin/settings?tab=drive`. Health and redirect construction read public
-configuration independently of secret decryption; an unreadable stored
-credential returns `ReconnectRequired` rather than an unhandled health error.
-Restore the correct Data Protection keys or re-enter the OAuth secret before
-reconnecting if the key ring was lost.
-
-The migration intentionally leaves upgraded installations disabled with empty deployment-specific fields. During a planned maintenance window, an administrator must save the former business configuration on the Admin page and reconnect before synchronization resumes. Although the existing encrypted refresh-token column is preserved, the first Client ID assignment clears that token because the application cannot prove it belongs to the newly entered OAuth client. For later topology changes with existing bindings, first save synchronization as disabled and wait for active `Processing` records to finish. Save the new root folder, deployment identity or business paths while still disabled, then re-enable in a separate save. The server rejects topology changes while processing is active or existing bindings are enabled. Nicon invalidates cached project-folder bindings so future operations resolve beneath the new topology. Existing catalog rows and Drive files are retained; the application does not move or delete historical files automatically.
-
-Project document storage is Drive-primary after synchronization. Manual uploads
-are queued in private host storage while Drive is unavailable; the worker
-verifies the remote byte count and SHA-256 before removing the staged copy.
-Authenticated downloads serve host or Drive content according to sync state.
-Deletion synchronization is configured independently in both directions. The
-default **Web → Drive** policy is off: deleting a synchronized document or an
-aggregate root removes/unlinks its Nicon data but preserves managed Drive files
-and project folders. When enabled, document deletion moves the verified replica
-to Drive trash and aggregate deletion may permanently delete only items that
-pass the existing ownership and impact-plan checks. The default **Drive → Web**
-policy is on: reconciliation marks a synchronized catalog record deleted when
-its bound Drive file disappears. When off, reconciliation leaves that web
-record unchanged. Both policy values are part of deterministic aggregate
-deletion plans, so changing either setting invalidates an earlier confirmation
-plan. SQL remains authoritative for catalog, authorization, claims and workflow
-state. Reconciliation catalogs unknown files without a host copy and reflects
-permitted remote changes. Source-module files retain their compatibility storage
-and lifecycle.
-Drive sharing and permission synchronization remain disabled until IT supplies
-approved group mappings.
-
-Manual project uploads require an `Idempotency-Key`. Nicon fingerprints multipart
-fields and file bytes independently from the browser-generated boundary, so a
-sequential or concurrent retry of the same upload intent creates at most one SQL
-catalog row and one Drive object. Reusing the key with another payload returns
-`409`; the React upload form retains its key after a failed request and clears it
-when the selected file, category, or Operational Project changes. Current
-Operational Project scope is checked before fingerprint comparison or cached
-response replay. A caller whose project access was revoked receives `404` and
-cannot recover prior upload metadata by replaying or changing the payload.
-
-The background worker skips claims while synchronization is disabled. When due
-work exists, it validates that the configured root is a live writable folder
-before claiming a row. Read-only, invalid-root, unavailable, or revoked-access
-states leave pending rows unchanged without consuming one of their three
-attempts. The connection response displays the authenticated account for
-administrators to verify against the deployment setup.
-
-Connection statuses have the following meanings:
-
-- `Connected`: a Google account is authenticated through OAuth, the root is a live folder, and Drive reports permission to add children.
-- `ReadOnly`: the folder is visible but Drive reports no permission to add children.
-- `InvalidRoot`: `RootFolderId` points to a non-folder item or an item in trash.
-- `ReconnectRequired`: the refresh token is missing, expired, or revoked; an administrator must reconnect once in Settings.
-- `Unavailable`: authentication or folder access failed.
-
-Each project document permits at most three automatic worker claims per retry
-cycle. An authorized user can select **Retry**, including after attempt three,
-to reset the attempt count and queue a new cycle after correcting the cause.
-`Processing` rows reject retry until the active claim completes or is recovered.
-
-While a legacy sidecar upload is running, a separate scoped database heartbeat renews its claim every five minutes. Losing claim ownership cancels the Drive request and SQL generation fencing rejects stale completion. If a crash or network race still leaves multiple remote files with the same Nicon replica key and generation, reconciliation preserves the SQL-bound replica and moves the extras to Drive trash.
-
-If the application stops during an active claim, the expired lease resumes the same numbered attempt instead of consuming another one. This includes attempt three; the Drive idempotency property lets recovery reconcile a remote file that may already have been created.
-
-Retry and deletion are rejected while a row is `Processing`. This preserves the active SQL lease and prevents an in-flight upload from creating an untracked Drive file; users can retry or delete after the worker completes or its lease is recovered.
-
-The response includes only safe identity/folder metadata and never includes the credential path, client secret, refresh token, or private key.
-
-For Docker development, save the OAuth configuration through **Settings >
-Google Drive**, using the exact loopback callback registered with Google.
-Compose persists the Data Protection key ring in the `data_protection_keys`
-volume; business OAuth settings are read from the encrypted database row.
-
-```bash
-docker compose up -d --build --force-recreate nihomeBackend
-```
-
-While synchronization is disabled, the worker leaves pending rows unclaimed at
-their current attempt count. When enabled, connection validation also prevents
-claims until OAuth values and `RootFolderId` identify a writable folder. A
-provider failure after a successful validation and claim still consumes an
-attempt.
-
-OAuth apps left in Testing can issue refresh tokens with a limited lifetime. Before production use, move the app to Production and complete any Google verification required for the Drive scope. The Google SDK automatically exchanges the stored refresh token for short-lived access tokens. A revoked refresh token cannot be silently renewed; health status becomes `ReconnectRequired` and an administrator must approve access again.
-
-Official references: [Drive API v3](https://developers.google.com/workspace/drive/api/reference/rest/v3), [files.get](https://developers.google.com/workspace/drive/api/reference/rest/v3/files/get), [OAuth scopes](https://developers.google.com/workspace/drive/api/guides/api-specific-auth), [Shared Drives](https://developers.google.com/workspace/drive/api/guides/about-shareddrives), and [Drive API errors](https://developers.google.com/workspace/drive/api/guides/handle-errors#storageQuotaExceeded).
-
-### 10.4 Deterministic demonstration data
-
-Development-only sample seeders create a compact deterministic demonstration
-dataset: two leads, five customers/operational projects, six opportunities,
-eight quotes, six contracts, three design projects, two surveys and two tenders.
-The linked examples cover pre-contract concept, quotation, contracting,
-permitting, construction, acceptance, as-built and handover. The main chain is
-the fictional Nhà máy may An Phú at KCN Quế Võ; a separate fictional Nhà máy
-cơ khí Hòa Bình customer/project carries two RFQs, an approved electrical BOQ,
-vendors and competing bids. Names are fictional but describe the work and
-project context. Display names omit the `[SAMPLE]` prefix; stable codes and
-internal notes identify demo-owned data.
-KPI seed entries are metric definitions, not fabricated performance results.
-Seeder-owned rows use stable internal markers such as `[SAMPLE_CONTRACT]`
-and `[SAMPLE_DP]`;
-downstream records are attached only to marker-owned sample projects rather than
-arbitrary database rows.
-
-The dataset is idempotent on a fresh Development database: rerunning sample
-seeding preserves row counts and administrator-edited free text, lifecycle
-values, and relationships. Reducing the manifest does not delete previously
-seeded rows from an existing database; existing local demo data may therefore
-contain more records than the counts above.
-A constrained backfill pass populates only missing sample relationships, including
-opportunity/quote links, project/customer/contract links, and PM/design-lead
-assignments. Sales records are owned by the SALE demo user, project and
-construction records prefer PM, design documents prefer DESIGN_LEAD then DESIGN,
-and permit work prefers LEGAL_OFFICER with safe fallbacks.
-
-When a web root is available, the seeder materializes small placeholder PDFs beneath `wwwroot/files/capability/`, `wwwroot/files/contracts/`, and `wwwroot/files/asbuilt/`; URL metadata is still seeded when no web root is supplied. These files and all named contacts, phone numbers, and email addresses in sample rows are demonstration data, not real personal or customer data, and must not be treated as production records.
+Seeder chỉ chạy ở Development: hai lead, năm khách hàng/dự án, sáu cơ hội, tám báo giá, sáu
+hợp đồng, ba dự án thiết kế, hai khảo sát, hai gói thầu, đi từ concept trước hợp đồng tới
+bàn giao. Chuỗi chính là Nhà máy may An Phú (KCN Quế Võ, hư cấu); Nhà máy cơ khí Hòa Bình
+có hai RFQ, BOQ điện đã duyệt, vendor và báo giá cạnh tranh. Tên hiển thị không có tiền tố
+`[SAMPLE]`; dữ liệu demo nhận diện bằng mã ổn định và marker nội bộ (`[SAMPLE_CONTRACT]`,
+`[SAMPLE_DP]`), bản ghi con chỉ gắn vào dự án mẫu có marker. KPI seed chỉ là định nghĩa,
+không phải kết quả. Seed idempotent: chạy lại giữ số dòng và nội dung/trạng thái/quan hệ
+admin đã sửa; thu nhỏ manifest không xoá dòng đã seed; backfill chỉ điền quan hệ còn thiếu
+(Sales thuộc user SALE, dự án và thi công ưu tiên PM, tài liệu thiết kế ưu tiên DESIGN_LEAD
+rồi DESIGN, pháp lý ưu tiên LEGAL_OFFICER). Khi có web root, seed tạo PDF giữ chỗ dưới
+`wwwroot/files/capability/`, `files/contracts/`, `files/asbuilt/`. Mọi tên, số điện thoại,
+email trong dữ liệu mẫu là giả.
 
 ---
 
-## 11. Troubleshooting
+## 19. Xử lý sự cố
 
-### 11.1 Database Connection Failures
-
-**Symptom**: The backend fails to start with a database connection error.
-
-**Resolution**:
-- Verify SQL Server is running: `docker ps | grep sqlserver`
-- Check the connection string in `appsettings.json` or the Docker Compose environment variable.
-- From the host use `localhost,1433`; from a Compose service use `sqlserver,1433`; from a separate Docker container use `host.docker.internal,1433` when supported by the platform.
-- The current Compose health check only verifies that the SQL Server process exists; confirm an actual database connection when diagnosing readiness.
-
-### 11.2 Migration Errors
-
-**Symptom**: EF Core migration fails to apply.
-
-**Resolution**:
-- Review the migration file for conflicts.
-- Use a .NET 8 SDK environment with `dotnet-ef` 8.x; the running development image currently lacks the tool.
-- Check the current database state with `dotnet ef migrations list`.
-- Remove only an unapplied last migration with `dotnet ef migrations remove`.
-- Generate a review script with `dotnet ef migrations script`.
-
-### 11.3 CORS Errors
-
-**Symptom**: The frontend receives CORS errors when calling the API.
-
-**Resolution**:
-- Verify each entry in `Frontend:AllowedOrigins` matches the frontend origin exactly (including protocol and port).
-- Restart the backend after changing CORS configuration.
-
-### 11.4 Email Sending Failures
-
-**Symptom**: OTP emails or contact reply emails are not delivered.
-
-**Resolution**:
-- Verify the SMTP settings in `appsettings.json`.
-- Check that the SMTP server is reachable from the backend container.
-- Review application logs for detailed error messages from MailKit.
-
-### 11.5 JWT Token Issues
-
-**Symptom**: API returns 401 Unauthorized for authenticated requests.
-
-**Resolution**:
-- Verify the access token has not expired.
-- Use the refresh endpoint to obtain a new access token.
-- Ensure the JWT `Issuer` and `Audience` settings match between token generation and validation.
-- If signing keys were rotated, ensure the `ActiveKeyId` matches a valid key in the configuration.
-
-The SPA restores its current user through `GET /users/me` on reload, retaining
-the existing tokens. It rotates the refresh token only after an access-token
-401. A transient profile/refresh failure preserves the tokens and offers retry;
-an invalid session returns to login. Refresh-token rotation remains single-use.
-
-### 11.6 Docker Volume Issues
-
-**Symptom**: Code changes are not reflected in the running container.
-
-**Resolution**:
-- Rebuild the immutable image with `docker compose up -d --build`.
-- Check `/api/system/health` and confirm `buildSha` matches the expected source revision.
-- Do not remove `sqlserver_data` to refresh application code; that volume contains business data.
-
-### 11.7 Running an old binary
-
-**Symptom**: The health endpoint reports a different `buildSha` than the source
-revision selected for E2E.
-
-**Resolution**:
-- Rebuild and recreate the backend with `BUILD_SHA=$(git rev-parse HEAD) docker compose up -d --build --force-recreate nihomeBackend`.
-- Confirm the new `buildSha` before starting Playwright.
+| Triệu chứng | Kiểm tra |
+|---|---|
+| Backend không kết nối database | `docker ps | grep sqlserver`; connection string theo [4.1](#41-database). Health check Compose chỉ kiểm process SQL tồn tại, cần thử kết nối thật |
+| Migration lỗi | Dùng SDK có `dotnet-ef` 8.x; `dotnet ef migrations list`; chỉ `remove` migration cuối chưa áp; sinh `script` để review |
+| Lỗi CORS | `Frontend:AllowedOrigins` khớp chính xác giao thức và port; restart backend |
+| Email không gửi | Cấu hình SMTP, mạng từ container tới SMTP, log MailKit; trạng thái `NeedsReview` của hàng chờ |
+| `401` khi đã đăng nhập | Token hết hạn → refresh; `Issuer`/`Audience` khớp; `ActiveKeyId` trỏ tới khoá có thật |
+| Sửa code không có tác dụng / E2E chạy binary cũ | `BUILD_SHA=$(git rev-parse HEAD) docker compose up -d --build --force-recreate nihomeBackend`, kiểm `buildSha` trước khi chạy Playwright. Không xoá `sqlserver_data` |
+| Đổi bản dịch không hiện | Cần data migration có guard giá trị cũ và restart backend (cache) |
 
 ---
 
-## 12. Kế hoạch hoàn thiện theo yêu cầu NICON
+## 20. Kế hoạch hoàn thiện theo yêu cầu NICON
 
-### 12.1 Phạm vi và nguyên tắc triển khai
+### 20.1 Phạm vi và nguyên tắc
 
-Kế hoạch bao phủ toàn bộ 14 mục của
+Kế hoạch phủ đủ 14 mục của
 [baseline họp 03/10/2026](Nicon/MoMs/2026-10-06/NICON_Meeting_2026-10-03_Tom-tat-yeu-cau-moi.md),
-đọc cùng [yêu cầu hiện hành](Nicon-QLVH.md),
-[workflow](Nicon-workflow.md), `Nicon_BreakTask_v1.xlsx` và hiện vật khách hàng
-liên quan. Giữ các xác nhận mới hơn: hai hướng HĐ Upstream ngày 16/10, BOQ cấu
-hình ngày 17/10, phản hồi CM tiếp nhận 18/10 và ISO nhận 20/10. Không quay lại
-quy tắc cũ đã được thay thế, cũng không suy code hiện tại thành quyết định mới.
+đọc cùng `Nicon_BreakTask_v1.xlsx` và hiện vật khách hàng. Các xác nhận mới hơn được giữ:
+hai đường tạo hợp đồng Upstream (16/10), BOQ cấu hình (17/10), phản hồi CM (18/10), bộ ISO
+(20/10), uỷ quyền quyết định S-Curve (09/11). Không quay lại quy tắc đã bị thay, không coi
+code hiện tại là quyết định mới.
 
-Mọi gói trong mục này là **Target**. Chỉ một phần đã có bằng chứng thì ghi
-**Partial** kèm khoảng trống trong các mục mô tả năng lực; nhánh chưa có quyết
-định có thẩm quyền giữ **Open decision**. Không đánh dấu **Implemented** từ kế
-hoạch, endpoint, menu hoặc test file chưa chạy. Trước từng gói, rà lại source và
-test mới nhất; lỗi đã sửa ở nhánh khác phải kiểm chứng trước khi làm trùng.
+- Mọi gói là **Target**; chỉ ghi **Partial** khi có bằng chứng một phần, nhánh chưa có
+  người có thẩm quyền quyết giữ **Open decision**. Không đánh dấu **Implemented** từ kế
+  hoạch, endpoint, menu hay file test chưa chạy.
+- Đích bàn giao là luồng nghiệp vụ đầy đủ: dữ liệu, API có phân quyền, UI, tài liệu, seed
+  và kiểm thử. Ưu tiên CRM + Thiết kế; sửa quyền và bảo toàn bằng chứng liên module trước.
+- Không tự mở rộng sang ERP, tái tạo Excel tuỳ ý, import `.mpp` đầy đủ hay ACL Drive ngoài
+  phạm vi NICON đã xác nhận. Đầu việc Target trong BreakTask (báo cáo tài chính/kho, chức
+  năng chung) vẫn phải được map và xếp đợt, không âm thầm bỏ.
+- Không tự đặt ngày hoàn thành hay effort khi chưa chốt đầu vào; đội phát triển và Product
+  Owner phân bổ theo năng lực thực tế. Cột estimate/status của workbook không phải lịch cam
+  kết.
 
-Đích bàn giao là luồng nghiệp vụ đầy đủ qua persistence, API có authorization,
-UI, tài liệu, seed và kiểm thử phù hợp. Ưu tiên CRM + Thiết kế; sửa quyền và bảo
-toàn bằng chứng xuyên module trước để không mở rộng workflow trên dữ liệu thiếu
-an toàn. Không tự mở rộng sang ERP, arbitrary Excel fidelity, full `.mpp`
-import hay Drive ACL ngoài phạm vi đã được NICON xác nhận. Các đầu việc Target
-trong BreakTask, gồm báo cáo tài chính/kho và chức năng chung, vẫn phải được map
-và xếp đợt; chưa được duyệt thì giữ quyết định/phạm vi rõ, không âm thầm loại bỏ.
+### 20.2 Quyết định còn mở
 
-Đây là kế hoạch triển khai, chưa phải thay đổi business contract. Không tự đặt
-ngày hoàn thành hoặc effort khi chưa chốt đầu vào, năng lực đội và đối chiếu
-BreakTask. Sau discovery, đội phát triển và Product Owner phân bổ từng gói theo
-capacity thực tế; mọi mốc phải có đầu ra và điều kiện thoát dưới đây.
+Huỳnh Anh là đầu mối khách hàng; Product Owner hoặc người NICON uỷ quyền chốt quy tắc;
+CM/FA/Thiết kế xác nhận nội dung chuyên môn; IT xác nhận triển khai, Drive và lưu trữ. Mỗi
+quyết định ghi người quyết, ngày/nguồn, phương án, tác động dữ liệu cũ và tiêu chí nghiệm
+thu.
 
-Workbook được đối chiếu ở chế độ chỉ đọc: `Nicon!A1:D1` ghi lần rà source
-`7813bc5d`, không chạy lại test/không xác nhận host; các đầu việc Drive/project
-reports tại `'Cập nhật Demo Ngày 2506'!A17:C19` và chức năng chung tại
-`'Tiến độ hiện tại'!A102:H102` cần được giữ trong traceability. Không dùng cột
-estimate/status của workbook làm lịch cam kết hoặc bằng chứng nghiệm thu mới.
-
-### 12.2 Quyết định nghiệp vụ và đầu vào bắt buộc
-
-Ghi quyết định ngay tại [mục 12 của yêu cầu](Nicon-QLVH.md#12-các-quyết-định-bắt-buộc-còn-mở),
-kèm người có thẩm quyền, ngày/nguồn, phương án được chọn, actor, lifecycle,
-data/API contract, acceptance criteria và tác động dữ liệu cũ. Huỳnh Anh là đầu
-mối khách hàng; Product Owner/người được NICON ủy quyền chốt rule, CM/FA/Thiết
-kế xác nhận nội dung chuyên môn. Việc giao xử lý quyết định không tự có nghĩa
-người đó đã chấp thuận phương án.
-
-| Quyết định / đầu vào | Cần chốt cụ thể | Gói phụ thuộc |
+| Mã | Cần chốt | Gói bị ảnh hưởng |
 |---|---|---|
-| Q-01 | Giữ/chuyển/gắn nhóm tiền hợp đồng; cách phân bổ khi một dự án có nhiều HĐ; contract link ở từng purpose có được thay đổi không | ROOT-01, WORK-01, COMM-01 |
-| Q-02 | Việc nội bộ có cần duyệt; metric, trọng số, kỳ khóa và điều kiện tính KPI | WORK-01, REPORT-01 |
-| Q-03 / Q-04 | Ai khởi tạo giao liên phòng, ngoại lệ admin; cơ cấu năm phòng và vị trí Cung ứng/Pháp lý; bộ quyền mẫu | RBAC-01, ROOT-01, WORK-01 |
-| Q-05 | Quy ước mã, normalization, uniqueness, alias và thời điểm được đổi/khóa | CRM-01; sửa stale Drive rename không cần đợi quy ước mới |
-| Q-06 / Q-07 / Q-10 | Recipient chỉ bình luận hay cần đồng thuận; CC mặc định; ranh giới Lead duyệt việc và Manager chốt giai đoạn | DESIGN-01, DESIGN-02 |
-| Q-08 | Cấp quyền xóa hồ sơ không đạt; hồ sơ từng trình khách; retention, bản phát hành và evidence liên quan | SAFE-02, RBAC-01, DRIVE-03; ngăn wildcard cấp nhầm quyền có thể làm trước |
-| Q-09 | Permit applicability theo loại/quy mô, mandatory/exemption và template version | LEGAL-01 |
-| Q-11 | Màn hình Đội ngũ/Tiến độ; WBS/calendar/baseline/import scope; mốc Project/Kinh doanh ban hành và mốc Design đề xuất | DESIGN-03; không coi có file `.mpp` là đã duyệt import contract |
-| ISO / CM / FA | Map quy trình → bước → mã/phiên bản/file nguồn → form/checklist; xử lý mã thiếu/trùng; Supply/Labour/Equipment/Mixed, advance/prepayment và chứng từ áp dụng | ISO-01, CM-01, FIELD-01, FIELD-02, QS-01, FIN-01 |
-| Approval / calculation | Approval matrix ngoài S-Curve cho MR/QA-QC/HSE/QS/VO; executed value; BOQ allowance/zero/reversal/conversion; KPI còn thiếu. Quy tắc S-Curve do người đại diện chủ sản phẩm quyết định theo ủy quyền NICON 09/11/2026: actual/task report, tỷ trọng WBS, lịch, kỳ cuối ngày/tháng/năm, PM duyệt và không mở khóa baseline; chỉ còn kiểm chứng triển khai và portfolio scope | CM-01, SUPPLY-01, REPORT-01 |
-| Approval hiệu lực | Cancel/withdraw nhóm Finance có thu hồi approval không; nội dung/phiên bản nào thay đổi thì phải rà lại | COMM-01, TENDER-01 |
-| Nguồn báo cáo / chức năng chung | Actual cashflow, cost/P&L/inventory sources, kỳ đối chiếu; phạm vi global search/saved filters và data source KPI còn thiếu | FIN-02, REPORT-01, COMMON-01 |
-| Document policy | Actor × source/category × action; historical approved bytes/retention; import-to-dossier; IFC-specific upload; phạm vi scan/native export và migration Survey. Giữ sharing/ACL tắt theo quyết định hiện tại; chỉ mở lại khi có yêu cầu mới được duyệt | SAFE-01, SAFE-02, DRIVE-02, DRIVE-03 |
+| Q-01 | Tiền hợp đồng theo nhóm việc; phân bổ khi một dự án có nhiều hợp đồng | ROOT-01, WORK-01, COMM-01 |
+| Q-02 | Việc nội bộ có cần duyệt; chỉ số, trọng số, kỳ khoá KPI | WORK-01, REPORT-01 |
+| Q-03 / Q-04 | Ai giao việc liên phòng; cơ cấu năm phòng, vị trí Cung ứng/Pháp lý; bộ quyền mẫu | RBAC-01, ROOT-01, WORK-01 |
+| Q-05 | Quy ước mã dự án, chuẩn hoá, thời điểm được đổi/khoá | CRM-01 |
+| Q-06 / Q-07 / Q-10 | Người nhận chỉ góp ý hay phải đồng thuận; CC mặc định; ranh giới Lead duyệt việc và Manager chốt giai đoạn | DESIGN-01, DESIGN-02 |
+| Q-08 | Ai được xoá hồ sơ không đạt; hồ sơ đã trình khách; lưu giữ bằng chứng | SAFE-02, RBAC-01, DRIVE-03 |
+| Q-09 | Permit áp dụng theo loại/quy mô, bắt buộc/miễn, phiên bản mẫu | LEGAL-01 |
+| Q-11 | Màn Đội ngũ/Tiến độ; phạm vi WBS/lịch/baseline/import | DESIGN-03 |
+| ISO / CM / FA | Ánh xạ quy trình → bước → form; mã thiếu/trùng; chứng từ theo gói Supply/Labour/Equipment/Mixed, tạm ứng | ISO-01, CM-01, FIELD-01/02, QS-01, FIN-01 |
+| Duyệt / công thức | Ma trận duyệt MR/QA-QC/HSE/QS/VO; giá trị thực hiện; hạn mức BOQ; KPI còn thiếu (S-Curve dự án đã chốt theo uỷ quyền 09/11) | CM-01, SUPPLY-01, REPORT-01 |
+| Hiệu lực duyệt | Huỷ/rút gói Finance có thu hồi duyệt không; thay đổi nào buộc duyệt lại | COMM-01, TENDER-01 |
+| Nguồn báo cáo | Thu/chi thực tế, chi phí, P&L, kho theo kỳ; tìm kiếm toàn cục, lưu bộ lọc | FIN-02, REPORT-01, COMMON-01 |
+| Chính sách tài liệu | Ai làm gì với tài liệu nào; lưu byte lịch sử; import vào hồ sơ; upload riêng IFC; migration Survey. Chia sẻ/ACL Drive giữ tắt | SAFE-01/02, DRIVE-02/03 |
 
-Các rule đã rõ được làm trước; không chờ toàn bộ bảng mới sửa quyền, evidence,
-task approval bypass, tender terminal guard hoặc stale rename. Phần chưa chốt
-không được publish thành template bắt buộc hay silently chọn giá trị mặc định.
-Không yêu cầu gửi lại toàn bộ ISO/BOQ/MS Project đã nhận; đọc hiện vật và hỏi
-đúng phần còn thiếu. Mẫu/giá trị/màu/ngày/tên khách trong evidence không tự
-trở thành business rule.
+Quy tắc đã rõ làm trước, không chờ cả bảng. Phần chưa chốt không được publish thành mẫu bắt
+buộc hay âm thầm chọn mặc định. Không yêu cầu NICON gửi lại ISO/BOQ/MS Project đã nhận; chỉ
+hỏi phần còn thiếu.
 
-### 12.3 Thứ tự, phụ thuộc và mốc bàn giao
+### 20.3 Thứ tự bàn giao
 
-| Đợt | Gói | Đầu ra để chuyển đợt |
+| Đợt | Gói | Điều kiện chuyển đợt |
 |---|---|---|
-| 0 — Chốt contract và tái hiện | PLAN-01, ISO-01 discovery | Traceability từng bullet, phân biệt lỗi/gap/open decision, actor/state matrix; đưa probe cần thiết vào regression đúng tầng; quyết định có owner |
-| 1 — Bảo vệ luồng đang có | SAFE-01/02/03, DRIVE-01, TENDER-01 guards, QA-01 | Không còn bypass đã xác nhận về quyền, xóa evidence, approval cũ, sửa terminal plan; health/redirect/rename an toàn; các test nền liên quan xanh |
-| 2 — CRM và công việc chung | RBAC-01, ROOT-01, WORK-01, CRM-01, COMMON-01 discovery | Một root dự án; role/department đúng quyết định; giao việc và notification mở đúng scope; nội bộ tách riêng; dữ liệu cũ tương thích |
-| 3 — Thiết kế và Drive | DESIGN-01/02/03/04, DRIVE-02/03 | Business journey từ Opportunity đến Concept/Basic/Shop/IFC, recipient, tài liệu/phiên bản và folder-init có bằng chứng; không chỉ upload General |
-| 4 — Thương mại và đấu thầu | COMM-01, BOQ-01, TENDER-01 hoàn chỉnh | Giá đầu vào → báo giá/Finance → HĐ; tender plan/dossier/submit/result có snapshot bất biến; BOQ đúng phạm vi được duyệt |
-| 5 — Pháp lý và ISO áp dụng | LEGAL-01, ISO-01 publish theo quyết định | Permit/task/applicability/activation không trùng; form/checklist có nguồn và phiên bản được duyệt |
-| 6 — CM, BCH và cung ứng | CM-01, FIELD-01/02, SUPPLY-01, QS-01 | Readiness gate và baseline cấu trúc; typed resource handoff, QA/QC/HSE/QS độc lập; evidence và offline/reconnect an toàn |
-| 7 — Hồ sơ tài chính và báo cáo | FIN-01/02, REPORT-01, COMMON-01 hoàn chỉnh | Hai hướng hồ sơ, đủ ba phần và chứng từ áp dụng mới gửi/chi; KPI/portfolio/báo cáo tài chính-kho có nguồn và phạm vi đã chốt |
-| 8 — Chuyển dữ liệu và nghiệm thu | MIG-01, RELEASE-01 | Rehearsal/rollback, docs/demo, BA → QA → NICON UAT trên bản deploy xác định; không còn High/Critical mở |
+| 0 | PLAN-01, ISO-01 (khảo sát) | Truy vết từng yêu cầu; tách lỗi, khoảng trống và quyết định mở; mỗi quyết định có người chịu trách nhiệm |
+| 1 | SAFE-01/02/03, DRIVE-01, chặn của TENDER-01, QA-01 | Hết lỗ hổng đã biết về quyền, xoá bằng chứng, duyệt cũ, sửa kế hoạch đã kết thúc |
+| 2 | RBAC-01, ROOT-01, WORK-01, CRM-01, COMMON-01 (khảo sát) | Một root dự án; phòng/role đúng quyết định; giao việc và notification đúng scope |
+| 3 | DESIGN-01/02/03/04, DRIVE-02/03 | Luồng Cơ hội → Concept/Basic/Shop/IFC có bằng chứng, tài liệu đúng phiên bản |
+| 4 | COMM-01, BOQ-01, TENDER-01 | Giá đầu vào → báo giá/Finance → hợp đồng; thầu có snapshot bất biến |
+| 5 | LEGAL-01, ISO-01 (publish) | Permit/task/kích hoạt không trùng; form có nguồn và phiên bản được duyệt |
+| 6 | CM-01, FIELD-01/02, SUPPLY-01, QS-01 | Gate khởi công, baseline, chuyển nguồn lực, QA/QC/HSE/QS duyệt độc lập |
+| 7 | FIN-01/02, REPORT-01, COMMON-01 | Hồ sơ thanh toán hai chiều đủ ba phần; báo cáo có nguồn |
+| 8 | MIG-01, RELEASE-01 | Rehearsal/rollback, tài liệu, demo, UAT NICON trên bản deploy xác định; không còn lỗi High/Critical |
 
-Đây là thứ tự bàn giao; không phải phải chờ hết một đợt mới discovery đợt sau.
-Contract QS/Finance và template phải thiết kế thống nhất trước code liên kết.
-Phần TC–KT tiền hợp đồng nằm ở COMM-01, không chờ đợt 7 hoặc bàn giao công trình.
-LEGAL-01 và IFC của Design cấp bằng chứng cho CM-01; published baseline và
-approved Execution BOQ cấp giới hạn cho SUPPLY-01. DRIVE và SAFE áp dụng xuyên
-mọi đợt. Discovery ISO/BOQ/schedule và thiết kế read contract có thể tiến hành
-khi chờ quyết định, nhưng không bật tính toán/gate chưa được duyệt.
+Khảo sát đợt sau có thể chạy song song. Hợp đồng QS/Finance và template phải thiết kế thống
+nhất trước. Phần Tài chính – Kế toán trước hợp đồng thuộc COMM-01. LEGAL-01 và IFC cấp bằng
+chứng cho CM-01; baseline ban hành và BOQ thi công đã duyệt cấp hạn mức cho SUPPLY-01.
+SAFE và DRIVE áp dụng xuyên suốt.
 
-### 12.4 Backlog tính năng và tiêu chí hoàn thành
+### 20.4 Các gói và tiêu chí hoàn thành
 
-Các đường code nêu dưới đây là điểm mở rộng cần khảo sát lại, không phải cam
-kết tên endpoint/schema mới. Mỗi gói phải chốt DTO/validation/state/concurrency
-và migration trước khi code; ưu tiên reuse controller/service/UI đang có.
-
-| Gói | Thêm/cập nhật đầy đủ | Điều kiện nghiệm thu và kiểm thử chính |
+| Gói | Nội dung chính | Hoàn thành khi |
 |---|---|---|
-| PLAN-01 — Contract và truy vết | Map từng bullet MoM và BreakTask liên quan → actor/rule/lifecycle → persistence/API/UI/seed → AC/test; giữ current subset và target tách biệt | Không bỏ mục nhỏ vì module đã có menu; mỗi gap/finding có gói xử lý, mỗi quyết định có owner; BA xác nhận test basis trước QA |
-| SAFE-01 — Authorization thống nhất | `ProjectAccessService`, `ProjectDocumentService`, Design/Permits controllers và task mutation: permission + active project/source scope; sửa Design Manager upload fallback bị filter chặn và member đọc evidence bị 404 | Assigned Design upload được; QAQC/QS/Legal đọc đúng evidence; ngoài dự án/ended membership/CC không có quyền mutation bị chặn; list/count/download không leak Finance hoặc tài liệu nguồn ngoài quyền. Integration qua API, có negative source-permission cases; không cấp blanket view-all |
-| SAFE-02 — Bảo toàn evidence và xóa | Dùng document/deletion services bảo vệ QA/QC/QS, review/submission và consumer tài chính; kiểm mọi generic delete, managed-source replacement/delete, remote edit/trash và aggregate deletion | Từ chối không đổi DB/file/history/job; approved dossier không âm thầm trỏ bytes mới. Chốt reject/version/archive và retention trước triển khai lưu bytes lịch sử; mọi hard delete có impact, typed code, plan token, concurrency, ownership/cleanup. SQL race và file/Drive tests, không chỉ FK/InMemory |
-| SAFE-03 — Approval đúng nội dung | `DetailDesignScheduleService` và workflow consumers: API update không hoàn thành lách Pending; approval gắn revision/nội dung, không giữ Approved cho scope/người/lịch/dependency đã thay | Complete → Pending và notification; đúng một independent assigned approver; CC không approve; reject có lý do, resubmit đúng revision. Edit approved bị chặn hoặc tạo revision theo contract đã chốt; stage gate không nhận approval cũ. Unit rules + HTTP bypass/concurrency tests |
-| QA-01 — Test foundation | Chuyển probe tái hiện thành regression tracked; sửa translation assertion lỗi thời, SQL fixture thiếu storage collaborator; SDK test runtime đủ fonts; live smoke thiếu credentials phải skip rõ | Các test hiện hữu đã sửa chạy pass trên final tracked source. Không thay wording staged/Pending thành synced để làm test xanh; không dùng fixture audit hoặc silent-return live test thay execution thật |
-| RBAC-01 — Phòng ban và bộ quyền | Role/group editor, baseline import snapshot, editable labels qua translations, design approve/transition/read-only scope; reconcile wildcard hard-delete và default grants có kiểm soát | Role mới nhận bộ quyền phòng theo lựa chọn đã chốt; không escalation/retroactive reset; DESIGN_LEAD không vô tình được highest-tier delete. Q-04/Q-08 chi phối cơ cấu/thẩm quyền; inventory custom grants trước migration, không ghi đè role người dùng. API matrix và UI bốn tiếng |
-| ROOT-01 — Dự án chung và entry points | OperationalProject là root; Kinh doanh tạo; phòng nhận workspace/gói việc sẵn, thông tin liên kết bằng stable ID; entry từ Project/Opportunity dùng chung rules | Không tạo lại customer/project theo phòng; không tự gắn việc vào HĐ đầu tiên. Nhiều HĐ theo Q-01, scope theo Q-03; Design/Construction giữ lifecycle chuyên môn. Integration cross-project/cross-contract và browser handoff |
-| WORK-01 — Việc phòng ban/nội bộ | `DepartmentWorkPackageService`, UI và notifications: chủ trì giao đúng người/phòng, lịch/WBS/dependency/progress; tab nội bộ không customer/project/HĐ; KPI theo Q-02; thống nhất create/update/import | Giao trùng/stale edit/reconnect không tạo record/notification trùng; dependency và lifecycle được server enforce; kết thúc assignment chặn thao tác cũ. Notification lỗi có durable retry/dedup và deep link đúng task theo quyền hiện tại; không resend lịch sử hàng loạt chưa kiểm chứng |
-| CRM-01 — CRM và mã dự án | Giữ thứ tự Project/Opportunity/Contract; Lead riêng, converted khóa; cá nhân không bắt TaxId; rename theo quy ước đã duyệt, history/unique/stable links; hai hướng Upstream được xác nhận | Validate format/length/range/normalization ở FE và server; duplicate/concurrent rename không mất liên kết. Hướng quote dùng approved/version/đúng project; direct agreed-value vẫn hợp lệ. Unit/HTTP, SQL unique/concurrency và live browser |
-| DESIGN-01 — Từ Cơ hội và phân vai | Kinh doanh handoff trước HĐ vào Concept; Manager điều phối nhiều nhóm, Lead chia subtask/duyệt trực tiếp, người khác CC; sửa complete/review kiểm active assignment | Opportunity → Design idempotent; Design không tạo business root. Full role/state journey complete/reject/resubmit/approve, author không tự duyệt, người bị thu hồi scope không xử lý. Không đồng nhất Design Manager với PM toàn dự án |
-| DESIGN-02 — Trình nội bộ/khách | Recipient-scoped entry point và download/comment, Manager tổng hợp → trình khách → record decision → stage gate; review evidence đúng revision/hash | Người ngoài project được chỉ định mở đúng review và file, không được đọc toàn project/dossier khác; comment không biến thành approve. Gate client acceptance/bước kế tiếp đúng contract Q-06/Q-10; test entry notification, replay/stale/negative decision, remote bytes thay đổi |
-| DESIGN-03 — Tiến độ và đội ngũ | WBS hierarchy, mô tả, planned/actual dates, assignee/approver/CC, predecessor/successor, relation/lag/calendar/resource/milestone/critical path; nguồn mốc Project/Kinh doanh và Design đề xuất | Source-derived schedule fixtures giữ hierarchy/dependency/duration/critical/baseline theo import scope đã duyệt. Không flatten PDF/MPP thành checklist. Pagination đủ mọi task/member/source, không mất dữ liệu trên 100 records; UI WBS/Gantt liên kết đội ngũ, mobile/tablet. Q-11 trước import/approval provenance mới |
-| DESIGN-04 — Thầu phụ, hồ sơ và IFC | Task gắn Vendor/HĐ Downstream đúng project; shortcut NCC/HĐ đã lọc; nhiều file mỗi option/stage; tab Documents tổng hợp đủ trang; upload IFC-specific theo contract; released IFC tới Construction | Manager dùng đúng supplier/RFQ/contract quyền được cấp; kết quả vào source/stage đúng. Draft/unreleased IFC không dùng thi công; không copy master data hoặc mở supplier data ngoài scope. HTTP source/vendor/contract validation và live journey Design → IFC → Construction |
-| DRIVE-01 — Độ tin cậy và cấu hình | `GoogleDriveOAuthService/SettingsStore/ProjectDriveSyncService`: health khi decrypt lỗi, return URL an toàn cả disabled/callback, stale rename ordering, topology drain guard; đồng bộ docs retry | Unit và API phân biệt Disabled/Connected/ReadOnly/InvalidRoot/ReconnectRequired; cũ A→B retry không ghi đè C; stale config/Processing không mất binding. Secret write-only, PKCE/state/actor/concurrency giữ nguyên; không log token hoặc thử outage bằng cách phá kết nối người dùng |
-| DRIVE-02 — Folder-init và catalog | Durable intent tạo cây Design khi handoff trước HĐ, kể cả zero file; reuse folder identity; upload mọi stage/source, checksum readback, verified host cleanup; retry/lease/fencing/import/conflict/native metadata | Drive lỗi không rollback business handoff hay báo folder đã có; Pending/Failed/retry nhìn thấy và phục hồi không trùng folder/file. Live kiểm đúng source workflow, không chỉ 9 General uploads; remote move/edit/trash/reconnect và mobile weak-network có bằng chứng. Scope scan/native export không tự mở rộng; sharing/ACL giữ tắt theo quyết định hiện tại và không là blocker nghiệm thu sync |
-| DRIVE-03 — Document coverage và lịch sử | Inventory Quote/Contract/Survey/Design/Permit/Acceptance/As-built/Handover bridges; bổ sung contract còn thiếu cho Tender, Finance, diary/Punch, QA/QS ISO export; source binding cho imports theo quyết định | Source owns lifecycle, managed file phải tồn tại/đúng project/permission; upload/replacement/delete cùng metadata/durable side effect, rollback không orphan. Drive-import không tự thành approved Design evidence; legacy backfill riêng, history không tự tạo từ dữ liệu hiện tại; giữ Survey/CRM bindings đến migration duyệt |
-| COMM-01 — Giá đầu vào và Finance tiền HĐ | Input offer independent lifecycle/expiry, quote snapshot; Finance đúng quote/tender content version; gate send/submit; thống nhất cancellation/withdrawal/material change và ContractId trên mọi write path | Sai purpose/project, expired/unapproved offer, self-review, stale content và bypass bị từ chối; rejected operation không side effect. Chỉ bật cancellation semantics đã chốt; input pricing/preliminary BOQ không thành Execution BOQ allowance. HTTP + live Procurement → Quote → Finance → Send |
-| BOQ-01 — Giá và workbook | UnitCost/BOQ, quote version, một current approved version, totals/rounding/VAT/discount; multi-sheet/configured catalog chuẩn, preview/mapping/revision/hash; nâng hierarchy/provenance/re-import nếu được duyệt | Đọc sample single/multi-sheet/cover/bilingual/merged/formula trước import contract; import lỗi không partial write. Giữ original workbook; typed numeric/formula restrictions hiện hành không tự đổi. Khi nâng model giữ parent/sheet/row/cell/UID phù hợp quyết định; không bịa provenance cũ hoặc hứa arbitrary Excel recalculation |
-| TENDER-01 — Kế hoạch tới kết quả | Full invitation → phòng lập plan → dossier/library/estimate/Finance → submit → result; khóa mọi edit/reopen/task/dependency sau terminal, dates không mất/qua deadline; full immutable submission snapshot | Snapshot tái dựng plan/tasks/actor/dates/dependencies, evidence revision/hash, estimate, Finance checklist/findings/decision/version, receipt/channel/time. Check gate và snapshot nhất quán trong transaction; source thay không đổi lần nộp cũ; resubmit thêm lần, retry không trùng. Unit/HTTP/SQL race; Won → Negotiation → HĐ đúng root |
-| ISO-01 — Form/template được duyệt | Đọc ISO thực tế, map process/step/source version/field/checklist/applicability; báo riêng file thiếu/trùng mã; quản trị/publish độc lập và retention theo thẩm quyền | CM/FA/NICON chấp thuận mapping, required/optional/exemption và form UI có validation đầy đủ; raw schema/results JSON không thay form nghiệp vụ. Published version/snapshot bất biến; template mới không sửa dossier lịch sử; các required language fields đầy đủ trên mọi write path |
-| LEGAL-01 — Pháp lý theo từng permit | Giữ Published-template wizard tương thích; sau Q-09 thêm applicability/tự sinh khi activation; PM phân ban đầu, chủ trì phân từng permit cho active member dù khác phòng; task/lịch/duyệt/evidence riêng | Activation atomic/idempotent, không permit/task trùng; không phụ thuộc phải tạo Design project. Permit nội bộ và kết quả cơ quan giữ lifecycle đã chốt; missing/expired/invalid evidence chặn gate. Tests applicability/legacy/mandatory/revocation/concurrency; snapshot mẫu và dữ liệu cũ giữ nguyên |
-| CM-01 — Chuẩn bị và baseline | Structured WBS/Gantt/calendar/critical path/S-Curve, BCH organization/resource plan và locked Budget Baseline có version; signed Upstream D&B/construction chỉ cho chuẩn bị | Start gate kiểm released IFC, permit hợp lệ bắt buộc, published schedule, approved BCH/resource và locked budget; handover/method/HSE theo approved profile. Lưu input/version/actor; không overwrite published baseline, scope/budget changes theo VO. Tests bypass/stale evidence/version/concurrency; không tự derive baseline từ free text |
-| FIELD-01 — BCH/CM và QA/QC/HSE | Tách field author và CM independent review; ISO forms cho acceptance/sample/lab/CO-CQ/material cert/diary theo applicability; project/WBS/evidence/timestamps/audit | Một người được tham gia nhiều BCH nhưng scope từng dự án độc lập; author không review hồ sơ mình. Mobile-first draft/pending/error/conflict, retry/offline không tạo trùng và không tự merge approved data. SQL/API file integrity; live BCH submit → CM review trên mobile/tablet/desktop |
-| FIELD-02 — Nghiệm thu tới bàn giao | QA/QC/HSE/Punch/diary/acceptance/as-built/handover giữ record/lifecycle riêng, source document links và checklist ISO; tiếp tục existing gate/correction/reopen audit | Completion không bỏ mandatory acceptance/as-built hoặc unresolved blockers theo contract; hard delete vẫn theo aggregate policy. Test source revision/dependency/state/reconnect và browser handover journey; không coi một checklist generic là thay mọi record |
-| SUPPLY-01 — Nguồn lực tới FA | Material/Equipment/Labour có WBS/quantity/unit/date/reason; Material reuse MR/applicable approved Execution BOQ, over-limit/unplanned independent CM level-2; máy/nhân công → Procurement → HĐ Downstream/supply → FA | Không suy CM Approved là đã mua/cung cấp/chi; wrong project/vendor/direction/contract/allowance và self-approval bị chặn. Retry handoff không tạo HĐ/payment trùng; source links bền. Nonmaterial không ép warehouse receipt; partial supply/cancel/amend chỉ sau rule được chốt |
-| QS-01 — Hai hướng khối lượng | Upstream gắn Owner contract/receivable milestone; Downstream gắn NCC/thầu phụ/tổ đội/payable dossier; stable WBS/BOQ/VO/evidence; approved quantity immutable, correction/reversal lineage | Không suy hướng từ dấu tiền, không double-count superseded/reversed batch; downstream consumer nhận source không còn hiệu lực. HTTP/SQL direction/project/milestone/totals/concurrency; retry CM approval không sinh duplicate payment |
-| FIN-01 — Dossier thanh toán hai chiều | Mở rộng tương thích PaymentRequest Downstream, thêm Upstream dossier; ba phần Công trường/CM/Kế toán có actor/evidence/status/version theo matrix duyệt; chạy song song vòng đời | Đủ ba phần và chứng từ áp dụng mới gửi khách/chi; Supply/Labour/Equipment/Mixed, advance/prepayment theo quyết định, không fake receipt. Giữ invoice uniqueness, independent approval, same-request revision khi QS superseded. API validation/authorization/file ownership; live một Upstream send và một Downstream pay |
-| FIN-02 — Nguồn tài chính và báo cáo kho | Chốt với FA nguồn thực thu/thực chi/chi phí, P&L và kho theo dự án/kỳ; hoàn thiện phần Target còn thiếu bằng liên kết nguồn chuẩn, không dựng sổ kế toán hoặc tích hợp ngân hàng chưa được yêu cầu | Approved dossier/milestone không tự bằng cash received/paid. Báo cáo tách kế hoạch/certified/posted/actual theo contract đã chốt; receipt/issue/reversal và package allocation đối chiếu đúng kỳ, currency/unit. Thiếu nguồn không báo số 0 hoặc lãi giả; API source permissions, unit reconciliation và live report/export |
-| REPORT-01 — CM/Finance/KPI | Portfolio progress, QS hai hướng, executed-vs-budget, QA/QC/HSE có source/period/baseline và drill-down; S-Curve và KPI theo definition/target đã duyệt | Với S-Curve cấp dự án, owner decision delegated 09/11/2026: delay = plan − actual theo điểm phần trăm, strictly >5 điểm cảnh báo; lưu task inputs/reporter/time/calendar/version/period; ngày/tháng/năm, period-end snapshots và thiếu actual = unavailable, không nội suy. Portfolio aggregation chưa thuộc slice. KPI khác vẫn cần chốt nguồn; terminal approved/posted/paid/verified phù hợp, không tính offline draft; unit boundary + API scope + desktop/tablet |
-| COMMON-01 — Chức năng chung trong BreakTask | Kiểm kê và map master data, translations, notification/audit, exports, tìm kiếm/filter từng module; chốt phạm vi global search/saved filters còn Target và reuse query/UI hiện có | Tìm kiếm/lưu filter giữ đúng ownership/project/source permission và pagination, không trả record/count ngoài scope. Export phản ánh đúng tập/kỳ/quyền; không mất filter khi reload/back navigation. Các vị trí/KPI được canonical xác nhận có metric/source/target hoặc MissingData rõ ràng; chưa có nguồn HR/budget không tự tạo điểm |
-| MIG-01 — Compatibility/backfill | Inventory IDs/versions/bindings/custom grants/legacy documents; kế hoạch additive migration cho model mới, root ID migration và Drive topology là các thay đổi riêng có decision | Dry-run counts/uniqueness/conflict/orphan/checksum, resume/checkpoint, rollback và rehearsal SQL. Không reset dữ liệu user; legacy thiếu evidence ghi rõ incomplete, không tái tạo submitted snapshot/approval/ISO completion bằng dữ liệu hiện tại |
-| RELEASE-01 — Giao hàng và UAT | Cập nhật guides/RBAC/seed/translations, deploy revision xác định, smoke/UAT theo actor và scenario; bàn giao PDF quy trình kịch bản A có screenshot và hỗ trợ phản hồi NICON qua Sheet | `buildSha`/migration/version khớp; mọi High/Critical đóng, affected tests bản cuối pass; deployment/UAT/Drive NICON và việc bàn giao PDF có bằng chứng riêng. Chỉ miễn/đổi định dạng hướng dẫn khi NICON xác nhận. Gửi tài liệu/thông báo chỉ theo kênh và ủy quyền đã có, không đánh đồng local pass với host đã deploy |
+| PLAN-01 | Map từng mục MoM/BreakTask → vai trò, quy tắc, vòng đời, dữ liệu/API/UI → tiêu chí và test | Mỗi khoảng trống có gói xử lý, mỗi quyết định có người chịu trách nhiệm; BA duyệt cơ sở test trước QA |
+| SAFE-01 | Phân quyền thống nhất: quyền + thành viên dự án + quyền nguồn cho tài liệu, Design, permit, task | Người được giao làm được; người ngoài dự án, đã hết hạn tham gia hoặc chỉ CC bị chặn; list/đếm/tải không lộ dữ liệu |
+| SAFE-02 | Bảo toàn bằng chứng khi xoá, thay file, sửa/xoá từ Drive | Từ chối không đổi dữ liệu/file/lịch sử; hồ sơ đã duyệt không trỏ sang byte mới; mọi hard delete theo mục 7 |
+| SAFE-03 | Duyệt gắn đúng nội dung: không lách `Pending`, duyệt cũ mất hiệu lực khi phạm vi/người/lịch đổi | Đúng một người duyệt độc lập; CC không duyệt; trả về có lý do; gate không nhận duyệt cũ |
+| QA-01 | Đưa probe tái hiện vào regression; sửa test lỗi thời và fixture | Test hiện có pass trên source cuối; không sửa câu chữ để test xanh |
+| RBAC-01 | Role/nhóm theo phòng, nhãn sửa được, phạm vi duyệt và xoá | Role mới nhận bộ quyền đúng; không nâng quyền hay reset role người dùng; DESIGN_LEAD không vô tình có quyền xoá cao nhất |
+| ROOT-01 | Operational Project là root; Kinh doanh tạo, các phòng nhận workspace liên kết bằng ID | Không tạo lại khách/dự án theo phòng; không tự gắn việc vào hợp đồng đầu tiên |
+| WORK-01 | Giao việc phòng ban/nội bộ: đúng người/phòng, lịch, WBS, phụ thuộc, tiến độ, KPI theo Q-02 | Không tạo trùng việc/notification; kết thúc assignment chặn thao tác cũ; notification có retry và link đúng |
+| CRM-01 | Thứ tự Dự án/Cơ hội/Hợp đồng; Lead riêng, khoá sau convert; cá nhân không bắt mã số thuế; đổi mã có lịch sử | Validate ở FE và server; đổi mã đồng thời không mất liên kết; cả hai đường tạo hợp đồng Upstream hợp lệ |
+| DESIGN-01 | Kinh doanh chuyển sang Concept trước hợp đồng; Manager điều phối, Lead chia và duyệt, người khác CC | Chuyển giao idempotent; tác giả không tự duyệt; người mất scope không xử lý được |
+| DESIGN-02 | Trình nội bộ/khách: người nhận được chỉ định, tổng hợp, ghi quyết định khách, gate giai đoạn | Người nhận ngoài dự án chỉ mở đúng review; góp ý không thành duyệt; file đúng revision/hash |
+| DESIGN-03 | Tiến độ và đội ngũ: WBS, ngày, người, phụ thuộc, lịch, critical path | Không làm phẳng PDF/MPP thành checklist; phân trang đủ dữ liệu trên 100 bản ghi; giao diện mobile/tablet |
+| DESIGN-04 | Thầu phụ thiết kế, nhiều file mỗi giai đoạn, IFC tới Thi công | IFC chưa phát hành không dùng thi công; không mở dữ liệu NCC ngoài scope |
+| DRIVE-01 | Độ tin cậy cấu hình: health khi giải mã lỗi, URL trả về an toàn, thứ tự đổi tên, chặn đổi topology khi đang xử lý | Phân biệt đúng các trạng thái kết nối; secret chỉ ghi; không log token |
+| DRIVE-02 | Khởi tạo thư mục bền khi chuyển giao, upload mọi giai đoạn có kiểm checksum | Drive lỗi không rollback nghiệp vụ; retry không tạo trùng; kiểm thật trên Drive, không chỉ upload General |
+| DRIVE-03 | Phủ tài liệu cho Tender, Finance, nhật ký/Punch, QA/QS | Module nguồn sở hữu vòng đời file; import Drive không tự thành bằng chứng Design đã duyệt |
+| COMM-01 | Giá đầu vào, Finance đúng phiên bản báo giá/thầu, gate gửi/nộp | Sai mục đích, offer hết hạn/chưa duyệt, tự duyệt, nội dung cũ đều bị chặn; giá đầu vào không thành hạn mức BOQ thi công |
+| BOQ-01 | Báo giá đơn giá/BOQ, phiên bản, tổng/VAT/chiết khấu; import workbook có preview, mapping, hash | Import lỗi không ghi dở; giữ file gốc; không hứa tính lại Excel tuỳ ý |
+| TENDER-01 | Thư mời → kế hoạch phòng → hồ sơ/dự toán/Finance → nộp → kết quả | Snapshot tái dựng được lần nộp; khoá sau kết quả; nộp lại tạo lần mới, retry không trùng |
+| ISO-01 | Map ISO thực tế thành form/checklist được duyệt, publish độc lập | CM/FA/NICON duyệt mapping; phiên bản đã publish bất biến; mẫu mới không sửa hồ sơ cũ |
+| LEGAL-01 | Permit theo áp dụng (sau Q-09), PM phân công, chủ trì giao từng permit | Kích hoạt nguyên tử, không trùng permit/task; bằng chứng thiếu/hết hạn chặn gate |
+| CM-01 | WBS/Gantt/lịch/S-Curve, tổ chức BCH, kế hoạch nguồn lực, Budget Baseline có phiên bản | Gate khởi công đủ điều kiện ở [13.3](#133-module-4-target-integration-contract); không ghi đè baseline đã ban hành |
+| FIELD-01 | BCH thực hiện, CM review độc lập; form ISO theo áp dụng | Tác giả không tự review; nháp/offline không tạo trùng hay tự gộp dữ liệu đã duyệt |
+| FIELD-02 | QA/QC, HSE, Punch, nhật ký, nghiệm thu, hoàn công, bàn giao giữ vòng đời riêng | Hoàn thành không bỏ qua nghiệm thu/hoàn công bắt buộc hay Punch chặn |
+| SUPPLY-01 | Vật tư/thiết bị/nhân công: CM cấp 2 cho vượt mức, Cung ứng lập hợp đồng/cung cấp, FA thanh toán | CM duyệt không đồng nghĩa đã mua/chi; retry không tạo hợp đồng/thanh toán trùng; phi vật tư không ép phiếu nhập kho |
+| QS-01 | Khối lượng hai hướng gắn hợp đồng, mốc, hồ sơ phải thu/phải trả | Không suy hướng từ dấu tiền; không đếm trùng bản bị thay/hoàn |
+| FIN-01 | Hồ sơ thanh toán hai chiều, ba phần Công trường/CM/Kế toán | Đủ ba phần và chứng từ mới gửi khách/chi; không phiếu nhập giả; giữ unique hoá đơn và duyệt độc lập |
+| FIN-02 | Nguồn thu/chi thực tế, chi phí, P&L, kho theo dự án/kỳ (không dựng sổ kế toán) | Hồ sơ duyệt không đồng nghĩa đã thu/chi; thiếu nguồn không báo số 0 |
+| REPORT-01 | Tiến độ danh mục, QS hai hướng, giá trị thực hiện so ngân sách, QA/QC/HSE, KPI | S-Curve dự án theo 13.2; tổng hợp danh mục chưa thuộc slice; KPI khác cần chốt nguồn |
+| COMMON-01 | Master data, bản dịch, notification/audit, xuất, tìm kiếm/lọc | Không trả bản ghi hay số đếm ngoài scope; giữ bộ lọc khi reload/back |
+| MIG-01 | Kiểm kê ID, phiên bản, binding, quyền tuỳ chỉnh, tài liệu cũ; migration chỉ thêm | Dry-run, checkpoint, rollback, rehearsal; dữ liệu cũ thiếu bằng chứng ghi rõ chưa đủ |
+| RELEASE-01 | Cập nhật hướng dẫn, RBAC, seed, bản dịch; deploy xác định; UAT; bàn giao PDF quy trình kịch bản A có ảnh, nhận phản hồi qua Sheet | `buildSha`/migration khớp; đóng hết High/Critical; có bằng chứng UAT và bàn giao riêng |
 
-Role custom hợp lệ phải tham gia workflow theo permission và assignment nghiệp
-vụ tương ứng; không hardcode chỉ các role mẫu SALE/PM/DESIGN trong selection,
-recipient eligibility hoặc mutation. Negative tests phải chứng minh role custom
-không được nâng quyền, nhảy phòng, đọc source ngoài scope hoặc tự duyệt.
+Role tuỳ chỉnh hợp lệ phải tham gia workflow theo permission và assignment, không hardcode
+role mẫu SALE/PM/DESIGN. Test âm phải chứng minh role tuỳ chỉnh không nâng quyền, nhảy phòng,
+đọc nguồn ngoài scope hay tự duyệt.
 
-### 12.5 Kiến trúc, hợp đồng và thay đổi dữ liệu
+### 20.5 Nguyên tắc kỹ thuật cho các gói
 
-- Giữ ASP.NET services/EF/React và durable workflow hiện có; không thêm broker,
-  microservice hay dependency khi database intent/outbox đủ đáp ứng. Business
-  write + intent cần atomic; worker chạy ngoài transaction dài gọi Google,
-  có idempotency, generation/token fence, retry và observable failure.
-- `OperationalProject` là business root. DesignProjectId của record cũ là
-  compatibility boundary; giữ adapter/lookup và có migration riêng, không tạo
-  aggregate liên module mới trên ID cũ hoặc đổi displayed code thành FK.
-- API dùng DTO; xác định required/nullable/enum/length/format/range/normalization,
-  cross-field/scope/source version, pagination và response/error contract cho
-  mọi create/update/import/transition. Reuse shared contact validators; 409 cho
-  stale version/plan theo convention, 403/404 theo permission/resource privacy.
-  Không phát minh route hoặc state công khai trước khi duyệt hợp đồng gói đó.
-- So sánh status quo và mở rộng tối thiểu: giữ module workspace và bổ sung shared
-  root links thay vì viết lại mọi module thành generic tasks; giữ snapshot JSON
-  có schema version nếu đủ thay vì thêm bảng không cần thiết; cần structured
-  baseline/BOQ provenance/payment sections thì migration additive rõ ràng.
-- Approval và submission là bằng chứng của đúng revision. Với bytes lịch sử,
-  so sánh pinned remote revision và app-owned immutable copy theo khả năng giữ
-  version, retention, chi phí/quota và quyền truy cập thực tế; owner chốt chính
-  sách trước implementation. Chưa có quyết định thì phát hiện/chặn mismatch,
-  không stream bytes mới dưới danh nghĩa evidence cũ đã duyệt.
-- Document/notification retry không làm replay business transition hoặc gửi
-  trùng. Mọi side effect cần event/source identity và audit; không xem log-only
-  catch là đã phục hồi notification, cũng không dùng Drive queue cho mọi event.
-- Form hiển thị loading/empty/error/success/conflict và responsive; mọi số nhập
-  có format đọc được như `100.000`. Dùng master data API/config đã duyệt, i18n
-  `/admin/translations` vi/en/zh/ja. Required multilingual entity fields được ghi
-  đủ ở create/import/seed/migration/legacy auto-create, không read-time fallback.
-- Bất kỳ email ứng dụng mới/thay đổi phải có template editable tại
-  `/admin/email-templates`, variable contract, preview thực trước gửi, server
-  render/HTML encoding/validation và send/edit permissions; thêm rendered-content
-  tests, giữ template đang dùng. Notification nội bộ không tự cần email mới.
+- Giữ ASP.NET/EF/React và workflow bền hiện có; không thêm broker, microservice hay
+  dependency khi intent/outbox trong database đủ dùng. Ghi nghiệp vụ và intent nguyên tử;
+  worker gọi Google ngoài transaction dài, có idempotency, fencing, retry và lỗi quan sát
+  được.
+- Mở rộng tối thiểu: thêm liên kết root dùng chung thay vì viết lại module thành task chung;
+  giữ snapshot JSON có schema version khi đủ; cần cấu trúc mới thì migration chỉ thêm.
+- Duyệt và nộp là bằng chứng của đúng revision. Chưa có chính sách lưu byte lịch sử thì phát
+  hiện và chặn khi lệch, không phục vụ byte mới dưới danh nghĩa bằng chứng cũ.
+- Retry tài liệu/notification không được chạy lại chuyển trạng thái hay gửi trùng.
+- Form có trạng thái đang tải/rỗng/lỗi/thành công/xung đột, responsive, số nhập dễ đọc (như
+  `100.000`). Dữ liệu chọn lấy từ master data API; bản dịch qua `/admin/translations` đủ
+  vi/en/zh/ja, ghi đủ ở mọi đường tạo/import/seed/migration, không fallback lúc đọc.
+- Email mới theo [6.3](#63-email-ứng-dụng).
 
-### 12.6 Ma trận kiểm thử và điều kiện nghiệm thu từng gói
+### 20.6 Kiểm thử và nghiệm thu
 
-| Rủi ro / hành trình | Tầng chứng minh thấp nhất | Bằng chứng bắt buộc |
+| Rủi ro | Tầng thấp nhất | Bằng chứng |
 |---|---|---|
-| Validation, version/hash/fingerprint, calculations đã chốt, stale rename ordering | Unit | Boundary/missing/malformed/duplicate; exact thresholds; không chấp nhận approval hoặc kết quả của revision khác |
-| Role × project/source × action; assignment revoked; approver/CC/author | Integration qua HTTP | Authenticated/unauthenticated, assigned/outside/ended, đúng/sai permission; list/count/content/mutation không leak; rejection giữ nguyên DB/file/history/notification |
-| Rowversion, unique code/invoice, gate-snapshot race, evidence delete/approve, idempotency reservation | SQL integration cô lập | Hai thao tác cạnh tranh, một kết quả hợp lệ, stale action bị từ chối; transaction rollback và related roots không đổi; không thay bằng EF InMemory |
-| BOQ/schedule/ISO import và migration | Source-derived fixture + integration | Mẫu được chấp nhận có expected mapping/totals/hierarchy/precision/evidence; lỗi không partial write; original source nguyên vẹn; rehearsal/backfill/rollback có đối chiếu |
-| Lead → Opportunity/Project → Design/input price → Quote/Finance → HĐ | Integration business pipeline + browser hẹp | Handoff/source links và negative gates ở API; browser đúng role, deep link, forms và SPA trên Compose |
-| Tender invitation → departmental plan/dossier/review → submission → Won → HĐ | Integration/SQL + browser hẹp | Snapshot cũ bất biến sau thay nguồn; terminal lock; duplicate/re-submit đúng contract; user thực hiện được journey |
-| Design complete → Lead review → assigned internal recipients → client decision → IFC → Construction | Integration + live browser | Một approver/CC, reviewer ngoài project chỉ đọc phiên được chỉ định, đúng file revision; missing/negative/stale decision không qua gate |
-| Contract activation → permit task → readiness; BCH resource/QA/QS → CM → Procurement/FA → handover | Integration/SQL + live browser | Independent review, applicability/evidence/version đúng; wrong direction/project/source và reconnect bị xử lý an toàn |
-| Upstream dossier gửi khách và Downstream dossier chi | Unit package rules + integration + live browser | Đủ ba phần/chứng từ; invoice/QS/revision/advance exceptions đúng rule; render email/preview khi gửi thật; không giả receipt |
-| Drive upload/source replacement/import/edit/move/trash/retry/delete | Unit/fake-provider integration và live Drive tách riêng | Checksum/parent/ownership/version/verified host cleanup; outage/expired lease/duplicate/stale plan; mock pass không tính live OAuth/Drive |
-| BCH mobile và CM desktop/tablet; bốn ngôn ngữ | Live E2E Compose | 390/768/1440px phù hợp màn hình, không overflow/JS error; duplicate submit/lost response/reconnect; labels và lỗi rõ, không mất draft |
-
-Chạy nhóm liên quan sau **final edit**, không full suite theo mặc định. Với .NET,
-format các project bị ảnh hưởng trong backend/SDK container và verify solution
-`dotnet format --no-restore --verify-no-changes` gồm unit/integration, rồi chạy
-lại affected tests sau sửa cuối. Với frontend chạy `npm run format`,
-`format:check`, lint/build theo scope; E2E phải là Compose-served application đã
-ready. Test môi trường thiếu thì ghi Not Run/unverified, không lấy build/test
-listing/kết quả phiên bản trước thay pass. Planning/docs-only chỉ kiểm tài liệu,
-không khởi động/rebuild Docker hay chạy code suites.
+| Validate, version/hash, công thức đã chốt | Unit | Biên, thiếu, sai, trùng; ngưỡng chính xác |
+| Role × dự án/nguồn × thao tác; mất assignment; người duyệt/CC/tác giả | Integration HTTP | Không lộ list/đếm/nội dung; từ chối giữ nguyên dữ liệu, file, lịch sử, notification |
+| Rowversion, mã/hoá đơn unique, race gate–snapshot, xoá–duyệt bằng chứng | SQL cô lập | Hai thao tác cạnh tranh, một kết quả hợp lệ; không thay bằng InMemory |
+| Import BOQ/tiến độ/ISO, migration | Fixture từ nguồn + integration | Mapping/tổng/cấp/độ chính xác đúng; lỗi không ghi dở; file gốc nguyên vẹn |
+| Lead → Cơ hội/Dự án → Thiết kế/giá đầu vào → Báo giá/Finance → Hợp đồng | Integration + browser | Liên kết nguồn và gate âm ở API; đúng role và deep link trên UI |
+| Thư mời → kế hoạch/hồ sơ → nộp → trúng → hợp đồng | Integration/SQL + browser | Snapshot cũ bất biến; khoá sau kết quả |
+| Thiết kế hoàn thành → Lead duyệt → người nhận → khách → IFC → Thi công | Integration + browser | Một người duyệt; người nhận ngoài dự án chỉ đọc review được giao |
+| Kích hoạt hợp đồng → permit → readiness; BCH → CM → Cung ứng/FA → bàn giao | Integration/SQL + browser | Review độc lập; sai hướng/dự án/nguồn bị chặn an toàn |
+| Hồ sơ Upstream gửi khách, Downstream chi | Unit + integration + browser | Đủ ba phần; email preview khi gửi thật; không phiếu nhập giả |
+| Drive upload/thay/import/sửa/xoá/retry | Fake-provider và Drive thật tách riêng | Checksum, sở hữu, dọn host; mock không tính là OAuth/Drive thật |
+| BCH mobile, CM desktop/tablet, bốn ngôn ngữ | E2E Compose | 390/768/1440px không tràn, không lỗi JS; nộp trùng/mất response/kết nối lại không mất nháp |
 
 Mỗi gói qua `.github/skills/senior-business-analyst/SKILL.md` rồi
-`.github/skills/business-functional-qa/SKILL.md`, ưu tiên reviewer độc lập.
-BA approval là test basis, không phải feature đã business-ready. Mọi critical
-contract cần rõ; requirement risk chỉ Product/business owner được chấp nhận.
-Không có ngoại lệ ngầm vì lịch giao hoặc test happy path đã xanh.
+`.github/skills/business-functional-qa/SKILL.md`, ưu tiên reviewer độc lập. BA duyệt là cơ sở
+test, chưa phải tính năng sẵn sàng; rủi ro yêu cầu chỉ chủ nghiệp vụ được chấp nhận.
 
-### 12.7 Migration, rollout, rollback và tài liệu
+### 20.7 Migration, rollout và tài liệu
 
-1. Inventory/dry-run trước thay đổi schema/grants/IDs/topology; backup dữ liệu,
-   key-ring và manifest tệp/binding/checksum phù hợp, không xuất secrets vào Git.
-   Đọc generated EF migration rồi rehearsal trên SQL clone độc lập; xác định
-   uniqueness/conflict/legacy compatibility và đối chiếu business records.
-2. Triển khai additive schema/backend có compatibility trước; backfill theo
-   eligibility/checkpoint, kiểm chứng rồi mới bật UI/worker/gate tương ứng.
-   Feature flag chỉ dùng khi cần rollout an toàn; không bật gate còn thiếu
-   quyết định hoặc tự đánh dấu dữ liệu cũ đã đủ hồ sơ.
-3. Đổi Drive root/instance/path phải có maintenance window, dừng phát sinh intent
-   liên quan và drain Processing; giữ bindings hiện hữu đến bước rebind được
-   duyệt. Survey topology chỉ migrate khi có kế hoạch move/rebind/reverse và
-   verify historical files; lưu config mới không tương đương đã migrate dữ liệu.
-4. Rollback tắt feature/worker mới và giữ immutable evidence/history; schema
-   rollback chỉ khi backward-compatible và đã rehearsal. Không hứa undo được
-   email đã gửi, payment posted hay file permanently deleted; những bước đó
-   cần gate riêng và phương án recovery/retention được owner chấp nhận.
-5. Seed/demo dùng tình huống NICON có tên có nghĩa, đúng contact/numeric rules và
-   bốn ngôn ngữ; normal/empty/error/edge/legacy states không giả approval hay
-   bằng chứng. Seed bổ sung idempotent, không reset free text, quyền hoặc
-   translations do admin chỉnh.
-6. Cập nhật `user_guide.md`, `users-rbac.md`, guide này khi behavior/API/ops đổi.
-   Chỉ cập nhật `Nicon-QLVH.md`/`Nicon-workflow.md` khi requirement được xác nhận;
-   không sửa customer evidence thành implementation history. Báo cáo mỗi run và
-   screenshots/logs ở test artifacts/PR, không thêm report vào `docs/Nicon/`.
-   Kho evidence hiện có ISO/JPG và một số tệp tạm không khớp strict allowlist
-   của AGENTS; xử lý bằng quyết định tổ chức nguồn/cập nhật allowlist có thẩm
-   quyền, không tự xóa hiện vật khách hàng để làm layout check xanh.
-7. Task branch/commit focused từng gói, stage explicit paths, review diff/secrets,
-   không sửa history. Mỗi PR nêu problem/behavior/AC/test/migration/residual risk.
-   Deploy ghi revision/buildSha và migration version, smoke rồi NICON UAT theo
-   actor qua đầu mối được chỉ định; host status không suy từ local branch.
+1. Kiểm kê và dry-run trước khi đổi schema, quyền, ID hay topology; backup dữ liệu, key
+   ring, manifest file/binding/checksum (không đưa secret vào Git); rehearsal trên bản SQL
+   sao chép.
+2. Triển khai schema/backend tương thích trước, backfill có checkpoint, kiểm rồi mới bật
+   UI/worker/gate. Không bật gate còn thiếu quyết định, không tự đánh dấu dữ liệu cũ là đủ
+   hồ sơ.
+3. Đổi root/instance/đường dẫn Drive cần cửa sổ bảo trì, dừng phát sinh intent và xả
+   `Processing`.
+4. Rollback tắt tính năng/worker mới, giữ bằng chứng và lịch sử. Email đã gửi, thanh toán đã
+   ghi, file đã xoá vĩnh viễn không hoàn tác được.
+5. Seed/demo dùng tình huống NICON có tên có nghĩa, đủ bốn ngôn ngữ, không giả duyệt; seed
+   bổ sung idempotent, không reset nội dung/quyền/bản dịch admin đã sửa.
+6. Cập nhật `user_guide.md` và tài liệu này khi hành vi, API hay vận hành đổi; không sửa hiện
+   vật khách thành lịch sử triển khai; báo cáo chạy và ảnh chụp để ở artifact/PR, không thêm
+   vào `docs/Nicon/`. Không tự xoá hiện vật khách để qua kiểm tra layout.
+7. Mỗi gói một nhánh và commit tập trung; PR nêu vấn đề, hành vi, tiêu chí, test, migration,
+   rủi ro còn lại. Deploy ghi revision/`buildSha` và migration, smoke rồi UAT với NICON qua
+   đầu mối được chỉ định; trạng thái host không suy từ nhánh local.
 
-### 12.8 Bao phủ toàn bộ baseline và trách nhiệm
+Kế hoạch chỉ đóng khi mọi tiêu chí trong phạm vi đã xác nhận có bằng chứng, quyết định mở
+được xử lý đúng thẩm quyền và NICON hoàn tất UAT; số test pass hay trạng thái Drive
+`Connected` không thay được điều kiện này.
 
-| Mục MoM | Gói chịu trách nhiệm | Điều kiện đóng phạm vi |
-|---|---|---|
-| 1 — Quyền/vai trò | RBAC-01, SAFE-01/02 | Cơ cấu/baseline theo quyết định, permission/scope đúng server, không wildcard xóa nhầm |
-| 2 — CRM | CRM-01, ROOT-01 | Menu, Lead conversion/lock, mã editable/unique và hai hướng HĐ đúng contract hiện hành |
-| 3 — Dự án/việc chung | ROOT-01, WORK-01, REPORT-01 | Shared root, việc nội bộ, assignment/notification/KPI và multi-contract theo quyết định |
-| 4 — Design trước HĐ | DESIGN-01, DRIVE-02 | Kinh doanh handoff từ Opportunity/Project, Concept không đòi HĐ và folder intent có thể phục hồi |
-| 5 — Liên phòng tiền HĐ | COMM-01, SUPPLY-01 | Input pricing khác Execution BOQ, Finance commercial/tender gate đúng phiên bản, nhãn Cung ứng |
-| 6 — Quote/BOQ | BOQ-01 | Hai mode/version, template/import đúng phạm vi được xác nhận; fidelity nâng cao chỉ đóng khi được duyệt và test |
-| 7 — Đấu thầu | TENDER-01, COMM-01, WORK-01 | Plan theo phòng, dossier/library/review/submission/result, snapshot bất biến và terminal lock |
-| 8 — Design | DESIGN-01/02/03/04, SAFE, DRIVE | Actor/approver/CC/review/client/stage/schedule/subcontractor/docs/IFC/delete đủ AC và negative cases |
-| 9 — Pháp lý | LEGAL-01, ISO-01, SAFE-01 | Permit applicability/activation/task/approval/progress và revoked access được chứng minh |
-| 10 — Thi công | CM-01, FIELD-01/02, SUPPLY-01, QS-01 | CM/BCH, readiness/baselines, resource/QAQC/HSE/QS/ISO và handover, không chỉ có menu |
-| 11 — Tài chính | COMM-01, FIN-01/02, QS-01, REPORT-01 | Hoạt động song song, hai hướng, ba phần hồ sơ và đúng package evidence trước send/pay; báo cáo có nguồn thực tế |
-| 12 — Giao hàng/Drive | DRIVE-01/02/03, RELEASE-01 | Account/config/recovery/document sources đúng, deployment/UAT/PDF hướng dẫn có bằng chứng |
-| 13 — Hiện vật NICON | PLAN-01, ISO-01, BOQ-01, DESIGN-03, LEGAL-01 | Kiểm kê inputs đã nhận, chỉ rõ phần thiếu, quyết định có owner; không coi file mẫu là rule |
-| 14 — Điểm chưa rõ | Bảng 12.2 và gói bị ảnh hưởng | Có xác nhận hoặc giữ Open decision; không đóng nghiệm thu bằng giả định của dev |
-
-Đội BE/FE/Data chịu implementation/compatibility của từng gói; QA chuẩn bị dữ
-liệu và thực thi theo risk, reviewer BA/Architecture kiểm contract và boundaries.
-Product Owner/người được ủy quyền chịu quyết định phạm vi/rule; CM/FA/Thiết kế
-xác nhận mapping chuyên môn, IT xác nhận deployment/Drive/retention. Chỉ đóng
-toàn kế hoạch khi mọi AC trong phạm vi được xác nhận đã có bằng chứng, quyết
-định còn mở được xử lý đúng thẩm quyền và NICON hoàn tất UAT; không dùng số test
-pass hay trạng thái Connected thay cho điều kiện này.
-
-### Procurement IFC receipt API and migration
-
-`GET /api/operational-projects/{projectId}/procurement/ifc?page=1` returns a
-20-item inbox of Released packets addressed to the current active member.
-`POST .../ifc/{recipientId}/acknowledge` requires View + Acknowledge and a
-`rowVersion` body (or the existing concurrency request header). First receipt
-persists actor/time; release and receipt timestamps serialize with explicit UTC
-(`Z`) both immediately and after SQL reload. Replay preserves the first
-values and emits no second receipt audit event. `GET .../ifc/{recipientId}/items/{itemId}/content` serves
-only that released drawing after verifying its SHA-256 against client-approved
-release evidence. Missing/mismatched evidence returns 409
-`IFC_RELEASED_FILE_CHANGED`; the UI asks the recipient to contact Design.
-No raw file path or broad Design permission is granted to Procurement.
-For a drawing with a primary file, release reads that same managed file and
-requires its SHA-256 to match a client-approved snapshot for the drawing. A
-supplementary attachment cannot supply a different hash. A missing/unreadable
-primary returns 400 `IFC_PRIMARY_FILE_UNAVAILABLE`; unapproved primary bytes
-return 400 `IFC_PRIMARY_FILE_NOT_APPROVED`. Both include `drawingCode`, preserve
-Draft/Approved workflow states and guide the user to restore/upload or obtain
-approval before retrying. The release dialog retains the localized drawing
-error until retry or dismissal instead of relying on a transient toast. Hashes are applied only after every file validates.
-Existing fileless drawings retain their metadata-only release behavior and
-have no downloadable primary snapshot. No schema or historical backfill is
-introduced by this validation.
-Design's `GET /api/ifc-releases/procurement-recipients?designProjectId=...`
-returns eligible active project members; add-recipient accepts optional
-`recipientUserId`. Existing external recipient payloads remain compatible.
-
-Migration `20261108150000_AddProcurementIfcReceipt` adds nullable addressed and
-acknowledging user IDs, released item SHA-256, and release/recipient rowversions.
-A filtered unique index prevents duplicate internal recipients within a packet.
-Legacy named recipients and timestamps remain unchanged; no actor/hash backfill
-is inferred. Existing released packets cannot acquire new recipients.
-The migration initializes only the two default Procurement role grants; custom
-role grants are preserved. Before deployment take a database backup. Before
-schema rollback export any new recipient identities, acknowledgments and hash
-snapshots: Down removes these columns. Permission catalog entries/grants remain
-on Down to preserve later administrator changes; the old application has no
-receipt endpoints. A database restore is required to recover removed receipt
-metadata. Rehearse Up/Down/Up on an isolated restored database before rollout.
-
-Focused checks: `IfcReleasesControllerTests`, SQL-backed
-`ProcurementIfcConcurrencyTests` (set `NICON_SQL_TEST_CONNECTION` to a disposable
-SQL test host), `PermissionServiceTests`, `tests/apiError.test.mjs`, and live
-`procurement-ifc-receipt-live.spec.ts`. The live receipt fixture supplies client approval and Drive sync metadata for
-its own records, then exercises the real IFC release and receipt endpoints.
-It covers supplementary-only rejection and successful download of approved
-primary bytes when both files belong to the review. It is not evidence of a live Drive sync pass.
-
-E2E SQL fixtures use `sqlcmd -I` so `QUOTED_IDENTIFIER` is enabled during setup
-and teardown, including writes affected by filtered IFC recipient indexes.
-The Procurement workspace preserves its previous permitted default tab; IFC
-opens explicitly with `tab=ifc`, or by default for users with IFC-only access.
+| Mục MoM 03/10 | Gói chịu trách nhiệm |
+|---|---|
+| 1 Quyền/vai trò | RBAC-01, SAFE-01/02 |
+| 2 CRM | CRM-01, ROOT-01 |
+| 3 Dự án/việc chung | ROOT-01, WORK-01, REPORT-01 |
+| 4 Thiết kế trước hợp đồng | DESIGN-01, DRIVE-02 |
+| 5 Liên phòng trước hợp đồng | COMM-01, SUPPLY-01 |
+| 6 Báo giá/BOQ | BOQ-01 |
+| 7 Đấu thầu | TENDER-01, COMM-01, WORK-01 |
+| 8 Thiết kế | DESIGN-01/02/03/04, SAFE, DRIVE |
+| 9 Pháp lý | LEGAL-01, ISO-01, SAFE-01 |
+| 10 Thi công | CM-01, FIELD-01/02, SUPPLY-01, QS-01 |
+| 11 Tài chính | COMM-01, FIN-01/02, QS-01, REPORT-01 |
+| 12 Giao hàng/Drive | DRIVE-01/02/03, RELEASE-01 |
+| 13 Hiện vật NICON | PLAN-01, ISO-01, BOQ-01, DESIGN-03, LEGAL-01 |
+| 14 Điểm chưa rõ | Bảng 20.2 và gói bị ảnh hưởng |
