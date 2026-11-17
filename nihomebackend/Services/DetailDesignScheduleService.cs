@@ -453,7 +453,8 @@ public sealed class DetailDesignScheduleService(
         var now = DateTime.UtcNow;
         var started = task.Status == DesignScheduleStatus.NotStarted;
         task.Status = DesignScheduleStatus.InProgress;
-        task.ActualStart ??= DateOnly.FromDateTime(now);
+        // Actual dates are calendar dates in the business time zone, not the UTC date.
+        task.ActualStart ??= await DisplaySettings.TodayAsync(db, ct);
         task.ProgressPercent = request.ProgressPercent;
         task.UpdatedAt = now;
         task.UpdatedByUserId = callerUserId;
