@@ -157,6 +157,8 @@ export interface OpportunityHistoryItem {
   message: string;
   actorName?: string | null;
   status: string;
+  /** New stage on stage-change entries. */
+  stage?: OpportunityStage | null;
 }
 
 export interface OpportunityListResponse {

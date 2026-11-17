@@ -722,7 +722,7 @@ const AdminQuoteDetail = () => {
   if (!Number.isFinite(quoteId))
     return (
       <AdminLayout>
-        <PageError message="Invalid id" />
+        <PageError message={t("common.notFound")} />
       </AdminLayout>
     );
   if (loading)

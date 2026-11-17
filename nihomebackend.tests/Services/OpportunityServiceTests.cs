@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
@@ -39,6 +40,43 @@ public class OpportunityServiceTests : IDisposable
     }
 
     public void Dispose() => _db.Dispose();
+
+    // ---------------- History ----------------
+
+    [Fact]
+    public async Task ListHistoryAsync_ReadsNewStageFromStageChangeSnapshots()
+    {
+        var owner = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(owner.Id);
+        var opportunity = await SeedOpportunityAsync(customer, owner);
+        var resourceId = opportunity.Id.ToString();
+        var start = DateTime.UtcNow.AddMinutes(-10);
+        AuditLog Entry(int minute, string action, string? json) => new()
+        {
+            AuditId = Guid.NewGuid().ToString(),
+            CreatedAt = start.AddMinutes(minute),
+            ActorUserId = owner.Id,
+            Action = action,
+            ResourceType = EntityTypes.Opportunity,
+            ResourceId = resourceId,
+            Message = $"Opportunity #{resourceId} changed.",
+            Status = "success",
+            NewValueJson = json,
+        };
+        _db.AuditLogs.AddRange(
+            Entry(1, "opportunity.stage-change", "{\"Stage\":4}"),
+            Entry(2, "opportunity.stage-change", "{\"Stage\":\"Negotiation\"}"),
+            Entry(3, "opportunity.stage-change", "{\"Stage\":"),
+            Entry(4, "opportunity.update", "{\"Stage\":5}"));
+        await _db.SaveChangesAsync();
+
+        var history = await _sut.ListHistoryAsync(opportunity.Id, owner.Id, canSeeAll: false);
+
+        Assert.NotNull(history);
+        Assert.Equal(
+            new OpportunityStage?[] { null, null, OpportunityStage.Negotiation, OpportunityStage.Won },
+            history!.Select(item => item.Stage).ToArray());
+    }
 
     // ---------------- Create ----------------
 

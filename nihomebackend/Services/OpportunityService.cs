@@ -226,7 +226,16 @@ public class OpportunityService(
             .OrderByDescending(entry => entry.CreatedAt)
             .ThenByDescending(entry => entry.Id)
             .Take(100)
-            .Select(entry => new { entry.Id, entry.CreatedAt, entry.Action, entry.Message, entry.ActorUserId, entry.Status })
+            .Select(entry => new
+            {
+                entry.Id,
+                entry.CreatedAt,
+                entry.Action,
+                entry.Message,
+                entry.ActorUserId,
+                entry.Status,
+                StageJson = entry.Action == StageChangeAuditAction ? entry.NewValueJson : null,
+            })
             .ToListAsync(ct);
         var actorIds = entries.Where(entry => entry.ActorUserId.HasValue).Select(entry => entry.ActorUserId!.Value).Distinct().ToList();
         var actorNames = await db.Users.AsNoTracking()
@@ -240,7 +249,32 @@ public class OpportunityService(
             Message = entry.Message,
             ActorName = entry.ActorUserId.HasValue && actorNames.TryGetValue(entry.ActorUserId.Value, out var name) ? name : null,
             Status = entry.Status,
+            Stage = ReadAuditedStage(entry.StageJson),
         }).ToList();
+    }
+
+    private const string StageChangeAuditAction = "opportunity.stage-change";
+
+    /// <summary>Reads the stage from a stage-change audit snapshot; null when it is missing or truncated.</summary>
+    private static OpportunityStage? ReadAuditedStage(string? json)
+    {
+        if (string.IsNullOrWhiteSpace(json)) return null;
+        try
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(json);
+            if (!document.RootElement.TryGetProperty("Stage", out var stage)) return null;
+            if (stage.ValueKind == System.Text.Json.JsonValueKind.Number &&
+                stage.TryGetInt32(out var number) && Enum.IsDefined(typeof(OpportunityStage), number))
+                return (OpportunityStage)number;
+            if (stage.ValueKind == System.Text.Json.JsonValueKind.String &&
+                Enum.TryParse<OpportunityStage>(stage.GetString(), out var named))
+                return named;
+            return null;
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return null;
+        }
     }
 
     // -------- Create / Update --------

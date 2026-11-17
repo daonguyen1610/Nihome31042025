@@ -211,7 +211,7 @@ test("sales, design-first and tender flows reach a contract without dead ends", 
   expect([project.opportunityCount, project.quoteCount, project.contractCount]).toEqual([1, 1, 1]);
 
   await page.goto(`/admin/opportunities/${opportunityId}`);
-  await page.getByRole("tab", { name: /Audit log/ }).click();
+  await page.getByRole("tab", { name: /Lịch sử thay đổi|Change history/ }).click();
   await expect(page.getByRole("tabpanel")).toContainText(/Lê Văn Thành|Quốc Huy|Trần/);
   await shot("13-lich-su-thay-doi-co-hoi.png");
 

@@ -485,6 +485,20 @@ const AdminOpportunities = () => {
 
   // Audit log tab — populated on demand when the detail dialog opens.
   const [auditItems, setAuditItems] = useState<OpportunityHistoryItem[]>([]);
+  const historyActionLabel = (item: OpportunityHistoryItem) => {
+    if (item.action.startsWith("opportunity.stage"))
+      return item.stage
+        ? t("opportunities.audit.actionStageTo", {
+            stage: t(`opportunities.stage.${item.stage}`),
+          })
+        : t("opportunities.audit.actionStage");
+    if (item.action === "opportunity.design-project.create")
+      return t("opportunities.audit.actionDesignProject");
+    if (item.action.endsWith(".create")) return t("opportunities.audit.actionCreate");
+    if (item.action.endsWith(".update")) return t("opportunities.audit.actionUpdate");
+    if (item.action.endsWith(".delete")) return t("opportunities.audit.actionDelete");
+    return t("opportunities.audit.actionOther");
+  };
   const [auditLoading, setAuditLoading] = useState(false);
 
   // Quotes tab — the price is what moves an opportunity towards a contract,
@@ -1584,7 +1598,7 @@ const AdminOpportunities = () => {
                       {t("opportunities.tab.timeline")} ({detail.activities.length})
                     </TabsTrigger>
                     <TabsTrigger className="h-12 shrink-0" value="audit">
-                      {t("opportunities.tab.audit")} ({auditItems.length})
+                      {t("opportunities.tab.history")} ({auditItems.length})
                     </TabsTrigger>
                   </TabsList>
 
@@ -2137,24 +2151,18 @@ const AdminOpportunities = () => {
                         {auditItems.map((a) => (
                           <li key={a.id} className="rounded border px-2 py-1.5">
                             <div className="flex items-center gap-2 text-muted-foreground">
-                              <Badge variant="outline">
-                                {a.action.startsWith("opportunity.stage")
-                                  ? t("opportunities.audit.actionStage")
-                                  : a.action.endsWith(".create")
-                                    ? t("opportunities.audit.actionCreate")
-                                    : a.action.endsWith(".update")
-                                      ? t("opportunities.audit.actionUpdate")
-                                      : a.action.endsWith(".delete")
-                                        ? t("opportunities.audit.actionDelete")
-                                        : a.action}
-                              </Badge>
+                              <Badge variant="outline">{historyActionLabel(a)}</Badge>
                               <span>{formatDateTime(a.createdAt)}</span>
                               {a.actorName && <span>· {a.actorName}</span>}
                               {a.status !== "success" && (
-                                <Badge variant="destructive">{a.status}</Badge>
+                                <Badge variant="destructive">
+                                  {t("opportunities.audit.failed")}
+                                </Badge>
                               )}
                             </div>
-                            <div className="mt-1">{a.message}</div>
+                            {/* Successful entries are fully described by the label; the stored
+                                message is an English system log. A failure keeps its reason. */}
+                            {a.status !== "success" && <div className="mt-1">{a.message}</div>}
                           </li>
                         ))}
                       </ul>
