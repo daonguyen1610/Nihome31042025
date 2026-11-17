@@ -9,7 +9,6 @@
   { "key": "shopDrawing.created", "category": "shopDrawing", "vi": "Đã tạo bản vẽ", "en": "Drawing created", "zh": "已创建施工图", "ja": "施工図を作成しました" },
   { "key": "shopDrawing.updated", "category": "shopDrawing", "vi": "Đã cập nhật bản vẽ", "en": "Drawing updated", "zh": "已更新施工图", "ja": "施工図を更新しました" },
   { "key": "shopDrawing.deleted", "category": "shopDrawing", "vi": "Đã xoá bản vẽ", "en": "Drawing deleted", "zh": "已删除施工图", "ja": "施工図を削除しました" },
-  { "key": "shopDrawing.transitioned", "category": "shopDrawing", "vi": "Đã cập nhật trạng thái bản vẽ", "en": "Drawing status updated", "zh": "已更新施工图状态", "ja": "施工図の状態を更新しました" },
   { "key": "shopDrawing.uploadFile", "category": "shopDrawing", "vi": "Tải tệp lên", "en": "Upload file", "zh": "上传文件", "ja": "ファイルをアップロード" },
   { "key": "shopDrawing.replaceFile", "category": "shopDrawing", "vi": "Thay tệp", "en": "Replace file", "zh": "替换文件", "ja": "ファイルを置き換える" },
   { "key": "shopDrawing.fileUploaded", "category": "shopDrawing", "vi": "Đã tải tệp lên", "en": "File uploaded", "zh": "文件已上传", "ja": "ファイルがアップロードされました" },
@@ -65,5 +64,7 @@
 
   { "key": "shopDrawing.delete.confirmTitle", "category": "shopDrawing", "vi": "Xoá bản vẽ?", "en": "Delete drawing?", "zh": "删除图纸？", "ja": "図面を削除しますか？" },
   { "key": "shopDrawing.delete.confirmBody", "category": "shopDrawing", "vi": "Xóa vĩnh viễn bản vẽ \"{code}\" và dữ liệu phụ thuộc? Hành động này không thể hoàn tác.", "en": "Permanently delete drawing \"{code}\" and its dependent data? This cannot be undone.", "zh": "永久删除图纸“{code}”及其相关数据？此操作无法撤销。", "ja": "図面「{code}」とその関連データを完全に削除しますか？元に戻せません。" },
-  { "key": "shopDrawing.delete.confirm", "category": "shopDrawing", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" }
+  { "key": "shopDrawing.delete.confirm", "category": "shopDrawing", "vi": "Xoá vĩnh viễn", "en": "Delete permanently", "zh": "永久删除", "ja": "完全に削除" },
+  {"key": "shopDrawing.confirmReject", "category": "shopDrawing", "vi": "Chuyển \"{title}\" sang Từ chối? Đây là trạng thái cuối, muốn làm tiếp phải tạo bản vẽ hoặc revision mới.", "en": "Mark \"{title}\" as Rejected? This is final; continuing needs a new drawing or revision.", "zh": "将“{title}”标记为已拒绝？此为最终状态，继续需新建图纸或修订版。", "ja": "「{title}」を却下にしますか？これは最終状態で、続けるには新しい図面か改訂が必要です。"},
+  {"key": "shopDrawing.transitionedTo", "category": "shopDrawing", "vi": "Đã chuyển bản vẽ sang \"{status}\".", "en": "Drawing moved to \"{status}\".", "zh": "图纸已更改为“{status}”。", "ja": "図面を「{status}」に変更しました。"}
 ]

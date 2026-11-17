@@ -38,6 +38,7 @@ import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
 import { useToast } from "@/hooks/use-toast";
+import { useConfirm } from "@/components/ui/confirmation";
 import {
   adminApi,
   DESIGN_SCHEDULE_PHASE_CODES,
@@ -99,6 +100,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
   const { toast } = useToast();
+  const confirm = useConfirm();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const operationalProjectId = project.operationalProjectId;
   const [schedule, setSchedule] = useState<DesignScheduleResponse | null>(null);
@@ -256,6 +258,15 @@ export const DesignScheduleTab = ({ project }: Props) => {
     task: DesignScheduleTaskResponse,
     action: "complete" | "approve" | "reject",
   ) => {
+    // Submitting and approving lock the task, so ask first; returning it is reversible.
+    if (
+      action !== "reject" &&
+      !(await confirm(t(`designProjects.schedule.confirm.${action}`, { name: task.name }), {
+        destructive: false,
+        confirmLabel: t(`designProjects.schedule.action.${action}`),
+      }))
+    )
+      return;
     setBusyTaskId(task.id);
     setError(null);
     try {
@@ -276,6 +287,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
           task.rowVersion,
           key,
         );
+      toast({ title: t(`designProjects.schedule.done.${action}`, { name: task.name }) });
       await load();
     } catch (reason) {
       setError(uiError(reason));
