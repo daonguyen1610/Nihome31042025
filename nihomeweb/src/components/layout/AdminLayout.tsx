@@ -461,7 +461,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           },
           {
             to: "/admin/projects",
-            label: t("nav.projects"),
+            label: t("nav.websiteProjects"),
             icon: Building2,
             permission: ADMIN_PERMS.projects,
           },

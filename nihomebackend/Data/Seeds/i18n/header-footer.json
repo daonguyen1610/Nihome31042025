@@ -112,12 +112,12 @@
     "ja": "ニュース管理"
   },
   {
-    "key": "nav.projects",
+    "key": "nav.websiteProjects",
     "category": "nav",
-    "vi": "Quản lý dự án",
-    "en": "Projects",
-    "zh": "项目管理",
-    "ja": "プロジェクト管理"
+    "vi": "Dự án tiêu biểu (website)",
+    "en": "Website portfolio",
+    "zh": "网站项目展示",
+    "ja": "サイト掲載プロジェクト"
   },
   {
     "key": "nav.contacts",
