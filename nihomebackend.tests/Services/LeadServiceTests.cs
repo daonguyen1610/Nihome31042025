@@ -406,7 +406,7 @@ public class LeadServiceTests : IDisposable
             canManage: true,
             canSeeAll: false));
 
-        Assert.Contains("Sales Manager", ex.Message);
+        Assert.Contains("Trưởng phòng Kinh doanh", ex.Message);
     }
 
     [Fact]
@@ -456,7 +456,7 @@ public class LeadServiceTests : IDisposable
             canManage: true,
             canSeeAll: true));
 
-        Assert.Contains("/convert", ex.Message);
+        Assert.Contains("nút Chuyển đổi", ex.Message);
     }
 
     [Fact]
@@ -1192,7 +1192,7 @@ public class LeadServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<LeadOperationException>(
             () => _sut.UnconvertAsync(lead.Id, sales.Id, canConvert: true));
 
-        Assert.Contains("converted", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("đã chuyển đổi", ex.Message);
     }
 
     // ---------------- Delete ----------------

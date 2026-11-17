@@ -140,7 +140,7 @@ public class CustomerService(
     {
         if (!canManage)
         {
-            throw new CustomerOperationException("Caller does not have permission to create customers.");
+            throw new CustomerOperationException("Bạn chưa có quyền tạo Khách hàng. Hãy liên hệ quản trị viên nếu cần quyền này.");
         }
 
         ValidateForType(request.Type, request.TaxId, request.Address, request.RepresentativeName);
@@ -217,7 +217,7 @@ public class CustomerService(
 
         if (customer is null) return null;
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return null;
-        if (!canManage) throw new CustomerOperationException("Caller does not have permission to modify customers.");
+        if (!canManage) throw new CustomerOperationException("Bạn chưa có quyền sửa Khách hàng. Hãy liên hệ quản trị viên nếu cần quyền này.");
 
         CrmConcurrency.Apply(db, customer, request.RowVersion);
 
@@ -226,13 +226,13 @@ public class CustomerService(
             customer.RelationshipStatus != CustomerRelationshipStatus.Suspended &&
             !canSeeAll)
         {
-            throw new CustomerOperationException("Only Sales Manager / BOD can suspend a customer.");
+            throw new CustomerOperationException("Chỉ Trưởng phòng Kinh doanh hoặc Ban Giám đốc được tạm ngừng Khách hàng.");
         }
 
         // Sales users cannot re-assign the customer to somebody else.
         if (!canSeeAll && request.OwnerUserId != customer.OwnerUserId && request.OwnerUserId != callerUserId)
         {
-            throw new CustomerOperationException("Only Sales Manager can reassign a customer.");
+            throw new CustomerOperationException("Chỉ Trưởng phòng Kinh doanh được giao lại Khách hàng cho người khác.");
         }
 
         ValidateForType(request.Type, request.TaxId, request.Address, request.RepresentativeName);
@@ -400,7 +400,7 @@ public class CustomerService(
 
         if (customer is null) return null;
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return null;
-        if (!canManage) throw new CustomerOperationException("Caller does not have permission to modify contacts.");
+        if (!canManage) throw new CustomerOperationException("Bạn chưa có quyền sửa người liên hệ của Khách hàng. Hãy liên hệ quản trị viên nếu cần quyền này.");
 
         ValidateContactContact(request.Phone, request.Email);
 
@@ -411,7 +411,7 @@ public class CustomerService(
         if (request.Id is int id)
         {
             contact = customer.Contacts.FirstOrDefault(c => c.Id == id)
-                ?? throw new CustomerOperationException("Contact not found on this customer.");
+                ?? throw new CustomerOperationException("Không tìm thấy người liên hệ này trong Khách hàng. Hãy tải lại trang để xem danh sách mới nhất.");
             contact.FullName = request.FullName.Trim();
             contact.Position = TrimOrNull(request.Position);
             contact.Phone = TrimOrNull(request.Phone);
@@ -523,7 +523,7 @@ public class CustomerService(
             """, ct);
         if ((int)result.Value < 0)
             throw new CrmConcurrencyException(
-                "Customer contacts are busy. Reload and retry the operation.");
+                "Người khác đang cập nhật danh sách người liên hệ. Hãy tải lại trang rồi thử lại.");
     }
 
     public async Task<bool> DeleteContactAsync(
@@ -540,7 +540,7 @@ public class CustomerService(
 
         if (customer is null) return false;
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return false;
-        if (!canManage) throw new CustomerOperationException("Caller does not have permission to modify contacts.");
+        if (!canManage) throw new CustomerOperationException("Bạn chưa có quyền sửa người liên hệ của Khách hàng. Hãy liên hệ quản trị viên nếu cần quyền này.");
 
         var contact = customer.Contacts.FirstOrDefault(c => c.Id == contactId);
         if (contact is null) return false;
@@ -645,11 +645,11 @@ public class CustomerService(
         if (type == CustomerType.Company)
         {
             if (string.IsNullOrWhiteSpace(taxId))
-                throw new CustomerOperationException("Company customers must have a TaxId (MST).");
+                throw new CustomerOperationException("Khách hàng doanh nghiệp phải có mã số thuế (MST).");
             if (string.IsNullOrWhiteSpace(address))
-                throw new CustomerOperationException("Company customers must have a registered address.");
+                throw new CustomerOperationException("Khách hàng doanh nghiệp phải có địa chỉ đăng ký kinh doanh.");
             if (string.IsNullOrWhiteSpace(representative))
-                throw new CustomerOperationException("Company customers must have a legal representative name.");
+                throw new CustomerOperationException("Khách hàng doanh nghiệp phải có tên người đại diện theo pháp luật.");
         }
     }
 

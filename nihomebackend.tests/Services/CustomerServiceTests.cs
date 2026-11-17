@@ -53,7 +53,7 @@ public class CustomerServiceTests : IDisposable
 
         var ex = await Assert.ThrowsAsync<CustomerOperationException>(() =>
             _sut.CreateAsync(req, user.Id, canManage: true));
-        Assert.Contains("TaxId", ex.Message);
+        Assert.Contains("mã số thuế", ex.Message);
     }
 
     [Fact]
@@ -257,7 +257,7 @@ public class CustomerServiceTests : IDisposable
                 sales.Id,
                 canManage: true,
                 canSeeAll: false));
-        Assert.Contains("suspend", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("tạm ngừng", ex.Message);
     }
 
     [Fact]

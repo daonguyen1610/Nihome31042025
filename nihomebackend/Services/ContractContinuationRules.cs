@@ -21,11 +21,11 @@ public static class ContractContinuationRules
             string.IsNullOrWhiteSpace(reason) || reason.Trim().Length > 2000)
             throw new ContractValidationException("Choose Renewal or Expansion and enter a reason (1–2000 characters).");
         if (permissions is null || !await permissions.HasAsync(userId, "crm.contracts.view", ct))
-            throw new ContractValidationException("Source contract is unavailable in your access scope.");
+            throw new ContractValidationException("Bạn không có quyền xem hợp đồng nguồn, hoặc hợp đồng đã bị xoá.");
         var all = await permissions.HasAsync(userId, "crm.contracts.view.all", ct);
         var source = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(c => c.Id == sourceId &&
             (all || c.OwnerUserId == userId), ct)
-            ?? throw new ContractValidationException("Source contract is unavailable in your access scope.");
+            ?? throw new ContractValidationException("Bạn không có quyền xem hợp đồng nguồn, hoặc hợp đồng đã bị xoá.");
         CrmConcurrency.EnsureMatches(source.RowVersion, version);
         if (source.Direction != ContractDirection.Upstream || source.CustomerId != customerId || source.SignedDate is null ||
             source.Status is ContractStatus.Draft or ContractStatus.Cancelled)
