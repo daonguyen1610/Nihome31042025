@@ -262,4 +262,26 @@
   ,{"key":"quotes.inputPrice.pricePending","category":"quotes","vi":"Chờ giá đầu vào","en":"Awaiting input price","zh":"等待输入报价","ja":"原価見積待ち"}
   ,{"key":"quotes.action.prepareOutput","category":"quotes","vi":"Lập báo giá đầu ra","en":"Prepare output quote","zh":"编制对外报价","ja":"対外見積を作成"}
   ,{"key":"quotes.validation.inputPriceRequired","category":"quotes","vi":"Nguồn giá đầu vào: phải chọn báo giá Cung ứng đã duyệt, còn hiệu lực trước khi lưu giá đầu ra.","en":"Input price source: select an approved, valid Procurement offer before saving the output quote.","zh":"输入价格来源：保存对外报价前，必须选择有效且已批准的采购报价。","ja":"原価ソース：対外見積を保存する前に、有効な承認済み調達見積を選択してください。"}
+  ,{"key":"quotes.progress.title","category":"quotes","vi":"Tiến trình báo giá","en":"Quote progress","zh":"报价进度","ja":"見積の進捗"}
+  ,{"key":"quotes.progress.step.input","category":"quotes","vi":"Giá đầu vào","en":"Input price","zh":"进项价格","ja":"仕入価格"}
+  ,{"key":"quotes.progress.step.output","category":"quotes","vi":"Lập giá đầu ra","en":"Output price","zh":"编制报价","ja":"見積価格の作成"}
+  ,{"key":"quotes.progress.step.internal","category":"quotes","vi":"Duyệt nội bộ","en":"Internal approval","zh":"内部审批","ja":"社内承認"}
+  ,{"key":"quotes.progress.step.finance","category":"quotes","vi":"Tài chính rà soát","en":"Finance review","zh":"财务审核","ja":"財務レビュー"}
+  ,{"key":"quotes.progress.step.send","category":"quotes","vi":"Gửi khách","en":"Send to customer","zh":"发送客户","ja":"顧客へ送付"}
+  ,{"key":"quotes.progress.step.customer","category":"quotes","vi":"Khách quyết định","en":"Customer decision","zh":"客户决定","ja":"顧客の判断"}
+  ,{"key":"quotes.progress.owner.input","category":"quotes","vi":"Cung ứng","en":"Procurement","zh":"采购部","ja":"調達部"}
+  ,{"key":"quotes.progress.owner.output","category":"quotes","vi":"Kinh doanh","en":"Sales","zh":"销售部","ja":"営業部"}
+  ,{"key":"quotes.progress.owner.internal","category":"quotes","vi":"Trưởng phòng Cung ứng","en":"Head of Procurement","zh":"采购部经理","ja":"調達部長"}
+  ,{"key":"quotes.progress.owner.finance","category":"quotes","vi":"Tài chính – Kế toán","en":"Finance & Accounting","zh":"财务会计部","ja":"財務経理部"}
+  ,{"key":"quotes.progress.owner.send","category":"quotes","vi":"Kinh doanh","en":"Sales","zh":"销售部","ja":"営業部"}
+  ,{"key":"quotes.progress.owner.customer","category":"quotes","vi":"Kinh doanh ghi nhận","en":"Recorded by Sales","zh":"由销售部记录","ja":"営業部が記録"}
+  ,{"key":"quotes.progress.next.input","category":"quotes","vi":"Việc tiếp theo: Cung ứng nhập giá đầu vào và gửi duyệt. Nếu chưa giao việc, bấm Yêu cầu giá đầu vào.","en":"Next: Procurement enters the input price and submits it. If nobody has been asked yet, press Request input price.","zh":"下一步：采购部录入进项价格并提交审批。如尚未分派，请点击“申请进项价格”。","ja":"次の作業：調達部が仕入価格を入力して承認申請します。未依頼の場合は「仕入価格を依頼」を押してください。"}
+  ,{"key":"quotes.progress.next.output","category":"quotes","vi":"Việc tiếp theo: Kinh doanh bấm Lập báo giá đầu ra, chọn phương thức, lưu, rồi bấm Gửi duyệt.","en":"Next: Sales presses Prepare output quote, chooses the method, saves, then presses Submit.","zh":"下一步：销售部点击“编制销售报价”，选择方式并保存，然后点击“提交审批”。","ja":"次の作業：営業部が「見積を作成」を押し、方式を選んで保存してから「承認申請」を押します。"}
+  ,{"key":"quotes.progress.next.internal","category":"quotes","vi":"Việc tiếp theo: Trưởng phòng Cung ứng được chọn bấm Duyệt hoặc Từ chối duyệt.","en":"Next: the selected Head of Procurement approves or rejects the quote.","zh":"下一步：被选中的采购部经理批准或驳回报价。","ja":"次の作業：指定された調達部長が承認または差し戻しします。"}
+  ,{"key":"quotes.progress.next.finance","category":"quotes","vi":"Việc tiếp theo: bấm Yêu cầu Tài chính rà soát và chờ Tài chính – Kế toán duyệt.","en":"Next: press Request finance review and wait for Finance & Accounting to approve it.","zh":"下一步：点击“申请财务审核”，等待财务会计部批准。","ja":"次の作業：「財務レビューを依頼」を押し、財務経理部の承認を待ちます。"}
+  ,{"key":"quotes.progress.next.send","category":"quotes","vi":"Việc tiếp theo: Tài chính đã duyệt. Kinh doanh bấm Gửi khách.","en":"Next: Finance has approved. Sales presses Send to customer.","zh":"下一步：财务已批准，销售部点击“发送客户”。","ja":"次の作業：財務が承認済みです。営業部が「顧客へ送付」を押します。"}
+  ,{"key":"quotes.progress.next.customer","category":"quotes","vi":"Việc tiếp theo: khi khách phản hồi, bấm Khách duyệt hoặc Khách từ chối.","en":"Next: when the customer replies, press Customer approved or Customer rejected.","zh":"下一步：客户回复后，点击“客户已批准”或“客户拒绝”。","ja":"次の作業：顧客から回答があれば「顧客承認」または「顧客却下」を押します。"}
+  ,{"key":"quotes.progress.done","category":"quotes","vi":"Khách đã duyệt báo giá. Có thể tạo hợp đồng từ báo giá này.","en":"The customer approved this quote. You can create a contract from it.","zh":"客户已批准此报价，可据此创建合同。","ja":"顧客がこの見積を承認しました。この見積から契約を作成できます。"}
+  ,{"key":"quotes.progress.stopped","category":"quotes","vi":"Báo giá đã dừng ở trạng thái {status}. Không còn bước nào cần làm.","en":"This quote stopped at {status}. No further steps are needed.","zh":"此报价已停止于“{status}”状态，无需后续操作。","ja":"この見積は「{status}」で終了しました。これ以上の作業はありません。"}
+  ,{"key":"quotes.progress.stepOf","category":"quotes","vi":"Bước {current}/{total}: {step} – {owner}","en":"Step {current} of {total}: {step} – {owner}","zh":"第 {current}/{total} 步：{step} – {owner}","ja":"ステップ {current}/{total}：{step} – {owner}"}
 ]
