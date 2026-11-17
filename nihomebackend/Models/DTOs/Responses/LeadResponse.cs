@@ -13,6 +13,9 @@ public class LeadResponse
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }
     public string? Note { get; set; }
+    public DateOnly? ResponseDueDate { get; set; }
+    /// <summary>The lead is still open and its response date has passed (Vietnam date).</summary>
+    public bool ResponseOverdue { get; set; }
     public DateTime? ConvertedAt { get; set; }
     public int? ConvertedCustomerId { get; set; }
     public int? ConvertedOpportunityId { get; set; }
