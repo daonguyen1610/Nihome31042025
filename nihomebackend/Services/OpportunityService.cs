@@ -255,20 +255,36 @@ public class OpportunityService(
 
     private const string StageChangeAuditAction = "opportunity.stage-change";
 
-    /// <summary>Reads the stage from a stage-change audit snapshot; null when it is missing or truncated.</summary>
+    /// <summary>
+    /// Reads the top-level Stage from a stage-change audit snapshot. The audit logger truncates long
+    /// snapshots, so the JSON is scanned token by token and only the part before Stage must be intact.
+    /// </summary>
     private static OpportunityStage? ReadAuditedStage(string? json)
     {
         if (string.IsNullOrWhiteSpace(json)) return null;
+        var reader = new System.Text.Json.Utf8JsonReader(
+            System.Text.Encoding.UTF8.GetBytes(json), isFinalBlock: false, state: default);
         try
         {
-            using var document = System.Text.Json.JsonDocument.Parse(json);
-            if (!document.RootElement.TryGetProperty("Stage", out var stage)) return null;
-            if (stage.ValueKind == System.Text.Json.JsonValueKind.Number &&
-                stage.TryGetInt32(out var number) && Enum.IsDefined(typeof(OpportunityStage), number))
-                return (OpportunityStage)number;
-            if (stage.ValueKind == System.Text.Json.JsonValueKind.String &&
-                Enum.TryParse<OpportunityStage>(stage.GetString(), out var named))
-                return named;
+            while (reader.Read())
+            {
+                if (reader.TokenType != System.Text.Json.JsonTokenType.PropertyName || reader.CurrentDepth != 1)
+                    continue;
+                var isStage = reader.ValueTextEquals("Stage");
+                if (!reader.Read()) return null;
+                if (!isStage)
+                {
+                    if (!reader.TrySkip()) return null;
+                    continue;
+                }
+                if (reader.TokenType == System.Text.Json.JsonTokenType.Number &&
+                    reader.TryGetInt32(out var number) && Enum.IsDefined(typeof(OpportunityStage), number))
+                    return (OpportunityStage)number;
+                if (reader.TokenType == System.Text.Json.JsonTokenType.String &&
+                    Enum.TryParse<OpportunityStage>(reader.GetString(), out var named))
+                    return named;
+                return null;
+            }
             return null;
         }
         catch (System.Text.Json.JsonException)
