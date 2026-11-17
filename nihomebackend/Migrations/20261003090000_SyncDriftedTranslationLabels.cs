@@ -10,7 +10,7 @@ namespace nihomebackend.Migrations
     /// TranslationSeeder only inserts missing keys, so later wording changes in
     /// the seed files never reached existing databases. The demo database still
     /// showed the old sales-pipeline stage names (Tìm hiểu / Đánh giá / Đề xuất /
-    /// Đàm phán / Thắng) instead of the customer's terms from Nicon-QLVH.md.
+    /// Đàm phán / Thắng) instead of the customer's terms in the requirements document.
     /// Each row below updates only while it still holds the exact earlier seed
     /// value it was found with (every one appears in the seed history), so
     /// labels an administrator edited in /admin/translations are left alone.

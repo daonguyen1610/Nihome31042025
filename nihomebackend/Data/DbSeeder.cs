@@ -277,8 +277,8 @@ public static class DbSeeder
     }
 
     // Phone numbers used here are stable, predictable test credentials so the
-    // RBAC test matrix in docs/users-rbac.md and the playwright/integration
-    // tests can always log in as any role.
+    // RBAC test matrix (see the Users RBAC section of docs/application_developer.md)
+    // and the playwright/integration tests can always log in as any role.
     private static readonly (string RoleCode, string Phone, string FullName, string Email, string? LegacyName, string? LegacyEmail)[] _businessRoleUsers =
     [
         (RbacRoleCodes.Sale, "0911000003", "Nguyễn Minh Anh", "minh.anh.sale@nihome.vn", "Sale Tester", "sale.test@nihome.vn"),
