@@ -2939,6 +2939,12 @@ namespace nihomebackend.Migrations
                     b.Property<int>("CustomerId")
                         .HasColumnType("int");
 
+                    b.Property<DateOnly?>("FollowUpDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("FollowUpNotifiedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
 
@@ -2954,6 +2960,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("CustomerId");
 
                     b.HasIndex("OccurredAt");
+
+                    b.HasIndex("FollowUpDate", "FollowUpNotifiedAt");
 
                     b.ToTable("customer_activities", (string)null);
                 });

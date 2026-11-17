@@ -13,9 +13,6 @@ public static class LeadResponseDeadline
 
     public static bool IsOverdue(LeadStatus status, DateOnly? dueDate, DateOnly today) =>
         dueDate.HasValue && dueDate.Value < today && OpenStatuses.Contains(status);
-
-    public static DateOnly VietnamToday() =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, DisplaySettings.VietnamTimeZone).DateTime);
 }
 
 /// <summary>Reminds a lead's owner once, on the response due date, while the lead is still open.</summary>
@@ -72,28 +69,5 @@ public sealed class LeadResponseReminderService(
                     "Lead {LeadId} response reminder was recorded but the notification failed.", lead.Id);
             }
         }
-    }
-}
-
-public sealed class LeadResponseReminderWorker(
-    IServiceScopeFactory scopes,
-    ILogger<LeadResponseReminderWorker> logger) : BackgroundService
-{
-    protected override async Task ExecuteAsync(CancellationToken stoppingToken)
-    {
-        // Check once at startup so reminders due during downtime are not delayed a full interval.
-        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(15));
-        do
-        {
-            try
-            {
-                using var scope = scopes.CreateScope();
-                await scope.ServiceProvider.GetRequiredService<LeadResponseReminderService>()
-                    .NotifyDueAsync(LeadResponseDeadline.VietnamToday(), stoppingToken);
-            }
-            catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested) { return; }
-            catch (Exception error) { logger.LogError(error, "Lead response reminders failed; retrying on the next interval."); }
-        }
-        while (await timer.WaitForNextTickAsync(stoppingToken));
     }
 }

@@ -999,7 +999,7 @@ public class LeadService(
             OwnerName = ownerName,
             Note = lead.Note,
             ResponseDueDate = lead.ResponseDueDate,
-            ResponseOverdue = LeadResponseDeadline.IsOverdue(lead.Status, lead.ResponseDueDate, LeadResponseDeadline.VietnamToday()),
+            ResponseOverdue = LeadResponseDeadline.IsOverdue(lead.Status, lead.ResponseDueDate, DisplaySettings.VietnamToday()),
             ConvertedAt = lead.ConvertedAt,
             ConvertedCustomerId = lead.ConvertedCustomerId,
             ConvertedOpportunityId = lead.ConvertedOpportunityId,

@@ -744,6 +744,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasKey(a => a.Id);
             b.Property(a => a.Type).HasConversion<string>().HasMaxLength(30);
             b.Property(a => a.Content).HasMaxLength(4000).IsRequired();
+            b.HasIndex(a => new { a.FollowUpDate, a.FollowUpNotifiedAt });
             b.HasOne(a => a.Customer)
                 .WithMany(c => c.Activities)
                 .HasForeignKey(a => a.CustomerId)

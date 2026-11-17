@@ -10,6 +10,8 @@ export interface TimelineEntry {
   createdByName?: string | null;
   /** ISO timestamp. Leads use createdAt, customers use occurredAt. */
   at: string;
+  /** Optional extra line, e.g. a follow-up reminder date. */
+  note?: string | null;
 }
 
 const dayKey = (iso: string) => formatDate(iso, "en-CA");
@@ -84,6 +86,7 @@ export const ActivityTimeline = ({
                   {entry.createdByName ? ` · ${entry.createdByName}` : ""}
                 </div>
                 <div className="whitespace-pre-wrap text-sm">{entry.content}</div>
+                {entry.note && <div className="text-xs font-medium text-primary">{entry.note}</div>}
               </li>
             ))}
           </ol>

@@ -23,6 +23,7 @@ public class CustomerActivityResponse
     public int CreatedByUserId { get; set; }
     public string? CreatedByName { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateOnly? FollowUpDate { get; set; }
 }
 
 public class CustomerDocumentResponse
