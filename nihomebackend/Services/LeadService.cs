@@ -130,7 +130,7 @@ public class LeadService(
     {
         if (!canManage)
         {
-            throw new LeadOperationException("Caller does not have permission to create leads.");
+            throw new LeadOperationException("Bạn chưa có quyền tạo Lead. Hãy liên hệ quản trị viên nếu cần quyền này.");
         }
 
         ValidateContact(request.Phone, request.Email);
@@ -213,14 +213,14 @@ public class LeadService(
 
         if (!canManage)
         {
-            throw new LeadOperationException("Caller does not have permission to modify leads.");
+            throw new LeadOperationException("Bạn chưa có quyền sửa Lead. Hãy liên hệ quản trị viên nếu cần quyền này.");
         }
 
         CrmConcurrency.Apply(db, lead, request.RowVersion);
 
         if (lead.Status == LeadStatus.Converted)
         {
-            throw new LeadOperationException("Converted leads cannot be edited.");
+            throw new LeadOperationException("Lead đã chuyển đổi nên không sửa được nữa. Hãy cập nhật trên Khách hàng hoặc Cơ hội đã tạo từ Lead này.");
         }
 
         // Only Sales Manager (canSeeAll proxy) may transition to NotInterested or Junk —
@@ -229,13 +229,13 @@ public class LeadService(
             lead.Status != request.Status &&
             !canSeeAll)
         {
-            throw new LeadOperationException("Only Sales Manager can move a lead to NotInterested or Junk.");
+            throw new LeadOperationException("Chỉ Trưởng phòng Kinh doanh được loại Lead. Hãy báo Trưởng phòng nếu Lead không còn tiềm năng.");
         }
 
         // /convert is the only entry point to LeadStatus.Converted — reject direct writes.
         if (request.Status == LeadStatus.Converted && lead.Status != LeadStatus.Converted)
         {
-            throw new LeadOperationException("Use POST /api/leads/{id}/convert to mark a lead as converted.");
+            throw new LeadOperationException("Không đổi trạng thái sang Đã chuyển đổi tại đây. Hãy dùng nút Chuyển đổi trên Lead.");
         }
 
         ValidateContact(request.Phone, request.Email);
@@ -248,7 +248,7 @@ public class LeadService(
         // Sales user cannot re-assign the lead to somebody else; managers can.
         if (!canSeeAll && newOwnerId != previousOwnerId && newOwnerId != callerUserId)
         {
-            throw new LeadOperationException("Only Sales Manager can reassign a lead.");
+            throw new LeadOperationException("Chỉ Trưởng phòng Kinh doanh được giao lại Lead cho người khác.");
         }
 
         if (newOwnerId.HasValue && newOwnerId != previousOwnerId)
@@ -289,7 +289,7 @@ public class LeadService(
         bool canSeeAll,
         CancellationToken ct = default)
     {
-        if (!canManage) throw new LeadOperationException("Caller does not have permission to delete leads.");
+        if (!canManage) throw new LeadOperationException("Bạn chưa có quyền xoá Lead. Hãy liên hệ quản trị viên nếu cần quyền này.");
         var visible = await db.Leads.AsNoTracking()
             .AnyAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
         return visible ? (await hardDeletePlans.ForLeadAsync(id, ct))?.Impact : null;
@@ -303,7 +303,7 @@ public class LeadService(
         bool canSeeAll,
         CancellationToken ct = default)
     {
-        if (!canManage) throw new LeadOperationException("Caller does not have permission to delete leads.");
+        if (!canManage) throw new LeadOperationException("Bạn chưa có quyền xoá Lead. Hãy liên hệ quản trị viên nếu cần quyền này.");
         var lead = await db.Leads.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Id == id && (canSeeAll || item.OwnerUserId == callerUserId), ct);
         if (lead is null) return null;
@@ -337,7 +337,7 @@ public class LeadService(
     {
         if (!canConvert)
         {
-            throw new LeadOperationException("Caller does not have permission to convert leads.");
+            throw new LeadOperationException("Bạn chưa có quyền chuyển đổi Lead. Hãy liên hệ quản trị viên nếu cần quyền này.");
         }
 
         var lead = await db.Leads
@@ -348,12 +348,12 @@ public class LeadService(
 
         if (lead.Status == LeadStatus.Converted)
         {
-            throw new LeadOperationException("Lead is already converted.");
+            throw new LeadOperationException("Lead này đã được chuyển đổi trước đó. Mở Khách hàng hoặc Cơ hội liên quan để làm tiếp.");
         }
 
         if (lead.Status == LeadStatus.Junk || lead.Status == LeadStatus.NotInterested)
         {
-            throw new LeadOperationException("Discarded leads (Junk / NotInterested) cannot be converted.");
+            throw new LeadOperationException("Lead đã bị loại nên không chuyển đổi được. Nếu khách hàng quay lại, hãy đổi trạng thái Lead trước.");
         }
 
         // One timestamp for all three rows. UnconvertAsync identifies the rows this
@@ -385,7 +385,7 @@ public class LeadService(
 
             if (existingOpportunity is null)
             {
-                throw new LeadOperationException($"Opportunity #{request.OpportunityId} not found.");
+                throw new LeadOperationException("Không tìm thấy Cơ hội đã chọn. Có thể Cơ hội đã bị xoá; hãy tải lại và chọn lại.");
             }
 
             if (request.CustomerId.HasValue && request.CustomerId.Value != existingOpportunity.CustomerId)
@@ -409,7 +409,7 @@ public class LeadService(
                 .AnyAsync(c => c.Id == linkedCustomerId.Value, ct);
             if (!customerExists)
             {
-                throw new LeadOperationException($"Customer #{linkedCustomerId} not found.");
+                throw new LeadOperationException("Không tìm thấy Khách hàng đã chọn. Có thể Khách hàng đã bị xoá; hãy tải lại và chọn lại.");
             }
         }
         else
@@ -606,7 +606,7 @@ public class LeadService(
     {
         if (!canConvert)
         {
-            throw new LeadOperationException("Caller does not have permission to convert leads.");
+            throw new LeadOperationException("Bạn chưa có quyền chuyển đổi Lead. Hãy liên hệ quản trị viên nếu cần quyền này.");
         }
 
         var lead = await db.Leads.Include(l => l.Owner).FirstOrDefaultAsync(l => l.Id == id, ct);
@@ -614,7 +614,7 @@ public class LeadService(
 
         if (lead.Status != LeadStatus.Converted || lead.ConvertedAt is null)
         {
-            throw new LeadOperationException("Only a converted lead can be unconverted.");
+            throw new LeadOperationException("Chỉ hoàn tác được Lead đã chuyển đổi.");
         }
 
         var convertedAt = lead.ConvertedAt.Value;

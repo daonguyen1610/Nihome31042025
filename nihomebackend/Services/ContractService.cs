@@ -434,11 +434,11 @@ public class ContractService(
             {
                 if (permissions is null || !await permissions.HasAsync(callerUserId, "crm.opportunities.view", ct) ||
                     opportunity.OwnerUserId != callerUserId && !await permissions.HasAsync(callerUserId, "crm.opportunities.view.all", ct))
-                    throw new ContractValidationException("Source opportunity is unavailable in your access scope.");
+                    throw new ContractValidationException("Bạn không có quyền xem Cơ hội gốc, hoặc Cơ hội đã bị xoá. Hãy chọn Cơ hội khác.");
                 if (opportunity.Stage == OpportunityStage.Lost)
                     throw new ContractValidationException("A lost continuation opportunity cannot create a contract. Start a new pursuit.");
                 if (req.SourceContractId.HasValue && req.SourceContractId != opportunity.SourceContractId)
-                    throw new ContractValidationException("Contract continuation must match its source opportunity.");
+                    throw new ContractValidationException("Hợp đồng tái ký hoặc phát triển phải thuộc đúng Cơ hội gốc đã chọn.");
                 req.SourceContractId = opportunity.SourceContractId;
                 req.OpportunityId = opportunity.Id;
                 req.ContinuationKind = opportunity.ContinuationKind;
@@ -446,7 +446,7 @@ public class ContractService(
             }
         }
         if (req.SourceContractId.HasValue && req.Direction != ContractDirection.Upstream)
-            throw new ContractValidationException("Only Upstream contracts support continuation.");
+            throw new ContractValidationException("Chỉ hợp đồng đầu ra (với khách hàng) mới tái ký hoặc phát triển được.");
         await ContractContinuationRules.ValidateAsync(db, permissions, req.SourceContractId, req.ContinuationKind,
             req.ContinuationReason, req.SourceContractRowVersion, req.CustomerId, callerUserId, ct);
         var customerOwnerUserId = await ValidateReferencesAsync(req, ct);
@@ -460,7 +460,7 @@ public class ContractService(
         var operationalProjectId = await ResolveOperationalProjectIdAsync(req, null, ct);
         if (req.SourceContractId.HasValue && operationalProjectId.HasValue &&
             (projectAccess is null || !await projectAccess.CanViewOperationalProjectAsync(callerUserId, operationalProjectId.Value, ct)))
-            throw new ContractValidationException("Selected project is unavailable in your access scope.");
+            throw new ContractValidationException("Bạn không có quyền với Dự án đã chọn, hoặc Dự án không còn tồn tại. Hãy chọn Dự án khác.");
 
         // A supplied number is the caller's to own; generated numbers are
         // serialized on SQL Server before reading the current maximum.
@@ -611,16 +611,16 @@ public class ContractService(
         if ((entity.SourceContractId.HasValue || await db.Contracts.AnyAsync(x => x.SourceContractId == id, ct) ||
             await db.Opportunities.AnyAsync(x => x.SourceContractId == id, ct)) &&
             (req.CustomerId != entity.CustomerId || req.Direction != entity.Direction))
-            throw new ContractValidationException("Contracts with continuation history cannot change customer or direction.");
+            throw new ContractValidationException("Hợp đồng đã có lịch sử tái ký hoặc phát triển nên không đổi được khách hàng hay chiều hợp đồng.");
         if (req.SourceContractId.HasValue && (req.SourceContractId != entity.SourceContractId ||
             req.ContinuationKind != entity.ContinuationKind || req.ContinuationReason?.Trim() != entity.ContinuationReason))
-            throw new ContractValidationException("Continuation provenance is immutable.");
+            throw new ContractValidationException("Không đổi được hợp đồng nguồn của hợp đồng tái ký hoặc phát triển.");
         if (req.OpportunityId.HasValue && await db.Opportunities.AnyAsync(x => x.Id == req.OpportunityId &&
             x.SourceContractId != null && (x.SourceContractId != entity.SourceContractId || x.ContinuationKind != entity.ContinuationKind), ct))
-            throw new ContractValidationException("Contract continuation must match its source opportunity.");
+            throw new ContractValidationException("Hợp đồng tái ký hoặc phát triển phải thuộc đúng Cơ hội gốc đã chọn.");
         if (req.QuoteId.HasValue && await db.Quotes.AnyAsync(x => x.Id == req.QuoteId &&
             x.Opportunity.SourceContractId != null && (x.Opportunity.SourceContractId != entity.SourceContractId || x.Opportunity.ContinuationKind != entity.ContinuationKind), ct))
-            throw new ContractValidationException("Contract continuation must match its quotation's source opportunity.");
+            throw new ContractValidationException("Báo giá của hợp đồng tái ký hoặc phát triển phải thuộc đúng Cơ hội gốc.");
         if (req.OpportunityId.HasValue && req.OpportunityId != entity.OpportunityId)
             await ValidateContinuationAssociationAsync(req.OpportunityId.Value, entity, callerUserId, ct);
         if (req.QuoteId.HasValue && req.QuoteId != entity.QuoteId)
@@ -645,7 +645,7 @@ public class ContractService(
             ct);
         if (entity.SourceContractId.HasValue && operationalProjectId != entity.OperationalProjectId && operationalProjectId.HasValue &&
             (projectAccess is null || !await projectAccess.CanViewOperationalProjectAsync(callerUserId, operationalProjectId.Value, ct)))
-            throw new ContractValidationException("Selected project is unavailable in your access scope.");
+            throw new ContractValidationException("Bạn không có quyền với Dự án đã chọn, hoặc Dự án không còn tồn tại. Hãy chọn Dự án khác.");
         var hasPaymentRequests = await db.PaymentRequests.AsNoTracking()
             .AnyAsync(item => item.ContractId == id, ct);
         var hasResourceRequests = await db.ConstructionResourceRequests.AsNoTracking()
@@ -864,7 +864,7 @@ public class ContractService(
         await ValidateContinuationAssociationAsync(quote.OpportunityId, entity, callerUserId, ct);
         if (await db.Opportunities.AnyAsync(x => x.Id == quote.OpportunityId && x.SourceContractId != null &&
             (x.SourceContractId != entity.SourceContractId || x.ContinuationKind != entity.ContinuationKind), ct))
-            throw new ContractValidationException("Contract continuation must match its quotation's source opportunity.");
+            throw new ContractValidationException("Báo giá của hợp đồng tái ký hoặc phát triển phải thuộc đúng Cơ hội gốc.");
         if (entity.QuoteId.HasValue)
         {
             var currentCode = await db.Quotes.AsNoTracking()
@@ -911,7 +911,7 @@ public class ContractService(
         if (opportunity.SourceContractId is null) return;
         if (permissions is null || !await permissions.HasAsync(userId, "crm.opportunities.view", ct) ||
             opportunity.OwnerUserId != userId && !await permissions.HasAsync(userId, "crm.opportunities.view.all", ct))
-            throw new ContractValidationException("Source opportunity is unavailable in your access scope.");
+            throw new ContractValidationException("Bạn không có quyền xem Cơ hội gốc, hoặc Cơ hội đã bị xoá. Hãy chọn Cơ hội khác.");
         if (opportunity.Stage == OpportunityStage.Lost || opportunity.SourceContractId != contract.SourceContractId ||
             opportunity.ContinuationKind != contract.ContinuationKind)
             throw new ContractValidationException("A continuation association requires a matching, accessible opportunity that is not Lost.");
