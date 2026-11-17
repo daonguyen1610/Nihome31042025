@@ -269,7 +269,7 @@ public sealed class ProcurementService(
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
-        await ApplyBoqAsync(entity, request, ct);
+        ApplyBoq(entity, request);
         db.ProjectBoqRevisions.Add(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         var response = (await GetBoqAsync(projectId, entity.Id, ct))!;
@@ -383,7 +383,7 @@ public sealed class ProcurementService(
         entity.RejectedByUserId = null;
         entity.PreparedByUserId = userId;
         entity.UpdatedAt = DateTime.UtcNow;
-        await ApplyBoqAsync(entity, request, ct);
+        ApplyBoq(entity, request);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetBoqAsync(projectId, id, ct);
     }
@@ -1294,7 +1294,7 @@ public sealed class ProcurementService(
         }
     }
 
-    private async Task ApplyBoqAsync(ProjectBoqRevision entity, ProjectBoqRevisionRequest request, CancellationToken ct)
+    private static void ApplyBoq(ProjectBoqRevision entity, ProjectBoqRevisionRequest request)
     {
         entity.UpstreamContractId = request.UpstreamContractId;
         entity.SourceTenderEstimateRevisionId = request.SourceTenderEstimateRevisionId;

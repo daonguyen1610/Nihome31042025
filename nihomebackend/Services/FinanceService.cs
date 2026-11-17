@@ -82,7 +82,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
-        await ApplyPaymentAsync(entity, request, ct);
+        ApplyPayment(entity, request);
         entity.Events.Add(NewPaymentEvent(null, PaymentRequestStatus.Draft, userId, null));
         db.PaymentRequests.Add(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
@@ -104,7 +104,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         db.PaymentRequestAttachments.RemoveRange(entity.Attachments);
         entity.Attachments.Clear();
-        await ApplyPaymentAsync(entity, request, ct);
+        ApplyPayment(entity, request);
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetPaymentAsync(id, ct);
@@ -344,7 +344,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
         };
-        await ApplyCorrectionAsync(entity, request, ct);
+        ApplyCorrection(entity, request);
         db.AccountingCorrections.Add(entity);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
@@ -360,7 +360,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             throw new FinanceOperationException("Chỉ được sửa bút toán điều chỉnh ở trạng thái Nháp.");
         await ValidateCorrectionAsync(request, ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
-        await ApplyCorrectionAsync(entity, request, ct);
+        ApplyCorrection(entity, request);
         entity.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         return await GetCorrectionAsync(id, ct);
@@ -579,7 +579,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
             throw new FinanceOperationException("Đường dẫn chứng từ phải là đường dẫn tương đối theo máy chủ.");
     }
 
-    private async Task ApplyPaymentAsync(PaymentRequest entity, PaymentRequestUpsertRequest request, CancellationToken ct)
+    private static void ApplyPayment(PaymentRequest entity, PaymentRequestUpsertRequest request)
     {
         entity.ContractId = request.ContractId;
         entity.VendorId = request.VendorId;
@@ -597,7 +597,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         }).ToList();
     }
 
-    private async Task ApplyCorrectionAsync(AccountingCorrection entity, AccountingCorrectionUpsertRequest request, CancellationToken ct)
+    private static void ApplyCorrection(AccountingCorrection entity, AccountingCorrectionUpsertRequest request)
     {
         entity.OperationalProjectId = request.OperationalProjectId;
         entity.AccountingPeriodId = request.AccountingPeriodId;

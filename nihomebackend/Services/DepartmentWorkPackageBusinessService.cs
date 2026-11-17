@@ -51,7 +51,7 @@ public sealed partial class DepartmentWorkPackageService
             UpdatedAt = now,
             UpdatedByUserId = callerUserId,
         };
-        await ApplyOfferAsync(offer, request, ct);
+        ApplyOffer(offer, request);
         db.ProcurementInputPriceOffers.Add(offer);
         TouchPackage(package, callerUserId, now);
         await CrmConcurrency.SaveChangesAsync(db, ct);
@@ -74,7 +74,7 @@ public sealed partial class DepartmentWorkPackageService
         CrmConcurrency.Apply(db, offer, request.RowVersion);
         db.ProcurementInputPriceLines.RemoveRange(offer.Lines);
         offer.Lines.Clear();
-        await ApplyOfferAsync(offer, request, ct);
+        ApplyOffer(offer, request);
         offer.Status = InputPriceOfferStatus.Draft;
         offer.DecisionReason = null;
         offer.SubmittedAt = null;
@@ -309,7 +309,7 @@ public sealed partial class DepartmentWorkPackageService
             throw Error("Giá đầu vào đã được báo giá tham chiếu và không thể sửa; hãy tạo chào giá mới.");
     }
 
-    private async Task ApplyOfferAsync(ProcurementInputPriceOffer offer, UpsertInputPriceOfferRequest request, CancellationToken ct)
+    private static void ApplyOffer(ProcurementInputPriceOffer offer, UpsertInputPriceOfferRequest request)
     {
         offer.VendorId = request.VendorId;
         offer.SupplierReference = request.SupplierReference.Trim();
