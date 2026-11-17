@@ -67,14 +67,16 @@ public class OpportunityServiceTests : IDisposable
             Entry(1, "opportunity.stage-change", "{\"Stage\":4}"),
             Entry(2, "opportunity.stage-change", "{\"Stage\":\"Negotiation\"}"),
             Entry(3, "opportunity.stage-change", "{\"Stage\":"),
-            Entry(4, "opportunity.update", "{\"Stage\":5}"));
+            Entry(4, "opportunity.update", "{\"Stage\":5}"),
+            Entry(5, "opportunity.stage-change",
+                "{\"Id\":7,\"Contracts\":[{\"Id\":2}],\"Stage\":5,\"Activities\":[{\"Content\":\"Khảo sát hiện trạng...[truncated]"));
         await _db.SaveChangesAsync();
 
         var history = await _sut.ListHistoryAsync(opportunity.Id, owner.Id, canSeeAll: false);
 
         Assert.NotNull(history);
         Assert.Equal(
-            new OpportunityStage?[] { null, null, OpportunityStage.Negotiation, OpportunityStage.Won },
+            new OpportunityStage?[] { OpportunityStage.Lost, null, null, OpportunityStage.Negotiation, OpportunityStage.Won },
             history!.Select(item => item.Stage).ToArray());
     }
 
