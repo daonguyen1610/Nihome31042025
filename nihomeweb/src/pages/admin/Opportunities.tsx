@@ -1512,15 +1512,19 @@ const AdminOpportunities = () => {
                     </div>
                   )}
                   {/* Sales may agree a value directly or send a quotation first. */}
-                  {((canStartDesign && detail.stage !== "Lost") ||
-                    (canCreateQuote && canRaiseQuote(detail)) ||
-                    (canCreateContract && detail.stage !== "Lost")) && (
+                  {/* Steps the deal allows stay visible; a missing permission is explained
+                      instead of hiding the button, so staff know whom to ask. */}
+                  {(detail.stage !== "Lost" || canRaiseQuote(detail)) && (
                     <div className="flex flex-wrap gap-2 pt-2">
-                      {canCreateContract && detail.stage !== "Lost" && (
+                      {detail.stage !== "Lost" && (
                         <Button
                           size="sm"
                           variant={detail.stage === "Negotiation" ? "outline" : "default"}
                           data-testid="opportunity-create-contract"
+                          disabled={!canCreateContract}
+                          aria-describedby={
+                            canCreateContract ? undefined : "opportunity-create-contract-blocked"
+                          }
                           onClick={() => {
                             const quote = contractReadyQuote(detail, opportunityQuotes);
                             navigate(contractFormPath(detail, quote));
@@ -1530,11 +1534,15 @@ const AdminOpportunities = () => {
                           {t("opportunities.action.createContract")}
                         </Button>
                       )}
-                      {canCreateQuote && canRaiseQuote(detail) && (
+                      {canRaiseQuote(detail) && (
                         <Button
                           size="sm"
                           variant="outline"
                           data-testid="opportunity-create-quote"
+                          disabled={!canCreateQuote}
+                          aria-describedby={
+                            canCreateQuote ? undefined : "opportunity-create-quote-blocked"
+                          }
                           onClick={() =>
                             navigate(`/admin/quotes?create=1&opportunityId=${detail.id}`)
                           }
@@ -1575,6 +1583,22 @@ const AdminOpportunities = () => {
                             {t("opportunities.action.createDesignProject")}
                           </Button>
                         ))}
+                      {detail.stage !== "Lost" && !canCreateContract && (
+                        <p
+                          id="opportunity-create-contract-blocked"
+                          className="w-full text-xs text-muted-foreground"
+                        >
+                          {t("opportunities.action.createContractBlocked")}
+                        </p>
+                      )}
+                      {canRaiseQuote(detail) && !canCreateQuote && (
+                        <p
+                          id="opportunity-create-quote-blocked"
+                          className="w-full text-xs text-muted-foreground"
+                        >
+                          {t("opportunities.action.createQuoteBlocked")}
+                        </p>
+                      )}
                     </div>
                   )}
                 </DialogHeader>
