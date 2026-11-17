@@ -166,5 +166,6 @@ public class ContactMessageService(
         ReplyContent = c.ReplyContent,
         RepliedAt = c.RepliedAt,
         CreatedAt = c.CreatedAt,
+        LeadId = c.LeadId,
     };
 }

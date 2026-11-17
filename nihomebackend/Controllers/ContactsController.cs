@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
@@ -9,7 +10,7 @@ namespace NihomeBackend.Controllers;
 [ApiController]
 [Route("api/contacts")]
 [Route("api/v1/contacts")]
-public class ContactsController(ContactMessageService svc) : ControllerBase
+public class ContactsController(ContactMessageService svc, ContactLeadService contactLeads) : ControllerBase
 {
     /// <summary>Public: submit a contact message.</summary>
     [HttpPost]
@@ -54,6 +55,25 @@ public class ContactsController(ContactMessageService svc) : ControllerBase
     {
         var result = await svc.MarkRepliedAsync(id);
         return result == null ? NotFound() : Ok(result);
+    }
+
+    /// <summary>Admin: turn a website message into a CRM lead (once; repeats return the same lead).</summary>
+    [HttpPost("{id:int}/lead")]
+    [Authorize]
+    [RequirePermission("contacts", "view")]
+    [RequirePermission("crm.leads", "manage")]
+    public async Task<IActionResult> CreateLead(int id, CancellationToken ct)
+    {
+        if (!int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Unauthorized();
+        try
+        {
+            var result = await contactLeads.CreateLeadAsync(id, userId, ct);
+            return result is null ? NotFound() : Ok(new { leadId = result.LeadId, created = result.Created });
+        }
+        catch (LeadOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
     }
 
     /// <summary>Admin: delete a contact message.</summary>

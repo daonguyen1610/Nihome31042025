@@ -598,5 +598,53 @@
     "en": "Customer inbox",
     "zh": "客户联系",
     "ja": "お客様のお問い合わせ"
+  },
+  {
+    "key": "contacts.lead.title",
+    "category": "contact",
+    "vi": "Lead CRM",
+    "en": "CRM lead",
+    "zh": "CRM 线索",
+    "ja": "CRM リード"
+  },
+  {
+    "key": "contacts.lead.help",
+    "category": "contact",
+    "vi": "Tạo Lead để phòng Kinh doanh theo dõi khách này.",
+    "en": "Create a lead so sales can follow up with this person.",
+    "zh": "创建线索，便于销售部门跟进此客户。",
+    "ja": "リードを作成して営業部がフォローできるようにします。"
+  },
+  {
+    "key": "contacts.lead.create",
+    "category": "contact",
+    "vi": "Tạo Lead từ liên hệ",
+    "en": "Create lead from message",
+    "zh": "从留言创建线索",
+    "ja": "メッセージからリードを作成"
+  },
+  {
+    "key": "contacts.lead.open",
+    "category": "contact",
+    "vi": "Mở Lead",
+    "en": "Open lead",
+    "zh": "打开线索",
+    "ja": "リードを開く"
+  },
+  {
+    "key": "contacts.lead.created",
+    "category": "contact",
+    "vi": "Đã tạo Lead từ liên hệ, nguồn Website.",
+    "en": "Lead created from the message with source Website.",
+    "zh": "已从留言创建线索，来源为网站。",
+    "ja": "メッセージからリードを作成しました（流入元：Web サイト）。"
+  },
+  {
+    "key": "contacts.lead.exists",
+    "category": "contact",
+    "vi": "Liên hệ này đã có Lead, không tạo thêm.",
+    "en": "This message already has a lead; no new one was created.",
+    "zh": "此留言已有线索，未重复创建。",
+    "ja": "このメッセージには既にリードがあるため、新規作成しませんでした。"
   }
 ]

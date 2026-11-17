@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { Mail, Phone, CheckCircle2, Clock, Trash2, Send, Search } from "lucide-react";
+import { Mail, Phone, CheckCircle2, Clock, Trash2, Send, Search, UserPlus } from "lucide-react";
+import { Link } from "react-router-dom";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useUiError } from "@/hooks/useUiError";
+import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -32,6 +36,10 @@ import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 const AdminContacts = () => {
   const { t } = useI18n();
   const { toast } = useToast();
+  const uiError = useUiError();
+  const { has } = usePermissions();
+  const canCreateLead = has(ADMIN_PERMS.leadsManage);
+  const [creatingLead, setCreatingLead] = useState(false);
   const { data: list, loading, error, refetch } = useContacts();
   const [active, setActive] = useState<ContactMessageResponse | null>(null);
   const [replyText, setReplyText] = useState("");
@@ -129,6 +137,22 @@ const AdminContacts = () => {
       toast({ title: t("common.error"), variant: "destructive" });
     } finally {
       setSending(false);
+    }
+  };
+
+  const handleCreateLead = async (contact: ContactMessageResponse) => {
+    setCreatingLead(true);
+    try {
+      const { data } = await adminApi.createLeadFromContact(contact.id);
+      setActive({ ...contact, leadId: data.leadId });
+      refetch();
+      toast({
+        title: t(data.created ? "contacts.lead.created" : "contacts.lead.exists"),
+      });
+    } catch (reason) {
+      toast({ title: t("common.error"), description: uiError(reason), variant: "destructive" });
+    } finally {
+      setCreatingLead(false);
     }
   };
 
@@ -377,6 +401,28 @@ const AdminContacts = () => {
                     <p className="whitespace-pre-wrap rounded-md border border-green-200 bg-green-50 p-4 leading-relaxed text-green-900">
                       {active.replyContent}
                     </p>
+                  </div>
+                )}
+
+                {(active.leadId || canCreateLead) && (
+                  <div className="mb-4 flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-3 text-sm">
+                    <span className="font-medium">{t("contacts.lead.title")}</span>
+                    {active.leadId ? (
+                      <Button asChild variant="outline" size="sm">
+                        <Link to={`/admin/leads/${active.leadId}`}>{t("contacts.lead.open")}</Link>
+                      </Button>
+                    ) : (
+                      <>
+                        <span className="text-muted-foreground">{t("contacts.lead.help")}</span>
+                        <Button
+                          size="sm"
+                          onClick={() => void handleCreateLead(active)}
+                          disabled={creatingLead}
+                        >
+                          <UserPlus className="mr-1.5 h-4 w-4" /> {t("contacts.lead.create")}
+                        </Button>
+                      </>
+                    )}
                   </div>
                 )}
 
