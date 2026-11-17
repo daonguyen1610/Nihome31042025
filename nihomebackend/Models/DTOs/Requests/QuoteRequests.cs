@@ -72,6 +72,10 @@ public class CreateQuoteRequest
     /// <summary>Optional; defaults to CreatedAt + 30 days when omitted.</summary>
     public DateTime? ValidUntil { get; set; }
 
+    /// <summary>Days before ValidUntil to remind the owner (0 = on the day). Omit to keep the current value.</summary>
+    [Range(0, ReminderDefaults.MaxDaysBefore)]
+    public int? ExpiryReminderDays { get; set; }
+
     [StringLength(4000)]
     public string? Note { get; set; }
 }
@@ -109,6 +113,10 @@ public class UpdateQuoteRequest : IConcurrencyRequest
     public decimal VatPercent { get; set; } = 8m;
 
     public DateTime? ValidUntil { get; set; }
+
+    /// <summary>Days before ValidUntil to remind the owner (0 = on the day). Omit to keep the current value.</summary>
+    [Range(0, ReminderDefaults.MaxDaysBefore)]
+    public int? ExpiryReminderDays { get; set; }
 
     [StringLength(4000)]
     public string? Note { get; set; }

@@ -8976,6 +8976,9 @@ namespace nihomebackend.Migrations
                     b.Property<decimal>("DiscountPercent")
                         .HasColumnType("decimal(5,2)");
 
+                    b.Property<int>("ExpiryReminderDays")
+                        .HasColumnType("int");
+
                     b.Property<decimal>("GrandTotal")
                         .HasColumnType("decimal(18,2)");
 
@@ -11107,6 +11110,9 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.Property<int>("CustomerId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("DeadlineReminderDays")
                         .HasColumnType("int");
 
                     b.Property<string>("InfoSource")

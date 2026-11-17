@@ -120,6 +120,7 @@ public class QuoteService(
                 GrandTotal = r.Quote.GrandTotal,
                 Status = r.Quote.Status.ToString(),
                 ValidUntil = r.Quote.ValidUntil,
+                ExpiryReminderDays = r.Quote.ExpiryReminderDays,
                 IsExpiringSoon = IsNonTerminal(r.Quote.Status)
                     && (r.Quote.ValidUntil - now).TotalDays <= ExpiringSoonDays,
                 UpdatedAt = r.Quote.UpdatedAt,
@@ -293,6 +294,7 @@ public class QuoteService(
             DiscountPercent = request.DiscountPercent,
             VatPercent = request.VatPercent,
             ValidUntil = validUntil,
+            ExpiryReminderDays = request.ExpiryReminderDays ?? ReminderDefaults.DaysBefore,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
             Status = QuoteStatus.Draft,
             CreatedAt = now,
@@ -494,6 +496,7 @@ public class QuoteService(
         quote.DiscountPercent = request.DiscountPercent;
         quote.VatPercent = request.VatPercent;
         if (request.ValidUntil.HasValue) quote.ValidUntil = request.ValidUntil.Value;
+        if (request.ExpiryReminderDays.HasValue) quote.ExpiryReminderDays = request.ExpiryReminderDays.Value;
         quote.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
         quote.UpdatedAt = now;
         quote.UpdatedByUserId = callerUserId;
@@ -1366,7 +1369,8 @@ public class QuoteService(
 
         // Not price-affecting, but still worth a trace.
         var cosmetic = S(quote.Note) != S(request.Note)
-            || (request.OwnerUserId.HasValue && request.OwnerUserId.Value != quote.OwnerUserId);
+            || (request.OwnerUserId.HasValue && request.OwnerUserId.Value != quote.OwnerUserId)
+            || (request.ExpiryReminderDays.HasValue && request.ExpiryReminderDays.Value != quote.ExpiryReminderDays);
 
         return new QuoteChangeSet(Any: material || cosmetic, Material: material);
     }
@@ -1580,6 +1584,7 @@ public class QuoteService(
         GrandTotalInWords = VietnameseNumberFormatter.ToWords(q.GrandTotal, CurrencyWords(q.Currency)),
         Status = q.Status.ToString(),
         ValidUntil = q.ValidUntil,
+        ExpiryReminderDays = q.ExpiryReminderDays,
         IsExpired = IsNonTerminal(q.Status) && q.ValidUntil < DateTime.UtcNow,
         Note = q.Note,
         SubmittedAt = q.SubmittedAt,

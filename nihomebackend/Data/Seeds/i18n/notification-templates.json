@@ -366,5 +366,53 @@
     "en": "Today ({{dueDate}}) is the follow-up date for {{customerName}}: {{summary}}. Contact the customer and record the outcome.",
     "zh": "今天（{{dueDate}}）是回访 {{customerName}} 的日期：{{summary}}。请联系客户并记录结果。",
     "ja": "本日（{{dueDate}}）は {{customerName}} のフォローアップ日です：{{summary}}。顧客に連絡し、結果を記録してください。"
+  },
+  {
+    "key": "notification.crm.tender.deadline-due.title",
+    "category": "notification",
+    "vi": "Gói thầu sắp hết hạn nộp",
+    "en": "Tender deadline approaching",
+    "zh": "投标截止日期临近",
+    "ja": "入札の提出期限が近づいています"
+  },
+  {
+    "key": "notification.crm.tender.deadline-due.body",
+    "category": "notification",
+    "vi": "Gói thầu {{code}} – {{name}} hết hạn nộp ngày {{dueDate}}. Hãy kiểm tra hồ sơ và nộp đúng hạn.",
+    "en": "Tender {{code}} – {{name}} is due on {{dueDate}}. Check the dossier and submit on time.",
+    "zh": "投标 {{code}} – {{name}} 的提交截止日期为 {{dueDate}}。请检查投标文件并按时提交。",
+    "ja": "入札 {{code}} – {{name}} の提出期限は {{dueDate}} です。書類を確認し、期限内に提出してください。"
+  },
+  {
+    "key": "notification.crm.tender.checklist-due.title",
+    "category": "notification",
+    "vi": "Mục hồ sơ thầu đến hạn nội bộ",
+    "en": "Tender dossier item due",
+    "zh": "投标文件事项内部到期",
+    "ja": "入札書類項目の社内期限です"
+  },
+  {
+    "key": "notification.crm.tender.checklist-due.body",
+    "category": "notification",
+    "vi": "Mục \"{{item}}\" của gói thầu {{code}} đến hạn nội bộ ngày {{dueDate}} nhưng chưa xong. Hãy hoàn thành và cập nhật trạng thái.",
+    "en": "Item \"{{item}}\" of tender {{code}} was due internally on {{dueDate}} and is not finished. Complete it and update its status.",
+    "zh": "投标 {{code}} 的事项“{{item}}”内部期限为 {{dueDate}}，尚未完成。请完成并更新状态。",
+    "ja": "入札 {{code}} の項目「{{item}}」は社内期限 {{dueDate}} ですが未完了です。完了して状態を更新してください。"
+  },
+  {
+    "key": "notification.crm.quote.expiry-due.title",
+    "category": "notification",
+    "vi": "Báo giá sắp hết hiệu lực",
+    "en": "Quote expiring soon",
+    "zh": "报价即将失效",
+    "ja": "見積の有効期限が近づいています"
+  },
+  {
+    "key": "notification.crm.quote.expiry-due.body",
+    "category": "notification",
+    "vi": "Báo giá {{code}} hết hiệu lực ngày {{dueDate}}. Hãy liên hệ khách hàng hoặc gia hạn báo giá nếu cần.",
+    "en": "Quote {{code}} expires on {{dueDate}}. Follow up with the customer or extend the quote if needed.",
+    "zh": "报价 {{code}} 将于 {{dueDate}} 失效。请联系客户，或在需要时延长报价有效期。",
+    "ja": "見積 {{code}} は {{dueDate}} に有効期限が切れます。顧客に連絡するか、必要に応じて延長してください。"
   }
 ]

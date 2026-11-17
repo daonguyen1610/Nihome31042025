@@ -22,5 +22,21 @@
     "en": "Some selection lists could not be loaded, so a few dropdowns and filters are empty. Press Retry.",
     "zh": "部分选项列表未能加载，因此一些下拉框和筛选项为空。请点击重试。",
     "ja": "一部の選択肢を読み込めなかったため、いくつかのドロップダウンとフィルターが空です。再試行を押してください。"
+  },
+  {
+    "key": "common.reminderDays.label",
+    "category": "common",
+    "vi": "Nhắc trước hạn (ngày)",
+    "en": "Remind before due date (days)",
+    "zh": "提前提醒（天）",
+    "ja": "期限前の通知（日）"
+  },
+  {
+    "key": "common.reminderDays.help",
+    "category": "common",
+    "vi": "Nhập 0 để nhắc đúng ngày hạn, 3 để nhắc trước 3 ngày, 7 để nhắc trước 1 tuần.",
+    "en": "Enter 0 to be reminded on the due date, 3 for three days before, 7 for one week before.",
+    "zh": "输入 0 表示到期当天提醒，3 表示提前 3 天，7 表示提前一周。",
+    "ja": "0 で期限当日、3 で 3 日前、7 で 1 週間前に通知します。"
   }
 ]

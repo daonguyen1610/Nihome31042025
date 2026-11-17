@@ -105,6 +105,7 @@ export interface TenderResponse {
   invitationReceivedByName?: string | null;
   invitationPortalUrl?: string | null;
   submissionDeadline: string;
+  deadlineReminderDays: number;
   preparerUserId?: number | null;
   preparerName?: string | null;
   infoSource?: string | null;
@@ -172,6 +173,7 @@ export interface TenderListItemResponse {
   invitationReceivedByUserId?: number | null;
   invitationPortalUrl?: string | null;
   submissionDeadline: string;
+  deadlineReminderDays: number;
   preparerUserId?: number | null;
   preparerName?: string | null;
   status: TenderStatus;
@@ -198,6 +200,8 @@ export interface CreateTenderRequest {
   invitationReceivedByUserId?: number | null;
   invitationPortalUrl?: string | null;
   submissionDeadline: string;
+  /** Days before the deadline to remind (0 = on the day). */
+  deadlineReminderDays?: number;
   preparerUserId?: number | null;
   infoSource?: string | null;
   note?: string | null;
@@ -213,6 +217,8 @@ export interface UpdateTenderRequest {
   invitationReceivedByUserId?: number | null;
   invitationPortalUrl?: string | null;
   submissionDeadline: string;
+  /** Days before the deadline to remind (0 = on the day). */
+  deadlineReminderDays?: number;
   preparerUserId?: number | null;
   infoSource?: string | null;
   note?: string | null;
