@@ -290,7 +290,9 @@ test("customer related records, documents, and contract owner inheritance work i
         scrollable: true,
       },
       {
-        tab: opportunityDialog.getByRole("tab", { name: /Audit log|审计日志|監査ログ/i }),
+        tab: opportunityDialog.getByRole("tab", {
+          name: /Lịch sử thay đổi|Change history|变更记录|変更履歴/i,
+        }),
         scrollable: false,
       },
     ];

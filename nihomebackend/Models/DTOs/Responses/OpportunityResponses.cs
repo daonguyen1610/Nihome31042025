@@ -110,4 +110,6 @@ public class OpportunityHistoryItemResponse
     public string Message { get; set; } = string.Empty;
     public string? ActorName { get; set; }
     public string Status { get; set; } = string.Empty;
+    /// <summary>New stage for stage-change entries, so the UI can name it in the user's language.</summary>
+    public OpportunityStage? Stage { get; set; }
 }
