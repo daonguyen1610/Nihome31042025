@@ -51,6 +51,10 @@ public static class DisplaySettings
 
     public static TimeZoneInfo VietnamTimeZone { get; } = CreateVietnamTimeZone();
 
+    /// <summary>Today's date in Vietnam, for business due dates.</summary>
+    public static DateOnly VietnamToday() =>
+        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, VietnamTimeZone).DateTime);
+
     public static DateTime UtcNowIn(TimeZoneInfo zone) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);
 
     public static DateTime TodayIn(TimeZoneInfo zone) => UtcNowIn(zone).Date;

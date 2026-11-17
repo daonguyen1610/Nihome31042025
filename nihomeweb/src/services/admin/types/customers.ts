@@ -31,6 +31,8 @@ export interface CustomerActivityResponse {
   createdByUserId: number;
   createdByName?: string;
   createdAt: string;
+  /** Date (yyyy-MM-dd) to call back or visit. */
+  followUpDate?: string | null;
 }
 
 export type ContractCareActivityType = Extract<
@@ -130,6 +132,7 @@ export interface CreateCustomerActivityRequest {
   type: CustomerActivityType;
   content: string;
   occurredAt?: string;
+  followUpDate?: string;
 }
 
 export interface CustomerDuplicateDetail {

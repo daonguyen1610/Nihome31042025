@@ -584,6 +584,8 @@ public class CustomerService(
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == customerId, ct);
         if (customer is null) return null;
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return null;
+        if (request.FollowUpDate < DisplaySettings.VietnamToday())
+            throw new CustomerOperationException("Ngày nhắc gọi lại/thăm phải từ hôm nay trở đi.");
 
         var activity = new CustomerActivity
         {
@@ -591,6 +593,7 @@ public class CustomerService(
             Type = request.Type,
             OccurredAt = request.OccurredAt ?? DateTime.UtcNow,
             Content = request.Content.Trim(),
+            FollowUpDate = request.FollowUpDate,
             CreatedByUserId = callerUserId,
             CreatedAt = DateTime.UtcNow,
         };
@@ -606,17 +609,20 @@ public class CustomerService(
             .Select(u => u.FullName)
             .FirstOrDefaultAsync(ct);
 
-        return new CustomerActivityResponse
-        {
-            Id = activity.Id,
-            Type = activity.Type,
-            OccurredAt = activity.OccurredAt,
-            Content = activity.Content,
-            CreatedByUserId = activity.CreatedByUserId,
-            CreatedByName = creator,
-            CreatedAt = activity.CreatedAt,
-        };
+        return MapActivity(activity, creator);
     }
+
+    private static CustomerActivityResponse MapActivity(CustomerActivity activity, string? creatorName) => new()
+    {
+        Id = activity.Id,
+        Type = activity.Type,
+        OccurredAt = activity.OccurredAt,
+        Content = activity.Content,
+        CreatedByUserId = activity.CreatedByUserId,
+        CreatedByName = creatorName,
+        CreatedAt = activity.CreatedAt,
+        FollowUpDate = activity.FollowUpDate,
+    };
 
     // ---------- helpers ----------
 
@@ -765,16 +771,7 @@ public class CustomerService(
                 ? new List<CustomerActivityResponse>()
                 : activities
                     .OrderByDescending(a => a.OccurredAt)
-                    .Select(a => new CustomerActivityResponse
-                    {
-                        Id = a.Id,
-                        Type = a.Type,
-                        OccurredAt = a.OccurredAt,
-                        Content = a.Content,
-                        CreatedByUserId = a.CreatedByUserId,
-                        CreatedByName = a.CreatedBy?.FullName,
-                        CreatedAt = a.CreatedAt,
-                    })
+                    .Select(a => MapActivity(a, a.CreatedBy?.FullName))
                     .ToList(),
         };
     }
