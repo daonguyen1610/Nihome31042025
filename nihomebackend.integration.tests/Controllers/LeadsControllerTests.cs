@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -193,6 +194,49 @@ public class LeadsControllerTests : IntegrationTestBase
         });
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
+    public async Task ResponseDueDate_PersistsFlagsOverdueAndResetsReminderWhenChanged()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var yesterday = LeadResponseDeadline.VietnamToday().AddDays(-1);
+
+        var created = await Client.PostAsJsonAsync("/api/leads", new
+        {
+            name = "Chị Lan - cải tạo căn hộ Quận 7 " + Guid.NewGuid().ToString("N")[..6],
+            phone = "0900000000",
+            sourceCode = "marketing",
+            responseDueDate = yesterday,
+        });
+        created.EnsureSuccessStatusCode();
+        var body = await ReadJsonAsync(created);
+        var leadId = body.GetProperty("id").GetInt32();
+        body.GetProperty("responseDueDate").GetString().Should().Be(yesterday.ToString("yyyy-MM-dd"));
+        body.GetProperty("responseOverdue").GetBoolean().Should().BeTrue();
+        await WithDbAsync(async db =>
+        {
+            var lead = await db.Leads.SingleAsync(item => item.Id == leadId);
+            lead.ResponseDueNotifiedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync();
+        });
+
+        var later = yesterday.AddDays(7);
+        var res = await Client.PutAsJsonAsync($"/api/leads/{leadId}", new
+        {
+            name = body.GetProperty("name").GetString(),
+            phone = "0900000000",
+            sourceCode = "marketing",
+            status = "Contacted",
+            ownerUserId = body.GetProperty("ownerUserId").GetInt32(),
+            responseDueDate = later,
+        });
+
+        res.EnsureSuccessStatusCode();
+        (await ReadJsonAsync(res)).GetProperty("responseOverdue").GetBoolean().Should().BeFalse();
+        var stored = await WithDbAsync(db => db.Leads.AsNoTracking().SingleAsync(item => item.Id == leadId));
+        stored.ResponseDueDate.Should().Be(later);
+        stored.ResponseDueNotifiedAt.Should().BeNull("a new due date gets its own reminder");
     }
 
     [Fact]

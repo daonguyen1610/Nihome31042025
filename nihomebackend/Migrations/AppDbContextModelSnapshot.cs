@@ -5581,6 +5581,12 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
 
+                    b.Property<DateOnly?>("ResponseDueDate")
+                        .HasColumnType("date");
+
+                    b.Property<DateTime?>("ResponseDueNotifiedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
@@ -5621,6 +5627,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("SourceCode");
 
                     b.HasIndex("Status");
+
+                    b.HasIndex("ResponseDueDate", "ResponseDueNotifiedAt");
 
                     b.ToTable("leads", (string)null);
                 });

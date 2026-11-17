@@ -209,6 +209,12 @@
       "module": "operations.projects",
       "channel": "InApp",
       "adminDescription": "Alert administrators after a master schedule email exhausts delivery retries."
+    },
+    {
+      "code": "crm.lead.response-due",
+      "module": "crm.leads",
+      "channel": "InApp",
+      "adminDescription": "Nhắc người phụ trách khi Lead đến hạn phản hồi mà chưa xử lý xong."
     }
   ]
 }

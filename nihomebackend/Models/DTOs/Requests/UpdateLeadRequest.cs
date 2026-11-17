@@ -40,4 +40,7 @@ public class UpdateLeadRequest : IConcurrencyRequest
 
     [StringLength(4000)]
     public string? Note { get; set; }
+
+    /// <summary>Optional date by which sales must respond to the lead.</summary>
+    public DateOnly? ResponseDueDate { get; set; }
 }

@@ -24,6 +24,10 @@ export interface LeadResponse {
   ownerUserId?: number;
   ownerName?: string;
   note?: string;
+  /** Date (yyyy-MM-dd) by which sales must respond. */
+  responseDueDate?: string | null;
+  /** Still open and past its response date. */
+  responseOverdue?: boolean;
   convertedAt?: string;
   convertedCustomerId?: number;
   convertedOpportunityId?: number;
@@ -49,6 +53,7 @@ export interface CreateLeadRequest {
   segmentCode: string;
   ownerUserId?: number | null;
   note?: string;
+  responseDueDate?: string | null;
 }
 
 export interface UpdateLeadRequest {
@@ -62,6 +67,7 @@ export interface UpdateLeadRequest {
   status: LeadStatus;
   ownerUserId?: number | null;
   note?: string;
+  responseDueDate?: string | null;
 }
 
 export interface ConvertLeadRequest {

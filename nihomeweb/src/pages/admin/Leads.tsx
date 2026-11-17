@@ -89,6 +89,7 @@ const emptyCreate: CreateLeadRequest = {
   sourceCode: "",
   segmentCode: "unclassified",
   note: "",
+  responseDueDate: "",
 };
 
 const toLeadEditForm = (lead: LeadResponse): UpdateLeadRequest => ({
@@ -102,6 +103,7 @@ const toLeadEditForm = (lead: LeadResponse): UpdateLeadRequest => ({
   status: lead.status,
   ownerUserId: lead.ownerUserId ?? null,
   note: lead.note ?? "",
+  responseDueDate: lead.responseDueDate ?? "",
 });
 
 const AdminLeads = () => {
@@ -283,6 +285,7 @@ const AdminLeads = () => {
         sourceCode: createForm.sourceCode,
         segmentCode: createForm.segmentCode,
         note: createForm.note?.trim() || undefined,
+        responseDueDate: createForm.responseDueDate || undefined,
       });
       toast({ title: t("leads.created") });
       setCreating(false);
@@ -322,6 +325,7 @@ const AdminLeads = () => {
         phone: editForm.phone?.trim() || undefined,
         email: editForm.email?.trim() || undefined,
         note: editForm.note?.trim() || undefined,
+        responseDueDate: editForm.responseDueDate || null,
       });
       setDetail(data);
       setEditForm(toLeadEditForm(data));
@@ -660,6 +664,11 @@ const AdminLeads = () => {
                       />
                       {t(`leads.status.${lead.status}`)}
                     </Badge>
+                    {lead.responseOverdue && (
+                      <Badge variant="destructive" className="shrink-0 whitespace-nowrap">
+                        {t("leads.responseOverdue")}
+                      </Badge>
+                    )}
                   </header>
 
                   <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
@@ -785,6 +794,11 @@ const AdminLeads = () => {
                           />
                           {t(`leads.status.${lead.status}`)}
                         </Badge>
+                        {lead.responseOverdue && (
+                          <Badge variant="destructive" className="ml-1 whitespace-nowrap">
+                            {t("leads.responseOverdue")}
+                          </Badge>
+                        )}
                       </td>
                       {canSeeAll && (
                         <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
@@ -925,6 +939,19 @@ const AdminLeads = () => {
                   ))}
                 </SelectContent>
               </Select>
+            </FieldScope>
+            <FieldScope>
+              <Label htmlFor="lead-create-response-due">{t("leads.field.responseDueDate")}</Label>
+              <Input
+                id="lead-create-response-due"
+                type="date"
+                value={createForm.responseDueDate ?? ""}
+                onChange={(e) => setCreateForm({ ...createForm, responseDueDate: e.target.value })}
+                aria-describedby="lead-create-response-due-help"
+              />
+              <p id="lead-create-response-due-help" className="text-xs text-muted-foreground">
+                {t("leads.field.responseDueDateHelp")}
+              </p>
             </FieldScope>
             <FieldScope>
               <Label>{t("leads.field.note")}</Label>
@@ -1080,6 +1107,23 @@ const AdminLeads = () => {
                         </SelectContent>
                       </Select>
                     </FieldScope>
+                    <FieldScope>
+                      <Label htmlFor="lead-edit-response-due">
+                        {t("leads.field.responseDueDate")}
+                      </Label>
+                      <Input
+                        id="lead-edit-response-due"
+                        type="date"
+                        value={editForm.responseDueDate ?? ""}
+                        onChange={(event) =>
+                          setEditForm({ ...editForm, responseDueDate: event.target.value })
+                        }
+                        aria-describedby="lead-edit-response-due-help"
+                      />
+                      <p id="lead-edit-response-due-help" className="text-xs text-muted-foreground">
+                        {t("leads.field.responseDueDateHelp")}
+                      </p>
+                    </FieldScope>
                     <FieldScope className="sm:col-span-2">
                       <Label>{t("leads.field.note")}</Label>
                       <Textarea
@@ -1115,6 +1159,17 @@ const AdminLeads = () => {
                     </div>
                     <div>{formatDateTime(detail.createdAt)}</div>
                   </div>
+                  {detail.responseDueDate && (
+                    <div>
+                      <div className="text-xs text-muted-foreground">
+                        {t("leads.field.responseDueDate")}
+                      </div>
+                      <div className={cn(detail.responseOverdue && "font-medium text-destructive")}>
+                        {formatDate(detail.responseDueDate)}
+                        {detail.responseOverdue && ` · ${t("leads.responseOverdue")}`}
+                      </div>
+                    </div>
+                  )}
                   {detail.note && (
                     <div className="col-span-2">
                       <div className="text-xs text-muted-foreground">{t("leads.field.note")}</div>

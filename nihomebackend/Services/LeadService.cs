@@ -172,6 +172,7 @@ public class LeadService(
             Status = LeadStatus.New,
             OwnerUserId = ownerId,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
+            ResponseDueDate = request.ResponseDueDate,
             CreatedAt = now,
             CreatedByUserId = callerUserId,
             UpdatedAt = now,
@@ -265,6 +266,12 @@ public class LeadService(
         lead.Status = request.Status;
         lead.OwnerUserId = newOwnerId;
         lead.Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim();
+        if (lead.ResponseDueDate != request.ResponseDueDate)
+        {
+            // A new date deserves its own reminder.
+            lead.ResponseDueDate = request.ResponseDueDate;
+            lead.ResponseDueNotifiedAt = null;
+        }
         lead.UpdatedAt = DateTime.UtcNow;
         lead.UpdatedByUserId = callerUserId;
 
@@ -991,6 +998,8 @@ public class LeadService(
             OwnerUserId = lead.OwnerUserId,
             OwnerName = ownerName,
             Note = lead.Note,
+            ResponseDueDate = lead.ResponseDueDate,
+            ResponseOverdue = LeadResponseDeadline.IsOverdue(lead.Status, lead.ResponseDueDate, LeadResponseDeadline.VietnamToday()),
             ConvertedAt = lead.ConvertedAt,
             ConvertedCustomerId = lead.ConvertedCustomerId,
             ConvertedOpportunityId = lead.ConvertedOpportunityId,

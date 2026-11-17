@@ -562,6 +562,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.HasIndex(l => l.SourceCode);
             b.HasIndex(l => l.SegmentCode);
             b.HasIndex(l => l.CreatedAt);
+            b.HasIndex(l => new { l.ResponseDueDate, l.ResponseDueNotifiedAt });
             b.HasOne(l => l.Owner)
                 .WithMany()
                 .HasForeignKey(l => l.OwnerUserId)
