@@ -14,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
-import { PageLoading, PageError } from "@/components/PageState";
+import { InlineWarning, PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -182,9 +182,12 @@ const AdminTenders = () => {
       : customers;
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [preparers, setPreparers] = useState<UserListItemResponse[]>([]);
+  const [lookupFailed, setLookupFailed] = useState(false);
+  const [lookupRevision, setLookupRevision] = useState(0);
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setLookupFailed(false);
       try {
         const [customerResponse, projectResponse] = await Promise.all([
           collectLookupPages((page) => adminApi.listCustomers({ pageSize: 200, page })),
@@ -195,21 +198,21 @@ const AdminTenders = () => {
           setProjects(projectResponse.data.items);
         }
       } catch {
-        /* non-fatal — filter/form dropdowns just stay empty */
+        if (!cancelled) setLookupFailed(true);
       }
       if (canPickPreparer) {
         try {
           const { data } = await adminApi.getPeopleDirectory();
           if (!cancelled) setPreparers(data.items.filter((u) => u.isActive));
         } catch {
-          /* non-fatal — preparer field will be hidden */
+          if (!cancelled) setLookupFailed(true);
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [canPickPreparer]);
+  }, [canPickPreparer, lookupRevision]);
   const customerOptions = useMemo(
     () => customers.map((c) => ({ value: String(c.id), label: c.name })),
     [customers],
@@ -458,6 +461,13 @@ const AdminTenders = () => {
             )}
           </div>
         </header>
+
+        {lookupFailed && (
+          <InlineWarning
+            message={t("common.lookupLoadFailed")}
+            onRetry={() => setLookupRevision((value) => value + 1)}
+          />
+        )}
 
         <TenderStatistics onInspect={inspectReport} refreshToken={statisticsRevision} />
 

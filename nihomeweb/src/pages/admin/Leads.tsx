@@ -14,7 +14,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { validateContact } from "@/lib/validation";
-import { PageLoading, PageError } from "@/components/PageState";
+import { InlineWarning, PageLoading, PageError } from "@/components/PageState";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -192,9 +192,12 @@ const AdminLeads = () => {
     void fetchList();
   }, [fetchList]);
 
+  const [lookupFailed, setLookupFailed] = useState(false);
+  const [lookupRevision, setLookupRevision] = useState(0);
   useEffect(() => {
     let cancelled = false;
     (async () => {
+      setLookupFailed(false);
       try {
         const [sourceResponse, segmentResponse] = await Promise.all([
           adminApi.getMasterDataOptions("customer_source", lang),
@@ -205,13 +208,14 @@ const AdminLeads = () => {
           setSegments(segmentResponse.data);
         }
       } catch {
-        // Non-fatal — form will still show but with an empty source dropdown.
+        // The list still works; tell the user why source/segment pickers are empty.
+        if (!cancelled) setLookupFailed(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, lookupRevision]);
 
   const openDetail = async (id: number) => {
     setDetailLoading(true);
@@ -512,6 +516,13 @@ const AdminLeads = () => {
             </Button>
           </div>
         </header>
+
+        {lookupFailed && (
+          <InlineWarning
+            message={t("common.lookupLoadFailed")}
+            onRetry={() => setLookupRevision((value) => value + 1)}
+          />
+        )}
 
         <section className="grid gap-3 rounded-lg border bg-card p-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
           <div>

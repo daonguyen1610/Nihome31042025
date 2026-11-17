@@ -32,7 +32,7 @@ import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { formatVnd, parseVnd } from "@/lib/numberFormat";
 import { isOpportunityOverdue } from "@/lib/opportunityDates";
 import { isContractReadyQuote } from "@/lib/contractQuotes";
-import { PageLoading, PageError } from "@/components/PageState";
+import { InlineWarning, PageLoading, PageError } from "@/components/PageState";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Button } from "@/components/ui/button";
@@ -269,22 +269,29 @@ const AdminOpportunities = () => {
     else void fetchPipeline();
   }, [view, fetchList, fetchPipeline]);
 
+  const [lookupFailed, setLookupFailed] = useState(false);
+  const [lookupRevision, setLookupRevision] = useState(0);
   useEffect(() => {
     let cancelled = false;
+    // Each lookup is optional for the page, but an empty picker must be explained.
+    const markFailed = () => {
+      if (!cancelled) setLookupFailed(true);
+    };
     (async () => {
+      setLookupFailed(false);
       try {
         const { data } = await collectLookupPages((page) =>
           adminApi.listCustomers({ pageSize: 100, page }),
         );
         if (!cancelled) setCustomers(data.items);
       } catch {
-        /* non-fatal — dropdown will just be empty */
+        markFailed();
       }
       try {
         const { data } = await adminApi.getMasterDataOptions("opportunity_lost_reason", lang);
         if (!cancelled) setLostReasons(data);
       } catch {
-        /* non-fatal */
+        markFailed();
       }
       // Owner picker is only useful for callers that can reassign
       // (canSeeAll). For plain sales the field is hidden — no need to fetch.
@@ -293,14 +300,14 @@ const AdminOpportunities = () => {
           const { data } = await adminApi.listOpportunityOwnerOptions();
           if (!cancelled) setSalesUsers(data);
         } catch {
-          /* non-fatal */
+          markFailed();
         }
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [canSeeAll, lang]);
+  }, [canSeeAll, lang, lookupRevision]);
 
   const customerLabel = useMemo(() => {
     const map = new Map<number, string>();
@@ -788,6 +795,13 @@ const AdminOpportunities = () => {
             )}
           </div>
         </header>
+
+        {lookupFailed && (
+          <InlineWarning
+            message={t("common.lookupLoadFailed")}
+            onRetry={() => setLookupRevision((value) => value + 1)}
+          />
+        )}
 
         <section className="grid items-end gap-3 rounded-lg border bg-card p-3 md:grid-cols-7">
           <div className="md:col-span-2">
