@@ -222,7 +222,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RfqIdempotencyGuard>();
         services.AddHostedService<RfqOverdueWorker>();
         services.AddScoped<LeadResponseReminderService>();
-        services.AddHostedService<LeadResponseReminderWorker>();
+        services.AddScoped<CustomerFollowUpReminderService>();
+        services.AddHostedService<CrmReminderWorker>();
         services.AddScoped<IMaterialAlertService, MaterialAlertService>();
         services.AddScoped<IFinanceService, FinanceService>();
         services.AddScoped<IAcceptanceRecordService, AcceptanceRecordService>();

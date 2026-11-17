@@ -103,5 +103,8 @@
   { "key": "customers.duplicate.saveAnyway", "category": "customers", "vi": "Vẫn lưu", "en": "Save anyway", "zh": "仍然保存", "ja": "保存する" },
   { "key": "customers.contact.nameDerived", "category": "customers", "vi": "Tên liên hệ lấy theo tên khách hàng (hoặc người đại diện nếu là doanh nghiệp).", "en": "The contact name follows the customer name, or the representative for a company.", "zh": "联系人姓名取自客户名称；企业客户则取法定代表人。", "ja": "担当者名は顧客名（法人の場合は代表者）を使用します。" },
   { "key": "customers.tab.related.projects", "category": "customers", "vi": "Dự án vận hành", "en": "Operational projects", "zh": "运营项目", "ja": "運用プロジェクト" },
-  { "key": "customers.tab.related.projects.empty", "category": "customers", "vi": "Khách hàng chưa có dự án vận hành.", "en": "This customer has no operational projects.", "zh": "该客户尚无运营项目。", "ja": "この顧客には運用プロジェクトがありません。" }
+  { "key": "customers.tab.related.projects.empty", "category": "customers", "vi": "Khách hàng chưa có dự án vận hành.", "en": "This customer has no operational projects.", "zh": "该客户尚无运营项目。", "ja": "この顧客には運用プロジェクトがありません。" },
+  {"key": "customers.activity.followUpDate", "category": "customers", "vi": "Ngày nhắc gọi lại/thăm", "en": "Follow-up date", "zh": "回访提醒日期", "ja": "フォローアップ日"},
+  {"key": "customers.activity.followUpHelp", "category": "customers", "vi": "Không bắt buộc. Đến ngày này, người ghi sẽ nhận thông báo nhắc.", "en": "Optional. You get a reminder on this date.", "zh": "选填。到期当天您会收到提醒。", "ja": "任意。この日に通知が届きます。"},
+  {"key": "customers.activity.followUpOn", "category": "customers", "vi": "Nhắc gọi lại/thăm: {date}", "en": "Follow up on {date}", "zh": "回访提醒：{date}", "ja": "フォローアップ：{date}"}
 ]

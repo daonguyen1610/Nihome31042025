@@ -200,7 +200,7 @@ public class LeadsControllerTests : IntegrationTestBase
     public async Task ResponseDueDate_PersistsFlagsOverdueAndResetsReminderWhenChanged()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        var yesterday = LeadResponseDeadline.VietnamToday().AddDays(-1);
+        var yesterday = DisplaySettings.VietnamToday().AddDays(-1);
 
         var created = await Client.PostAsJsonAsync("/api/leads", new
         {

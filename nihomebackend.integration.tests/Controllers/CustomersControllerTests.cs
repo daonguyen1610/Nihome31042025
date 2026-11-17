@@ -7,6 +7,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using NihomeBackend.Models;
+using NihomeBackend.Services;
 
 namespace NihomeBackend.IntegrationTests.Controllers;
 
@@ -1050,6 +1051,36 @@ public class CustomersControllerTests : IntegrationTestBase
 
         var detail = await Client.GetAsync($"/api/customers/{id}");
         (await ReadJsonAsync(detail)).GetProperty("activities").GetArrayLength().Should().Be(1);
+    }
+
+    [Fact]
+    public async Task Activity_FollowUpDate_RejectsPastDateAndShowsOnDetail()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var id = await CreateIndividualCustomerAsync("Chị Hạnh - nhà phố Gò Vấp");
+        var today = DisplaySettings.VietnamToday();
+
+        var past = await Client.PostAsJsonAsync($"/api/customers/{id}/activities", new
+        {
+            type = "Call",
+            content = "Gọi lại báo giá cải tạo",
+            followUpDate = today.AddDays(-1),
+        });
+        past.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await past.Content.ReadAsStringAsync()).Should().Contain("Ngày nhắc");
+
+        var next = today.AddDays(3);
+        var saved = await Client.PostAsJsonAsync($"/api/customers/{id}/activities", new
+        {
+            type = "Call",
+            content = "Gọi lại báo giá cải tạo",
+            followUpDate = next,
+        });
+        saved.StatusCode.Should().Be(HttpStatusCode.Created);
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/customers/{id}"));
+        var activities = detail.GetProperty("activities");
+        activities.GetArrayLength().Should().Be(1);
+        activities[0].GetProperty("followUpDate").GetString().Should().Be(next.ToString("yyyy-MM-dd"));
     }
 
     [Fact]
