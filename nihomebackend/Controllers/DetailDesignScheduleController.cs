@@ -160,6 +160,32 @@ public sealed class DetailDesignScheduleController(
         }
     }
 
+    [HttpPost("tasks/{taskId:int}/progress")]
+    [RequirePermission("operations.projects", "view")]
+    [Idempotency("operations.projects.design-schedule.tasks.progress", requireKey: true)]
+    public async Task<ActionResult<DesignScheduleTaskResponse>> UpdateTaskProgress(
+        int projectId,
+        int taskId,
+        [FromBody] UpdateDesignScheduleTaskProgressRequest request,
+        CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            var result = await service.UpdateTaskProgressAsync(projectId, taskId, request, userId.Value, ct);
+            if (result is null) return NotFound();
+            Audit("design-schedule.task.progress", projectId, taskId, result);
+            CrmConcurrency.SetResponseEntityTag(Response, result.RowVersion);
+            return Ok(result);
+        }
+        catch (DesignScheduleOperationException exception)
+        {
+            return BadRequest(new { message = exception.Message });
+        }
+    }
+
     [HttpPost("tasks/{taskId:int}/complete")]
     [RequirePermission("operations.projects", "view")]
     [Idempotency("operations.projects.design-schedule.tasks.complete", requireKey: true)]

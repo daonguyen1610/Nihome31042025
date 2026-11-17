@@ -121,6 +121,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     private readonly int activeMemberId;
     private readonly int approverMemberId;
     private readonly int otherProjectTaskId;
+    private readonly int assigneeUserId;
 
     public DetailDesignScheduleServiceTests()
     {
@@ -179,6 +180,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         activeMemberId = member.Id;
         approverMemberId = approver.Id;
         otherProjectTaskId = otherTask.Id;
+        assigneeUserId = memberUser.Id;
         var access = new Mock<IProjectAccessService>();
         access.Setup(item => item.CanViewOperationalProjectAsync(callerId, projectId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
@@ -378,7 +380,91 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         Assert.Empty(db.DesignScheduleTasks.Where(item => item.OperationalProjectId == projectId));
     }
 
+    [Fact]
+    public async Task UpdateTaskProgressAsync_AssigneeStartsThenReportsProgress()
+    {
+        var task = AddOwnTask("PROGRESS-001");
+
+        var started = await service.UpdateTaskProgressAsync(projectId, task.Id,
+            new UpdateDesignScheduleTaskProgressRequest { ProgressPercent = 0, RowVersion = Version(task) },
+            assigneeUserId, CancellationToken.None);
+        var updated = await service.UpdateTaskProgressAsync(projectId, task.Id,
+            new UpdateDesignScheduleTaskProgressRequest { ProgressPercent = 40, RowVersion = started!.RowVersion },
+            assigneeUserId, CancellationToken.None);
+
+        Assert.Equal("InProgress", updated!.Status);
+        Assert.Equal(40, updated.ProgressPercent);
+        Assert.NotNull(updated.ActualStart);
+        var actions = await db.DesignScheduleHistory
+            .Where(item => item.EntityType == "Task" && item.EntityId == task.Id)
+            .Select(item => item.Action).ToListAsync();
+        Assert.Contains("Started", actions);
+        Assert.Contains("ProgressUpdated", actions);
+    }
+
+    [Fact]
+    public async Task UpdateTaskProgressAsync_RejectsSomeoneOtherThanAssigneeWithoutChangingTask()
+    {
+        var task = AddOwnTask("PROGRESS-002");
+
+        var error = await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
+            service.UpdateTaskProgressAsync(projectId, task.Id,
+                new UpdateDesignScheduleTaskProgressRequest { ProgressPercent = 30, RowVersion = Version(task) },
+                callerId, CancellationToken.None));
+
+        Assert.Contains("người phụ trách", error.Message);
+        var stored = await db.DesignScheduleTasks.AsNoTracking().SingleAsync(item => item.Id == task.Id);
+        Assert.Equal(DesignScheduleStatus.NotStarted, stored.Status);
+        Assert.Equal(0, stored.ProgressPercent);
+    }
+
+    [Theory]
+    [InlineData(DesignScheduleStatus.InProgress, DesignTaskApprovalStatus.Pending, 50, "chờ duyệt")]
+    [InlineData(DesignScheduleStatus.Completed, DesignTaskApprovalStatus.Approved, 50, "đã được duyệt")]
+    [InlineData(DesignScheduleStatus.OnHold, DesignTaskApprovalStatus.NotSubmitted, 50, "tạm dừng")]
+    [InlineData(DesignScheduleStatus.InProgress, DesignTaskApprovalStatus.NotSubmitted, 100, "Hoàn thành")]
+    public async Task UpdateTaskProgressAsync_RejectsLockedTasksAndFullProgress(
+        DesignScheduleStatus status,
+        DesignTaskApprovalStatus approval,
+        int progress,
+        string expectedMessage)
+    {
+        var task = AddOwnTask($"PROGRESS-{status}-{approval}-{progress}", status, approval);
+
+        var error = await Assert.ThrowsAsync<DesignScheduleOperationException>(() =>
+            service.UpdateTaskProgressAsync(projectId, task.Id,
+                new UpdateDesignScheduleTaskProgressRequest { ProgressPercent = progress, RowVersion = Version(task) },
+                assigneeUserId, CancellationToken.None));
+
+        Assert.Contains(expectedMessage, error.Message);
+        var stored = await db.DesignScheduleTasks.AsNoTracking().SingleAsync(item => item.Id == task.Id);
+        Assert.Equal(status, stored.Status);
+    }
+
     public void Dispose() => db.Dispose();
+
+    private DesignScheduleTask AddOwnTask(
+        string code,
+        DesignScheduleStatus status = DesignScheduleStatus.NotStarted,
+        DesignTaskApprovalStatus approval = DesignTaskApprovalStatus.NotSubmitted)
+    {
+        var task = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, code);
+        task.Status = status;
+        task.ApprovalStatus = approval;
+        if (status != DesignScheduleStatus.NotStarted)
+        {
+            task.ActualStart = new DateOnly(2026, 9, 1);
+            task.ProgressPercent = status == DesignScheduleStatus.Completed ? 100 : 20;
+        }
+        if (status == DesignScheduleStatus.Completed) task.ActualEnd = new DateOnly(2026, 9, 2);
+        db.Add(task);
+        db.SaveChanges();
+        db.ChangeTracker.Clear();
+        return task;
+    }
+
+    private string Version(DesignScheduleTask task) => Convert.ToBase64String(
+        db.DesignScheduleTasks.AsNoTracking().Single(item => item.Id == task.Id).RowVersion);
 
     private ApplicationUser User(string phone, bool active)
     {

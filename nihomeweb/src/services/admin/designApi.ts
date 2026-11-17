@@ -168,6 +168,23 @@ export const designApi = {
         },
       },
     ),
+  updateDesignScheduleTaskProgress: (
+    projectId: number,
+    taskId: number,
+    progressPercent: number,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<DesignScheduleTaskResponse>(
+      `/operational-projects/${projectId}/design-schedule/tasks/${taskId}/progress`,
+      { progressPercent, rowVersion },
+      {
+        headers: {
+          ...withIdempotencyKey(idempotencyKey).headers,
+          ...withIfMatch(rowVersion).headers,
+        },
+      },
+    ),
   completeDesignScheduleTask: (
     projectId: number,
     taskId: number,

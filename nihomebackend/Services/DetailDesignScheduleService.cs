@@ -116,6 +116,7 @@ public interface IDetailDesignScheduleService
     Task<DesignSchedulePhaseResponse?> UpdatePhaseAsync(int projectId, int phaseId, UpsertDesignSchedulePhaseRequest request, int callerUserId, CancellationToken ct);
     Task<DesignScheduleTaskResponse?> CreateTaskAsync(int projectId, int phaseId, UpsertDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct);
     Task<DesignScheduleTaskResponse?> UpdateTaskAsync(int projectId, int taskId, UpsertDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct);
+    Task<DesignScheduleTaskResponse?> UpdateTaskProgressAsync(int projectId, int taskId, UpdateDesignScheduleTaskProgressRequest request, int callerUserId, CancellationToken ct);
     Task<DesignScheduleTaskResponse?> CompleteTaskAsync(int projectId, int taskId, string rowVersion, int callerUserId, CancellationToken ct);
     Task<DesignScheduleTaskResponse?> ReviewTaskAsync(int projectId, int taskId, ReviewDesignScheduleTaskRequest request, int callerUserId, CancellationToken ct);
 }
@@ -418,6 +419,48 @@ public sealed class DetailDesignScheduleService(
         await AddHistoryAsync(task, "Task", task.Id, "Updated", callerUserId, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         return response;
+    }
+
+    public async Task<DesignScheduleTaskResponse?> UpdateTaskProgressAsync(
+        int projectId,
+        int taskId,
+        UpdateDesignScheduleTaskProgressRequest request,
+        int callerUserId,
+        CancellationToken ct)
+    {
+        await using var transaction = await BeginScheduleMutationAsync(projectId, ct);
+        var task = await db.DesignScheduleTasks
+            .Include(item => item.AssigneeMember)
+            .SingleOrDefaultAsync(item => item.Id == taskId && item.OperationalProjectId == projectId, ct);
+        if (task is null) return null;
+        if (task.AssigneeMember.UserId != callerUserId)
+            throw new DesignScheduleOperationException(
+                "Chỉ người phụ trách đầu việc được tự bắt đầu và cập nhật tiến độ. Người quản lý lịch cập nhật tại nút Sửa.");
+        await EnsureActiveAssignmentAsync(task, ct);
+        if (task.ApprovalStatus == DesignTaskApprovalStatus.Pending)
+            throw new DesignScheduleOperationException(
+                "Đầu việc đang chờ duyệt nên chưa cập nhật được tiến độ. Hãy chờ người duyệt phản hồi.");
+        if (task.ApprovalStatus == DesignTaskApprovalStatus.Approved)
+            throw new DesignScheduleOperationException("Đầu việc đã được duyệt nên không cập nhật tiến độ được nữa.");
+        if (task.Status is not (DesignScheduleStatus.NotStarted or DesignScheduleStatus.InProgress))
+            throw new DesignScheduleOperationException(
+                "Đầu việc đang tạm dừng hoặc chờ phòng ban khác. Người quản lý lịch cần mở lại trước khi bạn tiếp tục.");
+        if (request.ProgressPercent is < 0 or > 99)
+            throw new DesignScheduleOperationException(
+                "Tiến độ phải từ 0 đến 99%. Khi xong việc, bấm Hoàn thành & gửi duyệt.");
+
+        CrmConcurrency.Apply(db, task, request.RowVersion);
+        var now = DateTime.UtcNow;
+        var started = task.Status == DesignScheduleStatus.NotStarted;
+        task.Status = DesignScheduleStatus.InProgress;
+        task.ActualStart ??= DateOnly.FromDateTime(now);
+        task.ProgressPercent = request.ProgressPercent;
+        task.UpdatedAt = now;
+        task.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        await AddHistoryAsync(task, "Task", task.Id, started ? "Started" : "ProgressUpdated", callerUserId, ct);
+        if (transaction is not null) await transaction.CommitAsync(ct);
+        return await MapTaskAsync(task.Id, ct);
     }
 
     public async Task<DesignScheduleTaskResponse?> CompleteTaskAsync(

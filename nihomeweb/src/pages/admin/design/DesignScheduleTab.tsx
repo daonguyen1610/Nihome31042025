@@ -14,6 +14,7 @@ import {
   Filter,
   Loader2,
   Pencil,
+  Play,
   Plus,
   RefreshCw,
   Send,
@@ -36,6 +37,7 @@ import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { useAppSelector } from "@/store";
+import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
   DESIGN_SCHEDULE_PHASE_CODES,
@@ -90,9 +92,13 @@ const statusClass: Record<string, string> = {
   WaitingForDepartment: "border-violet-200 bg-violet-50 text-violet-700",
 };
 
+const isValidProgress = (value: string) =>
+  /^\d{1,2}$/.test(value.trim()) && Number(value) >= 0 && Number(value) <= 99;
+
 export const DesignScheduleTab = ({ project }: Props) => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
+  const { toast } = useToast();
   const currentUserId = useAppSelector((state) => state.auth.user?.userId ?? null);
   const operationalProjectId = project.operationalProjectId;
   const [schedule, setSchedule] = useState<DesignScheduleResponse | null>(null);
@@ -111,6 +117,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
   const [initialPhaseId, setInitialPhaseId] = useState<number | undefined>();
   const [busyTaskId, setBusyTaskId] = useState<number | null>(null);
   const [reviewReasons, setReviewReasons] = useState<Record<number, string>>({});
+  const [progressDrafts, setProgressDrafts] = useState<Record<number, string>>({});
   const initializeKey = useRef(newIdempotencyKey());
 
   const load = useCallback(async () => {
@@ -269,6 +276,38 @@ export const DesignScheduleTab = ({ project }: Props) => {
           task.rowVersion,
           key,
         );
+      await load();
+    } catch (reason) {
+      setError(uiError(reason));
+    } finally {
+      setBusyTaskId(null);
+    }
+  };
+
+  const reportProgress = async (task: DesignScheduleTaskResponse, progressPercent: number) => {
+    setBusyTaskId(task.id);
+    setError(null);
+    try {
+      await adminApi.updateDesignScheduleTaskProgress(
+        operationalProjectId,
+        task.id,
+        progressPercent,
+        task.rowVersion,
+        newIdempotencyKey(),
+      );
+      setProgressDrafts((current) => {
+        const next = { ...current };
+        delete next[task.id];
+        return next;
+      });
+      toast({
+        title:
+          task.status === "NotStarted"
+            ? t("designProjects.schedule.progress.started")
+            : t("designProjects.schedule.progress.saved", {
+                percent: String(progressPercent),
+              }),
+      });
       await load();
     } catch (reason) {
       setError(uiError(reason));
@@ -824,16 +863,77 @@ export const DesignScheduleTab = ({ project }: Props) => {
                   ) : null}
                   <Progress className="mt-3 h-1.5" value={task.progressPercent} />
                   {isAssignee &&
+                  task.status === "NotStarted" &&
+                  task.approvalStatus !== "Pending" &&
+                  task.approvalStatus !== "Approved" ? (
+                    <div className="mt-3 space-y-1">
+                      <Button
+                        className="min-h-11"
+                        disabled={busyTaskId === task.id}
+                        onClick={() => void reportProgress(task, 0)}
+                      >
+                        <Play className="mr-1.5 h-4 w-4" />
+                        {t("designProjects.schedule.action.start")}
+                      </Button>
+                      <p className="text-xs text-muted-foreground">
+                        {t("designProjects.schedule.progress.startHelp")}
+                      </p>
+                    </div>
+                  ) : null}
+                  {isAssignee &&
                   task.status === "InProgress" &&
                   task.approvalStatus !== "Pending" ? (
-                    <Button
-                      className="mt-3 min-h-11"
-                      disabled={busyTaskId === task.id}
-                      onClick={() => void mutateTask(task, "complete")}
-                    >
-                      <Send className="mr-1.5 h-4 w-4" />
-                      {t("designProjects.schedule.action.complete")}
-                    </Button>
+                    <div className="mt-3 flex flex-wrap items-end gap-2">
+                      <div className="space-y-1">
+                        <Label htmlFor={`task-${task.id}-progress`}>
+                          {t("designProjects.schedule.progress.label")}
+                        </Label>
+                        <Input
+                          id={`task-${task.id}-progress`}
+                          type="number"
+                          inputMode="numeric"
+                          min={0}
+                          max={99}
+                          className="h-11 w-28"
+                          value={progressDrafts[task.id] ?? String(task.progressPercent)}
+                          onChange={(event) =>
+                            setProgressDrafts((current) => ({
+                              ...current,
+                              [task.id]: event.target.value,
+                            }))
+                          }
+                        />
+                      </div>
+                      <Button
+                        variant="outline"
+                        className="min-h-11"
+                        disabled={
+                          busyTaskId === task.id ||
+                          !isValidProgress(progressDrafts[task.id] ?? String(task.progressPercent))
+                        }
+                        onClick={() =>
+                          void reportProgress(
+                            task,
+                            Number(progressDrafts[task.id] ?? task.progressPercent),
+                          )
+                        }
+                      >
+                        {t("designProjects.schedule.action.saveProgress")}
+                      </Button>
+                      <Button
+                        className="min-h-11"
+                        disabled={busyTaskId === task.id}
+                        onClick={() => void mutateTask(task, "complete")}
+                      >
+                        <Send className="mr-1.5 h-4 w-4" />
+                        {t("designProjects.schedule.action.complete")}
+                      </Button>
+                      {!isValidProgress(progressDrafts[task.id] ?? String(task.progressPercent)) ? (
+                        <p className="w-full text-xs text-destructive">
+                          {t("designProjects.schedule.progress.invalid")}
+                        </p>
+                      ) : null}
+                    </div>
                   ) : null}
                   {isApprover && task.approvalStatus === "Pending" ? (
                     <div className="mt-3 space-y-2 rounded-md border bg-muted/30 p-3">

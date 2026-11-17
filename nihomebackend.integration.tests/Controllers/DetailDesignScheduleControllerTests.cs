@@ -810,6 +810,45 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
         retry.StatusCode.Should().Be(HttpStatusCode.OK, await retry.Content.ReadAsStringAsync());
     }
 
+    [Fact]
+    public async Task AssigneeProgress_OnlyAssigneeStartsAndReportsOwnTask()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phaseId = await PhaseIdAsync(fixture.ProjectId, "Concept");
+        using var created = await CreateTaskAsync(fixture, phaseId, TaskPayload("OWN-001", fixture.MemberId, 0));
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var task = await GetTaskAsync(fixture.ProjectId, "OWN-001");
+        var progressUri = $"/api/operational-projects/{fixture.ProjectId}/design-schedule/tasks/{task.Id}/progress";
+
+        using var byAdmin = await SendJsonWithKeyAsync(HttpMethod.Post, progressUri,
+            new { progressPercent = 10, rowVersion = task.RowVersion }, $"progress-admin-{Guid.NewGuid():N}");
+        byAdmin.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await byAdmin.Content.ReadAsStringAsync()).Should().Contain("người phụ trách");
+
+        await AuthenticateAsync("ARCHITECT");
+        using var fullProgress = await SendJsonWithKeyAsync(HttpMethod.Post, progressUri,
+            new { progressPercent = 100, rowVersion = task.RowVersion }, $"progress-full-{Guid.NewGuid():N}");
+        fullProgress.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        using var started = await SendJsonWithKeyAsync(HttpMethod.Post, progressUri,
+            new { progressPercent = 0, rowVersion = task.RowVersion }, $"progress-start-{Guid.NewGuid():N}");
+        started.StatusCode.Should().Be(HttpStatusCode.OK, await started.Content.ReadAsStringAsync());
+        var startedBody = await ReadJsonAsync(started);
+        startedBody.GetProperty("status").GetString().Should().Be("InProgress");
+        startedBody.GetProperty("actualStart").ValueKind.Should().NotBe(JsonValueKind.Null);
+
+        using var reported = await SendJsonWithKeyAsync(HttpMethod.Post, progressUri,
+            new { progressPercent = 60, rowVersion = startedBody.GetProperty("rowVersion").GetString() },
+            $"progress-report-{Guid.NewGuid():N}");
+        reported.StatusCode.Should().Be(HttpStatusCode.OK, await reported.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(reported)).GetProperty("progressPercent").GetInt32().Should().Be(60);
+
+        (await WithDbAsync(db => db.DesignScheduleHistory.CountAsync(item =>
+            item.EntityType == "Task" && item.EntityId == task.Id &&
+            (item.Action == "Started" || item.Action == "ProgressUpdated")))).Should().Be(2);
+    }
+
     private Task AuthenticateAsync(string roleCode) => AuthTestHelper.AuthenticateAsync(
         Client, client => AuthTestHelper.LoginAsRoleAsync(client, roleCode));
 
