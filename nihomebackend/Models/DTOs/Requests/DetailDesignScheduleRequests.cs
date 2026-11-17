@@ -124,6 +124,19 @@ public sealed class CompleteDesignScheduleTaskRequest
     public string? RowVersion { get; set; }
 }
 
+/// <summary>
+/// Lets the assignee start their own task and report progress. Reaching 100%
+/// still goes through the complete action so the approver is notified.
+/// </summary>
+public sealed class UpdateDesignScheduleTaskProgressRequest
+{
+    [Range(0, 99)]
+    public int ProgressPercent { get; set; }
+
+    [Required]
+    public string? RowVersion { get; set; }
+}
+
 public sealed class DesignScheduleQuery
 {
     public int? DesignProjectId { get; set; }
