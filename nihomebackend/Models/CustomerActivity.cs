@@ -22,9 +22,6 @@ public class CustomerActivity
     /// <summary>Optional date to call back or visit the customer ("nhắc gọi lại, nhắc thăm").</summary>
     public DateOnly? FollowUpDate { get; set; }
 
-    /// <summary>When the follow-up reminder was sent.</summary>
-    public DateTime? FollowUpNotifiedAt { get; set; }
-
     public int CreatedByUserId { get; set; }
     public ApplicationUser CreatedBy { get; set; } = null!;
 

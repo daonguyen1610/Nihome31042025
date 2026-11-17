@@ -1,3 +1,5 @@
+using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Data;
 using NihomeBackend.Models;
 
 namespace NihomeBackend.Services;
@@ -51,9 +53,13 @@ public static class DisplaySettings
 
     public static TimeZoneInfo VietnamTimeZone { get; } = CreateVietnamTimeZone();
 
-    /// <summary>Today's date in Vietnam, for business due dates.</summary>
-    public static DateOnly VietnamToday() =>
-        DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(DateTimeOffset.UtcNow, VietnamTimeZone).DateTime);
+    /// <summary>Today's date in the configured display time zone, so due dates match what users see.</summary>
+    public static async Task<DateOnly> TodayAsync(AppDbContext db, CancellationToken ct)
+    {
+        var timeZoneId = await db.SiteSettings.AsNoTracking()
+            .Select(settings => settings.DisplayTimeZoneId).FirstOrDefaultAsync(ct);
+        return DateOnly.FromDateTime(TodayIn(ResolveTimeZone(timeZoneId)));
+    }
 
     public static DateTime UtcNowIn(TimeZoneInfo zone) => TimeZoneInfo.ConvertTimeFromUtc(DateTime.UtcNow, zone);
 
