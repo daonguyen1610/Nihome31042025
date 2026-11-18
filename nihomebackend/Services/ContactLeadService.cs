@@ -21,7 +21,9 @@ public sealed class ContactLeadService(AppDbContext db, ILeadService leads)
         if (contact is null) return null;
         if (contact.LeadId is int existing) return new ContactLeadResult(existing, Created: false);
 
-        var note = $"Liên hệ từ website ngày {contact.CreatedAt:dd/MM/yyyy} – {contact.Subject}\n\n{contact.Message}";
+        var zone = await DisplaySettings.ZoneAsync(db, ct);
+        var receivedOn = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(contact.CreatedAt, DateTimeKind.Utc), zone);
+        var note = $"Liên hệ từ website ngày {receivedOn:dd/MM/yyyy} – {contact.Subject}\n\n{contact.Message}";
         var lead = await leads.CreateAsync(new CreateLeadRequest
         {
             Name = contact.Name,
