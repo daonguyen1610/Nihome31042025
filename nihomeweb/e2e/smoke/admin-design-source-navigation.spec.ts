@@ -47,7 +47,8 @@ test("Design overview opens its customer and contract and respects CRM permissio
   expect(granted).not.toContain("crm.contracts.view");
   await loginInBrowserAs(page, TEST_USERS.designLead);
   await page.goto(`/admin/design-projects/${leadProject.id}?tab=overview`);
-  await expect(page.getByRole("heading", { name: leadProject.projectCode })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: leadProject.name })).toBeVisible();
+  await expect(page.getByText(leadProject.projectCode, { exact: true })).toBeVisible();
   await expect(page.locator('a[href^="/admin/customers?open="]')).toHaveCount(0);
   await expect(page.locator('a[href^="/admin/contracts/"]')).toHaveCount(0);
 });

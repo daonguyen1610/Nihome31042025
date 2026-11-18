@@ -27,6 +27,7 @@ import { OperationalProjectTeamPanel } from "./design/DesignProjectTeamTab";
 import { DesignProjectDocumentsTab } from "./design/DesignProjectDocumentsTab";
 import { DesignScheduleTab } from "./design/DesignScheduleTab";
 import { DesignReviewsTab } from "./design/DesignReviewsTab";
+import { DesignNextStepPanel } from "./design/DesignNextStepPanel";
 import {
   formatDate as formatDateInZone,
   formatDateTime as formatDateTimeInZone,
@@ -135,14 +136,14 @@ const AdminDesignProjectDetail = () => {
     return [
       {
         label: t("designProjects.field.customer"),
-        value: project.customerName ?? `#${project.customerId}`,
+        value: project.customerName ?? "—",
         href: has(ADMIN_PERMS.customers)
           ? `/admin/customers?open=${project.customerId}`
           : undefined,
       },
       {
         label: t("designProjects.field.contract"),
-        value: project.contractNumber ?? (project.contractId ? `#${project.contractId}` : "—"),
+        value: project.contractNumber ?? "—",
         href:
           project.contractId && has(ADMIN_PERMS.contracts)
             ? `/admin/contracts/${project.contractId}`
@@ -236,10 +237,10 @@ const AdminDesignProjectDetail = () => {
             <div className="flex min-w-0 items-center gap-3">
               <PenTool className="h-6 w-6 text-muted-foreground" />
               <div className="min-w-0">
-                <h1 className="text-lg font-bold text-foreground md:text-2xl">
-                  {project.projectCode}
+                <h1 className="break-words text-lg font-bold text-foreground md:text-2xl">
+                  {project.name}
                 </h1>
-                <p className="text-sm text-muted-foreground">{project.name}</p>
+                <p className="text-sm text-muted-foreground">{project.projectCode}</p>
               </div>
             </div>
             <div className="flex flex-wrap items-center gap-2">
@@ -302,7 +303,8 @@ const AdminDesignProjectDetail = () => {
             <TabsTrigger value="docs">{t("designProjects.detail.tab.docs")}</TabsTrigger>
           </ScrollableTabsList>
 
-          <TabsContent value="overview">
+          <TabsContent value="overview" className="space-y-4">
+            <DesignNextStepPanel project={project} onOpenTab={selectTab} />
             <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
               <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 {infoRows.map((r) => (

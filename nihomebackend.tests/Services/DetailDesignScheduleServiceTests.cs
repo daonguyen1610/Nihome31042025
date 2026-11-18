@@ -277,6 +277,24 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task GetAsync_FiltersTasksWaitingForApproval()
+    {
+        var pending = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "WAIT-001");
+        pending.ApprovalStatus = DesignTaskApprovalStatus.Pending;
+        var approved = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "WAIT-002");
+        approved.ApprovalStatus = DesignTaskApprovalStatus.Approved;
+        db.DesignScheduleTasks.AddRange(pending, approved);
+        await db.SaveChangesAsync();
+
+        var response = await service.GetAsync(projectId,
+            new DesignScheduleQuery { PendingApprovalOnly = true }, callerId, default);
+
+        Assert.NotNull(response);
+        Assert.Equal(1, response.Tasks.TotalCount);
+        Assert.Equal("WAIT-001", Assert.Single(response.Tasks.Items).Code);
+    }
+
+    [Fact]
     public async Task CreateTaskAsync_RejectsCrossProjectPredecessorWithoutChangingState()
     {
         var request = Request(activeMemberId, approverMemberId);
