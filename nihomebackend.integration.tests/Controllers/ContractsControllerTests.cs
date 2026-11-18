@@ -1878,6 +1878,9 @@ public class ContractsControllerTests : IntegrationTestBase
             $"/api/contracts/{contractId}/transition",
             new { newStatus = "Signed" });
         missingTax.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // The message names the customer, what is missing and where to add it.
+        (await missingTax.Content.ReadAsStringAsync()).Should()
+            .Contain("Signing gate company").And.Contain("thiếu mã số thuế").And.Contain("trang Khách hàng");
         var afterMissingTax = await WithDbAsync(db => db.Contracts.AsNoTracking()
             .SingleAsync(item => item.Id == contractId));
         afterMissingTax.Status.Should().Be(ContractStatus.Draft);
@@ -1897,6 +1900,8 @@ public class ContractsControllerTests : IntegrationTestBase
             $"/api/contracts/{contractId}/transition",
             new { newStatus = "Signed" });
         missingRepresentative.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await missingRepresentative.Content.ReadAsStringAsync()).Should()
+            .Contain("thiếu người đại diện theo pháp luật").And.NotContain("mã số thuế");
         var afterMissingRepresentative = await WithDbAsync(db => db.Contracts.AsNoTracking()
             .SingleAsync(item => item.Id == contractId));
         afterMissingRepresentative.Status.Should().Be(ContractStatus.Draft);

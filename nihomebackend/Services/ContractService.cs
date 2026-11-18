@@ -1239,25 +1239,14 @@ public class ContractService(
         await ValidateClassificationAsync(req, ct);
         var customer = await db.Customers.AsNoTracking()
             .Where(customer => customer.Id == req.CustomerId)
-            .Select(customer => new
-            {
-                customer.OwnerUserId,
-                customer.Type,
-                customer.TaxId,
-                HasLegalRepresentative = customer.Contacts.Any(contact =>
-                    contact.IsLegalRepresentative),
-            })
+            .Select(customer => new { customer.OwnerUserId })
             .SingleOrDefaultAsync(ct);
         if (customer is null)
         {
             throw new ContractValidationException($"Khách hàng #{req.CustomerId} không tồn tại.");
         }
-        if (RequiresSignedCustomer(req.Status) && customer.Type == CustomerType.Company &&
-            (string.IsNullOrWhiteSpace(customer.TaxId) || !customer.HasLegalRepresentative))
-        {
-            throw new ContractValidationException(
-                "Khách hàng doanh nghiệp phải có mã số thuế và người đại diện hợp pháp trước khi ký Hợp đồng.");
-        }
+        if (RequiresSignedCustomer(req.Status))
+            await EnsureCustomerReadyForSignatureAsync(req.CustomerId, ct);
 
         if (req.OpportunityId.HasValue)
         {
@@ -1328,18 +1317,22 @@ public class ContractService(
             .Where(item => item.Id == customerId)
             .Select(item => new
             {
+                item.Name,
                 item.Type,
                 item.TaxId,
                 HasLegalRepresentative = item.Contacts.Any(contact =>
                     contact.IsLegalRepresentative),
             })
             .SingleAsync(ct);
-        if (customer.Type == CustomerType.Company &&
-            (string.IsNullOrWhiteSpace(customer.TaxId) || !customer.HasLegalRepresentative))
-        {
+        if (customer.Type != CustomerType.Company) return;
+        // Company prospects may be saved without these; they are required only to sign.
+        var missing = new List<string>();
+        if (string.IsNullOrWhiteSpace(customer.TaxId)) missing.Add("mã số thuế");
+        if (!customer.HasLegalRepresentative) missing.Add("người đại diện theo pháp luật");
+        if (missing.Count > 0)
             throw new ContractValidationException(
-                "Khách hàng doanh nghiệp phải có mã số thuế và người đại diện hợp pháp trước khi ký Hợp đồng.");
-        }
+                $"Chưa ký được Hợp đồng: khách hàng {customer.Name} còn thiếu {string.Join(" và ", missing)}. " +
+                "Bổ sung tại trang Khách hàng (Sửa thông tin) rồi ký lại.");
     }
 
     private static bool RequiresSignedCustomer(ContractStatus status) =>
