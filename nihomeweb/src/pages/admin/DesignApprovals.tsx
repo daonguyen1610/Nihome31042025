@@ -40,6 +40,8 @@ import {
 import { useApprovalList } from "./design/approvals/useApprovalList";
 
 const PAGE_SIZE = 20;
+/** Waiting this many days or more is shown as needing attention. */
+const LONG_WAIT_DAYS = 3;
 const REVIEW_STAGES: DesignReviewStage[] = ["Concept", "BasicDesign", "ShopDrawing"];
 type Tab = "tasks" | "reviews";
 type CommentFilter = "all" | "pending" | "done";
@@ -395,13 +397,20 @@ function InboxRow({
     <li className="rounded-lg border border-border bg-card p-4 shadow-sm">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
-          <h3 className="break-words font-semibold">{title}</h3>
+          <h2 className="break-words text-base font-semibold">{title}</h2>
           <p className="break-words text-sm text-muted-foreground">{dossier}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           {status}
           {waited != null && (
-            <span className="whitespace-nowrap text-sm text-muted-foreground">
+            <span
+              className={cn(
+                "whitespace-nowrap text-sm",
+                waited >= LONG_WAIT_DAYS
+                  ? "font-medium text-warning-strong"
+                  : "text-muted-foreground",
+              )}
+            >
               {waited === 0
                 ? t("designApprovals.waiting.today")
                 : t("designApprovals.waiting.days", { count: waited })}

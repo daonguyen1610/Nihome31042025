@@ -640,6 +640,14 @@
     "ja": "メッセージからリードを作成しました（流入元：Web サイト）。"
   },
   {
+    "key": "contacts.lead.linked",
+    "category": "contact",
+    "vi": "Đã tạo Lead từ liên hệ này. Phòng Kinh doanh theo dõi tiếp trên Lead.",
+    "en": "A lead was created from this message. Sales follows up on the lead.",
+    "zh": "已从此留言创建线索，销售部门在线索中继续跟进。",
+    "ja": "このメッセージからリードを作成済みです。営業部はリードで対応を続けます。"
+  },
+  {
     "key": "contacts.lead.exists",
     "category": "contact",
     "vi": "Liên hệ này đã có Lead, không tạo thêm.",

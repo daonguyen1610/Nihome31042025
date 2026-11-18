@@ -52,14 +52,14 @@ export function QuoteProgressPanel(props: QuoteProgressInput) {
                 className={cn(
                   "flex min-w-[8.5rem] flex-1 items-start gap-2 rounded-md border px-2 py-1.5 text-xs",
                   current && "border-primary bg-primary/5",
-                  done && "border-emerald-200 bg-emerald-50",
+                  done && "border-success/40 bg-success-soft",
                 )}
               >
                 <span
                   className={cn(
                     "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
                     current && "border-primary bg-primary text-primary-foreground",
-                    done && "border-emerald-600 bg-emerald-600 text-white",
+                    done && "border-success-strong bg-success-strong text-white",
                   )}
                   aria-hidden
                 >

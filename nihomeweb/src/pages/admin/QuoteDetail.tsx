@@ -1320,6 +1320,7 @@ const AdminQuoteDetail = () => {
                 </FormField>
                 <ReminderDaysField
                   id="quote-expiry-reminder-days"
+                  labelClassName={FORM_FIELD_LABEL}
                   value={form.expiryReminderDays ?? DEFAULT_REMINDER_DAYS}
                   disabled={!editing}
                   onChange={(days) => setForm({ ...form, expiryReminderDays: days })}
@@ -1873,9 +1874,11 @@ function workflowIcon(k: WorkflowKind) {
   }
 }
 
+const FORM_FIELD_LABEL = "text-xs uppercase tracking-wide text-muted-foreground";
+
 const FormField = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <FieldScope>
-    <Label className="text-xs uppercase tracking-wide text-muted-foreground">{label}</Label>
+    <Label className={FORM_FIELD_LABEL}>{label}</Label>
     {children}
   </FieldScope>
 );
