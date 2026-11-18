@@ -136,6 +136,29 @@ public class SurveyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task UpdateAsync_KeepsACompanionWhoWasDeactivated_ButRejectsAddingOne()
+    {
+        var leaver = AddUser("0900000025", "leaver.companion@example.com");
+        var inactive = AddUser("0900000026", "inactive.companion@example.com");
+        await _db.SaveChangesAsync();
+        var create = ValidCreate();
+        create.ParticipantUserIds = [leaver.Id];
+        var survey = await _sut.CreateAsync(create, _userId);
+        leaver.IsActive = false;
+        inactive.IsActive = false;
+        await _db.SaveChangesAsync();
+
+        // Editing the survey must not be blocked by someone who left after going on it.
+        var update = ToUpdate(create);
+        update.Location = "Địa điểm đã sửa";
+        var updated = await _sut.UpdateAsync(survey.Id, update, _userId);
+        Assert.Equal([leaver.Id], updated!.Participants.Select(item => item.UserId));
+
+        update.ParticipantUserIds = [leaver.Id, inactive.Id];
+        await Assert.ThrowsAsync<SurveyOperationException>(() => _sut.UpdateAsync(survey.Id, update, _userId));
+    }
+
+    [Fact]
     public async Task ListAsync_CompanionSeesTheSurvey_AndSurveyorFilterMatchesCompanions()
     {
         var owner = AddUser("0900000024", "owner.companion@example.com");

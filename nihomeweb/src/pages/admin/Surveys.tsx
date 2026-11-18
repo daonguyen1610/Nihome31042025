@@ -87,11 +87,21 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   }
 };
 
-/** Lead surveyor first, then the colleagues going along. */
-const surveyPeople = (survey: SurveyListItemResponse) =>
-  [survey.surveyorName, ...survey.participants.map((participant) => participant.fullName)]
-    .filter(Boolean)
-    .join(", ") || "—";
+/** Lead surveyor, then the colleagues going along on a quieter line. */
+const SurveyPeople = ({ survey }: { survey: SurveyListItemResponse }) => {
+  const { t } = useI18n();
+  const companions = survey.participants.map((participant) => participant.fullName).join(", ");
+  return (
+    <>
+      <span>{survey.surveyorName ?? "—"}</span>
+      {companions ? (
+        <span className="block text-muted-foreground">
+          {t("surveys.list.goingAlong", { names: companions })}
+        </span>
+      ) : null}
+    </>
+  );
+};
 
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
@@ -318,7 +328,11 @@ const AdminSurveys = () => {
           value: (r) => r.constructionTypeLabel ?? r.constructionTypeCode ?? "",
         },
         { header: t("surveys.field.surveyDate"), value: (r) => formatDate(r.surveyDate, lang) },
-        { header: t("surveys.field.surveyor"), value: (r) => r.surveyorName ?? "" },
+        { header: t("surveys.field.leadSurveyor"), value: (r) => r.surveyorName ?? "" },
+        {
+          header: t("surveys.field.participants"),
+          value: (r) => r.participants.map((participant) => participant.fullName),
+        },
         {
           header: t("surveys.field.projectOrOpportunity"),
           value: (r) => r.linkedProjectName ?? r.linkedOpportunityName ?? "",
@@ -719,7 +733,9 @@ const AdminSurveys = () => {
                       </div>
                       <div>
                         <dt className="text-muted-foreground">{t("surveys.field.surveyor")}</dt>
-                        <dd className="font-medium">{surveyPeople(r)}</dd>
+                        <dd className="font-medium">
+                          <SurveyPeople survey={r} />
+                        </dd>
                       </div>
                       <div className="col-span-2">
                         <dt className="text-muted-foreground">
@@ -793,7 +809,9 @@ const AdminSurveys = () => {
                         <td className="whitespace-nowrap px-3 py-2 text-xs">
                           {formatDate(r.surveyDate, lang)}
                         </td>
-                        <td className="px-3 py-2 text-xs">{surveyPeople(r)}</td>
+                        <td className="px-3 py-2 text-xs">
+                          <SurveyPeople survey={r} />
+                        </td>
                         <td className="min-w-[180px] px-3 py-2 text-xs">
                           {r.linkedProjectName ?? r.linkedOpportunityName ?? "—"}
                         </td>

@@ -506,7 +506,7 @@ public class SurveyService(
     private static IEnumerable<int> OptionalId(int? userId) => userId.HasValue ? [userId.Value] : [];
 
     /// <summary>
-    /// Distinct active colleagues going with the lead surveyor (the lead is not repeated).
+    /// Distinct colleagues going with the lead surveyor (the lead is not repeated).
     /// Adding someone other than yourself needs the same right as assigning the lead.
     /// </summary>
     private async Task<List<int>> ValidateParticipantsAsync(
@@ -519,19 +519,20 @@ public class SurveyService(
         IReadOnlySet<int>? alreadyOnSurvey = null)
     {
         var ids = requested.Where(userId => userId != leadUserId).Distinct().ToList();
-        if (ids.Count == 0) return ids;
+        // People already on the survey stay even if they have since left; only new ones must be active.
+        var added = ids.Where(userId => alreadyOnSurvey?.Contains(userId) != true).ToList();
+        if (added.Count == 0) return ids;
         var active = await db.Users.AsNoTracking()
-            .Where(user => ids.Contains(user.Id) && user.IsActive)
+            .Where(user => added.Contains(user.Id) && user.IsActive)
             .Select(user => user.Id)
             .ToListAsync(ct);
-        var missing = ids.Except(active).ToList();
+        var missing = added.Except(active).ToList();
         if (missing.Count > 0)
         {
             throw new SurveyOperationException(
                 $"Người đi khảo sát #{string.Join(", #", missing)} không tồn tại hoặc đã ngừng hoạt động. Hãy chọn lại người đi cùng.");
         }
-        var addedOther = ids.FirstOrDefault(userId =>
-            userId != callerUserId && alreadyOnSurvey?.Contains(userId) != true);
+        var addedOther = added.FirstOrDefault(userId => userId != callerUserId);
         if (addedOther != 0)
             await ValidateSurveyorAssignmentAsync(addedOther, projectId, callerUserId, canManageAll, ct);
         return ids;
