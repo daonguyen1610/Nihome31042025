@@ -181,6 +181,32 @@ public class NotificationServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task NotifyFromTemplateAsync_TranslatesLabelValuesIntoTheRecipientsLanguage()
+    {
+        // Stages and statuses are sent as label keys so nobody reads "ClientApproved".
+        var user = await SeedUserAsync(UserRole.USER);
+        await SeedTemplateAsync("lead.assigned");
+        SeedTranslation("notification.lead.assigned.title", "vi", "Hồ sơ {{title}}: {{status}}");
+        SeedTranslation("designProjects.reviews.status.ClientApproved", "vi", "Khách duyệt");
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.NotifyFromTemplateAsync(user.Id, "lead.assigned", new Dictionary<string, string>
+        {
+            ["title"] = "Phương án mặt tiền",
+            ["status"] = NotificationService.Label("designProjects.reviews.status.ClientApproved"),
+        });
+        var unknown = await _sut.NotifyFromTemplateAsync(user.Id, "lead.assigned", new Dictionary<string, string>
+        {
+            ["title"] = "Phương án mặt tiền",
+            ["status"] = NotificationService.Label("designProjects.reviews.status.Missing"),
+        });
+
+        Assert.Equal("Hồ sơ Phương án mặt tiền: Khách duyệt", result!.Title);
+        // A missing label falls back to the key's last segment rather than the marker.
+        Assert.Equal("Hồ sơ Phương án mặt tiền: Missing", unknown!.Title);
+    }
+
+    [Fact]
     public async Task NotifyFromTemplateAsync_InApp_RendersTitle_AndPersistsRow()
     {
         var user = await SeedUserAsync(UserRole.USER);

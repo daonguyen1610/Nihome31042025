@@ -14,8 +14,12 @@ namespace NihomeBackend.Services;
 public class IfcReleaseService(
     AppDbContext db,
     ILogger<IfcReleaseService> logger, ProcurementIfcService? procurementInbox = null,
-    IShopDrawingService? shopDrawings = null) : IIfcReleaseService
+    IShopDrawingService? shopDrawings = null,
+    INotificationService? notifications = null) : IIfcReleaseService
 {
+    /// <summary>Tells procurement recipients that a released IFC packet is waiting for them.</summary>
+    public const string ReleasedTemplateCode = "design-ifc.released";
+
     private const int MaxPageSize = 200;
     private const string PrimaryUnavailableCode = "IFC_PRIMARY_FILE_UNAVAILABLE";
     private const string PrimaryNotApprovedCode = "IFC_PRIMARY_FILE_NOT_APPROVED";
@@ -432,7 +436,40 @@ public class IfcReleaseService(
         logger.LogInformation(
             "IfcRelease {Id} released with {Count} drawings by user {UserId}",
             entity.Id, entity.Items.Count, callerUserId);
+        await NotifyReleasedAsync(entity, ct);
         return (await GetAsync(id, ct))!;
+    }
+
+    private async Task NotifyReleasedAsync(IfcRelease release, CancellationToken ct)
+    {
+        var recipientIds = release.Recipients
+            .Where(recipient => recipient.RecipientUserId.HasValue)
+            .Select(recipient => recipient.RecipientUserId!.Value)
+            .Distinct()
+            .ToList();
+        if (notifications is null || recipientIds.Count == 0) return;
+        try
+        {
+            var project = await db.DesignProjects.AsNoTracking()
+                .Where(item => item.Id == release.DesignProjectId)
+                .Select(item => new { item.ProjectCode, item.OperationalProjectId })
+                .SingleAsync(ct);
+            await notifications.NotifyManyFromTemplateAsync(recipientIds, ReleasedTemplateCode,
+                new Dictionary<string, string>
+                {
+                    ["releaseNumber"] = release.ReleaseNumber,
+                    ["title"] = release.Title,
+                    ["projectCode"] = project.ProjectCode,
+                    ["drawingCount"] = release.Items.Count.ToString(),
+                },
+                "IfcRelease", release.Id,
+                $"/admin/procurement-control?projectId={project.OperationalProjectId}&tab=ifc");
+        }
+        catch (Exception exception)
+        {
+            // The release is already committed; a missed notice must not undo it.
+            logger.LogWarning(exception, "IFC release {Id} was issued but recipients were not notified.", release.Id);
+        }
     }
 
     public async Task<IfcReleaseResponse> CancelAsync(int id, int callerUserId, CancellationToken ct = default)

@@ -5,6 +5,7 @@ using NihomeBackend.Constants;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
 
@@ -1372,6 +1373,46 @@ public class OpportunityServiceTests : IDisposable
         _db.Customers.Add(customer);
         await _db.SaveChangesAsync();
         return customer;
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task StartDesignAsync_TellsTheDesignTeamOnlyWhenADossierIsCreated(bool created)
+    {
+        var sales = await SeedUserAsync();
+        var designLead = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(sales.Id);
+        var project = new OperationalProject { Code = "OP-DESIGN-NOTICE", Name = "Nhà xưởng Bình Dương", CustomerId = customer.Id };
+        _db.OperationalProjects.Add(project);
+        await _db.SaveChangesAsync();
+        var opportunity = await SeedOpportunityAsync(customer, sales, OpportunityStage.Proposal);
+        opportunity.OperationalProjectId = project.Id;
+        await _db.SaveChangesAsync();
+        _projectAccess.Setup(item => item.CanViewOperationalProjectAsync(sales.Id, project.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var dossier = new DesignProjectResponse
+        {
+            Id = 77,
+            ProjectCode = "DP-2026-077",
+            Name = "Thiết kế nhà xưởng Bình Dương",
+            DesignLeadUserId = designLead.Id,
+            ProjectManagerUserId = sales.Id,
+        };
+        _designProjects.Setup(item => item.EnsureForOpportunityAsync(opportunity.Id, sales.Id, dossier.Name, null,
+                It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new EnsureDesignProjectResult(dossier, created));
+
+        await _sut.StartDesignAsync(opportunity.Id, sales.Id, canSeeAll: false,
+            new StartOpportunityDesignRequest { Name = dossier.Name });
+
+        // The salesperson who started it is not told about their own action.
+        _notifications.Verify(n => n.NotifyManyFromTemplateAsync(
+            It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { designLead.Id })),
+            OpportunityService.DesignProjectCreatedTemplate,
+            It.Is<IDictionary<string, string>>(data =>
+                data["projectCode"] == "DP-2026-077" && data["opportunityName"] == opportunity.Name),
+            "DesignProject", 77, "/admin/design-projects/77", "vi"), created ? Times.Once() : Times.Never());
     }
 
     private async Task<Opportunity> SeedOpportunityAsync(
