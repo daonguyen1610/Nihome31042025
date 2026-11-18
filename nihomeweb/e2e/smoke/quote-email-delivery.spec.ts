@@ -347,6 +347,8 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     // Contract, Opportunity and quote must share one project, so this step links
     // that project instead of creating a second one for the same customer.
     await expect(contractDialog.locator("#c-project-form")).toContainText(`PJ-`);
+    // The project is named, never shown as a raw database id ("Dự án #15").
+    await expect(contractDialog.locator("#c-project-form")).not.toContainText("#");
     await contractDialog.locator("#c-value").fill("810000000");
     const contractResponsePromise = page.waitForResponse(
       (response) =>

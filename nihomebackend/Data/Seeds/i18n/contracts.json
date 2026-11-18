@@ -1784,12 +1784,12 @@
     "ja": "この顧客には運用プロジェクトがまだありません。下で新規作成して契約の作成を続けてください。"
   },
   {
-    "key": "contracts.quickProject.linkedProject",
+    "key": "contracts.quickProject.linkedProjectFromQuote",
     "category": "contracts",
-    "vi": "Dự án #{id} (theo báo giá)",
-    "en": "Project #{id} (from the quote)",
-    "zh": "项目 #{id}（来自报价）",
-    "ja": "プロジェクト #{id}（見積から）"
+    "vi": "Dự án theo báo giá",
+    "en": "Project from the quote",
+    "zh": "报价所属项目",
+    "ja": "見積の案件"
   },
   {
     "key": "contracts.overdueBadge",
