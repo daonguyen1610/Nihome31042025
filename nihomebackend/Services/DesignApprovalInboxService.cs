@@ -108,10 +108,16 @@ public sealed class DesignApprovalInboxService(AppDbContext db)
         }), query, ct);
     }
 
-    private IQueryable<DesignScheduleTask> PendingTasks(int userId) =>
-        db.DesignScheduleTasks.AsNoTracking()
+    /// <summary>Tasks the user can approve now: still the approver and still on the team.</summary>
+    private IQueryable<DesignScheduleTask> PendingTasks(int userId)
+    {
+        var now = DateTime.UtcNow;
+        return db.DesignScheduleTasks.AsNoTracking()
             .Where(task => task.ApprovalStatus == DesignTaskApprovalStatus.Pending
-                && task.ApproverMember.UserId == userId);
+                && task.ApproverMember.UserId == userId
+                && task.ApproverMember.StartedAt <= now
+                && (task.ApproverMember.EndedAt == null || task.ApproverMember.EndedAt > now));
+    }
 
     private IQueryable<DesignReview> PendingReviews(int userId) =>
         db.DesignReviews.AsNoTracking()
