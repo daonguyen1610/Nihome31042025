@@ -254,6 +254,12 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             icon: PenTool,
             permission: ADMIN_PERMS.designProjects,
           },
+          {
+            to: "/admin/design-approvals",
+            label: t("nav.designApprovals"),
+            icon: ClipboardCheck,
+            permission: ADMIN_PERMS.designProjects,
+          },
         ],
       },
       {
