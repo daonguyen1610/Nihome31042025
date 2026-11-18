@@ -166,7 +166,7 @@ test("Opportunity offers a direct contract and optionally prefills an approved q
     await page.reload({ waitUntil: "networkidle" });
     await page.getByTestId("opportunity-create-contract").click();
     await expect(page).toHaveURL(new RegExp(`fromQuote=${quoteId}`));
-    await expect(page.getByRole("dialog").getByText(`#${quoteId}`)).toBeVisible();
+    await expect(page.getByRole("dialog").getByText(`#${quoteId}`, { exact: true })).toBeVisible();
   } finally {
     if (quoteId) await hardDeleteBusinessRoot(api, headers, `/api/quotes/${quoteId}`);
     if (opportunityId)
