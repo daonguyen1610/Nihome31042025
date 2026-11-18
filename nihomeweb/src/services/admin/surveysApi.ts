@@ -24,6 +24,7 @@ import type {
 export const surveysApi = {
   listSurveys: (params: SurveyListParams = {}) => {
     const q = new URLSearchParams();
+    if (params.status) q.append("status", params.status);
     if (params.constructionTypeCode) q.append("constructionTypeCode", params.constructionTypeCode);
     if (params.surveyorUserId != null) q.append("surveyorUserId", String(params.surveyorUserId));
     if (params.linkedProjectId != null) q.append("linkedProjectId", String(params.linkedProjectId));
@@ -40,6 +41,8 @@ export const surveysApi = {
   createSurvey: (body: CreateSurveyRequest) => api.post<SurveyResponse>("/surveys", body),
   updateSurvey: (id: number, body: CreateSurveyRequest) =>
     api.put<SurveyResponse>(`/surveys/${id}`, body),
+  completeSurvey: (id: number) => api.post<SurveyResponse>(`/surveys/${id}/complete`),
+  reopenSurvey: (id: number) => api.post<SurveyResponse>(`/surveys/${id}/reopen`),
   getSurveyDeletionImpact: (id: number) =>
     api.get<DeletionImpactResponse>(`/surveys/${id}/deletion-impact`),
   deleteSurvey: (id: number, body: ConfirmDeletionRequest) =>

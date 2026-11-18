@@ -179,6 +179,42 @@ public class SurveysControllerTests : IntegrationTestBase
         body.GetProperty("operationalProjectId").GetInt32().Should().Be(operationalProjectId);
     }
 
+    [Fact]
+    public async Task CompleteAndReopen_RecordTheSurveyAndItsTime()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var operationalProjectId = await CreateOperationalProjectAsync();
+        var created = await Client.PostAsJsonAsync("/api/surveys", new
+        {
+            location = "Lô C3, KCN Hiệp Phước " + Guid.NewGuid().ToString("N")[..4],
+            surveyDate = DateTime.UtcNow.Date.AddDays(2),
+            surveyTime = "08:30:00",
+            operationalProjectId,
+        });
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var survey = await ReadJsonAsync(created);
+        var id = survey.GetProperty("id").GetInt32();
+        survey.GetProperty("surveyTime").GetString().Should().Be("08:30:00");
+        survey.GetProperty("status").GetString().Should().Be("Planned");
+
+        var done = await Client.PostAsync($"/api/surveys/{id}/complete", null);
+        done.StatusCode.Should().Be(HttpStatusCode.OK);
+        var doneBody = await ReadJsonAsync(done);
+        doneBody.GetProperty("status").GetString().Should().Be("Completed");
+        doneBody.GetProperty("completedByName").GetString().Should().NotBeNullOrWhiteSpace();
+
+        var twice = await Client.PostAsync($"/api/surveys/{id}/complete", null);
+        twice.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await twice.Content.ReadAsStringAsync()).Should().Contain("đã được ghi nhận");
+
+        var reopened = await Client.PostAsync($"/api/surveys/{id}/reopen", null);
+        reopened.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(reopened)).GetProperty("status").GetString().Should().Be("Planned");
+
+        (await Client.PostAsync("/api/surveys/999999/complete", null)).StatusCode
+            .Should().Be(HttpStatusCode.NotFound);
+    }
+
     [Theory]
     [InlineData(null)]
     [InlineData(0)]

@@ -15,6 +15,9 @@ public class CreateSurveyRequest
     [Required]
     public DateTime SurveyDate { get; set; }
 
+    /// <summary>Optional start time, e.g. "08:30:00"; null when no time is agreed.</summary>
+    public TimeOnly? SurveyTime { get; set; }
+
     public int? SurveyorUserId { get; set; }
 
     /// <summary>
@@ -49,6 +52,9 @@ public class SurveyListParams
 
     public int? SurveyorUserId { get; set; }
     public int? LinkedProjectId { get; set; }
+
+    /// <summary>Planned or Completed.</summary>
+    public string? Status { get; set; }
 
     /// <summary>Multi-select filter — comma-separated enum names (NotSynced / Syncing / Synced / Failed).</summary>
     public string? DriveSyncStatus { get; set; }

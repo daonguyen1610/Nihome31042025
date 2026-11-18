@@ -55,6 +55,8 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   adminApi,
   SURVEY_DRIVE_STATUSES,
+  SURVEY_STATUSES,
+  type SurveyStatus,
   type CreateSurveyRequest,
   type DeletionImpactResponse,
   type MasterDataOption,
@@ -68,6 +70,8 @@ import {
 import { contentApi } from "@/services/contentApi";
 import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 import { todayIsoDate } from "@/lib/displaySettings";
+import { surveyProgress, surveyTimeLabel } from "@/lib/surveyStatus";
+import { DriveStatusHelp, SurveyStatusBadge } from "@/components/admin/SurveyStatus";
 
 // ------------------------------- helpers -------------------------------
 
@@ -103,6 +107,17 @@ const SurveyPeople = ({ survey }: { survey: SurveyListItemResponse }) => {
   );
 };
 
+/** Survey day, with the agreed start time when there is one. */
+const SurveyWhen = ({ survey, lang }: { survey: SurveyListItemResponse; lang: string }) => {
+  const time = surveyTimeLabel(survey.surveyTime);
+  return (
+    <span className="tabular-nums">
+      {formatDate(survey.surveyDate, lang)}
+      {time ? ` · ${time}` : null}
+    </span>
+  );
+};
+
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
 /** Today as YYYY-MM-DD in the configured display time zone. */
@@ -112,6 +127,7 @@ const emptyForm = (): CreateSurveyRequest => ({
   location: "",
   constructionTypeCode: null,
   surveyDate: `${todayLocalIso()}T00:00:00.000Z`,
+  surveyTime: null,
   surveyorUserId: null,
   participantUserIds: [],
   linkedProjectId: null,
@@ -197,6 +213,7 @@ const AdminSurveys = () => {
   const [surveyorUserId, setSurveyorUserId] = useState<number | null>(null);
   const [linkedProjectId, setLinkedProjectId] = useState<number | null>(null);
   const [driveStatus, setDriveStatus] = useState<SurveyDriveSyncStatus | "">("");
+  const [statusFilter, setStatusFilter] = useState<SurveyStatus | "">("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [page, setPage] = useState(1);
@@ -274,6 +291,7 @@ const AdminSurveys = () => {
     if (surveyorUserId != null) params.surveyorUserId = surveyorUserId;
     if (linkedProjectId != null) params.linkedProjectId = linkedProjectId;
     if (driveStatus) params.driveSyncStatus = driveStatus;
+    if (statusFilter) params.status = statusFilter;
     if (dateFrom) params.dateFrom = dateFrom;
     if (dateTo) params.dateTo = dateTo;
     return params;
@@ -283,6 +301,7 @@ const AdminSurveys = () => {
     surveyorUserId,
     linkedProjectId,
     driveStatus,
+    statusFilter,
     dateFrom,
     dateTo,
   ]);
@@ -328,6 +347,14 @@ const AdminSurveys = () => {
           value: (r) => r.constructionTypeLabel ?? r.constructionTypeCode ?? "",
         },
         { header: t("surveys.field.surveyDate"), value: (r) => formatDate(r.surveyDate, lang) },
+        {
+          header: t("surveys.field.surveyTime"),
+          value: (r) => surveyTimeLabel(r.surveyTime) ?? "",
+        },
+        {
+          header: t("surveys.field.status"),
+          value: (r) => t(`surveys.progress.${surveyProgress(r, todayIsoDate())}`),
+        },
         { header: t("surveys.field.leadSurveyor"), value: (r) => r.surveyorName ?? "" },
         {
           header: t("surveys.field.participants"),
@@ -352,6 +379,7 @@ const AdminSurveys = () => {
     surveyorUserId != null ||
     linkedProjectId != null ||
     driveStatus !== "" ||
+    statusFilter !== "" ||
     dateFrom !== "" ||
     dateTo !== "";
 
@@ -377,6 +405,7 @@ const AdminSurveys = () => {
     setSurveyorUserId(null);
     setLinkedProjectId(null);
     setDriveStatus("");
+    setStatusFilter("");
     setDateFrom("");
     setDateTo("");
     setPage(1);
@@ -408,6 +437,7 @@ const AdminSurveys = () => {
         location: data.location,
         constructionTypeCode: data.constructionTypeCode ?? null,
         surveyDate: data.surveyDate,
+        surveyTime: data.surveyTime ?? null,
         surveyorUserId: data.surveyorUserId ?? null,
         participantUserIds: data.participants.map((participant) => participant.userId),
         linkedProjectId: data.linkedProjectId ?? null,
@@ -456,6 +486,7 @@ const AdminSurveys = () => {
         location: form.location.trim(),
         constructionTypeCode: form.constructionTypeCode || null,
         surveyDate: form.surveyDate,
+        surveyTime: form.surveyTime ?? null,
         surveyorUserId: form.surveyorUserId ?? null,
         // Without the people directory the companions cannot be shown, so keep them.
         participantUserIds: canPickSurveyor ? form.participantUserIds : undefined,
@@ -585,7 +616,32 @@ const AdminSurveys = () => {
               </Select>
             </FieldScope>
             <FieldScope>
-              <Label className="text-xs">{t("surveys.field.driveStatus")}</Label>
+              <Label className="text-xs">{t("surveys.field.status")}</Label>
+              <Select
+                value={statusFilter || "__all__"}
+                onValueChange={(v) => {
+                  setStatusFilter(v === "__all__" ? "" : (v as SurveyStatus));
+                  setPage(1);
+                }}
+              >
+                <SelectTrigger className="mt-1 h-9">
+                  <SelectValue placeholder={t("surveys.filter.allStatuses")} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__all__">{t("surveys.filter.allStatuses")}</SelectItem>
+                  {SURVEY_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {t(`surveys.status.${s}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldScope>
+            <FieldScope>
+              <div className="flex items-center gap-1">
+                <Label className="text-xs">{t("surveys.field.driveStatus")}</Label>
+                <DriveStatusHelp />
+              </div>
               <Select
                 value={driveStatus}
                 onValueChange={(v) => {
@@ -729,7 +785,10 @@ const AdminSurveys = () => {
                     <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
                       <div>
                         <dt className="text-muted-foreground">{t("surveys.field.surveyDate")}</dt>
-                        <dd className="font-medium">{formatDate(r.surveyDate, lang)}</dd>
+                        <dd className="font-medium">
+                          <SurveyWhen survey={r} lang={lang} />
+                          <SurveyStatusBadge survey={r} className="mt-1" />
+                        </dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">{t("surveys.field.surveyor")}</dt>
@@ -780,12 +839,14 @@ const AdminSurveys = () => {
                   <tr>
                     <th className="px-3 py-2">{t("surveys.field.code")}</th>
                     <th className="px-3 py-2">{t("surveys.field.location")}</th>
-                    <th className="px-3 py-2">{t("surveys.field.constructionType")}</th>
                     <th className="px-3 py-2">{t("surveys.field.surveyDate")}</th>
-                    <th className="px-3 py-2">{t("surveys.field.surveyor")}</th>
+                    <th className="min-w-[140px] px-3 py-2">{t("surveys.field.surveyor")}</th>
                     <th className="px-3 py-2">{t("surveys.field.projectOrOpportunity")}</th>
-                    <th className="whitespace-nowrap px-3 py-2">
-                      {t("surveys.field.driveStatus")}
+                    <th className="px-3 py-2">
+                      <span className="inline-flex items-center gap-1">
+                        {t("surveys.field.driveStatus")}
+                        <DriveStatusHelp />
+                      </span>
                     </th>
                     {canManage ? <th className="px-3 py-2 text-right"></th> : null}
                   </tr>
@@ -800,19 +861,22 @@ const AdminSurveys = () => {
                         onClick={() => openDetail(r.id)}
                       >
                         <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{r.code}</td>
-                        <td className="min-w-[220px] px-3 py-2 break-words font-medium">
-                          {r.location}
-                        </td>
-                        <td className="px-3 py-2 text-xs">
-                          {r.constructionTypeLabel ?? r.constructionTypeCode ?? "—"}
+                        <td className="min-w-[200px] px-3 py-2 break-words">
+                          <span className="font-medium">{r.location}</span>
+                          {r.constructionTypeLabel ? (
+                            <span className="block text-xs text-muted-foreground">
+                              {r.constructionTypeLabel}
+                            </span>
+                          ) : null}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2 text-xs">
-                          {formatDate(r.surveyDate, lang)}
+                          <SurveyWhen survey={r} lang={lang} />
+                          <SurveyStatusBadge survey={r} className="mt-1 flex w-fit" />
                         </td>
                         <td className="px-3 py-2 text-xs">
                           <SurveyPeople survey={r} />
                         </td>
-                        <td className="min-w-[180px] px-3 py-2 text-xs">
+                        <td className="min-w-[140px] px-3 py-2 text-xs">
                           {r.linkedProjectName ?? r.linkedOpportunityName ?? "—"}
                         </td>
                         <td className="whitespace-nowrap px-3 py-2">
@@ -907,10 +971,11 @@ const AdminSurveys = () => {
               />
             </FieldScope>
 
-            <div className="grid gap-3 md:grid-cols-2">
+            <div className="grid gap-3 md:grid-cols-3">
               <FieldScope className="space-y-1">
-                <Label>{t("surveys.field.surveyDate")} *</Label>
+                <Label htmlFor="survey-date">{t("surveys.field.surveyDate")} *</Label>
                 <Input
+                  id="survey-date"
                   type="date"
                   value={toDateInputValue(form.surveyDate)}
                   onChange={(e) =>
@@ -922,6 +987,21 @@ const AdminSurveys = () => {
                     })
                   }
                 />
+              </FieldScope>
+              <FieldScope className="space-y-1">
+                <Label htmlFor="survey-time">{t("surveys.field.surveyTime")}</Label>
+                <Input
+                  id="survey-time"
+                  type="time"
+                  aria-describedby="survey-time-hint"
+                  value={surveyTimeLabel(form.surveyTime) ?? ""}
+                  onChange={(e) =>
+                    setForm({ ...form, surveyTime: e.target.value ? `${e.target.value}:00` : null })
+                  }
+                />
+                <p id="survey-time-hint" className="text-xs text-muted-foreground">
+                  {t("surveys.form.surveyTimeHint")}
+                </p>
               </FieldScope>
               <FieldScope className="space-y-1">
                 <Label>{t("surveys.field.constructionType")}</Label>
@@ -1053,7 +1133,7 @@ const AdminSurveys = () => {
               className="w-full sm:w-auto"
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("common.save")}
+              {t(isEdit ? "common.save" : "surveys.new")}
             </Button>
           </DialogFooter>
         </DialogContent>

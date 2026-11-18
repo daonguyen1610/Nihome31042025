@@ -1469,6 +1469,13 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             b.Property(s => s.ConstructionTypeCode).HasMaxLength(80);
             b.Property(s => s.Note).HasMaxLength(4000);
             b.Property(s => s.DriveSyncStatus).HasConversion<string>().HasMaxLength(20);
+            b.Property(s => s.Status).HasConversion<string>().HasMaxLength(20)
+                .HasDefaultValue(SurveyStatus.Planned);
+            b.HasOne(s => s.CompletedBy)
+                .WithMany()
+                .HasForeignKey(s => s.CompletedByUserId)
+                .OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(s => s.Status);
             b.Property(s => s.DriveSyncError).HasMaxLength(1000);
             b.Property(s => s.DriveFolderId).HasMaxLength(200);
             b.Property(s => s.DriveFolderLink).HasMaxLength(500);

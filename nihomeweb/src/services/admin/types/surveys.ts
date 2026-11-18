@@ -90,6 +90,11 @@ export interface SurveyResponse {
   constructionTypeCode?: string | null;
   constructionTypeLabel?: string | null;
   surveyDate: string;
+  /** Agreed start time "HH:mm:ss", or null when none was set. */
+  surveyTime?: string | null;
+  status: SurveyStatus;
+  completedAt?: string | null;
+  completedByName?: string | null;
   surveyorUserId?: number | null;
   surveyorName?: string | null;
   /** Colleagues going with the lead surveyor. */
@@ -119,6 +124,11 @@ export interface SurveyListItemResponse {
   constructionTypeCode?: string | null;
   constructionTypeLabel?: string | null;
   surveyDate: string;
+  /** Agreed start time "HH:mm:ss", or null when none was set. */
+  surveyTime?: string | null;
+  status: SurveyStatus;
+  completedAt?: string | null;
+  completedByName?: string | null;
   surveyorUserId?: number | null;
   surveyorName?: string | null;
   /** Colleagues going with the lead surveyor. */
@@ -142,7 +152,11 @@ export interface SurveyListResponse {
   items: SurveyListItemResponse[];
 }
 
+export type SurveyStatus = "Planned" | "Completed";
+export const SURVEY_STATUSES: SurveyStatus[] = ["Planned", "Completed"];
+
 export interface SurveyListParams {
+  status?: SurveyStatus;
   constructionTypeCode?: string;
   surveyorUserId?: number;
   linkedProjectId?: number;
@@ -164,6 +178,8 @@ export interface CreateSurveyRequest {
   location: string;
   constructionTypeCode?: string | null;
   surveyDate: string;
+  /** Optional start time "HH:mm:ss". */
+  surveyTime?: string | null;
   surveyorUserId?: number | null;
   /** Colleagues going along; omit on update to keep the current list. */
   participantUserIds?: number[];
