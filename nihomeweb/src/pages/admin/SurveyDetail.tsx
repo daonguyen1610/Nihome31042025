@@ -202,7 +202,7 @@ const AdminSurveyDetail = () => {
           survey.constructionTypeLabel ?? survey.constructionTypeCode ?? "—",
         ],
         [t("surveys.field.surveyDate"), formatDate(survey.surveyDate)],
-        [t("surveys.field.surveyor"), survey.surveyorName ?? "—"],
+        [t("surveys.field.leadSurveyor"), survey.surveyorName ?? "—"],
         [
           t("surveys.field.participants"),
           survey.participants.map((participant) => participant.fullName).join(", ") || "—",

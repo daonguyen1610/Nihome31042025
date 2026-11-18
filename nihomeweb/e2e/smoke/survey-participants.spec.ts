@@ -1,3 +1,4 @@
+import { readFile } from "node:fs/promises";
 import type { APIRequestContext } from "@playwright/test";
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
@@ -107,6 +108,17 @@ test("people going on a survey are listed, can open it and are notified", async 
     const row = page.locator("table tbody tr").filter({ hasText: survey.code });
     await expect(row).toContainText(manager.fullName);
     await expect(row).toContainText(sale.fullName);
+
+    // The Excel export lists the lead and the people going along in their own columns.
+    const downloading = page.waitForEvent("download");
+    await page.getByRole("button", { name: /Xuất Excel|Export Excel/i }).click();
+    const csv = await readFile((await (await downloading).path())!, "utf8");
+    const [header, ...lines] = csv.slice(1).split("\r\n");
+    expect(header).toContain("Người phụ trách khảo sát");
+    expect(header).toContain("Người đi cùng");
+    const exported = lines.find((line) => line.includes(survey.code));
+    expect(exported).toContain(manager.fullName);
+    expect(exported).toContain(sale.fullName);
 
     // Editing shows who is going; saving without changes tells nobody again.
     await row.getByRole("button", { name: /Sửa|Edit/i }).click();
