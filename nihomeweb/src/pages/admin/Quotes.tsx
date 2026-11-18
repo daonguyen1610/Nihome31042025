@@ -19,6 +19,8 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { useListExport } from "@/hooks/useListExport";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -138,17 +140,22 @@ const AdminQuotes = () => {
     return () => window.clearTimeout(h);
   }, [searchInput]);
 
+  // The filters shared by the visible page and the export.
+  const listFilters = useMemo(() => {
+    const params: QuoteListParams = {};
+    if (customerIdFilter) params.customerId = customerIdFilter;
+    if (statusFilter) params.status = statusFilter;
+    if (minValue) params.minValue = Number(minValue);
+    if (maxValue) params.maxValue = Number(maxValue);
+    if (search.trim()) params.search = search.trim();
+    return params;
+  }, [customerIdFilter, statusFilter, minValue, maxValue, search]);
+
   const fetchList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params: QuoteListParams = { page, pageSize };
-      if (customerIdFilter) params.customerId = customerIdFilter;
-      if (statusFilter) params.status = statusFilter;
-      if (minValue) params.minValue = Number(minValue);
-      if (maxValue) params.maxValue = Number(maxValue);
-      if (search.trim()) params.search = search.trim();
-      const { data } = await adminApi.listQuotes(params);
+      const { data } = await adminApi.listQuotes({ ...listFilters, page, pageSize });
       setRows(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -156,7 +163,7 @@ const AdminQuotes = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, customerIdFilter, statusFilter, minValue, maxValue, search, uiError]);
+  }, [page, listFilters, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -342,6 +349,26 @@ const AdminQuotes = () => {
 
   const totalPages = useMemo(() => (total > 0 ? Math.ceil(total / pageSize) : 1), [total]);
 
+  const { exporting, exportList } = useListExport();
+  const exportQuotes = () =>
+    exportList<QuoteListItemResponse>({
+      filename: "quotes",
+      loadPage: (nextPage) =>
+        adminApi.listQuotes({ ...listFilters, page: nextPage, pageSize: 100 }),
+      columns: [
+        { header: t("quotes.field.code"), value: "code" },
+        { header: t("quotes.field.opportunity"), value: (q) => q.opportunityName ?? "" },
+        { header: t("quotes.field.customer"), value: (q) => q.customerName ?? "" },
+        { header: t("quotes.field.method"), value: (q) => t(`quotes.method.${q.method}`) },
+        { header: t("quotes.field.grandTotal"), value: "grandTotal" },
+        { header: t("common.currency"), value: "currency" },
+        { header: t("quotes.field.status"), value: (q) => t(`quotes.status.${q.status}`) },
+        { header: t("quotes.field.validUntil"), value: (q) => formatDate(q.validUntil) },
+        { header: t("quotes.field.owner"), value: (q) => q.ownerName ?? "" },
+        { header: t("quotes.field.version"), value: "version" },
+      ],
+    });
+
   return (
     <AdminLayout>
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
@@ -358,6 +385,11 @@ const AdminQuotes = () => {
           >
             <RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} />
           </Button>
+          <AdminExportButton
+            onClick={() => void exportQuotes()}
+            disabled={total === 0 || exporting}
+            label={exporting ? t("common.exporting") : undefined}
+          />
           {canManage && (
             <Button onClick={() => openCreate()}>
               <Plus className="mr-1.5 h-4 w-4" />

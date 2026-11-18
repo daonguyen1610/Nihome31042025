@@ -10,6 +10,8 @@ import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { useListExport } from "@/hooks/useListExport";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { customerSelectOptions } from "@/lib/customerOptions";
 import { focusFormField } from "@/lib/formFocus";
 import { cn } from "@/lib/utils";
@@ -163,18 +165,23 @@ const AdminTenders = () => {
     return () => window.clearTimeout(h);
   }, [searchInput]);
 
+  // The filters shared by the visible page and the export.
+  const listFilters = useMemo(() => {
+    const params: TenderListParams = {};
+    if (reportScope) Object.assign(params, reportScope, { submittedOnly: true });
+    if (statusFilter) params.status = statusFilter;
+    if (customerFilter) params.customerId = customerFilter;
+    if (search.trim()) params.search = search.trim();
+    return params;
+  }, [reportScope, statusFilter, customerFilter, search]);
+
   const listRequest = useRef(0);
   const fetchList = useCallback(async () => {
     const requestId = ++listRequest.current;
     setLoading(true);
     setError(null);
     try {
-      const params: TenderListParams = { page, pageSize };
-      if (reportScope) Object.assign(params, reportScope, { submittedOnly: true });
-      if (statusFilter) params.status = statusFilter;
-      if (customerFilter) params.customerId = customerFilter;
-      if (search.trim()) params.search = search.trim();
-      const { data } = await adminApi.listTenders(params);
+      const { data } = await adminApi.listTenders({ ...listFilters, page, pageSize });
       if (requestId !== listRequest.current) return;
       setRows(data.items);
       setTotal(data.total);
@@ -184,7 +191,7 @@ const AdminTenders = () => {
     } finally {
       if (requestId === listRequest.current) setLoading(false);
     }
-  }, [page, reportScope, statusFilter, customerFilter, search, uiError]);
+  }, [page, listFilters, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -437,6 +444,32 @@ const AdminTenders = () => {
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const statusLabel = (s: TenderStatus) => t(`tenders.status.${s}`);
 
+  const { exporting, exportList } = useListExport();
+  const exportTenders = () =>
+    exportList<TenderListItemResponse>({
+      filename: "tenders",
+      loadPage: (nextPage) =>
+        adminApi.listTenders({ ...listFilters, page: nextPage, pageSize: 100 }),
+      columns: [
+        { header: t("tenders.field.code"), value: "code" },
+        { header: t("tenders.field.name"), value: "name" },
+        { header: t("tenders.field.customer"), value: "customerName" },
+        { header: t("tenders.field.invitationSource"), value: "invitationSource" },
+        {
+          header: t("tenders.field.invitationReceivedAt"),
+          value: (r) => formatDate(r.invitationReceivedAt, lang),
+        },
+        {
+          header: t("tenders.field.deadline"),
+          value: (r) => formatDate(r.submissionDeadline, lang),
+        },
+        { header: t("tenders.field.status"), value: (r) => statusLabel(r.status) },
+        { header: t("tenders.field.checklist"), value: (r) => `${r.checklistCompletionPercent}%` },
+        { header: t("tenders.field.preparer"), value: (r) => r.preparerName ?? "" },
+        { header: t("tenders.field.updatedAt"), value: (r) => formatDate(r.updatedAt, lang) },
+      ],
+    });
+
   const renderRowActions = (r: TenderListItemResponse) => (
     <>
       {canManage && (
@@ -490,6 +523,12 @@ const AdminTenders = () => {
               <RefreshCcw className={cn("mr-2 h-4 w-4", loading && "animate-spin")} />
               {t("common.refresh")}
             </Button>
+            <AdminExportButton
+              onClick={() => void exportTenders()}
+              disabled={total === 0 || exporting}
+              label={exporting ? t("common.exporting") : undefined}
+              className="h-9 flex-1 md:flex-none"
+            />
             {canManage && (
               <Button size="sm" onClick={openCreate} className="flex-1 md:flex-none">
                 <Plus className="mr-2 h-4 w-4" />
