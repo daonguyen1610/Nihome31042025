@@ -44,33 +44,81 @@ public class CustomerServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_CompanyMissingTaxId_Throws()
+    public async Task Create_CompanyWithoutTaxIdAddressOrRepresentative_CanBeCompletedLater()
     {
+        // NICON: a prospect company often has no tax id or legal representative yet.
         var user = await SeedUserAsync();
         SeedSource("marketing");
-        var req = BuildCreate(type: CustomerType.Company);
+        var req = BuildCreate(type: CustomerType.Company, name: "Công ty TNHH Gia Dụng Tân Phúc");
         req.TaxId = null;
+        req.Address = null;
+        req.RepresentativeName = null;
+        req.PrimaryContact.FullName = "Anh Quang – phòng mua hàng";
 
-        var ex = await Assert.ThrowsAsync<CustomerOperationException>(() =>
-            _sut.CreateAsync(req, user.Id, canManage: true));
-        Assert.Contains("mã số thuế", ex.Message);
+        var created = await _sut.CreateAsync(req, user.Id, canManage: true);
+
+        var saved = await _db.Customers.Include(item => item.Contacts).SingleAsync(item => item.Id == created.Id);
+        Assert.Equal(CustomerType.Company, saved.Type);
+        Assert.Null(saved.TaxId);
+        Assert.Null(saved.RepresentativeName);
+        // The contact person is not recorded as the legal representative just because one was not named.
+        Assert.DoesNotContain(saved.Contacts, contact => contact.IsLegalRepresentative);
     }
 
     [Fact]
-    public async Task Create_CompanyMissingAddressOrRepresentative_Throws()
+    public async Task Create_CompanyWithRepresentative_RecordsTheContactAsLegalRepresentative()
     {
         var user = await SeedUserAsync();
         SeedSource("marketing");
+        var req = BuildCreate(type: CustomerType.Company, name: "Công ty CP Xây dựng Minh An");
+        req.PrimaryContact.FullName = req.RepresentativeName!;
 
-        var noAddr = BuildCreate(type: CustomerType.Company);
-        noAddr.Address = null;
-        await Assert.ThrowsAsync<CustomerOperationException>(() =>
-            _sut.CreateAsync(noAddr, user.Id, canManage: true));
+        var created = await _sut.CreateAsync(req, user.Id, canManage: true);
 
-        var noRep = BuildCreate(type: CustomerType.Company);
-        noRep.RepresentativeName = null;
-        await Assert.ThrowsAsync<CustomerOperationException>(() =>
-            _sut.CreateAsync(noRep, user.Id, canManage: true));
+        var saved = await _db.Customers.Include(item => item.Contacts).SingleAsync(item => item.Id == created.Id);
+        Assert.True(Assert.Single(saved.Contacts).IsLegalRepresentative);
+    }
+
+    [Fact]
+    public async Task Create_CompanyWithContactOtherThanRepresentative_KeepsBothPeople()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var req = BuildCreate(type: CustomerType.Company, name: "Công ty CP Xây dựng Minh An");
+        req.PrimaryContact.FullName = "Anh Quang – phòng mua hàng";
+
+        var created = await _sut.CreateAsync(req, user.Id, canManage: true);
+
+        var contacts = await _db.CustomerContacts.Where(item => item.CustomerId == created.Id).ToListAsync();
+        var primary = Assert.Single(contacts, contact => contact.IsPrimary);
+        Assert.Equal("Anh Quang – phòng mua hàng", primary.FullName);
+        Assert.False(primary.IsLegalRepresentative);
+        Assert.Equal("Nguyễn Văn CEO", Assert.Single(contacts, contact => contact.IsLegalRepresentative).FullName);
+    }
+
+    [Fact]
+    public async Task Update_NamingARepresentativeLater_AddsThemWithoutRenamingTheContact()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var req = BuildCreate(type: CustomerType.Company, name: "Công ty TNHH Gia Dụng Tân Phúc");
+        req.TaxId = null;
+        req.RepresentativeName = null;
+        req.PrimaryContact.FullName = "Anh Quang – phòng mua hàng";
+        var created = await _sut.CreateAsync(req, user.Id, canManage: true);
+        var update = BuildUpdate();
+        update.Type = CustomerType.Company;
+        update.Name = "Công ty TNHH Gia Dụng Tân Phúc";
+        update.TaxId = "0316789012";
+        update.RepresentativeName = "Bà Trần Thị Phúc";
+        update.OwnerUserId = user.Id;
+        update.RowVersion = created.RowVersion;
+
+        await _sut.UpdateAsync(created.Id, update, user.Id, canManage: true, canSeeAll: true);
+
+        var contacts = await _db.CustomerContacts.Where(item => item.CustomerId == created.Id).ToListAsync();
+        Assert.Equal("Anh Quang – phòng mua hàng", Assert.Single(contacts, contact => contact.IsPrimary).FullName);
+        Assert.Equal("Bà Trần Thị Phúc", Assert.Single(contacts, contact => contact.IsLegalRepresentative).FullName);
     }
 
     [Fact]

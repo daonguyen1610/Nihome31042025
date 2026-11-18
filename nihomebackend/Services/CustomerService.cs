@@ -143,7 +143,6 @@ public class CustomerService(
             throw new CustomerOperationException("Bạn chưa có quyền tạo Khách hàng. Hãy liên hệ quản trị viên nếu cần quyền này.");
         }
 
-        ValidateForType(request.Type, request.TaxId, request.Address, request.RepresentativeName);
         ValidateContactContact(request.PrimaryContact.Phone, request.PrimaryContact.Email);
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
 
@@ -158,13 +157,21 @@ public class CustomerService(
             ct);
 
         var now = DateTime.UtcNow;
+        // Tax id, address and representative may be filled in later; the contact person is the
+        // legal representative only when one was named (contracts check this before signing).
+        var representativeName = request.Type == CustomerType.Company &&
+            !string.IsNullOrWhiteSpace(request.RepresentativeName)
+                ? request.RepresentativeName.Trim()
+                : null;
+        var contactIsRepresentative = representativeName is not null && string.Equals(
+            request.PrimaryContact.FullName.Trim(), representativeName, StringComparison.OrdinalIgnoreCase);
         var customer = new Customer
         {
             Type = request.Type,
             Name = request.Name.Trim(),
             TaxId = string.IsNullOrWhiteSpace(request.TaxId) ? null : request.TaxId.Trim(),
             Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
-            RepresentativeName = string.IsNullOrWhiteSpace(request.RepresentativeName) ? null : request.RepresentativeName.Trim(),
+            RepresentativeName = representativeName,
             SourceCode = sourceCode,
             RelationshipStatus = CustomerRelationshipStatus.Prospect,
             OwnerUserId = request.OwnerUserId ?? callerUserId,
@@ -182,18 +189,28 @@ public class CustomerService(
                     Phone = TrimOrNull(request.PrimaryContact.Phone),
                     Email = TrimOrNull(request.PrimaryContact.Email),
                     IsPrimary = true, // forced true — Create requires one primary contact
-                    IsLegalRepresentative = request.Type == CustomerType.Company,
-                    LegalRepresentativeSince = request.Type == CustomerType.Company ? now : null,
+                    IsLegalRepresentative = contactIsRepresentative,
+                    LegalRepresentativeSince = contactIsRepresentative ? now : null,
                     CreatedAt = now,
                     UpdatedAt = now,
                 },
             },
         };
 
-        if (request.Type == CustomerType.Company)
+        if (representativeName is not null)
         {
-            customer.Activities.Add(LegalRepresentativeActivity(
-                request.PrimaryContact.FullName.Trim(), callerUserId, now, "assigned"));
+            if (!contactIsRepresentative)
+            {
+                customer.Contacts.Add(new CustomerContact
+                {
+                    FullName = representativeName,
+                    IsLegalRepresentative = true,
+                    LegalRepresentativeSince = now,
+                    CreatedAt = now,
+                    UpdatedAt = now,
+                });
+            }
+            customer.Activities.Add(LegalRepresentativeActivity(representativeName, callerUserId, now, "assigned"));
         }
 
         db.Customers.Add(customer);
@@ -235,7 +252,6 @@ public class CustomerService(
             throw new CustomerOperationException("Chỉ Trưởng phòng Kinh doanh được giao lại Khách hàng cho người khác.");
         }
 
-        ValidateForType(request.Type, request.TaxId, request.Address, request.RepresentativeName);
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
 
         var primaryPhone = customer.Contacts.FirstOrDefault(c => c.IsPrimary)?.Phone;
@@ -254,13 +270,19 @@ public class CustomerService(
         customer.Name = request.Name.Trim();
         customer.TaxId = TrimOrNull(request.TaxId);
         customer.Address = TrimOrNull(request.Address);
-        if (request.Type == CustomerType.Company)
+        if (request.Type == CustomerType.Company && !string.IsNullOrWhiteSpace(request.RepresentativeName))
         {
-            var requestedName = request.RepresentativeName!.Trim();
+            var requestedName = request.RepresentativeName.Trim();
+            // A representative named for the first time is a new person unless they are already
+            // a contact; never rename the existing contact into them.
             var representative = previousRepresentative
                 ?? customer.Contacts.FirstOrDefault(contact =>
-                    string.Equals(contact.FullName, requestedName, StringComparison.OrdinalIgnoreCase))
-                ?? customer.Contacts.First(contact => contact.IsPrimary);
+                    string.Equals(contact.FullName, requestedName, StringComparison.OrdinalIgnoreCase));
+            if (representative is null)
+            {
+                representative = new CustomerContact { CreatedAt = DateTime.UtcNow };
+                customer.Contacts.Add(representative);
+            }
             foreach (var contact in customer.Contacts)
             {
                 contact.IsLegalRepresentative = contact == representative;
@@ -645,19 +667,6 @@ public class CustomerService(
             CreatedByUserId = callerUserId,
             CreatedAt = occurredAt,
         };
-
-    private static void ValidateForType(CustomerType type, string? taxId, string? address, string? representative)
-    {
-        if (type == CustomerType.Company)
-        {
-            if (string.IsNullOrWhiteSpace(taxId))
-                throw new CustomerOperationException("Khách hàng doanh nghiệp phải có mã số thuế (MST).");
-            if (string.IsNullOrWhiteSpace(address))
-                throw new CustomerOperationException("Khách hàng doanh nghiệp phải có địa chỉ đăng ký kinh doanh.");
-            if (string.IsNullOrWhiteSpace(representative))
-                throw new CustomerOperationException("Khách hàng doanh nghiệp phải có tên người đại diện theo pháp luật.");
-        }
-    }
 
     private static void ValidateContactContact(string? phone, string? email)
     {
