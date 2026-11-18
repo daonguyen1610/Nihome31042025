@@ -28,6 +28,7 @@ const __dirname = dirname(__filename);
 const ALL_ADMIN_PATHS = [
   "/admin",
   "/admin/notifications",
+  "/admin/design-approvals",
   "/admin/users",
   "/admin/roles",
   "/admin/leads",
@@ -160,6 +161,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/leads",
       "/admin/customers",
       "/admin/opportunities",
@@ -188,6 +190,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/leads",
       "/admin/customers",
       "/admin/opportunities",
@@ -217,6 +220,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/activities",
       "/admin/news",
       "/admin/projects",
@@ -261,6 +265,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/projects",
       "/admin/processes/general",
       "/admin/recruitment",
@@ -299,6 +304,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/operational-projects",
       "/admin/reports/projects",
       "/admin/construction/tasks",
@@ -319,6 +325,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/operational-projects",
       "/admin/construction/tasks",
       "/admin/construction/progress",
@@ -335,6 +342,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/activities",
       "/admin/news",
       "/admin/projects",
@@ -373,6 +381,7 @@ const matrix: RoleExpectation[] = [
       allowed: [
         "/admin",
         "/admin/notifications",
+        "/admin/design-approvals",
         "/admin/master-data",
         "/admin/workflows",
         "/admin/design-projects",
@@ -397,6 +406,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/contracts",
       "/admin/design-projects",
       "/admin/operational-projects",
@@ -416,6 +426,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/projects",
       "/admin/quotes",
       "/admin/tenders",
@@ -438,6 +449,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/material-rates",
       "/admin/contracts",
       "/admin/vendors",
@@ -457,6 +469,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/customers",
       "/admin/contracts",
       "/admin/finance/contracts",
@@ -479,6 +492,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/contacts",
       "/admin/recruitment",
       "/admin/recruitment/employment-types",
@@ -491,6 +505,7 @@ const matrix: RoleExpectation[] = [
     allowed: [
       "/admin",
       "/admin/notifications",
+      "/admin/design-approvals",
       "/admin/vendors",
       "/admin/procurement-control",
       "/admin/operational-projects",
