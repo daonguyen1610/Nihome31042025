@@ -100,6 +100,65 @@ public class SurveyServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_KeepsTheOptionalTime_AndStartsNotYetSurveyed()
+    {
+        var request = ValidCreate();
+        request.SurveyTime = new TimeOnly(8, 30);
+
+        var survey = await _sut.CreateAsync(request, _userId);
+
+        Assert.Equal(new TimeOnly(8, 30), survey.SurveyTime);
+        Assert.Equal("Planned", survey.Status);
+        Assert.Null(survey.CompletedAt);
+    }
+
+    [Fact]
+    public async Task SetCompletedAsync_RecordsWhoAndWhen_AndCanBeReopened()
+    {
+        var survey = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        var done = await _sut.SetCompletedAsync(survey.Id, true, _userId);
+        Assert.Equal("Completed", done!.Status);
+        Assert.NotNull(done.CompletedAt);
+        Assert.Equal("Surveyor Tester", done.CompletedByName);
+        var twice = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.SetCompletedAsync(survey.Id, true, _userId));
+        Assert.Contains("đã được ghi nhận", twice.Message);
+
+        var reopened = await _sut.SetCompletedAsync(survey.Id, false, _userId);
+        Assert.Equal("Planned", reopened!.Status);
+        Assert.Null(reopened.CompletedAt);
+        Assert.Null(reopened.CompletedByName);
+        await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.SetCompletedAsync(survey.Id, false, _userId));
+    }
+
+    [Fact]
+    public async Task SetCompletedAsync_OutsideTheCallersScope_ReturnsNull()
+    {
+        var owner = AddUser("0900000027", "scope.owner@example.com");
+        var project = AddProject("OP-SURVEY-SCOPE", owner.Id);
+        var survey = AddSurvey("SV-SCOPE", project.Id, owner.Id, owner.Id);
+        await _db.SaveChangesAsync();
+
+        Assert.Null(await _sut.SetCompletedAsync(survey.Id, true, _userId));
+    }
+
+    [Fact]
+    public async Task ListAsync_FiltersByStatus()
+    {
+        var planned = await _sut.CreateAsync(ValidCreate(), _userId);
+        var done = await _sut.CreateAsync(ValidCreate(location: "Đã khảo sát xong"), _userId);
+        await _sut.SetCompletedAsync(done.Id, true, _userId);
+
+        var completed = await _sut.ListAsync(
+            new SurveyListParams { PageSize = 100, Status = "Completed" }, _userId, true);
+
+        Assert.Contains(completed.Items, item => item.Id == done.Id && item.Status == "Completed");
+        Assert.DoesNotContain(completed.Items, item => item.Id == planned.Id);
+    }
+
+    [Fact]
     public async Task CreateAsync_UnknownCompanion_Throws()
     {
         var request = ValidCreate();
@@ -737,6 +796,17 @@ public class SurveyServiceTests : IDisposable
                 ResourceType = "Survey",
                 ResourceId = created.Id.ToString(),
                 Message = "newer",
+            },
+            // A refused attempt did not happen, so it is not part of the history.
+            new AuditLog
+            {
+                AuditId = Guid.NewGuid().ToString("N"),
+                CreatedAt = DateTime.UtcNow.AddMinutes(1),
+                Action = "survey.complete",
+                ResourceType = "Survey",
+                ResourceId = created.Id.ToString(),
+                Message = "refused",
+                Status = "failure",
             });
         _db.SaveChanges();
 

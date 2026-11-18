@@ -168,6 +168,10 @@ public class SampleCrmDataSeederTests : IDisposable
             var opportunity = _db.Opportunities.Single(item => item.Id == survey.LinkedOpportunityId);
             Assert.Equal(opportunity.OperationalProjectId, survey.OperationalProjectId);
             Assert.Null(survey.LinkedProjectId);
+            // Past sample surveys are recorded as done, so demo data shows no false overdue warning.
+            Assert.Equal(SurveyStatus.Completed, survey.Status);
+            Assert.Equal(survey.SurveyorUserId, survey.CompletedByUserId);
+            Assert.True(survey.CompletedAt >= survey.SurveyDate);
         }
         foreach (var tender in _db.Tenders)
             Assert.Contains(_db.Customers, item => item.Id == tender.CustomerId);

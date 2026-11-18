@@ -10773,6 +10773,12 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("nvarchar(40)");
 
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("CompletedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("ConstructionTypeCode")
                         .HasMaxLength(80)
                         .HasColumnType("nvarchar(80)");
@@ -10821,8 +10827,18 @@ namespace nihomebackend.Migrations
                     b.Property<int>("OperationalProjectId")
                         .HasColumnType("int");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)")
+                        .HasDefaultValue("Planned");
+
                     b.Property<DateTime>("SurveyDate")
                         .HasColumnType("datetime2");
+
+                    b.Property<TimeOnly?>("SurveyTime")
+                        .HasColumnType("time");
 
                     b.Property<int?>("SurveyorUserId")
                         .HasColumnType("int");
@@ -10838,6 +10854,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
+                    b.HasIndex("CompletedByUserId");
+
                     b.HasIndex("DriveSyncStatus");
 
                     b.HasIndex("LinkedOpportunityId");
@@ -10845,6 +10863,8 @@ namespace nihomebackend.Migrations
                     b.HasIndex("LinkedProjectId");
 
                     b.HasIndex("OperationalProjectId");
+
+                    b.HasIndex("Status");
 
                     b.HasIndex("SurveyDate");
 
@@ -15539,6 +15559,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.Survey", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "CompletedBy")
+                        .WithMany()
+                        .HasForeignKey("CompletedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.Opportunity", "LinkedOpportunity")
                         .WithMany()
                         .HasForeignKey("LinkedOpportunityId")
@@ -15559,6 +15584,8 @@ namespace nihomebackend.Migrations
                         .WithMany()
                         .HasForeignKey("SurveyorUserId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CompletedBy");
 
                     b.Navigation("LinkedOpportunity");
 

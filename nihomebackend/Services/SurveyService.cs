@@ -5,6 +5,7 @@ using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
 using NihomeBackend.Models.DTOs.Responses;
+using NihomeBackend.Services.Audit;
 
 namespace NihomeBackend.Services;
 
@@ -33,6 +34,7 @@ public class SurveyService(
         var q = db.Surveys
             .AsNoTracking()
             .Include(s => s.Surveyor)
+            .Include(s => s.CompletedBy)
             .Include(s => s.Participants).ThenInclude(participant => participant.User)
             .Include(s => s.LinkedProject)
             .Include(s => s.LinkedOpportunity)
@@ -50,6 +52,7 @@ public class SurveyService(
             q = q.Where(s => s.SurveyorUserId == p.SurveyorUserId.Value ||
                 s.Participants.Any(participant => participant.UserId == p.SurveyorUserId.Value));
         if (p.LinkedProjectId.HasValue) q = q.Where(s => s.LinkedProjectId == p.LinkedProjectId.Value);
+        if (Enum.TryParse<SurveyStatus>(p.Status, true, out var status)) q = q.Where(s => s.Status == status);
         if (!string.IsNullOrWhiteSpace(p.DriveSyncStatus))
         {
             var statuses = p.DriveSyncStatus.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
@@ -110,6 +113,10 @@ public class SurveyService(
                     ? label
                     : null,
                 SurveyDate = s.SurveyDate,
+                SurveyTime = s.SurveyTime,
+                Status = s.Status.ToString(),
+                CompletedAt = s.CompletedAt,
+                CompletedByName = s.CompletedBy?.FullName,
                 SurveyorUserId = s.SurveyorUserId,
                 SurveyorName = s.Surveyor?.FullName,
                 Participants = MapParticipants(s),
@@ -133,6 +140,7 @@ public class SurveyService(
         var entity = db.Surveys
             .AsNoTracking()
             .Include(s => s.Surveyor)
+            .Include(s => s.CompletedBy)
             .Include(s => s.Participants).ThenInclude(participant => participant.User)
             .Include(s => s.LinkedProject)
             .Include(s => s.LinkedOpportunity)
@@ -218,6 +226,7 @@ public class SurveyService(
             Location = location,
             ConstructionTypeCode = TrimOrNull(request.ConstructionTypeCode),
             SurveyDate = request.SurveyDate,
+            SurveyTime = request.SurveyTime,
             SurveyorUserId = request.SurveyorUserId,
             LinkedProjectId = request.LinkedProjectId,
             LinkedOpportunityId = request.LinkedOpportunityId,
@@ -331,6 +340,7 @@ public class SurveyService(
         entity.Location = location;
         entity.ConstructionTypeCode = TrimOrNull(request.ConstructionTypeCode);
         entity.SurveyDate = request.SurveyDate;
+        entity.SurveyTime = request.SurveyTime;
         entity.SurveyorUserId = request.SurveyorUserId;
         entity.Participants.RemoveAll(participant => !participantIds.Contains(participant.UserId));
         entity.Participants.AddRange(participantIds
@@ -395,6 +405,29 @@ public class SurveyService(
 
     // ------------------------------ Delete ----------------------------------
 
+    public async Task<SurveyResponse?> SetCompletedAsync(
+        int id, bool completed, int callerUserId, bool canManageAll = false, CancellationToken ct = default)
+    {
+        var entity = await ApplyAccessScope(db.Surveys, callerUserId, canManageAll)
+            .FirstOrDefaultAsync(s => s.Id == id, ct);
+        if (entity is null) return null;
+        var target = completed ? SurveyStatus.Completed : SurveyStatus.Planned;
+        if (entity.Status == target)
+        {
+            throw new SurveyOperationException(completed
+                ? $"Phiếu {entity.Code} đã được ghi nhận là đã khảo sát."
+                : $"Phiếu {entity.Code} đang ở trạng thái chưa khảo sát, không cần mở lại.");
+        }
+        entity.Status = target;
+        entity.CompletedAt = completed ? DateTime.UtcNow : null;
+        entity.CompletedByUserId = completed ? callerUserId : null;
+        entity.UpdatedByUserId = callerUserId;
+        entity.UpdatedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+        logger.LogInformation("Survey {Id} marked {Status} by user {UserId}", id, target, callerUserId);
+        return await GetAsync(id, callerUserId, canManageAll, ct);
+    }
+
     public async Task<bool> DeleteAsync(
         int id, int callerUserId, bool canManageAll, CancellationToken ct = default)
     {
@@ -430,7 +463,8 @@ public class SurveyService(
         var idText = id.ToString();
         var rows = await db.AuditLogs
             .AsNoTracking()
-            .Where(a => a.ResourceType == EntityTypes.Survey && a.ResourceId == idText)
+            .Where(a => a.ResourceType == EntityTypes.Survey && a.ResourceId == idText &&
+                a.Status == AuditStatus.Success)
             .OrderByDescending(a => a.CreatedAt)
             .Take(limit)
             .Select(a => new
@@ -552,7 +586,8 @@ public class SurveyService(
                 {
                     ["code"] = survey.Code,
                     ["location"] = survey.Location,
-                    ["surveyDate"] = survey.SurveyDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+                    ["surveyDate"] = survey.SurveyDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture) +
+                        (survey.SurveyTime is { } time ? time.ToString(" HH:mm", CultureInfo.InvariantCulture) : string.Empty),
                 },
                 "Survey",
                 survey.Id,
@@ -653,6 +688,10 @@ public class SurveyService(
         ConstructionTypeCode = s.ConstructionTypeCode,
         ConstructionTypeLabel = constructionTypeLabel,
         SurveyDate = s.SurveyDate,
+        SurveyTime = s.SurveyTime,
+        Status = s.Status.ToString(),
+        CompletedAt = s.CompletedAt,
+        CompletedByName = s.CompletedBy?.FullName,
         SurveyorUserId = s.SurveyorUserId,
         SurveyorName = s.Surveyor?.FullName,
         Participants = MapParticipants(s),

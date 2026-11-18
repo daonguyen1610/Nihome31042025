@@ -11,6 +11,11 @@ public class SurveyResponse
     public string? ConstructionTypeLabel { get; set; }
 
     public DateTime SurveyDate { get; set; }
+    public TimeOnly? SurveyTime { get; set; }
+    /// <summary>Planned or Completed.</summary>
+    public string Status { get; set; } = "Planned";
+    public DateTime? CompletedAt { get; set; }
+    public string? CompletedByName { get; set; }
 
     public int? SurveyorUserId { get; set; }
     public string? SurveyorName { get; set; }
@@ -50,6 +55,11 @@ public class SurveyListItemResponse
     public string? ConstructionTypeLabel { get; set; }
 
     public DateTime SurveyDate { get; set; }
+    public TimeOnly? SurveyTime { get; set; }
+    /// <summary>Planned or Completed.</summary>
+    public string Status { get; set; } = "Planned";
+    public DateTime? CompletedAt { get; set; }
+    public string? CompletedByName { get; set; }
 
     public int? SurveyorUserId { get; set; }
     public string? SurveyorName { get; set; }

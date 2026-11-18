@@ -21,6 +21,13 @@ public class Survey
 
     /// <summary>Date the site visit is scheduled / took place.</summary>
     public DateTime SurveyDate { get; set; }
+    /// <summary>Optional start time on <see cref="SurveyDate"/>, local site time.</summary>
+    public TimeOnly? SurveyTime { get; set; }
+    /// <summary>Planned until someone on the survey records that it took place.</summary>
+    public SurveyStatus Status { get; set; } = SurveyStatus.Planned;
+    public DateTime? CompletedAt { get; set; }
+    public int? CompletedByUserId { get; set; }
+    public ApplicationUser? CompletedBy { get; set; }
 
     /// <summary>User who performs / performed the survey. Nullable while unassigned.</summary>
     public int? SurveyorUserId { get; set; }
@@ -78,6 +85,12 @@ public class SurveyParticipant
     public Survey Survey { get; set; } = null!;
     public int UserId { get; set; }
     public ApplicationUser User { get; set; } = null!;
+}
+
+public enum SurveyStatus
+{
+    Planned = 0,
+    Completed = 1,
 }
 
 public enum SurveyDriveSyncStatus

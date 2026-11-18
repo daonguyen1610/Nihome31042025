@@ -1908,6 +1908,11 @@ public static class SampleCrmDataSeeder
                 Location = location,
                 ConstructionTypeCode = code,
                 SurveyDate = now.AddDays(-daysAgo),
+                SurveyTime = new TimeOnly(8, 30),
+                // Sample surveys are in the past: the surveyor has recorded them as done.
+                Status = SurveyStatus.Completed,
+                CompletedAt = now.AddDays(-daysAgo).AddHours(4),
+                CompletedByUserId = owner.Id,
                 SurveyorUserId = owner.Id,
                 OperationalProjectId = operationalProjectId.Value,
                 LinkedProjectId = linkProject ? sampleProject?.Id : null,

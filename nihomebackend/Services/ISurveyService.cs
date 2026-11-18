@@ -41,6 +41,13 @@ public interface ISurveyService
     /// Deletes a survey after all managed media has been removed through its
     /// resource-bound endpoint. Returns <c>false</c> when the row does not exist.
     /// </summary>
+    /// <summary>
+    /// Records that the survey took place (or reopens it). Null when the survey is
+    /// missing or outside the caller's scope.
+    /// </summary>
+    Task<SurveyResponse?> SetCompletedAsync(
+        int id, bool completed, int callerUserId, bool canManageAll = false, CancellationToken ct = default);
+
     Task<bool> DeleteAsync(
         int id, int callerUserId, bool canManageAll, CancellationToken ct = default);
 

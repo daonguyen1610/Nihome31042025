@@ -81,6 +81,53 @@ public class SurveysController(
         }
     }
 
+    /// <summary>Records that the survey took place.</summary>
+    [HttpPost("{id:int}/complete")]
+    [RequirePermission("crm.surveys", "manage")]
+    public Task<ActionResult<SurveyResponse>> Complete(int id, CancellationToken ct) =>
+        SetCompletedAsync(id, completed: true, ct);
+
+    /// <summary>Puts a survey recorded by mistake back to not yet surveyed.</summary>
+    [HttpPost("{id:int}/reopen")]
+    [RequirePermission("crm.surveys", "manage")]
+    public Task<ActionResult<SurveyResponse>> Reopen(int id, CancellationToken ct) =>
+        SetCompletedAsync(id, completed: false, ct);
+
+    private async Task<ActionResult<SurveyResponse>> SetCompletedAsync(int id, bool completed, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var action = completed ? "survey.complete" : "survey.reopen";
+        try
+        {
+            var response = await svc.SetCompletedAsync(
+                id, completed, userId.Value, await CanManageAllAsync(userId.Value, ct), ct);
+            if (response is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = action,
+                ResourceType = EntityTypes.Survey,
+                ResourceId = id.ToString(),
+                Message = completed ? $"Survey #{id} marked as surveyed." : $"Survey #{id} reopened.",
+                NewValue = response,
+            });
+            return Ok(response);
+        }
+        catch (SurveyOperationException ex)
+        {
+            audit.Log(new AuditEvent
+            {
+                Action = action,
+                ResourceType = EntityTypes.Survey,
+                ResourceId = id.ToString(),
+                Message = ex.Message,
+                Status = AuditStatus.Failure,
+                FailureReason = ex.Message,
+            });
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
     [HttpPut("{id:int}")]
     [RequirePermission("crm.surveys", "manage")]
     public async Task<ActionResult<SurveyResponse>> Update(int id, [FromBody] UpdateSurveyRequest request, CancellationToken ct)

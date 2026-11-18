@@ -5,6 +5,7 @@ import { Link, useParams, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
   ArrowLeft,
+  CheckCircle2,
   Calendar,
   ClipboardList,
   Cloud,
@@ -31,11 +32,16 @@ import {
 } from "@/services/adminApi";
 import { extractApiError } from "@/lib/apiError";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useToast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { SurveyStatusBadge } from "@/components/admin/SurveyStatus";
+import { surveyProgress, surveyTimeLabel } from "@/lib/surveyStatus";
 import SurveyMediaPanel from "./SurveyMediaPanel";
 import SurveyConditionsPanel from "./SurveyConditionsPanel";
 import {
   formatDate as formatDateInZone,
   formatDateTime as formatDateTimeInZone,
+  todayIsoDate,
 } from "@/lib/displaySettings";
 
 // ---------------------------- shared ----------------------------
@@ -51,6 +57,20 @@ const DRIVE_STATUS_BADGE: Record<SurveyDriveSyncStatus, string> = {
  * placeholder page that will be replaced once NIH-101 gets its full media
  * / sync-log slice; extracting to a shared component now would be
  * premature. */
+/** Audit actions with a readable label; anything else reads as a generic change. */
+const TIMELINE_ACTIONS = new Set([
+  "survey.create",
+  "survey.update",
+  "survey.complete",
+  "survey.reopen",
+  "survey.media.add",
+  "survey.media.remove",
+  "survey.media.retry",
+  "survey.checklist.update",
+  "survey.conditions.import",
+  "survey.conditions.replace",
+]);
+
 const DriveStatusBadge = ({
   status,
   error,
@@ -108,6 +128,8 @@ const AdminSurveyDetail = () => {
   const [activeTab, setActiveTab] = useState("info");
   const surveyLoadedRef = useRef(false);
 
+  const { toast } = useToast();
+  const [statusBusy, setStatusBusy] = useState(false);
   const [timeline, setTimeline] = useState<SurveyTimelineEvent[] | null>(null);
   const [timelineLoading, setTimelineLoading] = useState(false);
 
@@ -172,8 +194,33 @@ const AdminSurveyDetail = () => {
 
   useEffect(() => {
     void fetchSurvey();
-    void fetchTimeline();
-  }, [fetchSurvey, fetchTimeline]);
+  }, [fetchSurvey]);
+
+  // Audit entries are written shortly after each change, so read the history
+  // whenever the tab is opened rather than once with the page.
+  useEffect(() => {
+    if (activeTab === "timeline") void fetchTimeline();
+  }, [activeTab, fetchTimeline]);
+
+  /** Records that the survey took place, or reopens one recorded by mistake. */
+  const setCompleted = async (completed: boolean) => {
+    if (!survey) return;
+    setStatusBusy(true);
+    try {
+      const { data } = completed
+        ? await adminApi.completeSurvey(survey.id)
+        : await adminApi.reopenSurvey(survey.id);
+      setSurvey(data);
+      toast({
+        title: t(completed ? "surveys.status.completedToast" : "surveys.status.reopenedToast"),
+        description: completed ? t("surveys.status.completedNext") : undefined,
+      });
+    } catch (err) {
+      toast({ variant: "destructive", title: t("common.error"), description: uiError(err) });
+    } finally {
+      setStatusBusy(false);
+    }
+  };
 
   const requestedMediaId = useMemo(() => {
     const value = searchParams.get("mediaId");
@@ -201,7 +248,23 @@ const AdminSurveyDetail = () => {
           t("surveys.field.constructionType"),
           survey.constructionTypeLabel ?? survey.constructionTypeCode ?? "—",
         ],
-        [t("surveys.field.surveyDate"), formatDate(survey.surveyDate)],
+        [
+          t("surveys.field.surveyDate"),
+          [formatDate(survey.surveyDate), surveyTimeLabel(survey.surveyTime)]
+            .filter(Boolean)
+            .join(" · "),
+        ],
+        [
+          t("surveys.field.status"),
+          survey.status === "Completed"
+            ? survey.completedByName
+              ? t("surveys.status.completedBy", {
+                  name: survey.completedByName,
+                  at: formatDateTime(survey.completedAt),
+                })
+              : t("surveys.status.completedOn", { at: formatDate(survey.completedAt) })
+            : t(`surveys.progress.${surveyProgress(survey, todayIsoDate())}`),
+        ],
         [t("surveys.field.leadSurveyor"), survey.surveyorName ?? "—"],
         [
           t("surveys.field.participants"),
@@ -255,6 +318,7 @@ const AdminSurveyDetail = () => {
                   <div className="flex flex-wrap items-center gap-2">
                     <ClipboardList className="h-5 w-5 shrink-0 text-muted-foreground" />
                     <h1 className="text-xl font-bold text-foreground md:text-2xl">{survey.code}</h1>
+                    <SurveyStatusBadge survey={survey} />
                     <DriveStatusBadge
                       status={survey.driveSyncStatus}
                       error={survey.driveSyncError}
@@ -264,7 +328,47 @@ const AdminSurveyDetail = () => {
                     {survey.location}
                   </p>
                 </div>
+                {canManage ? (
+                  survey.status === "Completed" ? (
+                    <Button
+                      variant="outline"
+                      className="min-h-10"
+                      disabled={statusBusy}
+                      onClick={() => void setCompleted(false)}
+                    >
+                      {statusBusy ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
+                      {t("surveys.status.reopen")}
+                    </Button>
+                  ) : (
+                    <Button
+                      className="min-h-10"
+                      disabled={statusBusy}
+                      onClick={() => void setCompleted(true)}
+                    >
+                      {statusBusy ? (
+                        <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                      ) : (
+                        <CheckCircle2 className="mr-1.5 h-4 w-4" />
+                      )}
+                      {t("surveys.status.complete")}
+                    </Button>
+                  )
+                ) : null}
               </div>
+              {surveyProgress(survey, todayIsoDate()) === "overdue" ? (
+                <p
+                  role="status"
+                  className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                >
+                  <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+                  {t(
+                    canManage ? "surveys.status.overdueHint" : "surveys.status.overdueHintReadOnly",
+                    {
+                      date: formatDate(survey.surveyDate),
+                    },
+                  )}
+                </p>
+              ) : null}
             </div>
 
             {/* Tabs */}
@@ -357,15 +461,14 @@ const AdminSurveyDetail = () => {
                                   {ev.userName}
                                 </span>
                               ) : null}
-                              <span className="rounded bg-muted px-1.5 py-0.5 font-mono">
-                                {ev.action}
-                              </span>
                             </div>
-                            {ev.message ? (
-                              <div className="mt-0.5 break-words text-sm text-foreground">
-                                {ev.message}
-                              </div>
-                            ) : null}
+                            <div className="mt-0.5 break-words text-sm text-foreground">
+                              {t(
+                                TIMELINE_ACTIONS.has(ev.action)
+                                  ? `surveys.timeline.${ev.action}`
+                                  : "surveys.timeline.other",
+                              )}
+                            </div>
                           </div>
                         </li>
                       ))}
