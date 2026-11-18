@@ -219,6 +219,9 @@ test("customer related records, documents, and contract owner inheritance work i
       .filter({ hasText: /Thêm hợp đồng|New contract|新增合同|新規契約/i });
     // The customer picker finds a customer by tax ID and shows it under the name.
     await contractDialog.locator("#c-customer-form").click();
+    // Digits of another tax ID in the same order are not a match.
+    await page.getByRole("dialog").last().locator("[cmdk-input]").fill("0000000000");
+    await expect(page.getByText(/Không có kết quả phù hợp|No matching results/i)).toBeVisible();
     await page.getByRole("dialog").last().locator("[cmdk-input]").fill(taxId);
     await page
       .getByRole("option")

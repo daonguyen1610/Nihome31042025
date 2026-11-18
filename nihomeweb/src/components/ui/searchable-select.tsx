@@ -3,6 +3,7 @@ import * as React from "react";
 import { Check, ChevronsUpDown } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { matchesAllTerms } from "@/lib/searchMatch";
 import { Button } from "@/components/ui/button";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -187,7 +188,15 @@ export function SearchableSelect({
             </select>
           </div>
         )}
-        <Command shouldFilter={shouldFilter} className="min-h-0 flex-1">
+        <Command
+          shouldFilter={shouldFilter}
+          // Every typed word must appear in the label, hint or keywords (accents and
+          // case ignored); the default fuzzy match let "0000000000" find other tax IDs.
+          filter={(_value, search, keywords) =>
+            matchesAllTerms((keywords ?? []).join(" "), search) ? 1 : 0
+          }
+          className="min-h-0 flex-1"
+        >
           <CommandInput
             ref={searchInput}
             aria-label={
@@ -202,7 +211,7 @@ export function SearchableSelect({
           <CommandList className="min-h-0 overscroll-contain">
             {!loading && (
               <CommandEmpty>
-                {emptyText ?? (departments.length ? t("people.noResults") : "—")}
+                {emptyText ?? t(departments.length ? "people.noResults" : "common.noResults")}
               </CommandEmpty>
             )}
             {loading ? (
@@ -213,6 +222,7 @@ export function SearchableSelect({
                   <CommandItem
                     key={o.value}
                     value={`${o.value} ${o.label} ${o.hint ?? ""} ${o.keywords ?? ""}`}
+                    keywords={[o.label, o.hint ?? "", o.keywords ?? ""]}
                     className="min-h-11"
                     onSelect={() => {
                       onChange(o.value);
