@@ -317,6 +317,8 @@ public sealed class DetailDesignScheduleService(
             item.Id == phaseId && item.OperationalProjectId == projectId, ct);
         if (phase is null) return null;
         await EnsureCanManageFlowAsync(projectId, phase.DesignProjectId, callerUserId, ct);
+        if (string.IsNullOrWhiteSpace(request.Code))
+            request.Code = await NextTaskCodeAsync(projectId, phase.DesignProjectId, phase.Code, ct);
         var status = await ValidateTaskAsync(projectId, phase.DesignProjectId, null, request, ct);
         var predecessorIds = NormalizePredecessors(request.PredecessorTaskIds);
         var ccMemberIds = NormalizeMemberIds(request.CcMemberIds);
@@ -384,6 +386,7 @@ public sealed class DetailDesignScheduleService(
         if (task.ApprovalStatus is DesignTaskApprovalStatus.Pending or DesignTaskApprovalStatus.Approved)
             throw new DesignScheduleOperationException(
                 "Đầu việc đang chờ duyệt hoặc đã duyệt không được sửa nội dung.");
+        if (string.IsNullOrWhiteSpace(request.Code)) request.Code = task.Code;
         var status = await ValidateTaskAsync(projectId, task.DesignProjectId, taskId, request, ct);
         DesignScheduleRules.ValidateTransition(task.Status, status);
         var predecessorIds = NormalizePredecessors(request.PredecessorTaskIds);
@@ -608,8 +611,8 @@ public sealed class DetailDesignScheduleService(
         UpsertDesignScheduleTaskRequest request,
         CancellationToken ct)
     {
-        if (string.IsNullOrWhiteSpace(request.Code) || string.IsNullOrWhiteSpace(request.Name))
-            throw new DesignScheduleOperationException("Mã và tên công việc là bắt buộc.");
+        if (string.IsNullOrWhiteSpace(request.Name))
+            throw new DesignScheduleOperationException("Tên công việc là bắt buộc.");
         var status = DesignScheduleRules.ParseStatus(request.Status);
         if (status == DesignScheduleStatus.Completed)
             throw new DesignScheduleOperationException(
@@ -831,6 +834,32 @@ public sealed class DetailDesignScheduleService(
 
     private static string? NormalizeDisciplineCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
+
+    /// <summary>
+    /// Next free code for a task in a phase: YT-01… for concept, CS-01… for basic design,
+    /// CT-01… for detail design. Existing codes, typed or generated, are never reused.
+    /// </summary>
+    private async Task<string> NextTaskCodeAsync(
+        int projectId, int designProjectId, DesignSchedulePhaseCode phase, CancellationToken ct)
+    {
+        var prefix = phase switch
+        {
+            DesignSchedulePhaseCode.Concept => "YT",
+            DesignSchedulePhaseCode.BasicDesign => "CS",
+            _ => "CT",
+        } + "-";
+        var used = await db.DesignScheduleTasks.AsNoTracking()
+            .Where(task => task.OperationalProjectId == projectId && task.DesignProjectId == designProjectId &&
+                task.Code.StartsWith(prefix))
+            .Select(task => task.Code)
+            .ToListAsync(ct);
+        var highest = used
+            .Select(code => int.TryParse(code[prefix.Length..], NumberStyles.None, CultureInfo.InvariantCulture,
+                out var number) ? number : 0)
+            .DefaultIfEmpty(0)
+            .Max();
+        return $"{prefix}{highest + 1:00}";
+    }
 
     /// <summary>Tells the person now responsible for a task, unless they assigned it to themselves.</summary>
     private async Task NotifyAssigneeAsync(DesignScheduleTask task, int callerUserId, int projectId, CancellationToken ct)
