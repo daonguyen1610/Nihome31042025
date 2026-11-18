@@ -812,13 +812,13 @@ public class LeadServiceTests : IDisposable
         await _db.SaveChangesAsync();
 
         await Assert.ThrowsAsync<LeadOperationException>(() => _sut.ConvertAsync(
-            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
+            lead.Id, new ConvertLeadRequest { CustomerId = 999_999 }, sales.Id, canConvert: true));
 
         Assert.Empty(_db.OperationalProjects);
     }
 
     [Fact]
-    public async Task ConvertAsync_RejectsCompanyLeadWithoutAddressAndRepresentative()
+    public async Task ConvertAsync_CompanyLeadWithoutAddressOrRepresentative_CreatesCompanyCustomer()
     {
         var sales = await SeedUserAsync(UserRole.USER);
         SeedSource("marketing");
@@ -826,12 +826,15 @@ public class LeadServiceTests : IDisposable
         lead.CompanyName = "Công ty Alpha";
         await _db.SaveChangesAsync();
 
-        var ex = await Assert.ThrowsAsync<LeadOperationException>(() => _sut.ConvertAsync(
-            lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true));
+        var response = await _sut.ConvertAsync(lead.Id, new ConvertLeadRequest(), sales.Id, canConvert: true);
 
-        Assert.Contains("Address", ex.Message);
-        Assert.Empty(_db.Customers);
-        Assert.Empty(_db.Opportunities);
+        var customer = await _db.Customers.Include(item => item.Contacts)
+            .SingleAsync(item => item.Id == response!.ConvertedCustomerId);
+        Assert.Equal(CustomerType.Company, customer.Type);
+        Assert.Equal("Công ty Alpha", customer.Name);
+        Assert.Null(customer.Address);
+        Assert.Null(customer.RepresentativeName);
+        Assert.DoesNotContain(customer.Contacts, contact => contact.IsLegalRepresentative);
     }
 
     [Fact]
@@ -913,7 +916,7 @@ public class LeadServiceTests : IDisposable
             sales.Id,
             canConvert: true));
 
-        Assert.Contains("must match", ex.Message, StringComparison.OrdinalIgnoreCase);
+        Assert.Contains("khác khách hàng của Cơ hội", ex.Message, StringComparison.OrdinalIgnoreCase);
     }
 
     [Fact]

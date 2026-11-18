@@ -416,15 +416,6 @@ const AdminCustomers = () => {
       setCreateError(t("customers.validation.missingFields"));
       return;
     }
-    if (
-      type === "Company" &&
-      (!createForm.taxId?.trim() ||
-        !createForm.address?.trim() ||
-        !createForm.representativeName?.trim())
-    ) {
-      setCreateError(t("customers.validation.companyFieldsMissing"));
-      return;
-    }
     const createContactIssue = validateContact(
       createForm.primaryContact.phone,
       createForm.primaryContact.email,
@@ -445,16 +436,18 @@ const AdminCustomers = () => {
         representativeName: createForm.representativeName?.trim() || undefined,
         note: createForm.note?.trim() || undefined,
         primaryContact: {
-          // Required by the backend but no longer asked for: a company's contact
-          // is its representative, and an individual is their own contact.
+          // An individual is their own contact. A company's contact is the person
+          // sales talks to, falling back to the representative, then the company name.
           fullName:
-            (type === "Company" ? createForm.representativeName?.trim() : createForm.name.trim()) ||
-            createForm.name.trim(),
+            (type === "Company"
+              ? primary.fullName?.trim() || createForm.representativeName?.trim()
+              : createForm.name.trim()) || createForm.name.trim(),
           position: primary.position?.trim() || undefined,
           phone: primary.phone?.trim() || undefined,
           email: primary.email?.trim() || undefined,
           isPrimary: true,
-          isLegalRepresentative: type === "Company",
+          // The server marks the legal representative from representativeName.
+          isLegalRepresentative: false,
         },
         duplicateOverrideReason: opts?.overrideReason,
       });
@@ -1128,7 +1121,7 @@ const AdminCustomers = () => {
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{t("customers.new")}</DialogTitle>
-            <DialogDescription>{t("customers.validation.primaryContact")}</DialogDescription>
+            <DialogDescription>{t("customers.create.hint")}</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
@@ -1181,14 +1174,14 @@ const AdminCustomers = () => {
               <>
                 <div className="grid grid-cols-2 gap-3">
                   <FieldScope>
-                    <Label>{t("customers.field.taxId")} *</Label>
+                    <Label>{t("customers.field.taxId")}</Label>
                     <Input
                       value={createForm.taxId ?? ""}
                       onChange={(e) => setCreateForm({ ...createForm, taxId: e.target.value })}
                     />
                   </FieldScope>
                   <FieldScope>
-                    <Label>{t("customers.field.representativeName")} *</Label>
+                    <Label>{t("customers.field.representativeName")}</Label>
                     <Input
                       value={createForm.representativeName ?? ""}
                       onChange={(e) =>
@@ -1198,18 +1191,41 @@ const AdminCustomers = () => {
                   </FieldScope>
                 </div>
                 <FieldScope>
-                  <Label>{t("customers.field.address")} *</Label>
+                  <Label>{t("customers.field.address")}</Label>
                   <Textarea
                     rows={2}
                     value={createForm.address ?? ""}
                     onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
                   />
                 </FieldScope>
+                <p className="text-xs text-muted-foreground">
+                  {t("customers.companyFields.later")}
+                </p>
               </>
             )}
             <div className="rounded border p-3 space-y-3">
               <h4 className="text-sm font-medium">{t("customers.field.primaryContact")} *</h4>
-              <p className="text-xs text-muted-foreground">{t("customers.contact.nameDerived")}</p>
+              <p className="text-xs text-muted-foreground">
+                {t(
+                  createForm.type === "Company"
+                    ? "customers.contact.companyContactHint"
+                    : "customers.contact.nameDerived",
+                )}
+              </p>
+              {createForm.type === "Company" && (
+                <FieldScope>
+                  <Label>{t("customers.contact.fullName")}</Label>
+                  <Input
+                    value={createForm.primaryContact.fullName ?? ""}
+                    onChange={(e) =>
+                      setCreateForm({
+                        ...createForm,
+                        primaryContact: { ...createForm.primaryContact, fullName: e.target.value },
+                      })
+                    }
+                  />
+                </FieldScope>
+              )}
               <div className="grid grid-cols-2 gap-3">
                 <FieldScope>
                   <Label>{t("customers.contact.phone")}</Label>

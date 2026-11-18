@@ -403,7 +403,7 @@ public class LeadService(
             if (request.CustomerId.HasValue && request.CustomerId.Value != existingOpportunity.CustomerId)
             {
                 throw new LeadOperationException(
-                    "CustomerId must match the opportunity's customer, or be omitted.");
+                    "Khách hàng đã chọn khác khách hàng của Cơ hội. Hãy chọn đúng khách hàng của Cơ hội hoặc bỏ trống.");
             }
 
             customerIdFromOpportunity = existingOpportunity.CustomerId;
@@ -727,9 +727,8 @@ public class LeadService(
 
     /// <summary>
     /// Builds the customer a convert creates. A lead with a company name yields a
-    /// Company customer, and <c>CustomerService.ValidateForType</c> requires an
-    /// address and representative for those. Tax id is deliberately optional:
-    /// a prospect may not have supplied one at conversion time (NIH-448).
+    /// Company customer. Tax id, address and representative are optional: a prospect
+    /// often has not supplied them yet, and contracts require them before signing.
     /// </summary>
     private static Customer BuildCustomerFromLead(
         Lead lead,
@@ -738,14 +737,9 @@ public class LeadService(
         DateTime now)
     {
         var isCompany = !string.IsNullOrWhiteSpace(lead.CompanyName);
-
-        if (isCompany &&
-            (string.IsNullOrWhiteSpace(request.Address)
-             || string.IsNullOrWhiteSpace(request.RepresentativeName)))
-        {
-            throw new LeadOperationException(
-                "Company leads require Address and RepresentativeName to convert.");
-        }
+        var representativeName = isCompany && !string.IsNullOrWhiteSpace(request.RepresentativeName)
+            ? request.RepresentativeName.Trim()
+            : null;
 
         var primaryContact = new CustomerContact
         {
@@ -757,9 +751,8 @@ public class LeadService(
             UpdatedAt = now,
         };
         var contacts = new List<CustomerContact> { primaryContact };
-        if (isCompany)
+        if (representativeName is not null)
         {
-            var representativeName = request.RepresentativeName!.Trim();
             if (string.Equals(primaryContact.FullName, representativeName, StringComparison.OrdinalIgnoreCase))
             {
                 primaryContact.IsLegalRepresentative = true;
@@ -784,7 +777,7 @@ public class LeadService(
             Name = isCompany ? lead.CompanyName!.Trim() : lead.Name.Trim(),
             TaxId = string.IsNullOrWhiteSpace(request.TaxId) ? null : request.TaxId.Trim(),
             Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
-            RepresentativeName = isCompany ? request.RepresentativeName!.Trim() : null,
+            RepresentativeName = representativeName,
             SourceCode = lead.SourceCode,
             RelationshipStatus = CustomerRelationshipStatus.Prospect,
             OwnerUserId = lead.OwnerUserId,

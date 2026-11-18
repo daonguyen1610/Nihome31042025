@@ -165,7 +165,7 @@ public class CustomersControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Create_CompanyWithoutTaxId_IsBadRequest()
+    public async Task Create_CompanyWithoutTaxId_IsSavedForCompletionLater()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
 
@@ -177,7 +177,9 @@ public class CustomersControllerTests : IntegrationTestBase
             primaryContact = new { fullName = "CEO", phone = "0900" + Random.Shared.Next(100000, 999999) },
         });
 
-        res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // NC-01: tax id, address and representative can be added later; signing a contract still needs them.
+        res.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await ReadJsonAsync(res)).GetProperty("taxId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
     }
 
     [Fact]

@@ -470,11 +470,9 @@ const AdminLeads = () => {
     }
   };
 
-  // A lead carrying a company name produces a Company customer. Tax id remains
-  // optional because a prospect may not have supplied one yet (NIH-448).
+  // A lead carrying a company name produces a Company customer. Tax id, address and
+  // representative are optional now and can be completed before a contract is signed.
   const convertNeedsCompanyFields = Boolean(detail?.companyName?.trim());
-  const convertCompanyFieldsMissing =
-    convertNeedsCompanyFields && (!convertAddress.trim() || !convertRepresentative.trim());
 
   const openConvertDialog = () => {
     if (!detail) return;
@@ -1336,7 +1334,7 @@ const AdminLeads = () => {
           {convertNeedsCompanyFields && (
             <div className="space-y-3 py-2">
               <p className="rounded bg-muted p-2 text-xs text-muted-foreground">
-                {t("leads.convert.companyNotice")}
+                {t("leads.convert.companyNoticeOptional")}
               </p>
               <div className="space-y-1">
                 <Label className="text-xs" htmlFor="convert-taxid">
@@ -1400,7 +1398,7 @@ const AdminLeads = () => {
             </Button>
             <Button
               onClick={() => void handleConvert()}
-              disabled={converting || convertCompanyFieldsMissing || duplicate !== null}
+              disabled={converting || duplicate !== null}
             >
               {converting ? "…" : t("leads.convert.button")}
             </Button>
