@@ -16,7 +16,8 @@ export const QUOTE_PROGRESS_STEPS = [
 export type QuoteProgressStep = (typeof QUOTE_PROGRESS_STEPS)[number];
 
 export type QuoteProgress =
-  | { kind: "active"; step: QuoteProgressStep; index: number }
+  /** `ready`: the step's own work is done and it only waits for the hand-off (e.g. submit). */
+  | { kind: "active"; step: QuoteProgressStep; index: number; ready: boolean }
   | { kind: "done" }
   | { kind: "stopped" };
 
@@ -25,22 +26,27 @@ export type QuoteProgressInput = {
   grandTotal: number;
   /** Finance has approved the review for this quote version. */
   financeApproved: boolean;
+  /** An approved input price or approved project BOQ is available to price from. */
+  priceSourceReady: boolean;
 };
 
-const active = (step: QuoteProgressStep): QuoteProgress => ({
+const active = (step: QuoteProgressStep, ready = false): QuoteProgress => ({
   kind: "active",
   step,
   index: QUOTE_PROGRESS_STEPS.indexOf(step),
+  ready,
 });
 
 export function getQuoteProgress({
   status,
   grandTotal,
   financeApproved,
+  priceSourceReady,
 }: QuoteProgressInput): QuoteProgress {
   switch (status) {
     case "Draft":
-      return active(grandTotal === 0 ? "input" : "output");
+      if (grandTotal > 0) return active("output", true);
+      return active(priceSourceReady ? "output" : "input");
     case "PendingApproval":
       return active("internal");
     case "Approved":
