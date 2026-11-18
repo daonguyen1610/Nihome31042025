@@ -297,39 +297,107 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     [Fact]
     public async Task ApprovalInbox_ListsOnlyWorkWaitingOnTheCaller()
     {
-        var pending = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "INBOX-001");
-        pending.ApprovalStatus = DesignTaskApprovalStatus.Pending;
-        var approved = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "INBOX-002");
-        approved.ApprovalStatus = DesignTaskApprovalStatus.Approved;
-        db.DesignScheduleTasks.AddRange(pending, approved);
+        var approverUserId = SeedInbox();
+        var inbox = new DesignApprovalInboxService(db);
+
+        var summary = await inbox.GetSummaryAsync(approverUserId, default);
+        var tasks = await inbox.ListTasksAsync(approverUserId, new DesignApprovalInboxQuery(), default);
+        var reviews = await inbox.ListReviewsAsync(approverUserId, new DesignApprovalInboxQuery(), default);
+        var someoneElse = await inbox.ListTasksAsync(assigneeUserId, new DesignApprovalInboxQuery(), default);
+
+        Assert.Equal(3, summary.TaskCount);
+        Assert.Equal(2, summary.ReviewCount);
+        Assert.Equal(designProjectId, Assert.Single(summary.Dossiers).Id);
+        Assert.Equal(["INBOX-001", "INBOX-002", "INBOX-003"], tasks.Items.Select(item => item.Code));
+        Assert.Equal(3, tasks.Total);
+        Assert.Equal(2, reviews.Total);
+        Assert.Equal("INBOX-901", Assert.Single(someoneElse.Items).Code);
+        Assert.Equal(0, (await inbox.GetSummaryAsync(assigneeUserId, default)).ReviewCount);
+    }
+
+    [Fact]
+    public async Task ApprovalInbox_SearchesSortsAndPagesTasks()
+    {
+        var approverUserId = SeedInbox();
+        var inbox = new DesignApprovalInboxService(db);
+
+        var search = await inbox.ListTasksAsync(approverUserId,
+            new DesignApprovalInboxQuery { Search = " Mặt đứng " }, default);
+        var newestSecondPage = await inbox.ListTasksAsync(approverUserId,
+            new DesignApprovalInboxQuery { NewestFirst = true, Page = 2, PageSize = 2 }, default);
+        var otherDossier = await inbox.ListTasksAsync(approverUserId,
+            new DesignApprovalInboxQuery { DesignProjectId = designProjectId + 1000 }, default);
+
+        Assert.Equal("INBOX-002", Assert.Single(search.Items).Code);
+        Assert.Equal(3, newestSecondPage.Total);
+        Assert.Equal("INBOX-001", Assert.Single(newestSecondPage.Items).Code);
+        Assert.Equal(0, otherDossier.Total);
+    }
+
+    [Fact]
+    public async Task ApprovalInbox_FiltersReviewsByStageAndOwnComment()
+    {
+        var approverUserId = SeedInbox();
+        var inbox = new DesignApprovalInboxService(db);
+
+        var basic = await inbox.ListReviewsAsync(approverUserId,
+            new DesignApprovalInboxQuery { Stage = "basicdesign" }, default);
+        var commented = await inbox.ListReviewsAsync(approverUserId,
+            new DesignApprovalInboxQuery { Commented = true }, default);
+        var notCommented = await inbox.ListReviewsAsync(approverUserId,
+            new DesignApprovalInboxQuery { Commented = false }, default);
+
+        Assert.Equal("Hồ sơ cơ sở kết cấu", Assert.Single(basic.Items).Title);
+        var mine = Assert.Single(commented.Items);
+        Assert.Equal("Phương án mặt tiền", mine.Title);
+        Assert.True(mine.HasMyComment);
+        Assert.Equal("Hồ sơ cơ sở kết cấu", Assert.Single(notCommented.Items).Title);
+        var invalid = await Assert.ThrowsAsync<DesignApprovalInboxOperationException>(() =>
+            inbox.ListReviewsAsync(approverUserId, new DesignApprovalInboxQuery { Stage = "Permit" }, default));
+        Assert.Contains("Giai đoạn không hợp lệ", invalid.Message);
+    }
+
+    /// <summary>Three pending tasks and two internal reviews for the approver, plus work that is not theirs.</summary>
+    private int SeedInbox()
+    {
         var approverUserId = db.OperationalProjectMembers.Single(item => item.Id == approverMemberId).UserId;
-        DesignReview Review(string title, DesignReviewStatus status) => new()
+        var submitted = new DateTime(2026, 11, 10, 2, 0, 0, DateTimeKind.Utc);
+        DesignScheduleTask PendingTask(string code, string name, int day)
+        {
+            var task = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, code);
+            task.Name = name;
+            task.ApprovalStatus = DesignTaskApprovalStatus.Pending;
+            task.SubmittedAt = submitted.AddDays(day);
+            return task;
+        }
+        var approved = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "INBOX-900");
+        approved.ApprovalStatus = DesignTaskApprovalStatus.Approved;
+        var notMine = Task(projectId, designProjectId, phaseId, approverMemberId, activeMemberId, "INBOX-901");
+        notMine.ApprovalStatus = DesignTaskApprovalStatus.Pending;
+        db.DesignScheduleTasks.AddRange(
+            PendingTask("INBOX-001", "Mặt bằng tầng điển hình", 0),
+            PendingTask("INBOX-002", "Mặt đứng chính", 1),
+            PendingTask("INBOX-003", "Mặt cắt dọc", 2),
+            approved, notMine);
+        DesignReview Review(string title, DesignReviewStage stage, DesignReviewStatus status, int day) => new()
         {
             DesignProjectId = designProjectId,
-            Stage = DesignReviewStage.Concept,
+            Stage = stage,
             RevisionNumber = 1,
             Title = title,
             Status = status,
             DesignManagerUserId = callerId,
+            InternalSubmittedAt = submitted.AddDays(day),
             Recipients = [new DesignReviewRecipient { UserId = approverUserId }],
         };
+        var commented = Review("Phương án mặt tiền", DesignReviewStage.Concept, DesignReviewStatus.InternalReview, 0);
+        commented.Comments = [new DesignReviewComment { AuthorUserId = approverUserId, Body = "Đề nghị tăng lam che nắng." }];
         db.DesignReviews.AddRange(
-            Review("Phương án mặt tiền", DesignReviewStatus.InternalReview),
-            Review("Phương án đã gửi khách", DesignReviewStatus.SubmittedToClient));
-        await db.SaveChangesAsync();
-        var inbox = new DesignApprovalInboxService(db);
-
-        var mine = await inbox.GetAsync(approverUserId, default);
-        var someoneElse = await inbox.GetAsync(assigneeUserId, default);
-
-        var task = Assert.Single(mine.Tasks);
-        Assert.Equal("INBOX-001", task.Code);
-        Assert.Equal(designProjectId, task.DesignProjectId);
-        var review = Assert.Single(mine.Reviews);
-        Assert.Equal("Phương án mặt tiền", review.Title);
-        Assert.False(review.HasMyComment);
-        Assert.Empty(someoneElse.Tasks);
-        Assert.Empty(someoneElse.Reviews);
+            commented,
+            Review("Hồ sơ cơ sở kết cấu", DesignReviewStage.BasicDesign, DesignReviewStatus.InternalReview, 1),
+            Review("Phương án đã gửi khách", DesignReviewStage.Concept, DesignReviewStatus.SubmittedToClient, 2));
+        db.SaveChanges();
+        return approverUserId;
     }
 
     [Fact]

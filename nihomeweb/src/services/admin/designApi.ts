@@ -17,7 +17,11 @@ import type {
   UpsertDesignScheduleTaskRequest,
   DesignScheduleTaskResponse,
   DesignReviewResponse,
-  DesignApprovalInboxResponse,
+  DesignApprovalInboxSummary,
+  DesignApprovalInboxQuery,
+  DesignApprovalInboxPage,
+  DesignApprovalInboxTask,
+  DesignApprovalInboxReview,
   DesignReviewStage,
 } from "./types/designProjects";
 import type {
@@ -220,7 +224,16 @@ export const designApi = {
         },
       },
     ),
-  getDesignApprovalInbox: () => api.get<DesignApprovalInboxResponse>("/design-approval-inbox"),
+  getDesignApprovalSummary: () =>
+    api.get<DesignApprovalInboxSummary>("/design-approval-inbox/summary"),
+  listDesignApprovalTasks: (params: DesignApprovalInboxQuery) =>
+    api.get<DesignApprovalInboxPage<DesignApprovalInboxTask>>("/design-approval-inbox/tasks", {
+      params,
+    }),
+  listDesignApprovalReviews: (params: DesignApprovalInboxQuery) =>
+    api.get<DesignApprovalInboxPage<DesignApprovalInboxReview>>("/design-approval-inbox/reviews", {
+      params,
+    }),
   listDesignReviews: (projectId: number) =>
     api.get<DesignReviewResponse[]>(`/design-projects/${projectId}/reviews`),
   listDesignReviewRecipientCandidates: (projectId: number) =>
