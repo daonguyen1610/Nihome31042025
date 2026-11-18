@@ -170,10 +170,12 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     const dialog = page.getByRole("dialog").filter({ has: page.locator("#schedule-task-code") });
     await expect(dialog).toBeVisible();
     // An empty save points at the field to fix (the code is optional and numbered automatically).
-    await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
+    await dialog.getByRole("button", { name: /^(Thêm công việc|Add task)$/i }).click();
     await expect(dialog.locator("#schedule-task-name")).toBeFocused();
     await expect(dialog.locator("#schedule-task-name")).toHaveAttribute("aria-invalid", "true");
     await expect(dialog.locator("#schedule-task-code")).not.toHaveAttribute("aria-invalid", "true");
+    // The first task of an empty phase is offered the whole phase weight.
+    await expect(dialog.locator("#task-weight")).toHaveValue("100");
     await dialog.locator("#schedule-task-code").fill(`ARC-${suffix}`);
     await dialog.locator("#schedule-task-name").fill(`Architecture coordination ${suffix}`);
 
@@ -213,7 +215,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       .check();
     await dialog.locator("#task-planned-start").fill("2026-04-01");
     await dialog.locator("#task-planned-end").fill("2026-04-15");
-    await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
+    await dialog.getByRole("button", { name: /^(Thêm công việc|Add task)$/i }).click();
 
     await expect(dialog).toBeHidden();
     const tasksSection = schedule
@@ -233,7 +235,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
 
     await expect(dialog).toBeHidden();
-    await expect(taskRow).toContainText(/25%\s*[\/·]\s*1%/);
+    await expect(taskRow).toContainText(/25%\s*[\/·]\s*100%/);
     await expect(taskRow).toContainText(/Đang thực hiện|In progress/i);
 
     const filters = schedule.locator("section").filter({ hasText: /Bộ lọc|Filters/i });

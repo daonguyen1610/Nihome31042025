@@ -30,6 +30,7 @@ import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import { focusFormField } from "@/lib/formFocus";
+import { PHASE_TASK_WEIGHT_TOTAL, suggestedTaskWeight } from "@/lib/designScheduleWeights";
 import {
   adminApi,
   DESIGN_SCHEDULE_STATUSES,
@@ -53,6 +54,8 @@ interface Props {
   disciplines: MasterDataOption[];
   members: OperationalProjectMemberResponse[];
   initialPhaseId?: number;
+  /** Sum of task weights already used in each phase (whole schedule). */
+  taskWeightTotals: Map<number, number>;
   task: DesignScheduleTaskResponse | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -158,6 +161,7 @@ export const DesignScheduleTaskDialog = ({
   disciplines,
   members,
   initialPhaseId,
+  taskWeightTotals,
   task,
   open,
   onOpenChange,
@@ -189,6 +193,8 @@ export const DesignScheduleTaskDialog = ({
   useEffect(() => {
     if (!open) return;
     const blank = emptyForm(initialPhaseId ?? phases[0]?.id ?? 0);
+    // A new task starts with the weight that completes its phase to 100%.
+    blank.weight = suggestedTaskWeight(taskWeightTotals.get(blank.phaseId) ?? 0);
     // Most tasks in a design schedule belong to the design department.
     if (departments.some((department) => department.code === DESIGN_DEPARTMENT))
       blank.departmentCode = DESIGN_DEPARTMENT;
@@ -198,7 +204,7 @@ export const DesignScheduleTaskDialog = ({
     setAttempted(false);
     setBaseStatus(task?.status ?? "NotStarted");
     idempotencyKey.current = newIdempotencyKey();
-  }, [open, task, initialPhaseId, phases, departments]);
+  }, [open, task, initialPhaseId, phases, departments, taskWeightTotals]);
 
   useEffect(() => {
     if (!open) return;
@@ -409,7 +415,16 @@ export const DesignScheduleTaskDialog = ({
             <Select
               disabled={Boolean(task)}
               value={form.phaseId ? String(form.phaseId) : ""}
-              onValueChange={(value) => setForm({ ...form, phaseId: Number(value) })}
+              onValueChange={(value) =>
+                setForm({
+                  ...form,
+                  phaseId: Number(value),
+                  // Moving a new task to another phase suggests that phase's remaining weight.
+                  weight: task
+                    ? form.weight
+                    : suggestedTaskWeight(taskWeightTotals.get(Number(value)) ?? 0),
+                })
+              }
             >
               <SelectTrigger className="mt-1 min-h-11">
                 <SelectValue />
@@ -813,7 +828,14 @@ export const DesignScheduleTaskDialog = ({
               value={form.weight}
               onChange={(event) => setForm({ ...form, weight: Number(event.target.value) })}
             />
-            {fieldMessage("weight")}
+            {fieldMessage("weight") ?? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("designProjects.schedule.hint.weight", {
+                  used: (taskWeightTotals.get(form.phaseId) ?? 0) - (task?.weight ?? 0),
+                  total: PHASE_TASK_WEIGHT_TOTAL,
+                })}
+              </p>
+            )}
           </div>
           <label className="flex min-h-11 items-center gap-3 rounded-md border px-3 text-sm">
             <Checkbox
@@ -906,7 +928,7 @@ export const DesignScheduleTaskDialog = ({
           </Button>
           <Button className="min-h-11" disabled={saving} onClick={() => void save()}>
             {saving ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : null}
-            {t("common.save")}
+            {t(task ? "common.save" : "designProjects.schedule.taskDialog.create")}
           </Button>
         </DialogFooter>
       </DialogContent>

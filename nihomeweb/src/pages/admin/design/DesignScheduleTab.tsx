@@ -36,6 +36,7 @@ import {
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
+import { PHASE_TASK_WEIGHT_TOTAL, taskWeightTotals } from "@/lib/designScheduleWeights";
 import { useAppSelector } from "@/store";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/components/ui/confirmation";
@@ -198,6 +199,11 @@ export const DesignScheduleTab = ({ project }: Props) => {
   const activeMembers = useMemo(
     () => team?.members.filter((member) => member.isActive) ?? [],
     [team],
+  );
+  // Task weights per phase across the whole schedule, not just the current page.
+  const weightTotals = useMemo(
+    () => taskWeightTotals(schedule?.rollupSources ?? []),
+    [schedule?.rollupSources],
   );
 
   const initialize = async () => {
@@ -380,7 +386,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
             ) : (
               <Plus className="mr-1.5 h-4 w-4" />
             )}
-            {t("designProjects.schedule.action.initialize")}
+            {t("designProjects.schedule.action.initializePhases")}
           </Button>
         ) : (
           <p className="mt-4 text-sm font-medium text-muted-foreground">
@@ -447,10 +453,14 @@ export const DesignScheduleTab = ({ project }: Props) => {
             <p className="text-xs uppercase tracking-wide text-muted-foreground">
               {t("designProjects.schedule.rollup.policy")}
             </p>
-            <p className="mt-2 font-mono text-sm text-foreground">{schedule.rollupPolicyVersion}</p>
-            <p className="mt-2 text-xs text-muted-foreground">
+            <p className="mt-2 text-sm text-foreground">
               {t("designProjects.schedule.rollup.explanation")}
             </p>
+            {!schedule.baselineReady && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                {t("designProjects.schedule.baseline.projectIncomplete")}
+              </p>
+            )}
           </div>
         </div>
       </section>
@@ -524,11 +534,12 @@ export const DesignScheduleTab = ({ project }: Props) => {
             <Progress className="mt-3 h-2" value={phase.rolledUpProgressPercent ?? 0} />
             <div className="mt-3 flex items-center justify-between">
               <span className="text-xs text-muted-foreground">
-                {t(
-                  phase.baselineReady
-                    ? "designProjects.schedule.baseline.ready"
-                    : "designProjects.schedule.baseline.incomplete",
-                )}
+                {phase.baselineReady
+                  ? t("designProjects.schedule.baseline.ready")
+                  : t("designProjects.schedule.baseline.weightTotal", {
+                      used: weightTotals.get(phase.id) ?? 0,
+                      total: PHASE_TASK_WEIGHT_TOTAL,
+                    })}
               </span>
               {schedule.canManage ? (
                 <Button
@@ -1049,6 +1060,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
         disciplines={disciplines}
         members={team?.members ?? []}
         initialPhaseId={initialPhaseId}
+        taskWeightTotals={weightTotals}
         task={editingTask}
         open={taskDialogOpen}
         onOpenChange={setTaskDialogOpen}
