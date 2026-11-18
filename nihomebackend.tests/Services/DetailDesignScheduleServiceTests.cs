@@ -316,6 +316,23 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ApprovalInbox_HidesTasksOnceTheApproverHasLeftTheTeam()
+    {
+        var approverUserId = SeedInbox();
+        var approver = db.OperationalProjectMembers.Single(item => item.Id == approverMemberId);
+        approver.EndedAt = DateTime.UtcNow.AddMinutes(-1);
+        await db.SaveChangesAsync();
+        var inbox = new DesignApprovalInboxService(db);
+
+        var summary = await inbox.GetSummaryAsync(approverUserId, default);
+        var tasks = await inbox.ListTasksAsync(approverUserId, new DesignApprovalInboxQuery(), default);
+
+        // They can no longer approve these tasks, so they are not asked to.
+        Assert.Equal(0, summary.TaskCount);
+        Assert.Equal(0, tasks.Total);
+    }
+
+    [Fact]
     public async Task ApprovalInbox_SearchesSortsAndPagesTasks()
     {
         var approverUserId = SeedInbox();
