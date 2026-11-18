@@ -10,6 +10,7 @@ import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { focusFormField } from "@/lib/formFocus";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -332,14 +333,7 @@ const AdminTenders = () => {
     setShowFieldErrors(true);
     const firstInvalid = TENDER_FIELDS.find((field) => errors[field]);
     if (firstInvalid) {
-      // Bring the user to the first field that needs attention.
-      requestAnimationFrame(() =>
-        document
-          .querySelector<HTMLElement>(
-            `[data-tender-field="${firstInvalid}"] :is(input, textarea, button, [role="combobox"])`,
-          )
-          ?.focus(),
-      );
+      focusFormField(firstInvalid);
       return;
     }
     setSaving(true);
@@ -803,7 +797,7 @@ const AdminTenders = () => {
           </DialogHeader>
 
           <div className="space-y-3">
-            <FieldScope className="space-y-1" data-tender-field="name">
+            <FieldScope className="space-y-1" data-form-field="name">
               <Label>{t("tenders.field.name")} *</Label>
               <Input
                 value={form.name}
@@ -814,7 +808,7 @@ const AdminTenders = () => {
               {fieldError("name")}
             </FieldScope>
 
-            <FieldScope className="space-y-1" data-tender-field="customer">
+            <FieldScope className="space-y-1" data-form-field="customer">
               <Label>{t("tenders.field.customer")} *</Label>
               {isEdit ? (
                 <Input value={editingDetail!.customerName} disabled />
@@ -832,7 +826,7 @@ const AdminTenders = () => {
               {fieldError("customer")}
             </FieldScope>
 
-            <FieldScope className="space-y-1" data-tender-field="project">
+            <FieldScope className="space-y-1" data-form-field="project">
               <Label>{t("tenders.field.operationalProject")} *</Label>
               <Select
                 value={form.operationalProjectId ? String(form.operationalProjectId) : ""}
@@ -857,7 +851,7 @@ const AdminTenders = () => {
             </FieldScope>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <FieldScope className="space-y-1" data-tender-field="invitationReceivedAt">
+              <FieldScope className="space-y-1" data-form-field="invitationReceivedAt">
                 <Label>{t("tenders.field.invitationReceivedAt")} *</Label>
                 <Input
                   type="datetime-local"
@@ -881,7 +875,7 @@ const AdminTenders = () => {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <FieldScope className="space-y-1" data-tender-field="invitationSource">
+              <FieldScope className="space-y-1" data-form-field="invitationSource">
                 <Label>{t("tenders.field.invitationSource")} *</Label>
                 <Input
                   value={form.invitationSource}
@@ -916,7 +910,7 @@ const AdminTenders = () => {
                   disabled={editLocked}
                 />
               </FieldScope>
-              <FieldScope className="space-y-1" data-tender-field="deadline">
+              <FieldScope className="space-y-1" data-form-field="deadline">
                 <Label>{t("tenders.field.deadline")} *</Label>
                 <Input
                   type="datetime-local"
