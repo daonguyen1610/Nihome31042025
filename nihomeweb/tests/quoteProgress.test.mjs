@@ -13,15 +13,28 @@ const { getQuoteProgress } = await import(
   "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
 );
 
-const step = (status, grandTotal = 120_000_000, financeApproved = false) =>
-  getQuoteProgress({ status, grandTotal, financeApproved });
+const step = (
+  status,
+  grandTotal = 120_000_000,
+  financeApproved = false,
+  priceSourceReady = false,
+) => getQuoteProgress({ status, grandTotal, financeApproved, priceSourceReady });
 
-test("an unpriced draft waits for the procurement input price", () => {
-  assert.deepEqual(step("Draft", 0), { kind: "active", step: "input", index: 0 });
+test("an unpriced draft without a price source waits for the procurement input price", () => {
+  assert.deepEqual(step("Draft", 0), { kind: "active", step: "input", index: 0, ready: false });
 });
 
-test("a priced draft waits for sales to finish and submit the output quote", () => {
-  assert.equal(step("Draft").step, "output");
+test("an unpriced draft with an approved input price or project BOQ waits for sales to price it", () => {
+  assert.deepEqual(step("Draft", 0, false, true), {
+    kind: "active",
+    step: "output",
+    index: 1,
+    ready: false,
+  });
+});
+
+test("a priced draft is ready for sales to submit", () => {
+  assert.deepEqual(step("Draft"), { kind: "active", step: "output", index: 1, ready: true });
 });
 
 test("internal approval, finance review and sending follow in order", () => {

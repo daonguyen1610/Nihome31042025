@@ -759,11 +759,10 @@ const AdminQuoteDetail = () => {
     quote.status === "CustomerApproved" ||
     quote.status === "Rejected" ||
     quote.status === "Cancelled";
+  // Sales can price the quote once an approved input price or project BOQ exists.
+  const priceSourceReady = approvedInputOffers.length > 0 || projectBoq != null;
   const showEditToggle =
-    canManage &&
-    !editing &&
-    !isTerminal &&
-    (!awaitingInputPrice || approvedInputOffers.length > 0 || projectBoq != null);
+    canManage && !editing && !isTerminal && (!awaitingInputPrice || priceSourceReady);
   const primaryInputPackage =
     inputPricePackages.find((item) => item.status !== "Completed") ?? inputPricePackages[0];
   const primaryFinancePackage = selectQuoteFinanceReview(financeReviewPackages, quote.version);
@@ -965,6 +964,7 @@ const AdminQuoteDetail = () => {
       <QuoteProgressPanel
         status={quote.status}
         grandTotal={quote.grandTotal}
+        priceSourceReady={priceSourceReady}
         financeApproved={
           primaryFinancePackage?.financeReview?.status === "Approved" &&
           primaryFinancePackage.financeReview.reviewedQuoteVersion === quote.version
@@ -998,9 +998,11 @@ const AdminQuoteDetail = () => {
           {t(
             inputOffersUnavailable
               ? "quotes.inputPrice.unavailable"
-              : approvedInputOffers.length > 0 || projectBoq != null
+              : approvedInputOffers.length > 0
                 ? "quotes.inputPrice.readyForOutput"
-                : "quotes.inputPrice.awaitingApproval",
+                : projectBoq != null
+                  ? "quotes.inputPrice.readyFromProjectBoq"
+                  : "quotes.inputPrice.awaitingApproval",
           )}
         </div>
       )}

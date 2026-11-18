@@ -19,7 +19,11 @@ export function QuoteProgressPanel(props: QuoteProgressInput) {
         : -1;
   const nextText =
     progress.kind === "active"
-      ? t(`quotes.progress.next.${progress.step}`)
+      ? t(
+          progress.ready
+            ? `quotes.progress.next.${progress.step}Ready`
+            : `quotes.progress.next.${progress.step}`,
+        )
       : progress.kind === "done"
         ? t("quotes.progress.done")
         : t("quotes.progress.stopped", { status: t(`quotes.status.${props.status}`) });
