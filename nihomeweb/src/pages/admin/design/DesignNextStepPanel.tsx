@@ -12,7 +12,7 @@ import { adminApi, type DesignProjectResponse, type DesignProjectStage } from "@
 const NEXT_STEP_TAB: Record<DesignProjectStage, string> = {
   Concept: "concept",
   BasicDesign: "basic",
-  ShopDrawing: "ifc",
+  ShopDrawing: "shop",
   Completed: "ifc",
 };
 
@@ -86,7 +86,7 @@ export function DesignNextStepPanel({
       className="rounded-lg border border-border bg-card p-4 shadow-sm"
       aria-labelledby="design-next-step-title"
     >
-      <h2 id="design-next-step-title" className="text-base font-semibold">
+      <h2 id="design-next-step-title" className="text-lg font-semibold">
         {t("designProjects.overview.nextStep.title")}
       </h2>
       <p className="mt-1 text-sm text-foreground">

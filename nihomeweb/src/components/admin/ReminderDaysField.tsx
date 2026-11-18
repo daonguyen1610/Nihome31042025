@@ -11,16 +11,21 @@ export function ReminderDaysField({
   value,
   onChange,
   disabled,
+  labelClassName,
 }: {
   id: string;
   value: number;
   onChange: (days: number) => void;
   disabled?: boolean;
+  /** Lets a form keep the label style of the fields beside it. */
+  labelClassName?: string;
 }) {
   const { t } = useI18n();
   return (
     <div className="space-y-1">
-      <Label htmlFor={id}>{t("common.reminderDays.label")}</Label>
+      <Label htmlFor={id} className={labelClassName}>
+        {t("common.reminderDays.label")}
+      </Label>
       <Input
         id={id}
         type="number"

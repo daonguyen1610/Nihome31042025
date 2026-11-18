@@ -408,9 +408,14 @@ const AdminContacts = () => {
                   <div className="mb-4 flex flex-wrap items-center gap-2 rounded-md border bg-muted/30 p-3 text-sm">
                     <span className="font-medium">{t("contacts.lead.title")}</span>
                     {active.leadId ? (
-                      <Button asChild variant="outline" size="sm">
-                        <Link to={`/admin/leads/${active.leadId}`}>{t("contacts.lead.open")}</Link>
-                      </Button>
+                      <>
+                        <span className="text-muted-foreground">{t("contacts.lead.linked")}</span>
+                        <Button asChild variant="outline" size="sm">
+                          <Link to={`/admin/leads/${active.leadId}`}>
+                            {t("contacts.lead.open")}
+                          </Link>
+                        </Button>
+                      </>
                     ) : (
                       <>
                         <span className="text-muted-foreground">{t("contacts.lead.help")}</span>
