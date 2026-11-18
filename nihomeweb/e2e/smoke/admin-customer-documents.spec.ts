@@ -29,6 +29,7 @@ test("customer related records, documents, and contract owner inheritance work i
   const headers = { Authorization: `Bearer ${token}` };
   const unique = Date.now().toString();
   const customerName = `NIH-428 Browser ${unique}`;
+  const taxId = `03${unique.slice(-8)}`;
   const fileName = `nih-428-${unique}.pdf`;
   let customerId = 0;
   let operationalProjectId = 0;
@@ -43,6 +44,7 @@ test("customer related records, documents, and contract owner inheritance work i
       data: {
         type: "Individual",
         name: customerName,
+        taxId,
         sourceCode: "marketing",
         primaryContact: {
           fullName: "Playwright Contact",
@@ -215,8 +217,14 @@ test("customer related records, documents, and contract owner inheritance work i
     const contractDialog = page
       .getByRole("dialog")
       .filter({ hasText: /Thêm hợp đồng|New contract|新增合同|新規契約/i });
+    // The customer picker finds a customer by tax ID and shows it under the name.
     await contractDialog.locator("#c-customer-form").click();
-    await page.getByRole("option", { name: customerName, exact: true }).click();
+    await page.getByRole("dialog").last().locator("[cmdk-input]").fill(taxId);
+    await page
+      .getByRole("option")
+      .filter({ hasText: customerName })
+      .filter({ hasText: taxId })
+      .click();
     await contractDialog.locator("#c-project-form").click();
     await page.getByRole("option", { name: new RegExp(`NIH-428 Project ${unique}`) }).click();
     await expect(contractDialog.getByText(ownerName, { exact: true })).toBeVisible();

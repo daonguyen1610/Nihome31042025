@@ -69,6 +69,7 @@ import { newIdempotencyKey } from "@/lib/api";
 import { ProjectBoqSection } from "@/components/admin/ProjectBoqSection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
+import { customerSelectOptions } from "@/lib/customerOptions";
 import {
   adminApi,
   OPERATIONAL_PROJECT_STATUSES,
@@ -167,6 +168,10 @@ const OperationalProjects = () => {
     [],
   );
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const customerChoices = useMemo(
+    () => customerSelectOptions(customers, t("customers.field.taxId")),
+    [customers, t],
+  );
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -1400,23 +1405,14 @@ const OperationalProjects = () => {
             </div>
             <FieldScope>
               <Label>{t("operationalProjects.field.customer")}</Label>
-              <Select
+              <SearchableSelect
                 value={form.customerId ? String(form.customerId) : ""}
-                onValueChange={(value) =>
+                onChange={(value) =>
                   setForm((current) => ({ ...current, customerId: Number(value) }))
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder={t("operationalProjects.selectCustomer")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((customer) => (
-                    <SelectItem key={customer.id} value={String(customer.id)}>
-                      {customer.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={customerChoices}
+                placeholder={t("operationalProjects.selectCustomer")}
+              />
             </FieldScope>
             <FieldScope>
               <Label>{t("operationalProjects.field.manager")}</Label>

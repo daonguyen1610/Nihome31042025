@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { customerSelectOptions } from "@/lib/customerOptions";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
 import { useToast } from "@/hooks/use-toast";
 import {
@@ -272,6 +273,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     projects: [],
   });
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const customerChoices = useMemo(
+    () => customerSelectOptions(customers, t("customers.field.taxId")),
+    [customers, t],
+  );
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
   const [classification, setClassification] = useState<ContractClassificationOptions | null>(null);
   const [metadataError, setMetadataError] = useState<string | null>(null);
@@ -1165,7 +1170,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 id="c-search"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder={t("contracts.searchPlaceholder")}
+                placeholder={t("contracts.searchPlaceholderTaxId")}
                 className="h-9 pl-9"
               />
             </div>
@@ -2006,10 +2011,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               <Label htmlFor="c-customer-form" className="text-xs">
                 {t("contracts.field.customer")} *
               </Label>
-              <Select
+              <SearchableSelect
                 disabled={!!continuation.source}
                 value={form.customerId != null ? String(form.customerId) : ""}
-                onValueChange={(v) => {
+                onChange={(v) => {
                   const customerId = Number(v);
                   const customer = customers.find((item) => item.id === customerId);
                   setForm({
@@ -2026,18 +2031,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     ownerName: customer?.ownerName ?? "",
                   });
                 }}
-              >
-                <SelectTrigger id="c-customer-form" className="h-9">
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent className="max-h-72">
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={customerChoices}
+                id="c-customer-form"
+                placeholder="—"
+              />
             </div>
 
             <div className="space-y-1.5">

@@ -745,6 +745,19 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task List_SearchMatchesCustomerTaxId()
+    {
+        _db.Customers.Single(c => c.Id == _customerA).TaxId = "0312345678";
+        _db.SaveChanges();
+        await _sut.CreateAsync(Req(number: "HD-TAX-A"), 1, canReassignOwner: true);
+        await _sut.CreateAsync(Req(customerId: _customerB, number: "HD-TAX-B"), 1, canReassignOwner: true);
+
+        var byTaxId = await _sut.ListAsync(1, true, search: "0312345");
+
+        Assert.Equal("HD-TAX-A", Assert.Single(byTaxId.Items).ContractNumber);
+    }
+
+    [Fact]
     public async Task List_AppliesRequestedSortAndStablePagination()
     {
         var low = await _sut.CreateAsync(

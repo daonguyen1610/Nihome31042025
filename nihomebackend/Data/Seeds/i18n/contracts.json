@@ -80,12 +80,12 @@
     "ja": "新規契約"
   },
   {
-    "key": "contracts.searchPlaceholder",
+    "key": "contracts.searchPlaceholderTaxId",
     "category": "contracts",
-    "vi": "Tìm theo Số HĐ hoặc tên khách hàng…",
-    "en": "Search by number or customer name…",
-    "zh": "按合同编号或客户名称搜索…",
-    "ja": "契約番号または顧客名で検索…"
+    "vi": "Tìm theo Số HĐ, tên khách hàng hoặc MST…",
+    "en": "Search by number, customer name or tax ID…",
+    "zh": "按合同编号、客户名称或税号搜索…",
+    "ja": "契約番号・顧客名・税番号で検索…"
   },
   {
     "key": "contracts.empty",

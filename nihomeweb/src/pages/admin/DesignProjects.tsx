@@ -11,6 +11,7 @@ import { Pencil, PenTool, Plus, RefreshCcw, Search, Trash2 } from "lucide-react"
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { customerSelectOptions } from "@/lib/customerOptions";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -257,7 +258,7 @@ const AdminDesignProjects = () => {
   // Roles without customer access (Design Lead) still see the customer of the
   // projects they belong to, so picking a project fills a readable customer.
   const customerOptions = useMemo(() => {
-    const options = customers.map((c) => ({ value: String(c.id), label: c.name }));
+    const options = customerSelectOptions(customers, t("customers.field.taxId"));
     const known = new Set(options.map((option) => option.value));
     for (const project of projects) {
       const value = String(project.customerId);
@@ -267,7 +268,7 @@ const AdminDesignProjects = () => {
       }
     }
     return options;
-  }, [customers, projects]);
+  }, [customers, projects, t]);
   const userOptions = useMemo(() => users.map((u) => personOption(u, t)), [users, t]);
 
   const openDetail = (id: number) => navigate(`/admin/design-projects/${id}`);

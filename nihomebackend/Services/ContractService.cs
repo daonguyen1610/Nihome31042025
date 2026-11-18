@@ -115,7 +115,8 @@ public class ContractService(
             var like = $"%{search.Trim()}%";
             query = query.Where(c =>
                 EF.Functions.Like(c.ContractNumber, like) ||
-                EF.Functions.Like(c.Customer.Name, like));
+                EF.Functions.Like(c.Customer.Name, like) ||
+                (c.Customer.TaxId != null && EF.Functions.Like(c.Customer.TaxId, like)));
         }
 
         var total = await query.CountAsync(ct);

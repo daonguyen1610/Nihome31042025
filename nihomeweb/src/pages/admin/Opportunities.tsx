@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { customerSelectOptions } from "@/lib/customerOptions";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -219,6 +220,10 @@ const AdminOpportunities = () => {
 
   // masters
   const [customers, setCustomers] = useState<CustomerResponse[]>([]);
+  const customerChoices = useMemo(
+    () => customerSelectOptions(customers, t("customers.field.taxId")),
+    [customers, t],
+  );
   const [lostReasons, setLostReasons] = useState<MasterDataOption[]>([]);
   const [salesUsers, setSalesUsers] = useState<OpportunityOwnerOption[]>([]);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
@@ -1293,28 +1298,19 @@ const AdminOpportunities = () => {
             </FieldScope>
             <FieldScope>
               <Label>{t("opportunities.field.customer")}</Label>
-              <Select
+              <SearchableSelect
                 disabled={!!continuation.source}
                 value={createForm.customerId ? String(createForm.customerId) : ""}
-                onValueChange={(v) =>
+                onChange={(v) =>
                   setCreateForm({
                     ...createForm,
                     customerId: Number(v),
                     operationalProjectId: null,
                   })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="—" />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={String(c.id)}>
-                      {c.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                options={customerChoices}
+                placeholder="—"
+              />
             </FieldScope>
             <FieldScope>
               <Label>{t("opportunities.field.operationalProject")}</Label>
@@ -1827,27 +1823,17 @@ const AdminOpportunities = () => {
                           </FieldScope>
                           <FieldScope>
                             <Label>{t("opportunities.field.customer")}</Label>
-                            <Select
+                            <SearchableSelect
                               value={String(editForm.customerId)}
-                              onValueChange={(v) =>
+                              onChange={(v) =>
                                 setEditForm({
                                   ...editForm,
                                   customerId: Number(v),
                                   operationalProjectId: null,
                                 })
                               }
-                            >
-                              <SelectTrigger>
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {customers.map((c) => (
-                                  <SelectItem key={c.id} value={String(c.id)}>
-                                    {c.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              options={customerChoices}
+                            />
                           </FieldScope>
                           <FieldScope>
                             <Label>{t("opportunities.field.operationalProject")}</Label>
