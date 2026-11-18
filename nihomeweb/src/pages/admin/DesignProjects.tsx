@@ -580,6 +580,7 @@ const AdminDesignProjects = () => {
                     ...customerOptions,
                   ]}
                   placeholder={t("designProjects.filter.allCustomers")}
+                  searchPlaceholder={t("customers.picker.search")}
                 />
               </FieldScope>
             ) : null}
@@ -881,6 +882,7 @@ const AdminDesignProjects = () => {
                 value={form.customerId ? String(form.customerId) : ""}
                 onChange={(v) => setForm((f) => ({ ...f, customerId: v ? Number(v) : 0 }))}
                 options={customerOptions}
+                searchPlaceholder={t("customers.picker.search")}
                 placeholder={t("designProjects.field.customer")}
               />
             </FieldScope>

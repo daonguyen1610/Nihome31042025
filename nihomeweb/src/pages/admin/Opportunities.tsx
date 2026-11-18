@@ -1309,7 +1309,8 @@ const AdminOpportunities = () => {
                   })
                 }
                 options={customerChoices}
-                placeholder="—"
+                searchPlaceholder={t("customers.picker.search")}
+                placeholder={t("customers.picker.select")}
               />
             </FieldScope>
             <FieldScope>
@@ -1833,6 +1834,7 @@ const AdminOpportunities = () => {
                                 })
                               }
                               options={customerChoices}
+                              searchPlaceholder={t("customers.picker.search")}
                             />
                           </FieldScope>
                           <FieldScope>
