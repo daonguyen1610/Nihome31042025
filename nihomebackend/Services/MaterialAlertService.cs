@@ -487,7 +487,7 @@ public sealed class MaterialAlertService(
                 new Dictionary<string, string>
                 {
                     ["alertCode"] = alert.Code,
-                    ["alertType"] = alert.Type.ToString(),
+                    ["alertType"] = NotificationService.Label($"procurement.alerts.type.{alert.Type}"),
                     ["itemCode"] = alert.ItemCode,
                     ["projectCode"] = projectCode,
                     ["variance"] = alert.VarianceQuantity.ToString("0.######"),

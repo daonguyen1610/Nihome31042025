@@ -122,6 +122,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     private readonly int approverMemberId;
     private readonly int otherProjectTaskId;
     private readonly int assigneeUserId;
+    private readonly Mock<INotificationService> notifications = new();
 
     public DetailDesignScheduleServiceTests()
     {
@@ -191,7 +192,7 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         access.Setup(item => item.CanManageDesignProjectAsync(callerId, designProjectId, It.IsAny<CancellationToken>(), null))
             .ReturnsAsync(true);
         service = new DetailDesignScheduleService(
-            db, access.Object, new Mock<INotificationService>().Object,
+            db, access.Object, notifications.Object,
             NullLogger<DetailDesignScheduleService>.Instance);
     }
 
@@ -415,6 +416,33 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
             Review("Phương án đã gửi khách", DesignReviewStage.Concept, DesignReviewStatus.SubmittedToClient, 2));
         db.SaveChanges();
         return approverUserId;
+    }
+
+    [Fact]
+    public async Task TaskAssignment_NotifiesEachNewAssigneeOnce()
+    {
+        var created = await service.CreateTaskAsync(projectId, phaseId,
+            Request(activeMemberId, approverMemberId), callerId, default);
+        var sameAssignee = Request(activeMemberId, approverMemberId);
+        sameAssignee.Name = "Mặt bằng tầng điển hình – chỉnh sửa";
+        sameAssignee.RowVersion = created!.RowVersion;
+        var renamed = await service.UpdateTaskAsync(projectId, created.Id, sameAssignee, callerId, default);
+        var newcomerUser = User("0912000006", true);
+        var newcomer = Member(projectId, newcomerUser.Id);
+        newcomer.DesignProjectId = designProjectId;
+        db.Add(newcomer);
+        db.SaveChanges();
+        var reassigned = Request(newcomer.Id, approverMemberId);
+        reassigned.RowVersion = renamed!.RowVersion;
+
+        await service.UpdateTaskAsync(projectId, created.Id, reassigned, callerId, default);
+
+        void Assigned(int userId) => notifications.Verify(item => item.NotifyManyFromTemplateAsync(
+            It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { userId })), "design-task.assigned",
+            It.Is<IDictionary<string, string>>(data => data["taskCode"] == "DES-001" && data["plannedEnd"] == "02/09/2026"),
+            "DesignScheduleTask", created.Id, $"/admin/design-projects/{designProjectId}?tab=schedule", "vi"), Times.Once);
+        Assigned(assigneeUserId);
+        Assigned(newcomerUser.Id);
     }
 
     [Fact]

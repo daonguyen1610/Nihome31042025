@@ -15,6 +15,7 @@ public sealed class DesignReviewServiceTests : IDisposable
 {
     private readonly AppDbContext db = DbContextFactory.Create();
     private readonly DesignReviewService service;
+    private readonly Mock<INotificationService> notifications = new();
     private readonly int managerId;
     private readonly int recipientId;
     private readonly int projectId;
@@ -184,7 +185,7 @@ public sealed class DesignReviewServiceTests : IDisposable
             .ReturnsAsync(false);
         access.Setup(item => item.HasAdministrativeBypassAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
-        service = new DesignReviewService(db, new ConceptDossierService(db), access.Object, new Mock<INotificationService>().Object,
+        service = new DesignReviewService(db, new ConceptDossierService(db), access.Object, notifications.Object,
             NullLogger<DesignReviewService>.Instance);
     }
 
@@ -227,6 +228,32 @@ public sealed class DesignReviewServiceTests : IDisposable
                 ClientAcceptanceSignedAt = DateTime.UtcNow,
             }, managerId, default);
         Assert.Equal("ClientApproved", approved!.Status);
+    }
+
+    [Fact]
+    public async Task SubmitClient_TellsInternalReviewersTheDossierWentToTheClient()
+    {
+        var created = await service.CreateAsync(projectId, new CreateDesignReviewRequest
+        {
+            Stage = "Concept",
+            Title = "Phương án Concept R02",
+            RecipientUserIds = [recipientId],
+            ProjectDocumentIds = [documentId, perspectiveDocumentId],
+            ConceptRevisionId = conceptRevisionId,
+        }, managerId, default);
+        await service.SubmitInternalAsync(projectId, created.Id, "", managerId, default);
+        await service.ConsolidateAsync(projectId, created.Id,
+            new ConsolidateDesignReviewRequest { InternalSummary = "Không có góp ý thêm.", RowVersion = "" }, managerId, default);
+
+        await service.SubmitClientAsync(projectId, created.Id, "", managerId, default);
+
+        notifications.Verify(item => item.NotifyManyFromTemplateAsync(
+            It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { recipientId })),
+            "design-review.client-submitted",
+            It.Is<IDictionary<string, string>>(data => data["title"] == "Phương án Concept R02" &&
+                data["stage"] == NotificationService.Label("designProjects.stage.Concept")),
+            "DesignReview", created.Id,
+            $"/admin/design-reviews/{projectId}?reviewId={created.Id}", "vi"), Times.Once);
     }
 
     [Fact]

@@ -21,6 +21,7 @@ public class OpportunityService(
     private const int MaxPageSize = 100;
     private const string LostReasonMasterDataCategory = "opportunity_lost_reason";
     private const string OpportunityAssignedTemplate = "opportunity.assigned";
+    public const string DesignProjectCreatedTemplate = "design-project.created";
     private const string OpportunityStageChangedTemplate = "opportunity.stage-changed";
     private const string SignedContractRequiredCode = "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED";
 
@@ -641,6 +642,7 @@ public class OpportunityService(
 
         var result = await designProjects.EnsureForOpportunityAsync(
             id, callerUserId, name, request.Note?.Trim(), ct);
+        if (result.Created) await FireDesignProjectCreatedAsync(result.DesignProject, id, callerUserId, ct);
         return new OpportunityDesignStartResponse
         {
             Created = result.Created,
@@ -839,6 +841,35 @@ public class OpportunityService(
         return $"Stage {from} → {to}{extra}";
     }
 
+    /// <summary>Tells the people already named on a new design dossier that design work can start.</summary>
+    private async Task FireDesignProjectCreatedAsync(
+        DesignProjectResponse dossier, int opportunityId, int callerUserId, CancellationToken ct)
+    {
+        var recipients = new[] { dossier.DesignManagerUserId, dossier.DesignLeadUserId, dossier.ProjectManagerUserId }
+            .Where(userId => userId.HasValue && userId != callerUserId)
+            .Select(userId => userId!.Value)
+            .Distinct()
+            .ToList();
+        if (recipients.Count == 0) return;
+        try
+        {
+            var opportunityName = await db.Opportunities.AsNoTracking()
+                .Where(item => item.Id == opportunityId).Select(item => item.Name).SingleAsync(ct);
+            await notifications.NotifyManyFromTemplateAsync(recipients, DesignProjectCreatedTemplate,
+                new Dictionary<string, string>
+                {
+                    ["projectCode"] = dossier.ProjectCode,
+                    ["projectName"] = dossier.Name,
+                    ["opportunityName"] = opportunityName,
+                },
+                "DesignProject", dossier.Id, $"/admin/design-projects/{dossier.Id}");
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Design dossier {DesignProjectId} was created but its team was not notified.", dossier.Id);
+        }
+    }
+
     private async Task FireAssignedAsync(Opportunity op, string customerName, int ownerUserId)
     {
         try
@@ -879,7 +910,7 @@ public class OpportunityService(
                 {
                     ["opportunityName"] = op.Name,
                     ["customerName"] = customerName,
-                    ["stage"] = stage.ToString(),
+                    ["stage"] = NotificationService.Label($"opportunities.stage.{stage}"),
                 },
                 refEntityType: EntityTypes.Opportunity,
                 refEntityId: op.Id,

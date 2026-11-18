@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using System.Data;
 using Microsoft.EntityFrameworkCore;
@@ -362,6 +363,7 @@ public sealed class DetailDesignScheduleService(
         var response = await MapTaskAsync(task.Id, ct);
         await AddHistoryAsync(task, "Task", task.Id, "Created", callerUserId, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await NotifyAssigneeAsync(task, callerUserId, projectId, ct);
         return response;
     }
 
@@ -389,6 +391,7 @@ public sealed class DetailDesignScheduleService(
         var plannedStart = RequireDate(request.PlannedStart, "Ngày bắt đầu kế hoạch");
         var plannedEnd = RequireDate(request.PlannedEnd, "Ngày kết thúc kế hoạch");
         CrmConcurrency.Apply(db, task, request.RowVersion);
+        var reassigned = task.AssigneeMemberId != request.AssigneeMemberId;
         task.Code = request.Code.Trim();
         task.Name = request.Name.Trim();
         task.Description = NormalizeOptional(request.Description);
@@ -418,6 +421,7 @@ public sealed class DetailDesignScheduleService(
         var response = await MapTaskAsync(task.Id, ct);
         await AddHistoryAsync(task, "Task", task.Id, "Updated", callerUserId, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        if (reassigned) await NotifyAssigneeAsync(task, callerUserId, projectId, ct);
         return response;
     }
 
@@ -828,6 +832,17 @@ public sealed class DetailDesignScheduleService(
     private static string? NormalizeDisciplineCode(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim().ToLowerInvariant();
 
+    /// <summary>Tells the person now responsible for a task, unless they assigned it to themselves.</summary>
+    private async Task NotifyAssigneeAsync(DesignScheduleTask task, int callerUserId, int projectId, CancellationToken ct)
+    {
+        var assigneeUserId = await db.OperationalProjectMembers.AsNoTracking()
+            .Where(member => member.Id == task.AssigneeMemberId)
+            .Select(member => member.UserId)
+            .SingleAsync(ct);
+        if (assigneeUserId != callerUserId)
+            await NotifyTaskAsync([assigneeUserId], "design-task.assigned", task, projectId);
+    }
+
     private async Task NotifyTaskAsync(
         IEnumerable<int> userIds,
         string templateCode,
@@ -843,6 +858,7 @@ public sealed class DetailDesignScheduleService(
                 {
                     ["taskCode"] = task.Code,
                     ["taskTitle"] = task.Name,
+                    ["plannedEnd"] = task.PlannedEnd.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
                 },
                 "DesignScheduleTask",
                 task.Id,

@@ -394,6 +394,56 @@ public class IfcReleaseServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ReleaseAsync_NotifiesProcurementRecipientsWhereToReceiveIt()
+    {
+        var buyer = new ApplicationUser
+        {
+            PhoneNumber = "0900000081",
+            FullName = "Cung ứng IFC",
+            Email = "ifc.buyer@example.com",
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
+        };
+        _db.Users.Add(buyer);
+        var operationalProjectId = _db.DesignProjects.Single(item => item.Id == _projectId).OperationalProjectId!.Value;
+        _db.SaveChanges();
+        _db.OperationalProjectMembers.Add(new OperationalProjectMember
+        {
+            OperationalProjectId = operationalProjectId,
+            UserId = buyer.Id,
+            Position = "Cung ứng",
+            StartedAt = DateTime.UtcNow.AddDays(-1),
+        });
+        _db.SaveChanges();
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.HasAsync(buyer.Id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var notifications = new Mock<INotificationService>();
+        var service = new IfcReleaseService(_db, NullLogger<IfcReleaseService>.Instance,
+            new ProcurementIfcService(_db, permissions.Object), _drawingFiles.Object, notifications.Object);
+        var release = await service.CreateAsync(ValidCreate(), _userId);
+        await service.AddItemsAsync(release.Id, new AddIfcReleaseItemsRequest { ShopDrawingIds = [_approvedShopId] }, _userId);
+        await service.AddRecipientAsync(release.Id, new AddIfcReleaseRecipientRequest
+        {
+            Name = "Cung ứng IFC",
+            RecipientUserId = buyer.Id,
+            RecipientTypeCode = "main-contractor",
+        }, _userId);
+
+        var released = await service.ReleaseAsync(release.Id, _userId);
+
+        notifications.Verify(item => item.NotifyManyFromTemplateAsync(
+            It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { buyer.Id })),
+            IfcReleaseService.ReleasedTemplateCode,
+            It.Is<IDictionary<string, string>>(data =>
+                data["releaseNumber"] == released.ReleaseNumber && data["projectCode"] == "DP-2026-IFC-TEST" &&
+                data["drawingCount"] == "1"),
+            "IfcRelease", release.Id,
+            $"/admin/procurement-control?projectId={operationalProjectId}&tab=ifc", "vi"), Times.Once);
+    }
+
+    [Fact]
     public async Task ReleaseAsync_WithoutItems_Throws()
     {
         var release = await _sut.CreateAsync(ValidCreate(), _userId);

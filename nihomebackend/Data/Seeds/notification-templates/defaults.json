@@ -193,6 +193,30 @@
       "adminDescription": "Notify internal recipients when the Design Manager records the client decision."
     },
     {
+      "code": "design-review.client-submitted",
+      "module": "design.reviews",
+      "channel": "InApp",
+      "adminDescription": "Notify internal recipients when the Design Manager records that the dossier was sent to the client."
+    },
+    {
+      "code": "design-task.assigned",
+      "module": "design.schedule",
+      "channel": "InApp",
+      "adminDescription": "Notify a designer when a design task is assigned or reassigned to them."
+    },
+    {
+      "code": "design-project.created",
+      "module": "design.projects",
+      "channel": "InApp",
+      "adminDescription": "Notify the design manager, design lead and project manager when a design dossier is created from an opportunity."
+    },
+    {
+      "code": "design-ifc.released",
+      "module": "design.ifc",
+      "channel": "InApp",
+      "adminDescription": "Notify procurement recipients when an IFC packet is released to them."
+    },
+    {
       "code": "project.schedule.submitted",
       "module": "operations.projects",
       "channel": "InApp",

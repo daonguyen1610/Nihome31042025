@@ -15,6 +15,14 @@ public class NotificationService(
 {
     private const int MaxPageSize = 100;
     private const int MaxModuleLength = 80;
+    private const string LabelPrefix = "i18n:";
+
+    /// <summary>
+    /// A placeholder value that is shown as the translation of <paramref name="key"/> in the
+    /// recipient's language, e.g. a stage or status label instead of its enum name.
+    /// </summary>
+    public static string Label(string key) => LabelPrefix + key;
+
     private static readonly Regex PlaceholderRegex = new(@"\{\{\s*(?<key>[a-zA-Z0-9_\-\.]+)\s*\}\}", RegexOptions.Compiled);
 
     public async Task<NotificationResponse> CreateAsync(
@@ -288,6 +296,7 @@ public class NotificationService(
 
         var titleTemplate = map.GetValueOrDefault(template.TitleKey) ?? template.TitleKey;
         var bodyTemplate = map.GetValueOrDefault(template.BodyKey);
+        data = TranslateLabels(data, map);
 
         // Plain rendering for the in-app row (Title bar / mail Subject).
         var plainTitle = RenderPlaceholders(titleTemplate, data);
@@ -303,6 +312,19 @@ public class NotificationService(
             : RenderPlaceholdersHtml(bodyTemplate, data);
 
         return new RenderedTemplate(plainTitle, plainBody, htmlBody);
+    }
+
+    private static IDictionary<string, string>? TranslateLabels(
+        IDictionary<string, string>? data, IReadOnlyDictionary<string, string> map)
+    {
+        if (data is null || !data.Values.Any(value => value.StartsWith(LabelPrefix, StringComparison.Ordinal)))
+            return data;
+        return data.ToDictionary(item => item.Key, item =>
+        {
+            if (!item.Value.StartsWith(LabelPrefix, StringComparison.Ordinal)) return item.Value;
+            var key = item.Value[LabelPrefix.Length..];
+            return map.GetValueOrDefault(key) ?? key[(key.LastIndexOf('.') + 1)..];
+        });
     }
 
     private static string RenderPlaceholders(string template, IDictionary<string, string>? data)

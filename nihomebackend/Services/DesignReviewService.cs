@@ -256,6 +256,7 @@ public sealed class DesignReviewService(
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.client-submitted", review, ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
     }
 
@@ -522,8 +523,8 @@ public sealed class DesignReviewService(
                 new Dictionary<string, string>
                 {
                     ["title"] = review.Title,
-                    ["stage"] = review.Stage.ToString(),
-                    ["status"] = review.Status.ToString(),
+                    ["stage"] = NotificationService.Label($"designProjects.stage.{review.Stage}"),
+                    ["status"] = NotificationService.Label($"designProjects.reviews.status.{review.Status}"),
                 }, "DesignReview", review.Id, $"/admin/design-reviews/{review.DesignProjectId}?reviewId={review.Id}");
         }
         catch (Exception exception)
