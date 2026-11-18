@@ -940,6 +940,8 @@ public sealed class DetailDesignScheduleService(
             filtered = filtered.Where(item => item.PlannedStart <= query.PlannedTo.Value);
         if (query.OverdueOnly)
             filtered = filtered.Where(item => IsOverdue(item.PlannedEnd, item.Status, today));
+        if (query.PendingApprovalOnly)
+            filtered = filtered.Where(item => item.ApprovalStatus == DesignTaskApprovalStatus.Pending);
         var ordered = filtered.OrderBy(item => item.PlannedStart).ThenBy(item => item.Id).ToList();
         var skip = (long)(query.Page - 1) * query.PageSize;
 

@@ -148,6 +148,8 @@ public sealed class DesignScheduleQuery
     public DateOnly? PlannedFrom { get; set; }
     public DateOnly? PlannedTo { get; set; }
     public bool OverdueOnly { get; set; }
+    /// <summary>Only tasks submitted for approval and not yet approved or returned.</summary>
+    public bool PendingApprovalOnly { get; set; }
 
     [Range(1, int.MaxValue)]
     public int Page { get; set; } = 1;

@@ -95,7 +95,7 @@ test.describe("NIH-115 — Basic Design + Detail Design unlock (real-user flow)"
     });
 
     // Sanity check the header switched to Basic Design.
-    await expect(page.getByRole("heading", { name: new RegExp(`DP-\\d+-\\d+`) })).toBeVisible();
+    await expect(page.getByRole("heading", { level: 1, name: projectName })).toBeVisible();
     await expect(
       page
         .locator("main")

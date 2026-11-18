@@ -173,6 +173,7 @@ export interface DesignScheduleQuery {
   plannedFrom?: string;
   plannedTo?: string;
   overdueOnly?: boolean;
+  pendingApprovalOnly?: boolean;
   page?: number;
   pageSize?: number;
 }
