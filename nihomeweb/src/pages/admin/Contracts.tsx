@@ -72,7 +72,6 @@ const ENDING_SOON_DAYS = 30;
 const PAGE_SIZE = 20;
 const CONTRACT_TYPES: ContractType[] = [
   "Unclassified",
-  "Consulting",
   "Design",
   "Permit",
   "Construction",
@@ -80,6 +79,7 @@ const CONTRACT_TYPES: ContractType[] = [
   "DesignAndBuild",
   "PermitAndConstruction",
   "DesignPermitAndConstruction",
+  "Consulting",
   "Supply",
   "Subcontract",
 ];

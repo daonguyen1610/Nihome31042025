@@ -322,9 +322,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         next === "InProgress" &&
         contract.status === "Signed" &&
         contract.direction === "Upstream" &&
-        classification?.allowedTypes.Upstream.includes(
-          contract.type as Exclude<ContractType, "Unclassified">,
-        )
+        classification?.legalActivationTypes.includes(contract.type)
       ) {
         setLegalWizardOpen(true);
         return;
@@ -357,7 +355,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       }
     },
     [
-      classification?.allowedTypes.Upstream,
+      classification?.legalActivationTypes,
       confirmAction,
       contract,
       refreshContract,

@@ -1026,9 +1026,7 @@ public class ContractService(
 
         if (entity.Status == ContractStatus.Signed && newStatus == ContractStatus.InProgress &&
             entity.Direction == ContractDirection.Upstream &&
-            entity.Type is ContractType.Design or ContractType.Permit or ContractType.Construction or
-                ContractType.DesignAndPermit or ContractType.DesignAndBuild or
-                ContractType.PermitAndConstruction or ContractType.DesignPermitAndConstruction)
+            ContractTypes.RequiringLegalActivation.Contains(entity.Type))
         {
             throw new ContractValidationException(
                 "Hãy dùng bước kích hoạt có xác nhận để thiết lập công việc Pháp lý trước khi chuyển hợp đồng sang Đang thực hiện.",
