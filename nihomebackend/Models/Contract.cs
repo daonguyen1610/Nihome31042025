@@ -120,4 +120,6 @@ public enum ContractType
     DesignAndPermit = 7,
     PermitAndConstruction = 8,
     DesignPermitAndConstruction = 9,
+    /// <summary>Advisory work only: no design, permit or construction scope to set up.</summary>
+    Consulting = 10,
 }

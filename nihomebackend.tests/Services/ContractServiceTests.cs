@@ -1377,6 +1377,22 @@ public class ContractServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Transition_SignedConsultingContract_StartsWithoutLegalWizard()
+    {
+        // A consulting contract has no design, permit or construction scope to set up.
+        var request = Req();
+        request.Type = ContractType.Consulting;
+        var contract = await _sut.CreateAsync(request, 1, canReassignOwner: true);
+        await AddSignedScanAsync(contract.Id);
+        await _sut.TransitionStatusAsync(contract.Id, ContractStatus.Signed, 1, canSeeAll: true);
+
+        var started = await _sut.TransitionStatusAsync(
+            contract.Id, ContractStatus.InProgress, 1, canSeeAll: true);
+
+        Assert.Equal(ContractStatus.InProgress, started!.Status);
+    }
+
+    [Fact]
     public async Task Transition_InProgressToCompleted_RequiresAllMilestonesPaid()
     {
         var initial = Req(value: 100m);

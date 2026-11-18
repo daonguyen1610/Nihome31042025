@@ -408,6 +408,14 @@
     "ja": "設計・施工"
   },
   {
+    "key": "contracts.type.Consulting",
+    "category": "contracts",
+    "vi": "Tư vấn",
+    "en": "Consulting",
+    "zh": "咨询",
+    "ja": "コンサルティング"
+  },
+  {
     "key": "contracts.type.Permit",
     "category": "contracts",
     "vi": "Pháp lý",
