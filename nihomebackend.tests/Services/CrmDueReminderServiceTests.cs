@@ -269,6 +269,28 @@ public sealed class CrmDueReminderServiceTests : IDisposable
         notifications.VerifyNoOtherCalls();
     }
 
+    [Fact]
+    public async Task QuoteExpiries_UseTheDayChosenInTheValidUntilPicker()
+    {
+        // The quote form saves "valid until 20/11" as 2026-11-20T23:59:59Z, which is already the
+        // next morning in Vietnam; the reminder must still say and fire on the chosen day.
+        var owner = User("0911777007", active: true);
+        var today = DateOnly.FromDateTime(DisplaySettings.TodayIn(Zone));
+        var onTheDay = Quote("BG-2026-0201", owner, QuoteStatus.Approved,
+            today.ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc), 0);
+        Quote("BG-2026-0202", owner, QuoteStatus.Approved,
+            today.AddDays(-1).ToDateTime(new TimeOnly(23, 59, 59), DateTimeKind.Utc), 0);
+
+        await service.NotifyQuoteExpiriesAsync(Zone, CancellationToken.None);
+
+        notifications.Verify(item => item.NotifyFromTemplateAsync(
+            owner.Id, CrmDueReminderService.QuoteTemplateCode,
+            It.Is<IDictionary<string, string>>(data =>
+                data["code"] == "BG-2026-0201" && data["dueDate"] == today.ToString("dd/MM/yyyy")),
+            "Quote", onTheDay.Id, $"/admin/quotes/{onTheDay.Id}", "vi"), Times.Once);
+        notifications.VerifyNoOtherCalls();
+    }
+
     private Tender Tender(string code, string name, Customer customer, ApplicationUser preparer, ApplicationUser receiver,
         DateTime deadlineUtc, int reminderDays, TenderStatus status = TenderStatus.Preparing)
     {

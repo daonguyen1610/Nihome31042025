@@ -141,16 +141,19 @@ export type DateInput = Date | string | number | null | undefined;
 
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 const BARE_MIDNIGHT = /^\d{4}-\d{2}-\d{2}T00:00(?::00(?:\.0+)?)?$/;
+/** Date pickers that mean "valid through this day" save the day at 23:59:59 UTC. */
+const BARE_END_OF_DAY = /^\d{4}-\d{2}-\d{2}T23:59:59(?:\.9*)?$/;
 const HAS_ZONE = /(?:[zZ]|[+-]\d{2}:?\d{2})$/;
 
 /**
- * Date-only strings and bare UTC-midnight values are calendar dates, not
- * instants: the API serializes unspecified date fields at midnight UTC.
+ * Date-only strings, bare UTC-midnight and bare UTC end-of-day values are
+ * calendar dates, not instants: the API serializes date fields at midnight
+ * UTC, and "valid until" pickers save the chosen day at 23:59:59 UTC.
  */
 function isCalendarValue(value: DateInput): boolean {
   if (typeof value !== "string") return false;
   const text = value.trim();
-  return DATE_ONLY.test(text) || BARE_MIDNIGHT.test(text);
+  return DATE_ONLY.test(text) || BARE_MIDNIGHT.test(text) || BARE_END_OF_DAY.test(text);
 }
 
 /**

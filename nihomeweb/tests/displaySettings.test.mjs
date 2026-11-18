@@ -54,6 +54,15 @@ test("bare midnight values stay on their calendar date behind UTC", () => {
   applyDisplaySettings({ timeZoneId: "Asia/Ho_Chi_Minh", currency: "VND" });
 });
 
+test("bare end-of-day values from date pickers stay on their calendar date ahead of UTC", () => {
+  // Quote validity and supplier price dates are saved as the chosen day at 23:59:59 UTC.
+  assert.equal(formatDate("2026-11-20T23:59:59", "en"), "11/20/2026");
+  assert.equal(formatDate("2026-11-20T23:59:59.999", "en"), "11/20/2026");
+  // An instant with an explicit zone is still shown in the business time zone.
+  assert.equal(formatDate("2026-11-20T23:59:59Z", "en"), "11/21/2026");
+  assert.equal(formatDate("2026-11-20T18:30:00", "en"), "11/21/2026");
+});
+
 test("recorded amounts convert to the active currency and round to whole units", () => {
   applyDisplaySettings({
     timeZoneId: "Asia/Ho_Chi_Minh",
