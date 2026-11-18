@@ -98,6 +98,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
     public DbSet<Survey> Surveys => Set<Survey>();
     public DbSet<SurveyMedia> SurveyMedia => Set<SurveyMedia>();
+    public DbSet<SurveyParticipant> SurveyParticipants => Set<SurveyParticipant>();
     public DbSet<SurveyChecklistResult> SurveyChecklistResults => Set<SurveyChecklistResult>();
     public DbSet<SurveySiteCondition> SurveySiteConditions => Set<SurveySiteCondition>();
 
@@ -1488,11 +1489,26 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasForeignKey(s => s.OperationalProjectId)
                 .OnDelete(DeleteBehavior.Restrict);
             b.HasIndex(s => s.SurveyorUserId);
+            b.HasMany(s => s.Participants)
+                .WithOne(participant => participant.Survey)
+                .HasForeignKey(participant => participant.SurveyId)
+                .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(s => s.LinkedProjectId);
             b.HasIndex(s => s.LinkedOpportunityId);
             b.HasIndex(s => s.OperationalProjectId);
             b.HasIndex(s => s.SurveyDate);
             b.HasIndex(s => s.DriveSyncStatus);
+        });
+
+        modelBuilder.Entity<SurveyParticipant>(b =>
+        {
+            b.ToTable("survey_participants");
+            b.HasKey(participant => new { participant.SurveyId, participant.UserId });
+            b.HasOne(participant => participant.User)
+                .WithMany()
+                .HasForeignKey(participant => participant.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasIndex(participant => participant.UserId);
         });
 
         modelBuilder.Entity<SurveyMedia>(b =>

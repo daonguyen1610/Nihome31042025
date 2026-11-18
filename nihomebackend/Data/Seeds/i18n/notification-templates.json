@@ -376,6 +376,22 @@
     "ja": "本日（{{dueDate}}）は {{customerName}} のフォローアップ日です：{{summary}}。顧客に連絡し、結果を記録してください。"
   },
   {
+    "key": "notification.crm.survey.assigned.title",
+    "category": "notification",
+    "vi": "Bạn có lịch khảo sát {{code}}",
+    "en": "You are on survey {{code}}",
+    "zh": "您被安排参加勘察 {{code}}",
+    "ja": "現地調査 {{code}} の担当になりました"
+  },
+  {
+    "key": "notification.crm.survey.assigned.body",
+    "category": "notification",
+    "vi": "Khảo sát tại {{location}} ngày {{surveyDate}}. Mở phiếu để xem dự án, người đi cùng và tải ảnh, tài liệu sau khi khảo sát.",
+    "en": "Survey at {{location}} on {{surveyDate}}. Open it to see the project and who is going, and to upload photos and documents afterwards.",
+    "zh": "{{surveyDate}} 在 {{location}} 勘察。打开勘察单查看项目和同行人员，勘察后上传照片和资料。",
+    "ja": "{{surveyDate}} に {{location}} で現地調査があります。案件と同行者を確認し、調査後に写真や資料をアップロードしてください。"
+  },
+  {
     "key": "notification.crm.tender.deadline-due.title",
     "category": "notification",
     "vi": "Gói thầu sắp hết hạn nộp",

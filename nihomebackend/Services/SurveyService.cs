@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Data;
@@ -14,8 +15,10 @@ namespace NihomeBackend.Services;
 public class SurveyService(
     AppDbContext db,
     ILogger<SurveyService> logger,
-    IProjectDocumentStagingService projectDocuments) : ISurveyService
+    IProjectDocumentStagingService projectDocuments,
+    INotificationService notifications) : ISurveyService
 {
+    private const string AssignedTemplateCode = "crm.survey.assigned";
     private const int MaxPageSize = 100;
     private const string ConstructionTypeCategory = "construction_type";
     private const string ChecklistCategory = "survey_checklist_default";
@@ -30,6 +33,7 @@ public class SurveyService(
         var q = db.Surveys
             .AsNoTracking()
             .Include(s => s.Surveyor)
+            .Include(s => s.Participants).ThenInclude(participant => participant.User)
             .Include(s => s.LinkedProject)
             .Include(s => s.LinkedOpportunity)
             .Include(s => s.OperationalProject)
@@ -42,7 +46,9 @@ public class SurveyService(
             var code = p.ConstructionTypeCode.Trim();
             q = q.Where(s => s.ConstructionTypeCode == code);
         }
-        if (p.SurveyorUserId.HasValue) q = q.Where(s => s.SurveyorUserId == p.SurveyorUserId.Value);
+        if (p.SurveyorUserId.HasValue)
+            q = q.Where(s => s.SurveyorUserId == p.SurveyorUserId.Value ||
+                s.Participants.Any(participant => participant.UserId == p.SurveyorUserId.Value));
         if (p.LinkedProjectId.HasValue) q = q.Where(s => s.LinkedProjectId == p.LinkedProjectId.Value);
         if (!string.IsNullOrWhiteSpace(p.DriveSyncStatus))
         {
@@ -106,6 +112,7 @@ public class SurveyService(
                 SurveyDate = s.SurveyDate,
                 SurveyorUserId = s.SurveyorUserId,
                 SurveyorName = s.Surveyor?.FullName,
+                Participants = MapParticipants(s),
                 LinkedProjectId = s.LinkedProjectId,
                 LinkedProjectName = s.LinkedProject?.Name,
                 LinkedOpportunityId = s.LinkedOpportunityId,
@@ -126,6 +133,7 @@ public class SurveyService(
         var entity = db.Surveys
             .AsNoTracking()
             .Include(s => s.Surveyor)
+            .Include(s => s.Participants).ThenInclude(participant => participant.User)
             .Include(s => s.LinkedProject)
             .Include(s => s.LinkedOpportunity)
             .Include(s => s.OperationalProject)
@@ -197,6 +205,9 @@ public class SurveyService(
         }
         await ValidateSurveyorAssignmentAsync(
             request.SurveyorUserId, routing.ProjectId.Value, callerUserId, canManageAll, ct);
+        var participantIds = await ValidateParticipantsAsync(
+            request.ParticipantUserIds ?? [], request.SurveyorUserId, routing.ProjectId.Value,
+            callerUserId, canManageAll, ct);
 
         var code = await SequentialCodes.NextAsync(
             db.Surveys.Select(s => s.Code), $"SV-{DateTime.UtcNow.Year}-", 4, ct);
@@ -217,6 +228,7 @@ public class SurveyService(
             UpdatedByUserId = callerUserId,
             CreatedAt = DateTime.UtcNow,
             UpdatedAt = DateTime.UtcNow,
+            Participants = participantIds.Select(userId => new SurveyParticipant { UserId = userId }).ToList(),
         };
         db.Surveys.Add(entity);
         await db.SaveChangesAsync(ct);
@@ -240,6 +252,7 @@ public class SurveyService(
 
         logger.LogInformation("Survey {Id} ({Code}) created by user {UserId}",
             entity.Id, entity.Code, callerUserId);
+        await NotifyAssignedAsync(entity, [.. participantIds, .. OptionalId(entity.SurveyorUserId)], callerUserId);
         return (await GetAsync(entity.Id, callerUserId, canManageAll, ct))!;
     }
 
@@ -250,8 +263,12 @@ public class SurveyService(
         CancellationToken ct = default)
     {
         var entity = await ApplyAccessScope(db.Surveys, callerUserId, canManageAll)
+            .Include(s => s.Participants)
             .FirstOrDefaultAsync(s => s.Id == id, ct);
         if (entity is null) return null;
+        var previousPeople = entity.Participants.Select(participant => participant.UserId)
+            .Concat(OptionalId(entity.SurveyorUserId))
+            .ToHashSet();
 
         var location = (request.Location ?? string.Empty).Trim();
         if (string.IsNullOrWhiteSpace(location))
@@ -300,6 +317,13 @@ public class SurveyService(
             await ValidateSurveyorAssignmentAsync(
                 request.SurveyorUserId, newProjectId!.Value, callerUserId, canManageAll, ct);
         }
+        // Older clients send no list; keep the companions they cannot see.
+        var participantIds = request.ParticipantUserIds is null
+            ? entity.Participants.Select(participant => participant.UserId)
+                .Where(userId => userId != request.SurveyorUserId).ToList()
+            : await ValidateParticipantsAsync(request.ParticipantUserIds, request.SurveyorUserId,
+                newProjectId!.Value, callerUserId, canManageAll, ct,
+                alreadyOnSurvey: entity.Participants.Select(participant => participant.UserId).ToHashSet());
         await using var transaction = previousProjectId != newProjectId && db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
             : null;
@@ -308,6 +332,10 @@ public class SurveyService(
         entity.ConstructionTypeCode = TrimOrNull(request.ConstructionTypeCode);
         entity.SurveyDate = request.SurveyDate;
         entity.SurveyorUserId = request.SurveyorUserId;
+        entity.Participants.RemoveAll(participant => !participantIds.Contains(participant.UserId));
+        entity.Participants.AddRange(participantIds
+            .Where(userId => entity.Participants.All(participant => participant.UserId != userId))
+            .Select(userId => new SurveyParticipant { SurveyId = entity.Id, UserId = userId }));
         entity.LinkedProjectId = request.LinkedProjectId;
         entity.LinkedOpportunityId = request.LinkedOpportunityId;
         entity.OperationalProjectId = newProjectId!.Value;
@@ -359,6 +387,9 @@ public class SurveyService(
         await db.SaveChangesAsync(ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
         logger.LogInformation("Survey {Id} updated by user {UserId}", id, callerUserId);
+        await NotifyAssignedAsync(entity,
+            participantIds.Concat(OptionalId(entity.SurveyorUserId)).Where(userId => !previousPeople.Contains(userId)),
+            callerUserId);
         return await GetAsync(id, callerUserId, canManageAll, ct);
     }
 
@@ -439,6 +470,7 @@ public class SurveyService(
         if (canAccessAll) return query;
         return query.Where(survey =>
             survey.SurveyorUserId == callerUserId ||
+            survey.Participants.Any(participant => participant.UserId == callerUserId) ||
             survey.CreatedByUserId == callerUserId ||
             survey.OperationalProject.ProjectManagerUserId == callerUserId ||
             survey.OperationalProject.CreatedByUserId == callerUserId);
@@ -470,6 +502,67 @@ public class SurveyService(
     }
 
     private static string? TrimOrNull(string? s) => string.IsNullOrWhiteSpace(s) ? null : s.Trim();
+
+    private static IEnumerable<int> OptionalId(int? userId) => userId.HasValue ? [userId.Value] : [];
+
+    /// <summary>
+    /// Distinct active colleagues going with the lead surveyor (the lead is not repeated).
+    /// Adding someone other than yourself needs the same right as assigning the lead.
+    /// </summary>
+    private async Task<List<int>> ValidateParticipantsAsync(
+        IEnumerable<int> requested,
+        int? leadUserId,
+        int projectId,
+        int callerUserId,
+        bool canManageAll,
+        CancellationToken ct,
+        IReadOnlySet<int>? alreadyOnSurvey = null)
+    {
+        var ids = requested.Where(userId => userId != leadUserId).Distinct().ToList();
+        if (ids.Count == 0) return ids;
+        var active = await db.Users.AsNoTracking()
+            .Where(user => ids.Contains(user.Id) && user.IsActive)
+            .Select(user => user.Id)
+            .ToListAsync(ct);
+        var missing = ids.Except(active).ToList();
+        if (missing.Count > 0)
+        {
+            throw new SurveyOperationException(
+                $"Người đi khảo sát #{string.Join(", #", missing)} không tồn tại hoặc đã ngừng hoạt động. Hãy chọn lại người đi cùng.");
+        }
+        var addedOther = ids.FirstOrDefault(userId =>
+            userId != callerUserId && alreadyOnSurvey?.Contains(userId) != true);
+        if (addedOther != 0)
+            await ValidateSurveyorAssignmentAsync(addedOther, projectId, callerUserId, canManageAll, ct);
+        return ids;
+    }
+
+    /// <summary>Tells the people newly put on a survey, except whoever made the change.</summary>
+    private async Task NotifyAssignedAsync(Survey survey, IEnumerable<int> userIds, int callerUserId)
+    {
+        var recipients = userIds.Where(userId => userId != callerUserId).Distinct().ToList();
+        if (recipients.Count == 0) return;
+        try
+        {
+            await notifications.NotifyManyFromTemplateAsync(
+                recipients,
+                AssignedTemplateCode,
+                new Dictionary<string, string>
+                {
+                    ["code"] = survey.Code,
+                    ["location"] = survey.Location,
+                    ["surveyDate"] = survey.SurveyDate.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+                },
+                "Survey",
+                survey.Id,
+                $"/admin/surveys/{survey.Id}");
+        }
+        catch (Exception ex)
+        {
+            // The survey is saved; a failed notification must not undo it.
+            logger.LogWarning(ex, "Could not notify people assigned to survey {SurveyId}", survey.Id);
+        }
+    }
 
     private async Task<SurveyRoutingContext> ResolveRoutingAsync(
         int? operationalProjectId,
@@ -542,6 +635,15 @@ public class SurveyService(
 
     private sealed record SurveyRoutingContext(int? ProjectId, int? CustomerId);
 
+    private static List<SurveyParticipantResponse> MapParticipants(Survey s) => s.Participants
+        .Select(participant => new SurveyParticipantResponse
+        {
+            UserId = participant.UserId,
+            FullName = participant.User?.FullName ?? string.Empty,
+        })
+        .OrderBy(participant => participant.FullName, StringComparer.CurrentCulture)
+        .ToList();
+
     private static SurveyResponse Map(Survey s, string? constructionTypeLabel) => new()
     {
         Id = s.Id,
@@ -552,6 +654,7 @@ public class SurveyService(
         SurveyDate = s.SurveyDate,
         SurveyorUserId = s.SurveyorUserId,
         SurveyorName = s.Surveyor?.FullName,
+        Participants = MapParticipants(s),
         LinkedProjectId = s.LinkedProjectId,
         LinkedProjectName = s.LinkedProject?.Name,
         LinkedOpportunityId = s.LinkedOpportunityId,

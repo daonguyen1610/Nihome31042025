@@ -263,6 +263,12 @@
       "module": "crm.quotes",
       "channel": "InApp",
       "adminDescription": "Nhắc người phụ trách báo giá trước khi báo giá hết hiệu lực theo số ngày cấu hình."
+    },
+    {
+      "code": "crm.survey.assigned",
+      "module": "crm.surveys",
+      "channel": "InApp",
+      "adminDescription": "Báo cho người phụ trách khảo sát và từng người đi cùng khi họ được thêm vào một phiếu khảo sát."
     }
   ]
 }

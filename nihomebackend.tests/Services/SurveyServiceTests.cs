@@ -14,13 +14,15 @@ public class SurveyServiceTests : IDisposable
     private readonly AppDbContext _db;
     private readonly SurveyService _sut;
     private readonly Mock<IProjectDocumentStagingService> _projectDocuments = new();
+    private readonly Mock<INotificationService> _notifications = new();
     private readonly int _userId;
     private readonly int _projectId;
 
     public SurveyServiceTests()
     {
         _db = DbContextFactory.Create();
-        _sut = new SurveyService(_db, NullLogger<SurveyService>.Instance, _projectDocuments.Object);
+        _sut = new SurveyService(
+            _db, NullLogger<SurveyService>.Instance, _projectDocuments.Object, _notifications.Object);
 
         var user = new ApplicationUser
         {
@@ -67,6 +69,90 @@ public class SurveyServiceTests : IDisposable
         };
 
     // ---------------- Create ----------------
+
+    private void VerifyAssignedNotified(int surveyId, params int[] userIds) =>
+        _notifications.Verify(service => service.NotifyManyFromTemplateAsync(
+            It.Is<IEnumerable<int>>(ids => ids.OrderBy(id => id).SequenceEqual(userIds.OrderBy(id => id))),
+            "crm.survey.assigned",
+            It.IsAny<IDictionary<string, string>>(),
+            "Survey",
+            surveyId,
+            $"/admin/surveys/{surveyId}",
+            It.IsAny<string>()), Times.Once);
+
+    [Fact]
+    public async Task CreateAsync_WithCompanions_SavesThemAndNotifiesEveryoneButTheCaller()
+    {
+        var lead = AddUser("0900000020", "lead.surveyor@example.com");
+        var companion = AddUser("0900000021", "companion.surveyor@example.com");
+        await _db.SaveChangesAsync();
+        var request = ValidCreate();
+        request.SurveyorUserId = lead.Id;
+        // The lead is not repeated as a companion; the caller may go along.
+        request.ParticipantUserIds = [companion.Id, _userId, lead.Id, companion.Id];
+
+        var survey = await _sut.CreateAsync(request, _userId);
+
+        Assert.Equal(new[] { companion.Id, _userId }.Order(), survey.Participants.Select(item => item.UserId).Order());
+        Assert.Contains(survey.Participants, item => item.FullName == companion.FullName);
+        // Everyone is told except the caller, who set the survey up.
+        VerifyAssignedNotified(survey.Id, lead.Id, companion.Id);
+    }
+
+    [Fact]
+    public async Task CreateAsync_UnknownCompanion_Throws()
+    {
+        var request = ValidCreate();
+        request.ParticipantUserIds = [999_999];
+
+        var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
+            _sut.CreateAsync(request, _userId));
+
+        Assert.Contains("Người đi khảo sát", exception.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_NotifiesOnlyNewlyAddedPeople_AndKeepsCompanionsWhenOmitted()
+    {
+        var first = AddUser("0900000022", "first.companion@example.com");
+        var second = AddUser("0900000023", "second.companion@example.com");
+        await _db.SaveChangesAsync();
+        var create = ValidCreate();
+        create.ParticipantUserIds = [first.Id];
+        var survey = await _sut.CreateAsync(create, _userId);
+        _notifications.Invocations.Clear();
+
+        var update = ToUpdate(create);
+        update.ParticipantUserIds = [first.Id, second.Id];
+        var updated = await _sut.UpdateAsync(survey.Id, update, _userId);
+        Assert.Equal(new[] { first.Id, second.Id }.Order(), updated!.Participants.Select(item => item.UserId).Order());
+        VerifyAssignedNotified(survey.Id, second.Id);
+
+        // Older clients send no list: the companions stay as they are.
+        var untouched = ToUpdate(create);
+        untouched.ParticipantUserIds = null;
+        var kept = await _sut.UpdateAsync(survey.Id, untouched, _userId);
+        Assert.Equal(2, kept!.Participants.Count);
+    }
+
+    [Fact]
+    public async Task ListAsync_CompanionSeesTheSurvey_AndSurveyorFilterMatchesCompanions()
+    {
+        var owner = AddUser("0900000024", "owner.companion@example.com");
+        var ownerProject = AddProject("OP-SURVEY-COMPANION", owner.Id);
+        var shared = AddSurvey("SV-COMPANION", ownerProject.Id, owner.Id, owner.Id);
+        await _db.SaveChangesAsync();
+        _db.SurveyParticipants.Add(new SurveyParticipant { SurveyId = shared.Id, UserId = _userId });
+        await _db.SaveChangesAsync();
+
+        var scoped = await _sut.ListAsync(new SurveyListParams { PageSize = 100 }, _userId, false);
+        Assert.Contains(scoped.Items, item => item.Id == shared.Id);
+        Assert.NotNull(await _sut.GetAsync(shared.Id, _userId, false));
+
+        var mine = await _sut.ListAsync(
+            new SurveyListParams { PageSize = 100, SurveyorUserId = _userId }, owner.Id, true);
+        Assert.Contains(mine.Items, item => item.Id == shared.Id);
+    }
 
     [Fact]
     public async Task CreateAsync_HappyPath_AllocatesCodeAndLabel()
@@ -338,6 +424,16 @@ public class SurveyServiceTests : IDisposable
     }
 
     // ---------------- NIH-100 Update / Delete ----------------
+
+    private static UpdateSurveyRequest ToUpdate(CreateSurveyRequest create) => new()
+    {
+        Location = create.Location,
+        ConstructionTypeCode = create.ConstructionTypeCode,
+        SurveyDate = create.SurveyDate,
+        SurveyorUserId = create.SurveyorUserId,
+        ParticipantUserIds = create.ParticipantUserIds,
+        OperationalProjectId = create.OperationalProjectId,
+    };
 
     private UpdateSurveyRequest ValidUpdate(int _1, string? location = null,
         string? typeCode = "commercial", DateTime? date = null,

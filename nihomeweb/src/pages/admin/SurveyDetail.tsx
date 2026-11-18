@@ -203,6 +203,10 @@ const AdminSurveyDetail = () => {
         ],
         [t("surveys.field.surveyDate"), formatDate(survey.surveyDate)],
         [t("surveys.field.surveyor"), survey.surveyorName ?? "—"],
+        [
+          t("surveys.field.participants"),
+          survey.participants.map((participant) => participant.fullName).join(", ") || "—",
+        ],
         [t("surveys.field.linkedProject"), survey.linkedProjectName ?? "—"],
         [t("surveys.field.linkedOpportunity"), survey.linkedOpportunityName ?? "—"],
         [t("surveys.field.operationalProject"), survey.operationalProjectName ?? "—"],

@@ -11026,6 +11026,21 @@ namespace nihomebackend.Migrations
                     b.ToTable("survey_media", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.SurveyParticipant", b =>
+                {
+                    b.Property<int>("SurveyId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("SurveyId", "UserId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("survey_participants", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.SurveySiteCondition", b =>
                 {
                     b.Property<long>("Id")
@@ -15576,6 +15591,25 @@ namespace nihomebackend.Migrations
                     b.Navigation("Survey");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.SurveyParticipant", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Survey", "Survey")
+                        .WithMany("Participants")
+                        .HasForeignKey("SurveyId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Survey");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.SurveySiteCondition", b =>
                 {
                     b.HasOne("NihomeBackend.Models.Survey", "Survey")
@@ -16395,6 +16429,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("ChecklistResults");
 
                     b.Navigation("Media");
+
+                    b.Navigation("Participants");
 
                     b.Navigation("SiteConditions");
                 });

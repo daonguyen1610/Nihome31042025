@@ -17,6 +17,13 @@ public class CreateSurveyRequest
 
     public int? SurveyorUserId { get; set; }
 
+    /// <summary>
+    /// Colleagues going with the lead surveyor. On update, null keeps the current
+    /// list; an empty list removes everyone.
+    /// </summary>
+    [MaxLength(20)]
+    public List<int>? ParticipantUserIds { get; set; }
+
     public int? LinkedProjectId { get; set; }
     public int? LinkedOpportunityId { get; set; }
     [Required(ErrorMessage = "Vui lòng chọn Dự án vận hành.")]
