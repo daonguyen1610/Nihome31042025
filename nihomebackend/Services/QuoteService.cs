@@ -223,7 +223,7 @@ public class QuoteService(
         if (opportunity.Stage is OpportunityStage.Lost)
         {
             throw new QuoteOperationException(
-                $"Cơ hội #{opportunity.Id} đang ở trạng thái {opportunity.Stage} — không thể tạo báo giá mới.");
+                $"Cơ hội #{opportunity.Id} đã Thua nên không tạo được báo giá mới. Mở lại Cơ hội nếu khách hàng quay lại.");
         }
         if (opportunity.Stage is OpportunityStage.Won && opportunity.WonQuoteId.HasValue)
         {
@@ -624,9 +624,10 @@ public class QuoteService(
             .Include(q => q.Opportunity).ThenInclude(o => o.Customer).ThenInclude(c => c.Contacts)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null || (!canSeeAll && quote.OwnerUserId != caller)) return null;
-        if (quote.Status != QuoteStatus.Approved || quote.ValidUntil < DateTime.UtcNow ||
-            quote.Opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
-            throw new QuoteOperationException("Chỉ gửi báo giá đã duyệt, còn hiệu lực của cơ hội đang mở.");
+        if (ClosedOpportunityReason(quote) is { } closed)
+            throw new QuoteOperationException(closed);
+        if (quote.Status != QuoteStatus.Approved || quote.ValidUntil < DateTime.UtcNow)
+            throw new QuoteOperationException("Chỉ gửi báo giá đã duyệt và còn hiệu lực.");
         // §5 pre-contract control: Finance – Accounting reviews contract
         // conditions, guarantees and payment terms after the quote is approved.
         // The review is recorded on a project work package, so the quote must
@@ -1002,15 +1003,11 @@ public class QuoteService(
         if (quote is null) return null;
         if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
 
-        // An opportunity can go Lost after its quote was drafted, so guarding at
+        // An opportunity can close after its quote was drafted, so guarding at
         // create is not enough. This sits after the ownership check so a caller
         // without rights hears about the permission, never about the deal's state.
-        if (requireOpenOpportunity &&
-            quote.Opportunity.Stage is OpportunityStage.Won or OpportunityStage.Lost)
-        {
-            throw new QuoteOperationException(
-                $"Cơ hội của báo giá đang ở trạng thái {quote.Opportunity.Stage} — không thể chuyển tiếp báo giá.");
-        }
+        if (requireOpenOpportunity && ClosedOpportunityReason(quote) is { } reason)
+            throw new QuoteOperationException(reason);
 
         CrmConcurrency.Apply(db, quote, rowVersion);
 
@@ -1086,6 +1083,22 @@ public class QuoteService(
         QuoteStatus.Expired => "Hết hạn",
         QuoteStatus.Cancelled => "Đã huỷ",
         _ => s.ToString(),
+    };
+
+    /// <summary>
+    /// Why a quote may no longer move forward, or null. A lost opportunity closes every
+    /// quote; a won one keeps its winning quote open so it can be approved for the
+    /// contract (an opportunity is sometimes marked Won before its quote exists).
+    /// </summary>
+    private static string? ClosedOpportunityReason(Quote quote) => quote.Opportunity.Stage switch
+    {
+        OpportunityStage.Lost =>
+            "Cơ hội của báo giá đã Thua nên báo giá không chuyển tiếp được. Mở lại Cơ hội nếu khách hàng quay lại.",
+        OpportunityStage.Won when quote.Opportunity.WonQuoteId is null =>
+            "Cơ hội đã Thắng nhưng chưa gắn báo giá thắng. Hãy chọn báo giá thắng trên Cơ hội trước khi chuyển tiếp báo giá.",
+        OpportunityStage.Won when quote.Opportunity.WonQuoteId != quote.Id =>
+            "Cơ hội của báo giá đã Thắng với báo giá khác nên báo giá này không chuyển tiếp được. Dùng báo giá thắng để lập hợp đồng.",
+        _ => null,
     };
 
     private static void AutoExpireIfNeeded(Quote quote)

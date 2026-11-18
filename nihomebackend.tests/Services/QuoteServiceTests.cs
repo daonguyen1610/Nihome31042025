@@ -367,7 +367,8 @@ public class QuoteServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.CreateAsync(
             NewUnitCostRequest(opp.Id), user.Id, canManage: true));
 
-        Assert.Contains("Lost", ex.Message);
+        Assert.Contains("đã Thua", ex.Message);
+        Assert.DoesNotContain("Lost", ex.Message);
         Assert.Empty(_db.Quotes);
     }
 
@@ -413,10 +414,41 @@ public class QuoteServiceTests : IDisposable
         var ex = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SubmitAsync(
             quote.Id, new QuoteWorkflowRequest(), user.Id, canManage: true, canSeeAll: true));
 
-        Assert.Contains("Lost", ex.Message);
+        Assert.Contains("đã Thua", ex.Message);
 
         var saved = await _db.Quotes.SingleAsync(q => q.Id == quote.Id);
         Assert.Equal(QuoteStatus.Draft, saved.Status);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_WinningQuoteOfWonOpportunity_GoesThroughApproval()
+    {
+        // NC-03: an opportunity marked Won before any quote still needs its quote approved for the contract.
+        var (user, opp) = await SeedOpportunityAsync(OpportunityStage.Won);
+        var quote = await _sut.CreateAsync(NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+
+        var submitted = await _sut.SubmitAsync(
+            quote.Id, new QuoteWorkflowRequest(), user.Id, canManage: true, canSeeAll: true);
+
+        Assert.Equal("PendingApproval", submitted!.Status);
+    }
+
+    [Fact]
+    public async Task SubmitAsync_OtherQuoteOfWonOpportunity_StaysClosed()
+    {
+        var (user, opp) = await SeedOpportunityAsync();
+        var losing = await _sut.CreateAsync(NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+        var winning = await _sut.CreateAsync(NewUnitCostRequest(opp.Id), user.Id, canManage: true);
+        var tracked = await _db.Opportunities.SingleAsync(o => o.Id == opp.Id);
+        tracked.Stage = OpportunityStage.Won;
+        tracked.WonQuoteId = winning.Id;
+        await _db.SaveChangesAsync();
+
+        var ex = await Assert.ThrowsAsync<QuoteOperationException>(() => _sut.SubmitAsync(
+            losing.Id, new QuoteWorkflowRequest(), user.Id, canManage: true, canSeeAll: true));
+
+        Assert.Contains("đã Thắng với báo giá khác", ex.Message);
+        Assert.Equal(QuoteStatus.Draft, (await _db.Quotes.SingleAsync(q => q.Id == losing.Id)).Status);
     }
 
     [Fact]

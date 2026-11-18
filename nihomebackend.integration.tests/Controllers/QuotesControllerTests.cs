@@ -438,6 +438,22 @@ public class QuotesControllerTests : IntegrationTestBase
 
         (await Client.PostAsJsonAsync("/api/quotes", payload))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // NC-03: the winning quote still goes through internal approval so a contract can use it.
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var approverId = (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/approval-candidates")))
+            .EnumerateArray().First().GetProperty("id").GetInt32();
+        var rowVersion = quote.GetProperty("rowVersion").GetString();
+        var preview = await ReadJsonAsync(await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approval-email-preview",
+            new { approverUserId = approverId, rowVersion }));
+        var submitted = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
+        {
+            approverUserId = approverId,
+            previewToken = preview.GetProperty("previewToken").GetString(),
+            rowVersion,
+        });
+        submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(submitted)).GetProperty("status").GetString().Should().Be("PendingApproval");
     }
 
     [Fact]
