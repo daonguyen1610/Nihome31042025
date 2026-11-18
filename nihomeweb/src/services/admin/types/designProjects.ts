@@ -245,26 +245,56 @@ export interface DesignScheduleOutsourceOptionResponse {
 
 export type DesignReviewStage = "Concept" | "BasicDesign" | "ShopDrawing";
 
-/** Design work waiting on the signed-in user. */
-export interface DesignApprovalInboxResponse {
-  tasks: {
-    taskId: number;
-    code: string;
-    name: string;
-    designProjectId: number;
-    designProjectName: string;
-    assigneeName?: string | null;
-    submittedAt?: string | null;
-  }[];
-  reviews: {
-    reviewId: number;
-    title: string;
-    stage: DesignReviewStage;
-    designProjectId: number;
-    designProjectName: string;
-    submittedAt?: string | null;
-    hasMyComment: boolean;
-  }[];
+/** Counts for the "Chờ tôi duyệt" tabs and the dossiers that have work waiting on the user. */
+export interface DesignApprovalInboxSummary {
+  taskCount: number;
+  reviewCount: number;
+  dossiers: { id: number; projectCode: string; name: string }[];
+}
+
+export interface DesignApprovalInboxQuery {
+  search?: string;
+  designProjectId?: number;
+  /** Reviews only. */
+  stage?: DesignReviewStage;
+  /** Reviews only: true = already commented, false = not yet. */
+  commented?: boolean;
+  newestFirst?: boolean;
+  page?: number;
+  pageSize?: number;
+}
+
+export interface DesignApprovalInboxPage<T> {
+  page: number;
+  pageSize: number;
+  total: number;
+  items: T[];
+}
+
+export interface DesignApprovalInboxTask {
+  taskId: number;
+  code: string;
+  name: string;
+  phaseCode: DesignSchedulePhaseCode;
+  designProjectId: number;
+  designProjectCode: string;
+  designProjectName: string;
+  assigneeName?: string | null;
+  plannedEnd: string;
+  submittedAt?: string | null;
+}
+
+export interface DesignApprovalInboxReview {
+  reviewId: number;
+  title: string;
+  stage: DesignReviewStage;
+  revisionNumber: number;
+  designProjectId: number;
+  designProjectCode: string;
+  designProjectName: string;
+  designManagerName?: string | null;
+  submittedAt?: string | null;
+  hasMyComment: boolean;
 }
 
 export type DesignReviewStatus =
