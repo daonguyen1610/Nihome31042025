@@ -42,7 +42,8 @@ public sealed class UpsertDesignSchedulePhaseRequest
 
 public sealed class UpsertDesignScheduleTaskRequest
 {
-    [Required, MaxLength(80)]
+    /// <summary>Optional: left empty, a new task is numbered in its phase and an edit keeps its code.</summary>
+    [MaxLength(80)]
     public string Code { get; set; } = string.Empty;
 
     [Required, MaxLength(300)]

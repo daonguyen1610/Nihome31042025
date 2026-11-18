@@ -29,6 +29,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
+import { focusFormField } from "@/lib/formFocus";
 import {
   adminApi,
   DESIGN_SCHEDULE_STATUSES,
@@ -58,6 +59,28 @@ interface Props {
   onSaved: () => Promise<void> | void;
   onReload: () => Promise<DesignScheduleTaskResponse | undefined>;
 }
+
+/** Form fields a validation message can point at (each wrapper carries data-form-field). */
+type TaskField =
+  | "code"
+  | "name"
+  | "department"
+  | "discipline"
+  | "assignee"
+  | "approver"
+  | "cc"
+  | "plannedStart"
+  | "plannedEnd"
+  | "masterSchedule"
+  | "actualStart"
+  | "actualEnd"
+  | "progress"
+  | "weight"
+  | "status"
+  | "predecessors"
+  | "vendor";
+
+const DESIGN_DEPARTMENT = "DESIGN";
 
 const transitions: Record<DesignScheduleStatus, DesignScheduleStatus[]> = {
   NotStarted: ["NotStarted", "InProgress", "OnHold", "WaitingForDepartment"],
@@ -147,6 +170,8 @@ export const DesignScheduleTaskDialog = ({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [conflict, setConflict] = useState(false);
+  // Field messages appear after the first save attempt and follow the form as it is fixed.
+  const [attempted, setAttempted] = useState(false);
   const [baseStatus, setBaseStatus] = useState<DesignScheduleStatus>("NotStarted");
   const [outsourceOptions, setOutsourceOptions] = useState<DesignScheduleOutsourceOptionResponse[]>(
     [],
@@ -163,12 +188,17 @@ export const DesignScheduleTaskDialog = ({
 
   useEffect(() => {
     if (!open) return;
-    setForm(task ? taskForm(task) : emptyForm(initialPhaseId ?? phases[0]?.id ?? 0));
+    const blank = emptyForm(initialPhaseId ?? phases[0]?.id ?? 0);
+    // Most tasks in a design schedule belong to the design department.
+    if (departments.some((department) => department.code === DESIGN_DEPARTMENT))
+      blank.departmentCode = DESIGN_DEPARTMENT;
+    setForm(task ? taskForm(task) : blank);
     setError(null);
     setConflict(false);
+    setAttempted(false);
     setBaseStatus(task?.status ?? "NotStarted");
     idempotencyKey.current = newIdempotencyKey();
-  }, [open, task, initialPhaseId, phases]);
+  }, [open, task, initialPhaseId, phases, departments]);
 
   useEffect(() => {
     if (!open) return;
@@ -196,42 +226,50 @@ export const DesignScheduleTaskDialog = ({
     return visit(task.id);
   };
 
-  const validate = () => {
+  /** First rule the form breaks, with the field it belongs to so the message can sit beside it. */
+  const validate = (): { field: TaskField; message: string } | null => {
+    const fail = (field: TaskField, key: string, values?: Record<string, string | number>) => ({
+      field,
+      message: t(key, values),
+    });
     const code = form.code.trim(),
       name = form.name.trim();
-    if (!code || code.length > 80) return t("designProjects.schedule.validation.code");
-    if (!name || name.length > 300) return t("designProjects.schedule.validation.name");
+    if (code.length > 80) return fail("code", "designProjects.schedule.validation.codeLength");
+    if (!name || name.length > 300) return fail("name", "designProjects.schedule.validation.name");
     if (
       !departments.some(
         (department) => department.code.toLowerCase() === form.departmentCode.toLowerCase(),
       )
     )
-      return t("designProjects.schedule.validation.department");
+      return fail("department", "designProjects.schedule.validation.department");
     if (
       form.disciplineCode &&
       !disciplines.some(
         (discipline) => discipline.code === form.disciplineCode && discipline.isActive,
       )
     )
-      return t("designProjects.schedule.validation.discipline");
+      return fail("discipline", "designProjects.schedule.validation.discipline");
     if (!activeMembers.some((member) => member.id === form.assigneeMemberId))
-      return t("designProjects.schedule.validation.assignee");
+      return fail("assignee", "designProjects.schedule.validation.assignee");
     if (
       !activeMembers.some((member) => member.id === form.approverMemberId) ||
       form.approverMemberId === form.assigneeMemberId
     )
-      return t("designProjects.schedule.validation.approver");
+      return fail("approver", "designProjects.schedule.validation.approver");
     if (
       form.ccMemberIds.some((id) => id === form.assigneeMemberId || id === form.approverMemberId) ||
       new Set(form.ccMemberIds).size !== form.ccMemberIds.length
     )
-      return t("designProjects.schedule.validation.cc");
+      return fail("cc", "designProjects.schedule.validation.cc");
     if (!form.plannedStart || !form.plannedEnd)
-      return t("designProjects.schedule.validation.plannedRequired");
+      return fail(
+        form.plannedStart ? "plannedEnd" : "plannedStart",
+        "designProjects.schedule.validation.plannedRequired",
+      );
     if (form.plannedEnd < form.plannedStart)
-      return t("designProjects.schedule.validation.plannedOrder");
+      return fail("plannedEnd", "designProjects.schedule.validation.plannedOrder");
     if (masterScheduleItems.length > 0 && !form.projectScheduleNodeId)
-      return t("designProjects.schedule.validation.masterScheduleRequired");
+      return fail("masterSchedule", "designProjects.schedule.validation.masterScheduleRequired");
     const milestone = masterScheduleItems.find(
       (item) => item.nodeId === form.projectScheduleNodeId,
     );
@@ -239,40 +277,56 @@ export const DesignScheduleTaskDialog = ({
       milestone &&
       (form.plannedStart < milestone.plannedStart || form.plannedEnd > milestone.plannedEnd)
     )
-      return t("designProjects.schedule.validation.masterScheduleDates", {
+      return fail("plannedStart", "designProjects.schedule.validation.masterScheduleDates", {
         wbs: milestone.wbsCode,
       });
     if (form.isMilestone && form.plannedStart !== form.plannedEnd)
-      return t("designProjects.schedule.validation.milestoneDates");
+      return fail("plannedEnd", "designProjects.schedule.validation.milestoneDates");
     if (form.actualEnd && !form.actualStart)
-      return t("designProjects.schedule.validation.actualStartRequired");
+      return fail("actualStart", "designProjects.schedule.validation.actualStartRequired");
     if (form.actualStart && form.actualEnd && form.actualEnd < form.actualStart)
-      return t("designProjects.schedule.validation.actualOrder");
+      return fail("actualEnd", "designProjects.schedule.validation.actualOrder");
     if (form.progressPercent < 0 || form.progressPercent > 100)
-      return t("designProjects.schedule.validation.progressRange");
+      return fail("progress", "designProjects.schedule.validation.progressRange");
     if (form.weight < 1 || form.weight > 100)
-      return t("designProjects.schedule.validation.weightRange");
+      return fail("weight", "designProjects.schedule.validation.weightRange");
     if (
       form.status === "NotStarted" &&
       (form.actualStart || form.actualEnd || form.progressPercent !== 0)
     )
-      return t("designProjects.schedule.validation.notStarted");
+      return fail("status", "designProjects.schedule.validation.notStarted");
     if (form.status === "InProgress" && !form.actualStart)
-      return t("designProjects.schedule.validation.inProgress");
-    if (form.status === "Completed") return t("designProjects.schedule.validation.completeAction");
-    if (form.actualEnd) return t("designProjects.schedule.validation.actualEndCompleted");
+      return fail("actualStart", "designProjects.schedule.validation.inProgress");
+    if (form.status === "Completed")
+      return fail("status", "designProjects.schedule.validation.completeAction");
+    if (form.actualEnd)
+      return fail("actualEnd", "designProjects.schedule.validation.actualEndCompleted");
     if (task && form.predecessorTaskIds.includes(task.id))
-      return t("designProjects.schedule.validation.selfDependency");
-    if (createsCycle()) return t("designProjects.schedule.validation.dependencyCycle");
+      return fail("predecessors", "designProjects.schedule.validation.selfDependency");
+    if (createsCycle())
+      return fail("predecessors", "designProjects.schedule.validation.dependencyCycle");
     if (Boolean(form.vendorId) !== Boolean(form.downstreamContractId))
-      return t("designProjects.schedule.validation.outsourcePair");
+      return fail("vendor", "designProjects.schedule.validation.outsourcePair");
     return null;
   };
 
+  const fieldError = attempted ? validate() : null;
+  const invalid = (field: TaskField) =>
+    fieldError?.field === field
+      ? { "aria-invalid": true as const, "aria-describedby": `task-${field}-error` }
+      : {};
+  const fieldMessage = (field: TaskField) =>
+    fieldError?.field === field ? (
+      <p id={`task-${field}-error`} className="mt-1 text-xs text-destructive">
+        {fieldError.message}
+      </p>
+    ) : null;
+
   const save = async () => {
+    setAttempted(true);
     const validationError = validate();
     if (validationError) {
-      setError(validationError);
+      focusFormField(validationError.field);
       return;
     }
     setSaving(true);
@@ -392,7 +446,7 @@ export const DesignScheduleTaskDialog = ({
               </SelectContent>
             </Select>
           </FieldScope>
-          <div>
+          <div data-form-field="code">
             <Label htmlFor="schedule-task-code">{t("designProjects.schedule.field.code")}</Label>
             <Input
               id="schedule-task-code"
@@ -400,17 +454,26 @@ export const DesignScheduleTaskDialog = ({
               maxLength={80}
               value={form.code}
               onChange={(event) => setForm({ ...form, code: event.target.value })}
+              placeholder={t("designProjects.schedule.placeholder.codeAuto")}
+              {...invalid("code")}
             />
+            {fieldMessage("code") ?? (
+              <p className="mt-1 text-xs text-muted-foreground">
+                {t("designProjects.schedule.hint.codeAuto")}
+              </p>
+            )}
           </div>
-          <div>
-            <Label htmlFor="schedule-task-name">{t("designProjects.schedule.field.name")}</Label>
+          <div data-form-field="name">
+            <Label htmlFor="schedule-task-name">{t("designProjects.schedule.field.name")} *</Label>
             <Input
               id="schedule-task-name"
               className="mt-1 min-h-11"
               maxLength={300}
               value={form.name}
               onChange={(event) => setForm({ ...form, name: event.target.value })}
+              {...invalid("name")}
             />
+            {fieldMessage("name")}
           </div>
           <div className="sm:col-span-2">
             <Label htmlFor="schedule-task-description">
@@ -424,7 +487,7 @@ export const DesignScheduleTaskDialog = ({
               onChange={(event) => setForm({ ...form, description: event.target.value || null })}
             />
           </div>
-          <FieldScope>
+          <FieldScope data-form-field="vendor">
             <Label>{t("designProjects.schedule.field.vendor")}</Label>
             <Select
               value={form.vendorId ? String(form.vendorId) : "none"}
@@ -436,7 +499,7 @@ export const DesignScheduleTaskDialog = ({
                 }))
               }
             >
-              <SelectTrigger className="mt-1 min-h-11">
+              <SelectTrigger className="mt-1 min-h-11" {...invalid("vendor")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -452,6 +515,7 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
+            {fieldMessage("vendor")}
           </FieldScope>
           <FieldScope>
             <Label>{t("designProjects.schedule.field.downstreamContract")}</Label>
@@ -480,13 +544,13 @@ export const DesignScheduleTaskDialog = ({
               </SelectContent>
             </Select>
           </FieldScope>
-          <FieldScope>
-            <Label>{t("designProjects.schedule.field.department")}</Label>
+          <FieldScope data-form-field="department">
+            <Label>{t("designProjects.schedule.field.department")} *</Label>
             <Select
               value={form.departmentCode}
               onValueChange={(value) => setForm({ ...form, departmentCode: value })}
             >
-              <SelectTrigger className="mt-1 min-h-11">
+              <SelectTrigger className="mt-1 min-h-11" {...invalid("department")}>
                 <SelectValue placeholder={t("designProjects.schedule.placeholder.department")} />
               </SelectTrigger>
               <SelectContent>
@@ -497,8 +561,9 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
+            {fieldMessage("department")}
           </FieldScope>
-          <FieldScope>
+          <FieldScope data-form-field="discipline">
             <Label>{t("designProjects.schedule.field.discipline")}</Label>
             <Select
               value={form.disciplineCode ?? "none"}
@@ -506,7 +571,7 @@ export const DesignScheduleTaskDialog = ({
                 setForm({ ...form, disciplineCode: value === "none" ? null : value })
               }
             >
-              <SelectTrigger className="mt-1 min-h-11">
+              <SelectTrigger className="mt-1 min-h-11" {...invalid("discipline")}>
                 <SelectValue placeholder={t("designProjects.schedule.placeholder.discipline")} />
               </SelectTrigger>
               <SelectContent>
@@ -520,9 +585,10 @@ export const DesignScheduleTaskDialog = ({
                   ))}
               </SelectContent>
             </Select>
+            {fieldMessage("discipline")}
           </FieldScope>
-          <FieldScope>
-            <Label>{t("designProjects.schedule.field.assignee")}</Label>
+          <FieldScope data-form-field="assignee">
+            <Label>{t("designProjects.schedule.field.assignee")} *</Label>
             <SearchableSelect
               value={form.assigneeMemberId ? String(form.assigneeMemberId) : ""}
               onChange={(value) => {
@@ -538,10 +604,12 @@ export const DesignScheduleTaskDialog = ({
               ariaLabel={t("designProjects.schedule.field.assignee")}
               placeholder={t("designProjects.schedule.field.assignee")}
               options={[...activeMembers.map((member) => projectMemberOption(member, t))]}
+              {...invalid("assignee")}
             />
+            {fieldMessage("assignee")}
           </FieldScope>
-          <FieldScope>
-            <Label>{t("designProjects.schedule.field.approver")}</Label>
+          <FieldScope data-form-field="approver">
+            <Label>{t("designProjects.schedule.field.approver")} *</Label>
             <SearchableSelect
               value={form.approverMemberId ? String(form.approverMemberId) : ""}
               onChange={(value) => {
@@ -559,7 +627,9 @@ export const DesignScheduleTaskDialog = ({
                   .filter((member) => member.id !== form.assigneeMemberId)
                   .map((member) => projectMemberOption(member, t)),
               ]}
+              {...invalid("approver")}
             />
+            {fieldMessage("approver")}
           </FieldScope>
           <FieldScope>
             <Label>{t("designProjects.schedule.field.parentTask")}</Label>
@@ -596,9 +666,10 @@ export const DesignScheduleTaskDialog = ({
               }
             />
           </div>
-          <div>
+          <div data-form-field="masterSchedule">
             <Label htmlFor="task-master-schedule-node">
               {t("operationalProjects.schedule.milestone")}
+              {masterScheduleItems.length > 0 ? " *" : ""}
             </Label>
             <Select
               value={form.projectScheduleNodeId ?? "none"}
@@ -607,7 +678,11 @@ export const DesignScheduleTaskDialog = ({
               }
               disabled={masterScheduleItems.length === 0}
             >
-              <SelectTrigger id="task-master-schedule-node" className="mt-1 min-h-11">
+              <SelectTrigger
+                id="task-master-schedule-node"
+                className="mt-1 min-h-11"
+                {...invalid("masterSchedule")}
+              >
                 <SelectValue placeholder={t("operationalProjects.schedule.chooseMilestone")} />
               </SelectTrigger>
               <SelectContent>
@@ -621,18 +696,20 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
-            {masterScheduleItems.length > 0 && !form.projectScheduleNodeId && (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("operationalProjects.schedule.milestoneRequired")}
-              </p>
-            )}
+            {fieldMessage("masterSchedule") ??
+              (masterScheduleItems.length > 0 && !form.projectScheduleNodeId && (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("operationalProjects.schedule.milestoneRequired")}
+                </p>
+              ))}
           </div>
-          <div>
+          <div data-form-field="plannedStart">
             <Label htmlFor="task-planned-start">
-              {t("designProjects.schedule.field.plannedStart")}
+              {t("designProjects.schedule.field.plannedStart")} *
             </Label>
             <Input
               id="task-planned-start"
+              {...invalid("plannedStart")}
               className="mt-1 min-h-11"
               type="date"
               value={form.plannedStart}
@@ -644,13 +721,15 @@ export const DesignScheduleTaskDialog = ({
                 })
               }
             />
+            {fieldMessage("plannedStart")}
           </div>
-          <div>
+          <div data-form-field="plannedEnd">
             <Label htmlFor="task-planned-end">
-              {t("designProjects.schedule.field.plannedEnd")}
+              {t("designProjects.schedule.field.plannedEnd")} *
             </Label>
             <Input
               id="task-planned-end"
+              {...invalid("plannedEnd")}
               className="mt-1 min-h-11"
               type="date"
               disabled={form.isMilestone}
@@ -658,37 +737,42 @@ export const DesignScheduleTaskDialog = ({
               value={form.plannedEnd}
               onChange={(event) => setForm({ ...form, plannedEnd: event.target.value })}
             />
+            {fieldMessage("plannedEnd")}
           </div>
-          <div>
+          <div data-form-field="actualStart">
             <Label htmlFor="task-actual-start">
               {t("designProjects.schedule.field.actualStart")}
             </Label>
             <Input
               id="task-actual-start"
+              {...invalid("actualStart")}
               className="mt-1 min-h-11"
               type="date"
               value={form.actualStart ?? ""}
               onChange={(event) => setForm({ ...form, actualStart: event.target.value || null })}
             />
+            {fieldMessage("actualStart")}
           </div>
-          <div>
+          <div data-form-field="actualEnd">
             <Label htmlFor="task-actual-end">{t("designProjects.schedule.field.actualEnd")}</Label>
             <Input
               id="task-actual-end"
+              {...invalid("actualEnd")}
               className="mt-1 min-h-11"
               type="date"
               min={form.actualStart ?? undefined}
               value={form.actualEnd ?? ""}
               onChange={(event) => setForm({ ...form, actualEnd: event.target.value || null })}
             />
+            {fieldMessage("actualEnd")}
           </div>
-          <div>
+          <div data-form-field="status">
             <Label htmlFor="task-status">{t("designProjects.schedule.field.status")}</Label>
             <Select
               value={form.status}
               onValueChange={(value) => setForm({ ...form, status: value as DesignScheduleStatus })}
             >
-              <SelectTrigger id="task-status" className="mt-1 min-h-11">
+              <SelectTrigger id="task-status" className="mt-1 min-h-11" {...invalid("status")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -699,11 +783,13 @@ export const DesignScheduleTaskDialog = ({
                 ))}
               </SelectContent>
             </Select>
+            {fieldMessage("status")}
           </div>
-          <div>
+          <div data-form-field="progress">
             <Label htmlFor="task-progress">{t("designProjects.schedule.field.progress")}</Label>
             <Input
               id="task-progress"
+              {...invalid("progress")}
               className="mt-1 min-h-11"
               type="number"
               min={0}
@@ -713,11 +799,13 @@ export const DesignScheduleTaskDialog = ({
                 setForm({ ...form, progressPercent: Number(event.target.value) })
               }
             />
+            {fieldMessage("progress")}
           </div>
-          <div>
+          <div data-form-field="weight">
             <Label htmlFor="task-weight">{t("designProjects.schedule.field.weight")}</Label>
             <Input
               id="task-weight"
+              {...invalid("weight")}
               className="mt-1 min-h-11"
               type="number"
               min={1}
@@ -725,6 +813,7 @@ export const DesignScheduleTaskDialog = ({
               value={form.weight}
               onChange={(event) => setForm({ ...form, weight: Number(event.target.value) })}
             />
+            {fieldMessage("weight")}
           </div>
           <label className="flex min-h-11 items-center gap-3 rounded-md border px-3 text-sm">
             <Checkbox
@@ -733,10 +822,11 @@ export const DesignScheduleTaskDialog = ({
             />
             {t("designProjects.schedule.field.critical")}
           </label>
-          <fieldset className="min-w-0 space-y-2 sm:col-span-2">
+          <fieldset className="min-w-0 space-y-2 sm:col-span-2" data-form-field="predecessors">
             <legend className="text-sm font-medium text-foreground">
               {t("designProjects.schedule.field.predecessors")}
             </legend>
+            {fieldMessage("predecessors")}
             {availablePredecessors.length ? (
               <div className="max-h-44 space-y-1 overflow-y-auto rounded-md border p-2">
                 {availablePredecessors.map((item) => (
@@ -761,10 +851,11 @@ export const DesignScheduleTaskDialog = ({
               </p>
             )}
           </fieldset>
-          <fieldset className="min-w-0 space-y-2 sm:col-span-2">
+          <fieldset className="min-w-0 space-y-2 sm:col-span-2" data-form-field="cc">
             <legend className="text-sm font-medium text-foreground">
               {t("designProjects.schedule.field.cc")}
             </legend>
+            {fieldMessage("cc")}
             <PeopleChecklist
               people={members
                 .filter(

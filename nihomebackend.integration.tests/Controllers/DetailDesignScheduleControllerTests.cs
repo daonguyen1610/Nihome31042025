@@ -362,6 +362,19 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task CreateTask_WithoutCode_IsNumberedInItsPhase()
+    {
+        await AuthenticateAsync("SUPER_ADMIN");
+        var fixture = await CreateInitializedFixtureAsync();
+        var phaseId = await PhaseIdAsync(fixture.ProjectId, "BasicDesign");
+
+        using var response = await CreateTaskAsync(fixture, phaseId, TaskPayload("", fixture.MemberId, 0));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Created, await response.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(response)).GetProperty("code").GetString().Should().Be("CS-01");
+    }
+
+    [Fact]
     public async Task UpdatePhase_ValidUpdateSucceedsButInvalidWeightPreservesStateAndHistory()
     {
         await AuthenticateAsync("SUPER_ADMIN");
@@ -665,7 +678,8 @@ public sealed class DetailDesignScheduleControllerTests : IntegrationTestBase
 
         var invalidPayloads = new TaskPayloadModel[]
         {
-            TaskPayload(" ", fixture.MemberId, 0),
+            // A blank code is now numbered automatically; the name is what must be given.
+            TaskPayload("BAD-BLANK-NAME", fixture.MemberId, 0) with { Name = " " },
             TaskPayload(new string('C', 81), fixture.MemberId, 0),
             TaskPayload("BAD-NAME", fixture.MemberId, 0) with { Name = new string('N', 301) },
             TaskPayload("BAD-PROGRESS-LOW", fixture.MemberId, -1),

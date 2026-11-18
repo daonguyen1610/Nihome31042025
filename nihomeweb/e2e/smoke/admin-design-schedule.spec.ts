@@ -169,6 +169,11 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
     await createTaskButton.click();
     const dialog = page.getByRole("dialog").filter({ has: page.locator("#schedule-task-code") });
     await expect(dialog).toBeVisible();
+    // An empty save points at the field to fix (the code is optional and numbered automatically).
+    await dialog.getByRole("button", { name: /Lưu|Save/i }).click();
+    await expect(dialog.locator("#schedule-task-name")).toBeFocused();
+    await expect(dialog.locator("#schedule-task-name")).toHaveAttribute("aria-invalid", "true");
+    await expect(dialog.locator("#schedule-task-code")).not.toHaveAttribute("aria-invalid", "true");
     await dialog.locator("#schedule-task-code").fill(`ARC-${suffix}`);
     await dialog.locator("#schedule-task-name").fill(`Architecture coordination ${suffix}`);
 

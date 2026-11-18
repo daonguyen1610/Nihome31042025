@@ -446,6 +446,41 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateTaskAsync_WithoutCode_NumbersTasksWithinThePhase()
+    {
+        // NICON design feedback: a designer types the task name, not an internal code.
+        db.DesignScheduleTasks.Add(Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "YT-02"));
+        await db.SaveChangesAsync();
+        var first = Request(activeMemberId, approverMemberId);
+        first.Code = "  ";
+        var second = Request(activeMemberId, approverMemberId);
+        second.Code = "";
+
+        var a = await service.CreateTaskAsync(projectId, phaseId, first, callerId, default);
+        var b = await service.CreateTaskAsync(projectId, phaseId, second, callerId, default);
+
+        // Concept phase codes start with YT; an existing YT-02 is skipped, never duplicated.
+        Assert.Equal("YT-03", a!.Code);
+        Assert.Equal("YT-04", b!.Code);
+    }
+
+    [Fact]
+    public async Task UpdateTaskAsync_WithoutCode_KeepsTheTaskCode()
+    {
+        var created = await service.CreateTaskAsync(projectId, phaseId,
+            Request(activeMemberId, approverMemberId), callerId, default);
+        var update = Request(activeMemberId, approverMemberId);
+        update.Code = "";
+        update.Name = "Mặt bằng tầng 1 – chỉnh sửa";
+        update.RowVersion = created!.RowVersion;
+
+        var updated = await service.UpdateTaskAsync(projectId, created.Id, update, callerId, default);
+
+        Assert.Equal("DES-001", updated!.Code);
+        Assert.Equal("Mặt bằng tầng 1 – chỉnh sửa", updated.Name);
+    }
+
+    [Fact]
     public async Task CreateTaskAsync_RejectsCrossProjectPredecessorWithoutChangingState()
     {
         var request = Request(activeMemberId, approverMemberId);
