@@ -66,6 +66,8 @@ public class ContactsControllerTests : IntegrationTestBase
                 Phone = "0908123456",
                 Subject = "Báo giá thiết kế nhà phố 4 tầng",
                 Message = "Tôi cần tư vấn thiết kế và thi công nhà phố 5x20m tại Thủ Đức.",
+                // 01:30 on 18/11 in Vietnam, still 17/11 in UTC.
+                CreatedAt = new DateTime(2026, 11, 17, 18, 30, 0, DateTimeKind.Utc),
             };
             db.ContactMessages.Add(contact);
             await db.SaveChangesAsync();
@@ -89,7 +91,8 @@ public class ContactsControllerTests : IntegrationTestBase
         var lead = await WithDbAsync(db => db.Leads.AsNoTracking().SingleAsync(item => item.Id == leadId));
         lead.SourceCode.Should().Be("website");
         lead.Phone.Should().Be("0908123456");
-        lead.Note.Should().Contain("Báo giá thiết kế nhà phố 4 tầng").And.Contain("Thủ Đức");
+        lead.Note.Should().Contain("Báo giá thiết kế nhà phố 4 tầng").And.Contain("Thủ Đức")
+            .And.Contain("ngày 18/11/2026");
         (await ReadJsonAsync(await Client.GetAsync($"/api/contacts/{contactId}")))
             .GetProperty("leadId").GetInt32().Should().Be(leadId);
         (await Client.PostAsync("/api/contacts/999999/lead", null)).StatusCode.Should().Be(HttpStatusCode.NotFound);
