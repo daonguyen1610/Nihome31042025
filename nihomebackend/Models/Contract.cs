@@ -108,6 +108,24 @@ public enum ContractDirection
     Downstream = 1,
 }
 
+public static class ContractTypes
+{
+    /// <summary>
+    /// Upstream types with design, permit or construction scope: signing one sets up
+    /// Legal work through the activation step before the contract can start.
+    /// </summary>
+    public static readonly IReadOnlyList<ContractType> RequiringLegalActivation =
+    [
+        ContractType.Design,
+        ContractType.Permit,
+        ContractType.Construction,
+        ContractType.DesignAndPermit,
+        ContractType.DesignAndBuild,
+        ContractType.PermitAndConstruction,
+        ContractType.DesignPermitAndConstruction,
+    ];
+}
+
 public enum ContractType
 {
     Unclassified = 0,

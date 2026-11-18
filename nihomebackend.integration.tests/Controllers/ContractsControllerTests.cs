@@ -787,8 +787,14 @@ public class ContractsControllerTests : IntegrationTestBase
             .Should().NotContain("Unclassified");
         body.GetProperty("allowedTypes").GetProperty("Upstream")
             .EnumerateArray().Select(item => item.GetString())
+            // Ordered: the first type is the form default, so it stays Design.
+            .Should().Equal(
+                "Design", "Permit", "Construction", "DesignAndPermit",
+                "DesignAndBuild", "PermitAndConstruction", "DesignPermitAndConstruction", "Consulting");
+        // Consulting has no design, permit or construction scope to activate.
+        body.GetProperty("legalActivationTypes").EnumerateArray().Select(item => item.GetString())
             .Should().BeEquivalentTo(
-                "Consulting", "Design", "Permit", "Construction", "DesignAndPermit",
+                "Design", "Permit", "Construction", "DesignAndPermit",
                 "DesignAndBuild", "PermitAndConstruction", "DesignPermitAndConstruction");
         body.GetProperty("allowedTypes").GetProperty("Downstream")
             .EnumerateArray().Select(item => item.GetString())

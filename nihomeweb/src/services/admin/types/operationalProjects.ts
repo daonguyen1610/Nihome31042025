@@ -1367,5 +1367,7 @@ export interface ContractClassificationOptions {
   directions: ContractDirection[];
   types: Exclude<ContractType, "Unclassified">[];
   allowedTypes: Record<ContractDirection, Exclude<ContractType, "Unclassified">[]>;
+  /** Upstream types whose signed contract starts through the Legal activation step. */
+  legalActivationTypes: ContractType[];
   vendors: Pick<VendorResponse, "id" | "vendorCode" | "companyName" | "vendorType">[];
 }

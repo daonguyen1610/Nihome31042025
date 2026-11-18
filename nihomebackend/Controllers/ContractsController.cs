@@ -150,7 +150,6 @@ public class ContractsController(
             {
                 [ContractDirection.Upstream.ToString()] =
                 [
-                    ContractType.Consulting.ToString(),
                     ContractType.Design.ToString(),
                     ContractType.Permit.ToString(),
                     ContractType.Construction.ToString(),
@@ -158,6 +157,7 @@ public class ContractsController(
                     ContractType.DesignAndBuild.ToString(),
                     ContractType.PermitAndConstruction.ToString(),
                     ContractType.DesignPermitAndConstruction.ToString(),
+                    ContractType.Consulting.ToString(),
                 ],
                 [ContractDirection.Downstream.ToString()] =
                 [
@@ -165,6 +165,8 @@ public class ContractsController(
                     ContractType.Subcontract.ToString(),
                 ],
             },
+            // Signing one of these goes through the Legal activation step before it starts.
+            legalActivationTypes = ContractTypes.RequiringLegalActivation.Select(value => value.ToString()),
             vendors = await db.Vendors.AsNoTracking()
                 .Where(vendor => direction != ContractDirection.Upstream && vendor.IsActive)
                 .OrderBy(vendor => vendor.CompanyName)

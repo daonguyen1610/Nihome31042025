@@ -601,9 +601,7 @@ public sealed class LegalActivationService(
 
     private static bool IsEligibleContract(Contract contract) =>
         contract.Direction == ContractDirection.Upstream && contract.Status == ContractStatus.Signed &&
-        contract.Type is ContractType.Design or ContractType.Permit or ContractType.Construction or
-            ContractType.DesignAndPermit or ContractType.DesignAndBuild or
-            ContractType.PermitAndConstruction or ContractType.DesignPermitAndConstruction;
+        ContractTypes.RequiringLegalActivation.Contains(contract.Type);
 
     private static void EnsureEligibleContract(Contract contract)
     {
