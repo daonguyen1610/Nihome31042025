@@ -50,6 +50,32 @@ test("SPA renders /admin/tenders without console errors for SALES_MANAGER", asyn
   expect(jsErrors, `Unexpected JS errors: ${jsErrors.join("\n")}`).toHaveLength(0);
 });
 
+test("tender form names every missing required field and takes the user to the first", async ({
+  page,
+  loginInBrowserAs,
+  baseURL,
+}) => {
+  // NC-25: saving a tender without the HSMT source used to show one line at the bottom
+  // of the form, so it looked as if nothing happened.
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+  await loginInBrowserAs(page, TEST_USERS.salesManager);
+  await page.goto(`${baseURL}/admin/tenders`, { waitUntil: "networkidle" });
+  await page.getByRole("button", { name: "Tạo gói thầu" }).first().click();
+  const dialog = page.getByRole("dialog");
+
+  await dialog.getByRole("button", { name: "Tạo gói thầu" }).click();
+
+  const name = dialog.getByLabel("Tên gói thầu *");
+  await expect(name).toBeFocused();
+  await expect(name).toHaveAttribute("aria-invalid", "true");
+  await expect(dialog.getByText("Vui lòng nhập nguồn nhận HSMT", { exact: false })).toBeVisible();
+  await expect(dialog.getByText("Nhập deadline nộp hồ sơ thầu.")).toBeVisible();
+  await name.fill("Thi công nhà xưởng Bình Dương");
+  await expect(name).not.toHaveAttribute("aria-invalid", "true");
+  await expect(dialog.getByText("Nhập tên gói thầu", { exact: false })).toHaveCount(0);
+  await dialog.getByRole("button", { name: "Huỷ" }).click();
+});
+
 test("SALE can prepare a tender but cannot submit or cancel it", async ({
   api,
   page,

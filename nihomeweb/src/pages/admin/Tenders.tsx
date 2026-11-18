@@ -65,6 +65,18 @@ const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
   Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
+/** Fields the tender form requires, in the order they appear. */
+const TENDER_FIELDS = [
+  "name",
+  "customer",
+  "project",
+  "invitationReceivedAt",
+  "invitationSource",
+  "deadline",
+] as const;
+type TenderField = (typeof TENDER_FIELDS)[number];
+type TenderFieldErrors = Partial<Record<TenderField, string>>;
+
 const emptyCreate = (): CreateTenderRequest => ({
   name: "",
   customerId: 0,
@@ -226,6 +238,19 @@ const AdminTenders = () => {
   const [form, setForm] = useState<CreateTenderRequest>(emptyCreate());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Errors appear after the first save attempt and then follow the form as it is corrected.
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
+  /** Marks a required control invalid and points it at its error text. */
+  const invalid = (field: TenderField) =>
+    fieldErrors[field]
+      ? { "aria-invalid": true as const, "aria-describedby": `tender-${field}-error` }
+      : {};
+  const fieldError = (field: TenderField) =>
+    fieldErrors[field] ? (
+      <p id={`tender-${field}-error`} className="text-xs text-destructive">
+        {fieldErrors[field]}
+      </p>
+    ) : null;
   const customerProjects = useMemo(
     () => projects.filter((project) => project.customerId === form.customerId),
     [form.customerId, projects],
@@ -237,6 +262,7 @@ const AdminTenders = () => {
     setEditingDetail(null);
     setForm(emptyCreate());
     setFormError(null);
+    setShowFieldErrors(false);
     setDialogOpen(true);
   };
 
@@ -262,6 +288,7 @@ const AdminTenders = () => {
         note: data.note ?? "",
       });
       setFormError(null);
+      setShowFieldErrors(false);
       setDialogOpen(true);
     } catch (err) {
       toast({
@@ -274,35 +301,45 @@ const AdminTenders = () => {
     }
   };
 
+  const validateForm = useCallback((): TenderFieldErrors => {
+    const errors: TenderFieldErrors = {};
+    if (!form.name.trim()) errors.name = t("tenders.form.nameRequired");
+    if (!form.customerId) errors.customer = t("tenders.form.customerRequired");
+    if (!form.operationalProjectId) errors.project = t("tenders.form.projectRequired");
+    if (!form.invitationReceivedAt)
+      errors.invitationReceivedAt = t("tenders.form.invitationReceivedRequired");
+    if (!form.invitationSource.trim())
+      errors.invitationSource = t("tenders.form.invitationSourceRequired");
+    if (!form.submissionDeadline) errors.deadline = t("tenders.form.deadlineMissing");
+    else if (
+      form.invitationReceivedAt &&
+      new Date(form.invitationReceivedAt) >= new Date(form.submissionDeadline)
+    )
+      errors.deadline = t("tenders.form.invitationReceivedBeforeDeadline");
+    // For create, deadline must be > now on the client too (server enforces).
+    else if (!isEdit && new Date(form.submissionDeadline) <= new Date())
+      errors.deadline = t("tenders.form.deadlineRequired");
+    return errors;
+  }, [form, isEdit, t]);
+  const fieldErrors = useMemo(
+    () => (showFieldErrors ? validateForm() : {}),
+    [showFieldErrors, validateForm],
+  );
+
   const submitForm = async () => {
     setFormError(null);
-    if (!form.customerId) {
-      setFormError(t("tenders.form.customerRequired"));
-      return;
-    }
-    if (!form.operationalProjectId) {
-      setFormError(t("tenders.form.projectRequired"));
-      return;
-    }
-    if (!form.submissionDeadline) {
-      setFormError(t("tenders.form.deadlineRequired"));
-      return;
-    }
-    if (!form.invitationReceivedAt) {
-      setFormError(t("tenders.form.invitationReceivedRequired"));
-      return;
-    }
-    if (!form.invitationSource.trim()) {
-      setFormError(t("tenders.form.invitationSourceRequired"));
-      return;
-    }
-    if (new Date(form.invitationReceivedAt) >= new Date(form.submissionDeadline)) {
-      setFormError(t("tenders.form.invitationReceivedBeforeDeadline"));
-      return;
-    }
-    // For create, deadline must be > now on the client too (server enforces).
-    if (!isEdit && new Date(form.submissionDeadline) <= new Date()) {
-      setFormError(t("tenders.form.deadlineRequired"));
+    const errors = validateForm();
+    setShowFieldErrors(true);
+    const firstInvalid = TENDER_FIELDS.find((field) => errors[field]);
+    if (firstInvalid) {
+      // Bring the user to the first field that needs attention.
+      requestAnimationFrame(() =>
+        document
+          .querySelector<HTMLElement>(
+            `[data-tender-field="${firstInvalid}"] :is(input, textarea, button, [role="combobox"])`,
+          )
+          ?.focus(),
+      );
       return;
     }
     setSaving(true);
@@ -760,23 +797,25 @@ const AdminTenders = () => {
                   {editLocked && ` · ${t("tenders.form.readOnlyAfterSubmit")}`}
                 </>
               ) : (
-                t("tenders.form.createHint")
+                t("tenders.form.createRequiredHint")
               )}
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-3">
-            <FieldScope className="space-y-1">
-              <Label>{t("tenders.field.name")}</Label>
+            <FieldScope className="space-y-1" data-tender-field="name">
+              <Label>{t("tenders.field.name")} *</Label>
               <Input
                 value={form.name}
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                 disabled={editLocked}
+                {...invalid("name")}
               />
+              {fieldError("name")}
             </FieldScope>
 
-            <FieldScope className="space-y-1">
-              <Label>{t("tenders.field.customer")}</Label>
+            <FieldScope className="space-y-1" data-tender-field="customer">
+              <Label>{t("tenders.field.customer")} *</Label>
               {isEdit ? (
                 <Input value={editingDetail!.customerName} disabled />
               ) : (
@@ -787,18 +826,20 @@ const AdminTenders = () => {
                   }
                   options={customerOptions}
                   placeholder={t("tenders.form.customerPlaceholder")}
+                  {...invalid("customer")}
                 />
               )}
+              {fieldError("customer")}
             </FieldScope>
 
-            <FieldScope className="space-y-1">
-              <Label>{t("tenders.field.operationalProject")}</Label>
+            <FieldScope className="space-y-1" data-tender-field="project">
+              <Label>{t("tenders.field.operationalProject")} *</Label>
               <Select
                 value={form.operationalProjectId ? String(form.operationalProjectId) : ""}
                 onValueChange={(value) => setForm({ ...form, operationalProjectId: Number(value) })}
                 disabled={editLocked || !form.customerId}
               >
-                <SelectTrigger>
+                <SelectTrigger {...invalid("project")}>
                   <SelectValue placeholder={t("tenders.form.projectPlaceholder")} />
                 </SelectTrigger>
                 <SelectContent className="max-h-64">
@@ -812,18 +853,21 @@ const AdminTenders = () => {
               {form.customerId > 0 && customerProjects.length === 0 && (
                 <p className="text-xs text-muted-foreground">{t("tenders.form.noProject")}</p>
               )}
+              {fieldError("project")}
             </FieldScope>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <FieldScope className="space-y-1">
-                <Label>{t("tenders.field.invitationReceivedAt")}</Label>
+              <FieldScope className="space-y-1" data-tender-field="invitationReceivedAt">
+                <Label>{t("tenders.field.invitationReceivedAt")} *</Label>
                 <Input
                   type="datetime-local"
                   value={toDateTimeInputValue(form.invitationReceivedAt)}
                   onChange={(e) => setForm({ ...form, invitationReceivedAt: e.target.value })}
                   disabled={editLocked}
                   max={toDateTimeInputValue(new Date().toISOString())}
+                  {...invalid("invitationReceivedAt")}
                 />
+                {fieldError("invitationReceivedAt")}
               </FieldScope>
               <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.invitationReference")}</Label>
@@ -837,15 +881,17 @@ const AdminTenders = () => {
             </div>
 
             <div className="grid gap-3 md:grid-cols-2">
-              <FieldScope className="space-y-1">
-                <Label>{t("tenders.field.invitationSource")}</Label>
+              <FieldScope className="space-y-1" data-tender-field="invitationSource">
+                <Label>{t("tenders.field.invitationSource")} *</Label>
                 <Input
                   value={form.invitationSource}
                   onChange={(e) => setForm({ ...form, invitationSource: e.target.value })}
                   disabled={editLocked}
                   maxLength={200}
                   placeholder={t("tenders.form.invitationSourcePlaceholder")}
+                  {...invalid("invitationSource")}
                 />
+                {fieldError("invitationSource")}
               </FieldScope>
               <FieldScope className="space-y-1">
                 <Label>{t("tenders.field.invitationPortalUrl")}</Label>
@@ -870,14 +916,16 @@ const AdminTenders = () => {
                   disabled={editLocked}
                 />
               </FieldScope>
-              <FieldScope className="space-y-1">
-                <Label>{t("tenders.field.deadline")}</Label>
+              <FieldScope className="space-y-1" data-tender-field="deadline">
+                <Label>{t("tenders.field.deadline")} *</Label>
                 <Input
                   type="datetime-local"
                   value={toDateTimeInputValue(form.submissionDeadline)}
                   onChange={(e) => setForm({ ...form, submissionDeadline: e.target.value })}
                   disabled={editLocked}
+                  {...invalid("deadline")}
                 />
+                {fieldError("deadline")}
               </FieldScope>
               <FieldScope>
                 <ReminderDaysField
@@ -944,7 +992,7 @@ const AdminTenders = () => {
               className="w-full sm:w-auto"
             >
               {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {t("common.save")}
+              {t(isEdit ? "common.save" : "tenders.new")}
             </Button>
           </DialogFooter>
         </DialogContent>
