@@ -21,6 +21,8 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { useListExport } from "@/hooks/useListExport";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -246,24 +248,34 @@ const AdminSurveys = () => {
     };
   }, [canPickSurveyor, lang]);
 
+  // The filters shared by the visible page and the export.
+  const listFilters = useMemo(() => {
+    const params: SurveyListParams = {};
+    if (settledSearch.trim()) params.search = settledSearch.trim();
+    if (constructionType) params.constructionTypeCode = constructionType;
+    if (surveyorUserId != null) params.surveyorUserId = surveyorUserId;
+    if (linkedProjectId != null) params.linkedProjectId = linkedProjectId;
+    if (driveStatus) params.driveSyncStatus = driveStatus;
+    if (dateFrom) params.dateFrom = dateFrom;
+    if (dateTo) params.dateTo = dateTo;
+    return params;
+  }, [
+    settledSearch,
+    constructionType,
+    surveyorUserId,
+    linkedProjectId,
+    driveStatus,
+    dateFrom,
+    dateTo,
+  ]);
+
   const startListRequest = useRequestGuard();
   const fetchList = useCallback(async () => {
     const isCurrent = startListRequest();
     setLoading(true);
     setError(null);
     try {
-      const params: SurveyListParams = {
-        page,
-        pageSize,
-      };
-      if (settledSearch.trim()) params.search = settledSearch.trim();
-      if (constructionType) params.constructionTypeCode = constructionType;
-      if (surveyorUserId != null) params.surveyorUserId = surveyorUserId;
-      if (linkedProjectId != null) params.linkedProjectId = linkedProjectId;
-      if (driveStatus) params.driveSyncStatus = driveStatus;
-      if (dateFrom) params.dateFrom = dateFrom;
-      if (dateTo) params.dateTo = dateTo;
-      const { data } = await adminApi.listSurveys(params);
+      const { data } = await adminApi.listSurveys({ ...listFilters, page, pageSize });
       if (!isCurrent()) return;
       setRows(data.items ?? []);
       setTotal(data.total ?? 0);
@@ -278,24 +290,37 @@ const AdminSurveys = () => {
     } finally {
       if (isCurrent()) setLoading(false);
     }
-  }, [
-    startListRequest,
-    page,
-    settledSearch,
-    constructionType,
-    surveyorUserId,
-    linkedProjectId,
-    driveStatus,
-    dateFrom,
-    dateTo,
-    uiError,
-    toast,
-    t,
-  ]);
+  }, [startListRequest, page, listFilters, uiError, toast, t]);
 
   useEffect(() => {
     void fetchList();
   }, [fetchList]);
+
+  const { exporting, exportList } = useListExport();
+  const exportSurveys = () =>
+    exportList<SurveyListItemResponse>({
+      filename: "surveys",
+      loadPage: (nextPage) =>
+        adminApi.listSurveys({ ...listFilters, page: nextPage, pageSize: 100 }),
+      columns: [
+        { header: t("surveys.field.code"), value: "code" },
+        { header: t("surveys.field.location"), value: "location" },
+        {
+          header: t("surveys.field.constructionType"),
+          value: (r) => r.constructionTypeLabel ?? r.constructionTypeCode ?? "",
+        },
+        { header: t("surveys.field.surveyDate"), value: (r) => formatDate(r.surveyDate, lang) },
+        { header: t("surveys.field.surveyor"), value: (r) => r.surveyorName ?? "" },
+        {
+          header: t("surveys.field.projectOrOpportunity"),
+          value: (r) => r.linkedProjectName ?? r.linkedOpportunityName ?? "",
+        },
+        {
+          header: t("surveys.field.driveStatus"),
+          value: (r) => t(`surveys.driveStatus.${r.driveSyncStatus}`),
+        },
+      ],
+    });
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
@@ -625,6 +650,12 @@ const AdminSurveys = () => {
             <Button variant="ghost" size="sm" onClick={resetFilters} disabled={loading}>
               {t("common.reset")}
             </Button>
+            <AdminExportButton
+              onClick={() => void exportSurveys()}
+              disabled={total === 0 || exporting}
+              label={exporting ? t("common.exporting") : undefined}
+              className="h-9"
+            />
             <span className="ml-auto text-xs text-muted-foreground">
               {t("surveys.total").replace("{count}", String(total))}
             </span>

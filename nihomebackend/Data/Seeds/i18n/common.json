@@ -208,6 +208,30 @@
     "ja": "すべて表示"
   },
   {
+    "key": "common.currency",
+    "category": "common",
+    "vi": "Tiền tệ",
+    "en": "Currency",
+    "zh": "币种",
+    "ja": "通貨"
+  },
+  {
+    "key": "common.exporting",
+    "category": "common",
+    "vi": "Đang xuất…",
+    "en": "Exporting…",
+    "zh": "正在导出…",
+    "ja": "エクスポート中…"
+  },
+  {
+    "key": "common.exportFailed",
+    "category": "common",
+    "vi": "Không xuất được file Excel",
+    "en": "Could not export the Excel file",
+    "zh": "无法导出 Excel 文件",
+    "ja": "Excel ファイルを出力できませんでした"
+  },
+  {
     "key": "common.exportExcel",
     "category": "common",
     "vi": "Xuất Excel",

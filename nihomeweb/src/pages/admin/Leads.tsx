@@ -8,6 +8,8 @@ import { Plus, Search, Trash2, ArrowRight, RefreshCw, Pencil, Save } from "lucid
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { useListExport } from "@/hooks/useListExport";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -171,16 +173,21 @@ const AdminLeads = () => {
   const { id: routeId } = useParams();
   const [handledRouteId, setHandledRouteId] = useState<number | null>(null);
 
+  // The filters shared by the visible page and the export.
+  const listFilters = useMemo(() => {
+    const params: LeadListParams = {};
+    if (statusFilter) params.status = statusFilter;
+    if (sourceFilter) params.sourceCode = sourceFilter;
+    if (segmentFilter) params.segmentCode = segmentFilter;
+    if (search.trim()) params.search = search.trim();
+    return params;
+  }, [statusFilter, sourceFilter, segmentFilter, search]);
+
   const fetchList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params: LeadListParams = { page, pageSize };
-      if (statusFilter) params.status = statusFilter;
-      if (sourceFilter) params.sourceCode = sourceFilter;
-      if (segmentFilter) params.segmentCode = segmentFilter;
-      if (search.trim()) params.search = search.trim();
-      const { data } = await adminApi.listLeads(params);
+      const { data } = await adminApi.listLeads({ ...listFilters, page, pageSize });
       setLeads(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -188,7 +195,7 @@ const AdminLeads = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, statusFilter, sourceFilter, segmentFilter, search, uiError]);
+  }, [page, listFilters, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -495,6 +502,34 @@ const AdminLeads = () => {
     return map;
   }, [segments]);
 
+  const { exporting, exportList } = useListExport();
+  const exportLeads = () =>
+    exportList<LeadResponse>({
+      filename: "leads",
+      loadPage: (nextPage) => adminApi.listLeads({ ...listFilters, page: nextPage, pageSize: 100 }),
+      columns: [
+        { header: t("leads.field.name"), value: "name" },
+        { header: t("leads.field.company"), value: (lead) => lead.companyName ?? "" },
+        { header: t("leads.field.phone"), value: (lead) => lead.phone ?? "" },
+        { header: t("leads.field.email"), value: (lead) => lead.email ?? "" },
+        {
+          header: t("leads.field.source"),
+          value: (lead) => sourceLabelByCode.get(lead.sourceCode) ?? lead.sourceCode,
+        },
+        {
+          header: t("leads.field.segment"),
+          value: (lead) => segmentLabelByCode.get(lead.segmentCode) ?? lead.segmentCode,
+        },
+        { header: t("leads.field.status"), value: (lead) => t(`leads.status.${lead.status}`) },
+        {
+          header: t("leads.field.responseDueDate"),
+          value: (lead) => (lead.responseDueDate ? formatDate(lead.responseDueDate) : ""),
+        },
+        { header: t("leads.field.owner"), value: (lead) => lead.ownerName ?? "" },
+        { header: t("leads.field.createdAt"), value: (lead) => formatDate(lead.createdAt) },
+      ],
+    });
+
   return (
     <AdminLayout>
       <div className="space-y-4">
@@ -509,10 +544,15 @@ const AdminLeads = () => {
               )}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()}>
               <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
             </Button>
+            <AdminExportButton
+              onClick={() => void exportLeads()}
+              disabled={total === 0 || exporting}
+              label={exporting ? t("common.exporting") : undefined}
+            />
             <Button onClick={() => setCreating(true)}>
               <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
             </Button>

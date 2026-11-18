@@ -69,6 +69,8 @@ import { newIdempotencyKey } from "@/lib/api";
 import { ProjectBoqSection } from "@/components/admin/ProjectBoqSection";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
+import { useListExport } from "@/hooks/useListExport";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { customerSelectOptions } from "@/lib/customerOptions";
 import {
   adminApi,
@@ -225,6 +227,16 @@ const OperationalProjects = () => {
   }, [search]);
 
   const [page, setPage] = useListPage(JSON.stringify([customerFilter, debouncedSearch, status]));
+  // The filters shared by the visible list and the export.
+  const listFilters = useMemo(
+    () => ({
+      customerId: customerFilter,
+      search: debouncedSearch.trim() || undefined,
+      status: status || undefined,
+    }),
+    [customerFilter, debouncedSearch, status],
+  );
+
   const load = useCallback(async () => {
     const request = ++requestSequence.current;
     setLoading(true);
@@ -242,9 +254,7 @@ const OperationalProjects = () => {
         setDetail(null);
         setTimeline([]);
         const response = await adminApi.listOperationalProjects({
-          customerId: customerFilter,
-          search: debouncedSearch.trim() || undefined,
-          status: status || undefined,
+          ...listFilters,
           page,
           pageSize: 100,
         });
@@ -257,7 +267,43 @@ const OperationalProjects = () => {
     } finally {
       if (request === requestSequence.current) setLoading(false);
     }
-  }, [projectId, customerFilter, debouncedSearch, status, page, uiError]);
+  }, [projectId, listFilters, page, uiError]);
+
+  const { exporting, exportList } = useListExport();
+  const exportProjects = () =>
+    exportList<OperationalProjectListItemResponse>({
+      filename: "projects",
+      loadPage: (nextPage) =>
+        adminApi.listOperationalProjects({ ...listFilters, page: nextPage, pageSize: 100 }),
+      columns: [
+        { header: t("operationalProjects.field.code"), value: "code" },
+        { header: t("operationalProjects.field.name"), value: "name" },
+        { header: t("operationalProjects.field.customer"), value: "customerName" },
+        {
+          header: t("operationalProjects.field.manager"),
+          value: (p) => p.projectManagerName ?? "",
+        },
+        {
+          header: t("operationalProjects.field.status"),
+          value: (p) => t(`operationalProjects.status.${p.status}`),
+        },
+        {
+          header: t("operationalProjects.field.startDate"),
+          value: (p) => (p.startDate ? formatDateInZone(p.startDate, lang) : ""),
+        },
+        {
+          header: t("operationalProjects.field.endDate"),
+          value: (p) => (p.endDate ? formatDateInZone(p.endDate, lang) : ""),
+        },
+        { header: t("operationalProjects.count.opportunities"), value: "opportunityCount" },
+        { header: t("operationalProjects.count.quotes"), value: "quoteCount" },
+        { header: t("operationalProjects.count.contracts"), value: "contractCount" },
+        {
+          header: t("operationalProjects.field.updatedAt"),
+          value: (p) => formatDateInZone(p.updatedAt, lang),
+        },
+      ],
+    });
 
   useEffect(() => {
     const sequence = requestSequence;
@@ -1296,6 +1342,11 @@ const OperationalProjects = () => {
               <RefreshCcw className="mr-2 h-4 w-4" />
               {t("common.refresh")}
             </Button>
+            <AdminExportButton
+              onClick={() => void exportProjects()}
+              disabled={total === 0 || exporting}
+              label={exporting ? t("common.exporting") : undefined}
+            />
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">

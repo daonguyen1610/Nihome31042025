@@ -26,6 +26,8 @@ import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { useListExport } from "@/hooks/useListExport";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -211,16 +213,21 @@ const AdminCustomers = () => {
     return () => window.clearTimeout(h);
   }, [searchInput]);
 
+  // The filters shared by the visible page and the export.
+  const listFilters = useMemo(() => {
+    const params: CustomerListParams = {};
+    if (typeFilter) params.type = typeFilter;
+    if (statusFilter) params.status = statusFilter;
+    if (sourceFilter) params.sourceCode = sourceFilter;
+    if (search.trim()) params.search = search.trim();
+    return params;
+  }, [typeFilter, statusFilter, sourceFilter, search]);
+
   const fetchList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params: CustomerListParams = { page, pageSize };
-      if (typeFilter) params.type = typeFilter;
-      if (statusFilter) params.status = statusFilter;
-      if (sourceFilter) params.sourceCode = sourceFilter;
-      if (search.trim()) params.search = search.trim();
-      const { data } = await adminApi.listCustomers(params);
+      const { data } = await adminApi.listCustomers({ ...listFilters, page, pageSize });
       setRows(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -228,7 +235,7 @@ const AdminCustomers = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, typeFilter, statusFilter, sourceFilter, search, uiError]);
+  }, [page, listFilters, uiError]);
 
   useEffect(() => {
     void fetchList();
@@ -696,6 +703,40 @@ const AdminCustomers = () => {
   const primaryContact = (c: CustomerResponse) =>
     c.contacts.find((x) => x.isPrimary) ?? c.contacts[0];
 
+  const { exporting, exportList } = useListExport();
+  const exportCustomers = () =>
+    exportList<CustomerResponse>({
+      filename: "customers",
+      loadPage: (nextPage) =>
+        adminApi.listCustomers({ ...listFilters, page: nextPage, pageSize: 100 }),
+      columns: [
+        { header: t("customers.field.type"), value: (c) => t(`customers.type.${c.type}`) },
+        { header: t("customers.field.name"), value: "name" },
+        { header: t("customers.field.taxId"), value: (c) => c.taxId ?? "" },
+        { header: t("customers.field.address"), value: (c) => c.address ?? "" },
+        {
+          header: t("customers.field.representativeName"),
+          value: (c) => c.representativeName ?? "",
+        },
+        {
+          header: t("customers.contact.fullName"),
+          value: (c) => primaryContact(c)?.fullName ?? "",
+        },
+        { header: t("customers.contact.phone"), value: (c) => primaryContact(c)?.phone ?? "" },
+        { header: t("customers.contact.email"), value: (c) => primaryContact(c)?.email ?? "" },
+        {
+          header: t("customers.field.source"),
+          value: (c) => sourceLabelByCode.get(c.sourceCode) ?? c.sourceCode,
+        },
+        {
+          header: t("customers.field.status"),
+          value: (c) => t(`customers.status.${c.relationshipStatus}`),
+        },
+        { header: t("customers.field.owner"), value: (c) => c.ownerName ?? "" },
+        { header: t("customers.field.createdAt"), value: (c) => formatDate(c.createdAt) },
+      ],
+    });
+
   return (
     <AdminLayout>
       <div className="space-y-4">
@@ -710,10 +751,15 @@ const AdminCustomers = () => {
               )}
             </p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <Button variant="outline" size="sm" onClick={() => void fetchList()}>
               <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
             </Button>
+            <AdminExportButton
+              onClick={() => void exportCustomers()}
+              disabled={total === 0 || exporting}
+              label={exporting ? t("common.exporting") : undefined}
+            />
             {canManage && (
               <Button onClick={() => setCreating(true)}>
                 <Plus className="mr-1.5 h-4 w-4" /> {t("customers.new")}

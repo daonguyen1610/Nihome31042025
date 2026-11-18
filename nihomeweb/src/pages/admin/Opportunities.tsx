@@ -24,6 +24,8 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { useListExport } from "@/hooks/useListExport";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { customerSelectOptions } from "@/lib/customerOptions";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -230,17 +232,22 @@ const AdminOpportunities = () => {
   const [projectLoading, setProjectLoading] = useState(false);
   const [projectLoadError, setProjectLoadError] = useState<string | null>(null);
 
+  // The filters shared by the visible page and the export.
+  const listFilters = useMemo(() => {
+    const params: OpportunityListParams = {};
+    if (stageFilter) params.stage = stageFilter;
+    if (customerFilter) params.customerId = customerFilter;
+    if (minValue) params.minValue = Number(minValue);
+    if (maxValue) params.maxValue = Number(maxValue);
+    if (search.trim()) params.search = search.trim();
+    return params;
+  }, [stageFilter, customerFilter, minValue, maxValue, search]);
+
   const fetchList = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
-      const params: OpportunityListParams = { page, pageSize };
-      if (stageFilter) params.stage = stageFilter;
-      if (customerFilter) params.customerId = customerFilter;
-      if (minValue) params.minValue = Number(minValue);
-      if (maxValue) params.maxValue = Number(maxValue);
-      if (search.trim()) params.search = search.trim();
-      const { data } = await adminApi.listOpportunities(params);
+      const { data } = await adminApi.listOpportunities({ ...listFilters, page, pageSize });
       setRows(data.items);
       setTotal(data.total);
     } catch (err) {
@@ -248,7 +255,32 @@ const AdminOpportunities = () => {
     } finally {
       setLoading(false);
     }
-  }, [page, stageFilter, customerFilter, minValue, maxValue, search, uiError]);
+  }, [page, listFilters, uiError]);
+
+  const { exporting, exportList } = useListExport();
+  const exportOpportunities = () =>
+    exportList<OpportunityResponse>({
+      filename: "opportunities",
+      loadPage: (nextPage) =>
+        adminApi.listOpportunities({ ...listFilters, page: nextPage, pageSize: 100 }),
+      columns: [
+        { header: t("opportunities.field.name"), value: "name" },
+        { header: t("opportunities.field.customer"), value: (o) => o.customerName ?? "" },
+        { header: t("opportunities.field.estimatedValue"), value: "estimatedValue" },
+        { header: t("common.currency"), value: "currency" },
+        { header: t("opportunities.field.winProbability"), value: (o) => `${o.winProbability}%` },
+        {
+          header: t("opportunities.field.expectedCloseDate"),
+          value: (o) => (o.expectedCloseDate ? formatDate(o.expectedCloseDate) : ""),
+        },
+        {
+          header: t("opportunities.field.stage"),
+          value: (o) => t(`opportunities.stage.${o.stage}`),
+        },
+        { header: t("opportunities.field.owner"), value: (o) => o.ownerName ?? "" },
+        { header: t("opportunities.field.createdAt"), value: (o) => formatDate(o.createdAt) },
+      ],
+    });
 
   const fetchPipeline = useCallback(async () => {
     setPipelineLoading(true);
@@ -808,6 +840,13 @@ const AdminOpportunities = () => {
             >
               <RefreshCw className="mr-1.5 h-4 w-4" /> {t("common.refresh")}
             </Button>
+            {view === "table" && (
+              <AdminExportButton
+                onClick={() => void exportOpportunities()}
+                disabled={total === 0 || exporting}
+                label={exporting ? t("common.exporting") : undefined}
+              />
+            )}
             {canManage && (
               <Button onClick={openCreate}>
                 <Plus className="mr-1.5 h-4 w-4" /> {t("opportunities.new")}
