@@ -820,6 +820,7 @@ export const DesignScheduleTaskDialog = ({
             <Label htmlFor="task-weight">{t("designProjects.schedule.field.weight")}</Label>
             <Input
               id="task-weight"
+              aria-describedby="task-weight-hint"
               {...invalid("weight")}
               className="mt-1 min-h-11"
               type="number"
@@ -828,14 +829,27 @@ export const DesignScheduleTaskDialog = ({
               value={form.weight}
               onChange={(event) => setForm({ ...form, weight: Number(event.target.value) })}
             />
-            {fieldMessage("weight") ?? (
-              <p className="mt-1 text-xs text-muted-foreground">
-                {t("designProjects.schedule.hint.weight", {
-                  used: (taskWeightTotals.get(form.phaseId) ?? 0) - (task?.weight ?? 0),
-                  total: PHASE_TASK_WEIGHT_TOTAL,
-                })}
-              </p>
-            )}
+            {fieldMessage("weight") ??
+              (() => {
+                const others = (taskWeightTotals.get(form.phaseId) ?? 0) - (task?.weight ?? 0);
+                const afterSave = others + (form.weight || 0);
+                const exact = afterSave === PHASE_TASK_WEIGHT_TOTAL;
+                return (
+                  <p
+                    id="task-weight-hint"
+                    className={`mt-1 text-xs ${exact ? "text-muted-foreground" : "text-amber-700 dark:text-amber-400"}`}
+                  >
+                    {t("designProjects.schedule.hint.weightAfterSave", {
+                      others,
+                      after: afterSave,
+                      total: PHASE_TASK_WEIGHT_TOTAL,
+                    })}
+                    {exact
+                      ? null
+                      : ` ${t("designProjects.schedule.hint.weightNotExact", { total: PHASE_TASK_WEIGHT_TOTAL })}`}
+                  </p>
+                );
+              })()}
           </div>
           <label className="flex min-h-11 items-center gap-3 rounded-md border px-3 text-sm">
             <Checkbox

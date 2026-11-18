@@ -458,7 +458,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
             </p>
             {!schedule.baselineReady && (
               <p className="mt-2 text-xs text-muted-foreground">
-                {t("designProjects.schedule.baseline.projectIncomplete")}
+                {t("designProjects.schedule.baseline.projectNotExact")}
               </p>
             )}
           </div>
@@ -536,7 +536,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
               <span className="text-xs text-muted-foreground">
                 {phase.baselineReady
                   ? t("designProjects.schedule.baseline.ready")
-                  : t("designProjects.schedule.baseline.weightTotal", {
+                  : t("designProjects.schedule.baseline.taskWeightSum", {
                       used: weightTotals.get(phase.id) ?? 0,
                       total: PHASE_TASK_WEIGHT_TOTAL,
                     })}
