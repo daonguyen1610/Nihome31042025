@@ -132,6 +132,21 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
     // ---------- 3. Create a shop drawing via the dialog ----------
     await page.getByTestId("shop-drawing-new").click();
 
+    // Saving an empty form names each required field and focuses the first one,
+    // instead of a single line under the notes (NICON design feedback, 24/09).
+    await page.getByTestId("shop-drawing-form-save").click();
+    const discipline = page.getByTestId("shop-drawing-form-discipline");
+    await expect(discipline).toBeFocused();
+    await expect(discipline).toHaveAttribute("aria-invalid", "true");
+    await expect(page.getByTestId("shop-drawing-form-item")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+    await expect(page.getByTestId("shop-drawing-form-title")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
+
     // discipline dropdown (radix-ui Select)
     await page.getByTestId("shop-drawing-form-discipline").click();
     await page.getByRole("option", { name: /Ki\u1ebfn tr\u00fac|Architecture|建筑|建築/i }).click();

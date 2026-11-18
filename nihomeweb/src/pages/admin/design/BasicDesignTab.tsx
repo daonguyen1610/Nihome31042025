@@ -48,6 +48,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { translateError, useI18n } from "@/lib/i18n";
+import { useDesignDisciplines } from "./useDesignDisciplines";
+import { DisciplineSelectField } from "./DisciplineSelectField";
+import { focusFormField } from "@/lib/formFocus";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -61,7 +64,6 @@ import {
   type CreateBasicDesignDocRequest,
   type DesignProjectResponse,
   type DeletionImpactResponse,
-  type MasterDataOption,
 } from "@/services/adminApi";
 import { RevisionsPanel } from "./RevisionsPanel";
 import { formatDate as formatDateInZone } from "@/lib/displaySettings";
@@ -158,8 +160,6 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       ),
     );
 
-  const [disciplines, setDisciplines] = useState<MasterDataOption[]>([]);
-
   const [page, setPage] = useListPage(String(project.id));
   const [total, setTotal] = useState(0);
   const startRequest = useRequestGuard();
@@ -213,31 +213,8 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
     });
   }, [focusedDocumentId, loading, rows]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await adminApi.getMasterDataOptions("design_discipline", lang);
-        if (!cancelled) setDisciplines((data ?? []).filter((o) => o.isActive));
-      } catch {
-        // non-fatal
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [lang]);
-
-  const disciplineOptions = useMemo(
-    () => disciplines.map((d) => ({ value: d.code, label: d.name })),
-    [disciplines],
-  );
-
-  const disciplineLabelByCode = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const d of disciplines) m.set(d.code, d.name);
-    return m;
-  }, [disciplines]);
+  const disciplines = useDesignDisciplines();
+  const { options: disciplineOptions, labelByCode: disciplineLabelByCode } = disciplines;
 
   const rowsByDiscipline = useMemo(() => {
     const groups = new Map<string, BasicDesignDocResponse[]>();
@@ -278,12 +255,15 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Field messages appear after the first save attempt and follow the form as it is fixed.
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
   const isEdit = !!editing;
 
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
     setFormError(null);
+    setShowFieldErrors(false);
     setDialogOpen(true);
   };
   const openEdit = (row: BasicDesignDocResponse) => {
@@ -296,17 +276,25 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
       note: row.note ?? "",
     });
     setFormError(null);
+    setShowFieldErrors(false);
     setDialogOpen(true);
   };
 
+  const validation = useMemo(
+    () => ({
+      discipline: form.disciplineCode ? undefined : t("basicDesign.form.disciplineRequired"),
+      title: form.title.trim() ? undefined : t("basicDesign.form.titleRequired"),
+    }),
+    [form.disciplineCode, form.title, t],
+  );
+  const fieldErrors: Partial<typeof validation> = showFieldErrors ? validation : {};
+
   const submitForm = async () => {
     setFormError(null);
-    if (!form.title.trim()) {
-      setFormError(t("basicDesign.form.titleRequired"));
-      return;
-    }
-    if (!form.disciplineCode) {
-      setFormError(t("basicDesign.form.disciplineRequired"));
+    setShowFieldErrors(true);
+    const firstInvalid = (["discipline", "title"] as const).find((field) => validation[field]);
+    if (firstInvalid) {
+      focusFormField(firstInvalid);
       return;
     }
     setSaving(true);
@@ -711,32 +699,30 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
             <DialogDescription>{t("basicDesign.form.hint")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
-            <FieldScope>
-              <Label>{t("basicDesign.field.discipline")}</Label>
-              <Select
-                value={form.disciplineCode}
-                onValueChange={(v) => setForm((f) => ({ ...f, disciplineCode: v }))}
-                disabled={isEdit && editing?.status !== "InProgress"}
-              >
-                <SelectTrigger className="mt-1 h-9">
-                  <SelectValue placeholder={t("basicDesign.form.disciplinePlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {disciplineOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldScope>
-            <FieldScope>
-              <Label>{t("basicDesign.field.title")}</Label>
+            <DisciplineSelectField
+              label={t("basicDesign.field.discipline")}
+              placeholder={t("basicDesign.form.disciplinePlaceholder")}
+              value={form.disciplineCode}
+              onChange={(code) => setForm((f) => ({ ...f, disciplineCode: code }))}
+              disabled={isEdit && editing?.status !== "InProgress"}
+              error={fieldErrors.discipline}
+              errorId="basic-design-discipline-error"
+              disciplines={disciplines}
+            />
+            <FieldScope data-form-field="title">
+              <Label>{t("basicDesign.field.title")} *</Label>
               <Input
                 autoFocus
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
+                aria-invalid={fieldErrors.title ? true : undefined}
+                aria-describedby={fieldErrors.title ? "basic-design-title-error" : undefined}
               />
+              {fieldErrors.title && (
+                <p id="basic-design-title-error" className="mt-1 text-xs text-destructive">
+                  {fieldErrors.title}
+                </p>
+              )}
             </FieldScope>
             <FieldScope>
               <Label>{t("basicDesign.field.description")}</Label>
@@ -786,7 +772,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
               {t("common.cancel")}
             </Button>
             <Button onClick={() => void submitForm()} disabled={saving}>
-              {t("common.save")}
+              {t(isEdit ? "common.save" : "basicDesign.new")}
             </Button>
           </DialogFooter>
         </DialogContent>
