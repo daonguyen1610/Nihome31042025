@@ -1776,12 +1776,12 @@
     "ja": "この顧客には運用プロジェクトがまだありません。下で新規作成して契約の作成を続けてください。"
   },
   {
-    "key": "contracts.quickProject.linkedProjectFromQuote",
+    "key": "contracts.quickProject.linkedProjectHidden",
     "category": "contracts",
-    "vi": "Dự án theo báo giá",
-    "en": "Project from the quote",
-    "zh": "报价所属项目",
-    "ja": "見積の案件"
+    "vi": "Dự án đã liên kết (bạn không có quyền xem chi tiết)",
+    "en": "Linked project (you don't have access to its details)",
+    "zh": "已关联的项目（您无权查看详情）",
+    "ja": "紐付け済みの案件（詳細を表示する権限がありません）"
   },
   {
     "key": "contracts.overdueBadge",

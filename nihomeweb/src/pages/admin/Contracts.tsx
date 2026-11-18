@@ -592,8 +592,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     () => projects.filter((project) => project.customerId === form.customerId),
     [projects, form.customerId],
   );
-  // A project inherited from the quote can sit outside the loaded project list;
-  // name it instead of showing its database id.
+  // A prefilled project (from a quote, opportunity or tender) can sit outside the
+  // loaded project list; name it instead of showing its database id.
   const outsideProjectId =
     form.operationalProjectId != null &&
     !customerProjects.some((project) => project.id === form.operationalProjectId)
@@ -609,7 +609,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       .then(({ data }) => {
         if (!cancelled) setOutsideProjectLabel(`${data.code} · ${data.name}`);
       })
-      // Without access to the project, the generic label below is shown.
+      // Without access to the project, say so instead of showing its id.
       .catch(() => undefined);
     return () => {
       cancelled = true;
@@ -2081,10 +2081,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       {project.code} · {project.name}
                     </SelectItem>
                   ))}
-                  {/* Keep a quote's project selectable rather than blank. */}
+                  {/* Keep a prefilled project selectable rather than blank. */}
                   {outsideProjectId != null && (
                     <SelectItem value={String(outsideProjectId)}>
-                      {outsideProjectLabel ?? t("contracts.quickProject.linkedProjectFromQuote")}
+                      {outsideProjectLabel ?? t("contracts.quickProject.linkedProjectHidden")}
                     </SelectItem>
                   )}
                 </SelectContent>
