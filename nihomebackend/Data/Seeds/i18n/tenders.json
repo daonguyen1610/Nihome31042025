@@ -37,11 +37,13 @@
 
   { "key": "tenders.form.customerRequired", "category": "tenders", "vi": "Vui lòng chọn Chủ đầu tư.", "en": "Please pick a Customer.", "zh": "请选择客户。", "ja": "顧客を選択してください。" },
   { "key": "tenders.form.deadlineRequired", "category": "tenders", "vi": "Deadline nộp phải là ngày trong tương lai.", "en": "Submission deadline must be in the future.", "zh": "提交截止日期必须为未来日期。", "ja": "提出締切は未来の日付である必要があります。" },
+  { "key": "tenders.form.nameRequired", "category": "tenders", "vi": "Nhập tên gói thầu, ví dụ: Thi công nhà xưởng Bình Dương.", "en": "Enter the tender name, e.g. Binh Duong factory construction.", "zh": "请输入招标包名称，例如：平阳工厂施工。", "ja": "入札パッケージ名を入力してください（例：ビンズオン工場施工）。" },
+  { "key": "tenders.form.deadlineMissing", "category": "tenders", "vi": "Nhập deadline nộp hồ sơ thầu.", "en": "Enter the submission deadline.", "zh": "请输入投标截止时间。", "ja": "提出期限を入力してください。" },
+  { "key": "tenders.form.createRequiredHint", "category": "tenders", "vi": "Điền các trường có dấu * rồi bấm Tạo gói thầu.", "en": "Fill in the fields marked * and press Create tender.", "zh": "填写带 * 的字段后点击“创建招标包”。", "ja": "* の項目を入力して「入札パッケージ作成」を押してください。" },
   { "key": "tenders.form.readOnlyAfterSubmit", "category": "tenders", "vi": "Sau khi đã nộp, chỉ có thể sửa Ghi chú.", "en": "After submission only the Note can be edited.", "zh": "提交后只能修改备注。", "ja": "提出後は備考のみ編集可能です。" },
   { "key": "tenders.form.preparerPlaceholder", "category": "tenders", "vi": "Chọn người phụ trách", "en": "Pick a preparer", "zh": "选择负责人", "ja": "担当者を選択" },
   { "key": "tenders.form.preparerReadOnlyHint", "category": "tenders", "vi": "Chưa được gán", "en": "Not assigned", "zh": "未分配", "ja": "未割当" },
   { "key": "tenders.form.customerPlaceholder", "category": "tenders", "vi": "Chọn chủ đầu tư", "en": "Pick a customer", "zh": "选择客户", "ja": "顧客を選択" },
-  { "key": "tenders.form.createHint", "category": "tenders", "vi": "Điền thông tin gói thầu và bấm Lưu để bắt đầu.", "en": "Fill in the tender details and click Save to start.", "zh": "填写投标信息并点击保存以开始。", "ja": "入札情報を入力し、保存で開始します。" },
 
   { "key": "tenders.delete.confirmTitle", "category": "tenders", "vi": "Xoá gói thầu?", "en": "Delete tender?", "zh": "删除投标？", "ja": "入札を削除しますか？" },
   { "key": "tenders.delete.confirmBody", "category": "tenders", "vi": "Xóa vĩnh viễn gói thầu \"{name}\" và checklist liên quan? Hành động này không thể hoàn tác.", "en": "Permanently delete \"{name}\" and its checklist? This cannot be undone.", "zh": "永久删除“{name}”及其清单？此操作无法撤销。", "ja": "「{name}」とチェックリストを完全に削除しますか？元に戻せません。" },
