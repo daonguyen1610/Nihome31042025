@@ -820,6 +820,7 @@ const AdminTenders = () => {
                     setForm({ ...form, customerId: Number(v) || 0, operationalProjectId: null })
                   }
                   options={customerOptions}
+                  searchPlaceholder={t("customers.picker.search")}
                   placeholder={t("tenders.form.customerPlaceholder")}
                   {...invalid("customer")}
                 />

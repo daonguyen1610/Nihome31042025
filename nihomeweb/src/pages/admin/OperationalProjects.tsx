@@ -1411,6 +1411,7 @@ const OperationalProjects = () => {
                   setForm((current) => ({ ...current, customerId: Number(value) }))
                 }
                 options={customerChoices}
+                searchPlaceholder={t("customers.picker.search")}
                 placeholder={t("operationalProjects.selectCustomer")}
               />
             </FieldScope>

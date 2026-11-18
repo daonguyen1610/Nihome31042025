@@ -25,6 +25,8 @@
   { "key": "customers.field.type", "category": "customers", "vi": "Loại", "en": "Type", "zh": "类型", "ja": "種別" },
   { "key": "customers.field.name", "category": "customers", "vi": "Tên khách hàng", "en": "Customer name", "zh": "客户名称", "ja": "顧客名" },
   { "key": "customers.field.taxId", "category": "customers", "vi": "Mã số thuế", "en": "Tax ID", "zh": "税号", "ja": "税番号" },
+  { "key": "customers.picker.select", "category": "customers", "vi": "Chọn khách hàng", "en": "Select a customer", "zh": "选择客户", "ja": "顧客を選択" },
+  { "key": "customers.picker.search", "category": "customers", "vi": "Tìm theo tên hoặc MST…", "en": "Search by name or tax ID…", "zh": "按名称或税号搜索…", "ja": "名前または税番号で検索…" },
   { "key": "customers.field.address", "category": "customers", "vi": "Địa chỉ đăng ký", "en": "Registered address", "zh": "注册地址", "ja": "登録住所" },
   { "key": "customers.field.representativeName", "category": "customers", "vi": "Người đại diện", "en": "Legal representative", "zh": "法人代表", "ja": "代表者" },
   { "key": "customers.field.source", "category": "customers", "vi": "Nguồn", "en": "Source", "zh": "来源", "ja": "ソース" },

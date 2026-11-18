@@ -2033,8 +2033,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   });
                 }}
                 options={customerChoices}
+                searchPlaceholder={t("customers.picker.search")}
                 id="c-customer-form"
-                placeholder="—"
+                placeholder={t("customers.picker.select")}
               />
             </div>
 
