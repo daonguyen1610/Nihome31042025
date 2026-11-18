@@ -788,7 +788,7 @@ public class ContractsControllerTests : IntegrationTestBase
         body.GetProperty("allowedTypes").GetProperty("Upstream")
             .EnumerateArray().Select(item => item.GetString())
             .Should().BeEquivalentTo(
-                "Design", "Permit", "Construction", "DesignAndPermit",
+                "Consulting", "Design", "Permit", "Construction", "DesignAndPermit",
                 "DesignAndBuild", "PermitAndConstruction", "DesignPermitAndConstruction");
         body.GetProperty("allowedTypes").GetProperty("Downstream")
             .EnumerateArray().Select(item => item.GetString())

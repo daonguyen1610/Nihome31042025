@@ -150,6 +150,7 @@ public class ContractsController(
             {
                 [ContractDirection.Upstream.ToString()] =
                 [
+                    ContractType.Consulting.ToString(),
                     ContractType.Design.ToString(),
                     ContractType.Permit.ToString(),
                     ContractType.Construction.ToString(),

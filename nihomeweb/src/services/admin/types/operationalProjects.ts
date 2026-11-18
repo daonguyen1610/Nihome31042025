@@ -1352,6 +1352,7 @@ export type ContractDirection = "Upstream" | "Downstream";
 
 export type ContractType =
   | "Unclassified"
+  | "Consulting"
   | "Design"
   | "Permit"
   | "Construction"
