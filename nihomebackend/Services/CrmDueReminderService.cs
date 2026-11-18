@@ -153,7 +153,7 @@ public sealed class CrmDueReminderService(
             })
             .ToListAsync(ct);
         var due = items
-            .Select(item => new { Item = item, DueDate = LocalDate(item.Deadline, zone) })
+            .Select(item => new { Item = item, DueDate = CalendarDate(item.Deadline, zone) })
             .Where(entry => entry.Item.Recipient.HasValue && entry.DueDate <= today && entry.DueDate >= today.AddDays(-7))
             .ToList();
         await SendOnceAsync(CrmDueReminderKinds.TenderChecklistItem, await NotSentAsync(CrmDueReminderKinds.TenderChecklistItem,
@@ -175,12 +175,12 @@ public sealed class CrmDueReminderService(
         var horizon = DateTime.UtcNow.AddDays(ReminderDefaults.MaxDaysBefore + 1);
         var quotes = await db.Quotes.AsNoTracking()
             .Where(quote => (quote.Status == QuoteStatus.Approved || quote.Status == QuoteStatus.SentToCustomer) &&
-                quote.ValidUntil >= DateTime.UtcNow && quote.ValidUntil <= horizon &&
+                quote.ValidUntil >= DateTime.UtcNow.AddDays(-2) && quote.ValidUntil <= horizon &&
                 quote.OwnerUserId != null && quote.Owner!.IsActive)
             .Select(quote => new { quote.Id, quote.Code, quote.ValidUntil, quote.ExpiryReminderDays, Owner = quote.OwnerUserId!.Value })
             .ToListAsync(ct);
         var due = quotes
-            .Select(quote => new { Quote = quote, DueDate = LocalDate(quote.ValidUntil, zone) })
+            .Select(quote => new { Quote = quote, DueDate = CalendarDate(quote.ValidUntil, zone) })
             .Where(item => IsInReminderWindow(item.DueDate, item.Quote.ExpiryReminderDays, today))
             .ToList();
         await SendOnceAsync(CrmDueReminderKinds.QuoteExpiry, await NotSentAsync(CrmDueReminderKinds.QuoteExpiry,
@@ -197,6 +197,15 @@ public sealed class CrmDueReminderService(
     /// <summary>True from <paramref name="daysBefore"/> days ahead of the due date up to the due date itself.</summary>
     public static bool IsInReminderWindow(DateOnly dueDate, int daysBefore, DateOnly today) =>
         today >= dueDate.AddDays(-Math.Max(0, daysBefore)) && today <= dueDate;
+
+    /// <summary>
+    /// The day a user picked: date pickers save midnight or 23:59:59 UTC of the chosen day,
+    /// which must not shift with the time zone; any other value is an instant.
+    /// </summary>
+    private static DateOnly CalendarDate(DateTime utc, TimeZoneInfo zone) =>
+        utc.TimeOfDay == TimeSpan.Zero || utc.TimeOfDay >= new TimeSpan(23, 59, 59)
+            ? DateOnly.FromDateTime(utc)
+            : LocalDate(utc, zone);
 
     private static DateOnly LocalDate(DateTime utc, TimeZoneInfo zone) =>
         DateOnly.FromDateTime(TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(utc, DateTimeKind.Utc), zone));
