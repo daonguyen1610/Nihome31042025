@@ -48,6 +48,9 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { translateError, useI18n } from "@/lib/i18n";
+import { useDesignDisciplines } from "./useDesignDisciplines";
+import { DisciplineSelectField } from "./DisciplineSelectField";
+import { focusFormField } from "@/lib/formFocus";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useConfirm } from "@/components/ui/confirmation";
@@ -60,7 +63,6 @@ import {
   type CreateShopDrawingRequest,
   type DesignProjectResponse,
   type DeletionImpactResponse,
-  type MasterDataOption,
   type ShopDrawingResponse,
   type ShopDrawingStatus,
 } from "@/services/adminApi";
@@ -155,8 +157,6 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [disciplines, setDisciplines] = useState<MasterDataOption[]>([]);
-
   // filter state
   const [filterDiscipline, setFilterDiscipline] = useState<string>("");
   const [filterStatus, setFilterStatus] = useState<string>("");
@@ -237,31 +237,8 @@ export const ShopDrawingTab = ({ project }: Props) => {
     void fetchRows();
   }, [fetchRows]);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const { data } = await adminApi.getMasterDataOptions("design_discipline", lang);
-        if (!cancelled) setDisciplines((data ?? []).filter((o) => o.isActive));
-      } catch {
-        // non-fatal
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [lang]);
-
-  const disciplineOptions = useMemo(
-    () => disciplines.map((d) => ({ value: d.code, label: d.name })),
-    [disciplines],
-  );
-
-  const disciplineLabelByCode = useMemo(() => {
-    const m = new Map<string, string>();
-    for (const d of disciplines) m.set(d.code, d.name);
-    return m;
-  }, [disciplines]);
+  const disciplines = useDesignDisciplines();
+  const { options: disciplineOptions, labelByCode: disciplineLabelByCode } = disciplines;
 
   // Group by discipline → construction item so PMs see the site-team hierarchy.
   const grouped = useMemo(() => {
@@ -308,12 +285,15 @@ export const ShopDrawingTab = ({ project }: Props) => {
   const [form, setForm] = useState<FormState>(emptyForm());
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+  // Field messages appear after the first save attempt and follow the form as it is fixed.
+  const [showFieldErrors, setShowFieldErrors] = useState(false);
   const isEdit = !!editing;
 
   const openCreate = () => {
     setEditing(null);
     setForm(emptyForm());
     setFormError(null);
+    setShowFieldErrors(false);
     setDialogOpen(true);
   };
   const openEdit = (row: ShopDrawingResponse) => {
@@ -327,21 +307,30 @@ export const ShopDrawingTab = ({ project }: Props) => {
       note: row.note ?? "",
     });
     setFormError(null);
+    setShowFieldErrors(false);
     setDialogOpen(true);
   };
 
+  const validation = useMemo(
+    () => ({
+      discipline: form.disciplineCode ? undefined : t("shopDrawing.form.disciplineRequired"),
+      constructionItem: form.constructionItem.trim()
+        ? undefined
+        : t("shopDrawing.form.constructionItemRequired"),
+      title: form.title.trim() ? undefined : t("shopDrawing.form.titleRequired"),
+    }),
+    [form.disciplineCode, form.constructionItem, form.title, t],
+  );
+  const fieldErrors: Partial<typeof validation> = showFieldErrors ? validation : {};
+
   const submitForm = async () => {
     setFormError(null);
-    if (!form.title.trim()) {
-      setFormError(t("shopDrawing.form.titleRequired"));
-      return;
-    }
-    if (!form.disciplineCode) {
-      setFormError(t("shopDrawing.form.disciplineRequired"));
-      return;
-    }
-    if (!form.constructionItem.trim()) {
-      setFormError(t("shopDrawing.form.constructionItemRequired"));
+    setShowFieldErrors(true);
+    const firstInvalid = (["discipline", "constructionItem", "title"] as const).find(
+      (field) => validation[field],
+    );
+    if (firstInvalid) {
+      focusFormField(firstInvalid);
       return;
     }
     setSaving(true);
@@ -643,43 +632,51 @@ export const ShopDrawingTab = ({ project }: Props) => {
             <DialogDescription>{t("shopDrawing.form.hint")}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-3">
-            <FieldScope>
-              <Label>{t("shopDrawing.field.discipline")}</Label>
-              <Select
-                value={form.disciplineCode}
-                onValueChange={(v) => setForm((f) => ({ ...f, disciplineCode: v }))}
-                disabled={isEdit && editing?.status !== "Drafting"}
-              >
-                <SelectTrigger className="mt-1 h-9" data-testid="shop-drawing-form-discipline">
-                  <SelectValue placeholder={t("shopDrawing.form.disciplinePlaceholder")} />
-                </SelectTrigger>
-                <SelectContent>
-                  {disciplineOptions.map((o) => (
-                    <SelectItem key={o.value} value={o.value}>
-                      {o.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </FieldScope>
-            <FieldScope>
-              <Label>{t("shopDrawing.field.constructionItem")}</Label>
+            <DisciplineSelectField
+              label={t("shopDrawing.field.discipline")}
+              placeholder={t("shopDrawing.form.disciplinePlaceholder")}
+              value={form.disciplineCode}
+              onChange={(code) => setForm((f) => ({ ...f, disciplineCode: code }))}
+              disabled={isEdit && editing?.status !== "Drafting"}
+              error={fieldErrors.discipline}
+              errorId="shop-drawing-discipline-error"
+              disciplines={disciplines}
+              triggerTestId="shop-drawing-form-discipline"
+            />
+            <FieldScope data-form-field="constructionItem">
+              <Label>{t("shopDrawing.field.constructionItem")} *</Label>
               <Input
                 value={form.constructionItem}
                 onChange={(e) => setForm((f) => ({ ...f, constructionItem: e.target.value }))}
                 placeholder={t("shopDrawing.form.constructionItemPlaceholder")}
                 disabled={isEdit && editing?.status !== "Drafting"}
                 data-testid="shop-drawing-form-item"
+                aria-invalid={fieldErrors.constructionItem ? true : undefined}
+                aria-describedby={
+                  fieldErrors.constructionItem ? "shop-drawing-item-error" : undefined
+                }
               />
+              {fieldErrors.constructionItem && (
+                <p id="shop-drawing-item-error" className="mt-1 text-xs text-destructive">
+                  {fieldErrors.constructionItem}
+                </p>
+              )}
             </FieldScope>
-            <FieldScope>
-              <Label>{t("shopDrawing.field.title")}</Label>
+            <FieldScope data-form-field="title">
+              <Label>{t("shopDrawing.field.title")} *</Label>
               <Input
                 autoFocus
                 value={form.title}
                 onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))}
                 data-testid="shop-drawing-form-title"
+                aria-invalid={fieldErrors.title ? true : undefined}
+                aria-describedby={fieldErrors.title ? "shop-drawing-title-error" : undefined}
               />
+              {fieldErrors.title && (
+                <p id="shop-drawing-title-error" className="mt-1 text-xs text-destructive">
+                  {fieldErrors.title}
+                </p>
+              )}
             </FieldScope>
             <FieldScope>
               <Label>{t("shopDrawing.field.description")}</Label>
@@ -737,7 +734,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
               disabled={saving}
               data-testid="shop-drawing-form-save"
             >
-              {t("common.save")}
+              {t(isEdit ? "common.save" : "shopDrawing.new")}
             </Button>
           </DialogFooter>
         </DialogContent>
