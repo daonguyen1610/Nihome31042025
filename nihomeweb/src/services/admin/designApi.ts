@@ -17,6 +17,7 @@ import type {
   UpsertDesignScheduleTaskRequest,
   DesignScheduleTaskResponse,
   DesignReviewResponse,
+  DesignApprovalInboxResponse,
   DesignReviewStage,
 } from "./types/designProjects";
 import type {
@@ -219,6 +220,7 @@ export const designApi = {
         },
       },
     ),
+  getDesignApprovalInbox: () => api.get<DesignApprovalInboxResponse>("/design-approval-inbox"),
   listDesignReviews: (projectId: number) =>
     api.get<DesignReviewResponse[]>(`/design-projects/${projectId}/reviews`),
   listDesignReviewRecipientCandidates: (projectId: number) =>

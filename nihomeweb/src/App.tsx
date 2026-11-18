@@ -112,6 +112,7 @@ const ProjectReports = lazy(() => import("@/pages/admin/ProjectReports"));
 const AdminDesignProjects = lazy(() => import("./pages/admin/DesignProjects.tsx"));
 const AdminDesignProjectDetail = lazy(() => import("./pages/admin/DesignProjectDetail.tsx"));
 const AdminDesignReviewInbox = lazy(() => import("./pages/admin/DesignReviewInbox.tsx"));
+const AdminDesignApprovals = lazy(() => import("./pages/admin/DesignApprovals.tsx"));
 const AdminPermits = lazy(() => import("./pages/admin/Permits.tsx"));
 const BchOperationsPortal = lazy(() =>
   import("./pages/admin/construction/BchOperationsPortal").then((module) => ({
@@ -469,6 +470,7 @@ const App = () => (
                       />
                     </Route>
                     <Route path="/admin/design-reviews/:id" element={<AdminDesignReviewInbox />} />
+                    <Route path="/admin/design-approvals" element={<AdminDesignApprovals />} />
                     <Route element={<RequirePermission code={ADMIN_PERMS.permits} />}>
                       <Route path="/admin/permits" element={<AdminPermits />} />
                     </Route>

@@ -295,6 +295,44 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ApprovalInbox_ListsOnlyWorkWaitingOnTheCaller()
+    {
+        var pending = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "INBOX-001");
+        pending.ApprovalStatus = DesignTaskApprovalStatus.Pending;
+        var approved = Task(projectId, designProjectId, phaseId, activeMemberId, approverMemberId, "INBOX-002");
+        approved.ApprovalStatus = DesignTaskApprovalStatus.Approved;
+        db.DesignScheduleTasks.AddRange(pending, approved);
+        var approverUserId = db.OperationalProjectMembers.Single(item => item.Id == approverMemberId).UserId;
+        DesignReview Review(string title, DesignReviewStatus status) => new()
+        {
+            DesignProjectId = designProjectId,
+            Stage = DesignReviewStage.Concept,
+            RevisionNumber = 1,
+            Title = title,
+            Status = status,
+            DesignManagerUserId = callerId,
+            Recipients = [new DesignReviewRecipient { UserId = approverUserId }],
+        };
+        db.DesignReviews.AddRange(
+            Review("Phương án mặt tiền", DesignReviewStatus.InternalReview),
+            Review("Phương án đã gửi khách", DesignReviewStatus.SubmittedToClient));
+        await db.SaveChangesAsync();
+        var inbox = new DesignApprovalInboxService(db);
+
+        var mine = await inbox.GetAsync(approverUserId, default);
+        var someoneElse = await inbox.GetAsync(assigneeUserId, default);
+
+        var task = Assert.Single(mine.Tasks);
+        Assert.Equal("INBOX-001", task.Code);
+        Assert.Equal(designProjectId, task.DesignProjectId);
+        var review = Assert.Single(mine.Reviews);
+        Assert.Equal("Phương án mặt tiền", review.Title);
+        Assert.False(review.HasMyComment);
+        Assert.Empty(someoneElse.Tasks);
+        Assert.Empty(someoneElse.Reviews);
+    }
+
+    [Fact]
     public async Task CreateTaskAsync_RejectsCrossProjectPredecessorWithoutChangingState()
     {
         var request = Request(activeMemberId, approverMemberId);

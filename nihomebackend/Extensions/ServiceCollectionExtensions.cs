@@ -223,6 +223,7 @@ public static class ServiceCollectionExtensions
         services.AddHostedService<RfqOverdueWorker>();
         services.AddScoped<CrmDueReminderService>();
         services.AddScoped<SalesFunnelService>();
+        services.AddScoped<DesignApprovalInboxService>();
         services.AddScoped<ContactLeadService>();
         services.AddHostedService<CrmReminderWorker>();
         services.AddScoped<IMaterialAlertService, MaterialAlertService>();

@@ -245,6 +245,28 @@ export interface DesignScheduleOutsourceOptionResponse {
 
 export type DesignReviewStage = "Concept" | "BasicDesign" | "ShopDrawing";
 
+/** Design work waiting on the signed-in user. */
+export interface DesignApprovalInboxResponse {
+  tasks: {
+    taskId: number;
+    code: string;
+    name: string;
+    designProjectId: number;
+    designProjectName: string;
+    assigneeName?: string | null;
+    submittedAt?: string | null;
+  }[];
+  reviews: {
+    reviewId: number;
+    title: string;
+    stage: DesignReviewStage;
+    designProjectId: number;
+    designProjectName: string;
+    submittedAt?: string | null;
+    hasMyComment: boolean;
+  }[];
+}
+
 export type DesignReviewStatus =
   | "Draft"
   | "InternalReview"
