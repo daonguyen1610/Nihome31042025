@@ -54,6 +54,8 @@ public class Survey
     public string? DriveFolderId { get; set; }
     public string? DriveFolderLink { get; set; }
 
+    /// <summary>People who go on the survey with the lead surveyor; each is notified.</summary>
+    public List<SurveyParticipant> Participants { get; set; } = new();
     public List<SurveyMedia> Media { get; set; } = new();
     public List<SurveyChecklistResult> ChecklistResults { get; set; } = new();
     public List<SurveySiteCondition> SiteConditions { get; set; } = new();
@@ -69,6 +71,15 @@ public class Survey
 /// Drive-sync lifecycle of a <see cref="Survey"/>. The FE renders the value
 /// as a coloured badge on the list (green / orange / red / neutral).
 /// </summary>
+/// <summary>A colleague who goes on a survey with its lead surveyor.</summary>
+public class SurveyParticipant
+{
+    public int SurveyId { get; set; }
+    public Survey Survey { get; set; } = null!;
+    public int UserId { get; set; }
+    public ApplicationUser User { get; set; } = null!;
+}
+
 public enum SurveyDriveSyncStatus
 {
     NotSynced = 0,

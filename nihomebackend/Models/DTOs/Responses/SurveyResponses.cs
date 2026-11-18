@@ -14,6 +14,7 @@ public class SurveyResponse
 
     public int? SurveyorUserId { get; set; }
     public string? SurveyorName { get; set; }
+    public List<SurveyParticipantResponse> Participants { get; set; } = new();
 
     public int? LinkedProjectId { get; set; }
     public string? LinkedProjectName { get; set; }
@@ -52,6 +53,7 @@ public class SurveyListItemResponse
 
     public int? SurveyorUserId { get; set; }
     public string? SurveyorName { get; set; }
+    public List<SurveyParticipantResponse> Participants { get; set; } = new();
 
     public int? LinkedProjectId { get; set; }
     public string? LinkedProjectName { get; set; }
@@ -168,4 +170,10 @@ public sealed class SurveySiteConditionImportResponse
 {
     public List<SurveySiteConditionResponse> Conditions { get; set; } = [];
     public List<CsvImportError> Errors { get; set; } = [];
+}
+
+public class SurveyParticipantResponse
+{
+    public int UserId { get; set; }
+    public string FullName { get; set; } = string.Empty;
 }

@@ -155,6 +155,7 @@ test("migrated survey renders project-routed mutation controls", async ({
         operationalProjectName: "Migrated operational project",
         linkedOpportunityId: 71,
         linkedOpportunityName: "Legacy opportunity",
+        participants: [],
         driveSyncStatus: "NotSynced",
         media: [],
         checklistResults: [],

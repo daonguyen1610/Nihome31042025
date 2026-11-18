@@ -23,6 +23,7 @@ import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
+import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -86,6 +87,12 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   }
 };
 
+/** Lead surveyor first, then the colleagues going along. */
+const surveyPeople = (survey: SurveyListItemResponse) =>
+  [survey.surveyorName, ...survey.participants.map((participant) => participant.fullName)]
+    .filter(Boolean)
+    .join(", ") || "—";
+
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
 /** Today as YYYY-MM-DD in the configured display time zone. */
@@ -96,6 +103,7 @@ const emptyForm = (): CreateSurveyRequest => ({
   constructionTypeCode: null,
   surveyDate: `${todayLocalIso()}T00:00:00.000Z`,
   surveyorUserId: null,
+  participantUserIds: [],
   linkedProjectId: null,
   linkedOpportunityId: null,
   operationalProjectId: null,
@@ -387,6 +395,7 @@ const AdminSurveys = () => {
         constructionTypeCode: data.constructionTypeCode ?? null,
         surveyDate: data.surveyDate,
         surveyorUserId: data.surveyorUserId ?? null,
+        participantUserIds: data.participants.map((participant) => participant.userId),
         linkedProjectId: data.linkedProjectId ?? null,
         linkedOpportunityId: data.linkedOpportunityId ?? null,
         operationalProjectId: data.operationalProjectId,
@@ -434,6 +443,8 @@ const AdminSurveys = () => {
         constructionTypeCode: form.constructionTypeCode || null,
         surveyDate: form.surveyDate,
         surveyorUserId: form.surveyorUserId ?? null,
+        // Without the people directory the companions cannot be shown, so keep them.
+        participantUserIds: canPickSurveyor ? form.participantUserIds : undefined,
         linkedProjectId: form.linkedProjectId ?? null,
         linkedOpportunityId: form.linkedOpportunityId ?? null,
         operationalProjectId: form.operationalProjectId,
@@ -708,7 +719,7 @@ const AdminSurveys = () => {
                       </div>
                       <div>
                         <dt className="text-muted-foreground">{t("surveys.field.surveyor")}</dt>
-                        <dd className="font-medium">{r.surveyorName ?? "—"}</dd>
+                        <dd className="font-medium">{surveyPeople(r)}</dd>
                       </div>
                       <div className="col-span-2">
                         <dt className="text-muted-foreground">
@@ -782,7 +793,7 @@ const AdminSurveys = () => {
                         <td className="whitespace-nowrap px-3 py-2 text-xs">
                           {formatDate(r.surveyDate, lang)}
                         </td>
-                        <td className="px-3 py-2 text-xs">{r.surveyorName ?? "—"}</td>
+                        <td className="px-3 py-2 text-xs">{surveyPeople(r)}</td>
                         <td className="min-w-[180px] px-3 py-2 text-xs">
                           {r.linkedProjectName ?? r.linkedOpportunityName ?? "—"}
                         </td>
@@ -921,10 +932,20 @@ const AdminSurveys = () => {
 
             {canPickSurveyor && surveyorOptions.length > 0 ? (
               <FieldScope className="space-y-1">
-                <Label>{t("surveys.field.surveyor")}</Label>
+                <Label>{t("surveys.field.leadSurveyor")}</Label>
                 <SearchableSelect
                   value={form.surveyorUserId != null ? String(form.surveyorUserId) : ""}
-                  onChange={(v) => setForm({ ...form, surveyorUserId: v ? Number(v) : null })}
+                  onChange={(v) => {
+                    const lead = v ? Number(v) : null;
+                    setForm({
+                      ...form,
+                      surveyorUserId: lead,
+                      // The lead is not also a companion.
+                      participantUserIds: (form.participantUserIds ?? []).filter(
+                        (id) => id !== lead,
+                      ),
+                    });
+                  }}
                   options={[
                     { value: "", label: t("surveys.form.surveyorNone") },
                     ...surveyorOptions,
@@ -932,6 +953,22 @@ const AdminSurveys = () => {
                   placeholder={t("surveys.form.surveyorNone")}
                 />
               </FieldScope>
+            ) : null}
+
+            {canPickSurveyor && users.length > 0 ? (
+              <fieldset className="space-y-1" data-testid="survey-participants">
+                <legend className="text-sm font-medium">{t("surveys.field.participants")}</legend>
+                <p className="text-xs text-muted-foreground">
+                  {t("surveys.form.participantsHint")}
+                </p>
+                <PeopleChecklist
+                  people={users
+                    .filter((user) => user.id !== form.surveyorUserId)
+                    .map((user) => ({ ...user, userId: user.id, name: user.fullName }))}
+                  selected={form.participantUserIds ?? []}
+                  onChange={(ids) => setForm({ ...form, participantUserIds: ids })}
+                />
+              </fieldset>
             ) : null}
 
             <div className="grid gap-3 md:grid-cols-2">

@@ -92,6 +92,8 @@ export interface SurveyResponse {
   surveyDate: string;
   surveyorUserId?: number | null;
   surveyorName?: string | null;
+  /** Colleagues going with the lead surveyor. */
+  participants: SurveyParticipantResponse[];
   linkedProjectId?: number | null;
   linkedProjectName?: string | null;
   linkedOpportunityId?: number | null;
@@ -119,6 +121,8 @@ export interface SurveyListItemResponse {
   surveyDate: string;
   surveyorUserId?: number | null;
   surveyorName?: string | null;
+  /** Colleagues going with the lead surveyor. */
+  participants: SurveyParticipantResponse[];
   linkedProjectId?: number | null;
   linkedProjectName?: string | null;
   linkedOpportunityId?: number | null;
@@ -151,11 +155,18 @@ export interface SurveyListParams {
   pageSize?: number;
 }
 
+export interface SurveyParticipantResponse {
+  userId: number;
+  fullName: string;
+}
+
 export interface CreateSurveyRequest {
   location: string;
   constructionTypeCode?: string | null;
   surveyDate: string;
   surveyorUserId?: number | null;
+  /** Colleagues going along; omit on update to keep the current list. */
+  participantUserIds?: number[];
   linkedProjectId?: number | null;
   linkedOpportunityId?: number | null;
   operationalProjectId?: number | null;
