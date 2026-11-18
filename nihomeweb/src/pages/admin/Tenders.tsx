@@ -10,6 +10,7 @@ import { AlertTriangle, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2 } from
 import AdminLayout from "@/components/layout/AdminLayout";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { customerSelectOptions } from "@/lib/customerOptions";
 import { focusFormField } from "@/lib/formFocus";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
@@ -229,8 +230,8 @@ const AdminTenders = () => {
     };
   }, [canPickPreparer, lookupRevision]);
   const customerOptions = useMemo(
-    () => customers.map((c) => ({ value: String(c.id), label: c.name })),
-    [customers],
+    () => customerSelectOptions(customers, t("customers.field.taxId")),
+    [customers, t],
   );
 
   // -------- create / edit dialog --------
