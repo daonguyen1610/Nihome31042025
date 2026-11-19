@@ -1,9 +1,18 @@
-import { useEffect, useSyncExternalStore } from "react";
-import { CheckCircle2, CircleSlash, Loader2, TriangleAlert, X } from "lucide-react";
+import { useEffect, useId, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
+import {
+  CheckCircle2,
+  ChevronDown,
+  ChevronUp,
+  CircleSlash,
+  Loader2,
+  TriangleAlert,
+  X,
+} from "lucide-react";
 import { useI18n } from "@/lib/i18n";
 import { formatNumber } from "@/lib/displaySettings";
 import { getUiError } from "@/lib/apiError";
-import { uploadTracker, type UploadItem } from "@/lib/uploadTracker";
+import { UPLOAD_TRAY_ATTRIBUTE, uploadTracker, type UploadItem } from "@/lib/uploadTracker";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 
@@ -88,6 +97,8 @@ function UploadRow({ item }: { item: UploadItem }) {
  */
 export function UploadTray() {
   const { t } = useI18n();
+  const listId = useId();
+  const [collapsed, setCollapsed] = useState(false);
   const items = useSyncExternalStore(uploadTracker.subscribe, uploadTracker.getSnapshot);
   const active = items.filter((item) => item.status === "uploading").length;
 
@@ -102,14 +113,22 @@ export function UploadTray() {
   }, [active]);
 
   if (items.length === 0) return null;
-  return (
+  // Above a dialog's overlay and clickable while the dialog holds the page, so an
+  // upload started from a dialog can still be cancelled. A modal dialog hides
+  // the rest of the page from assistive technology except [aria-live] regions;
+  // aria-live="off" keeps the tray reachable without announcing every percent.
+  // It sits bottom-left, away from dialog actions (aligned right), and folds to
+  // its header when it is in the way.
+  return createPortal(
     <section
       aria-label={t("upload.tray.title")}
-      className="fixed inset-x-4 bottom-4 z-50 mx-auto max-w-md rounded-lg border border-border bg-card shadow-lg"
+      aria-live="off"
+      className="pointer-events-auto fixed inset-x-4 bottom-4 z-[60] rounded-lg border border-border bg-card shadow-lg sm:right-auto sm:w-80"
       data-testid="upload-tray"
+      {...{ [UPLOAD_TRAY_ATTRIBUTE]: "" }}
     >
-      <header className="flex items-center justify-between gap-2 border-b border-border px-4 py-2">
-        <h2 className="text-sm font-semibold text-foreground" aria-live="polite">
+      <header className="flex items-center gap-1 border-b border-border py-1.5 pl-4 pr-1.5">
+        <h2 className="min-w-0 flex-1 text-sm font-semibold text-foreground" aria-live="polite">
           {active > 0 ? t("upload.tray.uploading", { count: active }) : t("upload.tray.finished")}
         </h2>
         {active === 0 ? (
@@ -123,12 +142,33 @@ export function UploadTray() {
             {t("upload.tray.clear")}
           </Button>
         ) : null}
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 shrink-0"
+          aria-expanded={!collapsed}
+          aria-controls={listId}
+          aria-label={collapsed ? t("upload.tray.expand") : t("upload.tray.collapse")}
+          onClick={() => setCollapsed((value) => !value)}
+        >
+          {collapsed ? (
+            <ChevronUp className="h-4 w-4" aria-hidden />
+          ) : (
+            <ChevronDown className="h-4 w-4" aria-hidden />
+          )}
+        </Button>
       </header>
-      <ul className="max-h-64 divide-y divide-border overflow-y-auto px-4">
+      <ul
+        id={listId}
+        hidden={collapsed}
+        className="max-h-64 divide-y divide-border overflow-y-auto px-4"
+      >
         {items.map((item) => (
           <UploadRow key={item.id} item={item} />
         ))}
       </ul>
-    </section>
+    </section>,
+    document.body,
   );
 }

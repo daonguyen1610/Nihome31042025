@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 import { useI18n } from "@/lib/i18n";
+import { isInUploadTray } from "@/lib/uploadTracker";
 
 const Dialog = DialogPrimitive.Root;
 
@@ -31,7 +32,7 @@ DialogOverlay.displayName = DialogPrimitive.Overlay.displayName;
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => {
+>(({ className, children, onInteractOutside, ...props }, ref) => {
   const { t } = useI18n();
   const closeLabel = t("common.close");
   return (
@@ -44,6 +45,10 @@ const DialogContent = React.forwardRef<
           className,
         )}
         {...props}
+        onInteractOutside={(event) => {
+          if (isInUploadTray(event.target)) event.preventDefault();
+          onInteractOutside?.(event);
+        }}
       >
         {children}
         <DialogPrimitive.Close
