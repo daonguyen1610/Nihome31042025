@@ -112,6 +112,44 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Upload_FollowsTheDesignFileLimitSetInSettings()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var projectId = await CreateBasicStageProjectAsync();
+        var documentId = await CreateDocAsync(projectId, "architecture");
+        const string settingsPath = "/api/site-settings/design-uploads";
+        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        MultipartFormDataContent TwoMegabytePdf()
+        {
+            var form = new MultipartFormDataContent();
+            var file = new ByteArrayContent(new byte[2 * 1024 * 1024]);
+            file.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("application/pdf");
+            form.Add(file, "file", "mat-bang-tang-1.pdf");
+            return form;
+        }
+        try
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 1 })).EnsureSuccessStatusCode();
+            using var tooLarge = TwoMegabytePdf();
+            var refused = await Client.PostAsync($"/api/basic-design-docs/{documentId}/upload", tooLarge);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await refused.Content.ReadAsStringAsync()).Should()
+                .Contain("mat-bang-tang-1.pdf").And.Contain("vượt giới hạn 1 MB");
+
+            // Raising the limit in Settings lets the same file through, without a redeploy.
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 3 })).EnsureSuccessStatusCode();
+            using var allowed = TwoMegabytePdf();
+            (await Client.PostAsync($"/api/basic-design-docs/{documentId}/upload", allowed))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original })).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task Upload_UsesAuthenticatedContentRouteAndRejectsUnsupportedFiles()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));

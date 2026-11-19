@@ -77,14 +77,14 @@ public class SiteSettingsService(AppDbContext db)
         return settings;
     }
 
-    /// <summary>The configured limit for design files, within what the server accepts.</summary>
-    public async Task<int> GetDesignUploadLimitMbAsync(CancellationToken ct = default)
-    {
-        var configured = await db.SiteSettings.AsNoTracking()
+    /// <summary>
+    /// The administrator's limit for design files, used as saved. The settings
+    /// endpoint only accepts 1 to <see cref="DesignFileRules.MaxAllowedMb"/>.
+    /// </summary>
+    public async Task<int> GetDesignUploadLimitMbAsync(CancellationToken ct = default) =>
+        await db.SiteSettings.AsNoTracking()
             .Select(settings => (int?)settings.DesignMaxFileSizeMb)
             .FirstOrDefaultAsync(ct) ?? SiteSettings.DefaultDesignMaxFileSizeMb;
-        return Math.Clamp(configured, 1, DesignFileRules.MaxAllowedMb);
-    }
 
     public async Task<SiteSettings> UpdateEmailTemplatesAsync(
         string? newApplicationSubject,
