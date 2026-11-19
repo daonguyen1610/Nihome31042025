@@ -336,6 +336,17 @@ public sealed class DepartmentWorkPackagesController(
         });
     }
 
+    /// <summary>NICON users the sender may choose to approve input prices and BOQ.</summary>
+    [HttpGet("{id:int}/approvers")]
+    [RequirePermission("work.packages", "progress")]
+    public async Task<ActionResult<IReadOnlyList<WorkPackageApproverOption>>> ListApprovers(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteBusinessAsync<IReadOnlyList<WorkPackageApproverOption>>(async () =>
+            Ok(await service.ListInputPriceApproversAsync(id, userId.Value, ct)));
+    }
+
     [HttpPost("{id:int}/input-price-offers/{offerId:int}/approval-email-preview")]
     [RequirePermission("work.packages", "progress")]
     public async Task<ActionResult<WorkPackageApprovalPreview>> PreviewInputPriceOffer(int id, int offerId,

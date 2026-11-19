@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using MimeKit;
 
 namespace NihomeBackend.Services;
@@ -18,7 +19,7 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
 {
     private readonly IDataProtector protector = protection.CreateProtector("WorkPackageApproval.Preview.v1");
     private sealed record Preview(int UserId, string Hash, DateTime ExpiresAt,
-        string? ToEmail = null, string[]? CcEmails = null);
+        string? ToEmail = null, string[]? CcEmails = null, int? ApproverId = null);
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
     private async Task<(WorkPackageApprovalPreview Email, int RecipientId, string Hash, string LeadEmail)> RenderAsync(
@@ -26,11 +27,15 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
         int authorId, string rowVersion, int callerId, CancellationToken ct,
         WorkPackageApprovalRecipientsRequest? recipients = null)
     {
-        var recipient = await db.Users.AsNoTracking().SingleOrDefaultAsync(item => item.Id == package.LeadUserId, ct);
-        if (recipient is null || !recipient.IsActive || recipient.Id == authorId || string.IsNullOrWhiteSpace(recipient.Email) ||
+        // The sender names the approver (NICON); the department lead when none is chosen.
+        var approverId = recipients?.ApproverUserId ?? package.LeadUserId;
+        var recipient = await db.Users.AsNoTracking().SingleOrDefaultAsync(item => item.Id == approverId, ct);
+        if (recipient is not null && recipient.Id == authorId)
+            throw new DepartmentWorkPackageOperationException("Người duyệt phải khác người lập hồ sơ. Hãy chọn một người duyệt khác.");
+        if (recipient is null || !recipient.IsActive || string.IsNullOrWhiteSpace(recipient.Email) ||
             recipient.Email.Trim().Length > 254 || !ContactValidation.IsValidEmail(recipient.Email) ||
             !await permissions.HasAsync(recipient.Id, "work.packages.verify", ct))
-            throw new DepartmentWorkPackageOperationException("Chọn người chủ trì độc lập với người lập hồ sơ, đang hoạt động, có quyền duyệt nhóm công việc và email hợp lệ (ví dụ: ten@nicon.vn) trước khi gửi duyệt.");
+            throw new DepartmentWorkPackageOperationException("Người duyệt phải đang hoạt động, có quyền duyệt nhóm công việc và email hợp lệ (ví dụ: ten@nicon.vn). Hãy chọn người duyệt khác.");
         var sender = await db.Users.AsNoTracking().SingleAsync(item => item.Id == callerId, ct);
         var toEmail = NormalizeEmail(recipients?.ToEmail ?? recipient.Email, "To");
         var ccEmails = NormalizeCc(recipients?.CcEmails ?? [], toEmail);
@@ -110,12 +115,43 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
         return rendered.Email with
         {
             PreviewToken = protector.Protect(JsonSerializer.Serialize(
-            new Preview(callerId, rendered.Hash, DateTime.UtcNow.AddMinutes(15), rendered.Email.ToEmail, rendered.Email.CcEmails?.ToArray()))
+            new Preview(callerId, rendered.Hash, DateTime.UtcNow.AddMinutes(15), rendered.Email.ToEmail,
+                rendered.Email.CcEmails?.ToArray(), rendered.RecipientId))
             )
         };
     }
 
-    public async Task<DateTime> QueueAsync(DepartmentWorkPackage package, string type, int id, string reference,
+    /// <summary>
+    /// Active NICON users with an email who may approve work package records,
+    /// any department: NICON chooses the approver per submission.
+    /// </summary>
+    public async Task<IReadOnlyList<WorkPackageApproverOption>> ListApproverCandidatesAsync(
+        DepartmentWorkPackage package, CancellationToken ct)
+    {
+        var users = await db.Users.AsNoTracking()
+            .Where(user => user.IsActive && user.Email != null && user.Email != "")
+            .Select(user => new
+            {
+                user.Id,
+                user.FullName,
+                user.Email,
+                RoleLabelKey = user.RoleEntity == null ? null : user.RoleEntity.LabelKey,
+                RoleName = user.RoleEntity == null ? null : user.RoleEntity.Name,
+                DepartmentLabelKey = user.RoleEntity == null || user.RoleEntity.RoleGroup == null
+                    ? null : user.RoleEntity.RoleGroup.LabelKey,
+            }).ToListAsync(ct);
+        var approvers = await permissions.FilterByRolePermissionAsync(
+            users.Select(user => user.Id).ToList(), "work.packages.verify", ct);
+        return users
+            .Where(user => approvers.Contains(user.Id) && ContactValidation.IsValidEmail(user.Email!))
+            .Select(user => new WorkPackageApproverOption(user.Id, user.FullName ?? user.Email!, user.Email!.Trim(),
+                user.RoleLabelKey, user.RoleName, user.DepartmentLabelKey, user.Id == package.LeadUserId))
+            .OrderByDescending(user => user.IsDepartmentLead).ThenBy(user => user.Name, StringComparer.CurrentCulture)
+            .ToList();
+    }
+
+    /// <returns>When it was queued, and the approver it was sent to.</returns>
+    public async Task<(DateTime SubmittedAt, int ApproverUserId)> QueueAsync(DepartmentWorkPackage package, string type, int id, string reference,
         int authorId, string rowVersion, int callerId, string? token, CancellationToken ct)
     {
         Preview? preview;
@@ -123,7 +159,7 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
         catch (Exception error) when (error is CryptographicException or JsonException or ArgumentException)
         { throw new DepartmentWorkPackageOperationException("Vui lòng xem trước email trước khi gửi duyệt."); }
         var rendered = await RenderAsync(package, type, id, reference, authorId, rowVersion, callerId, ct,
-            new() { ToEmail = preview?.ToEmail, CcEmails = preview?.CcEmails?.ToList() ?? [] });
+            new() { ToEmail = preview?.ToEmail, CcEmails = preview?.CcEmails?.ToList() ?? [], ApproverUserId = preview?.ApproverId });
         if (preview is null || preview.UserId != callerId || preview.ExpiresAt < DateTime.UtcNow || preview.Hash != rendered.Hash)
             throw new DepartmentWorkPackageOperationException("Hồ sơ, người nhận hoặc mẫu email đã thay đổi. Vui lòng xem trước email lại trước khi gửi duyệt.");
         var createdAt = DateTime.UtcNow;
@@ -142,7 +178,7 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
             PreviewHash = Hash(token!),
             CreatedAt = createdAt,
         });
-        return createdAt;
+        return (createdAt, rendered.RecipientId);
     }
 
     public async Task SendPendingAsync(CancellationToken ct)

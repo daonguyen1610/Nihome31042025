@@ -18,6 +18,9 @@ public sealed class ProjectBoqRevision : IConcurrencyTracked
     public int PreparedByUserId { get; set; }
     public ApplicationUser PreparedBy { get; set; } = null!;
     public DateTime? SubmittedAt { get; set; }
+    /// <summary>The approver the sender chose; only they decide the submitted BOQ.</summary>
+    public int? ApprovalApproverUserId { get; set; }
+    public ApplicationUser? ApprovalApprover { get; set; }
     public int? SubmittedByUserId { get; set; }
     public ApplicationUser? SubmittedBy { get; set; }
     public DateTime? ApprovedAt { get; set; }

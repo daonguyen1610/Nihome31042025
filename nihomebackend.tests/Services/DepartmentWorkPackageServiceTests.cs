@@ -20,6 +20,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     private readonly Mock<INotificationService> _notifications = new();
     private readonly DepartmentWorkPackageService _service;
     private readonly Mock<IEmailService> _email = new();
+    private readonly Mock<IPermissionService> _permissions = new();
     private readonly WorkPackageApprovalEmailService _approvalEmails;
     private readonly RoleGroup _procurementGroup;
     private readonly RoleGroup _crmGroup;
@@ -70,9 +71,8 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
                 It.IsAny<int>(), It.IsAny<string>(), It.IsAny<IDictionary<string, string>>(),
                 It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>()))
             .ReturnsAsync((NihomeBackend.Models.DTOs.Responses.NotificationResponse?)null);
-        var permissions = new Mock<IPermissionService>();
-        permissions.Setup(item => item.HasAsync(It.IsAny<int>(), "work.packages.verify", It.IsAny<CancellationToken>())).ReturnsAsync(true);
-        _approvalEmails = new WorkPackageApprovalEmailService(_db, new EphemeralDataProtectionProvider(), permissions.Object,
+        _permissions.Setup(item => item.HasAsync(It.IsAny<int>(), "work.packages.verify", It.IsAny<CancellationToken>())).ReturnsAsync(true);
+        _approvalEmails = new WorkPackageApprovalEmailService(_db, new EphemeralDataProtectionProvider(), _permissions.Object,
             _email.Object, NullLogger<WorkPackageApprovalEmailService>.Instance,
             TestHttpContext.ServedFrom("https://nicon.example.test"));
         _service = new DepartmentWorkPackageService(
@@ -773,16 +773,93 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
 
         package.LeadUserId = _procurementLead.Id;
         await _db.SaveChangesAsync();
-        var selfApproval = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+        // The author cannot decide: the offer went to the approver chosen when sending.
+        await Assert.ThrowsAsync<DepartmentWorkPackageScopeException>(() =>
             _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
                 new DecideBusinessRecordRequest { Approved = true, RowVersion = offer.RowVersion }, _procurementLead.Id));
-        Assert.Contains("không được tự phê duyệt", selfApproval.Message);
 
         var approved = await _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
             new DecideBusinessRecordRequest { Approved = true, RowVersion = offer.RowVersion }, _admin.Id);
 
         Assert.Equal("Approved", approved!.Status);
         Assert.Equal(112_200_000m, approved.GrandTotal);
+    }
+
+    // NICON: the person sending input prices for approval names the approver,
+    // who need not be the department lead nor in Procurement.
+    [Fact]
+    public async Task InputPriceOffer_GoesToTheApproverTheSenderChose_WhoAloneDecides()
+    {
+        _access.Setup(item => item.GetAccessibleOperationalProjectIdsAsync(_accountantLead.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<int>());
+        _access.Setup(item => item.CanViewOperationalProjectAsync(_accountantLead.Id, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);
+        var offer = await _service.AddInputPriceOfferAsync(package.Id, new UpsertInputPriceOfferRequest
+        {
+            VendorId = _vendor.Id,
+            SupplierReference = "AP-PCCC-2026-011",
+            Currency = "VND",
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            Lines =
+            [
+                new() { ItemCode = "PCCC-02", Description = "Bình chữa cháy CO2", Unit = "bình", Quantity = 40, UnitPrice = 950000, VatPercent = 10, SortOrder = 1 },
+            ],
+        }, _warehouseStaff.Id);
+        var stored = await _db.ProcurementInputPriceOffers.SingleAsync(item => item.Id == offer.Id);
+        stored.RowVersion = BitConverter.GetBytes(1L);
+        await _db.SaveChangesAsync();
+        offer.RowVersion = Convert.ToBase64String(stored.RowVersion);
+
+        var selfChosen = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.PreviewApprovalEmailAsync(package.Id, offer.Id, _warehouseStaff.Id, default,
+                new WorkPackageApprovalRecipientsRequest { ApproverUserId = _warehouseStaff.Id }));
+        Assert.Contains("người duyệt", selfChosen.Message, StringComparison.OrdinalIgnoreCase);
+
+        var preview = await _service.PreviewApprovalEmailAsync(package.Id, offer.Id, _warehouseStaff.Id, default,
+            new WorkPackageApprovalRecipientsRequest { ApproverUserId = _accountantLead.Id });
+        Assert.Equal(_accountantLead.Email, preview.ToEmail);
+        var submitted = await _service.SubmitInputPriceOfferAsync(package.Id, offer.Id,
+            new SubmitBusinessRecordRequest { RowVersion = offer.RowVersion, PreviewToken = preview.PreviewToken }, _warehouseStaff.Id);
+
+        Assert.Equal(_accountantLead.Id, submitted!.ApprovalApproverUserId);
+        Assert.Equal(_accountantLead.Id, (await _db.WorkPackageApprovalEmails.SingleAsync()).RecipientUserId);
+        // The chosen approver opens the package even outside the department and project.
+        Assert.NotNull(await _service.GetAsync(package.Id, _accountantLead.Id, canViewAll: false));
+        // The department lead was not chosen, so cannot decide.
+        await Assert.ThrowsAsync<DepartmentWorkPackageScopeException>(() =>
+            _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
+                new DecideBusinessRecordRequest { Approved = true, RowVersion = submitted.RowVersion }, _procurementLead.Id));
+        var approved = await _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
+            new DecideBusinessRecordRequest { Approved = true, RowVersion = submitted.RowVersion }, _accountantLead.Id);
+        Assert.Equal("Approved", approved!.Status);
+    }
+
+    [Fact]
+    public async Task ApproverPicker_ListsNiconApprovers_AssignerFirst()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);
+        var inactive = AddUser("FORMER_BUYER", _procurementGroup);
+        inactive.IsActive = false;
+        var noEmail = AddUser("SITE_CLERK", _financeGroup);
+        noEmail.Email = null;
+        await _db.SaveChangesAsync();
+        // Only users whose role grants approval appear; the sales user lacks it.
+        _permissions.Setup(item => item.FilterByRolePermissionAsync(It.IsAny<IReadOnlyCollection<int>>(),
+                "work.packages.verify", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((IReadOnlyCollection<int> ids, string _, CancellationToken _) =>
+                ids.Where(id => id != _sales.Id).ToHashSet());
+
+        var options = await _service.ListInputPriceApproversAsync(package.Id, _warehouseStaff.Id);
+
+        Assert.Equal(_procurementLead.Id, options[0].UserId);
+        Assert.True(options[0].IsDepartmentLead);
+        Assert.Contains(options, option => option.UserId == _accountantLead.Id);
+        Assert.DoesNotContain(options, option => option.UserId == _sales.Id);
+        Assert.DoesNotContain(options, option => option.UserId == inactive.Id || option.UserId == noEmail.Id);
+        // Someone outside the department cannot browse who approves its records.
+        await Assert.ThrowsAsync<DepartmentWorkPackageScopeException>(() =>
+            _service.ListInputPriceApproversAsync(package.Id, _sales.Id));
     }
 
     [Fact]

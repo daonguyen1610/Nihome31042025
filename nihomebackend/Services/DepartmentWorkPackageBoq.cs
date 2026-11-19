@@ -69,8 +69,9 @@ public sealed partial class DepartmentWorkPackageService
         var revision = await RequireSubmittableBoqAsync(packageId, revisionId, ct);
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.EnsureMatches(revision.RowVersion, request.RowVersion);
-        var submittedAt = await approvalEmails.QueueAsync(package, BoqRecordType, revision.Id, BoqReference(revision),
+        var (submittedAt, approverId) = await approvalEmails.QueueAsync(package, BoqRecordType, revision.Id, BoqReference(revision),
             revision.PreparedByUserId, CrmConcurrency.Encode(revision.RowVersion), callerUserId, request.PreviewToken, ct);
+        revision.ApprovalApproverUserId = approverId;
         CrmConcurrency.Apply(db, revision, request.RowVersion);
         revision.Status = ProjectBoqRevisionStatus.Submitted;
         revision.SubmittedAt = submittedAt;
@@ -89,11 +90,13 @@ public sealed partial class DepartmentWorkPackageService
         int packageId, int revisionId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default)
     {
         var package = await RequireBusinessPackageAsync(packageId, WorkPackagePurpose.ProcurementInputPricing, ct);
-        if (!await IsAdministratorAsync(callerUserId, ct) && package.LeadUserId != callerUserId)
-            throw ScopeError();
         var revision = await db.ProjectBoqRevisions
             .SingleOrDefaultAsync(item => item.Id == revisionId && item.SourceWorkPackageId == packageId, ct);
         if (revision is null) return null;
+        // Only the approver the sender chose decides (the lead for BOQs sent before that choice existed).
+        if (!await IsAdministratorAsync(callerUserId, ct) &&
+            (revision.ApprovalApproverUserId ?? package.LeadUserId) != callerUserId)
+            throw ScopeError();
         if (revision.Status != ProjectBoqRevisionStatus.Submitted)
             throw Error("Chỉ BOQ đã gửi duyệt mới được quyết định.");
         if (revision.PreparedByUserId == callerUserId)
@@ -156,6 +159,9 @@ public sealed partial class DepartmentWorkPackageService
                 PreparedByName = item.PreparedBy.FullName,
                 CreatedAt = item.CreatedAt,
                 SubmittedAt = item.SubmittedAt,
+                ApprovalApproverUserId = item.ApprovalApproverUserId,
+                ApprovalApproverName = item.ApprovalApprover != null
+                    ? item.ApprovalApprover.FullName ?? item.ApprovalApprover.Email : null,
                 ApprovedAt = item.ApprovedAt,
                 RejectedAt = item.RejectedAt,
                 DecisionReason = item.DecisionReason,

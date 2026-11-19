@@ -182,6 +182,9 @@ public sealed class UpsertInputPriceOfferRequest : IConcurrencyRequest
 
 public sealed class WorkPackageApprovalRecipientsRequest
 {
+    /// <summary>The NICON user the sender chose to approve; the department lead when omitted.</summary>
+    public int? ApproverUserId { get; set; }
+
     [StringLength(150)]
     public string? ToEmail { get; set; }
 

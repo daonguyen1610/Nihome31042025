@@ -3128,6 +3128,9 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ApprovalApproverUserId")
+                        .HasColumnType("int");
+
                     b.Property<bool>("ContractConditionsReviewed")
                         .HasColumnType("bit");
 
@@ -3187,6 +3190,8 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ApprovalApproverUserId");
 
                     b.HasIndex("ReviewedByUserId");
 
@@ -7725,6 +7730,9 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ApprovalApproverUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
@@ -7791,6 +7799,8 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ApprovalApproverUserId");
 
                     b.HasIndex("ApprovedByUserId");
 
@@ -7970,6 +7980,9 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<int?>("ApprovalApproverUserId")
+                        .HasColumnType("int");
+
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 
@@ -8062,6 +8075,8 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("ApprovalApproverUserId");
 
                     b.HasIndex("ApprovedByUserId");
 
@@ -13376,6 +13391,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.DepartmentFinanceReview", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovalApprover")
+                        .WithMany()
+                        .HasForeignKey("ApprovalApproverUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "ReviewedByUser")
                         .WithMany()
                         .HasForeignKey("ReviewedByUserId")
@@ -13386,6 +13406,8 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("NihomeBackend.Models.DepartmentFinanceReview", "WorkPackageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ApprovalApprover");
 
                     b.Navigation("ReviewedByUser");
 
@@ -14758,6 +14780,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.ProcurementInputPriceOffer", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovalApprover")
+                        .WithMany()
+                        .HasForeignKey("ApprovalApproverUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovedByUser")
                         .WithMany()
                         .HasForeignKey("ApprovedByUserId")
@@ -14779,6 +14806,8 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("WorkPackageId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("ApprovalApprover");
 
                     b.Navigation("ApprovedByUser");
 
@@ -14812,6 +14841,11 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.ProjectBoqRevision", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovalApprover")
+                        .WithMany()
+                        .HasForeignKey("ApprovalApproverUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovedBy")
                         .WithMany()
                         .HasForeignKey("ApprovedByUserId")
@@ -14858,6 +14892,8 @@ namespace nihomebackend.Migrations
                         .WithMany()
                         .HasForeignKey("UpstreamContractId")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("ApprovalApprover");
 
                     b.Navigation("ApprovedBy");
 

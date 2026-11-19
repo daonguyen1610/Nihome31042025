@@ -80,6 +80,10 @@ public sealed partial class DepartmentWorkPackageService(
                 item.CreatedByUserId == callerUserId || item.LeadUserId == callerUserId ||
                 // Any member of the department may prepare an input price, not only its approver.
                 item.Purpose == WorkPackagePurpose.ProcurementInputPricing && item.DepartmentRoleGroupId == groupId ||
+                // The approver a sender chose may sit outside the department and project.
+                db.ProcurementInputPriceOffers.Any(offer => offer.WorkPackageId == item.Id && offer.ApprovalApproverUserId == callerUserId) ||
+                db.ProjectBoqRevisions.Any(boq => boq.SourceWorkPackageId == item.Id && boq.ApprovalApproverUserId == callerUserId) ||
+                db.DepartmentFinanceReviews.Any(review => review.WorkPackageId == item.Id && review.ApprovalApproverUserId == callerUserId) ||
                 item.Tasks.Any(task => task.AssigneeUserId == callerUserId ||
                     task.ApproverUserId == callerUserId || task.CcUsers.Any(cc => cc.UserId == callerUserId)) ||
                 item.OperationalProjectId.HasValue && projectIds.Contains(item.OperationalProjectId.Value));
@@ -643,8 +647,10 @@ public sealed partial class DepartmentWorkPackageService(
         .Include(item => item.Tasks).ThenInclude(task => task.CcUsers)
         .Include(item => item.Tasks).ThenInclude(task => task.Predecessors)
         .Include(item => item.InputPriceOffers).ThenInclude(offer => offer.Vendor)
+        .Include(item => item.InputPriceOffers).ThenInclude(offer => offer.ApprovalApprover)
         .Include(item => item.InputPriceOffers).ThenInclude(offer => offer.Lines)
-        .Include(item => item.FinanceReview).ThenInclude(review => review!.ReviewedByUser);
+        .Include(item => item.FinanceReview).ThenInclude(review => review!.ReviewedByUser)
+        .Include(item => item.FinanceReview).ThenInclude(review => review!.ApprovalApprover);
 
     private async Task ValidatePurposeAsync(
         CreateDepartmentWorkPackageRequest request,
@@ -1049,6 +1055,12 @@ public sealed partial class DepartmentWorkPackageService(
                 task.CcUsers.Any(cc => cc.UserId == callerUserId))) return true;
         if (item.Purpose == WorkPackagePurpose.ProcurementInputPricing &&
             item.DepartmentRoleGroupId == await UserRoleGroupIdAsync(callerUserId, ct)) return true;
+        if (await db.ProcurementInputPriceOffers.AnyAsync(offer =>
+                offer.WorkPackageId == item.Id && offer.ApprovalApproverUserId == callerUserId, ct) ||
+            await db.ProjectBoqRevisions.AnyAsync(boq =>
+                boq.SourceWorkPackageId == item.Id && boq.ApprovalApproverUserId == callerUserId, ct) ||
+            await db.DepartmentFinanceReviews.AnyAsync(review =>
+                review.WorkPackageId == item.Id && review.ApprovalApproverUserId == callerUserId, ct)) return true;
         return item.OperationalProjectId.HasValue &&
             await projectAccess.CanViewOperationalProjectAsync(callerUserId, item.OperationalProjectId.Value, ct);
     }

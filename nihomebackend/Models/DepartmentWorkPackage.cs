@@ -58,6 +58,9 @@ public class ProcurementInputPriceOffer : IConcurrencyTracked
     public InputPriceOfferStatus Status { get; set; } = InputPriceOfferStatus.Draft;
     public string? Note { get; set; }
     public DateTime? SubmittedAt { get; set; }
+    /// <summary>The approver the sender chose; only they decide the submitted offer.</summary>
+    public int? ApprovalApproverUserId { get; set; }
+    public ApplicationUser? ApprovalApprover { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public int? ApprovedByUserId { get; set; }
     public ApplicationUser? ApprovedByUser { get; set; }
@@ -101,6 +104,9 @@ public class DepartmentFinanceReview : IConcurrencyTracked
     public string? Findings { get; set; }
     public string? DecisionReason { get; set; }
     public DateTime? SubmittedAt { get; set; }
+    /// <summary>The approver the sender chose; only they decide the submitted review.</summary>
+    public int? ApprovalApproverUserId { get; set; }
+    public ApplicationUser? ApprovalApprover { get; set; }
     public DateTime? ReviewedAt { get; set; }
     public int? ReviewedByUserId { get; set; }
     public ApplicationUser? ReviewedByUser { get; set; }
