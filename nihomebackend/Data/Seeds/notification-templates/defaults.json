@@ -33,6 +33,12 @@
       "adminDescription": "Sales Manager cần duyệt một báo giá vừa submit."
     },
     {
+      "code": "quote.approval-requested",
+      "module": "crm.quotes",
+      "channel": "InApp",
+      "adminDescription": "Người được chọn duyệt báo giá (thường là Trưởng phòng Cung ứng) được thông báo trong hệ thống, kèm link mở báo giá. Email duyệt gửi riêng."
+    },
+    {
       "code": "quote.approved",
       "module": "crm.quotes",
       "channel": "InApp",

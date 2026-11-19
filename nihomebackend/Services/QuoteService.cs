@@ -1064,10 +1064,9 @@ public class QuoteService(
         // tell them in-app with a direct link, not only by email.
         if (to == QuoteStatus.PendingApproval && quote.ApprovalApproverUserId is int approverId)
         {
-            await notifications.CreateAsync(approverId, "crm.quote.approval-requested",
-                $"Báo giá {quote.Code} chờ bạn duyệt",
-                $"Báo giá {quote.Code} đã được gửi để bạn duyệt nội bộ. Mở báo giá để Duyệt hoặc Từ chối duyệt.",
-                $"/admin/quotes/{quote.Id}");
+            await notifications.NotifyFromTemplateAsync(approverId, "quote.approval-requested",
+                new Dictionary<string, string> { ["quoteCode"] = quote.Code },
+                "Quote", quote.Id, $"/admin/quotes/{quote.Id}");
         }
         if (quote.OwnerUserId is not int ownerId) return;
         if (to is not (QuoteStatus.Approved or QuoteStatus.SentToCustomer
