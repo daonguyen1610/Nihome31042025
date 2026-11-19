@@ -224,6 +224,86 @@
     "ja": "エクスポート中…"
   },
   {
+    "key": "upload.cancelled",
+    "category": "common",
+    "vi": "Đã huỷ tải lên",
+    "en": "Upload cancelled",
+    "zh": "已取消上传",
+    "ja": "アップロードを取り消しました"
+  },
+  {
+    "key": "upload.tooLargeForServer",
+    "category": "common",
+    "vi": "Tệp vượt dung lượng máy chủ cho phép nên không tải lên được. Hãy kiểm tra giới hạn trong Cài đặt hoặc tách nhỏ tệp.",
+    "en": "The file is larger than the server accepts. Check the limit in Settings or split the file.",
+    "zh": "文件超过服务器允许的大小，无法上传。请在设置中查看上限或拆分文件。",
+    "ja": "ファイルがサーバーの許容サイズを超えているためアップロードできません。設定で上限を確認するか、ファイルを分割してください。"
+  },
+  {
+    "key": "upload.tray.title",
+    "category": "common",
+    "vi": "Tệp đang tải lên",
+    "en": "File uploads",
+    "zh": "文件上传",
+    "ja": "ファイルのアップロード"
+  },
+  {
+    "key": "upload.tray.uploading",
+    "category": "common",
+    "vi": "Đang tải lên {count} tệp",
+    "en": "Uploading {count} file(s)",
+    "zh": "正在上传 {count} 个文件",
+    "ja": "{count} 件をアップロード中"
+  },
+  {
+    "key": "upload.tray.finished",
+    "category": "common",
+    "vi": "Đã xử lý xong các tệp",
+    "en": "Uploads finished",
+    "zh": "上传已完成",
+    "ja": "アップロードが完了しました"
+  },
+  {
+    "key": "upload.tray.clear",
+    "category": "common",
+    "vi": "Xoá danh sách",
+    "en": "Clear list",
+    "zh": "清除列表",
+    "ja": "一覧を消去"
+  },
+  {
+    "key": "upload.tray.progress",
+    "category": "common",
+    "vi": "{loaded} / {total} MB · {percent}%",
+    "en": "{loaded} / {total} MB · {percent}%",
+    "zh": "{loaded} / {total} MB · {percent}%",
+    "ja": "{loaded} / {total} MB · {percent}%"
+  },
+  {
+    "key": "upload.tray.done",
+    "category": "common",
+    "vi": "Đã tải lên · {total} MB",
+    "en": "Uploaded · {total} MB",
+    "zh": "已上传 · {total} MB",
+    "ja": "アップロード済み · {total} MB"
+  },
+  {
+    "key": "upload.tray.cancel",
+    "category": "common",
+    "vi": "Huỷ tải lên {name}",
+    "en": "Cancel uploading {name}",
+    "zh": "取消上传 {name}",
+    "ja": "{name} のアップロードを取り消す"
+  },
+  {
+    "key": "upload.tray.progressLabel",
+    "category": "common",
+    "vi": "Tiến độ tải lên {name}",
+    "en": "Upload progress of {name}",
+    "zh": "{name} 的上传进度",
+    "ja": "{name} のアップロード進捗"
+  },
+  {
     "key": "common.exportFailed",
     "category": "common",
     "vi": "Không xuất được file Excel",

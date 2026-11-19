@@ -8,7 +8,7 @@ const source = await readFile(new URL("../src/lib/apiError.ts", import.meta.url)
 const compiled = ts.transpileModule(source, {
   compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 },
 }).outputText;
-const { extractDownloadError, extractApiError } = await import(
+const { extractDownloadError, extractApiError, getUiError } = await import(
   "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
 );
 
@@ -214,4 +214,17 @@ test("IFC primary-file release errors retain drawing context in all languages", 
       );
     }
   }
+});
+
+test("an upload refused by the server for its size is explained, not reported as unexpected", () => {
+  const t = (key) => key;
+  assert.equal(
+    getUiError({ response: { status: 413, data: "" }, message: "HTTP 413" }, t),
+    "upload.tooLargeForServer",
+  );
+});
+
+test("an upload the user cancelled says so instead of reporting an error", () => {
+  const t = (key) => key;
+  assert.equal(getUiError({ code: "ERR_CANCELED", message: "canceled" }, t), "upload.cancelled");
 });
