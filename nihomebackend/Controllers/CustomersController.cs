@@ -32,7 +32,8 @@ public class CustomersController(
     ICustomerService svc,
     ICustomerDocumentService documentSvc,
     IPermissionService permissions,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    SiteSettingsService settings) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("crm.customers", "view")]
@@ -343,6 +344,8 @@ public class CustomersController(
 
     [HttpPost("{id:int}/documents")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("crm.customers", "manage")]
     public async Task<ActionResult<CustomerDocumentResponse>> UploadDocument(
         int id,
@@ -353,6 +356,10 @@ public class CustomersController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        // The per-file limit is an administrator setting, not a fixed size.
+        if (file is not null && file.Length > 0 &&
+            BusinessFileRules.Problem(file, await settings.GetUploadLimitMbAsync(UploadLimitKind.Customers, ct)) is { } problem)
+            return BadRequest(new { message = problem });
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
         try
         {

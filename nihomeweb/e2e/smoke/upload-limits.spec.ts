@@ -309,3 +309,48 @@ test("RFQ evidence follows the RFQ limit set in Settings", async ({
     await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
   }
 });
+
+// Customer documents follow the customer limit in Settings instead of a fixed 20 MB.
+test("customer documents follow the customer limit set in Settings", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
+  const settingsPath = `${LIMITS}/customers`;
+  const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
+    .maxFileSizeMb as number;
+  const customers = await (await api.get("/api/customers?pageSize=1", { headers })).json();
+  expect(customers.items.length, "a seeded customer is needed").toBeGreaterThan(0);
+  const customerId = customers.items[0].id as number;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.admin);
+    await setLimitInSettings(page, "customer-files", "customer-upload-limit", "1");
+
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    let uploads = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && /\/api\/customers\/\d+\/documents$/.test(request.url()))
+        uploads++;
+    });
+    await page.goto(`/admin/customers?open=${customerId}`, { waitUntil: "networkidle" });
+    const dialog = page.getByRole("dialog");
+    await dialog.getByRole("tab", { name: /Tài liệu/ }).click();
+    const input = dialog.locator("#customer-document-file");
+    await expect(input.locator("xpath=..")).toContainText("Tối đa 20 tệp, 1 MB mỗi tệp");
+    await input.setInputFiles(TWO_MB_PDF("giay-phep-kinh-doanh.pdf"));
+    await expect(page.getByText("giay-phep-kinh-doanh.pdf vượt quá 1 MB.").first()).toBeVisible();
+    await input.setInputFiles({
+      name: "bien-ban-gap.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(200 * 1024),
+    });
+    await expect(dialog.getByText("bien-ban-gap.pdf").first()).toBeVisible();
+    expect(uploads).toBe(0);
+  } finally {
+    await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
+  }
+});

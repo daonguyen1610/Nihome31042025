@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
 import { FieldScope } from "@/components/ui/field-scope";
@@ -129,6 +130,8 @@ const formatFileSize = (bytes: number) => {
 
 const AdminCustomers = () => {
   const uiError = useUiError();
+  // The per-file limit from Settings, so the picker refuses what the server would.
+  const customerUploadLimitMb = useUploadLimit("customers");
   const confirmAction = useConfirm();
   const { t, lang } = useI18n();
   const { toast } = useToast();
@@ -2072,7 +2075,8 @@ const AdminCustomers = () => {
                           files={documentFiles}
                           onChange={setDocumentFiles}
                           accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                          hint={t("customers.document.fileHint")}
+                          maxSizeMb={customerUploadLimitMb}
+                          hint={t("customers.document.fileTypes")}
                           testId="customer-document-file"
                         />
                       </div>

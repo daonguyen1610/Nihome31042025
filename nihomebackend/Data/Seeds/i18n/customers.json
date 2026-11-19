@@ -68,7 +68,7 @@
   { "key": "customers.tab.related.viewAll", "category": "customers", "vi": "Xem tất cả", "en": "View all", "zh": "查看全部", "ja": "すべて表示" },
 
   { "key": "customers.document.file", "category": "customers", "vi": "Chọn tài liệu", "en": "Choose document", "zh": "选择文档", "ja": "資料を選択" },
-  { "key": "customers.document.fileHint", "category": "customers", "vi": "PDF, Word, Excel hoặc hình ảnh · tối đa 20 MB", "en": "PDF, Word, Excel, or image · maximum 20 MB", "zh": "PDF、Word、Excel 或图片 · 最大 20 MB", "ja": "PDF、Word、Excel、画像 · 最大 20 MB" },
+  { "key": "customers.document.fileTypes", "category": "customers", "vi": "PDF, Word, Excel hoặc hình ảnh", "en": "PDF, Word, Excel, or image", "zh": "PDF、Word、Excel 或图片", "ja": "PDF、Word、Excel、画像" },
   { "key": "customers.document.label", "category": "customers", "vi": "Nhãn tài liệu", "en": "Document label", "zh": "文档标签", "ja": "資料ラベル" },
   { "key": "customers.document.labelPlaceholder", "category": "customers", "vi": "Ví dụ: Hồ sơ pháp lý", "en": "e.g. Legal profile", "zh": "例如：法律资料", "ja": "例：法務資料" },
   { "key": "customers.document.upload", "category": "customers", "vi": "Tải lên", "en": "Upload", "zh": "上传", "ja": "アップロード" },

@@ -21,6 +21,7 @@ import {
   Save,
   ShieldCheck,
   FileSearch,
+  Users,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -64,6 +65,7 @@ type SectionKey =
   | "capability-files"
   | "quote-files"
   | "rfq-files"
+  | "customer-files"
   | "map"
   | "slideshow";
 type OtpSettingsKey = keyof OtpSettingsResponse;
@@ -84,6 +86,7 @@ const sections: { key: SectionKey; labelKey: string; icon: LucideIcon }[] = [
   { key: "capability-files", labelKey: "settings.capabilityUploads.tab", icon: Award },
   { key: "quote-files", labelKey: "settings.quoteUploads.tab", icon: Receipt },
   { key: "rfq-files", labelKey: "settings.rfqUploads.tab", icon: FileSearch },
+  { key: "customer-files", labelKey: "settings.customerUploads.tab", icon: Users },
   { key: "map", labelKey: "settings.map.tab", icon: MapIcon },
   { key: "slideshow", labelKey: "set.slideshow", icon: Images },
 ];
@@ -698,6 +701,7 @@ const tenderUploadLimit = moduleUploadLimit("tenders");
 const capabilityUploadLimit = moduleUploadLimit("capability");
 const quoteUploadLimit = moduleUploadLimit("quotes");
 const rfqUploadLimit = moduleUploadLimit("rfqs");
+const customerUploadLimit = moduleUploadLimit("customers");
 
 /** One per-file upload limit setting (contracts, design files). */
 const UploadLimitTab = ({
@@ -1025,6 +1029,14 @@ const SettingsCenter = () => {
                 inputId="rfq-upload-limit"
                 loadLimit={rfqUploadLimit.load}
                 saveLimit={rfqUploadLimit.save}
+              />
+              <UploadLimitTab
+                sectionKey="customer-files"
+                icon={Users}
+                keyPrefix="settings.customerUploads"
+                inputId="customer-upload-limit"
+                loadLimit={customerUploadLimit.load}
+                saveLimit={customerUploadLimit.save}
               />
               <MapTab />
               <SlideshowSettings />

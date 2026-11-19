@@ -1479,6 +1479,7 @@ Trong **Cài đặt** (`/admin/settings`): bật/tắt OTP đăng ký và quên 
 | Tệp hợp đồng, phụ lục | Theo **Cài đặt → Tệp hợp đồng** (mặc định 100 MB, tối đa 5 GB) |
 | Tài liệu báo giá | Theo **Cài đặt → Tệp báo giá** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG |
 | Tệp minh chứng RFQ | Theo **Cài đặt → Tệp RFQ** (mặc định 20 MB, tối đa 100 MB); nhận cả bản vẽ CAD, chỉ chặn tệp chạy được |
+| Tài liệu khách hàng | Theo **Cài đặt → Tệp khách hàng** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG |
 | BOQ Excel | Tối đa 20 MB |
 
 ---
