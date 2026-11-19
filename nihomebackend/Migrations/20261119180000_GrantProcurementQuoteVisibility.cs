@@ -21,14 +21,15 @@ public partial class GrantProcurementQuoteVisibility : Migration
         SELECT r.Id, p.Id, SYSUTCDATETIME()
         FROM roles r
         CROSS JOIN permissions p
-        WHERE r.Code IN (N'PROCUREMENT', N'PROCUREMENT_MANAGER')
+        WHERE r.Code = N'PROCUREMENT'
           AND p.Module = N'crm.quotes' AND p.Action IN (N'view', N'view.all')
           AND NOT EXISTS (
               SELECT 1 FROM role_permissions existing
               WHERE existing.RoleId = r.Id AND existing.PermissionId = p.Id);
         """;
 
-    // PROCUREMENT_MANAGER had both grants by default before this migration; keep them.
+    // PROCUREMENT_MANAGER already had both grants by default and is left alone, so an
+    // administrator's removal there is not undone.
     private const string RevokeSql = """
         DELETE existing
         FROM role_permissions existing

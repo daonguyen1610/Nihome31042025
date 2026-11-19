@@ -792,10 +792,10 @@ public class QuoteServiceTests : IDisposable
         // The chosen approver (set by the approval email step) is told in-app as
         // well as by email, and the notice opens the quote directly.
         var approverId = user.Id + 1;
-        _notifications.Verify(service => service.CreateAsync(
-            approverId, "crm.quote.approval-requested",
-            It.Is<string>(title => title.Contains(quote.Code)),
-            It.IsAny<string?>(), $"/admin/quotes/{quote.Id}"), Times.Once);
+        _notifications.Verify(service => service.NotifyFromTemplateAsync(
+            approverId, "quote.approval-requested",
+            It.Is<IDictionary<string, string>>(data => data["quoteCode"] == quote.Code),
+            "Quote", quote.Id, $"/admin/quotes/{quote.Id}", It.IsAny<string?>()), Times.Once);
     }
 
     [Fact]
