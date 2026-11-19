@@ -149,20 +149,14 @@ export function OperationalProjectQuickCreate({
       <div className="flex justify-end gap-2">
         <Button
           type="button"
-          variant="ghost"
+          variant="outline"
           size="sm"
           disabled={saving}
           onClick={() => setOpen(false)}
         >
           {t("common.cancel")}
         </Button>
-        <Button
-          type="button"
-          variant="secondary"
-          size="sm"
-          disabled={saving}
-          onClick={() => void create()}
-        >
+        <Button type="button" size="sm" disabled={saving} onClick={() => void create()}>
           {saving ? t("common.saving") : t("opportunities.project.quickSubmit")}
         </Button>
       </div>
