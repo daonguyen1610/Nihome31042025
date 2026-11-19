@@ -1,3 +1,4 @@
+using NihomeBackend.Infrastructure;
 using System.Data;
 using System.Security.Cryptography;
 using System.Text;
@@ -13,7 +14,7 @@ namespace NihomeBackend.Services;
 
 public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtectionProvider protection,
     IPermissionService permissions, IEmailService email, ILogger<WorkPackageApprovalEmailService> logger,
-    IConfiguration configuration, IHttpContextAccessor httpContextAccessor)
+    IHttpContextAccessor httpContextAccessor)
 {
     private readonly IDataProtector protector = protection.CreateProtector("WorkPackageApproval.Preview.v1");
     private sealed record Preview(int UserId, string Hash, DateTime ExpiresAt,
@@ -78,40 +79,11 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
         catch (DepartmentWorkPackageOperationException) { return path; }
     }
 
-    private string GetPublicOrigin()
-    {
-        var configured = configuration["Frontend:PublicBaseUrl"];
-        if (!string.IsNullOrWhiteSpace(configured)) return ValidateOrigin(configured);
-
-        var allowed = configuration.GetSection("Frontend:AllowedOrigins").Get<string[]>() ?? [];
-        var request = httpContextAccessor.HttpContext?.Request;
-        var browserOrigin = request?.Headers.Origin.ToString();
-        if (!string.IsNullOrWhiteSpace(browserOrigin) &&
-            allowed.Contains(browserOrigin, StringComparer.OrdinalIgnoreCase))
-            return ValidateOrigin(browserOrigin);
-
-        if (request is not null)
-        {
-            var requestOrigin = $"{request.Scheme}://{request.Host}";
-            if (Uri.TryCreate(requestOrigin, UriKind.Absolute, out var uri) &&
-                (uri.IsLoopback || allowed.Contains(requestOrigin, StringComparer.OrdinalIgnoreCase)))
-                return ValidateOrigin(requestOrigin);
-        }
-
-        throw new DepartmentWorkPackageOperationException(
-            "Chưa cấu hình URL hệ thống để gửi link nhóm công việc. Hãy đặt Frontend:PublicBaseUrl.");
-    }
-
-    private static string ValidateOrigin(string value)
-    {
-        if (!Uri.TryCreate(value.TrimEnd('/'), UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)) ||
-            !string.IsNullOrEmpty(uri.UserInfo) || uri.AbsolutePath != "/" ||
-            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-            throw new DepartmentWorkPackageOperationException(
-                "Frontend:PublicBaseUrl phải là origin HTTPS công khai hoặc HTTP localhost hợp lệ.");
-        return uri.GetLeftPart(UriPartial.Authority);
-    }
+    // Links use the address the user is working on (no configuration on production).
+    private string GetPublicOrigin() =>
+        PublicOrigin.FromRequest(httpContextAccessor.HttpContext?.Request)
+        ?? throw new DepartmentWorkPackageOperationException(
+            "Không xác định được địa chỉ trang NICON để gửi link nhóm công việc. Hãy thao tác lại từ trình duyệt.");
 
     private static string NormalizeEmail(string? value, string field)
     {

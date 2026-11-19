@@ -1,3 +1,4 @@
+using NihomeBackend.Infrastructure;
 using System.Data;
 using System.Net;
 using System.Security.Cryptography;
@@ -15,8 +16,8 @@ using NihomeBackend.Models.Rbac;
 namespace NihomeBackend.Services;
 
 public sealed class RfqService(AppDbContext db, INotificationService notifications,
-    IEmailService email, IConfiguration configuration, ILogger<RfqService> logger,
-    IProjectDocumentService documents)
+    IEmailService email, ILogger<RfqService> logger,
+    IProjectDocumentService documents, IHttpContextAccessor httpContextAccessor)
 {
     // Take an update lock before reading mutable state to avoid shared-lock
     // conversion deadlocks between concurrent awards or bid transitions.
@@ -332,8 +333,8 @@ x.RoleEntity != null && x.RoleEntity.RoleGroup != null && x.RoleEntity.RoleGroup
     private async Task DeliverInvitationsAsync(Rfq entity,
         IReadOnlyList<(RfqInvitation Invitation, string Token, string Email)> deliveries, CancellationToken ct)
     {
-        var origin = configuration.GetValue<string>("Frontend:PublicBaseUrl") ??
-            configuration.GetSection("Frontend:AllowedOrigins").Get<string[]>()?.FirstOrDefault();
+        // The vendor link uses the address the buyer is working on (no configuration on production).
+        var origin = PublicOrigin.FromRequest(httpContextAccessor.HttpContext?.Request);
         foreach (var delivery in deliveries)
         {
             try

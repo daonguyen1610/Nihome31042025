@@ -261,10 +261,11 @@ Key cấu hình: `ConnectionStrings:DefaultConnection`.
   trợ xoay vòng; `ActiveKeyId` chọn khoá ký token mới. Refresh token chỉ dùng
   một lần.
 - `Frontend:AllowedOrigins` phải khớp chính xác origin (giao thức và port).
-- `Frontend:PublicBaseUrl`: origin HTTPS public dùng để dựng link trong email
-  (ví dụ `/admin/work-packages/{id}`). Compose local chấp nhận HTTP localhost.
-  Khi thiếu, chỉ origin nằm trong `AllowedOrigins` hoặc origin loopback của
-  request mới được dùng làm link.
+- Link trong email (duyệt báo giá, nhóm công việc, mời báo giá RFQ) lấy địa chỉ từ
+  chính request đang xử lý (`PublicOrigin.FromRequest`), không đọc cấu hình: header
+  `Origin` của trình duyệt khi trùng host (hoặc localhost khi dev), nếu không thì
+  `scheme://host` của request. Nên đặt `AllowedHosts` đúng tên miền để host lạ không
+  lọt vào link.
 
 ### 4.3 Logging JSON
 
@@ -2717,7 +2718,7 @@ python -m unittest discover -s tools/translation_keys -p "test_*.py"
 2. Xoay khoá ký JWT.
 3. `ASPNETCORE_ENVIRONMENT=Production`; không bật Swagger bằng cách chuyển sang
    Development.
-4. CORS chỉ cho domain frontend production; đặt `Frontend:PublicBaseUrl`.
+4. CORS chỉ cho domain frontend production; đặt `AllowedHosts` là tên miền production.
 5. Dùng secrets manager cho credential database, SMTP, JWT. Bật HTTPS.
 6. Không dùng `sa`; tạo user SQL riêng quyền hạn chế.
 7. Thu thập log JSON (mỗi dòng một object) và giám sát.

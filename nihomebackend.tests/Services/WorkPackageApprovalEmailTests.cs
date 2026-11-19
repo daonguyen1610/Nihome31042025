@@ -32,7 +32,7 @@ public sealed class WorkPackageApprovalEmailTests : IDisposable
         permissions.Setup(item => item.HasAsync(lead.Id, "work.packages.verify", It.IsAny<CancellationToken>())).ReturnsAsync(true);
         service = new(db, new EphemeralDataProtectionProvider(), permissions.Object, email.Object,
             NullLogger<WorkPackageApprovalEmailService>.Instance,
-            new ConfigurationManager { ["Frontend:PublicBaseUrl"] = "https://nicon.example.test" }, new HttpContextAccessor());
+            TestHttpContext.ServedFrom("https://nicon.example.test"));
     }
 
     [Theory]

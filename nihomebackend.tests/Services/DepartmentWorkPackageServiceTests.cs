@@ -74,7 +74,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         permissions.Setup(item => item.HasAsync(It.IsAny<int>(), "work.packages.verify", It.IsAny<CancellationToken>())).ReturnsAsync(true);
         _approvalEmails = new WorkPackageApprovalEmailService(_db, new EphemeralDataProtectionProvider(), permissions.Object,
             _email.Object, NullLogger<WorkPackageApprovalEmailService>.Instance,
-            new ConfigurationManager { ["Frontend:PublicBaseUrl"] = "https://nicon.example.test" }, new HttpContextAccessor());
+            TestHttpContext.ServedFrom("https://nicon.example.test"));
         _service = new DepartmentWorkPackageService(
             _db, _access.Object, _notifications.Object, NullLogger<DepartmentWorkPackageService>.Instance, _approvalEmails);
     }
