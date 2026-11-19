@@ -323,7 +323,6 @@ export function useDepartmentWorkPackages() {
     wbsCode: "",
     title: "",
     description: "",
-    resources: "",
     departmentRoleGroupId: null,
     assigneeUserId: 0,
     approverUserId: null,
@@ -754,7 +753,6 @@ export function useDepartmentWorkPackages() {
             wbsCode: task.wbsCode,
             title: task.title,
             description: task.description ?? "",
-            resources: task.resources ?? "",
             departmentRoleGroupId: task.departmentRoleGroupId,
             assigneeUserId: task.assigneeUserId,
             approverUserId: task.approverUserId ?? null,
@@ -771,7 +769,6 @@ export function useDepartmentWorkPackages() {
             wbsCode: suggestTaskWbsCode(detail?.tasks ?? [], parent?.id ?? null),
             title: "",
             description: "",
-            resources: "",
             departmentRoleGroupId:
               detail?.kind === "Internal" ? null : detail?.departmentRoleGroupId,
             assigneeUserId: 0,

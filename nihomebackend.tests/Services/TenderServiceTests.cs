@@ -1223,7 +1223,6 @@ public class TenderServiceTests : IDisposable
             WbsCode = "1.1",
             Title = "Hoàn thiện bản vẽ dự thầu NICON",
             Description = "Bản vẽ nhà xưởng được xác nhận trước khi nộp",
-            Resources = "Nhóm thiết kế kiến trúc",
             DepartmentRoleGroup = group,
             AssigneeUserId = _userId,
             ApproverUserId = verifier.Id,

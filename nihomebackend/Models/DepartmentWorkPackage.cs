@@ -147,7 +147,6 @@ public class DepartmentWorkTask : IConcurrencyTracked
     public string WbsCode { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string? Resources { get; set; }
     public int DepartmentRoleGroupId { get; set; }
     public RoleGroup DepartmentRoleGroup { get; set; } = null!;
     public int AssigneeUserId { get; set; }

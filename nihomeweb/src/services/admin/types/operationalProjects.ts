@@ -37,7 +37,6 @@ export interface DepartmentWorkTaskResponse {
   wbsCode: string;
   title: string;
   description?: string | null;
-  resources?: string | null;
   departmentRoleGroupId: number;
   departmentCode: string;
   departmentLabelKey: string;
@@ -296,7 +295,6 @@ export interface UpsertDepartmentWorkTaskRequest {
   wbsCode: string;
   title: string;
   description?: string | null;
-  resources?: string | null;
   departmentRoleGroupId?: number | null;
   assigneeUserId: number;
   approverUserId?: number | null;

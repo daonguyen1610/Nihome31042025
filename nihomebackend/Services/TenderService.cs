@@ -1148,7 +1148,6 @@ public class TenderService(
                     task.WbsCode,
                     task.Title,
                     task.Description,
-                    task.Resources,
                     task.DepartmentRoleGroupId,
                     task.AssigneeUserId,
                     task.ApproverUserId,

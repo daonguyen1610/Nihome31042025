@@ -65,7 +65,6 @@ public sealed class LegalActivationControllerTests : IntegrationTestBase
                 task.WbsCode,
                 task.Title,
                 task.Description,
-                task.Resources,
                 task.DepartmentRoleGroupId,
                 task.KpiDefinitionId,
                 assigneeUserId = changeApprover ? task.AssigneeUserId : designOnlyUserId,
