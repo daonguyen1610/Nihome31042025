@@ -59,7 +59,7 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     [Fact]
     public async Task DesignUploadLimit_IsReadableByUploaders_AndEditableOnlyWithSettingsPermission()
     {
-        const string path = "/api/site-settings/design-uploads";
+        const string path = "/api/site-settings/upload-limits/design";
         (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
         // A designer has no settings permission but must know the limit before uploading.
@@ -79,7 +79,7 @@ public class SiteSettingsControllerTests : IntegrationTestBase
             var invalid = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 101 });
             invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
             (await ReadJsonAsync(invalid)).GetProperty("code").GetString()
-                .Should().Be("DESIGN_UPLOAD_LIMIT_INVALID");
+                .Should().Be("UPLOAD_LIMIT_INVALID");
 
             (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 40 }))
                 .StatusCode.Should().Be(HttpStatusCode.OK);

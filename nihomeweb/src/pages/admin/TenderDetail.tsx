@@ -31,6 +31,8 @@ import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import TenderEstimatePanel from "./TenderEstimatePanel";
 import { isTenderChecklistEvidenceReady } from "./tenderChecklist";
 import { useI18n } from "@/lib/i18n";
+import { useBusinessFileCheck } from "@/hooks/useBusinessFileCheck";
+import { BUSINESS_FILE_ACCEPT } from "@/lib/businessFileRules";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -328,7 +330,7 @@ const InfoTab = ({
                 ref={invitationFileRef}
                 type="file"
                 className="hidden"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                accept={BUSINESS_FILE_ACCEPT}
                 multiple
                 onChange={(event) => {
                   const files = Array.from(event.target.files ?? []);
@@ -596,7 +598,7 @@ const ChecklistTab = ({
         type="file"
         className="hidden"
         onChange={onFileChange}
-        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+        accept={BUSINESS_FILE_ACCEPT}
       />
 
       {/* Desktop table */}
@@ -1955,6 +1957,7 @@ const AdminTenderDetail = () => {
   const tenderId = Number(id);
   const { t } = useI18n();
   const { toast } = useToast();
+  const fileCheck = useBusinessFileCheck("tenders");
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.tendersManage);
   const canMarkResult = has(ADMIN_PERMS.tendersMarkResult);
@@ -2098,6 +2101,11 @@ const AdminTenderDetail = () => {
   };
 
   const handleUpload = async (itemId: number, file: File) => {
+    const problem = fileCheck.problemFor(file);
+    if (problem) {
+      toast({ title: t("designFiles.refusedTitle"), description: problem, variant: "destructive" });
+      return;
+    }
     try {
       const { data } = await adminApi.uploadTenderChecklistFile(tenderId, itemId, file);
       setTender(data);
@@ -2117,6 +2125,11 @@ const AdminTenderDetail = () => {
     const failed: string[] = [];
     let uploaded = 0;
     for (const file of files) {
+      const problem = fileCheck.problemFor(file);
+      if (problem) {
+        failed.push(problem);
+        continue;
+      }
       try {
         const { data } = await adminApi.uploadTenderInvitationDocument(tenderId, file);
         setTender(data);

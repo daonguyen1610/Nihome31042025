@@ -3,11 +3,11 @@ using System.Globalization;
 namespace NihomeBackend.Services;
 
 /// <summary>
-/// Type and size rules for files attached to basic design documents and shop
-/// drawings. The size limit is the administrator's setting (Cài đặt → Giới hạn
-/// tệp hồ sơ thiết kế); the admin forms check the same rules before uploading.
+/// Type and size rules for business documents uploaded to design records,
+/// tenders and capability documents. Each module's size limit is an
+/// administrator setting (Cài đặt → Giới hạn tệp …, see <see cref="UploadLimitKind"/>).
 /// </summary>
-public static class DesignFileRules
+public static class BusinessFileRules
 {
     /// <summary>Highest limit an administrator may set, as for other project documents.</summary>
     public const int MaxAllowedMb = (int)(ProjectDocumentStorageService.MaxFileSize / (1024 * 1024));

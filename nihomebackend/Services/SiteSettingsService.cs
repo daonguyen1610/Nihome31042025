@@ -67,24 +67,42 @@ public class SiteSettingsService(AppDbContext db)
         return settings;
     }
 
-    public async Task<SiteSettings> UpdateDesignUploadLimitAsync(int maxFileSizeMb, CancellationToken ct)
+    public async Task<int> UpdateUploadLimitAsync(UploadLimitKind kind, int maxFileSizeMb, CancellationToken ct)
     {
         var settings = await db.SiteSettings.FirstOrDefaultAsync(ct)
             ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
-        settings.DesignMaxFileSizeMb = maxFileSizeMb;
+        switch (kind)
+        {
+            case UploadLimitKind.Design: settings.DesignMaxFileSizeMb = maxFileSizeMb; break;
+            case UploadLimitKind.Tenders: settings.TenderMaxFileSizeMb = maxFileSizeMb; break;
+            case UploadLimitKind.Capability: settings.CapabilityMaxFileSizeMb = maxFileSizeMb; break;
+        }
         settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
-        return settings;
+        return maxFileSizeMb;
     }
 
     /// <summary>
-    /// The administrator's limit for design files, used as saved. The settings
-    /// endpoint only accepts 1 to <see cref="DesignFileRules.MaxAllowedMb"/>.
+    /// The administrator's per-file limit for a module, used as saved. The settings
+    /// endpoint only accepts 1 to <see cref="BusinessFileRules.MaxAllowedMb"/>.
     /// </summary>
-    public async Task<int> GetDesignUploadLimitMbAsync(CancellationToken ct = default) =>
-        await db.SiteSettings.AsNoTracking()
-            .Select(settings => (int?)settings.DesignMaxFileSizeMb)
-            .FirstOrDefaultAsync(ct) ?? SiteSettings.DefaultDesignMaxFileSizeMb;
+    public async Task<int> GetUploadLimitMbAsync(UploadLimitKind kind, CancellationToken ct = default)
+    {
+        var limits = await db.SiteSettings.AsNoTracking()
+            .Select(settings => new
+            {
+                settings.DesignMaxFileSizeMb,
+                settings.TenderMaxFileSizeMb,
+                settings.CapabilityMaxFileSizeMb,
+            })
+            .FirstOrDefaultAsync(ct);
+        return kind switch
+        {
+            UploadLimitKind.Design => limits?.DesignMaxFileSizeMb ?? SiteSettings.DefaultDesignMaxFileSizeMb,
+            UploadLimitKind.Tenders => limits?.TenderMaxFileSizeMb ?? SiteSettings.DefaultTenderMaxFileSizeMb,
+            _ => limits?.CapabilityMaxFileSizeMb ?? SiteSettings.DefaultCapabilityMaxFileSizeMb,
+        };
+    }
 
     public async Task<SiteSettings> UpdateEmailTemplatesAsync(
         string? newApplicationSubject,

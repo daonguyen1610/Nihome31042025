@@ -2496,6 +2496,134 @@
     "ja": "設計ファイルの上限を保存できませんでした。もう一度お試しください。"
   },
   {
+    "key": "settings.tenderUploads.tab",
+    "category": "settings",
+    "vi": "Tệp gói thầu",
+    "en": "Tender files",
+    "zh": "投标文件",
+    "ja": "入札ファイル"
+  },
+  {
+    "key": "settings.tenderUploads.title",
+    "category": "settings",
+    "vi": "Giới hạn tệp gói thầu",
+    "en": "Tender file limit",
+    "zh": "投标文件大小上限",
+    "ja": "入札ファイルの上限"
+  },
+  {
+    "key": "settings.tenderUploads.description",
+    "category": "settings",
+    "vi": "Áp dụng cho mỗi tệp tải lên hồ sơ mời thầu và từng mục hồ sơ dự thầu. Thay đổi có hiệu lực ngay với lần tải lên tiếp theo.",
+    "en": "Applies to each file uploaded to invitation documents and each bid checklist item. Takes effect with the next upload.",
+    "zh": "适用于上传到招标文件及每个投标清单项的每个文件。下次上传即生效。",
+    "ja": "入札案内書類と各入札チェックリスト項目にアップロードする各ファイルに適用されます。次回のアップロードから有効です。"
+  },
+  {
+    "key": "settings.tenderUploads.label",
+    "category": "settings",
+    "vi": "Dung lượng tối đa mỗi tệp (MB)",
+    "en": "Maximum size per file (MB)",
+    "zh": "每个文件的最大大小（MB）",
+    "ja": "1ファイルあたりの最大サイズ（MB）"
+  },
+  {
+    "key": "settings.tenderUploads.invalidRange",
+    "category": "settings",
+    "vi": "Nhập số nguyên từ 1 đến {max} MB. Ví dụ: 20.",
+    "en": "Enter a whole number from 1 to {max} MB, e.g. 20.",
+    "zh": "请输入 1 到 {max} MB 之间的整数，例如 20。",
+    "ja": "1〜{max} MB の整数を入力してください（例：20）。"
+  },
+  {
+    "key": "settings.tenderUploads.maximum",
+    "category": "settings",
+    "vi": "Giới hạn có thể đặt tối đa: {max} MB cho mỗi tệp.",
+    "en": "Highest limit you can set: {max} MB per file.",
+    "zh": "可设置的最大上限：每个文件 {max} MB。",
+    "ja": "設定できる上限：1ファイルあたり {max} MB。"
+  },
+  {
+    "key": "settings.tenderUploads.loadError",
+    "category": "settings",
+    "vi": "Chưa tải được giới hạn tệp gói thầu. Hãy thử lại.",
+    "en": "Could not load the tender file limit. Try again.",
+    "zh": "无法加载投标文件上限，请重试。",
+    "ja": "入札ファイルの上限を読み込めませんでした。もう一度お試しください。"
+  },
+  {
+    "key": "settings.tenderUploads.saveError",
+    "category": "settings",
+    "vi": "Chưa lưu được giới hạn tệp gói thầu. Hãy thử lại.",
+    "en": "Could not save the tender file limit. Try again.",
+    "zh": "无法保存投标文件上限，请重试。",
+    "ja": "入札ファイルの上限を保存できませんでした。もう一度お試しください。"
+  },
+  {
+    "key": "settings.capabilityUploads.tab",
+    "category": "settings",
+    "vi": "Tệp hồ sơ năng lực",
+    "en": "Capability document files",
+    "zh": "能力文件文件",
+    "ja": "能力書類ファイル"
+  },
+  {
+    "key": "settings.capabilityUploads.title",
+    "category": "settings",
+    "vi": "Giới hạn tệp hồ sơ năng lực",
+    "en": "Capability document file limit",
+    "zh": "能力文件文件大小上限",
+    "ja": "能力書類ファイルの上限"
+  },
+  {
+    "key": "settings.capabilityUploads.description",
+    "category": "settings",
+    "vi": "Áp dụng cho mỗi tệp tải lên hồ sơ năng lực (chứng chỉ, giấy phép, hồ sơ công ty). Thay đổi có hiệu lực ngay với lần tải lên tiếp theo.",
+    "en": "Applies to each file uploaded to capability documents (certificates, licences, company profile). Takes effect with the next upload.",
+    "zh": "适用于上传到能力文件（证书、许可证、公司简介）的每个文件。下次上传即生效。",
+    "ja": "能力書類（証明書・許可証・会社概要）にアップロードする各ファイルに適用されます。次回のアップロードから有効です。"
+  },
+  {
+    "key": "settings.capabilityUploads.label",
+    "category": "settings",
+    "vi": "Dung lượng tối đa mỗi tệp (MB)",
+    "en": "Maximum size per file (MB)",
+    "zh": "每个文件的最大大小（MB）",
+    "ja": "1ファイルあたりの最大サイズ（MB）"
+  },
+  {
+    "key": "settings.capabilityUploads.invalidRange",
+    "category": "settings",
+    "vi": "Nhập số nguyên từ 1 đến {max} MB. Ví dụ: 20.",
+    "en": "Enter a whole number from 1 to {max} MB, e.g. 20.",
+    "zh": "请输入 1 到 {max} MB 之间的整数，例如 20。",
+    "ja": "1〜{max} MB の整数を入力してください（例：20）。"
+  },
+  {
+    "key": "settings.capabilityUploads.maximum",
+    "category": "settings",
+    "vi": "Giới hạn có thể đặt tối đa: {max} MB cho mỗi tệp.",
+    "en": "Highest limit you can set: {max} MB per file.",
+    "zh": "可设置的最大上限：每个文件 {max} MB。",
+    "ja": "設定できる上限：1ファイルあたり {max} MB。"
+  },
+  {
+    "key": "settings.capabilityUploads.loadError",
+    "category": "settings",
+    "vi": "Chưa tải được giới hạn tệp hồ sơ năng lực. Hãy thử lại.",
+    "en": "Could not load the capability document file limit. Try again.",
+    "zh": "无法加载能力文件文件上限，请重试。",
+    "ja": "能力書類ファイルの上限を読み込めませんでした。もう一度お試しください。"
+  },
+  {
+    "key": "settings.capabilityUploads.saveError",
+    "category": "settings",
+    "vi": "Chưa lưu được giới hạn tệp hồ sơ năng lực. Hãy thử lại.",
+    "en": "Could not save the capability document file limit. Try again.",
+    "zh": "无法保存能力文件文件上限，请重试。",
+    "ja": "能力書類ファイルの上限を保存できませんでした。もう一度お試しください。"
+  },
+  {
     "key": "settings.company",
     "category": "settings",
     "vi": "Thông tin công ty",

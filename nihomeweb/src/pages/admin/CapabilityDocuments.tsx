@@ -8,6 +8,7 @@ import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
+import { useBusinessFileCheck } from "@/hooks/useBusinessFileCheck";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -81,6 +82,7 @@ const formatDate = (iso?: string | null, lang: string = "vi") => {
 const CapabilityDocuments = () => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
+  const fileCheck = useBusinessFileCheck("capability");
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -185,6 +187,11 @@ const CapabilityDocuments = () => {
       setCreateError(t("capDocs.validation.missingFile"));
       return;
     }
+    const createFileProblem = fileCheck.problemFor(createFile);
+    if (createFileProblem) {
+      setCreateError(createFileProblem);
+      return;
+    }
     setSavingCreate(true);
     setCreateError(null);
     try {
@@ -231,6 +238,15 @@ const CapabilityDocuments = () => {
       setBusy(true);
       let successCount = 0;
       for (const file of list) {
+        const problem = fileCheck.problemFor(file);
+        if (problem) {
+          toast({
+            title: t("designFiles.refusedTitle"),
+            description: problem,
+            variant: "destructive",
+          });
+          continue;
+        }
         try {
           const uploaded = await adminApi.uploadCapabilityDocument(file);
           await adminApi.createCapabilityDocument({
@@ -258,7 +274,7 @@ const CapabilityDocuments = () => {
         await fetchList();
       }
     },
-    [canManage, uploadTag, toast, t, uiError, fetchList],
+    [canManage, uploadTag, toast, t, uiError, fetchList, fileCheck],
   );
 
   const onDrop = (e: React.DragEvent<HTMLDivElement>) => {
@@ -340,6 +356,11 @@ const CapabilityDocuments = () => {
 
   const replaceFileForEditing = async (file: File) => {
     if (!editing) return;
+    const problem = fileCheck.problemFor(file);
+    if (problem) {
+      setEditError(problem);
+      return;
+    }
     setSavingEdit(true);
     try {
       const uploaded = await adminApi.uploadCapabilityDocument(file);
@@ -491,7 +512,7 @@ const CapabilityDocuments = () => {
               ref={fileInputRef}
               type="file"
               multiple
-              accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+              accept={fileCheck.accept}
               className="hidden"
               onChange={(e) => {
                 if (e.target.files) void doUpload(e.target.files);
@@ -518,7 +539,9 @@ const CapabilityDocuments = () => {
             <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
               <div className="flex items-start gap-2 text-sm text-muted-foreground md:items-center">
                 <Upload className="mt-0.5 h-5 w-5 shrink-0 md:mt-0" />
-                <span className="text-left">{t("capDocs.form.dropHint")}</span>
+                <span className="text-left">
+                  {t("capDocs.form.dropHintRule", { rule: fileCheck.rule })}
+                </span>
               </div>
               <FieldScope className="flex flex-col gap-2 sm:flex-row sm:items-center md:shrink-0">
                 <Label className="text-xs uppercase tracking-wide text-muted-foreground">
@@ -851,7 +874,7 @@ const CapabilityDocuments = () => {
                   </Label>
                   <Input
                     type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                    accept={fileCheck.accept}
                     className="mt-1"
                     onChange={(e) => {
                       const file = e.target.files?.[0];
@@ -1136,7 +1159,7 @@ const CapabilityDocuments = () => {
                   <input
                     ref={createFileInputRef}
                     type="file"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                    accept={fileCheck.accept}
                     className="hidden"
                     onChange={(e) => {
                       handleCreateFileChange(e.target.files?.[0] ?? null);

@@ -1,3 +1,4 @@
+using NihomeBackend.Models;
 using System.IO.Compression;
 using System.Security.Claims;
 using System.Text;
@@ -37,17 +38,11 @@ public class CapabilityDocumentsController(
     AppDbContext db,
     IWebHostEnvironment env,
     IAuditLogger audit,
-    ILogger<CapabilityDocumentsController> logger) : ControllerBase
+    ILogger<CapabilityDocumentsController> logger,
+    SiteSettingsService settings) : ControllerBase
 {
-    private const long MaxFileSizeBytes = 20L * 1024 * 1024; // 20MB per AC
     private const string StorageSubfolder = "capability";
 
-    /// <summary>Allowed extensions per AC. Kept as a hash-set for O(1) lookup.</summary>
-    private static readonly HashSet<string> AllowedExtensions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg",
-        };
 
     [HttpGet]
     [RequirePermission("crm.capability-docs", "view")]
@@ -79,7 +74,7 @@ public class CapabilityDocumentsController(
         var safeFileName = Path.GetFileName(fileName);
         if (!string.Equals(safeFileName, fileName, StringComparison.Ordinal)) return NotFound();
         var extension = Path.GetExtension(safeFileName);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension)) return NotFound();
+        if (string.IsNullOrWhiteSpace(extension) || !BusinessFileRules.AllowedExtensions.Contains(extension)) return NotFound();
         var managedPath = $"/files/{StorageSubfolder}/{safeFileName}";
         var isReferenced = await db.CapabilityDocuments.AsNoTracking()
             .AnyAsync(document => document.FilePath == managedPath, ct)
@@ -134,6 +129,8 @@ public class CapabilityDocumentsController(
     /// </summary>
     [HttpPost("upload")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("crm.capability-docs", "manage")]
     public async Task<IActionResult> Upload(
         [FromForm] IFormFile? file,
@@ -143,15 +140,11 @@ public class CapabilityDocumentsController(
         {
             return BadRequest(new { message = "Chưa chọn file." });
         }
-        if (file.Length > MaxFileSizeBytes)
+        if (BusinessFileRules.Problem(file, await settings.GetUploadLimitMbAsync(UploadLimitKind.Capability, ct)) is { } problem)
         {
-            return BadRequest(new { message = "File quá lớn (tối đa 20MB)." });
+            return BadRequest(new { message = problem });
         }
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
-        {
-            return BadRequest(new { message = "Định dạng file không được hỗ trợ (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG)." });
-        }
 
         try
         {

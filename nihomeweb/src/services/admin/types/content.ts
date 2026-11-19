@@ -511,3 +511,6 @@ export interface ContactMessageResponse {
   /** Lead created from this message, if any. */
   leadId?: number | null;
 }
+
+/** Modules whose per-file upload limit is an administrator setting. */
+export type UploadLimitKind = "design" | "tenders" | "capability";

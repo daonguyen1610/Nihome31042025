@@ -98,6 +98,41 @@ public class CapabilityDocumentsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Upload_FollowsTheCapabilityFileLimitSetInSettings()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        const string settingsPath = "/api/site-settings/upload-limits/capability";
+        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        MultipartFormDataContent TwoMegabytePdf()
+        {
+            var form = new MultipartFormDataContent();
+            var file = new ByteArrayContent(new byte[2 * 1024 * 1024]);
+            file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+            form.Add(file, "file", "chung-chi-iso-9001.pdf");
+            return form;
+        }
+        try
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 1 })).EnsureSuccessStatusCode();
+            using var tooLarge = TwoMegabytePdf();
+            var refused = await Client.PostAsync("/api/capability-documents/upload", tooLarge);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await refused.Content.ReadAsStringAsync()).Should()
+                .Contain("chung-chi-iso-9001.pdf").And.Contain("vượt giới hạn 1 MB");
+
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 3 })).EnsureSuccessStatusCode();
+            using var allowed = TwoMegabytePdf();
+            (await Client.PostAsync("/api/capability-documents/upload", allowed))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original })).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task Create_WithInvalidTag_IsBadRequest()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

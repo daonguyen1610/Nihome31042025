@@ -42,7 +42,7 @@
   { "key": "capDocs.action.downloadZip", "category": "capability-docs", "vi": "Tải ZIP đã chọn", "en": "Download selected ZIP", "zh": "下载所选 ZIP", "ja": "選択をZIPで保存" },
   { "key": "capDocs.action.delete", "category": "capability-docs", "vi": "Xoá", "en": "Delete", "zh": "删除", "ja": "削除" },
 
-  { "key": "capDocs.form.dropHint", "category": "capability-docs", "vi": "Kéo thả file hoặc bấm để chọn (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, tối đa 20MB)", "en": "Drag & drop or click to pick file (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, max 20MB)", "zh": "拖放或点击选择文件 (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, 最大20MB)", "ja": "ドラッグ&ドロップ or クリックで選択 (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG, 最大20MB)" },
+  { "key": "capDocs.form.dropHintRule", "category": "capability-docs", "vi": "Kéo thả file hoặc bấm để chọn ({rule})", "en": "Drag files here or click to choose ({rule})", "zh": "拖放文件或点击选择（{rule}）", "ja": "ファイルをドラッグするか、クリックして選択（{rule}）" },
   { "key": "capDocs.form.selectTagFirst", "category": "capability-docs", "vi": "Chọn phân loại trước khi tải lên.", "en": "Pick a tag before uploading.", "zh": "上传前请先选择分类。", "ja": "アップロード前に分類を選択してください。" },
   { "key": "capDocs.form.uploading", "category": "capability-docs", "vi": "Đang tải lên...", "en": "Uploading...", "zh": "上传中...", "ja": "アップロード中..." },
   { "key": "capDocs.form.uploadFailed", "category": "capability-docs", "vi": "Tải lên thất bại: {message}", "en": "Upload failed: {message}", "zh": "上传失败：{message}", "ja": "アップロード失敗：{message}" },
