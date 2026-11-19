@@ -8,7 +8,7 @@ test("work package creation identifies required fields and focuses invalid input
 }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
-  await page.goto("/admin/work-packages/contracts");
+  await page.goto("/admin/work-packages/projects");
   await page.getByRole("button", { name: "Create work package" }).click();
   const dialog = page.getByRole("dialog", { name: "Create a department work package" });
   await expect(dialog).toBeVisible();
@@ -17,10 +17,8 @@ test("work package creation identifies required fields and focuses invalid input
   await dialog.getByRole("button", { name: "Save changes" }).click();
   await expect(dialog.getByRole("combobox", { name: "Operational project" })).toBeFocused();
   await expect(name).toHaveAttribute("aria-invalid", "true");
-  await expect(dialog.getByRole("combobox", { name: "Contract", exact: true })).toHaveAttribute(
-    "aria-invalid",
-    "true",
-  );
+  // Work is filed under the project; there is no contract to choose.
+  await expect(dialog.getByRole("combobox", { name: "Contract", exact: true })).toHaveCount(0);
   await expect(dialog.getByRole("alert").first()).toBeVisible();
   await name.fill("N");
   await name.blur();
