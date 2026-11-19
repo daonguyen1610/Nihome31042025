@@ -28,15 +28,6 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         public decimal? ThresholdPercent { get; set; }
     }
 
-    [HttpGet("contract-uploads")]
-    [Authorize]
-    [RequirePermission("system.settings", "view")]
-    public async Task<IActionResult> GetContractUploadLimit()
-    {
-        var settings = await svc.GetAsync();
-        return Ok(new { maxFileSizeMb = settings?.ContractMaxFileSizeMb ?? SiteSettings.DefaultContractMaxFileSizeMb, maxAllowedFileSizeMb = ProjectDocumentStorageService.ContractMaxFileSizeMb });
-    }
-
     /// <summary>
     /// Per-file upload limit of a module (design, tenders, capability, contracts). Readable by
     /// every signed-in user because the upload forms check it before sending a file.
@@ -59,17 +50,6 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
             return BadRequest(new { code = "UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = maxAllowed, message = $"Giới hạn tệp phải từ 1 đến {maxAllowed} MB. Ví dụ: 50 MB." });
         var saved = await svc.UpdateUploadLimitAsync(kind, req.MaxFileSizeMb, ct);
         return Ok(new { maxFileSizeMb = saved, maxAllowedFileSizeMb = maxAllowed });
-    }
-
-    [HttpPut("contract-uploads")]
-    [Authorize]
-    [RequirePermission("system.settings", "manage")]
-    public async Task<IActionResult> UpdateContractUploadLimit([FromBody] UpdateContractUploadLimitRequest req, CancellationToken ct)
-    {
-        if (req.MaxFileSizeMb < 1 || req.MaxFileSizeMb > ProjectDocumentStorageService.ContractMaxFileSizeMb)
-            return BadRequest(new { code = "CONTRACT_UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = ProjectDocumentStorageService.ContractMaxFileSizeMb, message = $"Giới hạn tệp hợp đồng phải từ 1 đến {ProjectDocumentStorageService.ContractMaxFileSizeMb} MB. Ví dụ: 100 MB." });
-        var settings = await svc.UpdateContractUploadLimitAsync(req.MaxFileSizeMb, ct);
-        return Ok(new { maxFileSizeMb = settings.ContractMaxFileSizeMb, maxAllowedFileSizeMb = ProjectDocumentStorageService.ContractMaxFileSizeMb });
     }
 
     /// <summary>Get OTP verification settings.</summary>

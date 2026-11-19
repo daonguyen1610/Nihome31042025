@@ -9,92 +9,47 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     public SiteSettingsControllerTests(NihomeWebApplicationFactory factory) : base(factory) { }
 
     [Fact]
-    public async Task ContractUploadLimit_AcceptsFiveGigabytes_AndRejectsLargerValue()
+    public async Task ContractUploadLimit_IsReadableByUploaders_AndKeepsTheFiveGigabyteCeiling()
     {
+        const string path = "/api/site-settings/upload-limits/contracts";
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        const string path = "/api/site-settings/contract-uploads";
         var original = (await ReadJsonAsync(await Client.GetAsync(path)))
             .GetProperty("maxFileSizeMb").GetInt32();
         try
         {
-            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 5120 }))
-                .StatusCode.Should().Be(HttpStatusCode.OK);
-            (await ReadJsonAsync(await Client.GetAsync(path)))
-                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(5120);
-            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 5121 }))
-                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        }
-        finally
-        {
-            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = original }))
-                .EnsureSuccessStatusCode();
-        }
-    }
-
-    [Fact]
-    public async Task ContractUploadLimit_RequiresSettingsPermission_AndPersistsValidValue()
-    {
-        const string path = "/api/site-settings/contract-uploads";
-        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-        (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
-            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
-
-        await AuthTestHelper.AuthenticateAsync(Client,
-            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
-        (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
-            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
-
-        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        var invalid = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 0 });
-        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await ReadJsonAsync(invalid)).GetProperty("code").GetString()
-            .Should().Be("CONTRACT_UPLOAD_LIMIT_INVALID");
-
-        var updated = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 75 });
-        updated.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadJsonAsync(await Client.GetAsync(path)))
-            .GetProperty("maxFileSizeMb").GetInt32().Should().Be(75);
-    }
-
-    [Fact]
-    public async Task ContractUploadLimit_IsReadableByUploaders_ThroughTheSharedUploadLimitRoute()
-    {
-        const string sharedPath = "/api/site-settings/upload-limits/contracts";
-        const string settingsPath = "/api/site-settings/contract-uploads";
-        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
-            .GetProperty("maxFileSizeMb").GetInt32();
-        try
-        {
-            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 64 }))
-                .EnsureSuccessStatusCode();
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 64 })).EnsureSuccessStatusCode();
 
             // Sales uploads contract files without settings permission, so the form
             // must still learn the Settings limit (and the contract ceiling) first.
             await AuthTestHelper.AuthenticateAsync(Client,
                 client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
-            (await Client.GetAsync(settingsPath)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
-            var read = await Client.GetAsync(sharedPath);
+            var read = await Client.GetAsync(path);
             read.StatusCode.Should().Be(HttpStatusCode.OK);
             var body = await ReadJsonAsync(read);
             body.GetProperty("maxFileSizeMb").GetInt32().Should().Be(64);
             body.GetProperty("maxAllowedFileSizeMb").GetInt32().Should().Be(5120);
-            (await Client.PutAsJsonAsync(sharedPath, new { maxFileSizeMb = 50 }))
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
                 .StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-            // Saved through the shared route, contracts keep their own 5 GB ceiling.
+            // Contracts keep their own 5 GB ceiling, above the business-file one.
             await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-            (await Client.PutAsJsonAsync(sharedPath, new { maxFileSizeMb = 5120 }))
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 5120 }))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
-            (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            (await ReadJsonAsync(await Client.GetAsync(path)))
                 .GetProperty("maxFileSizeMb").GetInt32().Should().Be(5120);
-            (await Client.PutAsJsonAsync(sharedPath, new { maxFileSizeMb = 5121 }))
+            var tooLarge = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 5121 });
+            tooLarge.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(tooLarge)).GetProperty("code").GetString()
+                .Should().Be("UPLOAD_LIMIT_INVALID");
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 0 }))
                 .StatusCode.Should().Be(HttpStatusCode.BadRequest);
         }
         finally
         {
             await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original }))
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = original }))
                 .EnsureSuccessStatusCode();
         }
     }

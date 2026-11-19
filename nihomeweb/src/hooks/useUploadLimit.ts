@@ -4,6 +4,11 @@ import { adminApi, type UploadLimitKind } from "@/services/adminApi";
 // One request per module and page load; every upload control shares it.
 const limitRequests = new Map<UploadLimitKind, Promise<number | null>>();
 
+/** Drops the cached limit after Settings saves it, so upload forms read the new value. */
+export function forgetUploadLimit(kind: UploadLimitKind) {
+  limitRequests.delete(kind);
+}
+
 /**
  * A module's per-file upload limit from Settings, in MB, or null while loading
  * or when it could not be read (the server still enforces it on upload).
