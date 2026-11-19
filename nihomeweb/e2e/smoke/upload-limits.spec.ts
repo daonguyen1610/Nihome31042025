@@ -13,10 +13,16 @@ async function setLimitInSettings(page: Page, section: string, inputId: string, 
   await page.goto(`/admin/settings?section=${section}`, { waitUntil: "networkidle" });
   const input = page.locator(`#${inputId}`);
   await input.fill(value);
+  // Wait for the save to land: navigating away at once cancels the request.
+  const saved = page.waitForResponse(
+    (response) =>
+      response.request().method() === "PUT" && new URL(response.url()).pathname.startsWith(LIMITS),
+  );
   await input
     .locator("xpath=ancestor::div[contains(@class,'space-y-3')][1]")
     .getByRole("button", { name: /Lưu|Save/i })
     .click();
+  expect((await saved).status()).toBe(200);
 }
 
 /**
