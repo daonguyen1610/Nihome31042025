@@ -49,6 +49,9 @@ public sealed class UpdateDepartmentWorkPackageRequest : IConcurrencyRequest
 
     public int? ContractId { get; set; }
 
+    /// <summary>The new assigner (TBP of the receiving department); null keeps the current one.</summary>
+    public int? LeadUserId { get; set; }
+
     [Required, StringLength(20)]
     public string Status { get; set; } = "Planned";
 

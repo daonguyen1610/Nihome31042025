@@ -1,4 +1,5 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 
 const closeNames: Record<string, string> = { vi: "Đóng", en: "Close", zh: "关闭", ja: "閉じる" };
 
@@ -161,4 +162,60 @@ test("the assigner defaults to the receiving department's head and follows the d
   await dialog.getByTestId("work-package-department").click();
   await page.getByRole("option").nth(crm.index).click();
   await expect(dialog.getByTestId("work-package-lead")).toContainText(crm.head.name);
+});
+
+// The assigner can be changed after creation, to anyone in the receiving
+// department who may assign work.
+test("editing a work package hands it to another assigner", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const options = await (await api.get("/api/work-packages/options", { headers })).json();
+  const procurement = options.departments.find(
+    (item: { code: string }) => item.code === "PROCUREMENT",
+  );
+  const assigners = options.users.filter(
+    (user: { roleGroupId: number; canLead: boolean }) =>
+      user.roleGroupId === procurement.id && user.canLead,
+  ) as { userId: number; name: string; roleCode: string }[];
+  const current = assigners.find((user) => user.roleCode.endsWith("_MANAGER"))!;
+  const next = assigners.find((user) => user.userId !== current.userId)!;
+  expect(current && next, "two procurement assigners are seeded").toBeTruthy();
+  const projects = await (
+    await api.get("/api/operational-projects?pageSize=1", { headers })
+  ).json();
+  const created = await api.post("/api/work-packages", {
+    headers: { ...headers, "Idempotency-Key": crypto.randomUUID() },
+    data: {
+      kind: "Project",
+      name: `Chuẩn bị vật tư đổi người phân công ${Date.now()}`,
+      operationalProjectId: projects.items[0].id,
+      departmentRoleGroupId: procurement.id,
+      leadUserId: current.userId,
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const packageId = (await created.json()).id as number;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.admin);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.goto(`/admin/work-packages/${packageId}`);
+    await page.getByTestId("work-package-edit").click();
+    const dialog = page.getByRole("dialog");
+    const assigner = dialog.getByTestId("work-package-edit-assigner");
+    await expect(assigner).toContainText(current.name);
+    await assigner.getByRole("combobox").click();
+    await page.getByRole("option", { name: new RegExp(next.name) }).click();
+    await dialog.getByRole("button", { name: /Lưu/ }).click();
+    await expect(dialog).toHaveCount(0);
+    const saved = await (await api.get(`/api/work-packages/${packageId}`, { headers })).json();
+    expect(saved.leadUserId).toBe(next.userId);
+    await expect(page.getByText(next.name).first()).toBeVisible();
+  } finally {
+    await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${packageId}`);
+  }
 });
