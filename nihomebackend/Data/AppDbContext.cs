@@ -1,11 +1,16 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Models;
 using NihomeBackend.Models.Rbac;
 
 namespace NihomeBackend.Data;
 
-public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(options)
+public class AppDbContext(DbContextOptions<AppDbContext> options)
+    : DbContext(options), IDataProtectionKeyContext
 {
+    /// <summary>Data Protection key ring, so encrypted settings survive redeploys.</summary>
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
+
     public DbSet<LegalChecklistTemplate> LegalChecklistTemplates => Set<LegalChecklistTemplate>();
     public DbSet<ApplicationUser> Users => Set<ApplicationUser>();
     public DbSet<RefreshToken> RefreshTokens => Set<RefreshToken>();

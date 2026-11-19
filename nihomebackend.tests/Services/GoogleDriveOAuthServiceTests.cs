@@ -774,6 +774,72 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.Equal("/admin/settings?tab=drive&view=configuration&driveOAuth=success", redirect);
     }
 
+    // Production ran with an in-memory key ring, so every restart lost the keys
+    // that encrypted the saved Client Secret and refresh token.
+    private static async Task<AppDbContext> ConfigurationSavedUnderLostKeysAsync()
+    {
+        var db = CreateDb();
+        var before = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        await before.UpdateAsync(ValidConfiguration("client-secret-value"), 7);
+        var version = (await before.GetAdminAsync()).RowVersion;
+        await before.SaveRefreshTokenAsync("refresh-token-value", "drive@example.com", 7, version);
+        return db;
+    }
+
+    private static GoogleDriveOAuthService OAuthServiceAfterRestart(
+        AppDbContext db, Mock<IHttpClientFactory> clients, IDataProtectionProvider? keys = null) => new(
+        new EphemeralDataProtectionProvider(),
+        new GoogleDriveSettingsStore(db, keys ?? new EphemeralDataProtectionProvider()),
+        clients.Object,
+        Mock.Of<IGoogleDriveAdapter>(),
+        Mock.Of<IPermissionService>(),
+        NullLogger<GoogleDriveOAuthService>.Instance);
+
+    [Fact]
+    public async Task DisconnectAsync_WhenStoredTokenCannotBeDecrypted_StillClearsTheConnection()
+    {
+        await using var db = await ConfigurationSavedUnderLostKeysAsync();
+        var clients = new Mock<IHttpClientFactory>();
+
+        var result = await OAuthServiceAfterRestart(db, clients).DisconnectAsync(12);
+
+        Assert.True(result.HadStoredCredential);
+        Assert.False(result.ProviderRevoked);
+        var stored = await db.GoogleDriveCredentials.AsNoTracking().SingleAsync();
+        Assert.Null(stored.ProtectedRefreshToken);
+        Assert.Null(stored.AccountEmail);
+        // An unreadable token cannot be revoked at Google.
+        clients.Verify(factory => factory.CreateClient(It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task GetStatusAsync_WhenSecretsCannotBeDecrypted_AsksToReenterTheClientSecret()
+    {
+        await using var db = await ConfigurationSavedUnderLostKeysAsync();
+
+        var status = await OAuthServiceAfterRestart(db, new Mock<IHttpClientFactory>()).GetStatusAsync();
+
+        Assert.Equal("ReconnectRequired", status.Status);
+        Assert.Contains("Client Secret", status.Error);
+        Assert.Contains("Lưu cấu hình", status.Error);
+    }
+
+    [Fact]
+    public async Task ReenteringTheClientSecretAfterKeyLoss_AllowsConnectingAgain()
+    {
+        await using var db = await ConfigurationSavedUnderLostKeysAsync();
+        var keysAfterRestart = new EphemeralDataProtectionProvider();
+        var restarted = new GoogleDriveSettingsStore(db, keysAfterRestart);
+        var request = ValidConfiguration("client-secret-value");
+        request.RowVersion = (await restarted.GetAdminAsync()).RowVersion;
+        await restarted.UpdateAsync(request, 7);
+
+        var start = await OAuthServiceAfterRestart(db, new Mock<IHttpClientFactory>(), keysAfterRestart)
+            .CreateAuthorizationRequestAsync(12);
+
+        Assert.StartsWith("https://accounts.google.com/o/oauth2/v2/auth?", start.AuthorizationUrl);
+    }
+
     private static AppDbContext CreateDb() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);

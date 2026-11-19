@@ -2,6 +2,7 @@ using System.Text;
 using AutoMapper;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.DataProtection;
+using Microsoft.Extensions.Configuration;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
@@ -37,6 +38,25 @@ public static class ServiceCollectionExtensions
         return services;
     }
 
+    /// <summary>
+    /// Keys that encrypt stored secrets (Google Drive Client Secret, refresh
+    /// token). Without a persisted key ring IIS keeps them in memory, so every
+    /// redeploy or app-pool recycle made the saved secrets unreadable. A
+    /// configured DataProtection:KeysPath still wins; otherwise the key ring
+    /// is kept in the application database.
+    /// </summary>
+    public static IServiceCollection AddNiconDataProtection(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        var dataProtection = services.AddDataProtection().SetApplicationName("Nicon");
+        var keysPath = configuration["DataProtection:KeysPath"];
+        if (!string.IsNullOrWhiteSpace(keysPath))
+            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(keysPath));
+        else
+            dataProtection.PersistKeysToDbContext<AppDbContext>();
+        return services;
+    }
+
     public static IServiceCollection AddAuthAndEmail(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -54,11 +74,7 @@ public static class ServiceCollectionExtensions
 
         services.Configure<JwtOptions>(configuration.GetSection("Jwt"));
         services.Configure<EmailSettings>(configuration.GetSection("EmailSettings"));
-        var dataProtection = services.AddDataProtection()
-            .SetApplicationName("Nicon");
-        var dataProtectionKeysPath = configuration["DataProtection:KeysPath"];
-        if (!string.IsNullOrWhiteSpace(dataProtectionKeysPath))
-            dataProtection.PersistKeysToFileSystem(new DirectoryInfo(dataProtectionKeysPath));
+        services.AddNiconDataProtection(configuration);
         services.AddHttpClient(nameof(GoogleDriveOAuthService), client =>
             client.Timeout = TimeSpan.FromSeconds(30));
 
