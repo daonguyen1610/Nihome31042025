@@ -125,7 +125,6 @@ public sealed class DepartmentWorkTaskResponse
     public string WbsCode { get; set; } = string.Empty;
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
-    public string? Resources { get; set; }
     public int DepartmentRoleGroupId { get; set; }
     public string DepartmentCode { get; set; } = string.Empty;
     public string DepartmentLabelKey { get; set; } = string.Empty;

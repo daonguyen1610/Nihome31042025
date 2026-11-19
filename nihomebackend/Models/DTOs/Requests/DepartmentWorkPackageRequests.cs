@@ -74,8 +74,6 @@ public sealed class UpsertDepartmentWorkTaskRequest : IConcurrencyRequest
     [StringLength(4000)]
     public string? Description { get; set; }
 
-    [StringLength(2000)]
-    public string? Resources { get; set; }
 
     [Range(1, int.MaxValue)]
     public int AssigneeUserId { get; set; }

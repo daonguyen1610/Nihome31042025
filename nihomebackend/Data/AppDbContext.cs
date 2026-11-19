@@ -2539,7 +2539,6 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(item => item.WbsCode).HasMaxLength(120).IsRequired();
             b.Property(item => item.Title).HasMaxLength(300).IsRequired();
             b.Property(item => item.Description).HasMaxLength(4000);
-            b.Property(item => item.Resources).HasMaxLength(2000);
             b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.WorkPackage).WithMany(package => package.Tasks)

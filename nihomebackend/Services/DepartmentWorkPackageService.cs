@@ -454,7 +454,6 @@ public sealed partial class DepartmentWorkPackageService(
             WbsCode = request.WbsCode.Trim(),
             Title = request.Title.Trim(),
             Description = TrimOrNull(request.Description),
-            Resources = TrimOrNull(request.Resources),
             DepartmentRoleGroupId = ResolveTaskDepartmentRoleGroupId(package, request),
             AssigneeUserId = request.AssigneeUserId,
             ApproverUserId = request.ApproverUserId,
@@ -509,7 +508,6 @@ public sealed partial class DepartmentWorkPackageService(
         task.WbsCode = request.WbsCode.Trim();
         task.Title = request.Title.Trim();
         task.Description = TrimOrNull(request.Description);
-        task.Resources = TrimOrNull(request.Resources);
         task.DepartmentRoleGroupId = ResolveTaskDepartmentRoleGroupId(package, request);
         task.AssigneeUserId = request.AssigneeUserId;
         task.ApproverUserId = request.ApproverUserId;
@@ -1311,7 +1309,6 @@ public sealed partial class DepartmentWorkPackageService(
             WbsCode = task.WbsCode,
             Title = task.Title,
             Description = task.Description,
-            Resources = task.Resources,
             DepartmentRoleGroupId = task.DepartmentRoleGroupId,
             DepartmentCode = task.DepartmentRoleGroup.Code,
             DepartmentLabelKey = task.DepartmentRoleGroup.LabelKey,

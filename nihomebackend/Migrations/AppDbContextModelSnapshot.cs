@@ -3446,10 +3446,6 @@ namespace nihomebackend.Migrations
                     b.Property<Guid?>("ProjectScheduleNodeId")
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<string>("Resources")
-                        .HasMaxLength(2000)
-                        .HasColumnType("nvarchar(2000)");
-
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()
