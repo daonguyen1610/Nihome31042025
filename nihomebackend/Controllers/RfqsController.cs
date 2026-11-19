@@ -17,7 +17,8 @@ namespace NihomeBackend.Controllers;
 [Route("api/operational-projects/{projectId:int}/procurement/rfqs")]
 [Route("api/v1/operational-projects/{projectId:int}/procurement/rfqs")]
 public sealed class RfqsController(RfqService service, IProjectAccessService access,
-    IProjectDocumentService documents, AppDbContext db, IAuditLogger audit) : ControllerBase
+    IProjectDocumentService documents, AppDbContext db, IAuditLogger audit,
+    SiteSettingsService settings) : ControllerBase
 {
     private int UserId => int.TryParse(User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("sub"), out var id) ? id : 0;
 
@@ -32,10 +33,15 @@ public sealed class RfqsController(RfqService service, IProjectAccessService acc
     [HttpPost("documents/upload"), RequirePermission("proc.rfqs", "manage")]
     [Consumes("multipart/form-data")]
     [Idempotency("proc.rfqs.upload", requestGuardType: typeof(RfqIdempotencyGuard), requireKey: true)]
-    [RequestSizeLimit(26 * 1024 * 1024)]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     public async Task<IActionResult> Upload(int projectId, IFormFile file, CancellationToken ct)
     {
         if (!await access.CanViewOperationalProjectAsync(UserId, projectId, ct)) return NotFound();
+        // Size follows Settings; RFQ evidence keeps the project-document type rule
+        // (supplier drawings such as .dwg are allowed, executables are not).
+        if (BusinessFileRules.SizeProblem(file, await settings.GetUploadLimitMbAsync(Models.UploadLimitKind.Rfqs, ct)) is { } problem)
+            return BadRequest(new { message = problem });
         if (await db.OperationalProjects.AnyAsync(x => x.Id == projectId &&
             (x.Status == Models.OperationalProjectStatus.Completed || x.Status == Models.OperationalProjectStatus.Cancelled), ct))
             return BadRequest(new { message = "Completed or cancelled projects cannot be changed." });

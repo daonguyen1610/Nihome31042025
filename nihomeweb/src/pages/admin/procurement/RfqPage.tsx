@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
@@ -154,6 +155,8 @@ function RfqWorkspace({
 }) {
   const uiError = useUiError();
   const { t, lang } = useI18n();
+  // Per-file limit for RFQ evidence from Settings, so the picker refuses what the server would.
+  const rfqUploadLimitMb = useUploadLimit("rfqs");
   const { has } = usePermissions();
   const projectId = project.id;
   const mounted = useRef(false);
@@ -926,6 +929,7 @@ function RfqWorkspace({
                     <Label htmlFor="rfq-files">{t("rfq.upload")}</Label>
                     <MultiFilePicker
                       id="rfq-files"
+                      maxSizeMb={rfqUploadLimitMb}
                       files={uploadFiles}
                       onChange={(files) => {
                         const added = files.filter((file) => !uploadFiles.includes(file));

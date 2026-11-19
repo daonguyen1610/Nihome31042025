@@ -531,4 +531,4 @@ export interface ContactMessageResponse {
 }
 
 /** Modules whose per-file upload limit is an administrator setting. */
-export type UploadLimitKind = "design" | "tenders" | "capability" | "contracts" | "quotes";
+export type UploadLimitKind = "design" | "tenders" | "capability" | "contracts" | "quotes" | "rfqs";

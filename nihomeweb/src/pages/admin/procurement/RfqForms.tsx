@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { personOption } from "@/lib/people";
@@ -256,6 +257,7 @@ export function RfqBidForm({
 }) {
   const uiError = useUiError();
   const { t, lang } = useI18n();
+  const rfqUploadLimitMb = useUploadLimit("rfqs");
   const [vendorId, setVendorId] = useState(0);
   const [leadTimeDays, setLeadTimeDays] = useState("0");
   const [paymentTerms, setPaymentTerms] = useState("");
@@ -481,6 +483,7 @@ export function RfqBidForm({
             <Label htmlFor="rfq-form-files">{t("rfq.upload")}</Label>
             <MultiFilePicker
               id="rfq-form-files"
+              maxSizeMb={rfqUploadLimitMb}
               files={uploadFiles}
               disabled={busy}
               onChange={(files) => {

@@ -28,6 +28,15 @@ public static class BusinessFileRules
             return $"Tệp “{file.FileName}” ({shown}) chưa được nhận. " +
                 "Chỉ nhận PDF, Word (.doc, .docx), Excel (.xls, .xlsx) và ảnh PNG, JPG.";
         }
+        return SizeProblem(file, maxMb);
+    }
+
+    /// <summary>
+    /// Why the file is empty or larger than the Settings limit, in Vietnamese; null when
+    /// its size is fine. For modules with their own type rule (e.g. RFQ evidence).
+    /// </summary>
+    public static string? SizeProblem(IFormFile file, int maxMb)
+    {
         if (file.Length == 0)
             return $"Tệp “{file.FileName}” trống. Hãy kiểm tra lại tệp rồi tải lên.";
         if (file.Length > (long)maxMb * 1024 * 1024)

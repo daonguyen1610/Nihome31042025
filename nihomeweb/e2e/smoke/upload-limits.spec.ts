@@ -265,3 +265,47 @@ test("quote documents follow the quote limit set in Settings", async ({
     await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
   }
 });
+
+// RFQ evidence follows the RFQ limit in Settings instead of a fixed 20 MB.
+test("RFQ evidence follows the RFQ limit set in Settings", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const settingsPath = `${LIMITS}/rfqs`;
+  const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
+    .maxFileSizeMb as number;
+  const projects = await (
+    await api.get("/api/operational-projects?pageSize=100", { headers: adminHeaders })
+  ).json();
+  const project = projects.items.find((item: { code: string }) => item.code === "PJ-SAMPLE-RFQ");
+  expect(project, "seeded procurement project required").toBeTruthy();
+  const base = `/api/operational-projects/${project.id}/procurement/rfqs`;
+  const rfq = (
+    await (await api.get(`${base}?status=Draft&pageSize=100`, { headers: adminHeaders })).json()
+  ).items[0];
+  expect(rfq, "seeded Draft RFQ required").toBeTruthy();
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.admin);
+    await setLimitInSettings(page, "rfq-files", "rfq-upload-limit", "1");
+
+    let uploads = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && request.url().endsWith(`${base}/documents/upload`))
+        uploads++;
+    });
+    await page.goto(`/admin/procurement-control/rfqs?projectId=${project.id}&rfqId=${rfq.id}`, {
+      waitUntil: "networkidle",
+    });
+    const input = page.getByTestId("rfq-files");
+    await expect(input.locator("xpath=..")).toContainText("Tối đa 20 tệp, 1 MB mỗi tệp");
+    await input.setInputFiles(TWO_MB_PDF("bao-gia-ncc-thep.pdf"));
+    await expect(page.getByText("bao-gia-ncc-thep.pdf vượt quá 1 MB.").first()).toBeVisible();
+    expect(uploads).toBe(0);
+  } finally {
+    await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
+  }
+});
