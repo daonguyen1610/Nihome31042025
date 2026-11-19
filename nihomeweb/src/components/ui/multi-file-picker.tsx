@@ -34,7 +34,8 @@ type MultiFilePickerProps = {
   accept?: string;
   multiple?: boolean;
   maxFiles?: number;
-  maxSizeMb?: number;
+  /** Per-file limit in MB; null while it is still loading (the server still checks). */
+  maxSizeMb?: number | null;
   disabled?: boolean;
   id?: string;
   testId?: string;
@@ -61,6 +62,8 @@ export function MultiFilePicker({
   const [error, setError] = useState<string | null>(null);
 
   const limitsHint = useMemo(() => {
+    if (maxSizeMb == null)
+      return t("common.filePicker.hintCount").replace("{count}", String(maxFiles));
     return t("common.filePicker.hint")
       .replace("{count}", String(maxFiles))
       .replace("{size}", String(maxSizeMb));
@@ -74,7 +77,7 @@ export function MultiFilePicker({
     for (const file of selected) {
       if (!matchesAccept(file, accept)) {
         failures.push(t("common.filePicker.unsupported").replace("{name}", file.name));
-      } else if (file.size > maxSizeMb * 1024 * 1024) {
+      } else if (maxSizeMb != null && file.size > maxSizeMb * 1024 * 1024) {
         failures.push(
           t("common.filePicker.tooLarge")
             .replace("{name}", file.name)

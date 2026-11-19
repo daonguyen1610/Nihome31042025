@@ -1408,6 +1408,14 @@
     "ja": "最大 {count} ファイル、各 {size} MB"
   },
   {
+    "key": "common.filePicker.hintCount",
+    "category": "common",
+    "vi": "Tối đa {count} tệp",
+    "en": "Up to {count} files",
+    "zh": "最多 {count} 个文件",
+    "ja": "最大 {count} ファイル"
+  },
+  {
     "key": "common.filePicker.remove",
     "category": "common",
     "vi": "Xoá tệp",

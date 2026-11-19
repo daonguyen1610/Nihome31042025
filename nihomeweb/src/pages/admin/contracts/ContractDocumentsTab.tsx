@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
 import { FieldScope } from "@/components/ui/field-scope";
@@ -43,6 +44,8 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
   const uiError = useUiError();
   const confirmAction = useConfirm();
   const { t } = useI18n();
+  // The per-file limit from Settings, so the picker refuses what the server would.
+  const uploadLimitMb = useUploadLimit("contracts");
   const { toast } = useToast();
   const [uploadKind, setUploadKind] = useState<ContractAttachmentKind>(
     contract.hasSignedScan ? "Supporting" : "SignedScan",
@@ -139,7 +142,8 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
                 files={pendingFiles}
                 onChange={setPendingFiles}
                 accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                hint={t("contracts.documents.uploadHint")}
+                maxSizeMb={uploadLimitMb}
+                hint={t("contracts.documents.uploadHintMulti")}
                 disabled={uploading}
                 testId="contract-attachment-files"
               />
