@@ -14,23 +14,29 @@ const { designFileProblem, DESIGN_FILE_ACCEPT } = await import(
 const MB = 1024 * 1024;
 
 test("an allowed file within 20 MB passes, whatever the case of its extension", () => {
-  assert.equal(designFileProblem({ name: "KT-01.PDF", size: 5 * MB }), null);
+  assert.equal(designFileProblem({ name: "KT-01.PDF", size: 5 * MB }, 20), null);
 });
 
-test("a file over 20 MB reports its size in MB", () => {
-  assert.deepEqual(designFileProblem({ name: "KC.pdf", size: 25.3 * MB }), {
+test("a file over the configured limit reports its size in MB", () => {
+  assert.deepEqual(designFileProblem({ name: "KC.pdf", size: 25.3 * MB }, 20), {
     code: "tooLarge",
     sizeMb: 25.3,
   });
+  // The same file fits once an administrator raises the limit.
+  assert.equal(designFileProblem({ name: "KC.pdf", size: 25.3 * MB }, 50), null);
+});
+
+test("without a known limit only the type and emptiness are checked", () => {
+  assert.equal(designFileProblem({ name: "KC.pdf", size: 500 * MB }, null), null);
 });
 
 test("an empty file and an unsupported type are refused", () => {
-  assert.deepEqual(designFileProblem({ name: "a.docx", size: 0 }), { code: "empty" });
-  assert.deepEqual(designFileProblem({ name: "ban-ve.DWG", size: 10 }), {
+  assert.deepEqual(designFileProblem({ name: "a.docx", size: 0 }, 20), { code: "empty" });
+  assert.deepEqual(designFileProblem({ name: "ban-ve.DWG", size: 10 }, 20), {
     code: "unsupported",
     extension: ".dwg",
   });
-  assert.deepEqual(designFileProblem({ name: "README", size: 10 }), {
+  assert.deepEqual(designFileProblem({ name: "README", size: 10 }, 20), {
     code: "unsupported",
     extension: "",
   });

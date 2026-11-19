@@ -382,6 +382,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .HasPrecision(18, 4).HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultUsdVndRate);
         modelBuilder.Entity<SiteSettings>().Property(s => s.ContractMaxFileSizeMb)
             .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultContractMaxFileSizeMb);
+        modelBuilder.Entity<SiteSettings>().Property(s => s.DesignMaxFileSizeMb)
+            .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultDesignMaxFileSizeMb);
 
         modelBuilder.Entity<Notification>().ToTable("notifications");
         modelBuilder.Entity<Notification>().HasKey(n => n.Id);
