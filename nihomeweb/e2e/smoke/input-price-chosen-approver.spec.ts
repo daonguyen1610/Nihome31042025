@@ -69,6 +69,20 @@ test("the sender picks the input price approver, who alone approves it", async (
     expect(response.ok(), await response.text()).toBeTruthy();
     packageId = (await response.json()).id;
 
+    // The whole Procurement department hears about the request (and is emailed),
+    // not only the assigner.
+    const notices = await (
+      await api.get("/api/notifications?take=50", { headers: officer })
+    ).json();
+    const items = (Array.isArray(notices) ? notices : notices.items) as {
+      title: string;
+      linkUrl?: string;
+    }[];
+    expect(
+      items.some((item) => item.linkUrl === `/admin/work-packages/${packageId}`),
+      "the officer is notified of the input price request",
+    ).toBeTruthy();
+
     // A Procurement officer who is not the assigner adds the supplier quote.
     response = await api.post(`/api/work-packages/${packageId}/input-price-offers`, {
       headers: writes(officer),
