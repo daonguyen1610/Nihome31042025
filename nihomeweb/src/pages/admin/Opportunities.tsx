@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { OperationalProjectQuickCreate } from "@/components/admin/OperationalProjectQuickCreate";
 import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { FieldScope } from "@/components/ui/field-scope";
@@ -187,6 +188,7 @@ const AdminOpportunities = () => {
   const canCreateQuote = has(ADMIN_PERMS.quotesManage);
   const canCreateContract = has(ADMIN_PERMS.contractsManage);
   const canStartDesign = canManage && has(ADMIN_PERMS.operationalProjectsManage);
+  const canCreateProject = has(ADMIN_PERMS.operationalProjectsManage);
   const canViewDesign = has(ADMIN_PERMS.designProjects);
   const canManageWorkPackages = has(ADMIN_PERMS.workPackagesManage);
 
@@ -1401,10 +1403,52 @@ const AdminOpportunities = () => {
                 ariaLabel={t("opportunities.field.operationalProject")}
                 placeholder={t("opportunities.project.select")}
               />
-              {projectLoadError && (
+              {projectLoadError ? (
                 <p role="alert" className="text-sm text-destructive">
                   {projectLoadError}
                 </p>
+              ) : !createForm.customerId ? (
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t("opportunities.project.chooseCustomerFirst")}
+                </p>
+              ) : (
+                !projectLoading && (
+                  <div className="mt-1 space-y-1">
+                    {projectOptions.length === 0 && (
+                      <p className="text-xs text-muted-foreground">
+                        {t("opportunities.project.noneForCustomer")}
+                      </p>
+                    )}
+                    {/* Sales often meet a new job before its project exists: create it here. */}
+                    {canCreateProject && (
+                      <OperationalProjectQuickCreate
+                        key={createForm.customerId}
+                        customerId={createForm.customerId}
+                        suggestedName={createForm.name}
+                        onCreated={(project) => {
+                          setProjects((current) => [
+                            ...current,
+                            {
+                              ...project,
+                              opportunityCount: 0,
+                              quoteCount: 0,
+                            } as OperationalProjectListItemResponse,
+                          ]);
+                          setCreateForm((current) => ({
+                            ...current,
+                            operationalProjectId: project.id,
+                          }));
+                          toast({
+                            title: t("opportunities.project.quickCreated", {
+                              code: project.code,
+                              name: project.name,
+                            }),
+                          });
+                        }}
+                      />
+                    )}
+                  </div>
+                )
               )}
             </FieldScope>
             <div className="grid grid-cols-2 gap-3">
