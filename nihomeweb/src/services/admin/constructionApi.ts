@@ -1,4 +1,4 @@
-import type { WorkPackageApprovalPreview } from "./types/content";
+import type { WorkPackageApprovalPreview, WorkPackageApprovalRecipients } from "./types/content";
 import api from "@/lib/api";
 import { withIdempotencyKey } from "@/lib/api";
 import { withIfMatch } from "@/lib/api";
@@ -247,7 +247,7 @@ export const constructionApi = {
   previewWorkPackageBoqApproval: (
     packageId: number,
     id: number,
-    recipients?: { toEmail: string; ccEmails: string[] },
+    recipients?: WorkPackageApprovalRecipients,
   ) =>
     api.post<WorkPackageApprovalPreview>(
       `/work-packages/${packageId}/boq-workbooks/${id}/approval-email-preview`,

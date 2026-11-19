@@ -40,6 +40,11 @@ export interface WorkPackageBoqWorkbook {
   approvedAt?: string | null;
   rejectedAt?: string | null;
   decisionReason?: string | null;
+  /** The approver the sender chose; only they may decide. */
+  approvalApproverUserId?: number | null;
+  approvalApproverName?: string | null;
+  /** The current user may approve or reject this submitted record. */
+  canDecide?: boolean;
   rowVersion: string;
 }
 

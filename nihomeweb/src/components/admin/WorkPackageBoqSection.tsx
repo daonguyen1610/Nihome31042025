@@ -18,8 +18,7 @@ export function WorkPackageBoqSection({
   open,
   boqs,
   canProgress,
-  canVerify,
-  currentUserId,
+  leadUserName,
   onChanged,
   onSubmit,
   onDecide,
@@ -28,8 +27,8 @@ export function WorkPackageBoqSection({
   open: boolean;
   boqs: WorkPackageBoqWorkbook[];
   canProgress: boolean;
-  canVerify: boolean;
-  currentUserId: number | null;
+  /** Who decides BOQs sent before the sender could choose an approver. */
+  leadUserName: string;
   onChanged: () => void;
   onSubmit: (boq: WorkPackageBoqWorkbook) => void;
   onDecide: (boq: WorkPackageBoqWorkbook, approved: boolean) => void;
@@ -121,23 +120,27 @@ export function WorkPackageBoqSection({
                     {t("workPackages.action.submit")}
                   </Button>
                 )}
-                {canVerify &&
-                  open &&
-                  boq.status === "Submitted" &&
-                  boq.preparedByUserId !== currentUserId && (
-                    <>
-                      <Button size="sm" variant="outline" onClick={() => onDecide(boq, false)}>
-                        {t("common.reject")}
-                      </Button>
-                      <Button
-                        size="sm"
-                        onClick={() => onDecide(boq, true)}
-                        data-testid="work-package-boq-approve"
-                      >
-                        {t("common.approve")}
-                      </Button>
-                    </>
-                  )}
+                {open && boq.status === "Submitted" && !boq.canDecide && (
+                  <span className="text-xs text-muted-foreground">
+                    {t("approvalEmail.awaiting", {
+                      name: boq.approvalApproverName ?? leadUserName,
+                    })}
+                  </span>
+                )}
+                {open && boq.canDecide && (
+                  <>
+                    <Button size="sm" variant="outline" onClick={() => onDecide(boq, false)}>
+                      {t("common.reject")}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => onDecide(boq, true)}
+                      data-testid="work-package-boq-approve"
+                    >
+                      {t("common.approve")}
+                    </Button>
+                  </>
+                )}
               </div>
             </li>
           ))}

@@ -256,6 +256,7 @@ test.describe("MoM §5 pre-contract department controls", () => {
     ).toBeVisible();
 
     await offerCard.getByRole("button", { name: "Gửi duyệt" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Tiếp tục" }).click();
     const approvalDialog = page.getByRole("dialog");
     const toField = approvalDialog.locator("#approval-to");
     await toField.focus();
@@ -280,16 +281,9 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await expect(offerCard.getByText("Chờ duyệt")).toBeVisible();
     await shot("s5-03-cho-duyet-gia-dau-vao.png");
 
-    // ---- Four eyes: the author cannot clear their own input price.
-    const selfDecision = page.waitForResponse(
-      (response) =>
-        response.request().method() === "POST" &&
-        response.url().includes(`/work-packages/${packageId}/input-price-offers/`) &&
-        response.url().endsWith("/decision"),
-    );
-    await offerCard.getByRole("button", { name: "Phê duyệt" }).click();
-    expect((await selfDecision).status()).toBe(404);
-    await expect(page.getByText("Đã xảy ra lỗi. Vui lòng thử lại sau.").first()).toBeVisible();
+    // ---- Four eyes: the author is not offered the decision; it waits for the chosen approver.
+    await expect(offerCard.getByRole("button", { name: "Phê duyệt" })).toHaveCount(0);
+    await expect(offerCard.getByText(/^Chờ .+ duyệt$/)).toBeVisible();
     await page.reload({ waitUntil: "networkidle" });
     await expect(
       page

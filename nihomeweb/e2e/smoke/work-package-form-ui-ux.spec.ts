@@ -124,3 +124,41 @@ test("failed package save keeps the draft and localizes the network error", asyn
   await expect(dialog.getByTestId("work-package-lead")).toContainText(lead.name);
   expect(saveRequests).toBe(1);
 });
+
+// NICON 19/11/2026: the package's assigner is the receiving department's head
+// (TBP) by default, so the requester does not have to guess who leads it.
+test("the assigner defaults to the receiving department's head and follows the department", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const options = await (await api.get("/api/work-packages/options", { headers })).json();
+  const headOf = (code: string) => {
+    const department = options.departments.find((item: { code: string }) => item.code === code);
+    return {
+      index: options.departments.indexOf(department),
+      head: options.users.find(
+        (user: { roleGroupId: number; roleCode: string; canLead: boolean }) =>
+          user.roleGroupId === department.id && user.canLead && user.roleCode.endsWith("_MANAGER"),
+      ) as { name: string },
+    };
+  };
+  const procurement = headOf("PROCUREMENT");
+  const crm = headOf("CRM");
+  expect(procurement.head && crm.head, "seeded department heads required").toBeTruthy();
+
+  await loginInBrowserAs(page, TEST_USERS.admin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+  await page.goto("/admin/work-packages/projects");
+  await page.getByRole("button", { name: "Tạo nhóm công việc" }).click();
+  const dialog = page.getByRole("dialog", { name: "Tạo nhóm công việc cho phòng ban" });
+  await expect(dialog.getByText("Người phân công (TBP phòng nhận)")).toBeVisible();
+  await dialog.getByTestId("work-package-department").click();
+  await page.getByRole("option").nth(procurement.index).click();
+  await expect(dialog.getByTestId("work-package-lead")).toContainText(procurement.head.name);
+  await dialog.getByTestId("work-package-department").click();
+  await page.getByRole("option").nth(crm.index).click();
+  await expect(dialog.getByTestId("work-package-lead")).toContainText(crm.head.name);
+});

@@ -14,14 +14,16 @@ const token = (name: string, descKey = `emailTemplate.editor.token.${name}`) => 
 
 const TOKENS: Record<ApprovalTemplateKind, { name: string; descKey: string }[]> = {
   workPackage: [
-    "recipientName",
-    "workPackageCode",
-    "workPackageName",
-    "recordType",
-    "recordReference",
-    "senderName",
-    "workPackageUrl",
-  ].map((name) => token(name)),
+    token("recipientName", "approvalEmail.token.chosenApprover"),
+    ...[
+      "workPackageCode",
+      "workPackageName",
+      "recordType",
+      "recordReference",
+      "senderName",
+      "workPackageUrl",
+    ].map((name) => token(name)),
+  ],
   quote: [
     "recipientName",
     "senderName",
@@ -184,7 +186,7 @@ export default function WorkPackageApprovalTemplateConfig({
                 ? "quotes.approval.templateHint"
                 : kind === "quoteDecision"
                   ? "quotes.approval.decisionTemplateHint"
-                  : "approvalEmail.tokens",
+                  : "approvalEmail.tokensChosenApprover",
             )}
           />
           {saved && <p role="status">{t("form.saved")}</p>}

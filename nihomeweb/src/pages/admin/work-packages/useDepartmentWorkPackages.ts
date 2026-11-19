@@ -30,7 +30,12 @@ import {
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { getActiveCurrency } from "@/lib/numberFormat";
-import type { WorkPackageApprovalPreview, DeletionImpactResponse } from "@/services/adminApi";
+import type {
+  WorkPackageApprovalPreview,
+  WorkPackageApprovalRecipients,
+  WorkPackageApproverOption,
+  DeletionImpactResponse,
+} from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
@@ -157,7 +162,6 @@ export function useDepartmentWorkPackages() {
   const canManage = has(ADMIN_PERMS.workPackagesManage);
   const canAssign = has(ADMIN_PERMS.workPackagesAssign);
   const canProgress = has(ADMIN_PERMS.workPackagesProgress);
-  const canVerifyBusiness = has(ADMIN_PERMS.workPackagesVerify);
   const canCreate = canManage && (kind !== "Internal" || canAssign);
   const [rows, setRows] = useState<DepartmentWorkPackageResponse[]>([]);
   const [total, setTotal] = useState(0);
@@ -246,6 +250,9 @@ export function useDepartmentWorkPackages() {
     | null
   >(null);
   const [approvalBusy, setApprovalBusy] = useState(false);
+  // NICON users who may approve, and the one the sender picked.
+  const [approvers, setApprovers] = useState<WorkPackageApproverOption[]>([]);
+  const [approverId, setApproverId] = useState<number | null>(null);
   const [approvalTo, setApprovalTo] = useState("");
   const [approvalCc, setApprovalCc] = useState("");
   const [approvalDirty, setApprovalDirty] = useState(false);
@@ -561,6 +568,15 @@ export function useDepartmentWorkPackages() {
       ),
     [options.users, packageForm.departmentRoleGroupId],
   );
+  // The assigner defaults to the receiving department's head (TBP): a *_MANAGER
+  // role, or the only person there who may assign work. It can still be changed.
+  useEffect(() => {
+    if (!packageOpen || packageForm.leadUserId || departmentUsers.length === 0) return;
+    const head =
+      departmentUsers.find((user) => user.roleCode?.endsWith("_MANAGER")) ??
+      (departmentUsers.length === 1 ? departmentUsers[0] : undefined);
+    if (head) setPackageForm((current) => ({ ...current, leadUserId: head.userId }));
+  }, [packageOpen, packageForm.leadUserId, departmentUsers]);
   const taskUsers = useMemo(
     () =>
       options.users.filter(
@@ -628,7 +644,7 @@ export function useDepartmentWorkPackages() {
     packageErrors.name = t("workPackages.validation.name");
   if (!packageForm.departmentRoleGroupId)
     packageErrors.department = t("workPackages.validation.departmentRequired");
-  if (!packageForm.leadUserId) packageErrors.lead = t("workPackages.validation.leadRequired");
+  if (!packageForm.leadUserId) packageErrors.lead = t("workPackages.validation.assignerRequired");
   if (packageForm.purpose === "TenderPlanning") {
     if (!packageForm.plannedStart) packageErrors.start = t("workPackages.validation.datesRequired");
     if (!packageForm.plannedEnd) packageErrors.end = t("workPackages.validation.datesRequired");
@@ -1166,16 +1182,40 @@ export function useDepartmentWorkPackages() {
     packageId: number,
     offerId?: number,
     boqId?: number,
-    recipients?: { toEmail: string; ccEmails: string[] },
+    recipients?: WorkPackageApprovalRecipients,
   ) =>
     boqId
       ? adminApi.previewWorkPackageBoqApproval(packageId, boqId, recipients)
       : adminApi.previewWorkPackageApprovalEmail(packageId, offerId, recipients);
   const previewApproval = async (rowVersion: string, offerId?: number, boqId?: number) => {
     if (!detail || approvalBusy) return;
+    // The record's author cannot approve it, so they are left out of the picker.
+    const authorId = boqId
+      ? detail.boqWorkbooks?.find((boq) => boq.id === boqId)?.preparedByUserId
+      : offerId
+        ? detail.inputPriceOffers?.find((offer) => offer.id === offerId)?.createdByUserId
+        : detail.financeReview?.createdByUserId;
+    if (
+      !(await confirmAction(t("approvalEmail.sendConfirm"), {
+        destructive: false,
+        confirmLabel: t("approvalEmail.continue"),
+      }))
+    )
+      return;
     setApprovalBusy(true);
     try {
-      const { data } = await fetchApprovalPreview(detail.id, offerId, boqId);
+      const { data: options } = await adminApi.listWorkPackageApprovers(detail.id);
+      const eligible = options.filter((option) => option.userId !== authorId);
+      if (eligible.length === 0) {
+        toast({ variant: "destructive", title: t("approvalEmail.noApprover") });
+        return;
+      }
+      const chosen = eligible.find((option) => option.isDepartmentLead) ?? eligible[0];
+      setApprovers(eligible);
+      setApproverId(chosen.userId);
+      const { data } = await fetchApprovalPreview(detail.id, offerId, boqId, {
+        approverUserId: chosen.userId,
+      });
       setApprovalPreview({
         ...data,
         packageId: detail.id,
@@ -1217,7 +1257,34 @@ export function useDepartmentWorkPackages() {
         approvalPreview.packageId,
         approvalPreview.offerId,
         approvalPreview.boqId,
-        { toEmail: approvalTo.trim(), ccEmails: ccAddresses },
+        {
+          approverUserId: approverId ?? undefined,
+          toEmail: approvalTo.trim(),
+          ccEmails: ccAddresses,
+        },
+      );
+      setApprovalPreview({ ...approvalPreview, ...data, idempotencyKey: newIdempotencyKey() });
+      setApprovalTo(data.toEmail);
+      setApprovalCc((data.ccEmails ?? []).join(", "));
+      setApprovalDirty(false);
+    } catch (cause) {
+      setApprovalError(uiError(cause, t("workPackages.error.save")));
+    } finally {
+      setApprovalBusy(false);
+    }
+  };
+  // Choosing another approver addresses the email to them and renders it again.
+  const chooseApprover = async (userId: number) => {
+    if (!approvalPreview || approvalBusy || userId === approverId) return;
+    setApproverId(userId);
+    setApprovalBusy(true);
+    setApprovalError("");
+    try {
+      const { data } = await fetchApprovalPreview(
+        approvalPreview.packageId,
+        approvalPreview.offerId,
+        approvalPreview.boqId,
+        { approverUserId: userId, ccEmails: ccAddresses },
       );
       setApprovalPreview({ ...approvalPreview, ...data, idempotencyKey: newIdempotencyKey() });
       setApprovalTo(data.toEmail);
@@ -1366,7 +1433,6 @@ export function useDepartmentWorkPackages() {
     canManage,
     canAssign,
     canProgress,
-    canVerifyBusiness,
     canCreate,
     rows,
     total,
@@ -1411,6 +1477,9 @@ export function useDepartmentWorkPackages() {
     deleteOpen,
     setDeleteOpen,
     approvalPreview,
+    approvers,
+    approverId,
+    chooseApprover,
     setApprovalPreview,
     approvalBusy,
     approvalTo,

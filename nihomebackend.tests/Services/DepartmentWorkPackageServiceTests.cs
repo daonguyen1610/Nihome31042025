@@ -824,8 +824,13 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
 
         Assert.Equal(_accountantLead.Id, submitted!.ApprovalApproverUserId);
         Assert.Equal(_accountantLead.Id, (await _db.WorkPackageApprovalEmails.SingleAsync()).RecipientUserId);
-        // The chosen approver opens the package even outside the department and project.
-        Assert.NotNull(await _service.GetAsync(package.Id, _accountantLead.Id, canViewAll: false));
+        // The chosen approver opens the package even outside the department and project,
+        // and only they are offered the decision.
+        var approverView = await _service.GetAsync(package.Id, _accountantLead.Id, canViewAll: false);
+        Assert.True(approverView!.InputPriceOffers.Single().CanDecide);
+        Assert.Equal("ACCOUNTANT", approverView.InputPriceOffers.Single().ApprovalApproverName);
+        var leadView = await _service.GetAsync(package.Id, _procurementLead.Id, canViewAll: false);
+        Assert.False(leadView!.InputPriceOffers.Single().CanDecide);
         // The department lead was not chosen, so cannot decide.
         await Assert.ThrowsAsync<DepartmentWorkPackageScopeException>(() =>
             _service.DecideInputPriceOfferAsync(package.Id, offer.Id,
