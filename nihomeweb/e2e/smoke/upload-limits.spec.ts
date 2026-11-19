@@ -418,3 +418,45 @@ test("work task attachments follow the work task limit set in Settings", async (
     await hardDeleteBusinessRoot(api, adminHeaders, `/api/work-packages/${packageId}`);
   }
 });
+
+// Project documents (and CM preparation records, which use the same endpoint and
+// setting) follow the project document limit in Settings instead of a fixed 100 MB.
+test("project documents follow the project document limit set in Settings", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const settingsPath = `${LIMITS}/projectDocuments`;
+  const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
+    .maxFileSizeMb as number;
+  const projects = await (
+    await api.get("/api/operational-projects?pageSize=1", { headers: adminHeaders })
+  ).json();
+  expect(projects.items.length, "a seeded project is needed").toBeGreaterThan(0);
+  const projectId = projects.items[0].id as number;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.admin);
+    await setLimitInSettings(page, "project-document-files", "project-document-upload-limit", "1");
+
+    let uploads = 0;
+    page.on("request", (request) => {
+      if (
+        request.method() === "POST" &&
+        new URL(request.url()).pathname === `/api/operational-projects/${projectId}/documents`
+      )
+        uploads++;
+    });
+    await page.goto(`/admin/operational-projects/${projectId}`, { waitUntil: "networkidle" });
+    const section = page.getByTestId("project-documents-section");
+    const input = section.locator("#project-document-file");
+    await expect(input.locator("xpath=..")).toContainText("Tối đa 20 tệp, 1 MB mỗi tệp");
+    await input.setInputFiles(TWO_MB_PDF("ho-so-nghiem-thu.pdf"));
+    await expect(page.getByText("ho-so-nghiem-thu.pdf vượt quá 1 MB.").first()).toBeVisible();
+    expect(uploads).toBe(0);
+  } finally {
+    await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
+  }
+});

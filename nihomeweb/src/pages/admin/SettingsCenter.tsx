@@ -23,6 +23,7 @@ import {
   FileSearch,
   Users,
   ClipboardList,
+  FolderOpen,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -68,6 +69,7 @@ type SectionKey =
   | "rfq-files"
   | "customer-files"
   | "work-task-files"
+  | "project-document-files"
   | "map"
   | "slideshow";
 type OtpSettingsKey = keyof OtpSettingsResponse;
@@ -90,6 +92,11 @@ const sections: { key: SectionKey; labelKey: string; icon: LucideIcon }[] = [
   { key: "rfq-files", labelKey: "settings.rfqUploads.tab", icon: FileSearch },
   { key: "customer-files", labelKey: "settings.customerUploads.tab", icon: Users },
   { key: "work-task-files", labelKey: "settings.workTaskUploads.tab", icon: ClipboardList },
+  {
+    key: "project-document-files",
+    labelKey: "settings.projectDocumentUploads.tab",
+    icon: FolderOpen,
+  },
   { key: "map", labelKey: "settings.map.tab", icon: MapIcon },
   { key: "slideshow", labelKey: "set.slideshow", icon: Images },
 ];
@@ -706,6 +713,7 @@ const quoteUploadLimit = moduleUploadLimit("quotes");
 const rfqUploadLimit = moduleUploadLimit("rfqs");
 const customerUploadLimit = moduleUploadLimit("customers");
 const workTaskUploadLimit = moduleUploadLimit("workTasks");
+const projectDocumentUploadLimit = moduleUploadLimit("projectDocuments");
 
 /** One per-file upload limit setting (contracts, design files). */
 const UploadLimitTab = ({
@@ -1049,6 +1057,14 @@ const SettingsCenter = () => {
                 inputId="work-task-upload-limit"
                 loadLimit={workTaskUploadLimit.load}
                 saveLimit={workTaskUploadLimit.save}
+              />
+              <UploadLimitTab
+                sectionKey="project-document-files"
+                icon={FolderOpen}
+                keyPrefix="settings.projectDocumentUploads"
+                inputId="project-document-upload-limit"
+                loadLimit={projectDocumentUploadLimit.load}
+                saveLimit={projectDocumentUploadLimit.save}
               />
               <MapTab />
               <SlideshowSettings />

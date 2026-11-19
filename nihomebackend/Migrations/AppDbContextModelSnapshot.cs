@@ -10699,6 +10699,11 @@ namespace nihomebackend.Migrations
                     b.Property<string>("PrimaryPhone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("ProjectDocumentMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(100);
+
                     b.Property<string>("ProjectScheduleEmailBodyTemplate")
                         .HasColumnType("nvarchar(max)");
 

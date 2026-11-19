@@ -10,6 +10,7 @@ public class SiteSettings
     public const int DefaultRfqMaxFileSizeMb = 20;
     public const int DefaultCustomerMaxFileSizeMb = 20;
     public const int DefaultWorkTaskMaxFileSizeMb = 20;
+    public const int DefaultProjectDocumentMaxFileSizeMb = 100;
     public const string DefaultTimeZoneId = "Asia/Ho_Chi_Minh";
     public const string DefaultCurrencyCode = "VND";
     public const decimal DefaultUsdVndRate = 25_000m;
@@ -102,6 +103,9 @@ public class SiteSettings
     /// <summary>Largest file attached to a work package task.</summary>
     public int WorkTaskMaxFileSizeMb { get; set; } = DefaultWorkTaskMaxFileSizeMb;
 
+    /// <summary>Largest project document (project files, CM preparation records).</summary>
+    public int ProjectDocumentMaxFileSizeMb { get; set; } = DefaultProjectDocumentMaxFileSizeMb;
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
@@ -119,4 +123,5 @@ public enum UploadLimitKind
     Rfqs,
     Customers,
     WorkTasks,
+    ProjectDocuments,
 }

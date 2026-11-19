@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { Link } from "react-router-dom";
 import { Loader2, Play, RefreshCcw, Save, Upload } from "lucide-react";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
@@ -59,6 +60,8 @@ function preparationSnapshot(preparation: ConstructionPreparationResponse) {
 
 export function CmPreparationSection({ projectId }: { projectId: number }) {
   const { t } = useI18n();
+  // CM records are project documents: same Settings limit as the project's Documents tab.
+  const uploadLimitMb = useUploadLimit("projectDocuments");
   const uiError = useUiError();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -398,7 +401,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                     files={pendingFiles}
                     onChange={selectUploadFiles}
                     maxFiles={20}
-                    maxSizeMb={100}
+                    maxSizeMb={uploadLimitMb}
                     disabled={uploading}
                   />
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-2">

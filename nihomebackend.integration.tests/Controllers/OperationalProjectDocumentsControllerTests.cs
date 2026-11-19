@@ -915,6 +915,49 @@ public sealed class OperationalProjectDocumentsControllerTests(
         migrationIndexes["IX_project_documents_ConflictWithDocumentId_ConflictObservedDriveFileId_ConflictObservedDriveVersion"].IsUnique.Should().BeTrue();
     }
 
+    [Fact]
+    public async Task Upload_FollowsTheProjectDocumentLimitSetInSettings()
+    {
+        const string settingsPath = "/api/site-settings/upload-limits/projectDocuments";
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var original = await ReadJsonAsync(await Client.GetAsync(settingsPath));
+        // Default keeps today's 100 MB behaviour; the ceiling is the storage limit.
+        SiteSettings.DefaultProjectDocumentMaxFileSizeMb.Should().Be(100);
+        original.GetProperty("maxAllowedFileSizeMb").GetInt32().Should().Be(100);
+        var originalMb = original.GetProperty("maxFileSizeMb").GetInt32();
+        var projectId = await CreateProjectAsync();
+        try
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 101 }))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 1 })).EnsureSuccessStatusCode();
+
+            // Project staff read the limit without settings permission.
+            await AuthenticateAsAsync("PM");
+            (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(1);
+
+            await AuthenticateAsAsync("SUPER_ADMIN");
+            using var tooLarge = CreateUploadContent("ConstructionAcceptance", "ho-so-nghiem-thu.pdf", new byte[2 * 1024 * 1024]);
+            var refused = await SendUploadAsync(projectId, tooLarge);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await refused.Content.ReadAsStringAsync()).Should()
+                .Contain("ho-so-nghiem-thu.pdf").And.Contain("vượt giới hạn 1 MB");
+            (await CountDocumentsAsync(projectId)).Should().Be(0);
+
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 3 })).EnsureSuccessStatusCode();
+            await AuthenticateAsAsync("SUPER_ADMIN");
+            using var allowed = CreateUploadContent("ConstructionAcceptance", "ho-so-nghiem-thu.pdf", new byte[2 * 1024 * 1024]);
+            (await SendUploadAsync(projectId, allowed)).StatusCode.Should().Be(HttpStatusCode.Created);
+        }
+        finally
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = originalMb })).EnsureSuccessStatusCode();
+        }
+    }
+
     private async Task AuthenticateAsAsync(string role) =>
         await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, role));
 
