@@ -7,7 +7,7 @@ const compiled = ts.transpileModule(
   await readFile(new URL("../src/lib/newVersionReload.ts", import.meta.url), "utf8"),
   { compilerOptions: { module: ts.ModuleKind.ES2022, target: ts.ScriptTarget.ES2022 } },
 ).outputText;
-const { isStaleBundleError, reloadOnceForNewVersion } = await import(
+const { isStaleBundleError, reloadOnceForNewVersion, shouldReloadForPreloadError } = await import(
   "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
 );
 
@@ -64,4 +64,20 @@ test("without storage (private mode) it reloads at most once per page", () => {
     false,
   );
   assert.equal(reloads, 1);
+});
+
+test("a preload error from a page's own work, such as a broken PDF, never reloads the page", () => {
+  // Vite reports errors raised after a dynamic import (here pdf.js parsing a
+  // file) as preload errors; only a missing bundle file means a new version.
+  const invalidPdf = Object.assign(new Error("Invalid PDF structure."), {
+    name: "InvalidPDFException",
+  });
+  assert.equal(shouldReloadForPreloadError(invalidPdf), false);
+  assert.equal(shouldReloadForPreloadError(undefined), false);
+  assert.equal(
+    shouldReloadForPreloadError(
+      new TypeError("Failed to fetch dynamically imported module: https://niconvn.com/assets/X.js"),
+    ),
+    true,
+  );
 });
