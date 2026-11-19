@@ -97,4 +97,6 @@ public enum UploadLimitKind
     Design,
     Tenders,
     Capability,
+    /// <summary>Contract files; stored as ContractMaxFileSizeMb with its own 5 GB ceiling.</summary>
+    Contracts,
 }

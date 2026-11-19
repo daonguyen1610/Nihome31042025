@@ -38,23 +38,27 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
     }
 
     /// <summary>
-    /// Per-file upload limit of a module (design, tenders, capability). Readable by
+    /// Per-file upload limit of a module (design, tenders, capability, contracts). Readable by
     /// every signed-in user because the upload forms check it before sending a file.
     /// </summary>
     [HttpGet("upload-limits/{kind}")]
     [Authorize]
     public async Task<IActionResult> GetUploadLimit(UploadLimitKind kind, CancellationToken ct) =>
-        Ok(new { maxFileSizeMb = await svc.GetUploadLimitMbAsync(kind, ct), maxAllowedFileSizeMb = BusinessFileRules.MaxAllowedMb });
+        Ok(new { maxFileSizeMb = await svc.GetUploadLimitMbAsync(kind, ct), maxAllowedFileSizeMb = MaxAllowedMb(kind) });
+
+    private static int MaxAllowedMb(UploadLimitKind kind) =>
+        kind == UploadLimitKind.Contracts ? ProjectDocumentStorageService.ContractMaxFileSizeMb : BusinessFileRules.MaxAllowedMb;
 
     [HttpPut("upload-limits/{kind}")]
     [Authorize]
     [RequirePermission("system.settings", "manage")]
     public async Task<IActionResult> UpdateUploadLimit(UploadLimitKind kind, [FromBody] UpdateContractUploadLimitRequest req, CancellationToken ct)
     {
-        if (req.MaxFileSizeMb < 1 || req.MaxFileSizeMb > BusinessFileRules.MaxAllowedMb)
-            return BadRequest(new { code = "UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = BusinessFileRules.MaxAllowedMb, message = $"Giới hạn tệp phải từ 1 đến {BusinessFileRules.MaxAllowedMb} MB. Ví dụ: 50 MB." });
+        var maxAllowed = MaxAllowedMb(kind);
+        if (req.MaxFileSizeMb < 1 || req.MaxFileSizeMb > maxAllowed)
+            return BadRequest(new { code = "UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = maxAllowed, message = $"Giới hạn tệp phải từ 1 đến {maxAllowed} MB. Ví dụ: 50 MB." });
         var saved = await svc.UpdateUploadLimitAsync(kind, req.MaxFileSizeMb, ct);
-        return Ok(new { maxFileSizeMb = saved, maxAllowedFileSizeMb = BusinessFileRules.MaxAllowedMb });
+        return Ok(new { maxFileSizeMb = saved, maxAllowedFileSizeMb = maxAllowed });
     }
 
     [HttpPut("contract-uploads")]

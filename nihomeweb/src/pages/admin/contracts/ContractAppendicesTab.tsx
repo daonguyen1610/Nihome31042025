@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { blankVoDraft } from "./contractDetailShared";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
@@ -82,6 +83,8 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
   const uiError = useUiError();
   const confirmAction = useConfirm();
   const { t } = useI18n();
+  // The per-file limit from Settings, so the picker refuses what the server would.
+  const uploadLimitMb = useUploadLimit("contracts");
   const { toast } = useToast();
   const [draft, setDraft] = useState<VoDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -456,6 +459,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                     setDraft((current) => (current ? { ...current, pendingFiles } : current))
                   }
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  maxSizeMb={uploadLimitMb}
                   disabled={saving}
                   testId="contract-appendix-files"
                 />

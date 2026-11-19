@@ -57,6 +57,49 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ContractUploadLimit_IsReadableByUploaders_ThroughTheSharedUploadLimitRoute()
+    {
+        const string sharedPath = "/api/site-settings/upload-limits/contracts";
+        const string settingsPath = "/api/site-settings/contract-uploads";
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        try
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 64 }))
+                .EnsureSuccessStatusCode();
+
+            // Sales uploads contract files without settings permission, so the form
+            // must still learn the Settings limit (and the contract ceiling) first.
+            await AuthTestHelper.AuthenticateAsync(Client,
+                client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+            (await Client.GetAsync(settingsPath)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            var read = await Client.GetAsync(sharedPath);
+            read.StatusCode.Should().Be(HttpStatusCode.OK);
+            var body = await ReadJsonAsync(read);
+            body.GetProperty("maxFileSizeMb").GetInt32().Should().Be(64);
+            body.GetProperty("maxAllowedFileSizeMb").GetInt32().Should().Be(5120);
+            (await Client.PutAsJsonAsync(sharedPath, new { maxFileSizeMb = 50 }))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            // Saved through the shared route, contracts keep their own 5 GB ceiling.
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(sharedPath, new { maxFileSizeMb = 5120 }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(5120);
+            (await Client.PutAsJsonAsync(sharedPath, new { maxFileSizeMb = 5121 }))
+                .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+        finally
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original }))
+                .EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task DesignUploadLimit_IsReadableByUploaders_AndEditableOnlyWithSettingsPermission()
     {
         const string path = "/api/site-settings/upload-limits/design";

@@ -1504,12 +1504,12 @@
     "ja": "この資料を削除しますか？"
   },
   {
-    "key": "contracts.documents.uploadHint",
+    "key": "contracts.documents.uploadHintMulti",
     "category": "contracts",
-    "vi": "Kéo thả hoặc chọn nhiều tệp cùng lúc; tối đa 20 MB mỗi tệp.",
-    "en": "Drag and drop or choose several files at once; up to 20 MB each.",
-    "zh": "可拖放或一次选择多个文件；每个最大 20 MB。",
-    "ja": "複数ファイルをまとめてドロップまたは選択できます（1ファイル最大20 MB）。"
+    "vi": "Kéo thả hoặc chọn nhiều tệp cùng lúc. Giới hạn dung lượng theo Cài đặt hợp đồng.",
+    "en": "Drag and drop or choose several files at once. The size limit follows the contract Settings.",
+    "zh": "可拖放或一次选择多个文件。大小限制以合同设置为准。",
+    "ja": "複数ファイルをまとめてドロップまたは選択できます。サイズ上限は契約の設定に従います。"
   },
   {
     "key": "contracts.timeline.empty",

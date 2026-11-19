@@ -16,7 +16,10 @@ async function setLimitInSettings(page: Page, section: string, inputId: string, 
   // Wait for the save to land: navigating away at once cancels the request.
   const saved = page.waitForResponse(
     (response) =>
-      response.request().method() === "PUT" && new URL(response.url()).pathname.startsWith(LIMITS),
+      response.request().method() === "PUT" &&
+      /^\/api\/site-settings\/(upload-limits|contract-uploads)/.test(
+        new URL(response.url()).pathname,
+      ),
   );
   await input
     .locator("xpath=ancestor::div[contains(@class,'space-y-3')][1]")
@@ -165,5 +168,50 @@ test("tender and capability upload limits set in Settings stop wrong files befor
     if (projectId)
       await hardDeleteBusinessRoot(api, headers, `/api/operational-projects/${projectId}`);
     if (customerId) await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
+  }
+});
+
+// Contract files follow the contract limit in Settings too. Sales cannot read
+// Settings, yet the picker must refuse a file the server would reject, instead
+// of a fixed 20 MB.
+test("contract documents and appendices follow the contract limit set in Settings", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
+  const settingsPath = "/api/site-settings/contract-uploads";
+  const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
+    .maxFileSizeMb as number;
+  const contracts = await (await api.get("/api/contracts?pageSize=1", { headers })).json();
+  const contractId = contracts.items[0].id as number;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.admin);
+    await setLimitInSettings(page, "contracts", "contract-upload-limit", "1");
+
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    let uploads = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && /\/api\/contracts\/\d+\//.test(request.url())) uploads++;
+    });
+    await page.goto(`/admin/contracts/${contractId}?tab=documents`, { waitUntil: "networkidle" });
+    const input = page.getByTestId("contract-attachment-files");
+    const dropZone = input.locator("xpath=..");
+    await expect(dropZone).toContainText("Tối đa 20 tệp, 1 MB mỗi tệp");
+    await input.setInputFiles(TWO_MB_PDF("hop-dong-ky.pdf"));
+    await expect(page.getByText("hop-dong-ky.pdf vượt quá 1 MB.").first()).toBeVisible();
+    // A file within the limit is still accepted into the list.
+    await input.setInputFiles({
+      name: "bien-ban.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(200 * 1024),
+    });
+    await expect(page.getByText("bien-ban.pdf").first()).toBeVisible();
+    expect(uploads).toBe(0);
+  } finally {
+    await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
   }
 });
