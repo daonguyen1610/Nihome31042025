@@ -1,16 +1,21 @@
 using System.Globalization;
+using NihomeBackend.Models;
 
 namespace NihomeBackend.Services;
 
 /// <summary>
 /// Type and size rules for business documents uploaded to design records,
-/// tenders and capability documents. Each module's size limit is an
+/// tenders, capability documents and contracts. Each module's size limit is an
 /// administrator setting (Cài đặt → Giới hạn tệp …, see <see cref="UploadLimitKind"/>).
 /// </summary>
 public static class BusinessFileRules
 {
     /// <summary>Highest limit an administrator may set, as for other project documents.</summary>
     public const int MaxAllowedMb = (int)(ProjectDocumentStorageService.MaxFileSize / (1024 * 1024));
+
+    /// <summary>Highest limit an administrator may set for a module; contract files go up to 5 GB.</summary>
+    public static int MaxAllowedMbFor(UploadLimitKind kind) =>
+        kind == UploadLimitKind.Contracts ? ProjectDocumentStorageService.ContractMaxFileSizeMb : MaxAllowedMb;
 
     public static readonly IReadOnlySet<string> AllowedExtensions = new HashSet<string>(
         [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"],

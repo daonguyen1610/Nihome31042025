@@ -7,6 +7,7 @@ import { useMemo, useState } from "react";
 import { Loader2, Trash2, Upload } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
+import { useBusinessFileCheck } from "@/hooks/useBusinessFileCheck";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
@@ -43,6 +44,7 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
   const uiError = useUiError();
   const confirmAction = useConfirm();
   const { t } = useI18n();
+  const fileCheck = useBusinessFileCheck("contracts");
   const { toast } = useToast();
   const [uploadKind, setUploadKind] = useState<ContractAttachmentKind>(
     contract.hasSignedScan ? "Supporting" : "SignedScan",
@@ -138,8 +140,9 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
               <MultiFilePicker
                 files={pendingFiles}
                 onChange={setPendingFiles}
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                hint={t("contracts.documents.uploadHint")}
+                accept={fileCheck.accept}
+                validate={fileCheck.problemFor}
+                hint={t("contracts.documents.uploadHintRule", { rule: fileCheck.rule })}
                 disabled={uploading}
                 testId="contract-attachment-files"
               />

@@ -39,6 +39,12 @@ type MultiFilePickerProps = {
   id?: string;
   testId?: string;
   hint?: string;
+  /**
+   * Replaces the built-in type and size check, for a module whose limit is set
+   * in Settings. Returns why the file is refused, or null to accept it; the
+   * caller's hint then states the rule.
+   */
+  validate?: (file: File) => string | null;
 };
 
 export function MultiFilePicker({
@@ -52,6 +58,7 @@ export function MultiFilePicker({
   id,
   testId,
   hint,
+  validate,
 }: MultiFilePickerProps) {
   const { t } = useI18n();
   const generatedId = useId();
@@ -61,10 +68,11 @@ export function MultiFilePicker({
   const [error, setError] = useState<string | null>(null);
 
   const limitsHint = useMemo(() => {
+    if (validate) return t("common.filePicker.countHint", { count: maxFiles });
     return t("common.filePicker.hint")
       .replace("{count}", String(maxFiles))
       .replace("{size}", String(maxSizeMb));
-  }, [maxFiles, maxSizeMb, t]);
+  }, [maxFiles, maxSizeMb, t, validate]);
 
   const addFiles = (selected: File[]) => {
     if (selected.length === 0) return;
@@ -72,7 +80,11 @@ export function MultiFilePicker({
     const failures: string[] = [];
     const valid: File[] = [];
     for (const file of selected) {
-      if (!matchesAccept(file, accept)) {
+      if (validate) {
+        const problem = validate(file);
+        if (problem) failures.push(problem);
+        else valid.push(file);
+      } else if (!matchesAccept(file, accept)) {
         failures.push(t("common.filePicker.unsupported").replace("{name}", file.name));
       } else if (file.size > maxSizeMb * 1024 * 1024) {
         failures.push(

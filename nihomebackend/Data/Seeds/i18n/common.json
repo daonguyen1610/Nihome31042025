@@ -1280,6 +1280,14 @@
     "ja": "ファイルをここにドロップ、またはクリックして選択"
   },
   {
+    "key": "common.filePicker.countHint",
+    "category": "common",
+    "vi": "Tối đa {count} tệp mỗi lần",
+    "en": "Up to {count} files at a time",
+    "zh": "每次最多 {count} 个文件",
+    "ja": "一度に最大 {count} ファイル"
+  },
+  {
     "key": "common.filePicker.hint",
     "category": "common",
     "vi": "Tối đa {count} tệp, {size} MB mỗi tệp",

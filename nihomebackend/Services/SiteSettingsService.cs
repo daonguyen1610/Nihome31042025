@@ -57,16 +57,6 @@ public class SiteSettingsService(AppDbContext db)
         return threshold;
     }
 
-    public async Task<SiteSettings> UpdateContractUploadLimitAsync(int maxFileSizeMb, CancellationToken ct)
-    {
-        var settings = await db.SiteSettings.FirstOrDefaultAsync(ct)
-            ?? throw new InvalidOperationException("SiteSettings chưa được khởi tạo.");
-        settings.ContractMaxFileSizeMb = maxFileSizeMb;
-        settings.UpdatedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
-        return settings;
-    }
-
     public async Task<int> UpdateUploadLimitAsync(UploadLimitKind kind, int maxFileSizeMb, CancellationToken ct)
     {
         var settings = await db.SiteSettings.FirstOrDefaultAsync(ct)
@@ -76,6 +66,7 @@ public class SiteSettingsService(AppDbContext db)
             case UploadLimitKind.Design: settings.DesignMaxFileSizeMb = maxFileSizeMb; break;
             case UploadLimitKind.Tenders: settings.TenderMaxFileSizeMb = maxFileSizeMb; break;
             case UploadLimitKind.Capability: settings.CapabilityMaxFileSizeMb = maxFileSizeMb; break;
+            case UploadLimitKind.Contracts: settings.ContractMaxFileSizeMb = maxFileSizeMb; break;
         }
         settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -84,7 +75,7 @@ public class SiteSettingsService(AppDbContext db)
 
     /// <summary>
     /// The administrator's per-file limit for a module, used as saved. The settings
-    /// endpoint only accepts 1 to <see cref="BusinessFileRules.MaxAllowedMb"/>.
+    /// endpoint only accepts 1 to <see cref="BusinessFileRules.MaxAllowedMbFor"/>.
     /// </summary>
     public async Task<int> GetUploadLimitMbAsync(UploadLimitKind kind, CancellationToken ct = default)
     {
@@ -94,12 +85,14 @@ public class SiteSettingsService(AppDbContext db)
                 settings.DesignMaxFileSizeMb,
                 settings.TenderMaxFileSizeMb,
                 settings.CapabilityMaxFileSizeMb,
+                settings.ContractMaxFileSizeMb,
             })
             .FirstOrDefaultAsync(ct);
         return kind switch
         {
             UploadLimitKind.Design => limits?.DesignMaxFileSizeMb ?? SiteSettings.DefaultDesignMaxFileSizeMb,
             UploadLimitKind.Tenders => limits?.TenderMaxFileSizeMb ?? SiteSettings.DefaultTenderMaxFileSizeMb,
+            UploadLimitKind.Contracts => limits?.ContractMaxFileSizeMb ?? SiteSettings.DefaultContractMaxFileSizeMb,
             _ => limits?.CapabilityMaxFileSizeMb ?? SiteSettings.DefaultCapabilityMaxFileSizeMb,
         };
     }

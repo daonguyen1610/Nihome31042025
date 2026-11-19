@@ -591,7 +591,7 @@ Ghi khảo sát gắn với Cơ hội hoặc Dự án: chụp ảnh, quay video 
 
 - Bản scan phải có loại tài liệu là bản scan hợp đồng đã ký và thuộc đúng hợp đồng này; tài liệu hỗ trợ không thay được. Thiếu bản scan thì ứng dụng mở tab Tài liệu và hợp đồng giữ Bản nháp. Hợp đồng đã ký trước đây mà chưa có bản scan vẫn giữ trạng thái; hãy bổ sung trước khi triển khai.
 - Ngày phải theo thứ tự ký → bắt đầu → kết thúc. Sửa thông tin chung không bỏ qua được các kiểm tra trạng thái.
-- Tệp hợp đồng và phụ lục có giới hạn dung lượng ở **Cài đặt → Tệp hợp đồng** (mặc định 100 MB, quản trị viên nâng được tới 5 GB).
+- Tệp hợp đồng và phụ lục có giới hạn dung lượng ở **Cài đặt → Tệp hợp đồng** (mặc định 100 MB, quản trị viên nâng được tới 5 GB). Tab **Tài liệu** và hộp tạo/sửa **Phụ lục (VO)** ghi giới hạn hiện hành và báo ngay khi chọn tệp sai loại hoặc quá lớn, nêu tên tệp, dung lượng và giới hạn; tệp đó không được gửi lên.
 - Tab lịch sử hợp đồng nằm sau các tab làm việc.
 
 **Đợt thanh toán.** Lập các đợt tạm ứng, theo giai đoạn, quyết toán. Đổi trạng thái đợt và kế toán phụ trách bằng thao tác trên đợt; sửa lịch vẫn giữ đợt và lịch sử. Đợt đã xử lý hoặc đã có đề nghị thanh toán không xóa được. Khi đợt thu của hợp đồng đầu ra chưa thu tới hạn, người phụ trách hợp đồng và kế toán được giao nhận một thông báo; đổi hạn thì có nhắc mới.

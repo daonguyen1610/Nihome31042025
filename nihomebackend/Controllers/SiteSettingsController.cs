@@ -28,44 +28,25 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         public decimal? ThresholdPercent { get; set; }
     }
 
-    [HttpGet("contract-uploads")]
-    [Authorize]
-    [RequirePermission("system.settings", "view")]
-    public async Task<IActionResult> GetContractUploadLimit()
-    {
-        var settings = await svc.GetAsync();
-        return Ok(new { maxFileSizeMb = settings?.ContractMaxFileSizeMb ?? SiteSettings.DefaultContractMaxFileSizeMb, maxAllowedFileSizeMb = ProjectDocumentStorageService.ContractMaxFileSizeMb });
-    }
-
     /// <summary>
-    /// Per-file upload limit of a module (design, tenders, capability). Readable by
+    /// Per-file upload limit of a module (design, tenders, capability, contracts). Readable by
     /// every signed-in user because the upload forms check it before sending a file.
     /// </summary>
     [HttpGet("upload-limits/{kind}")]
     [Authorize]
     public async Task<IActionResult> GetUploadLimit(UploadLimitKind kind, CancellationToken ct) =>
-        Ok(new { maxFileSizeMb = await svc.GetUploadLimitMbAsync(kind, ct), maxAllowedFileSizeMb = BusinessFileRules.MaxAllowedMb });
+        Ok(new { maxFileSizeMb = await svc.GetUploadLimitMbAsync(kind, ct), maxAllowedFileSizeMb = BusinessFileRules.MaxAllowedMbFor(kind) });
 
     [HttpPut("upload-limits/{kind}")]
     [Authorize]
     [RequirePermission("system.settings", "manage")]
     public async Task<IActionResult> UpdateUploadLimit(UploadLimitKind kind, [FromBody] UpdateContractUploadLimitRequest req, CancellationToken ct)
     {
-        if (req.MaxFileSizeMb < 1 || req.MaxFileSizeMb > BusinessFileRules.MaxAllowedMb)
-            return BadRequest(new { code = "UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = BusinessFileRules.MaxAllowedMb, message = $"Giới hạn tệp phải từ 1 đến {BusinessFileRules.MaxAllowedMb} MB. Ví dụ: 50 MB." });
+        var maxAllowedMb = BusinessFileRules.MaxAllowedMbFor(kind);
+        if (req.MaxFileSizeMb < 1 || req.MaxFileSizeMb > maxAllowedMb)
+            return BadRequest(new { code = "UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = maxAllowedMb, message = $"Giới hạn tệp phải từ 1 đến {maxAllowedMb} MB. Ví dụ: 50 MB." });
         var saved = await svc.UpdateUploadLimitAsync(kind, req.MaxFileSizeMb, ct);
-        return Ok(new { maxFileSizeMb = saved, maxAllowedFileSizeMb = BusinessFileRules.MaxAllowedMb });
-    }
-
-    [HttpPut("contract-uploads")]
-    [Authorize]
-    [RequirePermission("system.settings", "manage")]
-    public async Task<IActionResult> UpdateContractUploadLimit([FromBody] UpdateContractUploadLimitRequest req, CancellationToken ct)
-    {
-        if (req.MaxFileSizeMb < 1 || req.MaxFileSizeMb > ProjectDocumentStorageService.ContractMaxFileSizeMb)
-            return BadRequest(new { code = "CONTRACT_UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = ProjectDocumentStorageService.ContractMaxFileSizeMb, message = $"Giới hạn tệp hợp đồng phải từ 1 đến {ProjectDocumentStorageService.ContractMaxFileSizeMb} MB. Ví dụ: 100 MB." });
-        var settings = await svc.UpdateContractUploadLimitAsync(req.MaxFileSizeMb, ct);
-        return Ok(new { maxFileSizeMb = settings.ContractMaxFileSizeMb, maxAllowedFileSizeMb = ProjectDocumentStorageService.ContractMaxFileSizeMb });
+        return Ok(new { maxFileSizeMb = saved, maxAllowedFileSizeMb = maxAllowedMb });
     }
 
     /// <summary>Get OTP verification settings.</summary>

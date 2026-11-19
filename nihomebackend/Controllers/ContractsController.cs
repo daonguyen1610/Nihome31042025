@@ -47,12 +47,6 @@ public class ContractsController(
 {
     private const string StorageSubfolder = "contracts";
 
-    private static readonly HashSet<string> AllowedExtensions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg",
-        };
-
     [HttpGet]
     [RequirePermission("crm.contracts", "view")]
     public async Task<ActionResult<ContractListResponse>> List(
@@ -1141,15 +1135,12 @@ public class ContractsController(
         var maxFileSizeMb = (await db.SiteSettings.AsNoTracking()
             .Select(settings => (int?)settings.ContractMaxFileSizeMb)
             .FirstOrDefaultAsync(ct)) ?? SiteSettings.DefaultContractMaxFileSizeMb;
-        if (file.Length > (long)maxFileSizeMb * 1024 * 1024)
+        var problem = BusinessFileRules.Problem(file, maxFileSizeMb);
+        if (problem is not null)
         {
-            return new StoredFile { Result = BadRequest(new { message = $"Tệp vượt quá {maxFileSizeMb} MB. Hãy chọn tệp nhỏ hơn rồi thử lại." }) };
+            return new StoredFile { Result = BadRequest(new { message = problem }) };
         }
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
-        {
-            return new StoredFile { Result = BadRequest(new { message = "Định dạng file không được hỗ trợ (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG)." }) };
-        }
 
         var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
         Directory.CreateDirectory(uploadDir);

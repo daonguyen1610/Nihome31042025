@@ -328,7 +328,9 @@ Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ li�
   (5 GiB). Mỗi lần upload đọc giá trị hiện hành; transport và bước kiểm tra
   file hợp đồng cho phép tối đa 5 GiB. Multipart cần thêm dung lượng đĩa tạm.
   Reverse proxy phải cho body ít nhất 5.126 MiB và đủ thời gian upload. API:
-  `GET/PUT /api/site-settings/contract-uploads` với `system.settings.view/manage`.
+  `GET /api/site-settings/upload-limits/contracts` (mọi người đã đăng nhập, để
+  tab Tài liệu và Phụ lục kiểm tệp trước khi gửi) và `PUT` cùng đường dẫn với
+  `system.settings.manage`. Kiểm loại/dung lượng dùng chung `BusinessFileRules`.
   Các endpoint upload khác giữ giới hạn riêng.
 - Template email: xem [6.3](#63-email-ứng-dụng).
 - Google Drive: cấu hình trong database, xem [18.3](#183-google-drive-trên-iis).

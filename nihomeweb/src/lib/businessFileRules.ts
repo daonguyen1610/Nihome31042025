@@ -1,5 +1,5 @@
 /**
- * Business documents uploaded to design records, tenders and capability
+ * Business documents uploaded to design records, tenders, contracts and capability
  * documents. Mirrors BusinessFileRules on the server so a wrong file is caught
  * before it uploads; each module's size limit comes from Settings.
  * Free of imports so it can be unit-tested.

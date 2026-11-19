@@ -678,6 +678,7 @@ const moduleUploadLimit = (kind: UploadLimitKind) => ({
   load: () => adminApi.getUploadLimit(kind),
   save: (maxFileSizeMb: number) => adminApi.updateUploadLimit(kind, maxFileSizeMb),
 });
+const contractUploadLimit = moduleUploadLimit("contracts");
 const designUploadLimit = moduleUploadLimit("design");
 const tenderUploadLimit = moduleUploadLimit("tenders");
 const capabilityUploadLimit = moduleUploadLimit("capability");
@@ -966,8 +967,8 @@ const SettingsCenter = () => {
                 icon={FileText}
                 keyPrefix="settings.contractUploads"
                 inputId="contract-upload-limit"
-                loadLimit={adminApi.getContractUploadLimit}
-                saveLimit={adminApi.updateContractUploadLimit}
+                loadLimit={contractUploadLimit.load}
+                saveLimit={contractUploadLimit.save}
               />
               <UploadLimitTab
                 sectionKey="design-files"

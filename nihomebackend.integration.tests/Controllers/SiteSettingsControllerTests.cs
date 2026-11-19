@@ -12,7 +12,7 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     public async Task ContractUploadLimit_AcceptsFiveGigabytes_AndRejectsLargerValue()
     {
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        const string path = "/api/site-settings/contract-uploads";
+        const string path = "/api/site-settings/upload-limits/contracts";
         var original = (await ReadJsonAsync(await Client.GetAsync(path)))
             .GetProperty("maxFileSizeMb").GetInt32();
         try
@@ -32,28 +32,42 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task ContractUploadLimit_RequiresSettingsPermission_AndPersistsValidValue()
+    public async Task ContractUploadLimit_IsReadableByContractStaff_AndEditableOnlyWithSettingsPermission()
     {
-        const string path = "/api/site-settings/contract-uploads";
+        const string path = "/api/site-settings/upload-limits/contracts";
         (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
 
+        // Sales staff have no settings permission but check contract files before uploading.
         await AuthTestHelper.AuthenticateAsync(Client,
             client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        var read = await Client.GetAsync(path);
+        read.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(read)).GetProperty("maxAllowedFileSizeMb").GetInt32().Should().Be(5120);
         (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
             .StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        var invalid = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 0 });
-        invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await ReadJsonAsync(invalid)).GetProperty("code").GetString()
-            .Should().Be("CONTRACT_UPLOAD_LIMIT_INVALID");
+        var original = (await ReadJsonAsync(await Client.GetAsync(path)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        try
+        {
+            var invalid = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 0 });
+            invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(invalid)).GetProperty("code").GetString()
+                .Should().Be("UPLOAD_LIMIT_INVALID");
 
-        var updated = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 75 });
-        updated.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadJsonAsync(await Client.GetAsync(path)))
-            .GetProperty("maxFileSizeMb").GetInt32().Should().Be(75);
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 75 }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(await Client.GetAsync(path)))
+                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(75);
+        }
+        finally
+        {
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = original }))
+                .EnsureSuccessStatusCode();
+        }
     }
 
     [Fact]

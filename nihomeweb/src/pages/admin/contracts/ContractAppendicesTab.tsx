@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
+import { useBusinessFileCheck } from "@/hooks/useBusinessFileCheck";
 import { formatMoney, formatNumber } from "@/lib/displaySettings";
 import { MoneyInput } from "@/components/ui/money-input";
 import { cn } from "@/lib/utils";
@@ -82,6 +83,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
   const uiError = useUiError();
   const confirmAction = useConfirm();
   const { t } = useI18n();
+  const fileCheck = useBusinessFileCheck("contracts");
   const { toast } = useToast();
   const [draft, setDraft] = useState<VoDraft | null>(null);
   const [saving, setSaving] = useState(false);
@@ -455,7 +457,9 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                   onChange={(pendingFiles) =>
                     setDraft((current) => (current ? { ...current, pendingFiles } : current))
                   }
-                  accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
+                  accept={fileCheck.accept}
+                  validate={fileCheck.problemFor}
+                  hint={fileCheck.rule}
                   disabled={saving}
                   testId="contract-appendix-files"
                 />

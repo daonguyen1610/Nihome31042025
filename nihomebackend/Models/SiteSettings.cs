@@ -97,4 +97,5 @@ public enum UploadLimitKind
     Design,
     Tenders,
     Capability,
+    Contracts,
 }

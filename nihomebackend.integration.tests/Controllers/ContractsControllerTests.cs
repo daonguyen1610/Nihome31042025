@@ -837,7 +837,7 @@ public class ContractsControllerTests : IntegrationTestBase
         var rejected = await Client.PostAsync($"/api/contracts/{contractId}/attachments", rejectedForm);
         rejected.StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await ReadJsonAsync(rejected)).GetProperty("message").GetString()
-            .Should().Contain("10 MB");
+            .Should().Contain("“over-limit.pdf” nặng 11,0 MB, vượt giới hạn 10 MB");
         await WithDbAsync(async db =>
         {
             var settings = await db.SiteSettings.SingleAsync();
