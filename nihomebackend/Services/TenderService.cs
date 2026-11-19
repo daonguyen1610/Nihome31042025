@@ -1126,7 +1126,8 @@ public class TenderService(
                 (item.Purpose == WorkPackagePurpose.TenderPlanning || item.Purpose == WorkPackagePurpose.General))
             .Select(item => new
             {
-                SchemaVersion = 1,
+                // 2: work task Resources was removed.
+                SchemaVersion = 2,
                 item.Id,
                 item.Code,
                 item.Name,

@@ -312,7 +312,7 @@ Nhóm nằm ở tab nào là do nó đã gắn hợp đồng hay chưa. Gắn h�
 
 Hồ sơ chuyên môn của Thiết kế và Thi công vẫn làm ở màn hình riêng; nhóm công việc chung chỉ để điều phối. Trên trang chi tiết, **Sửa** đổi được tên, mô tả, ngày kế hoạch; nhóm chung theo dự án đổi được hợp đồng (cùng dự án). Dự án và phòng nhận việc không đổi được. Nút **Quay lại** giữ đúng tab, từ khóa và bộ lọc trước đó.
 
-**Tạo công việc trong nhóm.** Trưởng nhóm phòng nhận việc mở nhóm và tạo công việc: mã WBS, người thực hiện cùng phòng, ngày, đầu vào/nguồn lực, công việc tiền nhiệm (tùy chọn), người theo dõi CC. Nếu công việc tính KPI, chọn một định nghĩa KPI đang áp dụng. Mọi công việc theo dự án và mọi công việc có KPI phải có người xác nhận khác người thực hiện; mặc định là trưởng phòng nếu không chọn. Ô chọn tiền nhiệm tự loại các công việc có thể tạo vòng lặp phụ thuộc.
+**Tạo công việc trong nhóm.** Trưởng nhóm phòng nhận việc mở nhóm và tạo công việc: mã WBS, người thực hiện cùng phòng, ngày, công việc tiền nhiệm (tùy chọn), người theo dõi CC. Nếu công việc tính KPI, chọn một định nghĩa KPI đang áp dụng. Mọi công việc theo dự án và mọi công việc có KPI phải có người xác nhận khác người thực hiện; mặc định là trưởng phòng nếu không chọn. Ô chọn tiền nhiệm tự loại các công việc có thể tạo vòng lặp phụ thuộc.
 
 - Đính kèm tối đa 10 tệp mỗi lần (PDF, Word, Excel, JPG, PNG; tối đa 20 MB/tệp). Công việc được lưu trước, tệp tải sau; tệp lỗi được giữ để thử lại.
 - Nút **Tệp đính kèm** trên mỗi công việc để xem và tải. Trưởng nhóm hoặc người thực hiện thêm/xóa tệp khi nhóm còn mở; trưởng nhóm vẫn xóa được sau khi đóng nhóm. Tệp công việc hiện lưu trên máy chủ, không vào danh mục Drive.
