@@ -52,11 +52,12 @@ import {
 } from "@/services/adminApi";
 import { formatDateTime, formatMoney } from "@/lib/displaySettings";
 import { getActiveCurrency } from "@/lib/numberFormat";
+import { randomId } from "@/lib/randomId";
 
 type BoqLineDraft = ProjectBoqRevisionRequest["lines"][number] & { draftId: string };
 
 const emptyLine = (): BoqLineDraft => ({
-  draftId: crypto.randomUUID(),
+  draftId: randomId(),
   itemCode: "",
   description: "",
   unit: "",

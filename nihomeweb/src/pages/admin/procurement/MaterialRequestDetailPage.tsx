@@ -43,6 +43,7 @@ import {
 } from "@/services/adminApi";
 import { useAppSelector } from "@/store";
 import { formatDateTime } from "@/lib/displaySettings";
+import { randomId } from "@/lib/randomId";
 
 type UserOption = PersonIdentity & { userId: number; userName: string };
 type RequestLineDraft = MaterialRequestUpsertRequest["lines"][number] & { draftId: string };
@@ -888,7 +889,7 @@ const RequestEditForm = ({
           onClick={() =>
             setLines((current) => [
               ...current,
-              { draftId: crypto.randomUUID(), projectBoqLineId: 0, requestedQuantity: 1 },
+              { draftId: randomId(), projectBoqLineId: 0, requestedQuantity: 1 },
             ])
           }
         >

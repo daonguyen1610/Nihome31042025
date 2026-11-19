@@ -44,6 +44,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { formatDate, formatDate as formatDateInZone } from "@/lib/displaySettings";
 import { todayIsoDate } from "@/lib/displaySettings";
+import { randomId } from "@/lib/randomId";
 
 interface ProjectMasterScheduleProps {
   projectId: number;
@@ -71,7 +72,7 @@ interface ScheduleTreeRow {
 const DAY_MS = 86_400_000;
 
 const makeDefaultItem = (start?: string | null, end?: string | null): DraftItem => ({
-  nodeId: crypto.randomUUID(),
+  nodeId: randomId(),
   parentNodeId: "",
   wbsCode: "1",
   title: "",

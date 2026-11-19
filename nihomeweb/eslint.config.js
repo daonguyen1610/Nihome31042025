@@ -21,7 +21,21 @@ export default tseslint.config(
       ...reactHooks.configs.recommended.rules,
       "react-refresh/only-export-components": ["warn", { allowConstantExport: true }],
       "@typescript-eslint/no-unused-vars": "off",
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "crypto",
+          property: "randomUUID",
+          message:
+            "crypto.randomUUID is missing on pages served over plain http (production). Use randomId() from @/lib/randomId.",
+        },
+      ],
     },
+  },
+  {
+    // The two places that may call it: both check it exists first.
+    files: ["src/lib/randomId.ts", "src/lib/logger.ts"],
+    rules: { "no-restricted-properties": "off" },
   },
   {
     files: [

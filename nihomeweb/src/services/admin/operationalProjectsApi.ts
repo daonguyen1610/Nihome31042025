@@ -82,6 +82,7 @@ import type {
   OperationalProjectAssignmentCommentResponse,
 } from "./types/designProjects";
 import { postIdempotent } from "./helpers";
+import { randomId } from "@/lib/randomId";
 
 export const operationalProjectsApi = {
   listWorkPackages: (params: DepartmentWorkPackageQuery = {}) =>
@@ -340,7 +341,7 @@ export const operationalProjectsApi = {
     api.post<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions`,
       body,
-      withIdempotencyKey(crypto.randomUUID()),
+      withIdempotencyKey(randomId()),
     ),
   updateProjectScheduleRevision: (
     projectId: number,
@@ -350,7 +351,7 @@ export const operationalProjectsApi = {
     api.put<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}`,
       body,
-      withIdempotencyKey(crypto.randomUUID()),
+      withIdempotencyKey(randomId()),
     ),
   submitProjectScheduleRevision: (
     projectId: number,
@@ -362,7 +363,7 @@ export const operationalProjectsApi = {
     api.post<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/submit`,
       { approverUserId, rowVersion, previewToken },
-      withIdempotencyKey(crypto.randomUUID()),
+      withIdempotencyKey(randomId()),
     ),
   reviewProjectScheduleRevision: (
     projectId: number,
@@ -375,7 +376,7 @@ export const operationalProjectsApi = {
     api.post<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions/${revisionId}/review`,
       { decision, comment, rowVersion, previewToken },
-      withIdempotencyKey(crypto.randomUUID()),
+      withIdempotencyKey(randomId()),
     ),
   getConstructionPreparation: (projectId: number) =>
     api.get<ConstructionPreparationResponse>(
@@ -387,7 +388,7 @@ export const operationalProjectsApi = {
       body,
       {
         headers: {
-          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIdempotencyKey(randomId()).headers,
           ...(body.rowVersion ? withIfMatch(body.rowVersion).headers : {}),
         },
       },
@@ -398,7 +399,7 @@ export const operationalProjectsApi = {
       { rowVersion },
       {
         headers: {
-          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIdempotencyKey(randomId()).headers,
           ...withIfMatch(rowVersion).headers,
         },
       },
@@ -409,7 +410,7 @@ export const operationalProjectsApi = {
       { rowVersion },
       {
         headers: {
-          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIdempotencyKey(randomId()).headers,
           ...withIfMatch(rowVersion).headers,
         },
       },
@@ -490,7 +491,7 @@ export const operationalProjectsApi = {
     body: ConfirmDeletionRequest,
   ) =>
     api.delete(`/operational-projects/${projectId}/construction/resource-requests/${id}`, {
-      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      headers: withIdempotencyKey(randomId()).headers,
       data: body,
     }),
   submitConstructionResourceRequest: (projectId: number, id: number, rowVersion: string) =>
@@ -544,7 +545,7 @@ export const operationalProjectsApi = {
     ),
   deleteQaQcDossier: (projectId: number, id: number, body: ConfirmDeletionRequest) =>
     api.delete(`/operational-projects/${projectId}/construction/qa-qc/dossiers/${id}`, {
-      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      headers: withIdempotencyKey(randomId()).headers,
       data: body,
     }),
   submitQaQcDossier: (projectId: number, id: number, rowVersion: string) =>
@@ -592,7 +593,7 @@ export const operationalProjectsApi = {
     ),
   deleteConstructionQsBatch: (projectId: number, id: number, body: ConfirmDeletionRequest) =>
     api.delete(`/operational-projects/${projectId}/construction/qs-batches/${id}`, {
-      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      headers: withIdempotencyKey(randomId()).headers,
       data: body,
     }),
   submitConstructionQsBatch: (projectId: number, id: number, rowVersion: string) =>
@@ -661,7 +662,7 @@ export const operationalProjectsApi = {
     ),
   deleteHseViolation: (projectId: number, id: number, body: ConfirmDeletionRequest) =>
     api.delete(`/operational-projects/${projectId}/hse-violations/${id}`, {
-      headers: withIdempotencyKey(crypto.randomUUID()).headers,
+      headers: withIdempotencyKey(randomId()).headers,
       data: body,
     }),
   transitionHseViolation: (

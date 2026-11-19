@@ -1,5 +1,6 @@
 import api from "@/lib/api";
 import type { PersonIdentity } from "@/lib/people";
+import { randomId } from "@/lib/randomId";
 
 export type RfqStatus = "Draft" | "Issued" | "UnderEvaluation" | "Awarded" | "Closed" | "Cancelled";
 export interface RfqHeader {
@@ -231,7 +232,7 @@ export const rfqApi = {
     const data = new FormData();
     data.append("file", file);
     return api.post<RfqFile>(`${base(projectId)}/documents/upload`, data, {
-      headers: { "Idempotency-Key": crypto.randomUUID() },
+      headers: { "Idempotency-Key": randomId() },
     });
   },
   list: (projectId: number, params: RfqFilter) =>

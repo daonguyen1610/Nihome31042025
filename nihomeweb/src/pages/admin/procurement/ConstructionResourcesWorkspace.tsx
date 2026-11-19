@@ -26,6 +26,7 @@ import {
   type ContractType,
 } from "@/services/adminApi";
 import { formatDateTime, formatNumber } from "@/lib/displaySettings";
+import { randomId } from "@/lib/randomId";
 
 type ContractOption = { id: number; contractNumber: string; status: string };
 type SupplyDocument = { id: number; originalFileName: string };
@@ -81,8 +82,7 @@ function DraftContract({ projectId, onCreated }: { projectId: number; onCreated:
         scopeOfWork: scope.trim() || null,
       };
       const payload = JSON.stringify(body);
-      if (attempt.current?.payload !== payload)
-        attempt.current = { payload, key: crypto.randomUUID() };
+      if (attempt.current?.payload !== payload) attempt.current = { payload, key: randomId() };
       await adminApi.createConstructionProcurementContract(projectId, body, attempt.current.key);
       onCreated();
     } catch (cause) {

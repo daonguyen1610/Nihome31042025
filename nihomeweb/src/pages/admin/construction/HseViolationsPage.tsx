@@ -62,6 +62,7 @@ import {
   type UpdateHseViolationRequest,
 } from "@/services/adminApi";
 import { dateTimeLocalToIso, toDateTimeLocalValue, formatDateTime } from "@/lib/displaySettings";
+import { randomId } from "@/lib/randomId";
 
 const STATUSES: HseViolationStatus[] = [
   "Draft",
@@ -300,7 +301,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
     const occurredAt = dateTimeLocalToIso(form.occurredAt);
     if (!occurredAt) return null;
     return {
-      offlineClientId: formRecord?.offlineClientId ?? crypto.randomUUID(),
+      offlineClientId: formRecord?.offlineClientId ?? randomId(),
       occurredAt,
       location: form.location.trim(),
       category: form.category.trim(),
@@ -332,21 +333,19 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
     try {
       let saved: HseViolationResponse;
       if (formMode === "create") {
-        saved = (await adminApi.createHseViolation(projectId, fields, crypto.randomUUID())).data;
+        saved = (await adminApi.createHseViolation(projectId, fields, randomId())).data;
       } else if (formMode === "edit" && formRecord) {
         const body: UpdateHseViolationRequest = { ...fields, rowVersion: formRecord.rowVersion };
-        saved = (
-          await adminApi.updateHseViolation(projectId, formRecord.id, body, crypto.randomUUID())
-        ).data;
+        saved = (await adminApi.updateHseViolation(projectId, formRecord.id, body, randomId()))
+          .data;
       } else if (formRecord) {
         const body: CorrectHseViolationRequest = {
           ...fields,
           rowVersion: formRecord.rowVersion,
           reason: form.reason.trim(),
         };
-        saved = (
-          await adminApi.correctHseViolation(projectId, formRecord.id, body, crypto.randomUUID())
-        ).data;
+        saved = (await adminApi.correctHseViolation(projectId, formRecord.id, body, randomId()))
+          .data;
       } else return;
       setFormOpen(false);
       setDetail(saved);
@@ -372,7 +371,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
         row.id,
         action,
         { ...extra, rowVersion: row.rowVersion },
-        crypto.randomUUID(),
+        randomId(),
       );
       setDetail(data);
       setDecisionAction(null);

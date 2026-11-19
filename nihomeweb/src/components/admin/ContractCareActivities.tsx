@@ -20,6 +20,7 @@ import {
   type ContractCareActivityListResponse,
   type ContractCareActivityType,
 } from "@/services/adminApi";
+import { randomId } from "@/lib/randomId";
 
 const types: ContractCareActivityType[] = ["Call", "Email", "Meeting", "Note"];
 
@@ -74,7 +75,7 @@ export default function ContractCareActivities({
     }
     const payload = JSON.stringify({ type, content: trimmed });
     if (draftKey.current?.payload !== payload) {
-      draftKey.current = { payload, key: crypto.randomUUID() };
+      draftKey.current = { payload, key: randomId() };
     }
     submitting.current = true;
     setSaving(true);

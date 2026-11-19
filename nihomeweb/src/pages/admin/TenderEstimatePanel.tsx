@@ -37,6 +37,7 @@ import {
   type TenderStatus,
 } from "@/services/adminApi";
 import { isTenderChecklistEvidenceReady } from "./tenderChecklist";
+import { randomId } from "@/lib/randomId";
 
 type Props = {
   tender: TenderResponse;
@@ -229,7 +230,7 @@ export default function TenderEstimatePanel({
           note: decisionNote.trim() || null,
           rowVersion: tender.rowVersion,
         },
-        crypto.randomUUID(),
+        randomId(),
       );
       onTenderChanged(data);
       setSubmitOpen(false);

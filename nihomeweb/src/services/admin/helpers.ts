@@ -1,7 +1,8 @@
 import api, { withIdempotencyKey } from "@/lib/api";
 import type { BusinessDocumentUploadResponse } from "./types/vendors";
+import { randomId } from "@/lib/randomId";
 export const postIdempotent = <T>(url: string, body: unknown) =>
-  api.post<T>(url, body, withIdempotencyKey(crypto.randomUUID()));
+  api.post<T>(url, body, withIdempotencyKey(randomId()));
 export const uploadBusinessDocument = (
   area: "vendors" | "acceptance" | "as-built" | "handover",
   file: File,

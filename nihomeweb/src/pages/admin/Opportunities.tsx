@@ -88,6 +88,7 @@ import {
   normalizeCurrency,
   useDisplaySettings,
 } from "@/lib/displaySettings";
+import { randomId } from "@/lib/randomId";
 
 const ACTIVITY_TYPES: OpportunityActivityType[] = ["Call", "Email", "Meeting", "Note"];
 const SIGNED_CONTRACT_REQUIRED_CODE = "OPPORTUNITY_SIGNED_CONTRACT_REQUIRED";
@@ -452,7 +453,7 @@ const AdminOpportunities = () => {
       };
       const serialized = JSON.stringify(payload);
       if (createAttempt.current.body !== serialized)
-        createAttempt.current = { body: serialized, key: crypto.randomUUID() };
+        createAttempt.current = { body: serialized, key: randomId() };
       const created = await adminApi.createOpportunity(payload, createAttempt.current.key);
       if (continuation.source) {
         setCreating(false);

@@ -100,6 +100,7 @@ import type {
   TransitionHandoverStatusRequest,
 } from "./types/handover";
 import { postIdempotent, uploadBusinessDocument } from "./helpers";
+import { randomId } from "@/lib/randomId";
 
 export const constructionApi = {
   listConstructionTasks: (params: ConstructionTaskListParams = {}) => {
@@ -325,7 +326,7 @@ export const constructionApi = {
       body,
       {
         headers: {
-          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIdempotencyKey(randomId()).headers,
           ...withIfMatch(body.rowVersion).headers,
         },
       },
@@ -371,7 +372,7 @@ export const constructionApi = {
       body,
       {
         headers: {
-          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIdempotencyKey(randomId()).headers,
           ...withIfMatch(body.rowVersion).headers,
         },
       },
@@ -441,7 +442,7 @@ export const constructionApi = {
       body,
       {
         headers: {
-          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIdempotencyKey(randomId()).headers,
           ...withIfMatch(body.rowVersion).headers,
         },
       },
@@ -471,7 +472,7 @@ export const constructionApi = {
       body,
       {
         headers: {
-          ...withIdempotencyKey(crypto.randomUUID()).headers,
+          ...withIdempotencyKey(randomId()).headers,
           ...withIfMatch(body.rowVersion).headers,
         },
       },

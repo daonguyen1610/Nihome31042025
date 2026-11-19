@@ -67,6 +67,7 @@ import {
 import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { formatDate as formatDateInZone, formatMoney } from "@/lib/displaySettings";
 import { todayIsoDate } from "@/lib/displaySettings";
+import { randomId } from "@/lib/randomId";
 
 // Number of days before end-date that triggers the red "ending soon" badge.
 const ENDING_SOON_DAYS = 30;
@@ -931,7 +932,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     try {
       const serialized = JSON.stringify(payload);
       if (createAttempt.current.body !== serialized)
-        createAttempt.current = { body: serialized, key: crypto.randomUUID() };
+        createAttempt.current = { body: serialized, key: randomId() };
       const created = await adminApi.createContract(payload, createAttempt.current.key);
       if (continuation.source) {
         navigate(`/admin/contracts/${created.data.id}`);
