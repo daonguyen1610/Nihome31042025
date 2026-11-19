@@ -139,7 +139,6 @@ export default function ContractReminderTemplateConfig({
               token: `{{${name}}}`,
               desc: t(`emailTemplate.editor.token.${name}`),
             }))}
-            hint={t("contractReminder.tokens")}
           />
           {saved && <p role="status">{t("contractReminder.saved")}</p>}
         </>

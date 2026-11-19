@@ -181,13 +181,13 @@ export default function WorkPackageApprovalTemplateConfig({
               token: `{{${name}}}`,
               desc: t(descKey),
             }))}
-            hint={t(
+            hint={
               kind === "quote"
-                ? "quotes.approval.templateHint"
+                ? t("quotes.approval.templateHint")
                 : kind === "quoteDecision"
-                  ? "quotes.approval.decisionTemplateHint"
-                  : "approvalEmail.tokensChosenApprover",
-            )}
+                  ? t("quotes.approval.decisionTemplateHint")
+                  : undefined
+            }
           />
           {saved && <p role="status">{t("form.saved")}</p>}
         </>

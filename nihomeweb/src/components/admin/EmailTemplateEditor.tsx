@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { Eye, Maximize2, Minimize2, RotateCcw, Save } from "lucide-react";
+import { Eye, Maximize2, Minimize2, RotateCcw, Save, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -155,22 +155,22 @@ export default function EmailTemplateEditor({
             </p>
           )}
         </div>
-        <div className="rounded-lg border bg-muted/50 p-4">
-          <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-            {t("emailTemplate.editor.tokens")}
-          </p>
-          <div className="flex flex-wrap gap-2">
+        {/* Plain names people recognise; the code each inserts stays in the label. */}
+        <div className="space-y-2">
+          <p className="text-sm font-medium text-foreground">{t("emailTemplate.editor.tokens")}</p>
+          <div className="flex flex-wrap gap-1.5">
             {tokens.map(({ token, desc }) => (
               <button
                 key={token}
                 type="button"
                 disabled={disabled}
                 onClick={() => insertToken(token)}
-                className="inline-flex max-w-full flex-wrap items-center gap-1.5 rounded-md border bg-background px-2.5 py-1.5 text-left text-xs transition hover:border-primary hover:text-primary disabled:pointer-events-none disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-full border bg-background px-3 py-1 text-xs text-foreground/80 transition-colors hover:border-primary hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50"
                 title={desc}
+                aria-label={`${desc} ${token}`}
               >
-                <code className="break-all font-mono">{token}</code>
-                <span className="text-muted-foreground">– {desc}</span>
+                <Plus className="h-3 w-3 shrink-0 text-muted-foreground" aria-hidden />
+                {desc}
               </button>
             ))}
           </div>
