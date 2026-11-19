@@ -92,6 +92,68 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task EditingAPackage_CanHandItToAnotherAssignerInTheReceivingDepartment()
+    {
+        var manager = AddUser("PROCUREMENT_MANAGER", _procurementGroup, canAssign: true);
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        UpdateDepartmentWorkPackageRequest Edit(int leadUserId, string rowVersion) => new()
+        {
+            Name = package.Name,
+            Status = package.Status,
+            PlannedStart = package.PlannedStart,
+            PlannedEnd = package.PlannedEnd,
+            LeadUserId = leadUserId,
+            RowVersion = rowVersion,
+        };
+
+        // Someone outside the receiving department, or without the right to assign, is refused.
+        var outsider = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateAsync(package.Id, Edit(_accountantLead.Id, package.RowVersion), _pm.Id));
+        Assert.Contains("Người phân công", outsider.Message);
+        await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateAsync(package.Id, Edit(_warehouseStaff.Id, package.RowVersion), _pm.Id));
+
+        var updated = await _service.UpdateAsync(package.Id, Edit(manager.Id, package.RowVersion), _pm.Id);
+
+        Assert.Equal(manager.Id, updated!.LeadUserId);
+        _notifications.Verify(item => item.NotifyFromTemplateAsync(
+            manager.Id, "work-package.assigned", It.IsAny<IDictionary<string, string>>(),
+            It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+        // Leaving the assigner out keeps the current one.
+        var unchanged = await _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+        {
+            Name = updated.Name,
+            Status = updated.Status,
+            PlannedStart = updated.PlannedStart,
+            PlannedEnd = updated.PlannedEnd,
+            RowVersion = updated.RowVersion,
+        }, _pm.Id);
+        Assert.Equal(manager.Id, unchanged!.LeadUserId);
+    }
+
+    [Fact]
+    public async Task InternalWork_KeepsItsCreatorAsAssigner()
+    {
+        var request = ProjectRequest();
+        request.Kind = "Internal";
+        request.OperationalProjectId = null;
+        var package = await _service.CreateAsync(request, _procurementLead.Id);
+        var colleague = AddUser("PROCUREMENT_MANAGER", _procurementGroup, canAssign: true);
+
+        var refused = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateAsync(package.Id, new UpdateDepartmentWorkPackageRequest
+            {
+                Name = package.Name,
+                Status = package.Status,
+                PlannedStart = package.PlannedStart,
+                PlannedEnd = package.PlannedEnd,
+                LeadUserId = colleague.Id,
+                RowVersion = package.RowVersion,
+            }, _procurementLead.Id));
+        Assert.Contains("nội bộ", refused.Message);
+    }
+
+    [Fact]
     public async Task ProjectManager_AssignsQuoteLinkedPackageOwnedBySales()
     {
         var opportunity = new Opportunity

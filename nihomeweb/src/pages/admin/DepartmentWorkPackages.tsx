@@ -198,6 +198,7 @@ const DepartmentWorkPackages = () => {
     unavailablePredecessorIds,
     load,
     departmentUsers,
+    editAssigners,
     taskUsers,
     orderedTasks,
     availableDepartments,
@@ -1434,6 +1435,22 @@ const DepartmentWorkPackages = () => {
           </DialogHeader>
           {detail && packageEditForm && (
             <div className="grid gap-4 sm:grid-cols-2">
+              {detail.kind !== "Internal" && (
+                <Field label={t("workPackages.field.assigner")} className="sm:col-span-2">
+                  <div data-testid="work-package-edit-assigner">
+                    <SearchableSelect
+                      value={packageEditForm.leadUserId ? String(packageEditForm.leadUserId) : ""}
+                      onChange={(value) =>
+                        setPackageEditForm((current) =>
+                          current ? { ...current, leadUserId: Number(value) } : current,
+                        )
+                      }
+                      ariaLabel={t("workPackages.field.assigner")}
+                      options={editAssigners.map((user) => personOption(user, t))}
+                    />
+                  </div>
+                </Field>
+              )}
               <Field label={t("workPackages.field.name")} className="sm:col-span-2">
                 <Input
                   maxLength={300}

@@ -283,6 +283,8 @@ export interface UpdateDepartmentWorkPackageRequest {
   name: string;
   description?: string | null;
   contractId?: number | null;
+  /** The new assigner; omitted keeps the current one. */
+  leadUserId?: number;
   status: WorkPackageStatus;
   plannedStart?: string | null;
   plannedEnd?: string | null;

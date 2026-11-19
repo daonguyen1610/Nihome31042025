@@ -577,6 +577,14 @@ export function useDepartmentWorkPackages() {
       (departmentUsers.length === 1 ? departmentUsers[0] : undefined);
     if (head) setPackageForm((current) => ({ ...current, leadUserId: head.userId }));
   }, [packageOpen, packageForm.leadUserId, departmentUsers]);
+  // Who may take over as assigner when editing: people of the receiving department who may assign.
+  const editAssigners = useMemo(
+    () =>
+      options.users.filter(
+        (user) => user.roleGroupId === detail?.departmentRoleGroupId && user.canLead,
+      ),
+    [options.users, detail?.departmentRoleGroupId],
+  );
   const taskUsers = useMemo(
     () =>
       options.users.filter(
@@ -695,6 +703,7 @@ export function useDepartmentWorkPackages() {
     setPackageEditForm({
       name: detail.name,
       description: detail.description,
+      leadUserId: detail.leadUserId,
       status: detail.status,
       plannedStart: detail.plannedStart,
       plannedEnd: detail.plannedEnd,
@@ -1519,6 +1528,7 @@ export function useDepartmentWorkPackages() {
     unavailablePredecessorIds,
     load,
     departmentUsers,
+    editAssigners,
     taskUsers,
     orderedTasks,
     availableDepartments,

@@ -399,11 +399,20 @@ public sealed partial class DepartmentWorkPackageService(
         // A legacy link may be resent unchanged or cleared, never set anew.
         if (request.ContractId.HasValue && request.ContractId != entity.ContractId)
             throw Error(NotTiedToContract);
+        var newLeadId = request.LeadUserId is { } leadId && leadId != entity.LeadUserId ? leadId : (int?)null;
+        if (newLeadId.HasValue)
+        {
+            // Internal work is created and assigned by the same person.
+            if (entity.Kind == WorkPackageKind.Internal)
+                throw Error("Công việc nội bộ giữ người tạo làm người phân công; không đổi được người phân công.");
+            await ValidateDepartmentLeadAsync(newLeadId.Value, entity.DepartmentRoleGroupId, ct);
+        }
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         entity.Name = request.Name.Trim();
         entity.Description = TrimOrNull(request.Description);
         entity.ContractId = request.ContractId;
+        if (newLeadId.HasValue) entity.LeadUserId = newLeadId.Value;
         entity.Status = status;
         entity.PlannedStart = AsUtcDate(request.PlannedStart);
         entity.PlannedEnd = AsUtcDate(request.PlannedEnd);
@@ -414,6 +423,10 @@ public sealed partial class DepartmentWorkPackageService(
         var response = await LoadAndMapAsync(id, callerUserId, admin, ct);
         await AddHistoryAsync(id, "Package", id, reopening ? "Reopened" : "Updated", response, callerUserId, ct);
         await CommitAsync(transaction, ct);
+        if (newLeadId.HasValue)
+            await NotifySafelyAsync(newLeadId.Value, "work-package.assigned",
+                new Dictionary<string, string> { ["packageName"] = entity.Name, ["packageCode"] = entity.Code },
+                "DepartmentWorkPackage", entity.Id, $"/admin/work-packages/{entity.Id}", ct);
         return response;
     }
 
