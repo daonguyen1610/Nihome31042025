@@ -63,10 +63,10 @@ test("a design file limit set in Settings stops oversized and wrong files before
       waitUntil: "networkidle",
     });
     const fileInput = page.locator('input[type="file"][accept*=".pdf"]').first();
-    await expect(page.getByRole("button", { name: /Tải|Upload/i }).first()).toHaveAttribute(
-      "title",
-      /1 MB/,
-    );
+    // Documents without a file offer "Tải tệp lên"; those with one, "Thay tệp".
+    await expect(
+      page.getByRole("button", { name: /Tải tệp lên|Thay tệp|Upload file|Replace file/i }).first(),
+    ).toHaveAttribute("title", /1 MB/);
 
     await fileInput.setInputFiles({
       name: "mat-bang-tang-1.pdf",

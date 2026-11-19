@@ -56,9 +56,27 @@ export function extractApiError(
       if (key) return translate(key);
     }
     if ("errors" in data && data.errors && typeof data.errors === "object") {
-      return Object.entries(data.errors as Record<string, string[]>)
-        .map(([field, messages]) => `${field}: ${messages.join("; ")}`)
-        .join(" · ");
+      // Imports list row errors ({ message, messageKey }); validation maps each
+      // field to its messages. Never assume one shape: a crash here blanks the page.
+      if (Array.isArray(data.errors)) {
+        const rows = data.errors
+          .map((item: unknown) => {
+            if (typeof item === "string") return item;
+            if (!item || typeof item !== "object") return "";
+            const row = item as { message?: unknown; messageKey?: unknown };
+            if (translate && typeof row.messageKey === "string") return translate(row.messageKey);
+            return typeof row.message === "string" ? row.message : "";
+          })
+          .filter(Boolean);
+        if (rows.length > 0) return rows.join(" · ");
+      } else {
+        return Object.entries(data.errors as Record<string, unknown>)
+          .map(([field, messages]) => {
+            const text = Array.isArray(messages) ? messages.join("; ") : String(messages);
+            return `${field}: ${text}`;
+          })
+          .join(" · ");
+      }
     }
     if ("message" in data && typeof (data as { message?: unknown }).message === "string") {
       return (data as { message: string }).message;

@@ -111,7 +111,9 @@ test("multi-file upload stores every quote and customer document", async ({
     await page.locator("#quote-document-label").fill("Multi-file evidence");
     await page.getByRole("button", { name: uploadButton }).click();
     for (const name of quoteFileNames) {
-      await expect(page.locator("li").filter({ hasText: name })).toBeVisible({ timeout: 15_000 });
+      await expect(page.locator("main li").filter({ hasText: name })).toBeVisible({
+        timeout: 15_000,
+      });
     }
     await expect
       .poll(async () => {

@@ -184,7 +184,9 @@ test.describe("Material rate customer import workflow", () => {
     );
     await page.getByTestId("material-rates-import-confirm").click();
     expect((await emptyFormResponse).status()).toBe(400);
-    await expect(page.getByText(/must contain at least one data row/i)).toBeVisible();
+    await expect(
+      page.locator("main").getByText(/must contain at least one data row/i),
+    ).toBeVisible();
 
     const invalidCsv = [
       "MaterialCode,MaterialName,Unit,NormPerSqm,UnitRate,WastePercent",

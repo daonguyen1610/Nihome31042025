@@ -53,3 +53,25 @@ test("a failure keeps its reason, and finished rows can be cleared", () => {
     [running],
   );
 });
+
+test("a batch that all uploaded leaves the screen by itself; failures stay to be read", (t) => {
+  t.mock.timers.enable({ apis: ["setTimeout"] });
+  const tracker = createUploadTracker({ hideSucceededAfterMs: 4000 });
+  const a = tracker.start({ name: "a.pdf", size: 1, abort: () => {} });
+  const b = tracker.start({ name: "b.pdf", size: 1, abort: () => {} });
+  tracker.finish(a);
+  t.mock.timers.tick(5000);
+  assert.equal(tracker.getSnapshot().length, 2, "nothing hides while b is still uploading");
+  tracker.finish(b);
+  t.mock.timers.tick(3999);
+  assert.equal(tracker.getSnapshot().length, 2, "the confirmation is visible for a moment");
+  t.mock.timers.tick(1);
+  assert.deepEqual(tracker.getSnapshot(), []);
+
+  const ok = tracker.start({ name: "ok.pdf", size: 1, abort: () => {} });
+  const bad = tracker.start({ name: "bad.pdf", size: 1, abort: () => {} });
+  tracker.finish(ok);
+  tracker.fail(bad, new Error("no"));
+  t.mock.timers.tick(10_000);
+  assert.equal(tracker.getSnapshot().length, 2, "a failure keeps the tray until cleared");
+});
