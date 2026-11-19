@@ -70,7 +70,6 @@
   {"key":"workPackages.field.kpi","category":"work-packages","vi":"KPI liên kết (không bắt buộc)","en":"Linked KPI (optional)","zh":"关联KPI（可选）","ja":"連携KPI（任意）"},
   {"key":"workPackages.field.predecessors","category":"work-packages","vi":"Đầu việc tiên quyết","en":"Predecessor tasks","zh":"前置任务","ja":"先行タスク"},
   {"key":"workPackages.field.cc","category":"work-packages","vi":"Người theo dõi (CC)","en":"Followers (CC)","zh":"关注人（CC）","ja":"フォロワー（CC）"},
-  {"key":"workPackages.field.resources","category":"work-packages","vi":"Nguồn lực / tài liệu đầu vào","en":"Resources / inputs","zh":"资源 / 输入资料","ja":"リソース / 入力資料"},
   {"key":"workPackages.create.title","category":"work-packages","vi":"Tạo nhóm công việc cho phòng ban","en":"Create a department work package","zh":"创建部门工作包","ja":"部門作業パッケージを作成"},
   {"key":"workPackages.create.inputPriceForQuote","category":"work-packages","vi":"Yêu cầu giá đầu vào cho báo giá #{quote}","en":"Request input pricing for quote #{quote}","zh":"为报价 #{quote} 请求输入报价","ja":"見積 #{quote} の原価見積を依頼"},
   {"key":"workPackages.create.help","category":"work-packages","vi":"Dự án là bản ghi dùng chung. Chọn phòng nhận và người chủ trì; người này sẽ chia đầu việc cho nhân sự cùng phòng.","en":"The project is shared. Select the receiving department and its lead, who will assign tasks within the department.","zh":"项目为共享记录。选择接收部门及负责人，由负责人向本部门成员分配任务。","ja":"プロジェクトは共有レコードです。受入部門と責任者を選択し、責任者が部門内にタスクを割り当てます。"},

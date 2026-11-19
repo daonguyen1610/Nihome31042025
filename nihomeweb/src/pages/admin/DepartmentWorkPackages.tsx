@@ -1916,15 +1916,6 @@ const DepartmentWorkPackages = () => {
                 }
               />
             </Field>
-            <Field label={t("workPackages.field.resources")} className="sm:col-span-2">
-              <Textarea
-                maxLength={2000}
-                value={taskForm.resources ?? ""}
-                onChange={(event) =>
-                  setTaskForm((current) => ({ ...current, resources: event.target.value }))
-                }
-              />
-            </Field>
             <Field
               label={t("workPackages.attachments.addFiles")}
               htmlFor="work-task-files"
