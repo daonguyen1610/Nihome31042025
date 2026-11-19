@@ -127,6 +127,12 @@
       "adminDescription": "Người chủ trì phòng được thông báo khi nhận một nhóm công việc mới."
     },
     {
+      "code": "work-package.input-pricing-requested",
+      "module": "work.packages",
+      "channel": "Both",
+      "adminDescription": "Cả phòng Cung ứng nhận thông báo và email, kèm tên người được chỉ định duyệt, khi Kinh doanh hoặc PM yêu cầu báo giá đầu vào."
+    },
+    {
       "code": "work-task.assigned",
       "module": "work.packages",
       "channel": "InApp",

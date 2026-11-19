@@ -130,6 +130,57 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task InputPriceRequest_EmailsTheWholeProcurementDepartment_NamingTheApprover()
+    {
+        var opportunity = new Opportunity
+        {
+            Name = "Nhà máy bao bì Long An",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            OwnerUserId = _sales.Id,
+            Stage = OpportunityStage.Proposal,
+        };
+        _db.Opportunities.Add(opportunity);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "ProcurementInputPricing";
+        request.Name = "Yêu cầu giá đầu vào hệ thống PCCC";
+        request.SourceOpportunityId = opportunity.Id;
+        var sent = new Dictionary<int, IDictionary<string, string>>();
+        _notifications.Setup(item => item.NotifyFromTemplateAsync(
+                It.IsAny<int>(), "work-package.input-pricing-requested",
+                It.IsAny<IDictionary<string, string>>(), It.IsAny<string>(), It.IsAny<int?>(),
+                It.IsAny<string>(), It.IsAny<string>()))
+            .Callback((int userId, string _, IDictionary<string, string>? data, string? _, int? _, string? _, string? _) =>
+                sent[userId] = data!)
+            .ReturnsAsync((NihomeBackend.Models.DTOs.Responses.NotificationResponse?)null);
+
+        var result = await _service.CreateAsync(request, _pm.Id);
+
+        // NICON: Procurement only saw this inside the admin. The template is
+        // delivered by email too, to everyone in the department, once each.
+        Assert.Equal(new[] { _procurementLead.Id, _warehouseStaff.Id }.Order(), sent.Keys.Order());
+        var data = sent[_warehouseStaff.Id];
+        Assert.Equal("Nhà máy bao bì Long An", data["opportunityName"]);
+        Assert.Equal(_procurementLead.FullName, data["approverName"]);
+        Assert.Equal(_pm.FullName, data["requesterName"]);
+        Assert.Equal($"https://nicon.example.test/admin/work-packages/{result.Id}", data["packageLink"]);
+        _notifications.Verify(item => item.NotifyFromTemplateAsync(
+            It.IsAny<int>(), "work-package.assigned", It.IsAny<IDictionary<string, string>>(),
+            It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task OrdinaryPackage_KeepsTheInAppAssignmentNotice()
+    {
+        await _service.CreateAsync(ProjectRequest(), _pm.Id);
+
+        _notifications.Verify(item => item.NotifyFromTemplateAsync(
+            _procurementLead.Id, "work-package.assigned", It.IsAny<IDictionary<string, string>>(),
+            It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
     public async Task UnrelatedUser_CannotAssignQuoteLinkedPackage()
     {
         var opportunity = new Opportunity

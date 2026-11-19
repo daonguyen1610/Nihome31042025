@@ -68,6 +68,16 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
         return (new("", toEmail, rendered.Subject, rendered.Body, ccEmails), recipient.Id, hash, recipient.Email.Trim());
     }
 
+    /// <summary>
+    /// An absolute link for a notification email, or the relative path when no
+    /// public origin is configured: an assignment must not fail over a link.
+    /// </summary>
+    public string PublicLinkOrPath(string path)
+    {
+        try { return GetPublicOrigin() + path; }
+        catch (DepartmentWorkPackageOperationException) { return path; }
+    }
+
     private string GetPublicOrigin()
     {
         var configured = configuration["Frontend:PublicBaseUrl"];

@@ -286,9 +286,42 @@ public sealed partial class DepartmentWorkPackageService(
         var response = await LoadAndMapAsync(entity.Id, callerUserId, admin, ct);
         await AddHistoryAsync(entity.Id, "Package", entity.Id, "Created", response, callerUserId, ct);
         await CommitAsync(transaction, ct);
-        await NotifySafelyAsync(entity.LeadUserId, "work-package.assigned",
-            new Dictionary<string, string> { ["packageName"] = entity.Name, ["packageCode"] = entity.Code },
-            "DepartmentWorkPackage", entity.Id, $"/admin/work-packages/{entity.Id}", ct);
+        var packagePath = $"/admin/work-packages/{entity.Id}";
+        if (entity.Purpose == WorkPackagePurpose.ProcurementInputPricing)
+        {
+            // The whole Procurement department hears about an input-price request,
+            // by email as well, not only inside the admin; the mail names the approver.
+            var opportunityName = await db.Opportunities.AsNoTracking()
+                .Where(item => item.Id == entity.SourceOpportunityId)
+                .Select(item => item.Name).SingleOrDefaultAsync(ct);
+            string? NameOf(ApplicationUser user) => user.FullName ?? user.Email ?? user.PhoneNumber;
+            var people = await db.Users.AsNoTracking()
+                .Where(item => item.Id == callerUserId || item.Id == entity.LeadUserId)
+                .ToDictionaryAsync(item => item.Id, ct);
+            var data = new Dictionary<string, string>
+            {
+                ["packageName"] = entity.Name,
+                ["packageCode"] = entity.Code,
+                ["opportunityName"] = opportunityName ?? "—",
+                ["requesterName"] = people.TryGetValue(callerUserId, out var caller) ? NameOf(caller) ?? "—" : "—",
+                ["approverName"] = people.TryGetValue(entity.LeadUserId, out var lead) ? NameOf(lead) ?? "—" : "—",
+                ["plannedEnd"] = entity.PlannedEnd?.ToString("dd/MM/yyyy") ?? "—",
+                ["packageLink"] = approvalEmails.PublicLinkOrPath(packagePath),
+            };
+            var department = await db.Users.AsNoTracking()
+                .Where(item => item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive &&
+                    item.RoleEntity.RoleGroupId == entity.DepartmentRoleGroupId)
+                .Select(item => item.Id).ToListAsync(ct);
+            foreach (var userId in department.Append(entity.LeadUserId).Distinct())
+                await NotifySafelyAsync(userId, "work-package.input-pricing-requested", data,
+                    "DepartmentWorkPackage", entity.Id, packagePath, ct);
+        }
+        else
+        {
+            await NotifySafelyAsync(entity.LeadUserId, "work-package.assigned",
+                new Dictionary<string, string> { ["packageName"] = entity.Name, ["packageCode"] = entity.Code },
+                "DepartmentWorkPackage", entity.Id, packagePath, ct);
+        }
         return response;
     }
 
