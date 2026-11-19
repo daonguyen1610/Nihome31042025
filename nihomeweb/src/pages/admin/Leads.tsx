@@ -265,10 +265,21 @@ const AdminLeads = () => {
     setActivityContent("");
   };
 
+  /** Names exactly the required fields still empty, in form order. */
+  const missingRequired = (form: { name: string; sourceCode?: string; segmentCode?: string }) => {
+    const missing = [
+      !form.name.trim() && t("leads.field.name"),
+      !form.sourceCode && t("leads.field.source"),
+      !form.segmentCode && t("leads.field.segment"),
+    ].filter(Boolean);
+    return missing.length ? t("leads.validation.missing", { fields: missing.join(", ") }) : null;
+  };
+
   const handleCreate = async () => {
     setCreateError(null);
-    if (!createForm.name.trim() || !createForm.sourceCode || !createForm.segmentCode) {
-      setCreateError(t("leads.validation.missingFields"));
+    const missingCreate = missingRequired(createForm);
+    if (missingCreate) {
+      setCreateError(missingCreate);
       return;
     }
     const contactIssue = validateContact(createForm.phone, createForm.email);
@@ -308,8 +319,9 @@ const AdminLeads = () => {
   const handleUpdate = async () => {
     if (!detail || !editForm) return;
     setEditError(null);
-    if (!editForm.name.trim() || !editForm.sourceCode || !editForm.segmentCode) {
-      setEditError(t("leads.validation.missingFields"));
+    const missingEdit = missingRequired(editForm);
+    if (missingEdit) {
+      setEditError(missingEdit);
       return;
     }
     const contactIssue = validateContact(editForm.phone, editForm.email);

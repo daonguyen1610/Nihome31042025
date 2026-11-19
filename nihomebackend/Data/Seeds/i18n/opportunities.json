@@ -91,7 +91,8 @@
   { "key": "opportunities.pipeline.total", "category": "opportunities", "vi": "Tổng {count} · {value}", "en": "{count} · {value}", "zh": "{count} · {value}", "ja": "{count} · {value}" },
   { "key": "opportunities.pipeline.empty", "category": "opportunities", "vi": "Chưa có cơ hội trong giai đoạn này.", "en": "No opportunities in this stage.", "zh": "该阶段暂无商机。", "ja": "このフェーズには商談がありません。" },
 
-  { "key": "opportunities.validation.missingFields", "category": "opportunities", "vi": "Vui lòng nhập tên, khách hàng, giá trị và xác suất.", "en": "Please provide name, customer, value and probability.", "zh": "请填写名称、客户、金额和成交率。", "ja": "名前・顧客・金額・確度を入力してください。" },
+  {"key": "opportunities.validation.nameRequired", "category": "opportunities", "vi": "Nhập tên cơ hội, ví dụ “Thiết kế và thi công nhà xưởng An Phú”.", "en": "Enter the opportunity name, e.g. “Design and build of the An Phu factory”.", "zh": "请输入机会名称，例如“安富厂房设计施工”。", "ja": "案件名を入力してください（例：「アンフー工場の設計施工」）。"},
+  {"key": "opportunities.validation.customerRequired", "category": "opportunities", "vi": "Chọn khách hàng của cơ hội. Có thể tìm theo tên hoặc mã số thuế.", "en": "Choose the customer. You can search by name or tax ID.", "zh": "请选择客户，可按名称或税号搜索。", "ja": "顧客を選択してください。名前または税番号で検索できます。"},
 
   { "key": "opportunities.overdue", "category": "opportunities", "vi": "Quá hạn chốt", "en": "Overdue", "zh": "已逾期", "ja": "期限超過" },
   { "key": "opportunities.audit.empty", "category": "opportunities", "vi": "Chưa có thay đổi nào được ghi nhận.", "en": "No audit entries yet.", "zh": "暂无审计记录。", "ja": "監査ログはまだありません。" },
