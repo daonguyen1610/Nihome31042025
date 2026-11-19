@@ -1,4 +1,5 @@
-import axios from "axios";
+import axios, { type InternalAxiosRequestConfig } from "axios";
+import { uploadTracker } from "@/lib/uploadTracker";
 import type { RootState } from "@/store";
 import { createLogger, newCorrelationId } from "@/lib/logger";
 
@@ -44,6 +45,7 @@ api.interceptors.request.use((config) => {
   if (isMutation && !isMultipart && !config.headers["Idempotency-Key"]) {
     config.headers["Idempotency-Key"] = newIdempotencyKey();
   }
+  if (isMultipart) trackUpload(config);
   const rowVersion =
     !isMultipart && config.data && typeof config.data === "object"
       ? (config.data as { rowVersion?: string }).rowVersion
@@ -53,6 +55,50 @@ api.interceptors.request.use((config) => {
   }
   return config;
 });
+
+type TrackedConfig = InternalAxiosRequestConfig & { uploadTrackerId?: number };
+
+/**
+ * Shows a file upload in the upload tray: its progress, and a cancel that
+ * aborts the request. A caller's own progress callback and signal still work.
+ */
+function trackUpload(config: TrackedConfig) {
+  const files = [...(config.data as FormData).values()].filter(
+    (value): value is File => typeof File !== "undefined" && value instanceof File,
+  );
+  if (files.length === 0) return;
+  const controller = new AbortController();
+  const callerSignal = config.signal as AbortSignal | undefined;
+  if (callerSignal?.aborted) controller.abort();
+  else callerSignal?.addEventListener?.("abort", () => controller.abort(), { once: true });
+  config.signal = controller.signal;
+  const id = uploadTracker.start({
+    name: files.length === 1 ? files[0].name : `${files[0].name} +${files.length - 1}`,
+    size: files.reduce((total, file) => total + file.size, 0),
+    abort: () => controller.abort(),
+  });
+  const callerProgress = config.onUploadProgress;
+  config.onUploadProgress = (event) => {
+    uploadTracker.progress(id, event.loaded);
+    callerProgress?.(event);
+  };
+  config.uploadTrackerId = id;
+}
+
+api.interceptors.response.use(
+  (response) => {
+    const id = (response.config as TrackedConfig).uploadTrackerId;
+    if (id) uploadTracker.finish(id);
+    return response;
+  },
+  (error: unknown) => {
+    const id = axios.isAxiosError(error)
+      ? (error.config as TrackedConfig | undefined)?.uploadTrackerId
+      : undefined;
+    if (id) uploadTracker.fail(id, error);
+    return Promise.reject(error);
+  },
+);
 
 const readHeader = (headers: unknown, name: string): string | undefined => {
   if (!headers || typeof headers !== "object") return undefined;
@@ -76,7 +122,8 @@ export const getApiCorrelationId = (error: unknown): string | undefined => {
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
-    if (axios.isAxiosError(error)) {
+    // A cancel from the upload tray is the user's choice, not a failure to log.
+    if (axios.isAxiosError(error) && error.code !== "ERR_CANCELED") {
       const method = error.config?.method?.toUpperCase() ?? "UNKNOWN";
       const path = error.config?.url?.split("?", 1)[0] ?? "unknown";
       logger.error(

@@ -111,12 +111,16 @@ export function getUiError(err: unknown, t: (key: string) => string, fallback?: 
     response?: { status?: number; data?: unknown };
   } | null;
   if (failure?.code === "LOOKUP_INCOMPLETE") return t("common.lookupIncomplete");
+  // The user stopped the upload from the upload tray.
+  if (failure?.code === "ERR_CANCELED") return t("upload.cancelled");
   if (!failure?.response) {
     const network =
       failure?.message === "Network Error" ||
       ["ERR_NETWORK", "ECONNABORTED", "ETIMEDOUT"].includes(failure?.code ?? "");
     return network ? t("auth.err.networkError") : (fallback ?? t("auth.err.unexpected"));
   }
+  // The server closes an oversized upload with 413 and no explanation of its own.
+  if (failure.response.status === 413) return t("upload.tooLargeForServer");
   if ((failure.response.status ?? 500) >= 500) return t("auth.err.unexpected");
   const data = failure.response.data;
   if (!data || typeof data !== "object") return t("auth.err.unexpected");
