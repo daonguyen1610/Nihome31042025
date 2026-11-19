@@ -251,15 +251,6 @@ export const contentApi = {
   getOtpSettings: () => api.get<OtpSettingsResponse>("/site-settings/otp-settings"),
   updateOtpSettings: (data: UpdateOtpSettingsRequest) =>
     api.put<OtpSettingsResponse>("/site-settings/otp-settings", data),
-  getContractUploadLimit: () =>
-    api.get<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
-      "/site-settings/contract-uploads",
-    ),
-  updateContractUploadLimit: (maxFileSizeMb: number) =>
-    api.put<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
-      "/site-settings/contract-uploads",
-      { maxFileSizeMb },
-    ),
   /** Per-file upload limit of a module, set in Settings. */
   getUploadLimit: (kind: UploadLimitKind) =>
     api.get<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(

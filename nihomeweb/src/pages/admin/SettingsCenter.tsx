@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { forgetUploadLimit } from "@/hooks/useUploadLimit";
 import { useConfirm } from "@/components/ui/confirmation";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -679,8 +680,13 @@ type UploadLimitResponse = { maxFileSizeMb: number; maxAllowedFileSizeMb: number
 // Stable references so the section's load callback does not change on every render.
 const moduleUploadLimit = (kind: UploadLimitKind) => ({
   load: () => adminApi.getUploadLimit(kind),
-  save: (maxFileSizeMb: number) => adminApi.updateUploadLimit(kind, maxFileSizeMb),
+  save: async (maxFileSizeMb: number) => {
+    const saved = await adminApi.updateUploadLimit(kind, maxFileSizeMb);
+    forgetUploadLimit(kind);
+    return saved;
+  },
 });
+const contractUploadLimit = moduleUploadLimit("contracts");
 const designUploadLimit = moduleUploadLimit("design");
 const tenderUploadLimit = moduleUploadLimit("tenders");
 const capabilityUploadLimit = moduleUploadLimit("capability");
@@ -969,8 +975,8 @@ const SettingsCenter = () => {
                 icon={FileText}
                 keyPrefix="settings.contractUploads"
                 inputId="contract-upload-limit"
-                loadLimit={adminApi.getContractUploadLimit}
-                saveLimit={adminApi.updateContractUploadLimit}
+                loadLimit={contractUploadLimit.load}
+                saveLimit={contractUploadLimit.save}
               />
               <UploadLimitTab
                 sectionKey="design-files"

@@ -16,10 +16,7 @@ async function setLimitInSettings(page: Page, section: string, inputId: string, 
   // Wait for the save to land: navigating away at once cancels the request.
   const saved = page.waitForResponse(
     (response) =>
-      response.request().method() === "PUT" &&
-      /^\/api\/site-settings\/(upload-limits|contract-uploads)/.test(
-        new URL(response.url()).pathname,
-      ),
+      response.request().method() === "PUT" && new URL(response.url()).pathname.startsWith(LIMITS),
   );
   await input
     .locator("xpath=ancestor::div[contains(@class,'space-y-3')][1]")
@@ -182,10 +179,11 @@ test("contract documents and appendices follow the contract limit set in Setting
 }) => {
   const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
-  const settingsPath = "/api/site-settings/contract-uploads";
+  const settingsPath = `${LIMITS}/contracts`;
   const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
     .maxFileSizeMb as number;
   const contracts = await (await api.get("/api/contracts?pageSize=1", { headers })).json();
+  expect(contracts.items.length, "a seeded contract is needed").toBeGreaterThan(0);
   const contractId = contracts.items[0].id as number;
 
   try {
@@ -210,6 +208,14 @@ test("contract documents and appendices follow the contract limit set in Setting
       buffer: Buffer.alloc(200 * 1024),
     });
     await expect(page.getByText("bien-ban.pdf").first()).toBeVisible();
+
+    // An appendix (VO) file follows the same limit.
+    await page.goto(`/admin/contracts/${contractId}?tab=appendices`, { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: "Tạo VO mới" }).click();
+    const appendixInput = page.getByRole("dialog").getByTestId("contract-appendix-files");
+    await expect(appendixInput.locator("xpath=..")).toContainText("Tối đa 20 tệp, 1 MB mỗi tệp");
+    await appendixInput.setInputFiles(TWO_MB_PDF("phu-luc-vo.pdf"));
+    await expect(page.getByText("phu-luc-vo.pdf vượt quá 1 MB.").first()).toBeVisible();
     expect(uploads).toBe(0);
   } finally {
     await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
