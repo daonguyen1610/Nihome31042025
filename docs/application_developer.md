@@ -995,9 +995,11 @@ có `SourceTenderId` vẫn đọc và qua gate được, ghi mới phải dùng 
 
 Nộp thầu tạo snapshot `TenderSubmission` đánh số, bất biến: revision và checksum
 bằng chứng, nội dung dự toán đã duyệt, kế hoạch đã hoàn thành (metadata, task
-WBS/nội dung/nguồn lực/người/ngày/tiến độ/xác minh/CC/phụ thuộc), Finance review
+WBS/nội dung/người/ngày/tiến độ/xác minh/CC/phụ thuộc; snapshot kế hoạch
+`SchemaVersion` 1 còn có nguồn lực, từ 2 thì không vì trường đã bị xoá), Finance review
 đã duyệt (checklist, phát hiện, quyết định, người, phiên bản concurrency), kênh
-nộp, mã biên nhận, người và thời điểm. Field snapshot chỉ cộng thêm; snapshot cũ
+nộp, mã biên nhận, người và thời điểm. Field snapshot chỉ cộng thêm, trừ khi trường
+nguồn bị xoá hẳn thì tăng `SchemaVersion`; snapshot cũ
 thưa không backfill từ dữ liệu hiện tại. `SubmittedAt` đầu tiên bất biến. Backfill
 chỉ tạo snapshot `LegacyUnknown` khi có audit `tender.transition` thành công
 chứng minh lần Submitted (dùng thời điểm audit); không suy từ `UpdatedAt`.
