@@ -1494,7 +1494,7 @@ const AdminOpportunities = () => {
               {t("common.cancel")}
             </Button>
             <Button onClick={() => void handleCreate()} disabled={saving}>
-              {t("common.save")}
+              {t("opportunities.new")}
             </Button>
           </DialogFooter>
         </DialogContent>

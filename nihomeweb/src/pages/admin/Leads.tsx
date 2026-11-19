@@ -1013,7 +1013,10 @@ const AdminLeads = () => {
               />
             </FieldScope>
             {createError && (
-              <p className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive">
+              <p
+                role="alert"
+                className="rounded bg-destructive/10 px-3 py-2 text-xs text-destructive"
+              >
                 {createError}
               </p>
             )}
@@ -1185,7 +1188,11 @@ const AdminLeads = () => {
                       />
                     </FieldScope>
                   </div>
-                  {editError && <p className="text-sm text-destructive">{editError}</p>}
+                  {editError && (
+                    <p role="alert" className="text-sm text-destructive">
+                      {editError}
+                    </p>
+                  )}
                 </div>
               ) : (
                 <div className="grid grid-cols-2 gap-4 text-sm">

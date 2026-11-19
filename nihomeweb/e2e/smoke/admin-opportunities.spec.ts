@@ -579,3 +579,96 @@ test("Opportunity actions follow the sequential and terminal UI contract", async
   await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
   await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
 });
+
+/**
+ * Saving an incomplete opportunity names each missing required field under the
+ * field itself and moves focus there, instead of one sentence that also listed
+ * fields with defaults (value, probability).
+ */
+test("opportunity form points at each missing field and saves once they are filled", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
+  const unique = Date.now().toString();
+  const taxId = `08${unique.slice(-8)}`;
+  const customer = await api.post("/api/customers", {
+    headers,
+    data: {
+      type: "Company",
+      name: `Công ty Thép Phú Mỹ ${unique}`,
+      taxId,
+      sourceCode: "marketing",
+      primaryContact: { fullName: "Anh Quân", phone: `09${unique.slice(-8)}`, isPrimary: true },
+    },
+  });
+  expect(customer.status(), await customer.text()).toBe(201);
+  const customerId = (await customer.json()).id as number;
+  let opportunityId = 0;
+  try {
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.goto("/admin/opportunities", { waitUntil: "networkidle" });
+    await page.getByRole("button", { name: /Tạo Cơ hội mới|New opportunity/i }).click();
+    const dialog = page.getByRole("dialog");
+    let posts = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && new URL(request.url()).pathname === "/api/opportunities")
+        posts++;
+    });
+
+    await dialog.getByRole("button", { name: /Tạo Cơ hội mới|New opportunity/i }).click();
+    const name = dialog.locator("#opportunity-create-name");
+    await expect(name).toBeFocused();
+    await expect(name).toHaveAttribute("aria-invalid", "true");
+    await expect(dialog.getByText(/Nhập tên cơ hội/)).toBeVisible();
+    await expect(dialog.getByText(/Chọn khách hàng của cơ hội/)).toBeVisible();
+    // Value and probability have defaults and are not reported as missing.
+    await expect(dialog.getByText(/giá trị và xác suất/)).toHaveCount(0);
+    expect(posts).toBe(0);
+
+    await name.fill(`Nhà xưởng thép Phú Mỹ ${unique}`);
+    await expect(dialog.getByText(/Nhập tên cơ hội/)).toHaveCount(0);
+    await dialog
+      .getByRole("combobox")
+      .filter({ hasText: /Chọn khách hàng/ })
+      .click();
+    await page.locator("[cmdk-input]").fill(taxId);
+    await page.getByRole("option").filter({ hasText: taxId }).click();
+    await expect(dialog.getByText(/Chọn khách hàng của cơ hội/)).toHaveCount(0);
+
+    const created = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" &&
+        new URL(response.url()).pathname === "/api/opportunities",
+    );
+    await dialog.getByRole("button", { name: /Tạo Cơ hội mới|New opportunity/i }).click();
+    const response = await created;
+    expect(response.status(), await response.text()).toBe(201);
+    opportunityId = (await response.json()).id as number;
+  } finally {
+    if (opportunityId)
+      await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);
+    await hardDeleteBusinessRoot(api, headers, `/api/customers/${customerId}`);
+  }
+});
+
+test("lead form names exactly the required fields still empty", async ({
+  page,
+  loginInBrowserAs,
+}) => {
+  await loginInBrowserAs(page, TEST_USERS.salesManager);
+  await page.goto("/admin/leads", { waitUntil: "networkidle" });
+  await page
+    .getByRole("button", { name: /Tạo Lead mới|New lead/i })
+    .first()
+    .click();
+  const dialog = page.getByRole("dialog");
+  await dialog
+    .getByRole("button", { name: /Lưu|Save|Tạo/i })
+    .last()
+    .click();
+  // Segment has a default, so only the name and source are listed.
+  await expect(dialog.getByRole("alert")).toHaveText(/Còn thiếu: Tên liên hệ, Nguồn\./);
+});
