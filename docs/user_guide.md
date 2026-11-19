@@ -169,7 +169,7 @@ Không phải dự án nào cũng đi đủ một chuỗi.
 | 1. Lead | Kinh doanh | Lead bị khóa sau khi chuyển đổi | Chuyển Lead tạo hoặc nối Khách hàng, Cơ hội và Dự án (Lập kế hoạch) |
 | 2. Cơ hội | Kinh doanh | Tiếp cận → Khảo sát → Báo giá/Đấu thầu → Thương thảo → Ký hợp đồng; hoặc Thua | Ký hợp đồng cần hợp đồng liên kết có ngày ký, không Nháp/Đã hủy |
 | 3. Dự án | Kinh doanh hoặc PM | Lập kế hoạch → Đang thực hiện / Tạm dừng / Hoàn thành / Đã hủy | Có khách hàng, mã, tên, người phụ trách. Mã đổi được sau khi tạo, có lý do và lịch sử |
-| 4a. Báo giá | Kinh doanh; Cung ứng (giá đầu vào); Trưởng phòng Cung ứng (duyệt); Tài chính (rà soát) | Nháp → Chờ duyệt nội bộ → Đã duyệt → Đã gửi khách → Khách đã duyệt | Gửi khách cần báo giá gắn Dự án và Tài chính rà soát đã duyệt đúng phiên bản |
+| 4a. Báo giá | Kinh doanh; Cung ứng (giá đầu vào; cả phòng xem mọi báo giá); Trưởng phòng Cung ứng (duyệt, nhận thông báo kèm link khi được chọn); Tài chính (rà soát) | Nháp → Chờ duyệt nội bộ → Đã duyệt → Đã gửi khách → Khách đã duyệt | Gửi khách cần báo giá gắn Dự án và Tài chính rà soát đã duyệt đúng phiên bản |
 | 4b. Đấu thầu | Kinh doanh/QS văn phòng; các phòng theo kế hoạch thầu; Tài chính | Đang chuẩn bị → Đã nộp → Trúng/Trượt | Nộp cần kế hoạch đã xong, checklist đủ, dự toán đã duyệt, Tài chính rà soát hồ sơ thầu đã duyệt |
 | 5. Hợp đồng | Kinh doanh; Kế toán theo dõi thu/chi | Bản nháp → Đã ký → Đang thực hiện → Hoàn thành (Tạm dừng, Đã huỷ) | Từ báo giá đã duyệt hoặc tạo trực tiếp khi khách đã đồng ý giá trị. Đã ký cần bản scan hợp đồng đã ký |
 | 6. Tiến độ tổng dự án | Người quản lý dự án lập; Trưởng phòng Kinh doanh (trước ký) hoặc PM (sau ký) duyệt | Nháp → chờ duyệt → phát hành | Ngày công việc phòng ban, thiết kế, thi công nằm trong mốc WBS |
@@ -219,6 +219,7 @@ Theo quyết định họp 31/10/2026, mỗi Dự án có một BOQ gốc; khi t
 | 09/11/2026 | NICON ủy quyền người đại diện chủ sản phẩm chốt quy tắc S-Curve (2.5.4) | NICON ủy quyền |
 | 13/11/2026 | Cung ứng upload BOQ trong nhóm công việc yêu cầu giá đầu vào; trang Mẫu báo giá → BOQ thành thư viện mẫu chỉ đọc | Triển khai |
 | 14/11/2026 | Chuyển BOQ dự thầu thành BOQ hợp đồng; hai nguồn giá đầu vào chung khung **Báo giá đầu vào**; thêm 4 mẫu BOQ | Triển khai |
+| 19/11/2026 | Cả phòng Cung ứng (trưởng phòng và nhân viên) xem được mọi báo giá của NICON; chỉ người được chọn duyệt mới duyệt được và nhận thông báo kèm link tới báo giá | Người dùng |
 
 Mục tiêu đã ghi nhận ngày 07/11/2026 (chưa có): bản dịch cập nhật của mẫu checklist pháp lý và QA/QC áp dụng cả cho hồ sơ đã tạo; file BOQ tải trước khi đổi nhãn vẫn nhập được.
 
