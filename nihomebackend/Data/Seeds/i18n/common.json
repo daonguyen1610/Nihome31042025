@@ -234,10 +234,10 @@
   {
     "key": "upload.tooLargeForServer",
     "category": "common",
-    "vi": "Tệp vượt dung lượng máy chủ cho phép nên không tải lên được. Hãy kiểm tra giới hạn trong Cài đặt hoặc tách nhỏ tệp.",
-    "en": "The file is larger than the server accepts. Check the limit in Settings or split the file.",
-    "zh": "文件超过服务器允许的大小，无法上传。请在设置中查看上限或拆分文件。",
-    "ja": "ファイルがサーバーの許容サイズを超えているためアップロードできません。設定で上限を確認するか、ファイルを分割してください。"
+    "vi": "Tệp vượt dung lượng máy chủ cho phép nên không tải lên được. Hãy tách nhỏ hoặc nén tệp rồi tải lại, hoặc nhờ quản trị viên kiểm tra giới hạn tải lên.",
+    "en": "The file is larger than the server accepts. Split or compress it and upload again, or ask an administrator to check the upload limit.",
+    "zh": "文件超过服务器允许的大小，无法上传。请拆分或压缩文件后重新上传，或请管理员检查上传上限。",
+    "ja": "ファイルがサーバーの許容サイズを超えているためアップロードできません。ファイルを分割または圧縮して再度アップロードするか、管理者にアップロード上限の確認を依頼してください。"
   },
   {
     "key": "upload.tray.title",
@@ -286,6 +286,14 @@
     "en": "Uploaded · {total} MB",
     "zh": "已上传 · {total} MB",
     "ja": "アップロード済み · {total} MB"
+  },
+  {
+    "key": "upload.tray.saving",
+    "category": "common",
+    "vi": "Đã gửi đủ {total} MB · máy chủ đang lưu tệp",
+    "en": "All {total} MB sent · the server is saving the file",
+    "zh": "已发送全部 {total} MB · 服务器正在保存文件",
+    "ja": "{total} MB を送信済み · サーバーがファイルを保存中"
   },
   {
     "key": "upload.tray.cancel",

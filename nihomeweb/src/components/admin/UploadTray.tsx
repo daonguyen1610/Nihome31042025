@@ -13,6 +13,9 @@ function UploadRow({ item }: { item: UploadItem }) {
   const { t, lang } = useI18n();
   const percent = item.size > 0 ? Math.round((item.loaded / item.size) * 100) : 0;
   const mb = (bytes: number) => formatNumber(toMb(bytes), lang, { maximumFractionDigits: 1 });
+  // Every byte is sent and the server may already be saving the record, so a
+  // cancel could no longer undo the upload: it is not offered from here on.
+  const sent = item.status === "uploading" && item.size > 0 && item.loaded >= item.size;
 
   return (
     <li className="space-y-1.5 py-2">
@@ -40,20 +43,22 @@ function UploadRow({ item }: { item: UploadItem }) {
                 : "text-xs tabular-nums text-muted-foreground"
             }
           >
-            {item.status === "uploading"
-              ? t("upload.tray.progress", {
-                  loaded: mb(item.loaded),
-                  total: mb(item.size),
-                  percent,
-                })
-              : item.status === "done"
-                ? t("upload.tray.done", { total: mb(item.size) })
-                : item.status === "cancelled"
-                  ? t("upload.cancelled")
-                  : getUiError(item.error, t)}
+            {sent
+              ? t("upload.tray.saving", { total: mb(item.size) })
+              : item.status === "uploading"
+                ? t("upload.tray.progress", {
+                    loaded: mb(item.loaded),
+                    total: mb(item.size),
+                    percent,
+                  })
+                : item.status === "done"
+                  ? t("upload.tray.done", { total: mb(item.size) })
+                  : item.status === "cancelled"
+                    ? t("upload.cancelled")
+                    : getUiError(item.error, t)}
           </p>
         </div>
-        {item.status === "uploading" ? (
+        {item.status === "uploading" && !sent ? (
           <Button
             type="button"
             variant="ghost"
