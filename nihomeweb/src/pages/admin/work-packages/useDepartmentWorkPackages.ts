@@ -252,6 +252,8 @@ export function useDepartmentWorkPackages() {
   const [approvalBusy, setApprovalBusy] = useState(false);
   // NICON users who may approve, and the one the sender picked.
   const [approvers, setApprovers] = useState<WorkPackageApproverOption[]>([]);
+  // Suggestions for the CC line; typing any address still works without them.
+  const [emailContacts, setEmailContacts] = useState<WorkPackageApproverOption[]>([]);
   const [approverId, setApproverId] = useState<number | null>(null);
   const [approvalTo, setApprovalTo] = useState("");
   const [approvalCc, setApprovalCc] = useState("");
@@ -1213,7 +1215,12 @@ export function useDepartmentWorkPackages() {
       return;
     setApprovalBusy(true);
     try {
-      const { data: options } = await adminApi.listWorkPackageApprovers(detail.id);
+      const packageId = detail.id;
+      void adminApi
+        .listWorkPackageEmailContacts(packageId)
+        .then(({ data: contacts }) => setEmailContacts(contacts))
+        .catch(() => setEmailContacts([]));
+      const { data: options } = await adminApi.listWorkPackageApprovers(packageId);
       const eligible = options.filter((option) => option.userId !== authorId);
       if (eligible.length === 0) {
         toast({ variant: "destructive", title: t("approvalEmail.noApprover") });
@@ -1487,6 +1494,7 @@ export function useDepartmentWorkPackages() {
     setDeleteOpen,
     approvalPreview,
     approvers,
+    emailContacts,
     approverId,
     chooseApprover,
     setApprovalPreview,

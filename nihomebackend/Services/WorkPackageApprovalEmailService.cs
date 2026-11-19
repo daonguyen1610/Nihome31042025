@@ -128,6 +128,19 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
     public async Task<IReadOnlyList<WorkPackageApproverOption>> ListApproverCandidatesAsync(
         DepartmentWorkPackage package, CancellationToken ct)
     {
+        var users = await ListContactsAsync(package, ct);
+        var approvers = await permissions.FilterByRolePermissionAsync(
+            users.Select(user => user.UserId).ToList(), "work.packages.verify", ct);
+        return users.Where(user => approvers.Contains(user.UserId)).ToList();
+    }
+
+    /// <summary>Every active NICON user with a valid email: anyone may be copied.</summary>
+    public Task<IReadOnlyList<WorkPackageApproverOption>> ListEmailContactsAsync(
+        DepartmentWorkPackage package, CancellationToken ct) => ListContactsAsync(package, ct);
+
+    private async Task<IReadOnlyList<WorkPackageApproverOption>> ListContactsAsync(
+        DepartmentWorkPackage package, CancellationToken ct)
+    {
         var users = await db.Users.AsNoTracking()
             .Where(user => user.IsActive && user.Email != null && user.Email != "")
             .Select(user => new
@@ -140,10 +153,8 @@ public sealed class WorkPackageApprovalEmailService(AppDbContext db, IDataProtec
                 DepartmentLabelKey = user.RoleEntity == null || user.RoleEntity.RoleGroup == null
                     ? null : user.RoleEntity.RoleGroup.LabelKey,
             }).ToListAsync(ct);
-        var approvers = await permissions.FilterByRolePermissionAsync(
-            users.Select(user => user.Id).ToList(), "work.packages.verify", ct);
         return users
-            .Where(user => approvers.Contains(user.Id) && ContactValidation.IsValidEmail(user.Email!))
+            .Where(user => ContactValidation.IsValidEmail(user.Email!))
             .Select(user => new WorkPackageApproverOption(user.Id, user.FullName ?? user.Email!, user.Email!.Trim(),
                 user.RoleLabelKey, user.RoleName, user.DepartmentLabelKey, user.Id == package.LeadUserId))
             .OrderByDescending(user => user.IsDepartmentLead).ThenBy(user => user.Name, StringComparer.CurrentCulture)

@@ -1,4 +1,5 @@
 import { useDepartmentWorkPackages } from "./work-packages/useDepartmentWorkPackages";
+import { EmailRecipientsInput } from "@/components/ui/email-recipients-input";
 import { newPriceLine } from "./work-packages/workPackageFormatting";
 import { money } from "./work-packages/workPackageFormatting";
 import {
@@ -157,6 +158,7 @@ const DepartmentWorkPackages = () => {
     setDeleteOpen,
     approvalPreview,
     approvers,
+    emailContacts,
     approverId,
     chooseApprover,
     setApprovalPreview,
@@ -1569,22 +1571,30 @@ const DepartmentWorkPackages = () => {
                   }}
                 />
                 <Label htmlFor="approval-cc">{t("approvalEmail.cc")}</Label>
-                <Textarea
+                <EmailRecipientsInput
                   id="approval-cc"
-                  rows={2}
-                  maxLength={4000}
                   value={approvalCc}
                   disabled={approvalBusy}
-                  placeholder="cm@nicon.vn, qs@nicon.vn"
-                  aria-describedby="approval-recipient-hint"
-                  onChange={(event) => {
-                    setApprovalCc(event.target.value);
+                  invalid={!recipientsValid && approvalCc.trim().length > 0}
+                  placeholder={t("approvalEmail.ccPlaceholder")}
+                  ariaDescribedBy="approval-recipient-hint"
+                  contacts={emailContacts.map((contact) => ({
+                    name: contact.name,
+                    email: contact.email,
+                    hint: contact.departmentLabelKey
+                      ? t(contact.departmentLabelKey)
+                      : (contact.roleName ?? undefined),
+                  }))}
+                  removeLabel={(address) => t("approvalEmail.ccRemove", { email: address })}
+                  suggestionsLabel={t("approvalEmail.ccSuggestions")}
+                  onChange={(next) => {
+                    setApprovalCc(next);
                     setApprovalDirty(true);
                     setApprovalError("");
                   }}
                 />
                 <p id="approval-recipient-hint" className="text-xs text-muted-foreground">
-                  {t("approvalEmail.recipientChosenHint")}
+                  {t("approvalEmail.recipientHint")}
                 </p>
                 {!recipientsValid && (
                   <p role="alert" className="text-sm text-destructive">

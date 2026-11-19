@@ -14,6 +14,9 @@ public interface IDepartmentWorkPackageService
 {
     Task<IReadOnlyList<WorkPackageApproverOption>> ListInputPriceApproversAsync(
         int packageId, int callerUserId, CancellationToken ct = default);
+    /// <summary>Active NICON users with an email, suggested while typing CC addresses.</summary>
+    Task<IReadOnlyList<WorkPackageApproverOption>> ListEmailContactsAsync(
+        int packageId, int callerUserId, CancellationToken ct = default);
     Task<WorkPackageApprovalPreview> PreviewApprovalEmailAsync(int packageId, int? offerId, int callerUserId, CancellationToken ct = default, WorkPackageApprovalRecipientsRequest? recipients = null);
     Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, int callerUserId, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default);

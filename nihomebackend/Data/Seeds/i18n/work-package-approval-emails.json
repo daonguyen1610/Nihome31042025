@@ -96,12 +96,36 @@
     "ja": "{name} の承認待ち"
   },
   {
-    "key": "approvalEmail.recipientChosenHint",
+    "key": "approvalEmail.recipientHint",
     "category": "workPackages",
-    "vi": "To mặc định là email người duyệt đã chọn; có thể sửa địa chỉ nhận. CC tối đa 20 email, cách nhau bằng dấu phẩy, dấu chấm phẩy hoặc xuống dòng, ví dụ: ten@nicon.vn. Đổi địa chỉ nhận không đổi người có quyền duyệt.",
-    "en": "To defaults to the chosen approver's email and can be changed. CC up to 20 addresses separated by commas, semicolons or new lines, e.g. name@nicon.vn. Changing addresses does not change who may approve.",
-    "zh": "收件人默认为所选审批人的邮箱，可修改。抄送最多 20 个，用逗号、分号或换行分隔，例如 name@nicon.vn。修改地址不会改变审批人。",
-    "ja": "宛先は選んだ承認者のメールが既定で、変更できます。CC は最大 20 件（カンマ・セミコロン・改行区切り、例: name@nicon.vn）。宛先を変えても承認者は変わりません。"
+    "vi": "To mặc định là email người duyệt đã chọn; có thể sửa. Ở CC, gõ tên hoặc email để chọn người trong NICON, hoặc nhập email bên ngoài rồi nhấn Enter hay dấu phẩy; tối đa 20 email. Đổi địa chỉ nhận không đổi người có quyền duyệt.",
+    "en": "To defaults to the chosen approver's email and can be changed. In CC, type a name or email to pick someone at NICON, or enter an outside address and press Enter or a comma; up to 20 addresses. Changing addresses does not change who may approve.",
+    "zh": "收件人默认为所选审批人的邮箱，可修改。在抄送中输入姓名或邮箱可选择 NICON 同事，或输入外部邮箱后按回车或逗号；最多 20 个。修改地址不会改变审批人。",
+    "ja": "宛先は選んだ承認者のメールが既定で、変更できます。CC は名前かメールを入力して NICON の人を選ぶか、外部アドレスを入力して Enter かカンマを押します（最大 20 件）。宛先を変えても承認者は変わりません。"
+  },
+  {
+    "key": "approvalEmail.ccPlaceholder",
+    "category": "workPackages",
+    "vi": "Gõ tên hoặc email…",
+    "en": "Type a name or email…",
+    "zh": "输入姓名或邮箱…",
+    "ja": "名前またはメールを入力…"
+  },
+  {
+    "key": "approvalEmail.ccRemove",
+    "category": "workPackages",
+    "vi": "Bỏ {email} khỏi CC",
+    "en": "Remove {email} from CC",
+    "zh": "从抄送中移除 {email}",
+    "ja": "{email} を CC から外す"
+  },
+  {
+    "key": "approvalEmail.ccSuggestions",
+    "category": "workPackages",
+    "vi": "Gợi ý người nhận",
+    "en": "Suggested recipients",
+    "zh": "建议的收件人",
+    "ja": "宛先の候補"
   },
   {
     "key": "approvalEmail.continue",

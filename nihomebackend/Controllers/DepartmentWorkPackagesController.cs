@@ -347,6 +347,17 @@ public sealed class DepartmentWorkPackagesController(
             Ok(await service.ListInputPriceApproversAsync(id, userId.Value, ct)));
     }
 
+    /// <summary>NICON users suggested while typing CC addresses for an approval email.</summary>
+    [HttpGet("{id:int}/email-contacts")]
+    [RequirePermission("work.packages", "progress")]
+    public async Task<ActionResult<IReadOnlyList<WorkPackageApproverOption>>> ListEmailContacts(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteBusinessAsync<IReadOnlyList<WorkPackageApproverOption>>(async () =>
+            Ok(await service.ListEmailContactsAsync(id, userId.Value, ct)));
+    }
+
     [HttpPost("{id:int}/input-price-offers/{offerId:int}/approval-email-preview")]
     [RequirePermission("work.packages", "progress")]
     public async Task<ActionResult<WorkPackageApprovalPreview>> PreviewInputPriceOffer(int id, int offerId,
