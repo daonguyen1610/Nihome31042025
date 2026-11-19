@@ -16,6 +16,9 @@ public sealed partial class DepartmentWorkPackageService(
     ILogger<DepartmentWorkPackageService> logger,
     WorkPackageApprovalEmailService approvalEmails) : IDepartmentWorkPackageService
 {
+    private const string NotTiedToContract =
+        "Nhóm công việc gắn theo Dự án và giai đoạn, không gắn với hợp đồng. Bỏ chọn hợp đồng rồi lưu lại.";
+
     private const int MaxPageSize = 100;
 
     public async Task<DepartmentWorkPackageListResponse> ListAsync(
@@ -27,12 +30,12 @@ public sealed partial class DepartmentWorkPackageService(
         var page = Math.Max(query.Page, 1);
         var pageSize = Math.Clamp(query.PageSize, 1, MaxPageSize);
         var packages = await ApplyViewScopeAsync(BaseQuery(), callerUserId, canViewAll, ct);
+        // Work is filed under the project, never a contract (NICON, 19/11/2026);
+        // the retired "Contract" list now shows the project list.
         if (string.Equals(query.Kind, "Contract", StringComparison.OrdinalIgnoreCase))
-            packages = packages.Where(item => item.Kind == WorkPackageKind.Project && item.ContractId != null);
+            packages = packages.Where(item => item.Kind == WorkPackageKind.Project);
         else if (Enum.TryParse<WorkPackageKind>(query.Kind, true, out var kind))
-            packages = kind == WorkPackageKind.Project
-                ? packages.Where(item => item.Kind == kind && item.ContractId == null)
-                : packages.Where(item => item.Kind == kind);
+            packages = packages.Where(item => item.Kind == kind);
         if (query.OperationalProjectId.HasValue)
             packages = packages.Where(item => item.OperationalProjectId == query.OperationalProjectId);
         if (query.ContractId.HasValue) packages = packages.Where(item => item.ContractId == query.ContractId);
@@ -219,12 +222,10 @@ public sealed partial class DepartmentWorkPackageService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        var contractKind = string.Equals(request.Kind, "Contract", StringComparison.OrdinalIgnoreCase);
-        if (!Enum.TryParse<WorkPackageKind>(request.Kind, true, out var kind) && !contractKind)
-            throw Error("Loại nhóm công việc không hợp lệ. Giá trị hợp lệ: Project, Contract hoặc Internal.");
-        if (contractKind) kind = WorkPackageKind.Project;
-        if (contractKind && !request.ContractId.HasValue)
-            throw Error("Nhóm công việc theo Hợp đồng phải chọn Hợp đồng thuộc Dự án vận hành.");
+        if (string.Equals(request.Kind, "Contract", StringComparison.OrdinalIgnoreCase) || request.ContractId.HasValue)
+            throw Error(NotTiedToContract);
+        if (!Enum.TryParse<WorkPackageKind>(request.Kind, true, out var kind))
+            throw Error("Loại nhóm công việc không hợp lệ. Giá trị hợp lệ: Project hoặc Internal.");
         if (!Enum.TryParse<WorkPackagePurpose>(request.Purpose, true, out var purpose))
             throw Error("Mục đích nhóm công việc không hợp lệ.");
         if (purpose == WorkPackagePurpose.LegalPermitting)
@@ -345,10 +346,9 @@ public sealed partial class DepartmentWorkPackageService(
                      task.PlannedEnd > AsUtcDate(request.PlannedEnd.Value))))
                 throw Error("Khoảng thời gian kế hoạch phải bao gồm các đầu việc đang có.");
         }
-        if (entity.Kind == WorkPackageKind.Internal && request.ContractId.HasValue)
-            throw Error("Công việc nội bộ không được gắn Hợp đồng.");
-        if (request.ContractId.HasValue)
-            await ValidateContractAsync(request.ContractId.Value, entity.OperationalProjectId!.Value, ct);
+        // A legacy link may be resent unchanged or cleared, never set anew.
+        if (request.ContractId.HasValue && request.ContractId != entity.ContractId)
+            throw Error(NotTiedToContract);
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, entity, request.RowVersion);
         entity.Name = request.Name.Trim();
@@ -729,13 +729,6 @@ public sealed partial class DepartmentWorkPackageService(
         }
         if (!admin && project.ProjectManagerUserId != callerUserId && !isOpportunityOwner && !isTenderOwner)
             throw Error("Chỉ PM Dự án, Kinh doanh phụ trách Cơ hội hoặc người lập Gói thầu được giao việc cho phòng ban.");
-        if (request.ContractId.HasValue) await ValidateContractAsync(request.ContractId.Value, project.Id, ct);
-    }
-
-    private async Task ValidateContractAsync(int contractId, int projectId, CancellationToken ct)
-    {
-        if (!await db.Contracts.AsNoTracking().AnyAsync(item => item.Id == contractId && item.OperationalProjectId == projectId, ct))
-            throw Error("Hợp đồng phải thuộc cùng Dự án vận hành với nhóm công việc.");
     }
 
     private async Task ValidateTaskAsync(
@@ -1169,8 +1162,7 @@ public sealed partial class DepartmentWorkPackageService(
         {
             Id = item.Id,
             Code = item.Code,
-            Kind = item.Kind == WorkPackageKind.Project && item.ContractId.HasValue
-                ? "Contract" : item.Kind.ToString(),
+            Kind = item.Kind.ToString(),
             Purpose = item.Purpose.ToString(),
             Name = item.Name,
             Description = item.Description,

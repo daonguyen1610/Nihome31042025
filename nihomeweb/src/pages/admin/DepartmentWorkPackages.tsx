@@ -8,7 +8,6 @@ import {
   PriceOfferDialog,
   Summary,
 } from "./work-packages/WorkPackageControls";
-import { collectLookupPages } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useConfirm } from "@/components/ui/confirmation";
@@ -24,7 +23,6 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
-  ClipboardList,
   Download,
   Loader2,
   Paperclip,
@@ -77,7 +75,6 @@ import { isValidEmail } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import {
   adminApi,
-  type ContractResponse,
   type CreateDepartmentWorkPackageRequest,
   type DepartmentWorkPackageOptionsResponse,
   type DepartmentWorkPackageResponse,
@@ -123,7 +120,6 @@ const DepartmentWorkPackages = () => {
     detailBackTarget,
     options,
     projects,
-    contracts,
     projectSchedule,
     search,
     departmentFilter,
@@ -444,12 +440,6 @@ const DepartmentWorkPackages = () => {
                 icon={<Users />}
                 label={t("workPackages.field.lead")}
                 value={detail.leadUserName}
-              />
-              <Summary
-                icon={<ClipboardList />}
-                label={t("workPackages.field.contract")}
-                value={detail.contractNumber || "—"}
-                href={detail.contractId ? `/admin/contracts/${detail.contractId}` : undefined}
               />
             </div>
 
@@ -1103,9 +1093,7 @@ const DepartmentWorkPackages = () => {
                     <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
                       {item.kind === "Internal"
                         ? t("workPackages.kind.Internal")
-                        : item.kind === "Contract"
-                          ? `${item.contractNumber} · ${item.operationalProjectName}`
-                          : `${item.operationalProjectCode} · ${item.operationalProjectName}`}
+                        : `${item.operationalProjectCode} · ${item.operationalProjectName}`}
                     </p>
                     <div className="mt-4 flex items-center justify-between text-sm">
                       <span>
@@ -1177,7 +1165,6 @@ const DepartmentWorkPackages = () => {
                     kind: value,
                     purpose: "General",
                     operationalProjectId: null,
-                    contractId: null,
                     sourceOpportunityId: null,
                     sourceQuoteId: null,
                     sourceTenderId: null,
@@ -1192,7 +1179,6 @@ const DepartmentWorkPackages = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Project">{t("workPackages.kind.Project")}</SelectItem>
-                  <SelectItem value="Contract">{t("workPackages.kind.Contract")}</SelectItem>
                   {canAssign && (
                     <SelectItem value="Internal">{t("workPackages.kind.Internal")}</SelectItem>
                   )}
@@ -1215,7 +1201,6 @@ const DepartmentWorkPackages = () => {
                     setPackageForm((current) => ({
                       ...current,
                       purpose,
-                      contractId: purpose === "General" ? current.contractId : null,
                       departmentRoleGroupId: department?.id ?? 0,
                       leadUserId: 0,
                     }));
@@ -1259,7 +1244,6 @@ const DepartmentWorkPackages = () => {
                     setPackageForm((current) => ({
                       ...current,
                       operationalProjectId: Number(value),
-                      contractId: null,
                     }))
                   }
                 >
@@ -1273,33 +1257,6 @@ const DepartmentWorkPackages = () => {
                     {projects.map((project) => (
                       <SelectItem key={project.id} value={String(project.id)}>
                         {project.code} · {project.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </Field>
-            )}
-            {packageForm.kind === "Contract" && (
-              <Field
-                label={t("workPackages.field.requiredContract")}
-                {...packageFieldProps("contract", true)}
-              >
-                <Select
-                  value={packageForm.contractId?.toString() ?? ""}
-                  onValueChange={(value) =>
-                    setPackageForm((current) => ({
-                      ...current,
-                      contractId: value === "none" ? null : Number(value),
-                    }))
-                  }
-                >
-                  <SelectTrigger {...packageControlProps("contract", true)}>
-                    <SelectValue placeholder={t("workPackages.placeholder.contract")} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {contracts.map((contract) => (
-                      <SelectItem key={contract.id} value={String(contract.id)}>
-                        {contract.contractNumber}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1471,38 +1428,6 @@ const DepartmentWorkPackages = () => {
                   }
                 />
               </Field>
-              {detail.kind !== "Internal" && detail.purpose === "General" && (
-                <Field label={t("workPackages.field.contract")} className="sm:col-span-2">
-                  <Select
-                    value={packageEditForm.contractId?.toString() ?? "none"}
-                    onValueChange={(value) =>
-                      setPackageEditForm((current) =>
-                        current
-                          ? { ...current, contractId: value === "none" ? null : Number(value) }
-                          : current,
-                      )
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">{t("workPackages.contract.none")}</SelectItem>
-                      {detail.contractId &&
-                        !contracts.some((contract) => contract.id === detail.contractId) && (
-                          <SelectItem value={String(detail.contractId)}>
-                            {detail.contractNumber}
-                          </SelectItem>
-                        )}
-                      {contracts.map((contract) => (
-                        <SelectItem key={contract.id} value={String(contract.id)}>
-                          {contract.contractNumber}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </Field>
-              )}
               <Field label={t("workPackages.field.start")}>
                 <Input
                   type="date"

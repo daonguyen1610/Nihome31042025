@@ -8,11 +8,11 @@ test("package detail returns to its section with filters intact", async ({
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
   for (const width of [390, 768, 1440]) {
     await page.setViewportSize({ width, height: 900 });
-    await page.goto("/admin/work-packages/contracts");
+    await page.goto("/admin/work-packages/projects");
     const card = page.getByTestId("work-package-card").first();
     await expect(card).toBeVisible();
     const code = (await card.locator("div").first().locator("div").first().innerText()).trim();
-    const listUrl = `/admin/work-packages/contracts?search=${encodeURIComponent(code)}`;
+    const listUrl = `/admin/work-packages/projects?search=${encodeURIComponent(code)}`;
     await page.goto(listUrl);
     await expect(page.getByTestId("work-package-card")).toHaveCount(1);
     await page.getByTestId("work-package-card").click();
@@ -29,14 +29,14 @@ test("package detail returns to its section with filters intact", async ({
   }
 });
 
-test("direct contract package links return to contract work", async ({
+test("direct project package links return to project work", async ({
   page,
   api,
   loginAs,
   loginInBrowserAs,
 }) => {
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
-  const response = await api.get("/api/work-packages?kind=Contract&pageSize=1", { headers });
+  const response = await api.get("/api/work-packages?kind=Project&pageSize=1", { headers });
   expect(response.ok()).toBeTruthy();
   const { items } = await response.json();
   expect(items.length).toBeGreaterThan(0);
@@ -44,6 +44,6 @@ test("direct contract package links return to contract work", async ({
   await page.goto(`/admin/work-packages/${items[0].id}`);
   await expect(page.getByTestId("work-package-back")).toHaveAttribute(
     "href",
-    "/admin/work-packages/contracts",
+    "/admin/work-packages/projects",
   );
 });
