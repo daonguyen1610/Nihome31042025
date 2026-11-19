@@ -40,6 +40,16 @@ export function usePermissions(): UsePermissionsResult {
   });
 
   const set = useMemo(() => (query.data ? new Set(query.data.permissions) : EMPTY), [query.data]);
+  // Stable while the permissions are unchanged: effects that depend on `has`
+  // would otherwise re-run after every render (the CM email preview looped).
+  const checks = useMemo(
+    () => ({
+      has: (code: string) => set.has(code),
+      hasAny: (codes: readonly string[]) => codes.some((c) => set.has(c)),
+      hasAll: (codes: readonly string[]) => codes.every((c) => set.has(c)),
+    }),
+    [set],
+  );
 
   return {
     permissions: set,
@@ -47,8 +57,6 @@ export function usePermissions(): UsePermissionsResult {
     roleId: query.data?.roleId ?? null,
     isLoading: query.isLoading,
     isError: query.isError,
-    has: (code) => set.has(code),
-    hasAny: (codes) => codes.some((c) => set.has(c)),
-    hasAll: (codes) => codes.every((c) => set.has(c)),
+    ...checks,
   };
 }
