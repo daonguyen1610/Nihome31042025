@@ -228,3 +228,42 @@ test("an upload the user cancelled says so instead of reporting an error", () =>
   const t = (key) => key;
   assert.equal(getUiError({ code: "ERR_CANCELED", message: "canceled" }, t), "upload.cancelled");
 });
+
+test("an import that lists row errors is explained instead of crashing the page", () => {
+  // The material-rate import answers 400 with an array of row errors, not the
+  // ASP.NET field → messages map; the upload tray renders it on every page.
+  const failure = {
+    response: {
+      status: 400,
+      data: {
+        importedCount: 0,
+        errors: [
+          {
+            row: 5,
+            column: null,
+            message: "Tệp phải có ít nhất một dòng dữ liệu.",
+            messageKey: "materialRates.csvError.dataRequired",
+          },
+          { row: 6, message: "Đơn giá phải lớn hơn 0." },
+        ],
+      },
+    },
+  };
+  const t = (key) =>
+    key === "materialRates.csvError.dataRequired"
+      ? "The file must contain at least one data row."
+      : key;
+  assert.equal(
+    extractApiError(failure, undefined, t),
+    "The file must contain at least one data row. · Đơn giá phải lớn hơn 0.",
+  );
+  assert.equal(
+    getUiError(failure, t),
+    "The file must contain at least one data row. · Đơn giá phải lớn hơn 0.",
+  );
+});
+
+test("a field error given as a single string is shown as it is", () => {
+  const failure = { response: { status: 400, data: { errors: { Name: "Tên là bắt buộc." } } } };
+  assert.equal(extractApiError(failure), "Name: Tên là bắt buộc.");
+});

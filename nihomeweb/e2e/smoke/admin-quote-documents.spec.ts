@@ -218,7 +218,7 @@ test.describe.serial("quote document management", () => {
       await page.locator("#quote-document-label").fill("NIH-430 browser evidence");
       await page.getByRole("button", { name: /Tải lên|Upload|上传|アップロード/i }).click();
 
-      const documentItem = page.locator("li").filter({ hasText: fileName });
+      const documentItem = page.locator("main li").filter({ hasText: fileName });
       await expect(documentItem).toBeVisible({ timeout: 10_000 });
       await expect(documentItem).toContainText("NIH-430 browser evidence");
 
@@ -248,7 +248,7 @@ test.describe.serial("quote document management", () => {
 
       await page.reload({ waitUntil: "networkidle" });
       await page.getByRole("tab", { name: /Tài liệu|Documents|文档|資料/i }).click();
-      const persistedItem = page.locator("li").filter({ hasText: fileName });
+      const persistedItem = page.locator("main li").filter({ hasText: fileName });
       await expect(persistedItem).toBeVisible();
 
       await persistedItem.getByRole("button", { name: /Xoá|Delete|删除|削除/i }).click();

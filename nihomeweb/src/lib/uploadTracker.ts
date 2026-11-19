@@ -16,14 +16,24 @@ export interface UploadItem {
   error?: unknown;
 }
 
-export function createUploadTracker() {
+/**
+ * @param hideSucceededAfterMs When every upload of a batch succeeded, the page
+ * already lists the files, so the tray clears itself after this delay instead
+ * of covering the page. A failure or cancel keeps it until the user clears it.
+ */
+export function createUploadTracker({ hideSucceededAfterMs = 4000 } = {}) {
   let items: UploadItem[] = [];
+  let hideTimer: ReturnType<typeof setTimeout> | undefined;
   let nextId = 1;
   const aborts = new Map<number, () => void>();
   const listeners = new Set<() => void>();
 
   const update = (id: number, change: Partial<UploadItem>) => {
     items = items.map((item) => (item.id === id ? { ...item, ...change } : item));
+    listeners.forEach((listener) => listener());
+  };
+  const clearFinished = () => {
+    items = items.filter((item) => item.status === "uploading");
     listeners.forEach((listener) => listener());
   };
   const isUploading = (id: number) =>
@@ -50,7 +60,14 @@ export function createUploadTracker() {
     finish(id: number) {
       aborts.delete(id);
       const item = items.find((entry) => entry.id === id);
-      if (item?.status === "uploading") update(id, { status: "done", loaded: item.size });
+      if (item?.status !== "uploading") return;
+      update(id, { status: "done", loaded: item.size });
+      if (items.every((entry) => entry.status === "done")) {
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+          if (items.every((entry) => entry.status === "done")) clearFinished();
+        }, hideSucceededAfterMs);
+      }
     },
     fail(id: number, error: unknown) {
       aborts.delete(id);
@@ -63,10 +80,7 @@ export function createUploadTracker() {
       aborts.get(id)?.();
       aborts.delete(id);
     },
-    clearFinished() {
-      items = items.filter((item) => item.status === "uploading");
-      listeners.forEach((listener) => listener());
-    },
+    clearFinished,
   };
 }
 

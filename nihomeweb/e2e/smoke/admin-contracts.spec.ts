@@ -933,6 +933,10 @@ test("contract documents accept and upload multiple local files", async ({
     .click();
 
   await expect.poll(() => uploadedFiles.length).toBe(2);
-  await expect(page.getByText("contract-batch-one.pdf", { exact: true })).toBeVisible();
-  await expect(page.getByText("contract-batch-two.pdf", { exact: true })).toBeVisible();
+  await expect(
+    page.locator("main").getByText("contract-batch-one.pdf", { exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.locator("main").getByText("contract-batch-two.pdf", { exact: true }),
+  ).toBeVisible();
 });
