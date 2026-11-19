@@ -1713,6 +1713,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .HasForeignKey(item => item.SubmittedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.ApprovedBy).WithMany()
                 .HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovalApprover).WithMany()
+                .HasForeignKey(item => item.ApprovalApproverUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.RejectedBy).WithMany()
                 .HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(item => new { item.OperationalProjectId, item.RevisionNumber }).IsUnique();
@@ -2496,6 +2498,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(item => item.Vendor).WithMany().HasForeignKey(item => item.VendorId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.ApprovedByUser).WithMany().HasForeignKey(item => item.ApprovedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovalApprover).WithMany().HasForeignKey(item => item.ApprovalApproverUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.RejectedByUser).WithMany().HasForeignKey(item => item.RejectedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(item => new { item.WorkPackageId, item.SupplierReference, item.VendorId }).IsUnique();
             b.HasIndex(item => new { item.Status, item.ValidUntil });
@@ -2525,6 +2528,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.HasOne(item => item.WorkPackage).WithOne(item => item.FinanceReview)
                 .HasForeignKey<DepartmentFinanceReview>(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(item => item.ReviewedByUser).WithMany().HasForeignKey(item => item.ReviewedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne(item => item.ApprovalApprover).WithMany().HasForeignKey(item => item.ApprovalApproverUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(item => item.WorkPackageId).IsUnique();
         });
 

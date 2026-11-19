@@ -35,6 +35,18 @@ public sealed partial class DepartmentWorkPackageService
             review.CreatedByUserId, CrmConcurrency.Encode(review.RowVersion), callerUserId, ct, recipients);
     }
 
+    /// <summary>Who the sender may choose to approve this package's input prices, BOQ or finance review.</summary>
+    public async Task<IReadOnlyList<WorkPackageApproverOption>> ListInputPriceApproversAsync(
+        int packageId, int callerUserId, CancellationToken ct = default)
+    {
+        var package = await db.DepartmentWorkPackages.AsNoTracking().SingleOrDefaultAsync(item => item.Id == packageId, ct);
+        if (package is null || package.Purpose is not (WorkPackagePurpose.ProcurementInputPricing or
+                WorkPackagePurpose.FinanceCommercialReview or WorkPackagePurpose.FinanceTenderReview))
+            throw ScopeError();
+        await EnsureCanWorkInDepartmentAsync(package, callerUserId, ct);
+        return await approvalEmails.ListApproverCandidatesAsync(package, ct);
+    }
+
     public async Task<InputPriceOfferResponse> AddInputPriceOfferAsync(
         int packageId, UpsertInputPriceOfferRequest request, int callerUserId, CancellationToken ct = default)
     {
@@ -104,8 +116,9 @@ public sealed partial class DepartmentWorkPackageService
             throw Error("Giá đầu vào phải còn hiệu lực và có ít nhất một dòng trước khi gửi duyệt.");
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.EnsureMatches(offer.RowVersion, request.RowVersion);
-        var submittedAt = await approvalEmails.QueueAsync(package, "InputPriceOffer", offer.Id, offer.SupplierReference,
+        var (submittedAt, approverId) = await approvalEmails.QueueAsync(package, "InputPriceOffer", offer.Id, offer.SupplierReference,
             offer.CreatedByUserId, CrmConcurrency.Encode(offer.RowVersion), callerUserId, request.PreviewToken, ct);
+        offer.ApprovalApproverUserId = approverId;
         CrmConcurrency.Apply(db, offer, request.RowVersion);
         offer.Status = InputPriceOfferStatus.Submitted;
         offer.SubmittedAt = submittedAt;
@@ -124,11 +137,13 @@ public sealed partial class DepartmentWorkPackageService
         int packageId, int offerId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default)
     {
         var package = await RequireBusinessPackageAsync(packageId, WorkPackagePurpose.ProcurementInputPricing, ct);
-        if (!await IsAdministratorAsync(callerUserId, ct) && package.LeadUserId != callerUserId)
-            throw ScopeError();
         var offer = await db.ProcurementInputPriceOffers.Include(item => item.Lines)
             .SingleOrDefaultAsync(item => item.Id == offerId && item.WorkPackageId == packageId, ct);
         if (offer is null) return null;
+        // Only the approver the sender chose decides (the lead for offers sent before that choice existed).
+        if (!await IsAdministratorAsync(callerUserId, ct) &&
+            (offer.ApprovalApproverUserId ?? package.LeadUserId) != callerUserId)
+            throw ScopeError();
         if (offer.Status != InputPriceOfferStatus.Submitted)
             throw Error("Chỉ giá đầu vào đã gửi duyệt mới được quyết định.");
         if (offer.CreatedByUserId == callerUserId)
@@ -209,8 +224,9 @@ public sealed partial class DepartmentWorkPackageService
         ValidateReviewChecklist(package.Purpose, review);
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.EnsureMatches(review.RowVersion, request.RowVersion);
-        var submittedAt = await approvalEmails.QueueAsync(package, "FinanceReview", review.Id, package.Code,
+        var (submittedAt, approverId) = await approvalEmails.QueueAsync(package, "FinanceReview", review.Id, package.Code,
             review.CreatedByUserId, CrmConcurrency.Encode(review.RowVersion), callerUserId, request.PreviewToken, ct);
+        review.ApprovalApproverUserId = approverId;
         CrmConcurrency.Apply(db, review, request.RowVersion);
         review.Status = FinanceReviewStatus.Submitted;
         review.SubmittedAt = submittedAt;
@@ -229,10 +245,12 @@ public sealed partial class DepartmentWorkPackageService
         int packageId, DecideBusinessRecordRequest request, int callerUserId, CancellationToken ct = default)
     {
         var package = await RequireFinancePackageAsync(packageId, ct);
-        if (!await IsAdministratorAsync(callerUserId, ct) && package.LeadUserId != callerUserId)
-            throw ScopeError();
         var review = await db.DepartmentFinanceReviews.SingleOrDefaultAsync(item => item.WorkPackageId == packageId, ct);
         if (review is null) return null;
+        // Only the approver the sender chose decides (the assigner for reviews sent before that choice existed).
+        if (!await IsAdministratorAsync(callerUserId, ct) &&
+            (review.ApprovalApproverUserId ?? package.LeadUserId) != callerUserId)
+            throw ScopeError();
         if (review.Status != FinanceReviewStatus.Submitted)
             throw Error("Chỉ hồ sơ đã gửi rà soát mới được quyết định.");
         if (review.CreatedByUserId == callerUserId)
@@ -347,11 +365,12 @@ public sealed partial class DepartmentWorkPackageService
 
     private async Task<InputPriceOfferResponse> LoadOfferAsync(int packageId, int offerId, CancellationToken ct)
         => MapInputPriceOffer(await db.ProcurementInputPriceOffers.AsNoTracking()
-            .Include(item => item.Vendor).Include(item => item.Lines)
+            .Include(item => item.Vendor).Include(item => item.Lines).Include(item => item.ApprovalApprover)
             .SingleAsync(item => item.Id == offerId && item.WorkPackageId == packageId, ct));
 
     private async Task<FinanceReviewResponse> LoadReviewAsync(int packageId, CancellationToken ct)
         => MapFinanceReview(await db.DepartmentFinanceReviews.AsNoTracking().Include(item => item.ReviewedByUser)
+            .Include(item => item.ApprovalApprover)
             .SingleAsync(item => item.WorkPackageId == packageId, ct));
 
     private static InputPriceOfferResponse MapInputPriceOffer(ProcurementInputPriceOffer offer)
@@ -376,6 +395,8 @@ public sealed partial class DepartmentWorkPackageService
             VatAmount = vat,
             GrandTotal = subtotal + vat,
             CreatedByUserId = offer.CreatedByUserId,
+            ApprovalApproverUserId = offer.ApprovalApproverUserId,
+            ApprovalApproverName = offer.ApprovalApprover?.FullName ?? offer.ApprovalApprover?.Email,
             RowVersion = CrmConcurrency.Encode(offer.RowVersion),
             Lines = offer.Lines.OrderBy(line => line.SortOrder).Select(line => new InputPriceLineResponse
             {
@@ -407,6 +428,8 @@ public sealed partial class DepartmentWorkPackageService
         CreatedByUserId = review.CreatedByUserId,
         ReviewedByUserId = review.ReviewedByUserId,
         ReviewedByName = review.ReviewedByUser?.FullName ?? review.ReviewedByUser?.Email,
+        ApprovalApproverUserId = review.ApprovalApproverUserId,
+        ApprovalApproverName = review.ApprovalApprover?.FullName ?? review.ApprovalApprover?.Email,
         RowVersion = CrmConcurrency.Encode(review.RowVersion),
     };
 }

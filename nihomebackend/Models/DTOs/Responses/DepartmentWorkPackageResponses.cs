@@ -73,6 +73,8 @@ public sealed class InputPriceOfferResponse
     public decimal VatAmount { get; set; }
     public decimal GrandTotal { get; set; }
     public int CreatedByUserId { get; set; }
+    public int? ApprovalApproverUserId { get; set; }
+    public string? ApprovalApproverName { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public List<InputPriceLineResponse> Lines { get; set; } = new();
 }
@@ -105,6 +107,8 @@ public sealed class FinanceReviewResponse
     public int CreatedByUserId { get; set; }
     public int? ReviewedByUserId { get; set; }
     public string? ReviewedByName { get; set; }
+    public int? ApprovalApproverUserId { get; set; }
+    public string? ApprovalApproverName { get; set; }
     public string RowVersion { get; set; } = string.Empty;
 }
 
@@ -218,8 +222,15 @@ public sealed class WorkPackageBoqWorkbookResponse
     public string? PreparedByName { get; set; }
     public DateTime CreatedAt { get; set; }
     public DateTime? SubmittedAt { get; set; }
+    public int? ApprovalApproverUserId { get; set; }
+    public string? ApprovalApproverName { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public DateTime? RejectedAt { get; set; }
     public string? DecisionReason { get; set; }
     public string RowVersion { get; set; } = string.Empty;
 }
+
+/// <summary>A NICON user who may approve input prices, for the approver picker.</summary>
+public sealed record WorkPackageApproverOption(
+    int UserId, string Name, string Email, string? RoleLabelKey, string? RoleName,
+    string? DepartmentLabelKey, bool IsDepartmentLead);
