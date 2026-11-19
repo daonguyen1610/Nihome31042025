@@ -74,7 +74,7 @@ test("a design file limit set in Settings stops oversized and wrong files before
       buffer: Buffer.alloc(2 * 1024 * 1024),
     });
     await expect(
-      page.getByText(/“mat-bang-tang-1\.pdf” nặng 2 MB, vượt giới hạn 1 MB/),
+      page.getByText(/“mat-bang-tang-1\.pdf” nặng 2 MB, vượt giới hạn 1 MB/).first(),
     ).toBeVisible();
 
     await fileInput.setInputFiles({
@@ -82,7 +82,7 @@ test("a design file limit set in Settings stops oversized and wrong files before
       mimeType: "application/octet-stream",
       buffer: Buffer.from("dwg"),
     });
-    await expect(page.getByText(/“ban-ve-kien-truc\.dwg” chưa được nhận/)).toBeVisible();
+    await expect(page.getByText(/“ban-ve-kien-truc\.dwg” chưa được nhận/).first()).toBeVisible();
     expect(uploads, "refused files must not be sent").toBe(0);
   } finally {
     const restored = await api.put(SETTINGS_PATH, {
