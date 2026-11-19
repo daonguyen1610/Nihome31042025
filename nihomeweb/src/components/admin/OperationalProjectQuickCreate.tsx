@@ -139,7 +139,7 @@ export function OperationalProjectQuickCreate({
         </div>
       </div>
       <p id={`${inputId}-help`} className="text-xs text-muted-foreground">
-        {t("opportunities.project.quickCustomerHelp")} {t("operationalProjects.codeImmutableHint")}
+        {t("opportunities.project.quickCustomerHelp")} {t("opportunities.project.quickCodeHelp")}
       </p>
       {error && (
         <p role="alert" className="text-sm text-destructive">

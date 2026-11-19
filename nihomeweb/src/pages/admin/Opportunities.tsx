@@ -1329,12 +1329,14 @@ const AdminOpportunities = () => {
 
       {/* ---------- Create dialog ---------- */}
       <Dialog open={creating} onOpenChange={(o) => !o && closeCreate()}>
-        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
+        {/* A minmax(0,1fr) column keeps a long project or customer name from
+        widening the dialog past the viewport; only the body scrolls. */}
+        <DialogContent className="grid max-h-[90dvh] grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] gap-5 overflow-hidden sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>{t("opportunities.new")}</DialogTitle>
             <DialogDescription>{t("opportunities.subtitle")}</DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
+          <div className="-mx-4 min-h-0 space-y-5 overflow-y-auto px-4 py-1 sm:-mx-6 sm:px-6">
             {createError && (
               <p
                 ref={createErrorRef}
@@ -1363,32 +1365,48 @@ const AdminOpportunities = () => {
                 </p>
               )}
             </FieldScope>
-            <FieldScope data-form-field="customer">
-              <Label>{t("opportunities.field.customer")} *</Label>
-              <SearchableSelect
-                aria-invalid={createFieldError("customer") ? true : undefined}
-                aria-describedby={
-                  createFieldError("customer") ? "opportunity-create-customer-error" : undefined
-                }
-                disabled={!!continuation.source}
-                value={createForm.customerId ? String(createForm.customerId) : ""}
-                onChange={(v) =>
-                  setCreateForm({
-                    ...createForm,
-                    customerId: Number(v),
-                    operationalProjectId: null,
-                  })
-                }
-                options={customerChoices}
-                searchPlaceholder={t("customers.picker.search")}
-                placeholder={t("customers.picker.select")}
-              />
-              {createFieldError("customer") && (
-                <p id="opportunity-create-customer-error" className="mt-1 text-xs text-destructive">
-                  {createFieldError("customer")}
-                </p>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <FieldScope data-form-field="customer">
+                <Label>{t("opportunities.field.customer")} *</Label>
+                <SearchableSelect
+                  aria-invalid={createFieldError("customer") ? true : undefined}
+                  aria-describedby={
+                    createFieldError("customer") ? "opportunity-create-customer-error" : undefined
+                  }
+                  disabled={!!continuation.source}
+                  value={createForm.customerId ? String(createForm.customerId) : ""}
+                  onChange={(v) =>
+                    setCreateForm({
+                      ...createForm,
+                      customerId: Number(v),
+                      operationalProjectId: null,
+                    })
+                  }
+                  options={customerChoices}
+                  searchPlaceholder={t("customers.picker.search")}
+                  placeholder={t("customers.picker.select")}
+                />
+                {createFieldError("customer") && (
+                  <p
+                    id="opportunity-create-customer-error"
+                    className="mt-1 text-xs text-destructive"
+                  >
+                    {createFieldError("customer")}
+                  </p>
+                )}
+              </FieldScope>
+              {canSeeAll && (
+                <FieldScope>
+                  <Label>{t("opportunities.field.owner")}</Label>
+                  <SearchableSelect
+                    value={createForm.ownerUserId ? String(createForm.ownerUserId) : ""}
+                    onChange={(v) => setCreateForm({ ...createForm, ownerUserId: Number(v) })}
+                    ariaLabel={t("people.select")}
+                    options={[...salesUsers.map((person) => personOption(person, t))]}
+                  />
+                </FieldScope>
               )}
-            </FieldScope>
+            </div>
             <FieldScope>
               <Label>{t("opportunities.field.operationalProject")}</Label>
               <SearchableSelect
@@ -1451,7 +1469,7 @@ const AdminOpportunities = () => {
                 )
               )}
             </FieldScope>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-5 sm:grid-cols-2">
               <FieldScope>
                 <Label>
                   {t("opportunities.field.estimatedValue")}
@@ -1491,23 +1509,12 @@ const AdminOpportunities = () => {
                     onChange={(e) =>
                       setCreateForm({ ...createForm, winProbability: Number(e.target.value) })
                     }
-                    className="w-16"
+                    className="w-20"
                   />
                 </div>
               </FieldScope>
             </div>
-            {canSeeAll && (
-              <FieldScope>
-                <Label>{t("opportunities.field.owner")}</Label>
-                <SearchableSelect
-                  value={createForm.ownerUserId ? String(createForm.ownerUserId) : ""}
-                  onChange={(v) => setCreateForm({ ...createForm, ownerUserId: Number(v) })}
-                  ariaLabel={t("people.select")}
-                  options={[...salesUsers.map((person) => personOption(person, t))]}
-                />
-              </FieldScope>
-            )}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-5 sm:grid-cols-2">
               <FieldScope>
                 <Label>{t("opportunities.field.expectedCloseDate")}</Label>
                 <Input
@@ -1528,13 +1535,13 @@ const AdminOpportunities = () => {
             <FieldScope>
               <Label>{t("opportunities.field.note")}</Label>
               <Textarea
-                rows={3}
+                rows={4}
                 value={createForm.note ?? ""}
                 onChange={(e) => setCreateForm({ ...createForm, note: e.target.value })}
               />
             </FieldScope>
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2 border-t pt-4">
             <Button variant="outline" onClick={closeCreate} disabled={saving}>
               {t("common.cancel")}
             </Button>
@@ -1548,7 +1555,7 @@ const AdminOpportunities = () => {
       {/* ---------- Detail dialog ---------- */}
       <Dialog open={!!detail || detailLoading} onOpenChange={(o) => !o && closeDetail()}>
         <DialogContent
-          className="grid h-[90dvh] w-[95vw] grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:h-[min(90dvh,44rem)] sm:max-w-2xl"
+          className="grid h-[90dvh] w-[95vw] grid-cols-[minmax(0,1fr)] grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden sm:h-[min(90dvh,48rem)] sm:max-w-3xl"
           data-testid="opportunity-detail-dialog"
         >
           {detailLoading && !detail ? (
@@ -1932,7 +1939,7 @@ const AdminOpportunities = () => {
                       </div>
                     ) : (
                       editForm && (
-                        <div className="space-y-3">
+                        <div className="space-y-5">
                           <FieldScope>
                             <Label>{t("opportunities.field.name")}</Label>
                             <Input
@@ -1940,21 +1947,36 @@ const AdminOpportunities = () => {
                               onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
                             />
                           </FieldScope>
-                          <FieldScope>
-                            <Label>{t("opportunities.field.customer")}</Label>
-                            <SearchableSelect
-                              value={String(editForm.customerId)}
-                              onChange={(v) =>
-                                setEditForm({
-                                  ...editForm,
-                                  customerId: Number(v),
-                                  operationalProjectId: null,
-                                })
-                              }
-                              options={customerChoices}
-                              searchPlaceholder={t("customers.picker.search")}
-                            />
-                          </FieldScope>
+                          <div className="grid gap-5 sm:grid-cols-2">
+                            <FieldScope>
+                              <Label>{t("opportunities.field.customer")}</Label>
+                              <SearchableSelect
+                                value={String(editForm.customerId)}
+                                onChange={(v) =>
+                                  setEditForm({
+                                    ...editForm,
+                                    customerId: Number(v),
+                                    operationalProjectId: null,
+                                  })
+                                }
+                                options={customerChoices}
+                                searchPlaceholder={t("customers.picker.search")}
+                              />
+                            </FieldScope>
+                            {canSeeAll && (
+                              <FieldScope>
+                                <Label>{t("opportunities.field.owner")}</Label>
+                                <SearchableSelect
+                                  value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
+                                  onChange={(v) =>
+                                    setEditForm({ ...editForm, ownerUserId: Number(v) })
+                                  }
+                                  ariaLabel={t("people.select")}
+                                  options={[...salesUsers.map((person) => personOption(person, t))]}
+                                />
+                              </FieldScope>
+                            )}
+                          </div>
                           <FieldScope>
                             <Label>{t("opportunities.field.operationalProject")}</Label>
                             <SearchableSelect
@@ -1988,7 +2010,7 @@ const AdminOpportunities = () => {
                               </Button>
                             )}
                           </FieldScope>
-                          <div className="grid grid-cols-2 gap-3">
+                          <div className="grid gap-5 sm:grid-cols-2">
                             <FieldScope>
                               <Label>
                                 {t("opportunities.field.estimatedValue")}
@@ -2036,29 +2058,14 @@ const AdminOpportunities = () => {
                                       winProbability: Number(e.target.value),
                                     })
                                   }
-                                  className="w-16"
+                                  className="w-20"
                                 />
                               </div>
                             </FieldScope>
                           </div>
-                          {/* Owner and close date share a row, the way the create
-                          form already lays them out. A full-width date field
-                          strands its browser-drawn calendar icon far from the
-                          value. */}
-                          <div className="grid gap-3 sm:grid-cols-2">
-                            {canSeeAll && (
-                              <FieldScope>
-                                <Label>{t("opportunities.field.owner")}</Label>
-                                <SearchableSelect
-                                  value={editForm.ownerUserId ? String(editForm.ownerUserId) : ""}
-                                  onChange={(v) =>
-                                    setEditForm({ ...editForm, ownerUserId: Number(v) })
-                                  }
-                                  ariaLabel={t("people.select")}
-                                  options={[...salesUsers.map((person) => personOption(person, t))]}
-                                />
-                              </FieldScope>
-                            )}
+                          {/* A half-width date field keeps the browser-drawn
+                          calendar icon close to the value. */}
+                          <div className="grid gap-5 sm:grid-cols-2">
                             <FieldScope>
                               <Label>{t("opportunities.field.expectedCloseDate")}</Label>
                               <Input
@@ -2078,21 +2085,21 @@ const AdminOpportunities = () => {
                           <FieldScope>
                             <Label>{t("opportunities.field.note")}</Label>
                             <Textarea
-                              rows={3}
+                              rows={4}
                               value={editForm.note ?? ""}
                               onChange={(e) => setEditForm({ ...editForm, note: e.target.value })}
                             />
                           </FieldScope>
-                          <div className="flex gap-2">
-                            <Button onClick={() => void handleSaveEdit()} disabled={savingEdit}>
-                              {t("common.save")}
-                            </Button>
+                          <div className="flex flex-col-reverse gap-2 border-t pt-4 sm:flex-row sm:justify-end">
                             <Button
                               variant="outline"
                               onClick={() => setEditing(false)}
                               disabled={savingEdit}
                             >
                               {t("common.cancel")}
+                            </Button>
+                            <Button onClick={() => void handleSaveEdit()} disabled={savingEdit}>
+                              {t("common.save")}
                             </Button>
                           </div>
                         </div>
