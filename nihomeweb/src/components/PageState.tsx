@@ -67,3 +67,19 @@ export function PageEmpty({ message, action }: { message: string; action?: React
     </div>
   );
 }
+
+/**
+ * A route that could not load. `stale` means its bundle file is gone after a
+ * deploy, so reloading fetches the new version.
+ */
+export function PageLoadFailed({ stale }: { stale: boolean }) {
+  const { t } = useI18n();
+  return (
+    <div className="p-4 sm:p-6">
+      <PageError
+        message={t(stale ? "app.newVersion.reload" : "app.pageLoadFailed")}
+        onRetry={() => window.location.reload()}
+      />
+    </div>
+  );
+}

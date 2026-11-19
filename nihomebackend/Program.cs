@@ -108,7 +108,8 @@ app.Use(async (context, next) =>
 
     await next();
 });
-app.UseStaticFiles();
+var spaFiles = new StaticFileOptions { OnPrepareResponse = SpaHosting.ApplyCacheHeaders };
+app.UseStaticFiles(spaFiles);
 
 var uploadImagesPath = Path.Combine(builder.Environment.ContentRootPath, "wwwroot", "images", "upload");
 Directory.CreateDirectory(uploadImagesPath);
@@ -141,7 +142,7 @@ if (!string.Equals(app.Environment.EnvironmentName, "IntegrationTests", StringCo
 
 app.MapControllers();
 
-app.MapFallbackToFile("{*path:regex(^(?!api($|/)).*$)}", "index.html");
+app.MapFallbackToFile($"{{*path:regex({SpaHosting.FallbackPathRegex})}}", "index.html", spaFiles);
 
 app.Run();
 

@@ -87,7 +87,9 @@ export const authApi = {
   forgotResendOtp: (accountPhone: string) =>
     api.post<OtpMessageResponse>("/auth/forgot/resend-otp", { phoneNumber: accountPhone }),
 
-  refresh: (refreshToken: string) => api.post<AuthResponse>("/auth/refresh", { refreshToken }),
+  // Bounded so a stalled request ends in a retryable error, not an endless spinner.
+  refresh: (refreshToken: string) =>
+    api.post<AuthResponse>("/auth/refresh", { refreshToken }, { timeout: 20_000 }),
 
   logout: (refreshToken: string) => api.post<OtpMessageResponse>("/auth/logout", { refreshToken }),
 };
