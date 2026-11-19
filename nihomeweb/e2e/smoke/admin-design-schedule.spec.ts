@@ -190,7 +190,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       .filter({ hasText: designLead!.fullName })
       .getByRole("checkbox")
       .check();
-    await expect(cc.getByRole("button")).toHaveCount(2);
+    await expect(cc.getByRole("button", { name: /^(Bỏ chọn|Deselect):/ })).toHaveCount(2);
 
     const selectTriggers = dialog.locator('button[role="combobox"]');
     await selectTriggers.nth(4).click();
@@ -206,7 +206,7 @@ test.describe("Detail Design Schedule — assigned Design Lead flow", () => {
       .locator('[data-people-picker="true"][data-state="open"]')
       .getByRole("option", { name: designLead!.fullName })
       .click();
-    await expect(cc.getByRole("button")).toHaveCount(0);
+    await expect(cc.getByRole("button", { name: /^(Bỏ chọn|Deselect):/ })).toHaveCount(0);
     await cc.locator("label").filter({ hasText: mep!.fullName }).getByRole("checkbox").check();
     await cc
       .locator("label")

@@ -126,5 +126,29 @@
     "en": "The department/group filter is invalid. Select a group from the list or clear the filter.",
     "zh": "部门/团队筛选无效。请选择列表中的团队或清除筛选。",
     "ja": "部署・グループの絞り込みが無効です。一覧から選択するか、絞り込みを解除してください。"
+  },
+  {
+    "key": "people.clearAll",
+    "category": "common",
+    "vi": "Bỏ chọn tất cả",
+    "en": "Clear all",
+    "zh": "全部取消",
+    "ja": "すべて解除"
+  },
+  {
+    "key": "people.selectAllVisible",
+    "category": "common",
+    "vi": "Chọn tất cả ({count})",
+    "en": "Select all ({count})",
+    "zh": "全选（{count}）",
+    "ja": "すべて選択（{count}）"
+  },
+  {
+    "key": "people.visibleCount",
+    "category": "common",
+    "vi": "{count} người",
+    "en": "{count} people",
+    "zh": "{count} 人",
+    "ja": "{count} 人"
   }
 ]
