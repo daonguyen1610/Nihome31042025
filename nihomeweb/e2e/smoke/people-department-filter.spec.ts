@@ -165,4 +165,19 @@ test("design review retains chosen recipients and draft while filtering people",
   await expect(first).toBeChecked();
   await chip.click();
   await expect(first).not.toBeChecked();
+
+  // A department can be copied in one go, and cleared just as quickly.
+  await filter.selectOption((await options.nth(1).getAttribute("value"))!);
+  const boxes = checklist.getByRole("checkbox");
+  const inDepartment = await boxes.count();
+  const selectAll = checklist.getByRole("button", { name: /^Select all \(\d+\)$/ });
+  if (inDepartment > 1) {
+    await selectAll.click();
+    for (let index = 0; index < inDepartment; index++) await expect(boxes.nth(index)).toBeChecked();
+    await expect(checklist.getByRole("button", { name: /^Deselect:/ })).toHaveCount(inDepartment);
+    await expect(selectAll).toHaveCount(0);
+    await checklist.getByRole("button", { name: "Clear all" }).click();
+    await expect(checklist.getByRole("button", { name: /^Deselect:/ })).toHaveCount(0);
+    await expect(boxes.first()).not.toBeChecked();
+  }
 });
