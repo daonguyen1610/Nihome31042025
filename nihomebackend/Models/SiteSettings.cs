@@ -3,6 +3,7 @@ namespace NihomeBackend.Models;
 public class SiteSettings
 {
     public const int DefaultContractMaxFileSizeMb = 100;
+    public const int DefaultDesignMaxFileSizeMb = 100;
     public const string DefaultTimeZoneId = "Asia/Ho_Chi_Minh";
     public const string DefaultCurrencyCode = "VND";
     public const decimal DefaultUsdVndRate = 25_000m;
@@ -73,6 +74,9 @@ public class SiteSettings
     public int AuditLogRetentionMinutes { get; set; } = 43200;
 
     public int ContractMaxFileSizeMb { get; set; } = DefaultContractMaxFileSizeMb;
+
+    /// <summary>Largest file staff may attach to a basic design document or shop drawing.</summary>
+    public int DesignMaxFileSizeMb { get; set; } = DefaultDesignMaxFileSizeMb;
 
     public DateTime CreatedAt { get; set; }
 

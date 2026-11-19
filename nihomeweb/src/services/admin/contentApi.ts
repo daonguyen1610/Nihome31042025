@@ -253,6 +253,15 @@ export const contentApi = {
       "/site-settings/contract-uploads",
       { maxFileSizeMb },
     ),
+  getDesignUploadLimit: () =>
+    api.get<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
+      "/site-settings/design-uploads",
+    ),
+  updateDesignUploadLimit: (maxFileSizeMb: number) =>
+    api.put<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
+      "/site-settings/design-uploads",
+      { maxFileSizeMb },
+    ),
   getMapEmbed: () => api.get<MapEmbedResponse>("/site-settings/map-embed"),
   updateMapEmbed: (data: UpdateMapEmbedRequest) =>
     api.put<MapEmbedResponse>("/site-settings/map-embed", data),

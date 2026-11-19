@@ -8,6 +8,7 @@ import {
   Gauge,
   Globe2,
   HardDrive,
+  PencilRuler,
   Images,
   LogOut,
   Map as MapIcon,
@@ -46,7 +47,8 @@ import { cn } from "@/lib/utils";
 // were localStorage-only mocks; they were removed because they violated the
 // "no dead code / no hardcode" rule.
 type Tab = "general" | "drive";
-type SectionKey = "display" | "cm-schedule" | "security" | "contracts" | "map" | "slideshow";
+type SectionKey =
+  "display" | "cm-schedule" | "security" | "contracts" | "design-files" | "map" | "slideshow";
 type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
@@ -60,6 +62,7 @@ const sections: { key: SectionKey; labelKey: string; icon: LucideIcon }[] = [
   { key: "cm-schedule", labelKey: "cmSchedule.policyTitle", icon: Gauge },
   { key: "security", labelKey: "settings.tab.security", icon: ShieldCheck },
   { key: "contracts", labelKey: "settings.contractUploads.tab", icon: FileText },
+  { key: "design-files", labelKey: "settings.designUploads.tab", icon: PencilRuler },
   { key: "map", labelKey: "settings.map.tab", icon: MapIcon },
   { key: "slideshow", labelKey: "set.slideshow", icon: Images },
 ];
@@ -655,7 +658,25 @@ const DriveTab = () => {
 };
 
 /* ─── Settings Center ─── */
-const ContractUploadTab = () => {
+type UploadLimitResponse = { maxFileSizeMb: number; maxAllowedFileSizeMb: number };
+
+/** One per-file upload limit setting (contracts, design files). */
+const UploadLimitTab = ({
+  sectionKey,
+  icon,
+  keyPrefix,
+  inputId,
+  loadLimit,
+  saveLimit,
+}: {
+  sectionKey: SectionKey;
+  icon: LucideIcon;
+  /** Translation prefix, e.g. "settings.contractUploads". */
+  keyPrefix: string;
+  inputId: string;
+  loadLimit: () => Promise<{ data: UploadLimitResponse }>;
+  saveLimit: (maxFileSizeMb: number) => Promise<{ data: UploadLimitResponse }>;
+}) => {
   const { t, lang } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -671,16 +692,16 @@ const ContractUploadTab = () => {
     setLoading(true);
     setError(null);
     try {
-      const { data } = await adminApi.getContractUploadLimit();
+      const { data } = await loadLimit();
       setValue(formatNumber(data.maxFileSizeMb, lang));
       setSavedValue(formatNumber(data.maxFileSizeMb, lang));
       setMaxAllowed(data.maxAllowedFileSizeMb);
     } catch {
-      setError(t("settings.contractUploads.loadError"));
+      setError(t(`${keyPrefix}.loadError`));
     } finally {
       setLoading(false);
     }
-  }, [t, lang]);
+  }, [t, lang, keyPrefix, loadLimit]);
 
   useEffect(() => {
     void load();
@@ -689,21 +710,19 @@ const ContractUploadTab = () => {
   const save = async () => {
     const parsed = /^(?:\d+|\d{1,3}(?:[.,]\d{3})+)$/.test(value.trim()) ? parseVnd(value) : NaN;
     if (maxAllowed === null || !Number.isSafeInteger(parsed) || parsed < 1 || parsed > maxAllowed) {
-      setError(
-        t("settings.contractUploads.invalidRange", { max: formatNumber(maxAllowed ?? 0, lang) }),
-      );
+      setError(t(`${keyPrefix}.invalidRange`, { max: formatNumber(maxAllowed ?? 0, lang) }));
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const { data } = await adminApi.updateContractUploadLimit(parsed);
+      const { data } = await saveLimit(parsed);
       setValue(formatNumber(data.maxFileSizeMb, lang));
       setSavedValue(formatNumber(data.maxFileSizeMb, lang));
       setMaxAllowed(data.maxAllowedFileSizeMb);
       toast({ title: t("settings.saved") });
     } catch {
-      setError(t("settings.contractUploads.saveError"));
+      setError(t(`${keyPrefix}.saveError`));
     } finally {
       setSaving(false);
     }
@@ -711,18 +730,18 @@ const ContractUploadTab = () => {
 
   return (
     <SettingsSection
-      sectionKey="contracts"
-      icon={FileText}
-      title={t("settings.contractUploads.title")}
-      description={t("settings.contractUploads.description")}
+      sectionKey={sectionKey}
+      icon={icon}
+      title={t(`${keyPrefix}.title`)}
+      description={t(`${keyPrefix}.description`)}
     >
       {loading ? (
         <PageLoading />
       ) : (
         <div className="max-w-2xl space-y-3">
-          <Label htmlFor="contract-upload-limit">{t("settings.contractUploads.label")}</Label>
+          <Label htmlFor={inputId}>{t(`${keyPrefix}.label`)}</Label>
           <Input
-            id="contract-upload-limit"
+            id={inputId}
             inputMode="numeric"
             value={value}
             disabled={!canManage || saving || maxAllowed === null}
@@ -736,7 +755,7 @@ const ContractUploadTab = () => {
           />
           {maxAllowed !== null ? (
             <p className="text-sm text-muted-foreground">
-              {t("settings.contractUploads.maximum", { max: formatNumber(maxAllowed, lang) })}
+              {t(`${keyPrefix}.maximum`, { max: formatNumber(maxAllowed, lang) })}
             </p>
           ) : null}
           {error ? (
@@ -920,7 +939,22 @@ const SettingsCenter = () => {
               <DisplaySettingsTab />
               <CmSchedulePolicy />
               <SecurityTab />
-              <ContractUploadTab />
+              <UploadLimitTab
+                sectionKey="contracts"
+                icon={FileText}
+                keyPrefix="settings.contractUploads"
+                inputId="contract-upload-limit"
+                loadLimit={adminApi.getContractUploadLimit}
+                saveLimit={adminApi.updateContractUploadLimit}
+              />
+              <UploadLimitTab
+                sectionKey="design-files"
+                icon={PencilRuler}
+                keyPrefix="settings.designUploads"
+                inputId="design-upload-limit"
+                loadLimit={adminApi.getDesignUploadLimit}
+                saveLimit={adminApi.updateDesignUploadLimit}
+              />
               <MapTab />
               <SlideshowSettings />
             </div>

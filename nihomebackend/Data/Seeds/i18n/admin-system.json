@@ -2432,6 +2432,70 @@
     "ja": "ファイル制限を保存できませんでした。再試行してください。"
   },
   {
+    "key": "settings.designUploads.tab",
+    "category": "settings",
+    "vi": "Tệp hồ sơ thiết kế",
+    "en": "Design files",
+    "zh": "设计文件",
+    "ja": "設計ファイル"
+  },
+  {
+    "key": "settings.designUploads.title",
+    "category": "settings",
+    "vi": "Giới hạn tệp hồ sơ thiết kế",
+    "en": "Design file limit",
+    "zh": "设计文件大小上限",
+    "ja": "設計ファイルの上限"
+  },
+  {
+    "key": "settings.designUploads.description",
+    "category": "settings",
+    "vi": "Áp dụng cho mỗi tệp tải lên hồ sơ Thiết kế cơ sở và Thiết kế chi tiết. Thay đổi có hiệu lực ngay với lần tải lên tiếp theo.",
+    "en": "Applies to each file uploaded to basic and detailed design documents. Takes effect with the next upload.",
+    "zh": "适用于上传到基本设计和详细设计文件的每个文件。下次上传即生效。",
+    "ja": "基本設計・詳細設計の書類にアップロードする各ファイルに適用されます。次回のアップロードから有効です。"
+  },
+  {
+    "key": "settings.designUploads.label",
+    "category": "settings",
+    "vi": "Dung lượng tối đa mỗi tệp (MB)",
+    "en": "Maximum size per file (MB)",
+    "zh": "每个文件的最大大小（MB）",
+    "ja": "1ファイルあたりの最大サイズ（MB）"
+  },
+  {
+    "key": "settings.designUploads.invalidRange",
+    "category": "settings",
+    "vi": "Nhập số nguyên từ 1 đến {max} MB. Ví dụ: 50.",
+    "en": "Enter a whole number from 1 to {max} MB, e.g. 50.",
+    "zh": "请输入 1 到 {max} MB 之间的整数，例如 50。",
+    "ja": "1〜{max} MB の整数を入力してください（例：50）。"
+  },
+  {
+    "key": "settings.designUploads.maximum",
+    "category": "settings",
+    "vi": "Giới hạn có thể đặt tối đa: {max} MB cho mỗi tệp.",
+    "en": "Highest limit you can set: {max} MB per file.",
+    "zh": "可设置的最大上限：每个文件 {max} MB。",
+    "ja": "設定できる上限：1ファイルあたり {max} MB。"
+  },
+  {
+    "key": "settings.designUploads.loadError",
+    "category": "settings",
+    "vi": "Chưa tải được giới hạn tệp hồ sơ thiết kế. Hãy thử lại.",
+    "en": "Could not load the design file limit. Try again.",
+    "zh": "无法加载设计文件上限，请重试。",
+    "ja": "設計ファイルの上限を読み込めませんでした。もう一度お試しください。"
+  },
+  {
+    "key": "settings.designUploads.saveError",
+    "category": "settings",
+    "vi": "Chưa lưu được giới hạn tệp hồ sơ thiết kế. Hãy thử lại.",
+    "en": "Could not save the design file limit. Try again.",
+    "zh": "无法保存设计文件上限，请重试。",
+    "ja": "設計ファイルの上限を保存できませんでした。もう一度お試しください。"
+  },
+  {
     "key": "settings.company",
     "category": "settings",
     "vi": "Thông tin công ty",

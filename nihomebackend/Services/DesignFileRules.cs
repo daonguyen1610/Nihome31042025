@@ -3,12 +3,14 @@ using System.Globalization;
 namespace NihomeBackend.Services;
 
 /// <summary>
-/// Size and type rules for files attached to basic design documents and shop
-/// drawings. The admin forms check the same rules before uploading.
+/// Type and size rules for files attached to basic design documents and shop
+/// drawings. The size limit is the administrator's setting (Cài đặt → Giới hạn
+/// tệp hồ sơ thiết kế); the admin forms check the same rules before uploading.
 /// </summary>
 public static class DesignFileRules
 {
-    public const long MaxBytes = 20L * 1024 * 1024;
+    /// <summary>Highest limit an administrator may set, as for other project documents.</summary>
+    public const int MaxAllowedMb = (int)(ProjectDocumentStorageService.MaxFileSize / (1024 * 1024));
 
     public static readonly IReadOnlySet<string> AllowedExtensions = new HashSet<string>(
         [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"],
@@ -17,7 +19,7 @@ public static class DesignFileRules
     private static readonly CultureInfo Vietnamese = CultureInfo.GetCultureInfo("vi-VN");
 
     /// <summary>Why the file cannot be attached, in Vietnamese; null when it can.</summary>
-    public static string? Problem(IFormFile file)
+    public static string? Problem(IFormFile file, int maxMb)
     {
         var extension = Path.GetExtension(file.FileName);
         if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
@@ -28,10 +30,10 @@ public static class DesignFileRules
         }
         if (file.Length == 0)
             return $"Tệp “{file.FileName}” trống. Hãy kiểm tra lại tệp rồi tải lên.";
-        if (file.Length > MaxBytes)
+        if (file.Length > (long)maxMb * 1024 * 1024)
         {
             var megabytes = (file.Length / 1024d / 1024d).ToString("0.0", Vietnamese);
-            return $"Tệp “{file.FileName}” nặng {megabytes} MB, vượt giới hạn 20 MB. " +
+            return $"Tệp “{file.FileName}” nặng {megabytes} MB, vượt giới hạn {maxMb} MB. " +
                 "Hãy nén hoặc tách tệp rồi tải lên lại.";
         }
         return null;

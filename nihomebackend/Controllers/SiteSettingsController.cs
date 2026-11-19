@@ -37,6 +37,26 @@ public class SiteSettingsController(SiteSettingsService svc) : ControllerBase
         return Ok(new { maxFileSizeMb = settings?.ContractMaxFileSizeMb ?? SiteSettings.DefaultContractMaxFileSizeMb, maxAllowedFileSizeMb = ProjectDocumentStorageService.ContractMaxFileSizeMb });
     }
 
+    /// <summary>
+    /// Design file limit. Readable by every signed-in user because the upload
+    /// forms check it before sending a file.
+    /// </summary>
+    [HttpGet("design-uploads")]
+    [Authorize]
+    public async Task<IActionResult> GetDesignUploadLimit(CancellationToken ct) =>
+        Ok(new { maxFileSizeMb = await svc.GetDesignUploadLimitMbAsync(ct), maxAllowedFileSizeMb = DesignFileRules.MaxAllowedMb });
+
+    [HttpPut("design-uploads")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public async Task<IActionResult> UpdateDesignUploadLimit([FromBody] UpdateContractUploadLimitRequest req, CancellationToken ct)
+    {
+        if (req.MaxFileSizeMb < 1 || req.MaxFileSizeMb > DesignFileRules.MaxAllowedMb)
+            return BadRequest(new { code = "DESIGN_UPLOAD_LIMIT_INVALID", field = "maxFileSizeMb", maxAllowedFileSizeMb = DesignFileRules.MaxAllowedMb, message = $"Giới hạn tệp hồ sơ thiết kế phải từ 1 đến {DesignFileRules.MaxAllowedMb} MB. Ví dụ: 50 MB." });
+        var settings = await svc.UpdateDesignUploadLimitAsync(req.MaxFileSizeMb, ct);
+        return Ok(new { maxFileSizeMb = settings.DesignMaxFileSizeMb, maxAllowedFileSizeMb = DesignFileRules.MaxAllowedMb });
+    }
+
     [HttpPut("contract-uploads")]
     [Authorize]
     [RequirePermission("system.settings", "manage")]

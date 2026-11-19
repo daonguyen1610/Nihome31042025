@@ -24,7 +24,8 @@ public class ShopDrawingsController(
     IDesignRecordDeletionService deletion,
     IPermissionService permissions,
     IProjectAccessService projectAccess,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    SiteSettingsService settings) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("design.shop", "view")]
@@ -247,6 +248,8 @@ public class ShopDrawingsController(
     /// </summary>
     [HttpPost("{id:int}/upload")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("design.shop", "view")]
     public async Task<ActionResult<ShopDrawingResponse>> UploadFile(
         int id, [FromForm] IFormFile file, CancellationToken ct)
@@ -255,7 +258,7 @@ public class ShopDrawingsController(
         if (userId is null) return Unauthorized();
         if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
 
-        if (DesignFileRules.Problem(file) is { } problem)
+        if (DesignFileRules.Problem(file, await settings.GetDesignUploadLimitMbAsync(ct)) is { } problem)
             return BadRequest(new { message = problem });
 
         try

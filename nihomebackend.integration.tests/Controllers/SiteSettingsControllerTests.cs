@@ -57,6 +57,43 @@ public class SiteSettingsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task DesignUploadLimit_IsReadableByUploaders_AndEditableOnlyWithSettingsPermission()
+    {
+        const string path = "/api/site-settings/design-uploads";
+        (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+
+        // A designer has no settings permission but must know the limit before uploading.
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "ARCHITECT"));
+        var read = await Client.GetAsync(path);
+        read.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(read)).GetProperty("maxAllowedFileSizeMb").GetInt32().Should().Be(100);
+        (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 50 }))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var original = (await ReadJsonAsync(await Client.GetAsync(path)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        try
+        {
+            var invalid = await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 101 });
+            invalid.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(invalid)).GetProperty("code").GetString()
+                .Should().Be("DESIGN_UPLOAD_LIMIT_INVALID");
+
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = 40 }))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(await Client.GetAsync(path)))
+                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(40);
+        }
+        finally
+        {
+            (await Client.PutAsJsonAsync(path, new { maxFileSizeMb = original }))
+                .EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task GetOtpSettings_IsPublic_ReturnsOk()
     {
         (await Client.GetAsync("/api/site-settings/otp-settings")).StatusCode.Should().Be(HttpStatusCode.OK);

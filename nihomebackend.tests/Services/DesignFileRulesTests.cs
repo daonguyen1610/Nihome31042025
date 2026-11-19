@@ -16,12 +16,12 @@ public class DesignFileRulesTests
 
     [Fact]
     public void AcceptsAnAllowedFileWithinTheLimit() =>
-        Assert.Null(DesignFileRules.Problem(File("KT-01 Mặt bằng.PDF", 5 * 1024 * 1024)));
+        Assert.Null(DesignFileRules.Problem(File("KT-01 Mặt bằng.PDF", 5 * 1024 * 1024), 20));
 
     [Fact]
     public void NamesTheFileAndItsSizeWhenTooLarge()
     {
-        var message = DesignFileRules.Problem(File("KC-02 Kết cấu.pdf", 25L * 1024 * 1024 + 300 * 1024));
+        var message = DesignFileRules.Problem(File("KC-02 Kết cấu.pdf", 25L * 1024 * 1024 + 300 * 1024), 20);
 
         Assert.NotNull(message);
         Assert.Contains("KC-02 Kết cấu.pdf", message);
@@ -30,13 +30,22 @@ public class DesignFileRulesTests
     }
 
     [Fact]
+    public void FollowsTheConfiguredLimit()
+    {
+        var file = File("ban-ve-50mb.pdf", 50L * 1024 * 1024);
+
+        Assert.NotNull(DesignFileRules.Problem(file, 20));
+        Assert.Null(DesignFileRules.Problem(file, 60));
+    }
+
+    [Fact]
     public void SaysWhenTheFileIsEmpty() =>
-        Assert.Contains("trống", DesignFileRules.Problem(File("ghi-chu.docx", 0)));
+        Assert.Contains("trống", DesignFileRules.Problem(File("ghi-chu.docx", 0), 20));
 
     [Fact]
     public void ListsTheAcceptedTypesForAnUnsupportedFile()
     {
-        var message = DesignFileRules.Problem(File("ban-ve.dwg", 1024));
+        var message = DesignFileRules.Problem(File("ban-ve.dwg", 1024), 20);
 
         Assert.NotNull(message);
         Assert.Contains(".dwg", message);

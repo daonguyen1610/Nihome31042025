@@ -10616,6 +10616,11 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(3)")
                         .HasDefaultValue("VND");
 
+                    b.Property<int>("DesignMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(100);
+
                     b.Property<string>("DisplayTimeZoneId")
                         .IsRequired()
                         .ValueGeneratedOnAdd()

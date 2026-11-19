@@ -24,7 +24,8 @@ public class BasicDesignDocsController(
     IDesignRecordDeletionService deletion,
     IPermissionService permissions,
     IProjectAccessService projectAccess,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    SiteSettingsService settings) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("design.basic", "view")]
@@ -231,6 +232,8 @@ public class BasicDesignDocsController(
     /// </summary>
     [HttpPost("{id:int}/upload")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("design.basic", "view")]
     public async Task<ActionResult<BasicDesignDocResponse>> UploadFile(
         int id, [FromForm] IFormFile file, CancellationToken ct)
@@ -239,7 +242,7 @@ public class BasicDesignDocsController(
         if (userId is null) return Unauthorized();
         if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
 
-        if (DesignFileRules.Problem(file) is { } problem)
+        if (DesignFileRules.Problem(file, await settings.GetDesignUploadLimitMbAsync(ct)) is { } problem)
             return BadRequest(new { message = problem });
 
         try
