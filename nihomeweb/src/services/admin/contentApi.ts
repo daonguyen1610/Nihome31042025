@@ -220,6 +220,8 @@ export const contentApi = {
   }) => api.put<QuoteApprovalTemplates>("/site-settings/quote-approval-template", data),
   listWorkPackageApprovers: (packageId: number) =>
     api.get<WorkPackageApproverOption[]>(`/work-packages/${packageId}/approvers`),
+  listWorkPackageEmailContacts: (packageId: number) =>
+    api.get<WorkPackageApproverOption[]>(`/work-packages/${packageId}/email-contacts`),
   previewWorkPackageApprovalEmail: (
     packageId: number,
     offerId?: number,

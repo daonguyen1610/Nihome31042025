@@ -47,6 +47,17 @@ public sealed partial class DepartmentWorkPackageService
         return await approvalEmails.ListApproverCandidatesAsync(package, ct);
     }
 
+    public async Task<IReadOnlyList<WorkPackageApproverOption>> ListEmailContactsAsync(
+        int packageId, int callerUserId, CancellationToken ct = default)
+    {
+        var package = await db.DepartmentWorkPackages.AsNoTracking().SingleOrDefaultAsync(item => item.Id == packageId, ct);
+        if (package is null || package.Purpose is not (WorkPackagePurpose.ProcurementInputPricing or
+                WorkPackagePurpose.FinanceCommercialReview or WorkPackagePurpose.FinanceTenderReview))
+            throw ScopeError();
+        await EnsureCanWorkInDepartmentAsync(package, callerUserId, ct);
+        return await approvalEmails.ListEmailContactsAsync(package, ct);
+    }
+
     public async Task<InputPriceOfferResponse> AddInputPriceOfferAsync(
         int packageId, UpsertInputPriceOfferRequest request, int callerUserId, CancellationToken ct = default)
     {

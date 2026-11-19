@@ -930,6 +930,30 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CcSuggestions_ListEveryActiveNiconUserWithAnEmail()
+    {
+        var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);
+        var inactive = AddUser("FORMER_BUYER", _procurementGroup);
+        inactive.IsActive = false;
+        var noEmail = AddUser("SITE_CLERK", _financeGroup);
+        noEmail.Email = "";
+        await _db.SaveChangesAsync();
+        // Approval rights do not matter for CC: nobody may approve here.
+        _permissions.Setup(item => item.FilterByRolePermissionAsync(It.IsAny<IReadOnlyCollection<int>>(),
+                "work.packages.verify", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<int>());
+
+        var contacts = await _service.ListEmailContactsAsync(package.Id, _warehouseStaff.Id);
+
+        Assert.Contains(contacts, contact => contact.UserId == _sales.Id && contact.Email == _sales.Email);
+        Assert.Contains(contacts, contact => contact.UserId == _accountantLead.Id);
+        Assert.DoesNotContain(contacts, contact => contact.UserId == inactive.Id || contact.UserId == noEmail.Id);
+        // Someone outside the department cannot browse the directory through this package.
+        await Assert.ThrowsAsync<DepartmentWorkPackageScopeException>(() =>
+            _service.ListEmailContactsAsync(package.Id, _sales.Id));
+    }
+
+    [Fact]
     public async Task ProcurementInputOffer_RejectsDuplicateSupplierReference()
     {
         var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);

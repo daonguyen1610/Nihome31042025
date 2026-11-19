@@ -147,6 +147,34 @@ test("the sender picks the input price approver, who alone approves it", async (
     await page.keyboard.press("Escape");
     await expect(dialog.getByLabel("Người nhận", { exact: true })).toHaveValue(accountant.email);
     await expect(dialog.frameLocator("iframe").locator("body")).toContainText(accountant.name);
+
+    // CC suggests NICON people while typing, like a mail client; outside
+    // addresses can still be typed. Accents are optional when searching.
+    const cc = dialog.getByRole("combobox", { name: "CC (không bắt buộc)" });
+    const send = dialog.getByRole("button", { name: "Gửi duyệt và thông báo", exact: true });
+    const managerSurname = manager.name.split(" ").pop()!;
+    await cc.fill(managerSurname.normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
+    await expect(page.getByRole("option", { name: new RegExp(manager.email) })).toBeVisible();
+    await cc.press("Enter");
+    const chips = dialog.getByTestId("email-recipient-chip");
+    await expect(chips).toHaveCount(1);
+    await expect(chips.first()).toHaveText(manager.name);
+    // Someone already in CC is not suggested again.
+    await cc.fill(managerSurname);
+    await expect(page.getByRole("option", { name: new RegExp(manager.email) })).toHaveCount(0);
+    await cc.fill("doitac.pccc@example.com,");
+    await expect(chips).toHaveCount(2);
+    // A malformed address is flagged and blocks sending until removed.
+    await cc.fill("sai-email");
+    await cc.press("Enter");
+    await expect(chips).toHaveCount(3);
+    await expect(dialog.getByRole("alert")).toContainText("Nhập To và CC là email hợp lệ");
+    await expect(send).toBeDisabled();
+    await dialog.getByRole("button", { name: "Bỏ sai-email khỏi CC" }).click();
+    await expect(chips).toHaveCount(2);
+    await dialog.getByRole("button", { name: "Cập nhật xem trước" }).click();
+    await expect(send).toBeEnabled();
+    await expect(chips).toHaveCount(2);
     for (const width of [390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       expect(
