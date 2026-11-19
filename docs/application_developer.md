@@ -866,7 +866,7 @@ Hầu hết controller có alias `/api/v1/...` cùng hành vi với `/api/...`.
 |---|---|---|---|
 | `GET` | `/api/customers/{id}/documents` | `crm.customers.view` | Customer trong scope owner |
 | `GET` | `/api/customers/{id}/documents/{documentId}/content` | `crm.customers.view` | Xem/tải |
-| `POST` | `/api/customers/{id}/documents` | `crm.customers.manage` | PDF, Word, Excel, ảnh; tối đa 20 MB |
+| `POST` | `/api/customers/{id}/documents` | `crm.customers.manage` | PDF, Word, Excel, ảnh; mỗi tệp tối đa theo `GET /api/site-settings/upload-limits/customers` (mặc định 20 MB, 1–100 MB) |
 | `DELETE` | `/api/customers/{id}/documents/{documentId}` | `crm.customers.manage` | Xoá metadata và file managed |
 
 Metadata lưu ở `customer_documents`, file ở thư mục riêng của Customer.

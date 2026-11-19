@@ -1086,6 +1086,53 @@ public class CustomersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Documents_FollowTheCustomerFileLimitSetInSettings()
+    {
+        const string settingsPath = "/api/site-settings/upload-limits/customers";
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        async Task<HttpResponseMessage> Upload(int customerId, int megabytes)
+        {
+            using var form = new MultipartFormDataContent();
+            var file = new ByteArrayContent(new byte[megabytes * 1024 * 1024]);
+            file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+            form.Add(file, "file", "giay-phep-kinh-doanh.pdf");
+            return await Client.PostAsync($"/api/customers/{customerId}/documents", form);
+        }
+        try
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 1 })).EnsureSuccessStatusCode();
+
+            // Sales uploads customer files without settings permission but must know the limit.
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+            var read = await Client.GetAsync(settingsPath);
+            read.StatusCode.Should().Be(HttpStatusCode.OK);
+            (await ReadJsonAsync(read)).GetProperty("maxFileSizeMb").GetInt32().Should().Be(1);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 50 }))
+                .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+            var customerId = await CreateIndividualCustomerAsync("Customer file limit");
+
+            var refused = await Upload(customerId, 2);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await refused.Content.ReadAsStringAsync()).Should()
+                .Contain("giay-phep-kinh-doanh.pdf").And.Contain("vượt giới hạn 1 MB");
+
+            // Raised in Settings, a file above the old fixed 20 MB is accepted.
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 30 })).EnsureSuccessStatusCode();
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+            var accepted = await Upload(customerId, 21);
+            accepted.StatusCode.Should().Be(HttpStatusCode.Created, await accepted.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original })).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task Documents_AsOwner_CanUploadListAndDelete()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));

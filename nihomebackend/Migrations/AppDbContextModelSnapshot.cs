@@ -10651,6 +10651,11 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(3)")
                         .HasDefaultValue("VND");
 
+                    b.Property<int>("CustomerMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
                     b.Property<int>("DesignMaxFileSizeMb")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
