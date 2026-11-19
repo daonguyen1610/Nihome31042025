@@ -26,11 +26,6 @@ public class ShopDrawingsController(
     IProjectAccessService projectAccess,
     IAuditLogger audit) : ControllerBase
 {
-    private const long MaxFileSizeBytes = 20L * 1024 * 1024;
-    private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
-    {
-        ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg",
-    };
     [HttpGet]
     [RequirePermission("design.shop", "view")]
     public async Task<ActionResult<ShopDrawingListResponse>> List(
@@ -39,7 +34,7 @@ public class ShopDrawingsController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         if (!parameters.DesignProjectId.HasValue)
-            return BadRequest(new { message = "DesignProjectId is required." });
+            return BadRequest(new { message = "Hãy chọn Hồ Sơ Thiết Kế cần xem (thiếu designProjectId)." });
         if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, parameters.DesignProjectId.Value, ct))
             return NotFound();
 
@@ -260,11 +255,8 @@ public class ShopDrawingsController(
         if (userId is null) return Unauthorized();
         if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
 
-        if (file.Length == 0 || file.Length > MaxFileSizeBytes)
-            return BadRequest(new { message = "File size must be between 1 byte and 20 MB." });
-        var extension = Path.GetExtension(file.FileName);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
-            return BadRequest(new { message = "Unsupported file type. Allowed types: PDF, Word, Excel, PNG, JPG, JPEG." });
+        if (DesignFileRules.Problem(file) is { } problem)
+            return BadRequest(new { message = problem });
 
         try
         {
