@@ -58,15 +58,30 @@ test("creating an opportunity can create and select its operational project in p
     await expect(form.getByRole("alert")).toHaveText("Nhập tên dự án vận hành trước khi tạo.");
     expect(projectPosts).toBe(0);
 
+    // The code is prefilled with the next PJ code, as on the Projects page, and can be edited.
+    const code = form.getByLabel("Mã dự án");
+    await expect(code).toHaveValue(/^PJ-\d{4}-\d+$/);
+    // A code another project already uses is refused inline, keeping what was typed.
+    const existing = await (
+      await api.get("/api/operational-projects?pageSize=1", { headers })
+    ).json();
+    const takenCode = existing.items[0].code as string;
     const projectName = `Nhà xưởng cơ khí Bình Dương ${unique}`;
     await name.fill(projectName);
+    await code.fill(takenCode);
+    await name.press("Enter");
+    await expect(form.getByRole("alert")).toBeVisible();
+    await expect(name).toHaveValue(projectName);
+
+    const customCode = `bd-${String(unique).slice(-8)}`;
+    await code.fill(customCode);
     await name.press("Enter");
     await expect(form).toHaveCount(0);
-    // The new project is selected, with its server-assigned PJ code.
+    // The new project is selected under the edited code, upper-cased like on the Projects page.
     await expect(dialog.getByRole("combobox", { name: "Dự án vận hành" })).toContainText(
-      new RegExp(`PJ-\\d{4}-\\d+ · ${projectName}`),
+      `${customCode.toUpperCase()} · ${projectName}`,
     );
-    expect(projectPosts).toBe(1);
+    expect(projectPosts).toBe(2);
 
     await dialog.getByRole("button", { name: "Tạo Cơ hội mới" }).click();
     await expect(dialog).toHaveCount(0);
@@ -79,7 +94,11 @@ test("creating an opportunity can create and select its operational project in p
     const project = await (
       await api.get(`/api/operational-projects/${projectId}`, { headers })
     ).json();
-    expect(project).toMatchObject({ name: projectName, customerId });
+    expect(project).toMatchObject({
+      code: customCode.toUpperCase(),
+      name: projectName,
+      customerId,
+    });
   } finally {
     if (opportunityId)
       await hardDeleteBusinessRoot(api, headers, `/api/opportunities/${opportunityId}`);

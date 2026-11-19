@@ -1,4 +1,4 @@
-import { useId, useState } from "react";
+import { useId, useState, type KeyboardEvent } from "react";
 import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,7 +10,8 @@ import type { OperationalProjectResponse } from "@/services/adminApi";
 
 /**
  * Creates the customer's operational project without leaving the form that
- * needs it. The server allocates the PJ code; the caller selects the result.
+ * needs it. The code is prefilled with the server's next PJ code, as on the
+ * Projects page, and may be edited; the caller selects the result.
  */
 export function OperationalProjectQuickCreate({
   customerId,
@@ -26,14 +27,24 @@ export function OperationalProjectQuickCreate({
   const uiError = useUiError();
   const inputId = useId();
   const [open, setOpen] = useState(false);
+  const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const start = () => {
+  const start = async () => {
+    setCode("");
     setName(suggestedName.trim());
     setError(null);
     setOpen(true);
+    try {
+      const { data } = await adminApi.suggestOperationalProjectCode();
+      // Keep anything the user typed while the suggestion loaded.
+      setCode((current) => current || data.code);
+    } catch (cause) {
+      // Without a suggestion the server still allocates a code on create.
+      setError(uiError(cause));
+    }
   };
 
   const create = async () => {
@@ -46,7 +57,11 @@ export function OperationalProjectQuickCreate({
     setSaving(true);
     setError(null);
     try {
-      const { data } = await adminApi.createOperationalProject({ name: trimmed, customerId });
+      const { data } = await adminApi.createOperationalProject({
+        code: code.trim().toUpperCase() || null,
+        name: trimmed,
+        customerId,
+      });
       setOpen(false);
       onCreated(data);
     } catch (cause) {
@@ -57,6 +72,17 @@ export function OperationalProjectQuickCreate({
     }
   };
 
+  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Enter") {
+      event.preventDefault();
+      void create();
+    }
+    if (event.key === "Escape") {
+      event.stopPropagation();
+      setOpen(false);
+    }
+  };
+
   if (!open)
     return (
       <Button
@@ -64,7 +90,7 @@ export function OperationalProjectQuickCreate({
         variant="link"
         size="sm"
         className="h-auto px-0 text-sm"
-        onClick={start}
+        onClick={() => void start()}
         data-testid="opportunity-project-quick-create"
       >
         <Plus className="mr-1 h-4 w-4" aria-hidden />
@@ -77,32 +103,43 @@ export function OperationalProjectQuickCreate({
       className="space-y-2 rounded-md border bg-muted/30 p-3"
       data-testid="opportunity-project-quick-form"
     >
-      <Label htmlFor={inputId}>{t("opportunities.project.quickName")}</Label>
-      <Input
-        id={inputId}
-        value={name}
-        maxLength={300}
-        autoFocus
-        disabled={saving}
-        aria-invalid={error ? true : undefined}
-        aria-describedby={`${inputId}-help`}
-        onChange={(event) => {
-          setName(event.target.value);
-          setError(null);
-        }}
-        onKeyDown={(event) => {
-          if (event.key === "Enter") {
-            event.preventDefault();
-            void create();
-          }
-          if (event.key === "Escape") {
-            event.stopPropagation();
-            setOpen(false);
-          }
-        }}
-      />
+      <div className="grid gap-2 sm:grid-cols-[11rem_1fr]">
+        <div className="space-y-1">
+          <Label htmlFor={`${inputId}-code`}>{t("operationalProjects.field.code")}</Label>
+          <Input
+            id={`${inputId}-code`}
+            value={code}
+            maxLength={40}
+            autoComplete="off"
+            disabled={saving}
+            aria-describedby={`${inputId}-help`}
+            onChange={(event) => {
+              setCode(event.target.value);
+              setError(null);
+            }}
+            onKeyDown={onKeyDown}
+          />
+        </div>
+        <div className="space-y-1">
+          <Label htmlFor={inputId}>{t("opportunities.project.quickName")}</Label>
+          <Input
+            id={inputId}
+            value={name}
+            maxLength={300}
+            autoFocus
+            disabled={saving}
+            aria-invalid={error ? true : undefined}
+            aria-describedby={`${inputId}-help`}
+            onChange={(event) => {
+              setName(event.target.value);
+              setError(null);
+            }}
+            onKeyDown={onKeyDown}
+          />
+        </div>
+      </div>
       <p id={`${inputId}-help`} className="text-xs text-muted-foreground">
-        {t("opportunities.project.quickHelp")}
+        {t("opportunities.project.quickCustomerHelp")} {t("operationalProjects.codeImmutableHint")}
       </p>
       {error && (
         <p role="alert" className="text-sm text-destructive">
