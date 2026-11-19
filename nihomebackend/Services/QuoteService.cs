@@ -1060,6 +1060,15 @@ public class QuoteService(
         // lookup for Sales Manager on Submit is deferred to a follow-up slice
         // (needs "users with permission" resolver — parked in NIH-84).
         _ = ct;
+        // The chosen approver may not work in CRM (e.g. the Procurement head):
+        // tell them in-app with a direct link, not only by email.
+        if (to == QuoteStatus.PendingApproval && quote.ApprovalApproverUserId is int approverId)
+        {
+            await notifications.CreateAsync(approverId, "crm.quote.approval-requested",
+                $"Báo giá {quote.Code} chờ bạn duyệt",
+                $"Báo giá {quote.Code} đã được gửi để bạn duyệt nội bộ. Mở báo giá để Duyệt hoặc Từ chối duyệt.",
+                $"/admin/quotes/{quote.Id}");
+        }
         if (quote.OwnerUserId is not int ownerId) return;
         if (to is not (QuoteStatus.Approved or QuoteStatus.SentToCustomer
             or QuoteStatus.CustomerApproved or QuoteStatus.Rejected or QuoteStatus.Cancelled))
