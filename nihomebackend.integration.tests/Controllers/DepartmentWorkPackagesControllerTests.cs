@@ -81,6 +81,77 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
+    public async Task TaskAttachments_FollowTheWorkTaskFileLimitSetInSettings()
+    {
+        const string settingsPath = "/api/site-settings/upload-limits/workTasks";
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var packageResponse = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "General",
+            name = "Hồ sơ bản vẽ hoàn công điện nhà xưởng",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var packageId = (await ReadJsonAsync(packageResponse)).GetProperty("id").GetInt32();
+        var taskResponse = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+        {
+            wbsCode = "MEP-02",
+            title = "Nộp bản vẽ hoàn công tủ điện",
+            assigneeUserId = seed.DepartmentStaffId,
+            approverUserId = seed.DepartmentLeadId,
+            plannedStart = "2026-10-12T00:00:00Z",
+            plannedEnd = "2026-10-30T00:00:00Z",
+            ccUserIds = Array.Empty<int>(),
+            predecessorTaskIds = Array.Empty<int>(),
+        });
+        taskResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var taskId = (await ReadJsonAsync(taskResponse)).GetProperty("id").GetInt32();
+        async Task<HttpResponseMessage> Upload(int megabytes)
+        {
+            using var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(new byte[megabytes * 1024 * 1024]), "file", "ban-ve-hoan-cong.pdf");
+            using var request = new HttpRequestMessage(HttpMethod.Post,
+                $"/api/work-packages/{packageId}/tasks/{taskId}/attachments")
+            { Content = form };
+            request.Headers.TryAddWithoutValidation("Idempotency-Key", Guid.NewGuid().ToString("N"));
+            return await Client.SendAsync(request);
+        }
+        try
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 1 })).EnsureSuccessStatusCode();
+
+            // The assignee uploads without settings permission but must know the limit.
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+            (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(1);
+            var refused = await Upload(2);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await refused.Content.ReadAsStringAsync()).Should()
+                .Contain("ban-ve-hoan-cong.pdf").And.Contain("vượt giới hạn 1 MB");
+
+            // Raised in Settings, a file above the old fixed 20 MB is accepted.
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 30 })).EnsureSuccessStatusCode();
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+            var accepted = await Upload(21);
+            accepted.StatusCode.Should().Be(HttpStatusCode.Created, await accepted.Content.ReadAsStringAsync());
+        }
+        finally
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original })).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task TaskAttachments_RequireScope_StayPrivate_AndBlockPackageDeleteUntilCleaned()
     {
         var seed = await SeedProjectScopeAsync();

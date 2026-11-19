@@ -200,6 +200,7 @@ const DepartmentWorkPackages = () => {
     unavailablePredecessorIds,
     load,
     departmentUsers,
+    taskUploadLimitMb,
     editAssigners,
     taskUsers,
     orderedTasks,
@@ -1927,7 +1928,8 @@ const DepartmentWorkPackages = () => {
                 onChange={(files) => selectTaskFiles(files, "form")}
                 accept={TASK_FILE_EXTENSIONS.join(",")}
                 maxFiles={10}
-                hint={t("workPackages.attachments.help")}
+                maxSizeMb={taskUploadLimitMb}
+                hint={t("workPackages.attachments.fileTypes")}
                 disabled={saving}
                 testId="work-task-files"
               />
@@ -2020,7 +2022,8 @@ const DepartmentWorkPackages = () => {
                   onChange={(files) => selectTaskFiles(files, "attachments")}
                   accept={TASK_FILE_EXTENSIONS.join(",")}
                   maxFiles={10}
-                  hint={t("workPackages.attachments.help")}
+                  maxSizeMb={taskUploadLimitMb}
+                  hint={t("workPackages.attachments.fileTypes")}
                   disabled={attachmentBusy}
                   testId="work-task-attachments"
                 />

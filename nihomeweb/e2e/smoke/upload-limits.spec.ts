@@ -354,3 +354,67 @@ test("customer documents follow the customer limit set in Settings", async ({
     await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
   }
 });
+
+// Work task attachments follow the work task limit in Settings instead of a fixed 20 MB.
+test("work task attachments follow the work task limit set in Settings", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const settingsPath = `${LIMITS}/workTasks`;
+  const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
+    .maxFileSizeMb as number;
+  // A fresh project work package, so a task can be added whatever the seed holds.
+  const options = await (
+    await api.get("/api/work-packages/options", { headers: adminHeaders })
+  ).json();
+  const procurement = options.departments.find(
+    (item: { code: string }) => item.code === "PROCUREMENT",
+  );
+  const lead = options.users.find(
+    (user: { roleGroupId: number; canLead: boolean }) =>
+      user.roleGroupId === procurement.id && user.canLead,
+  );
+  const projects = await (
+    await api.get("/api/operational-projects?pageSize=1", { headers: adminHeaders })
+  ).json();
+  const created = await api.post("/api/work-packages", {
+    headers: { ...adminHeaders, "Idempotency-Key": crypto.randomUUID() },
+    data: {
+      kind: "Project",
+      purpose: "General",
+      name: `Hồ sơ hoàn công điện ${Date.now()}`,
+      operationalProjectId: projects.items[0].id,
+      departmentRoleGroupId: procurement.id,
+      leadUserId: lead.userId,
+    },
+  });
+  expect(created.status(), await created.text()).toBe(201);
+  const packageId = (await created.json()).id as number;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.admin);
+    await setLimitInSettings(page, "work-task-files", "work-task-upload-limit", "1");
+
+    await page.goto(`/admin/work-packages/${packageId}`, { waitUntil: "networkidle" });
+    await page
+      .getByRole("button", { name: /Thêm đầu việc/ })
+      .first()
+      .click();
+    const input = page.getByRole("dialog").getByTestId("work-task-files");
+    await expect(input.locator("xpath=..")).toContainText("Tối đa 10 tệp, 1 MB mỗi tệp");
+    await input.setInputFiles(TWO_MB_PDF("ban-ve-hoan-cong.pdf"));
+    await expect(page.getByText("ban-ve-hoan-cong.pdf vượt quá 1 MB.").first()).toBeVisible();
+    await input.setInputFiles({
+      name: "bien-ban-nghiem-thu.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(200 * 1024),
+    });
+    await expect(page.getByText("bien-ban-nghiem-thu.pdf").first()).toBeVisible();
+  } finally {
+    await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
+    await hardDeleteBusinessRoot(api, adminHeaders, `/api/work-packages/${packageId}`);
+  }
+});

@@ -15,6 +15,8 @@ export const BUSINESS_FILE_EXTENSIONS = [
   ".jpeg",
 ] as const;
 export const BUSINESS_FILE_ACCEPT = BUSINESS_FILE_EXTENSIONS.join(",");
+/** Highest per-file limit Settings may set (BusinessFileRules.MaxAllowedMb on the server). */
+export const BUSINESS_FILE_MAX_MB = 100;
 
 export type BusinessFileProblem =
   | { code: "unsupported"; extension: string }

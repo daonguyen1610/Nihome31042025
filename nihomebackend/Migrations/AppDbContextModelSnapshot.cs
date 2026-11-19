@@ -10766,6 +10766,11 @@ namespace nihomebackend.Migrations
                     b.Property<string>("WorkPackageApprovalEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("WorkTaskMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
                     b.HasKey("Id");
 
                     b.ToTable("site_settings", (string)null);
