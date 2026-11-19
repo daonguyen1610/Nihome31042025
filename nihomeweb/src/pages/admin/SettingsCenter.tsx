@@ -1,3 +1,4 @@
+import { useUiError } from "@/hooks/useUiError";
 import { useConfirm } from "@/components/ui/confirmation";
 import type { LucideIcon } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -354,6 +355,7 @@ const MapTab = () => {
 const DriveTab = () => {
   const confirmAction = useConfirm();
   const { t } = useI18n();
+  const uiError = useUiError();
   const { toast } = useToast();
   const { has } = usePermissions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -512,14 +514,15 @@ const DriveTab = () => {
         void loadStatus();
         toast({ description: t("settings.drive.popupClosed") });
       }, 500);
-    } catch {
+    } catch (reason) {
       popup.close();
       oauthPopup.current = null;
       setConnecting(false);
       if (switchingAccount) void loadStatus();
+      // The server says what to fix (e.g. re-enter the Client Secret).
       toast({
         title: t("common.error"),
-        description: t("settings.drive.startError"),
+        description: uiError(reason, t("settings.drive.startError")),
         variant: "destructive",
       });
     }
@@ -540,11 +543,11 @@ const DriveTab = () => {
       });
       setConfigurationVersion((value) => value + 1);
       await loadStatus();
-    } catch {
+    } catch (reason) {
       await loadStatus();
       toast({
         title: t("common.error"),
-        description: t("settings.drive.disconnectError"),
+        description: uiError(reason, t("settings.drive.disconnectError")),
         variant: "destructive",
       });
     } finally {

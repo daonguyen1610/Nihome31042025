@@ -176,7 +176,21 @@ public sealed class GoogleDriveOAuthService(
         int userId,
         CancellationToken ct = default)
     {
-        var options = await settingsStore.GetRuntimeAsync(ct);
+        GoogleDriveOptions options;
+        try
+        {
+            options = await settingsStore.GetRuntimeAsync(ct);
+        }
+        catch (GoogleDriveReconnectRequiredException)
+        {
+            // The stored token can no longer be decrypted (lost key ring), so it
+            // cannot be revoked at Google, but it must still be removable here,
+            // otherwise the admin can neither disconnect nor switch account.
+            var metadata = await settingsStore.GetAdminAsync(ct);
+            if (!metadata.HasRefreshToken) return new GoogleDriveDisconnectResponse(false, false);
+            await settingsStore.ClearRefreshTokenAsync(userId, metadata.RowVersion, ct);
+            return new GoogleDriveDisconnectResponse(true, false);
+        }
         var hadStoredCredential = !string.IsNullOrWhiteSpace(options.RefreshToken);
         if (!hadStoredCredential)
             return new GoogleDriveDisconnectResponse(false, false);
@@ -231,9 +245,20 @@ public sealed class GoogleDriveOAuthService(
 
         try
         {
-            // Key-ring failures must produce the same actionable status as a
-            // revoked credential; never disclose ciphertext or provider errors.
             await settingsStore.GetRuntimeAsync(ct);
+        }
+        catch (GoogleDriveReconnectRequiredException)
+        {
+            // Never disclose ciphertext; tell the admin the one step that fixes it.
+            logger.LogWarning("Google Drive settings could not be decrypted with the current key ring.");
+            return new("ReconnectRequired", configured, metadata.HasRefreshToken,
+                metadata.AccountEmail, metadata.ConnectedAt, null, null,
+                "Không đọc được Client Secret đã lưu vì khóa mã hóa trên máy chủ đã thay đổi. " +
+                "Hãy nhập lại Client Secret, bấm Lưu cấu hình rồi kết nối lại Google Drive.");
+        }
+
+        try
+        {
             var connection = await drive.CheckConnectionAsync(ct);
             var status = !connection.IsFolder || connection.IsTrashed
                 ? "InvalidRoot"
