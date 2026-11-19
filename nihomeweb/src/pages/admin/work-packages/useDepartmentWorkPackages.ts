@@ -70,6 +70,7 @@ import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { translateError, useI18n } from "@/lib/i18n";
 import { isValidEmail } from "@/lib/validation";
+import { splitEmails } from "@/components/ui/email-recipients-input";
 import { cn } from "@/lib/utils";
 import {
   adminApi,
@@ -1252,10 +1253,7 @@ export function useDepartmentWorkPackages() {
   };
   const submitPriceOffer = (offerId: number, rowVersion: string) =>
     previewApproval(rowVersion, offerId);
-  const ccAddresses = approvalCc
-    .split(/[;,\n]+/)
-    .map((address) => address.trim())
-    .filter(Boolean);
+  const ccAddresses = splitEmails(approvalCc);
   const recipientsValid =
     Boolean(approvalTo.trim()) &&
     isValidEmail(approvalTo) &&

@@ -444,12 +444,14 @@ const matrix: RoleExpectation[] = [
     ],
   },
   {
-    // PROCUREMENT: crm.material-rates.view opens the BOQ template library.
+    // PROCUREMENT: crm.material-rates.view opens the BOQ template library;
+    // crm.quotes.view(.all) lets the whole department see every quote (19/11).
     user: TEST_USERS.procurement,
     allowed: [
       "/admin",
       "/admin/notifications",
       "/admin/design-approvals",
+      "/admin/quotes",
       "/admin/material-rates",
       "/admin/contracts",
       "/admin/vendors",

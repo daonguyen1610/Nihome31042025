@@ -163,9 +163,8 @@ test("template tabs preserve drafts and submission delivers the confirmed approv
       .fill(`${ccEmails[0]}; ${ccEmails[1]}\n${ccEmails[0]}`);
     await expect(confirm).toBeDisabled();
     await dialog.getByRole("button", { name: "Cập nhật xem trước", exact: true }).click();
-    await expect(dialog.getByLabel("CC (không bắt buộc)", { exact: true })).toHaveValue(
-      ccEmails.join(", "),
-    );
+    // Each address becomes one chip; the repeated one is dropped.
+    await expect(dialog.getByTestId("email-recipient-chip")).toHaveText(ccEmails);
     await expect(confirm).toBeEnabled();
     await dialog.getByRole("button", { name: "Gửi duyệt và thông báo", exact: true }).click();
     await expect(dialog).not.toBeVisible();

@@ -1,4 +1,12 @@
-import { useId, useMemo, useRef, useState, type ClipboardEvent, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type ClipboardEvent,
+  type KeyboardEvent,
+} from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { isValidEmail } from "@/lib/validation";
@@ -10,7 +18,9 @@ export interface EmailContact {
   hint?: string;
 }
 
-const SEPARATORS = /[;,\n]+/;
+// Addresses never contain spaces, so whitespace separates them too (a single-line
+// field turns pasted or filled line breaks into spaces).
+const SEPARATORS = /[;,\s]+/;
 const MAX_SUGGESTIONS = 8;
 
 export const splitEmails = (value: string) =>
@@ -57,7 +67,27 @@ export function EmailRecipientsInput({
   const [draft, setDraft] = useState("");
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
-  const addresses = useMemo(() => splitEmails(value), [value]);
+  // Chips. An address still being typed is not a chip yet but already counts in
+  // the value, so the form validates and previews it without the field having
+  // to change shape when focus leaves it (which made the next click miss).
+  const [addresses, setAddresses] = useState(() => splitEmails(value));
+  const emitted = useRef(value);
+  useEffect(() => {
+    if (value === emitted.current) return;
+    emitted.current = value;
+    setAddresses(splitEmails(value));
+    setDraft("");
+  }, [value]);
+  const emit = (chips: string[], typed: string) => {
+    const taken = new Set(chips.map((address) => address.toLowerCase()));
+    // A name typed to search people is not an address; only "@" text counts.
+    const pending = splitEmails(typed).filter(
+      (address) => address.includes("@") && !taken.has(address.toLowerCase()),
+    );
+    const next = [...chips, ...pending].join(", ");
+    emitted.current = next;
+    if (next !== value) onChange(next);
+  };
   const byEmail = useMemo(
     () => new Map(contacts.map((contact) => [contact.email.toLowerCase(), contact])),
     [contacts],
@@ -77,7 +107,7 @@ export function EmailRecipientsInput({
   }, [addresses, contacts, draft]);
   const listOpen = open && suggestions.length > 0;
 
-  const add = (incoming: string[]) => {
+  const add = (incoming: string[], rest = "") => {
     const seen = new Set(addresses.map((address) => address.toLowerCase()));
     const next = [...addresses];
     for (const address of incoming) {
@@ -85,9 +115,10 @@ export function EmailRecipientsInput({
       seen.add(address.toLowerCase());
       next.push(address);
     }
-    if (next.length !== addresses.length) onChange(next.join(", "));
-    setDraft("");
+    setAddresses(next);
+    setDraft(rest);
     setActive(0);
+    emit(next, rest);
   };
   const commitDraft = () => {
     const typed = splitEmails(draft);
@@ -95,7 +126,9 @@ export function EmailRecipientsInput({
     else setDraft("");
   };
   const remove = (index: number) => {
-    onChange(addresses.filter((_, position) => position !== index).join(", "));
+    const next = addresses.filter((_, position) => position !== index);
+    setAddresses(next);
+    emit(next, draft);
     inputRef.current?.focus();
   };
 
@@ -198,27 +231,28 @@ export function EmailRecipientsInput({
             // A separator ends an address however it arrives: typed on a phone
             // keyboard that reports no key, autocompleted or dropped in.
             const text = event.target.value;
-            const end = Math.max(
+            const separator = Math.max(
               text.lastIndexOf(","),
               text.lastIndexOf(";"),
               text.lastIndexOf("\n"),
             );
+            // A space ends an address only once one was typed, so searching
+            // "Nguyễn Thị" by name keeps working.
+            const space = text.search(/\s\S*$/);
+            const end = space > separator && text.slice(0, space).includes("@") ? space : separator;
             if (end >= 0) {
-              add(splitEmails(text.slice(0, end)));
-              setDraft(text.slice(end + 1).trimStart());
+              add(splitEmails(text.slice(0, end)), text.slice(end + 1).trimStart());
             } else {
               setDraft(text);
               setActive(0);
+              emit(addresses, text);
             }
             setOpen(true);
           }}
           onKeyDown={onKeyDown}
           onPaste={onPaste}
           onFocus={() => setOpen(true)}
-          onBlur={() => {
-            setOpen(false);
-            commitDraft();
-          }}
+          onBlur={() => setOpen(false)}
         />
       </div>
       {listOpen && (
