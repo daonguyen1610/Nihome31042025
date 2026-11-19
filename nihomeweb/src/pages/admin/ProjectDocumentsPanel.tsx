@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -37,7 +38,6 @@ import {
 } from "@/services/adminApi";
 import { formatDateTime as formatDateTimeInZone } from "@/lib/displaySettings";
 
-const MAX_FILE_SIZE = 100 * 1024 * 1024;
 const MAX_FILES = 20;
 const BLOCKED_EXTENSIONS = new Set([
   "exe",
@@ -83,6 +83,8 @@ export default function ProjectDocumentsPanel({
   const confirmAction = useConfirm();
   const { t, lang } = useI18n();
   const { toast } = useToast();
+  // Per-file limit from Settings; null until loaded (the server still checks).
+  const uploadLimitMb = useUploadLimit("projectDocuments");
   const uploadIdempotencyKeysRef = useRef(new Map<File, string>());
   const [documents, setDocuments] = useState<ProjectDocumentResponse[]>([]);
   const [categories, setCategories] = useState<ProjectDocumentCategoryResponse[]>([]);
@@ -146,8 +148,9 @@ export default function ProjectDocumentsPanel({
           ? t("operationalProjects.documents.validation.fileRequired")
           : nextFiles.some((file) => BLOCKED_EXTENSIONS.has(extensionOf(file.name)))
             ? t("operationalProjects.documents.validation.extension")
-            : nextFiles.some((file) => file.size > MAX_FILE_SIZE)
-              ? t("operationalProjects.documents.validation.size")
+            : uploadLimitMb != null &&
+                nextFiles.some((file) => file.size > uploadLimitMb * 1024 * 1024)
+              ? t("operationalProjects.documents.validation.sizeLimit", { max: uploadLimitMb })
               : null;
     if (validationMessage) {
       toast({
@@ -456,7 +459,7 @@ export default function ProjectDocumentsPanel({
               files={files}
               onChange={selectFiles}
               maxFiles={MAX_FILES}
-              maxSizeMb={100}
+              maxSizeMb={uploadLimitMb}
               disabled={uploading}
               testId="project-document-file"
             />

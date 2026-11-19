@@ -1000,12 +1000,12 @@
     "ja": "この安全でないファイル形式は許可されません（例: floor-plan.pdf は使用できます）。"
   },
   {
-    "key": "operationalProjects.documents.validation.size",
+    "key": "operationalProjects.documents.validation.sizeLimit",
     "category": "operationalProjects",
-    "vi": "Tệp dự án không được vượt quá 100 MiB; hãy chọn tệp nhỏ hơn.",
-    "en": "Project files cannot exceed 100 MiB; select a smaller file.",
-    "zh": "项目文件不得超过 100 MiB；请选择更小的文件。",
-    "ja": "プロジェクトファイルは100 MiB以下にしてください。"
+    "vi": "Tệp dự án không được vượt quá {max} MB (theo Cài đặt); hãy chọn tệp nhỏ hơn.",
+    "en": "Project files cannot exceed {max} MB (set in Settings); select a smaller file.",
+    "zh": "项目文件不得超过 {max} MB（由设置决定）；请选择更小的文件。",
+    "ja": "プロジェクトファイルは {max} MB（設定で指定）を超えられません。より小さいファイルを選択してください。"
   },
   {
     "key": "operationalProjects.documents.validation.maxFiles",

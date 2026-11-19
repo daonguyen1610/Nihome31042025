@@ -287,7 +287,7 @@ Nếu dự án đã có thư mục Drive, trang chi tiết hiển thị trạng 
 **Tài liệu dự án** là danh mục tệp chung của dự án:
 
 - Người có quyền xem: xem trạng thái đồng bộ, tải tệp, mở bản trên Drive.
-- Người có quyền quản lý: tải lên tối đa 20 tệp mỗi lần, mỗi tệp tối đa 100 MiB, cho một danh mục. Tệp lỗi vẫn được giữ để thử lại. Có thể **Gửi lại lên Drive**, phân loại tệp lạ nhập từ Drive, chọn **Giữ cả hai** khi hai bên cùng sửa, và xóa tệp tải tay hoặc tệp nhập từ Drive.
+- Người có quyền quản lý: tải lên tối đa 20 tệp mỗi lần, dung lượng mỗi tệp theo **Cài đặt → Tài liệu dự án** (mặc định 100 MB), cho một danh mục. Tệp lỗi vẫn được giữ để thử lại. Có thể **Gửi lại lên Drive**, phân loại tệp lạ nhập từ Drive, chọn **Giữ cả hai** khi hai bên cùng sửa, và xóa tệp tải tay hoặc tệp nhập từ Drive.
 - Tệp thuộc Báo giá, Hợp đồng, Khảo sát, Thiết kế, Giấy phép, Nghiệm thu, Hoàn công, Bàn giao phải thay hoặc xóa ở màn hình gốc của nó.
 
 Chi tiết đồng bộ Drive xem [3.7](#37-tài-liệu-dự-án-và-google-drive).
@@ -1474,7 +1474,7 @@ Trong **Cài đặt** (`/admin/settings`): bật/tắt OTP đăng ký và quên 
 |---|---|
 | Ảnh nội dung website | Tối đa 5 MB; JPG, JPEG, PNG, GIF, WebP, SVG. Ảnh không còn được dùng sẽ tự dọn định kỳ |
 | CV ứng tuyển | Tải kèm hồ sơ ứng tuyển |
-| Tài liệu dự án | 20 tệp/lần, 100 MiB/tệp ([3.0](#30-dự-án)) |
+| Tài liệu dự án, hồ sơ chuẩn bị thi công (CM) | 20 tệp/lần; mỗi tệp theo **Cài đặt → Tài liệu dự án** (mặc định 100 MB, tối đa 100 MB); chỉ chặn tệp chạy được ([3.0](#30-dự-án)) |
 | Tệp công việc | 10 tệp/lần; mỗi tệp theo **Cài đặt → Tệp công việc** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG ([3.0.1](#301-nhóm-công-việc)) |
 | Tệp hợp đồng, phụ lục | Theo **Cài đặt → Tệp hợp đồng** (mặc định 100 MB, tối đa 5 GB) |
 | Tài liệu báo giá | Theo **Cài đặt → Tệp báo giá** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG |

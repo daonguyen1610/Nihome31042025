@@ -25,7 +25,8 @@ public class OperationalProjectsController(
     ILegalActivationService legalActivation,
     IPermissionService permissions,
     IAuditLogger audit,
-    IGoogleDriveSettingsStore driveSettings) : ControllerBase
+    IGoogleDriveSettingsStore driveSettings,
+    SiteSettingsService siteSettings) : ControllerBase
 {
     [HttpGet("code-suggestion")]
     [RequirePermission("operations.projects", "view")]
@@ -333,12 +334,17 @@ public class OperationalProjectsController(
     [Idempotency(
         "operations.projects.documents.upload",
         typeof(OperationalProjectIdempotencyGuard))]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
     [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MultipartBodyLengthLimit)]
     public async Task<ActionResult<ProjectDocumentResponse>> UploadDocument(
         int id, [FromForm] ProjectDocumentUploadRequest request, CancellationToken ct)
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        // Size follows Settings; project documents keep their own type rule (blocked executables).
+        if (request.File is { } file &&
+            BusinessFileRules.SizeProblem(file, await siteSettings.GetUploadLimitMbAsync(UploadLimitKind.ProjectDocuments, ct)) is { } problem)
+            return BadRequest(new { message = problem });
         var operationsManager = await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct);
         var designManager = request.SourceModule == ProjectDocumentSourceModule.Design &&
             await projectAccess.CanManageDesignDocumentSourceAsync(scope.Value.UserId, id,

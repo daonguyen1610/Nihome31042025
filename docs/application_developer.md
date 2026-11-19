@@ -1282,7 +1282,7 @@ website hay `DesignProject`. Route `/api/operational-projects` (và `/api/v1`):
 | `GET`/`POST`/`PUT` | `/{id}/master-schedule`, `.../revisions[/{revisionId}]`, `/submit`, `/review`, `/email-preview` | thành viên xem; `operations.projects.manage` soạn/trình; người duyệt được giao duyệt | Tiến độ tổng (WBS) |
 | `GET`/`POST` | `/{id}/master-schedule/emails/needs-review`, `.../{emailId}/resolve` | quản lý dự án được giao | Xử lý email tiến độ gửi lỗi |
 | `GET` | `/document-categories`, `/{id}/documents`, `.../{documentId}/content` | `operations.projects.view` | Danh mục, catalog, tải file riêng tư |
-| `POST`/`DELETE` | `/{id}/documents` (≤ 100 MiB), `.../retry`, `/classify`, `/resolve-conflict`, `/{documentId}` | `operations.projects.manage` | Upload, thử lại đồng bộ, phân loại file từ Drive, giữ cả hai phiên bản, xoá |
+| `POST`/`DELETE` | `/{id}/documents` (mỗi tệp ≤ `upload-limits/projectDocuments`, mặc định 100 MB, 1–100 MB), `.../retry`, `/classify`, `/resolve-conflict`, `/{documentId}` | `operations.projects.manage` | Upload, thử lại đồng bộ, phân loại file từ Drive, giữ cả hai phiên bản, xoá |
 
 **Mã dự án.** Mã `PJ-`, `TD-`, `SV-` lấy số lớn nhất đang dùng cộng một
 (`SequentialCodes`), không đếm dòng; cấp mã dự án dùng SQL application lock theo năm

@@ -2880,6 +2880,70 @@
     "ja": "作業タスクファイルの上限を保存できませんでした。もう一度お試しください。"
   },
   {
+    "key": "settings.projectDocumentUploads.tab",
+    "category": "settings",
+    "vi": "Tài liệu dự án",
+    "en": "Project documents",
+    "zh": "项目文档",
+    "ja": "プロジェクト文書"
+  },
+  {
+    "key": "settings.projectDocumentUploads.title",
+    "category": "settings",
+    "vi": "Giới hạn tệp tài liệu dự án",
+    "en": "Project document file limit",
+    "zh": "项目文档文件上限",
+    "ja": "プロジェクト文書ファイルの上限"
+  },
+  {
+    "key": "settings.projectDocumentUploads.description",
+    "category": "settings",
+    "vi": "Áp dụng cho mỗi tệp tải lên tab Tài liệu của dự án và hồ sơ chuẩn bị thi công (CM). Loại tệp không đổi: chỉ chặn tệp chạy được. Thay đổi có hiệu lực ngay với lần tải lên tiếp theo.",
+    "en": "Applies to each file uploaded to a project's Documents tab and to CM construction preparation. File types are unchanged: only executables are blocked. Takes effect with the next upload.",
+    "zh": "适用于项目“文档”标签页及施工准备（CM）上传的每个文件。文件类型不变：仅阻止可执行文件。下次上传即生效。",
+    "ja": "プロジェクトの文書タブと施工準備（CM）にアップロードする各ファイルに適用されます。ファイル種類は変わらず、実行ファイルのみ拒否します。次のアップロードから有効です。"
+  },
+  {
+    "key": "settings.projectDocumentUploads.label",
+    "category": "settings",
+    "vi": "Dung lượng tối đa mỗi tệp (MB)",
+    "en": "Maximum size per file (MB)",
+    "zh": "每个文件最大大小（MB）",
+    "ja": "1ファイルの最大サイズ（MB）"
+  },
+  {
+    "key": "settings.projectDocumentUploads.invalidRange",
+    "category": "settings",
+    "vi": "Nhập số nguyên từ 1 đến {max} MB. Ví dụ: 100.",
+    "en": "Enter a whole number from 1 to {max} MB, e.g. 100.",
+    "zh": "请输入 1 到 {max} MB 之间的整数，例如 100。",
+    "ja": "1〜{max} MB の整数を入力してください（例：100）。"
+  },
+  {
+    "key": "settings.projectDocumentUploads.maximum",
+    "category": "settings",
+    "vi": "Giới hạn có thể đặt tối đa: {max} MB cho mỗi tệp.",
+    "en": "Highest limit you can set: {max} MB per file.",
+    "zh": "可设置的最大上限：每个文件 {max} MB。",
+    "ja": "設定できる上限：1ファイル {max} MB。"
+  },
+  {
+    "key": "settings.projectDocumentUploads.loadError",
+    "category": "settings",
+    "vi": "Chưa tải được giới hạn tệp tài liệu dự án. Hãy thử lại.",
+    "en": "Could not load the project document file limit. Try again.",
+    "zh": "无法加载项目文档文件上限，请重试。",
+    "ja": "プロジェクト文書ファイルの上限を読み込めませんでした。もう一度お試しください。"
+  },
+  {
+    "key": "settings.projectDocumentUploads.saveError",
+    "category": "settings",
+    "vi": "Chưa lưu được giới hạn tệp tài liệu dự án. Hãy thử lại.",
+    "en": "Could not save the project document file limit. Try again.",
+    "zh": "无法保存项目文档文件上限，请重试。",
+    "ja": "プロジェクト文書ファイルの上限を保存できませんでした。もう一度お試しください。"
+  },
+  {
     "key": "settings.company",
     "category": "settings",
     "vi": "Thông tin công ty",
