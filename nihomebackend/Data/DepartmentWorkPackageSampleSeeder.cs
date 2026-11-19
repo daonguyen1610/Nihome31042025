@@ -120,8 +120,6 @@ public static class DepartmentWorkPackageSampleSeeder
             Name = "Chuẩn bị vật tư phục vụ thi công",
             Description = "Nhóm việc mẫu nhận thông tin từ dự án chung và được phòng Cung ứng phân công nội bộ.",
             OperationalProjectId = project.Id,
-            ContractId = db.Contracts.Where(item => item.OperationalProjectId == project.Id)
-                .OrderBy(item => item.Id).Select(item => (int?)item.Id).FirstOrDefault(),
             DepartmentRoleGroupId = groupId,
             LeadUserId = leadId,
             Status = WorkPackageStatus.Active,

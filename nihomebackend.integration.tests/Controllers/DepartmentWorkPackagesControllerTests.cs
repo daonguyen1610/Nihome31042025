@@ -184,92 +184,89 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             .Should().BeFalse();
     }
 
+    // NICON 19/11/2026, answer 1: work belongs to the project (PJ) and its
+    // phase, never to a contract; only money records carry a contract number.
     [Fact]
-    public async Task ContractPackages_RequireSameProjectContract_AndClassifyExistingLinks()
+    public async Task WorkPackages_AreFiledUnderTheProject_NeverUnderAContract()
     {
         var seed = await SeedProjectScopeAsync();
-        var otherProject = await SeedProjectScopeAsync();
-        var (contractId, otherContractId) = await WithDbAsync(async db =>
+        var (contractId, legacyId) = await WithDbAsync(async db =>
         {
-            var projects = await db.OperationalProjects.Where(item =>
-                    item.Id == seed.ProjectId || item.Id == otherProject.ProjectId)
-                .Select(item => new { item.Id, item.CustomerId }).ToListAsync();
-            Contract MakeContract(int projectId) => new()
+            var customerId = await db.OperationalProjects.Where(item => item.Id == seed.ProjectId)
+                .Select(item => item.CustomerId).SingleAsync();
+            var contract = new Contract
             {
                 ContractNumber = $"HD-WORK-{Guid.NewGuid():N}"[..20],
-                CustomerId = projects.Single(item => item.Id == projectId).CustomerId,
-                OperationalProjectId = projectId,
+                CustomerId = customerId,
+                OperationalProjectId = seed.ProjectId,
             };
-            var contract = MakeContract(seed.ProjectId);
-            var otherContract = MakeContract(otherProject.ProjectId);
-            db.Contracts.AddRange(contract, otherContract);
+            db.Contracts.Add(contract);
             await db.SaveChangesAsync();
-            return (contract.Id, otherContract.Id);
+            // A package linked to a contract before this rule.
+            var legacy = new DepartmentWorkPackage
+            {
+                Code = $"WP-LEGACY-{Guid.NewGuid():N}"[..20],
+                Kind = WorkPackageKind.Project,
+                Name = "Kế hoạch vật tư theo hợp đồng",
+                OperationalProjectId = seed.ProjectId,
+                ContractId = contract.Id,
+                DepartmentRoleGroupId = seed.DepartmentGroupId,
+                LeadUserId = seed.DepartmentLeadId,
+                CreatedByUserId = seed.DepartmentLeadId,
+                UpdatedByUserId = seed.DepartmentLeadId,
+            };
+            db.DepartmentWorkPackages.Add(legacy);
+            await db.SaveChangesAsync();
+            return (contract.Id, legacy.Id);
         });
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
 
-        var missingContract = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        foreach (var kind in new[] { "Contract", "Project" })
         {
-            kind = "Contract",
-            name = "Điều phối thi công theo hợp đồng",
-            operationalProjectId = seed.ProjectId,
-            departmentRoleGroupId = seed.DepartmentGroupId,
-            leadUserId = seed.DepartmentLeadId,
-        });
-        missingContract.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var wrongProject = await SendAsync(HttpMethod.Post, "/api/work-packages", new
-        {
-            kind = "Contract",
-            name = "Hợp đồng không thuộc dự án",
-            operationalProjectId = seed.ProjectId,
-            contractId = otherContractId,
-            departmentRoleGroupId = seed.DepartmentGroupId,
-            leadUserId = seed.DepartmentLeadId,
-        });
-        wrongProject.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-
-        async Task<System.Text.Json.JsonElement> CreateAsync(string kind, string name)
-        {
-            var response = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+            var linked = await SendAsync(HttpMethod.Post, "/api/work-packages", new
             {
                 kind,
-                name,
+                name = "Điều phối thi công theo hợp đồng",
                 operationalProjectId = seed.ProjectId,
                 contractId,
                 departmentRoleGroupId = seed.DepartmentGroupId,
                 leadUserId = seed.DepartmentLeadId,
             });
-            response.StatusCode.Should().Be(HttpStatusCode.Created);
-            return await ReadJsonAsync(response);
+            linked.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await linked.Content.ReadAsStringAsync()).Should().Contain("không gắn với hợp đồng");
         }
 
-        var current = await CreateAsync("Contract", "Điều phối hồ sơ hợp đồng xây dựng");
-        var legacy = await CreateAsync("Project", "Kế hoạch vật tư theo hợp đồng");
-        current.GetProperty("kind").GetString().Should().Be("Contract");
-        legacy.GetProperty("kind").GetString().Should().Be("Contract");
-        var contractList = await ReadJsonAsync(await Client.GetAsync(
-            $"/api/work-packages?kind=Contract&operationalProjectId={seed.ProjectId}"));
-        contractList.GetProperty("totalCount").GetInt32().Should().Be(2);
         var projectList = await ReadJsonAsync(await Client.GetAsync(
             $"/api/work-packages?kind=Project&operationalProjectId={seed.ProjectId}"));
-        projectList.GetProperty("totalCount").GetInt32().Should().Be(0);
-
-        var moved = await SendAsync(HttpMethod.Put,
-            $"/api/work-packages/{current.GetProperty("id").GetInt32()}", new
-            {
-                name = current.GetProperty("name").GetString(),
-                status = "Planned",
-                contractId = (int?)null,
-                rowVersion = current.GetProperty("rowVersion").GetString(),
-            }, current.GetProperty("rowVersion").GetString());
-        moved.StatusCode.Should().Be(HttpStatusCode.OK);
-        (await ReadJsonAsync(moved)).GetProperty("kind").GetString().Should().Be("Project");
-        contractList = await ReadJsonAsync(await Client.GetAsync(
-            $"/api/work-packages?kind=Contract&operationalProjectId={seed.ProjectId}"));
-        contractList.GetProperty("totalCount").GetInt32().Should().Be(1);
-        projectList = await ReadJsonAsync(await Client.GetAsync(
-            $"/api/work-packages?kind=Project&operationalProjectId={seed.ProjectId}"));
         projectList.GetProperty("totalCount").GetInt32().Should().Be(1);
+        var legacy = projectList.GetProperty("items")[0];
+        legacy.GetProperty("id").GetInt32().Should().Be(legacyId);
+        legacy.GetProperty("kind").GetString().Should().Be("Project");
+        // Old links to the contract list still land on the project list.
+        var oldLink = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/work-packages?kind=Contract&operationalProjectId={seed.ProjectId}"));
+        oldLink.GetProperty("totalCount").GetInt32().Should().Be(1);
+
+        // Saving the old package clears its contract link.
+        var saved = await SendAsync(HttpMethod.Put, $"/api/work-packages/{legacyId}", new
+        {
+            name = legacy.GetProperty("name").GetString(),
+            status = "Planned",
+            rowVersion = legacy.GetProperty("rowVersion").GetString(),
+        }, legacy.GetProperty("rowVersion").GetString());
+        saved.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.DepartmentWorkPackages.Where(item => item.Id == legacyId)
+            .Select(item => item.ContractId).SingleAsync())).Should().BeNull();
+
+        var savedJson = await ReadJsonAsync(saved);
+        var relinked = await SendAsync(HttpMethod.Put, $"/api/work-packages/{legacyId}", new
+        {
+            name = savedJson.GetProperty("name").GetString(),
+            status = "Planned",
+            contractId,
+            rowVersion = savedJson.GetProperty("rowVersion").GetString(),
+        }, savedJson.GetProperty("rowVersion").GetString());
+        relinked.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]

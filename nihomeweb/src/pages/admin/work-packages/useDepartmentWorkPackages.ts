@@ -3,7 +3,6 @@ import { getUiError } from "@/lib/apiError";
 import { newPriceLine } from "./workPackageFormatting";
 import { money } from "./workPackageFormatting";
 import { Field, ChoiceGrid, ReviewCheck, PriceOfferDialog, Summary } from "./WorkPackageControls";
-import { collectLookupPages } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useConfirm } from "@/components/ui/confirmation";
@@ -69,7 +68,6 @@ import { isValidEmail } from "@/lib/validation";
 import { cn } from "@/lib/utils";
 import {
   adminApi,
-  type ContractResponse,
   type CreateDepartmentWorkPackageRequest,
   type DepartmentWorkPackageOptionsResponse,
   type DepartmentWorkPackageResponse,
@@ -129,20 +127,15 @@ export function useDepartmentWorkPackages() {
   const { toast } = useToast();
   const { has } = usePermissions();
   const packageId = id && /^\d+$/.test(id) ? Number(id) : null;
-  const kindFromPath: WorkPackageKind | null = location.pathname.endsWith("/contracts")
-    ? "Contract"
-    : location.pathname.endsWith("/internal")
-      ? "Internal"
-      : location.pathname.endsWith("/projects")
-        ? "Project"
-        : null;
+  // Work is filed under the project, not a contract (NICON, 19/11/2026); old
+  // links to the contract list open the project list.
+  const kindFromPath: WorkPackageKind | null = location.pathname.endsWith("/internal")
+    ? "Internal"
+    : location.pathname.endsWith("/projects") || location.pathname.endsWith("/contracts")
+      ? "Project"
+      : null;
   const kind: WorkPackageKind =
-    kindFromPath ??
-    (params.get("kind") === "Internal"
-      ? "Internal"
-      : params.get("kind") === "Contract"
-        ? "Contract"
-        : "Project");
+    kindFromPath ?? (params.get("kind") === "Internal" ? "Internal" : "Project");
   const subPages = [
     {
       kind: "Project" as WorkPackageKind,
@@ -150,13 +143,6 @@ export function useDepartmentWorkPackages() {
       tabKey: "workPackages.tab.project",
       titleKey: "workPackages.subpage.projectsTitle",
       descriptionKey: "workPackages.subpage.projectsDescription",
-    },
-    {
-      kind: "Contract" as WorkPackageKind,
-      path: "/admin/work-packages/contracts",
-      tabKey: "workPackages.tab.contract",
-      titleKey: "workPackages.subpage.contractsTitle",
-      descriptionKey: "workPackages.subpage.contractsDescription",
     },
     {
       kind: "Internal" as WorkPackageKind,
@@ -186,7 +172,6 @@ export function useDepartmentWorkPackages() {
   const detailBackTarget = `${detailListPath}${location.search}`;
   const [options, setOptions] = useState(emptyOptions);
   const [projects, setProjects] = useState<OperationalProjectListItemResponse[]>([]);
-  const [contracts, setContracts] = useState<ContractResponse[]>([]);
   const [projectSchedule, setProjectSchedule] = useState<ProjectScheduleResponse | null>(null);
   const search = params.get("search") ?? "";
   const settledSearch = useDebouncedValue(search);
@@ -489,18 +474,6 @@ export function useDepartmentWorkPackages() {
     }
   }, [canViewProjects, canManage, canAssign]);
   useEffect(() => {
-    const projectIdValue = packageForm.operationalProjectId;
-    if (!projectIdValue) {
-      setContracts([]);
-      return;
-    }
-    collectLookupPages((page) =>
-      adminApi.listContracts({ operationalProjectId: projectIdValue, pageSize: 100, page }),
-    )
-      .then((response) => setContracts(response.data.items))
-      .catch(() => setContracts([]));
-  }, [packageForm.operationalProjectId]);
-  useEffect(() => {
     const projectIdValue = detail?.operationalProjectId;
     setProjectSchedule(null);
     if (!projectIdValue) return;
@@ -651,8 +624,6 @@ export function useDepartmentWorkPackages() {
   const packageErrors: Record<string, string> = {};
   if (packageForm.kind !== "Internal" && !packageForm.operationalProjectId)
     packageErrors.project = t("workPackages.validation.projectRequired");
-  if (packageForm.kind === "Contract" && !packageForm.contractId)
-    packageErrors.contract = t("workPackages.validation.contractRequired");
   if (packageForm.name.trim().length < 2 || packageForm.name.length > 300)
     packageErrors.name = t("workPackages.validation.name");
   if (!packageForm.departmentRoleGroupId)
@@ -708,31 +679,12 @@ export function useDepartmentWorkPackages() {
     setPackageEditForm({
       name: detail.name,
       description: detail.description,
-      contractId: detail.contractId,
       status: detail.status,
       plannedStart: detail.plannedStart,
       plannedEnd: detail.plannedEnd,
       rowVersion: detail.rowVersion,
     });
     setPackageEditOpen(true);
-    if (detail.kind !== "Internal" && detail.purpose === "General" && detail.operationalProjectId) {
-      setContracts([]);
-      try {
-        const response = await collectLookupPages((page) =>
-          adminApi.listContracts({
-            operationalProjectId: detail.operationalProjectId,
-            pageSize: 100,
-            page,
-          }),
-        );
-        setContracts(response.data.items);
-      } catch (cause) {
-        toast({
-          variant: "destructive",
-          title: uiError(cause, t("workPackages.error.load")),
-        });
-      }
-    }
   };
   const saveEditedPackage = async () => {
     if (!detail || !packageEditForm) return;
@@ -1040,7 +992,6 @@ export function useDepartmentWorkPackages() {
         {
           name: detail.name,
           description: detail.description,
-          contractId: detail.contractId,
           status,
           plannedStart: detail.plannedStart,
           plannedEnd: detail.plannedEnd,
@@ -1423,7 +1374,6 @@ export function useDepartmentWorkPackages() {
     detailBackTarget,
     options,
     projects,
-    contracts,
     projectSchedule,
     search,
     departmentFilter,

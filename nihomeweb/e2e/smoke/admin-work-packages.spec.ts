@@ -21,9 +21,8 @@ test("project, contract and internal work package tabs render without browser er
   await expect(page.getByTestId("work-packages-page")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("link", { name: /Theo dự án|Project work/i })).toBeVisible();
 
-  await page.getByRole("link", { name: /Theo hợp đồng|Contract work/i }).click();
-  await expect(page).toHaveURL(/\/admin\/work-packages\/contracts/);
-  await expect(page.getByTestId("work-packages-page")).toBeVisible();
+  // Work is filed under the project, never a contract (NICON, 19/11/2026).
+  await expect(page.getByRole("link", { name: /Theo hợp đồng|Contract work/i })).toHaveCount(0);
 
   await page.getByRole("link", { name: /Công việc nội bộ|Internal work/i }).click();
   await expect(page).toHaveURL(/\/admin\/work-packages\/internal/);
@@ -310,7 +309,7 @@ test("package manager can edit package metadata in the browser", async ({
   }
 });
 
-test("general project package can link and unlink its contract from the edit dialog", async ({
+test("a project package cannot be linked to a contract", async ({
   page,
   api,
   loginAs,
@@ -323,7 +322,6 @@ test("general project package can link and unlink its contract from the edit dia
   expect(contractsResponse.status()).toBe(200);
   const contracts = (await contractsResponse.json()).items as {
     id: number;
-    contractNumber: string;
     operationalProjectId: number | null;
   }[];
   const contract = contracts.find((item) => item.operationalProjectId);
@@ -335,47 +333,38 @@ test("general project package can link and unlink its contract from the edit dia
     (user: { canLead: boolean; roleGroupId: number }) => user.canLead && user.roleGroupId,
   );
   expect(lead, "an active department lead is required").toBeTruthy();
+  const base = {
+    purpose: "General",
+    operationalProjectId: contract!.operationalProjectId,
+    departmentRoleGroupId: lead.roleGroupId,
+    leadUserId: lead.userId,
+  };
+
+  // The API refuses a contract link, with a reason the user can act on.
+  const linked = await api.post("/api/work-packages", {
+    headers: { ...headers, "Idempotency-Key": randomUUID() },
+    data: { ...base, kind: "Project", name: "Gắn hợp đồng", contractId: contract!.id },
+  });
+  expect(linked.status()).toBe(400);
+  expect(await linked.text()).toContain("không gắn với hợp đồng");
+
   const created = await api.post("/api/work-packages", {
     headers: { ...headers, "Idempotency-Key": randomUUID() },
-    data: {
-      kind: "Project",
-      purpose: "General",
-      name: `Phối hợp hồ sơ hợp đồng dự án NICON ${Date.now()}`,
-      operationalProjectId: contract!.operationalProjectId,
-      departmentRoleGroupId: lead.roleGroupId,
-      leadUserId: lead.userId,
-    },
+    data: { ...base, kind: "Project", name: `Phối hợp hồ sơ dự án NICON ${Date.now()}` },
   });
   expect(created.status(), await created.text()).toBe(201);
   const packageId = (await created.json()).id as number;
 
   try {
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
-    await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
     await page.goto(`/admin/work-packages/${packageId}`);
     await page.getByTestId("work-package-edit").click();
-    let dialog = page.getByRole("dialog");
-    await dialog.getByRole("combobox").click();
-    await page.getByRole("option", { name: contract!.contractNumber }).click();
-    await dialog.getByRole("button", { name: "Save changes" }).click();
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await expect(dialog.getByText(/Hợp đồng|Contract/)).toHaveCount(0);
+    await dialog.getByRole("button", { name: /Lưu|Save/ }).click();
     await expect(dialog).toHaveCount(0);
-    let saved = await api.get(`/api/work-packages/${packageId}`, { headers });
-    expect(saved.status()).toBe(200);
-    expect(await saved.json()).toMatchObject({ contractId: contract!.id, kind: "Contract" });
-    await page.goto("/admin/work-packages?kind=Contract");
-    await expect(
-      page.getByTestId("work-package-card").filter({ hasText: contract!.contractNumber }),
-    ).toBeVisible();
-    await page.goto(`/admin/work-packages/${packageId}`);
-
-    await page.getByTestId("work-package-edit").click();
-    dialog = page.getByRole("dialog");
-    await dialog.getByRole("combobox").click();
-    await page.getByRole("option", { name: "No contract" }).click();
-    await dialog.getByRole("button", { name: "Save changes" }).click();
-    await expect(dialog).toHaveCount(0);
-    saved = await api.get(`/api/work-packages/${packageId}`, { headers });
-    expect(saved.status()).toBe(200);
+    const saved = await api.get(`/api/work-packages/${packageId}`, { headers });
     expect(await saved.json()).toMatchObject({ contractId: null, kind: "Project" });
   } finally {
     await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${packageId}`);
