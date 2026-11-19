@@ -85,7 +85,7 @@ public sealed class QuoteApprovalEmailServiceTests : IDisposable
                 It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .Returns(Task.CompletedTask);
         var service = new QuoteApprovalEmailService(db, new EphemeralDataProtectionProvider(),
-            permissions.Object, email.Object, new ConfigurationManager(),
+            permissions.Object, email.Object,
             new HttpContextAccessor(), NullLogger<QuoteApprovalEmailService>.Instance);
 
         await service.SendPendingAsync(default);
@@ -299,9 +299,5 @@ public sealed class QuoteApprovalEmailServiceTests : IDisposable
 
     private QuoteApprovalEmailService CreateService() => new(db, new EphemeralDataProtectionProvider(),
         permissions.Object, email.Object,
-        new ConfigurationBuilder().AddInMemoryCollection(new Dictionary<string, string?>
-        {
-            ["Frontend:PublicBaseUrl"] = "https://nicon.example",
-        }).Build(),
-        new HttpContextAccessor(), NullLogger<QuoteApprovalEmailService>.Instance);
+        TestHttpContext.ServedFrom("https://nicon.example"), NullLogger<QuoteApprovalEmailService>.Instance);
 }

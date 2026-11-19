@@ -1,3 +1,4 @@
+using NihomeBackend.Infrastructure;
 using System.Data;
 using System.Globalization;
 using System.Security.Cryptography;
@@ -26,7 +27,7 @@ public interface IQuoteApprovalEmailService
 }
 
 public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionProvider protection,
-    IPermissionService permissions, IEmailService email, IConfiguration configuration,
+    IPermissionService permissions, IEmailService email,
     IHttpContextAccessor httpContextAccessor, ILogger<QuoteApprovalEmailService> logger) : IQuoteApprovalEmailService
 {
     private readonly IDataProtector protector = protection.CreateProtector("QuoteApproval.Preview.v1");
@@ -328,22 +329,9 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         return result.OrderBy(address => address, StringComparer.OrdinalIgnoreCase).ToArray();
     }
 
-    private string GetPublicOrigin()
-    {
-        var value = configuration["Frontend:PublicBaseUrl"];
-        var request = httpContextAccessor.HttpContext?.Request;
-        if (string.IsNullOrWhiteSpace(value) && request is not null)
-        {
-            var origin = request.Headers.Origin.ToString();
-            var allowed = configuration.GetSection("Frontend:AllowedOrigins").Get<string[]>() ?? [];
-            value = !string.IsNullOrWhiteSpace(origin) && allowed.Contains(origin, StringComparer.OrdinalIgnoreCase)
-                ? origin : $"{request.Scheme}://{request.Host}";
-        }
-        if (!Uri.TryCreate(value?.TrimEnd('/'), UriKind.Absolute, out var uri) ||
-            (uri.Scheme != Uri.UriSchemeHttps && !(uri.Scheme == Uri.UriSchemeHttp && uri.IsLoopback)) ||
-            !string.IsNullOrEmpty(uri.UserInfo) || uri.AbsolutePath != "/" ||
-            !string.IsNullOrEmpty(uri.Query) || !string.IsNullOrEmpty(uri.Fragment))
-            throw new QuoteOperationException("Chưa cấu hình URL hệ thống hợp lệ để gửi liên kết báo giá. Hãy đặt Frontend:PublicBaseUrl.");
-        return uri.GetLeftPart(UriPartial.Authority);
-    }
+    // Links use the address the user is working on (no configuration on production).
+    private string GetPublicOrigin() =>
+        PublicOrigin.FromRequest(httpContextAccessor.HttpContext?.Request)
+        ?? throw new QuoteOperationException(
+            "Không xác định được địa chỉ trang NICON để gửi liên kết báo giá. Hãy thao tác lại từ trình duyệt.");
 }
