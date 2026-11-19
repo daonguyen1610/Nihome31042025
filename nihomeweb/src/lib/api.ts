@@ -72,14 +72,17 @@ function trackUpload(config: TrackedConfig) {
   if (callerSignal?.aborted) controller.abort();
   else callerSignal?.addEventListener?.("abort", () => controller.abort(), { once: true });
   config.signal = controller.signal;
+  const size = files.reduce((total, file) => total + file.size, 0);
   const id = uploadTracker.start({
     name: files.length === 1 ? files[0].name : `${files[0].name} +${files.length - 1}`,
-    size: files.reduce((total, file) => total + file.size, 0),
+    size,
     abort: () => controller.abort(),
   });
   const callerProgress = config.onUploadProgress;
   config.onUploadProgress = (event) => {
-    uploadTracker.progress(id, event.loaded);
+    // The request body also carries form fields and boundaries; scale to the files.
+    const sent = event.total ? (event.loaded / event.total) * size : event.loaded;
+    uploadTracker.progress(id, Math.min(size, Math.round(sent)));
     callerProgress?.(event);
   };
   config.uploadTrackerId = id;
