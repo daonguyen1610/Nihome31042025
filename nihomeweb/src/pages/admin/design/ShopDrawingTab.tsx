@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { DesignFileUploadButton } from "./DesignFileUploadButton";
 import { getUiError } from "@/lib/apiError";
 import { findRecordPage } from "@/lib/pagination";
 import { useRequestGuard } from "@/hooks/useRequestGuard";
@@ -7,13 +8,12 @@ import { useListPage } from "@/hooks/useListPage";
 import { ListPagination } from "@/components/admin/ListPagination";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useDesignTeamOwners } from "./useDesignTeamOwners";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
-  FileUp,
   History,
   Loader2,
   Pencil,
@@ -901,7 +901,7 @@ const DisciplineSection = ({
                                 className="max-w-xs"
                               />
                               {canManage && isShopStage && row.status !== "Released" ? (
-                                <FileUploadButton
+                                <DesignFileUploadButton
                                   label={t("shopDrawing.replaceFile")}
                                   busy={uploadingId === row.id}
                                   onFile={(file) => onUploadFile(row.id, file)}
@@ -910,7 +910,7 @@ const DisciplineSection = ({
                             </div>
                           ) : canManage && isShopStage && row.status !== "Released" ? (
                             <div className="mt-2">
-                              <FileUploadButton
+                              <DesignFileUploadButton
                                 label={t("shopDrawing.uploadFile")}
                                 busy={uploadingId === row.id}
                                 onFile={(file) => onUploadFile(row.id, file)}
@@ -990,48 +990,6 @@ const DisciplineSection = ({
         </div>
       ) : null}
     </section>
-  );
-};
-
-const FileUploadButton = ({
-  label,
-  busy,
-  onFile,
-}: {
-  label: string;
-  busy: boolean;
-  onFile: (file: File) => void;
-}) => {
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  return (
-    <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="gap-1 text-xs"
-        disabled={busy}
-        onClick={() => inputRef.current?.click()}
-      >
-        {busy ? (
-          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-        ) : (
-          <FileUp className="h-3.5 w-3.5" />
-        )}
-        {label}
-      </Button>
-      <input
-        ref={inputRef}
-        type="file"
-        accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-        className="hidden"
-        onChange={(event) => {
-          const file = event.target.files?.[0];
-          if (file) onFile(file);
-          event.target.value = "";
-        }}
-      />
-    </>
   );
 };
 

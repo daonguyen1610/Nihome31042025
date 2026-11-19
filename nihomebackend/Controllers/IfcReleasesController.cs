@@ -41,7 +41,7 @@ public class IfcReleasesController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
         if (!parameters.DesignProjectId.HasValue)
-            return BadRequest(new { message = "DesignProjectId is required." });
+            return BadRequest(new { message = "Hãy chọn Hồ Sơ Thiết Kế cần xem (thiếu designProjectId)." });
         if (!await projectAccess.CanViewDesignProjectAsync(userId.Value, parameters.DesignProjectId.Value, ct))
             return NotFound();
         if (await projectAccess.GetAccessibleDesignDisciplinesAsync(
