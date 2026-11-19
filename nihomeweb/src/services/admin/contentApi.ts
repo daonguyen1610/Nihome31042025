@@ -1,6 +1,7 @@
 import api from "@/lib/api";
 import type { ServiceResponse } from "@/services/contentApi";
 import type {
+  UploadLimitKind,
   UpsertActivityRequest,
   ActivityCategoryResponse,
   UpsertActivityCategoryRequest,
@@ -253,13 +254,14 @@ export const contentApi = {
       "/site-settings/contract-uploads",
       { maxFileSizeMb },
     ),
-  getDesignUploadLimit: () =>
+  /** Per-file upload limit of a module, set in Settings. */
+  getUploadLimit: (kind: UploadLimitKind) =>
     api.get<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
-      "/site-settings/design-uploads",
+      `/site-settings/upload-limits/${kind}`,
     ),
-  updateDesignUploadLimit: (maxFileSizeMb: number) =>
+  updateUploadLimit: (kind: UploadLimitKind, maxFileSizeMb: number) =>
     api.put<{ maxFileSizeMb: number; maxAllowedFileSizeMb: number }>(
-      "/site-settings/design-uploads",
+      `/site-settings/upload-limits/${kind}`,
       { maxFileSizeMb },
     ),
   getMapEmbed: () => api.get<MapEmbedResponse>("/site-settings/map-embed"),

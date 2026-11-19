@@ -117,7 +117,7 @@ public class BasicDesignDocsControllerTests : IntegrationTestBase
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
         var projectId = await CreateBasicStageProjectAsync();
         var documentId = await CreateDocAsync(projectId, "architecture");
-        const string settingsPath = "/api/site-settings/design-uploads";
+        const string settingsPath = "/api/site-settings/upload-limits/design";
         var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
             .GetProperty("maxFileSizeMb").GetInt32();
         MultipartFormDataContent TwoMegabytePdf()

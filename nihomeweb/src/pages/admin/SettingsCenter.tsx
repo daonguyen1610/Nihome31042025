@@ -7,6 +7,8 @@ import {
   FileText,
   Gauge,
   Globe2,
+  Award,
+  Gavel,
   HardDrive,
   PencilRuler,
   Images,
@@ -22,6 +24,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   adminApi,
   type GoogleDriveAdminStatusResponse,
+  type UploadLimitKind,
   type OtpSettingsResponse,
 } from "@/services/adminApi";
 import { usePermissions } from "@/hooks/usePermissions";
@@ -48,7 +51,15 @@ import { cn } from "@/lib/utils";
 // "no dead code / no hardcode" rule.
 type Tab = "general" | "drive";
 type SectionKey =
-  "display" | "cm-schedule" | "security" | "contracts" | "design-files" | "map" | "slideshow";
+  | "display"
+  | "cm-schedule"
+  | "security"
+  | "contracts"
+  | "design-files"
+  | "tender-files"
+  | "capability-files"
+  | "map"
+  | "slideshow";
 type OtpSettingsKey = keyof OtpSettingsResponse;
 
 const tabs: { key: Tab; labelKey: string }[] = [
@@ -63,6 +74,8 @@ const sections: { key: SectionKey; labelKey: string; icon: LucideIcon }[] = [
   { key: "security", labelKey: "settings.tab.security", icon: ShieldCheck },
   { key: "contracts", labelKey: "settings.contractUploads.tab", icon: FileText },
   { key: "design-files", labelKey: "settings.designUploads.tab", icon: PencilRuler },
+  { key: "tender-files", labelKey: "settings.tenderUploads.tab", icon: Gavel },
+  { key: "capability-files", labelKey: "settings.capabilityUploads.tab", icon: Award },
   { key: "map", labelKey: "settings.map.tab", icon: MapIcon },
   { key: "slideshow", labelKey: "set.slideshow", icon: Images },
 ];
@@ -660,6 +673,15 @@ const DriveTab = () => {
 /* ─── Settings Center ─── */
 type UploadLimitResponse = { maxFileSizeMb: number; maxAllowedFileSizeMb: number };
 
+// Stable references so the section's load callback does not change on every render.
+const moduleUploadLimit = (kind: UploadLimitKind) => ({
+  load: () => adminApi.getUploadLimit(kind),
+  save: (maxFileSizeMb: number) => adminApi.updateUploadLimit(kind, maxFileSizeMb),
+});
+const designUploadLimit = moduleUploadLimit("design");
+const tenderUploadLimit = moduleUploadLimit("tenders");
+const capabilityUploadLimit = moduleUploadLimit("capability");
+
 /** One per-file upload limit setting (contracts, design files). */
 const UploadLimitTab = ({
   sectionKey,
@@ -952,8 +974,24 @@ const SettingsCenter = () => {
                 icon={PencilRuler}
                 keyPrefix="settings.designUploads"
                 inputId="design-upload-limit"
-                loadLimit={adminApi.getDesignUploadLimit}
-                saveLimit={adminApi.updateDesignUploadLimit}
+                loadLimit={designUploadLimit.load}
+                saveLimit={designUploadLimit.save}
+              />
+              <UploadLimitTab
+                sectionKey="tender-files"
+                icon={Gavel}
+                keyPrefix="settings.tenderUploads"
+                inputId="tender-upload-limit"
+                loadLimit={tenderUploadLimit.load}
+                saveLimit={tenderUploadLimit.save}
+              />
+              <UploadLimitTab
+                sectionKey="capability-files"
+                icon={Award}
+                keyPrefix="settings.capabilityUploads"
+                inputId="capability-upload-limit"
+                loadLimit={capabilityUploadLimit.load}
+                saveLimit={capabilityUploadLimit.save}
               />
               <MapTab />
               <SlideshowSettings />

@@ -1,11 +1,9 @@
 import { useRef } from "react";
 import { FileUp, Loader2 } from "lucide-react";
 import { useI18n } from "@/lib/i18n";
-import { formatNumber } from "@/lib/displaySettings";
 import { useToast } from "@/hooks/use-toast";
+import { useBusinessFileCheck } from "@/hooks/useBusinessFileCheck";
 import { Button } from "@/components/ui/button";
-import { DESIGN_FILE_ACCEPT, designFileProblem } from "@/lib/designFileRules";
-import { useDesignUploadLimit } from "./useDesignUploadLimit";
 
 /**
  * Upload button for basic design documents and shop drawings. A file of the
@@ -20,31 +18,18 @@ export function DesignFileUploadButton({
   busy: boolean;
   onFile: (file: File) => void;
 }) {
-  const { t, lang } = useI18n();
+  const { t } = useI18n();
   const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const limitMb = useDesignUploadLimit();
+  const { accept, rule, problemFor } = useBusinessFileCheck("design");
 
   const pick = (file: File) => {
-    const problem = designFileProblem(file, limitMb);
-    if (!problem) {
-      onFile(file);
+    const problem = problemFor(file);
+    if (problem) {
+      toast({ variant: "destructive", title: t("designFiles.refusedTitle"), description: problem });
       return;
     }
-    toast({
-      variant: "destructive",
-      title: t("designFiles.refusedTitle"),
-      description:
-        problem.code === "tooLarge"
-          ? t("designFiles.tooLarge", {
-              name: file.name,
-              size: formatNumber(problem.sizeMb, lang, { maximumFractionDigits: 1 }),
-              max: limitMb,
-            })
-          : problem.code === "empty"
-            ? t("designFiles.empty", { name: file.name })
-            : t("designFiles.unsupported", { name: file.name }),
-    });
+    onFile(file);
   };
 
   return (
@@ -55,9 +40,7 @@ export function DesignFileUploadButton({
         size="sm"
         className="gap-1 text-xs"
         disabled={busy}
-        title={
-          limitMb == null ? t("designFiles.ruleTypes") : t("designFiles.rule", { max: limitMb })
-        }
+        title={rule}
         onClick={() => inputRef.current?.click()}
       >
         {busy ? (
@@ -70,7 +53,7 @@ export function DesignFileUploadButton({
       <input
         ref={inputRef}
         type="file"
-        accept={DESIGN_FILE_ACCEPT}
+        accept={accept}
         className="hidden"
         onChange={(event) => {
           const file = event.target.files?.[0];

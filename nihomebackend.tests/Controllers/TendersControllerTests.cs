@@ -1,3 +1,4 @@
+using nihomebackend.tests.Helpers;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
@@ -32,7 +33,8 @@ public class TendersControllerTests
             service.Object,
             environment.Object,
             Mock.Of<IAuditLogger>(),
-            Mock.Of<IPermissionService>())
+            Mock.Of<IPermissionService>(),
+            new SiteSettingsService(DbContextFactory.Create()))
         {
             ControllerContext = new ControllerContext
             {

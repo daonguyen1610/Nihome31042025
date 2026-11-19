@@ -1,3 +1,4 @@
+using NihomeBackend.Models;
 using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -242,7 +243,7 @@ public class BasicDesignDocsController(
         if (userId is null) return Unauthorized();
         if (!await CanAccessAsync(userId.Value, id, DesignProjectAction.Update, ct)) return NotFound();
 
-        if (DesignFileRules.Problem(file, await settings.GetDesignUploadLimitMbAsync(ct)) is { } problem)
+        if (BusinessFileRules.Problem(file, await settings.GetUploadLimitMbAsync(UploadLimitKind.Design, ct)) is { } problem)
             return BadRequest(new { message = problem });
 
         try

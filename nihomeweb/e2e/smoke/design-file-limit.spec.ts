@@ -1,6 +1,6 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 
-const SETTINGS_PATH = "/api/site-settings/design-uploads";
+const SETTINGS_PATH = "/api/site-settings/upload-limits/design";
 
 /**
  * The design file limit is an administrator setting (AGENTS.md: no hard-coded

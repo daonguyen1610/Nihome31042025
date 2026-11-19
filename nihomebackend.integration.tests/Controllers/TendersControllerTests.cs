@@ -33,6 +33,43 @@ public class TendersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ChecklistUpload_FollowsTheTenderFileLimitSetInSettings()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        const string settingsPath = "/api/site-settings/upload-limits/tenders";
+        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        var tenderId = await CreateTenderAsync();
+        var itemId = await FirstChecklistItemIdAsync(tenderId, "boq");
+        MultipartFormDataContent TwoMegabytePdf()
+        {
+            var form = new MultipartFormDataContent();
+            var file = new ByteArrayContent(new byte[2 * 1024 * 1024]);
+            file.Headers.ContentType = new MediaTypeHeaderValue("application/pdf");
+            form.Add(file, "file", "boq-du-thau.pdf");
+            return form;
+        }
+        try
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 1 })).EnsureSuccessStatusCode();
+            using var tooLarge = TwoMegabytePdf();
+            var refused = await Client.PostAsync($"/api/tenders/{tenderId}/checklist/{itemId}/upload", tooLarge);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await refused.Content.ReadAsStringAsync()).Should()
+                .Contain("boq-du-thau.pdf").And.Contain("vượt giới hạn 1 MB");
+
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 3 })).EnsureSuccessStatusCode();
+            using var allowed = TwoMegabytePdf();
+            (await Client.PostAsync($"/api/tenders/{tenderId}/checklist/{itemId}/upload", allowed))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original })).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task Create_HappyPath_ReturnsAutoChecklist()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

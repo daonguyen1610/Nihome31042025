@@ -4,6 +4,8 @@ public class SiteSettings
 {
     public const int DefaultContractMaxFileSizeMb = 100;
     public const int DefaultDesignMaxFileSizeMb = 100;
+    public const int DefaultTenderMaxFileSizeMb = 20;
+    public const int DefaultCapabilityMaxFileSizeMb = 20;
     public const string DefaultTimeZoneId = "Asia/Ho_Chi_Minh";
     public const string DefaultCurrencyCode = "VND";
     public const decimal DefaultUsdVndRate = 25_000m;
@@ -78,7 +80,21 @@ public class SiteSettings
     /// <summary>Largest file staff may attach to a basic design document or shop drawing.</summary>
     public int DesignMaxFileSizeMb { get; set; } = DefaultDesignMaxFileSizeMb;
 
+    /// <summary>Largest file attached to a tender (invitation documents, checklist items).</summary>
+    public int TenderMaxFileSizeMb { get; set; } = DefaultTenderMaxFileSizeMb;
+
+    /// <summary>Largest file attached to a capability document.</summary>
+    public int CapabilityMaxFileSizeMb { get; set; } = DefaultCapabilityMaxFileSizeMb;
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
+}
+
+/// <summary>Modules whose per-file upload limit is an administrator setting.</summary>
+public enum UploadLimitKind
+{
+    Design,
+    Tenders,
+    Capability,
 }

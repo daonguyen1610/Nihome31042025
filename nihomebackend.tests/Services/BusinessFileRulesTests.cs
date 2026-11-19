@@ -4,7 +4,7 @@ using NihomeBackend.Services;
 
 namespace nihomebackend.tests.Services;
 
-public class DesignFileRulesTests
+public class BusinessFileRulesTests
 {
     private static IFormFile File(string name, long length)
     {
@@ -16,12 +16,12 @@ public class DesignFileRulesTests
 
     [Fact]
     public void AcceptsAnAllowedFileWithinTheLimit() =>
-        Assert.Null(DesignFileRules.Problem(File("KT-01 Mặt bằng.PDF", 5 * 1024 * 1024), 20));
+        Assert.Null(BusinessFileRules.Problem(File("KT-01 Mặt bằng.PDF", 5 * 1024 * 1024), 20));
 
     [Fact]
     public void NamesTheFileAndItsSizeWhenTooLarge()
     {
-        var message = DesignFileRules.Problem(File("KC-02 Kết cấu.pdf", 25L * 1024 * 1024 + 300 * 1024), 20);
+        var message = BusinessFileRules.Problem(File("KC-02 Kết cấu.pdf", 25L * 1024 * 1024 + 300 * 1024), 20);
 
         Assert.NotNull(message);
         Assert.Contains("KC-02 Kết cấu.pdf", message);
@@ -34,18 +34,18 @@ public class DesignFileRulesTests
     {
         var file = File("ban-ve-50mb.pdf", 50L * 1024 * 1024);
 
-        Assert.NotNull(DesignFileRules.Problem(file, 20));
-        Assert.Null(DesignFileRules.Problem(file, 60));
+        Assert.NotNull(BusinessFileRules.Problem(file, 20));
+        Assert.Null(BusinessFileRules.Problem(file, 60));
     }
 
     [Fact]
     public void SaysWhenTheFileIsEmpty() =>
-        Assert.Contains("trống", DesignFileRules.Problem(File("ghi-chu.docx", 0), 20));
+        Assert.Contains("trống", BusinessFileRules.Problem(File("ghi-chu.docx", 0), 20));
 
     [Fact]
     public void ListsTheAcceptedTypesForAnUnsupportedFile()
     {
-        var message = DesignFileRules.Problem(File("ban-ve.dwg", 1024), 20);
+        var message = BusinessFileRules.Problem(File("ban-ve.dwg", 1024), 20);
 
         Assert.NotNull(message);
         Assert.Contains(".dwg", message);

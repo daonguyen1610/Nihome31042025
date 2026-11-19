@@ -1,3 +1,4 @@
+using NihomeBackend.Models;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.AspNetCore.Authorization;
@@ -26,19 +27,14 @@ public class TendersController(
     ITenderService svc,
     IWebHostEnvironment env,
     IAuditLogger audit,
-    IPermissionService permissions) : ControllerBase
+    IPermissionService permissions,
+    SiteSettingsService settings) : ControllerBase
 {
-    // Upload limits mirror ContractsController — 20 MB, same extension
-    // whitelist. Physical files land under wwwroot/files/tenders and are
-    // served only through the resource-bound content endpoint below.
-    private const long MaxFileSizeBytes = 20L * 1024 * 1024;
+    // File types and the per-file limit follow BusinessFileRules and the
+    // administrator's setting (Cài đặt → Giới hạn tệp gói thầu). Physical files
+    // land under wwwroot/files/tenders and are served only through the
+    // resource-bound content endpoint below.
     private const string StorageSubfolder = "tenders";
-
-    private static readonly HashSet<string> AllowedExtensions =
-        new(StringComparer.OrdinalIgnoreCase)
-        {
-            ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg",
-        };
 
     [HttpGet]
     [RequirePermission("crm.tenders", "view")]
@@ -231,6 +227,8 @@ public class TendersController(
 
     [HttpPost("{id:int}/invitation-documents")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("crm.tenders", "manage")]
     public async Task<ActionResult<TenderResponse>> UploadInvitationDocument(
         int id, [FromForm] IFormFile? file, CancellationToken ct)
@@ -357,6 +355,8 @@ public class TendersController(
 
     [HttpPost("{id:int}/checklist/{itemId:int}/upload")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("crm.tenders", "manage")]
     public async Task<ActionResult<TenderResponse>> UploadChecklistFile(
         int id, int itemId, [FromForm] IFormFile? file, CancellationToken ct)
@@ -578,18 +578,11 @@ public class TendersController(
         {
             return new StoredFile { Result = BadRequest(new { message = "Chưa chọn file." }) };
         }
-        if (file.Length > MaxFileSizeBytes)
+        if (BusinessFileRules.Problem(file, await settings.GetUploadLimitMbAsync(UploadLimitKind.Tenders, ct)) is { } problem)
         {
-            return new StoredFile { Result = BadRequest(new { message = "File quá lớn (tối đa 20MB)." }) };
+            return new StoredFile { Result = BadRequest(new { message = problem }) };
         }
         var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
-        {
-            return new StoredFile
-            {
-                Result = BadRequest(new { message = "Định dạng file không được hỗ trợ (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG)." }),
-            };
-        }
 
         var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
         Directory.CreateDirectory(uploadDir);
@@ -634,7 +627,7 @@ public class TendersController(
         }
 
         var extension = Path.GetExtension(fileName);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension)) return null;
+        if (string.IsNullOrWhiteSpace(extension) || !BusinessFileRules.AllowedExtensions.Contains(extension)) return null;
         return Path.Combine(env.ContentRootPath, "wwwroot", "files", subfolder, fileName);
     }
 

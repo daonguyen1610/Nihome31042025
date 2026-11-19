@@ -10577,6 +10577,11 @@ namespace nihomebackend.Migrations
                     b.Property<int>("AuditLogRetentionMinutes")
                         .HasColumnType("int");
 
+                    b.Property<int>("CapabilityMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
                     b.Property<decimal>("CmScheduleDelayThresholdPercent")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(9, 4)
@@ -10695,6 +10700,11 @@ namespace nihomebackend.Migrations
                     b.Property<string>("SiteName")
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("TenderMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
