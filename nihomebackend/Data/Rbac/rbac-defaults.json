@@ -665,6 +665,7 @@
         "work.packages.progress", "work.packages.verify",
         "analytics.kpi.view",
         "crm.contracts.view",
+        "crm.quotes.view", "crm.quotes.view.all",
         "proc.vendors.*",
         "proc.boq.view", "proc.boq.manage",
         "crm.material-rates.view",
