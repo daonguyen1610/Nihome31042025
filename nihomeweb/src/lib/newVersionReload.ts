@@ -18,6 +18,15 @@ export function isStaleBundleError(error: unknown): boolean {
   );
 }
 
+/**
+ * Vite also reports, as a preload error, failures raised after a dynamic
+ * import loaded (e.g. pdf.js rejecting a broken file). Only a missing bundle
+ * file means a newer version is deployed and a reload helps.
+ */
+export function shouldReloadForPreloadError(payload: unknown): boolean {
+  return isStaleBundleError(payload);
+}
+
 /** Reloads the page unless it already did so in the last minute. Returns whether it reloaded. */
 export function reloadOnceForNewVersion(
   storage: KeyValueStore = window.sessionStorage,
