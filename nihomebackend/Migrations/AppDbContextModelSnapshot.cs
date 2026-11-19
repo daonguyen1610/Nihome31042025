@@ -10718,6 +10718,11 @@ namespace nihomebackend.Migrations
                     b.Property<string>("QuoteEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("QuoteMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
                     b.Property<string>("SecondaryEmail")
                         .HasColumnType("nvarchar(max)");
 

@@ -393,6 +393,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultTenderMaxFileSizeMb);
         modelBuilder.Entity<SiteSettings>().Property(s => s.CapabilityMaxFileSizeMb)
             .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultCapabilityMaxFileSizeMb);
+        modelBuilder.Entity<SiteSettings>().Property(s => s.QuoteMaxFileSizeMb)
+            .HasDefaultValue(NihomeBackend.Models.SiteSettings.DefaultQuoteMaxFileSizeMb);
 
         modelBuilder.Entity<Notification>().ToTable("notifications");
         modelBuilder.Entity<Notification>().HasKey(n => n.Id);

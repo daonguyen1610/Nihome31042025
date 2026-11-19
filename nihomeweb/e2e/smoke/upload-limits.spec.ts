@@ -221,3 +221,47 @@ test("contract documents and appendices follow the contract limit set in Setting
     await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
   }
 });
+
+// Quote documents follow the quote limit in Settings instead of a fixed 20 MB.
+test("quote documents follow the quote limit set in Settings", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const adminHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
+  const settingsPath = `${LIMITS}/quotes`;
+  const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
+    .maxFileSizeMb as number;
+  const quotes = await (await api.get("/api/quotes?pageSize=1", { headers })).json();
+  expect(quotes.items.length, "a seeded quote is needed").toBeGreaterThan(0);
+  const quoteId = quotes.items[0].id as number;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.admin);
+    await setLimitInSettings(page, "quote-files", "quote-upload-limit", "1");
+
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    let uploads = 0;
+    page.on("request", (request) => {
+      if (request.method() === "POST" && /\/api\/quotes\/\d+\/documents$/.test(request.url()))
+        uploads++;
+    });
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Tài liệu/ }).click();
+    const input = page.getByTestId("quote-document-file");
+    await expect(input.locator("xpath=..")).toContainText("Tối đa 20 tệp, 1 MB mỗi tệp");
+    await input.setInputFiles(TWO_MB_PDF("bao-gia-gui-khach.pdf"));
+    await expect(page.getByText("bao-gia-gui-khach.pdf vượt quá 1 MB.").first()).toBeVisible();
+    await input.setInputFiles({
+      name: "bang-ky-thuat.pdf",
+      mimeType: "application/pdf",
+      buffer: Buffer.alloc(200 * 1024),
+    });
+    await expect(page.getByText("bang-ky-thuat.pdf").first()).toBeVisible();
+    expect(uploads).toBe(0);
+  } finally {
+    await api.put(settingsPath, { headers: adminHeaders, data: { maxFileSizeMb: original } });
+  }
+});

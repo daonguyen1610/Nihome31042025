@@ -11,7 +11,8 @@ public class QuoteDocumentService(
     ILogger<QuoteDocumentService> logger,
     IProjectDocumentStagingService projectDocuments) : IQuoteDocumentService
 {
-    private const long MaxFileSizeBytes = 20 * 1024 * 1024;
+    // The Settings limit is checked by the controller; this is the storage ceiling.
+    private const long MaxFileSizeBytes = BusinessFileRules.MaxAllowedMb * 1024L * 1024;
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg",
@@ -200,7 +201,7 @@ public class QuoteDocumentService(
     private static void ValidateFile(IFormFile? file, string? label)
     {
         if (file is null || file.Length == 0) throw new QuoteDocumentException("Chưa chọn file.");
-        if (file.Length > MaxFileSizeBytes) throw new QuoteDocumentException("File quá lớn (tối đa 20MB).");
+        if (file.Length > MaxFileSizeBytes) throw new QuoteDocumentException($"File quá lớn (tối đa {BusinessFileRules.MaxAllowedMb} MB).");
         var extension = Path.GetExtension(file.FileName);
         if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
         {

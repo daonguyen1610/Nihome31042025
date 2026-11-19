@@ -898,7 +898,7 @@ như Customer. Truy cập theo owner, `crm.quotes.view.all` cho xem chéo owner.
 |---|---|---|---|
 | `GET` | `/api/quotes/{id}/documents` | `crm.quotes.view` | Danh sách tài liệu |
 | `GET` | `/api/quotes/{id}/documents/{documentId}/content` | `crm.quotes.view` | Xem/tải |
-| `POST` | `/api/quotes/{id}/documents` | `crm.quotes.manage` | Upload |
+| `POST` | `/api/quotes/{id}/documents` | `crm.quotes.manage` | Upload; mỗi tệp tối đa theo `GET /api/site-settings/upload-limits/quotes` (mặc định 20 MB, 1–100 MB) |
 | `DELETE` | `/api/quotes/{id}/documents/{documentId}` | `crm.quotes.manage` | Xoá |
 | `GET` | `/api/opportunities?quoteEligibleOnly=true&search=...` | — | Picker tạo báo giá |
 | `GET` | `/api/quotes/{id}/email-preview` | `crm.quotes.send` | Điền sẵn email liên hệ chính, subject, body |

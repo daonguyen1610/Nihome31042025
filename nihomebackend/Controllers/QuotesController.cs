@@ -27,7 +27,8 @@ public class QuotesController(
     IQuoteDocumentService documentSvc,
     QuoteApprovalEmailService approvalEmails,
     IPermissionService permissions,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    SiteSettingsService settings) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("crm.quotes", "view")]
@@ -142,6 +143,8 @@ public class QuotesController(
 
     [HttpPost("{id:int}/documents")]
     [Consumes("multipart/form-data")]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     [RequirePermission("crm.quotes", "manage")]
     public async Task<ActionResult<QuoteDocumentResponse>> UploadDocument(
         int id,
@@ -152,6 +155,10 @@ public class QuotesController(
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
 
+        // The per-file limit is an administrator setting, not a fixed size.
+        if (file is not null && file.Length > 0 &&
+            BusinessFileRules.Problem(file, await settings.GetUploadLimitMbAsync(UploadLimitKind.Quotes, ct)) is { } problem)
+            return BadRequest(new { message = problem });
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.quotes.view.all", ct);
         try
         {
