@@ -6,6 +6,7 @@ public class SiteSettings
     public const int DefaultDesignMaxFileSizeMb = 100;
     public const int DefaultTenderMaxFileSizeMb = 20;
     public const int DefaultCapabilityMaxFileSizeMb = 20;
+    public const int DefaultQuoteMaxFileSizeMb = 20;
     public const string DefaultTimeZoneId = "Asia/Ho_Chi_Minh";
     public const string DefaultCurrencyCode = "VND";
     public const decimal DefaultUsdVndRate = 25_000m;
@@ -86,6 +87,9 @@ public class SiteSettings
     /// <summary>Largest file attached to a capability document.</summary>
     public int CapabilityMaxFileSizeMb { get; set; } = DefaultCapabilityMaxFileSizeMb;
 
+    /// <summary>Largest file attached to a quote (proposals, technical sheets, signed copies).</summary>
+    public int QuoteMaxFileSizeMb { get; set; } = DefaultQuoteMaxFileSizeMb;
+
     public DateTime CreatedAt { get; set; }
 
     public DateTime UpdatedAt { get; set; }
@@ -99,4 +103,5 @@ public enum UploadLimitKind
     Capability,
     /// <summary>Contract files; stored as ContractMaxFileSizeMb with its own 5 GB ceiling.</summary>
     Contracts,
+    Quotes,
 }

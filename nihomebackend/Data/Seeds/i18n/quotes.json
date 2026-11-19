@@ -111,7 +111,7 @@
   {"key": "quotes.tab.documents", "category": "quotes", "vi": "Tài liệu", "en": "Documents", "zh": "文档", "ja": "資料"},
   {"key": "quotes.tab.workflow", "category": "quotes", "vi": "Luồng duyệt", "en": "Workflow", "zh": "审批流程", "ja": "承認履歴"},
   {"key": "quotes.document.file", "category": "quotes", "vi": "Chọn tài liệu", "en": "Choose document", "zh": "选择文档", "ja": "資料を選択"},
-  {"key": "quotes.document.fileHint", "category": "quotes", "vi": "PDF, Word, Excel hoặc ảnh; tối đa 20MB.", "en": "PDF, Word, Excel or image; maximum 20MB.", "zh": "PDF、Word、Excel 或图片；最大 20MB。", "ja": "PDF、Word、Excel、画像（最大20MB）。"},
+  {"key": "quotes.document.fileTypes", "category": "quotes", "vi": "PDF, Word, Excel hoặc ảnh.", "en": "PDF, Word, Excel or image.", "zh": "PDF、Word、Excel 或图片。", "ja": "PDF、Word、Excel、画像。"},
   {"key": "quotes.document.label", "category": "quotes", "vi": "Nhãn tài liệu (tuỳ chọn)", "en": "Document label (optional)", "zh": "文档标签（可选）", "ja": "資料ラベル（任意）"},
   {"key": "quotes.document.labelPlaceholder", "category": "quotes", "vi": "Ví dụ: Báo giá gửi khách", "en": "For example: Customer proposal", "zh": "例如：客户报价", "ja": "例：顧客向け見積"},
   {"key": "quotes.document.upload", "category": "quotes", "vi": "Tải lên", "en": "Upload", "zh": "上传", "ja": "アップロード"},

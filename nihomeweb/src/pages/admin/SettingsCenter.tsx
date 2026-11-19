@@ -13,6 +13,7 @@ import {
   Gavel,
   HardDrive,
   PencilRuler,
+  Receipt,
   Images,
   LogOut,
   Map as MapIcon,
@@ -60,6 +61,7 @@ type SectionKey =
   | "design-files"
   | "tender-files"
   | "capability-files"
+  | "quote-files"
   | "map"
   | "slideshow";
 type OtpSettingsKey = keyof OtpSettingsResponse;
@@ -78,6 +80,7 @@ const sections: { key: SectionKey; labelKey: string; icon: LucideIcon }[] = [
   { key: "design-files", labelKey: "settings.designUploads.tab", icon: PencilRuler },
   { key: "tender-files", labelKey: "settings.tenderUploads.tab", icon: Gavel },
   { key: "capability-files", labelKey: "settings.capabilityUploads.tab", icon: Award },
+  { key: "quote-files", labelKey: "settings.quoteUploads.tab", icon: Receipt },
   { key: "map", labelKey: "settings.map.tab", icon: MapIcon },
   { key: "slideshow", labelKey: "set.slideshow", icon: Images },
 ];
@@ -690,6 +693,7 @@ const contractUploadLimit = moduleUploadLimit("contracts");
 const designUploadLimit = moduleUploadLimit("design");
 const tenderUploadLimit = moduleUploadLimit("tenders");
 const capabilityUploadLimit = moduleUploadLimit("capability");
+const quoteUploadLimit = moduleUploadLimit("quotes");
 
 /** One per-file upload limit setting (contracts, design files). */
 const UploadLimitTab = ({
@@ -1001,6 +1005,14 @@ const SettingsCenter = () => {
                 inputId="capability-upload-limit"
                 loadLimit={capabilityUploadLimit.load}
                 saveLimit={capabilityUploadLimit.save}
+              />
+              <UploadLimitTab
+                sectionKey="quote-files"
+                icon={Receipt}
+                keyPrefix="settings.quoteUploads"
+                inputId="quote-upload-limit"
+                loadLimit={quoteUploadLimit.load}
+                saveLimit={quoteUploadLimit.save}
               />
               <MapTab />
               <SlideshowSettings />

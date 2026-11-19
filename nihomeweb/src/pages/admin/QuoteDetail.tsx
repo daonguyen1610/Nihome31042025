@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useConfirm } from "@/components/ui/confirmation";
@@ -178,6 +179,8 @@ const AdminQuoteDetail = () => {
   const quoteId = Number(id);
   const navigate = useNavigate();
   const { t, lang } = useI18n();
+  // The per-file limit from Settings, so the picker refuses what the server would.
+  const quoteUploadLimitMb = useUploadLimit("quotes");
   const { toast } = useToast();
   const display = useDisplaySettings();
   const { has } = usePermissions();
@@ -1389,7 +1392,8 @@ const AdminQuoteDetail = () => {
                   files={documentFiles}
                   onChange={setDocumentFiles}
                   accept=".pdf,.doc,.docx,.xls,.xlsx,.png,.jpg,.jpeg"
-                  hint={t("quotes.document.fileHint")}
+                  maxSizeMb={quoteUploadLimitMb}
+                  hint={t("quotes.document.fileTypes")}
                   disabled={uploadingDocument}
                   testId="quote-document-file"
                 />
