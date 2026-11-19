@@ -2,6 +2,7 @@ import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { collectLookupPages } from "@/lib/pagination";
 import { FieldScope } from "@/components/ui/field-scope";
+import { focusFormField } from "@/lib/formFocus";
 import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ContinuationFields } from "@/components/admin/ContractContinuations";
@@ -401,18 +402,32 @@ const AdminOpportunities = () => {
     setCreateError(null);
   };
 
+  // Field messages appear after the first save attempt and follow the form as it is fixed.
+  const [createAttempted, setCreateAttempted] = useState(false);
+  const createFieldErrors = useMemo(() => {
+    const errors: Partial<Record<"name" | "customer", string>> = {};
+    if (!createForm.name.trim()) errors.name = t("opportunities.validation.nameRequired");
+    if (!createForm.customerId) errors.customer = t("opportunities.validation.customerRequired");
+    return errors;
+  }, [createForm.name, createForm.customerId, t]);
+  const createFieldError = (field: "name" | "customer") =>
+    createAttempted ? createFieldErrors[field] : undefined;
+
   const openCreate = () => {
     clearCreateParams();
     createAttempt.current = { body: "", key: "" };
     setCreateForm(emptyCreate());
     setCreateError(null);
+    setCreateAttempted(false);
     setCreating(true);
   };
 
   const handleCreate = async () => {
     setCreateError(null);
-    if (!createForm.name.trim() || !createForm.customerId) {
-      setCreateError(t("opportunities.validation.missingFields"));
+    setCreateAttempted(true);
+    const firstInvalid = (["name", "customer"] as const).find((field) => createFieldErrors[field]);
+    if (firstInvalid) {
+      focusFormField(firstInvalid);
       return;
     }
     if (saving) return;
@@ -1328,16 +1343,30 @@ const AdminOpportunities = () => {
               </p>
             )}
             <ContinuationFields context={continuation} />
-            <FieldScope>
-              <Label>{t("opportunities.field.name")}</Label>
+            <FieldScope data-form-field="name">
+              <Label htmlFor="opportunity-create-name">{t("opportunities.field.name")} *</Label>
               <Input
+                id="opportunity-create-name"
                 value={createForm.name}
+                aria-invalid={createFieldError("name") ? true : undefined}
+                aria-describedby={
+                  createFieldError("name") ? "opportunity-create-name-error" : undefined
+                }
                 onChange={(e) => setCreateForm({ ...createForm, name: e.target.value })}
               />
+              {createFieldError("name") && (
+                <p id="opportunity-create-name-error" className="mt-1 text-xs text-destructive">
+                  {createFieldError("name")}
+                </p>
+              )}
             </FieldScope>
-            <FieldScope>
-              <Label>{t("opportunities.field.customer")}</Label>
+            <FieldScope data-form-field="customer">
+              <Label>{t("opportunities.field.customer")} *</Label>
               <SearchableSelect
+                aria-invalid={createFieldError("customer") ? true : undefined}
+                aria-describedby={
+                  createFieldError("customer") ? "opportunity-create-customer-error" : undefined
+                }
                 disabled={!!continuation.source}
                 value={createForm.customerId ? String(createForm.customerId) : ""}
                 onChange={(v) =>
@@ -1351,6 +1380,11 @@ const AdminOpportunities = () => {
                 searchPlaceholder={t("customers.picker.search")}
                 placeholder={t("customers.picker.select")}
               />
+              {createFieldError("customer") && (
+                <p id="opportunity-create-customer-error" className="mt-1 text-xs text-destructive">
+                  {createFieldError("customer")}
+                </p>
+              )}
             </FieldScope>
             <FieldScope>
               <Label>{t("opportunities.field.operationalProject")}</Label>
