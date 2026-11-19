@@ -72,5 +72,17 @@ export function createUploadTracker() {
 
 export type UploadTracker = ReturnType<typeof createUploadTracker>;
 
+/** Marks the upload tray, which stays usable above an open dialog or sheet. */
+export const UPLOAD_TRAY_ATTRIBUTE = "data-upload-tray";
+
+/**
+ * True for a click in the upload tray. Dialogs and sheets do not treat it as a
+ * click outside, so cancelling an upload started from one does not close it.
+ */
+export const isInUploadTray = (target: EventTarget | null) =>
+  typeof Element !== "undefined" &&
+  target instanceof Element &&
+  target.closest(`[${UPLOAD_TRAY_ATTRIBUTE}]`) !== null;
+
 /** The one tracker the app uses. */
 export const uploadTracker = createUploadTracker();

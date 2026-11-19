@@ -296,6 +296,22 @@
     "ja": "{total} MB を送信済み · サーバーがファイルを保存中"
   },
   {
+    "key": "upload.tray.collapse",
+    "category": "common",
+    "vi": "Thu gọn danh sách tải lên",
+    "en": "Collapse the upload list",
+    "zh": "收起上传列表",
+    "ja": "アップロード一覧を折りたたむ"
+  },
+  {
+    "key": "upload.tray.expand",
+    "category": "common",
+    "vi": "Mở danh sách tải lên",
+    "en": "Expand the upload list",
+    "zh": "展开上传列表",
+    "ja": "アップロード一覧を開く"
+  },
+  {
     "key": "upload.tray.cancel",
     "category": "common",
     "vi": "Huỷ tải lên {name}",
