@@ -1,5 +1,8 @@
+import axios from "axios";
 import api from "@/lib/api";
 import { withIdempotencyKey } from "@/lib/api";
+import { uploadInChunks } from "@/lib/chunkedUpload";
+import { uploadTracker } from "@/lib/uploadTracker";
 import type { LegalChecklistTemplate } from "../legalChecklistTypes";
 import type { SaveLegalChecklistTemplate } from "../legalChecklistTypes";
 import type {
@@ -34,6 +37,73 @@ import type {
   ContractTimelineEvent,
 } from "./types/contractDocuments";
 import { postIdempotent, managedFileName } from "./helpers";
+
+/** Bytes the server holds when it refused a chunk for starting elsewhere (409), else null. */
+const receivedBytesOf = (error: unknown) => {
+  if (!axios.isAxiosError(error) || error.response?.status !== 409) return null;
+  const received = (error.response.data as { receivedBytes?: unknown } | undefined)?.receivedBytes;
+  return typeof received === "number" ? received : null;
+};
+
+/** The request never got an answer, or the server asked to retry shortly. */
+const isConnectionLost = (error: unknown) =>
+  axios.isAxiosError(error) &&
+  error.code !== "ERR_CANCELED" &&
+  (!error.response || [502, 503, 504].includes(error.response.status));
+
+/** Waits before retrying a chunk; sooner when the browser comes back online. */
+const waitToRetry = (ms: number, signal: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const finish = (settle: () => void) => () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("online", done);
+      signal.removeEventListener("abort", aborted);
+      settle();
+    };
+    const done = finish(resolve);
+    const aborted = finish(() => reject(signal.reason));
+    const timer = window.setTimeout(done, ms);
+    window.addEventListener("online", done);
+    signal.addEventListener("abort", aborted);
+  });
+
+/**
+ * Sends a contract file in chunks so a dropped connection continues where it
+ * stopped (files up to 5 GB); `complete` then stores it. Shows in the upload tray.
+ */
+const uploadContractFile = <T>(
+  contractId: number,
+  file: File,
+  complete: (uploadId: string, signal: AbortSignal) => Promise<T>,
+) => {
+  const uploads = `/contracts/${contractId}/uploads`;
+  return uploadInChunks(
+    file,
+    uploadTracker,
+    {
+      start: async (signal) =>
+        (
+          await api.post<{ uploadId: string; chunkSize: number }>(
+            uploads,
+            { fileName: file.name, size: file.size, contentType: file.type || undefined },
+            { signal },
+          )
+        ).data,
+      send: async (uploadId, offset, chunk, onProgress, signal) =>
+        (
+          await api.put<{ receivedBytes: number }>(`${uploads}/${uploadId}`, chunk, {
+            params: { offset },
+            headers: { "Content-Type": "application/octet-stream" },
+            signal,
+            onUploadProgress: (event) => onProgress(event.loaded),
+          })
+        ).data.receivedBytes,
+      complete,
+      cancel: (uploadId) => api.delete(`${uploads}/${uploadId}`),
+    },
+    { isConnectionLost, receivedBytesOf, wait: waitToRetry },
+  );
+};
 
 export const contractsApi = {
   listContracts: (params?: ContractListParams) =>
@@ -142,13 +212,12 @@ export const contractsApi = {
     }),
   deleteContractAppendix: (contractId: number, voId: number) =>
     api.delete(`/contracts/${contractId}/appendices/${voId}`),
-  uploadContractAppendixFile: (contractId: number, file: File) => {
-    const form = new FormData();
-    form.append("file", file);
-    return api.post<AppendixUploadResponse>(`/contracts/${contractId}/appendices/files`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-  },
+  uploadContractAppendixFile: async (contractId: number, file: File) => ({
+    data: await uploadContractFile(contractId, file, async (uploadId, signal) => {
+      const url = `/contracts/${contractId}/uploads/${uploadId}/appendix-file`;
+      return (await api.post<AppendixUploadResponse>(url, undefined, { signal })).data;
+    }),
+  }),
   listContractAttachments: (contractId: number) =>
     api.get<ContractAttachmentResponse[]>(`/contracts/${contractId}/attachments`),
   getContractAttachmentContent: (contractId: number, attachmentId: number) =>
@@ -159,20 +228,17 @@ export const contractsApi = {
     api.get<Blob>(`/contracts/${contractId}/appendices/files/${managedFileName(path)}/content`, {
       responseType: "blob",
     }),
-  uploadContractAttachment: (
+  uploadContractAttachment: async (
     contractId: number,
     file: File,
     kind: ContractAttachmentKind,
     label?: string,
-  ) => {
-    const form = new FormData();
-    form.append("file", file);
-    form.append("kind", kind);
-    if (label) form.append("label", label);
-    return api.post<ContractAttachmentResponse>(`/contracts/${contractId}/attachments`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
-  },
+  ) => ({
+    data: await uploadContractFile(contractId, file, async (uploadId, signal) => {
+      const url = `/contracts/${contractId}/uploads/${uploadId}/attachment`;
+      return (await api.post<ContractAttachmentResponse>(url, { kind, label }, { signal })).data;
+    }),
+  }),
   deleteContractAttachment: (contractId: number, attachmentId: number) =>
     api.delete(`/contracts/${contractId}/attachments/${attachmentId}`),
   getContractTimeline: (contractId: number, limit = 100) =>

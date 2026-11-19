@@ -43,7 +43,8 @@ public class ContractsController(
     ContractReminderService reminders,
     IWebHostEnvironment env,
     AppDbContext db,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    ContractUploadSessionService uploadSessions) : ControllerBase
 {
     private const string StorageSubfolder = "contracts";
 
@@ -889,29 +890,157 @@ public class ContractsController(
         var stored = await StoreUploadedFileAsync(file, "att", ct);
         if (stored.Result is BadRequestObjectResult bad) return bad;
         if (stored.Payload == null) return BadRequest(new { message = "Không upload được file." });
+        return await CreateAttachmentAsync(id, userId.Value, canSeeAll, kind, label, stored.Payload, ct);
+    }
 
+    // -------- chunked uploads (large contract files) --------
+
+    /// <summary>
+    /// Starts a contract file upload sent in chunks of
+    /// <see cref="ContractUploadSessionService.ChunkSize"/>, for files up to the
+    /// contract limit in Settings (5 GB at most). After a dropped connection the
+    /// client continues from the bytes the server holds.
+    /// </summary>
+    [HttpPost("{id:int}/uploads")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<IActionResult> StartChunkedUpload(
+        int id, [FromBody] StartContractUploadRequest req, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
+
+        var problem = await ContractFileProblemAsync(req.FileName, req.Size, ct);
+        if (problem is not null) return BadRequest(new { message = problem });
+
+        var contentType = string.IsNullOrWhiteSpace(req.ContentType) ? "application/octet-stream" : req.ContentType;
+        var session = uploadSessions.Start(id, userId.Value, req.FileName, req.Size, contentType);
+        return StatusCode(StatusCodes.Status201Created,
+            new { uploadId = session.Id, chunkSize = ContractUploadSessionService.ChunkSize });
+    }
+
+    /// <summary>
+    /// Appends the request body, starting at <paramref name="offset"/>. A chunk
+    /// that does not start where the received bytes end gets 409 with
+    /// <c>receivedBytes</c> so the client continues from there.
+    /// </summary>
+    [HttpPut("{id:int}/uploads/{uploadId}")]
+    [RequestSizeLimit(ContractUploadSessionService.ChunkSize + 1024 * 1024)]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<IActionResult> UploadChunk(int id, string uploadId, [FromQuery] long offset, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var session = uploadSessions.Find(uploadId, id, userId.Value);
+        if (session is null) return UploadNotFound();
+        if (Request.ContentLength is not { } length)
+            return StatusCode(StatusCodes.Status411LengthRequired,
+                new { message = "Thiếu độ dài phần tệp gửi lên. Hãy tải lên lại." });
+
+        var written = await uploadSessions.AppendAsync(session, offset, length, Request.Body, ct);
+        return written.Status switch
+        {
+            ChunkWriteStatus.Written => Ok(new { receivedBytes = written.ReceivedBytes }),
+            ChunkWriteStatus.OffsetMismatch => Conflict(new
+            {
+                code = "UPLOAD_OFFSET_MISMATCH",
+                receivedBytes = written.ReceivedBytes,
+                message = "Máy chủ đã nhận đến byte khác; tiếp tục từ vị trí máy chủ báo.",
+            }),
+            // Another request still writes this upload (a retry raced a slow one): retry shortly.
+            ChunkWriteStatus.Busy => StatusCode(StatusCodes.Status503ServiceUnavailable,
+                new { code = "UPLOAD_BUSY", message = "Phần trước của tệp vẫn đang được ghi. Đang thử lại." }),
+            _ => BadRequest(new
+            {
+                code = "UPLOAD_CHUNK_TOO_LARGE",
+                message = "Phần tệp gửi lên lớn hơn cho phép. Hãy tải lên lại.",
+            }),
+        };
+    }
+
+    /// <summary>Attaches a fully received chunked upload to the contract.</summary>
+    [HttpPost("{id:int}/uploads/{uploadId}/attachment")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<ActionResult<ContractAttachmentResponse>> CompleteChunkedAttachment(
+        int id, string uploadId, [FromBody] CompleteContractAttachmentUploadRequest req, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
+
+        var stored = await StoreChunkedUploadAsync(id, userId.Value, uploadId, "att", ct);
+        if (stored.Result is ObjectResult refused) return refused;
+        return await CreateAttachmentAsync(id, userId.Value, canSeeAll, req.Kind, req.Label, stored.Payload!, ct);
+    }
+
+    /// <summary>
+    /// Stores a fully received chunked upload as an appendix (VO) file and returns
+    /// its path, as <c>POST appendices/files</c> does.
+    /// </summary>
+    [HttpPost("{id:int}/uploads/{uploadId}/appendix-file")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<IActionResult> CompleteChunkedAppendixFile(int id, string uploadId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
+        if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
+
+        var stored = await StoreChunkedUploadAsync(id, userId.Value, uploadId, "vo", ct);
+        return stored.Result ?? Ok(stored.Payload);
+    }
+
+    /// <summary>Discards an unfinished chunked upload (the user cancelled it).</summary>
+    [HttpDelete("{id:int}/uploads/{uploadId}")]
+    [RequirePermission("crm.contracts", "manage")]
+    public IActionResult CancelChunkedUpload(int id, string uploadId)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var session = uploadSessions.Find(uploadId, id, userId.Value);
+        if (session is null) return UploadNotFound();
+        uploadSessions.Delete(session);
+        return NoContent();
+    }
+
+    private ObjectResult UploadNotFound() => NotFound(new
+    {
+        code = "UPLOAD_NOT_FOUND",
+        message = "Phiên tải lên đã hết hạn hoặc không còn. Hãy chọn tệp và tải lên lại.",
+    });
+
+    private async Task<ActionResult<ContractAttachmentResponse>> CreateAttachmentAsync(
+        int id,
+        int userId,
+        bool canSeeAll,
+        ContractAttachmentKind kind,
+        string? label,
+        UploadedPayload payload,
+        CancellationToken ct)
+    {
         ContractAttachmentResponse? created;
         try
         {
             created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
             {
                 Kind = kind,
-                FilePath = stored.Payload!.filePath,
-                OriginalFileName = stored.Payload.originalFileName,
-                FileSize = stored.Payload.fileSize,
-                ContentType = stored.Payload.contentType,
+                FilePath = payload.filePath,
+                OriginalFileName = payload.originalFileName,
+                FileSize = payload.fileSize,
+                ContentType = payload.contentType,
                 Label = label,
-            }, userId.Value, canSeeAll, ct);
+            }, userId, canSeeAll, ct);
         }
         catch
         {
-            DeleteUploadedFile(stored.Payload.filePath);
+            DeleteUploadedFile(payload.filePath);
             throw;
         }
-        // ContractExistsForCallerAsync above already verified the caller
-        // may write to this contract, so CreateAsync should never return
-        // null here — but be defensive so a race between the ownership
-        // check and the row disappearing doesn't 500.
+        // The caller already verified it may write to this contract, so
+        // CreateAsync should never return null here — but be defensive so a
+        // race between the ownership check and the row disappearing doesn't 500.
         if (created == null) return NotFound();
 
         audit.Log(new AuditEvent
@@ -919,7 +1048,7 @@ public class ContractsController(
             Action = "contract.attachment.create",
             ResourceType = EntityTypes.Contract,
             ResourceId = id.ToString(),
-            Message = $"Contract #{id} attachment ({kind}) uploaded — {stored.Payload.originalFileName}.",
+            Message = $"Contract #{id} attachment ({kind}) uploaded — {payload.originalFileName}.",
         });
 
         return CreatedAtAction(nameof(ListAttachments), new { id }, created);
@@ -1132,20 +1261,13 @@ public class ContractsController(
         {
             return new StoredFile { Result = BadRequest(new { message = "Chưa chọn file." }) };
         }
-        var maxFileSizeMb = (await db.SiteSettings.AsNoTracking()
-            .Select(settings => (int?)settings.ContractMaxFileSizeMb)
-            .FirstOrDefaultAsync(ct)) ?? SiteSettings.DefaultContractMaxFileSizeMb;
-        var problem = BusinessFileRules.Problem(file, maxFileSizeMb);
+        var problem = await ContractFileProblemAsync(file.FileName, file.Length, ct);
         if (problem is not null)
         {
             return new StoredFile { Result = BadRequest(new { message = problem }) };
         }
-        var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
 
-        var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
-        Directory.CreateDirectory(uploadDir);
-        var storedName = $"{kindTag}-{Guid.NewGuid():N}{extension}";
-        var storedPath = Path.Combine(uploadDir, storedName);
+        var (storedPath, filePath) = NewStoredFilePath(kindTag, file.FileName);
         await using (var stream = new FileStream(storedPath, FileMode.Create))
         {
             await file.CopyToAsync(stream, ct);
@@ -1153,11 +1275,64 @@ public class ContractsController(
         return new StoredFile
         {
             Payload = new UploadedPayload(
-                $"/files/{StorageSubfolder}/{storedName}",
+                filePath,
                 file.FileName,
                 file.Length,
                 string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType),
         };
+    }
+
+    /// <summary>Moves a fully received chunked upload into contract storage.</summary>
+    private async Task<StoredFile> StoreChunkedUploadAsync(
+        int contractId, int userId, string uploadId, string kindTag, CancellationToken ct)
+    {
+        var session = uploadSessions.Find(uploadId, contractId, userId);
+        if (session is null) return new StoredFile { Result = UploadNotFound() };
+        var received = uploadSessions.ReceivedBytes(session);
+        if (received != session.Size)
+        {
+            return new StoredFile
+            {
+                Result = Conflict(new
+                {
+                    code = "UPLOAD_INCOMPLETE",
+                    receivedBytes = received,
+                    message = "Tệp chưa được gửi đủ. Hãy tiếp tục tải lên.",
+                }),
+            };
+        }
+        // The limit may have been lowered since the upload started.
+        var problem = await ContractFileProblemAsync(session.FileName, session.Size, ct);
+        if (problem is not null)
+        {
+            uploadSessions.Delete(session);
+            return new StoredFile { Result = BadRequest(new { message = problem }) };
+        }
+
+        var (storedPath, filePath) = NewStoredFilePath(kindTag, session.FileName);
+        uploadSessions.MoveCompletedFile(session, storedPath);
+        return new StoredFile
+        {
+            Payload = new UploadedPayload(filePath, session.FileName, session.Size, session.ContentType),
+        };
+    }
+
+    /// <summary>Why a contract file cannot be attached under the limit in Settings; null when it can.</summary>
+    private async Task<string?> ContractFileProblemAsync(string fileName, long length, CancellationToken ct)
+    {
+        var maxFileSizeMb = (await db.SiteSettings.AsNoTracking()
+            .Select(settings => (int?)settings.ContractMaxFileSizeMb)
+            .FirstOrDefaultAsync(ct)) ?? SiteSettings.DefaultContractMaxFileSizeMb;
+        return BusinessFileRules.Problem(fileName, length, maxFileSizeMb);
+    }
+
+    /// <summary>A new file in contract storage: its disk path and its host-relative path.</summary>
+    private (string StoredPath, string FilePath) NewStoredFilePath(string kindTag, string fileName)
+    {
+        var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
+        Directory.CreateDirectory(uploadDir);
+        var storedName = $"{kindTag}-{Guid.NewGuid():N}{Path.GetExtension(fileName).ToLowerInvariant()}";
+        return (Path.Combine(uploadDir, storedName), $"/files/{StorageSubfolder}/{storedName}");
     }
 
     private async Task<bool> CanListAcrossOwnersAsync(

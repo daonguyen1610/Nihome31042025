@@ -12,6 +12,8 @@ export interface UploadItem {
   size: number;
   loaded: number;
   status: UploadStatus;
+  /** The connection dropped; a chunked upload continues once it is back. */
+  reconnecting: boolean;
   /** The request error, translated by the tray. */
   error?: unknown;
 }
@@ -40,12 +42,15 @@ export function createUploadTracker() {
     start({ name, size, abort }: { name: string; size: number; abort: () => void }) {
       const id = nextId++;
       aborts.set(id, abort);
-      items = [...items, { id, name, size, loaded: 0, status: "uploading" }];
+      items = [...items, { id, name, size, loaded: 0, status: "uploading", reconnecting: false }];
       listeners.forEach((listener) => listener());
       return id;
     },
     progress(id: number, loaded: number) {
-      if (isUploading(id)) update(id, { loaded });
+      if (isUploading(id)) update(id, { loaded, reconnecting: false });
+    },
+    reconnecting(id: number) {
+      if (isUploading(id)) update(id, { reconnecting: true });
     },
     finish(id: number) {
       aborts.delete(id);

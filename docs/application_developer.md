@@ -326,12 +326,31 @@ Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ li�
 - `ContractMaxFileSizeMb`: dung lượng tối đa mỗi file hợp đồng/phụ lục, sửa tại
   `/admin/settings?tab=contracts`. Mặc định 100 MiB, nhận số nguyên 1–5.120 MiB
   (5 GiB). Mỗi lần upload đọc giá trị hiện hành; transport và bước kiểm tra
-  file hợp đồng cho phép tối đa 5 GiB. Multipart cần thêm dung lượng đĩa tạm.
-  Reverse proxy phải cho body ít nhất 5.126 MiB và đủ thời gian upload. API:
+  file hợp đồng cho phép tối đa 5 GiB. Giao diện tab Tài liệu và Phụ lục gửi
+  tệp hợp đồng theo từng đoạn (xem dưới), nên reverse proxy chỉ cần nhận body
+  9 MiB; endpoint multipart cũ (`POST .../attachments`, `.../appendices/files`)
+  vẫn nhận tới 5.126 MiB cho client API. API giới hạn:
   `GET /api/site-settings/upload-limits/contracts` (mọi người đã đăng nhập, để
   tab Tài liệu và Phụ lục kiểm tệp trước khi gửi) và `PUT` cùng đường dẫn với
   `system.settings.manage`. Kiểm loại/dung lượng dùng chung `BusinessFileRules`.
   Các endpoint upload khác giữ giới hạn riêng.
+- Tải tệp hợp đồng theo đoạn (`ContractUploadSessionService`), quyền
+  `crm.contracts.manage`, phiên gắn với người tải và hợp đồng:
+  `POST /api/contracts/{id}/uploads` `{fileName,size,contentType}` kiểm loại và
+  giới hạn rồi trả `{uploadId, chunkSize}` (8 MiB);
+  `PUT .../uploads/{uploadId}?offset=N` với body là byte thô (tối đa một đoạn)
+  trả `{receivedBytes}`, offset lệch trả `409 UPLOAD_OFFSET_MISMATCH` kèm
+  `receivedBytes` để client tải tiếp từ đó, phiên đang được ghi trả
+  `503 UPLOAD_BUSY`; `POST .../uploads/{uploadId}/attachment` `{kind,label}` hoặc
+  `.../appendix-file` kiểm lại giới hạn, chuyển tệp vào `wwwroot/files/contracts`
+  và trả kết quả như endpoint multipart; chưa đủ byte trả `409 UPLOAD_INCOMPLETE`;
+  `DELETE .../uploads/{uploadId}` huỷ. Byte đến trước khi mất mạng được giữ.
+  Phần đang tải nằm ở `App_Data/contract-uploads/{uploadId}` (ngoài wwwroot,
+  cần đủ đĩa cho tệp 5 GiB; nên cùng ổ với `wwwroot/files` để bước hoàn tất
+  chỉ đổi chỗ tệp thay vì chép lại);
+  `ContractUploadSessionCleanupWorker` xoá phiên không ghi thêm sau 24 giờ, mỗi
+  giờ chạy một lần. Trình duyệt tự thử lại sau 1–15 giây (sớm hơn khi có mạng
+  lại) cho tới khi người dùng huỷ; đóng trang thì phải tải lại từ đầu.
 - Template email: xem [6.3](#63-email-ứng-dụng).
 - Google Drive: cấu hình trong database, xem [18.3](#183-google-drive-trên-iis).
 

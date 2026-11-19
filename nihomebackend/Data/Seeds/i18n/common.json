@@ -288,6 +288,14 @@
     "ja": "アップロード済み · {total} MB"
   },
   {
+    "key": "upload.tray.reconnecting",
+    "category": "common",
+    "vi": "Mất kết nối ở {loaded} / {total} MB · {percent}% · tự tải tiếp khi có mạng",
+    "en": "Connection lost at {loaded} / {total} MB · {percent}% · resumes when back online",
+    "zh": "在 {loaded} / {total} MB · {percent}% 处连接中断 · 恢复网络后自动继续",
+    "ja": "{loaded} / {total} MB · {percent}% で接続が切れました · 回線が戻ると自動で再開します"
+  },
+  {
     "key": "upload.tray.saving",
     "category": "common",
     "vi": "Đã gửi đủ {total} MB · máy chủ đang lưu tệp",

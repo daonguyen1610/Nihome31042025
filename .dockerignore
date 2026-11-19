@@ -7,6 +7,7 @@ node_modules
 **/obj
 **/out
 **/publish
+**/App_Data
 deployment-config/
 nihomebackend.tests
 nihomebackend.integration.tests

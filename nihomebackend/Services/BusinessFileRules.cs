@@ -24,21 +24,27 @@ public static class BusinessFileRules
     private static readonly CultureInfo Vietnamese = CultureInfo.GetCultureInfo("vi-VN");
 
     /// <summary>Why the file cannot be attached, in Vietnamese; null when it can.</summary>
-    public static string? Problem(IFormFile file, int maxMb)
+    public static string? Problem(IFormFile file, int maxMb) => Problem(file.FileName, file.Length, maxMb);
+
+    /// <summary>
+    /// Why a file with this name and size cannot be attached, in Vietnamese; null
+    /// when it can. Used before a chunked upload starts, when only those are known.
+    /// </summary>
+    public static string? Problem(string fileName, long length, int maxMb)
     {
-        var extension = Path.GetExtension(file.FileName);
+        var extension = Path.GetExtension(fileName);
         if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
         {
             var shown = string.IsNullOrWhiteSpace(extension) ? "không có đuôi" : extension.ToLowerInvariant();
-            return $"Tệp “{file.FileName}” ({shown}) chưa được nhận. " +
+            return $"Tệp “{fileName}” ({shown}) chưa được nhận. " +
                 "Chỉ nhận PDF, Word (.doc, .docx), Excel (.xls, .xlsx) và ảnh PNG, JPG.";
         }
-        if (file.Length == 0)
-            return $"Tệp “{file.FileName}” trống. Hãy kiểm tra lại tệp rồi tải lên.";
-        if (file.Length > (long)maxMb * 1024 * 1024)
+        if (length == 0)
+            return $"Tệp “{fileName}” trống. Hãy kiểm tra lại tệp rồi tải lên.";
+        if (length > (long)maxMb * 1024 * 1024)
         {
-            var megabytes = (file.Length / 1024d / 1024d).ToString("0.0", Vietnamese);
-            return $"Tệp “{file.FileName}” nặng {megabytes} MB, vượt giới hạn {maxMb} MB. " +
+            var megabytes = (length / 1024d / 1024d).ToString("0.0", Vietnamese);
+            return $"Tệp “{fileName}” nặng {megabytes} MB, vượt giới hạn {maxMb} MB. " +
                 "Hãy nén hoặc tách tệp rồi tải lên lại.";
         }
         return null;

@@ -72,7 +72,10 @@ test("contract Documents and Appendix tabs follow the file limit set in Settings
     let uploads = 0;
     page.on("request", (request) => {
       const path = new URL(request.url()).pathname;
-      if (request.method() === "POST" && /\/attachments$|\/appendices\/files$/.test(path))
+      if (
+        request.method() === "POST" &&
+        /\/attachments$|\/appendices\/files$|\/uploads$/.test(path)
+      )
         uploads++;
     });
     await page.goto(`/admin/contracts/${contractId}`);

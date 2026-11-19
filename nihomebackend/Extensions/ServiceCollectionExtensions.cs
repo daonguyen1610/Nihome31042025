@@ -261,6 +261,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrphanedManagedFileCleanupService, OrphanedManagedFileCleanupService>();
         services.AddHostedService<OrphanedManagedFileCleanupWorker>();
         services.AddHostedService<VendorDocumentUploadCleanupWorker>();
+        services.AddSingleton<ContractUploadSessionService>();
+        services.AddHostedService<ContractUploadSessionCleanupWorker>();
         services.AddHostedService<ProjectDriveSyncService>();
         services.AddHostedService<HardDeleteRetryWorker>();
 

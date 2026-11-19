@@ -42,6 +42,9 @@ nihomebackend/wwwroot/files/capability/
 # but doesn't drop physical files.
 nihomebackend/wwwroot/files/contracts/
 
+# Contract files still being uploaded in chunks (ContractUploadSessionService).
+nihomebackend/App_Data/
+
 # Quote documents are user uploads at runtime.
 nihomebackend/wwwroot/files/quotes/
 

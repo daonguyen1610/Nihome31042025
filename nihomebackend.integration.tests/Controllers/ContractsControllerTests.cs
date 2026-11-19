@@ -806,6 +806,112 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task ChunkedUpload_ContinuesFromTheServerCount_AndAttachesTheWholeFile()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var bytes = Enumerable.Range(0, ContractUploadSessionService.ChunkSize + 1000)
+            .Select(index => (byte)(index % 251)).ToArray();
+
+        var started = await Client.PostAsJsonAsync($"/api/contracts/{contractId}/uploads",
+            new { fileName = "HD-thi-cong-nha-xuong-ban-scan.pdf", size = bytes.Length, contentType = "application/pdf" });
+        started.StatusCode.Should().Be(HttpStatusCode.Created, await started.Content.ReadAsStringAsync());
+        var startedBody = await ReadJsonAsync(started);
+        var uploadId = startedBody.GetProperty("uploadId").GetString();
+        startedBody.GetProperty("chunkSize").GetInt32().Should().Be(ContractUploadSessionService.ChunkSize);
+        var chunkUrl = $"/api/contracts/{contractId}/uploads/{uploadId}";
+        Task<HttpResponseMessage> Send(int from, int count) =>
+            Client.PutAsync($"{chunkUrl}?offset={from}", new ByteArrayContent(bytes, from, count));
+
+        (await ReadJsonAsync(await Send(0, ContractUploadSessionService.ChunkSize)))
+            .GetProperty("receivedBytes").GetInt64().Should().Be(ContractUploadSessionService.ChunkSize);
+        // Part of the next chunk arrives before the connection drops.
+        (await Send(ContractUploadSessionService.ChunkSize, 400)).StatusCode.Should().Be(HttpStatusCode.OK);
+        var early = await Client.PostAsJsonAsync($"{chunkUrl}/attachment", new { kind = "SignedScan" });
+        early.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(early)).GetProperty("code").GetString().Should().Be("UPLOAD_INCOMPLETE");
+        // The client retries the chunk from its start and learns where the server is.
+        var retried = await Send(ContractUploadSessionService.ChunkSize, 1000);
+        retried.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var resumeAt = (int)(await ReadJsonAsync(retried)).GetProperty("receivedBytes").GetInt64();
+        resumeAt.Should().Be(ContractUploadSessionService.ChunkSize + 400);
+        (await Send(resumeAt, bytes.Length - resumeAt)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var completed = await Client.PostAsJsonAsync($"{chunkUrl}/attachment",
+            new { kind = "SignedScan", label = "Bản ký ngày 18/11" });
+        completed.StatusCode.Should().Be(HttpStatusCode.Created, await completed.Content.ReadAsStringAsync());
+        var attachment = await ReadJsonAsync(completed);
+        attachment.GetProperty("fileSize").GetInt64().Should().Be(bytes.Length);
+        attachment.GetProperty("originalFileName").GetString().Should().Be("HD-thi-cong-nha-xuong-ban-scan.pdf");
+        var content = await Client.GetAsync(
+            $"/api/contracts/{contractId}/attachments/{attachment.GetProperty("id").GetInt32()}/content");
+        (await content.Content.ReadAsByteArrayAsync()).Should().Equal(bytes);
+        // The session is gone once the file is attached.
+        (await Send(0, 10)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task ChunkedUpload_RefusesWrongFiles_OtherUsers_AndCancelledUploads()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var startUrl = $"/api/contracts/{contractId}/uploads";
+
+        var wrongType = await Client.PostAsJsonAsync(startUrl, new { fileName = "setup.exe", size = 100 });
+        wrongType.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(wrongType)).GetProperty("message").GetString().Should().Contain("“setup.exe” (.exe) chưa được nhận");
+
+        await WithDbAsync(async db =>
+        {
+            var settings = await db.SiteSettings.SingleAsync();
+            settings.ContractMaxFileSizeMb = 10;
+            await db.SaveChangesAsync();
+        });
+        try
+        {
+            var tooLarge = await Client.PostAsJsonAsync(startUrl,
+                new { fileName = "ho-so-hoan-cong.pdf", size = 11L * 1024 * 1024 });
+            tooLarge.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(tooLarge)).GetProperty("message").GetString()
+                .Should().Contain("“ho-so-hoan-cong.pdf” nặng 11,0 MB, vượt giới hạn 10 MB");
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                var settings = await db.SiteSettings.SingleAsync();
+                settings.ContractMaxFileSizeMb = SiteSettings.DefaultContractMaxFileSizeMb;
+                await db.SaveChangesAsync();
+            });
+        }
+
+        var started = await Client.PostAsJsonAsync(startUrl, new { fileName = "VO-01-bo-sung.pdf", size = 20 });
+        var uploadId = (await ReadJsonAsync(started)).GetProperty("uploadId").GetString();
+        var chunkUrl = $"{startUrl}/{uploadId}";
+        (await Client.PutAsync($"{chunkUrl}?offset=0", new ByteArrayContent(new byte[20])))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var appendixFile = await Client.PostAsync($"{chunkUrl}/appendix-file", null);
+        appendixFile.StatusCode.Should().Be(HttpStatusCode.OK, await appendixFile.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(appendixFile)).GetProperty("filePath").GetString().Should().StartWith("/files/contracts/vo-");
+
+        var cancelled = await Client.PostAsJsonAsync(startUrl, new { fileName = "VO-02.pdf", size = 20 });
+        var cancelledUrl = $"{startUrl}/{(await ReadJsonAsync(cancelled)).GetProperty("uploadId").GetString()}";
+        // Another user cannot write to or discard someone else's upload.
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        (await Client.PutAsync($"{cancelledUrl}?offset=0", new ByteArrayContent(new byte[20])))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Client.DeleteAsync(cancelledUrl)).StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        (await Client.DeleteAsync(cancelledUrl)).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        var afterCancel = await Client.PutAsync($"{cancelledUrl}?offset=0", new ByteArrayContent(new byte[20]));
+        afterCancel.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await ReadJsonAsync(afterCancel)).GetProperty("code").GetString().Should().Be("UPLOAD_NOT_FOUND");
+    }
+
+    [Fact]
     public async Task ContractAttachment_AcceptsFileAboveFormerTwentyMegabyteLimit()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

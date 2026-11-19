@@ -54,17 +54,23 @@ function UploadRow({ item }: { item: UploadItem }) {
           >
             {sent
               ? t("upload.tray.saving", { total: mb(item.size) })
-              : item.status === "uploading"
-                ? t("upload.tray.progress", {
+              : item.status === "uploading" && item.reconnecting
+                ? t("upload.tray.reconnecting", {
                     loaded: mb(item.loaded),
                     total: mb(item.size),
                     percent,
                   })
-                : item.status === "done"
-                  ? t("upload.tray.done", { total: mb(item.size) })
-                  : item.status === "cancelled"
-                    ? t("upload.cancelled")
-                    : getUiError(item.error, t)}
+                : item.status === "uploading"
+                  ? t("upload.tray.progress", {
+                      loaded: mb(item.loaded),
+                      total: mb(item.size),
+                      percent,
+                    })
+                  : item.status === "done"
+                    ? t("upload.tray.done", { total: mb(item.size) })
+                    : item.status === "cancelled"
+                      ? t("upload.cancelled")
+                      : getUiError(item.error, t)}
           </p>
         </div>
         {item.status === "uploading" && !sent ? (
