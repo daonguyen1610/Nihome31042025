@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   FileSearch,
   Users,
+  ClipboardList,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -66,6 +67,7 @@ type SectionKey =
   | "quote-files"
   | "rfq-files"
   | "customer-files"
+  | "work-task-files"
   | "map"
   | "slideshow";
 type OtpSettingsKey = keyof OtpSettingsResponse;
@@ -87,6 +89,7 @@ const sections: { key: SectionKey; labelKey: string; icon: LucideIcon }[] = [
   { key: "quote-files", labelKey: "settings.quoteUploads.tab", icon: Receipt },
   { key: "rfq-files", labelKey: "settings.rfqUploads.tab", icon: FileSearch },
   { key: "customer-files", labelKey: "settings.customerUploads.tab", icon: Users },
+  { key: "work-task-files", labelKey: "settings.workTaskUploads.tab", icon: ClipboardList },
   { key: "map", labelKey: "settings.map.tab", icon: MapIcon },
   { key: "slideshow", labelKey: "set.slideshow", icon: Images },
 ];
@@ -702,6 +705,7 @@ const capabilityUploadLimit = moduleUploadLimit("capability");
 const quoteUploadLimit = moduleUploadLimit("quotes");
 const rfqUploadLimit = moduleUploadLimit("rfqs");
 const customerUploadLimit = moduleUploadLimit("customers");
+const workTaskUploadLimit = moduleUploadLimit("workTasks");
 
 /** One per-file upload limit setting (contracts, design files). */
 const UploadLimitTab = ({
@@ -1037,6 +1041,14 @@ const SettingsCenter = () => {
                 inputId="customer-upload-limit"
                 loadLimit={customerUploadLimit.load}
                 saveLimit={customerUploadLimit.save}
+              />
+              <UploadLimitTab
+                sectionKey="work-task-files"
+                icon={ClipboardList}
+                keyPrefix="settings.workTaskUploads"
+                inputId="work-task-upload-limit"
+                loadLimit={workTaskUploadLimit.load}
+                saveLimit={workTaskUploadLimit.save}
               />
               <MapTab />
               <SlideshowSettings />

@@ -54,6 +54,22 @@ public class BusinessDocumentStorageServiceTests : IDisposable
             _sut.StoreAsync(file, BusinessDocumentArea.Handover));
     }
 
+    [Fact]
+    public async Task StoreAsync_WorkTasksAllowTheSettingsCeiling_OtherAreasKeep20Megabytes()
+    {
+        // Work task files follow a Settings limit checked by their controller (up to
+        // 100 MB); the storage must not cut them at the 20 MB used by other areas.
+        FormFile TwentyOneMegabytes() => new(new MemoryStream(new byte[21 * 1024 * 1024]), 0,
+            21 * 1024 * 1024, "file", "ban-ve-hoan-cong.pdf")
+        { Headers = new HeaderDictionary() };
+
+        var stored = await _sut.StoreAsync(TwentyOneMegabytes(), BusinessDocumentArea.WorkTasks);
+        Assert.Equal(21 * 1024 * 1024, stored.FileSize);
+        var refused = await Assert.ThrowsAsync<BusinessDocumentStorageException>(() =>
+            _sut.StoreAsync(TwentyOneMegabytes(), BusinessDocumentArea.Handover));
+        Assert.Contains("20 MB", refused.Message);
+    }
+
     private static FormFile CreateFile(string fileName)
     {
         var stream = new MemoryStream("document"u8.ToArray());

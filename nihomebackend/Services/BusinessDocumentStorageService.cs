@@ -34,6 +34,13 @@ public class BusinessDocumentStorageService(IWebHostEnvironment env) : IBusiness
 {
     public const long MaxFileSize = 20 * 1024 * 1024;
 
+    /// <summary>
+    /// Work task attachments follow a Settings limit checked by their controller, so the
+    /// storage only enforces the business-file ceiling for them; other areas keep 20 MB.
+    /// </summary>
+    private static long MaxFileSizeFor(BusinessDocumentArea area) =>
+        area == BusinessDocumentArea.WorkTasks ? BusinessFileRules.MaxAllowedMb * 1024L * 1024 : MaxFileSize;
+
     private static readonly HashSet<string> AllowedExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg",
@@ -61,9 +68,10 @@ public class BusinessDocumentStorageService(IWebHostEnvironment env) : IBusiness
         {
             throw new BusinessDocumentStorageException("File is required and must not be empty.");
         }
-        if (file.Length > MaxFileSize)
+        if (file.Length > MaxFileSizeFor(area))
         {
-            throw new BusinessDocumentStorageException("File size must not exceed 20 MB.");
+            throw new BusinessDocumentStorageException(
+                $"File size must not exceed {MaxFileSizeFor(area) / 1024 / 1024} MB.");
         }
 
         var extension = Path.GetExtension(file.FileName);

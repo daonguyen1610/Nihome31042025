@@ -20,7 +20,8 @@ public sealed class DepartmentWorkPackagesController(
     IDepartmentWorkPackageService service,
     WorkTaskAttachmentService attachments,
     IPermissionService permissions,
-    IAuditLogger audit) : ControllerBase
+    IAuditLogger audit,
+    SiteSettingsService settings) : ControllerBase
 {
     [HttpGet]
     [RequirePermission("work.packages", "view")]
@@ -201,12 +202,17 @@ public sealed class DepartmentWorkPackagesController(
     [RequirePermission("work.packages", "view")]
     [Idempotency("work.packages.tasks.attachments.upload",
         typeof(WorkTaskAttachmentIdempotencyGuard), requireKey: true)]
-    [RequestFormLimits(MultipartBodyLengthLimit = 21 * 1024 * 1024)]
+    [RequestSizeLimit(ProjectDocumentStorageService.MultipartBodyLengthLimit)]
+    [RequestFormLimits(MultipartBodyLengthLimit = ProjectDocumentStorageService.MaxFileSize)]
     public async Task<ActionResult<DepartmentWorkTaskAttachmentResponse>> UploadTaskAttachment(
         int id, int taskId, IFormFile? file, CancellationToken ct)
     {
         var scope = await ScopeAsync(ct);
         if (scope is null) return Unauthorized();
+        // The per-file limit is an administrator setting, not a fixed size.
+        if (file is not null && file.Length > 0 &&
+            BusinessFileRules.Problem(file, await settings.GetUploadLimitMbAsync(UploadLimitKind.WorkTasks, ct)) is { } problem)
+            return BadRequest(new { message = problem });
         try
         {
             var result = await attachments.UploadAsync(id, taskId, file,

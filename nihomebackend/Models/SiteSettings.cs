@@ -9,6 +9,7 @@ public class SiteSettings
     public const int DefaultQuoteMaxFileSizeMb = 20;
     public const int DefaultRfqMaxFileSizeMb = 20;
     public const int DefaultCustomerMaxFileSizeMb = 20;
+    public const int DefaultWorkTaskMaxFileSizeMb = 20;
     public const string DefaultTimeZoneId = "Asia/Ho_Chi_Minh";
     public const string DefaultCurrencyCode = "VND";
     public const decimal DefaultUsdVndRate = 25_000m;
@@ -91,10 +92,15 @@ public class SiteSettings
 
     /// <summary>Largest file attached to a quote (proposals, technical sheets, signed copies).</summary>
     public int QuoteMaxFileSizeMb { get; set; } = DefaultQuoteMaxFileSizeMb;
+
     /// <summary>Largest RFQ evidence file (supplier quotations, drawings, specifications).</summary>
     public int RfqMaxFileSizeMb { get; set; } = DefaultRfqMaxFileSizeMb;
+
     /// <summary>Largest file attached to a customer (business licence, ID, signed papers).</summary>
     public int CustomerMaxFileSizeMb { get; set; } = DefaultCustomerMaxFileSizeMb;
+
+    /// <summary>Largest file attached to a work package task.</summary>
+    public int WorkTaskMaxFileSizeMb { get; set; } = DefaultWorkTaskMaxFileSizeMb;
 
     public DateTime CreatedAt { get; set; }
 
@@ -112,4 +118,5 @@ public enum UploadLimitKind
     Quotes,
     Rfqs,
     Customers,
+    WorkTasks,
 }

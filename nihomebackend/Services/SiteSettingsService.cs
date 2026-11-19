@@ -70,6 +70,7 @@ public class SiteSettingsService(AppDbContext db)
             case UploadLimitKind.Quotes: settings.QuoteMaxFileSizeMb = maxFileSizeMb; break;
             case UploadLimitKind.Rfqs: settings.RfqMaxFileSizeMb = maxFileSizeMb; break;
             case UploadLimitKind.Customers: settings.CustomerMaxFileSizeMb = maxFileSizeMb; break;
+            case UploadLimitKind.WorkTasks: settings.WorkTaskMaxFileSizeMb = maxFileSizeMb; break;
         }
         settings.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
@@ -93,6 +94,7 @@ public class SiteSettingsService(AppDbContext db)
                 settings.QuoteMaxFileSizeMb,
                 settings.RfqMaxFileSizeMb,
                 settings.CustomerMaxFileSizeMb,
+                settings.WorkTaskMaxFileSizeMb,
             })
             .FirstOrDefaultAsync(ct);
         return kind switch
@@ -103,6 +105,7 @@ public class SiteSettingsService(AppDbContext db)
             UploadLimitKind.Quotes => limits?.QuoteMaxFileSizeMb ?? SiteSettings.DefaultQuoteMaxFileSizeMb,
             UploadLimitKind.Rfqs => limits?.RfqMaxFileSizeMb ?? SiteSettings.DefaultRfqMaxFileSizeMb,
             UploadLimitKind.Customers => limits?.CustomerMaxFileSizeMb ?? SiteSettings.DefaultCustomerMaxFileSizeMb,
+            UploadLimitKind.WorkTasks => limits?.WorkTaskMaxFileSizeMb ?? SiteSettings.DefaultWorkTaskMaxFileSizeMb,
             _ => limits?.CapabilityMaxFileSizeMb ?? SiteSettings.DefaultCapabilityMaxFileSizeMb,
         };
     }

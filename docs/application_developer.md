@@ -645,7 +645,8 @@ Luồng gửi:
 
 Form permit, nhà cung cấp, nghiệm thu từng phần, hoàn công và bàn giao cho phép
 chọn file local ngoài field URL ngoài. File lưu ở
-`wwwroot/files/business-documents/{area}/` với tên sinh tự động, tối đa 20 MB,
+`wwwroot/files/business-documents/{area}/` với tên sinh tự động, tối đa 20 MB
+(riêng `work-tasks`: trần 100 MB, giới hạn thực theo `upload-limits/workTasks`),
 đuôi `.pdf`, `.doc`, `.docx`, `.xls`, `.xlsx`, `.png`, `.jpg`, `.jpeg`.
 
 | Method | Route | Permission | Mục đích |
@@ -1397,7 +1398,7 @@ hai khi chưa có backfill, quy tắc unique, chính sách xung đột, rehearsa
 | `POST`/`PUT` | `/api/work-packages`, `/{id}` | `work.packages.manage` | Tạo/sửa gói, hợp đồng tuỳ chọn, vòng đời |
 | `GET`/`DELETE` | `/{id}/deletion-impact`, `/{id}` | `manage` + scope quản lý | Xoá cứng với mã, planToken, rowVersion, idempotency key |
 | `POST`/`PUT` | `/{id}/tasks`, `/{id}/tasks/{taskId}` | `work.packages.assign` | Thêm/sửa task (WBS, phụ thuộc, CC, KPI) chưa kết thúc |
-| `GET`/`POST`/`DELETE` | `/{id}/tasks/{taskId}/attachments[/{attachmentId}[/content]]` | `view` + scope gói (upload/xoá: lead/assignee; lead dọn được gói đã đóng) | Một file multipart `file` mỗi request kèm `Idempotency-Key` |
+| `GET`/`POST`/`DELETE` | `/{id}/tasks/{taskId}/attachments[/{attachmentId}[/content]]` | `view` + scope gói (upload/xoá: lead/assignee; lead dọn được gói đã đóng) | Một file multipart `file` mỗi request kèm `Idempotency-Key`; mỗi tệp tối đa theo `GET /api/site-settings/upload-limits/workTasks` (mặc định 20 MB, 1–100 MB) |
 | `PUT` | `/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Ghi tiến độ |
 | `POST` | `/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Xác minh độc lập task KPI đã xong |
 | `POST`/`PUT` | `/{id}/input-price-offers[/{offerId}]` | `work.packages.progress` | Thêm/sửa offer giá đầu vào (Draft/Rejected) |

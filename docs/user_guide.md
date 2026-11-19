@@ -315,7 +315,7 @@ Hồ sơ chuyên môn của Thiết kế và Thi công vẫn làm ở màn hình
 
 **Tạo công việc trong nhóm.** Trưởng nhóm phòng nhận việc mở nhóm và tạo công việc: mã WBS, người thực hiện cùng phòng, ngày, công việc tiền nhiệm (tùy chọn), người theo dõi CC. Nếu công việc tính KPI, chọn một định nghĩa KPI đang áp dụng. Mọi công việc theo dự án và mọi công việc có KPI phải có người xác nhận khác người thực hiện; mặc định là trưởng phòng nếu không chọn. Ô chọn tiền nhiệm tự loại các công việc có thể tạo vòng lặp phụ thuộc.
 
-- Đính kèm tối đa 10 tệp mỗi lần (PDF, Word, Excel, JPG, PNG; tối đa 20 MB/tệp). Công việc được lưu trước, tệp tải sau; tệp lỗi được giữ để thử lại.
+- Đính kèm tối đa 10 tệp mỗi lần (PDF, Word, Excel, JPG, PNG); dung lượng mỗi tệp theo **Cài đặt → Tệp công việc** (mặc định 20 MB). Công việc được lưu trước, tệp tải sau; tệp lỗi được giữ để thử lại.
 - Nút **Tệp đính kèm** trên mỗi công việc để xem và tải. Trưởng nhóm hoặc người thực hiện thêm/xóa tệp khi nhóm còn mở; trưởng nhóm vẫn xóa được sau khi đóng nhóm. Tệp công việc hiện lưu trên máy chủ, không vào danh mục Drive.
 - **Thêm công việc con** trên công việc chưa xong để chia nhỏ. Công việc cha tự cộng tiến độ và trạng thái từ các việc con; chỉ cập nhật tiến độ ở việc lá. Có thể nhiều cấp. Công việc đang gắn KPI phải bỏ KPI trước khi thêm việc con.
 
@@ -1475,7 +1475,7 @@ Trong **Cài đặt** (`/admin/settings`): bật/tắt OTP đăng ký và quên 
 | Ảnh nội dung website | Tối đa 5 MB; JPG, JPEG, PNG, GIF, WebP, SVG. Ảnh không còn được dùng sẽ tự dọn định kỳ |
 | CV ứng tuyển | Tải kèm hồ sơ ứng tuyển |
 | Tài liệu dự án | 20 tệp/lần, 100 MiB/tệp ([3.0](#30-dự-án)) |
-| Tệp công việc | 10 tệp/lần, 20 MB/tệp; PDF, Word, Excel, JPG, PNG ([3.0.1](#301-nhóm-công-việc)) |
+| Tệp công việc | 10 tệp/lần; mỗi tệp theo **Cài đặt → Tệp công việc** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG ([3.0.1](#301-nhóm-công-việc)) |
 | Tệp hợp đồng, phụ lục | Theo **Cài đặt → Tệp hợp đồng** (mặc định 100 MB, tối đa 5 GB) |
 | Tài liệu báo giá | Theo **Cài đặt → Tệp báo giá** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG |
 | Tệp minh chứng RFQ | Theo **Cài đặt → Tệp RFQ** (mặc định 20 MB, tối đa 100 MB); nhận cả bản vẽ CAD, chỉ chặn tệp chạy được |

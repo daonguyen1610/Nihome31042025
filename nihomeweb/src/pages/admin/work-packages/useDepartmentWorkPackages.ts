@@ -1,3 +1,5 @@
+import { BUSINESS_FILE_MAX_MB } from "@/lib/businessFileRules";
+import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { newPriceLine } from "./workPackageFormatting";
@@ -112,7 +114,6 @@ const emptyOptions: DepartmentWorkPackageOptionsResponse = {
   vendors: [],
 };
 const TASK_FILE_EXTENSIONS = [".pdf", ".doc", ".docx", ".xls", ".xlsx", ".png", ".jpg", ".jpeg"];
-const TASK_FILE_MAX_SIZE = 20 * 1024 * 1024;
 const statusTone: Record<WorkPackageStatus, string> = {
   Planned: "border-sky-200 bg-sky-50 text-sky-700",
   Active: "border-emerald-200 bg-emerald-50 text-emerald-700",
@@ -122,6 +123,8 @@ const statusTone: Record<WorkPackageStatus, string> = {
 
 export function useDepartmentWorkPackages() {
   const uiError = useUiError();
+  // Per-file limit for task attachments from Settings; null until loaded (the server still checks).
+  const taskUploadLimitMb = useUploadLimit("workTasks");
   const confirmAction = useConfirm();
   const LIST_PAGE_SIZE = 20;
   const { id } = useParams();
@@ -790,14 +793,19 @@ export function useDepartmentWorkPackages() {
       files.some(
         (file) =>
           file.size < 1 ||
-          file.size > TASK_FILE_MAX_SIZE ||
+          (taskUploadLimitMb != null && file.size > taskUploadLimitMb * 1024 * 1024) ||
           file.name.length > 255 ||
           !TASK_FILE_EXTENSIONS.some((extension) => file.name.toLowerCase().endsWith(extension)),
       )
     ) {
       if (target === "form") setTaskFiles([]);
       else setAttachmentFiles([]);
-      toast({ variant: "destructive", title: t("workPackages.attachments.validation") });
+      toast({
+        variant: "destructive",
+        title: t("workPackages.attachments.validationLimit", {
+          max: taskUploadLimitMb ?? BUSINESS_FILE_MAX_MB,
+        }),
+      });
       return;
     }
     if (target === "form") setTaskFiles(files);
@@ -1531,6 +1539,7 @@ export function useDepartmentWorkPackages() {
     unavailablePredecessorIds,
     load,
     departmentUsers,
+    taskUploadLimitMb,
     editAssigners,
     taskUsers,
     orderedTasks,
