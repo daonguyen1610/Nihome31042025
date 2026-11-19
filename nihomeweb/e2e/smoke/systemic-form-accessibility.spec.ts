@@ -118,6 +118,8 @@ for (const [language, title, application, otp] of [
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto("/admin/email-templates");
     await expect(page.getByRole("heading", { name: title, exact: true })).toBeVisible();
+    // On phones the templates sit behind one picker naming the template being edited.
+    await page.getByTestId("email-template-picker").click();
     await expect(page.getByRole("button", { name: application, exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: otp, exact: true })).toBeVisible();
   });

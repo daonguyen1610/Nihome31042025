@@ -1,7 +1,7 @@
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useCallback, useEffect, useState } from "react";
-import { Save, RotateCcw, Mail, ShieldCheck, FileText } from "lucide-react";
+import { Save, RotateCcw, ChevronDown } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import CmScheduleTemplateConfig from "@/components/admin/CmScheduleTemplateConfig";
 import WorkPackageApprovalTemplateConfig from "@/components/admin/WorkPackageApprovalTemplateConfig";
@@ -12,7 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { extractApiError } from "@/lib/apiError";
 import { adminApi } from "@/services/adminApi";
 import type { ProjectScheduleEmailReviewItem } from "@/services/adminApi";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -38,6 +38,46 @@ const CUSTOM_TEMPLATE_TABS = [
   "quoteDecision",
 ];
 const usesCustomEditor = (tab: TabType) => CUSTOM_TEMPLATE_TABS.includes(tab);
+
+/**
+ * Templates grouped by the business area that sends them. Each keeps its
+ * existing name (the accessible name) and gains one line on when it is sent.
+ */
+const TEMPLATE_GROUPS: { labelKey: string; tabs: { tab: TabType; nameKey: string }[] }[] = [
+  {
+    labelKey: "emailTemplate.group.accounts",
+    tabs: [
+      { tab: "application", nameKey: "a11yUi.applicationTab" },
+      { tab: "otp", nameKey: "a11yUi.otpTab" },
+    ],
+  },
+  {
+    labelKey: "emailTemplate.group.sales",
+    tabs: [
+      { tab: "quote", nameKey: "emailTemplate.quote.tab" },
+      { tab: "quoteApproval", nameKey: "quotes.approval.templateTab" },
+      { tab: "quoteDecision", nameKey: "quotes.approval.decisionTemplateTab" },
+    ],
+  },
+  {
+    labelKey: "emailTemplate.group.contracts",
+    tabs: [{ tab: "contract", nameKey: "contractReminder.templates" }],
+  },
+  {
+    labelKey: "emailTemplate.group.projects",
+    tabs: [
+      { tab: "projectSchedule", nameKey: "emailTemplate.schedule.tab" },
+      { tab: "cmSchedule", nameKey: "cmSchedule.emailTemplate" },
+    ],
+  },
+  {
+    labelKey: "emailTemplate.group.workPackages",
+    tabs: [{ tab: "approval", nameKey: "approvalEmail.tab" }],
+  },
+];
+const ALL_TEMPLATES = TEMPLATE_GROUPS.flatMap((group) => group.tabs);
+const isTab = (value: string | null): value is TabType =>
+  ALL_TEMPLATES.some((item) => item.tab === value);
 
 const APPLICATION_TOKENS = [
   { token: "{{siteName}}", desc: "a11yUi.siteName" },
@@ -84,11 +124,23 @@ const EmailTemplateConfig = () => {
   const { toast } = useToast();
   const [actionsContainer, setActionsContainer] = useState<HTMLDivElement | null>(null);
 
-  const [activeTab, setActiveTab] = useState<TabType>(
-    new URLSearchParams(window.location.search).get("tab") === "projectSchedule"
-      ? "projectSchedule"
-      : "application",
-  );
+  // The chosen template lives in the URL, so a reload or shared link reopens it.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const activeTab: TabType = isTab(requestedTab) ? requestedTab : "application";
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const setActiveTab = (tab: TabType) => {
+    setSearchParams(
+      (current) => {
+        const next = new URLSearchParams(current);
+        next.set("tab", tab);
+        return next;
+      },
+      { replace: true },
+    );
+    setPickerOpen(false);
+  };
+  const activeTemplate = ALL_TEMPLATES.find((item) => item.tab === activeTab)!;
   const [scheduleEmailsNeedingReview, setScheduleEmailsNeedingReview] = useState<
     ProjectScheduleEmailReviewItem[]
   >([]);
@@ -309,234 +361,234 @@ const EmailTemplateConfig = () => {
           />
         </header>
 
-        <div className="flex flex-wrap gap-1 border-b">
+        <div className="lg:grid lg:grid-cols-[17rem_minmax(0,1fr)] lg:items-start lg:gap-8">
+          {/* Phones: one picker naming the template being edited. */}
           <button
             type="button"
-            onClick={() => setActiveTab("application")}
+            data-testid="email-template-picker"
+            aria-expanded={pickerOpen}
+            aria-controls="email-template-list"
+            onClick={() => setPickerOpen((open) => !open)}
+            className="mb-4 flex w-full items-center justify-between gap-3 rounded-md border bg-card px-4 py-3 text-left lg:hidden"
+          >
+            <span className="min-w-0">
+              <span className="block text-xs text-muted-foreground">
+                {t("emailTemplate.picker.editing")}
+              </span>
+              <span className="block font-medium text-foreground">{t(activeTemplate.nameKey)}</span>
+            </span>
+            <ChevronDown
+              className={cn(
+                "h-4 w-4 shrink-0 text-muted-foreground transition-transform",
+                pickerOpen && "rotate-180",
+              )}
+              aria-hidden
+            />
+          </button>
+          <nav
+            id="email-template-list"
+            aria-label={t("emailTemplate.picker.listLabel")}
             className={cn(
-              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-              activeTab === "application"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
+              "mb-5 space-y-4 rounded-md border bg-card p-3 lg:sticky lg:top-20 lg:mb-0 lg:block",
+              pickerOpen ? "block" : "hidden",
             )}
           >
-            <Mail className="h-4 w-4" /> {t("a11yUi.applicationTab")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("otp")}
-            className={cn(
-              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-              activeTab === "otp"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <ShieldCheck className="h-4 w-4" /> {t("a11yUi.otpTab")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("quote")}
-            className={cn(
-              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-              activeTab === "quote"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <FileText className="h-4 w-4" /> {t("emailTemplate.quote.tab")}
-          </button>
-          <button
-            type="button"
-            onClick={() => setActiveTab("projectSchedule")}
-            aria-pressed={activeTab === "projectSchedule"}
-            className={cn(
-              "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-              activeTab === "projectSchedule"
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground",
-            )}
-          >
-            <FileText className="h-4 w-4" /> {t("emailTemplate.schedule.tab")}
-          </button>
-          {(["cmSchedule", "contract", "approval", "quoteApproval", "quoteDecision"] as const).map(
-            (tab) => (
-              <button
-                key={tab}
-                type="button"
-                onClick={() => setActiveTab(tab)}
-                aria-pressed={activeTab === tab}
-                className={cn(
-                  "-mb-px inline-flex items-center gap-2 border-b-2 px-4 py-2 text-sm font-medium transition",
-                  activeTab === tab
-                    ? "border-primary text-primary"
-                    : "border-transparent text-muted-foreground hover:text-foreground",
-                )}
-              >
-                <FileText className="h-4 w-4 shrink-0" />
-                {t(
-                  tab === "cmSchedule"
-                    ? "cmSchedule.emailTemplate"
-                    : tab === "contract"
-                      ? "contractReminder.templates"
-                      : tab === "approval"
-                        ? "approvalEmail.tab"
-                        : tab === "quoteApproval"
-                          ? "quotes.approval.templateTab"
-                          : "quotes.approval.decisionTemplateTab",
-                )}
-              </button>
-            ),
-          )}
-        </div>
-
-        <div hidden={activeTab !== "cmSchedule"}>
-          <CmScheduleTemplateConfig
-            active={activeTab === "cmSchedule"}
-            actionsContainer={actionsContainer}
-          />
-        </div>
-        <div hidden={activeTab !== "contract"}>
-          <ContractReminderTemplateConfig
-            active={activeTab === "contract"}
-            actionsContainer={actionsContainer}
-          />
-        </div>
-        <div hidden={activeTab !== "approval"}>
-          <WorkPackageApprovalTemplateConfig
-            active={activeTab === "approval"}
-            actionsContainer={actionsContainer}
-          />
-        </div>
-        <div hidden={activeTab !== "quoteApproval"}>
-          <WorkPackageApprovalTemplateConfig
-            kind="quote"
-            active={activeTab === "quoteApproval"}
-            actionsContainer={actionsContainer}
-          />
-        </div>
-        <div hidden={activeTab !== "quoteDecision"}>
-          <WorkPackageApprovalTemplateConfig
-            kind="quoteDecision"
-            active={activeTab === "quoteDecision"}
-            actionsContainer={actionsContainer}
-          />
-        </div>
-        {!usesCustomEditor(activeTab) && (
-          <EmailTemplateEditor
-            key={activeTab}
-            id="email"
-            subject={activeSubject}
-            body={activeBody}
-            onSubjectChange={
-              activeTab === "application"
-                ? setSubject
-                : activeTab === "otp"
-                  ? setOtpSubject
-                  : activeTab === "projectSchedule"
-                    ? setProjectScheduleSubject
-                    : setQuoteSubject
-            }
-            onBodyChange={
-              activeTab === "application"
-                ? setBody
-                : activeTab === "otp"
-                  ? setOtpBody
-                  : activeTab === "projectSchedule"
-                    ? setProjectScheduleBody
-                    : setQuoteBody
-            }
-            subjectMaxLength={activeTab === "quote" || activeTab === "projectSchedule" ? 200 : 255}
-            bodyMaxLength={
-              activeTab === "quote" || activeTab === "projectSchedule" ? 8000 : undefined
-            }
-            hint={
-              activeTab === "quote"
-                ? t("emailTemplate.quote.hint")
-                : activeTab === "projectSchedule"
-                  ? t("emailTemplate.schedule.hint")
-                  : undefined
-            }
-            tokens={currentTokens}
-            renderedPreview={activeTab === "projectSchedule" ? schedulePreview : undefined}
-            previewError={activeTab === "projectSchedule" ? schedulePreviewError : undefined}
-            previewLoading={activeTab === "projectSchedule" && schedulePreviewLoading}
-            beforeSubject={
-              activeTab === "application" ? (
-                <div className="space-y-1.5">
-                  <Label className="text-xs" htmlFor="notification-email">
-                    {t("a11yUi.notificationEmail")}
-                  </Label>
-                  <Input
-                    id="notification-email"
-                    type="email"
-                    value={notificationEmail}
-                    onChange={(event) => setNotificationEmail(event.target.value)}
-                    placeholder="hr@nihome.vn"
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {t("a11yUi.notificationEmailHelp")}
-                  </p>
-                </div>
-              ) : undefined
-            }
-          />
-        )}
-        {activeTab === "projectSchedule" && (
-          <section id="schedule-delivery" className="space-y-3 border-t pt-5">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold">
-                  {t("emailTemplate.schedule.delivery.title")}
+            {TEMPLATE_GROUPS.map((group) => (
+              <div key={group.labelKey} className="space-y-1">
+                <h2 className="px-3 text-xs font-medium text-muted-foreground">
+                  {t(group.labelKey)}
                 </h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("emailTemplate.schedule.delivery.guidance")}
-                </p>
+                <ul className="space-y-0.5">
+                  {group.tabs.map(({ tab, nameKey }) => {
+                    const active = activeTab === tab;
+                    return (
+                      <li key={tab}>
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab(tab)}
+                          aria-current={active ? "true" : undefined}
+                          aria-describedby={`email-template-when-${tab}`}
+                          className={cn(
+                            "w-full rounded-md px-3 py-2 text-left text-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                            active
+                              ? "bg-muted font-medium text-foreground"
+                              : "text-foreground/80 hover:bg-muted/60 hover:text-foreground",
+                          )}
+                        >
+                          {t(nameKey)}
+                        </button>
+                        <p id={`email-template-when-${tab}`} className="sr-only">
+                          {t(`emailTemplate.when.${tab}`)}
+                        </p>
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
-              <Button type="button" variant="outline" onClick={loadScheduleDelivery}>
-                {t("emailTemplate.schedule.delivery.refresh")}
-              </Button>
+            ))}
+          </nav>
+
+          <section aria-labelledby="email-template-current" className="min-w-0 space-y-4">
+            <div>
+              {/* On phones the picker above already names the template. */}
+              <h2 id="email-template-current" className="hidden text-lg font-semibold lg:block">
+                {t(activeTemplate.nameKey)}
+              </h2>
+              <p className="text-sm text-muted-foreground">
+                {t(`emailTemplate.when.${activeTab}`)}
+              </p>
             </div>
-            {scheduleDeliveryLoading ? (
-              <p className="text-sm text-muted-foreground">
-                {t("emailTemplate.schedule.delivery.loading")}
-              </p>
-            ) : scheduleDeliveryError ? (
-              <p role="alert" className="text-sm text-destructive">
-                {scheduleDeliveryError}
-              </p>
-            ) : scheduleEmailsNeedingReview.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                {t("emailTemplate.schedule.delivery.empty")}
-              </p>
-            ) : (
-              <div className="divide-y rounded-md border">
-                {scheduleEmailsNeedingReview.map((email) => (
-                  <div
-                    key={email.id}
-                    className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
-                  >
-                    <div>
-                      <div className="font-medium">
-                        {email.projectCode} · v{email.version} · #{email.id}
-                      </div>
-                      <div className="text-muted-foreground">
-                        {t("emailTemplate.schedule.delivery.attempts")}: {email.attemptCount}
-                        {email.lastAttemptAt && ` · ${formatDateTime(email.lastAttemptAt)}`}
-                      </div>
+            <div hidden={activeTab !== "cmSchedule"}>
+              <CmScheduleTemplateConfig
+                active={activeTab === "cmSchedule"}
+                actionsContainer={actionsContainer}
+              />
+            </div>
+            <div hidden={activeTab !== "contract"}>
+              <ContractReminderTemplateConfig
+                active={activeTab === "contract"}
+                actionsContainer={actionsContainer}
+              />
+            </div>
+            <div hidden={activeTab !== "approval"}>
+              <WorkPackageApprovalTemplateConfig
+                active={activeTab === "approval"}
+                actionsContainer={actionsContainer}
+              />
+            </div>
+            <div hidden={activeTab !== "quoteApproval"}>
+              <WorkPackageApprovalTemplateConfig
+                kind="quote"
+                active={activeTab === "quoteApproval"}
+                actionsContainer={actionsContainer}
+              />
+            </div>
+            <div hidden={activeTab !== "quoteDecision"}>
+              <WorkPackageApprovalTemplateConfig
+                kind="quoteDecision"
+                active={activeTab === "quoteDecision"}
+                actionsContainer={actionsContainer}
+              />
+            </div>
+            {!usesCustomEditor(activeTab) && (
+              <EmailTemplateEditor
+                key={activeTab}
+                id="email"
+                subject={activeSubject}
+                body={activeBody}
+                onSubjectChange={
+                  activeTab === "application"
+                    ? setSubject
+                    : activeTab === "otp"
+                      ? setOtpSubject
+                      : activeTab === "projectSchedule"
+                        ? setProjectScheduleSubject
+                        : setQuoteSubject
+                }
+                onBodyChange={
+                  activeTab === "application"
+                    ? setBody
+                    : activeTab === "otp"
+                      ? setOtpBody
+                      : activeTab === "projectSchedule"
+                        ? setProjectScheduleBody
+                        : setQuoteBody
+                }
+                subjectMaxLength={
+                  activeTab === "quote" || activeTab === "projectSchedule" ? 200 : 255
+                }
+                bodyMaxLength={
+                  activeTab === "quote" || activeTab === "projectSchedule" ? 8000 : undefined
+                }
+                hint={
+                  activeTab === "quote"
+                    ? t("emailTemplate.quote.hint")
+                    : activeTab === "projectSchedule"
+                      ? t("emailTemplate.schedule.hint")
+                      : undefined
+                }
+                tokens={currentTokens}
+                renderedPreview={activeTab === "projectSchedule" ? schedulePreview : undefined}
+                previewError={activeTab === "projectSchedule" ? schedulePreviewError : undefined}
+                previewLoading={activeTab === "projectSchedule" && schedulePreviewLoading}
+                beforeSubject={
+                  activeTab === "application" ? (
+                    <div className="space-y-1.5">
+                      <Label className="text-xs" htmlFor="notification-email">
+                        {t("a11yUi.notificationEmail")}
+                      </Label>
+                      <Input
+                        id="notification-email"
+                        type="email"
+                        value={notificationEmail}
+                        onChange={(event) => setNotificationEmail(event.target.value)}
+                        placeholder="hr@nihome.vn"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        {t("a11yUi.notificationEmailHelp")}
+                      </p>
                     </div>
-                    <Link
-                      className="font-medium text-primary underline-offset-4 hover:underline"
-                      to={`/admin/operational-projects/${email.projectId}?tab=schedule`}
-                    >
-                      {t("emailTemplate.schedule.delivery.openProject")}
-                    </Link>
+                  ) : undefined
+                }
+              />
+            )}
+            {activeTab === "projectSchedule" && (
+              <section id="schedule-delivery" className="space-y-3 border-t pt-5">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-semibold">
+                      {t("emailTemplate.schedule.delivery.title")}
+                    </h2>
+                    <p className="text-sm text-muted-foreground">
+                      {t("emailTemplate.schedule.delivery.guidance")}
+                    </p>
                   </div>
-                ))}
-              </div>
+                  <Button type="button" variant="outline" onClick={loadScheduleDelivery}>
+                    {t("emailTemplate.schedule.delivery.refresh")}
+                  </Button>
+                </div>
+                {scheduleDeliveryLoading ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("emailTemplate.schedule.delivery.loading")}
+                  </p>
+                ) : scheduleDeliveryError ? (
+                  <p role="alert" className="text-sm text-destructive">
+                    {scheduleDeliveryError}
+                  </p>
+                ) : scheduleEmailsNeedingReview.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    {t("emailTemplate.schedule.delivery.empty")}
+                  </p>
+                ) : (
+                  <div className="divide-y rounded-md border">
+                    {scheduleEmailsNeedingReview.map((email) => (
+                      <div
+                        key={email.id}
+                        className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 text-sm"
+                      >
+                        <div>
+                          <div className="font-medium">
+                            {email.projectCode} · v{email.version} · #{email.id}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {t("emailTemplate.schedule.delivery.attempts")}: {email.attemptCount}
+                            {email.lastAttemptAt && ` · ${formatDateTime(email.lastAttemptAt)}`}
+                          </div>
+                        </div>
+                        <Link
+                          className="font-medium text-primary underline-offset-4 hover:underline"
+                          to={`/admin/operational-projects/${email.projectId}?tab=schedule`}
+                        >
+                          {t("emailTemplate.schedule.delivery.openProject")}
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </section>
             )}
           </section>
-        )}
+        </div>
       </div>
     </AdminLayout>
   );

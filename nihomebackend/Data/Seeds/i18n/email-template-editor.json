@@ -1,5 +1,133 @@
 [
   {
+    "key": "emailTemplate.group.accounts",
+    "category": "emailTemplates",
+    "vi": "Tuyển dụng và tài khoản",
+    "en": "Recruitment and accounts",
+    "zh": "招聘与账户",
+    "ja": "採用とアカウント"
+  },
+  {
+    "key": "emailTemplate.group.sales",
+    "category": "emailTemplates",
+    "vi": "Kinh doanh",
+    "en": "Sales",
+    "zh": "销售",
+    "ja": "営業"
+  },
+  {
+    "key": "emailTemplate.group.contracts",
+    "category": "emailTemplates",
+    "vi": "Hợp đồng",
+    "en": "Contracts",
+    "zh": "合同",
+    "ja": "契約"
+  },
+  {
+    "key": "emailTemplate.group.projects",
+    "category": "emailTemplates",
+    "vi": "Dự án và thi công",
+    "en": "Projects and construction",
+    "zh": "项目与施工",
+    "ja": "プロジェクトと施工"
+  },
+  {
+    "key": "emailTemplate.group.workPackages",
+    "category": "emailTemplates",
+    "vi": "Nhóm công việc",
+    "en": "Work packages",
+    "zh": "工作包",
+    "ja": "作業パッケージ"
+  },
+  {
+    "key": "emailTemplate.picker.editing",
+    "category": "emailTemplates",
+    "vi": "Mẫu đang sửa",
+    "en": "Template being edited",
+    "zh": "正在编辑的模板",
+    "ja": "編集中のテンプレート"
+  },
+  {
+    "key": "emailTemplate.picker.listLabel",
+    "category": "emailTemplates",
+    "vi": "Danh sách mẫu email",
+    "en": "Email templates",
+    "zh": "邮件模板列表",
+    "ja": "メールテンプレート一覧"
+  },
+  {
+    "key": "emailTemplate.when.application",
+    "category": "emailTemplates",
+    "vi": "Gửi cho bộ phận nhân sự khi có ứng viên nộp hồ sơ trên website.",
+    "en": "Sent to HR when a candidate applies on the website.",
+    "zh": "候选人在网站投递简历时发送给人事部门。",
+    "ja": "ウェブサイトで応募があったときに人事部へ送信します。"
+  },
+  {
+    "key": "emailTemplate.when.otp",
+    "category": "emailTemplates",
+    "vi": "Gửi mã xác thực khi người dùng đăng ký tài khoản.",
+    "en": "Sends the verification code when someone registers.",
+    "zh": "用户注册账户时发送验证码。",
+    "ja": "アカウント登録時に認証コードを送信します。"
+  },
+  {
+    "key": "emailTemplate.when.quote",
+    "category": "emailTemplates",
+    "vi": "Gửi khách hàng khi Kinh doanh bấm Gửi khách.",
+    "en": "Sent to the customer when Sales sends the quote.",
+    "zh": "销售发送报价时发给客户。",
+    "ja": "営業が見積を送付したときに顧客へ送信します。"
+  },
+  {
+    "key": "emailTemplate.when.quoteApproval",
+    "category": "emailTemplates",
+    "vi": "Gửi người duyệt khi báo giá được gửi duyệt.",
+    "en": "Sent to the approver when a quote is submitted for approval.",
+    "zh": "报价送审时发给审批人。",
+    "ja": "見積が承認申請されたときに承認者へ送信します。"
+  },
+  {
+    "key": "emailTemplate.when.quoteDecision",
+    "category": "emailTemplates",
+    "vi": "Báo người gửi khi báo giá được duyệt hoặc bị từ chối.",
+    "en": "Tells the sender when the quote is approved or rejected.",
+    "zh": "报价被批准或驳回时通知提交人。",
+    "ja": "見積が承認・却下されたときに申請者へ通知します。"
+  },
+  {
+    "key": "emailTemplate.when.contract",
+    "category": "emailTemplates",
+    "vi": "Nhắc gia hạn hoặc thông báo kết thúc trước khi hợp đồng hết hạn.",
+    "en": "Reminds to renew, or announces the end, before a contract expires.",
+    "zh": "合同到期前提醒续签或通知结束。",
+    "ja": "契約満了前に更新の案内または終了を通知します。"
+  },
+  {
+    "key": "emailTemplate.when.projectSchedule",
+    "category": "emailTemplates",
+    "vi": "Báo các phòng khi tiến độ tổng thể có phiên bản mới.",
+    "en": "Tells departments when the master schedule has a new version.",
+    "zh": "总体进度有新版本时通知各部门。",
+    "ja": "全体工程に新しい版が出たときに各部署へ通知します。"
+  },
+  {
+    "key": "emailTemplate.when.cmSchedule",
+    "category": "emailTemplates",
+    "vi": "Gửi người duyệt kế hoạch thi công của Phòng CM.",
+    "en": "Sent to the approver of the CM department's construction plan.",
+    "zh": "发给 CM 部门施工计划的审批人。",
+    "ja": "CM 部門の施工計画の承認者へ送信します。"
+  },
+  {
+    "key": "emailTemplate.when.approval",
+    "category": "emailTemplates",
+    "vi": "Gửi người duyệt khi giá đầu vào, BOQ hoặc rà soát tài chính được gửi duyệt.",
+    "en": "Sent to the approver when input prices, a BOQ or a finance review is submitted.",
+    "zh": "进价、BOQ 或财务审查送审时发给审批人。",
+    "ja": "仕入価格・BOQ・財務審査が承認申請されたときに承認者へ送信します。"
+  },
+  {
     "key": "emailTemplate.editor.subject",
     "category": "emailTemplates",
     "vi": "Tiêu đề email",

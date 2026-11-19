@@ -1,4 +1,5 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { openEmailTemplate } from "../fixtures/emailTemplates";
 
 const contractTab = "Mẫu email gia hạn và kết thúc hợp đồng";
 const approvalTab = "Duyệt nhóm công việc";
@@ -17,7 +18,7 @@ test("email editor exposes per-event templates without a shared layout editor", 
   await page.goto("/admin/email-templates");
   await expect(page.getByRole("button", { name: "Giao diện chung" })).toHaveCount(0);
   await expect(page.locator('label[for="email-body"]')).toHaveText("Nội dung email");
-  await page.getByRole("button", { name: "Tiến độ tổng thể", exact: true }).click();
+  await openEmailTemplate(page, "Tiến độ tổng thể");
   const preview = page.frameLocator('iframe[title="Email preview"]:visible');
   await expect(preview.locator('table[role="presentation"]')).toHaveCSS("max-width", "600px");
   await expect(preview.locator("body")).toContainText("PJ-2026-001");
@@ -42,7 +43,7 @@ test("schedule email preview uses server rendering at mobile and desktop widths"
   const previewResponse = page.waitForResponse((response) =>
     response.url().endsWith("/api/site-settings/email-templates/project-schedule/preview"),
   );
-  await page.getByRole("button", { name: "Tiến độ tổng thể", exact: true }).click();
+  await openEmailTemplate(page, "Tiến độ tổng thể");
   const body = page.locator("#email-body");
   await expect(body).toBeVisible();
   const originalBody = await body.inputValue();
@@ -102,7 +103,7 @@ test("email editors share responsive previews and preserve drafts", async ({
         desc: "Mã nhóm công việc",
       },
     ]) {
-      await page.getByRole("button", { name: editor.tab, exact: true }).click();
+      await openEmailTemplate(page, editor.tab);
       if (editor.tab === contractTab) {
         await page
           .getByRole("button", {
@@ -161,13 +162,8 @@ test("email editors share responsive previews and preserve drafts", async ({
       await page.keyboard.press("Escape");
       await expect(page.getByRole("button", { name: "Toàn màn hình", exact: true })).toBeVisible();
 
-      await page
-        .getByRole("button", {
-          name: editor.tab === approvalTab ? contractTab : approvalTab,
-          exact: true,
-        })
-        .click();
-      await page.getByRole("button", { name: editor.tab, exact: true }).click();
+      await openEmailTemplate(page, editor.tab === approvalTab ? contractTab : approvalTab);
+      await openEmailTemplate(page, editor.tab);
       await expect(subject).toHaveValue(`NICON draft ${editor.token}`);
       await subject.fill(originalSubject);
       await body.fill(originalBody);
@@ -235,7 +231,7 @@ test("header actions save the selected template and restore saved content", asyn
         subject: "NICON approval {{workPackageCode}}",
       },
     ]) {
-      await page.getByRole("button", { name: editor.tab, exact: true }).click();
+      await openEmailTemplate(page, editor.tab);
       if (editor.tab === contractTab)
         await page
           .getByRole("button", {

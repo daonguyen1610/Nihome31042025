@@ -1,4 +1,5 @@
 import { expect, test, TEST_USERS } from "../fixtures/auth";
+import { openEmailTemplate } from "../fixtures/emailTemplates";
 
 test("email template settings expose the quote template and its required variables", async ({
   loginInBrowserAs,
@@ -10,7 +11,7 @@ test("email template settings expose the quote template and its required variabl
   for (const width of [390, 768]) {
     await page.setViewportSize({ width, height: 844 });
     await page.goto("/admin/email-templates", { waitUntil: "networkidle" });
-    await page.getByRole("button", { name: "Báo giá", exact: true }).click();
+    await openEmailTemplate(page, "Báo giá");
     await expect(page.locator("#email-subject")).toHaveValue(/\{\{quoteCode\}\}/);
     await expect(page.locator("#email-body")).toHaveValue(/\{\{quoteLines\}\}/);
     await expect(page.locator("#email-body")).toHaveValue(/\{\{grandTotal\}\}/);
