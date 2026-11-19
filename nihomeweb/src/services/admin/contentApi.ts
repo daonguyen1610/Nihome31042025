@@ -32,6 +32,8 @@ import type {
   ProjectScheduleEmailReviewItem,
   QuoteApprovalTemplates,
   WorkPackageApprovalPreview,
+  WorkPackageApprovalRecipients,
+  WorkPackageApproverOption,
   ContractReminderTemplates,
   ContractReminder,
   ContractReminderPreview,
@@ -216,10 +218,12 @@ export const contentApi = {
     decisionSubject?: string;
     decisionBody?: string;
   }) => api.put<QuoteApprovalTemplates>("/site-settings/quote-approval-template", data),
+  listWorkPackageApprovers: (packageId: number) =>
+    api.get<WorkPackageApproverOption[]>(`/work-packages/${packageId}/approvers`),
   previewWorkPackageApprovalEmail: (
     packageId: number,
     offerId?: number,
-    recipients?: { toEmail: string; ccEmails: string[] },
+    recipients?: WorkPackageApprovalRecipients,
   ) =>
     api.post<WorkPackageApprovalPreview>(
       offerId

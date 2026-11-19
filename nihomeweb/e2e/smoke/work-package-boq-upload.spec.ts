@@ -133,6 +133,8 @@ test("procurement uploads the filled BOQ in its work package and the lead approv
   await expect(section).toContainText("boq-pccc-dau-vao.xlsx");
 
   await section.getByTestId("work-package-boq-submit").click();
+  await page.getByRole("alertdialog").getByRole("button", { name: "Continue" }).click();
+  // The approver defaults to the assigner, the Procurement manager.
   await page.getByRole("button", { name: "Submit and notify" }).click();
   await expect(section).toContainText("Submitted");
   await expect(section.getByTestId("work-package-boq-approve")).toHaveCount(0);

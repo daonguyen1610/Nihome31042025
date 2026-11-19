@@ -164,6 +164,11 @@ export interface InputPriceOfferResponse {
   grandTotal: number;
   createdByUserId: number;
   lastEditedByUserId: number;
+  /** The approver the sender chose; only they may decide. */
+  approvalApproverUserId?: number | null;
+  approvalApproverName?: string | null;
+  /** The current user may approve or reject this submitted record. */
+  canDecide?: boolean;
   rowVersion: string;
   lines: InputPriceLineResponse[];
 }
@@ -183,6 +188,11 @@ export interface FinanceReviewResponse {
   lastEditedByUserId: number;
   reviewedByUserId?: number | null;
   reviewedByName?: string | null;
+  /** The approver the sender chose; only they may decide. */
+  approvalApproverUserId?: number | null;
+  approvalApproverName?: string | null;
+  /** The current user may approve or reject this submitted record. */
+  canDecide?: boolean;
   rowVersion: string;
 }
 

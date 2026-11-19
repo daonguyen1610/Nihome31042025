@@ -118,10 +118,20 @@ public sealed partial class DepartmentWorkPackageService(
     {
         var item = await BaseQuery().SingleOrDefaultAsync(package => package.Id == id, ct);
         if (item is null || !await CanViewAsync(item, callerUserId, canViewAll, ct)) return null;
-        var response = MapPackage(item, callerUserId, await IsAdministratorAsync(callerUserId, ct),
-            await DisplayClockAsync(ct));
+        var admin = await IsAdministratorAsync(callerUserId, ct);
+        var response = MapPackage(item, callerUserId, admin, await DisplayClockAsync(ct));
         if (item.Purpose == WorkPackagePurpose.ProcurementInputPricing)
             response.BoqWorkbooks = await ListBoqWorkbooksAsync(id, ct);
+        // Decide buttons show only for the approver the sender chose (the
+        // assigner for records sent earlier), never for the record's author.
+        bool Decides(string status, int? approverId, int authorId) => status == "Submitted" &&
+            authorId != callerUserId && (admin || (approverId ?? item.LeadUserId) == callerUserId);
+        foreach (var offer in response.InputPriceOffers)
+            offer.CanDecide = Decides(offer.Status, offer.ApprovalApproverUserId, offer.CreatedByUserId);
+        foreach (var boq in response.BoqWorkbooks)
+            boq.CanDecide = Decides(boq.Status, boq.ApprovalApproverUserId, boq.PreparedByUserId);
+        if (response.FinanceReview is { } review)
+            review.CanDecide = Decides(review.Status, review.ApprovalApproverUserId, review.CreatedByUserId);
         var emails = await db.WorkPackageApprovalEmails.AsNoTracking()
             .Where(email => email.WorkPackageId == id).OrderByDescending(email => email.Id).Take(50)
             .Select(email => new
@@ -253,7 +263,7 @@ public sealed partial class DepartmentWorkPackageService(
                 throw Error("Công việc nội bộ không được gắn Dự án, Hợp đồng, Cơ hội, Báo giá hoặc Gói thầu.");
             var callerGroup = await UserRoleGroupIdAsync(callerUserId, ct);
             if (!admin && (callerGroup != request.DepartmentRoleGroupId || request.LeadUserId != callerUserId))
-                throw Error("Công việc nội bộ phải do người chủ trì của chính phòng ban tạo.");
+                throw Error("Công việc nội bộ phải do người phân công của chính phòng ban tạo.");
         }
         else
         {
@@ -588,7 +598,7 @@ public sealed partial class DepartmentWorkPackageService(
         var isLegal = task.WorkPackage.Purpose == WorkPackagePurpose.LegalPermitting;
         var expectedVerifier = task.ApproverUserId ?? task.WorkPackage.LeadUserId;
         if (!admin && expectedVerifier != callerUserId)
-            throw Error("Chỉ người duyệt được chỉ định hoặc người chủ trì phòng mới được xác nhận đầu việc.");
+            throw Error("Chỉ người duyệt được chỉ định hoặc người phân công của phòng mới được xác nhận đầu việc.");
         if (await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(item => item.ParentTaskId == taskId, ct))
             throw Error("Công việc cha được xác nhận tự động khi các công việc con đã được xác nhận.");
         await EnsureTenderIsMutableAsync(task.WorkPackage, ct);
@@ -1113,7 +1123,7 @@ public sealed partial class DepartmentWorkPackageService(
                 rolePermission.Permission.Module == "work.packages" &&
                 rolePermission.Permission.Action == "assign"), ct);
         if (!canLead)
-            throw Error("Người chủ trì phải là người dùng đang hoạt động thuộc phòng ban nhận việc và có quyền phân công.");
+            throw Error("Người phân công phải là người dùng đang hoạt động thuộc phòng ban nhận việc và có quyền phân công.");
     }
 
     private async Task EnsureActiveUserAsync(int userId, string field, CancellationToken ct)

@@ -75,6 +75,8 @@ public sealed class InputPriceOfferResponse
     public int CreatedByUserId { get; set; }
     public int? ApprovalApproverUserId { get; set; }
     public string? ApprovalApproverName { get; set; }
+    /// <summary>The caller is the chosen approver (or an administrator) of this submitted record.</summary>
+    public bool CanDecide { get; set; }
     public string RowVersion { get; set; } = string.Empty;
     public List<InputPriceLineResponse> Lines { get; set; } = new();
 }
@@ -109,6 +111,8 @@ public sealed class FinanceReviewResponse
     public string? ReviewedByName { get; set; }
     public int? ApprovalApproverUserId { get; set; }
     public string? ApprovalApproverName { get; set; }
+    /// <summary>The caller is the chosen approver (or an administrator) of this submitted record.</summary>
+    public bool CanDecide { get; set; }
     public string RowVersion { get; set; } = string.Empty;
 }
 
@@ -224,6 +228,8 @@ public sealed class WorkPackageBoqWorkbookResponse
     public DateTime? SubmittedAt { get; set; }
     public int? ApprovalApproverUserId { get; set; }
     public string? ApprovalApproverName { get; set; }
+    /// <summary>The caller is the chosen approver (or an administrator) of this submitted record.</summary>
+    public bool CanDecide { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public DateTime? RejectedAt { get; set; }
     public string? DecisionReason { get; set; }

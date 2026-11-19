@@ -32,6 +32,86 @@
     "ja": "宛先と内容を確認してください。提出時に送信予約されます。メールによる自動承認は行いません。"
   },
   {
+    "key": "approvalEmail.sendConfirm",
+    "category": "workPackages",
+    "vi": "Gửi hồ sơ này đi duyệt? Bước tiếp theo bạn chọn người duyệt và xem trước email trước khi gửi.",
+    "en": "Send this record for approval? Next you choose the approver and preview the email before it is sent.",
+    "zh": "将此记录送审？下一步选择审批人并在发送前预览邮件。",
+    "ja": "この記録を承認に回しますか？次に承認者を選び、送信前にメールを確認します。"
+  },
+  {
+    "key": "approvalEmail.noApprover",
+    "category": "workPackages",
+    "vi": "Chưa có người dùng NICON nào đủ điều kiện duyệt (đang hoạt động, có quyền duyệt và có email). Hãy nhờ quản trị viên cấp quyền duyệt rồi thử lại.",
+    "en": "No NICON user can approve yet (active, allowed to approve, with an email). Ask an administrator to grant approval rights, then try again.",
+    "zh": "尚无可审批的 NICON 用户（需在职、有审批权限且有邮箱）。请联系管理员授予审批权限后重试。",
+    "ja": "承認できる NICON ユーザーがいません（有効・承認権限・メールあり）。管理者に承認権限の付与を依頼してから再試行してください。"
+  },
+  {
+    "key": "approvalEmail.approver",
+    "category": "workPackages",
+    "vi": "Người duyệt",
+    "en": "Approver",
+    "zh": "审批人",
+    "ja": "承認者"
+  },
+  {
+    "key": "approvalEmail.approverPlaceholder",
+    "category": "workPackages",
+    "vi": "Chọn người duyệt",
+    "en": "Choose the approver",
+    "zh": "选择审批人",
+    "ja": "承認者を選択"
+  },
+  {
+    "key": "approvalEmail.approverSearch",
+    "category": "workPackages",
+    "vi": "Gõ tên, email hoặc phòng ban để tìm",
+    "en": "Type a name, email or department",
+    "zh": "输入姓名、邮箱或部门搜索",
+    "ja": "名前・メール・部署で検索"
+  },
+  {
+    "key": "approvalEmail.approverEmpty",
+    "category": "workPackages",
+    "vi": "Không tìm thấy người duyệt phù hợp",
+    "en": "No matching approver",
+    "zh": "未找到匹配的审批人",
+    "ja": "該当する承認者がいません"
+  },
+  {
+    "key": "approvalEmail.approverHint",
+    "category": "workPackages",
+    "vi": "Chỉ người được chọn mới duyệt hoặc từ chối được hồ sơ này. Người lập hồ sơ không thể tự duyệt.",
+    "en": "Only the person chosen can approve or reject this record. Its author cannot approve it.",
+    "zh": "只有被选中的人才能审批或驳回此记录。记录编制人不能自行审批。",
+    "ja": "選ばれた人だけがこの記録を承認・却下できます。作成者は自分で承認できません。"
+  },
+  {
+    "key": "approvalEmail.awaiting",
+    "category": "workPackages",
+    "vi": "Chờ {name} duyệt",
+    "en": "Awaiting {name}'s approval",
+    "zh": "等待 {name} 审批",
+    "ja": "{name} の承認待ち"
+  },
+  {
+    "key": "approvalEmail.recipientChosenHint",
+    "category": "workPackages",
+    "vi": "To mặc định là email người duyệt đã chọn; có thể sửa địa chỉ nhận. CC tối đa 20 email, cách nhau bằng dấu phẩy, dấu chấm phẩy hoặc xuống dòng, ví dụ: ten@nicon.vn. Đổi địa chỉ nhận không đổi người có quyền duyệt.",
+    "en": "To defaults to the chosen approver's email and can be changed. CC up to 20 addresses separated by commas, semicolons or new lines, e.g. name@nicon.vn. Changing addresses does not change who may approve.",
+    "zh": "收件人默认为所选审批人的邮箱，可修改。抄送最多 20 个，用逗号、分号或换行分隔，例如 name@nicon.vn。修改地址不会改变审批人。",
+    "ja": "宛先は選んだ承認者のメールが既定で、変更できます。CC は最大 20 件（カンマ・セミコロン・改行区切り、例: name@nicon.vn）。宛先を変えても承認者は変わりません。"
+  },
+  {
+    "key": "approvalEmail.continue",
+    "category": "workPackages",
+    "vi": "Tiếp tục",
+    "en": "Continue",
+    "zh": "继续",
+    "ja": "続行"
+  },
+  {
     "key": "approvalEmail.recipient",
     "category": "workPackages",
     "vi": "Người nhận",
@@ -102,6 +182,22 @@
     "en": "If delivery is prolonged or needs review, ask an administrator to check SMTP and the recipient. Uncertain deliveries are not retried automatically to avoid duplicates.",
     "zh": "若发送时间过长或需要检查，请联系管理员检查SMTP和收件人。结果不确定时不会自动重试，以免重复。",
     "ja": "送信が長時間続く、または確認が必要な場合は管理者にSMTPと宛先の確認を依頼してください。重複防止のため結果不明のメールは自動再送しません。"
+  },
+  {
+    "key": "approvalEmail.token.chosenApprover",
+    "category": "workPackages",
+    "vi": "Người duyệt đã chọn",
+    "en": "Chosen approver",
+    "zh": "所选审批人",
+    "ja": "選んだ承認者"
+  },
+  {
+    "key": "approvalEmail.tokensChosenApprover",
+    "category": "workPackages",
+    "vi": "Biến hỗ trợ: {{recipientName}} — người duyệt đã chọn; {{workPackageCode}} — mã nhóm; {{workPackageName}} — tên nhóm; {{recordType}} — loại hồ sơ; {{recordReference}} — số báo giá hoặc mã nhóm; {{senderName}} — người gửi; {{workPackageUrl}} — link mở nhóm. HTML phải có mã nhóm, hồ sơ và link dạng <a href=\"{{workPackageUrl}}\">Mở nhóm công việc</a>. Xem trước email thực tế trước khi gửi duyệt.",
+    "en": "Variables: {{recipientName}} (chosen approver), {{workPackageCode}}, {{workPackageName}}, {{recordType}}, {{recordReference}}, {{senderName}}, {{workPackageUrl}}. HTML must contain the package code, record reference, and a link in the form <a href=\"{{workPackageUrl}}\">Open work package</a>. Preview rendered content before submission.",
+    "zh": "变量：{{recipientName}}（所选审批人）、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}、{{senderName}}、{{workPackageUrl}}。HTML 必须包含组代码、记录编号和 <a href=\"{{workPackageUrl}}\">打开工作组</a> 链接。提交前预览实际邮件。",
+    "ja": "変数：{{recipientName}}（選んだ承認者）、{{workPackageCode}}、{{workPackageName}}、{{recordType}}、{{recordReference}}、{{senderName}}、{{workPackageUrl}}。HTML にはグループコード、書類番号、<a href=\"{{workPackageUrl}}\">業務グループを開く</a> を含めてください。送信前にプレビューを確認してください。"
   },
   {
     "key": "approvalEmail.tokens",

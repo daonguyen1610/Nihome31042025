@@ -112,7 +112,6 @@ const DepartmentWorkPackages = () => {
     canManage,
     canAssign,
     canProgress,
-    canVerifyBusiness,
     canCreate,
     rows,
     total,
@@ -157,6 +156,9 @@ const DepartmentWorkPackages = () => {
     deleteOpen,
     setDeleteOpen,
     approvalPreview,
+    approvers,
+    approverId,
+    chooseApprover,
     setApprovalPreview,
     approvalBusy,
     approvalTo,
@@ -438,7 +440,7 @@ const DepartmentWorkPackages = () => {
               />
               <Summary
                 icon={<Users />}
-                label={t("workPackages.field.lead")}
+                label={t("workPackages.field.assigner")}
                 value={detail.leadUserName}
               />
             </div>
@@ -461,9 +463,7 @@ const DepartmentWorkPackages = () => {
                   open={!["Completed", "Cancelled"].includes(detail.status)}
                   boqs={detail.boqWorkbooks ?? []}
                   canProgress={canProgress}
-                  // Only the package lead or an administrator decides, never the uploader.
-                  canVerify={canVerifyBusiness && detail.canAssignTasks}
-                  currentUserId={currentUserId}
+                  leadUserName={detail.leadUserName}
                   onChanged={() => void load()}
                   onSubmit={(boq) => void submitBoq(boq.id, boq.rowVersion)}
                   onDecide={(boq, approved) => void decideBoq(boq.id, approved, boq.rowVersion)}
@@ -545,7 +545,14 @@ const DepartmentWorkPackages = () => {
                             {t("workPackages.action.submit")}
                           </Button>
                         )}
-                        {canVerifyBusiness && offer.status === "Submitted" && (
+                        {offer.status === "Submitted" && !offer.canDecide && (
+                          <span className="text-xs text-muted-foreground">
+                            {t("approvalEmail.awaiting", {
+                              name: offer.approvalApproverName ?? detail.leadUserName,
+                            })}
+                          </span>
+                        )}
+                        {offer.canDecide && (
                           <>
                             <Button
                               size="sm"
@@ -675,7 +682,15 @@ const DepartmentWorkPackages = () => {
                       {t("workPackages.action.submit")}
                     </Button>
                   )}
-                  {canVerifyBusiness && detail.financeReview?.status === "Submitted" && (
+                  {detail.financeReview?.status === "Submitted" &&
+                    !detail.financeReview.canDecide && (
+                      <span className="text-xs text-muted-foreground">
+                        {t("approvalEmail.awaiting", {
+                          name: detail.financeReview.approvalApproverName ?? detail.leadUserName,
+                        })}
+                      </span>
+                    )}
+                  {detail.financeReview?.canDecide && (
                     <>
                       <Button variant="outline" onClick={() => void decideFinanceReview(false)}>
                         {t("common.reject")}
@@ -693,7 +708,9 @@ const DepartmentWorkPackages = () => {
               <div className="flex items-center justify-between border-b p-4">
                 <div>
                   <h2 className="font-semibold">{t("workPackages.tasks.title")}</h2>
-                  <p className="text-sm text-muted-foreground">{t("workPackages.tasks.help")}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {t("workPackages.tasks.helpAssigner")}
+                  </p>
                 </div>
                 <span className="text-sm font-medium">{detail.progressPercent}%</span>
               </div>
@@ -830,7 +847,7 @@ const DepartmentWorkPackages = () => {
                 ))}
                 {detail.tasks.length === 0 && (
                   <div className="p-10 text-center text-sm text-muted-foreground">
-                    {t("workPackages.tasks.empty")}
+                    {t("workPackages.tasks.emptyAssigner")}
                   </div>
                 )}
               </div>
@@ -1145,7 +1162,7 @@ const DepartmentWorkPackages = () => {
                 ? t("workPackages.create.inputPriceForQuote", { quote: packageForm.sourceQuoteId })
                 : t("workPackages.create.title")}
             </DialogTitle>
-            <DialogDescription>{t("workPackages.create.help")}</DialogDescription>
+            <DialogDescription>{t("workPackages.create.helpAssigner")}</DialogDescription>
           </DialogHeader>
           {packageForm.sourceQuoteId && (
             <p
@@ -1316,7 +1333,7 @@ const DepartmentWorkPackages = () => {
                 </SelectContent>
               </Select>
             </Field>
-            <Field label={t("workPackages.field.lead")} {...packageFieldProps("lead", true)}>
+            <Field label={t("workPackages.field.assigner")} {...packageFieldProps("lead", true)}>
               <div data-testid="work-package-lead">
                 <SearchableSelect
                   {...packageControlProps("lead", true)}
@@ -1325,7 +1342,7 @@ const DepartmentWorkPackages = () => {
                   onChange={(value) =>
                     setPackageForm((current) => ({ ...current, leadUserId: Number(value) }))
                   }
-                  ariaLabel={t("workPackages.field.lead")}
+                  ariaLabel={t("workPackages.field.assigner")}
                   options={departmentUsers.map((user) => personOption(user, t))}
                 />
               </div>
@@ -1498,6 +1515,29 @@ const DepartmentWorkPackages = () => {
           {approvalPreview && (
             <div className="min-h-0 space-y-3 overflow-y-auto p-1.5">
               <div className="space-y-2">
+                <Label htmlFor="approval-approver">{t("approvalEmail.approver")}</Label>
+                <SearchableSelect
+                  id="approval-approver"
+                  value={approverId?.toString() ?? ""}
+                  onChange={(value) => void chooseApprover(Number(value))}
+                  options={approvers.map((option) => ({
+                    value: String(option.userId),
+                    label: option.name,
+                    hint: [
+                      option.departmentLabelKey ? t(option.departmentLabelKey) : option.roleName,
+                      option.email,
+                    ]
+                      .filter(Boolean)
+                      .join(" · "),
+                    keywords: `${option.email} ${option.roleName ?? ""}`,
+                  }))}
+                  placeholder={t("approvalEmail.approverPlaceholder")}
+                  searchPlaceholder={t("approvalEmail.approverSearch")}
+                  emptyText={t("approvalEmail.approverEmpty")}
+                  ariaLabel={t("approvalEmail.approver")}
+                  disabled={approvalBusy}
+                />
+                <p className="text-xs text-muted-foreground">{t("approvalEmail.approverHint")}</p>
                 <Label htmlFor="approval-to">{t("approvalEmail.recipient")}</Label>
                 <Input
                   id="approval-to"
@@ -1527,7 +1567,7 @@ const DepartmentWorkPackages = () => {
                   }}
                 />
                 <p id="approval-recipient-hint" className="text-xs text-muted-foreground">
-                  {t("approvalEmail.recipientHint")}
+                  {t("approvalEmail.recipientChosenHint")}
                 </p>
                 {!recipientsValid && (
                   <p role="alert" className="text-sm text-destructive">
@@ -1763,7 +1803,7 @@ const DepartmentWorkPackages = () => {
                 ariaLabel={t("workPackages.field.approver")}
                 options={[
                   ...(detail?.leadUserId !== taskForm.assigneeUserId
-                    ? [{ value: "lead", label: t("workPackages.approver.lead") }]
+                    ? [{ value: "lead", label: t("workPackages.approver.assigner") }]
                     : []),
                   ...taskUsers
                     .filter((user) => user.userId !== taskForm.assigneeUserId)

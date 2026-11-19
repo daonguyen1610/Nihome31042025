@@ -334,6 +334,24 @@ export interface ProjectScheduleEmailPreviewResponse {
   emails: ProjectScheduleEmailPreview[];
 }
 
+/** A NICON user who may approve work package records, for the approver picker. */
+export interface WorkPackageApproverOption {
+  userId: number;
+  name: string;
+  email: string;
+  roleLabelKey?: string | null;
+  roleName?: string | null;
+  departmentLabelKey?: string | null;
+  isDepartmentLead: boolean;
+}
+
+/** Who receives the approval email; the approver defaults to the assigner. */
+export interface WorkPackageApprovalRecipients {
+  approverUserId?: number;
+  toEmail?: string;
+  ccEmails?: string[];
+}
+
 export interface WorkPackageApprovalPreview {
   previewToken: string;
   toEmail: string;

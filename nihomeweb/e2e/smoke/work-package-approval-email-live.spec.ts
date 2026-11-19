@@ -131,6 +131,7 @@ test("template tabs preserve drafts and submission delivers the confirmed approv
     expect(response.ok(), await response.text()).toBeTruthy();
     await page.goto(`/admin/work-packages/${packageId}`);
     await page.getByRole("button", { name: "Gửi duyệt", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Tiếp tục" }).click();
     const dialog = page.getByRole("dialog");
     await expect(dialog.getByLabel("Người nhận", { exact: true })).toHaveValue(lead.email);
     await expect(dialog).toContainText(marker);
@@ -149,6 +150,7 @@ test("template tabs preserve drafts and submission delivers the confirmed approv
     expect(before.inputPriceOffers[0].status).toBe("Draft");
     expect(before.approvalEmails).toEqual([]);
     await page.getByRole("button", { name: "Gửi duyệt", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Tiếp tục" }).click();
     const toEmail = `approval-to-${Date.now()}@example.test`;
     const ccEmails = [`cm-${Date.now()}@example.test`, `qs-${Date.now()}@example.test`];
     const confirm = dialog.getByRole("button", { name: "Gửi duyệt và thông báo", exact: true });
@@ -224,6 +226,7 @@ test("template tabs preserve drafts and submission delivers the confirmed approv
     const rejectedId = (await rejectedOffer.json()).id;
     await page.reload();
     await page.getByRole("button", { name: "Gửi duyệt", exact: true }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Tiếp tục" }).click();
     await dialog
       .getByLabel("Người nhận", { exact: true })
       .fill(`reject-approval-${Date.now()}@example.test`);
