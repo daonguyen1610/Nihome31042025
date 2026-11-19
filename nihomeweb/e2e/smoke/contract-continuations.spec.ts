@@ -144,7 +144,7 @@ for (const width of [390, 768, 1440]) {
     const pursue = page.waitForResponse(
       (r) => r.url().endsWith("/api/opportunities") && r.request().method() === "POST",
     );
-    await dialog.getByRole("button", { name: /Lưu|Save/, exact: true }).click();
+    await dialog.getByRole("button", { name: /Tạo Cơ hội mới|New opportunity/ }).click();
     const pursued = await pursue;
     expect(pursued.ok(), await pursued.text()).toBeTruthy();
     const opportunity = await pursued.json();

@@ -129,7 +129,7 @@ export function SearchableSelect({
           aria-expanded={open}
           disabled={disabled}
           className={cn(
-            "w-full justify-between font-normal",
+            "w-full justify-between font-normal aria-[invalid=true]:border-destructive",
             selected?.department && "h-auto min-h-12 py-2",
             !selected && "text-muted-foreground",
             className,
