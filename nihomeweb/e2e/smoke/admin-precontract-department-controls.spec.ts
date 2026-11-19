@@ -721,14 +721,17 @@ test.describe("MoM §5 pre-contract department controls", () => {
     await page.getByRole("button", { name: "Lưu thay đổi" }).click();
     await shot("s5-07-ra-soat-thuong-mai.png");
     await page.getByRole("button", { name: "Gửi duyệt" }).click();
+    await page.getByRole("alertdialog").getByRole("button", { name: "Tiếp tục" }).click();
+    // The approver defaults to the assigner, the finance lead chosen above.
     await page
       .getByRole("dialog")
       .getByRole("button", { name: "Gửi duyệt và thông báo", exact: true })
       .click();
     await expect(page.getByText("Chờ duyệt").first()).toBeVisible();
 
-    // The maker cannot approve their own review; an independent approver must.
-    await expect(page.getByRole("button", { name: "Phê duyệt" })).toBeVisible();
+    // The maker is not offered the decision; it waits for the chosen approver.
+    await expect(page.getByRole("button", { name: "Phê duyệt" })).toHaveCount(0);
+    await expect(page.getByText(`Chờ ${accountant.name} duyệt`)).toBeVisible();
 
     await loginInBrowserAs(page, TEST_USERS[accountant.account]);
     await page.goto(`/admin/work-packages/${reviewPackageId}`, { waitUntil: "networkidle" });

@@ -847,7 +847,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         var inactive = AddUser("FORMER_BUYER", _procurementGroup);
         inactive.IsActive = false;
         var noEmail = AddUser("SITE_CLERK", _financeGroup);
-        noEmail.Email = null;
+        noEmail.Email = "";
         await _db.SaveChangesAsync();
         // Only users whose role grants approval appear; the sales user lacks it.
         _permissions.Setup(item => item.FilterByRolePermissionAsync(It.IsAny<IReadOnlyCollection<int>>(),
