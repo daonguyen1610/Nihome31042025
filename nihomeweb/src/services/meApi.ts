@@ -24,7 +24,8 @@ export interface UserDocumentResponse {
 }
 
 export const meApi = {
-  getMe: () => api.get<MeResponse>("/users/me"),
+  // Bounded so a stalled session check ends in a retryable error, not an endless spinner.
+  getMe: () => api.get<MeResponse>("/users/me", { timeout: 20_000 }),
 
   updateMe: (data: { fullName?: string; email?: string }, idempotencyKey?: string) =>
     api.put<MeResponse>("/users/me", data, withIdempotencyKey(idempotencyKey)),

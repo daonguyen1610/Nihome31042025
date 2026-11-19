@@ -328,6 +328,22 @@
     "ja": "{name} のアップロード進捗"
   },
   {
+    "key": "app.newVersion.reload",
+    "category": "common",
+    "vi": "NICON vừa được cập nhật. Tải lại trang để dùng phiên bản mới; dữ liệu đã lưu không bị ảnh hưởng.",
+    "en": "NICON has just been updated. Reload the page to use the new version; saved data is not affected.",
+    "zh": "NICON 刚刚更新。请重新加载页面以使用新版本；已保存的数据不受影响。",
+    "ja": "NICON が更新されました。ページを再読み込みして新しいバージョンをご利用ください。保存済みのデータに影響はありません。"
+  },
+  {
+    "key": "app.pageLoadFailed",
+    "category": "common",
+    "vi": "Không tải được trang này. Kiểm tra kết nối mạng rồi tải lại trang.",
+    "en": "This page could not load. Check your connection, then reload the page.",
+    "zh": "无法加载此页面。请检查网络连接后重新加载页面。",
+    "ja": "このページを読み込めませんでした。接続を確認してから再読み込みしてください。"
+  },
+  {
     "key": "common.exportFailed",
     "category": "common",
     "vi": "Không xuất được file Excel",
