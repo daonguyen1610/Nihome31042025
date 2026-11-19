@@ -1,4 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
+import { UploadTray } from "@/components/admin/UploadTray";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
   LayoutDashboard,
@@ -1004,6 +1005,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
         <main className="flex-1 overflow-x-hidden bg-muted/15 p-4 sm:p-5 lg:p-8">{children}</main>
       </div>
+      <UploadTray />
     </div>
   );
 };
