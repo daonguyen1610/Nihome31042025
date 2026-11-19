@@ -810,6 +810,39 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task InputPriceRequest_IsOpenToEveryProcurementMember_NotOnlyTheApprover()
+    {
+        // A procurement member with no task in the package and outside the project team.
+        _access.Setup(item => item.GetAccessibleOperationalProjectIdsAsync(_warehouseStaff.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<int>());
+        _access.Setup(item => item.CanViewOperationalProjectAsync(_warehouseStaff.Id, It.IsAny<int>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(false);
+        var inputPricing = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);
+        var ordinary = AddBusinessPackage(WorkPackagePurpose.General, _procurementGroup, _procurementLead);
+
+        var listed = await _service.ListAsync(new DepartmentWorkPackageQuery(), _warehouseStaff.Id, canViewAll: false);
+        var opened = await _service.GetAsync(inputPricing.Id, _warehouseStaff.Id, canViewAll: false);
+        var offer = await _service.AddInputPriceOfferAsync(inputPricing.Id, new UpsertInputPriceOfferRequest
+        {
+            VendorId = _vendor.Id,
+            SupplierReference = "AP-PCCC-2026-007",
+            Currency = "VND",
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+            Lines =
+            [
+                new() { ItemCode = "PCCC-01", Description = "Đầu phun sprinkler", Unit = "cái", Quantity = 300, UnitPrice = 120000, VatPercent = 10, SortOrder = 1 },
+            ],
+        }, _warehouseStaff.Id);
+
+        Assert.Contains(listed.Items, item => item.Id == inputPricing.Id);
+        Assert.NotNull(opened);
+        Assert.NotNull(offer);
+        // Other packages of the department keep their usual visibility.
+        Assert.DoesNotContain(listed.Items, item => item.Id == ordinary.Id);
+        Assert.Null(await _service.GetAsync(ordinary.Id, _warehouseStaff.Id, canViewAll: false));
+    }
+
+    [Fact]
     public async Task UpdateInputPriceOffer_KeepsTheStoredCurrencyAfterSettingsChange()
     {
         var package = AddBusinessPackage(WorkPackagePurpose.ProcurementInputPricing, _procurementGroup, _procurementLead);

@@ -75,8 +75,11 @@ public sealed partial class DepartmentWorkPackageService(
         if (!canViewAll && !await IsAdministratorAsync(callerUserId, ct))
         {
             var projectIds = await projectAccess.GetAccessibleOperationalProjectIdsAsync(callerUserId, ct);
+            var groupId = await UserRoleGroupIdAsync(callerUserId, ct);
             packages = packages.Where(item =>
                 item.CreatedByUserId == callerUserId || item.LeadUserId == callerUserId ||
+                // Any member of the department may prepare an input price, not only its approver.
+                item.Purpose == WorkPackagePurpose.ProcurementInputPricing && item.DepartmentRoleGroupId == groupId ||
                 item.Tasks.Any(task => task.AssigneeUserId == callerUserId ||
                     task.ApproverUserId == callerUserId || task.CcUsers.Any(cc => cc.UserId == callerUserId)) ||
                 item.OperationalProjectId.HasValue && projectIds.Contains(item.OperationalProjectId.Value));
@@ -1044,6 +1047,8 @@ public sealed partial class DepartmentWorkPackageService(
         if (item.CreatedByUserId == callerUserId || item.LeadUserId == callerUserId ||
             item.Tasks.Any(task => task.AssigneeUserId == callerUserId || task.ApproverUserId == callerUserId ||
                 task.CcUsers.Any(cc => cc.UserId == callerUserId))) return true;
+        if (item.Purpose == WorkPackagePurpose.ProcurementInputPricing &&
+            item.DepartmentRoleGroupId == await UserRoleGroupIdAsync(callerUserId, ct)) return true;
         return item.OperationalProjectId.HasValue &&
             await projectAccess.CanViewOperationalProjectAsync(callerUserId, item.OperationalProjectId.Value, ct);
     }
