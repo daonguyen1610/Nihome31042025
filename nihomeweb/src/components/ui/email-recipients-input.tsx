@@ -80,10 +80,9 @@ export function EmailRecipientsInput({
   }, [value]);
   const emit = (chips: string[], typed: string) => {
     const taken = new Set(chips.map((address) => address.toLowerCase()));
-    // A name typed to search people is not an address; only "@" text counts.
-    const pending = splitEmails(typed).filter(
-      (address) => address.includes("@") && !taken.has(address.toLowerCase()),
-    );
+    // Text left in the field counts too, so a mistyped address blocks sending
+    // instead of being dropped silently.
+    const pending = splitEmails(typed).filter((address) => !taken.has(address.toLowerCase()));
     const next = [...chips, ...pending].join(", ");
     emitted.current = next;
     if (next !== value) onChange(next);
@@ -167,7 +166,8 @@ export function EmailRecipientsInput({
 
   const onPaste = (event: ClipboardEvent<HTMLInputElement>) => {
     const pasted = event.clipboardData.getData("text");
-    if (!SEPARATORS.test(pasted)) return;
+    // A pasted list is split; a pasted name ("Nguyễn Thị Trang") is a search.
+    if (!/[;,\n]/.test(pasted) && !(/\s/.test(pasted.trim()) && pasted.includes("@"))) return;
     event.preventDefault();
     add(splitEmails(`${draft}${pasted}`));
   };
@@ -231,11 +231,7 @@ export function EmailRecipientsInput({
             // A separator ends an address however it arrives: typed on a phone
             // keyboard that reports no key, autocompleted or dropped in.
             const text = event.target.value;
-            const separator = Math.max(
-              text.lastIndexOf(","),
-              text.lastIndexOf(";"),
-              text.lastIndexOf("\n"),
-            );
+            const separator = Math.max(text.lastIndexOf(","), text.lastIndexOf(";"));
             // A space ends an address only once one was typed, so searching
             // "Nguyễn Thị" by name keeps working.
             const space = text.search(/\s\S*$/);
