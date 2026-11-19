@@ -10723,6 +10723,11 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int")
                         .HasDefaultValue(20);
 
+                    b.Property<int>("RfqMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
                     b.Property<string>("SecondaryEmail")
                         .HasColumnType("nvarchar(max)");
 

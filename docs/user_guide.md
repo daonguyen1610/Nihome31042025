@@ -1478,6 +1478,7 @@ Trong **Cài đặt** (`/admin/settings`): bật/tắt OTP đăng ký và quên 
 | Tệp công việc | 10 tệp/lần, 20 MB/tệp; PDF, Word, Excel, JPG, PNG ([3.0.1](#301-nhóm-công-việc)) |
 | Tệp hợp đồng, phụ lục | Theo **Cài đặt → Tệp hợp đồng** (mặc định 100 MB, tối đa 5 GB) |
 | Tài liệu báo giá | Theo **Cài đặt → Tệp báo giá** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG |
+| Tệp minh chứng RFQ | Theo **Cài đặt → Tệp RFQ** (mặc định 20 MB, tối đa 100 MB); nhận cả bản vẽ CAD, chỉ chặn tệp chạy được |
 | BOQ Excel | Tối đa 20 MB |
 
 ---

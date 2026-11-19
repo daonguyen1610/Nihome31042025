@@ -20,6 +20,52 @@ public sealed class RfqsControllerTests(NihomeWebApplicationFactory factory) : I
     { Converters = { new JsonStringEnumConverter() } };
 
     [Fact]
+    public async Task Upload_FollowsTheRfqFileLimitSetInSettings_AndKeepsSupplierFileTypes()
+    {
+        const string settingsPath = "/api/site-settings/upload-limits/rfqs";
+        var fixture = await SeedAsync();
+        await LoginAsync("ADMIN");
+        var original = (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+            .GetProperty("maxFileSizeMb").GetInt32();
+        async Task<HttpResponseMessage> Upload(string name, int megabytes)
+        {
+            using var form = new MultipartFormDataContent();
+            form.Add(new ByteArrayContent(new byte[megabytes * 1024 * 1024]), "file", name);
+            using var request = new HttpRequestMessage(HttpMethod.Post, Base(fixture.ProjectId) + "/documents/upload")
+            { Content = form };
+            request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString());
+            return await Client.SendAsync(request);
+        }
+        try
+        {
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 1 })).EnsureSuccessStatusCode();
+
+            // Procurement uploads supplier files without settings permission but must know the limit.
+            await LoginAsync("PROCUREMENT");
+            (await ReadJsonAsync(await Client.GetAsync(settingsPath)))
+                .GetProperty("maxFileSizeMb").GetInt32().Should().Be(1);
+            var refused = await Upload("bao-gia-ncc-thep.pdf", 2);
+            refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await refused.Content.ReadAsStringAsync()).Should()
+                .Contain("bao-gia-ncc-thep.pdf").And.Contain("vượt giới hạn 1 MB");
+
+            // Raised in Settings, a file above the old 26 MB request cap is accepted, and
+            // RFQ evidence keeps its own type rule: a supplier's CAD drawing still uploads.
+            await LoginAsync("ADMIN");
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = 30 })).EnsureSuccessStatusCode();
+            await LoginAsync("PROCUREMENT");
+            var accepted = await Upload("bao-gia-ncc-thep.pdf", 27);
+            accepted.StatusCode.Should().Be(HttpStatusCode.OK, await accepted.Content.ReadAsStringAsync());
+            (await Upload("ban-ve-ket-cau.dwg", 1)).StatusCode.Should().Be(HttpStatusCode.OK);
+        }
+        finally
+        {
+            await LoginAsync("ADMIN");
+            (await Client.PutAsJsonAsync(settingsPath, new { maxFileSizeMb = original })).EnsureSuccessStatusCode();
+        }
+    }
+
+    [Fact]
     public async Task Lifecycle_PreservesRevisions_AwardsOnce_AndCreatesCorrectDownstreamContract()
     {
         var fixture = await SeedAsync();

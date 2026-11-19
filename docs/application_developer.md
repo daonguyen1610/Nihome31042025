@@ -1841,7 +1841,7 @@ Route `/api/operational-projects/{projectId}/procurement/rfqs` (và `/api/v1`):
 | Nộp / rút báo giá | POST `/{id}/bids`, `/{id}/bids/{bidId}/withdraw` |
 | Chấm điểm / award theo lô | POST `/{id}/bids/evaluate`, `/{id}/award-batch` |
 | Gửi lại lời mời | POST `/{id}/invitations/resend` |
-| Upload / gắn file | POST `/documents/upload`, `/{id}/documents` |
+| Upload / gắn file | POST `/documents/upload`, `/{id}/documents`; mỗi tệp tối đa theo `GET /api/site-settings/upload-limits/rfqs` (mặc định 20 MB, 1–100 MB), loại tệp theo danh sách chặn của tài liệu dự án |
 | Tải file | GET `/{id}/documents/{documentId}/download` |
 
 `POST /{id}/award` (award trọn gói cũ) trả `410` khi deploy; chỉ bật trong cấu hình test
