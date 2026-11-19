@@ -795,7 +795,7 @@ public class QuoteServiceTests : IDisposable
         _notifications.Verify(service => service.NotifyFromTemplateAsync(
             approverId, "quote.approval-requested",
             It.Is<IDictionary<string, string>>(data => data["quoteCode"] == quote.Code),
-            "Quote", quote.Id, $"/admin/quotes/{quote.Id}", It.IsAny<string?>()), Times.Once);
+            "Quote", quote.Id, $"/admin/quotes/{quote.Id}", It.IsAny<string>()), Times.Once);
     }
 
     [Fact]
