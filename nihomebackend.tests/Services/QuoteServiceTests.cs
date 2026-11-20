@@ -39,17 +39,19 @@ public class QuoteServiceTests : IDisposable
                 _db.Quotes.Single(q => q.Id == id).ApprovalApproverUserId = caller + 1;
                 return Task.CompletedTask;
             });
-        // As the real service: the user is active and holds the step's role.
-        _approvalEmails.Setup(service => service.HoldsRoleAsync(
-                It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns<int, string, CancellationToken>((userId, roleCode, ct) => _db.Users.AnyAsync(user =>
-                user.Id == userId && user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
-                user.RoleEntity.Code == roleCode, ct));
-        _approvalEmails.Setup(service => service.IsEligibleApproverAsync(
-                It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
-            .Returns<int, string, CancellationToken>((userId, roleCode, ct) => _db.Users.AnyAsync(user =>
-                user.Id == userId && user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
-                user.RoleEntity.Code == roleCode, ct));
+        // As the real service, minus permissions: the user is active and holds the step's role.
+        _approvalEmails.Setup(service => service.CanDecideAsync(
+                It.IsAny<IReadOnlyCollection<(int UserId, string RoleCode)>>(), It.IsAny<CancellationToken>()))
+            .Returns<IReadOnlyCollection<(int UserId, string RoleCode)>, CancellationToken>(async (approvers, ct) =>
+            {
+                var holding = new HashSet<(int UserId, string RoleCode)>();
+                foreach (var approver in approvers)
+                    if (await _db.Users.AnyAsync(user => user.Id == approver.UserId && user.IsActive &&
+                            user.RoleEntity != null && user.RoleEntity.IsActive &&
+                            user.RoleEntity.Code == approver.RoleCode, ct))
+                        holding.Add(approver);
+                return holding;
+            });
         _quoteSpreadsheet = new Mock<IQuoteSpreadsheetService>();
         _quoteSpreadsheet
             .Setup(service => service.CreateAsync(

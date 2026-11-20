@@ -11,7 +11,7 @@ import { approveProjectBoq } from "../fixtures/projectBoq";
 // Both tests set the shared quote workflow, so they run one after the other.
 test.describe.configure({ mode: "serial" });
 
-type Headers = Record<string, string>;
+type Headers = { Authorization: string };
 type Step = { approverRoleCode: string; name: string };
 type WorkflowRow = { id: number; module: string; action: string };
 
@@ -37,10 +37,25 @@ async function applyQuoteChain(api: APIRequestContext, admin: Headers, steps: St
   return original;
 }
 
-/** A Sales lead converted to a project with an approved BOQ, and its draft BOQ quote. */
-async function createSalesQuote(api: APIRequestContext, admin: Headers, sale: Headers) {
+type Created = {
+  customerId: number;
+  opportunityId: number;
+  projectId: number;
+  quoteId: number;
+  code: string;
+};
+
+/**
+ * A Sales lead converted to a project with an approved BOQ, and its draft BOQ quote. Each id
+ * is recorded in `created` as soon as it exists, so a failure part-way still cleans up.
+ */
+async function createSalesQuote(
+  api: APIRequestContext,
+  admin: Headers,
+  sale: Headers,
+  created: Created,
+) {
   const suffix = Math.random().toString(36).slice(2, 8);
-  const created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
   const lead = await api.post("/api/leads", {
     headers: sale,
     data: {
@@ -83,14 +98,9 @@ async function createSalesQuote(api: APIRequestContext, admin: Headers, sale: He
   const body = (await quote.json()) as { id: number; code: string };
   created.quoteId = body.id;
   created.code = body.code;
-  return created;
 }
 
-async function removeSalesQuote(
-  api: APIRequestContext,
-  admin: Headers,
-  created: { customerId: number; opportunityId: number; projectId: number; quoteId: number },
-) {
+async function removeSalesQuote(api: APIRequestContext, admin: Headers, created: Created) {
   if (created.quoteId) await hardDeleteBusinessRoot(api, admin, `/api/quotes/${created.quoteId}`);
   if (created.opportunityId)
     await hardDeleteBusinessRoot(api, admin, `/api/opportunities/${created.opportunityId}`);
@@ -113,10 +123,10 @@ test("a quote is approved step by step along the configured chain", async ({
     { name: "Trưởng phòng Cung ứng duyệt", approverRoleCode: "PROCUREMENT_MANAGER" },
     { name: "Trưởng phòng Kinh doanh duyệt", approverRoleCode: "SALES_MANAGER" },
   ]);
-  let created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
+  const created: Created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
 
   try {
-    created = await createSalesQuote(api, admin, sale);
+    await createSalesQuote(api, admin, sale, created);
     const { quoteId, code } = created;
 
     // Sales chooses one approver for each step.
@@ -184,7 +194,7 @@ test("a quote whose approver can no longer decide it is taken back by Sales", as
   ]);
   const stamp = Date.now().toString().slice(-7);
   let approverId = 0;
-  let created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
+  const created: Created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
 
   try {
     // A Head of Procurement of its own, so the seeded one stays active for other tests.
@@ -200,7 +210,7 @@ test("a quote whose approver can no longer decide it is taken back by Sales", as
     approverId = Number(inserted.trim().split(/\s+/)[0]);
     expect(approverId, inserted).toBeGreaterThan(0);
 
-    created = await createSalesQuote(api, admin, sale);
+    await createSalesQuote(api, admin, sale, created);
     const { quoteId, code } = created;
     const draft = await (await api.get(`/api/quotes/${quoteId}`, { headers: sale })).json();
     const preview = await api.post(`/api/quotes/${quoteId}/approval-email-preview`, {

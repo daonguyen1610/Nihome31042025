@@ -140,27 +140,39 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
                 $"Unknown approver role code(s): {string.Join(", ", unknown)}.");
         }
 
-        // The quote workflow is applied when a quote is sent for approval, so every step must
-        // be one that someone can decide.
-        if (module == QuoteApprovalChain.Module && action == QuoteApprovalChain.Action)
+        // The quote workflow is applied when a quote is sent for approval, so while it is on every
+        // step must be one that someone can decide. Turning it off stays possible as it is.
+        if (req.IsActive && module == QuoteApprovalChain.Module && action == QuoteApprovalChain.Action)
         {
             var issues = await QuoteRoleIssuesAsync(approverRoleCodes, ct);
-            var blocking = issues.Values.FirstOrDefault(issue => issue.Issue != NoEligibleUser);
-            if (blocking is not null)
+            var blocked = req.Steps.OrderBy(step => step.Order)
+                .Select((step, index) => (Number: index + 1,
+                    Issue: issues.GetValueOrDefault(step.ApproverRoleCode.Trim())))
+                .Where(item => item.Issue is not null && item.Issue.Issue != NoEligibleUser)
+                .ToList();
+            if (blocked.Count > 0)
             {
-                var parameters = new Dictionary<string, object>
+                var lines = new List<string>();
+                foreach (var (number, issue) in blocked)
                 {
-                    ["roleLabelKey"] = blocking.RoleLabelKey ?? "",
-                    ["roleName"] = blocking.RoleName,
-                };
-                var name = await SourceLabels.VietnameseAsync(db, blocking.RoleLabelKey, blocking.RoleName, ct);
-                throw blocking.Issue == RoleInactive
-                    ? new WorkflowConfigValidationException(
-                        $"Vai trò {name} đã ngừng dùng nên không ai duyệt được bước này. Chọn vai trò đang dùng, hoặc bật lại vai trò ở Phân quyền.",
-                        "QUOTE_WORKFLOW_ROLE_INACTIVE", parameters)
-                    : new WorkflowConfigValidationException(
-                        $"Vai trò {name} chưa có quyền xem và duyệt báo giá nên không duyệt được bước này. Cấp quyền \"Xem báo giá\" và \"Duyệt báo giá\" cho vai trò này ở Phân quyền, rồi lưu lại luồng.",
-                        "QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE", parameters);
+                    var name = await SourceLabels.VietnameseAsync(db, issue!.RoleLabelKey, issue.RoleName, ct);
+                    lines.Add(issue.Issue == RoleInactive
+                        ? $"Bước {number} ({name}): vai trò đã ngừng dùng."
+                        : $"Bước {number} ({name}): vai trò chưa có quyền \"Xem báo giá\" và \"Duyệt báo giá\".");
+                }
+                throw new WorkflowConfigValidationException(
+                    $"Chưa lưu được luồng duyệt báo giá vì không ai duyệt được các bước sau. {string.Join(" ", lines)} Cấp quyền hoặc bật lại vai trò ở Phân quyền, hoặc chọn vai trò khác.",
+                    "QUOTE_WORKFLOW_STEPS_BLOCKED",
+                    new Dictionary<string, object>
+                    {
+                        ["items"] = blocked.Select(item => new
+                        {
+                            step = item.Number,
+                            issue = item.Issue!.Issue,
+                            roleLabelKey = item.Issue.RoleLabelKey ?? "",
+                            roleName = item.Issue.RoleName,
+                        }).ToList(),
+                    });
             }
             // Everyone in an "everyone approves" step is in the chain once already, so the same
             // role in another step would put each of them in it twice: no quote could be sent.
@@ -232,7 +244,9 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
 
     private async Task<WorkflowConfigResponse> AddQuoteStepIssuesAsync(WorkflowConfigResponse response, CancellationToken ct)
     {
-        if (response.Module != QuoteApprovalChain.Module || response.Action != QuoteApprovalChain.Action)
+        // Only the quote workflow is applied, and only while it is on.
+        if (!response.IsActive || response.Module != QuoteApprovalChain.Module ||
+            response.Action != QuoteApprovalChain.Action)
             return response;
         var issues = await QuoteRoleIssuesAsync(
             response.Steps.Select(step => step.ApproverRoleCode).Distinct().ToList(), ct);

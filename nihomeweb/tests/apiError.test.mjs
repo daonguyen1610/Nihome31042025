@@ -288,7 +288,9 @@ test("a field error given as a single string is shown as it is", () => {
 test("coded approval errors read in the user's language with the person, step and role", () => {
   const messages = {
     "quotes.error.notYourTurn": "Not your turn: waiting for {name} at step {current} of {total}.",
-    "workflow.error.roleCannotApprove": "{role} cannot view and approve quotes.",
+    "workflow.error.stepsBlocked": "Not saved: nobody can approve these steps. {steps}",
+    "workflow.issue.RoleCannotApprove": "Step {n} ({role}): cannot view and approve quotes.",
+    "workflow.issue.RoleInactive": "Step {n} ({role}): no longer in use.",
     "rbac.role.BGD.label": "Board of Directors",
   };
   const translate = (key, params = {}) =>
@@ -305,28 +307,27 @@ test("coded approval errors read in the user's language with the person, step an
     ),
     "Not your turn: waiting for Nguyễn Thị Thu Trang at step 1 of 2.",
   );
-  // The role comes from its label key, so it is translated too; without a key, its name.
+  // Every blocked step is named, its role from its label key (or its name without one).
   assert.equal(
     getUiError(
       failure({
-        code: "QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE",
-        message: "Vai trò Ban Giám đốc chưa có quyền.",
-        params: { roleLabelKey: "rbac.role.BGD.label", roleName: "BGD" },
+        code: "QUOTE_WORKFLOW_STEPS_BLOCKED",
+        message: "Chưa lưu được luồng duyệt báo giá.",
+        params: {
+          items: [
+            {
+              step: 2,
+              issue: "RoleCannotApprove",
+              roleLabelKey: "rbac.role.BGD.label",
+              roleName: "BGD",
+            },
+            { step: 3, issue: "RoleInactive", roleLabelKey: "", roleName: "Site lead" },
+          ],
+        },
       }),
       translate,
     ),
-    "Board of Directors cannot view and approve quotes.",
-  );
-  assert.equal(
-    getUiError(
-      failure({
-        code: "QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE",
-        message: "x",
-        params: { roleLabelKey: "", roleName: "Site lead" },
-      }),
-      translate,
-    ),
-    "Site lead cannot view and approve quotes.",
+    "Not saved: nobody can approve these steps. Step 2 (Board of Directors): cannot view and approve quotes. Step 3 (Site lead): no longer in use.",
   );
   // An unknown code keeps the server's own reason.
   assert.equal(

@@ -21,7 +21,7 @@ public class QuoteDocumentService(
     public async Task<List<QuoteDocumentResponse>?> ListAsync(
         int quoteId, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
-        if (!await QuoteExistsForCallerAsync(quoteId, callerUserId, canSeeAll, ct)) return null;
+        if (!await QuoteExistsForCallerAsync(quoteId, callerUserId, canSeeAll, ct, forRead: true)) return null;
 
         return await db.QuoteDocuments
             .AsNoTracking()
@@ -127,7 +127,7 @@ public class QuoteDocumentService(
         bool canSeeAll,
         CancellationToken ct = default)
     {
-        if (!await QuoteExistsForCallerAsync(quoteId, callerUserId, canSeeAll, ct)) return null;
+        if (!await QuoteExistsForCallerAsync(quoteId, callerUserId, canSeeAll, ct, forRead: true)) return null;
 
         var document = await db.QuoteDocuments.AsNoTracking()
             .Where(item => item.Id == documentId && item.QuoteId == quoteId)
@@ -188,14 +188,18 @@ public class QuoteDocumentService(
         }
     }
 
+    // Reading a quote's documents follows reading the quote (its approvers need them to
+    // decide); adding or deleting them stays with the owner.
     private async Task<bool> QuoteExistsForCallerAsync(
-        int quoteId, int callerUserId, bool canSeeAll, CancellationToken ct)
+        int quoteId, int callerUserId, bool canSeeAll, CancellationToken ct, bool forRead = false)
     {
         var quote = await db.Quotes.AsNoTracking()
             .Where(item => item.Id == quoteId)
-            .Select(item => new { item.OwnerUserId })
+            .Select(item => new { item.OwnerUserId, item.ApprovalApproverUserId, item.ApprovalStepsJson })
             .SingleOrDefaultAsync(ct);
-        return quote is not null && (canSeeAll || quote.OwnerUserId == callerUserId);
+        return quote is not null && (canSeeAll || (forRead
+            ? QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId, quote.ApprovalStepsJson, callerUserId)
+            : quote.OwnerUserId == callerUserId));
     }
 
     private static void ValidateFile(IFormFile? file, string? label)

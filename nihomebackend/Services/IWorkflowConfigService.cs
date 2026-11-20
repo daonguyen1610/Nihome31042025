@@ -38,7 +38,5 @@ public class WorkflowConfigValidationException(string message, string? code = nu
     public string? Code => code;
     public IReadOnlyDictionary<string, object>? Parameters => parameters;
 
-    public object ToResponse() => Code is null
-        ? new { message = Message }
-        : new { message = Message, code = Code, @params = Parameters };
+    public object ToResponse() => NihomeBackend.Infrastructure.CodedErrorBody.Create(Message, Code, Parameters);
 }
