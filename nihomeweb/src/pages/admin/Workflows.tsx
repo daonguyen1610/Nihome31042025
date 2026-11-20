@@ -122,7 +122,7 @@ const getErrorMessage = (error: unknown): string | undefined => {
 
 const Workflows = () => {
   const confirmAction = useConfirm();
-  const { t } = useI18n();
+  const { t, tSource } = useI18n();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.workflowManage);
@@ -139,7 +139,8 @@ const Workflows = () => {
     try {
       const [w, r] = await Promise.all([adminApi.listWorkflows(true), rbacApi.listRoles()]);
       setWorkflows(w.data);
-      setRoles(r.data.filter((role) => role.isActive));
+      // Every role, so a step naming a role that was since deactivated still reads by name.
+      setRoles(r.data);
     } catch (err) {
       setError(getErrorMessage(err) ?? t("common.error"));
     } finally {
@@ -152,21 +153,34 @@ const Workflows = () => {
   }, [load]);
 
   // Who approves, by role name: the chain itself, not only how many steps it has.
+  const findRole = useCallback(
+    (code: string) => roles.find((item) => item.code.toLowerCase() === code.toLowerCase()),
+    [roles],
+  );
   const roleLabel = useCallback(
     (code: string) => {
-      const role = roles.find((item) => item.code.toLowerCase() === code.toLowerCase());
+      const role = findRole(code);
       return role ? (role.labelKey ? t(role.labelKey) : role.name) : code;
     },
-    [roles, t],
+    [findRole, t],
   );
+  // A blank step is saved under its approver's name in the source language (Vietnamese),
+  // whatever language the administrator uses: forms collect source-language content only.
+  const defaultStepName = useCallback(
+    (code: string) => {
+      const role = findRole(code);
+      const label = role ? (role.labelKey ? tSource(role.labelKey) : role.name) : code;
+      return tSource("workflow.stepDefaultName", { role: label });
+    },
+    [findRole, tSource],
+  );
+  const activeRoles = useMemo(() => roles.filter((role) => role.isActive), [roles]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return workflows;
     return workflows.filter(
       (w) =>
-        w.module.toLowerCase().includes(q) ||
-        w.action.toLowerCase().includes(q) ||
         w.name.toLowerCase().includes(q) ||
         w.steps.some((step) => roleLabel(step.approverRoleCode).toLowerCase().includes(q)),
     );
@@ -243,10 +257,16 @@ const Workflows = () => {
       ),
     [workflows, editingId],
   );
+  // A name equal to a business action's label was filled in by the form, so it follows
+  // the action; a name the administrator typed is kept.
+  const isActionLabel = (name: string) =>
+    BUSINESS_ACTIONS.some((item) => [tSource(item.labelKey), t(item.labelKey)].includes(name));
   const chooseBusiness = (value: string) => {
+    const nameFor = (prevName: string, label: string) =>
+      prevName.trim() && !isActionLabel(prevName) ? prevName : label;
     if (value === OTHER_BUSINESS) {
       setOtherBusiness(true);
-      setForm((prev) => ({ ...prev, module: "", action: "" }));
+      setForm((prev) => ({ ...prev, module: "", action: "", name: nameFor(prev.name, "") }));
       return;
     }
     const known = BUSINESS_ACTIONS.find(
@@ -258,8 +278,8 @@ const Workflows = () => {
       ...prev,
       module: known.module,
       action: known.action,
-      // Name it after the business action unless the user already named it.
-      name: prev.name.trim() ? prev.name : t(known.labelKey),
+      // Named after the business action in the source language, unless the user named it.
+      name: nameFor(prev.name, tSource(known.labelKey)),
     }));
   };
 
@@ -286,6 +306,23 @@ const Workflows = () => {
     });
     setFormError(null);
     setDialogOpen(true);
+  };
+
+  // A name that names the previous approver would now be wrong: clear it, so the step is
+  // saved under its new approver unless the administrator writes another name.
+  const changeStepRole = (index: number, code: string) => {
+    setForm((prev) => ({
+      ...prev,
+      steps: prev.steps.map((step, i) => {
+        if (i !== index) return step;
+        const previous = step.approverRoleCode ? findRole(step.approverRoleCode) : undefined;
+        const previousLabels = previous
+          ? [roleLabel(previous.code), previous.labelKey ? tSource(previous.labelKey) : ""]
+          : [];
+        const namesPrevious = previousLabels.some((label) => label && step.name.includes(label));
+        return { ...step, approverRoleCode: code, name: namesPrevious ? "" : step.name };
+      }),
+    }));
   };
 
   const patchStep = (index: number, patch: Partial<WorkflowStep>) => {
@@ -354,8 +391,7 @@ const Workflows = () => {
       steps: form.steps.map((s, i) => ({
         order: i + 1,
         // An unnamed step reads as its approver, e.g. "Trưởng phòng Cung ứng duyệt".
-        name:
-          s.name.trim() || t("workflow.stepDefaultName", { role: roleLabel(s.approverRoleCode) }),
+        name: s.name.trim() || defaultStepName(s.approverRoleCode),
         approverRoleCode: s.approverRoleCode,
         slaHours: Number.isFinite(s.slaHours) ? Math.max(0, s.slaHours) : 0,
         requireAllApprovers: s.requireAllApprovers,
@@ -814,17 +850,23 @@ const Workflows = () => {
                       <Label className="text-xs">{t("workflow.field.approverRole")} *</Label>
                       <Select
                         value={step.approverRoleCode}
-                        onValueChange={(v) => patchStep(idx, { approverRoleCode: v })}
+                        onValueChange={(v) => changeStepRole(idx, v)}
                       >
                         <SelectTrigger>
                           <SelectValue placeholder={t("workflow.approverPlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
-                          {roles.map((r) => (
+                          {activeRoles.map((r) => (
                             <SelectItem key={r.code} value={r.code}>
                               {r.labelKey ? t(r.labelKey) : r.name}
                             </SelectItem>
                           ))}
+                          {step.approverRoleCode &&
+                            !activeRoles.some((r) => r.code === step.approverRoleCode) && (
+                              <SelectItem value={step.approverRoleCode}>
+                                {roleLabel(step.approverRoleCode)} · {t("workflow.roleInactive")}
+                              </SelectItem>
+                            )}
                         </SelectContent>
                       </Select>
                     </FieldScope>
@@ -836,9 +878,7 @@ const Workflows = () => {
                           onChange={(e) => patchStep(idx, { name: e.target.value })}
                           placeholder={
                             step.approverRoleCode
-                              ? t("workflow.stepDefaultName", {
-                                  role: roleLabel(step.approverRoleCode),
-                                })
+                              ? defaultStepName(step.approverRoleCode)
                               : undefined
                           }
                           className="h-9"

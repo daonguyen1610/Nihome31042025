@@ -374,5 +374,13 @@
     "en": "Save workflow",
     "zh": "保存审批流程",
     "ja": "承認フローを保存"
+  },
+  {
+    "key": "workflow.roleInactive",
+    "category": "workflow",
+    "vi": "vai trò đã ngừng dùng",
+    "en": "role no longer in use",
+    "zh": "角色已停用",
+    "ja": "使用停止中のロール"
   }
 ]

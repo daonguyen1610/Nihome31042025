@@ -47,6 +47,11 @@ type Ctx = {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: string, params?: Record<string, string | number>) => string;
+  /**
+   * The same text in the source language (Vietnamese), for defaults a form saves as
+   * content: forms collect only source-language content, whatever the UI language.
+   */
+  tSource: (key: string, params?: Record<string, string | number>) => string;
 };
 
 const I18nContext = createContext<Ctx | null>(null);
@@ -115,9 +120,8 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
 
   const setLang = (l: Lang) => setLangState(l);
 
-  const t = useMemo(() => {
-    return (key: string, params?: Record<string, string | number>) => {
-      let text = currentMap[key] ?? fallbackViMap[key] ?? key;
+  const [t, tSource] = useMemo(() => {
+    const format = (text: string, params?: Record<string, string | number>) => {
       if (params) {
         for (const [k, v] of Object.entries(params)) {
           text = text.replace(new RegExp(`\\{${k}\\}`, "g"), String(v));
@@ -125,9 +129,17 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
       }
       return text;
     };
+    return [
+      (key: string, params?: Record<string, string | number>) =>
+        format(currentMap[key] ?? fallbackViMap[key] ?? key, params),
+      (key: string, params?: Record<string, string | number>) =>
+        format(fallbackViMap[key] ?? key, params),
+    ] as const;
   }, [currentMap, fallbackViMap]);
 
-  return <I18nContext.Provider value={{ lang, setLang, t }}>{children}</I18nContext.Provider>;
+  return (
+    <I18nContext.Provider value={{ lang, setLang, t, tSource }}>{children}</I18nContext.Provider>
+  );
 };
 
 export const useI18n = () => {

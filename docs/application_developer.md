@@ -451,12 +451,15 @@ thiết kế/thi công chỉ seed ở môi trường `Development`
   phòng Cung ứng mà người gửi chọn duyệt báo giá, nên mặc định `quotes|approve` là một bước
   `PROCUREMENT_MANAGER`. Migration `AlignQuoteApprovalWorkflow` sửa chuỗi cũ (Sales
   Manager → BGĐ) và ghi chú mẫu thông báo trên DB đang chạy, chỉ khi admin chưa sửa; `Down`
-  khôi phục (các trường hợp đã kiểm: mặc định cũ → sửa; admin đã sửa mô tả hoặc bước → giữ;
-  chạy lại → không đổi; `Down` sau khi admin sửa → giữ). Trang Luồng duyệt hiện chuỗi vai
+  khôi phục. Một dòng chỉ được coi là "chưa sửa" khi mô tả khớp và từng bước (tên, vai trò,
+  thời hạn, "cần tất cả", đọc bằng `OPENJSON`) đúng bản mặc định; `Down` dùng cùng cách so
+  với chuỗi mới. Nhãn cũ chỉ bị xoá khi chữ còn đúng bản seed, chữ admin đã sửa được giữ. Trang Luồng duyệt hiện chuỗi vai
   trò duyệt và tìm theo tên luồng hoặc vai trò. Hộp thoại chọn nghiệp vụ theo tên
   (`BUSINESS_ACTIONS` trong `Workflows.tsx`, nghiệp vụ đã có luồng bị khoá); mã
   module/action chỉ nhập khi chọn "Nghiệp vụ khác". Bước không đặt tên được lưu là
-  "<vai trò> duyệt". Chưa service nào đọc `workflow_configs`: đổi chuỗi không đổi người
+  "<vai trò> duyệt" bằng tiếng Việt (`tSource` trong `i18n.tsx`), dù admin dùng ngôn ngữ nào;
+  tên tự điền theo nghiệp vụ cũng vậy và đổi theo khi chọn nghiệp vụ khác. Đổi vai trò của
+  bước thì tên đang nêu vai trò cũ bị xoá. Chưa service nào đọc `workflow_configs`: đổi chuỗi không đổi người
   duyệt của báo giá đang chờ (`QuotesControllerTests.SwitchingTheQuoteWorkflow_*`).
 - Process document chuẩn có `SeedKey` nullable (filtered unique index), suy từ
   process group và URL asset chuẩn đầu tiên nên đổi tiêu đề/thứ tự không đổi
