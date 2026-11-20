@@ -479,8 +479,12 @@ public class DesignProjectService(
                     $"Hợp đồng #{request.ContractId} không tồn tại.");
             }
             // Design is delivered under the customer's contract; a purchase order with a
-            // supplier carries no design scope.
-            if (contract.Direction != ContractDirection.Upstream)
+            // supplier carries no design scope. Checked when the contract is linked, so a
+            // project linked before this rule can still be renamed or moved on.
+            var linkedBefore = excludeDesignProjectId.HasValue &&
+                await db.DesignProjects.AsNoTracking().AnyAsync(design =>
+                    design.Id == excludeDesignProjectId.Value && design.ContractId == request.ContractId, ct);
+            if (!linkedBefore && contract.Direction != ContractDirection.Upstream)
             {
                 throw new DesignProjectOperationException(
                     $"Hợp đồng {contract.ContractNumber} là hợp đồng mua hàng với nhà cung cấp nên không gắn được với hồ sơ thiết kế. Hãy chọn hợp đồng ký với khách hàng hoặc để trống.");

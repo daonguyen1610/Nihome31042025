@@ -1951,10 +1951,17 @@ cũ thành VND tỷ giá 1). Demo RFQ chỉ có ở `Development`; production kh
 
 ## 12. Thiết kế và pháp lý
 
-Hồ sơ thiết kế chỉ gắn với hợp đồng ký với khách hàng (`ContractDirection.Upstream`).
-`DesignProjectService` từ chối hợp đồng Downstream (đơn mua hàng với nhà cung cấp) khi tạo
-hoặc sửa hồ sơ, kèm số hợp đồng trong thông báo. Form **Tạo hồ sơ thiết kế** chỉ liệt kê
-hợp đồng Upstream của khách hàng đã chọn; chọn hợp đồng sẽ điền khách hàng theo hợp đồng.
+Hồ sơ thiết kế chỉ gắn với hợp đồng ký với khách hàng (`ContractDirection.Upstream`):
+
+- `DesignProjectService` từ chối hợp đồng Downstream (đơn mua hàng với nhà cung cấp) khi
+  hồ sơ được gắn hoặc đổi sang hợp đồng đó, kèm số hợp đồng trong thông báo. Hồ sơ đã gắn
+  từ trước vẫn sửa được các thông tin khác.
+- `POST /api/contracts/{id}/design-project` trả `400` với hợp đồng Downstream; trang hợp
+  đồng chỉ hiện nút **Tạo hồ sơ thiết kế** với hợp đồng Upstream.
+- Hợp đồng đang gắn hồ sơ thiết kế không đổi được sang Downstream
+  (`400 CONTRACT_DESIGN_DIRECTION_LOCKED`).
+- Form **Tạo hồ sơ thiết kế** chỉ liệt kê hợp đồng Upstream của khách hàng đã chọn; chọn
+  hợp đồng sẽ điền khách hàng, đổi khách hàng sẽ bỏ hợp đồng và dự án của khách cũ.
 
 ### 12.1 Lịch thiết kế chi tiết (Module 2)
 

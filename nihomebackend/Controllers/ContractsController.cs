@@ -506,6 +506,10 @@ public class ContractsController(
         {
             return Forbid();
         }
+        if (contract.Direction != ContractDirection.Upstream)
+        {
+            return BadRequest(new { message = $"Hợp đồng {contract.ContractNumber} là hợp đồng mua hàng với nhà cung cấp nên không gắn được với hồ sơ thiết kế." });
+        }
         if (!contract.OperationalProjectId.HasValue)
         {
             return BadRequest(new { message = "Hợp đồng chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế." });
