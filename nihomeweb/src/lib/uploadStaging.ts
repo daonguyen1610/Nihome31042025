@@ -99,7 +99,7 @@ export const stageUploadForm = (
     onProgress,
   });
 
-/** The upload request succeeded: the server closed the sessions. */
+/** The server closed the sessions with the upload request. */
 export const forgetStagedUploads = (resumeKeys: string[]) => resumeKeys.forEach(resumeStore.remove);
 
 /** The user cancelled: drop the staged bytes on the server too. */

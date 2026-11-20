@@ -1,5 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
-import { UPLOAD_SESSIONS_HEADER } from "@/lib/chunkedUpload";
+import { keepsStagedUploads, UPLOAD_SESSIONS_HEADER } from "@/lib/chunkedUpload";
 import { discardStagedUploads, forgetStagedUploads, stageUploadForm } from "@/lib/uploadStaging";
 import { uploadTracker } from "@/lib/uploadTracker";
 import type { RootState } from "@/store";
@@ -51,7 +51,12 @@ api.interceptors.request.use(async (config) => {
   if (isMultipart) {
     trackUpload(config);
     // Chunk sessions need a signed-in user; anonymous forms (e.g. job CVs) are small.
-    if (token) await stageLargeFiles(config);
+    if (token) {
+      await stageLargeFiles(config);
+      // A long upload may outlive the token read above; send the current one.
+      const current = storeRef?.()?.auth.accessToken;
+      if (current) config.headers.Authorization = `Bearer ${current}`;
+    }
   }
   const rowVersion =
     !isMultipart && config.data && typeof config.data === "object"
@@ -129,6 +134,18 @@ async function stageLargeFiles(config: TrackedConfig) {
     config.stagedBytes = staged.stagedBytes;
     config.headers.set(UPLOAD_SESSIONS_HEADER, staged.header);
   } catch (error) {
+    if (
+      !signal.aborted &&
+      axios.isAxiosError(error) &&
+      (error.response?.data as { code?: string } | undefined)?.code === "UPLOAD_TOO_LARGE"
+    ) {
+      // Larger than every Settings limit: send it directly as before, so a module with
+      // its own fixed limit (survey media, process files) still decides.
+      discardStagedUploads(api, resumeKeys);
+      config.uploadResumeKeys = undefined;
+      uploadTracker.progress(id, 0);
+      return;
+    }
     if (signal.aborted) discardStagedUploads(api, resumeKeys);
     uploadTracker.fail(id, error);
     throw error;
@@ -148,10 +165,16 @@ api.interceptors.response.use(
       ? (error.config as TrackedConfig | undefined)
       : undefined;
     if (config?.uploadTrackerId) uploadTracker.fail(config.uploadTrackerId, error);
-    // Cancelled: drop the staged bytes. Any other failure keeps them, so sending the
-    // same files again only repeats this request instead of the whole upload.
+    // Cancelled: drop the staged bytes. A failure worth retrying keeps them, so sending
+    // the same files again only repeats this request instead of the whole upload; after
+    // a final refusal the server already dropped them.
     if (config?.uploadResumeKeys && axios.isCancel(error))
       discardStagedUploads(api, config.uploadResumeKeys);
+    else if (
+      config?.uploadResumeKeys &&
+      !keepsStagedUploads(axios.isAxiosError(error) ? error.response?.status : undefined)
+    )
+      forgetStagedUploads(config.uploadResumeKeys);
     return Promise.reject(error);
   },
 );

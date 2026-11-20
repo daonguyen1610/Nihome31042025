@@ -65,7 +65,7 @@ public sealed class PermissionAuthorizationFilter : IAsyncAuthorizationFilter
         }
     }
 
-    private static int ResolveUserId(ClaimsPrincipal user)
+    internal static int ResolveUserId(ClaimsPrincipal user)
     {
         var raw = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("uid");
         return int.TryParse(raw, out var id) ? id : 0;

@@ -83,7 +83,14 @@ public class SiteSettingsService(AppDbContext db)
     /// endpoint accepts 1 to <see cref="BusinessFileRules.MaxAllowedMb"/>, or up to
     /// <see cref="ProjectDocumentStorageService.ContractMaxFileSizeMb"/> for contracts.
     /// </summary>
-    public async Task<int> GetUploadLimitMbAsync(UploadLimitKind kind, CancellationToken ct = default)
+    public async Task<int> GetUploadLimitMbAsync(UploadLimitKind kind, CancellationToken ct = default) =>
+        (await GetUploadLimitsMbAsync(ct))[kind];
+
+    /// <summary>The largest per-file limit of any module, read in one query.</summary>
+    public async Task<int> GetLargestUploadLimitMbAsync(CancellationToken ct = default) =>
+        (await GetUploadLimitsMbAsync(ct)).Values.Max();
+
+    private async Task<Dictionary<UploadLimitKind, int>> GetUploadLimitsMbAsync(CancellationToken ct)
     {
         var limits = await db.SiteSettings.AsNoTracking()
             .Select(settings => new
@@ -99,17 +106,17 @@ public class SiteSettingsService(AppDbContext db)
                 settings.ProjectDocumentMaxFileSizeMb,
             })
             .FirstOrDefaultAsync(ct);
-        return kind switch
+        return new Dictionary<UploadLimitKind, int>
         {
-            UploadLimitKind.Design => limits?.DesignMaxFileSizeMb ?? SiteSettings.DefaultDesignMaxFileSizeMb,
-            UploadLimitKind.Tenders => limits?.TenderMaxFileSizeMb ?? SiteSettings.DefaultTenderMaxFileSizeMb,
-            UploadLimitKind.Contracts => limits?.ContractMaxFileSizeMb ?? SiteSettings.DefaultContractMaxFileSizeMb,
-            UploadLimitKind.Quotes => limits?.QuoteMaxFileSizeMb ?? SiteSettings.DefaultQuoteMaxFileSizeMb,
-            UploadLimitKind.Rfqs => limits?.RfqMaxFileSizeMb ?? SiteSettings.DefaultRfqMaxFileSizeMb,
-            UploadLimitKind.Customers => limits?.CustomerMaxFileSizeMb ?? SiteSettings.DefaultCustomerMaxFileSizeMb,
-            UploadLimitKind.WorkTasks => limits?.WorkTaskMaxFileSizeMb ?? SiteSettings.DefaultWorkTaskMaxFileSizeMb,
-            UploadLimitKind.ProjectDocuments => limits?.ProjectDocumentMaxFileSizeMb ?? SiteSettings.DefaultProjectDocumentMaxFileSizeMb,
-            _ => limits?.CapabilityMaxFileSizeMb ?? SiteSettings.DefaultCapabilityMaxFileSizeMb,
+            [UploadLimitKind.Design] = limits?.DesignMaxFileSizeMb ?? SiteSettings.DefaultDesignMaxFileSizeMb,
+            [UploadLimitKind.Tenders] = limits?.TenderMaxFileSizeMb ?? SiteSettings.DefaultTenderMaxFileSizeMb,
+            [UploadLimitKind.Capability] = limits?.CapabilityMaxFileSizeMb ?? SiteSettings.DefaultCapabilityMaxFileSizeMb,
+            [UploadLimitKind.Contracts] = limits?.ContractMaxFileSizeMb ?? SiteSettings.DefaultContractMaxFileSizeMb,
+            [UploadLimitKind.Quotes] = limits?.QuoteMaxFileSizeMb ?? SiteSettings.DefaultQuoteMaxFileSizeMb,
+            [UploadLimitKind.Rfqs] = limits?.RfqMaxFileSizeMb ?? SiteSettings.DefaultRfqMaxFileSizeMb,
+            [UploadLimitKind.Customers] = limits?.CustomerMaxFileSizeMb ?? SiteSettings.DefaultCustomerMaxFileSizeMb,
+            [UploadLimitKind.WorkTasks] = limits?.WorkTaskMaxFileSizeMb ?? SiteSettings.DefaultWorkTaskMaxFileSizeMb,
+            [UploadLimitKind.ProjectDocuments] = limits?.ProjectDocumentMaxFileSizeMb ?? SiteSettings.DefaultProjectDocumentMaxFileSizeMb,
         };
     }
 

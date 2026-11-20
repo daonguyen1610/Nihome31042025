@@ -212,3 +212,11 @@ export async function stageLargeFormFiles(
   }
   return { form: rest, header: pairs.join(","), stagedBytes: staged };
 }
+
+/**
+ * Whether the server kept the staged files after the upload request failed with this
+ * status, so sending it again does not re-upload them. A final refusal (wrong type, over
+ * the module's limit) closes them. Kept in step with UploadSessionFormFilter.KeepsSessions.
+ */
+export const keepsStagedUploads = (status: number | undefined) =>
+  status === undefined || [401, 408, 409, 429].includes(status) || status >= 500;

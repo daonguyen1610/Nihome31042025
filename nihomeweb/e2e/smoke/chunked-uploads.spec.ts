@@ -205,3 +205,49 @@ test("a large quote document is sent in chunks like any other module's file", as
     if (documentId) await api.delete(`/api/quotes/${quoteId}/documents/${documentId}`, { headers });
   }
 });
+
+// A file larger than every Settings limit is sent directly as before, so a module with
+// its own fixed limit still decides instead of the chunk transport refusing it.
+test("a file the chunk transport refuses is sent directly to the module", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
+  const quotes = await (await api.get("/api/quotes?pageSize=1", { headers })).json();
+  const quoteId = quotes.items[0].id as number;
+  const name = `ho-so-ky-thuat-${Date.now()}.pdf`;
+  const path = testInfo.outputPath(name);
+  await writeFile(path, randomBytes(CHUNK + MB));
+  let documentId: number | undefined;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await page.route("**/api/upload-sessions", (route) =>
+      route.fulfill({
+        status: 400,
+        contentType: "application/json",
+        body: JSON.stringify({ code: "UPLOAD_TOO_LARGE", maxFileSizeMb: 5 }),
+      }),
+    );
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Tài liệu/ }).click();
+    await page.getByTestId("quote-document-file").setInputFiles(path);
+    const completed = page.waitForResponse(uploadRequest(`/api/quotes/${quoteId}/documents`), {
+      timeout: 60_000,
+    });
+    await page.getByRole("button", { name: "Tải lên", exact: true }).click();
+
+    const response = await completed;
+    expect(response.status()).toBe(201);
+    expect(response.request().headers()["x-upload-sessions"]).toBeUndefined();
+    const document = await response.json();
+    documentId = document.id;
+    expect(document.fileSize).toBe(CHUNK + MB);
+  } finally {
+    if (documentId) await api.delete(`/api/quotes/${quoteId}/documents/${documentId}`, { headers });
+  }
+});
