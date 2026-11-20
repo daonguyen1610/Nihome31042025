@@ -10,6 +10,7 @@ import {
   Search as SearchIcon,
   ArrowUp,
   ArrowDown,
+  ChevronRight,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -130,6 +131,15 @@ const Workflows = () => {
     void load();
   }, [load]);
 
+  // Who approves, by role name: the chain itself, not only how many steps it has.
+  const roleLabel = useCallback(
+    (code: string) => {
+      const role = roles.find((item) => item.code.toLowerCase() === code.toLowerCase());
+      return role ? (role.labelKey ? t(role.labelKey) : role.name) : code;
+    },
+    [roles, t],
+  );
+
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
     if (!q) return workflows;
@@ -137,9 +147,33 @@ const Workflows = () => {
       (w) =>
         w.module.toLowerCase().includes(q) ||
         w.action.toLowerCase().includes(q) ||
-        w.name.toLowerCase().includes(q),
+        w.name.toLowerCase().includes(q) ||
+        w.steps.some((step) => roleLabel(step.approverRoleCode).toLowerCase().includes(q)),
     );
-  }, [workflows, query]);
+  }, [workflows, query, roleLabel]);
+
+  const renderChain = (w: WorkflowConfig) => (
+    <ol
+      className="flex flex-wrap items-center gap-x-1.5 gap-y-1"
+      aria-label={t("workflow.field.chain")}
+    >
+      {[...w.steps]
+        .sort((a, b) => a.order - b.order)
+        .map((step, index) => (
+          <li key={`${step.order}-${step.approverRoleCode}`} className="flex items-center gap-1.5">
+            {index > 0 && (
+              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+            )}
+            <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-0.5 text-xs">
+              <span className="tabular-nums text-muted-foreground">{index + 1}</span>
+              <span className="font-medium text-foreground">
+                {roleLabel(step.approverRoleCode)}
+              </span>
+            </span>
+          </li>
+        ))}
+    </ol>
+  );
 
   const visibleIds = useMemo(() => filtered.map((w) => w.id), [filtered]);
   const {
@@ -339,7 +373,7 @@ const Workflows = () => {
                 id="wf-search"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder={t("workflow.searchPlaceholder")}
+                placeholder={t("workflow.searchByNameOrRole")}
                 className="h-9 pl-9"
               />
             </div>
@@ -402,9 +436,6 @@ const Workflows = () => {
                         <h3 className="break-words text-sm font-semibold leading-tight">
                           {w.name}
                         </h3>
-                        <p className="mt-0.5 break-all font-mono text-xs text-muted-foreground">
-                          {w.module}.{w.action}
-                        </p>
                       </div>
                     </div>
                     {w.isActive ? (
@@ -419,16 +450,12 @@ const Workflows = () => {
                       />
                     )}
                   </div>
-                  <dl className="mt-2 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                    <dt className="text-muted-foreground">{t("workflow.field.steps")}</dt>
-                    <dd className="font-medium">{w.steps.length}</dd>
-                    {w.description && (
-                      <>
-                        <dt className="text-muted-foreground">{t("workflow.field.description")}</dt>
-                        <dd className="break-words">{w.description}</dd>
-                      </>
-                    )}
-                  </dl>
+                  {w.description && (
+                    <p className="mt-1.5 break-words text-xs text-muted-foreground">
+                      {w.description}
+                    </p>
+                  )}
+                  <div className="mt-2.5">{renderChain(w)}</div>
                   {canManage && (
                     <div className="mt-3 flex flex-wrap items-center justify-end gap-1 border-t pt-2">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(w)}>
@@ -468,17 +495,11 @@ const Workflows = () => {
                         />
                       </th>
                     )}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("workflow.field.module")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("workflow.field.action")}
-                    </th>
-                    <th className="min-w-[200px] px-3 py-3 text-left font-medium">
+                    <th className="w-[32%] min-w-[220px] px-3 py-3 text-left font-medium">
                       {t("workflow.field.name")}
                     </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("workflow.field.steps")}
+                    <th className="min-w-[260px] px-3 py-3 text-left font-medium">
+                      {t("workflow.field.chain")}
                     </th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
                       {t("workflow.field.isActive")}
@@ -502,15 +523,15 @@ const Workflows = () => {
                           />
                         </td>
                       )}
-                      <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{w.module}</td>
-                      <td className="whitespace-nowrap px-3 py-3 font-mono text-xs">{w.action}</td>
-                      <td className="min-w-[200px] px-3 py-3 font-medium">
+                      <td className="min-w-[220px] px-3 py-3 font-medium">
                         {w.name}
                         {w.description && (
-                          <p className="mt-0.5 text-xs text-muted-foreground">{w.description}</p>
+                          <p className="mt-0.5 max-w-prose text-xs font-normal text-muted-foreground">
+                            {w.description}
+                          </p>
                         )}
                       </td>
-                      <td className="whitespace-nowrap px-3 py-3 text-center">{w.steps.length}</td>
+                      <td className="px-3 py-3">{renderChain(w)}</td>
                       <td className="whitespace-nowrap px-3 py-3">
                         {w.isActive ? (
                           <Badge

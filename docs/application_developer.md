@@ -446,6 +446,13 @@ thiết kế/thi công chỉ seed ở môi trường `Development`
 - Activities, news, projects backfill theo slug, giữ chỉnh sửa của admin.
   Process documents và logos đối soát cộng dồn: khôi phục dòng chuẩn bị thiếu,
   không xoá dòng tự tạo, không ghi đè giá trị admin.
+- Luồng duyệt mặc định (`Seeds/workflows/defaults.json`) chỉ điền dòng còn trống; admin
+  sửa tại `/admin/workflows`. Đây là cấu hình tham chiếu: `QuoteService` chỉ cho Trưởng
+  phòng Cung ứng mà người gửi chọn duyệt báo giá, nên mặc định `quotes|approve` là một bước
+  `PROCUREMENT_MANAGER`. Migration `AlignQuoteApprovalWorkflow` sửa chuỗi cũ (Sales
+  Manager → BGĐ) và ghi chú mẫu thông báo trên DB đang chạy, chỉ khi admin chưa sửa; `Down`
+  khôi phục. Trang Luồng duyệt hiện chuỗi vai trò duyệt (không hiện mã module/action, chỉ
+  hiện trong hộp thoại Sửa) và tìm theo tên luồng hoặc vai trò.
 - Process document chuẩn có `SeedKey` nullable (filtered unique index), suy từ
   process group và URL asset chuẩn đầu tiên nên đổi tiêu đề/thứ tự không đổi
   định danh. Dòng không có `SeedKey` thuộc về admin. Metadata ảnh/file chỉ được
