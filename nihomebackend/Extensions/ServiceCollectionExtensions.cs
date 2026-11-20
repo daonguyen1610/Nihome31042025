@@ -8,6 +8,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using NihomeBackend.Authorization;
 using NihomeBackend.Data;
+using NihomeBackend.Infrastructure;
 using NihomeBackend.Infrastructure.OpenApi;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
@@ -23,6 +24,8 @@ public static class ServiceCollectionExtensions
         services.AddControllers(options =>
             {
                 options.Filters.Add<PermissionAuthorizationFilter>();
+                // Files sent beforehand in resumable chunks reach any upload endpoint as form files.
+                options.Filters.Add<UploadSessionFormFilter>();
             })
             .AddJsonOptions(options =>
             {

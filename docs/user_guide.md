@@ -593,7 +593,6 @@ Ghi khảo sát gắn với Cơ hội hoặc Dự án: chụp ảnh, quay video 
 - Bản scan phải có loại tài liệu là bản scan hợp đồng đã ký và thuộc đúng hợp đồng này; tài liệu hỗ trợ không thay được. Thiếu bản scan thì ứng dụng mở tab Tài liệu và hợp đồng giữ Bản nháp. Hợp đồng đã ký trước đây mà chưa có bản scan vẫn giữ trạng thái; hãy bổ sung trước khi triển khai.
 - Ngày phải theo thứ tự ký → bắt đầu → kết thúc. Sửa thông tin chung không bỏ qua được các kiểm tra trạng thái.
 - Tệp hợp đồng và phụ lục có giới hạn dung lượng ở **Cài đặt → Tệp hợp đồng** (mặc định 100 MB, quản trị viên nâng được tới 5 GB).
-- Tệp hợp đồng lớn (trên 8 MB) được gửi từng phần. Mất mạng giữa chừng thì tự gửi lại phần đang dở; nếu tải lại trang, hãy chọn lại **đúng tệp đó** rồi bấm tải lên: hệ thống gửi tiếp phần còn thiếu thay vì tải lại từ đầu (trong vòng 24 giờ).
 - Tab lịch sử hợp đồng nằm sau các tab làm việc.
 
 **Đợt thanh toán.** Lập các đợt tạm ứng, theo giai đoạn, quyết toán. Đổi trạng thái đợt và kế toán phụ trách bằng thao tác trên đợt; sửa lịch vẫn giữ đợt và lịch sử. Đợt đã xử lý hoặc đã có đề nghị thanh toán không xóa được. Khi đợt thu của hợp đồng đầu ra chưa thu tới hạn, người phụ trách hợp đồng và kế toán được giao nhận một thông báo; đổi hạn thì có nhắc mới.
@@ -1482,6 +1481,12 @@ Trong **Cài đặt** (`/admin/settings`): bật/tắt OTP đăng ký và quên 
 | Tệp minh chứng RFQ | Theo **Cài đặt → Tệp RFQ** (mặc định 20 MB, tối đa 100 MB); nhận cả bản vẽ CAD, chỉ chặn tệp chạy được |
 | Tài liệu khách hàng | Theo **Cài đặt → Tệp khách hàng** (mặc định 20 MB, tối đa 100 MB); PDF, Word, Excel, JPG, PNG |
 | BOQ Excel | Tối đa 20 MB |
+
+Tệp lớn hơn 8 MB ở mọi màn hình được gửi từng phần, tiến độ hiện ở khay tải lên góc dưới:
+
+- Mất mạng giữa chừng thì hệ thống tự gửi lại phần đang dở, không tải lại từ đầu.
+- Nếu tải lại trang hoặc lần tải trước báo lỗi, hãy chọn lại **đúng tệp đó** rồi bấm tải lên: hệ thống gửi tiếp phần còn thiếu (trong vòng 24 giờ).
+- Bấm ✕ trên khay để huỷ; phần đã gửi được xoá khỏi máy chủ.
 
 ---
 

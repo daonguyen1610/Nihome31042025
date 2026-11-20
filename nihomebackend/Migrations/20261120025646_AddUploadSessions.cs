@@ -17,8 +17,7 @@ namespace nihomebackend.Migrations
                 {
                     Id = table.Column<Guid>(type: "uniqueidentifier", nullable: false),
                     UserId = table.Column<int>(type: "int", nullable: false),
-                    Purpose = table.Column<string>(type: "nvarchar(40)", maxLength: 40, nullable: false),
-                    ContextId = table.Column<int>(type: "int", nullable: false),
+                    TargetPath = table.Column<string>(type: "nvarchar(300)", maxLength: 300, nullable: false),
                     FileName = table.Column<string>(type: "nvarchar(255)", maxLength: 255, nullable: false),
                     FileSize = table.Column<long>(type: "bigint", nullable: false),
                     ReceivedBytes = table.Column<long>(type: "bigint", nullable: false),
@@ -35,6 +34,11 @@ namespace nihomebackend.Migrations
                 name: "IX_upload_sessions_ExpiresAt",
                 table: "upload_sessions",
                 column: "ExpiresAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_upload_sessions_UserId",
+                table: "upload_sessions",
+                column: "UserId");
         }
 
         /// <inheritdoc />

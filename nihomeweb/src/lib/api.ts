@@ -1,4 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
+import { UPLOAD_SESSIONS_HEADER } from "@/lib/chunkedUpload";
+import { discardStagedUploads, forgetStagedUploads, stageUploadForm } from "@/lib/uploadStaging";
 import { uploadTracker } from "@/lib/uploadTracker";
 import type { RootState } from "@/store";
 import { createLogger, newCorrelationId } from "@/lib/logger";
@@ -17,7 +19,7 @@ export const setStoreRef = (getState: () => RootState) => {
   storeRef = getState;
 };
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use(async (config) => {
   if (!config.headers["X-Correlation-Id"]) {
     config.headers["X-Correlation-Id"] = newCorrelationId();
   }
@@ -46,7 +48,11 @@ api.interceptors.request.use((config) => {
   if (isMutation && !isMultipart && !config.headers["Idempotency-Key"]) {
     config.headers["Idempotency-Key"] = newIdempotencyKey();
   }
-  if (isMultipart) trackUpload(config);
+  if (isMultipart) {
+    trackUpload(config);
+    // Chunk sessions need a signed-in user; anonymous forms (e.g. job CVs) are small.
+    if (token) await stageLargeFiles(config);
+  }
   const rowVersion =
     !isMultipart && config.data && typeof config.data === "object"
       ? (config.data as { rowVersion?: string }).rowVersion
@@ -57,7 +63,12 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-type TrackedConfig = InternalAxiosRequestConfig & { uploadTrackerId?: number };
+type TrackedConfig = InternalAxiosRequestConfig & {
+  uploadTrackerId?: number;
+  /** Bytes already sent in resumable chunks before this request. */
+  stagedBytes?: number;
+  uploadResumeKeys?: string[];
+};
 
 /**
  * Shows a file upload in the upload tray: its progress, and a cancel that
@@ -81,25 +92,66 @@ function trackUpload(config: TrackedConfig) {
   });
   const callerProgress = config.onUploadProgress;
   config.onUploadProgress = (event) => {
-    // The request body also carries form fields and boundaries; scale to the files.
-    const sent = event.total ? (event.loaded / event.total) * size : event.loaded;
+    // The request body also carries form fields and boundaries; scale to the files
+    // still in it, after those already sent in chunks.
+    const staged = config.stagedBytes ?? 0;
+    const sent =
+      staged + (event.total ? (event.loaded / event.total) * (size - staged) : event.loaded);
     uploadTracker.progress(id, Math.min(size, Math.round(sent)));
     callerProgress?.(event);
   };
   config.uploadTrackerId = id;
 }
 
+/**
+ * Sends files above the chunk threshold in resumable chunks first (any module, any size
+ * up to its Settings limit), then lets the request carry only their session ids. A
+ * dropped connection resends one chunk, and after a reload the same file resumes.
+ */
+async function stageLargeFiles(config: TrackedConfig) {
+  const id = config.uploadTrackerId;
+  if (!id) return;
+  const target = new URL(api.getUri(config), window.location.href).pathname;
+  const resumeKeys: string[] = [];
+  config.uploadResumeKeys = resumeKeys;
+  const signal = config.signal as AbortSignal;
+  try {
+    const staged = await stageUploadForm(
+      api,
+      config.data as FormData,
+      target,
+      signal,
+      (sent) => uploadTracker.progress(id, sent),
+      resumeKeys,
+    );
+    if (!staged) return;
+    config.data = staged.form;
+    config.stagedBytes = staged.stagedBytes;
+    config.headers.set(UPLOAD_SESSIONS_HEADER, staged.header);
+  } catch (error) {
+    if (signal.aborted) discardStagedUploads(api, resumeKeys);
+    uploadTracker.fail(id, error);
+    throw error;
+  }
+}
+
 api.interceptors.response.use(
   (response) => {
-    const id = (response.config as TrackedConfig).uploadTrackerId;
-    if (id) uploadTracker.finish(id);
+    const config = response.config as TrackedConfig;
+    if (config.uploadTrackerId) uploadTracker.finish(config.uploadTrackerId);
+    // The server closed the sessions with the successful request.
+    if (config.uploadResumeKeys) forgetStagedUploads(config.uploadResumeKeys);
     return response;
   },
   (error: unknown) => {
-    const id = axios.isAxiosError(error)
-      ? (error.config as TrackedConfig | undefined)?.uploadTrackerId
+    const config = axios.isAxiosError(error)
+      ? (error.config as TrackedConfig | undefined)
       : undefined;
-    if (id) uploadTracker.fail(id, error);
+    if (config?.uploadTrackerId) uploadTracker.fail(config.uploadTrackerId, error);
+    // Cancelled: drop the staged bytes. Any other failure keeps them, so sending the
+    // same files again only repeats this request instead of the whole upload.
+    if (config?.uploadResumeKeys && axios.isCancel(error))
+      discardStagedUploads(api, config.uploadResumeKeys);
     return Promise.reject(error);
   },
 );

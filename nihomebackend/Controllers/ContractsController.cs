@@ -43,8 +43,7 @@ public class ContractsController(
     ContractReminderService reminders,
     IWebHostEnvironment env,
     AppDbContext db,
-    IAuditLogger audit,
-    UploadSessionService uploadSessions) : ControllerBase
+    IAuditLogger audit) : ControllerBase
 {
     private const string StorageSubfolder = "contracts";
 
@@ -821,22 +820,6 @@ public class ContractsController(
         return stored.Result ?? Ok(stored.Payload);
     }
 
-    /// <summary>Takes the finished file of an upload session as a VO attachment file.</summary>
-    [HttpPost("{id:int}/appendices/files/from-upload")]
-    [RequirePermission("crm.contracts", "manage")]
-    public async Task<IActionResult> UploadAppendixFileFromSession(int id, [FromBody] CompleteContractUploadRequest req, CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized();
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
-        if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
-
-        var result = await CompleteUploadAsync<IActionResult>(req.UploadSessionId, userId.Value,
-            UploadSessionPurpose.ContractAppendix, id, "vo", payload => Task.FromResult<IActionResult>(Ok(payload)),
-            registered: _ => true, ct);
-        return result ?? UploadNotReady();
-    }
-
     // -------- attachments --------
 
     [HttpGet("{id:int}/attachments")]
@@ -913,82 +896,24 @@ public class ContractsController(
         if (stored.Result is BadRequestObjectResult bad) return bad;
         if (stored.Payload == null) return BadRequest(new { message = "Không upload được file." });
 
+        ContractAttachmentResponse? created;
         try
         {
-            return await RegisterAttachmentAsync(id, stored.Payload, kind, label, userId.Value, canSeeAll, ct);
+            created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
+            {
+                Kind = kind,
+                FilePath = stored.Payload!.filePath,
+                OriginalFileName = stored.Payload.originalFileName,
+                FileSize = stored.Payload.fileSize,
+                ContentType = stored.Payload.contentType,
+                Label = label,
+            }, userId.Value, canSeeAll, ct);
         }
         catch
         {
             DeleteUploadedFile(stored.Payload.filePath);
             throw;
         }
-    }
-
-    /// <summary>
-    /// Opens a resumable upload for a large contract file. Type, size (Settings limit) and
-    /// access are checked before any byte is sent; the chunks then go to
-    /// <c>PUT /api/upload-sessions/{id}/chunks</c> and the file is taken with
-    /// <c>…/from-upload</c>.
-    /// </summary>
-    [HttpPost("{id:int}/upload-sessions")]
-    [RequirePermission("crm.contracts", "manage")]
-    public async Task<IActionResult> StartUploadSession(int id, [FromBody] StartContractUploadRequest req, CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized();
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
-        if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
-
-        var name = Path.GetFileName(req.FileName ?? string.Empty);
-        if (name.Length is < 1 or > 255)
-            return BadRequest(new { message = "Tên tệp phải có từ 1 đến 255 ký tự, ví dụ: hop-dong-ky.pdf." });
-        var extension = Path.GetExtension(name);
-        if (string.IsNullOrWhiteSpace(extension) || !AllowedExtensions.Contains(extension))
-            return BadRequest(new { message = "Định dạng file không được hỗ trợ (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG)." });
-        if (req.FileSize <= 0)
-            return BadRequest(new { message = $"Tệp “{name}” trống. Hãy kiểm tra lại tệp rồi tải lên." });
-        var maxFileSizeMb = await ContractMaxFileSizeMbAsync(ct);
-        if (req.FileSize > (long)maxFileSizeMb * 1024 * 1024)
-            return BadRequest(new { message = $"Tệp vượt quá {maxFileSizeMb} MB. Hãy chọn tệp nhỏ hơn rồi thử lại." });
-
-        var session = await uploadSessions.CreateAsync(userId.Value,
-            req.Purpose == ContractUploadPurpose.Appendix ? UploadSessionPurpose.ContractAppendix : UploadSessionPurpose.ContractAttachment,
-            id, name, req.FileSize, ct);
-        return Ok(new { session.Id, session.ReceivedBytes, ChunkSize = UploadSessionService.ChunkSize });
-    }
-
-    /// <summary>Registers the finished file of an upload session as a contract attachment.</summary>
-    [HttpPost("{id:int}/attachments/from-upload")]
-    [RequirePermission("crm.contracts", "manage")]
-    public async Task<ActionResult<ContractAttachmentResponse>> UploadAttachmentFromSession(
-        int id, [FromBody] CompleteContractAttachmentUploadRequest req, CancellationToken ct)
-    {
-        var userId = GetUserId();
-        if (userId is null) return Unauthorized();
-        var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
-        if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
-
-        var result = await CompleteUploadAsync(req.UploadSessionId, userId.Value, UploadSessionPurpose.ContractAttachment, id, "att",
-            payload => RegisterAttachmentAsync(id, payload, req.Kind, req.Label, userId.Value, canSeeAll, ct,
-                keepFileOnFailure: true),
-            registered: attachment => attachment.Result is not NotFoundResult, ct);
-        if (result is null) return UploadNotReady();
-        return result;
-    }
-
-    private async Task<ActionResult<ContractAttachmentResponse>> RegisterAttachmentAsync(int id,
-        UploadedPayload payload, ContractAttachmentKind kind, string? label, int userId, bool canSeeAll,
-        CancellationToken ct, bool keepFileOnFailure = false)
-    {
-        var created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
-        {
-            Kind = kind,
-            FilePath = payload.filePath,
-            OriginalFileName = payload.originalFileName,
-            FileSize = payload.fileSize,
-            ContentType = payload.contentType,
-            Label = label,
-        }, userId, canSeeAll, ct, keepFileOnFailure);
         // ContractExistsForCallerAsync above already verified the caller
         // may write to this contract, so CreateAsync should never return
         // null here — but be defensive so a race between the ownership
@@ -1000,7 +925,7 @@ public class ContractsController(
             Action = "contract.attachment.create",
             ResourceType = EntityTypes.Contract,
             ResourceId = id.ToString(),
-            Message = $"Contract #{id} attachment ({kind}) uploaded — {payload.originalFileName}.",
+            Message = $"Contract #{id} attachment ({kind}) uploaded — {stored.Payload.originalFileName}.",
         });
 
         return CreatedAtAction(nameof(ListAttachments), new { id }, created);
@@ -1207,64 +1132,15 @@ public class ContractsController(
         public IActionResult? Result;
     }
 
-    private async Task<int> ContractMaxFileSizeMbAsync(CancellationToken ct) =>
-        (await db.SiteSettings.AsNoTracking()
-            .Select(settings => (int?)settings.ContractMaxFileSizeMb)
-            .FirstOrDefaultAsync(ct)) ?? SiteSettings.DefaultContractMaxFileSizeMb;
-
-    private ObjectResult UploadNotReady() => BadRequest(new
-    {
-        code = "UPLOAD_NOT_READY",
-        message = "Tệp chưa tải lên xong hoặc phiên tải lên không thuộc hợp đồng này. Hãy tải tiếp hoặc chọn lại tệp.",
-    });
-
-    /// <summary>
-    /// Moves the finished file of the caller's session into contract storage and lets
-    /// <paramref name="register"/> record it. When registering throws or reports failure the
-    /// file goes back to the session, so the user can retry without uploading it again.
-    /// Null when the session is not theirs, not for this contract or incomplete.
-    /// </summary>
-    private Task<TResult?> CompleteUploadAsync<TResult>(Guid sessionId, int userId, UploadSessionPurpose purpose,
-        int contractId, string kindTag, Func<UploadedPayload, Task<TResult>> register,
-        Func<TResult, bool> registered, CancellationToken ct) where TResult : class =>
-        uploadSessions.CompleteAsync(sessionId, userId, purpose, contractId, async completed =>
-        {
-            var (managedPath, fullPath) = NewStoredFilePath(kindTag, completed.FileName);
-            System.IO.File.Move(completed.StagingPath, fullPath);
-            if (!ContentTypes.TryGetContentType(completed.FileName, out var contentType))
-                contentType = "application/octet-stream";
-            TResult result;
-            try
-            {
-                result = await register(new UploadedPayload(managedPath, completed.FileName, completed.FileSize, contentType));
-            }
-            catch
-            {
-                System.IO.File.Move(fullPath, completed.StagingPath);
-                throw;
-            }
-            if (!registered(result)) System.IO.File.Move(fullPath, completed.StagingPath);
-            return result;
-        }, ct);
-
-    private static readonly Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider ContentTypes = new();
-
-    /// <summary>A new unique contract storage location for a file with this name's extension.</summary>
-    private (string managedPath, string fullPath) NewStoredFilePath(string kindTag, string fileName)
-    {
-        var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
-        Directory.CreateDirectory(uploadDir);
-        var storedName = $"{kindTag}-{Guid.NewGuid():N}{Path.GetExtension(fileName).ToLowerInvariant()}";
-        return ($"/files/{StorageSubfolder}/{storedName}", Path.Combine(uploadDir, storedName));
-    }
-
     private async Task<StoredFile> StoreUploadedFileAsync(IFormFile? file, string kindTag, CancellationToken ct)
     {
         if (file is null || file.Length == 0)
         {
             return new StoredFile { Result = BadRequest(new { message = "Chưa chọn file." }) };
         }
-        var maxFileSizeMb = await ContractMaxFileSizeMbAsync(ct);
+        var maxFileSizeMb = (await db.SiteSettings.AsNoTracking()
+            .Select(settings => (int?)settings.ContractMaxFileSizeMb)
+            .FirstOrDefaultAsync(ct)) ?? SiteSettings.DefaultContractMaxFileSizeMb;
         if (file.Length > (long)maxFileSizeMb * 1024 * 1024)
         {
             return new StoredFile { Result = BadRequest(new { message = $"Tệp vượt quá {maxFileSizeMb} MB. Hãy chọn tệp nhỏ hơn rồi thử lại." }) };
@@ -1275,7 +1151,10 @@ public class ContractsController(
             return new StoredFile { Result = BadRequest(new { message = "Định dạng file không được hỗ trợ (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG)." }) };
         }
 
-        var (managedPath, storedPath) = NewStoredFilePath(kindTag, file.FileName);
+        var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
+        Directory.CreateDirectory(uploadDir);
+        var storedName = $"{kindTag}-{Guid.NewGuid():N}{extension}";
+        var storedPath = Path.Combine(uploadDir, storedName);
         await using (var stream = new FileStream(storedPath, FileMode.Create))
         {
             await file.CopyToAsync(stream, ct);
@@ -1283,7 +1162,7 @@ public class ContractsController(
         return new StoredFile
         {
             Payload = new UploadedPayload(
-                managedPath,
+                $"/files/{StorageSubfolder}/{storedName}",
                 file.FileName,
                 file.Length,
                 string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType),

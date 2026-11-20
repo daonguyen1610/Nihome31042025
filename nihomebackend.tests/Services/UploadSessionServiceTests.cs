@@ -10,7 +10,7 @@ namespace nihomebackend.tests.Services;
 public class UploadSessionServiceTests : IDisposable
 {
     private const int Owner = 7;
-    private const int ContractId = 42;
+    private const string Target = "/api/quotes/42/documents";
     private readonly AppDbContext _db;
     private readonly string _contentRoot;
     private readonly UploadSessionService _sut;
@@ -31,22 +31,23 @@ public class UploadSessionServiceTests : IDisposable
     }
 
     private Task<UploadSession> StartAsync(long size) =>
-        _sut.CreateAsync(Owner, UploadSessionPurpose.ContractAttachment, ContractId, "hop-dong-ky.pdf", size);
+        _sut.CreateAsync(Owner, Target, "hop-dong-ky.pdf", size);
 
     private Task<UploadChunkResult> SendAsync(Guid id, long offset, byte[] bytes, int user = Owner) =>
         _sut.AppendAsync(id, user, offset, new MemoryStream(bytes), bytes.Length);
 
     private static byte[] Bytes(int length, byte value) => Enumerable.Repeat(value, length).ToArray();
 
-    /// <summary>Completes like a module that moves the file away: reads it, then removes it.</summary>
-    private Task<Tuple<byte[], string>?> CompleteAsync(Guid id, int user = Owner,
-        UploadSessionPurpose purpose = UploadSessionPurpose.ContractAttachment, int context = ContractId) =>
-        _sut.CompleteAsync(id, user, purpose, context, async completed =>
-        {
-            var bytes = await File.ReadAllBytesAsync(completed.StagingPath);
-            File.Delete(completed.StagingPath);
-            return Tuple.Create(bytes, completed.FileName);
-        });
+    /// <summary>Uses the finished file like a successful upload request: reads it, then closes.</summary>
+    private async Task<Tuple<byte[], string>?> CompleteAsync(Guid id, int user = Owner, string target = Target)
+    {
+        await using var held = await _sut.HoldCompletedAsync([id], user, target);
+        if (held is null) return null;
+        var file = held.Files.Single();
+        var bytes = await File.ReadAllBytesAsync(file.StagingPath);
+        await held.CloseAsync();
+        return Tuple.Create(bytes, file.FileName);
+    }
 
     [Fact]
     public async Task Chunks_AppendInOrder_AndTheCompleteFileHasEveryByte()
@@ -124,52 +125,53 @@ public class UploadSessionServiceTests : IDisposable
 
         Assert.Null(await CompleteAsync(session.Id));
         await SendAsync(session.Id, 4, Bytes(6, 1));
-        // Bound to the contract and purpose it was opened for.
-        Assert.Null(await CompleteAsync(session.Id, purpose: UploadSessionPurpose.ContractAppendix));
-        Assert.Null(await CompleteAsync(session.Id, context: ContractId + 1));
-        Assert.NotNull(await CompleteAsync(session.Id));
+        // Bound to the upload request it was opened for.
+        Assert.Null(await CompleteAsync(session.Id, target: "/api/customers/42/documents"));
+        Assert.NotNull(await CompleteAsync(session.Id, target: Target.ToUpperInvariant()));
     }
 
     [Fact]
-    public async Task FailedRegistration_KeepsTheSessionSoTheCompletionCanBeRetried()
+    public async Task FailedUploadRequest_KeepsTheSessionSoTheRequestCanBeSentAgain()
     {
         var session = await StartAsync(4);
         await SendAsync(session.Id, 0, Bytes(4, 1));
 
-        // The module could not record the file (e.g. a database error) and threw.
-        await Assert.ThrowsAsync<InvalidOperationException>(() => _sut.CompleteAsync<string>(session.Id, Owner,
-            UploadSessionPurpose.ContractAttachment, ContractId, _ => throw new InvalidOperationException()));
-        // Or it left the file where it was.
-        Assert.Equal("kept", await _sut.CompleteAsync(session.Id, Owner,
-            UploadSessionPurpose.ContractAttachment, ContractId, _ => Task.FromResult("kept")));
+        // The module refused or failed the request: the held files are let go, not closed.
+        await using (var held = await _sut.HoldCompletedAsync([session.Id], Owner, Target))
+            Assert.NotNull(held);
 
         Assert.NotNull(await _sut.FindAsync(session.Id, Owner));
         Assert.Equal(Bytes(4, 1), (await CompleteAsync(session.Id))!.Item1);
+        Assert.Null(await _sut.FindAsync(session.Id, Owner));
     }
 
     [Fact]
-    public async Task DoubleSubmit_TakesTheFileOnce()
+    public async Task DoubleSubmit_UsesTheFileOnce()
     {
         var session = await StartAsync(4);
         await SendAsync(session.Id, 0, Bytes(4, 1));
-        var consumed = 0;
-        var release = new TaskCompletionSource();
 
-        Task<string?> Complete() => _sut.CompleteAsync(session.Id, Owner, UploadSessionPurpose.ContractAttachment,
-            ContractId, async completed =>
-            {
-                Interlocked.Increment(ref consumed);
-                await release.Task;
-                File.Delete(completed.StagingPath);
-                return "taken";
-            });
+        var first = await _sut.HoldCompletedAsync([session.Id], Owner, Target);
+        // The second request waits for the first one to finish with the file.
+        var second = _sut.HoldCompletedAsync([session.Id], Owner, Target);
+        await Task.Delay(50);
+        Assert.False(second.IsCompleted);
+        await first!.CloseAsync();
+        await first.DisposeAsync();
 
-        var first = Complete();
-        var second = Complete();
-        release.SetResult();
+        Assert.Null(await second);
+    }
 
-        Assert.Equal(["taken", null], (await Task.WhenAll(first, second)).OrderBy(item => item is null));
-        Assert.Equal(1, consumed);
+    [Fact]
+    public async Task OneMissingFile_HoldsNothing()
+    {
+        var done = await StartAsync(4);
+        await SendAsync(done.Id, 0, Bytes(4, 1));
+        var unfinished = await StartAsync(10);
+
+        Assert.Null(await _sut.HoldCompletedAsync([done.Id, unfinished.Id], Owner, Target));
+        // The finished one was let go and is still usable.
+        Assert.NotNull(await CompleteAsync(done.Id));
     }
 
     [Fact]

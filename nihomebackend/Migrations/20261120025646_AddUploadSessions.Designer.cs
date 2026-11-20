@@ -12,7 +12,7 @@ using NihomeBackend.Data;
 namespace nihomebackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261120004930_AddUploadSessions")]
+    [Migration("20261120025646_AddUploadSessions")]
     partial class AddUploadSessions
     {
         /// <inheritdoc />
@@ -10654,6 +10654,11 @@ namespace nihomebackend.Migrations
                         .HasColumnType("nvarchar(3)")
                         .HasDefaultValue("VND");
 
+                    b.Property<int>("CustomerMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
+
                     b.Property<int>("DesignMaxFileSizeMb")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("int")
@@ -10763,6 +10768,11 @@ namespace nihomebackend.Migrations
 
                     b.Property<string>("WorkPackageApprovalEmailSubjectTemplate")
                         .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("WorkTaskMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(20);
 
                     b.HasKey("Id");
 
@@ -11896,9 +11906,6 @@ namespace nihomebackend.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
-                    b.Property<int>("ContextId")
-                        .HasColumnType("int");
-
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime2");
 
@@ -11913,13 +11920,13 @@ namespace nihomebackend.Migrations
                     b.Property<long>("FileSize")
                         .HasColumnType("bigint");
 
-                    b.Property<string>("Purpose")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("nvarchar(40)");
-
                     b.Property<long>("ReceivedBytes")
                         .HasColumnType("bigint");
+
+                    b.Property<string>("TargetPath")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime2");
@@ -11930,6 +11937,8 @@ namespace nihomebackend.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("ExpiresAt");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("upload_sessions", (string)null);
                 });

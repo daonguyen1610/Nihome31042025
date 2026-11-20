@@ -132,26 +132,6 @@ public class ContractAttachmentServiceTests : IDisposable
     }
 
     [Fact]
-    public async Task Create_FailsForAFinishedChunkedUpload_KeepsTheFileForTheRetry()
-    {
-        var directory = Path.Combine(_contentRoot, "wwwroot", "files", "contracts");
-        Directory.CreateDirectory(directory);
-        await File.WriteAllTextAsync(Path.Combine(directory, "x.pdf"), "contract");
-        _projectDocuments.Setup(staging => staging.StageExistingManagedFileAsync(
-                It.IsAny<int>(), It.IsAny<ProjectDocumentCategory>(), It.IsAny<ProjectDocumentSourceModule>(),
-            It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(), It.IsAny<string>(), It.IsAny<string>(),
-                It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new InvalidOperationException("staging failed"));
-
-        await Assert.ThrowsAsync<InvalidOperationException>(() =>
-            _sut.CreateAsync(_contract.Id, Req(), 100, true, keepFileOnFailure: true));
-
-        Assert.Empty(_db.ContractAttachments);
-        // The caller puts it back into the upload session, so the user only retries the last step.
-        Assert.True(File.Exists(Path.Combine(directory, "x.pdf")));
-    }
-
-    [Fact]
     public async Task Delete_ReturnsFalseWhenSalesDoesNotOwn()
     {
         var created = await _sut.CreateAsync(_contract.Id, Req(), 100, true);

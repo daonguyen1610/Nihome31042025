@@ -1133,6 +1133,71 @@ public class CustomersControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task Documents_SentInChunks_ArriveAsAnOrdinaryUpload()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var customerId = await CreateIndividualCustomerAsync("Chunked customer document");
+        var target = $"/api/customers/{customerId}/documents";
+        var content = new byte[UploadSessionService.ChunkSize + 2 * 1024 * 1024];
+        Random.Shared.NextBytes(content);
+
+        async Task<string> Stage(string name)
+        {
+            var started = await Client.PostAsJsonAsync("/api/upload-sessions",
+                new { targetPath = target, fileName = name, fileSize = content.Length });
+            started.StatusCode.Should().Be(HttpStatusCode.OK, await started.Content.ReadAsStringAsync());
+            var id = (await ReadJsonAsync(started)).GetProperty("id").GetString()!;
+            for (var offset = 0; offset < content.Length; offset += UploadSessionService.ChunkSize)
+            {
+                using var chunk = new ByteArrayContent(content, offset,
+                    Math.Min(UploadSessionService.ChunkSize, content.Length - offset));
+                chunk.Headers.ContentType = new MediaTypeHeaderValue("application/octet-stream");
+                (await Client.PutAsync($"/api/upload-sessions/{id}/chunks?offset={offset}", chunk))
+                    .EnsureSuccessStatusCode();
+            }
+            return id;
+        }
+        async Task<HttpResponseMessage> Send(string path, string sessionId)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, path);
+            request.Headers.Add("X-Upload-Sessions", $"file={sessionId}");
+            request.Content = new MultipartFormDataContent { { new StringContent("Giấy phép"), "label" } };
+            return await Client.SendAsync(request);
+        }
+
+        // Nothing is staged that no upload limit in Settings allows, nor for a non-API target.
+        (await Client.PostAsJsonAsync("/api/upload-sessions",
+                new { targetPath = target, fileName = "a.pdf", fileSize = 6L * 1024 * 1024 * 1024 }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.PostAsJsonAsync("/api/upload-sessions",
+                new { targetPath = "/files/customers/x", fileName = "a.pdf", fileSize = 10 }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // The module still applies its own rules: an executable is refused, and the
+        // staged file stays so the request could be sent again.
+        var refusedId = await Stage("ghi-chu.exe");
+        (await Send(target, refusedId)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await Client.GetAsync($"/api/upload-sessions/{refusedId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        var sessionId = await Stage("giay-phep-kinh-doanh.pdf");
+        // Bound to the request it was opened for.
+        var otherCustomer = await CreateIndividualCustomerAsync("Other customer");
+        (await Send($"/api/customers/{otherCustomer}/documents", sessionId))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var upload = await Send(target, sessionId);
+        upload.StatusCode.Should().Be(HttpStatusCode.Created, await upload.Content.ReadAsStringAsync());
+        var document = await ReadJsonAsync(upload);
+        document.GetProperty("originalFileName").GetString().Should().Be("giay-phep-kinh-doanh.pdf");
+        var stored = await Client.GetAsync(
+            $"/api/customers/{customerId}/documents/{document.GetProperty("id").GetInt32()}/content");
+        (await stored.Content.ReadAsByteArrayAsync()).Should().Equal(content);
+        // Used once: the session closed with the successful request.
+        (await Client.GetAsync($"/api/upload-sessions/{sessionId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await Send(target, sessionId)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Documents_AsOwner_CanUploadListAndDelete()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));

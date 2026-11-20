@@ -34,8 +34,6 @@ import type {
   ContractTimelineEvent,
 } from "./types/contractDocuments";
 import { postIdempotent, managedFileName } from "./helpers";
-import { CHUNKED_UPLOAD_THRESHOLD_BYTES } from "@/lib/chunkedUpload";
-import { uploadContractFileInChunks } from "./contractChunkedUpload";
 
 export const contractsApi = {
   listContracts: (params?: ContractListParams) =>
@@ -145,13 +143,6 @@ export const contractsApi = {
   deleteContractAppendix: (contractId: number, voId: number) =>
     api.delete(`/contracts/${contractId}/appendices/${voId}`),
   uploadContractAppendixFile: (contractId: number, file: File) => {
-    // Large files go in resumable chunks; the result is the same stored file.
-    if (file.size > CHUNKED_UPLOAD_THRESHOLD_BYTES)
-      return uploadContractFileInChunks(contractId, "Appendix", file, (uploadSessionId) =>
-        api.post<AppendixUploadResponse>(`/contracts/${contractId}/appendices/files/from-upload`, {
-          uploadSessionId,
-        }),
-      );
     const form = new FormData();
     form.append("file", file);
     return api.post<AppendixUploadResponse>(`/contracts/${contractId}/appendices/files`, form, {
@@ -174,15 +165,6 @@ export const contractsApi = {
     kind: ContractAttachmentKind,
     label?: string,
   ) => {
-    // Large files go in resumable chunks; the result is the same attachment.
-    if (file.size > CHUNKED_UPLOAD_THRESHOLD_BYTES)
-      return uploadContractFileInChunks(contractId, "Attachment", file, (uploadSessionId) =>
-        api.post<ContractAttachmentResponse>(`/contracts/${contractId}/attachments/from-upload`, {
-          uploadSessionId,
-          kind,
-          label,
-        }),
-      );
     const form = new FormData();
     form.append("file", file);
     form.append("kind", kind);

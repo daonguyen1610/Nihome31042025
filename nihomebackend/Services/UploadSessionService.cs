@@ -17,12 +17,13 @@ public enum UploadChunkStatus
 
 public sealed record UploadChunkResult(UploadChunkStatus Status, long ReceivedBytes);
 
-public sealed record CompletedUpload(string StagingPath, string FileName, long FileSize);
+public sealed record CompletedUpload(Guid Id, string StagingPath, string FileName, long FileSize);
 
 /// <summary>
-/// Resumable chunked uploads. A session belongs to the user who opened it; chunks must
-/// arrive in order, a resent chunk that was already stored is accepted without writing
-/// it twice, and the staged file only becomes usable once every byte is in.
+/// Resumable chunked uploads for every module. A session belongs to the user who opened
+/// it and to the upload request it was opened for; chunks must arrive in order, a resent
+/// chunk that was already stored is accepted without writing it twice, and the staged
+/// file only becomes usable once every byte is in.
 /// </summary>
 public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment env)
 {
@@ -42,16 +43,21 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
 
     public string StagingPath(Guid id) => Path.Combine(StagingDirectory, $"{id:N}.part");
 
-    public async Task<UploadSession> CreateAsync(int userId, UploadSessionPurpose purpose, int contextId,
-        string fileName, long fileSize, CancellationToken ct = default)
+    /// <summary>Open sessions one user may keep at a time (a batch is at most 20 files).</summary>
+    public const int MaxOpenSessionsPerUser = 50;
+
+    public Task<int> CountOpenAsync(int userId, CancellationToken ct = default) =>
+        db.UploadSessions.CountAsync(item => item.UserId == userId && item.ExpiresAt > DateTime.UtcNow, ct);
+
+    public async Task<UploadSession> CreateAsync(int userId, string targetPath, string fileName, long fileSize,
+        CancellationToken ct = default)
     {
         var now = DateTime.UtcNow;
         var session = new UploadSession
         {
             Id = Guid.NewGuid(),
             UserId = userId,
-            Purpose = purpose,
-            ContextId = contextId,
+            TargetPath = targetPath,
             FileName = fileName,
             FileSize = fileSize,
             CreatedAt = now,
@@ -131,41 +137,71 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     }
 
     /// <summary>
-    /// Hands the finished file of the caller's session to <paramref name="consume"/>, under
-    /// the session's lock so a double submit cannot take it twice. The session closes only
-    /// when consume moved the file away; if consume throws or leaves the file in place, the
-    /// session and its bytes stay so the completion can be retried without uploading again.
-    /// Null when the session is not theirs, not for this record, or still missing bytes.
+    /// Holds the finished files of the caller's sessions for the upload request at
+    /// <paramref name="targetPath"/>, under each session's lock so a double submit cannot
+    /// use them twice. Null when any session is not theirs, not for this request, or still
+    /// missing bytes. The caller closes the sessions only when its request succeeded, so a
+    /// failed request can be sent again without uploading the files again.
     /// </summary>
-    public async Task<T?> CompleteAsync<T>(Guid id, int userId, UploadSessionPurpose purpose, int contextId,
-        Func<CompletedUpload, Task<T>> consume, CancellationToken ct = default) where T : class
+    public async Task<HeldUploads?> HoldCompletedAsync(IReadOnlyCollection<Guid> ids, int userId, string targetPath,
+        CancellationToken ct = default)
     {
-        // Only real sessions get a lock, so unknown ids cannot grow the lock table.
-        if (await FindAsync(id, userId, ct) is null) return null;
-        var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct);
+        var held = new HeldUploads(this);
         try
         {
-            // Read again under the lock: a concurrent completion may have taken it meanwhile.
-            var session = await FindAsync(id, userId, ct);
-            if (session is null || session.Purpose != purpose || session.ContextId != contextId ||
-                session.ReceivedBytes != session.FileSize)
-                return null;
-            if (!StagedFileHolds(id, session.FileSize, exactly: true))
+            // A fixed order, so two requests holding the same sessions cannot deadlock.
+            foreach (var id in ids.Distinct().Order())
             {
-                // The staged bytes were lost (e.g. App_Data replaced): nothing left to resume.
-                await ReleaseAsync(id, ct);
-                return null;
+                // Only real sessions get a lock, so unknown ids cannot grow the lock table.
+                if (await FindAsync(id, userId, ct) is null) return await held.AbandonAsync();
+                var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+                await gate.WaitAsync(ct);
+                held.Gates.Add(gate);
+                // Read again under the lock: a concurrent request may have used it meanwhile.
+                var session = await FindAsync(id, userId, ct);
+                if (session is null || !string.Equals(session.TargetPath, targetPath, StringComparison.OrdinalIgnoreCase) ||
+                    session.ReceivedBytes != session.FileSize)
+                    return await held.AbandonAsync();
+                if (!StagedFileHolds(id, session.FileSize, exactly: true))
+                {
+                    // The staged bytes were lost (e.g. App_Data replaced): nothing left to resume.
+                    await ReleaseAsync(id, ct);
+                    return await held.AbandonAsync();
+                }
+                held.Files.Add(new CompletedUpload(id, StagingPath(id), session.FileName, session.FileSize));
             }
-
-            var result = await consume(new CompletedUpload(StagingPath(id), session.FileName, session.FileSize));
-            // The file now lives elsewhere; closing must not depend on the request still running.
-            if (!File.Exists(StagingPath(id))) await ReleaseAsync(id, CancellationToken.None);
-            return result;
+            return held;
         }
-        finally
+        catch
         {
-            gate.Release();
+            await held.AbandonAsync();
+            throw;
+        }
+    }
+
+    /// <summary>Finished files held for one request; disposing lets other requests at them.</summary>
+    public sealed class HeldUploads(UploadSessionService owner) : IAsyncDisposable
+    {
+        internal List<SemaphoreSlim> Gates { get; } = [];
+        public List<CompletedUpload> Files { get; } = [];
+
+        /// <summary>The request succeeded: drop the sessions and their staged bytes.</summary>
+        public async Task CloseAsync()
+        {
+            foreach (var file in Files) await owner.ReleaseAsync(file.Id, CancellationToken.None);
+        }
+
+        internal async Task<HeldUploads?> AbandonAsync()
+        {
+            await DisposeAsync();
+            return null;
+        }
+
+        public ValueTask DisposeAsync()
+        {
+            foreach (var gate in Gates) gate.Release();
+            Gates.Clear();
+            return ValueTask.CompletedTask;
         }
     }
 

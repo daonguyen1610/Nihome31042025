@@ -330,9 +330,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         {
             session.ToTable("upload_sessions");
             session.HasKey(item => item.Id);
-            session.Property(item => item.Purpose).HasConversion<string>().HasMaxLength(40);
+            session.Property(item => item.TargetPath).HasMaxLength(UploadSession.TargetPathMaxLength);
             session.Property(item => item.FileName).HasMaxLength(255);
             session.HasIndex(item => item.ExpiresAt);
+            session.HasIndex(item => item.UserId);
         });
         modelBuilder.Entity<IdempotencyRecord>().ToTable("idempotency_records");
         modelBuilder.Entity<IdempotencyRecord>().HasKey(r => r.Id);
