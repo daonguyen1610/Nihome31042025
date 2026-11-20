@@ -13,6 +13,8 @@ export interface QuoteCurrentApproval {
   role: string;
   current: number;
   total: number;
+  /** False when that person can no longer approve, so Sales takes the quote back. */
+  available: boolean;
 }
 
 /** Shows which step of the quote flow the quotation is at, who acts next and what to press. */
@@ -36,18 +38,20 @@ export function QuoteProgressPanel({
         : -1;
   const nextText =
     progress.kind === "active"
-      ? progress.step === "internal"
-        ? t("quotes.progress.next.internalStep", {
-            name: currentApproval?.name ?? "—",
-            role: ownerOf("internal"),
-            current: currentApproval?.current ?? 1,
-            total: currentApproval?.total ?? 1,
-          })
-        : t(
-            progress.ready
-              ? `quotes.progress.next.${progress.step}Ready`
-              : `quotes.progress.next.${progress.step}`,
-          )
+      ? progress.step === "internal" && currentApproval?.available === false
+        ? t("quotes.progress.next.internalBlocked", { name: currentApproval.name })
+        : progress.step === "internal"
+          ? t("quotes.progress.next.internalStep", {
+              name: currentApproval?.name ?? "—",
+              role: ownerOf("internal"),
+              current: currentApproval?.current ?? 1,
+              total: currentApproval?.total ?? 1,
+            })
+          : t(
+              progress.ready
+                ? `quotes.progress.next.${progress.step}Ready`
+                : `quotes.progress.next.${progress.step}`,
+            )
       : progress.kind === "done"
         ? t("quotes.progress.done")
         : t("quotes.progress.stopped", { status: t(`quotes.status.${props.status}`) });

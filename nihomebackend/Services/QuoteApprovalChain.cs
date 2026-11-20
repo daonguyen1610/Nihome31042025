@@ -48,7 +48,7 @@ public static class QuoteApprovalChain
         var configured = (steps ?? [])
             .Where(step => !string.IsNullOrWhiteSpace(step.ApproverRoleCode))
             .OrderBy(step => step.Order)
-            .Select(step => new QuoteWorkflowStep(step.Order, step.Name.Trim(), step.ApproverRoleCode.Trim(),
+            .Select(step => new QuoteWorkflowStep(step.Order, (step.Name ?? "").Trim(), step.ApproverRoleCode.Trim(),
                 step.SlaHours, step.RequireAllApprovers))
             .ToList();
         return configured.Count > 0 ? configured : [Default];
@@ -68,6 +68,17 @@ public static class QuoteApprovalChain
     }
 
     public static string Write(IEnumerable<QuoteApprovalStep> steps) => JsonSerializer.Serialize(steps, Json);
+
+    // Each written step reads "approverUserId":{id},"approverName":..., so the id is followed
+    // by a comma: 12 never matches 120.
+    private static string ApproverToken(int userId) => $"\"approverUserId\":{userId},";
+
+    /// <summary>SQL LIKE pattern for quotes whose chain includes the user, at any step.</summary>
+    public static string ApproverPattern(int userId) => $"%{ApproverToken(userId)}%";
+
+    /// <summary>True when the user approves a step of this chain (before, at or after their turn).</summary>
+    public static bool Includes(string? stepsJson, int userId) =>
+        stepsJson is not null && stepsJson.Contains(ApproverToken(userId), StringComparison.Ordinal);
 
     /// <summary>The role that decides now: the current step's, or the Procurement Manager for a quote sent before chains.</summary>
     public static string CurrentRoleCode(string? stepsJson, int? stepIndex)

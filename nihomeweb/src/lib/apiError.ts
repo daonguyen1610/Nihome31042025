@@ -122,7 +122,48 @@ export function isConcurrencyConflict(err: unknown): boolean {
 }
 
 /** Localized UI boundary: preserve safe API reasons; never expose runtime failures. */
-export function getUiError(err: unknown, t: (key: string) => string, fallback?: string): string {
+type Translate = (key: string, params?: Record<string, string | number>) => string;
+
+/**
+ * Business errors that carry a stable code and the values their message needs (a person,
+ * a step, a role), so the reason reads in the user's language with those details.
+ */
+const CODED_ERRORS: Record<string, string> = {
+  QUOTE_APPROVAL_NOT_YOUR_TURN: "quotes.error.notYourTurn",
+  QUOTE_APPROVAL_NOT_CHOSEN: "quotes.error.notChosen",
+  QUOTE_APPROVAL_ROLE_LOST: "quotes.error.roleLost",
+  QUOTE_NEXT_APPROVER_UNAVAILABLE: "quotes.error.nextApproverUnavailable",
+  QUOTE_WITHDRAW_APPROVER_AVAILABLE: "quotes.error.withdrawApproverAvailable",
+  QUOTE_APPROVAL_STEP_NO_APPROVER: "quotes.error.stepNoApprover",
+  QUOTE_APPROVAL_STEP_UNCHOSEN: "quotes.error.stepUnchosen",
+  QUOTE_APPROVAL_STEP_INVALID_APPROVER: "quotes.error.stepInvalidApprover",
+  QUOTE_APPROVAL_CHAIN_CHANGED: "quotes.error.chainChanged",
+  QUOTE_APPROVAL_PERSON_TWICE: "quotes.error.personTwice",
+  QUOTE_WORKFLOW_ROLE_INACTIVE: "workflow.error.roleInactive",
+  QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE: "workflow.error.roleCannotApprove",
+  QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED: "workflow.error.everyoneRoleRepeated",
+};
+
+/** The localized message for a coded business error, or null when the code is not one of them. */
+export function codedErrorMessage(data: unknown, t: Translate): string | null {
+  if (!data || typeof data !== "object" || !("code" in data) || typeof data.code !== "string")
+    return null;
+  const key = CODED_ERRORS[data.code];
+  if (!key) return null;
+  const raw =
+    "params" in data && data.params && typeof data.params === "object"
+      ? (data.params as Record<string, unknown>)
+      : {};
+  const params: Record<string, string | number> = {};
+  for (const [name, value] of Object.entries(raw))
+    if (typeof value === "string" || typeof value === "number") params[name] = value;
+  // A role is named by its translation key, so it reads in the user's language.
+  if (typeof raw.roleLabelKey === "string" || typeof raw.roleName === "string")
+    params.role = raw.roleLabelKey ? t(String(raw.roleLabelKey)) : String(raw.roleName ?? "");
+  return t(key, params);
+}
+
+export function getUiError(err: unknown, t: Translate, fallback?: string): string {
   const failure = err as {
     code?: string;
     name?: string;
@@ -153,6 +194,8 @@ export function getUiError(err: unknown, t: (key: string) => string, fallback?: 
     ("detail" in data && typeof data.detail === "string") ||
     ("errors" in data && typeof data.errors === "object" && data.errors !== null);
   if (!hasReason) return t("auth.err.unexpected");
+  const coded = codedErrorMessage(data, t);
+  if (coded) return coded;
   const message = extractApiError(err, t("auth.err.unexpected"), t);
   if (
     /\bat\s+\S+\([^)]*:\d+|\b(?:SqlException|System\.[A-Z]\w*Exception|TypeError|ReferenceError)\b|(?:\/app\/|[A-Z]:\\)/.test(

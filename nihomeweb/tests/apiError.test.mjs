@@ -284,3 +284,53 @@ test("a field error given as a single string is shown as it is", () => {
   const failure = { response: { status: 400, data: { errors: { Name: "Tên là bắt buộc." } } } };
   assert.equal(extractApiError(failure), "Name: Tên là bắt buộc.");
 });
+
+test("coded approval errors read in the user's language with the person, step and role", () => {
+  const messages = {
+    "quotes.error.notYourTurn": "Not your turn: waiting for {name} at step {current} of {total}.",
+    "workflow.error.roleCannotApprove": "{role} cannot view and approve quotes.",
+    "rbac.role.BGD.label": "Board of Directors",
+  };
+  const translate = (key, params = {}) =>
+    (messages[key] ?? key).replace(/\{(\w+)\}/g, (_, name) => String(params[name] ?? ""));
+
+  assert.equal(
+    getUiError(
+      failure({
+        code: "QUOTE_APPROVAL_NOT_YOUR_TURN",
+        message: "Chưa tới lượt bạn duyệt.",
+        params: { name: "Nguyễn Thị Thu Trang", current: 1, total: 2 },
+      }),
+      translate,
+    ),
+    "Not your turn: waiting for Nguyễn Thị Thu Trang at step 1 of 2.",
+  );
+  // The role comes from its label key, so it is translated too; without a key, its name.
+  assert.equal(
+    getUiError(
+      failure({
+        code: "QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE",
+        message: "Vai trò Ban Giám đốc chưa có quyền.",
+        params: { roleLabelKey: "rbac.role.BGD.label", roleName: "BGD" },
+      }),
+      translate,
+    ),
+    "Board of Directors cannot view and approve quotes.",
+  );
+  assert.equal(
+    getUiError(
+      failure({
+        code: "QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE",
+        message: "x",
+        params: { roleLabelKey: "", roleName: "Site lead" },
+      }),
+      translate,
+    ),
+    "Site lead cannot view and approve quotes.",
+  );
+  // An unknown code keeps the server's own reason.
+  assert.equal(
+    getUiError(failure({ code: "SOMETHING_ELSE", message: "Lý do từ máy chủ." }), translate),
+    "Lý do từ máy chủ.",
+  );
+});

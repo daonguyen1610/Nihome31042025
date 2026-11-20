@@ -33,6 +33,12 @@ public interface IQuoteApprovalEmailService
 
     /// <summary>True when the user may decide the quote's current step (active, in the step's role).</summary>
     Task<bool> HoldsRoleAsync(int userId, string roleCode, CancellationToken ct);
+
+    /// <summary>
+    /// True when the user may approve a step of this role now: active, in the active role,
+    /// with a valid email and permission to view and approve quotes.
+    /// </summary>
+    Task<bool> IsEligibleApproverAsync(int userId, string roleCode, CancellationToken ct);
 }
 
 public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionProvider protection,
@@ -100,10 +106,9 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         for (var index = 0; index < chain.Count; index++)
         {
             var step = chain[index];
-            var label = await RoleNameAsync(step.RoleLabelKey, step.RoleName, ct);
             if (step.Candidates.Count == 0)
-                throw new QuoteOperationException(
-                    $"Bước {index + 1} ({label}) chưa có ai đủ điều kiện duyệt báo giá: cần tài khoản đang hoạt động, khác người gửi, có email hợp lệ và quyền xem, duyệt báo giá. Nhờ quản trị kiểm tra Phân quyền hoặc Cấu hình → Luồng duyệt.");
+                throw await StepErrorAsync(step, index, "QUOTE_APPROVAL_STEP_NO_APPROVER", label =>
+                    $"Bước {index + 1} ({label}) chưa có ai đủ điều kiện duyệt báo giá: cần tài khoản đang hoạt động, khác người gửi, có email hợp lệ và quyền xem, duyệt báo giá. Nhờ quản trị kiểm tra Phân quyền hoặc Cấu hình → Luồng duyệt.", ct);
             IReadOnlyList<QuoteApprovalCandidateResponse> people;
             if (step.EveryoneApproves)
             {
@@ -112,27 +117,52 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             else
             {
                 if (!picks.TryDequeue(out var chosenId))
-                    throw new QuoteOperationException($"Chọn người duyệt cho bước {index + 1} ({label}).");
-                people = [step.Candidates.FirstOrDefault(candidate => candidate.Id == chosenId)
-                    ?? throw new QuoteOperationException(
-                        $"Bước {index + 1}: chọn một {label} khác người gửi, đang hoạt động, có quyền xem và duyệt báo giá cùng email hợp lệ (ví dụ: ten@nicon.vn).")];
+                    throw await StepErrorAsync(step, index, "QUOTE_APPROVAL_STEP_UNCHOSEN",
+                        label => $"Chọn người duyệt cho bước {index + 1} ({label}).", ct);
+                var person = step.Candidates.FirstOrDefault(candidate => candidate.Id == chosenId);
+                if (person is null)
+                    throw await StepErrorAsync(step, index, "QUOTE_APPROVAL_STEP_INVALID_APPROVER", label =>
+                        $"Bước {index + 1}: chọn một {label} khác người gửi, đang hoạt động, có quyền xem và duyệt báo giá cùng email hợp lệ (ví dụ: ten@nicon.vn).", ct);
+                people = [person];
             }
             result.AddRange(people.Select(person => new QuoteApprovalStep(step.Order, step.Name, step.RoleCode,
                 step.RoleLabelKey, step.SlaHours, person.Id, person.Name, null, null)));
         }
         if (picks.Count > 0)
-            throw new QuoteOperationException("Luồng duyệt vừa thay đổi. Tải lại trang rồi chọn lại người duyệt.");
-        if (result.Select(step => step.ApproverUserId).Distinct().Count() != result.Count)
-            throw new QuoteOperationException("Mỗi người chỉ duyệt một bước. Chọn người khác cho các bước còn lại.");
+            throw new QuoteOperationException("Luồng duyệt vừa thay đổi. Tải lại trang rồi chọn lại người duyệt.",
+                "QUOTE_APPROVAL_CHAIN_CHANGED", new Dictionary<string, object>());
+        var repeated = result.GroupBy(step => step.ApproverUserId).FirstOrDefault(group => group.Count() > 1);
+        if (repeated is not null)
+            throw new QuoteOperationException(
+                $"Mỗi người chỉ duyệt một bước: {repeated.First().ApproverName} đang ở nhiều bước. Chọn người khác cho các bước còn lại.",
+                "QUOTE_APPROVAL_PERSON_TWICE", new Dictionary<string, object> { ["name"] = repeated.First().ApproverName });
         return result;
     }
 
-    private async Task<string> RoleNameAsync(string? labelKey, string fallback, CancellationToken ct) =>
-        labelKey is null
-            ? fallback
-            : await db.Translations.AsNoTracking()
-                .Where(row => row.Key == labelKey && row.LanguageCode == "vi")
-                .Select(row => row.Value).FirstOrDefaultAsync(ct) ?? fallback;
+    // The role name is read only for the error, never on the happy path.
+    private async Task<QuoteOperationException> StepErrorAsync(QuoteApprovalChainStepResponse step, int index,
+        string code, Func<string, string> message, CancellationToken ct) =>
+        new(message(await SourceLabels.VietnameseAsync(db, step.RoleLabelKey, step.RoleName, ct)), code,
+            new Dictionary<string, object>
+            {
+                ["step"] = index + 1,
+                ["roleLabelKey"] = step.RoleLabelKey ?? "",
+                ["roleName"] = step.RoleName,
+            });
+
+    /// <summary>
+    /// True when the user may approve a step of this role now: active, in the active role,
+    /// with a valid email and permission to view and approve quotes (as for the candidates).
+    /// </summary>
+    public async Task<bool> IsEligibleApproverAsync(int userId, string roleCode, CancellationToken ct)
+    {
+        var email = await db.Users.AsNoTracking()
+            .Where(user => user.Id == userId && user.IsActive && user.RoleEntity != null &&
+                user.RoleEntity.IsActive && user.RoleEntity.Code == roleCode)
+            .Select(user => user.Email).FirstOrDefaultAsync(ct);
+        return email is not null && ContactValidation.IsValidEmail(email) &&
+            await HasQuoteApproverAccessAsync(userId, ct);
+    }
 
     private async Task<(Quote Quote, ApplicationUser Approver, List<QuoteApprovalStep> Chain, string[] CcEmails, QuoteApprovalTemplate Message, string Hash)> RenderAsync(
         int quoteId, IReadOnlyList<int> chosenApprovers, string? rowVersion, int callerId, bool canSeeAll, CancellationToken ct)

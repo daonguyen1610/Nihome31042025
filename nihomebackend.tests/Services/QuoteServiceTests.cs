@@ -45,6 +45,11 @@ public class QuoteServiceTests : IDisposable
             .Returns<int, string, CancellationToken>((userId, roleCode, ct) => _db.Users.AnyAsync(user =>
                 user.Id == userId && user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
                 user.RoleEntity.Code == roleCode, ct));
+        _approvalEmails.Setup(service => service.IsEligibleApproverAsync(
+                It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<int, string, CancellationToken>((userId, roleCode, ct) => _db.Users.AnyAsync(user =>
+                user.Id == userId && user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
+                user.RoleEntity.Code == roleCode, ct));
         _quoteSpreadsheet = new Mock<IQuoteSpreadsheetService>();
         _quoteSpreadsheet
             .Setup(service => service.CreateAsync(

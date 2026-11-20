@@ -1345,7 +1345,7 @@ Trang quản trị ở `/admin`, dành cho người đã đăng nhập và có q
 
 - Thêm hoặc sửa luồng: chọn **Nghiệp vụ cần duyệt** (nghiệp vụ đã có luồng sẽ mờ, vì mỗi nghiệp vụ chỉ có một luồng), đặt tên, rồi với mỗi bước chỉ cần chọn **Vai trò duyệt**. Tên bước để trống thì hệ thống ghi theo vai trò, ví dụ "Trưởng phòng Cung ứng duyệt". **Thời hạn xử lý** tính bằng giờ (24 giờ = 1 ngày). Tắt **Đang áp dụng** để tạm ngưng luồng mà không xoá.
 - Mã kỹ thuật chỉ cần nhập khi chọn **Nghiệp vụ khác**.
-- Luồng **Duyệt báo giá** được áp dụng thật: khi gửi duyệt, người gửi chọn người cho từng bước theo đúng thứ tự ở đây (xem mục **Gửi duyệt báo giá nội bộ** ở [12.2](#122-mẫu-email-và-email-gửi-duyệt)). Vai trò ở mỗi bước phải có quyền "Xem báo giá" và "Duyệt báo giá"; thiếu quyền thì không lưu được và hệ thống nói rõ cần cấp quyền gì ở Phân quyền. Sửa luồng chỉ áp dụng cho lần gửi duyệt sau; báo giá đang chờ giữ chuỗi lúc gửi.
+- Luồng **Duyệt báo giá** được áp dụng thật: khi gửi duyệt, người gửi chọn người cho từng bước theo đúng thứ tự ở đây (xem mục **Gửi duyệt báo giá nội bộ** ở [12.2](#122-mẫu-email-và-email-gửi-duyệt)). Vai trò ở mỗi bước phải đang dùng và có quyền "Xem báo giá", "Duyệt báo giá"; vai trò có bước "mọi người đều phải duyệt" không lặp lại ở bước khác. Sai thì không lưu được, và hệ thống nói rõ cần sửa gì. Nếu một bước đã lưu từ trước mà nay không ai duyệt được (vai trò ngừng dùng, thiếu quyền, hoặc chưa có ai đang hoạt động có email), danh sách đánh dấu bước đó và ghi cách xử lý. Sửa luồng chỉ áp dụng cho lần gửi duyệt sau; báo giá đang chờ giữ chuỗi lúc gửi.
 - Các luồng khác (hợp đồng, gói thầu, thiết kế) hiện là quy trình chung để mọi người làm theo; người duyệt trên từng phiếu do màn hình của nghiệp vụ đó áp dụng.
 
 **Xuất Excel.** Các danh sách liên hệ, hồ sơ ứng tuyển, bài đăng, dự án, bản dịch, danh mục hoạt động, hình thức làm việc, logo (khách hàng, đối tác, nhà cung cấp, giải thưởng) có nút **Xuất Excel**, tải dữ liệu đang lọc dưới dạng CSV UTF-8 mở được bằng Excel. Nút bị khóa khi danh sách trống.
@@ -1457,7 +1457,12 @@ Mở **Mẫu email** (`/admin/email-templates`, cần quyền quản lý cài đ
 3. Trang báo giá hiện từng bước: người duyệt, đã duyệt lúc nào, bước đang chờ và hạn xử lý, cùng trạng thái gửi email.
 4. Người của bước đang chờ bấm **Duyệt** (xác nhận) hoặc **Từ chối duyệt** (bắt buộc ghi lý do). Duyệt một bước thì báo giá chuyển cho người bước sau, kèm email và thông báo; duyệt bước cuối thì báo giá thành Đã duyệt. Từ chối ở bất kỳ bước nào thì báo giá về Nháp để Kinh doanh sửa và gửi lại.
 
-Chỉ người của bước đang chờ duyệt hoặc từ chối được; người bước sau phải chờ tới lượt. Việc duyệt làm trên hệ thống; email chỉ chứa liên kết. Báo giá đã gửi giữ nguyên chuỗi lúc gửi, kể cả khi quản trị đổi luồng sau đó; báo giá đang chờ từ trước khi có chuỗi vẫn do Trưởng phòng Cung ứng đã chọn quyết định. "Cần kiểm tra" không có nghĩa là chưa gửi được: nhờ quản trị viên kiểm tra SMTP và hỏi người duyệt trước khi gửi lại. Báo giá Chờ duyệt cũ chưa có người duyệt cần xử lý nghiệp vụ trước khi quyết định.
+Chỉ người của bước đang chờ duyệt hoặc từ chối được; người bước sau phải chờ tới lượt (hệ thống báo đang chờ ai, ở bước mấy). Người trong chuỗi xem được báo giá cả trước và sau lượt của mình.
+
+Khi một người duyệt nghỉ việc, đổi vai trò hoặc mất quyền:
+- Trang báo giá ghi "Không còn đủ điều kiện duyệt" ở bước của họ, trước khi ai bấm gì.
+- Người bước sau không còn đủ điều kiện: người đang duyệt không chuyển tiếp được. Họ **Từ chối duyệt** để Kinh doanh gửi lại với người khác, hoặc nhờ quản trị khôi phục tài khoản, quyền.
+- Người đang giữ báo giá không còn đủ điều kiện: Kinh doanh bấm **Rút lại để chọn người duyệt khác** (có xác nhận). Báo giá về Nháp để chọn lại người duyệt rồi gửi lại. Nút này chỉ có khi người đang giữ thật sự không duyệt được nữa. Việc duyệt làm trên hệ thống; email chỉ chứa liên kết. Báo giá đã gửi giữ nguyên chuỗi lúc gửi, kể cả khi quản trị đổi luồng sau đó; báo giá đang chờ từ trước khi có chuỗi vẫn do Trưởng phòng Cung ứng đã chọn quyết định. "Cần kiểm tra" không có nghĩa là chưa gửi được: nhờ quản trị viên kiểm tra SMTP và hỏi người duyệt trước khi gửi lại. Báo giá Chờ duyệt cũ chưa có người duyệt cần xử lý nghiệp vụ trước khi quyết định.
 
 **Gửi duyệt giá đầu vào và rà soát Tài chính**
 

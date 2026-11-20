@@ -58,6 +58,63 @@ public class WorkflowConfigServiceTests : IDisposable
         Assert.Equal("contracts", contracts.Module);
     }
 
+    [Fact]
+    public async Task Create_QuoteWorkflow_RejectsAnInactiveRole()
+    {
+        _db.Roles.Single(role => role.Code == "BGD").IsActive = false;
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<WorkflowConfigValidationException>(() => _sut.CreateAsync(
+            Req(steps: [(1, "Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER"), (2, "Ban Giám đốc duyệt", "BGD")])));
+
+        Assert.Equal("QUOTE_WORKFLOW_ROLE_INACTIVE", error.Code);
+        Assert.Equal("BGD", error.Parameters!["roleName"]);
+    }
+
+    [Fact]
+    public async Task Create_QuoteWorkflow_RejectsAnEveryoneStepRoleRepeated()
+    {
+        var request = Req(steps: [(1, "Ban Giám đốc duyệt", "BGD"), (2, "Ban Giám đốc phê duyệt", "BGD")]);
+        request.Steps[1].RequireAllApprovers = true;
+
+        var error = await Assert.ThrowsAsync<WorkflowConfigValidationException>(() => _sut.CreateAsync(request));
+
+        Assert.Equal("QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED", error.Code);
+        // The same role in two steps where one person is chosen each time is allowed.
+        request.Steps[1].RequireAllApprovers = false;
+        Assert.Equal(2, (await _sut.CreateAsync(request)).Steps.Count);
+    }
+
+    [Fact]
+    public async Task Get_QuoteWorkflow_NamesStepsNobodyCanApproveToday()
+    {
+        // As a row saved before the checks existed: a role without the grants, and a role
+        // with them but nobody in it.
+        _db.WorkflowConfigs.Add(new WorkflowConfig
+        {
+            Module = "quotes",
+            Action = "approve",
+            Name = "Duyệt báo giá",
+            StepsJson = """[{"order":1,"name":"Quản lý dự án duyệt","approverRoleCode":"PM","slaHours":24,"requireAllApprovers":false},{"order":2,"name":"Ban Giám đốc duyệt","approverRoleCode":"BGD","slaHours":24,"requireAllApprovers":false}]""",
+        });
+        _db.WorkflowConfigs.Add(new WorkflowConfig
+        {
+            Module = "contracts",
+            Action = "sign",
+            Name = "Ký hợp đồng",
+            StepsJson = """[{"order":1,"name":"Quản lý dự án duyệt","approverRoleCode":"PM","slaHours":24,"requireAllApprovers":false}]""",
+        });
+        await _db.SaveChangesAsync();
+
+        var all = await _sut.ListAsync(includeInactive: true);
+
+        var quote = all.Single(item => item.Module == "quotes");
+        Assert.Equal([(1, "RoleCannotApprove"), (2, "NoEligibleUser")],
+            quote.StepIssues.Select(issue => (issue.Order, issue.Issue)).ToList());
+        // Other workflows are not applied, so they carry no issues.
+        Assert.Empty(all.Single(item => item.Module == "contracts").StepIssues);
+    }
+
     private static UpsertWorkflowConfigRequest Req(
         string module = "quotes",
         string action = "approve",

@@ -47,7 +47,7 @@ public class WorkflowsController(IWorkflowConfigService svc) : ControllerBase
         }
         catch (WorkflowConfigValidationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
     }
 
@@ -67,7 +67,7 @@ public class WorkflowsController(IWorkflowConfigService svc) : ControllerBase
         }
         catch (WorkflowConfigValidationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
     }
 

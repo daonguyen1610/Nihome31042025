@@ -30,6 +30,15 @@ public class WorkflowConfigDuplicateException(string module, string action)
 /// Thrown when the caller-supplied step list violates a config-level rule
 /// (empty, duplicate order values, unknown approver role).
 /// </summary>
-public class WorkflowConfigValidationException(string message) : InvalidOperationException(message)
+/// <param name="code">Stable code the client maps to a localized message, when it needs one.</param>
+/// <param name="parameters">Values that message needs, such as the role.</param>
+public class WorkflowConfigValidationException(string message, string? code = null,
+    IReadOnlyDictionary<string, object>? parameters = null) : InvalidOperationException(message)
 {
+    public string? Code => code;
+    public IReadOnlyDictionary<string, object>? Parameters => parameters;
+
+    public object ToResponse() => Code is null
+        ? new { message = Message }
+        : new { message = Message, code = Code, @params = Parameters };
 }

@@ -16,8 +16,18 @@ export interface WorkflowConfig {
   isActive: boolean;
   sortOrder: number;
   steps: WorkflowStep[];
+  /** Steps of an applied workflow (quote approval) that nobody can approve today. */
+  stepIssues?: WorkflowStepIssue[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface WorkflowStepIssue {
+  order: number;
+  roleCode: string;
+  roleLabelKey?: string | null;
+  roleName: string;
+  issue: "RoleInactive" | "RoleCannotApprove" | "NoEligibleUser";
 }
 
 export interface UpsertWorkflowConfigRequest {

@@ -1,3 +1,5 @@
+import type { APIRequestContext } from "@playwright/test";
+import { execSql } from "../fixtures/db";
 import { expect, test, TEST_USERS } from "../fixtures/auth";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
 import { approveProjectBoq } from "../fixtures/projectBoq";
@@ -5,6 +7,99 @@ import { approveProjectBoq } from "../fixtures/projectBoq";
 // Quotes follow the approval chain in Cấu hình → Luồng duyệt: the sender chooses one
 // approver per step and the steps decide in turn. Rules and edge cases are covered by
 // QuotesControllerTests; this checks the screens people use for it.
+
+// Both tests set the shared quote workflow, so they run one after the other.
+test.describe.configure({ mode: "serial" });
+
+type Headers = Record<string, string>;
+type Step = { approverRoleCode: string; name: string };
+type WorkflowRow = { id: number; module: string; action: string };
+
+/** Applies a quote approval chain and returns the workflow as it was, to put back. */
+async function applyQuoteChain(api: APIRequestContext, admin: Headers, steps: Step[]) {
+  const workflows = (await (
+    await api.get("/api/workflows?includeInactive=true", { headers: admin })
+  ).json()) as WorkflowRow[];
+  const original = workflows.find((w) => w.module === "quotes" && w.action === "approve")!;
+  const saved = await api.put(`/api/workflows/${original.id}`, {
+    headers: admin,
+    data: {
+      ...original,
+      steps: steps.map((step, index) => ({
+        order: index + 1,
+        ...step,
+        slaHours: 24,
+        requireAllApprovers: false,
+      })),
+    },
+  });
+  expect(saved.status(), await saved.text()).toBe(200);
+  return original;
+}
+
+/** A Sales lead converted to a project with an approved BOQ, and its draft BOQ quote. */
+async function createSalesQuote(api: APIRequestContext, admin: Headers, sale: Headers) {
+  const suffix = Math.random().toString(36).slice(2, 8);
+  const created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
+  const lead = await api.post("/api/leads", {
+    headers: sale,
+    data: {
+      name: `Nhà xưởng Tân Uyên ${suffix}`,
+      phone: `0913${Math.floor(100000 + Math.random() * 899999)}`,
+      sourceCode: "marketing",
+    },
+  });
+  expect(lead.status(), await lead.text()).toBe(201);
+  const converted = await (
+    await api.post(`/api/leads/${(await lead.json()).id}/convert`, {
+      headers: sale,
+      data: { address: "KCN Tân Uyên, Bình Dương", representativeName: "Võ Thanh Tâm" },
+    })
+  ).json();
+  created.customerId = converted.convertedCustomerId;
+  created.opportunityId = converted.convertedOpportunityId;
+  created.projectId = (
+    await (await api.get(`/api/opportunities/${created.opportunityId}`, { headers: sale })).json()
+  ).operationalProjectId;
+  for (const targetStage of ["Qualification", "Proposal", "Negotiation"])
+    await api.patch(`/api/opportunities/${created.opportunityId}/stage`, {
+      headers: sale,
+      data: { targetStage },
+    });
+  const boq = await approveProjectBoq(api, admin, created.projectId, [
+    { name: "Thi công kết cấu thép nhà xưởng", unit: "tấn", quantity: 120, unitPrice: 28_500_000 },
+  ]);
+  const quote = await api.post("/api/quotes", {
+    headers: sale,
+    data: {
+      opportunityId: created.opportunityId,
+      method: "Boq",
+      packageDescription: "Nhà xưởng thép Tân Uyên",
+      projectBoqRevisionId: boq.id,
+      vatPercent: 8,
+    },
+  });
+  expect(quote.status(), await quote.text()).toBe(201);
+  const body = (await quote.json()) as { id: number; code: string };
+  created.quoteId = body.id;
+  created.code = body.code;
+  return created;
+}
+
+async function removeSalesQuote(
+  api: APIRequestContext,
+  admin: Headers,
+  created: { customerId: number; opportunityId: number; projectId: number; quoteId: number },
+) {
+  if (created.quoteId) await hardDeleteBusinessRoot(api, admin, `/api/quotes/${created.quoteId}`);
+  if (created.opportunityId)
+    await hardDeleteBusinessRoot(api, admin, `/api/opportunities/${created.opportunityId}`);
+  if (created.projectId)
+    await hardDeleteBusinessRoot(api, admin, `/api/operational-projects/${created.projectId}`);
+  if (created.customerId)
+    await hardDeleteBusinessRoot(api, admin, `/api/customers/${created.customerId}`);
+}
+
 test("a quote is approved step by step along the configured chain", async ({
   page,
   api,
@@ -14,87 +109,15 @@ test("a quote is approved step by step along the configured chain", async ({
   test.setTimeout(240_000);
   const admin = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
   const sale = { Authorization: `Bearer ${await loginAs(TEST_USERS.sale)}` };
-  const suffix = Math.random().toString(36).slice(2, 8);
-  const workflows = (await (
-    await api.get("/api/workflows?includeInactive=true", { headers: admin })
-  ).json()) as { id: number; module: string; action: string }[];
-  const original = workflows.find((w) => w.module === "quotes" && w.action === "approve")!;
-  let customerId = 0;
-  let opportunityId = 0;
-  let projectId = 0;
-  let quoteId = 0;
+  const original = await applyQuoteChain(api, admin, [
+    { name: "Trưởng phòng Cung ứng duyệt", approverRoleCode: "PROCUREMENT_MANAGER" },
+    { name: "Trưởng phòng Kinh doanh duyệt", approverRoleCode: "SALES_MANAGER" },
+  ]);
+  let created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
 
   try {
-    const chain = await api.put(`/api/workflows/${original.id}`, {
-      headers: admin,
-      data: {
-        ...original,
-        steps: [
-          {
-            order: 1,
-            name: "Trưởng phòng Cung ứng duyệt",
-            approverRoleCode: "PROCUREMENT_MANAGER",
-            slaHours: 24,
-            requireAllApprovers: false,
-          },
-          {
-            order: 2,
-            name: "Trưởng phòng Kinh doanh duyệt",
-            approverRoleCode: "SALES_MANAGER",
-            slaHours: 24,
-            requireAllApprovers: false,
-          },
-        ],
-      },
-    });
-    expect(chain.status(), await chain.text()).toBe(200);
-
-    const lead = await api.post("/api/leads", {
-      headers: sale,
-      data: {
-        name: `Nhà xưởng Tân Uyên ${suffix}`,
-        phone: `0913${Math.floor(100000 + Math.random() * 899999)}`,
-        sourceCode: "marketing",
-      },
-    });
-    expect(lead.status(), await lead.text()).toBe(201);
-    const converted = await (
-      await api.post(`/api/leads/${(await lead.json()).id}/convert`, {
-        headers: sale,
-        data: { address: "KCN Tân Uyên, Bình Dương", representativeName: "Võ Thanh Tâm" },
-      })
-    ).json();
-    customerId = converted.convertedCustomerId;
-    opportunityId = converted.convertedOpportunityId;
-    projectId = (
-      await (await api.get(`/api/opportunities/${opportunityId}`, { headers: sale })).json()
-    ).operationalProjectId;
-    for (const targetStage of ["Qualification", "Proposal", "Negotiation"])
-      await api.patch(`/api/opportunities/${opportunityId}/stage`, {
-        headers: sale,
-        data: { targetStage },
-      });
-    const boq = await approveProjectBoq(api, admin, projectId, [
-      {
-        name: "Thi công kết cấu thép nhà xưởng",
-        unit: "tấn",
-        quantity: 120,
-        unitPrice: 28_500_000,
-      },
-    ]);
-    const created = await api.post("/api/quotes", {
-      headers: sale,
-      data: {
-        opportunityId,
-        method: "Boq",
-        packageDescription: "Nhà xưởng thép Tân Uyên",
-        projectBoqRevisionId: boq.id,
-        vatPercent: 8,
-      },
-    });
-    expect(created.status(), await created.text()).toBe(201);
-    const code = ((await created.json()) as { id: number; code: string }).code;
-    quoteId = (await created.json()).id;
+    created = await createSalesQuote(api, admin, sale);
+    const { quoteId, code } = created;
 
     // Sales chooses one approver for each step.
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
@@ -141,11 +164,82 @@ test("a quote is approved step by step along the configured chain", async ({
     ]);
   } finally {
     await api.put(`/api/workflows/${original.id}`, { headers: admin, data: original });
-    if (quoteId) await hardDeleteBusinessRoot(api, admin, `/api/quotes/${quoteId}`);
-    if (opportunityId)
-      await hardDeleteBusinessRoot(api, admin, `/api/opportunities/${opportunityId}`);
-    if (projectId)
-      await hardDeleteBusinessRoot(api, admin, `/api/operational-projects/${projectId}`);
-    if (customerId) await hardDeleteBusinessRoot(api, admin, `/api/customers/${customerId}`);
+    await removeSalesQuote(api, admin, created);
+  }
+});
+
+// When the person a waiting quote is with can no longer approve it, the quote says so and
+// Sales takes it back to choose someone else, instead of it waiting forever.
+test("a quote whose approver can no longer decide it is taken back by Sales", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  test.setTimeout(240_000);
+  const admin = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const sale = { Authorization: `Bearer ${await loginAs(TEST_USERS.sale)}` };
+  const original = await applyQuoteChain(api, admin, [
+    { name: "Trưởng phòng Cung ứng duyệt", approverRoleCode: "PROCUREMENT_MANAGER" },
+  ]);
+  const stamp = Date.now().toString().slice(-7);
+  let approverId = 0;
+  let created = { customerId: 0, opportunityId: 0, projectId: 0, quoteId: 0, code: "" };
+
+  try {
+    // A Head of Procurement of its own, so the seeded one stays active for other tests.
+    // Administrators here cannot manage users through the API, so it copies the seeded
+    // one's role in SQL, as other fixtures do for setup without a public API.
+    const inserted = execSql(
+      `SET NOCOUNT ON; INSERT INTO users (PhoneNumber, FullName, Email, PasswordHash, Role, IsActive, RoleEntityId)
+       OUTPUT INSERTED.Id
+       SELECT N'0917${stamp}', N'Lâm Quốc Bảo ${stamp}', N'quoc.bao.${stamp}@e2e.nihome.local',
+              PasswordHash, Role, 1, RoleEntityId
+       FROM users WHERE PhoneNumber = N'${TEST_USERS.procurementManager.phoneNumber}'`,
+    );
+    approverId = Number(inserted.trim().split(/\s+/)[0]);
+    expect(approverId, inserted).toBeGreaterThan(0);
+
+    created = await createSalesQuote(api, admin, sale);
+    const { quoteId, code } = created;
+    const draft = await (await api.get(`/api/quotes/${quoteId}`, { headers: sale })).json();
+    const preview = await api.post(`/api/quotes/${quoteId}/approval-email-preview`, {
+      headers: sale,
+      data: { approverUserIds: [approverId], rowVersion: draft.rowVersion },
+    });
+    expect(preview.status(), await preview.text()).toBe(200);
+    const submitted = await api.post(`/api/quotes/${quoteId}/submit`, {
+      headers: sale,
+      data: {
+        approverUserIds: [approverId],
+        rowVersion: draft.rowVersion,
+        previewToken: (await preview.json()).previewToken,
+      },
+    });
+    expect(submitted.status(), await submitted.text()).toBe(200);
+    // The approver leaves NICON while the quote waits.
+    execSql(`UPDATE users SET IsActive = 0 WHERE Id = ${approverId}`);
+
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    await loginInBrowserAs(page, TEST_USERS.sale);
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    const card = page.getByTestId("quote-approval-email-status");
+    await expect(card).toContainText(
+      `Lâm Quốc Bảo ${stamp} không còn đủ điều kiện duyệt báo giá này`,
+    );
+    await card.getByTestId("quote-withdraw-approval").click();
+    // Taking back is not a deletion: the confirmation says what it does.
+    const confirm = page.getByRole("alertdialog");
+    await expect(confirm.getByRole("button", { name: "Xoá" })).toHaveCount(0);
+    await confirm.getByRole("button", { name: "Rút lại báo giá" }).click();
+    await expect(page.getByText(`Đã rút lại báo giá ${code} về Nháp`).first()).toBeVisible();
+    await expect(page.getByRole("button", { name: "Gửi duyệt" })).toBeVisible();
+    const back = await (await api.get(`/api/quotes/${quoteId}`, { headers: sale })).json();
+    expect(back.status).toBe("Draft");
+    expect(back.approvalApproverUserId ?? null).toBeNull();
+  } finally {
+    await api.put(`/api/workflows/${original.id}`, { headers: admin, data: original });
+    await removeSalesQuote(api, admin, created);
+    if (approverId) execSql(`DELETE FROM users WHERE Id = ${approverId}`);
   }
 });

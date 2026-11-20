@@ -961,6 +961,7 @@ như Customer. Truy cập theo owner, `crm.quotes.view.all` cho xem chéo owner.
 | `POST` | `/api/quotes/{id}/send` | `crm.quotes.send` | Gửi kèm file `.xlsx` |
 | `GET` | `/api/quotes/{id}/export.xlsx?lang=vi` | `crm.quotes.view` | Workbook báo giá `vi`/`en`/`zh`/`ja` |
 | `GET` | `/api/quotes/{id}/approval-chain` | `crm.quotes.manage` | Các bước của luồng `quotes|approve` kèm người duyệt hợp lệ mỗi bước |
+| `POST` | `/api/quotes/{id}/withdraw-approval` | `crm.quotes.manage` | PendingApproval → Draft, chỉ khi người duyệt hiện tại không còn đủ điều kiện |
 | `GET` | `/api/quotes/{id}/approval-candidates` | — | Người duyệt hợp lệ của bước 1 (client một bước) |
 | `POST` | `/api/quotes/{id}/approval-email-preview` | — | Preview email duyệt |
 | `POST` | `/api/quotes/{id}/submit` | — | Draft → PendingApproval |
@@ -995,12 +996,34 @@ có luồng đang bật thì một bước `PROCUREMENT_MANAGER`, theo ghi chú 
   `PROCUREMENT_MANAGER`.
 - `approve` của bước chưa cuối giữ `PendingApproval`, ghi `DecidedAt`, chuyển
   `ApprovalApproverUserId` sang người bước sau và xếp hàng email yêu cầu cho họ trong cùng
-  lần lưu (thông báo in-app qua `quote.approval-requested`); bước cuối chuyển `Approved`
-  và gửi email quyết định cho người trình. `reject-internal` ở bước nào cũng về `Draft` và
-  xoá chuỗi. Người gọi phải là người của bước hiện tại, còn giữ role của bước; người bước
-  sau gọi sớm nhận thông báo "chưa tới lượt".
-- Lưu luồng `quotes|approve` bị từ chối khi role của một bước thiếu `crm.quotes.view` hoặc
-  `crm.quotes.approve` (`WorkflowConfigService.ValidateAsync`).
+  lần lưu (thông báo in-app qua `quote.approval-requested`), nhật ký ghi `ApproveStep`;
+  bước cuối chuyển `Approved`, ghi `Approve` và gửi email quyết định cho người trình.
+  Trước khi chuyển, người bước sau phải còn đủ điều kiện
+  (`IQuoteApprovalEmailService.IsEligibleApproverAsync`: đang hoạt động, đúng role đang bật,
+  email hợp lệ, có `crm.quotes.view` + `crm.quotes.approve`); không thì 400
+  `QUOTE_NEXT_APPROVER_UNAVAILABLE` và báo giá ở nguyên bước hiện tại. `reject-internal` ở
+  bước nào cũng về `Draft` và xoá chuỗi. Người gọi phải là người của bước hiện tại, còn giữ
+  role của bước; người bước sau gọi sớm nhận `QUOTE_APPROVAL_NOT_YOUR_TURN`.
+- `GET /api/quotes/{id}` của báo giá đang chờ trả `approvalSteps[].available` cho các bước chưa
+  duyệt và `approvalApproverAvailable` cho người đang giữ báo giá. Khi người đang giữ không
+  còn đủ điều kiện, người có `crm.quotes.manage` (chủ báo giá, hoặc `view.all`) gọi
+  `withdraw-approval` để về `Draft` (nhật ký `WithdrawApproval`, ghi chú tuỳ chọn); khi họ
+  còn đủ điều kiện thì 400 `QUOTE_WITHDRAW_APPROVER_AVAILABLE`.
+- Người có tên trong chuỗi (trước, đúng hoặc sau lượt) xem được báo giá, `project-boq` và
+  thấy nó trong danh sách dù không có `crm.quotes.view.all`
+  (`QuoteApprovalChain.Includes`/`ApproverPattern`, so `"approverUserId":{id},`).
+- Lưu luồng `quotes|approve` (`WorkflowConfigService.ValidateAsync`) bị từ chối khi role của
+  một bước đã ngừng dùng (`QUOTE_WORKFLOW_ROLE_INACTIVE`), thiếu grant đang bật
+  `crm.quotes.view`/`approve` (`QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE`), hoặc role có bước
+  `requireAllApprovers` lặp ở bước khác (`QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED`). Danh sách và
+  chi tiết luồng trả `stepIssues` (`RoleInactive`, `RoleCannotApprove`, `NoEligibleUser`)
+  cho dòng đã lưu trước khi có các kiểm tra này.
+- Lỗi chặn của chuỗi duyệt trả `{ message, code, params }`: `message` tiếng Việt cho log và
+  audit; frontend dịch theo `code` (`CODED_ERRORS` trong `src/lib/apiError.ts`), vai trò lấy
+  từ `params.roleLabelKey`. Các mã: `QUOTE_APPROVAL_STEP_NO_APPROVER`, `_STEP_UNCHOSEN`,
+  `_STEP_INVALID_APPROVER`, `_CHAIN_CHANGED`, `_PERSON_TWICE`, `_NOT_YOUR_TURN`,
+  `_NOT_CHOSEN`, `_ROLE_LOST`, `QUOTE_NEXT_APPROVER_UNAVAILABLE`,
+  `QUOTE_WITHDRAW_APPROVER_AVAILABLE` và ba mã `QUOTE_WORKFLOW_*` ở trên.
 - `approval-email-preview` trả To (người duyệt bước 1),
   subject/HTML đã render, các CC hợp lệ và `previewToken` 15 phút. CC là thành
   viên đang hoạt động của dự án vận hành có quyền xem báo giá (owner hoặc

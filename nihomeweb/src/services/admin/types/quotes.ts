@@ -131,6 +131,8 @@ export interface QuoteResponse {
   submittedAt?: string;
   approvalApproverUserId?: number | null;
   approvalApproverName?: string | null;
+  /** While waiting: false when the person it is with can no longer approve it. */
+  approvalApproverAvailable?: boolean | null;
   approvalEmailStatus?: "Pending" | "Sending" | "Sent" | "NeedsReview" | null;
   approvalEmailSentAt?: string | null;
   approvedAt?: string;
@@ -272,6 +274,8 @@ export interface QuoteApprovalStep {
   state: "Approved" | "Current" | "Waiting";
   decidedAt?: string | null;
   dueAt?: string | null;
+  /** False when this approver can no longer approve (deactivated, other role, no permission). */
+  available?: boolean;
 }
 
 /** A step of the quote workflow for the next submission, with who may approve it. */

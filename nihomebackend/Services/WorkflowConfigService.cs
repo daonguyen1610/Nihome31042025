@@ -31,13 +31,15 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
             .ThenBy(w => w.SortOrder)
             .ThenBy(w => w.Action)
             .ToListAsync(ct);
-        return rows.Select(MapToResponse).ToList();
+        var responses = rows.Select(MapToResponse).ToList();
+        foreach (var response in responses) await AddQuoteStepIssuesAsync(response, ct);
+        return responses;
     }
 
     public async Task<WorkflowConfigResponse?> GetByIdAsync(int id, CancellationToken ct = default)
     {
         var entity = await db.WorkflowConfigs.AsNoTracking().FirstOrDefaultAsync(w => w.Id == id, ct);
-        return entity == null ? null : MapToResponse(entity);
+        return entity == null ? null : await AddQuoteStepIssuesAsync(MapToResponse(entity), ct);
     }
 
     public async Task<WorkflowConfigResponse> CreateAsync(
@@ -60,7 +62,7 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
         db.WorkflowConfigs.Add(entity);
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Created workflow config {Id} ({Module}/{Action})", entity.Id, entity.Module, entity.Action);
-        return MapToResponse(entity);
+        return await AddQuoteStepIssuesAsync(MapToResponse(entity), ct);
     }
 
     public async Task<WorkflowConfigResponse?> UpdateAsync(
@@ -86,7 +88,7 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
         entity.UpdatedAt = DateTime.UtcNow;
         await db.SaveChangesAsync(ct);
         logger.LogInformation("Updated workflow config {Id} ({Module}/{Action})", entity.Id, entity.Module, entity.Action);
-        return MapToResponse(entity);
+        return await AddQuoteStepIssuesAsync(MapToResponse(entity), ct);
     }
 
     public async Task<bool> DeleteAsync(int id, CancellationToken ct = default)
@@ -138,29 +140,41 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
                 $"Unknown approver role code(s): {string.Join(", ", unknown)}.");
         }
 
-        // The quote workflow is applied when a quote is sent for approval, so each step's
-        // role must be able to open and approve quotes, or nobody could decide that step.
+        // The quote workflow is applied when a quote is sent for approval, so every step must
+        // be one that someone can decide.
         if (module == QuoteApprovalChain.Module && action == QuoteApprovalChain.Action)
         {
-            var quoteCodes = new[] { "view", "approve" };
-            var missing = await db.Roles.AsNoTracking()
-                .Where(role => approverRoleCodes.Contains(role.Code) &&
-                    db.Permissions.Count(permission => permission.Module == "crm.quotes" &&
-                        quoteCodes.Contains(permission.Action) &&
-                        db.RolePermissions.Any(grant => grant.RoleId == role.Id && grant.PermissionId == permission.Id)) < quoteCodes.Length)
-                .Select(role => new { role.Name, role.LabelKey })
-                .ToListAsync(ct);
-            if (missing.Count > 0)
+            var issues = await QuoteRoleIssuesAsync(approverRoleCodes, ct);
+            var blocking = issues.Values.FirstOrDefault(issue => issue.Issue != NoEligibleUser);
+            if (blocking is not null)
             {
-                var names = new List<string>();
-                foreach (var role in missing)
+                var parameters = new Dictionary<string, object>
                 {
-                    names.Add(role.LabelKey is null ? role.Name : await db.Translations.AsNoTracking()
-                        .Where(row => row.Key == role.LabelKey && row.LanguageCode == "vi")
-                        .Select(row => row.Value).FirstOrDefaultAsync(ct) ?? role.Name);
-                }
+                    ["roleLabelKey"] = blocking.RoleLabelKey ?? "",
+                    ["roleName"] = blocking.RoleName,
+                };
+                var name = await SourceLabels.VietnameseAsync(db, blocking.RoleLabelKey, blocking.RoleName, ct);
+                throw blocking.Issue == RoleInactive
+                    ? new WorkflowConfigValidationException(
+                        $"Vai trò {name} đã ngừng dùng nên không ai duyệt được bước này. Chọn vai trò đang dùng, hoặc bật lại vai trò ở Phân quyền.",
+                        "QUOTE_WORKFLOW_ROLE_INACTIVE", parameters)
+                    : new WorkflowConfigValidationException(
+                        $"Vai trò {name} chưa có quyền xem và duyệt báo giá nên không duyệt được bước này. Cấp quyền \"Xem báo giá\" và \"Duyệt báo giá\" cho vai trò này ở Phân quyền, rồi lưu lại luồng.",
+                        "QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE", parameters);
+            }
+            // Everyone in an "everyone approves" step is in the chain once already, so the same
+            // role in another step would put each of them in it twice: no quote could be sent.
+            var repeated = req.Steps.GroupBy(step => step.ApproverRoleCode.Trim(), StringComparer.OrdinalIgnoreCase)
+                .FirstOrDefault(group => group.Count() > 1 && group.Any(step => step.RequireAllApprovers));
+            if (repeated is not null)
+            {
+                var role = await db.Roles.AsNoTracking().Where(item => item.Code == repeated.Key)
+                    .Select(item => new { item.Name, item.LabelKey }).FirstAsync(ct);
+                var name = await SourceLabels.VietnameseAsync(db, role.LabelKey, role.Name, ct);
                 throw new WorkflowConfigValidationException(
-                    $"Vai trò {string.Join(", ", names)} chưa có quyền xem và duyệt báo giá nên không duyệt được bước này. Cấp quyền \"Xem báo giá\" và \"Duyệt báo giá\" cho vai trò này ở Phân quyền, rồi lưu lại luồng.");
+                    $"Vai trò {name} có bước \"mọi người đều phải duyệt\" nên không lặp lại ở bước khác: mỗi người chỉ duyệt một bước. Gộp các bước của vai trò này làm một.",
+                    "QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED",
+                    new Dictionary<string, object> { ["roleLabelKey"] = role.LabelKey ?? "", ["roleName"] = role.Name });
             }
         }
 
@@ -171,6 +185,65 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
         {
             throw new WorkflowConfigDuplicateException(module, action);
         }
+    }
+
+    private const string RoleInactive = "RoleInactive";
+    private const string RoleCannotApprove = "RoleCannotApprove";
+    private const string NoEligibleUser = "NoEligibleUser";
+    private static readonly string[] QuoteApproverActions = ["view", "approve"];
+
+    private sealed record RoleIssue(string RoleCode, string? RoleLabelKey, string RoleName, string Issue);
+
+    /// <summary>
+    /// Why nobody can approve a quote step of each role, if so: the role is inactive, lacks
+    /// the active quote view/approve grants (the grants the permission check reads), or has
+    /// no active member with a usable email.
+    /// </summary>
+    private async Task<Dictionary<string, RoleIssue>> QuoteRoleIssuesAsync(IReadOnlyCollection<string> roleCodes,
+        CancellationToken ct)
+    {
+        var roles = await db.Roles.AsNoTracking()
+            .Where(role => roleCodes.Contains(role.Code))
+            .Select(role => new
+            {
+                role.Id,
+                role.Code,
+                role.Name,
+                role.LabelKey,
+                role.IsActive,
+                Grants = db.RolePermissions.Count(grant => grant.RoleId == role.Id && grant.Permission.IsActive &&
+                    grant.Permission.Module == "crm.quotes" && QuoteApproverActions.Contains(grant.Permission.Action)),
+            }).ToListAsync(ct);
+        var roleIds = roles.Select(role => role.Id).ToList();
+        var emails = await db.Users.AsNoTracking()
+            .Where(user => user.IsActive && user.RoleEntityId != null && roleIds.Contains(user.RoleEntityId.Value))
+            .Select(user => new { RoleId = user.RoleEntityId!.Value, user.Email }).ToListAsync(ct);
+        var issues = new Dictionary<string, RoleIssue>(StringComparer.OrdinalIgnoreCase);
+        foreach (var role in roles)
+        {
+            var issue = !role.IsActive ? RoleInactive
+                : role.Grants < QuoteApproverActions.Length ? RoleCannotApprove
+                : !emails.Any(user => user.RoleId == role.Id && ContactValidation.IsValidEmail(user.Email)) ? NoEligibleUser
+                : null;
+            if (issue is not null) issues[role.Code] = new RoleIssue(role.Code, role.LabelKey, role.Name, issue);
+        }
+        return issues;
+    }
+
+    private async Task<WorkflowConfigResponse> AddQuoteStepIssuesAsync(WorkflowConfigResponse response, CancellationToken ct)
+    {
+        if (response.Module != QuoteApprovalChain.Module || response.Action != QuoteApprovalChain.Action)
+            return response;
+        var issues = await QuoteRoleIssuesAsync(
+            response.Steps.Select(step => step.ApproverRoleCode).Distinct().ToList(), ct);
+        response.StepIssues = response.Steps
+            .Where(step => issues.ContainsKey(step.ApproverRoleCode))
+            .Select(step =>
+            {
+                var issue = issues[step.ApproverRoleCode];
+                return new WorkflowStepIssueResponse(step.Order, issue.RoleCode, issue.RoleLabelKey, issue.RoleName, issue.Issue);
+            }).ToList();
+        return response;
     }
 
     private static string Normalize(string value) =>

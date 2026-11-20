@@ -12,14 +12,17 @@ import {
   ArrowDown,
   ChevronRight,
   Info,
+  AlertTriangle,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
 import { useToast } from "@/hooks/use-toast";
+import { useUiError } from "@/hooks/useUiError";
 import {
   adminApi,
   type WorkflowConfig,
   type WorkflowStep,
+  type WorkflowStepIssue,
   type UpsertWorkflowConfigRequest,
 } from "@/services/adminApi";
 import { rbacApi, type RoleResponse } from "@/services/rbacApi";
@@ -102,27 +105,10 @@ const emptyForm: FormData = {
   steps: [blankStep(1)],
 };
 
-const getErrorMessage = (error: unknown): string | undefined => {
-  if (
-    typeof error === "object" &&
-    error !== null &&
-    "response" in error &&
-    typeof error.response === "object" &&
-    error.response !== null &&
-    "data" in error.response &&
-    typeof error.response.data === "object" &&
-    error.response.data !== null
-  ) {
-    const data = error.response.data as { detail?: unknown; message?: unknown };
-    if (typeof data.detail === "string") return data.detail;
-    if (typeof data.message === "string") return data.message;
-  }
-  return undefined;
-};
-
 const Workflows = () => {
   const confirmAction = useConfirm();
   const { t, tSource } = useI18n();
+  const uiError = useUiError();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManage = has(ADMIN_PERMS.workflowManage);
@@ -142,11 +128,11 @@ const Workflows = () => {
       // Every role, so a step naming a role that was since deactivated still reads by name.
       setRoles(r.data);
     } catch (err) {
-      setError(getErrorMessage(err) ?? t("common.error"));
+      setError(uiError(err));
     } finally {
       setLoading(false);
     }
-  }, [t]);
+  }, [uiError]);
 
   useEffect(() => {
     void load();
@@ -186,28 +172,72 @@ const Workflows = () => {
     );
   }, [workflows, query, roleLabel]);
 
-  const renderChain = (w: WorkflowConfig) => (
-    <ol
-      className="flex flex-wrap items-center gap-x-1.5 gap-y-1"
-      aria-label={t("workflow.field.chain")}
-    >
-      {[...w.steps]
-        .sort((a, b) => a.order - b.order)
-        .map((step, index) => (
-          <li key={`${step.order}-${step.approverRoleCode}`} className="flex items-center gap-1.5">
-            {index > 0 && (
-              <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
-            )}
-            <span className="inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-0.5 text-xs">
-              <span className="tabular-nums text-muted-foreground">{index + 1}</span>
-              <span className="font-medium text-foreground">
-                {roleLabel(step.approverRoleCode)}
-              </span>
-            </span>
-          </li>
-        ))}
-    </ol>
-  );
+  // Why nobody can approve a step of an applied workflow (the quote approval), in words.
+  const issueText = (issue: WorkflowStepIssue, stepNumber: number) =>
+    t(`workflow.issue.${issue.issue}`, {
+      n: stepNumber,
+      role: issue.roleLabelKey ? t(issue.roleLabelKey) : roleLabel(issue.roleCode),
+    });
+  const issueFor = (w: WorkflowConfig | undefined, step: WorkflowStep) =>
+    w?.stepIssues?.find(
+      (issue) => issue.order === step.order && issue.roleCode === step.approverRoleCode,
+    );
+
+  const renderChain = (w: WorkflowConfig) => {
+    const steps = [...w.steps].sort((a, b) => a.order - b.order);
+    const issues = steps.flatMap((step, index) => {
+      const issue = issueFor(w, step);
+      return issue ? [{ issue, n: index + 1 }] : [];
+    });
+    return (
+      <div className="space-y-1.5">
+        <ol
+          className="flex flex-wrap items-center gap-x-1.5 gap-y-1"
+          aria-label={t("workflow.field.chain")}
+        >
+          {steps.map((step, index) => {
+            const blocked = issueFor(w, step) != null;
+            return (
+              <li
+                key={`${step.order}-${step.approverRoleCode}`}
+                className="flex items-center gap-1.5"
+              >
+                {index > 0 && (
+                  <ChevronRight
+                    className="h-3.5 w-3.5 shrink-0 text-muted-foreground"
+                    aria-hidden
+                  />
+                )}
+                <span
+                  className={
+                    blocked
+                      ? "inline-flex items-center gap-1.5 rounded-md border border-destructive/50 bg-destructive/5 px-2 py-0.5 text-xs"
+                      : "inline-flex items-center gap-1.5 rounded-md border bg-muted/40 px-2 py-0.5 text-xs"
+                  }
+                >
+                  {blocked ? (
+                    <AlertTriangle className="h-3 w-3 text-destructive" aria-hidden />
+                  ) : (
+                    <span className="tabular-nums text-muted-foreground">{index + 1}</span>
+                  )}
+                  <span className="font-medium text-foreground">
+                    {roleLabel(step.approverRoleCode)}
+                  </span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+        {issues.length > 0 && (
+          <ul className="space-y-0.5 text-xs text-destructive" data-testid="wf-step-issues">
+            {issues.map(({ issue, n }) => (
+              <li key={`${issue.order}-${issue.roleCode}`}>{issueText(issue, n)}</li>
+            ))}
+          </ul>
+        )}
+      </div>
+    );
+  };
 
   const visibleIds = useMemo(() => filtered.map((w) => w.id), [filtered]);
   const {
@@ -248,6 +278,10 @@ const Workflows = () => {
     );
     return known ? businessKeyOf(known.module, known.action) : OTHER_BUSINESS;
   }, [form.module, form.action, otherBusiness]);
+  const editingWorkflow = useMemo(
+    () => workflows.find((workflow) => workflow.id === editingId),
+    [workflows, editingId],
+  );
   const takenBusiness = useMemo(
     () =>
       new Set(
@@ -410,7 +444,7 @@ const Workflows = () => {
       setDialogOpen(false);
       await load();
     } catch (err) {
-      setFormError(getErrorMessage(err) ?? t("common.error"));
+      setFormError(uiError(err));
     } finally {
       setSaving(false);
     }
@@ -425,7 +459,7 @@ const Workflows = () => {
     } catch (err) {
       toast({
         title: t("common.error"),
-        description: getErrorMessage(err),
+        description: uiError(err),
         variant: "destructive",
       });
     }
@@ -869,6 +903,15 @@ const Workflows = () => {
                             )}
                         </SelectContent>
                       </Select>
+                      {(() => {
+                        // The saved step's problem, while its role is unchanged in the form.
+                        const issue = issueFor(editingWorkflow, step);
+                        return issue ? (
+                          <p role="alert" className="text-xs text-destructive">
+                            {issueText(issue, idx + 1)}
+                          </p>
+                        ) : null;
+                      })()}
                     </FieldScope>
                     <div className="grid gap-3 sm:grid-cols-2">
                       <FieldScope className="space-y-1">
