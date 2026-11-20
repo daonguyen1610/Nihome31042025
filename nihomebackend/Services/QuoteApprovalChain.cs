@@ -76,6 +76,13 @@ public static class QuoteApprovalChain
     /// <summary>SQL LIKE pattern for quotes whose chain includes the user, at any step.</summary>
     public static string ApproverPattern(int userId) => $"%{ApproverToken(userId)}%";
 
+    /// <summary>
+    /// Who may read a quote without permission to see every quote: its owner, and everyone in
+    /// its approval chain, before, at and after their turn. Changes stay with the owner.
+    /// </summary>
+    public static bool CanRead(int? ownerUserId, int? approverUserId, string? stepsJson, int userId) =>
+        ownerUserId == userId || approverUserId == userId || Includes(stepsJson, userId);
+
     /// <summary>True when the user approves a step of this chain (before, at or after their turn).</summary>
     public static bool Includes(string? stepsJson, int userId) =>
         stepsJson is not null && stepsJson.Contains(ApproverToken(userId), StringComparison.Ordinal);

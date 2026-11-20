@@ -105,6 +105,11 @@ test("an approval workflow is set up by business action and approver, without co
       "placeholder",
       "Ban Giám đốc duyệt",
     );
+    // A step nobody can approve is refused, naming the step and what to do. Not saved.
+    await quoteDialog.getByRole("button", { name: "Lưu luồng duyệt" }).click();
+    await expect(quoteDialog.getByRole("alert").last()).toContainText(
+      "Bước 1 (Ban Giám đốc): vai trò chưa có quyền xem và duyệt báo giá",
+    );
     await quoteDialog.getByRole("button", { name: "Huỷ" }).click();
   } finally {
     const all = (await (

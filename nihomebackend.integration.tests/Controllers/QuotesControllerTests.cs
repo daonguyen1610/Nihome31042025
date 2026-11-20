@@ -616,7 +616,12 @@ public class QuotesControllerTests : IntegrationTestBase
         // The Board has no quote approval permission, so nobody could decide that step.
         var response = await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("BGD", false));
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("chưa có quyền xem và duyệt báo giá");
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("code").GetString().Should().Be("QUOTE_WORKFLOW_STEPS_BLOCKED");
+        var item = body.GetProperty("params").GetProperty("items").EnumerateArray().Single();
+        item.GetProperty("step").GetInt32().Should().Be(2);
+        item.GetProperty("issue").GetString().Should().Be("RoleCannotApprove");
+        item.GetProperty("roleLabelKey").GetString().Should().Be("rbac.role.BGD.label");
     });
 
     [Fact]
@@ -685,10 +690,25 @@ public class QuotesControllerTests : IntegrationTestBase
         var quoteId = await CreateQuoteAsync();
         (await SubmitWithApprovalAsync(quoteId)).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Negative: while the Procurement Manager can still decide, Sales cannot take it back.
-        var early = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval", new { });
-        early.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await ReadJsonAsync(early)).GetProperty("code").GetString().Should().Be("QUOTE_WITHDRAW_APPROVER_AVAILABLE");
+        // Negative: without the version the user saw, nothing is withdrawn.
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval", new { }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // Negative: while the Procurement Manager can still decide, Sales cannot take it back,
+        // even when their email no longer works (it only affects the request email).
+        var procurementId = await UserIdAsync("PROCUREMENT_MANAGER");
+        var email = await WithDbAsync(db => db.Users.Where(user => user.Id == procurementId)
+            .Select(user => user.Email).SingleAsync());
+        await SetUserEmailAsync(procurementId, "khong-con-email");
+        try
+        {
+            var early = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval",
+                new { rowVersion = await QuoteRowVersionAsync(quoteId) });
+            early.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(early)).GetProperty("code").GetString().Should().Be("QUOTE_WITHDRAW_APPROVER_AVAILABLE");
+            (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}")))
+                .GetProperty("approvalApproverAvailable").GetBoolean().Should().BeTrue();
+        }
+        finally { await SetUserEmailAsync(procurementId, email); }
 
         var procurement = await UserIdAsync("PROCUREMENT_MANAGER");
         await WithUserInactiveAsync(procurement, async () =>
@@ -697,7 +717,7 @@ public class QuotesControllerTests : IntegrationTestBase
             shown.GetProperty("approvalApproverAvailable").GetBoolean().Should().BeFalse();
 
             var withdrawn = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval",
-                new { note = "Trưởng phòng Cung ứng nghỉ phép dài ngày" });
+                new { note = "Trưởng phòng Cung ứng nghỉ phép dài ngày", rowVersion = await QuoteRowVersionAsync(quoteId) });
             withdrawn.StatusCode.Should().Be(HttpStatusCode.OK, await withdrawn.Content.ReadAsStringAsync());
             var quote = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
             quote.Status.Should().Be(QuoteStatus.Draft);
@@ -725,6 +745,9 @@ public class QuotesControllerTests : IntegrationTestBase
             await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
             (await Client.GetAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.OK);
             (await Client.GetAsync($"/api/quotes/{quoteId}/project-boq")).StatusCode.Should().Be(HttpStatusCode.OK);
+            // What they need to decide: earlier versions and the quote's documents.
+            (await Client.GetAsync($"/api/quotes/{quoteId}/versions")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await Client.GetAsync($"/api/quotes/{quoteId}/documents")).StatusCode.Should().Be(HttpStatusCode.OK);
             var listed = await ReadJsonAsync(await Client.GetAsync("/api/quotes?pageSize=200"));
             listed.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("id").GetInt32())
                 .Should().Contain(quoteId);
@@ -774,6 +797,15 @@ public class QuotesControllerTests : IntegrationTestBase
         body.GetProperty("code").GetString().Should().Be("QUOTE_APPROVAL_STEP_NO_APPROVER");
         body.GetProperty("params").GetProperty("step").GetInt32().Should().Be(2);
         body.GetProperty("params").GetProperty("roleLabelKey").GetString().Should().Be("rbac.role.BGD.label");
+    });
+
+    private async Task<string?> QuoteRowVersionAsync(int quoteId) =>
+        (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"))).GetProperty("rowVersion").GetString();
+
+    private Task<int> SetUserEmailAsync(int userId, string email) => WithDbAsync(async db =>
+    {
+        (await db.Users.SingleAsync(user => user.Id == userId)).Email = email;
+        return await db.SaveChangesAsync();
     });
 
     /// <summary>Runs a test while the user is deactivated, then turns them back on.</summary>

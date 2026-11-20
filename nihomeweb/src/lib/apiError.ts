@@ -139,8 +139,7 @@ const CODED_ERRORS: Record<string, string> = {
   QUOTE_APPROVAL_STEP_INVALID_APPROVER: "quotes.error.stepInvalidApprover",
   QUOTE_APPROVAL_CHAIN_CHANGED: "quotes.error.chainChanged",
   QUOTE_APPROVAL_PERSON_TWICE: "quotes.error.personTwice",
-  QUOTE_WORKFLOW_ROLE_INACTIVE: "workflow.error.roleInactive",
-  QUOTE_WORKFLOW_ROLE_CANNOT_APPROVE: "workflow.error.roleCannotApprove",
+  QUOTE_WORKFLOW_STEPS_BLOCKED: "workflow.error.stepsBlocked",
   QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED: "workflow.error.everyoneRoleRepeated",
 };
 
@@ -158,8 +157,18 @@ export function codedErrorMessage(data: unknown, t: Translate): string | null {
   for (const [name, value] of Object.entries(raw))
     if (typeof value === "string" || typeof value === "number") params[name] = value;
   // A role is named by its translation key, so it reads in the user's language.
+  const roleOf = (item: Record<string, unknown>) =>
+    item.roleLabelKey ? t(String(item.roleLabelKey)) : String(item.roleName ?? "");
   if (typeof raw.roleLabelKey === "string" || typeof raw.roleName === "string")
-    params.role = raw.roleLabelKey ? t(String(raw.roleLabelKey)) : String(raw.roleName ?? "");
+    params.role = roleOf(raw);
+  // Several blocked steps, each said in full: "Step 2 (Board): …".
+  if (Array.isArray(raw.items))
+    params.steps = raw.items
+      .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+      .map((item) =>
+        t(`workflow.issue.${String(item.issue)}`, { n: Number(item.step), role: roleOf(item) }),
+      )
+      .join(" ");
   return t(key, params);
 }
 

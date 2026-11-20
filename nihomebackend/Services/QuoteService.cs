@@ -33,10 +33,7 @@ public class QuoteOperationException : Exception
     public string? Code { get; }
     public IReadOnlyDictionary<string, object>? Parameters { get; }
 
-    /// <summary>The 400 body: the Vietnamese message, plus the code and its values when known.</summary>
-    public object ToResponse() => Code is null
-        ? new { message = Message }
-        : new { message = Message, code = Code, @params = Parameters };
+    public object ToResponse() => NihomeBackend.Infrastructure.CodedErrorBody.Create(Message, Code, Parameters);
 }
 
 /// <summary>
@@ -162,9 +159,8 @@ public class QuoteService(
             .Include(q => q.ApprovalEmails)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
-        if (!canSeeAll && quote.OwnerUserId != callerUserId &&
-            quote.ApprovalApproverUserId != callerUserId &&
-            !QuoteApprovalChain.Includes(quote.ApprovalStepsJson, callerUserId))
+        if (!canSeeAll && !QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId,
+                quote.ApprovalStepsJson, callerUserId))
             return null;
         return await WithApproverAvailabilityAsync(Map(quote), ct);
     }
@@ -177,8 +173,8 @@ public class QuoteService(
             .Select(q => new { q.OperationalProjectId, q.OwnerUserId, q.ApprovalApproverUserId, q.ApprovalStepsJson })
             .SingleOrDefaultAsync(ct);
         if (quote is null) return null;
-        if (!canSeeAll && quote.OwnerUserId != callerUserId && quote.ApprovalApproverUserId != callerUserId &&
-            !QuoteApprovalChain.Includes(quote.ApprovalStepsJson, callerUserId))
+        if (!canSeeAll && !QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId,
+                quote.ApprovalStepsJson, callerUserId))
             return null;
         if (!quote.OperationalProjectId.HasValue) return new QuoteProjectBoqLookupResponse();
         var latest = await ApprovedProjectBoqs(quote.OperationalProjectId.Value)
@@ -579,9 +575,9 @@ public class QuoteService(
             var next = steps[index + 1];
             // The next person was fixed when the quote was sent; hand over only if they can
             // still approve, or the quote would wait on someone who cannot decide it.
-            if (!await approvalEmails.IsEligibleApproverAsync(next.ApproverUserId, next.RoleCode, ct))
+            if ((await approvalEmails.CanDecideAsync([(next.ApproverUserId, next.RoleCode)], ct)).Count == 0)
                 throw new QuoteOperationException(
-                    $"Không chuyển được báo giá sang bước {index + 2}/{steps.Count}: {next.ApproverName} không còn đủ điều kiện duyệt (tài khoản ngừng hoạt động, đổi vai trò, thiếu email hoặc mất quyền duyệt báo giá). Hãy Từ chối duyệt để Kinh doanh gửi lại với người duyệt khác, hoặc nhờ quản trị khôi phục tài khoản, quyền của người này.",
+                    $"Không chuyển được báo giá sang bước {index + 2}/{steps.Count}: {next.ApproverName} không còn đủ điều kiện duyệt (tài khoản ngừng hoạt động, đổi vai trò hoặc mất quyền xem, duyệt báo giá). Hãy Từ chối duyệt để Kinh doanh gửi lại với người duyệt khác, hoặc nhờ quản trị khôi phục tài khoản, quyền của người này.",
                     "QUOTE_NEXT_APPROVER_UNAVAILABLE",
                     new Dictionary<string, object>
                     {
@@ -667,14 +663,18 @@ public class QuoteService(
     public async Task<QuoteResponse?> WithdrawApprovalAsync(int id, QuoteWorkflowRequest req, int caller,
         bool canManage, bool canSeeAll, CancellationToken ct = default)
     {
+        // The version the user saw is required: without it, a quote that has just moved on to
+        // someone who can decide could still be pulled back.
+        if (string.IsNullOrWhiteSpace(req.RowVersion))
+            throw new QuoteOperationException("Tải lại báo giá rồi thử lại: cần phiên bản báo giá đang xem để rút lại.");
         var waiting = await db.Quotes.AsNoTracking().Where(q => q.Id == id)
             .Select(q => new { q.Status, q.ApprovalApproverUserId, q.ApprovalStepsJson, q.ApprovalStepIndex })
             .SingleOrDefaultAsync(ct);
         if (waiting is null) return null;
         var stillAvailable = waiting.Status == QuoteStatus.PendingApproval &&
             waiting.ApprovalApproverUserId is int approverId &&
-            await approvalEmails.IsEligibleApproverAsync(approverId,
-                QuoteApprovalChain.CurrentRoleCode(waiting.ApprovalStepsJson, waiting.ApprovalStepIndex), ct);
+            (await approvalEmails.CanDecideAsync([(approverId,
+                QuoteApprovalChain.CurrentRoleCode(waiting.ApprovalStepsJson, waiting.ApprovalStepIndex))], ct)).Count == 1;
         return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.PendingApproval],
             to: QuoteStatus.Draft,
@@ -684,7 +684,9 @@ public class QuoteService(
             rowVersion: req.RowVersion,
             beforeSave: q =>
             {
-                if (stillAvailable)
+                // Decided on the quote as checked above; if it moved on meanwhile, nothing is withdrawn.
+                if (stillAvailable || q.ApprovalApproverUserId != waiting.ApprovalApproverUserId ||
+                    q.ApprovalStepIndex != waiting.ApprovalStepIndex)
                     throw new QuoteOperationException(
                         "Người duyệt hiện tại vẫn duyệt được báo giá này, nên chưa rút lại được. Hãy chờ họ Duyệt hoặc Từ chối duyệt.",
                         "QUOTE_WITHDRAW_APPROVER_AVAILABLE", new Dictionary<string, object>());
@@ -732,9 +734,9 @@ public class QuoteService(
                     "QUOTE_APPROVAL_NOT_CHOSEN", parameters);
         }
         var roleCode = QuoteApprovalChain.CurrentRoleCode(quote.ApprovalStepsJson, quote.ApprovalStepIndex);
-        if (!await approvalEmails.HoldsRoleAsync(caller, roleCode, ct))
+        if ((await approvalEmails.CanDecideAsync([(caller, roleCode)], ct)).Count == 0)
             throw new QuoteOperationException(
-                "Bạn không còn giữ vai trò của bước duyệt này nên không duyệt hay từ chối được. Nhờ quản trị kiểm tra vai trò của bạn; Kinh doanh có thể rút lại báo giá để chọn người duyệt khác.",
+                "Bạn không còn giữ vai trò hoặc quyền xem, duyệt báo giá của bước này nên không duyệt hay từ chối được. Nhờ quản trị kiểm tra vai trò, quyền của bạn; Kinh doanh có thể rút lại báo giá để chọn người duyệt khác.",
                 "QUOTE_APPROVAL_ROLE_LOST", new Dictionary<string, object>());
         return (steps, index);
     }
@@ -1031,7 +1033,9 @@ public class QuoteService(
             .Include(q => q.InputPriceOffer).ThenInclude(offer => offer!.Vendor)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
-        if (!canSeeAll && quote.OwnerUserId != callerUserId) return null;
+        if (!canSeeAll && !QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId,
+                quote.ApprovalStepsJson, callerUserId))
+            return null;
 
         var snapshotRevisionIds = quote.VersionSnapshots
             .Where(snapshot => snapshot.MaterialRateRevisionId.HasValue)
@@ -1728,14 +1732,17 @@ public class QuoteService(
         if (response.ApprovalSteps.Count == 0)
         {
             response.ApprovalApproverAvailable = response.ApprovalApproverUserId is int approverId &&
-                await approvalEmails.IsEligibleApproverAsync(approverId, RbacRoleCodes.ProcurementManager, ct);
+                (await approvalEmails.CanDecideAsync([(approverId, RbacRoleCodes.ProcurementManager)], ct)).Count == 1;
             return response;
         }
+        var open = response.ApprovalSteps.Where(step => step.State != "Approved")
+            .Select(step => (step.ApproverUserId, step.RoleCode)).ToList();
+        var canDecide = await approvalEmails.CanDecideAsync(open, ct);
         for (var index = 0; index < response.ApprovalSteps.Count; index++)
         {
             var step = response.ApprovalSteps[index];
             if (step.State == "Approved") continue;
-            var available = await approvalEmails.IsEligibleApproverAsync(step.ApproverUserId, step.RoleCode, ct);
+            var available = canDecide.Contains((step.ApproverUserId, step.RoleCode));
             response.ApprovalSteps[index] = step with { Available = available };
             if (step.State == "Current") response.ApprovalApproverAvailable = available;
         }

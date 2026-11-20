@@ -51,7 +51,8 @@ public class WorkflowConfigServiceTests : IDisposable
         var error = await Assert.ThrowsAsync<WorkflowConfigValidationException>(() => _sut.CreateAsync(
             Req(steps: [(1, "Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER"), (2, "Quản lý dự án duyệt", "PM")])));
 
-        Assert.Contains("PM chưa có quyền xem và duyệt báo giá", error.Message);
+        Assert.Equal("QUOTE_WORKFLOW_STEPS_BLOCKED", error.Code);
+        Assert.Contains("Bước 2 (PM): vai trò chưa có quyền", error.Message);
         // Other business actions are not applied to quotes, so their roles are not checked.
         var contracts = await _sut.CreateAsync(Req(module: "contracts", action: "sign",
             steps: [(1, "Quản lý dự án duyệt", "PM")]));
@@ -67,8 +68,41 @@ public class WorkflowConfigServiceTests : IDisposable
         var error = await Assert.ThrowsAsync<WorkflowConfigValidationException>(() => _sut.CreateAsync(
             Req(steps: [(1, "Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER"), (2, "Ban Giám đốc duyệt", "BGD")])));
 
-        Assert.Equal("QUOTE_WORKFLOW_ROLE_INACTIVE", error.Code);
-        Assert.Equal("BGD", error.Parameters!["roleName"]);
+        Assert.Equal("QUOTE_WORKFLOW_STEPS_BLOCKED", error.Code);
+        Assert.Contains("Bước 2 (BGD): vai trò đã ngừng dùng.", error.Message);
+    }
+
+    [Fact]
+    public async Task Create_QuoteWorkflow_NamesEveryBlockedStepInOrder()
+    {
+        _db.Roles.Single(role => role.Code == "BGD").IsActive = false;
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<WorkflowConfigValidationException>(() => _sut.CreateAsync(
+            Req(steps: [(1, "Quản lý dự án duyệt", "PM"), (2, "Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER"),
+                (3, "Ban Giám đốc duyệt", "BGD")])));
+
+        // Both blocked steps at once, so the administrator fixes them in one go.
+        var message = error.Message;
+        Assert.True(message.IndexOf("Bước 1 (PM)", StringComparison.Ordinal) <
+            message.IndexOf("Bước 3 (BGD)", StringComparison.Ordinal), message);
+        Assert.DoesNotContain("Bước 2", message);
+    }
+
+    [Fact]
+    public async Task Update_QuoteWorkflow_CanBeTurnedOffWhileAStepIsBlocked()
+    {
+        var created = await _sut.CreateAsync(Req(steps: [(1, "Ban Giám đốc duyệt", "BGD")]));
+        _db.Roles.Single(role => role.Code == "BGD").IsActive = false;
+        await _db.SaveChangesAsync();
+
+        var off = Req(steps: [(1, "Ban Giám đốc duyệt", "BGD")]);
+        off.IsActive = false;
+        var saved = await _sut.UpdateAsync(created.Id, off);
+
+        Assert.False(saved!.IsActive);
+        // A workflow that is off is not applied, so it carries no warnings.
+        Assert.Empty(saved.StepIssues);
     }
 
     [Fact]
