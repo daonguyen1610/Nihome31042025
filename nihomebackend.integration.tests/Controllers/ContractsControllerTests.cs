@@ -870,6 +870,10 @@ public class ContractsControllerTests : IntegrationTestBase
         (await Start("payload.exe", 10)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await Start("qua-gioi-han.pdf", (long)(SiteSettings.DefaultContractMaxFileSizeMb + 1) * 1024 * 1024))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // A purpose that is neither attachment nor appendix is refused, not treated as an attachment.
+        (await Client.PostAsJsonAsync($"/api/contracts/{contractId}/upload-sessions",
+                new { purpose = 7, fileName = "hop-dong.pdf", fileSize = 10 }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
         var started = await Start("hop-dong-ky-ban-scan.pdf", content.Length);
         started.StatusCode.Should().Be(HttpStatusCode.OK, await started.Content.ReadAsStringAsync());

@@ -239,6 +239,11 @@ test("a stopped chunked upload explains why and what to do", () => {
 test("an upload the user cancelled says so instead of reporting an error", () => {
   const t = (key) => key;
   assert.equal(getUiError({ code: "ERR_CANCELED", message: "canceled" }, t), "upload.cancelled");
+  // A chunked upload cancelled between chunks rejects with an AbortError.
+  assert.equal(
+    getUiError(new DOMException("The upload was cancelled.", "AbortError"), t),
+    "upload.cancelled",
+  );
 });
 
 test("an import that lists row errors is explained instead of crashing the page", () => {
