@@ -125,12 +125,15 @@ export function isConcurrencyConflict(err: unknown): boolean {
 export function getUiError(err: unknown, t: (key: string) => string, fallback?: string): string {
   const failure = err as {
     code?: string;
+    name?: string;
     message?: string;
     response?: { status?: number; data?: unknown };
   } | null;
   if (failure?.code === "LOOKUP_INCOMPLETE") return t("common.lookupIncomplete");
-  // The user stopped the upload from the upload tray.
-  if (failure?.code === "ERR_CANCELED") return t("upload.cancelled");
+  // The user stopped the upload from the upload tray (a chunked upload may stop between
+  // requests, which rejects with an AbortError rather than an axios cancel).
+  if (failure?.code === "ERR_CANCELED" || failure?.name === "AbortError")
+    return t("upload.cancelled");
   // A chunked upload stopped: the session expired, or the connection kept dropping.
   if (failure?.code === "UPLOAD_SESSION_GONE") return t("upload.chunked.sessionGone");
   if (failure?.code === "UPLOAD_RETRIES_EXHAUSTED") return t("upload.chunked.retriesExhausted");

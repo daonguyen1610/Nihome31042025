@@ -72,6 +72,8 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     public async Task<UploadChunkResult> AppendAsync(Guid id, int userId, long offset, Stream body,
         long? length, CancellationToken ct = default)
     {
+        // Only real sessions get a lock, so unknown ids cannot grow the lock table.
+        if (await FindAsync(id, userId, ct) is null) return new(UploadChunkStatus.NotFound, 0);
         var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
         await gate.WaitAsync(ct);
         try
@@ -86,8 +88,15 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
                 return new(UploadChunkStatus.Accepted, session.ReceivedBytes);
             if (offset != session.ReceivedBytes)
                 return new(UploadChunkStatus.OffsetMismatch, session.ReceivedBytes);
+            if (!StagedFileHolds(id, session.ReceivedBytes, exactly: false))
+            {
+                // The staged bytes were lost (e.g. App_Data replaced on deploy); padding the
+                // gap would store a corrupt file, so the client starts over.
+                await ReleaseAsync(id, ct);
+                return new(UploadChunkStatus.NotFound, 0);
+            }
 
-            await using (var file = new FileStream(StagingPath(id), FileMode.OpenOrCreate, FileAccess.Write))
+            await using (var file = new FileStream(StagingPath(id), FileMode.Open, FileAccess.Write))
             {
                 // Drop bytes of an earlier attempt that never completed.
                 file.SetLength(session.ReceivedBytes);
@@ -122,18 +131,42 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     }
 
     /// <summary>
-    /// The finished file of the caller's session for this purpose and record, or null when
-    /// it is not theirs, not for this record, or still missing bytes. The caller moves the
-    /// file and then calls <see cref="ReleaseAsync"/>.
+    /// Hands the finished file of the caller's session to <paramref name="consume"/>, under
+    /// the session's lock so a double submit cannot take it twice. The session closes only
+    /// when consume moved the file away; if consume throws or leaves the file in place, the
+    /// session and its bytes stay so the completion can be retried without uploading again.
+    /// Null when the session is not theirs, not for this record, or still missing bytes.
     /// </summary>
-    public async Task<CompletedUpload?> TakeCompletedAsync(Guid id, int userId, UploadSessionPurpose purpose,
-        int contextId, CancellationToken ct = default)
+    public async Task<T?> CompleteAsync<T>(Guid id, int userId, UploadSessionPurpose purpose, int contextId,
+        Func<CompletedUpload, Task<T>> consume, CancellationToken ct = default) where T : class
     {
-        var session = await FindAsync(id, userId, ct);
-        if (session is null || session.Purpose != purpose || session.ContextId != contextId ||
-            session.ReceivedBytes != session.FileSize || !File.Exists(StagingPath(id)))
-            return null;
-        return new CompletedUpload(StagingPath(id), session.FileName, session.FileSize);
+        // Only real sessions get a lock, so unknown ids cannot grow the lock table.
+        if (await FindAsync(id, userId, ct) is null) return null;
+        var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        try
+        {
+            // Read again under the lock: a concurrent completion may have taken it meanwhile.
+            var session = await FindAsync(id, userId, ct);
+            if (session is null || session.Purpose != purpose || session.ContextId != contextId ||
+                session.ReceivedBytes != session.FileSize)
+                return null;
+            if (!StagedFileHolds(id, session.FileSize, exactly: true))
+            {
+                // The staged bytes were lost (e.g. App_Data replaced): nothing left to resume.
+                await ReleaseAsync(id, ct);
+                return null;
+            }
+
+            var result = await consume(new CompletedUpload(StagingPath(id), session.FileName, session.FileSize));
+            // The file now lives elsewhere; closing must not depend on the request still running.
+            if (!File.Exists(StagingPath(id))) await ReleaseAsync(id, CancellationToken.None);
+            return result;
+        }
+        finally
+        {
+            gate.Release();
+        }
     }
 
     public async Task ReleaseAsync(Guid id, CancellationToken ct = default)
@@ -154,8 +187,16 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     {
         var expired = await db.UploadSessions.Where(item => item.ExpiresAt <= now)
             .Select(item => item.Id).ToListAsync(ct);
-        foreach (var id in expired) await ReleaseAsync(id, ct);
+        if (expired.Count == 0) return 0;
+        await db.UploadSessions.Where(item => expired.Contains(item.Id)).ExecuteDeleteOrRemoveAsync(db, ct);
+        foreach (var id in expired) DeleteStaged(id);
         return expired.Count;
+    }
+
+    private bool StagedFileHolds(Guid id, long bytes, bool exactly)
+    {
+        var file = new FileInfo(StagingPath(id));
+        return file.Exists && (exactly ? file.Length == bytes : file.Length >= bytes);
     }
 
     private void DeleteStaged(Guid id)

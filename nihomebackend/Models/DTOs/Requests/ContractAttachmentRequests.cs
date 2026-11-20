@@ -34,6 +34,7 @@ public enum ContractUploadPurpose
 /// <summary>Opens a resumable upload of one contract file.</summary>
 public class StartContractUploadRequest
 {
+    [EnumDataType(typeof(ContractUploadPurpose))]
     public ContractUploadPurpose Purpose { get; set; }
     public string? FileName { get; set; }
     public long FileSize { get; set; }

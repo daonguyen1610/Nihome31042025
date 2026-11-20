@@ -831,8 +831,10 @@ public class ContractsController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
         if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
 
-        var payload = await TakeUploadedFileAsync(req.UploadSessionId, userId.Value, UploadSessionPurpose.ContractAppendix, id, "vo", ct);
-        return payload is null ? UploadNotReady() : Ok(payload);
+        var result = await CompleteUploadAsync<IActionResult>(req.UploadSessionId, userId.Value,
+            UploadSessionPurpose.ContractAppendix, id, "vo", payload => Task.FromResult<IActionResult>(Ok(payload)),
+            registered: _ => true, ct);
+        return result ?? UploadNotReady();
     }
 
     // -------- attachments --------
@@ -911,7 +913,15 @@ public class ContractsController(
         if (stored.Result is BadRequestObjectResult bad) return bad;
         if (stored.Payload == null) return BadRequest(new { message = "Không upload được file." });
 
-        return await RegisterAttachmentAsync(id, stored.Payload, kind, label, userId.Value, canSeeAll, ct);
+        try
+        {
+            return await RegisterAttachmentAsync(id, stored.Payload, kind, label, userId.Value, canSeeAll, ct);
+        }
+        catch
+        {
+            DeleteUploadedFile(stored.Payload.filePath);
+            throw;
+        }
     }
 
     /// <summary>
@@ -958,33 +968,26 @@ public class ContractsController(
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.contracts.view.all", ct);
         if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
 
-        var payload = await TakeUploadedFileAsync(req.UploadSessionId, userId.Value, UploadSessionPurpose.ContractAttachment, id, "att", ct);
-        if (payload is null) return UploadNotReady();
-        return await RegisterAttachmentAsync(id, payload, req.Kind, req.Label, userId.Value, canSeeAll, ct);
+        var result = await CompleteUploadAsync(req.UploadSessionId, userId.Value, UploadSessionPurpose.ContractAttachment, id, "att",
+            payload => RegisterAttachmentAsync(id, payload, req.Kind, req.Label, userId.Value, canSeeAll, ct),
+            registered: attachment => attachment.Result is not NotFoundResult, ct);
+        if (result is null) return UploadNotReady();
+        return result;
     }
 
     private async Task<ActionResult<ContractAttachmentResponse>> RegisterAttachmentAsync(int id,
         UploadedPayload payload, ContractAttachmentKind kind, string? label, int userId, bool canSeeAll,
         CancellationToken ct)
     {
-        ContractAttachmentResponse? created;
-        try
+        var created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
         {
-            created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
-            {
-                Kind = kind,
-                FilePath = payload.filePath,
-                OriginalFileName = payload.originalFileName,
-                FileSize = payload.fileSize,
-                ContentType = payload.contentType,
-                Label = label,
-            }, userId, canSeeAll, ct);
-        }
-        catch
-        {
-            DeleteUploadedFile(payload.filePath);
-            throw;
-        }
+            Kind = kind,
+            FilePath = payload.filePath,
+            OriginalFileName = payload.originalFileName,
+            FileSize = payload.fileSize,
+            ContentType = payload.contentType,
+            Label = label,
+        }, userId, canSeeAll, ct);
         // ContractExistsForCallerAsync above already verified the caller
         // may write to this contract, so CreateAsync should never return
         // null here — but be defensive so a race between the ownership
@@ -1215,24 +1218,43 @@ public class ContractsController(
     });
 
     /// <summary>
-    /// Moves the finished file of the caller's session into contract storage and closes the
-    /// session; null when the session is not theirs, not for this contract or incomplete.
+    /// Moves the finished file of the caller's session into contract storage and lets
+    /// <paramref name="register"/> record it. When registering throws or reports failure the
+    /// file goes back to the session, so the user can retry without uploading it again.
+    /// Null when the session is not theirs, not for this contract or incomplete.
     /// </summary>
-    private async Task<UploadedPayload?> TakeUploadedFileAsync(Guid sessionId, int userId,
-        UploadSessionPurpose purpose, int contractId, string kindTag, CancellationToken ct)
+    private Task<TResult?> CompleteUploadAsync<TResult>(Guid sessionId, int userId, UploadSessionPurpose purpose,
+        int contractId, string kindTag, Func<UploadedPayload, Task<TResult>> register,
+        Func<TResult, bool> registered, CancellationToken ct) where TResult : class =>
+        uploadSessions.CompleteAsync(sessionId, userId, purpose, contractId, async completed =>
+        {
+            var (managedPath, fullPath) = NewStoredFilePath(kindTag, completed.FileName);
+            System.IO.File.Move(completed.StagingPath, fullPath);
+            if (!ContentTypes.TryGetContentType(completed.FileName, out var contentType))
+                contentType = "application/octet-stream";
+            TResult result;
+            try
+            {
+                result = await register(new UploadedPayload(managedPath, completed.FileName, completed.FileSize, contentType));
+            }
+            catch
+            {
+                System.IO.File.Move(fullPath, completed.StagingPath);
+                throw;
+            }
+            if (!registered(result)) System.IO.File.Move(fullPath, completed.StagingPath);
+            return result;
+        }, ct);
+
+    private static readonly Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider ContentTypes = new();
+
+    /// <summary>A new unique contract storage location for a file with this name's extension.</summary>
+    private (string managedPath, string fullPath) NewStoredFilePath(string kindTag, string fileName)
     {
-        var completed = await uploadSessions.TakeCompletedAsync(sessionId, userId, purpose, contractId, ct);
-        if (completed is null) return null;
-        var extension = Path.GetExtension(completed.FileName).ToLowerInvariant();
         var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
         Directory.CreateDirectory(uploadDir);
-        var storedName = $"{kindTag}-{Guid.NewGuid():N}{extension}";
-        System.IO.File.Move(completed.StagingPath, Path.Combine(uploadDir, storedName));
-        await uploadSessions.ReleaseAsync(sessionId, ct);
-        if (!new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider()
-                .TryGetContentType(completed.FileName, out var contentType))
-            contentType = "application/octet-stream";
-        return new UploadedPayload($"/files/{StorageSubfolder}/{storedName}", completed.FileName, completed.FileSize, contentType);
+        var storedName = $"{kindTag}-{Guid.NewGuid():N}{Path.GetExtension(fileName).ToLowerInvariant()}";
+        return ($"/files/{StorageSubfolder}/{storedName}", Path.Combine(uploadDir, storedName));
     }
 
     private async Task<StoredFile> StoreUploadedFileAsync(IFormFile? file, string kindTag, CancellationToken ct)
@@ -1252,10 +1274,7 @@ public class ContractsController(
             return new StoredFile { Result = BadRequest(new { message = "Định dạng file không được hỗ trợ (PDF/DOC/DOCX/XLS/XLSX/PNG/JPG)." }) };
         }
 
-        var uploadDir = Path.Combine(env.ContentRootPath, "wwwroot", "files", StorageSubfolder);
-        Directory.CreateDirectory(uploadDir);
-        var storedName = $"{kindTag}-{Guid.NewGuid():N}{extension}";
-        var storedPath = Path.Combine(uploadDir, storedName);
+        var (managedPath, storedPath) = NewStoredFilePath(kindTag, file.FileName);
         await using (var stream = new FileStream(storedPath, FileMode.Create))
         {
             await file.CopyToAsync(stream, ct);
@@ -1263,7 +1282,7 @@ public class ContractsController(
         return new StoredFile
         {
             Payload = new UploadedPayload(
-                $"/files/{StorageSubfolder}/{storedName}",
+                managedPath,
                 file.FileName,
                 file.Length,
                 string.IsNullOrWhiteSpace(file.ContentType) ? "application/octet-stream" : file.ContentType),

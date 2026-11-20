@@ -55,7 +55,19 @@ export class ChunkedUploadError extends Error {
   }
 }
 
-const sleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+// Ends early on cancel so the tray's cancel does not wait out a retry backoff.
+const sleep = (ms: number, signal?: AbortSignal) =>
+  new Promise<void>((resolve) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      "abort",
+      () => {
+        clearTimeout(timer);
+        resolve();
+      },
+      { once: true },
+    );
+  });
 
 const aborted = (signal?: AbortSignal) => {
   if (signal?.aborted) throw new DOMException("The upload was cancelled.", "AbortError");
@@ -70,7 +82,7 @@ export async function uploadInChunks({
   onProgress,
   signal,
   retries = 5,
-  wait = sleep,
+  wait = (ms) => sleep(ms, signal),
 }: ChunkedUploadOptions): Promise<string> {
   let id = store.get(resumeKey);
   let offset = 0;
