@@ -7,10 +7,27 @@ import {
   type QuoteProgressInput,
 } from "@/lib/quoteProgress";
 
+/** Who decides the internal approval now: the current step of the quote's approval chain. */
+export interface QuoteCurrentApproval {
+  name: string;
+  role: string;
+  current: number;
+  total: number;
+}
+
 /** Shows which step of the quote flow the quotation is at, who acts next and what to press. */
-export function QuoteProgressPanel(props: QuoteProgressInput) {
+export function QuoteProgressPanel({
+  currentApproval,
+  ...props
+}: QuoteProgressInput & { currentApproval?: QuoteCurrentApproval }) {
   const { t } = useI18n();
   const progress = getQuoteProgress(props);
+  // The internal approval follows the chain in Cấu hình → Luồng duyệt, so its owner is
+  // the current step's role once sent, and "the workflow's approvers" before.
+  const ownerOf = (step: string) =>
+    step === "internal"
+      ? (currentApproval?.role ?? t("quotes.progress.owner.internalChain"))
+      : t(`quotes.progress.owner.${step}`);
   const currentIndex =
     progress.kind === "active"
       ? progress.index
@@ -19,11 +36,18 @@ export function QuoteProgressPanel(props: QuoteProgressInput) {
         : -1;
   const nextText =
     progress.kind === "active"
-      ? t(
-          progress.ready
-            ? `quotes.progress.next.${progress.step}Ready`
-            : `quotes.progress.next.${progress.step}`,
-        )
+      ? progress.step === "internal"
+        ? t("quotes.progress.next.internalStep", {
+            name: currentApproval?.name ?? "—",
+            role: ownerOf("internal"),
+            current: currentApproval?.current ?? 1,
+            total: currentApproval?.total ?? 1,
+          })
+        : t(
+            progress.ready
+              ? `quotes.progress.next.${progress.step}Ready`
+              : `quotes.progress.next.${progress.step}`,
+          )
       : progress.kind === "done"
         ? t("quotes.progress.done")
         : t("quotes.progress.stopped", { status: t(`quotes.status.${props.status}`) });
@@ -40,7 +64,7 @@ export function QuoteProgressPanel(props: QuoteProgressInput) {
             current: progress.index + 1,
             total: QUOTE_PROGRESS_STEPS.length,
             step: t(`quotes.progress.step.${progress.step}`),
-            owner: t(`quotes.progress.owner.${progress.step}`),
+            owner: ownerOf(progress.step),
           })}
         </p>
       )}
@@ -73,9 +97,7 @@ export function QuoteProgressPanel(props: QuoteProgressInput) {
                   <span className="block font-medium text-foreground">
                     {t(`quotes.progress.step.${step}`)}
                   </span>
-                  <span className="block text-muted-foreground">
-                    {t(`quotes.progress.owner.${step}`)}
-                  </span>
+                  <span className="block text-muted-foreground">{ownerOf(step)}</span>
                 </span>
               </li>
             );

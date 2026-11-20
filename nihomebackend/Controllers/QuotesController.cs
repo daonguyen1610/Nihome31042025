@@ -281,6 +281,21 @@ public class QuotesController(
         return Ok(await approvalEmails.CandidatesAsync(uid.Value, ct));
     }
 
+    /// <summary>
+    /// The approval chain this quote will follow when sent now (from Cấu hình → Luồng duyệt),
+    /// with who may approve each step.
+    /// </summary>
+    [HttpGet("{id:int}/approval-chain")]
+    [RequirePermission("crm.quotes", "manage")]
+    public async Task<IActionResult> ApprovalChain(int id, CancellationToken ct)
+    {
+        var uid = GetUserId();
+        if (uid is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(uid.Value, "crm.quotes.view.all", ct);
+        if (await svc.GetAsync(id, uid.Value, canSeeAll, ct) is null) return NotFound();
+        return Ok(await approvalEmails.ChainAsync(uid.Value, ct));
+    }
+
     [HttpPost("{id:int}/approval-email-preview")]
     [RequirePermission("crm.quotes", "manage")]
     public async Task<IActionResult> ApprovalEmailPreview(int id, QuoteApprovalPreviewRequest request, CancellationToken ct)
@@ -290,7 +305,7 @@ public class QuotesController(
         try
         {
             var canSeeAll = await permissions.HasAsync(uid.Value, "crm.quotes.view.all", ct);
-            return Ok(await approvalEmails.PreviewAsync(id, request.ApproverUserId ?? 0,
+            return Ok(await approvalEmails.PreviewAsync(id, request.ChosenApprovers(),
                 request.RowVersion, uid.Value, canSeeAll, ct));
         }
         catch (QuoteOperationException error) { return BadRequest(new { message = error.Message }); }

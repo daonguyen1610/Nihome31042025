@@ -442,7 +442,7 @@ public class QuoteService(
             quote.Status = QuoteStatus.Draft;
             quote.SubmittedAt = null;
             quote.SubmittedByUserId = null;
-            quote.ApprovalApproverUserId = null;
+            ClearApprovalChain(quote);
             quote.ApprovedAt = null;
             quote.ApprovedByUserId = null;
             quote.SentAt = null;
@@ -524,7 +524,7 @@ public class QuoteService(
     {
         if (!canManage) throw new QuoteOperationException("Không có quyền gửi duyệt báo giá.");
         await EnsureProjectBoqCurrentAsync(id, ct);
-        await approvalEmails.QueueAsync(id, req.ApproverUserId ?? 0, req.RowVersion,
+        await approvalEmails.QueueAsync(id, req.ChosenApprovers(), req.RowVersion,
             req.PreviewToken, caller, canSeeAll, ct);
         return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.Draft],
@@ -546,10 +546,39 @@ public class QuoteService(
             }, ct, requireOpenOpportunity: true);
     }
 
+    /// <summary>
+    /// The current step's approver decides. Before the last step the quote stays waiting
+    /// and moves to the next approver; the last approval approves the quote.
+    /// </summary>
     public async Task<QuoteResponse?> ApproveAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default)
     {
-        await EnsureProcurementManagerAsync(caller, ct);
-        if (!await db.Quotes.AsNoTracking().AnyAsync(q => q.Id == id, ct)) return null;
+        var state = await CurrentApprovalAsync(id, caller, ct);
+        if (state is null) return null;
+        var (steps, index) = state.Value;
+        if (index + 1 < steps.Count)
+        {
+            var next = steps[index + 1];
+            // Queued before the transition, so the request is saved together with the step change.
+            await approvalEmails.QueueNextStepAsync(id, next.ApproverUserId, ct);
+            return await TransitionAsync(id, caller, canSeeAll: true,
+                allowedFrom: [QuoteStatus.PendingApproval],
+                to: QuoteStatus.PendingApproval,
+                action: QuoteWorkflowAction.Approve,
+                permitted: canApprove,
+                note: req.Note,
+                rowVersion: req.RowVersion,
+                beforeSave: q =>
+                {
+                    EnsureCurrentApprover(q, caller, "duyệt");
+                    var now = DateTime.UtcNow;
+                    steps[index] = steps[index] with { DecidedAt = now };
+                    steps[index + 1] = next with { StartedAt = now };
+                    q.ApprovalStepsJson = QuoteApprovalChain.Write(steps);
+                    q.ApprovalStepIndex = index + 1;
+                    q.ApprovalApproverUserId = next.ApproverUserId;
+                },
+                ct: ct);
+        }
         // Queued before the transition: the outbox row is saved together with it,
         // and the author's address must be read while the workflow still holds it.
         await approvalEmails.QueueDecisionAsync(id, caller, approved: true, req.Note, ct);
@@ -562,18 +591,22 @@ public class QuoteService(
             rowVersion: req.RowVersion,
             beforeSave: q =>
             {
-                if (q.ApprovalApproverUserId != caller || q.SubmittedByUserId == caller)
-                    throw new QuoteOperationException("Chỉ người được chọn, khác người gửi duyệt, mới được duyệt báo giá.");
+                EnsureCurrentApprover(q, caller, "duyệt");
+                if (steps.Count > 0)
+                {
+                    steps[index] = steps[index] with { DecidedAt = DateTime.UtcNow };
+                    q.ApprovalStepsJson = QuoteApprovalChain.Write(steps);
+                }
                 q.ApprovedAt = DateTime.UtcNow;
                 q.ApprovedByUserId = caller;
             },
             ct: ct);
     }
 
+    /// <summary>Any step's approver can send the quote back to Sales; the chain ends there.</summary>
     public async Task<QuoteResponse?> RejectInternalAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default)
     {
-        await EnsureProcurementManagerAsync(caller, ct);
-        if (!await db.Quotes.AsNoTracking().AnyAsync(q => q.Id == id, ct)) return null;
+        if (await CurrentApprovalAsync(id, caller, ct) is null) return null;
         // Rejecting clears SubmittedByUserId/ApprovalApproverUserId in beforeSave,
         // so the outcome email has to be queued while those fields still exist.
         await approvalEmails.QueueDecisionAsync(id, caller, approved: false, req.Note, ct);
@@ -586,20 +619,57 @@ public class QuoteService(
             rowVersion: req.RowVersion,
             beforeSave: q =>
             {
-                if (q.ApprovalApproverUserId != caller || q.SubmittedByUserId == caller)
-                    throw new QuoteOperationException("Chỉ người được chọn, khác người gửi duyệt, mới được từ chối báo giá.");
+                EnsureCurrentApprover(q, caller, "từ chối");
                 q.SubmittedAt = null;
                 q.SubmittedByUserId = null;
-                q.ApprovalApproverUserId = null;
+                ClearApprovalChain(q);
             }, ct);
     }
 
-    private async Task EnsureProcurementManagerAsync(int caller, CancellationToken ct)
+    /// <summary>
+    /// The chain and current step of a waiting quote, after checking the caller still holds
+    /// the current step's role. A quote sent before chains has no steps and one approver.
+    /// </summary>
+    private async Task<(List<QuoteApprovalStep> Steps, int Index)?> CurrentApprovalAsync(int id, int caller, CancellationToken ct)
     {
-        if (!await db.Users.AsNoTracking().AnyAsync(user => user.Id == caller && user.IsActive &&
-            user.RoleEntity != null && user.RoleEntity.IsActive &&
-            user.RoleEntity.Code == RbacRoleCodes.ProcurementManager, ct))
-            throw new QuoteOperationException("Chỉ Trưởng phòng Cung ứng đang hoạt động được duyệt hoặc từ chối báo giá.");
+        var quote = await db.Quotes.AsNoTracking().Where(q => q.Id == id)
+            .Select(q => new
+            {
+                q.Status,
+                q.ApprovalStepsJson,
+                q.ApprovalStepIndex,
+                q.ApprovalApproverUserId,
+                ApproverName = q.ApprovalApprover != null ? q.ApprovalApprover.FullName : null,
+            }).SingleOrDefaultAsync(ct);
+        if (quote is null) return null;
+        var steps = QuoteApprovalChain.Read(quote.ApprovalStepsJson);
+        var index = quote.ApprovalStepIndex is int value && value >= 0 && value < steps.Count ? value : 0;
+        // Say whose turn it is, so a later approver knows to wait rather than retry.
+        if (quote.Status == QuoteStatus.PendingApproval && quote.ApprovalApproverUserId != caller)
+        {
+            var name = quote.ApproverName ?? "người duyệt được chọn";
+            throw new QuoteOperationException(steps.Skip(index + 1).Any(step => step.ApproverUserId == caller)
+                ? $"Chưa tới lượt bạn duyệt. Báo giá đang chờ {name} ở bước {index + 1}/{steps.Count}; bạn sẽ nhận email và thông báo khi tới lượt."
+                : $"Chỉ {name}, người duyệt được chọn cho bước hiện tại, mới được duyệt hoặc từ chối báo giá này.");
+        }
+        var roleCode = QuoteApprovalChain.CurrentRoleCode(quote.ApprovalStepsJson, quote.ApprovalStepIndex);
+        if (!await approvalEmails.HoldsRoleAsync(caller, roleCode, ct))
+            throw new QuoteOperationException(
+                "Chỉ người được chọn cho bước duyệt hiện tại, còn giữ vai trò của bước đó, mới được duyệt hoặc từ chối báo giá.");
+        return (steps, index);
+    }
+
+    private static void EnsureCurrentApprover(Quote quote, int caller, string verb)
+    {
+        if (quote.ApprovalApproverUserId != caller || quote.SubmittedByUserId == caller)
+            throw new QuoteOperationException($"Chỉ người được chọn cho bước hiện tại, khác người gửi duyệt, mới được {verb} báo giá.");
+    }
+
+    private static void ClearApprovalChain(Quote quote)
+    {
+        quote.ApprovalApproverUserId = null;
+        quote.ApprovalStepsJson = null;
+        quote.ApprovalStepIndex = null;
     }
 
     public async Task<QuoteEmailPreviewResponse?> GetEmailPreviewAsync(
@@ -1564,6 +1634,16 @@ public class QuoteService(
         SortOrder = i.SortOrder,
     };
 
+    private static List<QuoteApprovalStepResponse> MapApprovalSteps(Quote q)
+    {
+        var steps = QuoteApprovalChain.Read(q.ApprovalStepsJson);
+        var waiting = q.Status == QuoteStatus.PendingApproval;
+        return steps.Select((step, index) => new QuoteApprovalStepResponse(step.Order, step.Name, step.RoleCode,
+            step.RoleLabelKey, step.ApproverUserId, step.ApproverName,
+            step.DecidedAt is not null ? "Approved" : waiting && index == q.ApprovalStepIndex ? "Current" : "Waiting",
+            step.DecidedAt, step.StartedAt?.AddHours(step.SlaHours))).ToList();
+    }
+
     private static QuoteResponse Map(Quote q) => new()
     {
         Id = q.Id,
@@ -1620,6 +1700,7 @@ public class QuoteService(
         UpdatedAt = q.UpdatedAt,
         RowVersion = CrmConcurrency.Encode(q.RowVersion),
         Items = q.Items?.OrderBy(i => i.SortOrder).Select(MapItem).ToList() ?? new(),
+        ApprovalSteps = MapApprovalSteps(q),
         ApprovalLogs = q.ApprovalLogs?
             .OrderBy(l => l.CreatedAt)
             .Select(l => new QuoteApprovalLogResponse

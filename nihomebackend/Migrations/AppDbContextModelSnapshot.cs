@@ -8975,6 +8975,12 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("ApprovalApproverUserId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ApprovalStepIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ApprovalStepsJson")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<DateTime?>("ApprovedAt")
                         .HasColumnType("datetime2");
 

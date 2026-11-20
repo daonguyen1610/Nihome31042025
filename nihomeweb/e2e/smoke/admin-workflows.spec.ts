@@ -86,13 +86,13 @@ test("an approval workflow is set up by business action and approver, without co
       }),
     ]);
 
-    // The quote workflow states the rule the app applies.
+    // The quote workflow states how the app applies it.
     await page
       .getByRole("row", { name: /Duyệt báo giá/ })
       .getByRole("button", { name: "Sửa" })
       .click();
     const quoteDialog = page.getByRole("dialog");
-    await expect(quoteDialog).toContainText("người gửi chọn một Trưởng phòng Cung ứng để duyệt");
+    await expect(quoteDialog).toContainText("người gửi chọn người duyệt cho từng bước");
 
     // A step name that names the previous approver is cleared when the approver changes,
     // so the step is not saved telling the wrong role to approve. Not saved here.

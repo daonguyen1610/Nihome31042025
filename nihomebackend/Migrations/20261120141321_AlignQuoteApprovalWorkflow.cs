@@ -18,43 +18,60 @@ namespace nihomebackend.Migrations
 (2, N'Ban Giám đốc phê duyệt', N'BGD', 48, CAST(1 AS bit))";
         private const string NewSteps = @"(1, N'Trưởng phòng Cung ứng được chọn duyệt', N'PROCUREMENT_MANAGER', 24, CAST(0 AS bit))";
 
-        // The editor's labels that are no longer used, with their seeded wording.
-        private const string RetiredLabels = @"(N'workflow.field.steps', N'en', N'Steps'),
-(N'workflow.field.steps', N'ja', N'ステップ数'),
-(N'workflow.field.steps', N'vi', N'Số bước'),
-(N'workflow.field.steps', N'zh', N'步骤数'),
-(N'workflow.searchPlaceholder', N'en', N'Search by module, action or name…'),
-(N'workflow.searchPlaceholder', N'ja', N'モジュール・アクション・名称で検索…'),
-(N'workflow.searchPlaceholder', N'vi', N'Tìm theo module, action hoặc tên…'),
-(N'workflow.searchPlaceholder', N'zh', N'按模块、操作或名称搜索…'),
-(N'workflow.dialogHelp', N'en', N'Each module + action pair can have only one workflow. Approver roles must exist in RBAC.'),
-(N'workflow.dialogHelp', N'ja', N'モジュールとアクションの組合せは 1 つのフローのみ。承認ロールは RBAC に存在する必要があります。'),
-(N'workflow.dialogHelp', N'vi', N'Mỗi cặp module + action chỉ được có một luồng duyệt. Vai trò duyệt phải nằm trong danh sách RBAC.'),
-(N'workflow.dialogHelp', N'zh', N'每个模块 + 操作组合只能配置一个流程。审批角色必须存在于 RBAC 中。'),
-(N'workflow.stepFieldsRequired', N'en', N'Each step needs a name and an approver role.'),
-(N'workflow.stepFieldsRequired', N'ja', N'各ステップに名称と承認ロールが必要です。'),
-(N'workflow.stepFieldsRequired', N'vi', N'Mỗi bước cần có tên và vai trò duyệt.'),
-(N'workflow.stepFieldsRequired', N'zh', N'每个步骤都需要名称和审批角色。'),
-(N'workflow.field.description', N'en', N'Description'),
-(N'workflow.field.description', N'ja', N'説明'),
-(N'workflow.field.description', N'vi', N'Mô tả'),
-(N'workflow.field.description', N'zh', N'描述'),
-(N'workflow.field.sortOrder', N'en', N'Sort order'),
-(N'workflow.field.sortOrder', N'ja', N'並び順'),
-(N'workflow.field.sortOrder', N'vi', N'Thứ tự'),
-(N'workflow.field.sortOrder', N'zh', N'排序'),
-(N'workflow.field.stepName', N'en', N'Step name'),
-(N'workflow.field.stepName', N'ja', N'ステップ名'),
-(N'workflow.field.stepName', N'vi', N'Tên bước'),
-(N'workflow.field.stepName', N'zh', N'步骤名称'),
-(N'workflow.field.slaHours', N'en', N'SLA (hours)'),
-(N'workflow.field.slaHours', N'ja', N'SLA（時間）'),
-(N'workflow.field.slaHours', N'vi', N'SLA (giờ)'),
-(N'workflow.field.slaHours', N'zh', N'SLA（小时）'),
-(N'workflow.field.requireAll', N'en', N'Require all approvers'),
-(N'workflow.field.requireAll', N'ja', N'全員承認が必要'),
-(N'workflow.field.requireAll', N'vi', N'Cần tất cả duyệt'),
-(N'workflow.field.requireAll', N'zh', N'需所有人审批')";
+        // Labels no longer used (the workflow editor's, and the quote screens' that named the
+        // Procurement Manager as the only approver), with their seeded wording and category.
+        private const string RetiredLabels = @"(N'workflow.field.steps', N'en', N'Steps', N'workflow'),
+(N'workflow.field.steps', N'ja', N'ステップ数', N'workflow'),
+(N'workflow.field.steps', N'vi', N'Số bước', N'workflow'),
+(N'workflow.field.steps', N'zh', N'步骤数', N'workflow'),
+(N'workflow.searchPlaceholder', N'en', N'Search by module, action or name…', N'workflow'),
+(N'workflow.searchPlaceholder', N'ja', N'モジュール・アクション・名称で検索…', N'workflow'),
+(N'workflow.searchPlaceholder', N'vi', N'Tìm theo module, action hoặc tên…', N'workflow'),
+(N'workflow.searchPlaceholder', N'zh', N'按模块、操作或名称搜索…', N'workflow'),
+(N'workflow.dialogHelp', N'en', N'Each module + action pair can have only one workflow. Approver roles must exist in RBAC.', N'workflow'),
+(N'workflow.dialogHelp', N'ja', N'モジュールとアクションの組合せは 1 つのフローのみ。承認ロールは RBAC に存在する必要があります。', N'workflow'),
+(N'workflow.dialogHelp', N'vi', N'Mỗi cặp module + action chỉ được có một luồng duyệt. Vai trò duyệt phải nằm trong danh sách RBAC.', N'workflow'),
+(N'workflow.dialogHelp', N'zh', N'每个模块 + 操作组合只能配置一个流程。审批角色必须存在于 RBAC 中。', N'workflow'),
+(N'workflow.stepFieldsRequired', N'en', N'Each step needs a name and an approver role.', N'workflow'),
+(N'workflow.stepFieldsRequired', N'ja', N'各ステップに名称と承認ロールが必要です。', N'workflow'),
+(N'workflow.stepFieldsRequired', N'vi', N'Mỗi bước cần có tên và vai trò duyệt.', N'workflow'),
+(N'workflow.stepFieldsRequired', N'zh', N'每个步骤都需要名称和审批角色。', N'workflow'),
+(N'workflow.field.description', N'en', N'Description', N'workflow'),
+(N'workflow.field.description', N'ja', N'説明', N'workflow'),
+(N'workflow.field.description', N'vi', N'Mô tả', N'workflow'),
+(N'workflow.field.description', N'zh', N'描述', N'workflow'),
+(N'workflow.field.sortOrder', N'en', N'Sort order', N'workflow'),
+(N'workflow.field.sortOrder', N'ja', N'並び順', N'workflow'),
+(N'workflow.field.sortOrder', N'vi', N'Thứ tự', N'workflow'),
+(N'workflow.field.sortOrder', N'zh', N'排序', N'workflow'),
+(N'workflow.field.stepName', N'en', N'Step name', N'workflow'),
+(N'workflow.field.stepName', N'ja', N'ステップ名', N'workflow'),
+(N'workflow.field.stepName', N'vi', N'Tên bước', N'workflow'),
+(N'workflow.field.stepName', N'zh', N'步骤名称', N'workflow'),
+(N'workflow.field.slaHours', N'en', N'SLA (hours)', N'workflow'),
+(N'workflow.field.slaHours', N'ja', N'SLA（時間）', N'workflow'),
+(N'workflow.field.slaHours', N'vi', N'SLA (giờ)', N'workflow'),
+(N'workflow.field.slaHours', N'zh', N'SLA（小时）', N'workflow'),
+(N'workflow.field.requireAll', N'en', N'Require all approvers', N'workflow'),
+(N'workflow.field.requireAll', N'ja', N'全員承認が必要', N'workflow'),
+(N'workflow.field.requireAll', N'vi', N'Cần tất cả duyệt', N'workflow'),
+(N'workflow.field.requireAll', N'zh', N'需所有人审批', N'workflow'),
+(N'quotes.approval.noCandidates', N'en', N'No eligible Head of Procurement. Check the account, quote view/approval permissions, and email.', N'quotes'),
+(N'quotes.approval.noCandidates', N'ja', N'承認可能な調達部長がいません。アカウント、見積の閲覧・承認権限、メールを確認してください。', N'quotes'),
+(N'quotes.approval.noCandidates', N'vi', N'Chưa có Trưởng phòng Cung ứng phù hợp. Hãy kiểm tra tài khoản, quyền xem/duyệt báo giá và email.', N'quotes'),
+(N'quotes.approval.noCandidates', N'zh', N'没有符合条件的采购部经理。请检查账户、报价查看及审批权限和邮箱。', N'quotes'),
+(N'quotes.progress.next.internal', N'en', N'Next: the selected Head of Procurement approves or rejects the quote.', N'quotes'),
+(N'quotes.progress.next.internal', N'ja', N'次の作業：指定された調達部長が承認または差し戻しします。', N'quotes'),
+(N'quotes.progress.next.internal', N'vi', N'Việc tiếp theo: Trưởng phòng Cung ứng được chọn bấm Duyệt hoặc Từ chối duyệt.', N'quotes'),
+(N'quotes.progress.next.internal', N'zh', N'下一步：被选中的采购部经理批准或驳回报价。', N'quotes'),
+(N'quotes.progress.owner.internal', N'en', N'Head of Procurement', N'quotes'),
+(N'quotes.progress.owner.internal', N'ja', N'調達部長', N'quotes'),
+(N'quotes.progress.owner.internal', N'vi', N'Trưởng phòng Cung ứng', N'quotes'),
+(N'quotes.progress.owner.internal', N'zh', N'采购部经理', N'quotes'),
+(N'quotes.approval.previewHint', N'en', N'Choose one approver, inspect the rendered email, then submit. Only that person can decide.', N'quotes'),
+(N'quotes.approval.previewHint', N'ja', N'承認者を一名選び、実際のメールを確認して提出します。決裁できるのは指定者のみです。', N'quotes'),
+(N'quotes.approval.previewHint', N'vi', N'Chọn một người duyệt, xem email thực tế rồi xác nhận gửi duyệt. Chỉ người được chọn mới có thể quyết định.', N'quotes'),
+(N'quotes.approval.previewHint', N'zh', N'选择一名审批人，预览实际邮件后提交。只有指定人员可审批。', N'quotes')";
 
         /// <summary>
         /// True when the quote workflow's steps are exactly the given default chain: every
@@ -85,7 +102,7 @@ WHERE Module = N'quotes' AND Action = N'approve' AND Description = N'{fromDescri
             // not edited them; an edited row stays as the administrator left it.
             migrationBuilder.Sql(MoveDefault(OldDescription, OldSteps, 2, NewDescription, NewStepsJson) + @"
 UPDATE notification_templates
-SET AdminDescription = N'Trưởng phòng Cung ứng được chọn cần duyệt một báo giá vừa gửi.'
+SET AdminDescription = N'Người duyệt được chọn cho bước hiện tại cần duyệt một báo giá vừa gửi.'
 WHERE Code = N'quote.submitted-for-approval' AND AdminDescription = N'Sales Manager cần duyệt một báo giá vừa submit.';");
             // The list shows the approval chain and searches by name or approver role, and the
             // simplified editor drops its technical labels. The seeder only inserts keys, so
@@ -93,7 +110,7 @@ WHERE Code = N'quote.submitted-for-approval' AND AdminDescription = N'Sales Mana
             // wording an administrator changed in /admin/translations is kept.
             migrationBuilder.Sql(@"
 DELETE t FROM translations t
-JOIN (VALUES " + RetiredLabels + @") v([Key], LanguageCode, Value)
+JOIN (VALUES " + RetiredLabels + @") v([Key], LanguageCode, Value, Category)
   ON t.[Key] = v.[Key] AND t.LanguageCode = v.LanguageCode AND t.Value = v.Value;");
         }
 
@@ -102,13 +119,13 @@ JOIN (VALUES " + RetiredLabels + @") v([Key], LanguageCode, Value)
         {
             migrationBuilder.Sql(@"
 INSERT INTO translations ([Key], LanguageCode, Value, Category, CreatedAt, UpdatedAt)
-SELECT v.[Key], v.LanguageCode, v.Value, N'workflow', SYSUTCDATETIME(), SYSUTCDATETIME()
-FROM (VALUES " + RetiredLabels + @") v([Key], LanguageCode, Value)
+SELECT v.[Key], v.LanguageCode, v.Value, v.Category, SYSUTCDATETIME(), SYSUTCDATETIME()
+FROM (VALUES " + RetiredLabels + @") v([Key], LanguageCode, Value, Category)
 WHERE NOT EXISTS (SELECT 1 FROM translations t WHERE t.[Key] = v.[Key] AND t.LanguageCode = v.LanguageCode);");
             migrationBuilder.Sql(MoveDefault(NewDescription, NewSteps, 1, OldDescription, OldStepsJson) + @"
 UPDATE notification_templates
 SET AdminDescription = N'Sales Manager cần duyệt một báo giá vừa submit.'
-WHERE Code = N'quote.submitted-for-approval' AND AdminDescription = N'Trưởng phòng Cung ứng được chọn cần duyệt một báo giá vừa gửi.';");
+WHERE Code = N'quote.submitted-for-approval' AND AdminDescription = N'Người duyệt được chọn cho bước hiện tại cần duyệt một báo giá vừa gửi.';");
         }
     }
 }

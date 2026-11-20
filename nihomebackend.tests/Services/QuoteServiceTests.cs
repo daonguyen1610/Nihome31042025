@@ -32,13 +32,19 @@ public class QuoteServiceTests : IDisposable
         _email = new Mock<IEmailService>();
         _approvalEmails = new Mock<IQuoteApprovalEmailService>();
         _approvalEmails.Setup(service => service.QueueAsync(
-                It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
+                It.IsAny<int>(), It.IsAny<IReadOnlyList<int>>(), It.IsAny<string?>(), It.IsAny<string?>(),
                 It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()))
-            .Returns<int, int, string?, string?, int, bool, CancellationToken>((id, approver, version, preview, caller, scope, ct) =>
+            .Returns<int, IReadOnlyList<int>, string?, string?, int, bool, CancellationToken>((id, approvers, version, preview, caller, scope, ct) =>
             {
                 _db.Quotes.Single(q => q.Id == id).ApprovalApproverUserId = caller + 1;
                 return Task.CompletedTask;
             });
+        // As the real service: the user is active and holds the step's role.
+        _approvalEmails.Setup(service => service.HoldsRoleAsync(
+                It.IsAny<int>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns<int, string, CancellationToken>((userId, roleCode, ct) => _db.Users.AnyAsync(user =>
+                user.Id == userId && user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive &&
+                user.RoleEntity.Code == roleCode, ct));
         _quoteSpreadsheet = new Mock<IQuoteSpreadsheetService>();
         _quoteSpreadsheet
             .Setup(service => service.CreateAsync(
@@ -763,7 +769,7 @@ public class QuoteServiceTests : IDisposable
         Assert.Contains("bản duyệt mới hơn (R2)", exception.Message);
         Assert.Equal(QuoteStatus.Draft, (await _db.Quotes.SingleAsync(q => q.Id == created.Id)).Status);
         _approvalEmails.Verify(service => service.QueueAsync(
-            It.IsAny<int>(), It.IsAny<int>(), It.IsAny<string?>(), It.IsAny<string?>(),
+            It.IsAny<int>(), It.IsAny<IReadOnlyList<int>>(), It.IsAny<string?>(), It.IsAny<string?>(),
             It.IsAny<int>(), It.IsAny<bool>(), It.IsAny<CancellationToken>()), Times.Never);
     }
 

@@ -15,8 +15,14 @@ namespace NihomeBackend.Services;
 
 public interface IQuoteApprovalEmailService
 {
-    Task QueueAsync(int quoteId, int approverId, string? rowVersion, string? previewToken,
+    Task QueueAsync(int quoteId, IReadOnlyList<int> chosenApprovers, string? rowVersion, string? previewToken,
         int callerId, bool canSeeAll, CancellationToken ct);
+
+    /// <summary>
+    /// Queues the approval request for the next step of a quote's chain, saved together
+    /// with the step change.
+    /// </summary>
+    Task QueueNextStepAsync(int quoteId, int approverId, CancellationToken ct);
 
     /// <summary>
     /// Queues the outcome email for the person who submitted the quote, with the
@@ -24,6 +30,9 @@ public interface IQuoteApprovalEmailService
     /// workflow transition because rejecting clears the submitter fields.
     /// </summary>
     Task QueueDecisionAsync(int quoteId, int callerId, bool approved, string? note, CancellationToken ct);
+
+    /// <summary>True when the user may decide the quote's current step (active, in the step's role).</summary>
+    Task<bool> HoldsRoleAsync(int userId, string roleCode, CancellationToken ct);
 }
 
 public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionProvider protection,
@@ -34,11 +43,16 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
     private sealed record Preview(int CallerId, int ApproverId, string Hash, DateTime ExpiresAt);
     private static string Hash(string value) => Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 
-    public async Task<IReadOnlyList<QuoteApprovalCandidateResponse>> CandidatesAsync(int callerId, CancellationToken ct)
+    /// <summary>
+    /// The quote workflow as it applies to the caller's next submission: each step with the
+    /// people who may approve it (active, in the step's role, not the caller, with an email
+    /// and permission to view and approve quotes).
+    /// </summary>
+    public async Task<IReadOnlyList<QuoteApprovalChainStepResponse>> ChainAsync(int callerId, CancellationToken ct)
     {
-        var users = await db.Users.AsNoTracking().Where(u => u.IsActive && u.Id != callerId)
-            .Select(u => new { u.Id, u.FullName, u.Email, u.RoleEntityId }).ToListAsync(ct);
-        var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive && r.Code == RbacRoleCodes.ProcurementManager)
+        var steps = await QuoteApprovalChain.ConfiguredAsync(db, ct);
+        var codes = steps.Select(step => step.RoleCode).Distinct().ToList();
+        var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive && codes.Contains(r.Code))
             .Select(r => new
             {
                 r.Id,
@@ -48,21 +62,80 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
                 DepartmentId = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroupId : null,
                 DepartmentLabelKey = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroup.LabelKey : null
             }).ToListAsync(ct);
-        var roleById = roles.ToDictionary(r => r.Id);
-        var candidates = new List<QuoteApprovalCandidateResponse>();
-        foreach (var user in users.Where(user => ContactValidation.IsValidEmail(user.Email) &&
-            user.RoleEntityId is int roleId && roleById.ContainsKey(roleId)))
+        var roleIds = roles.Select(role => role.Id).ToList();
+        var users = await db.Users.AsNoTracking()
+            .Where(u => u.IsActive && u.Id != callerId && u.RoleEntityId != null && roleIds.Contains(u.RoleEntityId.Value))
+            .Select(u => new { u.Id, u.FullName, u.Email, RoleId = u.RoleEntityId!.Value }).ToListAsync(ct);
+        var candidatesByRole = roles.ToDictionary(role => role.Id, _ => new List<QuoteApprovalCandidateResponse>());
+        foreach (var user in users.Where(user => ContactValidation.IsValidEmail(user.Email)))
         {
             if (!await HasQuoteApproverAccessAsync(user.Id, ct)) continue;
-            var role = roleById[user.RoleEntityId!.Value];
-            candidates.Add(new QuoteApprovalCandidateResponse(user.Id, user.FullName ?? user.Email,
+            var role = roles.Single(item => item.Id == user.RoleId);
+            candidatesByRole[role.Id].Add(new QuoteApprovalCandidateResponse(user.Id, user.FullName ?? user.Email,
                 user.Email, role.Code, role.Name, role.LabelKey, role.DepartmentId, role.DepartmentLabelKey));
         }
-        return candidates.OrderBy(user => user.Name).ToList();
+        return steps.Select(step =>
+        {
+            var role = roles.FirstOrDefault(item => string.Equals(item.Code, step.RoleCode, StringComparison.OrdinalIgnoreCase));
+            return new QuoteApprovalChainStepResponse(step.Order, step.Name, step.RoleCode, role?.Name ?? step.RoleCode,
+                role?.LabelKey, step.SlaHours, step.EveryoneApproves,
+                role is null ? [] : candidatesByRole[role.Id].OrderBy(user => user.Name).ToList());
+        }).ToList();
     }
 
-    private async Task<(Quote Quote, ApplicationUser Approver, string[] CcEmails, QuoteApprovalTemplate Message, string Hash)> RenderAsync(
-        int quoteId, int approverId, string? rowVersion, int callerId, bool canSeeAll, CancellationToken ct)
+    /// <summary>The people who may approve the first step (kept for single-step clients).</summary>
+    public async Task<IReadOnlyList<QuoteApprovalCandidateResponse>> CandidatesAsync(int callerId, CancellationToken ct) =>
+        (await ChainAsync(callerId, ct))[0].Candidates;
+
+    /// <summary>
+    /// Fixes the chain for a submission: the chosen person for each step that needs a choice,
+    /// and every eligible person, one after another, for a step everyone in the role approves.
+    /// </summary>
+    private async Task<List<QuoteApprovalStep>> BuildChainAsync(int callerId, IReadOnlyList<int> chosenApprovers,
+        CancellationToken ct)
+    {
+        var chain = await ChainAsync(callerId, ct);
+        var picks = new Queue<int>(chosenApprovers);
+        var result = new List<QuoteApprovalStep>();
+        for (var index = 0; index < chain.Count; index++)
+        {
+            var step = chain[index];
+            var label = await RoleNameAsync(step.RoleLabelKey, step.RoleName, ct);
+            if (step.Candidates.Count == 0)
+                throw new QuoteOperationException(
+                    $"Bước {index + 1} ({label}) chưa có ai đủ điều kiện duyệt báo giá: cần tài khoản đang hoạt động, khác người gửi, có email hợp lệ và quyền xem, duyệt báo giá. Nhờ quản trị kiểm tra Phân quyền hoặc Cấu hình → Luồng duyệt.");
+            IReadOnlyList<QuoteApprovalCandidateResponse> people;
+            if (step.EveryoneApproves)
+            {
+                people = step.Candidates;
+            }
+            else
+            {
+                if (!picks.TryDequeue(out var chosenId))
+                    throw new QuoteOperationException($"Chọn người duyệt cho bước {index + 1} ({label}).");
+                people = [step.Candidates.FirstOrDefault(candidate => candidate.Id == chosenId)
+                    ?? throw new QuoteOperationException(
+                        $"Bước {index + 1}: chọn một {label} khác người gửi, đang hoạt động, có quyền xem và duyệt báo giá cùng email hợp lệ (ví dụ: ten@nicon.vn).")];
+            }
+            result.AddRange(people.Select(person => new QuoteApprovalStep(step.Order, step.Name, step.RoleCode,
+                step.RoleLabelKey, step.SlaHours, person.Id, person.Name, null, null)));
+        }
+        if (picks.Count > 0)
+            throw new QuoteOperationException("Luồng duyệt vừa thay đổi. Tải lại trang rồi chọn lại người duyệt.");
+        if (result.Select(step => step.ApproverUserId).Distinct().Count() != result.Count)
+            throw new QuoteOperationException("Mỗi người chỉ duyệt một bước. Chọn người khác cho các bước còn lại.");
+        return result;
+    }
+
+    private async Task<string> RoleNameAsync(string? labelKey, string fallback, CancellationToken ct) =>
+        labelKey is null
+            ? fallback
+            : await db.Translations.AsNoTracking()
+                .Where(row => row.Key == labelKey && row.LanguageCode == "vi")
+                .Select(row => row.Value).FirstOrDefaultAsync(ct) ?? fallback;
+
+    private async Task<(Quote Quote, ApplicationUser Approver, List<QuoteApprovalStep> Chain, string[] CcEmails, QuoteApprovalTemplate Message, string Hash)> RenderAsync(
+        int quoteId, IReadOnlyList<int> chosenApprovers, string? rowVersion, int callerId, bool canSeeAll, CancellationToken ct)
     {
         var quote = await db.Quotes.Include(q => q.Opportunity).SingleOrDefaultAsync(q => q.Id == quoteId, ct);
         if (quote is null || (!canSeeAll && quote.OwnerUserId != callerId))
@@ -71,38 +144,13 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             throw new QuoteOperationException("Chỉ báo giá ở trạng thái Nháp mới được gửi duyệt.");
         if (string.IsNullOrWhiteSpace(rowVersion) || rowVersion != CrmConcurrency.Encode(quote.RowVersion))
             throw new QuoteOperationException("Báo giá đã thay đổi. Vui lòng tải lại và xem trước email lần nữa.");
-        var approver = await db.Users.AsNoTracking().SingleOrDefaultAsync(u => u.Id == approverId, ct);
-        if (approver is null || !approver.IsActive || approver.Id == callerId ||
-            !ContactValidation.IsValidEmail(approver.Email) ||
-            !await IsProcurementManagerAsync(approver.Id, ct) ||
-            !await HasQuoteApproverAccessAsync(approverId, ct))
-            throw new QuoteOperationException("Chọn Trưởng phòng Cung ứng khác người gửi, đang hoạt động, có quyền xem và duyệt báo giá cùng email hợp lệ (ví dụ: ten@nicon.vn).");
+        var chain = await BuildChainAsync(callerId, chosenApprovers, ct);
+        var approver = await db.Users.AsNoTracking().SingleAsync(u => u.Id == chain[0].ApproverUserId, ct);
         var ccEmails = await GetCcEmailsAsync(quote, approver.Id, ct);
         if (JsonSerializer.Serialize(ccEmails).Length > 20000)
             throw new QuoteOperationException("Danh sách CC của đội ngũ quá dài. Hãy cập nhật đội ngũ dự án trước khi gửi duyệt.");
         var sender = await db.Users.AsNoTracking().SingleAsync(u => u.Id == callerId, ct);
-        var origin = GetPublicOrigin();
-        var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-        {
-            ["recipientName"] = approver.FullName ?? approver.Email,
-            ["senderName"] = sender.FullName ?? sender.Email,
-            ["quoteCode"] = quote.Code,
-            ["quoteVersion"] = quote.Version.ToString(CultureInfo.InvariantCulture),
-            ["grandTotal"] = quote.GrandTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")),
-            ["currency"] = quote.Currency,
-            ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
-            ["quoteUrl"] = $"{origin}/admin/quotes/{quote.Id}",
-        };
-        QuoteApprovalTemplate message;
-        try
-        {
-            message = QuoteApprovalEmailTemplates.Render(QuoteApprovalEmailTemplates.Get(
-                await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct)), tokens);
-        }
-        catch (ArgumentException error)
-        {
-            throw new QuoteOperationException(error.Message);
-        }
+        var message = await RenderRequestAsync(quote, approver, sender, ct);
         var hash = Hash(JsonSerializer.Serialize(new
         {
             QuoteId = quote.Id,
@@ -113,44 +161,92 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             quote.ValidUntil,
             ApproverId = approver.Id,
             approver.Email,
+            Chain = chain.Select(step => new { step.Order, step.RoleCode, step.ApproverUserId }),
             ccEmails,
             callerId,
             message.Subject,
             message.Body
         }));
-        return (quote, approver, ccEmails, message, hash);
+        return (quote, approver, chain, ccEmails, message, hash);
     }
 
-    public async Task<QuoteApprovalPreviewResponse> PreviewAsync(int quoteId, int approverId,
+    private async Task<QuoteApprovalTemplate> RenderRequestAsync(Quote quote, ApplicationUser approver,
+        ApplicationUser sender, CancellationToken ct)
+    {
+        var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+        {
+            ["recipientName"] = approver.FullName ?? approver.Email,
+            ["senderName"] = sender.FullName ?? sender.Email,
+            ["quoteCode"] = quote.Code,
+            ["quoteVersion"] = quote.Version.ToString(CultureInfo.InvariantCulture),
+            ["grandTotal"] = quote.GrandTotal.ToString("N0", CultureInfo.GetCultureInfo("vi-VN")),
+            ["currency"] = quote.Currency,
+            ["validUntil"] = quote.ValidUntil.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture),
+            ["quoteUrl"] = $"{GetPublicOrigin()}/admin/quotes/{quote.Id}",
+        };
+        try
+        {
+            return QuoteApprovalEmailTemplates.Render(QuoteApprovalEmailTemplates.Get(
+                await db.SiteSettings.AsNoTracking().FirstOrDefaultAsync(ct)), tokens);
+        }
+        catch (ArgumentException error)
+        {
+            throw new QuoteOperationException(error.Message);
+        }
+    }
+
+    public async Task<QuoteApprovalPreviewResponse> PreviewAsync(int quoteId, IReadOnlyList<int> chosenApprovers,
         string? rowVersion, int callerId, bool canSeeAll, CancellationToken ct)
     {
-        var rendered = await RenderAsync(quoteId, approverId, rowVersion, callerId, canSeeAll, ct);
+        var rendered = await RenderAsync(quoteId, chosenApprovers, rowVersion, callerId, canSeeAll, ct);
         var token = protector.Protect(JsonSerializer.Serialize(
-            new Preview(callerId, approverId, rendered.Hash, DateTime.UtcNow.AddMinutes(15))));
-        return new(token, approverId, rendered.Approver.FullName ?? rendered.Approver.Email,
+            new Preview(callerId, rendered.Approver.Id, rendered.Hash, DateTime.UtcNow.AddMinutes(15))));
+        return new(token, rendered.Approver.Id, rendered.Approver.FullName ?? rendered.Approver.Email,
             rendered.Approver.Email, rendered.CcEmails, rendered.Message.Subject, rendered.Message.Body);
     }
 
-    public async Task QueueAsync(int quoteId, int approverId, string? rowVersion, string? previewToken,
+    public async Task QueueAsync(int quoteId, IReadOnlyList<int> chosenApprovers, string? rowVersion, string? previewToken,
         int callerId, bool canSeeAll, CancellationToken ct)
     {
         Preview? preview;
         try { preview = JsonSerializer.Deserialize<Preview>(protector.Unprotect(previewToken ?? "")); }
         catch (Exception error) when (error is CryptographicException or JsonException or ArgumentException)
         { throw new QuoteOperationException("Vui lòng chọn người duyệt và xem trước email trước khi gửi duyệt."); }
-        var rendered = await RenderAsync(quoteId, approverId, rowVersion, callerId, canSeeAll, ct);
-        if (preview is null || preview.CallerId != callerId || preview.ApproverId != approverId ||
+        var rendered = await RenderAsync(quoteId, chosenApprovers, rowVersion, callerId, canSeeAll, ct);
+        if (preview is null || preview.CallerId != callerId || preview.ApproverId != rendered.Approver.Id ||
             preview.ExpiresAt < DateTime.UtcNow || preview.Hash != rendered.Hash)
             throw new QuoteOperationException("Báo giá, người duyệt hoặc mẫu email đã thay đổi. Vui lòng xem trước email lần nữa.");
-        rendered.Quote.ApprovalApproverUserId = approverId;
+        var now = DateTime.UtcNow;
+        rendered.Chain[0] = rendered.Chain[0] with { StartedAt = now };
+        rendered.Quote.ApprovalApproverUserId = rendered.Approver.Id;
+        rendered.Quote.ApprovalStepsJson = QuoteApprovalChain.Write(rendered.Chain);
+        rendered.Quote.ApprovalStepIndex = 0;
         db.QuoteApprovalEmails.Add(new()
         {
             QuoteId = quoteId,
-            ApproverUserId = approverId,
+            ApproverUserId = rendered.Approver.Id,
             ToEmail = rendered.Approver.Email.Trim(),
             CcEmailsJson = JsonSerializer.Serialize(rendered.CcEmails),
             Subject = rendered.Message.Subject,
             Body = rendered.Message.Body,
+        });
+    }
+
+    public async Task QueueNextStepAsync(int quoteId, int approverId, CancellationToken ct)
+    {
+        var quote = await db.Quotes.SingleAsync(q => q.Id == quoteId, ct);
+        var approver = await db.Users.AsNoTracking().SingleAsync(u => u.Id == approverId, ct);
+        var sender = await db.Users.AsNoTracking().SingleAsync(u => u.Id == quote.SubmittedByUserId, ct);
+        var ccEmails = await GetCcEmailsAsync(quote, approverId, ct);
+        var message = await RenderRequestAsync(quote, approver, sender, ct);
+        db.QuoteApprovalEmails.Add(new()
+        {
+            QuoteId = quoteId,
+            ApproverUserId = approverId,
+            ToEmail = approver.Email.Trim(),
+            CcEmailsJson = JsonSerializer.Serialize(ccEmails),
+            Subject = message.Subject,
+            Body = message.Body,
         });
     }
 
@@ -295,14 +391,15 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
             message.Quote.SubmittedByUserId != message.ApproverUserId &&
             approver is { IsActive: true } && approver.Email.Trim() == message.ToEmail &&
             ContactValidation.IsValidEmail(approver.Email) &&
-            await IsProcurementManagerAsync(message.ApproverUserId, ct) &&
+            await HoldsRoleAsync(message.ApproverUserId, QuoteApprovalChain.CurrentRoleCode(
+                message.Quote.ApprovalStepsJson, message.Quote.ApprovalStepIndex), ct) &&
             await HasQuoteApproverAccessAsync(message.ApproverUserId, ct);
     }
 
-    private Task<bool> IsProcurementManagerAsync(int userId, CancellationToken ct) =>
+    public Task<bool> HoldsRoleAsync(int userId, string roleCode, CancellationToken ct) =>
         db.Users.AsNoTracking().AnyAsync(user => user.Id == userId && user.IsActive &&
             user.RoleEntity != null && user.RoleEntity.IsActive &&
-            user.RoleEntity.Code == RbacRoleCodes.ProcurementManager, ct);
+            user.RoleEntity.Code == roleCode, ct);
 
     private async Task<bool> HasQuoteApproverAccessAsync(int userId, CancellationToken ct) =>
         await permissions.HasAsync(userId, "crm.quotes.view", ct) &&

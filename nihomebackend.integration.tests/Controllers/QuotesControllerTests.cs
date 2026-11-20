@@ -506,15 +506,139 @@ public class QuotesControllerTests : IntegrationTestBase
             .StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
+    // ---- The quote approval chain follows Cấu hình → Luồng duyệt (quotes / approve) ----
+
     [Fact]
-    public async Task SwitchingTheQuoteWorkflow_FromOldChainToNew_KeepsApprovalWithTheChosenProcurementManager()
+    public async Task QuoteApproval_FollowsTheConfiguredChain_StepByStep() => await WithQuoteWorkflowAsync(async () =>
     {
-        // The quote workflow is shared by the class's database: put it back afterwards.
+        (await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("ADMIN", false))).EnsureSuccessStatusCode();
+        var procurement = await UserIdAsync("PROCUREMENT_MANAGER");
+        var admin = await UserIdAsync("ADMIN");
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+
+        // The sender sees each step with the people who may approve it.
+        var chain = (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/approval-chain")))
+            .EnumerateArray().ToList();
+        chain.Select(step => step.GetProperty("roleCode").GetString())
+            .Should().Equal("PROCUREMENT_MANAGER", "ADMIN");
+        chain[1].GetProperty("candidates").EnumerateArray().Select(c => c.GetProperty("id").GetInt32())
+            .Should().Contain(admin);
+
+        // Negative: people in the wrong order, or a step left without anyone.
+        (await SubmitWithChainAsync(quoteId, admin, procurement)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await SubmitWithChainAsync(quoteId, procurement)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await SubmitWithChainAsync(quoteId, procurement, admin)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Negative: the second step's approver cannot decide before the first.
+        (await DecideAsAsync("ADMIN", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
+        var waiting = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
+        waiting.Status.Should().Be(QuoteStatus.PendingApproval);
+        waiting.ApprovalApproverUserId.Should().Be(admin);
+        waiting.ApprovalStepIndex.Should().Be(1);
+        (await WithDbAsync(db => db.QuoteApprovalEmails.CountAsync(e => e.QuoteId == quoteId &&
+            e.ApproverUserId == admin && e.Kind != "Decision"))).Should().Be(1, "the next approver is asked by email");
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var shown = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        shown.GetProperty("approvalSteps").EnumerateArray().Select(step => step.GetProperty("state").GetString())
+            .Should().Equal("Approved", "Current");
+
+        // The administrator applies another chain while the quote waits: the quote keeps
+        // the chain it was sent with.
+        (await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false))).EnsureSuccessStatusCode();
+        (await DecideAsAsync("ADMIN", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
+        var approved = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
+        approved.Status.Should().Be(QuoteStatus.Approved);
+        approved.ApprovedByUserId.Should().Be(admin);
+    });
+
+    [Fact]
+    public async Task QuoteApproval_RejectedAtALaterStep_GoesBackToSalesWithoutTheChain() => await WithQuoteWorkflowAsync(async () =>
+    {
+        (await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("ADMIN", false))).EnsureSuccessStatusCode();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        (await SubmitWithChainAsync(quoteId, await UserIdAsync("PROCUREMENT_MANAGER"), await UserIdAsync("ADMIN")))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        (await DecideAsAsync("ADMIN", quoteId, "reject-internal", "Thiếu chi phí vận chuyển thép"))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        var rejected = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
+        rejected.Status.Should().Be(QuoteStatus.Draft);
+        rejected.ApprovalApproverUserId.Should().BeNull();
+        rejected.ApprovalStepsJson.Should().BeNull();
+        rejected.ApprovalStepIndex.Should().BeNull();
+    });
+
+    [Fact]
+    public async Task QuoteApproval_OnePersonApprovesOneStep() => await WithQuoteWorkflowAsync(async () =>
+    {
+        (await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("PROCUREMENT_MANAGER", false)))
+            .EnsureSuccessStatusCode();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var procurement = await UserIdAsync("PROCUREMENT_MANAGER");
+
+        var response = await SubmitWithChainAsync(quoteId, procurement, procurement);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Mỗi người chỉ duyệt một bước");
+    });
+
+    [Fact]
+    public async Task QuoteApproval_EveryoneInARoleApprovesInTurn_WithoutBeingChosen() => await WithQuoteWorkflowAsync(async () =>
+    {
+        (await SaveQuoteWorkflowAsync(("ADMIN", false), ("PROCUREMENT_MANAGER", true))).EnsureSuccessStatusCode();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+
+        (await SubmitWithChainAsync(quoteId, await UserIdAsync("ADMIN"))).StatusCode.Should().Be(HttpStatusCode.OK);
+        var steps = QuoteApprovalChain.Read((await WithDbAsync(db =>
+            db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId))).ApprovalStepsJson);
+        steps.Should().HaveCountGreaterThan(1);
+        steps.Skip(1).Should().OnlyContain(step => step.RoleCode == "PROCUREMENT_MANAGER");
+    });
+
+    [Fact]
+    public async Task QuoteWorkflow_CannotUseARoleThatCannotApproveQuotes() => await WithQuoteWorkflowAsync(async () =>
+    {
+        // The Board has no quote approval permission, so nobody could decide that step.
+        var response = await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("BGD", false));
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await response.Content.ReadAsStringAsync()).Should().Contain("chưa có quyền xem và duyệt báo giá");
+    });
+
+    [Fact]
+    public async Task QuoteApproval_SentBeforeChains_IsDecidedByItsOneProcurementManager()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        (await SubmitWithApprovalAsync(quoteId)).StatusCode.Should().Be(HttpStatusCode.OK);
+        // As a quote waiting when this release is deployed: one approver and no chain.
+        await WithDbAsync(async db =>
+        {
+            var quote = await db.Quotes.SingleAsync(q => q.Id == quoteId);
+            quote.ApprovalStepsJson = null;
+            quote.ApprovalStepIndex = null;
+            return await db.SaveChangesAsync();
+        });
+
+        (await DecideAsAsync("SALES_MANAGER", quoteId, "approve")).StatusCode
+            .Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.Forbidden);
+        (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId))).Status
+            .Should().Be(QuoteStatus.Approved);
+    }
+
+    /// <summary>Runs a test that changes the shared quote workflow, then puts it back.</summary>
+    private async Task WithQuoteWorkflowAsync(Func<Task> test)
+    {
         var original = await WithDbAsync(db => db.WorkflowConfigs.AsNoTracking()
             .SingleOrDefaultAsync(item => item.Module == "quotes" && item.Action == "approve"));
         try
         {
-            await SwitchQuoteWorkflowFromOldChainToNewAsync();
+            await test();
         }
         finally
         {
@@ -531,86 +655,68 @@ public class QuotesControllerTests : IntegrationTestBase
         }
     }
 
-    private async Task SwitchQuoteWorkflowFromOldChainToNewAsync()
+    private async Task<HttpResponseMessage> SaveQuoteWorkflowAsync(params (string Role, bool Everyone)[] steps)
     {
-        // The administrator restores the old chain (Sales Manager then Board), as a database
-        // seeded before the correction would show it.
-        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        object Chain(string description, params (string Name, string Role)[] steps) => new
+        var prior = Client.DefaultRequestHeaders.Authorization;
+        try
         {
-            module = "quotes",
-            action = "approve",
-            name = "Duyệt báo giá",
-            description,
-            isActive = true,
-            sortOrder = 10,
-            steps = steps.Select((step, index) => new
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            var body = new
             {
-                order = index + 1,
-                name = step.Name,
-                approverRoleCode = step.Role,
-                slaHours = 24,
-                requireAllApprovers = false,
-            }).ToArray(),
-        };
-        var existing = (await ReadJsonAsync(await Client.GetAsync("/api/workflows?includeInactive=true")))
-            .EnumerateArray().FirstOrDefault(item => item.GetProperty("module").GetString() == "quotes" &&
-                item.GetProperty("action").GetString() == "approve");
-        var oldChain = Chain("Chuỗi cũ",
-            ("Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER"), ("Ban Giám đốc phê duyệt", "BGD"));
-        var saved = existing.ValueKind == System.Text.Json.JsonValueKind.Object
-            ? await Client.PutAsJsonAsync($"/api/workflows/{existing.GetProperty("id").GetInt32()}", oldChain)
-            : await Client.PostAsJsonAsync("/api/workflows", oldChain);
-        saved.EnsureSuccessStatusCode();
-        var workflowId = (await ReadJsonAsync(saved)).GetProperty("id").GetInt32();
-
-        // Under the old chain, Sales sends a quote: only a Procurement Manager can be chosen.
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        var quoteId = await CreateQuoteAsync();
-        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
-        var rowVersion = quote.GetProperty("rowVersion").GetString();
-        var candidates = (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/approval-candidates")))
-            .EnumerateArray().ToList();
-        candidates.Should().NotBeEmpty().And.OnlyContain(item =>
-            item.GetProperty("roleCode").GetString() == "PROCUREMENT_MANAGER");
-        var board = await WithDbAsync(db => db.Users.Where(user => user.RoleEntity != null &&
-            user.RoleEntity.Code == "BGD").Select(user => user.Id).FirstAsync());
-        // Negative: the Board member of the old chain cannot be chosen.
-        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approval-email-preview",
-            new { approverUserId = board, rowVersion })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        var approverId = candidates[0].GetProperty("id").GetInt32();
-        var preview = await ReadJsonAsync(await Client.PostAsJsonAsync(
-            $"/api/quotes/{quoteId}/approval-email-preview", new { approverUserId = approverId, rowVersion }));
-        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
-        {
-            approverUserId = approverId,
-            previewToken = preview.GetProperty("previewToken").GetString(),
-            rowVersion,
-        })).StatusCode.Should().Be(HttpStatusCode.OK);
-
-        // The administrator applies the new chain while the quote waits.
-        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
-        (await Client.PutAsJsonAsync($"/api/workflows/{workflowId}", Chain("Chuỗi mới",
-            ("Trưởng phòng Cung ứng được chọn duyệt", "PROCUREMENT_MANAGER"))))
-            .EnsureSuccessStatusCode();
-
-        // Negative: neither approver of the old chain can decide the waiting quote.
-        foreach (var role in new[] { "SALES_MANAGER", "BGD" })
-        {
-            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, role));
-            (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { }))
-                .StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.Forbidden);
+                module = "quotes",
+                action = "approve",
+                name = "Duyệt báo giá",
+                description = "Chuỗi duyệt báo giá kiểm thử",
+                isActive = true,
+                sortOrder = 10,
+                steps = steps.Select((step, index) => new
+                {
+                    order = index + 1,
+                    name = $"Bước {index + 1}",
+                    approverRoleCode = step.Role,
+                    slaHours = 24,
+                    requireAllApprovers = step.Everyone,
+                }).ToArray(),
+            };
+            var existing = await WithDbAsync(db => db.WorkflowConfigs.AsNoTracking()
+                .Where(item => item.Module == "quotes" && item.Action == "approve")
+                .Select(item => (int?)item.Id).SingleOrDefaultAsync());
+            return existing is int id
+                ? await Client.PutAsJsonAsync($"/api/workflows/{id}", body)
+                : await Client.PostAsJsonAsync("/api/workflows", body);
         }
-        (await WithDbAsync(db => db.Quotes.SingleAsync(item => item.Id == quoteId))).Status
-            .Should().Be(QuoteStatus.PendingApproval);
+        finally { Client.DefaultRequestHeaders.Authorization = prior; }
+    }
 
-        // Happy path: the Procurement Manager chosen before the switch approves it.
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
-        var approved = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { });
-        approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
-        var decided = await WithDbAsync(db => db.Quotes.SingleAsync(item => item.Id == quoteId));
-        decided.Status.Should().Be(QuoteStatus.Approved);
-        decided.ApprovedByUserId.Should().Be(approverId);
+    private Task<int> UserIdAsync(string roleCode) => WithDbAsync(db => db.Users.AsNoTracking()
+        .Where(user => user.RoleEntity != null && user.RoleEntity.Code == roleCode)
+        .Select(user => user.Id).FirstAsync());
+
+    /// <summary>Previews and sends the quote for approval with one chosen person per step.</summary>
+    private async Task<HttpResponseMessage> SubmitWithChainAsync(int quoteId, params int[] approverUserIds)
+    {
+        var rowVersion = (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}")))
+            .GetProperty("rowVersion").GetString();
+        var preview = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approval-email-preview",
+            new { approverUserIds, rowVersion });
+        if (!preview.IsSuccessStatusCode) return preview;
+        return await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
+        {
+            approverUserIds,
+            rowVersion,
+            previewToken = (await ReadJsonAsync(preview)).GetProperty("previewToken").GetString(),
+        });
+    }
+
+    private async Task<HttpResponseMessage> DecideAsAsync(string roleCode, int quoteId, string action, string? note = null)
+    {
+        var prior = Client.DefaultRequestHeaders.Authorization;
+        try
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, roleCode));
+            return await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/{action}", new { note });
+        }
+        finally { Client.DefaultRequestHeaders.Authorization = prior; }
     }
 
     [Fact]

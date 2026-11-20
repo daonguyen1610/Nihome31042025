@@ -6,7 +6,7 @@ import type {
   QuoteVersionsResponse,
   CreateQuoteRequest,
   UpdateQuoteRequest,
-  QuoteApprovalCandidate,
+  QuoteApprovalChainStep,
   QuoteApprovalPreview,
   QuoteWorkflowRequest,
   QuoteEmailPreviewResponse,
@@ -54,13 +54,15 @@ export const quotesApi = {
   createQuote: (body: CreateQuoteRequest) => api.post<QuoteResponse>("/quotes", body),
   updateQuote: (id: number, body: UpdateQuoteRequest) =>
     api.put<QuoteResponse>(`/quotes/${id}`, body),
-  getQuoteApprovalCandidates: (id: number) =>
-    api.get<QuoteApprovalCandidate[]>(`/quotes/${id}/approval-candidates`),
-  previewQuoteApprovalEmail: (id: number, body: { approverUserId: number; rowVersion: string }) =>
-    api.post<QuoteApprovalPreview>(`/quotes/${id}/approval-email-preview`, body),
+  getQuoteApprovalChain: (id: number) =>
+    api.get<QuoteApprovalChainStep[]>(`/quotes/${id}/approval-chain`),
+  previewQuoteApprovalEmail: (
+    id: number,
+    body: { approverUserIds: number[]; rowVersion: string },
+  ) => api.post<QuoteApprovalPreview>(`/quotes/${id}/approval-email-preview`, body),
   submitQuote: (
     id: number,
-    body: QuoteWorkflowRequest & { approverUserId: number; previewToken: string },
+    body: QuoteWorkflowRequest & { approverUserIds: number[]; previewToken: string },
   ) => api.post<QuoteResponse>(`/quotes/${id}/submit`, body),
   approveQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/approve`, body),

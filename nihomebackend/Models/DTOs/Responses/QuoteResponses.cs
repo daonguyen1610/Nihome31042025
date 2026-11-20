@@ -141,7 +141,18 @@ public class QuoteResponse
 
     public List<QuoteItemResponse> Items { get; set; } = new();
     public List<QuoteApprovalLogResponse> ApprovalLogs { get; set; } = new();
+
+    /// <summary>The approval chain fixed when the quote was sent, with each step's state.</summary>
+    public List<QuoteApprovalStepResponse> ApprovalSteps { get; set; } = new();
 }
+
+/// <param name="State">Approved, Current or Waiting.</param>
+public sealed record QuoteApprovalStepResponse(int Order, string Name, string RoleCode, string? RoleLabelKey,
+    int ApproverUserId, string ApproverName, string State, DateTime? DecidedAt, DateTime? DueAt);
+
+/// <summary>A step of the quote workflow as it applies to the next submission, with who can approve it.</summary>
+public sealed record QuoteApprovalChainStepResponse(int Order, string Name, string RoleCode, string RoleName,
+    string? RoleLabelKey, int SlaHours, bool EveryoneApproves, IReadOnlyList<QuoteApprovalCandidateResponse> Candidates);
 
 public class QuoteEmailPreviewResponse
 {
