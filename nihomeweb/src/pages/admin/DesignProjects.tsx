@@ -302,9 +302,18 @@ const AdminDesignProjects = () => {
   // Declared after `form` on purpose: the dependency array reads form.contractId
   // during render, so sitting above the useState threw before initialisation and
   // blanked the page.
+  // Only the customer's own contracts carry design scope (never a supplier purchase
+  // order), narrowed to the chosen customer like the project picker below.
   const selectableContracts = useMemo(
-    () => contracts.filter((c) => c.designProjectId == null || c.id === form.contractId),
-    [contracts, form.contractId],
+    () =>
+      contracts.filter(
+        (c) =>
+          c.id === form.contractId ||
+          (c.designProjectId == null &&
+            c.direction === "Upstream" &&
+            (!form.customerId || c.customerId === form.customerId)),
+      ),
+    [contracts, form.contractId, form.customerId],
   );
   // With a contract chosen the project comes from that contract; without one
   // (design first, contract later) the user picks the project directly.
@@ -319,10 +328,18 @@ const AdminDesignProjects = () => {
   );
   const contractOptions = useMemo(
     () =>
-      selectableContracts.map((c) => ({
-        value: String(c.id),
-        label: `${c.contractNumber}${c.customerName ? ` — ${c.customerName}` : ""}`,
-      })),
+      selectableContracts.map((c) => {
+        const project = c.operationalProjectCode
+          ? [c.operationalProjectCode, c.operationalProjectName].filter(Boolean).join(" · ")
+          : null;
+        return {
+          value: String(c.id),
+          label: c.contractNumber,
+          // A second line, so the customer and project are read in full, not cut off.
+          hint: [c.customerName, project].filter(Boolean).join(" — ") || undefined,
+          hintClassName: "whitespace-normal break-words",
+        };
+      }),
     [selectableContracts],
   );
 
@@ -861,12 +878,13 @@ const AdminDesignProjects = () => {
 
       {/* Create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
+        <DialogContent className="max-h-[90vh] w-[95vw] min-w-0 max-w-2xl overflow-y-auto overflow-x-hidden sm:w-full">
           <DialogHeader>
             <DialogTitle>{isEdit ? t("designProjects.edit") : t("designProjects.new")}</DialogTitle>
             <DialogDescription>{t("designProjects.form.createHint")}</DialogDescription>
           </DialogHeader>
-          <div className="grid gap-3 md:grid-cols-2">
+          {/* Fields shrink with the dialog, so a long value never pushes it off screen. */}
+          <div className="grid min-w-0 gap-3 md:grid-cols-2 [&>*]:min-w-0">
             <FieldScope className="md:col-span-2">
               <Label>{t("designProjects.field.name")}</Label>
               <Input
@@ -875,26 +893,43 @@ const AdminDesignProjects = () => {
                 autoFocus
               />
             </FieldScope>
-            <FieldScope>
+            <FieldScope className="min-w-0 md:col-span-2">
               <Label>{t("designProjects.field.customer")}</Label>
               <SearchableSelect
-                className="mt-1"
+                className="mt-1 min-w-0"
                 value={form.customerId ? String(form.customerId) : ""}
-                onChange={(v) => setForm((f) => ({ ...f, customerId: v ? Number(v) : 0 }))}
+                onChange={(v) =>
+                  setForm((f) => {
+                    const customerId = v ? Number(v) : 0;
+                    const contract = contracts.find((c) => c.id === f.contractId);
+                    // A contract of another customer no longer fits.
+                    const keepsContract =
+                      !contract || !customerId || contract.customerId === customerId;
+                    return {
+                      ...f,
+                      customerId,
+                      contractId: keepsContract ? f.contractId : null,
+                    };
+                  })
+                }
                 options={customerOptions}
                 searchPlaceholder={t("customers.picker.search")}
                 placeholder={t("designProjects.field.customer")}
               />
             </FieldScope>
-            <FieldScope>
+            <FieldScope className="min-w-0 md:col-span-2">
               <Label>{t("designProjects.field.contract")}</Label>
               <SearchableSelect
-                className="mt-1"
+                className="mt-1 min-w-0"
                 value={form.contractId != null ? String(form.contractId) : ""}
                 onChange={(v) =>
                   setForm((f) => ({
                     ...f,
                     contractId: v ? Number(v) : null,
+                    // The contract decides the customer and the project.
+                    customerId: v
+                      ? (contracts.find((c) => c.id === Number(v))?.customerId ?? f.customerId)
+                      : f.customerId,
                     operationalProjectId: v ? null : f.operationalProjectId,
                   }))
                 }
@@ -902,6 +937,7 @@ const AdminDesignProjects = () => {
                   { value: "", label: t("designProjects.form.contractNone") },
                   ...contractOptions,
                 ]}
+                searchPlaceholder={t("designProjects.form.contractSearch")}
                 placeholder={t("designProjects.form.contractNone")}
               />
             </FieldScope>

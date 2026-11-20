@@ -653,7 +653,7 @@ Mục tiêu: kiểm soát hồ sơ kỹ thuật, tránh sai lệch trước khi 
 
 #### 3.2.1 Hồ sơ thiết kế, đội ngũ và tiến độ
 
-**Tạo hồ sơ.** Hồ sơ thiết kế chỉ được tạo bằng thao tác chủ động, kể cả trước khi có hợp đồng (thiết kế trước, ký sau). Chuyển hợp đồng sang Đang thực hiện không tự tạo hồ sơ. Trong **Tạo hồ sơ thiết kế**, chọn Dự án hoặc một hợp đồng đã thuộc dự án. Hồ sơ tạo từ Cơ hội vẫn là hồ sơ đó khi dự án có thêm hợp đồng; tạo từ hợp đồng không sinh hồ sơ trùng. Kinh doanh cần quyền quản lý Cơ hội, quản lý Dự án và quản lý đội ngũ dự án để khởi tạo (xem [3.1.3](#313-cơ-hội)).
+**Tạo hồ sơ.** Hồ sơ thiết kế chỉ được tạo bằng thao tác chủ động, kể cả trước khi có hợp đồng (thiết kế trước, ký sau). Chuyển hợp đồng sang Đang thực hiện không tự tạo hồ sơ. Trong **Tạo hồ sơ thiết kế**, chọn Dự án hoặc một hợp đồng đã thuộc dự án. Ô Hợp đồng chỉ liệt kê hợp đồng ký với khách hàng đã chọn (không có đơn mua hàng với nhà cung cấp), mỗi dòng ghi đủ khách hàng và dự án; chọn hợp đồng thì ô Khách hàng tự điền theo hợp đồng. Hồ sơ tạo từ Cơ hội vẫn là hồ sơ đó khi dự án có thêm hợp đồng; tạo từ hợp đồng không sinh hồ sơ trùng. Kinh doanh cần quyền quản lý Cơ hội, quản lý Dự án và quản lý đội ngũ dự án để khởi tạo (xem [3.1.3](#313-cơ-hội)).
 
 **Nhiều luồng thiết kế trong một dự án.** Một Dự án có thể có nhiều Hồ sơ thiết kế. Mở đúng hồ sơ trước khi sửa Đội ngũ hoặc Tiến độ: thành viên, quan hệ báo cáo, người thực hiện, người duyệt, CC thuộc riêng hồ sơ đó. Là thành viên một hồ sơ không có quyền vào hồ sơ khác.
 
