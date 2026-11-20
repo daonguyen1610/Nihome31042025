@@ -169,7 +169,7 @@ Không phải dự án nào cũng đi đủ một chuỗi.
 | 1. Lead | Kinh doanh | Lead bị khóa sau khi chuyển đổi | Chuyển Lead tạo hoặc nối Khách hàng, Cơ hội và Dự án (Lập kế hoạch) |
 | 2. Cơ hội | Kinh doanh | Tiếp cận → Khảo sát → Báo giá/Đấu thầu → Thương thảo → Ký hợp đồng; hoặc Thua | Ký hợp đồng cần hợp đồng liên kết có ngày ký, không Nháp/Đã hủy |
 | 3. Dự án | Kinh doanh hoặc PM | Lập kế hoạch → Đang thực hiện / Tạm dừng / Hoàn thành / Đã hủy | Có khách hàng, mã, tên, người phụ trách. Mã đổi được sau khi tạo, có lý do và lịch sử |
-| 4a. Báo giá | Kinh doanh; Cung ứng (giá đầu vào; cả phòng xem mọi báo giá); Trưởng phòng Cung ứng (duyệt, nhận thông báo kèm link khi được chọn); Tài chính (rà soát) | Nháp → Chờ duyệt nội bộ → Đã duyệt → Đã gửi khách → Khách đã duyệt | Gửi khách cần báo giá gắn Dự án và Tài chính rà soát đã duyệt đúng phiên bản |
+| 4a. Báo giá | Kinh doanh; Cung ứng (giá đầu vào; cả phòng xem mọi báo giá); người duyệt theo Luồng duyệt báo giá, mặc định Trưởng phòng Cung ứng (duyệt lần lượt từng bước, nhận thông báo kèm link khi tới lượt); Tài chính (rà soát) | Nháp → Chờ duyệt nội bộ → Đã duyệt → Đã gửi khách → Khách đã duyệt | Gửi khách cần báo giá gắn Dự án và Tài chính rà soát đã duyệt đúng phiên bản |
 | 4b. Đấu thầu | Kinh doanh/QS văn phòng; các phòng theo kế hoạch thầu; Tài chính | Đang chuẩn bị → Đã nộp → Trúng/Trượt | Nộp cần kế hoạch đã xong, checklist đủ, dự toán đã duyệt, Tài chính rà soát hồ sơ thầu đã duyệt |
 | 5. Hợp đồng | Kinh doanh; Kế toán theo dõi thu/chi | Bản nháp → Đã ký → Đang thực hiện → Hoàn thành (Tạm dừng, Đã huỷ) | Từ báo giá đã duyệt hoặc tạo trực tiếp khi khách đã đồng ý giá trị. Đã ký cần bản scan hợp đồng đã ký |
 | 6. Tiến độ tổng dự án | Người quản lý dự án lập; Trưởng phòng Kinh doanh (trước ký) hoặc PM (sau ký) duyệt | Nháp → chờ duyệt → phát hành | Ngày công việc phòng ban, thiết kế, thi công nằm trong mốc WBS |
@@ -362,7 +362,7 @@ Trước khi gửi báo giá hoặc nộp thầu, các phòng ban làm phần vi
 2. Trên trang báo giá, chọn **Yêu cầu giá đầu vào** để giao nhóm công việc cho Cung ứng. **Xem yêu cầu giá đầu vào** mở lại nhóm đó.
 3. Cung ứng nhập giá đầu vào trong khung **Báo giá đầu vào** (BOQ Excel và/hoặc báo giá nhà cung cấp, thầu phụ) và gửi duyệt.
 4. Khi đã có giá đầu vào được duyệt và còn hiệu lực, Kinh doanh chọn **Lập báo giá đầu ra**, chọn phương thức **Suất đầu tư** hoặc **BOQ**, gắn nguồn giá đầu vào, nhập diện tích/đơn giá hoặc áp BOQ rồi lưu.
-5. **Gửi duyệt** nội bộ (chỉ bản nháp có giá trị hợp lệ). Chọn Trưởng phòng Cung ứng đang hoạt động, xem trước To/CC. Hệ thống chỉ CC thành viên dự án có quyền xem báo giá; chỉ người được chọn mới duyệt hoặc từ chối được.
+5. **Gửi duyệt** nội bộ (chỉ bản nháp có giá trị hợp lệ). Chọn người duyệt cho từng bước của Luồng duyệt báo giá (mặc định một Trưởng phòng Cung ứng), xem trước To/CC. Hệ thống chỉ CC thành viên dự án có quyền xem báo giá; chỉ người của bước đang chờ mới duyệt hoặc từ chối được.
 6. Sau khi báo giá được duyệt, chọn **Yêu cầu Tài chính rà soát**.
 7. Khi Tài chính rà soát đã duyệt, chọn **Gửi khách**.
 
@@ -1215,7 +1215,7 @@ Vai trò nghiệp vụ được tạo sẵn và chỉnh ở **Quản lý vai tr�
 |---|---|
 | Kinh doanh (`SALE`) | Lead, Cơ hội, Khảo sát, Báo giá, Đấu thầu, Hợp đồng trong phạm vi khách/cơ hội của mình. Tạo Dự án và khởi tạo hồ sơ thiết kế từ Cơ hội |
 | Trưởng phòng Kinh doanh (`SALES_MANAGER`) | Như Kinh doanh; duyệt tiến độ tổng dự án trước khi ký hợp đồng |
-| Trưởng phòng Cung ứng (`PROCUREMENT_MANAGER`) | Người duy nhất được chọn duyệt báo giá đầu ra; tải mẫu BOQ |
+| Trưởng phòng Cung ứng (`PROCUREMENT_MANAGER`) | Người duyệt báo giá đầu ra theo luồng mặc định (một bước); tải mẫu BOQ |
 | Cung ứng (`PROCUREMENT`) | Giá đầu vào, BOQ, nhà cung cấp, RFQ, yêu cầu vật tư; nhận máy/nhân công CM đã duyệt, soạn và gắn hợp đồng đầu vào, xác nhận cung ứng. Không ký hợp đồng, không duyệt CM, không duyệt/chi thanh toán |
 | Thủ kho (`WAREHOUSE`) | Nhập, xuất, cấp phát vật tư |
 | Chủ nhiệm thiết kế (`DESIGN_MANAGER`) | Mọi việc của Chủ trì thiết kế, thêm phối hợp nhà cung cấp/RFQ và xem hợp đồng thầu phụ. Không xóa vĩnh viễn hồ sơ thiết kế không đạt (chờ Q-08) |
@@ -1345,7 +1345,8 @@ Trang quản trị ở `/admin`, dành cho người đã đăng nhập và có q
 
 - Thêm hoặc sửa luồng: chọn **Nghiệp vụ cần duyệt** (nghiệp vụ đã có luồng sẽ mờ, vì mỗi nghiệp vụ chỉ có một luồng), đặt tên, rồi với mỗi bước chỉ cần chọn **Vai trò duyệt**. Tên bước để trống thì hệ thống ghi theo vai trò, ví dụ "Trưởng phòng Cung ứng duyệt". **Thời hạn xử lý** tính bằng giờ (24 giờ = 1 ngày). Tắt **Đang áp dụng** để tạm ngưng luồng mà không xoá.
 - Mã kỹ thuật chỉ cần nhập khi chọn **Nghiệp vụ khác**.
-- Luồng duyệt là quy trình chung để mọi người làm theo. Người duyệt trên từng phiếu do màn hình của nghiệp vụ đó áp dụng: báo giá do người gửi chọn một Trưởng phòng Cung ứng để duyệt, người gửi không tự duyệt được. Sửa luồng ở đây không đổi người duyệt của báo giá đang chờ duyệt.
+- Luồng **Duyệt báo giá** được áp dụng thật: khi gửi duyệt, người gửi chọn người cho từng bước theo đúng thứ tự ở đây (xem mục **Gửi duyệt báo giá nội bộ** ở [12.2](#122-mẫu-email-và-email-gửi-duyệt)). Vai trò ở mỗi bước phải có quyền "Xem báo giá" và "Duyệt báo giá"; thiếu quyền thì không lưu được và hệ thống nói rõ cần cấp quyền gì ở Phân quyền. Sửa luồng chỉ áp dụng cho lần gửi duyệt sau; báo giá đang chờ giữ chuỗi lúc gửi.
+- Các luồng khác (hợp đồng, gói thầu, thiết kế) hiện là quy trình chung để mọi người làm theo; người duyệt trên từng phiếu do màn hình của nghiệp vụ đó áp dụng.
 
 **Xuất Excel.** Các danh sách liên hệ, hồ sơ ứng tuyển, bài đăng, dự án, bản dịch, danh mục hoạt động, hình thức làm việc, logo (khách hàng, đối tác, nhà cung cấp, giải thưởng) có nút **Xuất Excel**, tải dữ liệu đang lọc dưới dạng CSV UTF-8 mở được bằng Excel. Nút bị khóa khi danh sách trống.
 
@@ -1451,11 +1452,12 @@ Mở **Mẫu email** (`/admin/email-templates`, cần quyền quản lý cài đ
 
 **Gửi duyệt báo giá nội bộ**
 
-1. Ở báo giá Nháp, chọn **Gửi duyệt**, chọn đúng một Trưởng phòng Cung ứng đang hoạt động, có quyền xem và duyệt báo giá, khác người gửi. CC chỉ gồm thành viên dự án đang hoạt động có quyền xem báo giá đó. Nếu người duyệt bị đổi vai trò hoặc mất quyền sau khi gửi, email duyệt đang chờ sẽ không được gửi.
-2. Xem bản xem trước thật (To, tiêu đề, nội dung) rồi xác nhận.
-3. Trang báo giá hiện người duyệt và trạng thái gửi: đang chờ, đang gửi, đã gửi, cần kiểm tra.
+1. Ở báo giá Nháp, chọn **Gửi duyệt**. Hộp thoại hiện các bước của luồng **Duyệt báo giá** (Cấu hình → Luồng duyệt, mặc định một bước Trưởng phòng Cung ứng). Với mỗi bước, chọn một người có vai trò của bước đó, đang hoạt động, có quyền xem và duyệt báo giá, khác người gửi; mỗi người chỉ duyệt một bước. Bước "mọi người có vai trò này đều phải duyệt" không cần chọn: tất cả lần lượt duyệt. CC chỉ gồm thành viên dự án đang hoạt động có quyền xem báo giá đó. Nếu người duyệt bị đổi vai trò hoặc mất quyền sau khi gửi, email duyệt đang chờ sẽ không được gửi.
+2. Xem bản xem trước thật (To là người duyệt bước 1, tiêu đề, nội dung) rồi xác nhận.
+3. Trang báo giá hiện từng bước: người duyệt, đã duyệt lúc nào, bước đang chờ và hạn xử lý, cùng trạng thái gửi email.
+4. Người của bước đang chờ bấm **Duyệt** (xác nhận) hoặc **Từ chối duyệt** (bắt buộc ghi lý do). Duyệt một bước thì báo giá chuyển cho người bước sau, kèm email và thông báo; duyệt bước cuối thì báo giá thành Đã duyệt. Từ chối ở bất kỳ bước nào thì báo giá về Nháp để Kinh doanh sửa và gửi lại.
 
-Chỉ người được chọn duyệt hoặc từ chối được, và việc duyệt làm trên hệ thống; email chỉ chứa liên kết. "Cần kiểm tra" không có nghĩa là chưa gửi được: nhờ quản trị viên kiểm tra SMTP và hỏi người duyệt trước khi gửi lại. Báo giá Chờ duyệt cũ chưa có người duyệt cần xử lý nghiệp vụ trước khi quyết định.
+Chỉ người của bước đang chờ duyệt hoặc từ chối được; người bước sau phải chờ tới lượt. Việc duyệt làm trên hệ thống; email chỉ chứa liên kết. Báo giá đã gửi giữ nguyên chuỗi lúc gửi, kể cả khi quản trị đổi luồng sau đó; báo giá đang chờ từ trước khi có chuỗi vẫn do Trưởng phòng Cung ứng đã chọn quyết định. "Cần kiểm tra" không có nghĩa là chưa gửi được: nhờ quản trị viên kiểm tra SMTP và hỏi người duyệt trước khi gửi lại. Báo giá Chờ duyệt cũ chưa có người duyệt cần xử lý nghiệp vụ trước khi quyết định.
 
 **Gửi duyệt giá đầu vào và rà soát Tài chính**
 

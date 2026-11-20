@@ -129,13 +129,30 @@ public class QuoteWorkflowRequest : IConcurrencyRequest
     [StringLength(2000)]
     public string? Note { get; set; }
     public int? ApproverUserId { get; set; }
+
+    /// <summary>
+    /// The person chosen for each step of the approval chain that needs a choice, in step
+    /// order. A single-step chain may send <see cref="ApproverUserId"/> instead.
+    /// </summary>
+    [MaxLength(20)]
+    public List<int>? ApproverUserIds { get; set; }
     public string? PreviewToken { get; set; }
+
+    public IReadOnlyList<int> ChosenApprovers() =>
+        ApproverUserIds is { Count: > 0 } ids ? ids : ApproverUserId is int id ? [id] : [];
 }
 
 public sealed class QuoteApprovalPreviewRequest
 {
-    [Required] public int? ApproverUserId { get; set; }
+    public int? ApproverUserId { get; set; }
+
+    /// <summary>The person chosen for each step that needs a choice, in step order.</summary>
+    [MaxLength(20)]
+    public List<int>? ApproverUserIds { get; set; }
     public string? RowVersion { get; set; }
+
+    public IReadOnlyList<int> ChosenApprovers() =>
+        ApproverUserIds is { Count: > 0 } ids ? ids : ApproverUserId is int id ? [id] : [];
 }
 
 public class SendQuoteEmailRequest : QuoteWorkflowRequest

@@ -74,6 +74,17 @@ public class Quote : IConcurrencyTracked
     public int? SubmittedByUserId { get; set; }
     public int? ApprovalApproverUserId { get; set; }
     public ApplicationUser? ApprovalApprover { get; set; }
+
+    /// <summary>
+    /// The approval chain taken from the quote workflow when the quote was sent for
+    /// approval, with the person approving each step (see <c>QuoteApprovalChain</c>).
+    /// Changing the workflow later does not change a chain already sent. Null for a
+    /// quote sent before chains existed: its one approver is <see cref="ApprovalApproverUserId"/>.
+    /// </summary>
+    public string? ApprovalStepsJson { get; set; }
+
+    /// <summary>Index in <see cref="ApprovalStepsJson"/> of the step waiting for a decision.</summary>
+    public int? ApprovalStepIndex { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public int? ApprovedByUserId { get; set; }
     public DateTime? SentAt { get; set; }

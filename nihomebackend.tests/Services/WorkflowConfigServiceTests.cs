@@ -16,7 +16,9 @@ public class WorkflowConfigServiceTests : IDisposable
     public WorkflowConfigServiceTests()
     {
         _db = DbContextFactory.Create();
-        SeedRoles("SUPER_ADMIN", "ADMIN", "SALES_MANAGER", "BGD");
+        SeedRoles("SUPER_ADMIN", "ADMIN", "SALES_MANAGER", "BGD", "PM");
+        // The quote workflow needs approvers who can view and approve quotes; PM cannot.
+        GrantQuoteApproval("SUPER_ADMIN", "ADMIN", "SALES_MANAGER", "BGD");
         _sut = new WorkflowConfigService(_db, NullLogger<WorkflowConfigService>.Instance);
     }
 
@@ -29,6 +31,31 @@ public class WorkflowConfigServiceTests : IDisposable
             _db.Roles.Add(new Role { Code = c, Name = c });
         }
         _db.SaveChanges();
+    }
+
+    private void GrantQuoteApproval(params string[] codes)
+    {
+        var permissions = new[] { "view", "approve" }
+            .Select(action => new Permission { Module = "crm.quotes", Action = action }).ToList();
+        _db.Permissions.AddRange(permissions);
+        _db.SaveChanges();
+        foreach (var role in _db.Roles.Where(role => codes.Contains(role.Code)).ToList())
+            foreach (var permission in permissions)
+                _db.RolePermissions.Add(new RolePermission { RoleId = role.Id, PermissionId = permission.Id });
+        _db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task Create_QuoteWorkflow_RejectsARoleThatCannotApproveQuotes()
+    {
+        var error = await Assert.ThrowsAsync<WorkflowConfigValidationException>(() => _sut.CreateAsync(
+            Req(steps: [(1, "Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER"), (2, "Quản lý dự án duyệt", "PM")])));
+
+        Assert.Contains("PM chưa có quyền xem và duyệt báo giá", error.Message);
+        // Other business actions are not applied to quotes, so their roles are not checked.
+        var contracts = await _sut.CreateAsync(Req(module: "contracts", action: "sign",
+            steps: [(1, "Quản lý dự án duyệt", "PM")]));
+        Assert.Equal("contracts", contracts.Module);
     }
 
     private static UpsertWorkflowConfigRequest Req(

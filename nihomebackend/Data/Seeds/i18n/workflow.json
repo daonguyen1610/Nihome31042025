@@ -274,10 +274,10 @@
   {
     "key": "workflow.quoteRule",
     "category": "workflow",
-    "vi": "Khi gửi duyệt báo giá, người gửi chọn một Trưởng phòng Cung ứng để duyệt; người gửi không tự duyệt được báo giá của mình.",
-    "en": "When sending a quote for approval, the sender chooses a Procurement Manager to approve it; senders cannot approve their own quote.",
-    "zh": "提交报价审批时，提交人需选择一名采购经理审批；提交人不能审批自己的报价。",
-    "ja": "見積を承認に回す際、送信者が購買部長を1名選んで承認を依頼します。送信者は自分の見積を承認できません。"
+    "vi": "Luồng này được áp dụng khi gửi duyệt báo giá: người gửi chọn người duyệt cho từng bước, bước sau chỉ mở khi bước trước đã duyệt, người gửi không tự duyệt. Báo giá đã gửi giữ nguyên luồng lúc gửi. Vai trò ở mỗi bước cần quyền Xem và Duyệt báo giá.",
+    "en": "This workflow is applied when a quote is sent for approval: the sender chooses an approver for each step, the next step opens only after the previous one approves, and senders cannot approve their own quote. A quote already sent keeps the workflow it was sent with. Each step's role needs permission to view and approve quotes.",
+    "zh": "提交报价审批时应用此流程：提交人为每一步选择审批人，上一步批准后才进入下一步，提交人不能审批自己的报价。已提交的报价保持提交时的流程。每一步的角色需要查看和审批报价的权限。",
+    "ja": "見積を承認に回すときにこのフローが適用されます。送信者が各ステップの承認者を選び、前のステップが承認されると次に進みます。送信者は自分の見積を承認できません。送信済みの見積は送信時のフローのままです。各ステップのロールには見積の閲覧・承認権限が必要です。"
   },
   {
     "key": "workflow.technicalCodes",

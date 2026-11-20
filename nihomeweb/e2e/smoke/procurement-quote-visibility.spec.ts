@@ -107,6 +107,10 @@ test("Procurement sees every quote and the chosen approver is notified with a li
     await page.getByRole("link", { name: quote.code }).first().click();
     await expect(page).toHaveURL(new RegExp(`/admin/quotes/${quoteId}$`));
     await expect(page.getByRole("button", { name: "Duyệt", exact: true })).toBeDisabled();
+    // The disabled decision says who can take it.
+    await expect(page.getByTestId("quote-approval-email-status")).toContainText(
+      "(người duyệt được chọn) được Duyệt hoặc Từ chối duyệt báo giá này",
+    );
 
     // The head gets an in-app notice that opens the quote, ready to approve.
     const notices = await (await api.get("/api/notifications?take=20", { headers: head })).json();
@@ -122,6 +126,26 @@ test("Procurement sees every quote and the chosen approver is notified with a li
     await page.getByText(notice!.title).first().click();
     await expect(page).toHaveURL(new RegExp(`/admin/quotes/${quoteId}$`));
     await expect(page.getByRole("button", { name: "Duyệt", exact: true })).toBeEnabled();
+
+    // A rejection is confirmed and needs a reason; it goes back to Sales with it.
+    await page.getByRole("button", { name: "Từ chối duyệt", exact: true }).click();
+    const decision = page.getByRole("dialog");
+    await expect(decision).toContainText("quay về Kinh doanh để sửa");
+    const confirmReject = decision.getByRole("button", { name: "Từ chối duyệt", exact: true });
+    await expect(confirmReject).toBeDisabled();
+    await decision.getByRole("textbox").fill("Đơn giá kết cấu thép chưa cập nhật tháng 11");
+    await confirmReject.click();
+    await expect(decision).toBeHidden();
+    await expect(
+      page.getByText(`Đã trả báo giá ${quote.code} về Kinh doanh để sửa`).first(),
+    ).toBeVisible();
+    const rejected = await (await api.get(`/api/quotes/${quoteId}`, { headers: sales })).json();
+    expect(rejected.status).toBe("Draft");
+    expect(
+      (rejected.approvalLogs as { note?: string }[]).some(
+        (log) => log.note === "Đơn giá kết cấu thép chưa cập nhật tháng 11",
+      ),
+    ).toBe(true);
   } finally {
     if (quoteId) await hardDeleteBusinessRoot(api, admin, `/api/quotes/${quoteId}`);
     if (opportunityId)

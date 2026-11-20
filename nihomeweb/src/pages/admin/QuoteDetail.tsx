@@ -9,6 +9,7 @@ import {
   ArrowLeft,
   Ban,
   Calendar,
+  Check,
   CheckCheck,
   Download,
   FileText,
@@ -77,7 +78,7 @@ import {
   adminApi,
   type QuoteDocumentResponse,
   type QuoteEmailPreviewResponse,
-  type QuoteApprovalCandidate,
+  type QuoteApprovalChainStep,
   type QuoteApprovalPreview,
   type QuoteItemResponse,
   type QuoteMethod,
@@ -235,8 +236,17 @@ const AdminQuoteDetail = () => {
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [sendPreview, setSendPreview] = useState<QuoteEmailPreviewResponse | null>(null);
   const [sendDraft, setSendDraft] = useState<QuoteEmailPreviewResponse | null>(null);
-  const [approvalCandidates, setApprovalCandidates] = useState<QuoteApprovalCandidate[]>([]);
-  const [selectedApproverId, setSelectedApproverId] = useState<number | null>(null);
+  // The approval chain from Cấu hình → Luồng duyệt, and the person chosen for each step.
+  const [approvalChain, setApprovalChain] = useState<QuoteApprovalChainStep[]>([]);
+  const [chosenApprovers, setChosenApprovers] = useState<(number | null)[]>([]);
+  const chosenApproverIds = approvalChain.flatMap((step, index) =>
+    !step.everyoneApproves && chosenApprovers[index] != null ? [chosenApprovers[index]!] : [],
+  );
+  const chainReady =
+    approvalChain.length > 0 &&
+    approvalChain.every((step, index) =>
+      step.everyoneApproves ? step.candidates.length > 0 : chosenApprovers[index] != null,
+    );
   const [approvalPreview, setApprovalPreview] = useState<QuoteApprovalPreview | null>(null);
   const [approvalError, setApprovalError] = useState("");
   const [deleteImpact, setDeleteImpact] = useState<DeletionImpactResponse | null>(null);
@@ -520,7 +530,7 @@ const AdminQuoteDetail = () => {
         submit: () =>
           adminApi.submitQuote(quote.id, {
             ...body,
-            approverUserId: selectedApproverId!,
+            approverUserIds: chosenApproverIds,
             previewToken: approvalPreview!.previewToken,
           }),
         approve: () => adminApi.approveQuote(quote.id, body),
@@ -545,7 +555,21 @@ const AdminQuoteDetail = () => {
       setSendDraft(null);
       setApprovalPreview(null);
       setWorkflowNote("");
-      toast({ title: t(`quotes.action.${targetWorkflow}`) });
+      const done: Partial<Record<WorkflowKind, string>> = {
+        submit: "quotes.done.submit",
+        approve: "quotes.done.approve",
+        rejectInternal: "quotes.done.rejectInternal",
+      };
+      // Approving a step before the last passes the quote to the next approver.
+      const doneKey =
+        targetWorkflow === "approve" && data.status === "PendingApproval"
+          ? "quotes.done.approveStep"
+          : done[targetWorkflow];
+      toast({
+        title: doneKey
+          ? t(doneKey, { code: data.code, name: data.approvalApproverName ?? "" })
+          : t(`quotes.action.${targetWorkflow}`),
+      });
     } catch (err) {
       toast({
         title: t("common.error"),
@@ -558,18 +582,19 @@ const AdminQuoteDetail = () => {
     }
   };
 
-  // Actions that can run directly without a dialog (note is optional)
-  const directActions: WorkflowKind[] = ["approve", "rejectInternal", "customerApprove"];
+  // Actions that can run directly without a dialog (note is optional). The internal
+  // decision is confirmed in the dialog, and a rejection says why.
+  const directActions: WorkflowKind[] = ["customerApprove"];
 
   const handleWorkflowClick = async (k: WorkflowKind) => {
     if (k === "submit" && quote) {
       setWorkflowBusy(true);
       setApprovalError("");
       setApprovalPreview(null);
-      setSelectedApproverId(null);
       try {
-        const { data } = await adminApi.getQuoteApprovalCandidates(quote.id);
-        setApprovalCandidates(data);
+        const { data } = await adminApi.getQuoteApprovalChain(quote.id);
+        setApprovalChain(data);
+        setChosenApprovers(data.map(() => null));
         setWorkflowNote("");
         setWorkflow(k);
       } catch (err) {
@@ -611,13 +636,13 @@ const AdminQuoteDetail = () => {
   };
 
   const previewApprovalEmail = async () => {
-    if (!quote || !selectedApproverId) return;
+    if (!quote || !chainReady) return;
     setWorkflowBusy(true);
     setApprovalError("");
     setApprovalPreview(null);
     try {
       const { data } = await adminApi.previewQuoteApprovalEmail(quote.id, {
-        approverUserId: selectedApproverId,
+        approverUserIds: chosenApproverIds,
         rowVersion: quote.rowVersion,
       });
       setApprovalPreview(data);
@@ -764,6 +789,28 @@ const AdminQuoteDetail = () => {
     quote.status === "Cancelled";
   // Sales can price the quote once an approved input price or project BOQ exists.
   const priceSourceReady = approvedInputOffers.length > 0 || projectBoq != null;
+  // Who decides now, from the chain fixed when the quote was sent. A quote sent before
+  // chains has one approver, the chosen Procurement Manager.
+  const approvalSteps = quote.approvalSteps ?? [];
+  const currentStepIndex = approvalSteps.findIndex((step) => step.state === "Current");
+  const currentStep = approvalSteps[currentStepIndex];
+  const nextApprover = currentStep ? approvalSteps[currentStepIndex + 1] : undefined;
+  const currentApproval =
+    quote.status !== "PendingApproval"
+      ? undefined
+      : currentStep
+        ? {
+            name: currentStep.approverName,
+            role: currentStep.roleLabelKey ? t(currentStep.roleLabelKey) : currentStep.roleCode,
+            current: currentStepIndex + 1,
+            total: approvalSteps.length,
+          }
+        : {
+            name: quote.approvalApproverName ?? "—",
+            role: t("rbac.role.PROCUREMENT_MANAGER.label"),
+            current: 1,
+            total: 1,
+          };
   const showEditToggle =
     canManage && !editing && !isTerminal && (!awaitingInputPrice || priceSourceReady);
   const primaryInputPackage =
@@ -965,6 +1012,7 @@ const AdminQuoteDetail = () => {
       </div>
 
       <QuoteProgressPanel
+        currentApproval={currentApproval}
         status={quote.status}
         grandTotal={quote.grandTotal}
         priceSourceReady={priceSourceReady}
@@ -979,12 +1027,62 @@ const AdminQuoteDetail = () => {
           className="mb-4 rounded-lg border bg-card p-4 text-sm"
           data-testid="quote-approval-email-status"
         >
-          <p className="font-medium">
-            {t("quotes.approval.recipient")}: {quote.approvalApproverName ?? "—"}
-          </p>
+          {(quote.approvalSteps?.length ?? 0) <= 1 && (
+            <p className="font-medium">
+              {t("quotes.approval.recipient")}: {quote.approvalApproverName ?? "—"}
+            </p>
+          )}
+          {(quote.approvalSteps?.length ?? 0) > 1 && (
+            <ol className="space-y-2" data-testid="quote-approval-steps">
+              {quote.approvalSteps!.map((step, index) => (
+                <li key={`${step.order}-${index}`} className="flex gap-2">
+                  <span
+                    className={
+                      step.state === "Approved"
+                        ? "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-strong text-[11px] font-semibold text-white"
+                        : "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold tabular-nums"
+                    }
+                    aria-hidden
+                  >
+                    {step.state === "Approved" ? <Check className="h-3 w-3" /> : index + 1}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block font-medium">
+                      {step.approverName}
+                      <span className="font-normal text-muted-foreground">
+                        {" "}
+                        · {step.roleLabelKey ? t(step.roleLabelKey) : step.roleCode}
+                      </span>
+                    </span>
+                    <span
+                      className={
+                        step.state === "Approved"
+                          ? "block text-xs text-success-strong"
+                          : step.state === "Current"
+                            ? "block text-xs font-medium text-foreground"
+                            : "block text-xs text-muted-foreground"
+                      }
+                    >
+                      {t(`quotes.approval.stepState.${step.state}`)}
+                      {step.state === "Approved" && step.decidedAt
+                        ? ` ${formatDateTime(step.decidedAt)}`
+                        : step.state === "Current" && step.dueAt
+                          ? ` · ${t("quotes.approval.dueAt", { at: formatDateTime(step.dueAt) })}`
+                          : ""}
+                    </span>
+                  </span>
+                </li>
+              ))}
+            </ol>
+          )}
           <p className="mt-1 text-muted-foreground">
             {t(`quotes.approval.status.${quote.approvalEmailStatus ?? "Pending"}`)}
           </p>
+          {quote.status === "PendingApproval" && quote.approvalApproverUserId !== currentUserId && (
+            <p className="mt-1 text-muted-foreground">
+              {t("quotes.approval.onlyChosen", { name: quote.approvalApproverName ?? "—" })}
+            </p>
+          )}
           {quote.approvalEmailStatus === "NeedsReview" && (
             <p className="mt-1 text-destructive">{t("quotes.approval.needsReviewAction")}</p>
           )}
@@ -1591,40 +1689,84 @@ const AdminQuoteDetail = () => {
           <DialogHeader>
             <DialogTitle>{workflow && t(`quotes.action.${workflow}`)}</DialogTitle>
             <DialogDescription>
-              {t(
-                workflow === "submit"
-                  ? "quotes.approval.previewHint"
-                  : workflow === "send"
-                    ? "quotes.email.previewHint"
-                    : "quotes.action.noteOptional",
-              )}
+              {workflow === "approve" || workflow === "rejectInternal"
+                ? workflow === "approve" && nextApprover
+                  ? t("quotes.decide.approveStepHint", {
+                      code: quote.code,
+                      current: currentApproval!.current,
+                      total: currentApproval!.total,
+                      name: nextApprover.approverName,
+                    })
+                  : t(`quotes.decide.${workflow}Hint`, { code: quote.code })
+                : t(
+                    workflow === "submit"
+                      ? "quotes.approval.chainHint"
+                      : workflow === "send"
+                        ? "quotes.email.previewHint"
+                        : "quotes.action.noteOptional",
+                  )}
             </DialogDescription>
           </DialogHeader>
           {workflow === "submit" && (
             <div className="space-y-3">
-              <Label htmlFor="quote-approval-approver">{t("quotes.approval.recipient")}</Label>
-              <div data-testid="quote-approval-approver">
-                <SearchableSelect
-                  ariaLabel={t("quotes.approval.recipient")}
-                  value={selectedApproverId?.toString() ?? null}
-                  onChange={(value) => {
-                    setSelectedApproverId(Number(value));
-                    setApprovalPreview(null);
-                    setApprovalError("");
-                  }}
-                  placeholder={t("quotes.approval.selectApprover")}
-                  options={approvalCandidates.map((candidate) => personOption(candidate, t))}
-                />
-              </div>
-              {approvalCandidates.length === 0 && (
-                <p role="alert" className="text-sm text-destructive">
-                  {t("quotes.approval.noCandidates")}
-                </p>
-              )}
+              <ol className="space-y-3" data-testid="quote-approval-chain">
+                {approvalChain.map((step, index) => {
+                  const role = step.roleLabelKey ? t(step.roleLabelKey) : step.roleName;
+                  // One person approves one step: people chosen elsewhere are not offered.
+                  const takenElsewhere = new Set(
+                    chosenApprovers.filter((id, other) => other !== index && id != null),
+                  );
+                  const options = step.candidates.filter((c) => !takenElsewhere.has(c.id));
+                  return (
+                    <li
+                      key={`${step.order}-${index}`}
+                      className="space-y-1.5 rounded-md border p-3"
+                    >
+                      <p className="text-sm font-medium">
+                        {t("quotes.approval.stepTitle", { n: index + 1, role })}
+                      </p>
+                      {step.everyoneApproves ? (
+                        <p className="text-sm text-muted-foreground">
+                          {t("quotes.approval.everyoneInOrder", {
+                            names: step.candidates.map((c) => c.name).join(", ") || "—",
+                          })}
+                        </p>
+                      ) : (
+                        <div
+                          data-testid={
+                            index === 0
+                              ? "quote-approval-approver"
+                              : `quote-approval-approver-${index}`
+                          }
+                        >
+                          <SearchableSelect
+                            ariaLabel={t("quotes.approval.stepTitle", { n: index + 1, role })}
+                            value={chosenApprovers[index]?.toString() ?? null}
+                            onChange={(value) => {
+                              setChosenApprovers((prev) =>
+                                prev.map((id, other) => (other === index ? Number(value) : id)),
+                              );
+                              setApprovalPreview(null);
+                              setApprovalError("");
+                            }}
+                            placeholder={t("quotes.approval.selectApprover")}
+                            options={options.map((candidate) => personOption(candidate, t))}
+                          />
+                        </div>
+                      )}
+                      {step.candidates.length === 0 && (
+                        <p role="alert" className="text-sm text-destructive">
+                          {t("quotes.approval.noCandidatesForStep", { role })}
+                        </p>
+                      )}
+                    </li>
+                  );
+                })}
+              </ol>
               <Button
                 type="button"
                 variant="outline"
-                disabled={!selectedApproverId || workflowBusy}
+                disabled={!chainReady || workflowBusy}
                 onClick={() => void previewApprovalEmail()}
               >
                 {t("quotes.approval.preview")}
@@ -1733,7 +1875,9 @@ const AdminQuoteDetail = () => {
               rows={4}
               value={workflowNote}
               onChange={(e) => setWorkflowNote(e.target.value)}
-              placeholder={t("quotes.field.note")}
+              placeholder={t(
+                workflow === "rejectInternal" ? "quotes.decide.rejectReason" : "quotes.field.note",
+              )}
             />
           )}
           <DialogFooter className="sticky bottom-0 z-10 border-t bg-background pt-3">
@@ -1745,6 +1889,7 @@ const AdminQuoteDetail = () => {
               disabled={
                 workflowBusy ||
                 (workflow === "submit" && !approvalPreview) ||
+                (workflow === "rejectInternal" && !workflowNote.trim()) ||
                 (workflow === "send" &&
                   (!sendDraft ||
                     !isValidEmail(sendDraft.toEmail) ||
@@ -1756,7 +1901,10 @@ const AdminQuoteDetail = () => {
             >
               {workflowBusy && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
               {t(
-                workflow === "send" || workflow === "submit"
+                workflow === "send" ||
+                  workflow === "submit" ||
+                  workflow === "approve" ||
+                  workflow === "rejectInternal"
                   ? `quotes.action.${workflow}`
                   : "common.save",
               )}

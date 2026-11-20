@@ -138,6 +138,32 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
                 $"Unknown approver role code(s): {string.Join(", ", unknown)}.");
         }
 
+        // The quote workflow is applied when a quote is sent for approval, so each step's
+        // role must be able to open and approve quotes, or nobody could decide that step.
+        if (module == QuoteApprovalChain.Module && action == QuoteApprovalChain.Action)
+        {
+            var quoteCodes = new[] { "view", "approve" };
+            var missing = await db.Roles.AsNoTracking()
+                .Where(role => approverRoleCodes.Contains(role.Code) &&
+                    db.Permissions.Count(permission => permission.Module == "crm.quotes" &&
+                        quoteCodes.Contains(permission.Action) &&
+                        db.RolePermissions.Any(grant => grant.RoleId == role.Id && grant.PermissionId == permission.Id)) < quoteCodes.Length)
+                .Select(role => new { role.Name, role.LabelKey })
+                .ToListAsync(ct);
+            if (missing.Count > 0)
+            {
+                var names = new List<string>();
+                foreach (var role in missing)
+                {
+                    names.Add(role.LabelKey is null ? role.Name : await db.Translations.AsNoTracking()
+                        .Where(row => row.Key == role.LabelKey && row.LanguageCode == "vi")
+                        .Select(row => row.Value).FirstOrDefaultAsync(ct) ?? role.Name);
+                }
+                throw new WorkflowConfigValidationException(
+                    $"Vai trò {string.Join(", ", names)} chưa có quyền xem và duyệt báo giá nên không duyệt được bước này. Cấp quyền \"Xem báo giá\" và \"Duyệt báo giá\" cho vai trò này ở Phân quyền, rồi lưu lại luồng.");
+            }
+        }
+
         var duplicate = await db.WorkflowConfigs
             .AsNoTracking()
             .AnyAsync(w => w.Module == module && w.Action == action && (excludeId == null || w.Id != excludeId), ct);

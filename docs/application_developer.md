@@ -447,9 +447,9 @@ thiết kế/thi công chỉ seed ở môi trường `Development`
   Process documents và logos đối soát cộng dồn: khôi phục dòng chuẩn bị thiếu,
   không xoá dòng tự tạo, không ghi đè giá trị admin.
 - Luồng duyệt mặc định (`Seeds/workflows/defaults.json`) chỉ điền dòng còn trống; admin
-  sửa tại `/admin/workflows`. Đây là cấu hình tham chiếu: `QuoteService` chỉ cho Trưởng
-  phòng Cung ứng mà người gửi chọn duyệt báo giá, nên mặc định `quotes|approve` là một bước
-  `PROCUREMENT_MANAGER`. Migration `AlignQuoteApprovalWorkflow` sửa chuỗi cũ (Sales
+  sửa tại `/admin/workflows`. Luồng `quotes|approve` được áp dụng khi gửi duyệt báo giá
+  ([8.2](#82-báo-giá)); các luồng khác là cấu hình tham chiếu. Mặc định
+  `quotes|approve` là một bước `PROCUREMENT_MANAGER`. Migration `AlignQuoteApprovalWorkflow` sửa chuỗi cũ (Sales
   Manager → BGĐ) và ghi chú mẫu thông báo trên DB đang chạy, chỉ khi admin chưa sửa; `Down`
   khôi phục. Một dòng chỉ được coi là "chưa sửa" khi mô tả khớp và từng bước (tên, vai trò,
   thời hạn, "cần tất cả", đọc bằng `OPENJSON`) đúng bản mặc định; `Down` dùng cùng cách so
@@ -459,8 +459,8 @@ thiết kế/thi công chỉ seed ở môi trường `Development`
   module/action chỉ nhập khi chọn "Nghiệp vụ khác". Bước không đặt tên được lưu là
   "<vai trò> duyệt" bằng tiếng Việt (`tSource` trong `i18n.tsx`), dù admin dùng ngôn ngữ nào;
   tên tự điền theo nghiệp vụ cũng vậy và đổi theo khi chọn nghiệp vụ khác. Đổi vai trò của
-  bước thì tên đang nêu vai trò cũ bị xoá. Chưa service nào đọc `workflow_configs`: đổi chuỗi không đổi người
-  duyệt của báo giá đang chờ (`QuotesControllerTests.SwitchingTheQuoteWorkflow_*`).
+  bước thì tên đang nêu vai trò cũ bị xoá. Báo giá đang chờ giữ chuỗi lúc gửi
+  (`QuotesControllerTests.QuoteApproval_*`).
 - Process document chuẩn có `SeedKey` nullable (filtered unique index), suy từ
   process group và URL asset chuẩn đầu tiên nên đổi tiêu đề/thứ tự không đổi
   định danh. Dòng không có `SeedKey` thuộc về admin. Metadata ảnh/file chỉ được
@@ -960,7 +960,8 @@ như Customer. Truy cập theo owner, `crm.quotes.view.all` cho xem chéo owner.
 | `GET` | `/api/quotes/{id}/email-preview` | `crm.quotes.send` | Điền sẵn email liên hệ chính, subject, body |
 | `POST` | `/api/quotes/{id}/send` | `crm.quotes.send` | Gửi kèm file `.xlsx` |
 | `GET` | `/api/quotes/{id}/export.xlsx?lang=vi` | `crm.quotes.view` | Workbook báo giá `vi`/`en`/`zh`/`ja` |
-| `GET` | `/api/quotes/{id}/approval-candidates` | — | Người duyệt hợp lệ |
+| `GET` | `/api/quotes/{id}/approval-chain` | `crm.quotes.manage` | Các bước của luồng `quotes|approve` kèm người duyệt hợp lệ mỗi bước |
+| `GET` | `/api/quotes/{id}/approval-candidates` | — | Người duyệt hợp lệ của bước 1 (client một bước) |
 | `POST` | `/api/quotes/{id}/approval-email-preview` | — | Preview email duyệt |
 | `POST` | `/api/quotes/{id}/submit` | — | Draft → PendingApproval |
 | `POST` | `/api/quotes/{id}/approve`, `/reject-internal` | `crm.quotes.approve` | Chỉ người duyệt được chọn |
@@ -978,12 +979,29 @@ còn hạn, cùng dự án (riêng phương thức BOQ xem [10.6](#106-báo-giá
 tạo kèm giá cũ vẫn giữ cho tích hợp và test lịch sử. Sales không tạo báo giá cho
 Opportunity của owner khác. Gửi lại `Idempotency-Key` trả response tạo ban đầu.
 
-Duyệt nội bộ (một bước, một Trưởng phòng Cung ứng `PROCUREMENT_MANAGER`; theo ghi
-chú 30/10/2026 và xác nhận 31/10/2026):
+Duyệt nội bộ theo luồng `quotes|approve` ở `/admin/workflows` (`QuoteApprovalChain`; không
+có luồng đang bật thì một bước `PROCUREMENT_MANAGER`, theo ghi chú 30/10/2026 và xác nhận
+31/10/2026):
 
-- `approval-candidates` trả user đang hoạt động có role đó, có
-  `crm.quotes.approve`, `crm.quotes.view`, email hợp lệ và khác người gọi.
-- `approval-email-preview` nhận `approverUserId` và `rowVersion`, trả To,
+- `approval-chain` trả từng bước với user đang hoạt động có role của bước, có
+  `crm.quotes.approve`, `crm.quotes.view`, email hợp lệ và khác người gọi. Bước
+  `requireAllApprovers` không cần chọn: mọi user hợp lệ thành một mục, duyệt lần lượt.
+- `approval-email-preview` và `submit` nhận `approverUserIds` (một người cho mỗi bước cần
+  chọn, theo thứ tự; `approverUserId` vẫn nhận cho chuỗi một bước). Server dựng chuỗi, từ
+  chối khi bước không có ai hợp lệ, thiếu/thừa người hay một người ở hai bước, rồi ghim
+  chuỗi vào `Quote.ApprovalStepsJson` + `ApprovalStepIndex` (tên, role, hạn giờ, người
+  duyệt, lúc bắt đầu/quyết định). Đổi luồng sau đó không đổi chuỗi đã ghim. Báo giá chờ
+  duyệt trước migration `AddQuoteApprovalChain` có cột rỗng: một bước, role
+  `PROCUREMENT_MANAGER`.
+- `approve` của bước chưa cuối giữ `PendingApproval`, ghi `DecidedAt`, chuyển
+  `ApprovalApproverUserId` sang người bước sau và xếp hàng email yêu cầu cho họ trong cùng
+  lần lưu (thông báo in-app qua `quote.approval-requested`); bước cuối chuyển `Approved`
+  và gửi email quyết định cho người trình. `reject-internal` ở bước nào cũng về `Draft` và
+  xoá chuỗi. Người gọi phải là người của bước hiện tại, còn giữ role của bước; người bước
+  sau gọi sớm nhận thông báo "chưa tới lượt".
+- Lưu luồng `quotes|approve` bị từ chối khi role của một bước thiếu `crm.quotes.view` hoặc
+  `crm.quotes.approve` (`WorkflowConfigService.ValidateAsync`).
+- `approval-email-preview` trả To (người duyệt bước 1),
   subject/HTML đã render, các CC hợp lệ và `previewToken` 15 phút. CC là thành
   viên đang hoạt động của dự án vận hành có quyền xem báo giá (owner hoặc
   `crm.quotes.view.all`).

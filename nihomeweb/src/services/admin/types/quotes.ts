@@ -141,6 +141,8 @@ export interface QuoteResponse {
   rowVersion: string;
   items: QuoteItemResponse[];
   approvalLogs: QuoteApprovalLogResponse[];
+  /** The approval chain fixed when the quote was sent (empty for a quote sent before chains). */
+  approvalSteps?: QuoteApprovalStep[];
 }
 
 export interface QuoteDocumentResponse {
@@ -258,6 +260,30 @@ export interface QuoteApprovalCandidate {
   roleLabelKey?: string | null;
   departmentId?: number | null;
   departmentLabelKey?: string | null;
+}
+
+export interface QuoteApprovalStep {
+  order: number;
+  name: string;
+  roleCode: string;
+  roleLabelKey?: string | null;
+  approverUserId: number;
+  approverName: string;
+  state: "Approved" | "Current" | "Waiting";
+  decidedAt?: string | null;
+  dueAt?: string | null;
+}
+
+/** A step of the quote workflow for the next submission, with who may approve it. */
+export interface QuoteApprovalChainStep {
+  order: number;
+  name: string;
+  roleCode: string;
+  roleName: string;
+  roleLabelKey?: string | null;
+  slaHours: number;
+  everyoneApproves: boolean;
+  candidates: QuoteApprovalCandidate[];
 }
 
 export interface QuoteApprovalPreview {
