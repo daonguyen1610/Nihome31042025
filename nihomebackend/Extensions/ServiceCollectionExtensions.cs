@@ -189,6 +189,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IHardDeleteResourceHandlerRegistry, HardDeleteResourceHandlerRegistry>();
         services.AddScoped<IHardDeleteOperationService, HardDeleteOperationService>();
         services.AddScoped<IVendorDocumentUploadCleanupService, VendorDocumentUploadCleanupService>();
+        services.AddScoped<UploadSessionService>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();
         services.AddScoped<IProjectAccessService, ProjectAccessService>();
         services.AddScoped<ILegacyProjectTeamSyncService, LegacyProjectTeamSyncService>();
@@ -277,6 +278,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IOrphanedManagedFileCleanupService, OrphanedManagedFileCleanupService>();
         services.AddHostedService<OrphanedManagedFileCleanupWorker>();
         services.AddHostedService<VendorDocumentUploadCleanupWorker>();
+        services.AddHostedService<UploadSessionCleanupWorker>();
         services.AddHostedService<ProjectDriveSyncService>();
         services.AddHostedService<HardDeleteRetryWorker>();
 

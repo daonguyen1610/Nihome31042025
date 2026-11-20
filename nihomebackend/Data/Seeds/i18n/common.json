@@ -240,6 +240,22 @@
     "ja": "ファイルがサーバーの許容サイズを超えているためアップロードできません。ファイルを分割または圧縮して再度アップロードするか、管理者にアップロード上限の確認を依頼してください。"
   },
   {
+    "key": "upload.chunked.sessionGone",
+    "category": "common",
+    "vi": "Phiên tải lên đã hết hạn hoặc bị huỷ nên không tải tiếp được. Hãy chọn lại tệp để tải từ đầu.",
+    "en": "The upload session expired or was cancelled, so it cannot resume. Choose the file again to upload it from the start.",
+    "zh": "上传会话已过期或已取消，无法继续。请重新选择文件从头上传。",
+    "ja": "アップロードのセッションが期限切れか取り消されたため、再開できません。ファイルを選び直して最初からアップロードしてください。"
+  },
+  {
+    "key": "upload.chunked.retriesExhausted",
+    "category": "common",
+    "vi": "Kết nối bị gián đoạn nhiều lần nên đã tạm dừng tải lên. Phần đã gửi được giữ lại: khi mạng ổn định, chọn lại đúng tệp này để tải tiếp.",
+    "en": "The connection kept dropping, so the upload paused. What was sent is kept: when the network is stable, choose the same file again to resume.",
+    "zh": "连接多次中断，上传已暂停。已发送的部分会保留：网络稳定后重新选择同一文件即可继续上传。",
+    "ja": "接続が何度も途切れたため、アップロードを一時停止しました。送信済みの部分は保持されます。回線が安定したら同じファイルを選び直すと再開します。"
+  },
+  {
     "key": "upload.tray.title",
     "category": "common",
     "vi": "Tệp đang tải lên",

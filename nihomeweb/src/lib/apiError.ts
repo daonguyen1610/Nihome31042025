@@ -131,6 +131,9 @@ export function getUiError(err: unknown, t: (key: string) => string, fallback?: 
   if (failure?.code === "LOOKUP_INCOMPLETE") return t("common.lookupIncomplete");
   // The user stopped the upload from the upload tray.
   if (failure?.code === "ERR_CANCELED") return t("upload.cancelled");
+  // A chunked upload stopped: the session expired, or the connection kept dropping.
+  if (failure?.code === "UPLOAD_SESSION_GONE") return t("upload.chunked.sessionGone");
+  if (failure?.code === "UPLOAD_RETRIES_EXHAUSTED") return t("upload.chunked.retriesExhausted");
   if (!failure?.response) {
     const network =
       failure?.message === "Network Error" ||

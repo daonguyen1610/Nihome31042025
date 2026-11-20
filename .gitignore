@@ -60,6 +60,8 @@ nihomebackend/wwwroot/files/customers/
 
 # Private survey media staging; files are retained locally after Drive sync.
 nihomebackend/wwwroot/files/survey-media/
+# Resumable upload chunks staged until the module takes the finished file (expire in 24 h).
+nihomebackend/App_Data/upload-sessions/
 
 # Recoverable holding area for the orphan-file cleanup worker.
 nihomebackend/.managed-file-quarantine/

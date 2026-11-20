@@ -21,6 +21,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<UserDocument> UserDocuments => Set<UserDocument>();
     public DbSet<AuditLog> AuditLogs => Set<AuditLog>();
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
+    public DbSet<UploadSession> UploadSessions => Set<UploadSession>();
     public DbSet<SeededRootDeletion> SeededRootDeletions => Set<SeededRootDeletion>();
     public DbSet<HardDeleteOperation> HardDeleteOperations => Set<HardDeleteOperation>();
     public DbSet<HardDeleteItem> HardDeleteItems => Set<HardDeleteItem>();
@@ -325,6 +326,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
         modelBuilder.Entity<RegistrationOtp>().HasKey(otp => otp.Id);
         modelBuilder.Entity<RegistrationOtp>().HasIndex(otp => otp.PhoneNumber);
 
+        modelBuilder.Entity<UploadSession>(session =>
+        {
+            session.ToTable("upload_sessions");
+            session.HasKey(item => item.Id);
+            session.Property(item => item.Purpose).HasConversion<string>().HasMaxLength(40);
+            session.Property(item => item.FileName).HasMaxLength(255);
+            session.HasIndex(item => item.ExpiresAt);
+        });
         modelBuilder.Entity<IdempotencyRecord>().ToTable("idempotency_records");
         modelBuilder.Entity<IdempotencyRecord>().HasKey(r => r.Id);
         modelBuilder.Entity<IdempotencyRecord>()

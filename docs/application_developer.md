@@ -332,6 +332,18 @@ Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ li�
   `GET/PUT /api/site-settings/upload-limits/contracts`: mọi người đã đăng nhập đọc
   được để form upload kiểm tra trước, sửa cần `system.settings.manage`.
   Các endpoint upload khác giữ giới hạn riêng.
+- Upload tiếp tục được (chunked) cho file hợp đồng > 8 MiB: frontend tự chia phần
+  8 MiB (dưới giới hạn ~28,6 MB mặc định của IIS), thử lại khi mất mạng và nhớ phiên
+  trong `localStorage` để chọn lại đúng file sau khi tải lại trang thì gửi tiếp.
+  `POST /api/contracts/{id}/upload-sessions` (`crm.contracts.manage`, kiểm quyền hợp
+  đồng, đuôi file và `ContractMaxFileSizeMb` trước khi gửi byte nào) →
+  `PUT /api/upload-sessions/{id}/chunks?offset=` (thân là byte thô; gửi lại phần đã
+  nhận vẫn `200`, sai offset → `409 UPLOAD_OFFSET_MISMATCH` kèm `receivedBytes`) →
+  `POST /api/contracts/{id}/attachments/from-upload` hoặc
+  `…/appendices/files/from-upload` (`400 UPLOAD_NOT_READY` khi chưa đủ byte). `GET`/
+  `DELETE /api/upload-sessions/{id}` để hỏi tiến độ/huỷ; chỉ chủ phiên thấy phiên.
+  Byte tạm nằm ở `App_Data/upload-sessions/` (ngoài wwwroot), bảng `upload_sessions`;
+  phiên rảnh quá 24 giờ bị `UploadSessionCleanupWorker` xoá mỗi giờ.
 - Template email: xem [6.3](#63-email-ứng-dụng).
 - Google Drive: cấu hình trong database, xem [18.3](#183-google-drive-trên-iis).
 
