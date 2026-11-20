@@ -113,14 +113,18 @@ public sealed class OperationalProjectDocumentsControllerTests(
     {
         var projectId = await CreateProjectAsync();
 
+        // Bytes only this test sends: test classes run in parallel on separate databases
+        // but share wwwroot, so another class may store its own file under the same id.
+        var bytes = Encoding.ASCII.GetBytes($"%PDF-1.4\n% unauthenticated {Guid.NewGuid():N}\n%%EOF");
+
         var list = await Client.GetAsync($"/api/operational-projects/{projectId}/documents");
-        using var uploadContent = CreateUploadContent("DesignBasic", "document.pdf", PdfBytes);
+        using var uploadContent = CreateUploadContent("DesignBasic", "document.pdf", bytes);
         var upload = await Client.PostAsync($"/api/operational-projects/{projectId}/documents", uploadContent);
 
         list.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         upload.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await CountDocumentsAsync(projectId)).Should().Be(0);
-        ProjectFiles(projectId).Should().BeEmpty();
+        ProjectFiles(projectId).Should().NotContain(path => File.ReadAllBytes(path).SequenceEqual(bytes));
     }
 
     [Fact]
