@@ -1292,6 +1292,61 @@ public class DesignProjectsControllerTests : IntegrationTestBase
 
     // -------- helpers --------
 
+    [Fact]
+    public async Task PurchaseOrder_CannotBeLinked_ButAnEarlierLinkStillSaves()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var customerId = await FirstCustomerIdAsync();
+        var operationalProjectId = await CreateOperationalProjectAsync(customerId);
+        var purchaseOrder = await WithDbAsync<(int Id, string Number)>(async db =>
+        {
+            var contract = new Contract
+            {
+                ContractNumber = $"PO-RFQ-{Guid.NewGuid():N}"[..20],
+                CustomerId = customerId,
+                OperationalProjectId = operationalProjectId,
+                Direction = ContractDirection.Downstream,
+                Type = ContractType.Supply,
+                Value = 250_000_000,
+                Status = ContractStatus.Signed,
+            };
+            db.Contracts.Add(contract);
+            await db.SaveChangesAsync();
+            return (contract.Id, contract.ContractNumber);
+        });
+
+        var refused = await Client.PostAsJsonAsync("/api/design-projects", new
+        {
+            name = "Thiết kế kho lạnh",
+            customerId,
+            contractId = purchaseOrder.Id,
+        });
+
+        refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await refused.Content.ReadAsStringAsync()).Should().Contain(purchaseOrder.Number);
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(item => item.ContractId == purchaseOrder.Id)))
+            .Should().Be(0);
+
+        // A project linked before the rule must still be editable.
+        var id = await CreateAsync(customerId, "Thiết kế kho lạnh (liên kết cũ)");
+        await WithDbAsync(async db =>
+        {
+            var design = await db.DesignProjects.SingleAsync(item => item.Id == id);
+            design.ContractId = purchaseOrder.Id;
+            design.OperationalProjectId = operationalProjectId;
+            await db.SaveChangesAsync();
+        });
+        var renamed = await Client.PutAsJsonAsync($"/api/design-projects/{id}", new
+        {
+            name = "Thiết kế kho lạnh — đổi tên",
+            customerId,
+            contractId = purchaseOrder.Id,
+            operationalProjectId,
+        });
+        renamed.StatusCode.Should().Be(HttpStatusCode.OK, await renamed.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(renamed)).GetProperty("name").GetString().Should().Be("Thiết kế kho lạnh — đổi tên");
+    }
+
     private async Task<int> CreateAsync(int customerId, string name)
     {
         var operationalProjectId = await CreateOperationalProjectAsync(customerId);

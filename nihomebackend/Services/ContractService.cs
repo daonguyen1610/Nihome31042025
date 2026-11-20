@@ -598,6 +598,15 @@ public class ContractService(
                 "Contract direction cannot change after customer-care history has been recorded.",
                 "CONTRACT_CARE_DIRECTION_LOCKED");
         }
+        // A design project runs under a customer contract only; turning that contract
+        // into a purchase order would leave the design on a supplier contract.
+        if (req.Direction != entity.Direction && req.Direction != ContractDirection.Upstream &&
+            await db.DesignProjects.AsNoTracking().AnyAsync(design => design.ContractId == id, ct))
+        {
+            throw new ContractValidationException(
+                $"Hợp đồng {entity.ContractNumber} đang gắn hồ sơ thiết kế nên không chuyển được thành hợp đồng mua hàng. Hãy bỏ liên kết hợp đồng ở hồ sơ thiết kế trước.",
+                "CONTRACT_DESIGN_DIRECTION_LOCKED");
+        }
         if (req.PaymentMilestones is not null)
         {
             ValidatePaymentMilestones(req.PaymentMilestones);

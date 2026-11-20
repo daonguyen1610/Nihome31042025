@@ -760,6 +760,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
                   contract={contract}
                   onEnsureDesignProject={
                     !isFinanceWorkspace &&
+                    contract.direction === "Upstream" &&
                     has(ADMIN_PERMS.opportunitiesManage) &&
                     has(ADMIN_PERMS.operationalProjectsManage)
                       ? () => void handleEnsureDesignProject()

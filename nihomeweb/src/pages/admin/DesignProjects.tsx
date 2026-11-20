@@ -337,7 +337,6 @@ const AdminDesignProjects = () => {
           label: c.contractNumber,
           // A second line, so the customer and project are read in full, not cut off.
           hint: [c.customerName, project].filter(Boolean).join(" — ") || undefined,
-          hintClassName: "whitespace-normal break-words",
         };
       }),
     [selectableContracts],
@@ -878,7 +877,7 @@ const AdminDesignProjects = () => {
 
       {/* Create / edit dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-h-[90vh] w-[95vw] min-w-0 max-w-2xl overflow-y-auto overflow-x-hidden sm:w-full">
+        <DialogContent className="max-h-[90vh] w-[95vw] max-w-2xl overflow-y-auto sm:w-full">
           <DialogHeader>
             <DialogTitle>{isEdit ? t("designProjects.edit") : t("designProjects.new")}</DialogTitle>
             <DialogDescription>{t("designProjects.form.createHint")}</DialogDescription>
@@ -893,22 +892,26 @@ const AdminDesignProjects = () => {
                 autoFocus
               />
             </FieldScope>
-            <FieldScope className="min-w-0 md:col-span-2">
+            <FieldScope className="md:col-span-2">
               <Label>{t("designProjects.field.customer")}</Label>
               <SearchableSelect
-                className="mt-1 min-w-0"
+                className="mt-1"
                 value={form.customerId ? String(form.customerId) : ""}
                 onChange={(v) =>
                   setForm((f) => {
                     const customerId = v ? Number(v) : 0;
                     const contract = contracts.find((c) => c.id === f.contractId);
-                    // A contract of another customer no longer fits.
+                    const project = projects.find((p) => p.id === f.operationalProjectId);
+                    // A contract or project of another customer no longer fits.
                     const keepsContract =
                       !contract || !customerId || contract.customerId === customerId;
+                    const keepsProject =
+                      !project || !customerId || project.customerId === customerId;
                     return {
                       ...f,
                       customerId,
                       contractId: keepsContract ? f.contractId : null,
+                      operationalProjectId: keepsProject ? f.operationalProjectId : null,
                     };
                   })
                 }
@@ -917,10 +920,10 @@ const AdminDesignProjects = () => {
                 placeholder={t("designProjects.field.customer")}
               />
             </FieldScope>
-            <FieldScope className="min-w-0 md:col-span-2">
+            <FieldScope className="md:col-span-2">
               <Label>{t("designProjects.field.contract")}</Label>
               <SearchableSelect
-                className="mt-1 min-w-0"
+                className="mt-1"
                 value={form.contractId != null ? String(form.contractId) : ""}
                 onChange={(v) =>
                   setForm((f) => ({
@@ -950,9 +953,13 @@ const AdminDesignProjects = () => {
                 {projectFromContract ? (
                   <p className="mt-1 text-sm text-muted-foreground">
                     {t("designProjects.form.projectFromContract", {
-                      project:
-                        projects.find((p) => p.id === projectFromContract)?.code ??
-                        `#${projectFromContract}`,
+                      // Code and name, so the chosen contract reads in full next to its number.
+                      project: (() => {
+                        const project = projects.find((p) => p.id === projectFromContract);
+                        return project
+                          ? `${project.code} · ${project.name}`
+                          : `#${projectFromContract}`;
+                      })(),
                     })}
                   </p>
                 ) : (

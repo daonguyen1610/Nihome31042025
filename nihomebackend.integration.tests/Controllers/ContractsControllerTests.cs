@@ -2,6 +2,7 @@ using System.Net;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Nodes;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Constants;
 using NihomeBackend.Models;
@@ -2000,6 +2001,48 @@ public class ContractsControllerTests : IntegrationTestBase
         response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await WithDbAsync(db => db.DesignProjects.CountAsync(project => project.ContractId == contractId)))
             .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task CreateDesignProject_FromPurchaseOrder_IsRejected()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        var contractNumber = await WithDbAsync(async db =>
+        {
+            var contract = await db.Contracts.SingleAsync(item => item.Id == contractId);
+            contract.Direction = ContractDirection.Downstream;
+            await db.SaveChangesAsync();
+            return contract.ContractNumber;
+        });
+
+        var response = await Client.PostAsync($"/api/contracts/{contractId}/design-project", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(response)).GetProperty("message").GetString().Should().Contain(contractNumber);
+        (await WithDbAsync(db => db.DesignProjects.CountAsync(project => project.ContractId == contractId)))
+            .Should().Be(0);
+    }
+
+    [Fact]
+    public async Task ContractWithADesign_CannotTurnIntoAPurchaseOrder()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var contractId = await CreateContractAsync(await CreateCustomerAsync());
+        (await Client.PostAsync($"/api/contracts/{contractId}/design-project", null)).EnsureSuccessStatusCode();
+        var before = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contractId}"));
+        var payload = JsonNode.Parse(before.GetRawText())!.AsObject();
+        payload["direction"] = "Downstream";
+
+        var response = await Client.PutAsJsonAsync($"/api/contracts/{contractId}", payload);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest, await response.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("code").GetString().Should().Be("CONTRACT_DESIGN_DIRECTION_LOCKED");
+        body.GetProperty("message").GetString().Should().Contain(before.GetProperty("contractNumber").GetString()!);
+        (await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contractId}")))
+            .GetProperty("direction").GetString().Should().Be("Upstream");
     }
 
     [Fact]
