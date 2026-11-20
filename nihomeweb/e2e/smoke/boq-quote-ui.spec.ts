@@ -84,8 +84,15 @@ test("a BOQ quote is created in the browser from the approved project BOQ", asyn
     const quote = await (await api.get(`/api/quotes/${quoteId}`, { headers: sales })).json();
     expect(quote.method).toBe("Boq");
     expect(quote.projectBoqRevisionId).toBe(boq.id);
-    expect(quote.items).toHaveLength(2);
-    expect(Number(quote.subtotal)).toBeCloseTo(boq.total, 0);
+    // Decimals survive to the cent: 12.5 × 2.850.000 and 3.75 × 1.234.567 = 4.629.626,25.
+    const amounts = (quote.items as { amount: string }[])
+      .map((item) => Number(item.amount))
+      .sort((a, b) => a - b);
+    expect(amounts).toHaveLength(2);
+    expect(amounts[0]).toBeCloseTo(4_629_626.25, 2);
+    expect(amounts[1]).toBeCloseTo(35_625_000, 2);
+    expect(Number(quote.subtotal)).toBeCloseTo(boq.total, 2);
+    expect(Number(quote.subtotal)).toBeCloseTo(40_254_626.25, 2);
     expect(pageErrors).toEqual([]);
     expect(serverErrors).toEqual([]);
   } finally {
