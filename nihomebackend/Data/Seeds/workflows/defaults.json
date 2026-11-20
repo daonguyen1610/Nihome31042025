@@ -5,11 +5,12 @@
       "module": "quotes",
       "action": "approve",
       "name": "Duyệt báo giá",
-      "description": "Báo giá do Trưởng phòng Cung ứng được người gửi chọn duyệt; người gửi không tự duyệt.",
+      "description": "Chuỗi duyệt báo giá tiêu chuẩn: Sales Manager rồi Ban Giám đốc.",
       "sortOrder": 10,
       "isActive": true,
       "steps": [
-        { "order": 1, "name": "Trưởng phòng Cung ứng duyệt", "approverRoleCode": "PROCUREMENT_MANAGER", "slaHours": 24, "requireAllApprovers": false }
+        { "order": 1, "name": "Trưởng phòng Kinh doanh duyệt", "approverRoleCode": "SALES_MANAGER", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 2, "name": "Ban Giám đốc phê duyệt", "approverRoleCode": "BGD", "slaHours": 48, "requireAllApprovers": true }
       ]
     },
     {

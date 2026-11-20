@@ -537,4 +537,17 @@ public class SampleContractSeederTests : IDisposable
         Assert.Equal(quote.ApprovedByUserId, quote.ApprovalApproverUserId);
         Assert.NotEqual(record.SubmittedByUserId, record.ApprovedByUserId);
     }
+
+    [Fact]
+    public void ProductionSeed_LeavesSampleDataAndItsRepairsOut()
+    {
+        // Production startup runs the same pipeline without development samples.
+        DbSeeder.Seed(_db);
+
+        Assert.Empty(_db.Quotes);
+        Assert.Empty(_db.Contracts);
+        Assert.Empty(_db.ContractLegalActivations);
+        Assert.Empty(_db.DepartmentWorkPackages);
+        Assert.Empty(_db.AcceptanceRecords);
+    }
 }

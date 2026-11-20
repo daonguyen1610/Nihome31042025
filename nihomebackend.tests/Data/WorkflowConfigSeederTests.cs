@@ -19,7 +19,7 @@ public class WorkflowConfigSeederTests : IDisposable
         _db = DbContextFactory.Create();
         SeedRoles(
             "SALES_MANAGER", "BGD", "LEGAL_OFFICER", "QS",
-            "DESIGN_LEAD", "PM", "SUPER_ADMIN", "ADMIN", "PROCUREMENT_MANAGER");
+            "DESIGN_LEAD", "PM", "SUPER_ADMIN", "ADMIN");
     }
 
     public void Dispose() => _db.Dispose();
