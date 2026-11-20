@@ -969,7 +969,8 @@ public class ContractsController(
         if (!await ContractExistsForCallerAsync(id, userId.Value, canSeeAll, ct)) return NotFound();
 
         var result = await CompleteUploadAsync(req.UploadSessionId, userId.Value, UploadSessionPurpose.ContractAttachment, id, "att",
-            payload => RegisterAttachmentAsync(id, payload, req.Kind, req.Label, userId.Value, canSeeAll, ct),
+            payload => RegisterAttachmentAsync(id, payload, req.Kind, req.Label, userId.Value, canSeeAll, ct,
+                keepFileOnFailure: true),
             registered: attachment => attachment.Result is not NotFoundResult, ct);
         if (result is null) return UploadNotReady();
         return result;
@@ -977,7 +978,7 @@ public class ContractsController(
 
     private async Task<ActionResult<ContractAttachmentResponse>> RegisterAttachmentAsync(int id,
         UploadedPayload payload, ContractAttachmentKind kind, string? label, int userId, bool canSeeAll,
-        CancellationToken ct)
+        CancellationToken ct, bool keepFileOnFailure = false)
     {
         var created = await attSvc.CreateAsync(id, new CreateContractAttachmentRequest
         {
@@ -987,7 +988,7 @@ public class ContractsController(
             FileSize = payload.fileSize,
             ContentType = payload.contentType,
             Label = label,
-        }, userId, canSeeAll, ct);
+        }, userId, canSeeAll, ct, keepFileOnFailure);
         // ContractExistsForCallerAsync above already verified the caller
         // may write to this contract, so CreateAsync should never return
         // null here — but be defensive so a race between the ownership
