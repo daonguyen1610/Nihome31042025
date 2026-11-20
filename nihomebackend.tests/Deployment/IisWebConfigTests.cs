@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using NihomeBackend.Services;
 
-namespace NihomeBackend.Tests.Deployment;
+namespace nihomebackend.tests.Deployment;
 
 /// <summary>
 /// Production runs in IIS in-process (plain <c>dotnet publish</c> on Plesk). IIS request
