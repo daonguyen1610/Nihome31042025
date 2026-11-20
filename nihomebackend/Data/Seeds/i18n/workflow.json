@@ -32,12 +32,12 @@
     "ja": "新規フロー"
   },
   {
-    "key": "workflow.searchPlaceholder",
+    "key": "workflow.searchByNameOrRole",
     "category": "workflow",
-    "vi": "Tìm theo module, action hoặc tên…",
-    "en": "Search by module, action or name…",
-    "zh": "按模块、操作或名称搜索…",
-    "ja": "モジュール・アクション・名称で検索…"
+    "vi": "Tìm theo tên luồng hoặc vai trò duyệt…",
+    "en": "Search by workflow or approver role…",
+    "zh": "按流程名称或审批角色搜索…",
+    "ja": "フロー名または承認ロールで検索…"
   },
   {
     "key": "workflow.empty",
@@ -184,12 +184,12 @@
     "ja": "説明"
   },
   {
-    "key": "workflow.field.steps",
+    "key": "workflow.field.chain",
     "category": "workflow",
-    "vi": "Số bước",
-    "en": "Steps",
-    "zh": "步骤数",
-    "ja": "ステップ数"
+    "vi": "Chuỗi duyệt",
+    "en": "Approval chain",
+    "zh": "审批链",
+    "ja": "承認フロー"
   },
   {
     "key": "workflow.field.sortOrder",

@@ -1341,6 +1341,8 @@ Trang quản trị ở `/admin`, dành cho người đã đăng nhập và có q
 
 Đường dẫn cũ `/admin/posts/*`, `/admin/project-categories`, `/admin/slideshow` tự chuyển sang vị trí mới.
 
+**Luồng duyệt.** Trang **Cấu hình → Luồng duyệt** liệt kê từng nghiệp vụ cùng chuỗi người duyệt theo thứ tự (ví dụ "1 Phụ trách Pháp lý › 2 Trưởng phòng Kinh doanh"), tìm được theo tên luồng hoặc vai trò duyệt. Báo giá do người gửi chọn một Trưởng phòng Cung ứng để duyệt; người gửi không tự duyệt được báo giá của mình.
+
 **Xuất Excel.** Các danh sách liên hệ, hồ sơ ứng tuyển, bài đăng, dự án, bản dịch, danh mục hoạt động, hình thức làm việc, logo (khách hàng, đối tác, nhà cung cấp, giải thưởng) có nút **Xuất Excel**, tải dữ liệu đang lọc dưới dạng CSV UTF-8 mở được bằng Excel. Nút bị khóa khi danh sách trống.
 
 ---

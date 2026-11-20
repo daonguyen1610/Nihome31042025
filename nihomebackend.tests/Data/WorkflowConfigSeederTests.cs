@@ -19,7 +19,7 @@ public class WorkflowConfigSeederTests : IDisposable
         _db = DbContextFactory.Create();
         SeedRoles(
             "SALES_MANAGER", "BGD", "LEGAL_OFFICER", "QS",
-            "DESIGN_LEAD", "PM", "SUPER_ADMIN", "ADMIN");
+            "DESIGN_LEAD", "PM", "SUPER_ADMIN", "ADMIN", "PROCUREMENT_MANAGER");
     }
 
     public void Dispose() => _db.Dispose();
@@ -45,6 +45,19 @@ public class WorkflowConfigSeederTests : IDisposable
         Assert.Contains("quotes|approve", pairs);
         Assert.Contains("contracts|sign", pairs);
         Assert.Contains("tenders|submit", pairs);
+    }
+
+    [Fact]
+    public void Seed_QuoteApproval_IsTheProcurementManagerTheSenderChooses()
+    {
+        WorkflowConfigSeeder.Seed(_db);
+
+        // QuoteService lets only the chosen Procurement Manager approve, never the sender.
+        var quote = _db.WorkflowConfigs.Single(w => w.Module == "quotes" && w.Action == "approve");
+        using var doc = JsonDocument.Parse(quote.StepsJson);
+        var step = Assert.Single(doc.RootElement.EnumerateArray());
+        Assert.Equal("PROCUREMENT_MANAGER", step.GetProperty("approverRoleCode").GetString());
+        Assert.Contains("Trưởng phòng Cung ứng", quote.Description);
     }
 
     [Fact]
