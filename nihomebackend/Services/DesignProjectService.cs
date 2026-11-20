@@ -471,12 +471,19 @@ public class DesignProjectService(
             var contract = await db.Contracts
                 .AsNoTracking()
                 .Where(item => item.Id == request.ContractId.Value)
-                .Select(item => new { item.CustomerId, item.OperationalProjectId })
+                .Select(item => new { item.ContractNumber, item.CustomerId, item.OperationalProjectId, item.Direction })
                 .SingleOrDefaultAsync(ct);
             if (contract is null)
             {
                 throw new DesignProjectOperationException(
                     $"Hợp đồng #{request.ContractId} không tồn tại.");
+            }
+            // Design is delivered under the customer's contract; a purchase order with a
+            // supplier carries no design scope.
+            if (contract.Direction != ContractDirection.Upstream)
+            {
+                throw new DesignProjectOperationException(
+                    $"Hợp đồng {contract.ContractNumber} là hợp đồng mua hàng với nhà cung cấp nên không gắn được với hồ sơ thiết kế. Hãy chọn hợp đồng ký với khách hàng hoặc để trống.");
             }
             if (contract.CustomerId != request.CustomerId)
             {

@@ -192,6 +192,28 @@ public class DesignProjectServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CreateAsync_PurchaseOrderWithSupplier_CannotCarryTheDesign()
+    {
+        var purchaseOrder = new Contract
+        {
+            ContractNumber = "PO-RFQ-2026-0007",
+            CustomerId = _customerId,
+            Direction = ContractDirection.Downstream,
+            Type = ContractType.Supply,
+            Value = 250_000_000,
+            Status = ContractStatus.Signed,
+        };
+        _db.Contracts.Add(purchaseOrder);
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<DesignProjectOperationException>(() =>
+            _sut.CreateAsync(ValidCreate(contractId: purchaseOrder.Id), _userId));
+
+        Assert.Contains("PO-RFQ-2026-0007", error.Message);
+        Assert.Empty(await _db.DesignProjects.ToListAsync());
+    }
+
+    [Fact]
     public async Task CreateAsync_InactiveDesignLead_IsRejectedWithoutMembership()
     {
         var inactiveLead = new ApplicationUser

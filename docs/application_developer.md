@@ -1951,6 +1951,11 @@ cũ thành VND tỷ giá 1). Demo RFQ chỉ có ở `Development`; production kh
 
 ## 12. Thiết kế và pháp lý
 
+Hồ sơ thiết kế chỉ gắn với hợp đồng ký với khách hàng (`ContractDirection.Upstream`).
+`DesignProjectService` từ chối hợp đồng Downstream (đơn mua hàng với nhà cung cấp) khi tạo
+hoặc sửa hồ sơ, kèm số hợp đồng trong thông báo. Form **Tạo hồ sơ thiết kế** chỉ liệt kê
+hợp đồng Upstream của khách hàng đã chọn; chọn hợp đồng sẽ điền khách hàng theo hợp đồng.
+
 ### 12.1 Lịch thiết kế chi tiết (Module 2)
 
 Lịch theo từng luồng Design cho ba giai đoạn, bảng `design_schedule_*` riêng, không
