@@ -2734,6 +2734,12 @@ python -m unittest discover -s tools/translation_keys -p "test_*.py"
 11. Kiểm font PDF: trên IIS cài Arial, Microsoft YaHei, Meiryo cho tài khoản application
     pool hoặc đặt các biến `NIHOME_PDF_FONT_*` (và `_INDEX` cho TTC).
 12. Ghi revision/`buildSha` và phiên bản migration khi deploy; smoke rồi UAT với NICON.
+13. Giới hạn body của IIS: request filtering mặc định chặn body trên 30.000.000 byte
+    (~28,6 MB) trước khi tới ứng dụng. `nihomebackend/web.config` (được `dotnet publish`
+    giữ lại) và `auto-deployment.sh` (chèn vào `deployment-config/web.config` nếu thiếu)
+    đặt `requestLimits maxAllowedContentLength="4294967295"` (~4 GB, mức tối đa của IIS);
+    giới hạn thật theo từng module nằm ở **Cài đặt**. Nếu Plesk/IIS đặt Request Filtering
+    ở cấp server thấp hơn thì phải nâng ở đó. Tệp trên ~4 GB cần tải theo phần.
 
 ### 18.3 Google Drive trên IIS
 

@@ -72,6 +72,17 @@ cp -f $DEPLOYMENT_CONFIG_DIR/appsettings.json $PUBLISH_RELEASE_DIR/appsettings.j
     || die "Failed to copy appsettings.json to $PUBLISH_RELEASE_DIR."
 cp -f $DEPLOYMENT_CONFIG_DIR/web.config $PUBLISH_RELEASE_DIR/web.config \
     || die "Failed to copy web.config to $PUBLISH_RELEASE_DIR."
+# IIS request filtering rejects bodies above ~28.6 MB before the app sees them; uploads
+# follow the per-module limits in Settings (up to 100 MB, contracts more), so make sure
+# the server's web.config raises the IIS limit to its maximum (~4 GB) as
+# nihomebackend/web.config does. Leaves an existing requestLimits untouched.
+if ! grep -q 'maxAllowedContentLength' $PUBLISH_RELEASE_DIR/web.config; then
+    perl -0pi -e 's#(\s*)</system\.webServer>#$1  <security>$1    <requestFiltering>$1      <requestLimits maxAllowedContentLength="4294967295" />$1    </requestFiltering>$1  </security>$1</system.webServer>#' \
+        $PUBLISH_RELEASE_DIR/web.config \
+        || die "Failed to raise the IIS request limit in $PUBLISH_RELEASE_DIR/web.config."
+    grep -q 'maxAllowedContentLength="4294967295"' $PUBLISH_RELEASE_DIR/web.config \
+        || die "web.config in $PUBLISH_RELEASE_DIR has no </system.webServer> to add requestLimits to."
+fi
 echo "Images, files, process-assets, appsettings.json, and web.config copied successfully."
 
 # Step 4: Zip the publish-release folder (cd into parent so paths inside
