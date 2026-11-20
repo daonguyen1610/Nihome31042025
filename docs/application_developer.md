@@ -450,6 +450,18 @@ thiết kế/thi công chỉ seed ở môi trường `Development`
   process group và URL asset chuẩn đầu tiên nên đổi tiêu đề/thứ tự không đổi
   định danh. Dòng không có `SeedKey` thuộc về admin. Metadata ảnh/file chỉ được
   backfill khi tiêu đề chuẩn chưa đổi.
+- Dữ liệu mẫu theo đúng luật nghiệp vụ mà service áp dụng, để mở rồi lưu lại không bị
+  từ chối:
+  - Báo giá mẫu do Trưởng phòng Cung ứng (người duyệt được chọn) duyệt, không phải
+    người gửi; VO do Trưởng phòng Kinh doanh quyết định; nghiệm thu và hoàn công do
+    Chỉ huy trưởng lập, PM duyệt. Không bản ghi mẫu nào để người lập tự duyệt.
+  - Hợp đồng mẫu Đang thực hiện/Tạm dừng/Hoàn thành thuộc loại cần Pháp lý có bản ghi
+    kích hoạt trên gói Pháp lý của dự án. Đơn mua hàng mẫu (`HD-SAMPLE-NCC-001`) không
+    gắn cơ hội, báo giá khách, hồ sơ thiết kế hay VO.
+  - Mốc thanh toán đã yêu cầu/đã thu có kế toán phụ trách và ngày tương ứng.
+  - DB đã seed trước đó được sửa khi khởi động (chỉ bản ghi có dấu mẫu). Migration
+    `AlignQuoteApprovalDefaults` đổi chuỗi duyệt báo giá mặc định thành một bước Trưởng
+    phòng Cung ứng, chỉ khi admin chưa sửa.
 - Workflow manifest được validate trước khi lưu; định nghĩa lỗi, thứ tự bước
   trùng/sai hoặc role duyệt không tồn tại làm startup thất bại thay vì âm thầm
   nới lỏng chuỗi duyệt.
