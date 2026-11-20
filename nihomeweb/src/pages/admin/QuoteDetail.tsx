@@ -188,6 +188,7 @@ const AdminQuoteDetail = () => {
   const currentUserId = useAppSelector((state) => state.auth.user?.userId);
 
   const canManage = has(ADMIN_PERMS.quotesManage);
+  const canSeeAllQuotes = has(ADMIN_PERMS.quotesViewAll);
   const canViewWorkPackages = has(ADMIN_PERMS.workPackages);
   const canManageWorkPackages = has(ADMIN_PERMS.workPackagesManage);
   const canApprove = has(ADMIN_PERMS.quotesApprove);
@@ -843,6 +844,9 @@ const AdminQuoteDetail = () => {
             total: 1,
             available: quote.approvalApproverAvailable !== false,
           };
+  // Taking a quote back is a change, so it stays with its owner (or someone who sees every
+  // quote), even though everyone in the chain can read it.
+  const canWithdraw = canManage && (canSeeAllQuotes || quote.ownerUserId === currentUserId);
   // Approving now would stop: the next person can no longer approve, so say so up front.
   const nextApproverBlocked = nextApprover?.available === false;
   const showEditToggle =
@@ -1141,7 +1145,7 @@ const AdminQuoteDetail = () => {
                   name: quote.approvalApproverName ?? "—",
                 })}
               </p>
-              {canManage && (
+              {canWithdraw ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -1151,6 +1155,10 @@ const AdminQuoteDetail = () => {
                 >
                   {t("quotes.approval.withdraw")}
                 </Button>
+              ) : (
+                <p className="text-muted-foreground">
+                  {t("quotes.approval.withdrawByOwner", { owner: quote.ownerName ?? "—" })}
+                </p>
               )}
             </div>
           )}

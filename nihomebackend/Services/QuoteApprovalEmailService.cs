@@ -161,11 +161,10 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         var roles = await db.Users.AsNoTracking()
             .Where(user => ids.Contains(user.Id) && user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive)
             .Select(user => new { user.Id, user.RoleEntity!.Code }).ToListAsync(ct);
-        var canView = await permissions.FilterByRolePermissionAsync(ids, "crm.quotes.view", ct);
-        var canApprove = await permissions.FilterByRolePermissionAsync(ids, "crm.quotes.approve", ct);
+        var permitted = await permissions.FilterByRolePermissionsAsync(ids, ["crm.quotes.view", "crm.quotes.approve"], ct);
         foreach (var approver in approvers)
         {
-            if (canView.Contains(approver.UserId) && canApprove.Contains(approver.UserId) &&
+            if (permitted.Contains(approver.UserId) &&
                 roles.Any(role => role.Id == approver.UserId &&
                     string.Equals(role.Code, approver.RoleCode, StringComparison.OrdinalIgnoreCase)))
                 result.Add(approver);
@@ -263,6 +262,7 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
         rendered.Quote.ApprovalApproverUserId = rendered.Approver.Id;
         rendered.Quote.ApprovalStepsJson = QuoteApprovalChain.Write(rendered.Chain);
         rendered.Quote.ApprovalStepIndex = 0;
+        await QuoteApprovalChain.SetApproversAsync(db, rendered.Quote, rendered.Chain, ct);
         db.QuoteApprovalEmails.Add(new()
         {
             QuoteId = quoteId,

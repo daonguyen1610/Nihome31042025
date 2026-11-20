@@ -422,5 +422,21 @@
     "en": "The quote approval workflow was not saved because nobody can approve these steps. {steps}",
     "zh": "报价审批流程未保存，因为以下步骤无人能审批。{steps}",
     "ja": "次のステップを承認できる人がいないため、見積承認フローは保存されませんでした。{steps}"
+  },
+  {
+    "key": "workflow.issue.RoleMissing",
+    "category": "workflow",
+    "vi": "Bước {n}: vai trò của bước này đã bị xoá nên không ai duyệt được. Chọn vai trò khác cho bước này.",
+    "en": "Step {n}: this step's role was deleted, so nobody can approve it. Choose another role for this step.",
+    "zh": "第 {n} 步：该步骤的角色已被删除，无人能审批。请为此步骤选择其他角色。",
+    "ja": "ステップ {n}：このステップのロールが削除されたため、承認できる人がいません。別のロールを選んでください。"
+  },
+  {
+    "key": "workflow.roleDeleted",
+    "category": "workflow",
+    "vi": "Vai trò đã bị xoá",
+    "en": "Role deleted",
+    "zh": "角色已删除",
+    "ja": "削除されたロール"
   }
 ]

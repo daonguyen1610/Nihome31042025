@@ -30,5 +30,5 @@ public class WorkflowConfigResponse
     public DateTime UpdatedAt { get; set; }
 }
 
-/// <param name="Issue">RoleInactive, RoleCannotApprove or NoEligibleUser.</param>
+/// <param name="Issue">RoleMissing (deleted), RoleInactive, RoleCannotApprove or NoEligibleUser.</param>
 public sealed record WorkflowStepIssueResponse(int Order, string RoleCode, string? RoleLabelKey, string RoleName, string Issue);

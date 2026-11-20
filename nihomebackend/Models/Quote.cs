@@ -102,6 +102,9 @@ public class Quote : IConcurrencyTracked
     public List<QuoteItem> Items { get; set; } = new();
     public List<QuoteApprovalLog> ApprovalLogs { get; set; } = new();
     public List<QuoteApprovalEmail> ApprovalEmails { get; set; } = new();
+
+    /// <summary>Everyone in the approval chain sent with this quote, so they can find and read it.</summary>
+    public List<QuoteChainApprover> ChainApprovers { get; set; } = new();
     public List<QuoteVersionSnapshot> VersionSnapshots { get; set; } = new();
     public List<QuoteDocument> Documents { get; set; } = new();
 }
@@ -123,6 +126,19 @@ public class QuoteItem
 }
 
 /// <summary>Immutable audit entry of a workflow action (submit/approve/reject/send/...).</summary>
+/// <summary>
+/// A person in a quote's approval chain (any step, before or after their turn). Kept beside the
+/// chain JSON so finding the quotes a person is part of is an indexed lookup.
+/// </summary>
+public class QuoteChainApprover
+{
+    public int Id { get; set; }
+    public int QuoteId { get; set; }
+    public Quote Quote { get; set; } = null!;
+    public int UserId { get; set; }
+    public ApplicationUser User { get; set; } = null!;
+}
+
 public class QuoteApprovalLog
 {
     public int Id { get; set; }

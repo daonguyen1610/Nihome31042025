@@ -20,5 +20,8 @@ public interface IPermissionService
     // Role grants only; membership-derived view capabilities are excluded.
     Task<IReadOnlySet<int>> FilterByRolePermissionAsync(IReadOnlyCollection<int> userIds,
         string permissionCode, CancellationToken ct = default);
+    // Role grants only: the users whose role holds every one of the codes, read once.
+    Task<IReadOnlySet<int>> FilterByRolePermissionsAsync(IReadOnlyCollection<int> userIds,
+        IReadOnlyCollection<string> permissionCodes, CancellationToken ct = default);
     Task<bool> HasAsync(int userId, string permissionCode, CancellationToken ct = default);
 }

@@ -196,7 +196,8 @@ const Workflows = () => {
           aria-label={t("workflow.field.chain")}
         >
           {steps.map((step, index) => {
-            const blocked = issueFor(w, step) != null;
+            const issue = issueFor(w, step);
+            const blocked = issue != null;
             return (
               <li
                 key={`${step.order}-${step.approverRoleCode}`}
@@ -221,7 +222,9 @@ const Workflows = () => {
                     <span className="tabular-nums text-muted-foreground">{index + 1}</span>
                   )}
                   <span className="font-medium text-foreground">
-                    {roleLabel(step.approverRoleCode)}
+                    {issue?.issue === "RoleMissing"
+                      ? t("workflow.roleDeleted")
+                      : roleLabel(step.approverRoleCode)}
                   </span>
                 </span>
               </li>

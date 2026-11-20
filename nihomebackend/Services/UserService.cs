@@ -319,6 +319,8 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
         db.RefreshTokens.RemoveRange(user.RefreshTokens);
         db.Notifications.RemoveRange(user.Notifications);
         db.UserDocuments.RemoveRange(user.Documents);
+        // Their place in quote approval chains only gave them sight of those quotes.
+        db.QuoteChainApprovers.RemoveRange(db.QuoteChainApprovers.Where(item => item.UserId == id));
 
         // Remove the user
         db.Users.Remove(user);

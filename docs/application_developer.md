@@ -999,8 +999,10 @@ có luồng đang bật thì một bước `PROCUREMENT_MANAGER`, theo ghi chú 
   lần lưu (thông báo in-app qua `quote.approval-requested`), nhật ký ghi `ApproveStep`;
   bước cuối chuyển `Approved`, ghi `Approve` và gửi email quyết định cho người trình.
   Một quy tắc "còn duyệt được" (`IQuoteApprovalEmailService.CanDecideAsync`, kiểm nhiều người
-  trong số truy vấn cố định): đang hoạt động, đúng role đang bật, có grant role
-  `crm.quotes.view` + `crm.quotes.approve`. Quy tắc này dùng cho quyền quyết định, chuyển bước,
+  trong số truy vấn cố định qua `IPermissionService.FilterByRolePermissionsAsync`): đang hoạt
+  động, đúng role đang bật, có grant role `crm.quotes.view` + `crm.quotes.approve`. Cờ của người
+  đang giữ dùng role của bước hiện tại, hoặc Trưởng phòng Cung ứng khi không có bước hợp lệ,
+  như khi duyệt và rút lại. Quy tắc này dùng cho quyền quyết định, chuyển bước,
   cờ `available`, rút lại và kiểm tra hàng chờ email; danh sách ứng viên lúc gửi cần thêm email
   hợp lệ. Trước khi chuyển, người bước sau phải còn duyệt được; không thì 400
   `QUOTE_NEXT_APPROVER_UNAVAILABLE` và báo giá ở nguyên bước hiện tại. `reject-internal` ở
@@ -1010,25 +1012,32 @@ có luồng đang bật thì một bước `PROCUREMENT_MANAGER`, theo ghi chú 
   duyệt và `approvalApproverAvailable` cho người đang giữ báo giá. Khi người đang giữ không
   còn đủ điều kiện, người có `crm.quotes.manage` (chủ báo giá, hoặc `view.all`) gọi
   `withdraw-approval` kèm `rowVersion` (bắt buộc) để về `Draft` (nhật ký `WithdrawApproval`,
-  ghi chú tuỳ chọn). Khi họ còn duyệt được, hoặc báo giá đã chuyển bước giữa lúc kiểm và lúc
-  lưu, trả 400 `QUOTE_WITHDRAW_APPROVER_AVAILABLE`.
+  ghi chú tuỳ chọn). Phiên bản được so trước (`CrmConcurrency.EnsureMatches`): trang cũ nhận
+  409 để tải lại. Khi người đang giữ còn duyệt được, hoặc báo giá chuyển bước giữa lúc kiểm và
+  lúc lưu, trả 400 `QUOTE_WITHDRAW_APPROVER_AVAILABLE`. Nút rút lại chỉ hiện cho chủ báo giá
+  hoặc người có `view.all`, đúng như server cho phép; người khác trong chuỗi thấy ai rút được.
+- Duyệt hoặc từ chối một báo giá không còn `PendingApproval` (trang cũ) trả
+  `QUOTE_APPROVAL_NOT_PENDING`, trước khi xét vai trò.
 - Người có tên trong chuỗi (trước, đúng hoặc sau lượt) đọc được báo giá, `project-boq`,
   `versions`, danh sách và nội dung tài liệu, và thấy nó trong danh sách dù không có
-  `crm.quotes.view.all` (`QuoteApprovalChain.CanRead`; danh sách dùng `ApproverPattern`, so
-  `"approverUserId":{id},` trên JSON do `QuoteApprovalChain.Write` ghi, có unit test giữ định
-  dạng). Sửa, gửi khách, xoá và tải lên/xoá tài liệu vẫn chỉ dành cho chủ báo giá. LIKE có
-  wildcard đầu không dùng index; ở quy mô báo giá của NICON chi phí này nhỏ. Nếu số báo giá
-  lớn, tách người duyệt ra bảng riêng.
+  `crm.quotes.view.all`. Người trong chuỗi nằm ở bảng `quote_chain_approvers` (QuoteId,
+  UserId; unique, index theo UserId): ghi khi gửi duyệt (`QuoteApprovalChain.SetApproversAsync`),
+  xoá cùng lúc chuỗi kết thúc (từ chối, rút lại, phiên bản mới; `ClearApproversAsync`), giữ sau
+  khi Đã duyệt. Đọc qua `QuoteApprovalChain.CanReadAsync`; danh sách lọc bằng
+  `ChainApprovers.Any(...)`, có index. Migration `AddQuoteChainApprovers` điền bảng từ
+  `ApprovalStepsJson` của báo giá đã gửi (bỏ người dùng không còn). Xoá cứng người dùng xoá các
+  dòng của họ. Sửa, gửi khách, xoá và tải lên/xoá tài liệu vẫn chỉ dành cho chủ báo giá.
 - Lưu luồng `quotes|approve` đang bật (`WorkflowConfigService.ValidateAsync`) bị từ chối khi
   có bước mà role đã ngừng dùng hoặc thiếu grant đang bật `crm.quotes.view`/`approve`
   (`QUOTE_WORKFLOW_STEPS_BLOCKED`, `params.items` liệt kê mọi bước bị chặn theo thứ tự), hoặc
   role có bước `requireAllApprovers` lặp ở bước khác (`QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED`).
   Tắt luồng thì không bị kiểm, để admin tắt được luồng đang hỏng. Danh sách và chi tiết luồng
-  đang bật trả `stepIssues` (`RoleInactive`, `RoleCannotApprove`, `NoEligibleUser`) cho dòng đã
-  lưu trước khi có các kiểm tra này.
+  đang bật trả `stepIssues` (`RoleMissing` khi role đã bị xoá, `RoleInactive`,
+  `RoleCannotApprove`, `NoEligibleUser`) cho dòng đã lưu trước khi có các kiểm tra này.
 - Lỗi chặn của chuỗi duyệt trả `{ message, code, params }`: `message` tiếng Việt cho log và
-  audit; frontend dịch theo `code` (`CODED_ERRORS` trong `src/lib/apiError.ts`), vai trò lấy
-  từ `params.roleLabelKey`. Các mã: `QUOTE_APPROVAL_STEP_NO_APPROVER`, `_STEP_UNCHOSEN`,
+  audit; frontend dịch theo `code` qua bảng duy nhất `CODED_ERRORS` trong `src/lib/apiError.ts`
+  (cả `extractApiError` lẫn `getUiError`), vai trò lấy từ `params.roleLabelKey`. Các mã:
+  `QUOTE_APPROVAL_NOT_PENDING`, `QUOTE_APPROVAL_STEP_NO_APPROVER`, `_STEP_UNCHOSEN`,
   `_STEP_INVALID_APPROVER`, `_CHAIN_CHANGED`, `_PERSON_TWICE`, `_NOT_YOUR_TURN`,
   `_NOT_CHOSEN`, `_ROLE_LOST`, `QUOTE_NEXT_APPROVER_UNAVAILABLE`,
   `QUOTE_WITHDRAW_APPROVER_AVAILABLE` và hai mã `QUOTE_WORKFLOW_*` ở trên. Thân lỗi dựng chung

@@ -1,6 +1,7 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using NihomeBackend.Data;
+using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Models.Rbac;
 
@@ -69,23 +70,30 @@ public static class QuoteApprovalChain
 
     public static string Write(IEnumerable<QuoteApprovalStep> steps) => JsonSerializer.Serialize(steps, Json);
 
-    // Each written step reads "approverUserId":{id},"approverName":..., so the id is followed
-    // by a comma: 12 never matches 120.
-    private static string ApproverToken(int userId) => $"\"approverUserId\":{userId},";
-
-    /// <summary>SQL LIKE pattern for quotes whose chain includes the user, at any step.</summary>
-    public static string ApproverPattern(int userId) => $"%{ApproverToken(userId)}%";
-
     /// <summary>
-    /// Who may read a quote without permission to see every quote: its owner, and everyone in
-    /// its approval chain, before, at and after their turn. Changes stay with the owner.
+    /// Who may read a quote without permission to see every quote: its owner, its current
+    /// approver, and everyone in its approval chain, before, at and after their turn
+    /// (<see cref="QuoteChainApprover"/>). Changes stay with the owner.
     /// </summary>
-    public static bool CanRead(int? ownerUserId, int? approverUserId, string? stepsJson, int userId) =>
-        ownerUserId == userId || approverUserId == userId || Includes(stepsJson, userId);
+    public static async Task<bool> CanReadAsync(AppDbContext db, int quoteId, int? ownerUserId,
+        int? approverUserId, int userId, CancellationToken ct) =>
+        ownerUserId == userId || approverUserId == userId ||
+        await db.QuoteChainApprovers.AsNoTracking()
+            .AnyAsync(item => item.QuoteId == quoteId && item.UserId == userId, ct);
 
-    /// <summary>True when the user approves a step of this chain (before, at or after their turn).</summary>
-    public static bool Includes(string? stepsJson, int userId) =>
-        stepsJson is not null && stepsJson.Contains(ApproverToken(userId), StringComparison.Ordinal);
+    /// <summary>Records everyone in a chain just sent, replacing any earlier chain of the quote.</summary>
+    public static async Task SetApproversAsync(AppDbContext db, Quote quote, IEnumerable<QuoteApprovalStep> steps,
+        CancellationToken ct)
+    {
+        await ClearApproversAsync(db, quote.Id, ct);
+        foreach (var userId in steps.Select(step => step.ApproverUserId).Distinct())
+            db.QuoteChainApprovers.Add(new QuoteChainApprover { QuoteId = quote.Id, UserId = userId });
+    }
+
+    /// <summary>Stages removing a quote's chain members, saved with the change that ends the chain.</summary>
+    public static async Task ClearApproversAsync(AppDbContext db, int quoteId, CancellationToken ct) =>
+        db.QuoteChainApprovers.RemoveRange(
+            await db.QuoteChainApprovers.Where(item => item.QuoteId == quoteId).ToListAsync(ct));
 
     /// <summary>The role that decides now: the current step's, or the Procurement Manager for a quote sent before chains.</summary>
     public static string CurrentRoleCode(string? stepsJson, int? stepIndex)

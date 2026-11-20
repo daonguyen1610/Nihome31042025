@@ -1464,7 +1464,8 @@ Người trong chuỗi xem được cả các phiên bản và tài liệu của
 Khi một người duyệt nghỉ việc, đổi vai trò hoặc mất quyền xem, duyệt báo giá:
 - Trang báo giá ghi "Không còn đủ điều kiện duyệt" ở bước của họ, trước khi ai bấm gì.
 - Người bước sau không còn đủ điều kiện: người đang duyệt không chuyển tiếp được. Họ **Từ chối duyệt** để Kinh doanh gửi lại với người khác, hoặc nhờ quản trị khôi phục tài khoản, quyền.
-- Người đang giữ báo giá không còn đủ điều kiện: Kinh doanh bấm **Rút lại để chọn người duyệt khác** (có xác nhận). Báo giá về Nháp để chọn lại người duyệt rồi gửi lại. Nút này chỉ có khi người đang giữ thật sự không duyệt được nữa. Việc duyệt làm trên hệ thống; email chỉ chứa liên kết. Báo giá đã gửi giữ nguyên chuỗi lúc gửi, kể cả khi quản trị đổi luồng sau đó; báo giá đang chờ từ trước khi có chuỗi vẫn do Trưởng phòng Cung ứng đã chọn quyết định. "Cần kiểm tra" không có nghĩa là chưa gửi được: nhờ quản trị viên kiểm tra SMTP và hỏi người duyệt trước khi gửi lại. Báo giá Chờ duyệt cũ chưa có người duyệt cần xử lý nghiệp vụ trước khi quyết định.
+- Người đang giữ báo giá không còn đủ điều kiện: người phụ trách báo giá bấm **Rút lại để chọn người duyệt khác** (có xác nhận). Báo giá về Nháp để chọn lại người duyệt rồi gửi lại. Nút này chỉ có khi người đang giữ thật sự không duyệt được nữa; người khác trong chuỗi thấy ai rút lại được.
+- Nếu trang đang mở đã cũ (báo giá vừa được duyệt, rút lại hoặc trả về), hệ thống báo tải lại trang thay vì làm theo trạng thái cũ. Việc duyệt làm trên hệ thống; email chỉ chứa liên kết. Báo giá đã gửi giữ nguyên chuỗi lúc gửi, kể cả khi quản trị đổi luồng sau đó; báo giá đang chờ từ trước khi có chuỗi vẫn do Trưởng phòng Cung ứng đã chọn quyết định. "Cần kiểm tra" không có nghĩa là chưa gửi được: nhờ quản trị viên kiểm tra SMTP và hỏi người duyệt trước khi gửi lại. Báo giá Chờ duyệt cũ chưa có người duyệt cần xử lý nghiệp vụ trước khi quyết định.
 
 **Gửi duyệt giá đầu vào và rà soát Tài chính**
 

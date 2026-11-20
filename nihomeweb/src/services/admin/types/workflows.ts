@@ -27,7 +27,7 @@ export interface WorkflowStepIssue {
   roleCode: string;
   roleLabelKey?: string | null;
   roleName: string;
-  issue: "RoleInactive" | "RoleCannotApprove" | "NoEligibleUser";
+  issue: "RoleMissing" | "RoleInactive" | "RoleCannotApprove" | "NoEligibleUser";
 }
 
 export interface UpsertWorkflowConfigRequest {

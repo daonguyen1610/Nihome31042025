@@ -78,6 +78,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Quote> Quotes => Set<Quote>();
     public DbSet<QuoteItem> QuoteItems => Set<QuoteItem>();
     public DbSet<QuoteApprovalLog> QuoteApprovalLogs => Set<QuoteApprovalLog>();
+    public DbSet<QuoteChainApprover> QuoteChainApprovers => Set<QuoteChainApprover>();
     public DbSet<QuoteApprovalEmail> QuoteApprovalEmails => Set<QuoteApprovalEmail>();
     public DbSet<QuoteVersionSnapshot> QuoteVersionSnapshots => Set<QuoteVersionSnapshot>();
     public DbSet<QuoteDocument> QuoteDocuments => Set<QuoteDocument>();
@@ -1006,6 +1007,23 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .HasForeignKey(i => i.QuoteId)
                 .OnDelete(DeleteBehavior.Cascade);
             b.HasIndex(i => i.QuoteId);
+        });
+
+        modelBuilder.Entity<QuoteChainApprover>(b =>
+        {
+            b.ToTable("quote_chain_approvers");
+            b.HasKey(item => item.Id);
+            b.HasIndex(item => new { item.QuoteId, item.UserId }).IsUnique();
+            b.HasIndex(item => item.UserId);
+            b.HasOne(item => item.Quote)
+                .WithMany(q => q.ChainApprovers)
+                .HasForeignKey(item => item.QuoteId)
+                .OnDelete(DeleteBehavior.Cascade);
+            // As for the quote's current approver: removed with the quote, not with the user.
+            b.HasOne(item => item.User)
+                .WithMany()
+                .HasForeignKey(item => item.UserId)
+                .OnDelete(DeleteBehavior.NoAction);
         });
 
         modelBuilder.Entity<QuoteApprovalLog>(b =>

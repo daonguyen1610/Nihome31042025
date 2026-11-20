@@ -79,8 +79,8 @@ public sealed class QuoteApprovalEmailServiceTests : IDisposable
         permissions.Setup(item => item.HasAsync(approver.Id, It.IsAny<string>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(true);
         // The approver's role can view and approve quotes, so they can still decide the step.
-        permissions.Setup(item => item.FilterByRolePermissionAsync(
-                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<string>(), It.IsAny<CancellationToken>()))
+        permissions.Setup(item => item.FilterByRolePermissionsAsync(
+                It.IsAny<IReadOnlyCollection<int>>(), It.IsAny<IReadOnlyCollection<string>>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(new HashSet<int> { approver.Id });
         permissions.Setup(item => item.HasAsync(owner.Id, "crm.quotes.view", It.IsAny<CancellationToken>()))
             .ReturnsAsync(ownerCanView);

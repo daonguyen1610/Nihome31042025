@@ -133,16 +133,18 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
             .Where(r => approverRoleCodes.Contains(r.Code))
             .Select(r => r.Code)
             .ToListAsync(ct);
+        var isQuoteWorkflow = module == QuoteApprovalChain.Module && action == QuoteApprovalChain.Action;
         var unknown = approverRoleCodes.Except(knownRoleCodes).ToList();
-        if (unknown.Count > 0)
+        // The active quote workflow names a deleted role as a blocked step, with the others.
+        if (unknown.Count > 0 && !(isQuoteWorkflow && req.IsActive))
         {
             throw new WorkflowConfigValidationException(
-                $"Unknown approver role code(s): {string.Join(", ", unknown)}.");
+                $"Vai trò duyệt không còn tồn tại: {string.Join(", ", unknown)}. Chọn vai trò khác cho các bước này.");
         }
 
         // The quote workflow is applied when a quote is sent for approval, so while it is on every
         // step must be one that someone can decide. Turning it off stays possible as it is.
-        if (req.IsActive && module == QuoteApprovalChain.Module && action == QuoteApprovalChain.Action)
+        if (req.IsActive && isQuoteWorkflow)
         {
             var issues = await QuoteRoleIssuesAsync(approverRoleCodes, ct);
             var blocked = req.Steps.OrderBy(step => step.Order)
@@ -156,9 +158,12 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
                 foreach (var (number, issue) in blocked)
                 {
                     var name = await SourceLabels.VietnameseAsync(db, issue!.RoleLabelKey, issue.RoleName, ct);
-                    lines.Add(issue.Issue == RoleInactive
-                        ? $"Bước {number} ({name}): vai trò đã ngừng dùng."
-                        : $"Bước {number} ({name}): vai trò chưa có quyền \"Xem báo giá\" và \"Duyệt báo giá\".");
+                    lines.Add(issue.Issue switch
+                    {
+                        RoleMissing => $"Bước {number}: vai trò của bước đã bị xoá.",
+                        RoleInactive => $"Bước {number} ({name}): vai trò đã ngừng dùng.",
+                        _ => $"Bước {number} ({name}): vai trò chưa có quyền \"Xem báo giá\" và \"Duyệt báo giá\".",
+                    });
                 }
                 throw new WorkflowConfigValidationException(
                     $"Chưa lưu được luồng duyệt báo giá vì không ai duyệt được các bước sau. {string.Join(" ", lines)} Cấp quyền hoặc bật lại vai trò ở Phân quyền, hoặc chọn vai trò khác.",
@@ -202,6 +207,7 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
     private const string RoleInactive = "RoleInactive";
     private const string RoleCannotApprove = "RoleCannotApprove";
     private const string NoEligibleUser = "NoEligibleUser";
+    private const string RoleMissing = "RoleMissing";
     private static readonly string[] QuoteApproverActions = ["view", "approve"];
 
     private sealed record RoleIssue(string RoleCode, string? RoleLabelKey, string RoleName, string Issue);
@@ -239,6 +245,10 @@ public class WorkflowConfigService(AppDbContext db, ILogger<WorkflowConfigServic
                 : null;
             if (issue is not null) issues[role.Code] = new RoleIssue(role.Code, role.LabelKey, role.Name, issue);
         }
+        // A role deleted since the step was saved: nobody can hold it.
+        foreach (var code in roleCodes.Where(code => !roles.Any(role =>
+            string.Equals(role.Code, code, StringComparison.OrdinalIgnoreCase))))
+            issues[code] = new RoleIssue(code, null, code, RoleMissing);
         return issues;
     }
 

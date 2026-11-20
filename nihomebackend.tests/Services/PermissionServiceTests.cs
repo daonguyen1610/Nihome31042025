@@ -107,6 +107,33 @@ public class PermissionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task BatchRolePermissions_KeepsOnlyUsersWhoseRoleHoldsEveryCode()
+    {
+        var both = new NihomeBackend.Models.Rbac.Role { Code = "QUOTE_DECIDER", Name = "Quote decider", IsActive = true };
+        var viewOnly = new NihomeBackend.Models.Rbac.Role { Code = "QUOTE_READER", Name = "Quote reader", IsActive = true };
+        _db.Roles.AddRange(both, viewOnly);
+        var view = new NihomeBackend.Models.Rbac.Permission { Module = "crm.quotes", Action = "view" };
+        var approve = new NihomeBackend.Models.Rbac.Permission { Module = "crm.quotes", Action = "approve" };
+        _db.Permissions.AddRange(view, approve);
+        _db.SaveChanges();
+        _db.RolePermissions.AddRange(
+            new NihomeBackend.Models.Rbac.RolePermission { RoleId = both.Id, PermissionId = view.Id },
+            new NihomeBackend.Models.Rbac.RolePermission { RoleId = both.Id, PermissionId = approve.Id },
+            new NihomeBackend.Models.Rbac.RolePermission { RoleId = viewOnly.Id, PermissionId = view.Id });
+        _db.SaveChanges();
+        var decider = AddUser("0900000094", UserRole.USER, both.Id);
+        var reader = AddUser("0900000095", UserRole.USER, viewOnly.Id);
+
+        var allowed = await _svc.FilterByRolePermissionsAsync([decider.Id, reader.Id],
+            ["crm.quotes.view", "crm.quotes.approve"]);
+
+        Assert.Equal([decider.Id], allowed.ToList());
+        // The one-code form reads through the same rule.
+        Assert.Equal(new[] { decider.Id, reader.Id }.Order(),
+            (await _svc.FilterByRolePermissionAsync([decider.Id, reader.Id], "crm.quotes.view")).Order());
+    }
+
+    [Fact]
     public async Task BatchRolePermission_MatchesSingleUserResolutionAfterRoleChanges()
     {
         var legacy = AddUser("0900000091", UserRole.SUPER_ADMIN);
