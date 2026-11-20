@@ -11,6 +11,7 @@ import {
   ArrowUp,
   ArrowDown,
   ChevronRight,
+  Info,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
@@ -52,6 +53,25 @@ import {
 
 // Same regex as the backend normalization: lowercase slug, digits, dash / dot.
 const IDENTIFIER_RE = /^[a-z0-9][a-z0-9._-]{0,58}[a-z0-9]$|^[a-z0-9]$/;
+
+/** Business actions people pick by name; their technical codes stay out of sight. */
+const BUSINESS_ACTIONS = [
+  { module: "quotes", action: "approve", labelKey: "workflow.business.quotesApprove" },
+  { module: "contracts", action: "sign", labelKey: "workflow.business.contractsSign" },
+  { module: "tenders", action: "submit", labelKey: "workflow.business.tendersSubmit" },
+  {
+    module: "design.concepts",
+    action: "approve",
+    labelKey: "workflow.business.designConceptsApprove",
+  },
+  {
+    module: "design.shop",
+    action: "issue-for-construction",
+    labelKey: "workflow.business.designShopIfc",
+  },
+] as const;
+const OTHER_BUSINESS = "other";
+const businessKeyOf = (module: string, action: string) => `${module}|${action}`;
 
 type FormData = {
   module: string;
@@ -203,14 +223,58 @@ const Workflows = () => {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Which business action the form is for: a known one, "other" (codes typed by hand), or
+  // none yet. Each business action has one workflow, so the ones in use are offered disabled.
+  const [otherBusiness, setOtherBusiness] = useState(false);
+  const business = useMemo(() => {
+    if (otherBusiness) return OTHER_BUSINESS;
+    if (!form.module && !form.action) return "";
+    const known = BUSINESS_ACTIONS.find(
+      (item) => item.module === form.module && item.action === form.action,
+    );
+    return known ? businessKeyOf(known.module, known.action) : OTHER_BUSINESS;
+  }, [form.module, form.action, otherBusiness]);
+  const takenBusiness = useMemo(
+    () =>
+      new Set(
+        workflows
+          .filter((workflow) => workflow.id !== editingId)
+          .map((workflow) => businessKeyOf(workflow.module, workflow.action)),
+      ),
+    [workflows, editingId],
+  );
+  const chooseBusiness = (value: string) => {
+    if (value === OTHER_BUSINESS) {
+      setOtherBusiness(true);
+      setForm((prev) => ({ ...prev, module: "", action: "" }));
+      return;
+    }
+    const known = BUSINESS_ACTIONS.find(
+      (item) => businessKeyOf(item.module, item.action) === value,
+    );
+    if (!known) return;
+    setOtherBusiness(false);
+    setForm((prev) => ({
+      ...prev,
+      module: known.module,
+      action: known.action,
+      // Name it after the business action unless the user already named it.
+      name: prev.name.trim() ? prev.name : t(known.labelKey),
+    }));
+  };
+
   const openCreate = () => {
     setEditingId(null);
+    setOtherBusiness(false);
     setForm({ ...emptyForm, sortOrder: workflows.length });
     setFormError(null);
     setDialogOpen(true);
   };
   const openEdit = (wf: WorkflowConfig) => {
     setEditingId(wf.id);
+    setOtherBusiness(
+      !BUSINESS_ACTIONS.some((item) => item.module === wf.module && item.action === wf.action),
+    );
     setForm({
       module: wf.module,
       action: wf.action,
@@ -260,6 +324,10 @@ const Workflows = () => {
     const module = form.module.trim().toLowerCase();
     const action = form.action.trim().toLowerCase();
     const name = form.name.trim();
+    if (!business) {
+      setFormError(t("workflow.businessRequired"));
+      return;
+    }
     if (!module || !action || !name) {
       setFormError(t("form.required"));
       return;
@@ -272,11 +340,9 @@ const Workflows = () => {
       setFormError(t("workflow.stepsRequired"));
       return;
     }
-    for (const s of form.steps) {
-      if (!s.name.trim() || !s.approverRoleCode) {
-        setFormError(t("workflow.stepFieldsRequired"));
-        return;
-      }
+    if (form.steps.some((s) => !s.approverRoleCode)) {
+      setFormError(t("workflow.stepRoleRequired"));
+      return;
     }
     const payload: UpsertWorkflowConfigRequest = {
       module,
@@ -287,7 +353,9 @@ const Workflows = () => {
       sortOrder: Number.isFinite(form.sortOrder) ? Math.max(0, form.sortOrder) : 0,
       steps: form.steps.map((s, i) => ({
         order: i + 1,
-        name: s.name.trim(),
+        // An unnamed step reads as its approver, e.g. "Trưởng phòng Cung ứng duyệt".
+        name:
+          s.name.trim() || t("workflow.stepDefaultName", { role: roleLabel(s.approverRoleCode) }),
         approverRoleCode: s.approverRoleCode,
         slaHours: Number.isFinite(s.slaHours) ? Math.max(0, s.slaHours) : 0,
         requireAllApprovers: s.requireAllApprovers,
@@ -592,195 +660,246 @@ const Workflows = () => {
             <DialogTitle>
               {editingId != null ? t("workflow.editModalTitle") : t("workflow.createModalTitle")}
             </DialogTitle>
-            <DialogDescription>{t("workflow.dialogHelp")}</DialogDescription>
+            <DialogDescription>{t("workflow.dialogIntro")}</DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-5">
+            {/* 1. What is approved */}
+            <FieldScope className="space-y-1.5">
+              <Label htmlFor="wf-business">{t("workflow.field.business")} *</Label>
+              <Select value={business} onValueChange={chooseBusiness}>
+                <SelectTrigger id="wf-business" data-testid="wf-business">
+                  <SelectValue placeholder={t("workflow.businessPlaceholder")} />
+                </SelectTrigger>
+                <SelectContent>
+                  {BUSINESS_ACTIONS.map((item) => {
+                    const key = businessKeyOf(item.module, item.action);
+                    const taken = takenBusiness.has(key);
+                    return (
+                      <SelectItem key={key} value={key} disabled={taken}>
+                        {t(item.labelKey)}
+                        {taken ? ` · ${t("workflow.business.taken")}` : ""}
+                      </SelectItem>
+                    );
+                  })}
+                  <SelectItem value={OTHER_BUSINESS}>{t("workflow.business.other")}</SelectItem>
+                </SelectContent>
+              </Select>
+              {business === businessKeyOf("quotes", "approve") && (
+                <p className="flex gap-2 rounded-md border bg-muted/40 p-2.5 text-xs text-foreground">
+                  <Info className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden />
+                  {t("workflow.quoteRule")}
+                </p>
+              )}
+            </FieldScope>
+
+            {business === OTHER_BUSINESS && (
+              <div className="space-y-2 rounded-md border border-dashed p-3">
+                <p className="text-xs font-medium">{t("workflow.technicalCodes")}</p>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="wf-module" className="text-xs">
+                      {t("workflow.field.module")} *
+                    </Label>
+                    <Input
+                      id="wf-module"
+                      value={form.module}
+                      onChange={(e) => setForm({ ...form, module: e.target.value.toLowerCase() })}
+                      placeholder="procurement.rfq"
+                      className="h-9 font-mono"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="wf-action" className="text-xs">
+                      {t("workflow.field.action")} *
+                    </Label>
+                    <Input
+                      id="wf-action"
+                      value={form.action}
+                      onChange={(e) => setForm({ ...form, action: e.target.value.toLowerCase() })}
+                      placeholder="award"
+                      className="h-9 font-mono"
+                    />
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">{t("workflow.identifierHint")}</p>
+              </div>
+            )}
+
+            {/* 2. Name and note */}
+            <div className="space-y-3">
               <div className="space-y-1.5">
-                <Label htmlFor="wf-module" className="text-xs">
-                  {t("workflow.field.module")} *
-                </Label>
+                <Label htmlFor="wf-name">{t("workflow.field.name")} *</Label>
                 <Input
-                  id="wf-module"
-                  value={form.module}
-                  onChange={(e) => setForm({ ...form, module: e.target.value.toLowerCase() })}
-                  placeholder="quotes"
-                  className="h-9 font-mono"
+                  id="wf-name"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="wf-action" className="text-xs">
-                  {t("workflow.field.action")} *
-                </Label>
-                <Input
-                  id="wf-action"
-                  value={form.action}
-                  onChange={(e) => setForm({ ...form, action: e.target.value.toLowerCase() })}
-                  placeholder="approve"
-                  className="h-9 font-mono"
+                <Label htmlFor="wf-description">{t("workflow.field.descriptionOptional")}</Label>
+                <Textarea
+                  id="wf-description"
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
+                  rows={2}
                 />
               </div>
             </div>
-            <p className="text-xs text-muted-foreground">{t("workflow.identifierHint")}</p>
 
-            <div className="space-y-1.5">
-              <Label htmlFor="wf-name" className="text-xs">
-                {t("workflow.field.name")} *
-              </Label>
-              <Input
-                id="wf-name"
-                value={form.name}
-                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                className="h-9"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <Label htmlFor="wf-description" className="text-xs">
-                {t("workflow.field.description")}
-              </Label>
-              <Textarea
-                id="wf-description"
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                rows={2}
-              />
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="space-y-1.5">
-                <Label htmlFor="wf-sortOrder" className="text-xs">
-                  {t("workflow.field.sortOrder")}
-                </Label>
-                <Input
-                  id="wf-sortOrder"
-                  type="number"
-                  min={0}
-                  value={form.sortOrder}
-                  onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) || 0 })}
-                  className="h-9"
-                />
-              </div>
-              <div className="flex items-end gap-2">
-                <Switch
-                  id="wf-active"
-                  checked={form.isActive}
-                  onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
-                  aria-label={t("workflow.field.isActive")}
-                />
-                <Label htmlFor="wf-active" className="mb-2 text-sm font-medium">
-                  {t("workflow.field.isActive")}
-                </Label>
-              </div>
-            </div>
-
-            {/* Steps editor */}
-            <div className="space-y-2 rounded-md border p-3">
-              <div className="flex items-center justify-between">
-                <h4 className="text-sm font-semibold">{t("workflow.stepsTitle")}</h4>
+            {/* 3. Who approves, in order */}
+            <section className="space-y-2" aria-labelledby="wf-steps-title">
+              <div className="flex items-center justify-between gap-2">
+                <h4 id="wf-steps-title" className="text-sm font-semibold">
+                  {t("workflow.stepsTitle")}
+                </h4>
                 <Button type="button" size="sm" variant="outline" onClick={addStep}>
                   <Plus className="mr-1 h-3.5 w-3.5" /> {t("workflow.addStep")}
                 </Button>
               </div>
-              {form.steps.map((step, idx) => (
-                <div
-                  key={idx}
-                  className="space-y-2 rounded border bg-card/50 p-2"
-                  data-testid={`wf-step-${idx}`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-xs font-semibold uppercase text-muted-foreground">
-                      #{idx + 1}
-                    </span>
-                    <div className="inline-flex items-center gap-1">
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => moveStep(idx, -1)}
-                        disabled={idx === 0}
-                        aria-label={t("workflow.moveUp")}
-                        className="h-7 w-7"
-                      >
-                        <ArrowUp className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => moveStep(idx, 1)}
-                        disabled={idx === form.steps.length - 1}
-                        aria-label={t("workflow.moveDown")}
-                        className="h-7 w-7"
-                      >
-                        <ArrowDown className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        onClick={() => removeStep(idx)}
-                        disabled={form.steps.length <= 1}
-                        aria-label={t("common.delete")}
-                        className="h-7 w-7 text-destructive hover:text-destructive"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+              <ol className="space-y-2">
+                {form.steps.map((step, idx) => (
+                  <li
+                    key={idx}
+                    className="space-y-3 rounded-md border bg-card p-3"
+                    data-testid={`wf-step-${idx}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="inline-flex items-center gap-2 text-sm font-semibold">
+                        <span
+                          className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-muted text-xs tabular-nums"
+                          aria-hidden
+                        >
+                          {idx + 1}
+                        </span>
+                        {t("workflow.stepTitle", { n: idx + 1 })}
+                      </span>
+                      <div className="inline-flex shrink-0 items-center">
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => moveStep(idx, -1)}
+                          disabled={idx === 0}
+                          aria-label={t("workflow.moveUp")}
+                          className="h-8 w-8"
+                        >
+                          <ArrowUp className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => moveStep(idx, 1)}
+                          disabled={idx === form.steps.length - 1}
+                          aria-label={t("workflow.moveDown")}
+                          className="h-8 w-8"
+                        >
+                          <ArrowDown className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          type="button"
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => removeStep(idx)}
+                          disabled={form.steps.length <= 1}
+                          aria-label={t("common.delete")}
+                          className="h-8 w-8 text-destructive hover:text-destructive"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
                     </div>
-                  </div>
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <FieldScope className="space-y-1">
-                      <Label className="text-xs">{t("workflow.field.stepName")} *</Label>
-                      <Input
-                        value={step.name}
-                        onChange={(e) => patchStep(idx, { name: e.target.value })}
-                        className="h-8"
-                      />
-                    </FieldScope>
                     <FieldScope className="space-y-1">
                       <Label className="text-xs">{t("workflow.field.approverRole")} *</Label>
                       <Select
                         value={step.approverRoleCode}
                         onValueChange={(v) => patchStep(idx, { approverRoleCode: v })}
                       >
-                        <SelectTrigger className="h-8">
+                        <SelectTrigger>
                           <SelectValue placeholder={t("workflow.approverPlaceholder")} />
                         </SelectTrigger>
                         <SelectContent>
                           {roles.map((r) => (
                             <SelectItem key={r.code} value={r.code}>
-                              {r.labelKey ? t(r.labelKey) : r.name} ({r.code})
+                              {r.labelKey ? t(r.labelKey) : r.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
                       </Select>
                     </FieldScope>
-                    <FieldScope className="space-y-1">
-                      <Label className="text-xs">{t("workflow.field.slaHours")}</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        value={step.slaHours}
-                        onChange={(e) => patchStep(idx, { slaHours: Number(e.target.value) || 0 })}
-                        className="h-8"
-                      />
-                    </FieldScope>
-                    <FieldScope className="flex items-end gap-2">
-                      <FieldControl>
-                        <Switch
-                          checked={step.requireAllApprovers}
-                          onCheckedChange={(v) => patchStep(idx, { requireAllApprovers: v })}
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <FieldScope className="space-y-1">
+                        <Label className="text-xs">{t("workflow.field.stepNameOptional")}</Label>
+                        <Input
+                          value={step.name}
+                          onChange={(e) => patchStep(idx, { name: e.target.value })}
+                          placeholder={
+                            step.approverRoleCode
+                              ? t("workflow.stepDefaultName", {
+                                  role: roleLabel(step.approverRoleCode),
+                                })
+                              : undefined
+                          }
+                          className="h-9"
                         />
-                      </FieldControl>
-                      <Label className="mb-2 text-xs">{t("workflow.field.requireAll")}</Label>
-                    </FieldScope>
-                  </div>
-                </div>
-              ))}
+                      </FieldScope>
+                      <FieldScope className="space-y-1">
+                        <Label className="text-xs">{t("workflow.field.deadlineHours")}</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          inputMode="numeric"
+                          value={step.slaHours}
+                          onChange={(e) =>
+                            patchStep(idx, { slaHours: Number(e.target.value) || 0 })
+                          }
+                          className="h-9"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          {t("workflow.deadlineHint")}
+                        </p>
+                      </FieldScope>
+                      <FieldScope className="flex items-start gap-2 sm:col-span-2">
+                        <FieldControl>
+                          <Checkbox
+                            checked={step.requireAllApprovers}
+                            onCheckedChange={(v) =>
+                              patchStep(idx, { requireAllApprovers: v === true })
+                            }
+                            className="mt-0.5"
+                          />
+                        </FieldControl>
+                        <Label className="text-xs font-normal leading-snug">
+                          {t("workflow.field.everyoneMustApprove")}
+                        </Label>
+                      </FieldScope>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+
+            {/* 4. In use */}
+            <div className="flex items-start gap-3 rounded-md border p-3">
+              <Switch
+                id="wf-active"
+                checked={form.isActive}
+                onCheckedChange={(checked) => setForm({ ...form, isActive: checked })}
+              />
+              <div className="space-y-0.5">
+                <Label htmlFor="wf-active" className="text-sm font-medium">
+                  {t("workflow.field.activeNow")}
+                </Label>
+                <p className="text-xs text-muted-foreground">{t("workflow.activeHint")}</p>
+              </div>
             </div>
 
-            {formError && <p className="text-sm text-destructive">{formError}</p>}
+            {formError && (
+              <p role="alert" className="text-sm text-destructive">
+                {formError}
+              </p>
+            )}
           </div>
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
@@ -788,7 +907,7 @@ const Workflows = () => {
               {t("common.cancel")}
             </Button>
             <Button onClick={() => void submit()} disabled={saving}>
-              {saving ? t("common.saving") : t("common.save")}
+              {saving ? t("common.saving") : t("workflow.saveWorkflow")}
             </Button>
           </DialogFooter>
         </DialogContent>

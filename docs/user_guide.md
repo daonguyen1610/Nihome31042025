@@ -1341,7 +1341,11 @@ Trang quản trị ở `/admin`, dành cho người đã đăng nhập và có q
 
 Đường dẫn cũ `/admin/posts/*`, `/admin/project-categories`, `/admin/slideshow` tự chuyển sang vị trí mới.
 
-**Luồng duyệt.** Trang **Cấu hình → Luồng duyệt** liệt kê từng nghiệp vụ cùng chuỗi người duyệt theo thứ tự (ví dụ "1 Phụ trách Pháp lý › 2 Trưởng phòng Kinh doanh"), tìm được theo tên luồng hoặc vai trò duyệt. Báo giá do người gửi chọn một Trưởng phòng Cung ứng để duyệt; người gửi không tự duyệt được báo giá của mình.
+**Luồng duyệt.** Trang **Cấu hình → Luồng duyệt** liệt kê từng nghiệp vụ cùng chuỗi người duyệt theo thứ tự (ví dụ "1 Phụ trách Pháp lý › 2 Trưởng phòng Kinh doanh"), tìm được theo tên luồng hoặc vai trò duyệt.
+
+- Thêm hoặc sửa luồng: chọn **Nghiệp vụ cần duyệt** (nghiệp vụ đã có luồng sẽ mờ, vì mỗi nghiệp vụ chỉ có một luồng), đặt tên, rồi với mỗi bước chỉ cần chọn **Vai trò duyệt**. Tên bước để trống thì hệ thống ghi theo vai trò, ví dụ "Trưởng phòng Cung ứng duyệt". **Thời hạn xử lý** tính bằng giờ (24 giờ = 1 ngày). Tắt **Đang áp dụng** để tạm ngưng luồng mà không xoá.
+- Mã kỹ thuật chỉ cần nhập khi chọn **Nghiệp vụ khác**.
+- Luồng duyệt là quy trình chung để mọi người làm theo. Người duyệt trên từng phiếu do màn hình của nghiệp vụ đó áp dụng: báo giá do người gửi chọn một Trưởng phòng Cung ứng để duyệt, người gửi không tự duyệt được. Sửa luồng ở đây không đổi người duyệt của báo giá đang chờ duyệt.
 
 **Xuất Excel.** Các danh sách liên hệ, hồ sơ ứng tuyển, bài đăng, dự án, bản dịch, danh mục hoạt động, hình thức làm việc, logo (khách hàng, đối tác, nhà cung cấp, giải thưởng) có nút **Xuất Excel**, tải dữ liệu đang lọc dưới dạng CSV UTF-8 mở được bằng Excel. Nút bị khóa khi danh sách trống.
 

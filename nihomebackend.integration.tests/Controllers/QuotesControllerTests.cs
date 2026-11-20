@@ -507,6 +507,89 @@ public class QuotesControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task SwitchingTheQuoteWorkflow_FromOldChainToNew_KeepsApprovalWithTheChosenProcurementManager()
+    {
+        // The administrator restores the old chain (Sales Manager then Board), as a database
+        // seeded before the correction would show it.
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        object Chain(string description, params (string Name, string Role)[] steps) => new
+        {
+            module = "quotes",
+            action = "approve",
+            name = "Duyệt báo giá",
+            description,
+            isActive = true,
+            sortOrder = 10,
+            steps = steps.Select((step, index) => new
+            {
+                order = index + 1,
+                name = step.Name,
+                approverRoleCode = step.Role,
+                slaHours = 24,
+                requireAllApprovers = false,
+            }).ToArray(),
+        };
+        var existing = (await ReadJsonAsync(await Client.GetAsync("/api/workflows?includeInactive=true")))
+            .EnumerateArray().FirstOrDefault(item => item.GetProperty("module").GetString() == "quotes" &&
+                item.GetProperty("action").GetString() == "approve");
+        var oldChain = Chain("Chuỗi cũ",
+            ("Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER"), ("Ban Giám đốc phê duyệt", "BGD"));
+        var saved = existing.ValueKind == System.Text.Json.JsonValueKind.Object
+            ? await Client.PutAsJsonAsync($"/api/workflows/{existing.GetProperty("id").GetInt32()}", oldChain)
+            : await Client.PostAsJsonAsync("/api/workflows", oldChain);
+        saved.EnsureSuccessStatusCode();
+        var workflowId = (await ReadJsonAsync(saved)).GetProperty("id").GetInt32();
+
+        // Under the old chain, Sales sends a quote: only a Procurement Manager can be chosen.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var quote = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+        var rowVersion = quote.GetProperty("rowVersion").GetString();
+        var candidates = (await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}/approval-candidates")))
+            .EnumerateArray().ToList();
+        candidates.Should().NotBeEmpty().And.OnlyContain(item =>
+            item.GetProperty("roleCode").GetString() == "PROCUREMENT_MANAGER");
+        var board = await WithDbAsync(db => db.Users.Where(user => user.RoleEntity != null &&
+            user.RoleEntity.Code == "BGD").Select(user => user.Id).FirstAsync());
+        // Negative: the Board member of the old chain cannot be chosen.
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approval-email-preview",
+            new { approverUserId = board, rowVersion })).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var approverId = candidates[0].GetProperty("id").GetInt32();
+        var preview = await ReadJsonAsync(await Client.PostAsJsonAsync(
+            $"/api/quotes/{quoteId}/approval-email-preview", new { approverUserId = approverId, rowVersion }));
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/submit", new
+        {
+            approverUserId = approverId,
+            previewToken = preview.GetProperty("previewToken").GetString(),
+            rowVersion,
+        })).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // The administrator applies the new chain while the quote waits.
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        (await Client.PutAsJsonAsync($"/api/workflows/{workflowId}", Chain("Chuỗi mới",
+            ("Trưởng phòng Cung ứng được chọn duyệt", "PROCUREMENT_MANAGER"))))
+            .EnsureSuccessStatusCode();
+
+        // Negative: neither approver of the old chain can decide the waiting quote.
+        foreach (var role in new[] { "SALES_MANAGER", "BGD" })
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, role));
+            (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { }))
+                .StatusCode.Should().BeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.Forbidden);
+        }
+        (await WithDbAsync(db => db.Quotes.SingleAsync(item => item.Id == quoteId))).Status
+            .Should().Be(QuoteStatus.PendingApproval);
+
+        // Happy path: the Procurement Manager chosen before the switch approves it.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
+        var approved = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/approve", new { });
+        approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
+        var decided = await WithDbAsync(db => db.Quotes.SingleAsync(item => item.Id == quoteId));
+        decided.Status.Should().Be(QuoteStatus.Approved);
+        decided.ApprovedByUserId.Should().Be(approverId);
+    }
+
+    [Fact]
     public async Task ApprovalPreview_CopiesOnlyActiveTeamMembersWithQuoteAccess()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
