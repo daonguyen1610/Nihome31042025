@@ -530,8 +530,13 @@ public class QuotesControllerTests : IntegrationTestBase
         (await SubmitWithChainAsync(quoteId, procurement)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
         (await SubmitWithChainAsync(quoteId, procurement, admin)).StatusCode.Should().Be(HttpStatusCode.OK);
 
-        // Negative: the second step's approver cannot decide before the first.
-        (await DecideAsAsync("ADMIN", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // Negative: the second step's approver cannot decide before the first, and is told whose turn it is.
+        var early = await DecideAsAsync("ADMIN", quoteId, "approve");
+        early.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var earlyBody = await ReadJsonAsync(early);
+        earlyBody.GetProperty("code").GetString().Should().Be("QUOTE_APPROVAL_NOT_YOUR_TURN");
+        earlyBody.GetProperty("params").GetProperty("current").GetInt32().Should().Be(1);
+        earlyBody.GetProperty("params").GetProperty("total").GetInt32().Should().Be(2);
         (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
         var waiting = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
         waiting.Status.Should().Be(QuoteStatus.PendingApproval);
@@ -551,6 +556,11 @@ public class QuotesControllerTests : IntegrationTestBase
         var approved = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
         approved.Status.Should().Be(QuoteStatus.Approved);
         approved.ApprovedByUserId.Should().Be(admin);
+        // History records the first step apart from the approval of the quote.
+        (await WithDbAsync(db => db.QuoteApprovalLogs.AsNoTracking().Where(log => log.QuoteId == quoteId &&
+                (log.Action == QuoteWorkflowAction.ApproveStep || log.Action == QuoteWorkflowAction.Approve))
+            .OrderBy(log => log.Id).Select(log => log.Action).ToListAsync()))
+            .Should().Equal(QuoteWorkflowAction.ApproveStep, QuoteWorkflowAction.Approve);
     });
 
     [Fact]
@@ -629,6 +639,185 @@ public class QuotesControllerTests : IntegrationTestBase
         (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
         (await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId))).Status
             .Should().Be(QuoteStatus.Approved);
+    }
+
+    [Fact]
+    public async Task QuoteApproval_NextApproverNoLongerEligible_StopsTheHandOverAndSaysWhatToDo() => await WithQuoteWorkflowAsync(async () =>
+    {
+        (await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("ADMIN", false))).EnsureSuccessStatusCode();
+        var admin = await UserIdAsync("ADMIN");
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        (await SubmitWithChainAsync(quoteId, await UserIdAsync("PROCUREMENT_MANAGER"), admin))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await WithUserInactiveAsync(admin, async () =>
+        {
+            // The quote says so before anyone decides.
+            var shown = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+            var steps = shown.GetProperty("approvalSteps").EnumerateArray().ToList();
+            steps[0].GetProperty("available").GetBoolean().Should().BeTrue();
+            steps[1].GetProperty("available").GetBoolean().Should().BeFalse();
+
+            // Negative: step 1 cannot hand the quote to someone who cannot decide it.
+            var approve = await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve");
+            approve.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            var body = await ReadJsonAsync(approve);
+            body.GetProperty("code").GetString().Should().Be("QUOTE_NEXT_APPROVER_UNAVAILABLE");
+            body.GetProperty("params").GetProperty("step").GetInt32().Should().Be(2);
+            var waiting = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
+            waiting.ApprovalStepIndex.Should().Be(0, "the quote stays with step 1");
+            (await WithDbAsync(db => db.QuoteApprovalEmails.CountAsync(e => e.QuoteId == quoteId && e.ApproverUserId == admin)))
+                .Should().Be(0, "no request goes to someone who cannot decide");
+
+            // The way out: step 1 rejects, and Sales can send it again with someone else.
+            (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "reject-internal", "Người duyệt bước 2 đã nghỉ việc"))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            (await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId))).Status
+                .Should().Be(QuoteStatus.Draft);
+        });
+    });
+
+    [Fact]
+    public async Task QuoteApproval_WithdrawnBySales_OnlyWhenTheApproverCanNoLongerDecide()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        (await SubmitWithApprovalAsync(quoteId)).StatusCode.Should().Be(HttpStatusCode.OK);
+
+        // Negative: while the Procurement Manager can still decide, Sales cannot take it back.
+        var early = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval", new { });
+        early.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(early)).GetProperty("code").GetString().Should().Be("QUOTE_WITHDRAW_APPROVER_AVAILABLE");
+
+        var procurement = await UserIdAsync("PROCUREMENT_MANAGER");
+        await WithUserInactiveAsync(procurement, async () =>
+        {
+            var shown = await ReadJsonAsync(await Client.GetAsync($"/api/quotes/{quoteId}"));
+            shown.GetProperty("approvalApproverAvailable").GetBoolean().Should().BeFalse();
+
+            var withdrawn = await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval",
+                new { note = "Trưởng phòng Cung ứng nghỉ phép dài ngày" });
+            withdrawn.StatusCode.Should().Be(HttpStatusCode.OK, await withdrawn.Content.ReadAsStringAsync());
+            var quote = await WithDbAsync(db => db.Quotes.AsNoTracking().SingleAsync(q => q.Id == quoteId));
+            quote.Status.Should().Be(QuoteStatus.Draft);
+            quote.ApprovalApproverUserId.Should().BeNull();
+            quote.ApprovalStepsJson.Should().BeNull();
+            (await WithDbAsync(db => db.QuoteApprovalLogs.AnyAsync(log => log.QuoteId == quoteId &&
+                log.Action == QuoteWorkflowAction.WithdrawApproval &&
+                log.Note == "Trưởng phòng Cung ứng nghỉ phép dài ngày"))).Should().BeTrue();
+        });
+    }
+
+    [Fact]
+    public async Task QuoteApproval_EveryoneInTheChain_SeesTheQuote_WithoutSeeingAllQuotes() => await WithQuoteWorkflowAsync(async () =>
+    {
+        (await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("ADMIN", false))).EnsureSuccessStatusCode();
+        await WithoutViewAllAsync("PROCUREMENT_MANAGER", async () =>
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+            var quoteId = await CreateQuoteAsync();
+            (await SubmitWithChainAsync(quoteId, await UserIdAsync("PROCUREMENT_MANAGER"), await UserIdAsync("ADMIN")))
+                .StatusCode.Should().Be(HttpStatusCode.OK);
+            (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
+
+            // Step 1 already approved and the quote moved on: it still opens and lists for them.
+            await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));
+            (await Client.GetAsync($"/api/quotes/{quoteId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await Client.GetAsync($"/api/quotes/{quoteId}/project-boq")).StatusCode.Should().Be(HttpStatusCode.OK);
+            var listed = await ReadJsonAsync(await Client.GetAsync("/api/quotes?pageSize=200"));
+            listed.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("id").GetInt32())
+                .Should().Contain(quoteId);
+        });
+    });
+
+    [Fact]
+    public async Task QuoteApproval_PersonInTwoSteps_IsNamed() => await WithQuoteWorkflowAsync(async () =>
+    {
+        (await SaveQuoteWorkflowAsync(("PROCUREMENT_MANAGER", false), ("PROCUREMENT_MANAGER", false)))
+            .EnsureSuccessStatusCode();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var quoteId = await CreateQuoteAsync();
+        var procurement = await UserIdAsync("PROCUREMENT_MANAGER");
+
+        var body = await ReadJsonAsync(await SubmitWithChainAsync(quoteId, procurement, procurement));
+
+        body.GetProperty("code").GetString().Should().Be("QUOTE_APPROVAL_PERSON_TWICE");
+        body.GetProperty("params").GetProperty("name").GetString().Should().NotBeNullOrWhiteSpace();
+    });
+
+    [Fact]
+    public async Task QuoteWorkflow_SavedBeforeTheChecks_ShowsTheStepNobodyCanApprove() => await WithQuoteWorkflowAsync(async () =>
+    {
+        // As a database where an administrator edited the old chain before this release, so the
+        // migration left "Sales Manager, then Board" in place: the Board cannot approve quotes.
+        (await SaveQuoteWorkflowAsync(("SALES_MANAGER", false))).EnsureSuccessStatusCode();
+        await WithDbAsync(async db =>
+        {
+            var row = await db.WorkflowConfigs.SingleAsync(item => item.Module == "quotes" && item.Action == "approve");
+            row.StepsJson = """[{"order":1,"name":"Trưởng phòng Kinh doanh duyệt","approverRoleCode":"SALES_MANAGER","slaHours":24,"requireAllApprovers":false},{"order":2,"name":"Ban Giám đốc phê duyệt","approverRoleCode":"BGD","slaHours":48,"requireAllApprovers":true}]""";
+            return await db.SaveChangesAsync();
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+        var quoteWorkflow = (await ReadJsonAsync(await Client.GetAsync("/api/workflows?includeInactive=true")))
+            .EnumerateArray().Single(item => item.GetProperty("module").GetString() == "quotes" &&
+                item.GetProperty("action").GetString() == "approve");
+        var issue = quoteWorkflow.GetProperty("stepIssues").EnumerateArray().Single();
+        issue.GetProperty("order").GetInt32().Should().Be(2);
+        issue.GetProperty("issue").GetString().Should().Be("RoleCannotApprove");
+
+        // Sales hears the same at submission, with the step and its role.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        var quoteId = await CreateQuoteAsync();
+        var body = await ReadJsonAsync(await SubmitWithChainAsync(quoteId, await UserIdAsync("SALES_MANAGER")));
+        body.GetProperty("code").GetString().Should().Be("QUOTE_APPROVAL_STEP_NO_APPROVER");
+        body.GetProperty("params").GetProperty("step").GetInt32().Should().Be(2);
+        body.GetProperty("params").GetProperty("roleLabelKey").GetString().Should().Be("rbac.role.BGD.label");
+    });
+
+    /// <summary>Runs a test while the user is deactivated, then turns them back on.</summary>
+    private async Task WithUserInactiveAsync(int userId, Func<Task> test)
+    {
+        await SetUserActiveAsync(userId, false);
+        try { await test(); }
+        finally { await SetUserActiveAsync(userId, true); }
+    }
+
+    private Task<int> SetUserActiveAsync(int userId, bool active) => WithDbAsync(async db =>
+    {
+        (await db.Users.SingleAsync(user => user.Id == userId)).IsActive = active;
+        return await db.SaveChangesAsync();
+    });
+
+    /// <summary>Runs a test while the role cannot see every quote, then gives the grant back.</summary>
+    private async Task WithoutViewAllAsync(string roleCode, Func<Task> test)
+    {
+        var grant = await WithDbAsync(db => db.RolePermissions.AsNoTracking()
+            .Where(item => item.Role.Code == roleCode && item.Permission.Module == "crm.quotes" &&
+                item.Permission.Action == "view.all")
+            .Select(item => new { item.RoleId, item.PermissionId }).SingleOrDefaultAsync());
+        if (grant is not null)
+            await WithDbAsync(async db =>
+            {
+                db.RolePermissions.Remove(await db.RolePermissions.SingleAsync(item =>
+                    item.RoleId == grant.RoleId && item.PermissionId == grant.PermissionId));
+                return await db.SaveChangesAsync();
+            });
+        try { await test(); }
+        finally
+        {
+            if (grant is not null)
+                await WithDbAsync(async db =>
+                {
+                    db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission
+                    {
+                        RoleId = grant.RoleId,
+                        PermissionId = grant.PermissionId,
+                    });
+                    return await db.SaveChangesAsync();
+                });
+        }
     }
 
     /// <summary>Runs a test that changes the shared quote workflow, then puts it back.</summary>

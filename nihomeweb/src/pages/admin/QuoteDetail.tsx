@@ -635,6 +635,32 @@ const AdminQuoteDetail = () => {
     }
   };
 
+  // Sales takes back a waiting quote whose approver can no longer decide it.
+  const withdrawApproval = async () => {
+    if (
+      !quote ||
+      !(await confirmAction(t("quotes.approval.withdrawConfirm"), {
+        destructive: false,
+        confirmLabel: t("quotes.approval.withdrawAction"),
+      }))
+    )
+      return;
+    setWorkflowBusy(true);
+    try {
+      const { data } = await adminApi.withdrawQuoteApproval(quote.id, {
+        rowVersion: quote.rowVersion,
+      });
+      setQuote(data);
+      setForm(toFormState(data));
+      toast({ title: t("quotes.done.withdrawApproval", { code: data.code }) });
+    } catch (err) {
+      toast({ title: t("common.error"), description: uiError(err), variant: "destructive" });
+      if (isConcurrencyConflict(err)) await load();
+    } finally {
+      setWorkflowBusy(false);
+    }
+  };
+
   const previewApprovalEmail = async () => {
     if (!quote || !chainReady) return;
     setWorkflowBusy(true);
@@ -795,6 +821,10 @@ const AdminQuoteDetail = () => {
   const currentStepIndex = approvalSteps.findIndex((step) => step.state === "Current");
   const currentStep = approvalSteps[currentStepIndex];
   const nextApprover = currentStep ? approvalSteps[currentStepIndex + 1] : undefined;
+  // A later approver who can no longer approve would stop the quote when it reaches them.
+  const laterApproverUnavailable = approvalSteps.find(
+    (step) => step.state === "Waiting" && step.available === false,
+  );
   const currentApproval =
     quote.status !== "PendingApproval"
       ? undefined
@@ -804,13 +834,17 @@ const AdminQuoteDetail = () => {
             role: currentStep.roleLabelKey ? t(currentStep.roleLabelKey) : currentStep.roleCode,
             current: currentStepIndex + 1,
             total: approvalSteps.length,
+            available: quote.approvalApproverAvailable !== false,
           }
         : {
             name: quote.approvalApproverName ?? "—",
             role: t("rbac.role.PROCUREMENT_MANAGER.label"),
             current: 1,
             total: 1,
+            available: quote.approvalApproverAvailable !== false,
           };
+  // Approving now would stop: the next person can no longer approve, so say so up front.
+  const nextApproverBlocked = nextApprover?.available === false;
   const showEditToggle =
     canManage && !editing && !isTerminal && (!awaitingInputPrice || priceSourceReady);
   const primaryInputPackage =
@@ -1070,6 +1104,11 @@ const AdminQuoteDetail = () => {
                           ? ` · ${t("quotes.approval.dueAt", { at: formatDateTime(step.dueAt) })}`
                           : ""}
                     </span>
+                    {step.state !== "Approved" && step.available === false && (
+                      <span className="block text-xs font-medium text-destructive">
+                        {t("quotes.approval.stepUnavailable")}
+                      </span>
+                    )}
                   </span>
                 </li>
               ))}
@@ -1078,10 +1117,42 @@ const AdminQuoteDetail = () => {
           <p className="mt-1 text-muted-foreground">
             {t(`quotes.approval.status.${quote.approvalEmailStatus ?? "Pending"}`)}
           </p>
-          {quote.status === "PendingApproval" && quote.approvalApproverUserId !== currentUserId && (
-            <p className="mt-1 text-muted-foreground">
-              {t("quotes.approval.onlyChosen", { name: quote.approvalApproverName ?? "—" })}
+          {quote.status === "PendingApproval" &&
+            quote.approvalApproverAvailable !== false &&
+            quote.approvalApproverUserId !== currentUserId && (
+              <p className="mt-1 text-muted-foreground">
+                {t("quotes.approval.onlyChosen", { name: quote.approvalApproverName ?? "—" })}
+              </p>
+            )}
+          {quote.status === "PendingApproval" && laterApproverUnavailable && (
+            <p role="alert" className="mt-1 text-destructive">
+              {t("quotes.approval.laterUnavailable", {
+                name: laterApproverUnavailable.approverName,
+              })}
             </p>
+          )}
+          {quote.status === "PendingApproval" && quote.approvalApproverAvailable === false && (
+            <div
+              role="alert"
+              className="mt-2 space-y-2 rounded-md border border-destructive/40 p-3"
+            >
+              <p className="text-destructive">
+                {t("quotes.approval.currentUnavailable", {
+                  name: quote.approvalApproverName ?? "—",
+                })}
+              </p>
+              {canManage && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={workflowBusy}
+                  onClick={() => void withdrawApproval()}
+                  data-testid="quote-withdraw-approval"
+                >
+                  {t("quotes.approval.withdraw")}
+                </Button>
+              )}
+            </div>
           )}
           {quote.approvalEmailStatus === "NeedsReview" && (
             <p className="mt-1 text-destructive">{t("quotes.approval.needsReviewAction")}</p>
@@ -1690,14 +1761,20 @@ const AdminQuoteDetail = () => {
             <DialogTitle>{workflow && t(`quotes.action.${workflow}`)}</DialogTitle>
             <DialogDescription>
               {workflow === "approve" || workflow === "rejectInternal"
-                ? workflow === "approve" && nextApprover
-                  ? t("quotes.decide.approveStepHint", {
-                      code: quote.code,
-                      current: currentApproval!.current,
+                ? workflow === "approve" && nextApproverBlocked
+                  ? t("quotes.decide.approveStepBlocked", {
+                      current: currentApproval!.current + 1,
                       total: currentApproval!.total,
-                      name: nextApprover.approverName,
+                      name: nextApprover!.approverName,
                     })
-                  : t(`quotes.decide.${workflow}Hint`, { code: quote.code })
+                  : workflow === "approve" && nextApprover
+                    ? t("quotes.decide.approveStepHint", {
+                        code: quote.code,
+                        current: currentApproval!.current,
+                        total: currentApproval!.total,
+                        name: nextApprover.approverName,
+                      })
+                    : t(`quotes.decide.${workflow}Hint`, { code: quote.code })
                 : t(
                     workflow === "submit"
                       ? "quotes.approval.chainHint"
@@ -1712,9 +1789,18 @@ const AdminQuoteDetail = () => {
               <ol className="space-y-3" data-testid="quote-approval-chain">
                 {approvalChain.map((step, index) => {
                   const role = step.roleLabelKey ? t(step.roleLabelKey) : step.roleName;
-                  // One person approves one step: people chosen elsewhere are not offered.
+                  // One person approves one step: people chosen for another step, or already
+                  // in a step everyone in the role approves, are not offered.
                   const takenElsewhere = new Set(
-                    chosenApprovers.filter((id, other) => other !== index && id != null),
+                    approvalChain.flatMap((other, otherIndex) =>
+                      otherIndex === index
+                        ? []
+                        : other.everyoneApproves
+                          ? other.candidates.map((candidate) => candidate.id)
+                          : chosenApprovers[otherIndex] != null
+                            ? [chosenApprovers[otherIndex]!]
+                            : [],
+                    ),
                   );
                   const options = step.candidates.filter((c) => !takenElsewhere.has(c.id));
                   return (
@@ -1890,6 +1976,7 @@ const AdminQuoteDetail = () => {
                 workflowBusy ||
                 (workflow === "submit" && !approvalPreview) ||
                 (workflow === "rejectInternal" && !workflowNote.trim()) ||
+                (workflow === "approve" && nextApproverBlocked) ||
                 (workflow === "send" &&
                   (!sendDraft ||
                     !isValidEmail(sendDraft.toEmail) ||
@@ -1987,6 +2074,8 @@ function translateAction(action: string, t: (k: string) => string): string {
     Update: "quotes.log.update",
     Submit: "quotes.action.submit",
     Approve: "quotes.action.approve",
+    ApproveStep: "quotes.log.approveStep",
+    WithdrawApproval: "quotes.log.withdrawApproval",
     RejectInternal: "quotes.action.rejectInternal",
     Send: "quotes.action.send",
     CustomerApprove: "quotes.action.customerApprove",

@@ -382,5 +382,53 @@
     "en": "role no longer in use",
     "zh": "角色已停用",
     "ja": "使用停止中のロール"
+  },
+  {
+    "key": "workflow.error.roleInactive",
+    "category": "workflow",
+    "vi": "Vai trò {role} đã ngừng dùng nên không ai duyệt được bước này. Chọn vai trò đang dùng, hoặc bật lại vai trò ở Phân quyền.",
+    "en": "The {role} role is no longer in use, so nobody can approve this step. Choose a role in use, or turn the role back on in Permissions.",
+    "zh": "角色“{role}”已停用，无人能审批此步骤。请选择在用的角色，或在权限中重新启用该角色。",
+    "ja": "ロール「{role}」は使用停止中のため、このステップを承認できる人がいません。使用中のロールを選ぶか、権限設定でロールを再開してください。"
+  },
+  {
+    "key": "workflow.error.roleCannotApprove",
+    "category": "workflow",
+    "vi": "Vai trò {role} chưa có quyền xem và duyệt báo giá nên không duyệt được bước này. Cấp quyền \"Xem báo giá\" và \"Duyệt báo giá\" cho vai trò này ở Phân quyền, rồi lưu lại luồng.",
+    "en": "The {role} role cannot view and approve quotes, so it cannot approve this step. Grant it \"View quotes\" and \"Approve quotes\" in Permissions, then save the workflow again.",
+    "zh": "角色“{role}”没有查看和审批报价的权限，无法审批此步骤。请在权限中为该角色授予“查看报价”和“审批报价”，然后重新保存流程。",
+    "ja": "ロール「{role}」には見積の閲覧・承認権限がないため、このステップを承認できません。権限設定で「見積を表示」と「見積を承認」を付与してから、フローを保存し直してください。"
+  },
+  {
+    "key": "workflow.error.everyoneRoleRepeated",
+    "category": "workflow",
+    "vi": "Vai trò {role} có bước \"mọi người đều phải duyệt\" nên không lặp lại ở bước khác: mỗi người chỉ duyệt một bước. Gộp các bước của vai trò này làm một.",
+    "en": "The {role} role has an \"everyone must approve\" step, so it cannot appear in another step: each person approves one step only. Merge this role's steps into one.",
+    "zh": "角色“{role}”有“所有人都必须审批”的步骤，不能在其他步骤重复出现：每人只能审批一步。请将该角色的步骤合并为一步。",
+    "ja": "ロール「{role}」には「全員が承認」のステップがあるため、他のステップに重ねて入れられません。1人が承認できるのは1ステップだけです。このロールのステップを1つにまとめてください。"
+  },
+  {
+    "key": "workflow.issue.RoleInactive",
+    "category": "workflow",
+    "vi": "Bước {n} ({role}): vai trò đã ngừng dùng nên không ai duyệt được. Chọn vai trò khác cho bước này.",
+    "en": "Step {n} ({role}): the role is no longer in use, so nobody can approve it. Choose another role for this step.",
+    "zh": "第 {n} 步（{role}）：该角色已停用，无人能审批。请为此步骤选择其他角色。",
+    "ja": "ステップ {n}（{role}）：ロールが使用停止中のため承認できる人がいません。このステップに別のロールを選んでください。"
+  },
+  {
+    "key": "workflow.issue.RoleCannotApprove",
+    "category": "workflow",
+    "vi": "Bước {n} ({role}): vai trò chưa có quyền xem và duyệt báo giá nên không ai duyệt được. Cấp quyền ở Phân quyền hoặc chọn vai trò khác.",
+    "en": "Step {n} ({role}): the role cannot view and approve quotes, so nobody can approve it. Grant the permissions in Permissions or choose another role.",
+    "zh": "第 {n} 步（{role}）：该角色没有查看和审批报价的权限，无人能审批。请在权限中授权或选择其他角色。",
+    "ja": "ステップ {n}（{role}）：ロールに見積の閲覧・承認権限がないため承認できる人がいません。権限設定で付与するか、別のロールを選んでください。"
+  },
+  {
+    "key": "workflow.issue.NoEligibleUser",
+    "category": "workflow",
+    "vi": "Bước {n} ({role}): chưa có ai đang hoạt động, có email hợp lệ trong vai trò này, nên báo giá chưa gửi duyệt được. Thêm người ở Người dùng hoặc chọn vai trò khác.",
+    "en": "Step {n} ({role}): nobody active with a valid email holds this role, so quotes cannot be sent for approval. Add someone in Users or choose another role.",
+    "zh": "第 {n} 步（{role}）：该角色中没有在职且邮箱有效的人员，报价暂时无法提交审批。请在“用户”中添加人员或选择其他角色。",
+    "ja": "ステップ {n}（{role}）：このロールに有効なメールを持つ在職者がいないため、見積を承認申請できません。ユーザーで人を追加するか、別のロールを選んでください。"
   }
 ]

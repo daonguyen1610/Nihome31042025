@@ -216,4 +216,8 @@ public enum QuoteWorkflowAction
     Cancel = 8,
     ExtendValidity = 9,
     NewVersion = 10,
+    /// <summary>A step of the approval chain approved; the quote waits for the next step.</summary>
+    ApproveStep = 11,
+    /// <summary>Sales took a waiting quote back because its approver can no longer decide it.</summary>
+    WithdrawApproval = 12,
 }

@@ -129,6 +129,12 @@ public class QuoteResponse
     public DateTime? SubmittedAt { get; set; }
     public int? ApprovalApproverUserId { get; set; }
     public string? ApprovalApproverName { get; set; }
+
+    /// <summary>
+    /// While waiting for approval: false when the person it is with can no longer approve it,
+    /// so Sales may withdraw it. Null otherwise.
+    /// </summary>
+    public bool? ApprovalApproverAvailable { get; set; }
     public string? ApprovalEmailStatus { get; set; }
     public DateTime? ApprovalEmailSentAt { get; set; }
     public DateTime? ApprovedAt { get; set; }
@@ -147,8 +153,9 @@ public class QuoteResponse
 }
 
 /// <param name="State">Approved, Current or Waiting.</param>
+/// <param name="Available">False when this approver can no longer approve (deactivated, other role, no permission).</param>
 public sealed record QuoteApprovalStepResponse(int Order, string Name, string RoleCode, string? RoleLabelKey,
-    int ApproverUserId, string ApproverName, string State, DateTime? DecidedAt, DateTime? DueAt);
+    int ApproverUserId, string ApproverName, string State, DateTime? DecidedAt, DateTime? DueAt, bool Available = true);
 
 /// <summary>A step of the quote workflow as it applies to the next submission, with who can approve it.</summary>
 public sealed record QuoteApprovalChainStepResponse(int Order, string Name, string RoleCode, string RoleName,

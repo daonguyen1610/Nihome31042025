@@ -308,7 +308,7 @@ public class QuotesController(
             return Ok(await approvalEmails.PreviewAsync(id, request.ChosenApprovers(),
                 request.RowVersion, uid.Value, canSeeAll, ct));
         }
-        catch (QuoteOperationException error) { return BadRequest(new { message = error.Message }); }
+        catch (QuoteOperationException error) { return BadRequest(error.ToResponse()); }
     }
 
     [HttpPost("{id:int}/approve")]
@@ -318,6 +318,15 @@ public class QuotesController(
         Workflow(id, body, ct, "approve",
             async (uid, _) => await svc.ApproveAsync(id, body, uid,
                 await permissions.HasAsync(uid, "crm.quotes.approve", ct), ct));
+
+    /// <summary>Sales takes back a waiting quote whose approver can no longer decide it.</summary>
+    [HttpPost("{id:int}/withdraw-approval")]
+    [RequirePermission("crm.quotes", "manage")]
+    [Idempotency("crm.quotes.withdraw-approval")]
+    public Task<ActionResult<QuoteResponse>> WithdrawApproval(int id, [FromBody] QuoteWorkflowRequest body, CancellationToken ct) =>
+        Workflow(id, body, ct, "withdraw-approval",
+            async (uid, sa) => await svc.WithdrawApprovalAsync(id, body, uid,
+                await permissions.HasAsync(uid, "crm.quotes.manage", ct), sa, ct));
 
     [HttpPost("{id:int}/reject-internal")]
     [RequirePermission("crm.quotes", "approve")]
@@ -490,9 +499,9 @@ public class QuotesController(
             ResourceId = id?.ToString(),
             Message = ex.Message,
             Status = AuditStatus.Failure,
-            FailureReason = ex.Message,
+            FailureReason = ex.Code is null ? ex.Message : $"{ex.Code}: {ex.Message}",
         });
-        return BadRequest(new { message = ex.Message });
+        return BadRequest(ex.ToResponse());
     }
 
     private int? GetUserId()

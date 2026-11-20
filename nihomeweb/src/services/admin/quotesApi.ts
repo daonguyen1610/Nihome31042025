@@ -66,6 +66,8 @@ export const quotesApi = {
   ) => api.post<QuoteResponse>(`/quotes/${id}/submit`, body),
   approveQuote: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/approve`, body),
+  withdrawQuoteApproval: (id: number, body: QuoteWorkflowRequest = {}) =>
+    api.post<QuoteResponse>(`/quotes/${id}/withdraw-approval`, body),
   rejectQuoteInternal: (id: number, body: QuoteWorkflowRequest = {}) =>
     api.post<QuoteResponse>(`/quotes/${id}/reject-internal`, body),
   getQuoteEmailPreview: (id: number) =>
