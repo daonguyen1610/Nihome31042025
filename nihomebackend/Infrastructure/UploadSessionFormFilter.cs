@@ -15,9 +15,10 @@ namespace NihomeBackend.Infrastructure;
 /// chunks. The client sends the ordinary upload request with
 /// <c>X-Upload-Sessions: field=sessionId,…</c> instead of those files' bytes; this filter
 /// adds each finished file to the form under its field before model binding, so the
-/// module validates and stores it exactly like a direct upload. The sessions close when the
-/// request succeeds or the module refuses the file for good; a failure worth retrying
-/// (see <see cref="KeepsSessions"/>) keeps them, so it can be sent again without re-uploading.
+/// module validates and stores it exactly like a direct upload. A failure worth retrying
+/// (see <see cref="KeepsSessions"/>) keeps the sessions, so it can be sent again without
+/// re-uploading; a final refusal drops them; a success drops the bytes but keeps the
+/// response, so a resend after a lost reply gets it again instead of a second copy.
 /// </summary>
 public sealed class UploadSessionFormFilter(UploadSessionService sessions) : IAsyncResourceFilter
 {
@@ -65,6 +66,17 @@ public sealed class UploadSessionFormFilter(UploadSessionService sessions) : IAs
             context.Result = NotReady();
             return;
         }
+        if (held.Replay is { } replay)
+        {
+            // Already stored by this same request; its reply was lost on the way back.
+            context.Result = new ContentResult
+            {
+                StatusCode = replay.Status,
+                ContentType = replay.ContentType,
+                Content = replay.Body,
+            };
+            return;
+        }
 
         var form = await http.Request.ReadFormAsync(ct);
         var files = new FormFileCollection();
@@ -97,14 +109,33 @@ public sealed class UploadSessionFormFilter(UploadSessionService sessions) : IAs
             // Tied to the request (not just the collection), as model binding expects.
             http.Features.Set<IFormFeature>(new FormFeature(http.Request) { Form = new FormCollection(values, files) });
 
-            var executed = await next();
-            var finished = (executed.Exception is null || executed.ExceptionHandled) &&
-                           !KeepsSessions(http.Response.StatusCode);
+            // Keep the response so a resend after a lost reply can be answered with it.
+            var responseBody = http.Response.Body;
+            using var captured = new MemoryStream();
+            http.Response.Body = captured;
+            ResourceExecutedContext executed;
+            try
+            {
+                executed = await next();
+            }
+            finally
+            {
+                http.Response.Body = responseBody;
+                captured.Position = 0;
+                await captured.CopyToAsync(responseBody, CancellationToken.None);
+            }
+            var status = http.Response.StatusCode;
+            var completed = executed.Exception is null || executed.ExceptionHandled;
             foreach (var stream in streams) await stream.DisposeAsync();
             streams.Clear();
-            // Stored, or refused for good (wrong type, over the module's limit): the staged
-            // copy is of no further use and should not hold disk space for a day.
-            if (finished) await held.CloseAsync();
+            if (!completed || KeepsSessions(status)) return;
+            if (status is >= 200 and < 300)
+                await held.SucceededAsync(new UploadReplay(status, http.Response.ContentType,
+                    System.Text.Encoding.UTF8.GetString(captured.ToArray())));
+            else
+                // Refused for good (wrong type, over the module's limit): the staged copy is
+                // of no further use and should not hold disk space for a day.
+                await held.RefusedAsync();
         }
         finally
         {

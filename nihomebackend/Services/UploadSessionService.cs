@@ -19,6 +19,9 @@ public sealed record UploadChunkResult(UploadChunkStatus Status, long ReceivedBy
 
 public sealed record CompletedUpload(Guid Id, string StagingPath, string FileName, long FileSize);
 
+/// <summary>The response an upload request got the first time, replayed when it is sent again.</summary>
+public sealed record UploadReplay(int Status, string? ContentType, string Body);
+
 /// <summary>
 /// Resumable chunked uploads for every module. A session belongs to the user who opened
 /// it and to the upload request it was opened for; chunks must arrive in order, a resent
@@ -47,7 +50,7 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     public const int MaxOpenSessionsPerUser = 50;
 
     public Task<int> CountOpenAsync(int userId, CancellationToken ct = default) =>
-        db.UploadSessions.CountAsync(item => item.UserId == userId && item.ExpiresAt > DateTime.UtcNow, ct);
+        db.UploadSessions.CountAsync(item => item.UserId == userId && item.UsedAt == null && item.ExpiresAt > DateTime.UtcNow, ct);
 
     public async Task<UploadSession> CreateAsync(int userId, string targetPath, string fileName, long fileSize,
         CancellationToken ct = default)
@@ -139,8 +142,8 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     /// Holds the finished files of the caller's sessions for the upload request at
     /// <paramref name="targetPath"/>, under each session's lock so a double submit cannot
     /// use them twice. Null when any session is not theirs, not for this request, or still
-    /// missing bytes. The caller closes the sessions only when its request succeeded, so a
-    /// failed request can be sent again without uploading the files again.
+    /// missing bytes. When the request already succeeded with these sessions, the held
+    /// result carries that response to replay instead of files.
     /// </summary>
     public async Task<HeldUploads?> HoldCompletedAsync(IReadOnlyCollection<Guid> ids, int userId, string targetPath,
         CancellationToken ct = default)
@@ -161,6 +164,14 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
                 if (!string.Equals(session.TargetPath, targetPath, StringComparison.OrdinalIgnoreCase) ||
                     session.ReceivedBytes != session.FileSize)
                     return await held.AbandonAsync();
+                if (session.UsedAt is not null)
+                {
+                    // The same request already succeeded; its reply never reached the client.
+                    held.Replay ??= new UploadReplay(session.ResultStatus ?? StatusCodes.Status200OK,
+                        session.ResultContentType, session.ResultBody ?? string.Empty);
+                    held.UsedIds.Add(id);
+                    continue;
+                }
                 if (!StagedFileHolds(id, session.FileSize, exactly: true))
                 {
                     // The staged bytes were lost (e.g. App_Data replaced): nothing left to resume.
@@ -169,6 +180,8 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
                 }
                 held.Files.Add(new CompletedUpload(id, StagingPath(id), session.FileName, session.FileSize));
             }
+            // Partly used sessions do not form a request that was ever sent.
+            if (held.UsedIds.Count > 0 && held.Files.Count > 0) return await held.AbandonAsync();
             return held;
         }
         catch
@@ -182,10 +195,20 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     public sealed class HeldUploads(UploadSessionService owner) : IAsyncDisposable
     {
         internal List<SemaphoreSlim> Gates { get; } = [];
+        internal List<Guid> UsedIds { get; } = [];
         public List<CompletedUpload> Files { get; } = [];
 
-        /// <summary>The request succeeded: drop the sessions and their staged bytes.</summary>
-        public async Task CloseAsync()
+        /// <summary>Set when this exact request already succeeded: answer with it again.</summary>
+        public UploadReplay? Replay { get; internal set; }
+
+        /// <summary>
+        /// The request succeeded: drop the staged bytes, and keep its response until the
+        /// sessions expire so a resend after a lost reply gets it again.
+        /// </summary>
+        public Task SucceededAsync(UploadReplay response) => owner.MarkUsedAsync(Files, response);
+
+        /// <summary>The module refused the files for good: drop the sessions entirely.</summary>
+        public async Task RefusedAsync()
         {
             foreach (var file in Files) await owner.ReleaseAsync(file.Id, CancellationToken.None);
         }
@@ -206,8 +229,40 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
 
     public async Task ReleaseAsync(Guid id, CancellationToken ct = default)
     {
-        await db.UploadSessions.Where(item => item.Id == id).ExecuteDeleteOrRemoveAsync(db, ct);
+        await RemoveRowsAsync([id], ct);
         DeleteStaged(id);
+    }
+
+    private async Task MarkUsedAsync(IReadOnlyCollection<CompletedUpload> files, UploadReplay response)
+    {
+        if (response.Body.Length > UploadSession.ResultBodyMaxLength)
+        {
+            // Too large to keep: close as before; a resend then starts over.
+            foreach (var file in files) await ReleaseAsync(file.Id, CancellationToken.None);
+            return;
+        }
+        var ids = files.Select(file => file.Id).ToList();
+        var now = DateTime.UtcNow;
+        foreach (var session in await db.UploadSessions.Where(item => ids.Contains(item.Id)).ToListAsync())
+        {
+            session.UsedAt = now;
+            session.ResultStatus = response.Status;
+            session.ResultContentType = response.ContentType;
+            session.ResultBody = response.Body;
+            session.ExpiresAt = now + Lifetime;
+        }
+        await db.SaveChangesAsync(CancellationToken.None);
+        // The module has its own copy; the lock stays until the row expires.
+        foreach (var id in ids) TryDelete(StagingPath(id));
+    }
+
+    /// <summary>Tracked removal, the same on SQL Server and the test provider (rows are few).</summary>
+    private async Task RemoveRowsAsync(IReadOnlyCollection<Guid> ids, CancellationToken ct)
+    {
+        var rows = await db.UploadSessions.Where(item => ids.Contains(item.Id)).ToListAsync(ct);
+        if (rows.Count == 0) return;
+        db.UploadSessions.RemoveRange(rows);
+        await db.SaveChangesAsync(ct);
     }
 
     public async Task<bool> CancelAsync(Guid id, int userId, CancellationToken ct = default)
@@ -246,7 +301,7 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
             var ids = taken.Select(item => item.Id).ToList();
             if (ids.Count > 0)
             {
-                await db.UploadSessions.Where(item => ids.Contains(item.Id)).ExecuteDeleteOrRemoveAsync(db, ct);
+                await RemoveRowsAsync(ids, ct);
                 foreach (var id in ids) DeleteStaged(id);
             }
         }
@@ -319,22 +374,6 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
         catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
         {
         }
-    }
-}
-
-internal static class UploadSessionQueryExtensions
-{
-    /// <summary>ExecuteDelete on SQL Server; tracked removal for the in-memory test provider.</summary>
-    public static async Task ExecuteDeleteOrRemoveAsync(this IQueryable<UploadSession> query, AppDbContext db,
-        CancellationToken ct)
-    {
-        if (db.Database.IsRelational())
-        {
-            await query.ExecuteDeleteAsync(ct);
-            return;
-        }
-        db.UploadSessions.RemoveRange(await query.ToListAsync(ct));
-        await db.SaveChangesAsync(ct);
     }
 }
 

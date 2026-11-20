@@ -1192,9 +1192,14 @@ public class CustomersControllerTests : IntegrationTestBase
         var stored = await Client.GetAsync(
             $"/api/customers/{customerId}/documents/{document.GetProperty("id").GetInt32()}/content");
         (await stored.Content.ReadAsByteArrayAsync()).Should().Equal(content);
-        // Used once: the session closed with the successful request.
-        (await Client.GetAsync($"/api/upload-sessions/{sessionId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
-        (await Send(target, sessionId)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // The reply got lost and the same request is sent again: it gets the same document
+        // back instead of a second copy, and no byte is uploaded again.
+        var resent = await Send(target, sessionId);
+        resent.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await ReadJsonAsync(resent)).GetProperty("id").GetInt32().Should().Be(document.GetProperty("id").GetInt32());
+        (await ReadJsonAsync(await Client.GetAsync(target))).EnumerateArray()
+            .Count(item => item.GetProperty("originalFileName").GetString() == "giay-phep-kinh-doanh.pdf")
+            .Should().Be(1);
     }
 
     [Fact]

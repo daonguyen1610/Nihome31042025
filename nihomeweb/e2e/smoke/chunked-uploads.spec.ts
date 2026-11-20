@@ -251,3 +251,69 @@ test("a file the chunk transport refuses is sent directly to the module", async 
     if (documentId) await api.delete(`/api/quotes/${quoteId}/documents/${documentId}`, { headers });
   }
 });
+
+// The upload request reached the server and stored the file, but its reply was lost.
+// Sending it again returns the same document instead of a second copy or a re-upload.
+test("a resend after a lost reply gets the stored document, not a duplicate", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
+  const quotes = await (await api.get("/api/quotes?pageSize=1", { headers })).json();
+  const quoteId = quotes.items[0].id as number;
+  const target = `/api/quotes/${quoteId}/documents`;
+  const name = `bien-ban-nghiem-thu-${Date.now()}.pdf`;
+  const path = testInfo.outputPath(name);
+  await writeFile(path, randomBytes(CHUNK + MB));
+  const stored = async () =>
+    (
+      (await (await api.get(target, { headers })).json()) as {
+        id: number;
+        originalFileName: string;
+      }[]
+    ).filter((item) => item.originalFileName === name);
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    let lost = false;
+    await page.route(`**${target}`, async (route) => {
+      if (route.request().method() !== "POST" || lost) return route.continue();
+      lost = true;
+      // Let the server store it, then drop the reply on the way back.
+      await route.fetch();
+      await route.abort("connectionreset");
+    });
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Tài liệu/ }).click();
+    await page.getByTestId("quote-document-file").setInputFiles(path);
+    const firstTry = page.waitForEvent(
+      "requestfailed",
+      (request) => new URL(request.url()).pathname === target,
+    );
+    await page.getByRole("button", { name: "Tải lên", exact: true }).click();
+    await firstTry;
+    const first = await stored();
+    expect(first).toHaveLength(1);
+
+    const chunks: number[] = [];
+    page.on("request", (request) => {
+      if (request.method() === "PUT" && new URL(request.url()).pathname.endsWith("/chunks"))
+        chunks.push(Number(new URL(request.url()).searchParams.get("offset")));
+    });
+    await page.getByTestId("quote-document-file").setInputFiles(path);
+    const resent = page.waitForResponse(uploadRequest(target), { timeout: 60_000 });
+    await page.getByRole("button", { name: "Tải lên", exact: true }).click();
+
+    const response = await resent;
+    expect(response.status()).toBe(201);
+    expect((await response.json()).id).toBe(first[0].id);
+    expect(chunks).toEqual([]);
+    expect(await stored()).toHaveLength(1);
+  } finally {
+    for (const item of await stored()) await api.delete(`${target}/${item.id}`, { headers });
+  }
+});
