@@ -24,3 +24,32 @@ public class CreateContractAttachmentRequest
     [StringLength(300)]
     public string? Label { get; set; }
 }
+
+public enum ContractUploadPurpose
+{
+    Attachment,
+    Appendix,
+}
+
+/// <summary>Opens a resumable upload of one contract file.</summary>
+public class StartContractUploadRequest
+{
+    public ContractUploadPurpose Purpose { get; set; }
+    public string? FileName { get; set; }
+    public long FileSize { get; set; }
+}
+
+/// <summary>Takes the finished file of an upload session.</summary>
+public class CompleteContractUploadRequest
+{
+    public Guid UploadSessionId { get; set; }
+}
+
+/// <summary>Takes the finished file of an upload session as a contract attachment.</summary>
+public class CompleteContractAttachmentUploadRequest : CompleteContractUploadRequest
+{
+    public ContractAttachmentKind Kind { get; set; }
+
+    [StringLength(300)]
+    public string? Label { get; set; }
+}

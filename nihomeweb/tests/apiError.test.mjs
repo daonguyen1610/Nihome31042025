@@ -224,6 +224,18 @@ test("an upload refused by the server for its size is explained, not reported as
   );
 });
 
+test("a stopped chunked upload explains why and what to do", () => {
+  const t = (key) => key;
+  assert.equal(
+    getUiError({ code: "UPLOAD_SESSION_GONE", message: "expired" }, t),
+    "upload.chunked.sessionGone",
+  );
+  assert.equal(
+    getUiError({ code: "UPLOAD_RETRIES_EXHAUSTED", message: "offline" }, t),
+    "upload.chunked.retriesExhausted",
+  );
+});
+
 test("an upload the user cancelled says so instead of reporting an error", () => {
   const t = (key) => key;
   assert.equal(getUiError({ code: "ERR_CANCELED", message: "canceled" }, t), "upload.cancelled");
