@@ -1173,11 +1173,11 @@ public class CustomersControllerTests : IntegrationTestBase
                 new { targetPath = "/files/customers/x", fileName = "a.pdf", fileSize = 10 }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
-        // The module still applies its own rules: an executable is refused, and the
-        // staged file stays so the request could be sent again.
+        // The module still applies its own rules: an executable is refused for good, so
+        // its staged copy is dropped instead of holding disk space for a day.
         var refusedId = await Stage("ghi-chu.exe");
         (await Send(target, refusedId)).StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await Client.GetAsync($"/api/upload-sessions/{refusedId}")).StatusCode.Should().Be(HttpStatusCode.OK);
+        (await Client.GetAsync($"/api/upload-sessions/{refusedId}")).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var sessionId = await Stage("giay-phep-kinh-doanh.pdf");
         // Bound to the request it was opened for.

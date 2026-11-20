@@ -340,7 +340,9 @@ Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ li�
   1. `POST /api/upload-sessions` `{targetPath, fileName, fileSize}`: `targetPath` là
      đường dẫn API của request upload (ví dụ `/api/quotes/5/documents`). Từ chối
      trước khi gửi byte nào nếu tên file sai, file lớn hơn mọi giới hạn trong Cài đặt
-     (`UPLOAD_TOO_LARGE`) hoặc người dùng đã có 50 phiên mở (`UPLOAD_TOO_MANY_SESSIONS`).
+     (`UPLOAD_TOO_LARGE`; khi đó frontend gửi thẳng file như trước để phân hệ có giới
+     hạn cố định riêng tự quyết) hoặc người dùng đã có 50 phiên mở
+     (`UPLOAD_TOO_MANY_SESSIONS`).
   2. `PUT /api/upload-sessions/{id}/chunks?offset=` (thân là byte thô). Gửi lại phần đã
      nhận vẫn `200`; sai offset → `409 UPLOAD_OFFSET_MISMATCH` kèm `receivedBytes`.
   3. Request upload gốc gửi các field nhỏ như cũ, còn file lớn thay bằng header
@@ -348,12 +350,14 @@ Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ li�
      toàn cục) giữ khoá phiên, gắn file đã nhận đủ vào form dưới đúng field rồi mới
      model binding, nên controller kiểm tra quyền, loại file và giới hạn như upload
      thường. Phiên sai người, sai `targetPath` hoặc chưa đủ byte → `400 UPLOAD_NOT_READY`.
-     Phiên chỉ đóng khi request trả 2xx; request lỗi (ví dụ lỗi database) giữ phiên để
-     gửi lại mà không tải lại file. Bấm hai lần thì lần sau thấy phiên đã đóng.
+     Phiên đóng khi request thành công hoặc bị từ chối hẳn (4xx như sai loại file, quá
+     giới hạn). Lỗi đáng thử lại (401, 408, 409, 429, 5xx, mất mạng) giữ phiên để gửi lại
+     mà không tải lại file. Bấm hai lần thì lần sau thấy phiên đã đóng.
   `GET`/`DELETE /api/upload-sessions/{id}` để hỏi tiến độ/huỷ; chỉ chủ phiên thấy phiên.
   Byte tạm nằm ở `App_Data/upload-sessions/` (ngoài wwwroot, cùng ổ với `wwwroot`),
   bảng `upload_sessions`; phiên rảnh quá 24 giờ bị `UploadSessionCleanupWorker` xoá
-  mỗi giờ. Upload ẩn danh (CV ứng tuyển) vẫn gửi một request.
+  mỗi giờ (bỏ qua phiên đang dùng; xoá cả file `.part` không còn phiên). Huỷ phiên chờ
+  phần đang ghi xong rồi mới xoá file. Upload ẩn danh (CV ứng tuyển) vẫn gửi một request.
 - Template email: xem [6.3](#63-email-ứng-dụng).
 - Google Drive: cấu hình trong database, xem [18.3](#183-google-drive-trên-iis).
 

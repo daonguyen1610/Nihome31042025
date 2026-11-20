@@ -20,7 +20,8 @@ public sealed class UploadSessionsController(UploadSessionService sessions, Site
 {
     /// <summary>
     /// Opens a session for one file. Refused before any byte is sent when the file is
-    /// larger than every upload limit in Settings; the receiving module checks its own.
+    /// larger than every upload limit in Settings; the client then sends it directly, so a
+    /// module with its own fixed limit still decides. The receiving module checks its own.
     /// </summary>
     [HttpPost]
     public async Task<IActionResult> Start([FromBody] StartUploadSessionRequest req, CancellationToken ct)
@@ -34,9 +35,7 @@ public sealed class UploadSessionsController(UploadSessionService sessions, Site
         if (name.Length is 0 or > 255 || name != Path.GetFileName(name) || name.Any(char.IsControl))
             return BadRequest(new { code = "UPLOAD_FILE_NAME_INVALID", message = "Tên tệp không hợp lệ. Hãy đổi tên tệp (tối đa 255 ký tự) rồi thử lại." });
 
-        var largestMb = 0;
-        foreach (var kind in Enum.GetValues<UploadLimitKind>())
-            largestMb = Math.Max(largestMb, await settings.GetUploadLimitMbAsync(kind, ct));
+        var largestMb = await settings.GetLargestUploadLimitMbAsync(ct);
         if (req.FileSize <= 0 || req.FileSize > (long)largestMb * 1024 * 1024)
             return BadRequest(new { code = "UPLOAD_TOO_LARGE", maxFileSizeMb = largestMb, message = $"Tệp vượt quá {largestMb} MB, mức lớn nhất trong Cài đặt. Hãy chọn tệp nhỏ hơn rồi thử lại." });
         if (await sessions.CountOpenAsync(userId, ct) >= UploadSessionService.MaxOpenSessionsPerUser)

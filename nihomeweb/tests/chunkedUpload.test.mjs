@@ -173,7 +173,7 @@ test("a cancelled upload stops before the next chunk", async () => {
   assert.deepEqual(server.calls, [0]);
 });
 
-const { stageLargeFormFiles, CHUNKED_UPLOAD_THRESHOLD_BYTES } = await import(
+const { stageLargeFormFiles, CHUNKED_UPLOAD_THRESHOLD_BYTES, keepsStagedUploads } = await import(
   "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
 );
 
@@ -244,4 +244,13 @@ test("the same large file twice in one form gets two sessions", async () => {
   });
 
   assert.equal(staged.header, "files=s1,files=s2");
+});
+
+test("staged files are kept only after failures worth sending again", () => {
+  // Network drop, expired sign-in, timeout, edit conflict, throttling, server error.
+  for (const status of [undefined, 401, 408, 409, 429, 500, 503])
+    assert.equal(keepsStagedUploads(status), true, String(status));
+  // Refused for good: wrong type, no permission, gone, too large, invalid.
+  for (const status of [400, 403, 404, 413, 415, 422])
+    assert.equal(keepsStagedUploads(status), false, String(status));
 });

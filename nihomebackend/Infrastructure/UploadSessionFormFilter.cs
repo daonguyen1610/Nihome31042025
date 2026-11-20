@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc.Filters;
 using Microsoft.AspNetCore.StaticFiles;
 using Microsoft.Extensions.Primitives;
 using Microsoft.Net.Http.Headers;
+using NihomeBackend.Authorization;
 using NihomeBackend.Services;
 
 namespace NihomeBackend.Infrastructure;
@@ -14,8 +15,9 @@ namespace NihomeBackend.Infrastructure;
 /// chunks. The client sends the ordinary upload request with
 /// <c>X-Upload-Sessions: field=sessionId,…</c> instead of those files' bytes; this filter
 /// adds each finished file to the form under its field before model binding, so the
-/// module validates and stores it exactly like a direct upload. The sessions close only
-/// when the request succeeds, so a failed request can be sent again without re-uploading.
+/// module validates and stores it exactly like a direct upload. The sessions close when the
+/// request succeeds or the module refuses the file for good; a failure worth retrying
+/// (see <see cref="KeepsSessions"/>) keeps them, so it can be sent again without re-uploading.
 /// </summary>
 public sealed class UploadSessionFormFilter(UploadSessionService sessions) : IAsyncResourceFilter
 {
@@ -23,11 +25,15 @@ public sealed class UploadSessionFormFilter(UploadSessionService sessions) : IAs
 
     private static readonly FileExtensionContentTypeProvider ContentTypes = new();
 
-    public static int? UserId(ClaimsPrincipal user)
-    {
-        var raw = user.FindFirstValue(ClaimTypes.NameIdentifier) ?? user.FindFirstValue("uid") ?? user.FindFirstValue("sub");
-        return int.TryParse(raw, out var id) ? id : null;
-    }
+    public static int? UserId(ClaimsPrincipal user) =>
+        PermissionAuthorizationFilter.ResolveUserId(user) is > 0 and var id ? id : null;
+
+    /// <summary>
+    /// Failures after which the same request may succeed when sent again (sign-in expired,
+    /// timeout, edit conflict, throttling, server error); the staged files stay for it.
+    /// Kept in step with <c>RETRYABLE_UPLOAD_STATUSES</c> in nihomeweb/src/lib/chunkedUpload.ts.
+    /// </summary>
+    public static bool KeepsSessions(int status) => status is 401 or 408 or 409 or 429 or >= 500;
 
     public async Task OnResourceExecutionAsync(ResourceExecutingContext context, ResourceExecutionDelegate next)
     {
@@ -92,11 +98,13 @@ public sealed class UploadSessionFormFilter(UploadSessionService sessions) : IAs
             http.Features.Set<IFormFeature>(new FormFeature(http.Request) { Form = new FormCollection(values, files) });
 
             var executed = await next();
-            var succeeded = (executed.Exception is null || executed.ExceptionHandled) &&
-                            http.Response.StatusCode is >= 200 and < 300;
+            var finished = (executed.Exception is null || executed.ExceptionHandled) &&
+                           !KeepsSessions(http.Response.StatusCode);
             foreach (var stream in streams) await stream.DisposeAsync();
             streams.Clear();
-            if (succeeded) await held.CloseAsync();
+            // Stored, or refused for good (wrong type, over the module's limit): the staged
+            // copy is of no further use and should not hold disk space for a day.
+            if (finished) await held.CloseAsync();
         }
         finally
         {

@@ -80,13 +80,12 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     {
         // Only real sessions get a lock, so unknown ids cannot grow the lock table.
         if (await FindAsync(id, userId, ct) is null) return new(UploadChunkStatus.NotFound, 0);
-        var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
-        await gate.WaitAsync(ct);
+        UploadSession? session = null;
+        var gate = await LockAsync(id, async () => (session = await db.UploadSessions
+            .SingleOrDefaultAsync(item => item.Id == id && item.UserId == userId && item.ExpiresAt > DateTime.UtcNow, ct)) is not null, ct);
+        if (gate is null || session is null) return new(UploadChunkStatus.NotFound, 0);
         try
         {
-            var session = await db.UploadSessions
-                .SingleOrDefaultAsync(item => item.Id == id && item.UserId == userId && item.ExpiresAt > DateTime.UtcNow, ct);
-            if (session is null) return new(UploadChunkStatus.NotFound, 0);
             if (length is not > 0 || length > ChunkSize || offset < 0 || offset + length > session.FileSize)
                 return new(UploadChunkStatus.Invalid, session.ReceivedBytes);
             // Already stored: the client lost our reply and sent it again.
@@ -154,12 +153,12 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
             {
                 // Only real sessions get a lock, so unknown ids cannot grow the lock table.
                 if (await FindAsync(id, userId, ct) is null) return await held.AbandonAsync();
-                var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
-                await gate.WaitAsync(ct);
-                held.Gates.Add(gate);
                 // Read again under the lock: a concurrent request may have used it meanwhile.
-                var session = await FindAsync(id, userId, ct);
-                if (session is null || !string.Equals(session.TargetPath, targetPath, StringComparison.OrdinalIgnoreCase) ||
+                UploadSession? session = null;
+                var gate = await LockAsync(id, async () => (session = await FindAsync(id, userId, ct)) is not null, ct);
+                if (gate is null || session is null) return await held.AbandonAsync();
+                held.Gates.Add(gate);
+                if (!string.Equals(session.TargetPath, targetPath, StringComparison.OrdinalIgnoreCase) ||
                     session.ReceivedBytes != session.FileSize)
                     return await held.AbandonAsync();
                 if (!StagedFileHolds(id, session.FileSize, exactly: true))
@@ -214,19 +213,88 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     public async Task<bool> CancelAsync(Guid id, int userId, CancellationToken ct = default)
     {
         if (await FindAsync(id, userId, ct) is null) return false;
-        await ReleaseAsync(id, ct);
+        // Waits for a chunk still being written, so its file is not deleted under it.
+        var gate = await LockAsync(id, async () => await FindAsync(id, userId, ct) is not null, ct);
+        if (gate is null) return false;
+        try
+        {
+            await ReleaseAsync(id, ct);
+        }
+        finally
+        {
+            gate.Release();
+        }
         return true;
     }
 
-    /// <summary>Removes sessions idle past their expiry with their staged bytes.</summary>
+    /// <summary>
+    /// Removes sessions idle past their expiry with their staged bytes, skipping any still
+    /// in use (the next run takes them), and staged files no session refers to any more.
+    /// </summary>
     public async Task<int> DeleteExpiredAsync(DateTime now, CancellationToken ct = default)
     {
         var expired = await db.UploadSessions.Where(item => item.ExpiresAt <= now)
             .Select(item => item.Id).ToListAsync(ct);
-        if (expired.Count == 0) return 0;
-        await db.UploadSessions.Where(item => expired.Contains(item.Id)).ExecuteDeleteOrRemoveAsync(db, ct);
-        foreach (var id in expired) DeleteStaged(id);
-        return expired.Count;
+        var taken = new List<(Guid Id, SemaphoreSlim Gate)>();
+        foreach (var id in expired)
+        {
+            var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+            if (gate.Wait(0)) taken.Add((id, gate));
+        }
+        try
+        {
+            var ids = taken.Select(item => item.Id).ToList();
+            if (ids.Count > 0)
+            {
+                await db.UploadSessions.Where(item => ids.Contains(item.Id)).ExecuteDeleteOrRemoveAsync(db, ct);
+                foreach (var id in ids) DeleteStaged(id);
+            }
+        }
+        finally
+        {
+            foreach (var (id, gate) in taken)
+            {
+                gate.Release();
+                Locks.TryRemove(new KeyValuePair<Guid, SemaphoreSlim>(id, gate));
+            }
+        }
+
+        // A file whose delete failed earlier (e.g. still open on Windows) has no row left.
+        if (Directory.Exists(StagingDirectory))
+        {
+            var known = (await db.UploadSessions.Select(item => item.Id).ToListAsync(ct)).ToHashSet();
+            foreach (var path in Directory.EnumerateFiles(StagingDirectory, "*.part"))
+            {
+                if (Guid.TryParse(Path.GetFileNameWithoutExtension(path), out var id) && !known.Contains(id) &&
+                    File.GetLastWriteTimeUtc(path) <= now - Lifetime)
+                    TryDelete(path);
+            }
+        }
+        return taken.Count;
+    }
+
+    /// <summary>
+    /// Takes the session's lock and confirms under it that the session still exists; null
+    /// when it is gone, leaving no lock behind for it.
+    /// </summary>
+    private async Task<SemaphoreSlim?> LockAsync(Guid id, Func<Task<bool>> exists, CancellationToken ct)
+    {
+        var gate = Locks.GetOrAdd(id, _ => new SemaphoreSlim(1, 1));
+        await gate.WaitAsync(ct);
+        bool found;
+        try
+        {
+            found = await exists();
+        }
+        catch
+        {
+            gate.Release();
+            throw;
+        }
+        if (found) return gate;
+        gate.Release();
+        Locks.TryRemove(new KeyValuePair<Guid, SemaphoreSlim>(id, gate));
+        return null;
     }
 
     private bool StagedFileHolds(Guid id, long bytes, bool exactly)
@@ -238,8 +306,19 @@ public sealed class UploadSessionService(AppDbContext db, IWebHostEnvironment en
     private void DeleteStaged(Guid id)
     {
         Locks.TryRemove(id, out _);
-        var path = StagingPath(id);
-        if (File.Exists(path)) File.Delete(path);
+        TryDelete(StagingPath(id));
+    }
+
+    // A file that cannot be deleted now (e.g. still open) is swept by DeleteExpiredAsync later.
+    private static void TryDelete(string path)
+    {
+        try
+        {
+            if (File.Exists(path)) File.Delete(path);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+        }
     }
 }
 

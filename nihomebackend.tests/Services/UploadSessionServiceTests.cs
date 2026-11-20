@@ -195,6 +195,45 @@ public class UploadSessionServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Cancel_WaitsForTheRequestUsingTheFile()
+    {
+        var session = await StartAsync(4);
+        await SendAsync(session.Id, 0, Bytes(4, 1));
+        var held = await _sut.HoldCompletedAsync([session.Id], Owner, Target);
+
+        var cancel = _sut.CancelAsync(session.Id, Owner);
+        await Task.Delay(50);
+        // The file is not pulled away while the upload request still reads it.
+        Assert.False(cancel.IsCompleted);
+        Assert.True(File.Exists(held!.Files.Single().StagingPath));
+        await held.DisposeAsync();
+
+        Assert.True(await cancel);
+        Assert.False(File.Exists(_sut.StagingPath(session.Id)));
+    }
+
+    [Fact]
+    public async Task ExpiryCleanup_SkipsASessionInUse_AndSweepsFilesWithoutASession()
+    {
+        var busy = await StartAsync(4);
+        await SendAsync(busy.Id, 0, Bytes(4, 1));
+        var orphan = Path.Combine(Path.GetDirectoryName(_sut.StagingPath(busy.Id))!, $"{Guid.NewGuid():N}.part");
+        await File.WriteAllBytesAsync(orphan, Bytes(3, 9));
+        var later = DateTime.UtcNow + UploadSessionService.Lifetime + TimeSpan.FromMinutes(1);
+        File.SetLastWriteTimeUtc(orphan, DateTime.UtcNow - UploadSessionService.Lifetime - TimeSpan.FromMinutes(1));
+
+        await using (var held = await _sut.HoldCompletedAsync([busy.Id], Owner, Target))
+        {
+            Assert.Equal(0, await _sut.DeleteExpiredAsync(later));
+            Assert.True(File.Exists(_sut.StagingPath(busy.Id)));
+        }
+        Assert.False(File.Exists(orphan));
+
+        Assert.Equal(1, await _sut.DeleteExpiredAsync(later));
+        Assert.False(File.Exists(_sut.StagingPath(busy.Id)));
+    }
+
+    [Fact]
     public async Task LostStagedBytes_EndTheSessionInsteadOfPaddingTheFile()
     {
         var session = await StartAsync(10);
