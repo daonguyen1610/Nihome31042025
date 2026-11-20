@@ -55,6 +55,43 @@ public class SampleContractSeederTests : IDisposable
         var financeDemoProject = _db.OperationalProjects
             .Single(item => item.Id == downstreamContract.OperationalProjectId);
         Assert.Contains("An Phú", financeDemoProject.Name);
+        // A supplier purchase order carries no customer pursuit, quote, design or VO.
+        Assert.Null(downstreamContract.OpportunityId);
+        Assert.Null(downstreamContract.QuoteId);
+        Assert.DoesNotContain(_db.DesignProjects, project => project.ContractId == downstreamContract.Id);
+        Assert.DoesNotContain(_db.ContractAppendices, item => item.ContractId == downstreamContract.Id);
+        // Seeded workflow records must be ones the services would accept on the next save.
+        Assert.All(_db.Quotes.Where(item => item.ApprovedByUserId != null), quote =>
+        {
+            Assert.Equal(quote.ApprovalApproverUserId, quote.ApprovedByUserId);
+            Assert.NotEqual(quote.SubmittedByUserId, quote.ApprovedByUserId);
+        });
+        Assert.All(_db.ContractPaymentMilestones.Where(item => item.Status != PaymentMilestoneStatus.Pending), milestone =>
+        {
+            Assert.NotNull(milestone.ResponsibleAccountantUserId);
+            if (milestone.Status == PaymentMilestoneStatus.Paid) Assert.NotNull(milestone.ActualPaymentDate);
+        });
+        // Nobody approves their own record: VOs, acceptances and as-built documents.
+        Assert.All(_db.ContractAppendices.Where(item => item.DecidedByUserId != null), appendix =>
+        {
+            Assert.NotEqual(appendix.CreatedByUserId, appendix.DecidedByUserId);
+            Assert.NotEqual(appendix.SubmittedByUserId, appendix.DecidedByUserId);
+        });
+        Assert.All(_db.AcceptanceRecords.Where(item => item.ApprovedByUserId != null), record =>
+            Assert.NotEqual(record.SubmittedByUserId, record.ApprovedByUserId));
+        Assert.All(_db.AsBuiltDocuments.Where(item => item.ApprovedByUserId != null), document =>
+            Assert.NotEqual(document.SubmittedByUserId, document.ApprovedByUserId));
+        // A customer contract that needs Legal is past Signed only through the activation step.
+        var activeLegalContracts = contracts.Where(contract => contract.Direction == ContractDirection.Upstream &&
+            contract.Status is ContractStatus.InProgress or ContractStatus.OnHold or ContractStatus.Completed &&
+            ContractTypes.RequiringLegalActivation.Contains(contract.Type)).ToList();
+        Assert.NotEmpty(activeLegalContracts);
+        Assert.All(activeLegalContracts, contract =>
+        {
+            var activation = Assert.Single(_db.ContractLegalActivations, item => item.ContractId == contract.Id);
+            Assert.Equal(WorkPackagePurpose.LegalPermitting,
+                _db.DepartmentWorkPackages.Single(item => item.Id == activation.WorkPackageId).Purpose);
+        });
 
         var upstreamContracts = contracts.Where(contract => contract.Direction == ContractDirection.Upstream &&
             contract.SourceContractId == null).ToList();
@@ -459,4 +496,45 @@ public class SampleContractSeederTests : IDisposable
         _db.AsBuiltDocuments.Count(),
         _db.CapabilityDocumentVersions.Count(),
     ];
+
+    [Fact]
+    public void OperationalSamples_SitOnTheConstructionProject_AndNeverSelfApprove()
+    {
+        DbSeeder.Seed(_db);
+        SampleCrmDataSeeder.Seed(_db);
+        // Without a site commander the CM office would author and approve its own records.
+        foreach (var commander in _db.Users.Where(user => user.RoleEntity != null &&
+                     user.RoleEntity.Code == NihomeBackend.Models.Rbac.RbacRoleCodes.SiteCommander))
+            commander.IsActive = false;
+        _db.SaveChanges();
+
+        DepartmentWorkPackageSampleSeeder.Seed(_db);
+        ConstructionSampleSeeder.Seed(_db);
+
+        // Materials for construction belong to the project under its construction contract.
+        var supply = _db.DepartmentWorkPackages.Single(item => item.Code == "WP-DEMO-SUPPLY");
+        Assert.Equal("PJ-SAMPLE-003", _db.OperationalProjects.Single(item => item.Id == supply.OperationalProjectId).Code);
+        Assert.Empty(_db.QaQcDossiers);
+        Assert.Empty(_db.ConstructionQsBatches);
+    }
+
+    [Fact]
+    public void Seed_RepairsSampleRecordsThatShowTheirAuthorApproving()
+    {
+        DbSeeder.Seed(_db);
+        SampleCrmDataSeeder.Seed(_db);
+        // A database seeded before the rule: the Sales author approved their own quote.
+        var quote = _db.Quotes.First(item => item.Code.StartsWith("QT-SAMPLE-") && item.ApprovedByUserId != null);
+        quote.ApprovedByUserId = quote.SubmittedByUserId;
+        quote.ApprovalApproverUserId = null;
+        var record = _db.AcceptanceRecords.First(item => item.ApprovedByUserId != null);
+        record.SubmittedByUserId = record.ApprovedByUserId;
+        _db.SaveChanges();
+
+        SampleCrmDataSeeder.Seed(_db);
+
+        Assert.NotEqual(quote.SubmittedByUserId, quote.ApprovedByUserId);
+        Assert.Equal(quote.ApprovedByUserId, quote.ApprovalApproverUserId);
+        Assert.NotEqual(record.SubmittedByUserId, record.ApprovedByUserId);
+    }
 }

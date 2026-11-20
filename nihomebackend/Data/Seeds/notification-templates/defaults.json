@@ -30,7 +30,7 @@
       "code": "quote.submitted-for-approval",
       "module": "crm.quotes",
       "channel": "Both",
-      "adminDescription": "Sales Manager cần duyệt một báo giá vừa submit."
+      "adminDescription": "Trưởng phòng Cung ứng được chọn cần duyệt một báo giá vừa gửi."
     },
     {
       "code": "quote.approval-requested",

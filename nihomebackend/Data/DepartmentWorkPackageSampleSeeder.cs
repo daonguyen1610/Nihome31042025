@@ -104,7 +104,9 @@ public static class DepartmentWorkPackageSampleSeeder
     {
         const string code = "WP-DEMO-SUPPLY";
         if (db.DepartmentWorkPackages.Any(item => item.Code == code)) return;
-        var project = db.OperationalProjects.OrderBy(item => item.Id).FirstOrDefault();
+        // Materials for construction belong to the sample project already under its
+        // construction contract, not to one still at concept stage.
+        var project = db.OperationalProjects.FirstOrDefault(item => item.Code == "PJ-SAMPLE-003");
         var groupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Procurement && item.IsActive)
             .Select(item => item.Id).FirstOrDefault();
         var leadId = ActiveUserForRole(db, RbacRoleCodes.Procurement);
@@ -254,6 +256,7 @@ public static class DepartmentWorkPackageSampleSeeder
                     Note = "Giá giao đến công trình, chưa bao gồm chi phí lưu kho.",
                     SubmittedAt = now.AddDays(-3),
                     ApprovedAt = now.AddDays(-2),
+                    ApprovalApproverUserId = leadId,
                     ApprovedByUserId = leadId,
                     CreatedAt = now.AddDays(-4),
                     CreatedByUserId = actorId,
@@ -324,6 +327,9 @@ public static class DepartmentWorkPackageSampleSeeder
                 PaymentTermsReviewed = true,
                 FinancialDossierReviewed = false,
                 Findings = "Điều kiện tạm ứng và bảo lãnh đã phù hợp hồ sơ thương mại.",
+                // The approval covers only this quote version; sending or signing checks it.
+                ReviewedQuoteVersion = quote.Version,
+                ApprovalApproverUserId = leadId,
                 SubmittedAt = now.AddDays(-2),
                 ReviewedAt = now.AddDays(-1),
                 ReviewedByUserId = leadId,

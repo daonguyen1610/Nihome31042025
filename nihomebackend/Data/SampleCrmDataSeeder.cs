@@ -98,6 +98,9 @@ public static class SampleCrmDataSeeder
         SeedHandoverRecords(db, projectManager, now);
         RepairSampleRelationships(db, owner);
         LinkOperationalProjectRelationships(db, owner);
+        // After contracts are linked to their projects.
+        SeedLegalActivations(db, owner, projectManager, legalOwner, now);
+        RepairSelfApprovedSamples(db);
         SeedContractContinuations(db, owner, now);
         SeedConstructionResourceHandoff(db, owner, projectManager, now);
     }
@@ -623,6 +626,8 @@ public static class SampleCrmDataSeeder
             .Where(item => item.ResourceType == EntityTypes.Quote)
             .Select(item => item.ResourceKey)
             .ToHashSet();
+        // Only a chosen Procurement Manager, other than the sender, approves a quote.
+        var approver = ResolveOtherRoleUser(db, RbacRoleCodes.ProcurementManager, owner);
 
         // Keep one quote per commercial step, including the customer-approved
         // version used by the won opportunity and completed contract.
@@ -700,7 +705,7 @@ public static class SampleCrmDataSeeder
             }
 
             RecomputeTotals(quote);
-            StampWorkflowTimestamps(quote, owner.Id, eventAt);
+            StampWorkflowTimestamps(quote, owner.Id, approver.Id, eventAt);
 
             db.Quotes.Add(quote);
             db.SaveChanges();
@@ -709,7 +714,7 @@ public static class SampleCrmDataSeeder
                 snapshotQuoteId = quote.Id;
             }
 
-            WriteApprovalLogs(db, quote, owner.Id, eventAt);
+            WriteApprovalLogs(db, quote, owner.Id, approver.Id, eventAt);
             db.SaveChanges();
         }
 
@@ -725,8 +730,10 @@ public static class SampleCrmDataSeeder
     /// Sets Submitted/Approved/Sent/Closed timestamps consistent with the
     /// seeded <see cref="QuoteStatus"/> so timeline UI reads sensibly.
     /// </summary>
-    private static void StampWorkflowTimestamps(Quote q, int userId, DateTime now)
+    private static void StampWorkflowTimestamps(Quote q, int userId, int approverId, DateTime now)
     {
+        if (q.Status is not (QuoteStatus.Draft or QuoteStatus.Cancelled))
+            q.ApprovalApproverUserId = approverId;
         switch (q.Status)
         {
             case QuoteStatus.PendingApproval:
@@ -737,13 +744,13 @@ public static class SampleCrmDataSeeder
                 q.SubmittedAt = now.AddDays(-1);
                 q.SubmittedByUserId = userId;
                 q.ApprovedAt = now.AddHours(-5);
-                q.ApprovedByUserId = userId;
+                q.ApprovedByUserId = approverId;
                 break;
             case QuoteStatus.SentToCustomer:
                 q.SubmittedAt = now.AddDays(-2);
                 q.SubmittedByUserId = userId;
                 q.ApprovedAt = now.AddDays(-1);
-                q.ApprovedByUserId = userId;
+                q.ApprovedByUserId = approverId;
                 q.SentAt = now.AddHours(-4);
                 q.SentByUserId = userId;
                 break;
@@ -751,7 +758,7 @@ public static class SampleCrmDataSeeder
                 q.SubmittedAt = now.AddDays(-4);
                 q.SubmittedByUserId = userId;
                 q.ApprovedAt = now.AddDays(-3);
-                q.ApprovedByUserId = userId;
+                q.ApprovedByUserId = approverId;
                 q.SentAt = now.AddDays(-2);
                 q.SentByUserId = userId;
                 q.ClosedAt = now.AddHours(-2);
@@ -760,7 +767,7 @@ public static class SampleCrmDataSeeder
                 q.SubmittedAt = now.AddDays(-5);
                 q.SubmittedByUserId = userId;
                 q.ApprovedAt = now.AddDays(-4);
-                q.ApprovedByUserId = userId;
+                q.ApprovedByUserId = approverId;
                 q.SentAt = now.AddDays(-3);
                 q.SentByUserId = userId;
                 q.ClosedAt = now.AddDays(-1);
@@ -769,7 +776,7 @@ public static class SampleCrmDataSeeder
                 q.SubmittedAt = now.AddDays(-15);
                 q.SubmittedByUserId = userId;
                 q.ApprovedAt = now.AddDays(-14);
-                q.ApprovedByUserId = userId;
+                q.ApprovedByUserId = approverId;
                 q.SentAt = now.AddDays(-12);
                 q.SentByUserId = userId;
                 break;
@@ -780,7 +787,7 @@ public static class SampleCrmDataSeeder
     }
 
     /// <summary>Emits a Create log plus every intermediate transition matching the final status.</summary>
-    private static void WriteApprovalLogs(AppDbContext db, Quote quote, int userId, DateTime now)
+    private static void WriteApprovalLogs(AppDbContext db, Quote quote, int userId, int approverId, DateTime now)
     {
         db.QuoteApprovalLogs.Add(new QuoteApprovalLog
         {
@@ -819,7 +826,8 @@ public static class SampleCrmDataSeeder
                 QuoteWorkflowAction.Cancel => (QuoteStatus.Cancelled, quote.ClosedAt ?? stamp.AddMinutes(20)),
                 _ => (progress, stamp),
             };
-            AppendLog(db, quote.Id, action, progress, to, userId, at, action == QuoteWorkflowAction.CustomerReject ? "Khách yêu cầu giảm giá." : null);
+            AppendLog(db, quote.Id, action, progress, to, action == QuoteWorkflowAction.Approve ? approverId : userId, at,
+                action == QuoteWorkflowAction.CustomerReject ? "Khách yêu cầu giảm giá." : null);
             progress = to;
             stamp = at;
         }
@@ -1159,6 +1167,11 @@ public static class SampleCrmDataSeeder
                      && c.SignedDate != null)
             .OrderBy(c => c.ContractNumber)
             .ToList();
+        var accountantId = db.Users
+            .Where(user => user.IsActive && user.RoleEntity != null && user.RoleEntity.Code == RbacRoleCodes.Accountant)
+            .OrderBy(user => user.Id)
+            .Select(user => (int?)user.Id)
+            .FirstOrDefault();
 
         foreach (var c in contracts)
         {
@@ -1174,11 +1187,20 @@ public static class SampleCrmDataSeeder
             };
             foreach (var milestone in milestones)
             {
-                if (!db.ContractPaymentMilestones.Any(existing => existing.ContractId == c.Id
-                    && existing.Order == milestone.Order))
+                var row = db.ContractPaymentMilestones.FirstOrDefault(existing => existing.ContractId == c.Id
+                    && existing.Order == milestone.Order);
+                if (row is null)
                 {
                     db.ContractPaymentMilestones.Add(milestone);
+                    row = milestone;
                 }
+                // A requested or paid milestone needs its accountant, and a paid one its payment
+                // date, or the payment schedule cannot be saved again.
+                if (row.Status == PaymentMilestoneStatus.Pending) continue;
+                row.ResponsibleAccountantUserId ??= accountantId;
+                if (row.Status == PaymentMilestoneStatus.Requested) row.RequestedAt ??= now;
+                if (row.Status == PaymentMilestoneStatus.Paid)
+                    row.ActualPaymentDate ??= (row.DueDate < now ? row.DueDate!.Value : now).Date;
             }
         }
         db.SaveChanges();
@@ -1194,9 +1216,12 @@ public static class SampleCrmDataSeeder
     {
         var contracts = db.Contracts
             .Where(c => c.Note != null && c.Note.StartsWith(SampleContractMarker)
-                     && c.Status != ContractStatus.Draft)
+                     && c.Status != ContractStatus.Draft
+                     && c.Direction == ContractDirection.Upstream)
             .OrderBy(c => c.Id)
             .ToList();
+        // A VO is decided by a manager who can see every contract, not by the Sales author.
+        var decider = ResolveOtherRoleUser(db, RbacRoleCodes.SalesManager, owner);
         foreach (var c in contracts)
         {
             switch (c.Status)
@@ -1217,7 +1242,7 @@ public static class SampleCrmDataSeeder
                             SubmittedAt = now.AddDays(-14),
                             SubmittedByUserId = owner.Id,
                             DecidedAt = now.AddDays(-12),
-                            DecidedByUserId = owner.Id,
+                            DecidedByUserId = decider.Id,
                             DecisionNote = "Đã đối chiếu bảng chi phí — chấp thuận.",
                             CreatedByUserId = owner.Id,
                             UpdatedByUserId = owner.Id,
@@ -1235,7 +1260,7 @@ public static class SampleCrmDataSeeder
                             SubmittedAt = now.AddDays(-4),
                             SubmittedByUserId = owner.Id,
                             DecidedAt = now.AddDays(-2),
-                            DecidedByUserId = owner.Id,
+                            DecidedByUserId = decider.Id,
                             DecisionNote = "Cần bổ sung mẫu vật liệu trước khi trình lại.",
                             CreatedByUserId = owner.Id,
                             UpdatedByUserId = owner.Id,
@@ -1255,7 +1280,7 @@ public static class SampleCrmDataSeeder
                         SubmittedAt = now.AddDays(-200),
                         SubmittedByUserId = owner.Id,
                         DecidedAt = now.AddDays(-195),
-                        DecidedByUserId = owner.Id,
+                        DecidedByUserId = decider.Id,
                         DecisionNote = "Đã bàn giao — quyết toán.",
                         CreatedByUserId = owner.Id,
                         UpdatedByUserId = owner.Id,
@@ -2158,6 +2183,140 @@ public static class SampleCrmDataSeeder
     /// PresentedToClient, one Discarded). Idempotent — guarded on the
     /// (design_project_id, name) uniqueness of the sample rows.
     /// </summary>
+    /// <summary>
+    /// Sample records seeded before the author-is-never-the-approver rule showed their author
+    /// approving them. Re-point those (sample markers only) at a different, fitting approver
+    /// so existing databases match fresh ones. Real records are never touched.
+    /// </summary>
+    private static void RepairSelfApprovedSamples(AppDbContext db)
+    {
+        ApplicationUser UserOf(int id) => db.Users.Single(user => user.Id == id);
+
+        foreach (var quote in db.Quotes.Where(item => item.Code.StartsWith("QT-SAMPLE-") &&
+                     item.ApprovedByUserId != null && item.ApprovedByUserId == item.SubmittedByUserId).ToList())
+        {
+            var approver = ResolveOtherRoleUser(db, RbacRoleCodes.ProcurementManager, UserOf(quote.SubmittedByUserId!.Value));
+            if (approver.Id == quote.SubmittedByUserId) continue;
+            foreach (var log in db.QuoteApprovalLogs.Where(item => item.QuoteId == quote.Id &&
+                         item.Action == QuoteWorkflowAction.Approve && item.ByUserId == quote.SubmittedByUserId))
+                log.ByUserId = approver.Id;
+            quote.ApprovedByUserId = approver.Id;
+            quote.ApprovalApproverUserId = approver.Id;
+        }
+
+        foreach (var appendix in db.ContractAppendices.Where(item => item.DecidedByUserId != null &&
+                     (item.DecidedByUserId == item.CreatedByUserId || item.DecidedByUserId == item.SubmittedByUserId) &&
+                     db.Contracts.Any(contract => contract.Id == item.ContractId && contract.Note != null &&
+                         contract.Note.StartsWith(SampleContractMarker))).ToList())
+        {
+            var author = appendix.CreatedByUserId ?? appendix.SubmittedByUserId;
+            if (author is null) continue;
+            var decider = ResolveOtherRoleUser(db, RbacRoleCodes.SalesManager, UserOf(author.Value));
+            if (decider.Id == appendix.CreatedByUserId || decider.Id == appendix.SubmittedByUserId) continue;
+            appendix.DecidedByUserId = decider.Id;
+        }
+
+        foreach (var record in db.AcceptanceRecords.Where(item => item.Description != null &&
+                     item.Description.StartsWith("[SAMPLE_ACCEPT]") && item.ApprovedByUserId != null &&
+                     item.ApprovedByUserId == item.SubmittedByUserId).ToList())
+        {
+            var author = ResolveOtherRoleUser(db, RbacRoleCodes.SiteCommander, UserOf(record.ApprovedByUserId!.Value));
+            if (author.Id == record.ApprovedByUserId) continue;
+            record.SubmittedByUserId = author.Id;
+            record.CreatedByUserId = author.Id;
+        }
+
+        foreach (var document in db.AsBuiltDocuments.Where(item => item.Note != null &&
+                     item.Note.StartsWith("[SAMPLE_ASBUILT]") && item.ApprovedByUserId != null &&
+                     item.ApprovedByUserId == item.SubmittedByUserId).ToList())
+        {
+            var author = ResolveOtherRoleUser(db, RbacRoleCodes.SiteCommander, UserOf(document.ApprovedByUserId!.Value));
+            if (author.Id == document.ApprovedByUserId) continue;
+            document.SubmittedByUserId = author.Id;
+            document.CreatedByUserId = author.Id;
+        }
+        db.SaveChanges();
+    }
+
+    /// <summary>
+    /// A customer contract of a type that needs Legal reaches In progress only through the
+    /// activation step (LegalActivationService). Sample contracts past that point record the
+    /// activation the project manager made, on the project's Legal package.
+    /// </summary>
+    private static void SeedLegalActivations(
+        AppDbContext db, ApplicationUser owner, ApplicationUser projectManager, ApplicationUser legalLead, DateTime now)
+    {
+        var contracts = db.Contracts
+            .Where(contract => contract.Note != null && contract.Note.StartsWith(SampleContractMarker)
+                && contract.Direction == ContractDirection.Upstream
+                && contract.OperationalProjectId != null
+                && (contract.Status == ContractStatus.InProgress || contract.Status == ContractStatus.OnHold
+                    || contract.Status == ContractStatus.Completed)
+                && !db.ContractLegalActivations.Any(activation => activation.ContractId == contract.Id))
+            .OrderBy(contract => contract.Id)
+            .ToList()
+            .Where(contract => ContractTypes.RequiringLegalActivation.Contains(contract.Type))
+            .ToList();
+        if (contracts.Count == 0) return;
+        var constructionGroupId = db.RoleGroups.Where(item => item.Code == RoleGroupCodes.Construction)
+            .Select(item => item.Id).FirstOrDefault();
+        var legalGroupId = db.Roles.Where(role => role.Id == legalLead.RoleEntityId)
+            .Select(role => role.RoleGroupId ?? 0).SingleOrDefault();
+        if (constructionGroupId == 0) return;
+
+        foreach (var contract in contracts)
+        {
+            var projectId = contract.OperationalProjectId!.Value;
+            var activatedAt = (contract.StartDate ?? contract.SignedDate ?? now.AddDays(-30)).Date.AddHours(9);
+            var package = db.DepartmentWorkPackages.FirstOrDefault(item => item.OperationalProjectId == projectId &&
+                item.Purpose == WorkPackagePurpose.LegalPermitting);
+            if (package is null)
+            {
+                var project = db.OperationalProjects.Single(item => item.Id == projectId);
+                package = new DepartmentWorkPackage
+                {
+                    Code = $"LEGAL-{projectId}",
+                    Kind = WorkPackageKind.Project,
+                    Purpose = WorkPackagePurpose.LegalPermitting,
+                    Name = $"Pháp lý và xin phép - {project.Name}",
+                    Description = "Gói Pháp lý mẫu NICON được thiết lập khi kích hoạt hợp đồng.",
+                    OperationalProjectId = projectId,
+                    DepartmentRoleGroupId = constructionGroupId,
+                    LeadUserId = legalLead.Id,
+                    Status = contract.Status == ContractStatus.Completed ? WorkPackageStatus.Completed : WorkPackageStatus.Active,
+                    PlannedStart = activatedAt,
+                    PlannedEnd = activatedAt.AddDays(90),
+                    CreatedAt = activatedAt,
+                    UpdatedAt = now,
+                    CreatedByUserId = projectManager.Id,
+                    UpdatedByUserId = owner.Id,
+                    ParticipantGroups = new[] { constructionGroupId, legalGroupId }
+                        .Where(groupId => groupId != 0)
+                        .Distinct()
+                        .Select(groupId => new DepartmentWorkPackageParticipantGroup { RoleGroupId = groupId })
+                        .ToList(),
+                };
+                db.DepartmentWorkPackages.Add(package);
+                db.SaveChanges();
+            }
+            db.ContractLegalActivations.Add(new ContractLegalActivation
+            {
+                ContractId = contract.Id,
+                OperationalProjectId = projectId,
+                WorkPackageId = package.Id,
+                ActivatedAt = activatedAt,
+                ActivatedByUserId = projectManager.Id,
+                ConfigurationJson = System.Text.Json.JsonSerializer.Serialize(new Models.DTOs.Requests.ActivateContractWithLegalRequest
+                {
+                    LegalLeadUserId = legalLead.Id,
+                    PlannedStart = package.PlannedStart ?? activatedAt,
+                    PlannedEnd = package.PlannedEnd ?? activatedAt.AddDays(90),
+                }),
+            });
+        }
+        db.SaveChanges();
+    }
+
     private static void SeedLegalPermitting(
         AppDbContext db, ApplicationUser owner, ApplicationUser projectManager,
         ApplicationUser legalLead, ApplicationUser crossDepartmentAssignee,
@@ -3249,6 +3408,8 @@ public static class SampleCrmDataSeeder
 
     private static void SeedAcceptanceRecords(AppDbContext db, ApplicationUser owner, DateTime now)
     {
+        // Site command records the evidence; the project manager approves it.
+        var author = ResolveOtherRoleUser(db, RbacRoleCodes.SiteCommander, owner);
         const string SampleMarker = "[SAMPLE_ACCEPT]";
         var project = db.DesignProjects
             .Where(dp => dp.Note != null && dp.Note.StartsWith(SampleDesignProjectMarker)
@@ -3335,10 +3496,10 @@ public static class SampleCrmDataSeeder
             ResolutionNote = "Đã ký biên bản, chuyển bước.",
             Status = AcceptanceStatus.Approved,
             SubmittedAt = now.AddDays(-9),
-            SubmittedByUserId = owner.Id,
+            SubmittedByUserId = author.Id,
             ApprovedAt = now.AddDays(-8),
             ApprovedByUserId = owner.Id,
-            CreatedByUserId = owner.Id,
+            CreatedByUserId = author.Id,
             UpdatedByUserId = owner.Id,
             CreatedAt = now.AddDays(-15),
             UpdatedAt = now.AddDays(-8),
@@ -3466,6 +3627,8 @@ public static class SampleCrmDataSeeder
     /// </summary>
     private static void SeedAsBuiltDocuments(AppDbContext db, ApplicationUser owner, DateTime now, string? webRootPath)
     {
+        // Site command submits the as-built records; the project manager approves them.
+        var author = ResolveOtherRoleUser(db, RbacRoleCodes.SiteCommander, owner);
         const string SampleMarker = "[SAMPLE_ASBUILT]";
         MaterializeAsBuiltPlaceholders(webRootPath);
         // Resolve category IDs
@@ -3492,10 +3655,10 @@ public static class SampleCrmDataSeeder
                 FileUrl = "/files/asbuilt/sample-arch-l1.pdf",
                 Note = $"{SampleMarker} Đã duyệt - mẫu",
                 SubmittedAt = now.AddDays(-6),
-                SubmittedByUserId = owner.Id,
+                SubmittedByUserId = author.Id,
                 ApprovedAt = now.AddDays(-4),
                 ApprovedByUserId = owner.Id,
-                CreatedByUserId = owner.Id,
+                CreatedByUserId = author.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-10),
                 UpdatedAt = now.AddDays(-4),
@@ -3511,11 +3674,11 @@ public static class SampleCrmDataSeeder
                 FileUrl = "/files/asbuilt/sample-minute-foundation.pdf",
                 Note = $"{SampleMarker} Đã lưu trữ - mẫu",
                 SubmittedAt = now.AddDays(-14),
-                SubmittedByUserId = owner.Id,
+                SubmittedByUserId = author.Id,
                 ApprovedAt = now.AddDays(-12),
                 ApprovedByUserId = owner.Id,
                 ArchivedAt = now.AddDays(-1),
-                CreatedByUserId = owner.Id,
+                CreatedByUserId = author.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-20),
                 UpdatedAt = now.AddDays(-1),
@@ -3531,10 +3694,10 @@ public static class SampleCrmDataSeeder
                 FileUrl = "/files/asbuilt/sample-test-c30.pdf",
                 Note = $"{SampleMarker} Đã duyệt - mẫu",
                 SubmittedAt = now.AddDays(-8),
-                SubmittedByUserId = owner.Id,
+                SubmittedByUserId = author.Id,
                 ApprovedAt = now.AddDays(-7),
                 ApprovedByUserId = owner.Id,
-                CreatedByUserId = owner.Id,
+                CreatedByUserId = author.Id,
                 UpdatedByUserId = owner.Id,
                 CreatedAt = now.AddDays(-12),
                 UpdatedAt = now.AddDays(-7),
@@ -3683,8 +3846,24 @@ public static class SampleCrmDataSeeder
             : fallback;
     }
 
+    /// <summary>
+    /// An active user of the role other than <paramref name="other"/>, or any other active
+    /// user, so a seeded record never shows its author approving it. Only a database with a
+    /// single user (a bare test database) gets <paramref name="other"/> back.
+    /// </summary>
+    private static ApplicationUser ResolveOtherRoleUser(AppDbContext db, string roleCode, ApplicationUser other)
+    {
+        var active = db.Users.Where(user => user.IsActive && user.Id != other.Id);
+        return active.Where(user => user.RoleEntity != null && user.RoleEntity.Code == roleCode)
+                   .OrderBy(user => user.Id).FirstOrDefault()
+               ?? active.OrderBy(user => user.Id).FirstOrDefault()
+               ?? other;
+    }
+
+    // Design is delivered under the customer's contract, never a supplier purchase order.
     private static List<Contract> GetSampleContracts(AppDbContext db) => db.Contracts
-        .Where(contract => contract.Note != null && contract.Note.StartsWith(SampleContractMarker))
+        .Where(contract => contract.Note != null && contract.Note.StartsWith(SampleContractMarker)
+            && contract.Direction == ContractDirection.Upstream)
         .OrderByDescending(contract => contract.Status == ContractStatus.InProgress)
         .ThenBy(contract => contract.Id)
         .ToList();
@@ -3895,8 +4074,10 @@ public static class SampleCrmDataSeeder
         var opportunities = GetCoreOpportunities(db)
             .OrderBy(opportunity => opportunity.Id)
             .ToList();
+        // Only customer contracts carry a pursuit and a customer quote.
         var contracts = db.Contracts
-            .Where(contract => contract.Note != null && contract.Note.StartsWith(SampleContractMarker))
+            .Where(contract => contract.Note != null && contract.Note.StartsWith(SampleContractMarker)
+                && contract.Direction == ContractDirection.Upstream)
             .OrderBy(contract => contract.Id)
             .ToList();
         var quotes = db.Quotes

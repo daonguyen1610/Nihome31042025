@@ -41,8 +41,10 @@ public static class ConstructionSampleSeeder
         if (project is null) return;
 
         var cm = ResolveUser(db, RbacRoleCodes.ProjectManager);
-        if (cm is null) return;
-        var site = ResolveUser(db, RbacRoleCodes.SiteCommander) ?? cm;
+        // Site command authors what the CM office reviews; without a site commander the
+        // records would show their author approving them, so they are not seeded.
+        var site = ResolveUser(db, RbacRoleCodes.SiteCommander);
+        if (cm is null || site is null || site.Id == cm.Id) return;
         var qa = ResolveUser(db, RbacRoleCodes.SiteQaQc) ?? site;
         var qs = ResolveUser(db, RbacRoleCodes.QuantitySurveyor) ?? site;
         var procurement = ResolveUser(db, RbacRoleCodes.Procurement) ?? qs;
