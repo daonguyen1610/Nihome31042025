@@ -107,14 +107,13 @@ test("choosing the same file again after a reload resumes the upload", async ({
   try {
     await loginInBrowserAs(page, TEST_USERS.salesManager);
     await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
-    // Hold the second chunk so the page can be reloaded mid-upload.
+    // Let only the first chunk through, so the page is reloaded mid-upload. Later chunks
+    // and their retries are refused until after the reload: holding one and lifting the
+    // route before reloading let a retry reach the server first, and the upload finished.
     await page.route("**/api/upload-sessions/*/chunks?*", async (route) => {
       const offset = Number(new URL(route.request().url()).searchParams.get("offset"));
-      if (offset === 0) {
-        await route.continue();
-        return;
-      }
-      await new Promise(() => undefined);
+      if (offset === 0) await route.continue();
+      else await route.abort();
     });
     await page.goto(`/admin/contracts/${contractId}?tab=documents`, { waitUntil: "networkidle" });
     await page.getByTestId("contract-attachment-files").setInputFiles(path);
@@ -125,10 +124,10 @@ test("choosing the same file again after a reload resumes the upload", async ({
     );
     await page.getByRole("button", { name: "Tải lên tài liệu" }).click();
     await stored;
-    await page.unrouteAll({ behavior: "ignoreErrors" });
 
     await page.reload({ waitUntil: "networkidle" });
-    // Count only what the reloaded page sends; the held request above dies with the reload.
+    await page.unrouteAll({ behavior: "ignoreErrors" });
+    // Count only what the reloaded page sends.
     const sessionsOpened: string[] = [];
     const offsets: number[] = [];
     page.on("request", (request) => {
