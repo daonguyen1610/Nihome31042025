@@ -91,9 +91,21 @@ test("an approval workflow is set up by business action and approver, without co
       .getByRole("row", { name: /Duyệt báo giá/ })
       .getByRole("button", { name: "Sửa" })
       .click();
-    await expect(page.getByRole("dialog")).toContainText(
-      "người gửi chọn một Trưởng phòng Cung ứng để duyệt",
+    const quoteDialog = page.getByRole("dialog");
+    await expect(quoteDialog).toContainText("người gửi chọn một Trưởng phòng Cung ứng để duyệt");
+
+    // A step name that names the previous approver is cleared when the approver changes,
+    // so the step is not saved telling the wrong role to approve. Not saved here.
+    const quoteStep = quoteDialog.getByTestId("wf-step-0");
+    await expect(quoteStep.getByRole("textbox").first()).toHaveValue(/Trưởng phòng Cung ứng/);
+    await quoteStep.getByRole("combobox").click();
+    await page.getByRole("option", { name: "Ban Giám đốc", exact: true }).click();
+    await expect(quoteStep.getByRole("textbox").first()).toHaveValue("");
+    await expect(quoteStep.getByRole("textbox").first()).toHaveAttribute(
+      "placeholder",
+      "Ban Giám đốc duyệt",
     );
+    await quoteDialog.getByRole("button", { name: "Huỷ" }).click();
   } finally {
     const all = (await (
       await api.get("/api/workflows?includeInactive=true", { headers })
@@ -101,6 +113,53 @@ test("an approval workflow is set up by business action and approver, without co
       id: number;
       action: string;
     }[];
+    for (const item of all.filter((entry) => entry.action === action))
+      await api.delete(`/api/workflows/${item.id}`, { headers });
+  }
+});
+
+// Forms collect source-language content only: an unnamed step is saved in Vietnamese even
+// when the administrator works in English.
+test("an unnamed step is saved under its approver in Vietnamese, whatever the UI language", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.admin)}` };
+  const action = `source-${Date.now()}`;
+  await loginInBrowserAs(page, TEST_USERS.admin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
+  await page.goto("/admin/workflows", { waitUntil: "networkidle" });
+
+  try {
+    await page.getByRole("button", { name: "New workflow" }).first().click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByTestId("wf-business").click();
+    await page.getByRole("option", { name: "Other action (enter technical codes)" }).click();
+    await dialog.locator("#wf-module").fill("e2e.workflow");
+    await dialog.locator("#wf-action").fill(action);
+    await dialog.locator("#wf-name").fill("Source language check");
+    await dialog.getByTestId("wf-step-0").getByRole("combobox").click();
+    await page.getByRole("option", { name: "Head of Procurement", exact: true }).click();
+    const saved = page.waitForResponse(
+      (response) =>
+        response.request().method() === "POST" && response.url().endsWith("/api/workflows"),
+    );
+    await dialog.getByRole("button", { name: "Save workflow" }).click();
+    expect((await saved).status()).toBe(201);
+
+    const created = (
+      (await (await api.get("/api/workflows?includeInactive=true", { headers })).json()) as {
+        action: string;
+        steps: { name: string }[];
+      }[]
+    ).find((item) => item.action === action)!;
+    expect(created.steps.map((step) => step.name)).toEqual(["Trưởng phòng Cung ứng duyệt"]);
+  } finally {
+    const all = (await (
+      await api.get("/api/workflows?includeInactive=true", { headers })
+    ).json()) as { id: number; action: string }[];
     for (const item of all.filter((entry) => entry.action === action))
       await api.delete(`/api/workflows/${item.id}`, { headers });
   }

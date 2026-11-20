@@ -509,6 +509,30 @@ public class QuotesControllerTests : IntegrationTestBase
     [Fact]
     public async Task SwitchingTheQuoteWorkflow_FromOldChainToNew_KeepsApprovalWithTheChosenProcurementManager()
     {
+        // The quote workflow is shared by the class's database: put it back afterwards.
+        var original = await WithDbAsync(db => db.WorkflowConfigs.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Module == "quotes" && item.Action == "approve"));
+        try
+        {
+            await SwitchQuoteWorkflowFromOldChainToNewAsync();
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                var current = await db.WorkflowConfigs
+                    .SingleOrDefaultAsync(item => item.Module == "quotes" && item.Action == "approve");
+                if (current is not null && original is null)
+                    db.WorkflowConfigs.Remove(current);
+                else if (current is not null && original is not null)
+                    db.Entry(current).CurrentValues.SetValues(original);
+                return await db.SaveChangesAsync();
+            });
+        }
+    }
+
+    private async Task SwitchQuoteWorkflowFromOldChainToNewAsync()
+    {
         // The administrator restores the old chain (Sales Manager then Board), as a database
         // seeded before the correction would show it.
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
