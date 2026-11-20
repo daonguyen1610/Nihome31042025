@@ -383,28 +383,47 @@ test("editing a task excludes descendants from predecessor choices", async ({
   });
   expect(list.status()).toBe(200);
   const { items } = await list.json();
-  const packageId = items.find((item: { status: string }) => item.status === "Active")?.id;
-  expect(packageId, "active seeded legal package required").toBeTruthy();
-  const detailResponse = await api.get(`/api/work-packages/${packageId}`, { headers });
-  expect(detailResponse.status()).toBe(200);
-  const detail = await detailResponse.json();
-  const task = detail.tasks.find(
-    (candidate: { id: number; status: string }) =>
-      ["Planned", "InProgress"].includes(candidate.status) &&
-      detail.tasks.some((other: { predecessorTaskIds: number[] }) =>
-        other.predecessorTaskIds.includes(candidate.id),
-      ),
-  );
-  expect(task, "an editable task with a dependent task is required").toBeTruthy();
-  const descendant = detail.tasks.find((candidate: { predecessorTaskIds: number[] }) =>
-    candidate.predecessorTaskIds.includes(task.id),
-  );
+  type Task = {
+    id: number;
+    status: string;
+    predecessorTaskIds: number[];
+    wbsCode: string;
+    title: string;
+  };
+  // Legal packages opened when a contract is activated start without tasks, so look
+  // for an active one that has an editable task another task depends on.
+  let packageId: number | undefined;
+  let detail: { tasks: Task[] } | undefined;
+  let task: Task | undefined;
+  for (const item of items as { id: number; status: string }[]) {
+    if (item.status !== "Active") continue;
+    const detailResponse = await api.get(`/api/work-packages/${item.id}`, { headers });
+    expect(detailResponse.status()).toBe(200);
+    const candidateDetail = (await detailResponse.json()) as { tasks: Task[] };
+    task = candidateDetail.tasks.find(
+      (candidate) =>
+        ["Planned", "InProgress"].includes(candidate.status) &&
+        candidateDetail.tasks.some((other) => other.predecessorTaskIds.includes(candidate.id)),
+    );
+    if (task) {
+      packageId = item.id;
+      detail = candidateDetail;
+      break;
+    }
+  }
+  expect(
+    task,
+    "an active legal package with an editable task another task depends on is required",
+  ).toBeTruthy();
+  const descendant = detail!.tasks.find((candidate) =>
+    candidate.predecessorTaskIds.includes(task!.id),
+  )!;
 
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
   await page.setViewportSize({ width: 768, height: 900 });
   await page.goto(`/admin/work-packages/${packageId}`);
-  await page.locator(`#task-${task.id}`).getByRole("button", { name: "Sửa" }).click();
+  await page.locator(`#task-${task!.id}`).getByRole("button", { name: "Sửa" }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText(`${descendant.wbsCode} · ${descendant.title}`)).toHaveCount(0);
   await expect(dialog.getByText("Người theo dõi (CC)")).toBeVisible();
