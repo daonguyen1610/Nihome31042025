@@ -29,8 +29,12 @@ async function deleteAttachment(
     await api.delete(`/api/contracts/${contractId}/attachments/${item.id}`, { headers });
 }
 
-// Large contract files go in 8 MB chunks: a dropped chunk is sent again on its own,
-// and the server ends up with the whole file.
+/** The module's own upload request, carrying session ids instead of the large file. */
+const uploadRequest = (path: string) => (response: import("@playwright/test").Response) =>
+  response.request().method() === "POST" && new URL(response.url()).pathname === path;
+
+// Large files in any module go in 8 MB chunks before the module's own upload request: a
+// dropped chunk is sent again on its own, and the server ends up with the whole file.
 test("a large contract file survives a dropped chunk", async ({
   page,
   api,
@@ -63,12 +67,16 @@ test("a large contract file survives a dropped chunk", async ({
     await page.goto(`/admin/contracts/${contractId}?tab=documents`, { waitUntil: "networkidle" });
     await page.getByTestId("contract-attachment-files").setInputFiles(path);
     const completed = page.waitForResponse(
-      (response) => response.url().endsWith(`/api/contracts/${contractId}/attachments/from-upload`),
+      uploadRequest(`/api/contracts/${contractId}/attachments`),
       { timeout: 60_000 },
     );
     await page.getByRole("button", { name: "Tải lên tài liệu" }).click();
 
-    expect((await completed).status()).toBe(201);
+    const response = await completed;
+    expect(response.status()).toBe(201);
+    // The module's request carried the session, not the 20 MB.
+    expect(response.request().headers()["x-upload-sessions"]).toMatch(/^file=[0-9a-f-]{36}$/);
+    expect(response.request().postDataBuffer()?.length ?? 0).toBeLessThan(64 * 1024);
     expect(offsets).toEqual([0, CHUNK, CHUNK, 2 * CHUNK]);
     const attachments = (await (
       await api.get(`/api/contracts/${contractId}/attachments`, { headers })
@@ -132,7 +140,7 @@ test("choosing the same file again after a reload resumes the upload", async ({
     });
     await page.getByTestId("contract-attachment-files").setInputFiles(path);
     const completed = page.waitForResponse(
-      (response) => response.url().endsWith(`/api/contracts/${contractId}/attachments/from-upload`),
+      uploadRequest(`/api/contracts/${contractId}/attachments`),
       { timeout: 60_000 },
     );
     await page.getByRole("button", { name: "Tải lên tài liệu" }).click();
@@ -142,5 +150,58 @@ test("choosing the same file again after a reload resumes the upload", async ({
     expect(offsets).toEqual([CHUNK]);
   } finally {
     await deleteAttachment(api, headers, contractId, name);
+  }
+});
+
+// The same transport serves every module: a quote document above 8 MB is chunked too.
+test("a large quote document is sent in chunks like any other module's file", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}, testInfo) => {
+  test.setTimeout(120_000);
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.salesManager)}` };
+  const quotes = await (await api.get("/api/quotes?pageSize=1", { headers })).json();
+  expect(quotes.items.length, "a seeded quote is needed").toBeGreaterThan(0);
+  const quoteId = quotes.items[0].id as number;
+  const name = `ban-ve-bao-gia-${Date.now()}.pdf`;
+  const path = testInfo.outputPath(name);
+  await writeFile(path, randomBytes(CHUNK + 4 * MB));
+  let documentId: number | undefined;
+
+  try {
+    await loginInBrowserAs(page, TEST_USERS.salesManager);
+    await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
+    const offsets: number[] = [];
+    let dropped = false;
+    await page.route("**/api/upload-sessions/*/chunks?*", async (route) => {
+      const offset = Number(new URL(route.request().url()).searchParams.get("offset"));
+      offsets.push(offset);
+      if (offset === CHUNK && !dropped) {
+        dropped = true;
+        await route.abort("connectionreset");
+        return;
+      }
+      await route.continue();
+    });
+    await page.goto(`/admin/quotes/${quoteId}`, { waitUntil: "networkidle" });
+    await page.getByRole("tab", { name: /Tài liệu/ }).click();
+    await page.getByTestId("quote-document-file").setInputFiles(path);
+    const completed = page.waitForResponse(uploadRequest(`/api/quotes/${quoteId}/documents`), {
+      timeout: 60_000,
+    });
+    await page.getByRole("button", { name: "Tải lên", exact: true }).click();
+
+    const response = await completed;
+    expect(response.status()).toBe(201);
+    expect(response.request().headers()["x-upload-sessions"]).toMatch(/^file=[0-9a-f-]{36}$/);
+    expect(offsets).toEqual([0, CHUNK, CHUNK]);
+    const document = await response.json();
+    documentId = document.id;
+    expect(document.originalFileName).toBe(name);
+    expect(document.fileSize).toBe(CHUNK + 4 * MB);
+  } finally {
+    if (documentId) await api.delete(`/api/quotes/${quoteId}/documents/${documentId}`, { headers });
   }
 });

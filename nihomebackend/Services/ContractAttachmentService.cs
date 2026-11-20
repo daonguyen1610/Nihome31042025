@@ -38,8 +38,7 @@ public class ContractAttachmentService(
     }
 
     public async Task<ContractAttachmentResponse?> CreateAsync(
-        int contractId, CreateContractAttachmentRequest req, int callerUserId, bool canSeeAll,
-        CancellationToken ct = default, bool keepFileOnFailure = false)
+        int contractId, CreateContractAttachmentRequest req, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
         var contract = await FetchContractAsync(contractId, callerUserId, canSeeAll, ct);
         if (contract == null) return null;
@@ -81,7 +80,7 @@ public class ContractAttachmentService(
                 db.ContractAttachments.Remove(entity);
                 await db.SaveChangesAsync(CancellationToken.None);
             }
-            if (!keepFileOnFailure) DeleteManagedFile(ToManagedFullPath(entity.FilePath));
+            DeleteManagedFile(ToManagedFullPath(entity.FilePath));
             throw;
         }
         logger.LogInformation("Registered attachment {Id} ({Kind}) for contract {Contract}", entity.Id, entity.Kind, contractId);

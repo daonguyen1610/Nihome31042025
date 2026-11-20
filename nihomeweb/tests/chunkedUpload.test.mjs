@@ -172,3 +172,76 @@ test("a cancelled upload stops before the next chunk", async () => {
   );
   assert.deepEqual(server.calls, [0]);
 });
+
+const { stageLargeFormFiles, CHUNKED_UPLOAD_THRESHOLD_BYTES } = await import(
+  "data:text/javascript;base64," + Buffer.from(compiled).toString("base64")
+);
+
+test("an upload form sends only its large files in chunks and names their sessions", async () => {
+  const server = fakeServer({ chunkSize: CHUNKED_UPLOAD_THRESHOLD_BYTES });
+  const big = new File([new Uint8Array(CHUNKED_UPLOAD_THRESHOLD_BYTES + 1)], "ban-ve.pdf");
+  const small = new File([new Uint8Array(10)], "ghi-chu.pdf");
+  const form = new FormData();
+  form.append("category", "Drawings");
+  form.append("files", small);
+  form.append("files", big);
+  const resumeKeys = [];
+  const progress = [];
+
+  const staged = await stageLargeFormFiles(form, {
+    target: "/api/quotes/5/documents",
+    transportFor: () => server.transport,
+    store: memoryStore(),
+    resumeKeys,
+    onProgress: (sent) => progress.push(sent),
+    wait: noWait,
+  });
+
+  assert.equal(staged.header, "files=s1");
+  assert.equal(staged.stagedBytes, big.size);
+  assert.deepEqual(
+    [...staged.form.entries()].map(([field, value]) => [
+      field,
+      typeof value === "string" ? value : value.name,
+    ]),
+    [
+      ["category", "Drawings"],
+      ["files", "ghi-chu.pdf"],
+    ],
+  );
+  assert.equal(resumeKeys.length, 1);
+  assert.equal(progress.at(-1), big.size);
+});
+
+test("a form without large files is sent as it is", async () => {
+  const form = new FormData();
+  form.append("file", new File([new Uint8Array(10)], "a.pdf"));
+
+  const staged = await stageLargeFormFiles(form, {
+    target: "/api/customers/1/documents",
+    transportFor: () => fakeServer().transport,
+    store: memoryStore(),
+    resumeKeys: [],
+    wait: noWait,
+  });
+
+  assert.equal(staged, null);
+});
+
+test("the same large file twice in one form gets two sessions", async () => {
+  const server = fakeServer({ chunkSize: CHUNKED_UPLOAD_THRESHOLD_BYTES });
+  const big = new File([new Uint8Array(CHUNKED_UPLOAD_THRESHOLD_BYTES + 1)], "ban-ve.pdf");
+  const form = new FormData();
+  form.append("files", big);
+  form.append("files", big);
+
+  const staged = await stageLargeFormFiles(form, {
+    target: "/api/rfqs/1/documents",
+    transportFor: () => server.transport,
+    store: memoryStore(),
+    resumeKeys: [],
+    wait: noWait,
+  });
+
+  assert.equal(staged.header, "files=s1,files=s2");
+});

@@ -332,18 +332,28 @@ Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ li�
   `GET/PUT /api/site-settings/upload-limits/contracts`: mọi người đã đăng nhập đọc
   được để form upload kiểm tra trước, sửa cần `system.settings.manage`.
   Các endpoint upload khác giữ giới hạn riêng.
-- Upload tiếp tục được (chunked) cho file hợp đồng > 8 MiB: frontend tự chia phần
-  8 MiB (dưới giới hạn ~28,6 MB mặc định của IIS), thử lại khi mất mạng và nhớ phiên
-  trong `localStorage` để chọn lại đúng file sau khi tải lại trang thì gửi tiếp.
-  `POST /api/contracts/{id}/upload-sessions` (`crm.contracts.manage`, kiểm quyền hợp
-  đồng, đuôi file và `ContractMaxFileSizeMb` trước khi gửi byte nào) →
-  `PUT /api/upload-sessions/{id}/chunks?offset=` (thân là byte thô; gửi lại phần đã
-  nhận vẫn `200`, sai offset → `409 UPLOAD_OFFSET_MISMATCH` kèm `receivedBytes`) →
-  `POST /api/contracts/{id}/attachments/from-upload` hoặc
-  `…/appendices/files/from-upload` (`400 UPLOAD_NOT_READY` khi chưa đủ byte). `GET`/
-  `DELETE /api/upload-sessions/{id}` để hỏi tiến độ/huỷ; chỉ chủ phiên thấy phiên.
-  Byte tạm nằm ở `App_Data/upload-sessions/` (ngoài wwwroot), bảng `upload_sessions`;
-  phiên rảnh quá 24 giờ bị `UploadSessionCleanupWorker` xoá mỗi giờ.
+- Upload tiếp tục được (chunked) cho **mọi** upload multipart của người đã đăng nhập,
+  với file > 8 MiB. Interceptor trong `src/lib/api.ts` tự chia phần 8 MiB (dưới giới
+  hạn ~28,6 MB mặc định của IIS), thử lại khi mất mạng và nhớ phiên trong
+  `localStorage` để chọn lại đúng file sau khi tải lại trang thì gửi tiếp. Màn hình và
+  endpoint của từng phân hệ không phải sửa gì:
+  1. `POST /api/upload-sessions` `{targetPath, fileName, fileSize}`: `targetPath` là
+     đường dẫn API của request upload (ví dụ `/api/quotes/5/documents`). Từ chối
+     trước khi gửi byte nào nếu tên file sai, file lớn hơn mọi giới hạn trong Cài đặt
+     (`UPLOAD_TOO_LARGE`) hoặc người dùng đã có 50 phiên mở (`UPLOAD_TOO_MANY_SESSIONS`).
+  2. `PUT /api/upload-sessions/{id}/chunks?offset=` (thân là byte thô). Gửi lại phần đã
+     nhận vẫn `200`; sai offset → `409 UPLOAD_OFFSET_MISMATCH` kèm `receivedBytes`.
+  3. Request upload gốc gửi các field nhỏ như cũ, còn file lớn thay bằng header
+     `X-Upload-Sessions: field=sessionId,…`. `UploadSessionFormFilter` (resource filter
+     toàn cục) giữ khoá phiên, gắn file đã nhận đủ vào form dưới đúng field rồi mới
+     model binding, nên controller kiểm tra quyền, loại file và giới hạn như upload
+     thường. Phiên sai người, sai `targetPath` hoặc chưa đủ byte → `400 UPLOAD_NOT_READY`.
+     Phiên chỉ đóng khi request trả 2xx; request lỗi (ví dụ lỗi database) giữ phiên để
+     gửi lại mà không tải lại file. Bấm hai lần thì lần sau thấy phiên đã đóng.
+  `GET`/`DELETE /api/upload-sessions/{id}` để hỏi tiến độ/huỷ; chỉ chủ phiên thấy phiên.
+  Byte tạm nằm ở `App_Data/upload-sessions/` (ngoài wwwroot, cùng ổ với `wwwroot`),
+  bảng `upload_sessions`; phiên rảnh quá 24 giờ bị `UploadSessionCleanupWorker` xoá
+  mỗi giờ. Upload ẩn danh (CV ứng tuyển) vẫn gửi một request.
 - Template email: xem [6.3](#63-email-ứng-dụng).
 - Google Drive: cấu hình trong database, xem [18.3](#183-google-drive-trên-iis).
 
