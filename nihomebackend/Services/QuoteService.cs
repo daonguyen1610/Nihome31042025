@@ -159,8 +159,8 @@ public class QuoteService(
             .Include(q => q.ApprovalEmails)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
-        if (!canSeeAll && !QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId,
-                quote.ApprovalStepsJson, callerUserId))
+        if (!canSeeAll && !await QuoteApprovalChain.CanReadAsync(db, id, quote.OwnerUserId,
+                quote.ApprovalApproverUserId, callerUserId, ct))
             return null;
         return await WithApproverAvailabilityAsync(Map(quote), ct);
     }
@@ -170,11 +170,11 @@ public class QuoteService(
         int id, int callerUserId, bool canSeeAll, CancellationToken ct = default)
     {
         var quote = await db.Quotes.AsNoTracking().Where(q => q.Id == id)
-            .Select(q => new { q.OperationalProjectId, q.OwnerUserId, q.ApprovalApproverUserId, q.ApprovalStepsJson })
+            .Select(q => new { q.OperationalProjectId, q.OwnerUserId, q.ApprovalApproverUserId })
             .SingleOrDefaultAsync(ct);
         if (quote is null) return null;
-        if (!canSeeAll && !QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId,
-                quote.ApprovalStepsJson, callerUserId))
+        if (!canSeeAll && !await QuoteApprovalChain.CanReadAsync(db, id, quote.OwnerUserId,
+                quote.ApprovalApproverUserId, callerUserId, ct))
             return null;
         if (!quote.OperationalProjectId.HasValue) return new QuoteProjectBoqLookupResponse();
         var latest = await ApprovedProjectBoqs(quote.OperationalProjectId.Value)
@@ -458,6 +458,7 @@ public class QuoteService(
             quote.SubmittedAt = null;
             quote.SubmittedByUserId = null;
             ClearApprovalChain(quote);
+            await QuoteApprovalChain.ClearApproversAsync(db, quote.Id, ct);
             quote.ApprovedAt = null;
             quote.ApprovedByUserId = null;
             quote.SentAt = null;
@@ -636,6 +637,7 @@ public class QuoteService(
     public async Task<QuoteResponse?> RejectInternalAsync(int id, QuoteWorkflowRequest req, int caller, bool canApprove, CancellationToken ct = default)
     {
         if (await CurrentApprovalAsync(id, caller, ct) is null) return null;
+        await QuoteApprovalChain.ClearApproversAsync(db, id, ct);
         // Rejecting clears SubmittedByUserId/ApprovalApproverUserId in beforeSave,
         // so the outcome email has to be queued while those fields still exist.
         await approvalEmails.QueueDecisionAsync(id, caller, approved: false, req.Note, ct);
@@ -663,18 +665,18 @@ public class QuoteService(
     public async Task<QuoteResponse?> WithdrawApprovalAsync(int id, QuoteWorkflowRequest req, int caller,
         bool canManage, bool canSeeAll, CancellationToken ct = default)
     {
-        // The version the user saw is required: without it, a quote that has just moved on to
-        // someone who can decide could still be pulled back.
-        if (string.IsNullOrWhiteSpace(req.RowVersion))
-            throw new QuoteOperationException("Tải lại báo giá rồi thử lại: cần phiên bản báo giá đang xem để rút lại.");
         var waiting = await db.Quotes.AsNoTracking().Where(q => q.Id == id)
-            .Select(q => new { q.Status, q.ApprovalApproverUserId, q.ApprovalStepsJson, q.ApprovalStepIndex })
+            .Select(q => new { q.Status, q.ApprovalApproverUserId, q.ApprovalStepsJson, q.ApprovalStepIndex, q.RowVersion })
             .SingleOrDefaultAsync(ct);
         if (waiting is null) return null;
+        // The version the user saw comes first: a page that is out of date is told to reload
+        // (409), rather than judged on a quote that has since moved on.
+        CrmConcurrency.EnsureMatches(waiting.RowVersion, req.RowVersion);
         var stillAvailable = waiting.Status == QuoteStatus.PendingApproval &&
             waiting.ApprovalApproverUserId is int approverId &&
             (await approvalEmails.CanDecideAsync([(approverId,
                 QuoteApprovalChain.CurrentRoleCode(waiting.ApprovalStepsJson, waiting.ApprovalStepIndex))], ct)).Count == 1;
+        if (!stillAvailable) await QuoteApprovalChain.ClearApproversAsync(db, id, ct);
         return await TransitionAsync(id, caller, canSeeAll,
             allowedFrom: [QuoteStatus.PendingApproval],
             to: QuoteStatus.Draft,
@@ -733,6 +735,11 @@ public class QuoteService(
                     $"Chỉ {name}, người duyệt được chọn cho bước hiện tại, mới được duyệt hoặc từ chối báo giá này.",
                     "QUOTE_APPROVAL_NOT_CHOSEN", parameters);
         }
+        // Decided, withdrawn or sent back meanwhile: the page is out of date, whatever the role.
+        if (quote.Status != QuoteStatus.PendingApproval)
+            throw new QuoteOperationException(
+                "Báo giá không còn chờ duyệt (đã được quyết định, rút lại hoặc trả về Kinh doanh). Tải lại trang để xem trạng thái mới.",
+                "QUOTE_APPROVAL_NOT_PENDING", new Dictionary<string, object>());
         var roleCode = QuoteApprovalChain.CurrentRoleCode(quote.ApprovalStepsJson, quote.ApprovalStepIndex);
         if ((await approvalEmails.CanDecideAsync([(caller, roleCode)], ct)).Count == 0)
             throw new QuoteOperationException(
@@ -1033,8 +1040,8 @@ public class QuoteService(
             .Include(q => q.InputPriceOffer).ThenInclude(offer => offer!.Vendor)
             .FirstOrDefaultAsync(q => q.Id == id, ct);
         if (quote is null) return null;
-        if (!canSeeAll && !QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId,
-                quote.ApprovalStepsJson, callerUserId))
+        if (!canSeeAll && !await QuoteApprovalChain.CanReadAsync(db, id, quote.OwnerUserId,
+                quote.ApprovalApproverUserId, callerUserId, ct))
             return null;
 
         var snapshotRevisionIds = quote.VersionSnapshots
@@ -1292,11 +1299,10 @@ public class QuoteService(
     {
         var q = db.Quotes.AsNoTracking().AsQueryable();
         // Everyone in a quote's approval chain sees it: before their turn, while deciding,
-        // and after approving, without needing to see every quote.
-        var inChain = QuoteApprovalChain.ApproverPattern(callerUserId);
+        // and after approving, without needing to see every quote (an indexed lookup).
         if (!canSeeAll) q = q.Where(x => x.OwnerUserId == callerUserId ||
             x.ApprovalApproverUserId == callerUserId ||
-            (x.ApprovalStepsJson != null && EF.Functions.Like(x.ApprovalStepsJson, inChain)));
+            x.ChainApprovers.Any(item => item.UserId == callerUserId));
         else if (ownerUserId.HasValue) q = q.Where(x => x.OwnerUserId == ownerUserId.Value);
 
         if (status.HasValue) q = q.Where(x => x.Status == status.Value);
@@ -1729,22 +1735,24 @@ public class QuoteService(
     private async Task<QuoteResponse> WithApproverAvailabilityAsync(QuoteResponse response, CancellationToken ct)
     {
         if (response.Status != nameof(QuoteStatus.PendingApproval)) return response;
-        if (response.ApprovalSteps.Count == 0)
-        {
-            response.ApprovalApproverAvailable = response.ApprovalApproverUserId is int approverId &&
-                (await approvalEmails.CanDecideAsync([(approverId, RbacRoleCodes.ProcurementManager)], ct)).Count == 1;
-            return response;
-        }
+        // The person the quote is with, in the role deciding and withdrawing use: the current
+        // step's, or the Procurement Manager's when there is no valid current step.
+        var currentRole = response.ApprovalSteps.FirstOrDefault(step => step.State == "Current")?.RoleCode
+            ?? RbacRoleCodes.ProcurementManager;
         var open = response.ApprovalSteps.Where(step => step.State != "Approved")
             .Select(step => (step.ApproverUserId, step.RoleCode)).ToList();
+        if (response.ApprovalApproverUserId is int approverId) open.Add((approverId, currentRole));
         var canDecide = await approvalEmails.CanDecideAsync(open, ct);
+        response.ApprovalApproverAvailable = response.ApprovalApproverUserId is int current &&
+            canDecide.Contains((current, currentRole));
         for (var index = 0; index < response.ApprovalSteps.Count; index++)
         {
             var step = response.ApprovalSteps[index];
             if (step.State == "Approved") continue;
-            var available = canDecide.Contains((step.ApproverUserId, step.RoleCode));
-            response.ApprovalSteps[index] = step with { Available = available };
-            if (step.State == "Current") response.ApprovalApproverAvailable = available;
+            response.ApprovalSteps[index] = step with
+            {
+                Available = canDecide.Contains((step.ApproverUserId, step.RoleCode)),
+            };
         }
         return response;
     }

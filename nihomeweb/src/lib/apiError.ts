@@ -1,3 +1,61 @@
+type Translate = (key: string, params?: Record<string, string | number>) => string;
+
+/**
+ * Business errors with a stable code, and for some the values their message needs (a person,
+ * a step, a role), so the reason reads in the user's language with those details. The one
+ * table every error path uses.
+ */
+const CODED_ERRORS: Record<string, string> = {
+  HSE_INDEPENDENT_REVIEW_REQUIRED: "hse.independentReviewRequired",
+  IFC_RELEASED_FILE_CHANGED: "procurement.ifc.fileChanged",
+  CONTRACT_SIGNED_SCAN_REQUIRED: "contracts.detail.transition.needScan",
+  LEGAL_MEMBER_INVALID: "people.legalMemberInvalid",
+  PUNCH_DESIGN_MEMBER_INVALID: "people.designMemberInvalid",
+  WORK_PACKAGE_NOT_COMPLETABLE: "workPackages.error.notCompletable",
+  QUOTE_APPROVAL_NOT_PENDING: "quotes.error.notPending",
+  QUOTE_APPROVAL_NOT_YOUR_TURN: "quotes.error.notYourTurn",
+  QUOTE_APPROVAL_NOT_CHOSEN: "quotes.error.notChosen",
+  QUOTE_APPROVAL_ROLE_LOST: "quotes.error.roleLost",
+  QUOTE_NEXT_APPROVER_UNAVAILABLE: "quotes.error.nextApproverUnavailable",
+  QUOTE_WITHDRAW_APPROVER_AVAILABLE: "quotes.error.withdrawApproverAvailable",
+  QUOTE_APPROVAL_STEP_NO_APPROVER: "quotes.error.stepNoApprover",
+  QUOTE_APPROVAL_STEP_UNCHOSEN: "quotes.error.stepUnchosen",
+  QUOTE_APPROVAL_STEP_INVALID_APPROVER: "quotes.error.stepInvalidApprover",
+  QUOTE_APPROVAL_CHAIN_CHANGED: "quotes.error.chainChanged",
+  QUOTE_APPROVAL_PERSON_TWICE: "quotes.error.personTwice",
+  QUOTE_WORKFLOW_STEPS_BLOCKED: "workflow.error.stepsBlocked",
+  QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED: "workflow.error.everyoneRoleRepeated",
+};
+
+/** The localized message for a coded business error, or null when the code is not one of them. */
+export function codedErrorMessage(data: unknown, t: Translate): string | null {
+  if (!data || typeof data !== "object" || !("code" in data) || typeof data.code !== "string")
+    return null;
+  const key = CODED_ERRORS[data.code];
+  if (!key) return null;
+  const raw =
+    "params" in data && data.params && typeof data.params === "object"
+      ? (data.params as Record<string, unknown>)
+      : {};
+  const params: Record<string, string | number> = {};
+  for (const [name, value] of Object.entries(raw))
+    if (typeof value === "string" || typeof value === "number") params[name] = value;
+  // A role is named by its translation key, so it reads in the user's language.
+  const roleOf = (item: Record<string, unknown>) =>
+    item.roleLabelKey ? t(String(item.roleLabelKey)) : String(item.roleName ?? "");
+  if (typeof raw.roleLabelKey === "string" || typeof raw.roleName === "string")
+    params.role = roleOf(raw);
+  // Several blocked steps, each said in full: "Step 2 (Board): …".
+  if (Array.isArray(raw.items))
+    params.steps = raw.items
+      .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
+      .map((item) =>
+        t(`workflow.issue.${String(item.issue)}`, { n: Number(item.step), role: roleOf(item) }),
+      )
+      .join(" ");
+  return t(key, params);
+}
+
 /**
  * Shared helper for extracting a human-friendly message from an error thrown
  * by an axios `adminApi.*` call. Used by every admin CRUD page so ModelState
@@ -10,11 +68,7 @@
  *  2. Simple `{ message: "..." }` bodies from our service exceptions.
  *  3. Any other Error / value — falls back to `.message` then `String(err)`.
  */
-export function extractApiError(
-  err: unknown,
-  fallback?: string,
-  translate?: (key: string) => string,
-): string {
+export function extractApiError(err: unknown, fallback?: string, translate?: Translate): string {
   if (typeof err !== "object" || err === null) return fallback ?? String(err);
 
   const anyErr = err as {
@@ -28,9 +82,6 @@ export function extractApiError(
       if (typeof data.code === "string" && data.code.startsWith("CM_SCHEDULE_")) {
         return translate(`cmSchedule.error.${data.code.slice("CM_SCHEDULE_".length)}`);
       }
-      if (data.code === "HSE_INDEPENDENT_REVIEW_REQUIRED") {
-        return translate("hse.independentReviewRequired");
-      }
       const primaryNotApproved = data.code === "IFC_PRIMARY_FILE_NOT_APPROVED";
       if (primaryNotApproved || data.code === "IFC_PRIMARY_FILE_UNAVAILABLE") {
         const key = primaryNotApproved
@@ -41,19 +92,8 @@ export function extractApiError(
           ? `${data.drawingCode}: ${message}`
           : message;
       }
-      const key =
-        data.code === "IFC_RELEASED_FILE_CHANGED"
-          ? "procurement.ifc.fileChanged"
-          : data.code === "CONTRACT_SIGNED_SCAN_REQUIRED"
-            ? "contracts.detail.transition.needScan"
-            : data.code === "LEGAL_MEMBER_INVALID"
-              ? "people.legalMemberInvalid"
-              : data.code === "PUNCH_DESIGN_MEMBER_INVALID"
-                ? "people.designMemberInvalid"
-                : data.code === "WORK_PACKAGE_NOT_COMPLETABLE"
-                  ? "workPackages.error.notCompletable"
-                  : null;
-      if (key) return translate(key);
+      const coded = codedErrorMessage(data, translate);
+      if (coded) return coded;
     }
     if ("errors" in data && data.errors && typeof data.errors === "object") {
       // Imports list row errors ({ message, messageKey }); validation maps each
@@ -122,56 +162,6 @@ export function isConcurrencyConflict(err: unknown): boolean {
 }
 
 /** Localized UI boundary: preserve safe API reasons; never expose runtime failures. */
-type Translate = (key: string, params?: Record<string, string | number>) => string;
-
-/**
- * Business errors that carry a stable code and the values their message needs (a person,
- * a step, a role), so the reason reads in the user's language with those details.
- */
-const CODED_ERRORS: Record<string, string> = {
-  QUOTE_APPROVAL_NOT_YOUR_TURN: "quotes.error.notYourTurn",
-  QUOTE_APPROVAL_NOT_CHOSEN: "quotes.error.notChosen",
-  QUOTE_APPROVAL_ROLE_LOST: "quotes.error.roleLost",
-  QUOTE_NEXT_APPROVER_UNAVAILABLE: "quotes.error.nextApproverUnavailable",
-  QUOTE_WITHDRAW_APPROVER_AVAILABLE: "quotes.error.withdrawApproverAvailable",
-  QUOTE_APPROVAL_STEP_NO_APPROVER: "quotes.error.stepNoApprover",
-  QUOTE_APPROVAL_STEP_UNCHOSEN: "quotes.error.stepUnchosen",
-  QUOTE_APPROVAL_STEP_INVALID_APPROVER: "quotes.error.stepInvalidApprover",
-  QUOTE_APPROVAL_CHAIN_CHANGED: "quotes.error.chainChanged",
-  QUOTE_APPROVAL_PERSON_TWICE: "quotes.error.personTwice",
-  QUOTE_WORKFLOW_STEPS_BLOCKED: "workflow.error.stepsBlocked",
-  QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED: "workflow.error.everyoneRoleRepeated",
-};
-
-/** The localized message for a coded business error, or null when the code is not one of them. */
-export function codedErrorMessage(data: unknown, t: Translate): string | null {
-  if (!data || typeof data !== "object" || !("code" in data) || typeof data.code !== "string")
-    return null;
-  const key = CODED_ERRORS[data.code];
-  if (!key) return null;
-  const raw =
-    "params" in data && data.params && typeof data.params === "object"
-      ? (data.params as Record<string, unknown>)
-      : {};
-  const params: Record<string, string | number> = {};
-  for (const [name, value] of Object.entries(raw))
-    if (typeof value === "string" || typeof value === "number") params[name] = value;
-  // A role is named by its translation key, so it reads in the user's language.
-  const roleOf = (item: Record<string, unknown>) =>
-    item.roleLabelKey ? t(String(item.roleLabelKey)) : String(item.roleName ?? "");
-  if (typeof raw.roleLabelKey === "string" || typeof raw.roleName === "string")
-    params.role = roleOf(raw);
-  // Several blocked steps, each said in full: "Step 2 (Board): …".
-  if (Array.isArray(raw.items))
-    params.steps = raw.items
-      .filter((item): item is Record<string, unknown> => !!item && typeof item === "object")
-      .map((item) =>
-        t(`workflow.issue.${String(item.issue)}`, { n: Number(item.step), role: roleOf(item) }),
-      )
-      .join(" ");
-  return t(key, params);
-}
-
 export function getUiError(err: unknown, t: Translate, fallback?: string): string {
   const failure = err as {
     code?: string;
@@ -203,8 +193,6 @@ export function getUiError(err: unknown, t: Translate, fallback?: string): strin
     ("detail" in data && typeof data.detail === "string") ||
     ("errors" in data && typeof data.errors === "object" && data.errors !== null);
   if (!hasReason) return t("auth.err.unexpected");
-  const coded = codedErrorMessage(data, t);
-  if (coded) return coded;
   const message = extractApiError(err, t("auth.err.unexpected"), t);
   if (
     /\bat\s+\S+\([^)]*:\d+|\b(?:SqlException|System\.[A-Z]\w*Exception|TypeError|ReferenceError)\b|(?:\/app\/|[A-Z]:\\)/.test(

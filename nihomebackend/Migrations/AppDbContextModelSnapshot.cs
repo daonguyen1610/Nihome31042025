@@ -9266,6 +9266,30 @@ namespace nihomebackend.Migrations
                     b.ToTable("quote_approval_logs", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.QuoteChainApprover", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("QuoteId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("QuoteId", "UserId")
+                        .IsUnique();
+
+                    b.ToTable("quote_chain_approvers", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.QuoteDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -15296,6 +15320,25 @@ namespace nihomebackend.Migrations
                     b.Navigation("Quote");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.QuoteChainApprover", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Quote", "Quote")
+                        .WithMany("ChainApprovers")
+                        .HasForeignKey("QuoteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Quote");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.QuoteDocument", b =>
                 {
                     b.HasOne("NihomeBackend.Models.Quote", "Quote")
@@ -16548,6 +16591,8 @@ namespace nihomebackend.Migrations
                     b.Navigation("ApprovalEmails");
 
                     b.Navigation("ApprovalLogs");
+
+                    b.Navigation("ChainApprovers");
 
                     b.Navigation("Documents");
 

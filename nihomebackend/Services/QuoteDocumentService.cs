@@ -195,10 +195,11 @@ public class QuoteDocumentService(
     {
         var quote = await db.Quotes.AsNoTracking()
             .Where(item => item.Id == quoteId)
-            .Select(item => new { item.OwnerUserId, item.ApprovalApproverUserId, item.ApprovalStepsJson })
+            .Select(item => new { item.OwnerUserId, item.ApprovalApproverUserId })
             .SingleOrDefaultAsync(ct);
         return quote is not null && (canSeeAll || (forRead
-            ? QuoteApprovalChain.CanRead(quote.OwnerUserId, quote.ApprovalApproverUserId, quote.ApprovalStepsJson, callerUserId)
+            ? await QuoteApprovalChain.CanReadAsync(db, quoteId, quote.OwnerUserId, quote.ApprovalApproverUserId,
+                callerUserId, ct)
             : quote.OwnerUserId == callerUserId));
     }
 

@@ -90,6 +90,24 @@ public class WorkflowConfigServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Get_QuoteWorkflow_FlagsAStepWhoseRoleWasDeleted()
+    {
+        var created = await _sut.CreateAsync(Req(steps: [(1, "Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER")]));
+        var row = _db.WorkflowConfigs.Single(item => item.Id == created.Id);
+        row.StepsJson = row.StepsJson.Replace("SALES_MANAGER", "RETIRED_ROLE");
+        await _db.SaveChangesAsync();
+
+        var issue = Assert.Single((await _sut.GetByIdAsync(created.Id))!.StepIssues);
+
+        Assert.Equal((1, "RoleMissing"), (issue.Order, issue.Issue));
+        // Saving it while on names the step, as for any other blocked step.
+        var error = await Assert.ThrowsAsync<WorkflowConfigValidationException>(() =>
+            _sut.UpdateAsync(created.Id, Req(steps: [(1, "Bước cũ", "RETIRED_ROLE")])));
+        Assert.Equal("QUOTE_WORKFLOW_STEPS_BLOCKED", error.Code);
+        Assert.Contains("Bước 1: vai trò của bước đã bị xoá.", error.Message);
+    }
+
+    [Fact]
     public async Task Update_QuoteWorkflow_CanBeTurnedOffWhileAStepIsBlocked()
     {
         var created = await _sut.CreateAsync(Req(steps: [(1, "Ban Giám đốc duyệt", "BGD")]));

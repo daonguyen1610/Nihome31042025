@@ -119,17 +119,29 @@ public sealed class PermissionService(AppDbContext db) : IPermissionService
         return ResolveActiveRoleId(roleEntityId, legacyRoleCode, roles);
     }
 
-    public async Task<IReadOnlySet<int>> FilterByRolePermissionAsync(IReadOnlyCollection<int> userIds,
-        string permissionCode, CancellationToken ct = default)
+    public Task<IReadOnlySet<int>> FilterByRolePermissionAsync(IReadOnlyCollection<int> userIds,
+        string permissionCode, CancellationToken ct = default) =>
+        FilterByRolePermissionsAsync(userIds, [permissionCode], ct);
+
+    public async Task<IReadOnlySet<int>> FilterByRolePermissionsAsync(IReadOnlyCollection<int> userIds,
+        IReadOnlyCollection<string> permissionCodes, CancellationToken ct = default)
     {
         var users = await db.Users.AsNoTracking().Where(user => userIds.Contains(user.Id) && user.IsActive)
             .Select(user => new { user.Id, user.RoleEntityId, user.Role }).ToListAsync(ct);
         var roles = await db.Roles.AsNoTracking()
             .Select(role => new RoleState(role.Id, role.Code, role.IsActive, role.IsSystem)).ToListAsync(ct);
-        var permittedRoles = await db.RolePermissions.AsNoTracking()
-            .Where(grant => grant.Permission.IsActive && grant.Permission.Module + RbacConventions.CodeSeparator + grant.Permission.Action == permissionCode)
-            .Select(grant => grant.RoleId).ToListAsync(ct);
-        return users.Where(user => ResolveActiveRoleId(user.RoleEntityId, UserRoleCodeMapper.ToCode(user.Role), roles) is int roleId && permittedRoles.Contains(roleId))
+        var grants = await db.RolePermissions.AsNoTracking()
+            .Where(grant => grant.Permission.IsActive && permissionCodes.Contains(
+                grant.Permission.Module + RbacConventions.CodeSeparator + grant.Permission.Action))
+            .Select(grant => new
+            {
+                grant.RoleId,
+                Code = grant.Permission.Module + RbacConventions.CodeSeparator + grant.Permission.Action,
+            }).ToListAsync(ct);
+        var codesByRole = grants.GroupBy(grant => grant.RoleId)
+            .ToDictionary(group => group.Key, group => group.Select(grant => grant.Code).ToHashSet());
+        return users.Where(user => ResolveActiveRoleId(user.RoleEntityId, UserRoleCodeMapper.ToCode(user.Role), roles) is int roleId &&
+                codesByRole.TryGetValue(roleId, out var held) && permissionCodes.All(held.Contains))
             .Select(user => user.Id).ToHashSet();
     }
 }

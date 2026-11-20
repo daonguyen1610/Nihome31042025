@@ -580,6 +580,9 @@ public class QuotesControllerTests : IntegrationTestBase
         rejected.ApprovalApproverUserId.Should().BeNull();
         rejected.ApprovalStepsJson.Should().BeNull();
         rejected.ApprovalStepIndex.Should().BeNull();
+        // The chain ended, so its members no longer have a reason to see the quote.
+        (await WithDbAsync(db => db.QuoteChainApprovers.CountAsync(item => item.QuoteId == quoteId)))
+            .Should().Be(0);
     });
 
     [Fact]
@@ -688,8 +691,12 @@ public class QuotesControllerTests : IntegrationTestBase
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
         var quoteId = await CreateQuoteAsync();
+        var draftVersion = await QuoteRowVersionAsync(quoteId);
         (await SubmitWithApprovalAsync(quoteId)).StatusCode.Should().Be(HttpStatusCode.OK);
 
+        // Negative: a page out of date is told to reload, not judged on the quote as it is now.
+        (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval", new { rowVersion = draftVersion }))
+            .StatusCode.Should().Be(HttpStatusCode.Conflict);
         // Negative: without the version the user saw, nothing is withdrawn.
         (await Client.PostAsJsonAsync($"/api/quotes/{quoteId}/withdraw-approval", new { }))
             .StatusCode.Should().Be(HttpStatusCode.BadRequest);
@@ -727,6 +734,12 @@ public class QuotesControllerTests : IntegrationTestBase
                 log.Action == QuoteWorkflowAction.WithdrawApproval &&
                 log.Note == "Trưởng phòng Cung ứng nghỉ phép dài ngày"))).Should().BeTrue();
         });
+
+        // Back at work with the old page open: they are told the quote is no longer waiting,
+        // not that they lost their role.
+        var late = await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve");
+        late.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(late)).GetProperty("code").GetString().Should().Be("QUOTE_APPROVAL_NOT_PENDING");
     }
 
     [Fact]
@@ -740,6 +753,9 @@ public class QuotesControllerTests : IntegrationTestBase
             (await SubmitWithChainAsync(quoteId, await UserIdAsync("PROCUREMENT_MANAGER"), await UserIdAsync("ADMIN")))
                 .StatusCode.Should().Be(HttpStatusCode.OK);
             (await DecideAsAsync("PROCUREMENT_MANAGER", quoteId, "approve")).StatusCode.Should().Be(HttpStatusCode.OK);
+            (await WithDbAsync(db => db.QuoteChainApprovers.Where(item => item.QuoteId == quoteId)
+                    .Select(item => item.UserId).OrderBy(id => id).ToListAsync()))
+                .Should().BeEquivalentTo(new[] { await UserIdAsync("PROCUREMENT_MANAGER"), await UserIdAsync("ADMIN") });
 
             // Step 1 already approved and the quote moved on: it still opens and lists for them.
             await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "PROCUREMENT_MANAGER"));

@@ -38,21 +38,28 @@ public class QuoteApprovalChainTests
     }
 
     [Fact]
-    public void Includes_FindsEachApproverOfTheChain_AndNoOneElse()
+    public async Task ChainMembers_ReadTheQuote_UntilTheChainEnds()
     {
-        var json = QuoteApprovalChain.Write([
-            new QuoteApprovalStep(1, "Trưởng phòng Cung ứng duyệt", "PROCUREMENT_MANAGER", null, 24, 12, "Nguyễn Thị Thu Trang",
-                DateTime.UtcNow, DateTime.UtcNow),
-            new QuoteApprovalStep(2, "Trưởng phòng Kinh doanh duyệt", "SALES_MANAGER", null, 24, 120, "Trần Quốc Huy",
-                DateTime.UtcNow, null),
-        ]);
+        using var db = DbContextFactory.Create();
+        var quote = new Quote { Code = "QT-2026-0101", OwnerUserId = 7 };
+        db.Quotes.Add(quote);
+        await db.SaveChangesAsync();
+        QuoteApprovalStep Step(int order, int userId) => new(order, $"Bước {order}", "PROCUREMENT_MANAGER", null, 24,
+            userId, $"Người {userId}", null, null);
 
-        Assert.True(QuoteApprovalChain.Includes(json, 12));
-        Assert.True(QuoteApprovalChain.Includes(json, 120));
-        Assert.False(QuoteApprovalChain.Includes(json, 1));
-        Assert.False(QuoteApprovalChain.Includes(json, 20));
-        Assert.False(QuoteApprovalChain.Includes(null, 12));
-        // The SQL pattern is built on the same token.
-        Assert.Equal("%\"approverUserId\":12,%", QuoteApprovalChain.ApproverPattern(12));
+        // Sent with a chain in which 12 approves twice (an "everyone approves" step) and 120 once.
+        await QuoteApprovalChain.SetApproversAsync(db, quote, [Step(1, 12), Step(2, 120), Step(3, 12)], CancellationToken.None);
+        await db.SaveChangesAsync();
+
+        Assert.Equal([12, 120], db.QuoteChainApprovers.Where(item => item.QuoteId == quote.Id)
+            .Select(item => item.UserId).OrderBy(id => id).ToList());
+        Assert.True(await QuoteApprovalChain.CanReadAsync(db, quote.Id, 7, null, 120, CancellationToken.None));
+        Assert.True(await QuoteApprovalChain.CanReadAsync(db, quote.Id, 7, null, 7, CancellationToken.None));
+        Assert.False(await QuoteApprovalChain.CanReadAsync(db, quote.Id, 7, null, 20, CancellationToken.None));
+
+        // Rejected or withdrawn: the chain ends, and so does their access.
+        await QuoteApprovalChain.ClearApproversAsync(db, quote.Id, CancellationToken.None);
+        await db.SaveChangesAsync();
+        Assert.False(await QuoteApprovalChain.CanReadAsync(db, quote.Id, 7, null, 120, CancellationToken.None));
     }
 }
