@@ -350,9 +350,12 @@ Không xoá `sqlserver_data` để làm mới code: volume này chứa dữ li�
      toàn cục) giữ khoá phiên, gắn file đã nhận đủ vào form dưới đúng field rồi mới
      model binding, nên controller kiểm tra quyền, loại file và giới hạn như upload
      thường. Phiên sai người, sai `targetPath` hoặc chưa đủ byte → `400 UPLOAD_NOT_READY`.
-     Phiên đóng khi request thành công hoặc bị từ chối hẳn (4xx như sai loại file, quá
-     giới hạn). Lỗi đáng thử lại (401, 408, 409, 429, 5xx, mất mạng) giữ phiên để gửi lại
-     mà không tải lại file. Bấm hai lần thì lần sau thấy phiên đã đóng.
+     Request thành công: xoá byte tạm nhưng giữ phản hồi (`UsedAt`, `ResultStatus`,
+     `ResultBody` ≤ 64 KB) tới khi phiên hết hạn. Gửi lại đúng request đó (mất phản hồi,
+     bấm hai lần) nhận lại phản hồi cũ thay vì lưu file lần hai hay tải lại file. Bị từ
+     chối hẳn (4xx như sai loại file, quá giới hạn) thì xoá phiên. Lỗi đáng thử lại (401,
+     408, 409, 429, 5xx, mất mạng) giữ phiên để gửi lại mà không tải lại file. Phiên đã
+     dùng không tính vào giới hạn 50 phiên mở.
   `GET`/`DELETE /api/upload-sessions/{id}` để hỏi tiến độ/huỷ; chỉ chủ phiên thấy phiên.
   Byte tạm nằm ở `App_Data/upload-sessions/` (ngoài wwwroot, cùng ổ với `wwwroot`),
   bảng `upload_sessions`; phiên rảnh quá 24 giờ bị `UploadSessionCleanupWorker` xoá

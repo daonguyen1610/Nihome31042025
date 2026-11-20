@@ -11925,12 +11925,26 @@ namespace nihomebackend.Migrations
                     b.Property<long>("ReceivedBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ResultBody")
+                        .HasMaxLength(65536)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResultContentType")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("ResultStatus")
+                        .HasColumnType("int");
+
                     b.Property<string>("TargetPath")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UsedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("UserId")

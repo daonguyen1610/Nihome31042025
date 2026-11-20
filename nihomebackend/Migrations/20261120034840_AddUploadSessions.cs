@@ -23,7 +23,11 @@ namespace nihomebackend.Migrations
                     ReceivedBytes = table.Column<long>(type: "bigint", nullable: false),
                     CreatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
                     UpdatedAt = table.Column<DateTime>(type: "datetime2", nullable: false),
-                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false)
+                    ExpiresAt = table.Column<DateTime>(type: "datetime2", nullable: false),
+                    UsedAt = table.Column<DateTime>(type: "datetime2", nullable: true),
+                    ResultStatus = table.Column<int>(type: "int", nullable: true),
+                    ResultContentType = table.Column<string>(type: "nvarchar(200)", maxLength: 200, nullable: true),
+                    ResultBody = table.Column<string>(type: "nvarchar(max)", maxLength: 65536, nullable: true)
                 },
                 constraints: table =>
                 {

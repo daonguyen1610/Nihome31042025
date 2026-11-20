@@ -332,6 +332,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             session.HasKey(item => item.Id);
             session.Property(item => item.TargetPath).HasMaxLength(UploadSession.TargetPathMaxLength);
             session.Property(item => item.FileName).HasMaxLength(255);
+            session.Property(item => item.ResultContentType).HasMaxLength(200);
+            session.Property(item => item.ResultBody).HasMaxLength(UploadSession.ResultBodyMaxLength);
             session.HasIndex(item => item.ExpiresAt);
             session.HasIndex(item => item.UserId);
         });

@@ -12,7 +12,7 @@ using NihomeBackend.Data;
 namespace nihomebackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261120025646_AddUploadSessions")]
+    [Migration("20261120034840_AddUploadSessions")]
     partial class AddUploadSessions
     {
         /// <inheritdoc />
@@ -10702,6 +10702,11 @@ namespace nihomebackend.Migrations
                     b.Property<string>("PrimaryPhone")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int>("ProjectDocumentMaxFileSizeMb")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(100);
+
                     b.Property<string>("ProjectScheduleEmailBodyTemplate")
                         .HasColumnType("nvarchar(max)");
 
@@ -11923,12 +11928,26 @@ namespace nihomebackend.Migrations
                     b.Property<long>("ReceivedBytes")
                         .HasColumnType("bigint");
 
+                    b.Property<string>("ResultBody")
+                        .HasMaxLength(65536)
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("ResultContentType")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<int?>("ResultStatus")
+                        .HasColumnType("int");
+
                     b.Property<string>("TargetPath")
                         .IsRequired()
                         .HasMaxLength(300)
                         .HasColumnType("nvarchar(300)");
 
                     b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<DateTime?>("UsedAt")
                         .HasColumnType("datetime2");
 
                     b.Property<int>("UserId")

@@ -1486,6 +1486,7 @@ Tệp lớn hơn 8 MB ở mọi màn hình được gửi từng phần, tiến 
 
 - Mất mạng giữa chừng thì hệ thống tự gửi lại phần đang dở, không tải lại từ đầu.
 - Nếu tải lại trang hoặc lần tải trước báo lỗi, hãy chọn lại **đúng tệp đó** rồi bấm tải lên: hệ thống gửi tiếp phần còn thiếu (trong vòng 24 giờ).
+- Nếu tệp thực ra đã lưu xong nhưng màn hình báo mất kết nối, chọn lại tệp đó và bấm tải lên: hệ thống trả về đúng tài liệu đã lưu, không tạo bản trùng.
 - Bấm ✕ trên khay để huỷ; phần đã gửi được xoá khỏi máy chủ.
 
 ---

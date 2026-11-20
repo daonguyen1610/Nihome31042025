@@ -38,14 +38,16 @@ public class UploadSessionServiceTests : IDisposable
 
     private static byte[] Bytes(int length, byte value) => Enumerable.Repeat(value, length).ToArray();
 
+    private static readonly UploadReplay Stored = new(201, "application/json; charset=utf-8", "{\"id\":7}");
+
     /// <summary>Uses the finished file like a successful upload request: reads it, then closes.</summary>
     private async Task<Tuple<byte[], string>?> CompleteAsync(Guid id, int user = Owner, string target = Target)
     {
         await using var held = await _sut.HoldCompletedAsync([id], user, target);
-        if (held is null) return null;
+        if (held is null || held.Replay is not null) return null;
         var file = held.Files.Single();
         var bytes = await File.ReadAllBytesAsync(file.StagingPath);
-        await held.CloseAsync();
+        await held.SucceededAsync(Stored);
         return Tuple.Create(bytes, file.FileName);
     }
 
@@ -63,8 +65,9 @@ public class UploadSessionServiceTests : IDisposable
         Assert.NotNull(completed);
         Assert.Equal([.. Bytes(6, 1), .. Bytes(4, 2)], completed!.Item1);
         Assert.Equal("hop-dong-ky.pdf", completed.Item2);
-        // Taken: the session is closed.
-        Assert.Null(await _sut.FindAsync(session.Id, Owner));
+        // Used: the staged bytes are gone, only the response is kept.
+        Assert.NotNull((await _sut.FindAsync(session.Id, Owner))!.UsedAt);
+        Assert.False(File.Exists(_sut.StagingPath(session.Id)));
     }
 
     [Fact]
@@ -142,7 +145,35 @@ public class UploadSessionServiceTests : IDisposable
 
         Assert.NotNull(await _sut.FindAsync(session.Id, Owner));
         Assert.Equal(Bytes(4, 1), (await CompleteAsync(session.Id))!.Item1);
+    }
+
+    [Fact]
+    public async Task ResendAfterALostReply_GetsTheFirstResponse_WithoutTheFileAgain()
+    {
+        var session = await StartAsync(4);
+        await SendAsync(session.Id, 0, Bytes(4, 1));
+        Assert.Equal(1, await _sut.CountOpenAsync(Owner));
+        await CompleteAsync(session.Id);
+
+        await using var resent = await _sut.HoldCompletedAsync([session.Id], Owner, Target);
+
+        Assert.Equal(Stored, resent!.Replay);
+        Assert.Empty(resent.Files);
+        // A used session no longer takes up the open-session allowance.
+        Assert.Equal(0, await _sut.CountOpenAsync(Owner));
+    }
+
+    [Fact]
+    public async Task RefusedUploadRequest_DropsTheSession()
+    {
+        var session = await StartAsync(4);
+        await SendAsync(session.Id, 0, Bytes(4, 1));
+
+        await using (var held = await _sut.HoldCompletedAsync([session.Id], Owner, Target))
+            await held!.RefusedAsync();
+
         Assert.Null(await _sut.FindAsync(session.Id, Owner));
+        Assert.False(File.Exists(_sut.StagingPath(session.Id)));
     }
 
     [Fact]
@@ -156,10 +187,13 @@ public class UploadSessionServiceTests : IDisposable
         var second = _sut.HoldCompletedAsync([session.Id], Owner, Target);
         await Task.Delay(50);
         Assert.False(second.IsCompleted);
-        await first!.CloseAsync();
+        await first!.SucceededAsync(Stored);
         await first.DisposeAsync();
 
-        Assert.Null(await second);
+        // The second gets the first one's response instead of storing the file again.
+        await using var replayed = await second;
+        Assert.Equal(Stored, replayed!.Replay);
+        Assert.Empty(replayed.Files);
     }
 
     [Fact]
