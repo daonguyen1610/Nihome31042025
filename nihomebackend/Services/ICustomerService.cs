@@ -23,6 +23,7 @@ public interface ICustomerService
         CustomerRelationshipStatus? status = null,
         int? ownerUserId = null,
         string? sourceCode = null,
+        string? businessSectorCode = null,
         string? search = null,
         DateTime? createdFrom = null,
         DateTime? createdTo = null,

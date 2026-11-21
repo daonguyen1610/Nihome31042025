@@ -918,6 +918,8 @@ Hầu hết controller có alias `/api/v1/...` cùng hành vi với `/api/...`.
 
 ### 8.1 Customer và Lead
 
+Customer có `BusinessSectorCode` (tuỳ chọn, mã master data `business_sector`, seed 35 lĩnh vực NICON trong `Seeds/master-data/defaults.json`) và `BusinessDetail` (tự nhập, tối đa 500 ký tự). Tạo hoặc đổi sang lĩnh vực phải đang bật; giữ nguyên lĩnh vực đã tắt vẫn lưu được. `GET /api/customers?businessSectorCode=` lọc theo lĩnh vực.
+
 | Method | Route | Permission | Ghi chú |
 |---|---|---|---|
 | `GET` | `/api/customers/{id}/documents` | `crm.customers.view` | Customer trong scope owner |

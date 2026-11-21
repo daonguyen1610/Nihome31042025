@@ -703,6 +703,9 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(c => c.Address).HasMaxLength(500);
             b.Property(c => c.RepresentativeName).HasMaxLength(200);
             b.Property(c => c.SourceCode).HasMaxLength(60).IsRequired();
+            b.Property(c => c.BusinessSectorCode).HasMaxLength(60);
+            b.Property(c => c.BusinessDetail).HasMaxLength(500);
+            b.HasIndex(c => c.BusinessSectorCode);
             b.Property(c => c.RelationshipStatus).HasConversion<string>().HasMaxLength(30);
             b.HasIndex(c => c.Type);
             b.HasIndex(c => c.RelationshipStatus);

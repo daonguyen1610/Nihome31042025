@@ -709,6 +709,69 @@ public class CustomerServiceTests : IDisposable
         return user;
     }
 
+    // ---------------- Business sector (NICON feedback rows 21, 22) ----------------
+
+    [Fact]
+    public async Task BusinessSector_IsSavedFilteredAndKeptAfterItIsSwitchedOff()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var food = SeedSector("food-beverage", isActive: true);
+        SeedSector("textile-garment", isActive: true);
+        var bakery = BuildCreate(type: CustomerType.Company, name: "Công ty CP Bánh kẹo Hữu Nghị");
+        bakery.BusinessSectorCode = "food-beverage";
+        bakery.BusinessDetail = "  Sản xuất bánh kẹo, kho lạnh  ";
+        var created = await _sut.CreateAsync(bakery, user.Id, canManage: true);
+        var garment = BuildCreate(name: "Anh Tuấn", phone: "0900002222");
+        garment.BusinessSectorCode = "textile-garment";
+        await _sut.CreateAsync(garment, user.Id, canManage: true);
+
+        Assert.Equal("Sản xuất bánh kẹo, kho lạnh", created.BusinessDetail);
+        var filtered = await _sut.ListAsync(user.Id, canSeeAll: true, businessSectorCode: "food-beverage");
+        Assert.Equal(created.Id, Assert.Single(filtered.Items).Id);
+
+        // An admin switches the sector off: the customer keeps it when saved again.
+        food.IsActive = false;
+        await _db.SaveChangesAsync();
+        var update = BuildUpdate(ownerUserId: user.Id);
+        update.Type = CustomerType.Company;
+        update.Name = bakery.Name;
+        update.BusinessSectorCode = "food-beverage";
+        update.RowVersion = created.RowVersion;
+        var updated = await _sut.UpdateAsync(created.Id, update, user.Id, canManage: true, canSeeAll: true);
+        Assert.Equal("food-beverage", updated!.BusinessSectorCode);
+    }
+
+    [Fact]
+    public async Task BusinessSector_NotInTheActiveList_IsRefused()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        SeedSector("mining-minerals", isActive: false);
+        var req = BuildCreate();
+        req.BusinessSectorCode = "mining-minerals";
+        await Assert.ThrowsAsync<CustomerOperationException>(() =>
+            _sut.CreateAsync(req, user.Id, canManage: true));
+        req.BusinessSectorCode = "khong-co";
+        await Assert.ThrowsAsync<CustomerOperationException>(() =>
+            _sut.CreateAsync(req, user.Id, canManage: true));
+    }
+
+    private MasterDataOption SeedSector(string code, bool isActive)
+    {
+        var option = new MasterDataOption
+        {
+            Category = "business_sector",
+            Code = code,
+            Name = code,
+            SortOrder = 1,
+            IsActive = isActive,
+        };
+        _db.MasterDataOptions.Add(option);
+        _db.SaveChanges();
+        return option;
+    }
+
     private void SeedSource(string code)
     {
         if (_db.MasterDataOptions.Any(o => o.Category == "customer_source" && o.Code == code)) return;

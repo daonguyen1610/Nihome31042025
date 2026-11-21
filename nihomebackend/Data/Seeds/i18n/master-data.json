@@ -1294,5 +1294,293 @@
     "en": "Storm",
     "zh": "雷暴",
     "ja": "嵐"
+  },
+  {
+    "key": "masterData.category.business_sector.title",
+    "category": "masterData",
+    "vi": "Lĩnh vực kinh doanh",
+    "en": "Business sector",
+    "zh": "经营领域",
+    "ja": "事業分野"
+  },
+  {
+    "key": "masterData.business_sector.food-beverage.label",
+    "category": "masterData",
+    "vi": "Thực phẩm & Đồ uống",
+    "en": "Food & beverage",
+    "zh": "食品饮料",
+    "ja": "食品・飲料"
+  },
+  {
+    "key": "masterData.business_sector.consumer-goods.label",
+    "category": "masterData",
+    "vi": "Hàng tiêu dùng (Đồ gia dụng; Chăm sóc cá nhân; Đồ dùng nhà ở; Đồ chơi & sản phẩm trẻ em; Sản phẩm thể thao)",
+    "en": "Consumer goods (household, personal care, home goods, toys and children's products, sports)",
+    "zh": "消费品（家居用品、个人护理、家庭用品、玩具及儿童用品、体育用品）",
+    "ja": "消費財（家庭用品、パーソナルケア、住まい用品、玩具・子ども用品、スポーツ用品）"
+  },
+  {
+    "key": "masterData.business_sector.electronics-semiconductor.label",
+    "category": "masterData",
+    "vi": "Điện, Điện tử & Bán dẫn",
+    "en": "Electrical, electronics & semiconductors",
+    "zh": "电气、电子与半导体",
+    "ja": "電気・電子・半導体"
+  },
+  {
+    "key": "masterData.business_sector.telecom-fiber.label",
+    "category": "masterData",
+    "vi": "Viễn thông & Cáp quang",
+    "en": "Telecommunications & fiber optics",
+    "zh": "电信与光纤",
+    "ja": "通信・光ファイバー"
+  },
+  {
+    "key": "masterData.business_sector.automotive.label",
+    "category": "masterData",
+    "vi": "Ô tô (Sản xuất ô tô; Lắp ráp xe; Linh kiện ô tô; Phụ tùng; Nội thất ô tô; Pin & linh kiện xe điện)",
+    "en": "Automotive (car making, vehicle assembly, components, spare parts, car interiors, EV batteries and parts)",
+    "zh": "汽车（整车制造、组装、零部件、配件、汽车内饰、电动车电池及部件）",
+    "ja": "自動車（自動車製造、組立、部品、補修部品、内装、EV電池・部品）"
+  },
+  {
+    "key": "masterData.business_sector.pharma-medical.label",
+    "category": "masterData",
+    "vi": "Dược phẩm, Thiết bị y tế & Chăm sóc sức khỏe",
+    "en": "Pharmaceuticals, medical devices & healthcare",
+    "zh": "医药、医疗器械与医疗保健",
+    "ja": "医薬品・医療機器・ヘルスケア"
+  },
+  {
+    "key": "masterData.business_sector.chemicals-oil-gas.label",
+    "category": "masterData",
+    "vi": "Hóa chất & Dầu khí (Hóa chất công nghiệp; Hóa chất chuyên dụng; Hóa dầu; Lọc dầu; Khí công nghiệp; Khí tự nhiên; Xăng dầu; Kho chứa hóa chất; Kho xăng dầu)",
+    "en": "Chemicals & oil and gas (industrial and specialty chemicals, petrochemicals, refining, industrial and natural gas, fuel, chemical and fuel storage)",
+    "zh": "化工与油气（工业化学品、专用化学品、石化、炼油、工业气体、天然气、燃油、化学品仓储、油库）",
+    "ja": "化学・石油ガス（工業薬品、特殊化学品、石油化学、精製、産業ガス、天然ガス、燃料、化学品倉庫、油槽所）"
+  },
+  {
+    "key": "masterData.business_sector.textile-garment.label",
+    "category": "masterData",
+    "vi": "Dệt may",
+    "en": "Textiles & garments",
+    "zh": "纺织服装",
+    "ja": "繊維・アパレル"
+  },
+  {
+    "key": "masterData.business_sector.plastic-rubber-packaging.label",
+    "category": "masterData",
+    "vi": "Nhựa, Cao su, Bao bì & In ấn",
+    "en": "Plastics, rubber, packaging & printing",
+    "zh": "塑料、橡胶、包装与印刷",
+    "ja": "プラスチック・ゴム・包装・印刷"
+  },
+  {
+    "key": "masterData.business_sector.paper-pulp.label",
+    "category": "masterData",
+    "vi": "Giấy & Bột giấy",
+    "en": "Paper & pulp",
+    "zh": "纸及纸浆",
+    "ja": "紙・パルプ"
+  },
+  {
+    "key": "masterData.business_sector.wood-furniture.label",
+    "category": "masterData",
+    "vi": "Gỗ & Nội thất",
+    "en": "Wood & furniture",
+    "zh": "木材与家具",
+    "ja": "木材・家具"
+  },
+  {
+    "key": "masterData.business_sector.metal-steel.label",
+    "category": "masterData",
+    "vi": "Kim loại & Thép",
+    "en": "Metals & steel",
+    "zh": "金属与钢铁",
+    "ja": "金属・鉄鋼"
+  },
+  {
+    "key": "masterData.business_sector.metal-machining.label",
+    "category": "masterData",
+    "vi": "Kim loại & Gia công cơ khí",
+    "en": "Metals & machining",
+    "zh": "金属与机械加工",
+    "ja": "金属・機械加工"
+  },
+  {
+    "key": "masterData.business_sector.building-materials.label",
+    "category": "masterData",
+    "vi": "Vật liệu xây dựng",
+    "en": "Building materials",
+    "zh": "建筑材料",
+    "ja": "建築資材"
+  },
+  {
+    "key": "masterData.business_sector.ceramics.label",
+    "category": "masterData",
+    "vi": "Gốm sứ",
+    "en": "Ceramics",
+    "zh": "陶瓷",
+    "ja": "陶磁器"
+  },
+  {
+    "key": "masterData.business_sector.cement-concrete.label",
+    "category": "masterData",
+    "vi": "Xi măng & Bê tông",
+    "en": "Cement & concrete",
+    "zh": "水泥与混凝土",
+    "ja": "セメント・コンクリート"
+  },
+  {
+    "key": "masterData.business_sector.mining-minerals.label",
+    "category": "masterData",
+    "vi": "Khai khoáng & Khoáng sản",
+    "en": "Mining & minerals",
+    "zh": "采矿与矿产",
+    "ja": "鉱業・鉱物"
+  },
+  {
+    "key": "masterData.business_sector.energy-power.label",
+    "category": "masterData",
+    "vi": "Năng lượng & Điện",
+    "en": "Energy & power",
+    "zh": "能源与电力",
+    "ja": "エネルギー・電力"
+  },
+  {
+    "key": "masterData.business_sector.agriculture-livestock.label",
+    "category": "masterData",
+    "vi": "Nông nghiệp & Chăn nuôi",
+    "en": "Agriculture & livestock",
+    "zh": "农业与畜牧",
+    "ja": "農業・畜産"
+  },
+  {
+    "key": "masterData.business_sector.warehousing-logistics.label",
+    "category": "masterData",
+    "vi": "Kho bãi & Logistics",
+    "en": "Warehousing & logistics",
+    "zh": "仓储与物流",
+    "ja": "倉庫・物流"
+  },
+  {
+    "key": "masterData.business_sector.water-waste-recycling.label",
+    "category": "masterData",
+    "vi": "Cấp nước, Xử lý nước thải & Tái chế",
+    "en": "Water supply, wastewater treatment & recycling",
+    "zh": "供水、污水处理与回收",
+    "ja": "上水・排水処理・リサイクル"
+  },
+  {
+    "key": "masterData.business_sector.industrial-products.label",
+    "category": "masterData",
+    "vi": "Sản xuất sản phẩm công nghiệp",
+    "en": "Industrial products manufacturing",
+    "zh": "工业产品制造",
+    "ja": "工業製品製造"
+  },
+  {
+    "key": "masterData.business_sector.electrical-lighting.label",
+    "category": "masterData",
+    "vi": "Điện & Thiết bị chiếu sáng",
+    "en": "Electrical & lighting equipment",
+    "zh": "电气与照明设备",
+    "ja": "電気・照明機器"
+  },
+  {
+    "key": "masterData.business_sector.trade-retail.label",
+    "category": "masterData",
+    "vi": "Thương mại & Bán lẻ",
+    "en": "Trade & retail",
+    "zh": "商贸与零售",
+    "ja": "商業・小売"
+  },
+  {
+    "key": "masterData.business_sector.office.label",
+    "category": "masterData",
+    "vi": "Văn phòng",
+    "en": "Offices",
+    "zh": "办公",
+    "ja": "オフィス"
+  },
+  {
+    "key": "masterData.business_sector.real-estate-housing.label",
+    "category": "masterData",
+    "vi": "Bất động sản & Nhà ở",
+    "en": "Real estate & housing",
+    "zh": "房地产与住宅",
+    "ja": "不動産・住宅"
+  },
+  {
+    "key": "masterData.business_sector.hotel-resort.label",
+    "category": "masterData",
+    "vi": "Khách sạn & Nghỉ dưỡng",
+    "en": "Hotels & resorts",
+    "zh": "酒店与度假",
+    "ja": "ホテル・リゾート"
+  },
+  {
+    "key": "masterData.business_sector.serviced-apartment.label",
+    "category": "masterData",
+    "vi": "Căn hộ dịch vụ",
+    "en": "Serviced apartments",
+    "zh": "服务式公寓",
+    "ja": "サービスアパートメント"
+  },
+  {
+    "key": "masterData.business_sector.education.label",
+    "category": "masterData",
+    "vi": "Giáo dục",
+    "en": "Education",
+    "zh": "教育",
+    "ja": "教育"
+  },
+  {
+    "key": "masterData.business_sector.media-broadcasting.label",
+    "category": "masterData",
+    "vi": "Truyền thông & Truyền hình",
+    "en": "Media & broadcasting",
+    "zh": "传媒与电视",
+    "ja": "メディア・放送"
+  },
+  {
+    "key": "masterData.business_sector.finance-banking.label",
+    "category": "masterData",
+    "vi": "Tài chính Ngân hàng",
+    "en": "Finance & banking",
+    "zh": "金融银行",
+    "ja": "金融・銀行"
+  },
+  {
+    "key": "masterData.business_sector.transport.label",
+    "category": "masterData",
+    "vi": "Giao thông vận tải",
+    "en": "Transport",
+    "zh": "交通运输",
+    "ja": "運輸"
+  },
+  {
+    "key": "masterData.business_sector.port-maritime-aviation.label",
+    "category": "masterData",
+    "vi": "Cảng, Hàng hải, Hàng không & Sân bay",
+    "en": "Ports, maritime, aviation & airports",
+    "zh": "港口、航运、航空与机场",
+    "ja": "港湾・海運・航空・空港"
+  },
+  {
+    "key": "masterData.business_sector.public-government.label",
+    "category": "masterData",
+    "vi": "Công trình công cộng & Chính phủ",
+    "en": "Public works & government",
+    "zh": "公共工程与政府",
+    "ja": "公共施設・官公庁"
+  },
+  {
+    "key": "masterData.business_sector.other.label",
+    "category": "masterData",
+    "vi": "Lĩnh vực khác",
+    "en": "Other sectors",
+    "zh": "其他领域",
+    "ja": "その他の分野"
   }
 ]

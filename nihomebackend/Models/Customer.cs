@@ -26,6 +26,12 @@ public class Customer : IConcurrencyTracked
     /// <summary>Master-data code from <c>customer_source</c> (marketing, referral, website…).</summary>
     public string SourceCode { get; set; } = string.Empty;
 
+    /// <summary>Master-data code from <c>business_sector</c> (NICON's list); optional.</summary>
+    public string? BusinessSectorCode { get; set; }
+
+    /// <summary>What the customer does within that sector, as typed by Sales.</summary>
+    public string? BusinessDetail { get; set; }
+
     public CustomerRelationshipStatus RelationshipStatus { get; set; } = CustomerRelationshipStatus.Prospect;
 
     /// <summary>Sales owner. Nullable while unassigned; SetNull on user delete.</summary>

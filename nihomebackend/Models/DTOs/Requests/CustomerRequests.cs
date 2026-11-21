@@ -48,6 +48,13 @@ public class CreateCustomerRequest
     [StringLength(60, MinimumLength = 1)]
     public string SourceCode { get; set; } = string.Empty;
 
+    /// <summary>Optional master-data code from <c>business_sector</c>.</summary>
+    [StringLength(60)]
+    public string? BusinessSectorCode { get; set; }
+
+    [StringLength(500)]
+    public string? BusinessDetail { get; set; }
+
     /// <summary>Optional explicit owner. If null, service assigns caller (when sales) or leaves unassigned.</summary>
     public int? OwnerUserId { get; set; }
 
@@ -95,6 +102,13 @@ public class UpdateCustomerRequest : IConcurrencyRequest
     [Required]
     [StringLength(60, MinimumLength = 1)]
     public string SourceCode { get; set; } = string.Empty;
+
+    /// <summary>Optional master-data code from <c>business_sector</c>.</summary>
+    [StringLength(60)]
+    public string? BusinessSectorCode { get; set; }
+
+    [StringLength(500)]
+    public string? BusinessDetail { get; set; }
 
     [Required]
     public CustomerRelationshipStatus RelationshipStatus { get; set; }

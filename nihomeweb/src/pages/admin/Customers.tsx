@@ -38,6 +38,7 @@ import { validateContact, type ContactIssue } from "@/lib/validation";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -115,6 +116,59 @@ const emptyContact: UpsertCustomerContactRequest = {
   isLegalRepresentative: false,
 };
 
+/** NICON's business sector (from Danh mục) and what the customer does in it; both optional. */
+function BusinessSectorFields({
+  sectorCode,
+  detail,
+  sectors,
+  onChange,
+  t,
+}: {
+  sectorCode?: string | null;
+  detail?: string | null;
+  sectors: MasterDataOption[];
+  onChange: (next: { businessSectorCode: string | null; businessDetail: string }) => void;
+  t: (key: string) => string;
+}) {
+  const known = !sectorCode || sectors.some((s) => s.code === sectorCode);
+  return (
+    <>
+      <FieldScope>
+        <Label>{t("customers.field.businessSector")}</Label>
+        <SearchableSelect
+          value={sectorCode || "__none"}
+          onChange={(v) =>
+            onChange({
+              businessSectorCode: v === "__none" ? null : v,
+              businessDetail: detail ?? "",
+            })
+          }
+          ariaLabel={t("customers.field.businessSector")}
+          searchPlaceholder={t("customers.businessSector.search")}
+          data-testid="customer-business-sector"
+          options={[
+            { value: "__none", label: t("customers.businessSector.none") },
+            // A sector an admin switched off still shows on the customers that have it.
+            ...(known ? [] : [{ value: sectorCode!, label: sectorCode! }]),
+            ...sectors.map((s) => ({ value: s.code, label: s.name })),
+          ]}
+        />
+      </FieldScope>
+      <FieldScope>
+        <Label>{t("customers.field.businessDetail")}</Label>
+        <Input
+          value={detail ?? ""}
+          maxLength={500}
+          placeholder={t("customers.businessDetail.placeholder")}
+          onChange={(e) =>
+            onChange({ businessSectorCode: sectorCode ?? null, businessDetail: e.target.value })
+          }
+        />
+      </FieldScope>
+    </>
+  );
+}
+
 const emptyCreate: CreateCustomerRequest = {
   type: "Individual",
   name: "",
@@ -148,10 +202,12 @@ const AdminCustomers = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [sources, setSources] = useState<MasterDataOption[]>([]);
+  const [sectors, setSectors] = useState<MasterDataOption[]>([]);
 
   const [typeFilter, setTypeFilter] = useState<CustomerType | "">("");
   const [statusFilter, setStatusFilter] = useState<CustomerRelationshipStatus | "">("");
   const [sourceFilter, setSourceFilter] = useState("");
+  const [sectorFilter, setSectorFilter] = useState("");
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
@@ -222,9 +278,10 @@ const AdminCustomers = () => {
     if (typeFilter) params.type = typeFilter;
     if (statusFilter) params.status = statusFilter;
     if (sourceFilter) params.sourceCode = sourceFilter;
+    if (sectorFilter) params.businessSectorCode = sectorFilter;
     if (search.trim()) params.search = search.trim();
     return params;
-  }, [typeFilter, statusFilter, sourceFilter, search]);
+  }, [typeFilter, statusFilter, sourceFilter, sectorFilter, search]);
 
   const fetchList = useCallback(async () => {
     setLoading(true);
@@ -248,8 +305,14 @@ const AdminCustomers = () => {
     let cancelled = false;
     (async () => {
       try {
-        const { data } = await adminApi.getMasterDataOptions("customer_source", lang);
-        if (!cancelled) setSources(data);
+        const [source, sector] = await Promise.all([
+          adminApi.getMasterDataOptions("customer_source", lang),
+          adminApi.getMasterDataOptions("business_sector", lang),
+        ]);
+        if (!cancelled) {
+          setSources(source.data);
+          setSectors(sector.data);
+        }
       } catch {
         // best-effort — dropdown may just be empty
       }
@@ -264,6 +327,10 @@ const AdminCustomers = () => {
     sources.forEach((s) => map.set(s.code, s.name));
     return map;
   }, [sources]);
+  const sectorLabel = useCallback(
+    (code?: string | null) => (code ? (sectors.find((s) => s.code === code)?.name ?? code) : ""),
+    [sectors],
+  );
 
   const fetchDocuments = async (customerId: number) => {
     setDocumentsLoading(true);
@@ -370,6 +437,8 @@ const AdminCustomers = () => {
           address: data.address,
           representativeName: data.representativeName,
           sourceCode: data.sourceCode,
+          businessSectorCode: data.businessSectorCode ?? null,
+          businessDetail: data.businessDetail ?? null,
           relationshipStatus: data.relationshipStatus,
           ownerUserId: data.ownerUserId,
           note: data.note,
@@ -718,6 +787,11 @@ const AdminCustomers = () => {
         { header: t("customers.field.taxId"), value: (c) => c.taxId ?? "" },
         { header: t("customers.field.address"), value: (c) => c.address ?? "" },
         {
+          header: t("customers.field.businessSector"),
+          value: (c) => sectorLabel(c.businessSectorCode),
+        },
+        { header: t("customers.field.businessDetail"), value: (c) => c.businessDetail ?? "" },
+        {
           header: t("customers.field.representativeName"),
           value: (c) => c.representativeName ?? "",
         },
@@ -771,7 +845,7 @@ const AdminCustomers = () => {
           </div>
         </header>
 
-        <section className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)]">
+        <section className="grid gap-2 rounded-lg border bg-card p-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1.5fr)]">
           <div className="sm:col-span-2 lg:col-span-1">
             <Label className="text-xs" htmlFor="customer-search">
               {t("customers.filter.search")}
@@ -852,6 +926,23 @@ const AdminCustomers = () => {
                 ))}
               </SelectContent>
             </Select>
+          </FieldScope>
+          <FieldScope className="sm:col-span-2 lg:col-span-1">
+            <Label className="text-xs">{t("customers.filter.businessSector")}</Label>
+            <SearchableSelect
+              value={sectorFilter || "__all"}
+              onChange={(v) => {
+                setPage(1);
+                setSectorFilter(v === "__all" ? "" : v);
+              }}
+              ariaLabel={t("customers.filter.businessSector")}
+              searchPlaceholder={t("customers.businessSector.search")}
+              className="h-9"
+              options={[
+                { value: "__all", label: t("customers.filter.all") },
+                ...sectors.map((s) => ({ value: s.code, label: s.name })),
+              ]}
+            />
           </FieldScope>
         </section>
 
@@ -1219,6 +1310,13 @@ const AdminCustomers = () => {
                 autoFocus
               />
             </FieldScope>
+            <BusinessSectorFields
+              sectorCode={createForm.businessSectorCode}
+              detail={createForm.businessDetail}
+              sectors={sectors}
+              onChange={(next) => setCreateForm({ ...createForm, ...next })}
+              t={t}
+            />
             {createForm.type === "Company" && (
               <>
                 <div className="grid grid-cols-2 gap-3">
@@ -1472,6 +1570,15 @@ const AdminCustomers = () => {
                             {t("customers.field.source")}
                           </div>
                           <div>{sourceLabelByCode.get(detail.sourceCode) ?? detail.sourceCode}</div>
+                        </div>
+                        <div className="col-span-2">
+                          <div className="text-xs text-muted-foreground">
+                            {t("customers.field.businessSector")}
+                          </div>
+                          <div>
+                            {sectorLabel(detail.businessSectorCode) || "—"}
+                            {detail.businessDetail ? ` · ${detail.businessDetail}` : ""}
+                          </div>
                         </div>
                         <div>
                           <div className="text-xs text-muted-foreground">
@@ -1749,6 +1856,13 @@ const AdminCustomers = () => {
                             </SelectContent>
                           </Select>
                         </FieldScope>
+                        <BusinessSectorFields
+                          sectorCode={editForm.businessSectorCode}
+                          detail={editForm.businessDetail}
+                          sectors={sectors}
+                          onChange={(next) => setEditForm({ ...editForm, ...next })}
+                          t={t}
+                        />
                         <FieldScope>
                           <Label>{t("customers.field.note")}</Label>
                           <Textarea

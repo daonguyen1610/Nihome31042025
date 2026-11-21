@@ -110,5 +110,11 @@
   { "key": "customers.tab.related.projects.empty", "category": "customers", "vi": "Khách hàng chưa có dự án.", "en": "This customer has no projects.", "zh": "该客户尚无项目。", "ja": "この顧客にはプロジェクトがありません。" },
   {"key": "customers.activity.followUpDate", "category": "customers", "vi": "Ngày nhắc gọi lại/thăm", "en": "Follow-up date", "zh": "回访提醒日期", "ja": "フォローアップ日"},
   {"key": "customers.activity.followUpHelp", "category": "customers", "vi": "Không bắt buộc. Đến ngày này, người ghi sẽ nhận thông báo nhắc.", "en": "Optional. You get a reminder on this date.", "zh": "选填。到期当天您会收到提醒。", "ja": "任意。この日に通知が届きます。"},
-  {"key": "customers.activity.followUpOn", "category": "customers", "vi": "Nhắc gọi lại/thăm: {date}", "en": "Follow up on {date}", "zh": "回访提醒：{date}", "ja": "フォローアップ：{date}"}
+  {"key": "customers.activity.followUpOn", "category": "customers", "vi": "Nhắc gọi lại/thăm: {date}", "en": "Follow up on {date}", "zh": "回访提醒：{date}", "ja": "フォローアップ：{date}"},
+  {"key": "customers.field.businessSector", "category": "customers", "vi": "Lĩnh vực kinh doanh", "en": "Business sector", "zh": "经营领域", "ja": "事業分野"},
+  {"key": "customers.field.businessDetail", "category": "customers", "vi": "Chi tiết ngành nghề", "en": "Business details", "zh": "行业详情", "ja": "業種の詳細"},
+  {"key": "customers.filter.businessSector", "category": "customers", "vi": "Lĩnh vực kinh doanh", "en": "Business sector", "zh": "经营领域", "ja": "事業分野"},
+  {"key": "customers.businessSector.none", "category": "customers", "vi": "Chưa chọn", "en": "Not chosen", "zh": "未选择", "ja": "未選択"},
+  {"key": "customers.businessSector.search", "category": "customers", "vi": "Tìm lĩnh vực…", "en": "Search sectors…", "zh": "搜索领域…", "ja": "分野を検索…"},
+  {"key": "customers.businessDetail.placeholder", "category": "customers", "vi": "Ví dụ: sản xuất bao bì giấy cho ngành thực phẩm", "en": "E.g. paper packaging for the food industry", "zh": "例如：为食品行业生产纸包装", "ja": "例：食品業界向け紙包装の製造"}
 ]

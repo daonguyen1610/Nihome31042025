@@ -73,6 +73,8 @@ export interface CustomerResponse {
   representativeName?: string;
   legalRepresentativeContactId?: number | null;
   sourceCode: string;
+  businessSectorCode?: string | null;
+  businessDetail?: string | null;
   relationshipStatus: CustomerRelationshipStatus;
   ownerUserId?: number;
   ownerName?: string;
@@ -108,6 +110,8 @@ export interface CreateCustomerRequest {
   address?: string;
   representativeName?: string;
   sourceCode: string;
+  businessSectorCode?: string | null;
+  businessDetail?: string | null;
   ownerUserId?: number | null;
   note?: string;
   primaryContact: UpsertCustomerContactRequest;
@@ -122,6 +126,8 @@ export interface UpdateCustomerRequest {
   address?: string;
   representativeName?: string;
   sourceCode: string;
+  businessSectorCode?: string | null;
+  businessDetail?: string | null;
   relationshipStatus: CustomerRelationshipStatus;
   ownerUserId?: number | null;
   note?: string;
@@ -148,6 +154,7 @@ export interface CustomerListParams {
   status?: CustomerRelationshipStatus;
   ownerUserId?: number;
   sourceCode?: string;
+  businessSectorCode?: string;
   search?: string;
   createdFrom?: string;
   createdTo?: string;
