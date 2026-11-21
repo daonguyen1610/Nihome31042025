@@ -179,4 +179,5 @@ public sealed record ContractProjectSiteResponse(
     ProjectConstructionKind? ConstructionKind,
     string? BusinessSectorCode,
     decimal? SiteAreaM2,
-    string? BusinessSectorName = null);
+    string? BusinessSectorName = null,
+    string? BusinessSectorLabelKey = null);

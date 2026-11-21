@@ -356,12 +356,6 @@ public class ContractService(
                     c.OperationalProject.ConstructionKind,
                     c.OperationalProject.BusinessSectorCode,
                     c.OperationalProject.SiteAreaM2,
-                    // Read in the same query; the client prefers its localized sector list.
-                    BusinessSectorName = db.MasterDataOptions
-                        .Where(option => option.Category == BusinessSectors.Category &&
-                            option.Code == c.OperationalProject.BusinessSectorCode)
-                        .Select(option => option.Name)
-                        .FirstOrDefault(),
                 },
                 // Contract has no navigation to DesignProject — the foreign key
                 // lives on the other side — so this reads as a correlated subquery,
@@ -420,27 +414,26 @@ public class ContractService(
         // The contract reads the project's site details rather than keeping copies (feedback row 25),
         // for callers who may open that project. Every contract response is built here, so the
         // rule holds for reads and for the result of each change alike.
-        response.ProjectSite = row.ProjectSite is null ||
-            !await CanViewProjectAsync(callerUserId, row.Contract.OperationalProjectId!.Value, ct)
-            ? null
-            : new ContractProjectSiteResponse(row.ProjectSite.SiteAddress, row.ProjectSite.ConstructionKind,
-                row.ProjectSite.BusinessSectorCode, row.ProjectSite.SiteAreaM2,
-                row.ProjectSite.BusinessSectorName);
+        if (row.ProjectSite is not null &&
+            await CanViewProjectAsync(callerUserId, row.Contract.OperationalProjectId!.Value, ct))
+        {
+            var (sectorName, sectorLabelKey) = await BusinessSectors.LabelAsync(db, row.ProjectSite.BusinessSectorCode, ct);
+            response.ProjectSite = new ContractProjectSiteResponse(row.ProjectSite.SiteAddress,
+                row.ProjectSite.ConstructionKind, row.ProjectSite.BusinessSectorCode, row.ProjectSite.SiteAreaM2,
+                sectorName, sectorLabelKey);
+        }
         return response;
     }
 
-    /// <summary>
-    /// The project page's rule (OperationalProjectService.CanView): project view, and either all
-    /// projects or being this project's manager, creator or active team member.
-    /// </summary>
+    /// <summary>The project page's own rule (OperationalProjectService.CanView), not a copy.</summary>
     private async Task<bool> CanViewProjectAsync(int callerUserId, int projectId, CancellationToken ct)
     {
-        if (permissions is null) return false;
-        if (!await permissions.HasAsync(callerUserId, "operations.projects.view", ct)) return false;
-        return await permissions.HasAsync(callerUserId, "operations.projects.view.all", ct) ||
-            await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId &&
-                (project.ProjectManagerUserId == callerUserId || project.CreatedByUserId == callerUserId ||
-                 project.TeamMembers.Any(member => member.UserId == callerUserId && member.EndedAt == null)), ct);
+        if (permissions is null || !await permissions.HasAsync(callerUserId, "operations.projects.view", ct))
+            return false;
+        var project = await db.OperationalProjects.AsNoTracking().Include(item => item.TeamMembers)
+            .SingleOrDefaultAsync(item => item.Id == projectId, ct);
+        return project is not null && OperationalProjectService.CanView(project, callerUserId,
+            await permissions.HasAsync(callerUserId, "operations.projects.view.all", ct));
     }
 
     public Task<string> PreviewNextNumberAsync(CancellationToken ct = default) =>

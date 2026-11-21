@@ -591,19 +591,23 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // The chosen project's site details, read fresh each time (another tab may have just
   // completed them) and also for a prefilled project outside the loaded list (feedback row 25).
   const [siteProject, setSiteProject] = useState<OperationalProjectResponse | null>(null);
-  // Coming back after "Bổ sung ở trang Dự án" reads the project again; other tab switches don't.
+  // While the chosen project still lacks site details, coming back to this tab (for example
+  // after "Bổ sung ở trang Dự án", however the link was opened) reads it again.
   const [siteRefresh, setSiteRefresh] = useState(0);
-  const projectTabOpened = useRef(false);
+  const siteIncomplete =
+    siteProject != null &&
+    (!siteProject.siteAddress ||
+      !siteProject.constructionKind ||
+      !siteProject.businessSectorCode ||
+      siteProject.siteAreaM2 == null);
   useEffect(() => {
-    if (!dialogOpen) return;
+    if (!dialogOpen || !siteIncomplete) return;
     const refresh = () => {
-      if (document.visibilityState !== "visible" || !projectTabOpened.current) return;
-      projectTabOpened.current = false;
-      setSiteRefresh((value) => value + 1);
+      if (document.visibilityState === "visible") setSiteRefresh((value) => value + 1);
     };
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
-  }, [dialogOpen]);
+  }, [dialogOpen, siteIncomplete]);
   useEffect(() => {
     const projectId = form.operationalProjectId;
     if (!dialogOpen || projectId == null || !canViewOperationalProjects) {
@@ -2136,9 +2140,6 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   site={siteProject}
                   projectHref={`/admin/operational-projects/${siteProject.id}`}
                   openInNewTab
-                  onOpenProject={() => {
-                    projectTabOpened.current = true;
-                  }}
                   className="mt-2 bg-muted/30 p-3"
                   compact
                   testId="contract-project-site"

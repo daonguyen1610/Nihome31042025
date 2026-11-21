@@ -2,15 +2,16 @@ import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { formatNumber } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
-import { useBusinessSectors } from "@/hooks/useBusinessSectors";
+import { masterDataLabel } from "@/lib/masterDataLabel";
 import type { ProjectConstructionKind } from "@/services/admin/types/operationalProjects";
 
 export interface ProjectSite {
   siteAddress?: string | null;
   constructionKind?: ProjectConstructionKind | null;
   businessSectorCode?: string | null;
-  /** The sector's name as set in master data, sent by the server. */
+  /** The sector's master-data name and translation key, sent with the project. */
   businessSectorName?: string | null;
+  businessSectorLabelKey?: string | null;
   siteAreaM2?: number | null;
 }
 
@@ -23,7 +24,6 @@ export function ProjectSiteDetails({
   site,
   projectHref,
   openInNewTab = false,
-  onOpenProject,
   className,
   compact = false,
   testId = "project-site",
@@ -32,21 +32,20 @@ export function ProjectSiteDetails({
   projectHref?: string;
   /** Inside an unsaved form: the project opens in a new tab so the draft is kept. */
   openInNewTab?: boolean;
-  /** Called when the user follows the link to complete the project's details. */
-  onOpenProject?: () => void;
   className?: string;
   /** Two columns at most, for narrow places such as a dialog. */
   compact?: boolean;
   testId?: string;
 }) {
-  const { t, lang } = useI18n();
-  // One source for sector names: the localized list every sector screen uses; the name the
-  // server sent only when that list cannot be read; the code as a last resort.
-  const sectors = useBusinessSectors(lang);
+  const { t } = useI18n();
+  // The server sends the sector's name and translation key with the project, so every viewer
+  // sees the same name in their language without loading the master-data list.
   const sector = site.businessSectorCode
-    ? sectors.find((item) => item.code === site.businessSectorCode)?.name ||
-      site.businessSectorName ||
-      site.businessSectorCode
+    ? masterDataLabel(t, {
+        labelKey: site.businessSectorLabelKey,
+        name: site.businessSectorName,
+        code: site.businessSectorCode,
+      })
     : "";
   const fields = [
     { key: "siteAddress", value: site.siteAddress ?? "" },
@@ -87,7 +86,6 @@ export function ProjectSiteDetails({
               <Link
                 className="underline underline-offset-4"
                 to={projectHref}
-                onClick={onOpenProject}
                 {...(openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
               >
                 {t("operationalProjects.site.openProject")}

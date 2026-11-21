@@ -8,7 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ProjectSiteDetails } from "@/components/admin/ProjectSiteDetails";
-import { useBusinessSectors } from "@/hooks/useBusinessSectors";
+import { masterDataLabel } from "@/lib/masterDataLabel";
 import { personOption } from "@/lib/people";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -185,8 +185,26 @@ const OperationalProjects = () => {
     [customers, t],
   );
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
-  // Loaded on its own: a user who may not read master data still gets customers and people.
-  const sectors = useBusinessSectors(lang);
+  // Loaded on its own (a user who may not read master data still gets customers and people),
+  // switched-off sectors included so a project that keeps one still shows its name.
+  const [sectors, setSectors] = useState<MasterDataOption[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    adminApi
+      .getMasterDataOptions("business_sector", lang, true)
+      .then(({ data }) => {
+        if (!cancelled)
+          setSectors(
+            (data ?? []).map((option) => ({ ...option, name: masterDataLabel(t, option) })),
+          );
+      })
+      .catch(() => {
+        // Without master data the picker is empty; the project card still names its sector.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [lang, t]);
   const sectorLabel = useCallback(
     (code?: string | null) => (code ? (sectors.find((s) => s.code === code)?.name ?? code) : ""),
     [sectors],

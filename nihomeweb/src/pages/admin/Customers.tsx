@@ -1,4 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
+import { masterDataLabel } from "@/lib/masterDataLabel";
 import { useUploadLimit } from "@/hooks/useUploadLimit";
 import { getUiError } from "@/lib/apiError";
 import { useConfirm } from "@/components/ui/confirmation";
@@ -314,7 +315,10 @@ const AdminCustomers = () => {
         ]);
         if (!cancelled) {
           setSources(source.data);
-          setSectors(sector.data);
+          // Names in the user's language: the label key's translation, else the admin's name.
+          setSectors(
+            sector.data.map((option) => ({ ...option, name: masterDataLabel(t, option) })),
+          );
         }
       } catch {
         // best-effort — dropdown may just be empty
@@ -323,7 +327,7 @@ const AdminCustomers = () => {
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, t]);
 
   const sourceLabelByCode = useMemo(() => {
     const map = new Map<string, string>();

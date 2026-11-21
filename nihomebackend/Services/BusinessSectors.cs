@@ -11,12 +11,20 @@ public static class BusinessSectors
     public const string Category = "business_sector";
     public const string NotInListMessage = "Lĩnh vực kinh doanh đã chọn không có trong danh mục. Hãy chọn lại.";
 
-    /// <summary>The sector's name in master data, also for one switched off; null when unknown.</summary>
-    public static Task<string?> NameAsync(AppDbContext db, string? code, CancellationToken ct) =>
-        string.IsNullOrEmpty(code)
-            ? Task.FromResult<string?>(null)
-            : db.MasterDataOptions.AsNoTracking().Where(o => o.Category == Category && o.Code == code)
-                .Select(o => o.Name).FirstOrDefaultAsync(ct);
+    /// <summary>
+    /// The sector's master-data name and translation key, also for one switched off; nulls when
+    /// unknown. The one lookup used wherever a sector is named.
+    /// </summary>
+    public static async Task<(string? Name, string? LabelKey)> LabelAsync(
+        AppDbContext db, string? code, CancellationToken ct)
+    {
+        if (string.IsNullOrEmpty(code)) return (null, null);
+        var option = await db.MasterDataOptions.AsNoTracking()
+            .Where(o => o.Category == Category && o.Code == code)
+            .Select(o => new { o.Name, o.LabelKey })
+            .FirstOrDefaultAsync(ct);
+        return (option?.Name, option?.LabelKey);
+    }
 
     /// <summary>
     /// The trimmed code, or null when none was chosen; false when it is not in the active list.
