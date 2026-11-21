@@ -267,7 +267,7 @@ Mở **CRM → Dự án** để tạo hoặc tìm dự án trước khi làm vi�
 | Đã hủy (`Cancelled`) | Ngừng; vẫn xem được như trên |
 
 - Chỉ xóa được dự án đang **Lập kế hoạch** và chưa có dữ liệu. Dự án đã có lịch sử nghiệp vụ thì chuyển **Đã hủy**.
-- Không đổi được khách hàng khi dự án đã có bản ghi liên kết.
+- Đổi được khách hàng (ví dụ tạo nhầm khách hàng) khi dự án chưa có cơ hội, báo giá, hợp đồng hay hồ sơ thiết kế; đội ngũ, phân công và tài liệu không chặn việc này, tài liệu chuyển theo khách hàng mới. Khi đã có các bản ghi đó, hệ thống báo số lượng từng loại. Nếu chỉ nhập sai tên khách hàng, sửa tên tại **Quản lý Khách hàng**.
 - Dự án không lưu trữ (archive) theo khối. Thao tác lưu trữ trong một luồng tài liệu chỉ áp dụng cho tài liệu đó.
 
 **Quyền xem và sửa.** Mặc định bạn thấy dự án mình tạo hoặc quản lý. Vai trò xem được tất cả dự án thì thấy toàn bộ danh mục. Tạo và sửa cần quyền quản lý dự án.

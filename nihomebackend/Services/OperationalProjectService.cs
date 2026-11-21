@@ -321,11 +321,14 @@ public class OperationalProjectService(
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
 
         await ValidateAsync(request, callerUserId, canSeeAll, ct);
-        if (project.CustomerId != request.CustomerId &&
-            await HasDependenciesAsync(project.Id, ct))
+        if (project.CustomerId != request.CustomerId)
         {
-            throw new OperationalProjectOperationException(
-                "Không thể đổi Khách hàng khi Dự án đã có dữ liệu nghiệp vụ.");
+            await EnsureCustomerCanChangeAsync(project.Id, ct);
+            // The project's documents were filed under the old customer: they follow it.
+            foreach (var document in await db.ProjectDocuments
+                         .Where(item => item.OperationalProjectId == project.Id && item.CustomerId == project.CustomerId)
+                         .ToListAsync(ct))
+                document.CustomerId = request.CustomerId;
         }
         ValidateTransition(project.Status, request.Status);
         if (project.Status != OperationalProjectStatus.Completed &&
@@ -543,15 +546,31 @@ public class OperationalProjectService(
         return result;
     }
 
-    private async Task<bool> HasDependenciesAsync(int projectId, CancellationToken ct) =>
-        await db.Opportunities.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.Quotes.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.Contracts.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.ProjectDocuments.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.OperationalProjectMembers.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.OperationalProjectAssignments.AnyAsync(item => item.OperationalProjectId == projectId, ct) ||
-        await db.OperationalProjectTeamHistory.AnyAsync(item => item.OperationalProjectId == projectId, ct);
+    /// <summary>
+    /// A project created with the wrong customer can be moved to the right one until records
+    /// that belong to that customer hang off it: opportunities (with their quotes), contracts and
+    /// design dossiers. Its team, assignments and documents do not depend on the customer, so
+    /// they do not block it (NICON feedback row 35). When blocked, the message says what blocks
+    /// and what to do.
+    /// </summary>
+    private async Task EnsureCustomerCanChangeAsync(int projectId, CancellationToken ct)
+    {
+        var opportunities = await db.Opportunities.CountAsync(item => item.OperationalProjectId == projectId, ct);
+        var quotes = await db.Quotes.CountAsync(item => item.OperationalProjectId == projectId, ct);
+        var contracts = await db.Contracts.CountAsync(item => item.OperationalProjectId == projectId, ct);
+        var designs = await db.DesignProjects.CountAsync(item => item.OperationalProjectId == projectId, ct);
+        if (opportunities + quotes + contracts + designs == 0) return;
+        throw new OperationalProjectOperationException(
+            $"Chưa đổi được khách hàng vì dự án đã có {opportunities} cơ hội, {quotes} báo giá, {contracts} hợp đồng, {designs} hồ sơ thiết kế của khách hàng hiện tại. Nếu chỉ nhập sai tên khách hàng, hãy sửa tên tại Quản lý Khách hàng. Nếu đúng là khách hàng khác, hãy xử lý các bản ghi trên (mở từ trang chi tiết dự án) rồi đổi lại.",
+            "OPERATIONAL_PROJECT_CUSTOMER_IN_USE",
+            new Dictionary<string, object>
+            {
+                ["opportunities"] = opportunities,
+                ["quotes"] = quotes,
+                ["contracts"] = contracts,
+                ["designs"] = designs,
+            });
+    }
 
     private async Task ValidateCompletionAsync(int projectId, CancellationToken ct)
     {

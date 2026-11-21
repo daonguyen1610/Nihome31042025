@@ -4,7 +4,16 @@ using NihomeBackend.Services.HardDelete;
 
 namespace NihomeBackend.Services;
 
-public sealed class OperationalProjectOperationException(string message) : Exception(message);
+/// <param name="code">Stable code the client maps to a localized message, when it needs one.</param>
+/// <param name="parameters">Values that message needs.</param>
+public sealed class OperationalProjectOperationException(string message, string? code = null,
+    IReadOnlyDictionary<string, object>? parameters = null) : Exception(message)
+{
+    public string? Code => code;
+    public IReadOnlyDictionary<string, object>? Parameters => parameters;
+
+    public object ToResponse() => NihomeBackend.Infrastructure.CodedErrorBody.Create(Message, Code, Parameters);
+}
 
 public interface IOperationalProjectService
 {

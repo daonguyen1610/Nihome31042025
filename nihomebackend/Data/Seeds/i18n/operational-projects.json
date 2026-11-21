@@ -1694,5 +1694,13 @@
     "en": "Changed",
     "zh": "已变更",
     "ja": "変更"
+  },
+  {
+    "key": "operationalProjects.error.customerInUse",
+    "category": "operationalProjects",
+    "vi": "Chưa đổi được khách hàng vì dự án đã có {opportunities} cơ hội, {quotes} báo giá, {contracts} hợp đồng, {designs} hồ sơ thiết kế của khách hàng hiện tại. Nếu chỉ nhập sai tên khách hàng, hãy sửa tên tại Quản lý Khách hàng. Nếu đúng là khách hàng khác, hãy xử lý các bản ghi trên (mở từ trang chi tiết dự án) rồi đổi lại.",
+    "en": "The customer cannot be changed: the project already has {opportunities} opportunities, {quotes} quotes, {contracts} contracts and {designs} design dossiers of the current customer. If only the customer's name is wrong, fix it in Customers. If it really is another customer, deal with those records first (open them from the project page).",
+    "zh": "暂不能更换客户：该项目已有当前客户的 {opportunities} 个商机、{quotes} 份报价、{contracts} 份合同和 {designs} 个设计档案。若只是客户名称填错，请在“客户管理”中修改名称；若确实是其他客户，请先处理上述记录（可在项目详情页打开）。",
+    "ja": "顧客を変更できません。このプロジェクトには現在の顧客の商談 {opportunities} 件、見積 {quotes} 件、契約 {contracts} 件、設計書類 {designs} 件があります。顧客名の入力ミスだけなら「顧客管理」で名前を修正してください。本当に別の顧客の場合は、先にこれらの記録を処理してください（プロジェクト詳細から開けます）。"
   }
 ]

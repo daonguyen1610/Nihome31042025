@@ -386,8 +386,47 @@ public class OperationalProjectServiceTests : IDisposable
         var request = ValidUpdate(created, OperationalProjectStatus.Planning);
         request.CustomerId = otherCustomer.Id;
 
-        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+        var error = await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
             _service.UpdateAsync(created.Id, request, _managerId, false));
+
+        // It says what blocks the change and how to fix a mistyped name.
+        Assert.Equal("OPERATIONAL_PROJECT_CUSTOMER_IN_USE", error.Code);
+        Assert.Equal(1, error.Parameters!["contracts"]);
+        Assert.Contains("sửa tên tại Quản lý Khách hàng", error.Message);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ProjectCreatedForTheWrongCustomer_MovesWithItsTeamAndDocuments()
+    {
+        // NICON feedback row 35: a project entered with the wrong customer, already staffed and
+        // holding a document, but with nothing that belongs to the customer yet.
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        // Creating it already put its project manager on the team.
+        Assert.True(await _db.OperationalProjectMembers.AnyAsync(item => item.OperationalProjectId == created.Id));
+        var document = new ProjectDocument
+        {
+            OperationalProjectId = created.Id,
+            CustomerId = _customerId,
+            OriginalFileName = "khao-sat-ban-dau.pdf",
+            LocalPath = "projects/khao-sat-ban-dau.pdf",
+        };
+        _db.ProjectDocuments.Add(document);
+        var rightCustomer = new Customer
+        {
+            Name = "Công ty TNHH Thực phẩm Đức Hoà",
+            Type = CustomerType.Company,
+            SourceCode = "referral",
+        };
+        _db.Customers.Add(rightCustomer);
+        await _db.SaveChangesAsync();
+        var request = ValidUpdate(created, OperationalProjectStatus.Planning);
+        request.CustomerId = rightCustomer.Id;
+
+        var updated = await _service.UpdateAsync(created.Id, request, _managerId, false);
+
+        Assert.Equal(rightCustomer.Id, updated!.CustomerId);
+        // Its documents are filed under the right customer too.
+        Assert.Equal(rightCustomer.Id, (await _db.ProjectDocuments.SingleAsync(item => item.Id == document.Id)).CustomerId);
     }
 
     [Fact]
