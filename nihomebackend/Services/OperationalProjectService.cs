@@ -386,13 +386,12 @@ public class OperationalProjectService(
     }
 
     /// <summary>
-    /// A customer contract that was signed puts the project past gate 3 and its code on paper,
-    /// even if it was cancelled later. Purchase contracts (Downstream) do not count.
+    /// A signed customer contract puts the project past gate 3. Purchase contracts (Downstream)
+    /// do not count. A cancelled contract does not either: no history tells a cancelled signed
+    /// contract from a cancelled draft (a draft may already carry its planned SignedDate).
     /// </summary>
     private static readonly Expression<Func<Contract, bool>> LocksProjectCode = contract =>
-        contract.Direction == ContractDirection.Upstream &&
-        (ContractStatuses.Signed.Contains(contract.Status) ||
-            (contract.Status == ContractStatus.Cancelled && contract.SignedDate != null));
+        contract.Direction == ContractDirection.Upstream && ContractStatuses.Signed.Contains(contract.Status);
 
     private static readonly Func<Contract, bool> LocksProjectCodeInMemory = LocksProjectCode.Compile();
 

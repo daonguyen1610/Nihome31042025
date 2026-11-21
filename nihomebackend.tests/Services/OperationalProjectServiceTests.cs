@@ -539,12 +539,12 @@ public class OperationalProjectServiceTests : IDisposable
     }
 
     // NICON (Góp ý lập trình v2, answer 2): the code changes only before gate 3, the signed contract.
-    // A purchase contract (Downstream) is not gate 3; a customer contract cancelled after
-    // signing keeps the code locked because the code is already on the signed paper.
+    // A purchase contract (Downstream) is not gate 3, and a cancelled contract no longer stands,
+    // even one carrying a SignedDate (a draft may hold its planned date).
     [Theory]
     [InlineData(ContractDirection.Upstream, ContractStatus.Draft, false, false)]
     [InlineData(ContractDirection.Upstream, ContractStatus.Cancelled, false, false)]
-    [InlineData(ContractDirection.Upstream, ContractStatus.Cancelled, true, true)]
+    [InlineData(ContractDirection.Upstream, ContractStatus.Cancelled, true, false)]
     [InlineData(ContractDirection.Upstream, ContractStatus.Signed, true, true)]
     [InlineData(ContractDirection.Upstream, ContractStatus.InProgress, true, true)]
     [InlineData(ContractDirection.Upstream, ContractStatus.OnHold, true, true)]
