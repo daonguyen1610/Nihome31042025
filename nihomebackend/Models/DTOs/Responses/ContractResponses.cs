@@ -32,6 +32,12 @@ public class ContractResponse
     public string? OperationalProjectCode { get; set; }
     public string? OperationalProjectName { get; set; }
 
+    /// <summary>The project's site details, read from the project (detail endpoint only).</summary>
+    public string? ProjectSiteAddress { get; set; }
+    public ProjectConstructionKind? ProjectConstructionKind { get; set; }
+    public string? ProjectBusinessSectorCode { get; set; }
+    public decimal? ProjectSiteAreaM2 { get; set; }
+
     public int? OpportunityId { get; set; }
     public string? OpportunityTitle { get; set; }
 

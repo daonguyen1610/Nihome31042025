@@ -1,4 +1,5 @@
 import { useConfirm } from "@/components/ui/confirmation";
+import { ProjectSiteDetails } from "@/components/admin/ProjectSiteDetails";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { personOption } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -2089,6 +2090,18 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   )}
                 </SelectContent>
               </Select>
+              {(() => {
+                const project = projects.find((item) => item.id === form.operationalProjectId);
+                return project ? (
+                  <ProjectSiteDetails
+                    site={project}
+                    projectHref={`/admin/operational-projects/${project.id}`}
+                    className="mt-2 bg-muted/30 p-3"
+                    compact
+                    testId="contract-project-site"
+                  />
+                ) : null;
+              })()}
               {form.customerId != null &&
                 customerProjects.length === 0 &&
                 form.operationalProjectId == null && (

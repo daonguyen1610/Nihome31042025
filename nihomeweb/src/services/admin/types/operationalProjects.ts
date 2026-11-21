@@ -1229,6 +1229,11 @@ export interface ContractResponse {
   operationalProjectId?: number | null;
   operationalProjectCode?: string | null;
   operationalProjectName?: string | null;
+  /** The project's site details, read from the project (contract detail only). */
+  projectSiteAddress?: string | null;
+  projectConstructionKind?: ProjectConstructionKind | null;
+  projectBusinessSectorCode?: string | null;
+  projectSiteAreaM2?: number | null;
   /** Derived from design_projects; present when a design project is attached. */
   designProjectId?: number | null;
   designProjectCode?: string | null;

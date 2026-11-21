@@ -7,6 +7,7 @@ import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { MoneyInput } from "@/components/ui/money-input";
+import { ProjectSiteDetails } from "@/components/admin/ProjectSiteDetails";
 import { personOption } from "@/lib/people";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -696,7 +697,7 @@ const OperationalProjects = () => {
             />
           </section>
 
-          <ProjectSiteCard project={detail} sectorLabel={sectorLabel} />
+          <ProjectSiteDetails site={detail} />
 
           <ProjectMasterSchedule
             projectId={detail.id}
@@ -1824,53 +1825,5 @@ const Count = ({ value, label }: { value: number; label: string }) => (
     <span className="text-muted-foreground">{label}</span>
   </div>
 );
-
-/** Where and what NICON builds; says which details are still missing (feedback row 27). */
-function ProjectSiteCard({
-  project,
-  sectorLabel,
-}: {
-  project: OperationalProjectResponse;
-  sectorLabel: (code?: string | null) => string;
-}) {
-  const { t } = useI18n();
-  const fields = [
-    { key: "siteAddress", value: project.siteAddress ?? "" },
-    {
-      key: "constructionKind",
-      value: project.constructionKind
-        ? t(`operationalProjects.constructionKind.${project.constructionKind}`)
-        : "",
-    },
-    { key: "businessSector", value: sectorLabel(project.businessSectorCode) },
-    {
-      key: "siteArea",
-      value: project.siteAreaM2 != null ? `${formatNumber(project.siteAreaM2)} m²` : "",
-    },
-  ];
-  const missing = fields.filter((field) => !field.value);
-  return (
-    <section className="rounded-lg border bg-card p-4" data-testid="project-site">
-      <h2 className="mb-3 font-medium">{t("operationalProjects.site.title")}</h2>
-      <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
-        {fields.map((field) => (
-          <div key={field.key} className="min-w-0">
-            <dt className="text-xs text-muted-foreground">
-              {t(`operationalProjects.field.${field.key}`)}
-            </dt>
-            <dd className="break-words">{field.value || "—"}</dd>
-          </div>
-        ))}
-      </dl>
-      {missing.length > 0 && (
-        <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
-          {t("operationalProjects.site.missing", {
-            fields: missing.map((field) => t(`operationalProjects.field.${field.key}`)).join(", "),
-          })}
-        </p>
-      )}
-    </section>
-  );
-}
 
 export default OperationalProjects;

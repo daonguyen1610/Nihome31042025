@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { Link2 } from "lucide-react";
 import ContractSourceLeads from "@/components/admin/ContractSourceLeads";
+import { ProjectSiteDetails } from "@/components/admin/ProjectSiteDetails";
 import { useI18n } from "@/lib/i18n";
 import { formatMoney } from "@/lib/displaySettings";
 import { Badge } from "@/components/ui/badge";
@@ -72,6 +73,20 @@ export const InfoTab = ({
           ))}
         </dl>
       </div>
+
+      {contract.operationalProjectId != null && (
+        <ProjectSiteDetails
+          site={{
+            siteAddress: contract.projectSiteAddress,
+            constructionKind: contract.projectConstructionKind,
+            businessSectorCode: contract.projectBusinessSectorCode,
+            siteAreaM2: contract.projectSiteAreaM2,
+          }}
+          projectHref={`/admin/operational-projects/${contract.operationalProjectId}`}
+          className="shadow-sm"
+          testId="contract-project-site"
+        />
+      )}
 
       {contract.direction === "Upstream" ||
       contract.quoteId != null ||

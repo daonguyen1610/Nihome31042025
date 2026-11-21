@@ -122,6 +122,32 @@ public class ContractsControllerTests : IntegrationTestBase
         };
 
     [Fact]
+    public async Task Detail_ReadsTheSiteDetailsOfItsProject()
+    {
+        // NICON feedback row 25: the contract shows the project's address, type of works,
+        // sector and area without typing them again.
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
+        var customerId = await CreateCustomerAsync();
+        var contractId = await CreateContractAsync(customerId);
+        await WithDbAsync(async db =>
+        {
+            var project = await db.Contracts.Where(c => c.Id == contractId).Select(c => c.OperationalProject!).SingleAsync();
+            project.SiteAddress = "Lô C5, KCN Tân Uyên, Bình Dương";
+            project.ConstructionKind = ProjectConstructionKind.Renovation;
+            project.BusinessSectorCode = "food-beverage";
+            project.SiteAreaM2 = 12500.5m;
+            return await db.SaveChangesAsync();
+        });
+
+        var detail = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contractId}"));
+
+        detail.GetProperty("projectSiteAddress").GetString().Should().Be("Lô C5, KCN Tân Uyên, Bình Dương");
+        detail.GetProperty("projectConstructionKind").GetString().Should().Be("Renovation");
+        detail.GetProperty("projectBusinessSectorCode").GetString().Should().Be("food-beverage");
+        detail.GetProperty("projectSiteAreaM2").GetDecimal().Should().Be(12500.5m);
+    }
+
+    [Fact]
     public async Task Create_FromQuoteWithoutOpportunity_LinksQuoteOpportunity()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
