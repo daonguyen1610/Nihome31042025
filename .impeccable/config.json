@@ -1,7 +1,9 @@
 {
   "detector": {
     "ignoreRules": [],
-    "ignoreFiles": [],
+    "ignoreFiles": [
+      "deployment-config/output/**"
+    ],
     "ignoreValues": [
       {
         "rule": "side-tab",
