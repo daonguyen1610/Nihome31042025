@@ -1854,5 +1854,21 @@
     "en": "Project · Customer",
     "zh": "项目 · 客户",
     "ja": "プロジェクト · 顧客"
+  },
+  {
+    "key": "operationalProjects.list.periodFrom",
+    "category": "operationalProjects",
+    "vi": "Từ {date}",
+    "en": "From {date}",
+    "zh": "自 {date} 起",
+    "ja": "{date} から"
+  },
+  {
+    "key": "operationalProjects.list.periodUntil",
+    "category": "operationalProjects",
+    "vi": "Đến {date}",
+    "en": "Until {date}",
+    "zh": "至 {date}",
+    "ja": "{date} まで"
   }
 ]
