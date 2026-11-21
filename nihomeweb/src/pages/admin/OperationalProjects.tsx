@@ -1487,40 +1487,24 @@ const OperationalProjects = () => {
                     <tr
                       key={project.id}
                       data-testid="project-row"
-                      className="cursor-pointer align-top transition-colors hover:bg-muted/40"
-                      onClick={(event) => {
-                        const href = `/admin/operational-projects/${project.id}`;
-                        // A modified click opens a new tab, as on a link.
-                        if (event.metaKey || event.ctrlKey || event.shiftKey) {
-                          window.open(href, "_blank", "noopener");
-                          return;
-                        }
-                        // A drag selects text to copy; it is not "open".
-                        if (window.getSelection()?.toString()) return;
-                        navigate(href);
-                      }}
+                      className="align-top transition-colors hover:bg-muted/40"
                     >
                       <td className="px-4 py-3">
-                        {/* The code is for copying: clicking or double-clicking it never opens the project. */}
-                        <p
-                          className="break-all font-mono text-xs text-muted-foreground"
-                          onClick={(event) => event.stopPropagation()}
-                        >
+                        <p className="break-all font-mono text-xs text-muted-foreground">
                           {project.code}
                         </p>
                         <Link
                           to={`/admin/operational-projects/${project.id}`}
                           className="mt-0.5 block font-medium text-foreground underline-offset-4 hover:underline focus-visible:underline"
-                          onClick={(event) => event.stopPropagation()}
                         >
                           {project.name}
                         </Link>
                         <p className="mt-0.5 text-muted-foreground">{project.customerName}</p>
                         <p className="mt-1 text-xs text-muted-foreground tabular-nums md:hidden">
                           {t("operationalProjects.count.summary", {
-                            opportunities: project.opportunityCount,
-                            quotes: project.quoteCount,
-                            contracts: project.contractCount,
+                            opportunities: formatNumber(project.opportunityCount),
+                            quotes: formatNumber(project.quoteCount),
+                            contracts: formatNumber(project.contractCount),
                           })}
                         </p>
                       </td>
@@ -1549,13 +1533,13 @@ const OperationalProjects = () => {
                         )}
                       </td>
                       <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
-                        {project.opportunityCount}
+                        {formatNumber(project.opportunityCount)}
                       </td>
                       <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
-                        {project.quoteCount}
+                        {formatNumber(project.quoteCount)}
                       </td>
                       <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
-                        {project.contractCount}
+                        {formatNumber(project.contractCount)}
                       </td>
                       <td className="hidden whitespace-nowrap px-4 py-3 tabular-nums xl:table-cell">
                         {formatDate(project.updatedAt)}
