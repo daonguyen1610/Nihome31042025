@@ -810,10 +810,10 @@
   {
     "key": "operationalProjects.documents.category.DesignShopDrawing",
     "category": "operationalProjects",
-    "vi": "Thiết kế chi tiết / Shop Drawing",
-    "en": "Detailed design / Shop drawings",
-    "zh": "深化设计 / 施工图",
-    "ja": "詳細設計・施工図"
+    "vi": "Thiết kế chi tiết",
+    "en": "Detail design",
+    "zh": "详细设计",
+    "ja": "詳細設計"
   },
   {
     "key": "operationalProjects.documents.category.LegalPermits",
