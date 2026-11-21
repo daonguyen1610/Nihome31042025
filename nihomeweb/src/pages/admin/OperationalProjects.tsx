@@ -1444,13 +1444,12 @@ const OperationalProjects = () => {
             // row keeps the name, customer, status and counts; wider screens add the columns.
             <div className="overflow-x-auto rounded-lg border bg-card">
               <table className="w-full text-sm">
-                <caption className="sr-only">
-                  {t("operationalProjects.total", { count: total })}
-                </caption>
+                <caption className="sr-only">{t("operationalProjects.title")}</caption>
                 <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-4 py-2.5 font-medium md:min-w-[18rem]">
-                      {t("operationalProjects.field.name")}
+                      {t("operationalProjects.field.name")} ·{" "}
+                      {t("operationalProjects.field.customer")}
                     </th>
                     <th scope="col" className="px-4 py-2.5 font-medium">
                       {t("operationalProjects.field.status")}
@@ -1493,10 +1492,17 @@ const OperationalProjects = () => {
                       key={project.id}
                       data-testid="project-row"
                       className="cursor-pointer align-top transition-colors hover:bg-muted/40"
-                      onClick={() => navigate(`/admin/operational-projects/${project.id}`)}
+                      onClick={(event) => {
+                        // Selecting text (to copy a code) or a modified click is not "open".
+                        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+                        if (window.getSelection()?.toString()) return;
+                        navigate(`/admin/operational-projects/${project.id}`);
+                      }}
                     >
                       <td className="px-4 py-3">
-                        <p className="font-mono text-xs text-muted-foreground">{project.code}</p>
+                        <p className="break-all font-mono text-xs text-muted-foreground">
+                          {project.code}
+                        </p>
                         <Link
                           to={`/admin/operational-projects/${project.id}`}
                           className="mt-0.5 block font-medium text-foreground underline-offset-4 hover:underline focus-visible:underline"
@@ -1506,9 +1512,11 @@ const OperationalProjects = () => {
                         </Link>
                         <p className="mt-0.5 text-muted-foreground">{project.customerName}</p>
                         <p className="mt-1 text-xs text-muted-foreground tabular-nums md:hidden">
-                          {project.opportunityCount} {t("operationalProjects.count.opportunities")}{" "}
-                          · {project.quoteCount} {t("operationalProjects.count.quotes")} ·{" "}
-                          {project.contractCount} {t("operationalProjects.count.contracts")}
+                          {t("operationalProjects.count.summary", {
+                            opportunities: project.opportunityCount,
+                            quotes: project.quoteCount,
+                            contracts: project.contractCount,
+                          })}
                         </p>
                       </td>
                       <td className="px-4 py-3">
@@ -1523,9 +1531,11 @@ const OperationalProjects = () => {
                         {project.projectManagerName || "—"}
                       </td>
                       <td className="hidden whitespace-nowrap px-4 py-3 tabular-nums 2xl:table-cell">
-                        {project.startDate || project.endDate
+                        {project.startDate && project.endDate
                           ? `${formatDate(project.startDate)} – ${formatDate(project.endDate)}`
-                          : "—"}
+                          : project.startDate || project.endDate
+                            ? formatDate(project.startDate ?? project.endDate)
+                            : "—"}
                       </td>
                       <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
                         {project.opportunityCount}
