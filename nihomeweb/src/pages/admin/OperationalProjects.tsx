@@ -1489,15 +1489,18 @@ const OperationalProjects = () => {
                         <p className="break-all font-mono text-xs text-muted-foreground">
                           {project.code}
                         </p>
+                        {/* Name and customer form one full-width link: a tap target fit for phones. */}
                         <Link
                           to={`/admin/operational-projects/${project.id}`}
-                          className="mt-0.5 block font-medium [overflow-wrap:anywhere] text-foreground underline-offset-4 hover:underline focus-visible:underline"
+                          className="group mt-0.5 block min-h-11 [overflow-wrap:anywhere]"
                         >
-                          {project.name}
+                          <span className="block font-medium text-foreground underline-offset-4 group-hover:underline group-focus-visible:underline">
+                            {project.name}
+                          </span>
+                          <span className="mt-0.5 block text-muted-foreground">
+                            {project.customerName}
+                          </span>
                         </Link>
-                        <p className="mt-0.5 text-muted-foreground [overflow-wrap:anywhere]">
-                          {project.customerName}
-                        </p>
                         <p className="mt-1 text-xs text-muted-foreground tabular-nums md:hidden">
                           {t("operationalProjects.count.summary", {
                             opportunities: formatNumber(project.opportunityCount),
