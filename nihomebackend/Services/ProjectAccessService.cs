@@ -7,6 +7,16 @@ namespace NihomeBackend.Services;
 
 public sealed class ProjectAccessService(AppDbContext db, IPermissionService permissions) : IProjectAccessService
 {
+    public async Task<bool> CanOpenProjectPageAsync(int userId, int projectId, CancellationToken ct = default)
+    {
+        if (!await permissions.HasAsync(userId, "operations.projects.view", ct)) return false;
+        if (await permissions.HasAsync(userId, "operations.projects.view.all", ct))
+            return await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId, ct);
+        return await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId &&
+            (project.ProjectManagerUserId == userId || project.CreatedByUserId == userId ||
+             project.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null)), ct);
+    }
+
     public async Task<bool> CanViewOperationalProjectAsync(
         int userId,
         int projectId,

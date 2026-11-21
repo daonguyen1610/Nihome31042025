@@ -22,7 +22,8 @@ public class ContractService(
     IProjectDocumentStagingService projectDocuments,
     IOpportunityClosureInvariantService closureInvariant,
     IWebHostEnvironment? env = null, IPermissionService? permissions = null,
-    IProjectAccessService? projectAccess = null) : IContractService
+    IProjectAccessService? projectAccess = null,
+    IRequestLanguage? requestLanguage = null) : IContractService
 {
     private const int MaxPageSize = 100;
     private const string SignedScanRequiredCode = "CONTRACT_SIGNED_SCAN_REQUIRED";
@@ -417,24 +418,20 @@ public class ContractService(
         if (row.ProjectSite is not null &&
             await CanViewProjectAsync(callerUserId, row.Contract.OperationalProjectId!.Value, ct))
         {
-            var (sectorName, sectorLabelKey) = await BusinessSectors.LabelAsync(db, row.ProjectSite.BusinessSectorCode, ct);
             response.ProjectSite = new ContractProjectSiteResponse(row.ProjectSite.SiteAddress,
                 row.ProjectSite.ConstructionKind, row.ProjectSite.BusinessSectorCode, row.ProjectSite.SiteAreaM2,
-                sectorName, sectorLabelKey);
+                await BusinessSectors.NameAsync(db, row.ProjectSite.BusinessSectorCode, requestLanguage?.Lang ?? "vi", ct));
         }
         return response;
     }
 
-    /// <summary>The project page's own rule (OperationalProjectService.CanView), not a copy.</summary>
-    private async Task<bool> CanViewProjectAsync(int callerUserId, int projectId, CancellationToken ct)
-    {
-        if (permissions is null || !await permissions.HasAsync(callerUserId, "operations.projects.view", ct))
-            return false;
-        var project = await db.OperationalProjects.AsNoTracking().Include(item => item.TeamMembers)
-            .SingleOrDefaultAsync(item => item.Id == projectId, ct);
-        return project is not null && OperationalProjectService.CanView(project, callerUserId,
-            await permissions.HasAsync(callerUserId, "operations.projects.view.all", ct));
-    }
+    /// <summary>
+    /// Site details link to the project's page, so they follow who may open that page. This is a
+    /// different question from who may read the contract (CanViewOperationalProjectAsync), which
+    /// also admits pending schedule approvers and administrators for the contract itself.
+    /// </summary>
+    private Task<bool> CanViewProjectAsync(int callerUserId, int projectId, CancellationToken ct) =>
+        projectAccess?.CanOpenProjectPageAsync(callerUserId, projectId, ct) ?? Task.FromResult(false);
 
     public Task<string> PreviewNextNumberAsync(CancellationToken ct = default) =>
         GenerateNumberAsync(ct);

@@ -17,7 +17,8 @@ public class OperationalProjectService(
     ILegacyProjectTeamSyncService projectTeamSync,
     ILogger<OperationalProjectService> logger,
     IProjectHardDeletePlanService hardDeletePlans,
-    IHardDeleteOperationService hardDeleteOperations) : IOperationalProjectService
+    IHardDeleteOperationService hardDeleteOperations,
+    IRequestLanguage? requestLanguage = null) : IOperationalProjectService
 {
     private static readonly Regex ProjectCodePattern = new(
         "^[A-Z0-9][A-Z0-9_-]{1,39}$",
@@ -184,8 +185,8 @@ public class OperationalProjectService(
                         .Sum(milestone => milestone.PercentValue)));
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
-        (response.BusinessSectorName, response.BusinessSectorLabelKey) =
-            await BusinessSectors.LabelAsync(db, project.BusinessSectorCode, ct);
+        response.BusinessSectorName =
+            await BusinessSectors.NameAsync(db, project.BusinessSectorCode, requestLanguage?.Lang ?? "vi", ct);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
             role.Member.OperationalProjectId == id && role.Member.UserId == callerUserId &&
             role.Member.DesignProjectId == null && role.Member.EndedAt == null && role.EndedAt == null &&
@@ -818,12 +819,7 @@ public class OperationalProjectService(
             project.ProjectManagerUserId == callerUserId ||
             project.CreatedByUserId == callerUserId;
 
-    /// <summary>
-    /// Who may open a project (with project view permission): everyone with all-projects view,
-    /// its manager, its creator and its active team members. TeamMembers must be loaded.
-    /// Contracts reuse it to decide who sees a project's site details.
-    /// </summary>
-    public static bool CanView(
+    private static bool CanView(
         OperationalProject project,
         int callerUserId,
         bool canSeeAll) => CanManage(project, callerUserId, canSeeAll) ||

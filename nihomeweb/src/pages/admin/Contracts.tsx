@@ -591,23 +591,18 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // The chosen project's site details, read fresh each time (another tab may have just
   // completed them) and also for a prefilled project outside the loaded list (feedback row 25).
   const [siteProject, setSiteProject] = useState<OperationalProjectResponse | null>(null);
-  // While the chosen project still lacks site details, coming back to this tab (for example
-  // after "Bổ sung ở trang Dự án", however the link was opened) reads it again.
+  // Coming back to this tab reads the chosen project again: its details may have been completed
+  // or corrected in the project tab ("Bổ sung ở trang Dự án"), or the first read may have failed.
   const [siteRefresh, setSiteRefresh] = useState(0);
-  const siteIncomplete =
-    siteProject != null &&
-    (!siteProject.siteAddress ||
-      !siteProject.constructionKind ||
-      !siteProject.businessSectorCode ||
-      siteProject.siteAreaM2 == null);
+  const siteProjectChosen = form.operationalProjectId != null;
   useEffect(() => {
-    if (!dialogOpen || !siteIncomplete) return;
+    if (!dialogOpen || !siteProjectChosen) return;
     const refresh = () => {
       if (document.visibilityState === "visible") setSiteRefresh((value) => value + 1);
     };
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
-  }, [dialogOpen, siteIncomplete]);
+  }, [dialogOpen, siteProjectChosen]);
   useEffect(() => {
     const projectId = form.operationalProjectId;
     if (!dialogOpen || projectId == null || !canViewOperationalProjects) {
@@ -622,9 +617,10 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       })
       .catch((reason: { response?: { status?: number } }) => {
         if (cancelled) return;
-        // No access, or the project is gone: no panel. A network hiccup keeps what it showed.
+        // No access, or the project is gone: no panel. A network hiccup or an expired session
+        // (401, refreshed by the API client) keeps what it showed.
         const status = reason?.response?.status;
-        const gone = status === 401 || status === 403 || status === 404;
+        const gone = status === 403 || status === 404;
         setSiteProject((current) => (!gone && current?.id === projectId ? current : null));
       });
     return () => {

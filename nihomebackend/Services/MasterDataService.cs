@@ -77,11 +77,11 @@ public class MasterDataService(
             .ThenBy(o => o.Name)
             .ToListAsync(ct);
 
-        var translations = await entityTranslations.GetBatchTranslationsAsync(
-            EntityTypes.MasterDataOption, entities.Select(o => o.Id), lang);
+        // The same naming rule every record that shows an option uses.
+        var names = await MasterDataNames.LocalizeAsync(db, entities, lang, ct);
 
         var items = entities
-            .Select(o => MapToResponse(o, translations.GetValueOrDefault(o.Id)))
+            .Select(o => MapToResponse(o, new Dictionary<string, string> { ["Name"] = names[o.Id] }))
             .ToList();
 
         if (useCache)
