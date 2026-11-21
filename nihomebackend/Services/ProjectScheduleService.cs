@@ -26,6 +26,7 @@ public interface IProjectScheduleService
     Task<ProjectScheduleResponse?> SubmitAsync(int projectId, int revisionId, SubmitProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
     Task<ProjectScheduleResponse?> ReviewAsync(int projectId, int revisionId, ReviewProjectScheduleRevisionRequest request, int callerUserId, CancellationToken ct);
     Task<ProjectScheduleEmailPreviewResponse> PreviewEmailAsync(int projectId, int revisionId, string action, int? recipientUserId, int callerUserId, CancellationToken ct);
+    Task<ProjectScheduleImportResponse> PreviewImportAsync(int projectId, Stream xml, string fileName, int callerUserId, CancellationToken ct);
 }
 
 public sealed record ProjectScheduleEmailPreview(int RecipientUserId, string ToEmail, string Subject, string Body);
@@ -92,6 +93,44 @@ public sealed class ProjectScheduleService(
         await CommitAsync(transaction, ct);
         logger.LogInformation("Project schedule revision {RevisionId} created for project {ProjectId} by {UserId}.", revision.Id, projectId, callerUserId);
         return await BuildResponseAsync(projectId, ct);
+    }
+
+    /// <summary>
+    /// Reads an MS Project XML file into draft rows for the editor. Only people who may draw up
+    /// the master schedule can import; nothing is saved until they save the draft.
+    /// </summary>
+    public async Task<ProjectScheduleImportResponse> PreviewImportAsync(
+        int projectId, Stream xml, string fileName, int callerUserId, CancellationToken ct)
+    {
+        if (!await db.OperationalProjects.AnyAsync(item => item.Id == projectId, ct) ||
+            !await access.CanViewOperationalProjectAsync(callerUserId, projectId, ct))
+            throw new ProjectScheduleOperationException("Không tìm thấy dự án.", 404);
+        if (!await CanAuthorScheduleAsync(callerUserId, ct))
+            throw new ProjectScheduleOperationException("Chỉ phòng CRM được lập và gửi duyệt tiến độ tổng thể.", 403);
+        MsProjectImport import;
+        try { import = MsProjectXmlImporter.Parse(xml); }
+        catch (MsProjectImportException exception) { throw new ProjectScheduleOperationException(exception.Message); }
+        return new ProjectScheduleImportResponse
+        {
+            SourceName = Path.GetFileName(fileName),
+            Warnings = import.Warnings,
+            Items = import.Items.Select(item => new ProjectScheduleItemResponse
+            {
+                NodeId = item.NodeId!.Value,
+                ParentNodeId = item.ParentNodeId,
+                WbsCode = item.WbsCode,
+                Title = item.Title,
+                PlannedStart = item.PlannedStart!.Value,
+                PlannedEnd = item.PlannedEnd!.Value,
+                SortOrder = item.SortOrder,
+                IsMilestone = item.IsMilestone,
+                BaselineStart = item.BaselineStart,
+                BaselineEnd = item.BaselineEnd,
+                Predecessors = item.Predecessors
+                    .Select(link => new ProjectScheduleLinkResponse(link.PredecessorNodeId, link.Type, link.LagDays))
+                    .ToList(),
+            }).ToList(),
+        };
     }
 
     public async Task<ProjectScheduleResponse?> UpdateRevisionAsync(
@@ -308,6 +347,13 @@ public sealed class ProjectScheduleService(
                 if (start < parent.PlannedStart.Value || end > parent.PlannedEnd.Value)
                     throw new ProjectScheduleOperationException($"Thời gian của hạng mục {item.WbsCode} phải nằm trong khung của hạng mục cha.");
             }
+            if (item.BaselineStart.HasValue != item.BaselineEnd.HasValue ||
+                item.BaselineEnd < item.BaselineStart)
+                throw new ProjectScheduleOperationException(
+                    $"Baseline của hạng mục {item.WbsCode} cần đủ ngày bắt đầu và kết thúc, kết thúc không trước bắt đầu.");
+            if (item.Predecessors.Any(link => link.PredecessorNodeId == nodeId || !byId.ContainsKey(link.PredecessorNodeId)))
+                throw new ProjectScheduleOperationException(
+                    $"Hạng mục {item.WbsCode} chỉ được phụ thuộc vào hạng mục khác trong cùng phiên bản tiến độ.");
             revision.Items.Add(new ProjectScheduleItem
             {
                 NodeId = nodeId,
@@ -317,6 +363,13 @@ public sealed class ProjectScheduleService(
                 PlannedStart = start,
                 PlannedEnd = end,
                 SortOrder = item.SortOrder,
+                IsMilestone = item.IsMilestone,
+                BaselineStart = item.BaselineStart,
+                BaselineEnd = item.BaselineEnd,
+                PredecessorsJson = item.Predecessors.Count == 0
+                    ? null
+                    : JsonSerializer.Serialize(item.Predecessors.Select(link =>
+                        new ProjectScheduleLinkResponse(link.PredecessorNodeId, link.Type, link.LagDays))),
             });
         }
         if (HasParentCycle(revision.Items)) throw new ProjectScheduleOperationException("Các hạng mục tiến độ không được liên kết cha-con thành vòng lặp.");
@@ -573,6 +626,12 @@ public sealed class ProjectScheduleService(
                     PlannedStart = value.PlannedStart,
                     PlannedEnd = value.PlannedEnd,
                     SortOrder = value.SortOrder,
+                    IsMilestone = value.IsMilestone,
+                    BaselineStart = value.BaselineStart,
+                    BaselineEnd = value.BaselineEnd,
+                    Predecessors = value.PredecessorsJson == null
+                        ? new List<ProjectScheduleLinkResponse>()
+                        : JsonSerializer.Deserialize<List<ProjectScheduleLinkResponse>>(value.PredecessorsJson) ?? [],
                 }).ToList(),
             }).ToList(),
         };

@@ -998,5 +998,69 @@
     "zh": "退回时必填，便于CRM知道需要修改什么。",
     "ja": "差し戻す場合は理由を入力してください（CRMが修正内容を把握するため）。",
     "category": "construction"
+  },
+  {
+    "key": "scheduleUx.import.action",
+    "category": "construction",
+    "vi": "Nhập từ MS Project (.xml)",
+    "en": "Import from MS Project (.xml)",
+    "zh": "从 MS Project 导入（.xml）",
+    "ja": "MS Project から取り込む（.xml）"
+  },
+  {
+    "key": "scheduleUx.import.help",
+    "category": "construction",
+    "vi": "Trong MS Project chọn File → Save As → XML rồi tải tệp lên. Hệ thống lấy các cấp công việc, mã WBS, ngày, mốc, liên kết và baseline (không lấy tài nguyên, chi phí); các hạng mục đang soạn được thay bằng nội dung tệp. Kiểm tra lại rồi lưu nháp và gửi duyệt như thường lệ.",
+    "en": "In MS Project choose File → Save As → XML, then upload the file. Levels, WBS codes, dates, milestones, links and baseline are read (not resources or costs); the items being drafted are replaced. Check them, then save and send for approval as usual.",
+    "zh": "在 MS Project 中选择 文件 → 另存为 → XML 后上传。系统读取任务层级、WBS 编码、日期、里程碑、关联和基准（不读取资源和成本）；正在编辑的条目将被替换。核对后照常保存草稿并提交审批。",
+    "ja": "MS Project で「ファイル → 名前を付けて保存 → XML」を選び、そのファイルをアップロードします。階層、WBS コード、日付、マイルストーン、リンク、ベースラインを取り込みます（リソース・コストは除く）。作成中の項目は置き換わります。確認後、通常どおり下書き保存して承認依頼してください。"
+  },
+  {
+    "key": "scheduleUx.import.reason",
+    "category": "construction",
+    "vi": "Nhập từ MS Project: {file}",
+    "en": "Imported from MS Project: {file}",
+    "zh": "从 MS Project 导入：{file}",
+    "ja": "MS Project から取り込み：{file}"
+  },
+  {
+    "key": "scheduleUx.import.done",
+    "category": "construction",
+    "vi": "Đã nhập {count} hạng mục từ {file}",
+    "en": "Imported {count} items from {file}",
+    "zh": "已从 {file} 导入 {count} 个条目",
+    "ja": "{file} から {count} 件を取り込みました"
+  },
+  {
+    "key": "scheduleUx.import.review",
+    "category": "construction",
+    "vi": "Kiểm tra lại các hạng mục rồi lưu nháp; chưa có gì được lưu.",
+    "en": "Check the items, then save the draft; nothing has been saved yet.",
+    "zh": "请核对条目后保存草稿；目前尚未保存。",
+    "ja": "項目を確認してから下書きを保存してください。まだ保存されていません。"
+  },
+  {
+    "key": "scheduleUx.import.milestone",
+    "category": "construction",
+    "vi": "Mốc",
+    "en": "Milestone",
+    "zh": "里程碑",
+    "ja": "マイルストーン"
+  },
+  {
+    "key": "scheduleUx.import.after",
+    "category": "construction",
+    "vi": "Sau: {links}",
+    "en": "After: {links}",
+    "zh": "前置：{links}",
+    "ja": "先行：{links}"
+  },
+  {
+    "key": "scheduleUx.import.baseline",
+    "category": "construction",
+    "vi": "Baseline: {start} – {end}",
+    "en": "Baseline: {start} – {end}",
+    "zh": "基准：{start} – {end}",
+    "ja": "ベースライン：{start} – {end}"
   }
 ]

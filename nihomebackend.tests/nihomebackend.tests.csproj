@@ -30,4 +30,9 @@
     <ProjectReference Include="..\nihomebackend\nihomebackend.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <!-- NICON's own MS Project schedules (docs/Nicon/MoMs/2026-10-06/ms_project), saved as XML. -->
+    <None Include="TestData\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
 </Project>

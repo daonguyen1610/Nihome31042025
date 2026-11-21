@@ -230,6 +230,45 @@ public sealed class ProjectScheduleServiceTests
             PlannedEnd = end,
         };
 
+    [Fact]
+    public async Task ImportedMsProjectSchedule_SavesAsADraftWithItsLinks()
+    {
+        await using var db = CreateDb();
+        SeedProject(db);
+        var service = CreateService(db);
+        await using var file = File.OpenRead(Path.Combine(
+            AppContext.BaseDirectory, "TestData", "MsProject", "nicon-bma-design-schedule.xml"));
+
+        var preview = await service.PreviewImportAsync(ProjectId, file, "BMA.xml", CallerId, default);
+        // Nothing is saved until the user saves the draft.
+        Assert.Empty(db.ProjectScheduleRevisions);
+        var saved = await service.CreateRevisionAsync(ProjectId, new SaveProjectScheduleRevisionRequest
+        {
+            ChangeReason = "Nhập từ MS Project: BMA.xml",
+            Items = preview.Items.Select(item => new SaveProjectScheduleItemRequest
+            {
+                NodeId = item.NodeId,
+                ParentNodeId = item.ParentNodeId,
+                WbsCode = item.WbsCode,
+                Title = item.Title,
+                PlannedStart = item.PlannedStart,
+                PlannedEnd = item.PlannedEnd,
+                SortOrder = item.SortOrder,
+                IsMilestone = item.IsMilestone,
+                Predecessors = item.Predecessors.Select(link => new SaveProjectScheduleLinkRequest
+                {
+                    PredecessorNodeId = link.PredecessorNodeId,
+                    Type = link.Type,
+                    LagDays = link.LagDays,
+                }).ToList(),
+            }).ToList(),
+        }, CallerId, default);
+
+        var draft = Assert.Single(saved.Revisions);
+        Assert.Equal(46, draft.Items.Count);
+        Assert.Equal(preview.Items.Sum(item => item.Predecessors.Count), draft.Items.Sum(item => item.Predecessors.Count));
+    }
+
     private static AppDbContext CreateDb() => new(
         new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"project-schedule-{Guid.NewGuid()}")

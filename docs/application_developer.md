@@ -1398,6 +1398,7 @@ website hay `DesignProject`. Route `/api/operational-projects` (và `/api/v1`):
 | `DELETE` | `/{id}` | `operations.projects.manage` | Theo [mục 7](#7-xoá-vĩnh-viễn-aggregate-permanent-aggregate-deletion) |
 | `GET` | `/{id}/team/history` | xem dự án | Sự kiện đội ngũ và lịch sử đổi mã |
 | `GET`/`POST`/`PUT` | `/{id}/master-schedule`, `.../revisions[/{revisionId}]`, `/submit`, `/review`, `/email-preview` | thành viên xem; `operations.projects.manage` soạn/trình; người duyệt được giao duyệt | Tiến độ tổng (WBS) |
+| `POST` | `/{id}/master-schedule/import` (multipart `file`) | `operations.projects.manage`, người được lập tiến độ | Đọc XML MS Project (MSPDI, `MsProjectXmlImporter`, chặn DTD/XXE, ≤ 10 MB, ≤ 500 công việc) thành hạng mục nháp; không ghi DB. Hạng mục lưu thêm `IsMilestone`, `BaselineStart/End`, `PredecessorsJson` (FS/SS/FF/SF + lag ngày) |
 | `GET`/`POST` | `/{id}/master-schedule/emails/needs-review`, `.../{emailId}/resolve` | quản lý dự án được giao | Xử lý email tiến độ gửi lỗi |
 | `GET` | `/document-categories`, `/{id}/documents`, `.../{documentId}/content` | `operations.projects.view` | Danh mục, catalog, tải file riêng tư |
 | `POST`/`DELETE` | `/{id}/documents` (mỗi tệp ≤ `upload-limits/projectDocuments`, mặc định 100 MB, 1–100 MB), `.../retry`, `/classify`, `/resolve-conflict`, `/{documentId}` | `operations.projects.manage` | Upload, thử lại đồng bộ, phân loại file từ Drive, giữ cả hai phiên bản, xoá |

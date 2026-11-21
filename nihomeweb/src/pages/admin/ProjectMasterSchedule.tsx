@@ -31,10 +31,19 @@ import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { useI18n } from "@/lib/i18n";
 import { usePermissions } from "@/hooks/usePermissions";
 import { cn } from "@/lib/utils";
-import { AlertTriangle, ChevronDown, ChevronRight, Diamond, Plus, Trash2 } from "lucide-react";
+import {
+  AlertTriangle,
+  ChevronDown,
+  ChevronRight,
+  Diamond,
+  FileUp,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import {
   adminApi,
   type ProjectScheduleItemResponse,
+  type ProjectScheduleLink,
   type ProjectScheduleResponse,
   type ProjectScheduleEmailPreviewResponse,
   type ProjectScheduleEmailReviewItem,
@@ -61,6 +70,11 @@ interface DraftItem {
   plannedStart: string;
   plannedEnd: string;
   sortOrder: number;
+  /** Kept from an MS Project import (NICON PRD v2 answer 11) and saved with the draft. */
+  isMilestone: boolean;
+  baselineStart: string | null;
+  baselineEnd: string | null;
+  predecessors: ProjectScheduleLink[];
 }
 
 interface ScheduleTreeRow {
@@ -79,6 +93,10 @@ const makeDefaultItem = (start?: string | null, end?: string | null): DraftItem 
   plannedStart: start?.slice(0, 10) ?? localDateToday(),
   plannedEnd: end?.slice(0, 10) ?? localDateToday(),
   sortOrder: 0,
+  isMilestone: false,
+  baselineStart: null,
+  baselineEnd: null,
+  predecessors: [],
 });
 
 type ScheduleDiffStatus = "Added" | "Removed" | "Changed";
@@ -222,6 +240,10 @@ const fromItem = (item: ProjectScheduleItemResponse): DraftItem => ({
   plannedStart: item.plannedStart,
   plannedEnd: item.plannedEnd,
   sortOrder: item.sortOrder,
+  isMilestone: item.isMilestone ?? false,
+  baselineStart: item.baselineStart ?? null,
+  baselineEnd: item.baselineEnd ?? null,
+  predecessors: item.predecessors ?? [],
 });
 
 export const ProjectMasterSchedule = ({
@@ -634,6 +656,13 @@ export const ProjectMasterSchedule = ({
       plannedStart: item.plannedStart,
       plannedEnd: item.plannedEnd,
       sortOrder: item.sortOrder,
+      isMilestone: item.isMilestone,
+      baselineStart: item.baselineStart,
+      baselineEnd: item.baselineEnd,
+      // A link to an item deleted from the draft goes with it.
+      predecessors: item.predecessors.filter((link) =>
+        items.some((other) => other.nodeId === link.predecessorNodeId),
+      ),
     })),
   });
 
@@ -994,6 +1023,39 @@ export const ProjectMasterSchedule = ({
     label: user.name || user.email || String(user.userId),
     hint: user.name && user.email ? user.email : undefined,
   }));
+  const importInputRef = useRef<HTMLInputElement>(null);
+  const importMsProject = async (file: File) => {
+    setBusy(true);
+    setError(null);
+    try {
+      const { data } = await adminApi.importProjectSchedule(projectId, file);
+      setItems(data.items.map(fromItem));
+      setCollapsed(new Set());
+      setChangeReason((current) =>
+        current.trim() ? current : t("scheduleUx.import.reason", { file: data.sourceName }),
+      );
+      toast({
+        title: t("scheduleUx.import.done", { count: data.items.length, file: data.sourceName }),
+        description: data.warnings.length ? data.warnings.join(" ") : t("scheduleUx.import.review"),
+      });
+    } catch (reason) {
+      setError(uiError(reason));
+    } finally {
+      setBusy(false);
+      if (importInputRef.current) importInputRef.current.value = "";
+    }
+  };
+  const linkText = (item: DraftItem) =>
+    item.predecessors
+      .map((link) => {
+        const from = items.find((other) => other.nodeId === link.predecessorNodeId);
+        if (!from) return null;
+        const lag = link.lagDays ? ` ${link.lagDays > 0 ? "+" : ""}${link.lagDays}d` : "";
+        return `${from.wbsCode} ${link.type}${lag}`;
+      })
+      .filter(Boolean)
+      .join(", ");
+
   const renderEditor = () =>
     showEditor ? (
       <section aria-labelledby="schedule-editor-heading" className="space-y-3 border-t pt-4">
@@ -1008,10 +1070,38 @@ export const ProjectMasterSchedule = ({
               {t("scheduleUx.wbsCodeHelp")}
             </p>
           </div>
-          <Button variant="ghost" size="sm" onClick={() => setEditorOpen(false)}>
-            {t("scheduleUx.hideEditor")}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <input
+              ref={importInputRef}
+              type="file"
+              accept=".xml,text/xml,application/xml"
+              className="sr-only"
+              tabIndex={-1}
+              aria-label={t("scheduleUx.import.action")}
+              data-testid="schedule-import-input"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void importMsProject(file);
+              }}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={busy}
+              aria-describedby="schedule-import-help"
+              onClick={() => importInputRef.current?.click()}
+            >
+              <FileUp className="mr-1.5 h-4 w-4" aria-hidden />
+              {t("scheduleUx.import.action")}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setEditorOpen(false)}>
+              {t("scheduleUx.hideEditor")}
+            </Button>
+          </div>
         </div>
+        <p id="schedule-import-help" className="text-xs text-muted-foreground">
+          {t("scheduleUx.import.help")}
+        </p>
         <div className="space-y-1.5">
           <Label htmlFor="schedule-change-reason">
             {t("operationalProjects.schedule.changeReason")}
@@ -1140,6 +1230,32 @@ export const ProjectMasterSchedule = ({
                             className="min-w-[220px]"
                           />
                         </div>
+                        {(item.isMilestone ||
+                          item.predecessors.length > 0 ||
+                          item.baselineStart) && (
+                          <p
+                            className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
+                            style={{ paddingLeft: `${row.depth * 16 + 32}px` }}
+                          >
+                            {item.isMilestone && (
+                              <span className="inline-flex items-center gap-1">
+                                <Diamond className="h-3 w-3" aria-hidden />
+                                {t("scheduleUx.import.milestone")}
+                              </span>
+                            )}
+                            {linkText(item) && (
+                              <span>{t("scheduleUx.import.after", { links: linkText(item) })}</span>
+                            )}
+                            {item.baselineStart && item.baselineEnd && (
+                              <span>
+                                {t("scheduleUx.import.baseline", {
+                                  start: formatScheduleDate(item.baselineStart),
+                                  end: formatScheduleDate(item.baselineEnd),
+                                })}
+                              </span>
+                            )}
+                          </p>
+                        )}
                       </div>
                     </td>
                     <td className="py-2 pr-2">

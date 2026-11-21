@@ -72,6 +72,29 @@ public sealed class ProjectScheduleController(IProjectScheduleService service,
         catch (ProjectScheduleOperationException exception) { return StatusCode(exception.StatusCode, new { message = exception.Message }); }
     }
 
+    /// <summary>Maximum MS Project XML size read in one import.</summary>
+    public const long ImportMaxBytes = 10 * 1024 * 1024;
+
+    [HttpPost("import")]
+    [RequirePermission("operations.projects", "manage")]
+    [RequestSizeLimit(ImportMaxBytes + 64 * 1024)]
+    public async Task<ActionResult<ProjectScheduleImportResponse>> Import(
+        int projectId, [FromForm] IFormFile file, CancellationToken ct)
+    {
+        var userId = UserId();
+        if (userId is null) return Unauthorized();
+        if (file is null || file.Length == 0)
+            return BadRequest(new { message = "Chọn tệp tiến độ MS Project dạng .xml." });
+        if (file.Length > ImportMaxBytes)
+            return BadRequest(new { message = "Tệp tiến độ tối đa 10 MB." });
+        try
+        {
+            await using var stream = file.OpenReadStream();
+            return Ok(await service.PreviewImportAsync(projectId, stream, file.FileName, userId.Value, ct));
+        }
+        catch (ProjectScheduleOperationException exception) { return StatusCode(exception.StatusCode, new { message = exception.Message }); }
+    }
+
     [HttpPut("revisions/{revisionId:int}")]
     [RequirePermission("operations.projects", "manage")]
     [Idempotency("operations.projects.master-schedule.update", requireKey: true)]
