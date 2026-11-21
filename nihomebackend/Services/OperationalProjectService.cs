@@ -184,6 +184,7 @@ public class OperationalProjectService(
                         .Sum(milestone => milestone.PercentValue)));
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
+        response.BusinessSectorName = await BusinessSectors.NameAsync(db, project.BusinessSectorCode, ct);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
             role.Member.OperationalProjectId == id && role.Member.UserId == callerUserId &&
             role.Member.DesignProjectId == null && role.Member.EndedAt == null && role.EndedAt == null &&

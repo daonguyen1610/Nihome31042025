@@ -40,6 +40,8 @@ public class OperationalProjectListResponse
 public class OperationalProjectResponse : OperationalProjectListItemResponse
 {
     public string? Note { get; set; }
+    /// <summary>The sector's name as set in master data (also for one switched off).</summary>
+    public string? BusinessSectorName { get; set; }
     public int? DesignProjectId { get; set; }
     public string? DesignProjectCode { get; set; }
     public List<OperationalProjectDesignResponse> DesignProjects { get; set; } = new();

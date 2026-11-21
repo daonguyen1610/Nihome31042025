@@ -171,6 +171,38 @@ public class ContractServiceTests : IDisposable
         Assert.Empty(_db.Contracts);
     }
 
+    [Theory]
+    [InlineData(true, false, true, true)]   // views this project
+    [InlineData(true, true, false, true)]   // views all projects
+    [InlineData(true, false, false, false)] // views projects, but not this one
+    [InlineData(false, true, true, false)]  // may not view projects at all
+    public async Task Detail_GivesSiteDetails_OnlyToWhoMayOpenTheProject(
+        bool projectView, bool viewAll, bool onProject, bool expected)
+    {
+        // NICON feedback row 25: the contract reads the project's site details, under the
+        // project's own access rule, for reads and for the result of a change alike.
+        var created = await _sut.CreateAsync(Req(), callerUserId: 1, canReassignOwner: true);
+        var project = _db.OperationalProjects.Single(item => item.Id == created.OperationalProjectId);
+        project.SiteAddress = "Lô C5, KCN Tân Uyên, Bình Dương";
+        project.SiteAreaM2 = 12500m;
+        await _db.SaveChangesAsync();
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.HasAsync(7, "operations.projects.view", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(projectView);
+        permissions.Setup(item => item.HasAsync(7, "operations.projects.view.all", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(viewAll);
+        var access = new Mock<IProjectAccessService>();
+        access.Setup(item => item.CanViewOperationalProjectAsync(7, project.Id, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(onProject);
+        var service = new ContractService(_db, NullLogger<ContractService>.Instance, _projectDocuments.Object,
+            new OpportunityClosureInvariantService(_db), null, permissions.Object, access.Object);
+
+        var detail = await service.GetAsync(created.Id, 7, canSeeAll: true);
+
+        Assert.Equal(expected, detail!.ProjectSite is not null);
+        if (expected) Assert.Equal("Lô C5, KCN Tân Uyên, Bình Dương", detail.ProjectSite!.SiteAddress);
+    }
+
     [Fact]
     public async Task Create_AutoGeneratesContractNumber()
     {

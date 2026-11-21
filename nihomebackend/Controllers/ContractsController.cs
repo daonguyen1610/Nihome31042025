@@ -194,8 +194,6 @@ public class ContractsController(
         var canSeeAll = await CanReadContractAcrossOwnersAsync(userId.Value, id, ct);
         var found = await svc.GetAsync(id, userId.Value, canSeeAll, ct);
         if (found is null || direction.HasValue && found.Direction != direction.Value) return NotFound();
-        // Site details belong to the project: only callers who may view projects get them.
-        if (!await permissions.HasAsync(userId.Value, "operations.projects.view", ct)) found.ProjectSite = null;
         CrmConcurrency.SetResponseEntityTag(Response, found.RowVersion);
         return Ok(found);
     }
