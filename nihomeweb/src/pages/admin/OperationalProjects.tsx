@@ -401,8 +401,14 @@ const OperationalProjects = () => {
           } satisfies CreateOperationalProjectRequest);
       setDialogOpen(false);
       toast({ title: t(detail ? "operationalProjects.updated" : "operationalProjects.created") });
+      // Editing stays on the same page, so navigating would not reload it: show the saved
+      // project (name, customer, status) and its history at once.
+      if (detail) {
+        void load();
+        return;
+      }
       navigate(
-        !detail && returnOpportunity
+        returnOpportunity
           ? returnToOpportunityEdit
             ? `/admin/opportunities/${returnOpportunity}?edit=1&projectId=${response.data.id}`
             : `/admin/opportunities/${returnOpportunity}/design-project/new?projectId=${response.data.id}`
