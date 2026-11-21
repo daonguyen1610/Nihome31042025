@@ -1447,7 +1447,7 @@ const OperationalProjects = () => {
                 <caption className="sr-only">{t("operationalProjects.title")}</caption>
                 <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
                   <tr>
-                    <th scope="col" className="px-4 py-2.5 font-medium md:min-w-[15rem]">
+                    <th scope="col" className="px-4 py-2.5 font-medium md:min-w-[14rem]">
                       {t("operationalProjects.list.projectColumn")}
                     </th>
                     <th scope="col" className="px-4 py-2.5 font-medium">

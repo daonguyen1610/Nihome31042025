@@ -53,6 +53,8 @@ for (const width of [390, 768, 1440]) {
     );
     await search.fill(missingTerm);
     expect((await missingResult).status()).toBe(200);
+    // The empty state, not the loading state, shows no rows.
+    await expect(page.getByText(/No matching projects|Chưa có dự án phù hợp/)).toBeVisible();
     await expect(page.getByTestId("project-row")).toHaveCount(0);
     await expect(search).toBeFocused();
     await search.fill("");
@@ -100,6 +102,7 @@ test("project search ignores stale responses and remains usable after errors (si
   );
   await search.fill("latest");
   await latest;
+  await expect(page.getByText(/No matching projects|Chưa có dự án phù hợp/)).toBeVisible();
   await expect(page.getByTestId("project-row")).toHaveCount(0);
   const stale = page.waitForResponse(
     (res) => new URL(res.url()).searchParams.get("search") === "slow",
