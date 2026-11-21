@@ -388,6 +388,8 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
   designProjectCode?: string | null;
   rowVersion: string;
   createdAt: string;
+  /** A contract is signed (gate 3), so the project code can no longer change. */
+  codeLocked: boolean;
   latestCodeChange?: {
     id: number;
     oldCode: string;
