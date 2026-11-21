@@ -17,6 +17,18 @@ public abstract class OperationalProjectFieldsRequest
 
     [StringLength(4000)]
     public string? Note { get; set; }
+
+    [StringLength(500)]
+    public string? SiteAddress { get; set; }
+
+    [EnumDataType(typeof(ProjectConstructionKind))]
+    public ProjectConstructionKind? ConstructionKind { get; set; }
+
+    [StringLength(60)]
+    public string? BusinessSectorCode { get; set; }
+
+    [Range(typeof(decimal), "0.01", "100000000")]
+    public decimal? SiteAreaM2 { get; set; }
 }
 
 public class CreateOperationalProjectRequest : OperationalProjectFieldsRequest

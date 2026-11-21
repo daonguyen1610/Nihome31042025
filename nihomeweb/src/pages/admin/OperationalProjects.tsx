@@ -6,6 +6,7 @@ import { ListPagination } from "@/components/admin/ListPagination";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
+import { MoneyInput } from "@/components/ui/money-input";
 import { personOption } from "@/lib/people";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -75,7 +76,10 @@ import { customerSelectOptions } from "@/lib/customerOptions";
 import {
   adminApi,
   OPERATIONAL_PROJECT_STATUSES,
+  PROJECT_CONSTRUCTION_KINDS,
   type CustomerResponse,
+  type MasterDataOption,
+  type ProjectConstructionKind,
   type DeletionImpactResponse,
   type OperationalProjectListItemResponse,
   type OperationalProjectResponse,
@@ -87,7 +91,7 @@ import {
   type UpdateOperationalProjectRequest,
   type UserListItemResponse,
 } from "@/services/adminApi";
-import { formatDate as formatDateInZone, formatMoney } from "@/lib/displaySettings";
+import { formatDate as formatDateInZone, formatMoney, formatNumber } from "@/lib/displaySettings";
 import { formatVnd } from "@/lib/numberFormat";
 
 const statusClass: Record<OperationalProjectStatus, string> = {
@@ -115,6 +119,10 @@ const emptyForm = (): OperationalProjectForm => ({
   endDate: null,
   note: "",
   status: "Planning",
+  siteAddress: "",
+  constructionKind: null,
+  businessSectorCode: null,
+  siteAreaM2: null,
 });
 
 const dateInput = (value?: string | null) => value?.slice(0, 10) ?? "";
@@ -175,6 +183,11 @@ const OperationalProjects = () => {
     [customers, t],
   );
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
+  const [sectors, setSectors] = useState<MasterDataOption[]>([]);
+  const sectorLabel = useCallback(
+    (code?: string | null) => (code ? (sectors.find((s) => s.code === code)?.name ?? code) : ""),
+    [sectors],
+  );
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const requestSequence = useRef(0);
@@ -207,11 +220,13 @@ const OperationalProjects = () => {
       canListUsers
         ? adminApi.getPeopleDirectory()
         : Promise.resolve({ data: { items: [], total: 0 } }),
+      adminApi.getMasterDataOptions("business_sector", lang),
     ])
-      .then(([customerResponse, userResponse]) => {
+      .then(([customerResponse, userResponse, sectorResponse]) => {
         if (cancelled) return;
         setCustomers(customerResponse.data.items ?? []);
         setUsers(userResponse.data.items ?? []);
+        setSectors(sectorResponse.data ?? []);
       })
       .catch(() => {
         // Lookup access is secondary; the main request reports its own error.
@@ -219,7 +234,7 @@ const OperationalProjects = () => {
     return () => {
       cancelled = true;
     };
-  }, [canListUsers]);
+  }, [canListUsers, lang]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -279,6 +294,22 @@ const OperationalProjects = () => {
         { header: t("operationalProjects.field.code"), value: "code" },
         { header: t("operationalProjects.field.name"), value: "name" },
         { header: t("operationalProjects.field.customer"), value: "customerName" },
+        { header: t("operationalProjects.field.siteAddress"), value: (p) => p.siteAddress ?? "" },
+        {
+          header: t("operationalProjects.field.constructionKind"),
+          value: (p) =>
+            p.constructionKind
+              ? t(`operationalProjects.constructionKind.${p.constructionKind}`)
+              : "",
+        },
+        {
+          header: t("operationalProjects.field.businessSector"),
+          value: (p) => sectorLabel(p.businessSectorCode),
+        },
+        {
+          header: t("operationalProjects.field.siteArea"),
+          value: (p) => (p.siteAreaM2 != null ? formatNumber(p.siteAreaM2) : ""),
+        },
         {
           header: t("operationalProjects.field.manager"),
           value: (p) => p.projectManagerName ?? "",
@@ -353,6 +384,10 @@ const OperationalProjects = () => {
       note: project.note ?? "",
       status: project.status,
       rowVersion: project.rowVersion,
+      siteAddress: project.siteAddress ?? "",
+      constructionKind: project.constructionKind ?? null,
+      businessSectorCode: project.businessSectorCode ?? null,
+      siteAreaM2: project.siteAreaM2 ?? null,
     });
     setFormError(null);
     setDialogOpen(true);
@@ -369,6 +404,12 @@ const OperationalProjects = () => {
       return t("operationalProjects.validation.dateRange");
     }
     if ((form.note?.length ?? 0) > 4000) return t("operationalProjects.validation.note");
+    // NICON keeps these for every project (feedback row 27).
+    if (!form.siteAddress?.trim()) return t("operationalProjects.validation.siteAddress");
+    if (!form.constructionKind) return t("operationalProjects.validation.constructionKind");
+    if (!form.businessSectorCode) return t("operationalProjects.validation.businessSector");
+    if (!form.siteAreaM2 || form.siteAreaM2 <= 0)
+      return t("operationalProjects.validation.siteArea");
     return null;
   };
 
@@ -388,6 +429,10 @@ const OperationalProjects = () => {
         note: form.note?.trim() || null,
         startDate: apiDate(dateInput(form.startDate)),
         endDate: apiDate(dateInput(form.endDate)),
+        siteAddress: form.siteAddress?.trim() || null,
+        constructionKind: form.constructionKind,
+        businessSectorCode: form.businessSectorCode,
+        siteAreaM2: form.siteAreaM2,
       };
       const response = detail
         ? await adminApi.updateOperationalProject(detail.id, {
@@ -650,6 +695,8 @@ const OperationalProjects = () => {
               value={formatDate(detail.updatedAt)}
             />
           </section>
+
+          <ProjectSiteCard project={detail} sectorLabel={sectorLabel} />
 
           <ProjectMasterSchedule
             projectId={detail.id}
@@ -1465,7 +1512,15 @@ const OperationalProjects = () => {
               <SearchableSelect
                 value={form.customerId ? String(form.customerId) : ""}
                 onChange={(value) =>
-                  setForm((current) => ({ ...current, customerId: Number(value) }))
+                  setForm((current) => ({
+                    ...current,
+                    customerId: Number(value),
+                    // The project's sector starts as its customer's.
+                    businessSectorCode:
+                      current.businessSectorCode ??
+                      customers.find((c) => c.id === Number(value))?.businessSectorCode ??
+                      null,
+                  }))
                 }
                 options={customerChoices}
                 searchPlaceholder={t("customers.picker.search")}
@@ -1514,6 +1569,76 @@ const OperationalProjects = () => {
                 </Select>
               </FieldScope>
             )}
+            <div className="sm:col-span-2">
+              <Label htmlFor="project-site-address">
+                {t("operationalProjects.field.siteAddress")} *
+              </Label>
+              <Input
+                id="project-site-address"
+                maxLength={500}
+                value={form.siteAddress ?? ""}
+                placeholder={t("operationalProjects.siteAddress.placeholder")}
+                onChange={(event) =>
+                  setForm((current) => ({ ...current, siteAddress: event.target.value }))
+                }
+              />
+            </div>
+            <FieldScope>
+              <Label>{t("operationalProjects.field.constructionKind")} *</Label>
+              <Select
+                value={form.constructionKind ?? undefined}
+                onValueChange={(value) =>
+                  setForm((current) => ({
+                    ...current,
+                    constructionKind: value as ProjectConstructionKind,
+                  }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue
+                    placeholder={t("operationalProjects.constructionKind.placeholder")}
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {PROJECT_CONSTRUCTION_KINDS.map((kind) => (
+                    <SelectItem key={kind} value={kind}>
+                      {t(`operationalProjects.constructionKind.${kind}`)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </FieldScope>
+            <div>
+              <Label htmlFor="project-site-area">{t("operationalProjects.field.siteArea")} *</Label>
+              <MoneyInput
+                id="project-site-area"
+                decimalScale={2}
+                value={form.siteAreaM2 ?? 0}
+                onChange={(next) =>
+                  setForm((current) => ({ ...current, siteAreaM2: next > 0 ? next : null }))
+                }
+              />
+            </div>
+            <FieldScope className="sm:col-span-2">
+              <Label>{t("operationalProjects.field.businessSector")} *</Label>
+              <SearchableSelect
+                ariaLabel={t("operationalProjects.field.businessSector")}
+                value={form.businessSectorCode ?? ""}
+                placeholder={t("operationalProjects.businessSector.placeholder")}
+                searchPlaceholder={t("customers.businessSector.search")}
+                onChange={(value) =>
+                  setForm((current) => ({ ...current, businessSectorCode: value || null }))
+                }
+                options={[
+                  // A sector an admin switched off still shows on projects that have it.
+                  ...(form.businessSectorCode &&
+                  !sectors.some((s) => s.code === form.businessSectorCode)
+                    ? [{ value: form.businessSectorCode, label: form.businessSectorCode }]
+                    : []),
+                  ...sectors.map((s) => ({ value: s.code, label: s.name })),
+                ]}
+              />
+            </FieldScope>
             <div>
               <Label htmlFor="project-start">{t("operationalProjects.field.startDate")}</Label>
               <Input
@@ -1699,5 +1824,53 @@ const Count = ({ value, label }: { value: number; label: string }) => (
     <span className="text-muted-foreground">{label}</span>
   </div>
 );
+
+/** Where and what NICON builds; says which details are still missing (feedback row 27). */
+function ProjectSiteCard({
+  project,
+  sectorLabel,
+}: {
+  project: OperationalProjectResponse;
+  sectorLabel: (code?: string | null) => string;
+}) {
+  const { t } = useI18n();
+  const fields = [
+    { key: "siteAddress", value: project.siteAddress ?? "" },
+    {
+      key: "constructionKind",
+      value: project.constructionKind
+        ? t(`operationalProjects.constructionKind.${project.constructionKind}`)
+        : "",
+    },
+    { key: "businessSector", value: sectorLabel(project.businessSectorCode) },
+    {
+      key: "siteArea",
+      value: project.siteAreaM2 != null ? `${formatNumber(project.siteAreaM2)} m²` : "",
+    },
+  ];
+  const missing = fields.filter((field) => !field.value);
+  return (
+    <section className="rounded-lg border bg-card p-4" data-testid="project-site">
+      <h2 className="mb-3 font-medium">{t("operationalProjects.site.title")}</h2>
+      <dl className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-4">
+        {fields.map((field) => (
+          <div key={field.key} className="min-w-0">
+            <dt className="text-xs text-muted-foreground">
+              {t(`operationalProjects.field.${field.key}`)}
+            </dt>
+            <dd className="break-words">{field.value || "—"}</dd>
+          </div>
+        ))}
+      </dl>
+      {missing.length > 0 && (
+        <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
+          {t("operationalProjects.site.missing", {
+            fields: missing.map((field) => t(`operationalProjects.field.${field.key}`)).join(", "),
+          })}
+        </p>
+      )}
+    </section>
+  );
+}
 
 export default OperationalProjects;

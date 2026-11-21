@@ -1642,6 +1642,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(p => p.Name).HasMaxLength(300).IsRequired();
             b.Property(p => p.Status).HasConversion<string>().HasMaxLength(20);
             b.Property(p => p.Note).HasMaxLength(4000);
+            b.Property(p => p.SiteAddress).HasMaxLength(500);
+            b.Property(p => p.ConstructionKind).HasConversion<string>().HasMaxLength(20);
+            b.Property(p => p.BusinessSectorCode).HasMaxLength(60);
+            b.Property(p => p.SiteAreaM2).HasPrecision(18, 2);
             b.Property(p => p.RowVersion).IsRowVersion();
             b.HasOne(p => p.Customer)
                 .WithMany(c => c.OperationalProjects)

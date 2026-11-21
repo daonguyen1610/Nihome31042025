@@ -256,6 +256,8 @@ Lưu ý: 11 tiêu chí đánh giá cá nhân trong mẫu ISO `NS2-M01` khác v�
 
 Mở **CRM → Dự án** để tạo hoặc tìm dự án trước khi làm việc ở các phân hệ khác. Danh sách hiển thị khách hàng, trạng thái và số Cơ hội, Báo giá, Hợp đồng liên kết. Trang chi tiết có liên kết tới các bản ghi đó và tới Hồ sơ thiết kế. Tìm theo mã hoặc tên dự án; bộ lọc trạng thái vẫn dùng được khi tìm không ra kết quả.
 
+**Thông tin công trình.** Hộp **Tạo dự án** và **Chỉnh sửa dự án** bắt buộc nhập **Địa chỉ dự án**, **Loại hình** (Xây mới hoặc Cải tạo), **Ngành nghề kinh doanh** (danh mục lĩnh vực của NICON, tự điền theo khách hàng, sửa được) và **Diện tích (m²)**. Dự án tạo nhanh từ Cơ hội, Hợp đồng hoặc khi chuyển Lead chỉ cần tên; trang chi tiết dự án hiện mục **Thông tin công trình** và báo còn thiếu gì, bấm **Sửa** để bổ sung. **Xuất Excel** danh sách dự án có cả bốn cột này.
+
 **Trạng thái dự án**
 
 | Trạng thái | Ý nghĩa |

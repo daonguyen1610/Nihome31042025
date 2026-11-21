@@ -116,6 +116,33 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task SiteDetails_AreSaved_AndAnAreaOfZeroIsRefused()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync();
+        object Body(decimal area) => new
+        {
+            name = $"Nhà xưởng Tân Uyên {Guid.NewGuid():N}",
+            customerId,
+            siteAddress = "Lô C5, KCN Tân Uyên, Bình Dương",
+            constructionKind = "NewBuild",
+            siteAreaM2 = area,
+        };
+
+        var refused = await Client.PostAsJsonAsync("/api/operational-projects", Body(0m));
+        refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var created = await Client.PostAsJsonAsync("/api/operational-projects", Body(12500.5m));
+        created.StatusCode.Should().Be(HttpStatusCode.Created, await created.Content.ReadAsStringAsync());
+        var body = await ReadJsonAsync(created);
+        body.GetProperty("siteAddress").GetString().Should().Be("Lô C5, KCN Tân Uyên, Bình Dương");
+        body.GetProperty("constructionKind").GetString().Should().Be("NewBuild");
+        body.GetProperty("siteAreaM2").GetDecimal().Should().Be(12500.5m);
+    }
+
+    [Fact]
     public async Task CustomerOfAProject_ChangesUntilCustomerRecordsHangOffIt()
     {
         await AuthTestHelper.AuthenticateAsync(

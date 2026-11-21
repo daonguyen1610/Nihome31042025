@@ -39,7 +39,14 @@ test("a project entered with the wrong customer is moved to the right one", asyn
     await createCustomer(rightName);
     const created = await api.post("/api/operational-projects", {
       headers: admin,
-      data: { name: `Kho lạnh Đức Hoà ${suffix}`, customerId: wrong },
+      data: {
+        name: `Kho lạnh Đức Hoà ${suffix}`,
+        customerId: wrong,
+        siteAddress: "Đức Hoà, Long An",
+        constructionKind: "NewBuild",
+        businessSectorCode: "food-beverage",
+        siteAreaM2: 3200,
+      },
     });
     expect(created.status(), await created.text()).toBe(201);
     const projectId = (await created.json()).id as number;

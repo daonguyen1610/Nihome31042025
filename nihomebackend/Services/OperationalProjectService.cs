@@ -89,6 +89,10 @@ public class OperationalProjectService(
                 Status = project.Status.ToString(),
                 StartDate = project.StartDate,
                 EndDate = project.EndDate,
+                SiteAddress = project.SiteAddress,
+                ConstructionKind = project.ConstructionKind,
+                BusinessSectorCode = project.BusinessSectorCode,
+                SiteAreaM2 = project.SiteAreaM2,
                 OpportunityCount = project.Opportunities.Count,
                 QuoteCount = project.Quotes.Count,
                 ContractCount = project.Contracts.Count,
@@ -264,6 +268,10 @@ public class OperationalProjectService(
         CancellationToken ct = default)
     {
         await ValidateAsync(request, callerUserId, canSeeAll, ct);
+        // A project not given a sector takes its customer's (quick creates ask only for a name).
+        var sector = await ValidateSectorAsync(request.BusinessSectorCode, null, ct) ??
+            await db.Customers.Where(customer => customer.Id == request.CustomerId)
+                .Select(customer => customer.BusinessSectorCode).FirstOrDefaultAsync(ct);
         var now = DateTime.UtcNow;
         var year = now.Year;
         await using var allocationTransaction = await BeginCodeAllocationAsync(year, ct);
@@ -279,6 +287,10 @@ public class OperationalProjectService(
             StartDate = request.StartDate,
             EndDate = request.EndDate,
             Note = TrimOrNull(request.Note),
+            SiteAddress = TrimOrNull(request.SiteAddress),
+            ConstructionKind = request.ConstructionKind,
+            BusinessSectorCode = sector,
+            SiteAreaM2 = request.SiteAreaM2,
             CreatedAt = now,
             CreatedByUserId = callerUserId,
             UpdatedAt = now,
@@ -321,6 +333,7 @@ public class OperationalProjectService(
         if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
 
         await ValidateAsync(request, callerUserId, canSeeAll, ct);
+        var sector = await ValidateSectorAsync(request.BusinessSectorCode, project.BusinessSectorCode, ct);
         if (project.CustomerId != request.CustomerId)
         {
             await EnsureCustomerCanChangeAsync(project.Id, ct);
@@ -353,6 +366,10 @@ public class OperationalProjectService(
         project.StartDate = request.StartDate;
         project.EndDate = request.EndDate;
         project.Note = TrimOrNull(request.Note);
+        project.SiteAddress = TrimOrNull(request.SiteAddress);
+        project.ConstructionKind = request.ConstructionKind;
+        project.BusinessSectorCode = sector;
+        project.SiteAreaM2 = request.SiteAreaM2;
         project.UpdatedAt = DateTime.UtcNow;
         project.UpdatedByUserId = callerUserId;
 
@@ -660,6 +677,13 @@ public class OperationalProjectService(
         }
     }
 
+    private async Task<string?> ValidateSectorAsync(string? code, string? current, CancellationToken ct)
+    {
+        var (allowed, normalized) = await BusinessSectors.CheckAsync(db, code, current, ct);
+        if (!allowed) throw new OperationalProjectOperationException(BusinessSectors.NotInListMessage);
+        return normalized;
+    }
+
     private async Task ValidateAsync(
         OperationalProjectFieldsRequest request,
         int callerUserId,
@@ -832,6 +856,10 @@ public class OperationalProjectService(
             CompletedAt = project.CompletedAt,
             FinalProjectBoqRevisionId = project.FinalProjectBoqRevisionId,
             Note = project.Note,
+            SiteAddress = project.SiteAddress,
+            ConstructionKind = project.ConstructionKind,
+            BusinessSectorCode = project.BusinessSectorCode,
+            SiteAreaM2 = project.SiteAreaM2,
             OpportunityCount = project.Opportunities.Count,
             QuoteCount = project.Quotes.Count,
             ContractCount = project.Contracts.Count,
