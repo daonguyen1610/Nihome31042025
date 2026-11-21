@@ -577,7 +577,8 @@ Ghi khảo sát gắn với Cơ hội hoặc Dự án: chụp ảnh, quay video 
 
 1. Chọn **Tạo hợp đồng** từ Cơ hội, từ báo giá đã duyệt, hoặc tạo mới trong Sổ hợp đồng.
 2. Số hợp đồng được đề xuất theo dạng `HD-YYYY-NNNN`. Có thể sửa theo quy ước bên ngoài (duy nhất, tối đa 40 ký tự). Nếu giữ số đề xuất, số chính thức được cấp khi lưu nên có thể nhảy nếu có người vừa tạo hợp đồng khác.
-3. Chọn Dự án của cùng khách hàng. Hợp đồng tạo từ Cơ hội hoặc báo giá dùng dự án của nguồn. Khách chỉ có một dự án thì hệ thống tự chọn; không có hoặc có nhiều dự án thì phải chọn. Chưa có dự án phù hợp thì chọn **Tạo dự án mới** dưới ô dự án (cần quyền quản lý dự án).
+3. Chọn Dự án của cùng khách hàng. Hợp đồng tạo từ Cơ hội hoặc báo giá dùng dự án của nguồn. Khách chỉ có một dự án thì hệ thống tự chọn; không có hoặc có nhiều dự án thì phải chọn. Chưa có dự án phù hợp thì chọn **Tạo dự án mới** dưới ô dự án (cần quyền quản lý dự án). Chọn xong, form hiện **Thông tin công trình** của dự án (địa chỉ, loại hình Xây mới/Cải tạo, ngành nghề kinh doanh, diện tích), không phải nhập lại; còn thiếu gì thì bổ sung ở trang Dự án. Tab **Thông tin** của hợp đồng cũng hiện mục này.
+   Loại hợp đồng có: Thiết kế, Thi công, Thiết kế và Thi công, Tư vấn, Xin phép, Thiết kế - Xin phép, Thi công - Xin phép, Thiết kế - Xin phép - Thi công, Cung ứng, Thầu phụ.
 4. Hợp đồng khách hàng có 7 phạm vi: Thiết kế, Xin phép, Thi công và 4 tổ hợp của chúng.
 5. Lưu. Mọi hợp đồng mới bắt đầu ở **Bản nháp**.
 

@@ -918,6 +918,8 @@ Hầu hết controller có alias `/api/v1/...` cùng hành vi với `/api/...`.
 
 ### 8.1 Customer và Lead
 
+`GET /api/contracts/{id}` trả thêm `projectSiteAddress`, `projectConstructionKind`, `projectBusinessSectorCode`, `projectSiteAreaM2` đọc từ dự án (không lưu bản sao); component `ProjectSiteDetails` dùng chung cho trang Dự án, form và tab Thông tin hợp đồng.
+
 OperationalProject có `SiteAddress`, `ConstructionKind` (`NewBuild`/`Renovation`), `BusinessSectorCode` (cùng danh mục, mặc định lấy của khách hàng khi tạo) và `SiteAreaM2` (> 0); API không bắt buộc để tạo nhanh và chuyển Lead vẫn chạy, form Dự án bắt buộc cả bốn. Kiểm tra lĩnh vực dùng chung `BusinessSectors.CheckAsync`.
 
 Customer có `BusinessSectorCode` (tuỳ chọn, mã master data `business_sector`, seed 35 lĩnh vực NICON trong `Seeds/master-data/defaults.json`) và `BusinessDetail` (tự nhập, tối đa 500 ký tự). Tạo hoặc đổi sang lĩnh vực phải đang bật; giữ nguyên lĩnh vực đã tắt vẫn lưu được. `GET /api/customers?businessSectorCode=` lọc theo lĩnh vực.

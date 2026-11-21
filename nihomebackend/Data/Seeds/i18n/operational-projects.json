@@ -1822,5 +1822,21 @@
     "en": "Still missing: {fields}. Use Edit to add them.",
     "zh": "尚缺：{fields}。请点击编辑补充。",
     "ja": "未入力：{fields}。「編集」から追加してください。"
+  },
+  {
+    "key": "operationalProjects.site.missingElsewhere",
+    "category": "operationalProjects",
+    "vi": "Dự án còn thiếu: {fields}.",
+    "en": "The project is still missing: {fields}.",
+    "zh": "项目尚缺：{fields}。",
+    "ja": "プロジェクトの未入力：{fields}。"
+  },
+  {
+    "key": "operationalProjects.site.openProject",
+    "category": "operationalProjects",
+    "vi": "Bổ sung ở trang Dự án",
+    "en": "Add them on the project page",
+    "zh": "在项目页面补充",
+    "ja": "プロジェクト画面で追加"
   }
 ]

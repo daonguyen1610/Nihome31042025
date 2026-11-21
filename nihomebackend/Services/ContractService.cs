@@ -350,6 +350,13 @@ public class ContractService(
                 OwnerName = c.Owner != null ? c.Owner.FullName : null,
                 OperationalProjectCode = c.OperationalProject != null ? c.OperationalProject.Code : null,
                 OperationalProjectName = c.OperationalProject != null ? c.OperationalProject.Name : null,
+                ProjectSite = c.OperationalProject == null ? null : new
+                {
+                    c.OperationalProject.SiteAddress,
+                    c.OperationalProject.ConstructionKind,
+                    c.OperationalProject.BusinessSectorCode,
+                    c.OperationalProject.SiteAreaM2,
+                },
                 // Contract has no navigation to DesignProject — the foreign key
                 // lives on the other side — so this reads as a correlated subquery,
                 // the same shape the list projection already uses.
@@ -392,7 +399,7 @@ public class ContractService(
             .AsNoTracking()
             .CountAsync(v => v.ContractId == id, ct);
 
-        return MapToResponse(
+        var response = MapToResponse(
             row.Contract, row.CustomerName, row.VendorCode, row.VendorName,
             row.OpportunityTitle, row.QuoteCode, row.OwnerName,
             row.OperationalProjectCode, row.OperationalProjectName,
@@ -404,6 +411,12 @@ public class ContractService(
             sourceTenderId: row.SourceTender?.Id,
             sourceTenderCode: row.SourceTender?.Code,
             sourceTenderName: row.SourceTender?.Name);
+        // The contract reads the project's site details rather than keeping copies (feedback row 25).
+        response.ProjectSiteAddress = row.ProjectSite?.SiteAddress;
+        response.ProjectConstructionKind = row.ProjectSite?.ConstructionKind;
+        response.ProjectBusinessSectorCode = row.ProjectSite?.BusinessSectorCode;
+        response.ProjectSiteAreaM2 = row.ProjectSite?.SiteAreaM2;
+        return response;
     }
 
     public Task<string> PreviewNextNumberAsync(CancellationToken ct = default) =>
