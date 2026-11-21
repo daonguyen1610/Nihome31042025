@@ -94,6 +94,7 @@ export const crmApi = {
     if (params.status) q.append("status", params.status);
     if (params.ownerUserId != null) q.append("ownerUserId", String(params.ownerUserId));
     if (params.sourceCode) q.append("sourceCode", params.sourceCode);
+    if (params.businessSectorCode) q.append("businessSectorCode", params.businessSectorCode);
     if (params.search) q.append("search", params.search);
     if (params.createdFrom) q.append("createdFrom", params.createdFrom);
     if (params.createdTo) q.append("createdTo", params.createdTo);

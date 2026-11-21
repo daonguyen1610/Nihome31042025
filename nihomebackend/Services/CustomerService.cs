@@ -19,6 +19,7 @@ public class CustomerService(
 {
     private const int MaxPageSize = 100;
     private const string SourceCategory = "customer_source";
+    private const string BusinessSectorCategory = "business_sector";
     private static readonly ConcurrentDictionary<int, SemaphoreSlim> ContactMutationGates = new();
 
     public async Task<CustomerListResponse> ListAsync(
@@ -28,6 +29,7 @@ public class CustomerService(
         CustomerRelationshipStatus? status = null,
         int? ownerUserId = null,
         string? sourceCode = null,
+        string? businessSectorCode = null,
         string? search = null,
         DateTime? createdFrom = null,
         DateTime? createdTo = null,
@@ -57,6 +59,12 @@ public class CustomerService(
         {
             var normalized = sourceCode.Trim();
             query = query.Where(c => c.SourceCode == normalized);
+        }
+
+        if (!string.IsNullOrWhiteSpace(businessSectorCode))
+        {
+            var sector = businessSectorCode.Trim();
+            query = query.Where(c => c.BusinessSectorCode == sector);
         }
 
         if (createdFrom.HasValue) query = query.Where(c => c.CreatedAt >= createdFrom.Value);
@@ -145,6 +153,7 @@ public class CustomerService(
 
         ValidateContactContact(request.PrimaryContact.Phone, request.PrimaryContact.Email);
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
+        var businessSectorCode = await ValidateBusinessSectorAsync(request.BusinessSectorCode, null, ct);
 
         // Duplicate detection — TaxId (Company) or primary Phone (Individual).
         await EnsureNoDuplicateAsync(
@@ -173,6 +182,8 @@ public class CustomerService(
             Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
             RepresentativeName = representativeName,
             SourceCode = sourceCode,
+            BusinessSectorCode = businessSectorCode,
+            BusinessDetail = string.IsNullOrWhiteSpace(request.BusinessDetail) ? null : request.BusinessDetail.Trim(),
             RelationshipStatus = CustomerRelationshipStatus.Prospect,
             OwnerUserId = request.OwnerUserId ?? callerUserId,
             Note = string.IsNullOrWhiteSpace(request.Note) ? null : request.Note.Trim(),
@@ -253,6 +264,8 @@ public class CustomerService(
         }
 
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
+        var businessSectorCode = await ValidateBusinessSectorAsync(
+            request.BusinessSectorCode, customer.BusinessSectorCode, ct);
 
         var primaryPhone = customer.Contacts.FirstOrDefault(c => c.IsPrimary)?.Phone;
         await EnsureNoDuplicateAsync(
@@ -315,6 +328,8 @@ public class CustomerService(
             }
         }
         customer.SourceCode = sourceCode;
+        customer.BusinessSectorCode = businessSectorCode;
+        customer.BusinessDetail = TrimOrNull(request.BusinessDetail);
         customer.RelationshipStatus = request.RelationshipStatus;
         customer.OwnerUserId = request.OwnerUserId;
         customer.Note = TrimOrNull(request.Note);
@@ -694,6 +709,21 @@ public class CustomerService(
         return normalized;
     }
 
+    /// <summary>
+    /// The sector is optional and chosen from the active list. A sector an admin later switched
+    /// off stays on the customers that already have it, so saving them does not fail.
+    /// </summary>
+    private async Task<string?> ValidateBusinessSectorAsync(string? code, string? current, CancellationToken ct)
+    {
+        var normalized = code?.Trim();
+        if (string.IsNullOrEmpty(normalized)) return null;
+        if (normalized == current) return normalized;
+        if (!await db.MasterDataOptions.AsNoTracking().AnyAsync(
+                o => o.Category == BusinessSectorCategory && o.Code == normalized && o.IsActive, ct))
+            throw new CustomerOperationException("Lĩnh vực kinh doanh đã chọn không có trong danh mục. Hãy chọn lại.");
+        return normalized;
+    }
+
     private async Task EnsureNoDuplicateAsync(
         CustomerType type,
         string? taxId,
@@ -762,6 +792,8 @@ public class CustomerService(
             LegalRepresentativeContactId = contacts?
                 .SingleOrDefault(contact => contact.IsLegalRepresentative)?.Id,
             SourceCode = customer.SourceCode,
+            BusinessSectorCode = customer.BusinessSectorCode,
+            BusinessDetail = customer.BusinessDetail,
             RelationshipStatus = customer.RelationshipStatus,
             OwnerUserId = customer.OwnerUserId,
             OwnerName = ownerName,

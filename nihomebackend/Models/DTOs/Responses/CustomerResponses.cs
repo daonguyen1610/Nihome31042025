@@ -50,6 +50,8 @@ public class CustomerResponse
     public string? RepresentativeName { get; set; }
     public int? LegalRepresentativeContactId { get; set; }
     public string SourceCode { get; set; } = string.Empty;
+    public string? BusinessSectorCode { get; set; }
+    public string? BusinessDetail { get; set; }
     public CustomerRelationshipStatus RelationshipStatus { get; set; }
     public int? OwnerUserId { get; set; }
     public string? OwnerName { get; set; }

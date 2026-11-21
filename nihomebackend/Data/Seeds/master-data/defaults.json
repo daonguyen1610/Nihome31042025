@@ -23,6 +23,47 @@
     },
 
     {
+      "category": "business_sector",
+      "options": [
+        { "code": "food-beverage", "name": "Thực phẩm & Đồ uống", "sortOrder": 1 },
+        { "code": "consumer-goods", "name": "Hàng tiêu dùng (Đồ gia dụng; Chăm sóc cá nhân; Đồ dùng nhà ở; Đồ chơi & sản phẩm trẻ em; Sản phẩm thể thao)", "sortOrder": 2 },
+        { "code": "electronics-semiconductor", "name": "Điện, Điện tử & Bán dẫn", "sortOrder": 3 },
+        { "code": "telecom-fiber", "name": "Viễn thông & Cáp quang", "sortOrder": 4 },
+        { "code": "automotive", "name": "Ô tô (Sản xuất ô tô; Lắp ráp xe; Linh kiện ô tô; Phụ tùng; Nội thất ô tô; Pin & linh kiện xe điện)", "sortOrder": 5 },
+        { "code": "pharma-medical", "name": "Dược phẩm, Thiết bị y tế & Chăm sóc sức khỏe", "sortOrder": 6 },
+        { "code": "chemicals-oil-gas", "name": "Hóa chất & Dầu khí (Hóa chất công nghiệp; Hóa chất chuyên dụng; Hóa dầu; Lọc dầu; Khí công nghiệp; Khí tự nhiên; Xăng dầu; Kho chứa hóa chất; Kho xăng dầu)", "sortOrder": 7 },
+        { "code": "textile-garment", "name": "Dệt may", "sortOrder": 8 },
+        { "code": "plastic-rubber-packaging", "name": "Nhựa, Cao su, Bao bì & In ấn", "sortOrder": 9 },
+        { "code": "paper-pulp", "name": "Giấy & Bột giấy", "sortOrder": 10 },
+        { "code": "wood-furniture", "name": "Gỗ & Nội thất", "sortOrder": 11 },
+        { "code": "metal-steel", "name": "Kim loại & Thép", "sortOrder": 12 },
+        { "code": "metal-machining", "name": "Kim loại & Gia công cơ khí", "sortOrder": 13 },
+        { "code": "building-materials", "name": "Vật liệu xây dựng", "sortOrder": 14 },
+        { "code": "ceramics", "name": "Gốm sứ", "sortOrder": 15 },
+        { "code": "cement-concrete", "name": "Xi măng & Bê tông", "sortOrder": 16 },
+        { "code": "mining-minerals", "name": "Khai khoáng & Khoáng sản", "sortOrder": 17 },
+        { "code": "energy-power", "name": "Năng lượng & Điện", "sortOrder": 18 },
+        { "code": "agriculture-livestock", "name": "Nông nghiệp & Chăn nuôi", "sortOrder": 19 },
+        { "code": "warehousing-logistics", "name": "Kho bãi & Logistics", "sortOrder": 20 },
+        { "code": "water-waste-recycling", "name": "Cấp nước, Xử lý nước thải & Tái chế", "sortOrder": 21 },
+        { "code": "industrial-products", "name": "Sản xuất sản phẩm công nghiệp", "sortOrder": 22 },
+        { "code": "electrical-lighting", "name": "Điện & Thiết bị chiếu sáng", "sortOrder": 23 },
+        { "code": "trade-retail", "name": "Thương mại & Bán lẻ", "sortOrder": 24 },
+        { "code": "office", "name": "Văn phòng", "sortOrder": 25 },
+        { "code": "real-estate-housing", "name": "Bất động sản & Nhà ở", "sortOrder": 26 },
+        { "code": "hotel-resort", "name": "Khách sạn & Nghỉ dưỡng", "sortOrder": 27 },
+        { "code": "serviced-apartment", "name": "Căn hộ dịch vụ", "sortOrder": 28 },
+        { "code": "education", "name": "Giáo dục", "sortOrder": 29 },
+        { "code": "media-broadcasting", "name": "Truyền thông & Truyền hình", "sortOrder": 30 },
+        { "code": "finance-banking", "name": "Tài chính Ngân hàng", "sortOrder": 31 },
+        { "code": "transport", "name": "Giao thông vận tải", "sortOrder": 32 },
+        { "code": "port-maritime-aviation", "name": "Cảng, Hàng hải, Hàng không & Sân bay", "sortOrder": 33 },
+        { "code": "public-government", "name": "Công trình công cộng & Chính phủ", "sortOrder": 34 },
+        { "code": "other", "name": "Lĩnh vực khác", "sortOrder": 99 }
+      ]
+    },
+
+    {
       "category": "customer_status",
       "options": [
         { "code": "prospect",     "name": "Tiềm năng", "sortOrder": 1 },

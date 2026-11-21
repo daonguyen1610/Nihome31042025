@@ -42,6 +42,7 @@ public class CustomersController(
         [FromQuery] CustomerRelationshipStatus? status,
         [FromQuery] int? ownerUserId,
         [FromQuery] string? sourceCode,
+        [FromQuery] string? businessSectorCode,
         [FromQuery] string? search,
         [FromQuery] DateTime? createdFrom,
         [FromQuery] DateTime? createdTo,
@@ -53,7 +54,7 @@ public class CustomersController(
         if (userId is null) return Unauthorized();
 
         var canSeeAll = await permissions.HasAsync(userId.Value, "crm.customers.view.all", ct);
-        var result = await svc.ListAsync(userId.Value, canSeeAll, type, status, ownerUserId, sourceCode, search, createdFrom, createdTo, page, pageSize, ct);
+        var result = await svc.ListAsync(userId.Value, canSeeAll, type, status, ownerUserId, sourceCode, businessSectorCode, search, createdFrom, createdTo, page, pageSize, ct);
         return Ok(result);
     }
 
