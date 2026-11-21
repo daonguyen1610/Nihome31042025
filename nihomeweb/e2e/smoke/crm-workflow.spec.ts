@@ -144,7 +144,8 @@ test.describe("CRM workflow navigation", () => {
           links.slice(0, 3).map((link) => new URL((link as HTMLAnchorElement).href).pathname),
         ),
       )
-      .toEqual(["/admin/operational-projects", "/admin/opportunities", "/admin/contracts"]);
+      // NICON's working order (feedback row 31): customers, projects, leads first.
+      .toEqual(["/admin/customers", "/admin/operational-projects", "/admin/leads"]);
     // Scope to the sidebar group: the dashboard also links to these lists (sales funnel).
     const crmGroup = page.locator("#admin-nav-group-crm");
     await expect(crmGroup.getByRole("link", { name: /lead|tiềm năng/i })).toBeVisible();
