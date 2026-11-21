@@ -85,6 +85,63 @@ public sealed class MsProjectXmlImporterTests
         Assert.Equal(2, Assert.Single(import.Items[1].Predecessors).LagDays);
     }
 
+    private static MsProjectImport ParseXml(string tasks, string project = "") =>
+        MsProjectXmlImporter.Parse(new MemoryStream(Encoding.UTF8.GetBytes(
+            $"""<Project xmlns="http://schemas.microsoft.com/project">{project}<Tasks>{tasks}</Tasks></Project>""")));
+
+    private static string Task(string uid, int level, string wbs, string name, string start, string finish, string extra = "") =>
+        $"<Task><UID>{uid}</UID><OutlineLevel>{level}</OutlineLevel><WBS>{wbs}</WBS><Name>{name}</Name>" +
+        $"<Start>{start}T08:00:00</Start><Finish>{finish}T17:00:00</Finish>{extra}</Task>";
+
+    [Fact]
+    public void RepeatedWbsCodes_GetCodesThatAreStillUnique()
+    {
+        var import = ParseXml(
+            Task("1", 1, "2", "Móng", "2026-06-01", "2026-06-05") +
+            Task("2", 1, "2", "Kết cấu", "2026-06-06", "2026-06-10") +
+            Task("3", 1, "2", "Hoàn thiện", "2026-06-11", "2026-06-15"));
+
+        Assert.Equal(3, import.Items.Select(item => item.WbsCode).Distinct(StringComparer.OrdinalIgnoreCase).Count());
+        Assert.Equal(2, import.Warnings.Count(warning => warning.Code == "wbsReplaced"));
+    }
+
+    [Fact]
+    public void ManuallyScheduledSummary_IsWidenedToCoverItsTasks()
+    {
+        var import = ParseXml(
+            Task("1", 1, "1", "Phần móng", "2026-06-01", "2026-06-10") +
+            Task("2", 2, "1.1", "Ép cọc", "2026-06-01", "2026-06-12"));
+
+        Assert.Equal(new DateOnly(2026, 6, 12), import.Items[0].PlannedEnd);
+        Assert.Equal(("parentWidened", "1"), (import.Warnings.Single().Code, import.Warnings.Single().Wbs));
+    }
+
+    [Fact]
+    public void Lag_UsesTheProjectWorkingDay_AndPercentLagBecomesZero()
+    {
+        var link = (string uid, string lag, string format) =>
+            $"<PredecessorLink><PredecessorUID>{uid}</PredecessorUID><Type>1</Type><LinkLag>{lag}</LinkLag><LagFormat>{format}</LagFormat></PredecessorLink>";
+        var import = ParseXml(
+            Task("1", 1, "1", "Móng", "2026-06-01", "2026-06-05") +
+            Task("2", 1, "2", "Kết cấu", "2026-06-08", "2026-06-12", link("1", "12000", "7")) +
+            Task("3", 1, "3", "Hoàn thiện", "2026-06-15", "2026-06-20", link("2", "5000", "19")),
+            "<MinutesPerDay>600</MinutesPerDay>");
+
+        // 12000 tenths of a minute on a 10-hour day is 2 days, not 2.5 rounded up.
+        Assert.Equal(2, import.Items[1].Predecessors.Single().LagDays);
+        Assert.Equal(0, import.Items[2].Predecessors.Single().LagDays);
+        Assert.Contains(import.Warnings, warning => warning.Code == "lagPercent" && warning.Wbs == "3");
+    }
+
+    [Fact]
+    public void MissingOrRepeatedUid_IsRefusedWithAReadableMessage()
+    {
+        var error = Assert.Throws<MsProjectImportException>(() => ParseXml(
+            Task("7", 1, "1", "Móng", "2026-06-01", "2026-06-05") +
+            Task("7", 1, "2", "Kết cấu", "2026-06-06", "2026-06-10")));
+        Assert.Contains("UID", error.Message);
+    }
+
     [Theory]
     [InlineData("""<?xml version="1.0"?><!DOCTYPE p [<!ENTITY x SYSTEM "file:///etc/passwd">]><Project xmlns="http://schemas.microsoft.com/project"><Tasks><Task><UID>1</UID><Name>&x;</Name></Task></Tasks></Project>""")]
     [InlineData("""<workbook><sheet>not a schedule</sheet></workbook>""")]

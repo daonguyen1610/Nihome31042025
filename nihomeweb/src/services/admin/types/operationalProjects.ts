@@ -506,7 +506,8 @@ export interface ProjectScheduleLink {
 export interface ProjectScheduleImportResponse {
   sourceName: string;
   items: ProjectScheduleItemResponse[];
-  warnings: string[];
+  /** What the import adjusted: translated from `scheduleUx.import.warning.{code}`. */
+  warnings: { code: string; wbs: string; value?: string | null }[];
 }
 
 export interface ProjectScheduleRevisionResponse {

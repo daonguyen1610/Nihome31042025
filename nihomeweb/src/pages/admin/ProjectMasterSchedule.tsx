@@ -246,6 +246,18 @@ const fromItem = (item: ProjectScheduleItemResponse): DraftItem => ({
   predecessors: item.predecessors ?? [],
 });
 
+/** "1.1 FS, 2.2 SS +2d": each link by its predecessor's WBS code, type and lag. */
+const linksLabel = (item: DraftItem, byId: Map<string, DraftItem>) =>
+  item.predecessors
+    .map((link) => {
+      const from = byId.get(link.predecessorNodeId);
+      if (!from) return null;
+      const lag = link.lagDays ? ` ${link.lagDays > 0 ? "+" : ""}${link.lagDays}d` : "";
+      return `${from.wbsCode} ${link.type}${lag}`;
+    })
+    .filter(Boolean)
+    .join(", ");
+
 export const ProjectMasterSchedule = ({
   projectId,
   projectStart,
@@ -282,6 +294,7 @@ export const ProjectMasterSchedule = ({
   const [schedule, setSchedule] = useState<ProjectScheduleResponse | null>(null);
   const [revisionId, setRevisionId] = useState<number | null>(null);
   const [items, setItems] = useState<DraftItem[]>([]);
+  const itemsById = useMemo(() => new Map(items.map((item) => [item.nodeId, item])), [items]);
   const [changeReason, setChangeReason] = useState("");
   const [approverId, setApproverId] = useState("");
   const [reviewComment, setReviewComment] = useState("");
@@ -385,6 +398,12 @@ export const ProjectMasterSchedule = ({
           plannedStart: item.plannedStart,
           plannedEnd: item.plannedEnd,
           sortOrder: item.sortOrder,
+          isMilestone: item.isMilestone,
+          baselineStart: item.baselineStart,
+          baselineEnd: item.baselineEnd,
+          predecessors: [...item.predecessors].sort((left, right) =>
+            left.predecessorNodeId.localeCompare(right.predecessorNodeId),
+          ),
         }))
         .sort((left, right) => left.nodeId.localeCompare(right.nodeId));
     return (
@@ -615,6 +634,32 @@ export const ProjectMasterSchedule = ({
           `${t("operationalProjects.schedule.end")}: ${formatScheduleDate(previous.plannedEnd)} → ${formatScheduleDate(current.plannedEnd)}`,
         );
       }
+      if (previous.isMilestone !== current.isMilestone) {
+        details.push(
+          `${t("scheduleUx.import.milestone")}: ${previous.isMilestone ? "✓" : "—"} → ${current.isMilestone ? "✓" : "—"}`,
+        );
+      }
+      const previousLinks = linksLabel(previous, baselineById);
+      const currentLinks = linksLabel(current, currentById);
+      if (previousLinks !== currentLinks) {
+        details.push(
+          t("scheduleUx.import.after", {
+            links: `${previousLinks || "—"} → ${currentLinks || "—"}`,
+          }),
+        );
+      }
+      if (
+        previous.baselineStart !== current.baselineStart ||
+        previous.baselineEnd !== current.baselineEnd
+      ) {
+        const span = (item: DraftItem) =>
+          item.baselineStart && item.baselineEnd
+            ? `${formatScheduleDate(item.baselineStart)} – ${formatScheduleDate(item.baselineEnd)}`
+            : "—";
+        details.push(
+          t("scheduleUx.import.baselineChanged", { from: span(previous), to: span(current) }),
+        );
+      }
       if (details.length > 0) {
         rows.push({
           key: `changed-${current.nodeId}`,
@@ -660,9 +705,7 @@ export const ProjectMasterSchedule = ({
       baselineStart: item.baselineStart,
       baselineEnd: item.baselineEnd,
       // A link to an item deleted from the draft goes with it.
-      predecessors: item.predecessors.filter((link) =>
-        items.some((other) => other.nodeId === link.predecessorNodeId),
-      ),
+      predecessors: item.predecessors.filter((link) => itemsById.has(link.predecessorNodeId)),
     })),
   });
 
@@ -1036,7 +1079,19 @@ export const ProjectMasterSchedule = ({
       );
       toast({
         title: t("scheduleUx.import.done", { count: data.items.length, file: data.sourceName }),
-        description: data.warnings.length ? data.warnings.join(" ") : t("scheduleUx.import.review"),
+        description: data.warnings.length
+          ? [
+              ...data.warnings.slice(0, 3).map((warning) =>
+                t(`scheduleUx.import.warning.${warning.code}`, {
+                  wbs: warning.wbs,
+                  value: warning.value ?? "",
+                }),
+              ),
+              ...(data.warnings.length > 3
+                ? [t("scheduleUx.import.moreWarnings", { count: data.warnings.length - 3 })]
+                : []),
+            ].join(" ")
+          : t("scheduleUx.import.review"),
       });
     } catch (reason) {
       setError(uiError(reason));
@@ -1045,16 +1100,6 @@ export const ProjectMasterSchedule = ({
       if (importInputRef.current) importInputRef.current.value = "";
     }
   };
-  const linkText = (item: DraftItem) =>
-    item.predecessors
-      .map((link) => {
-        const from = items.find((other) => other.nodeId === link.predecessorNodeId);
-        if (!from) return null;
-        const lag = link.lagDays ? ` ${link.lagDays > 0 ? "+" : ""}${link.lagDays}d` : "";
-        return `${from.wbsCode} ${link.type}${lag}`;
-      })
-      .filter(Boolean)
-      .join(", ");
 
   const renderEditor = () =>
     showEditor ? (
@@ -1075,9 +1120,9 @@ export const ProjectMasterSchedule = ({
               ref={importInputRef}
               type="file"
               accept=".xml,text/xml,application/xml"
-              className="sr-only"
+              className="hidden"
               tabIndex={-1}
-              aria-label={t("scheduleUx.import.action")}
+              aria-label={t("scheduleUx.import.file")}
               data-testid="schedule-import-input"
               onChange={(event) => {
                 const file = event.target.files?.[0];
@@ -1243,8 +1288,12 @@ export const ProjectMasterSchedule = ({
                                 {t("scheduleUx.import.milestone")}
                               </span>
                             )}
-                            {linkText(item) && (
-                              <span>{t("scheduleUx.import.after", { links: linkText(item) })}</span>
+                            {item.predecessors.length > 0 && (
+                              <span>
+                                {t("scheduleUx.import.after", {
+                                  links: linksLabel(item, itemsById),
+                                })}
+                              </span>
                             )}
                             {item.baselineStart && item.baselineEnd && (
                               <span>
