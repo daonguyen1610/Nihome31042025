@@ -21,12 +21,18 @@ export interface ProjectSite {
 export function ProjectSiteDetails({
   site,
   projectHref,
+  openInNewTab = false,
+  sectorName,
   className,
   compact = false,
   testId = "project-site",
 }: {
   site: ProjectSite;
   projectHref?: string;
+  /** Inside an unsaved form: the project opens in a new tab so the draft is kept. */
+  openInNewTab?: boolean;
+  /** The sector name, when the page already has the list; otherwise it is loaded here. */
+  sectorName?: (code: string) => string;
   className?: string;
   /** Two columns at most, for narrow places such as a dialog. */
   compact?: boolean;
@@ -35,9 +41,11 @@ export function ProjectSiteDetails({
   const { t, lang } = useI18n();
   const [sectors, setSectors] = useState<MasterDataOption[]>([]);
   useEffect(() => {
+    if (sectorName) return;
     let cancelled = false;
+    // Switched-off sectors too: a project keeps the sector it was given.
     adminApi
-      .getMasterDataOptions("business_sector", lang)
+      .getMasterDataOptions("business_sector", lang, true)
       .then(({ data }) => {
         if (!cancelled) setSectors(data ?? []);
       })
@@ -47,12 +55,14 @@ export function ProjectSiteDetails({
     return () => {
       cancelled = true;
     };
-  }, [lang]);
+  }, [lang, sectorName]);
 
-  const sector = site.businessSectorCode
-    ? (sectors.find((item) => item.code === site.businessSectorCode)?.name ??
-      site.businessSectorCode)
-    : "";
+  const sector = !site.businessSectorCode
+    ? ""
+    : sectorName
+      ? sectorName(site.businessSectorCode)
+      : (sectors.find((item) => item.code === site.businessSectorCode)?.name ??
+        site.businessSectorCode);
   const fields = [
     { key: "siteAddress", value: site.siteAddress ?? "" },
     {
@@ -90,7 +100,11 @@ export function ProjectSiteDetails({
                   .map((field) => t(`operationalProjects.field.${field.key}`))
                   .join(", "),
               })}{" "}
-              <Link className="underline underline-offset-4" to={projectHref}>
+              <Link
+                className="underline underline-offset-4"
+                to={projectHref}
+                {...(openInNewTab ? { target: "_blank", rel: "noopener noreferrer" } : {})}
+              >
                 {t("operationalProjects.site.openProject")}
               </Link>
             </>

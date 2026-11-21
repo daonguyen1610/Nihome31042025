@@ -37,6 +37,7 @@ import {
   type CustomerResponse,
   type DeletionImpactResponse,
   type OperationalProjectListItemResponse,
+  type OperationalProjectResponse,
   type PaymentMilestoneStatus,
   type UpsertContractRequest,
 } from "@/services/adminApi";
@@ -587,6 +588,30 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // -------- dialog / form --------
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormData>(emptyForm);
+  // The chosen project's site details, read fresh each time (another tab may have just
+  // completed them) and also for a prefilled project outside the loaded list (feedback row 25).
+  const [siteProject, setSiteProject] = useState<OperationalProjectResponse | null>(null);
+  useEffect(() => {
+    const projectId = form.operationalProjectId;
+    if (!dialogOpen || projectId == null || !canViewOperationalProjects) {
+      setSiteProject(null);
+      return;
+    }
+    let cancelled = false;
+    adminApi
+      .getOperationalProject(projectId)
+      .then(({ data }) => {
+        if (!cancelled) setSiteProject(data);
+      })
+      .catch(() => {
+        // Without access to the project the form simply has no site panel.
+        if (!cancelled) setSiteProject(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [dialogOpen, form.operationalProjectId, canViewOperationalProjects]);
+
   const sourceContractId = Number(searchParams.get("sourceContractId")) || null;
   const continuation = useContractContinuation(sourceContractId, form.opportunityId);
   const initializedContinuation = useRef("");
@@ -2090,18 +2115,16 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   )}
                 </SelectContent>
               </Select>
-              {(() => {
-                const project = projects.find((item) => item.id === form.operationalProjectId);
-                return project ? (
-                  <ProjectSiteDetails
-                    site={project}
-                    projectHref={`/admin/operational-projects/${project.id}`}
-                    className="mt-2 bg-muted/30 p-3"
-                    compact
-                    testId="contract-project-site"
-                  />
-                ) : null;
-              })()}
+              {siteProject && siteProject.id === form.operationalProjectId && (
+                <ProjectSiteDetails
+                  site={siteProject}
+                  projectHref={`/admin/operational-projects/${siteProject.id}`}
+                  openInNewTab
+                  className="mt-2 bg-muted/30 p-3"
+                  compact
+                  testId="contract-project-site"
+                />
+              )}
               {form.customerId != null &&
                 customerProjects.length === 0 &&
                 form.operationalProjectId == null && (

@@ -7,9 +7,10 @@ import type {
 import type { WorkflowConfig, UpsertWorkflowConfigRequest } from "./types/workflows";
 
 export const configurationApi = {
-  getMasterDataOptions: (category: string, lang = "vi") =>
+  /** `includeInactive` also returns options an admin switched off, to name old records. */
+  getMasterDataOptions: (category: string, lang = "vi", includeInactive = false) =>
     api.get<MasterDataOption[]>(`/master-data/${encodeURIComponent(category)}`, {
-      params: { lang },
+      params: includeInactive ? { lang, includeInactive } : { lang },
     }),
   listMasterDataCategories: () => api.get<MasterDataCategory[]>("/master-data/categories"),
   listMasterDataByCategory: (category: string, includeInactive = false) =>
