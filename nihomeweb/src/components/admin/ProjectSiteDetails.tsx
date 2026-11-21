@@ -8,6 +8,8 @@ export interface ProjectSite {
   siteAddress?: string | null;
   constructionKind?: ProjectConstructionKind | null;
   businessSectorCode?: string | null;
+  /** The sector's name as set in master data, sent by the server. */
+  businessSectorName?: string | null;
   siteAreaM2?: number | null;
 }
 
@@ -20,6 +22,7 @@ export function ProjectSiteDetails({
   site,
   projectHref,
   openInNewTab = false,
+  sectorName,
   className,
   compact = false,
   testId = "project-site",
@@ -28,18 +31,27 @@ export function ProjectSiteDetails({
   projectHref?: string;
   /** Inside an unsaved form: the project opens in a new tab so the draft is kept. */
   openInNewTab?: boolean;
+  /** The sector name the page already shows elsewhere, so both read the same. */
+  sectorName?: string;
   className?: string;
   /** Two columns at most, for narrow places such as a dialog. */
   compact?: boolean;
   testId?: string;
 }) {
   const { t } = useI18n();
-  // Sector names come from the translations every user already has (the master-data list
-  // needs its own permission), and a sector an admin switched off keeps its name.
+  // The page's own name first; then the translation every user has (the master-data list
+  // needs its own permission); then the name the server sent, for a sector an admin added;
+  // a switched-off sector keeps its name in all three.
   const sectorKey = site.businessSectorCode
     ? `masterData.business_sector.${site.businessSectorCode}.label`
     : "";
-  const sectorName = sectorKey ? t(sectorKey) : "";
+  const translated = sectorKey ? t(sectorKey) : "";
+  const sector = !site.businessSectorCode
+    ? ""
+    : sectorName ||
+      (translated !== sectorKey ? translated : "") ||
+      site.businessSectorName ||
+      site.businessSectorCode;
   const fields = [
     { key: "siteAddress", value: site.siteAddress ?? "" },
     {
@@ -48,10 +60,7 @@ export function ProjectSiteDetails({
         ? t(`operationalProjects.constructionKind.${site.constructionKind}`)
         : "",
     },
-    {
-      key: "businessSector",
-      value: sectorName === sectorKey ? (site.businessSectorCode ?? "") : sectorName,
-    },
+    { key: "businessSector", value: sector },
     {
       key: "siteArea",
       value: site.siteAreaM2 != null ? `${formatNumber(site.siteAreaM2)} m²` : "",

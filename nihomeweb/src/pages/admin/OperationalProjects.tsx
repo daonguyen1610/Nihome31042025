@@ -698,7 +698,10 @@ const OperationalProjects = () => {
             />
           </section>
 
-          <ProjectSiteDetails site={detail} />
+          <ProjectSiteDetails
+            site={detail}
+            sectorName={sectors.find((s) => s.code === detail.businessSectorCode)?.name}
+          />
 
           <ProjectMasterSchedule
             projectId={detail.id}

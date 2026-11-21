@@ -374,6 +374,8 @@ export interface OperationalProjectListItemResponse {
 }
 
 export interface OperationalProjectResponse extends OperationalProjectListItemResponse {
+  /** The sector's name as set in master data (also for one switched off). */
+  businessSectorName?: string | null;
   designProjects: Array<{
     id: number;
     projectCode: string;
@@ -1260,6 +1262,7 @@ export interface ContractResponse {
     siteAddress?: string | null;
     constructionKind?: ProjectConstructionKind | null;
     businessSectorCode?: string | null;
+    businessSectorName?: string | null;
     siteAreaM2?: number | null;
   } | null;
   /** Derived from design_projects; present when a design project is attached. */

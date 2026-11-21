@@ -411,12 +411,25 @@ public class ContractService(
             sourceTenderId: row.SourceTender?.Id,
             sourceTenderCode: row.SourceTender?.Code,
             sourceTenderName: row.SourceTender?.Name);
-        // The contract reads the project's site details rather than keeping copies (feedback row 25).
-        response.ProjectSite = row.ProjectSite is null
+        // The contract reads the project's site details rather than keeping copies (feedback row 25),
+        // for callers who may open that project. Every contract response is built here, so the
+        // rule holds for reads and for the result of each change alike.
+        response.ProjectSite = row.ProjectSite is null ||
+            !await CanViewProjectAsync(callerUserId, row.Contract.OperationalProjectId!.Value, ct)
             ? null
             : new ContractProjectSiteResponse(row.ProjectSite.SiteAddress, row.ProjectSite.ConstructionKind,
-                row.ProjectSite.BusinessSectorCode, row.ProjectSite.SiteAreaM2);
+                row.ProjectSite.BusinessSectorCode, row.ProjectSite.SiteAreaM2,
+                await BusinessSectors.NameAsync(db, row.ProjectSite.BusinessSectorCode, ct));
         return response;
+    }
+
+    /// <summary>Same rule as the project page: project view, and all projects or this one.</summary>
+    private async Task<bool> CanViewProjectAsync(int callerUserId, int projectId, CancellationToken ct)
+    {
+        if (permissions is null || projectAccess is null) return false;
+        if (!await permissions.HasAsync(callerUserId, "operations.projects.view", ct)) return false;
+        return await permissions.HasAsync(callerUserId, "operations.projects.view.all", ct) ||
+            await projectAccess.CanViewOperationalProjectAsync(callerUserId, projectId, ct);
     }
 
     public Task<string> PreviewNextNumberAsync(CancellationToken ct = default) =>

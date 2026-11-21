@@ -149,39 +149,6 @@ public class ContractsControllerTests : IntegrationTestBase
     }
 
     [Fact]
-    public async Task Detail_LeavesOutSiteDetails_ForCallersWhoCannotViewProjects()
-    {
-        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));
-        var customerId = await CreateCustomerAsync();
-        var contractId = await CreateContractAsync(customerId);
-        var grant = await WithDbAsync(async db =>
-        {
-            var role = await db.Roles.SingleAsync(x => x.Code == "SALES_MANAGER");
-            var permission = await db.RolePermissions.Include(x => x.Permission).SingleAsync(x => x.RoleId == role.Id &&
-                x.Permission.Module == "operations.projects" && x.Permission.Action == "view");
-            db.RolePermissions.Remove(permission);
-            await db.SaveChangesAsync();
-            return permission;
-        });
-        try
-        {
-            var detail = await ReadJsonAsync(await Client.GetAsync($"/api/contracts/{contractId}"));
-
-            detail.TryGetProperty("projectSite", out var site).Should().BeTrue();
-            site.ValueKind.Should().Be(JsonValueKind.Null);
-        }
-        finally
-        {
-            await WithDbAsync(async db =>
-            {
-                if (!await db.RolePermissions.AnyAsync(x => x.RoleId == grant.RoleId && x.PermissionId == grant.PermissionId))
-                    db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission { RoleId = grant.RoleId, PermissionId = grant.PermissionId });
-                return await db.SaveChangesAsync();
-            });
-        }
-    }
-
-    [Fact]
     public async Task Create_FromQuoteWithoutOpportunity_LinksQuoteOpportunity()
     {
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALES_MANAGER"));

@@ -598,12 +598,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     const refresh = () => {
       if (document.visibilityState === "visible") setSiteRefresh((value) => value + 1);
     };
-    window.addEventListener("focus", refresh);
     document.addEventListener("visibilitychange", refresh);
-    return () => {
-      window.removeEventListener("focus", refresh);
-      document.removeEventListener("visibilitychange", refresh);
-    };
+    return () => document.removeEventListener("visibilitychange", refresh);
   }, [dialogOpen]);
   useEffect(() => {
     const projectId = form.operationalProjectId;
@@ -618,8 +614,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         if (!cancelled) setSiteProject(data);
       })
       .catch(() => {
-        // Without access to the project the form simply has no site panel.
-        if (!cancelled) setSiteProject(null);
+        // Without access the form has no site panel; a failed refresh keeps what it showed.
+        if (!cancelled) setSiteProject((current) => (current?.id === projectId ? current : null));
       });
     return () => {
       cancelled = true;
