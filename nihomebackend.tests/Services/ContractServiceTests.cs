@@ -172,26 +172,37 @@ public class ContractServiceTests : IDisposable
     }
 
     [Theory]
-    [InlineData(true, false, true, true)]   // views this project
-    [InlineData(true, true, false, true)]   // views all projects
-    [InlineData(true, false, false, false)] // views projects, but not this one
-    [InlineData(false, true, true, false)]  // may not view projects at all
+    [InlineData(true, false, "member", true)]   // active team member
+    [InlineData(true, false, "manager", true)]  // the project's manager
+    [InlineData(true, true, "none", true)]      // views all projects
+    [InlineData(true, false, "former", false)]  // left the team
+    [InlineData(true, false, "none", false)]    // views projects, but not this one
+    [InlineData(false, true, "manager", false)] // may not view projects at all
     public async Task Detail_GivesSiteDetails_OnlyToWhoMayOpenTheProject(
-        bool projectView, bool viewAll, bool onProject, bool expected)
+        bool projectView, bool viewAll, string relation, bool expected)
     {
-        // NICON feedback row 25: the contract reads the project's site details, under the
-        // project's own access rule, for reads and for the result of a change alike.
+        // NICON feedback row 25: the contract reads the project's site details under the
+        // project page's own access rule, for reads and for the result of a change alike.
         var created = await _sut.CreateAsync(Req(), callerUserId: 1, canReassignOwner: true);
         var project = _db.OperationalProjects.Single(item => item.Id == created.OperationalProjectId);
         project.SiteAddress = "Lô C5, KCN Tân Uyên, Bình Dương";
-        project.SiteAreaM2 = 12500m;
-        // "On the project" as the project page counts it: an active team member (a past one is not).
-        _db.OperationalProjectMembers.Add(new OperationalProjectMember
+        project.BusinessSectorCode = "food-beverage";
+        if (relation == "manager") project.ProjectManagerUserId = 7;
+        if (relation is "member" or "former")
+            _db.OperationalProjectMembers.Add(new OperationalProjectMember
+            {
+                OperationalProjectId = project.Id,
+                UserId = 7,
+                StartedAt = DateTime.UtcNow.AddDays(-30),
+                EndedAt = relation == "former" ? DateTime.UtcNow.AddDays(-1) : null,
+            });
+        _db.MasterDataOptions.Add(new MasterDataOption
         {
-            OperationalProjectId = project.Id,
-            UserId = 7,
-            StartedAt = DateTime.UtcNow.AddDays(-30),
-            EndedAt = onProject ? null : DateTime.UtcNow.AddDays(-1),
+            Category = "business_sector",
+            Code = "food-beverage",
+            Name = "Thực phẩm & Đồ uống",
+            LabelKey = "masterData.business_sector.food-beverage.label",
+            IsActive = false,
         });
         await _db.SaveChangesAsync();
         var permissions = new Mock<IPermissionService>();
@@ -205,7 +216,11 @@ public class ContractServiceTests : IDisposable
         var detail = await service.GetAsync(created.Id, 7, canSeeAll: true);
 
         Assert.Equal(expected, detail!.ProjectSite is not null);
-        if (expected) Assert.Equal("Lô C5, KCN Tân Uyên, Bình Dương", detail.ProjectSite!.SiteAddress);
+        if (!expected) return;
+        Assert.Equal("Lô C5, KCN Tân Uyên, Bình Dương", detail.ProjectSite!.SiteAddress);
+        // A switched-off sector still comes with its name and translation key.
+        Assert.Equal("Thực phẩm & Đồ uống", detail.ProjectSite.BusinessSectorName);
+        Assert.Equal("masterData.business_sector.food-beverage.label", detail.ProjectSite.BusinessSectorLabelKey);
     }
 
     [Fact]

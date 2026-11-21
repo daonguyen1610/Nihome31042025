@@ -184,7 +184,8 @@ public class OperationalProjectService(
                         .Sum(milestone => milestone.PercentValue)));
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
-        response.BusinessSectorName = await BusinessSectors.NameAsync(db, project.BusinessSectorCode, ct);
+        (response.BusinessSectorName, response.BusinessSectorLabelKey) =
+            await BusinessSectors.LabelAsync(db, project.BusinessSectorCode, ct);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
             role.Member.OperationalProjectId == id && role.Member.UserId == callerUserId &&
             role.Member.DesignProjectId == null && role.Member.EndedAt == null && role.EndedAt == null &&
@@ -817,7 +818,12 @@ public class OperationalProjectService(
             project.ProjectManagerUserId == callerUserId ||
             project.CreatedByUserId == callerUserId;
 
-    private static bool CanView(
+    /// <summary>
+    /// Who may open a project (with project view permission): everyone with all-projects view,
+    /// its manager, its creator and its active team members. TeamMembers must be loaded.
+    /// Contracts reuse it to decide who sees a project's site details.
+    /// </summary>
+    public static bool CanView(
         OperationalProject project,
         int callerUserId,
         bool canSeeAll) => CanManage(project, callerUserId, canSeeAll) ||
