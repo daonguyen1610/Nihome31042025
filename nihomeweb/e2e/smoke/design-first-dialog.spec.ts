@@ -20,7 +20,7 @@ test("design project dialog requires an operational project when no contract is 
   const dialog = page.getByRole("dialog");
   const projectField = page.getByTestId("design-project-operational-project");
   await expect(projectField).toBeVisible();
-  await expect(projectField).toContainText(/Dự án vận hành|Operational project/);
+  await expect(projectField).toContainText(/Dự án|Operational project/);
   await expect(dialog.getByText("Chủ nhiệm thiết kế", { exact: true })).toBeVisible();
 
   let posted = false;
@@ -65,10 +65,10 @@ test("Project Manager can view shared projects but cannot create the Sales root"
   await page.goto("/admin/operational-projects", { waitUntil: "networkidle" });
 
   await expect(
-    page.getByRole("heading", { name: /dự án vận hành|Operational project management/i }),
+    page.getByRole("heading", { name: /dự án|Operational project management/i }),
   ).toBeVisible();
   await expect(
-    page.getByRole("button", { name: /Tạo dự án vận hành|New operational project/i }),
+    page.getByRole("button", { name: /Tạo dự án|New operational project/i }),
   ).toHaveCount(0);
   await page.goto("/admin/operational-projects?create=1", { waitUntil: "networkidle" });
   await expect(page.getByRole("dialog")).toHaveCount(0);

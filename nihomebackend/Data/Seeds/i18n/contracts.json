@@ -178,10 +178,10 @@
   {
     "key": "contracts.filter.allOperationalProjects",
     "category": "contracts",
-    "vi": "Tất cả dự án vận hành",
-    "en": "All operational projects",
-    "zh": "全部运营项目",
-    "ja": "すべての運用プロジェクト"
+    "vi": "Tất cả dự án",
+    "en": "All projects",
+    "zh": "全部项目",
+    "ja": "すべてのプロジェクト"
   },
   {
     "key": "contracts.filter.allDirections",
@@ -322,10 +322,10 @@
   {
     "key": "contracts.field.operationalProject",
     "category": "contracts",
-    "vi": "Dự án vận hành",
-    "en": "Operational project",
-    "zh": "运营项目",
-    "ja": "運用プロジェクト"
+    "vi": "Dự án",
+    "en": "Project",
+    "zh": "项目",
+    "ja": "プロジェクト"
   },
   {
     "key": "contracts.field.direction",
@@ -1714,18 +1714,18 @@
   {
     "key": "contracts.selectOperationalProject",
     "category": "contracts",
-    "vi": "Chọn dự án vận hành",
-    "en": "Select an operational project",
-    "zh": "选择运营项目",
-    "ja": "運用プロジェクトを選択"
+    "vi": "Chọn dự án",
+    "en": "Select a project",
+    "zh": "选择项目",
+    "ja": "プロジェクトを選択"
   },
   {
     "key": "contracts.validation.operationalProjectRequired",
     "category": "contracts",
-    "vi": "Vui lòng chọn dự án vận hành cho hợp đồng.",
-    "en": "Select an operational project for the contract.",
-    "zh": "请为合同选择运营项目。",
-    "ja": "契約の運用プロジェクトを選択してください。"
+    "vi": "Vui lòng chọn dự án cho hợp đồng.",
+    "en": "Select a project for the contract.",
+    "zh": "请为合同选择项目。",
+    "ja": "契約のプロジェクトを選択してください。"
   },
   {
     "key": "contracts.quickProject.action",
@@ -1778,10 +1778,10 @@
   {
     "key": "contracts.quickProject.noProjects",
     "category": "contracts",
-    "vi": "Khách hàng này chưa có dự án vận hành. Hãy tạo dự án mới ngay bên dưới để tiếp tục lập hợp đồng.",
-    "en": "This customer has no operational project yet. Create one below to continue with the contract.",
-    "zh": "该客户尚无运营项目。请在下方新建项目以继续创建合同。",
-    "ja": "この顧客には運用プロジェクトがまだありません。下で新規作成して契約の作成を続けてください。"
+    "vi": "Khách hàng này chưa có dự án. Hãy tạo dự án mới ngay bên dưới để tiếp tục lập hợp đồng.",
+    "en": "This customer has no project yet. Create one below to continue with the contract.",
+    "zh": "该客户尚无项目。请在下方新建项目以继续创建合同。",
+    "ja": "この顧客にはプロジェクトがまだありません。下で新規作成して契約の作成を続けてください。"
   },
   {
     "key": "contracts.quickProject.linkedProjectHidden",
@@ -2186,10 +2186,10 @@
   {
     "key": "contracts.legal.project",
     "category": "contracts",
-    "vi": "Dự án vận hành",
-    "en": "Operational project",
-    "zh": "运营项目",
-    "ja": "運用プロジェクト"
+    "vi": "Dự án",
+    "en": "Project",
+    "zh": "项目",
+    "ja": "プロジェクト"
   },
   {
     "key": "contracts.legal.currentStatus",

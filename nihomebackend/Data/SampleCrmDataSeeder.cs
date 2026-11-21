@@ -1886,7 +1886,7 @@ public static class SampleCrmDataSeeder
         if (operationalProjects.Count == 0)
         {
             throw new InvalidOperationException(
-                "Không thể tạo dữ liệu khảo sát mẫu vì chưa có Dự án vận hành mẫu.");
+                "Không thể tạo dữ liệu khảo sát mẫu vì chưa có Dự án mẫu.");
         }
 
         // Projects are content-side and not always available on a bare seed
@@ -2044,7 +2044,7 @@ public static class SampleCrmDataSeeder
             var projectCode = $"DP-SAMPLE-{index + 1:D3}";
             if (deletedProjectCodes.Contains(projectCode)) continue;
             var sampleName = name;
-            var sampleNote = $"{SampleDesignProjectMarker} Hồ sơ thiết kế {name} gắn với dự án vận hành và khách hàng chủ đầu tư.";
+            var sampleNote = $"{SampleDesignProjectMarker} Hồ sơ thiết kế {name} gắn với dự án và khách hàng chủ đầu tư.";
             var existing = db.DesignProjects.FirstOrDefault(project => project.ProjectCode == projectCode
                 || (project.Note != null && project.Note.StartsWith(SampleDesignProjectMarker)
                     && project.Name == sampleName));

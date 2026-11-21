@@ -523,7 +523,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
   await page.locator("#c-project").click();
   await page
     .getByRole("option", {
-      name: /Tất cả dự án vận hành|All operational projects|全部运营项目|すべての運用プロジェクト/i,
+      name: /Tất cả dự án|All operational projects|全部运营项目|すべての運用プロジェクト/i,
     })
     .click();
 
@@ -589,7 +589,7 @@ test("SPA renders /admin/contracts without console errors for SUPER_ADMIN", asyn
 
   await editButton.click();
   await expect(editForm.locator("#contract-detail-project")).not.toHaveText(
-    /Chọn dự án vận hành|Select operational project|选择运营项目|運用プロジェクトを選択/i,
+    /Chọn dự án|Select operational project|选择运营项目|運用プロジェクトを選択/i,
   );
   const updateResponse = page.waitForResponse(
     (response) =>

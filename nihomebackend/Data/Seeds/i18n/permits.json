@@ -2,7 +2,7 @@
   { "key": "nav.permits", "category": "nav", "vi": "Pháp lý", "en": "Permits", "zh": "许可证", "ja": "許認可" },
 
   { "key": "permits.title", "category": "permits", "vi": "Workspace Pháp lý", "en": "Legal permitting workspace", "zh": "法务许可工作区", "ja": "法務・許認可ワークスペース" },
-  { "key": "permits.subtitle", "category": "permits", "vi": "Theo dõi trạng thái cơ quan, kế hoạch nội bộ, phân công, duyệt và rủi ro giấy phép theo Dự án vận hành.", "en": "Track authority status, internal schedule, assignments, approvals and permit risks by operational project.", "zh": "按运营项目跟踪主管机关状态、内部计划、分工、审批及许可证风险。", "ja": "運用プロジェクト単位で行政状態、社内計画、担当、承認、許認可リスクを追跡します。" },
+  { "key": "permits.subtitle", "category": "permits", "vi": "Theo dõi trạng thái cơ quan, kế hoạch nội bộ, phân công, duyệt và rủi ro giấy phép theo Dự án.", "en": "Track authority status, internal schedule, assignments, approvals and permit risks by project.", "zh": "按项目跟踪主管机关状态、内部计划、分工、审批及许可证风险。", "ja": "プロジェクト単位で行政状態、社内計画、担当、承認、許認可リスクを追跡します。" },
   { "key": "permits.create", "category": "permits", "vi": "Thêm hạng mục", "en": "Add permit item", "zh": "添加许可证项目", "ja": "許認可項目を追加" },
   { "key": "permits.created", "category": "permits", "vi": "Đã tạo hạng mục pháp lý", "en": "Permit item created", "zh": "许可证项目已创建", "ja": "許認可項目を作成しました" },
   { "key": "permits.updated", "category": "permits", "vi": "Đã cập nhật hạng mục pháp lý", "en": "Permit item updated", "zh": "已更新许可证项目", "ja": "許認可項目を更新しました" },
@@ -18,7 +18,7 @@
   { "key": "permits.regenerate", "category": "permits", "vi": "Tạo lại checklist mặc định", "en": "Regenerate default checklist", "zh": "重新生成默认清单", "ja": "既定チェックリストを再生成" },
   { "key": "permits.regenerated", "category": "permits", "vi": "Đã tạo lại checklist mặc định", "en": "Default checklist regenerated", "zh": "已重新生成默认清单", "ja": "既定チェックリストを再生成しました" },
 
-  { "key": "permits.field.project", "category": "permits", "vi": "Dự án vận hành", "en": "Operational project", "zh": "运营项目", "ja": "運用プロジェクト" },
+  { "key": "permits.field.project", "category": "permits", "vi": "Dự án", "en": "Project", "zh": "项目", "ja": "プロジェクト" },
   { "key": "permits.field.permitType", "category": "permits", "vi": "Loại giấy phép", "en": "Permit type", "zh": "许可证类型", "ja": "許認可種別" },
   { "key": "permits.field.agency", "category": "permits", "vi": "Cơ quan cấp", "en": "Issuing agency", "zh": "发证机关", "ja": "発行機関" },
   { "key": "permits.field.owner", "category": "permits", "vi": "Người phụ trách", "en": "Owner", "zh": "负责人", "ja": "担当者" },
@@ -62,7 +62,7 @@
   { "key": "permits.form.title", "category": "permits", "vi": "Cập nhật hạng mục pháp lý", "en": "Update permit item", "zh": "更新许可证项目", "ja": "許認可項目を更新" },
   { "key": "permits.form.createTitle", "category": "permits", "vi": "Thêm hạng mục pháp lý", "en": "Add permit item", "zh": "添加许可证项目", "ja": "許認可項目を追加" },
   { "key": "permits.form.create", "category": "permits", "vi": "Tạo hạng mục", "en": "Create item", "zh": "创建项目", "ja": "項目を作成" },
-  { "key": "permits.form.selectProject", "category": "permits", "vi": "Chọn Dự án vận hành", "en": "Select an operational project", "zh": "选择运营项目", "ja": "運用プロジェクトを選択" },
+  { "key": "permits.form.selectProject", "category": "permits", "vi": "Chọn Dự án", "en": "Select a project", "zh": "选择项目", "ja": "プロジェクトを選択" },
   { "key": "permits.form.selectType", "category": "permits", "vi": "Chọn loại giấy phép", "en": "Select a permit type", "zh": "选择许可证类型", "ja": "許認可種別を選択" },
   { "key": "permits.form.projectTypeRequired", "category": "permits", "vi": "Vui lòng chọn dự án và loại giấy phép.", "en": "Select a project and permit type.", "zh": "请选择项目和许可证类型。", "ja": "プロジェクトと許認可種別を選択してください。" },
   { "key": "permits.form.hint", "category": "permits", "vi": "Trạng thái cơ quan cấp phép tách biệt với tiến độ công việc nội bộ. Trạng thái Đã cấp bắt buộc có ngày cấp và hồ sơ giấy phép.", "en": "Authority status is separate from internal task progress. Issued requires an issue date and the issued permit file.", "zh": "主管机关状态与内部任务进度相互独立。标记为已签发时必须填写签发日期并上传许可证文件。", "ja": "行政上の状態と社内タスク進捗は別管理です。発行済みには発行日と許可証ファイルが必要です。" },

@@ -10,10 +10,10 @@
   {
     "key": "operationalProjects.title",
     "category": "operationalProjects",
-    "vi": "Quản lý dự án vận hành",
-    "en": "Operational project management",
-    "zh": "运营项目管理",
-    "ja": "運用プロジェクト管理"
+    "vi": "Quản lý dự án",
+    "en": "Project management",
+    "zh": "项目管理",
+    "ja": "プロジェクト管理"
   },
   {
     "key": "operationalProjects.subtitle",
@@ -26,10 +26,10 @@
   {
     "key": "operationalProjects.new",
     "category": "operationalProjects",
-    "vi": "Tạo dự án vận hành",
-    "en": "New operational project",
-    "zh": "新建运营项目",
-    "ja": "運用プロジェクトを作成"
+    "vi": "Tạo dự án",
+    "en": "New project",
+    "zh": "新建项目",
+    "ja": "プロジェクトを作成"
   },
   {
     "key": "operationalProjects.edit",
@@ -42,10 +42,10 @@
   {
     "key": "operationalProjects.created",
     "category": "operationalProjects",
-    "vi": "Đã tạo dự án vận hành",
-    "en": "Operational project created",
-    "zh": "运营项目已创建",
-    "ja": "運用プロジェクトを作成しました"
+    "vi": "Đã tạo dự án",
+    "en": "Project created",
+    "zh": "项目已创建",
+    "ja": "プロジェクトを作成しました"
   },
   {
     "key": "operationalProjects.updated",
@@ -74,10 +74,10 @@
   {
     "key": "operationalProjects.empty",
     "category": "operationalProjects",
-    "vi": "Chưa có dự án vận hành phù hợp.",
-    "en": "No matching operational projects.",
-    "zh": "没有匹配的运营项目。",
-    "ja": "該当する運用プロジェクトはありません。"
+    "vi": "Chưa có dự án phù hợp.",
+    "en": "No matching projects.",
+    "zh": "没有匹配的项目。",
+    "ja": "該当するプロジェクトはありません。"
   },
   {
     "key": "operationalProjects.total",
@@ -1074,10 +1074,10 @@
   {
     "key": "operationalProjects.rename.title",
     "category": "operationalProjects",
-    "vi": "Đổi mã dự án vận hành",
-    "en": "Change operational project code",
-    "zh": "更改运营项目编号",
-    "ja": "運用プロジェクト番号を変更"
+    "vi": "Đổi mã dự án",
+    "en": "Change project code",
+    "zh": "更改项目编号",
+    "ja": "プロジェクト番号を変更"
   },
   {
     "key": "operationalProjects.rename.description",

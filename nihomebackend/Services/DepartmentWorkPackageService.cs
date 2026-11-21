@@ -270,7 +270,7 @@ public sealed partial class DepartmentWorkPackageService(
             if (request.ParticipantDepartmentRoleGroupIds.Count > 0)
                 throw Error("Nhóm công việc dự án chỉ có một phòng ban nhận việc.");
             if (!request.OperationalProjectId.HasValue)
-                throw Error("Nhóm công việc dự án phải chọn Dự án vận hành.");
+                throw Error("Nhóm công việc dự án phải chọn Dự án.");
             await ValidateProjectScopeAsync(request, purpose, callerUserId, admin, ct);
             await ValidatePurposeAsync(request, purpose, ct);
         }
@@ -764,7 +764,7 @@ public sealed partial class DepartmentWorkPackageService(
         var project = await db.OperationalProjects.AsNoTracking()
             .Where(item => item.Id == request.OperationalProjectId)
             .Select(item => new { item.Id, item.ProjectManagerUserId })
-            .SingleOrDefaultAsync(ct) ?? throw Error("Dự án vận hành không tồn tại.");
+            .SingleOrDefaultAsync(ct) ?? throw Error("Dự án không tồn tại.");
         var receivingGroupCode = await db.RoleGroups.AsNoTracking()
             .Where(group => group.Id == request.DepartmentRoleGroupId && group.IsActive)
             .Select(group => group.Code)
@@ -781,7 +781,7 @@ public sealed partial class DepartmentWorkPackageService(
                 .SingleOrDefaultAsync(ct);
             if (opportunity is null || opportunity.OperationalProjectId != project.Id ||
                 opportunity.Stage == OpportunityStage.Lost)
-                throw Error("Cơ hội phải đang hoạt động và gắn đúng Dự án vận hành.");
+                throw Error("Cơ hội phải đang hoạt động và gắn đúng Dự án.");
             isOpportunityOwner = opportunity.OwnerUserId == callerUserId;
         }
         if (request.SourceTenderId.HasValue)
@@ -832,7 +832,7 @@ public sealed partial class DepartmentWorkPackageService(
                 DateOnly.FromDateTime(AsUtcDate(request.PlannedStart)),
                 DateOnly.FromDateTime(AsUtcDate(request.PlannedEnd)), ct);
         else if (request.ProjectScheduleNodeId.HasValue)
-            throw Error("Chỉ đầu việc thuộc dự án vận hành mới được liên kết với mốc WBS của tiến độ tổng thể.");
+            throw Error("Chỉ đầu việc thuộc dự án mới được liên kết với mốc WBS của tiến độ tổng thể.");
         if (request.ApproverUserId == request.AssigneeUserId)
             throw Error("Người duyệt phải khác người phụ trách đầu việc.");
         if (RequiresIndependentVerification(package, request.KpiDefinitionId) &&

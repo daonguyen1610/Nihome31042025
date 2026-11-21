@@ -391,14 +391,14 @@ public sealed class PrecontractCrossDepartmentControlsTests(NihomeWebApplication
         // aggregate because its plan and Finance review use that root.
         using var orphanCreate = await SendAsync(HttpMethod.Post, "/api/tenders", new
         {
-            name = "Gói thầu chưa gắn dự án vận hành",
+            name = "Gói thầu chưa gắn dự án",
             customerId = scope.CustomerId,
             invitationReceivedAt = DateTime.UtcNow.AddDays(-1),
             invitationSource = "Cổng đấu thầu quốc gia",
             submissionDeadline = DateTime.UtcNow.AddDays(14),
         });
         orphanCreate.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await orphanCreate.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
+        (await orphanCreate.Content.ReadAsStringAsync()).Should().Contain("Dự án");
 
         var tender = await PostAsync("/api/tenders", new
         {

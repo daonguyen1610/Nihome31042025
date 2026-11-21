@@ -29,8 +29,8 @@ public class CreateSurveyRequest
 
     public int? LinkedProjectId { get; set; }
     public int? LinkedOpportunityId { get; set; }
-    [Required(ErrorMessage = "Vui lòng chọn Dự án vận hành.")]
-    [Range(1, int.MaxValue, ErrorMessage = "Dự án vận hành không hợp lệ. Hãy chọn một dự án có mã số lớn hơn 0, ví dụ 1.")]
+    [Required(ErrorMessage = "Vui lòng chọn Dự án.")]
+    [Range(1, int.MaxValue, ErrorMessage = "Dự án không hợp lệ. Hãy chọn một dự án có mã số lớn hơn 0, ví dụ 1.")]
     public int? OperationalProjectId { get; set; }
 
     [StringLength(4000)]

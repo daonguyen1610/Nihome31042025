@@ -548,7 +548,7 @@ public sealed class FinanceService(AppDbContext db, IProjectAccessService projec
         if (period?.Status != AccountingPeriodStatus.Closed)
             throw new FinanceOperationException("Chỉ được lập điều chỉnh cho kỳ kế toán đã đóng.");
         if (!await db.OperationalProjects.AsNoTracking().AnyAsync(item => item.Id == request.OperationalProjectId, ct))
-            throw new FinanceOperationException("Dự án vận hành không tồn tại.");
+            throw new FinanceOperationException("Dự án không tồn tại.");
         await ValidateAccountantAsync(request.ResponsibleAccountantUserId, ct);
         var sourceExists = request.SourceEntityType switch
         {

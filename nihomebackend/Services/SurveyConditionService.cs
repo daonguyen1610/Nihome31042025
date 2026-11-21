@@ -279,7 +279,7 @@ public sealed partial class SurveyConditionService(AppDbContext db, IUtf8CsvPars
         if (!projectId.HasValue || projectId.Value <= 0)
         {
             throw new SurveyOperationException(
-                "Dự án vận hành của phiếu khảo sát không hợp lệ. Hãy chọn một dự án có mã số lớn hơn 0, ví dụ 1, trước khi nhập điều kiện khảo sát.");
+                "Dự án của phiếu khảo sát không hợp lệ. Hãy chọn một dự án có mã số lớn hơn 0, ví dụ 1, trước khi nhập điều kiện khảo sát.");
         }
     }
 

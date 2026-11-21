@@ -1473,7 +1473,7 @@ public class ContractService(
                 return customerProjectIds[0];
             }
             throw new ContractValidationException(
-                "Dự án vận hành là bắt buộc cho Hợp đồng.");
+                "Dự án là bắt buộc cho Hợp đồng.");
         }
 
         var projectCustomerId = await db.OperationalProjects

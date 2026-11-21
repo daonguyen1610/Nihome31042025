@@ -617,15 +617,15 @@ public class SurveyService(
                 if (!opportunityProjectId.HasValue)
                 {
                     throw new SurveyOperationException(
-                        $"Cơ hội #{opportunityId} chưa được gán dự án vận hành. Hãy gán dự án cho cơ hội trước khi lưu phiếu khảo sát.");
+                        $"Cơ hội #{opportunityId} chưa được gán dự án. Hãy gán dự án cho cơ hội trước khi lưu phiếu khảo sát.");
                 }
                 throw new SurveyOperationException(
-                    $"Dự án vận hành là bắt buộc và phải là dự án #{opportunityProjectId.Value} của cơ hội đã chọn.");
+                    $"Dự án là bắt buộc và phải là dự án #{opportunityProjectId.Value} của cơ hội đã chọn.");
             }
             if (requireProject)
             {
                 throw new SurveyOperationException(
-                    "Dự án vận hành là bắt buộc. Hãy chọn dự án thuộc đúng khách hàng trước khi tạo phiếu khảo sát.");
+                    "Dự án là bắt buộc. Hãy chọn dự án thuộc đúng khách hàng trước khi tạo phiếu khảo sát.");
             }
             return new SurveyRoutingContext(null, null);
         }
@@ -636,7 +636,7 @@ public class SurveyService(
             .FirstOrDefaultAsync(ct);
         if (project is null)
         {
-            throw new SurveyOperationException($"Dự án vận hành #{operationalProjectId} không tồn tại.");
+            throw new SurveyOperationException($"Dự án #{operationalProjectId} không tồn tại.");
         }
 
         if (opportunityId.HasValue)
@@ -652,17 +652,17 @@ public class SurveyService(
             if (!opportunity.OperationalProjectId.HasValue)
             {
                 throw new SurveyOperationException(
-                    $"Cơ hội #{opportunityId} chưa được gán dự án vận hành. Hãy gán dự án cho cơ hội trước khi lưu phiếu khảo sát.");
+                    $"Cơ hội #{opportunityId} chưa được gán dự án. Hãy gán dự án cho cơ hội trước khi lưu phiếu khảo sát.");
             }
             if (opportunity.OperationalProjectId.Value != project.Id)
             {
                 throw new SurveyOperationException(
-                    $"Dự án vận hành #{project.Id} không khớp dự án #{opportunity.OperationalProjectId.Value} của cơ hội #{opportunityId}.");
+                    $"Dự án #{project.Id} không khớp dự án #{opportunity.OperationalProjectId.Value} của cơ hội #{opportunityId}.");
             }
             if (opportunity.CustomerId != project.CustomerId)
             {
                 throw new SurveyOperationException(
-                    "Dự án vận hành và cơ hội phải thuộc cùng một khách hàng.");
+                    "Dự án và cơ hội phải thuộc cùng một khách hàng.");
             }
         }
 

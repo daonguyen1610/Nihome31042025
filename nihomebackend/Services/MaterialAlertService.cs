@@ -108,7 +108,7 @@ public sealed class MaterialAlertService(
             .Where(item => item.Id == projectId)
             .Select(item => new { item.Code, item.ProjectManagerUserId })
             .SingleOrDefaultAsync(ct);
-        if (project is null) throw new MaterialAlertOperationException("Dự án vận hành không tồn tại.");
+        if (project is null) throw new MaterialAlertOperationException("Dự án không tồn tại.");
 
         await using var transaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(IsolationLevel.Serializable, ct)

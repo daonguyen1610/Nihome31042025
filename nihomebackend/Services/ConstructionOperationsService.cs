@@ -609,7 +609,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         EnsureText(request.WbsCode, "Mã WBS"); EnsureText(request.Description, "Mô tả QS");
         if (request.Lines.Any(x => string.IsNullOrWhiteSpace(x.ItemCode) || string.IsNullOrWhiteSpace(x.Description) || string.IsNullOrWhiteSpace(x.Unit))) throw new ConstructionOperationException("Mỗi dòng QS phải có mã hạng mục, mô tả và đơn vị tính.");
         if (request.PeriodFrom > request.PeriodTo) throw new ConstructionOperationException("Ngày bắt đầu kỳ QS không được sau ngày kết thúc.");
-        var contract = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.ContractId && x.OperationalProjectId == projectId, ct) ?? throw new ConstructionOperationException("Hợp đồng phải thuộc dự án vận hành.");
+        var contract = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(x => x.Id == request.ContractId && x.OperationalProjectId == projectId, ct) ?? throw new ConstructionOperationException("Hợp đồng phải thuộc dự án.");
         if (contract.Status is ContractStatus.Draft or ContractStatus.Cancelled)
             throw new ConstructionOperationException("Lô QS phải gắn với hợp đồng đã ký hoặc đang hiệu lực.");
         if ((request.Direction == ConstructionQsDirection.Upstream) != (contract.Direction == ContractDirection.Upstream)) throw new ConstructionOperationException("Chiều QS phải khớp với chiều của hợp đồng được liên kết.");
@@ -691,7 +691,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         var ids = PreparationDocumentIds(request).Where(x => x.HasValue).Select(x => x!.Value).ToList();
         if (ids.Count != ids.Distinct().Count()) throw new ConstructionOperationException("Mỗi điều kiện chuẩn bị phải tham chiếu một tài liệu dự án khác nhau.");
         var active = await ActiveConstructionDocumentIdsAsync(projectId, ids, ct);
-        if (active.Count != ids.Count) throw new ConstructionOperationException("Minh chứng chuẩn bị phải là biên bản nghiệm thu thi công còn hiệu lực trong cùng dự án vận hành.");
+        if (active.Count != ids.Count) throw new ConstructionOperationException("Minh chứng chuẩn bị phải là biên bản nghiệm thu thi công còn hiệu lực trong cùng dự án.");
     }
     private async Task<HashSet<long>> ActiveConstructionDocumentIdsAsync(int projectId, IReadOnlyCollection<long> ids, CancellationToken ct) =>
         (await db.ProjectDocuments.AsNoTracking().Where(x => ids.Contains(x.Id) && x.OperationalProjectId == projectId &&

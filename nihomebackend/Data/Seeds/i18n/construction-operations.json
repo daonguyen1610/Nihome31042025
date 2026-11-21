@@ -1664,9 +1664,9 @@
   {
     "key": "construction.common.noDesignProject",
     "category": "construction",
-    "vi": "Dự án vận hành này chưa liên kết dự án thiết kế nên chưa có công việc hiển thị. Hãy liên kết dự án thiết kế trong hồ sơ dự án vận hành.",
-    "en": "This operational project has no linked design project, so there are no tasks to show. Link a design project in the operational project record.",
-    "zh": "此运营项目尚未关联设计项目，因此没有可显示的任务。请在运营项目资料中关联设计项目。",
+    "vi": "Dự án này chưa liên kết dự án thiết kế nên chưa có công việc hiển thị. Hãy liên kết dự án thiết kế trong hồ sơ dự án.",
+    "en": "This project has no linked design project, so there are no tasks to show. Link a design project in the project record.",
+    "zh": "此项目尚未关联设计项目，因此没有可显示的任务。请在项目资料中关联设计项目。",
     "ja": "この運営プロジェクトには設計プロジェクトが紐付いていないため、表示する作業がありません。運営プロジェクトの記録で設計プロジェクトを紐付けてください。"
   },
   {
@@ -1688,10 +1688,10 @@
   {
     "key": "construction.common.operationalProject",
     "category": "construction",
-    "vi": "Dự án vận hành",
-    "en": "Operational project",
-    "zh": "运营项目",
-    "ja": "運用プロジェクト"
+    "vi": "Dự án",
+    "en": "Project",
+    "zh": "项目",
+    "ja": "プロジェクト"
   },
   {
     "key": "construction.common.updated",
@@ -1704,10 +1704,10 @@
   {
     "key": "construction.common.noDesignProject.generic",
     "category": "construction",
-    "vi": "Dự án vận hành này chưa liên kết dự án thiết kế. Hãy liên kết trong hồ sơ dự án vận hành để dùng màn hình này.",
-    "en": "This operational project has no linked design project. Link one in the operational project record to use this screen.",
-    "zh": "此运营项目尚未关联设计项目。请在运营项目记录中关联后使用此页面。",
-    "ja": "この運用プロジェクトには設計プロジェクトがリンクされていません。運用プロジェクト記録でリンクしてからこの画面を使用してください。"
+    "vi": "Dự án này chưa liên kết dự án thiết kế. Hãy liên kết trong hồ sơ dự án để dùng màn hình này.",
+    "en": "This project has no linked design project. Link one in the project record to use this screen.",
+    "zh": "此项目尚未关联设计项目。请在项目记录中关联后使用此页面。",
+    "ja": "このプロジェクトには設計プロジェクトがリンクされていません。プロジェクト記録でリンクしてからこの画面を使用してください。"
   },
   {
     "key": "construction.actions.deleteConfirm",

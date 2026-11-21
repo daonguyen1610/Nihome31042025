@@ -335,7 +335,7 @@ public sealed class DesignReviewService(
         if (project.ProjectManagerUserId != callerUserId && !await HasReviewAdministrativeBypassAsync(callerUserId, ct))
             throw new DesignReviewOperationException("Chỉ Chủ nhiệm thiết kế được quản lý hồ sơ trình.");
         if (!project.OperationalProjectId.HasValue)
-            throw new DesignReviewOperationException("Dự án thiết kế chưa liên kết Dự án vận hành.");
+            throw new DesignReviewOperationException("Dự án thiết kế chưa liên kết Dự án.");
         return project;
     }
 

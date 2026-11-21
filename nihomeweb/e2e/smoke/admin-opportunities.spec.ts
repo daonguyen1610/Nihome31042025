@@ -250,8 +250,8 @@ test("Sales starts Concept from Opportunity before a contract", async ({
   await expect(form).toBeVisible();
   await expect(form.getByRole("alert")).toHaveCount(0);
   await form.getByTestId("opportunity-design-submit").click();
-  await expect(form.getByRole("alert")).toContainText(/Dự án vận hành|operational project/i);
-  await form.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }).click();
+  await expect(form.getByRole("alert")).toContainText(/Dự án|operational project/i);
+  await form.getByRole("combobox", { name: /Dự án|Operational project/i }).click();
   await page.getByRole("option", { name: new RegExp(`Design first`) }).click();
 
   const startResponse = page.waitForResponse(
@@ -317,9 +317,7 @@ test("Sales can create the missing operational project and return to the design 
   await page.goto(`${baseURL}/admin/opportunities/${opportunityId}`, { waitUntil: "networkidle" });
   await page.getByTestId("opportunity-create-design-project").click();
   const form = page.getByTestId("opportunity-design-form");
-  await form
-    .getByRole("link", { name: /Tạo Dự án vận hành mới|Create an operational project/i })
-    .click();
+  await form.getByRole("link", { name: /Tạo Dự án mới|Create an operational project/i }).click();
   await expect(page).toHaveURL(/\/admin\/operational-projects\?create=1/);
   const projectDialog = page.getByRole("dialog");
   await expect(projectDialog).toBeVisible();
@@ -344,9 +342,9 @@ test("Sales can create the missing operational project and return to the design 
   await expect(page).toHaveURL(
     new RegExp(`/admin/opportunities/${opportunityId}/design-project/new\\?projectId=\\d+`),
   );
-  await expect(
-    form.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }),
-  ).toContainText("Project from design handoff");
+  await expect(form.getByRole("combobox", { name: /Dự án|Operational project/i })).toContainText(
+    "Project from design handoff",
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   await page.setViewportSize({ width: 768, height: 1024 });
@@ -416,7 +414,7 @@ test("Opportunity create and edit forms expose customer-scoped project linking",
   const customerResponse = await client.get(`/api/customers/${customerId}`);
   const customerName = ((await customerResponse.json()) as { name: string }).name;
   await page.getByRole("option", { name: customerName }).click();
-  await createDialog.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }).click();
+  await createDialog.getByRole("combobox", { name: /Dự án|Operational project/i }).click();
   await page.getByRole("option", { name: new RegExp(projectName) }).click();
   await createDialog.getByRole("button", { name: /Huỷ|Hủy|Cancel/i }).click();
 
@@ -425,7 +423,7 @@ test("Opportunity create and edit forms expose customer-scoped project linking",
   await expect(editDialog.getByTestId("opportunity-link-project")).toBeVisible();
   await expect(editDialog.getByTestId("opportunity-create-operational-project")).toBeVisible();
   await editDialog.getByTestId("opportunity-link-project").click();
-  await editDialog.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }).click();
+  await editDialog.getByRole("combobox", { name: /Dự án|Operational project/i }).click();
   await page.getByRole("option", { name: new RegExp(projectName) }).click();
   const updateResponse = page.waitForResponse(
     (response) =>
@@ -476,9 +474,9 @@ test("Sales creates an operational project from Opportunity detail and confirms 
     new RegExp(`/admin/opportunities/${opportunityId}\\?edit=1&projectId=\\d+`),
     { timeout: 15_000 },
   );
-  await expect(
-    detail.getByRole("combobox", { name: /Dự án vận hành|Operational project/i }),
-  ).toContainText(projectName);
+  await expect(detail.getByRole("combobox", { name: /Dự án|Operational project/i })).toContainText(
+    projectName,
+  );
   await page.setViewportSize({ width: 390, height: 844 });
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
   const responsePromise = page.waitForResponse(

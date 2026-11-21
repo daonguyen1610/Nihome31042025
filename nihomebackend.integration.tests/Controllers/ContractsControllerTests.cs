@@ -1072,7 +1072,7 @@ public class ContractsControllerTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án");
     }
 
     [Fact]
@@ -1099,7 +1099,7 @@ public class ContractsControllerTests : IntegrationTestBase
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án vận hành");
+        (await response.Content.ReadAsStringAsync()).Should().Contain("Dự án");
     }
 
     [Fact]
