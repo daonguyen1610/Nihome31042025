@@ -1370,9 +1370,7 @@ public class ContractService(
                 "Bổ sung tại trang Khách hàng (Sửa thông tin) rồi ký lại.");
     }
 
-    private static bool RequiresSignedCustomer(ContractStatus status) =>
-        status is ContractStatus.Signed or ContractStatus.InProgress or
-            ContractStatus.OnHold or ContractStatus.Completed;
+    private static bool RequiresSignedCustomer(ContractStatus status) => ContractStatuses.Signed.Contains(status);
 
     private async Task ValidateClassificationAsync(
         UpsertContractRequest request,

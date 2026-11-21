@@ -1,4 +1,5 @@
 using System.Data;
+using System.Linq.Expressions;
 using System.Text.RegularExpressions;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
@@ -185,7 +186,7 @@ public class OperationalProjectService(
                         .Sum(milestone => milestone.PercentValue)));
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
-        response.CodeLocked = project.Contracts.Any(contract => SignedStatuses.Contains(contract.Status));
+        response.CodeLocked = project.Contracts.Any(LocksProjectCodeInMemory);
         response.BusinessSectorName =
             await BusinessSectors.NameAsync(db, project.BusinessSectorCode, requestLanguage?.Lang ?? "vi", ct);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
@@ -384,9 +385,16 @@ public class OperationalProjectService(
         return await GetAsync(id, callerUserId, canSeeAll, ct);
     }
 
-    /// <summary>A contract in one of these states has been signed: the project is past gate 3.</summary>
-    private static readonly ContractStatus[] SignedStatuses =
-        [ContractStatus.Signed, ContractStatus.InProgress, ContractStatus.OnHold, ContractStatus.Completed];
+    /// <summary>
+    /// A customer contract that was signed puts the project past gate 3 and its code on paper,
+    /// even if it was cancelled later. Purchase contracts (Downstream) do not count.
+    /// </summary>
+    private static readonly Expression<Func<Contract, bool>> LocksProjectCode = contract =>
+        contract.Direction == ContractDirection.Upstream &&
+        (ContractStatuses.Signed.Contains(contract.Status) ||
+            (contract.Status == ContractStatus.Cancelled && contract.SignedDate != null));
+
+    private static readonly Func<Contract, bool> LocksProjectCodeInMemory = LocksProjectCode.Compile();
 
     public async Task<OperationalProjectResponse?> RenameCodeAsync(
         int id,
@@ -407,7 +415,8 @@ public class OperationalProjectService(
             throw new OperationalProjectOperationException("Lý do đổi mã Dự án phải có ít nhất 3 ký tự.");
         // NICON (Góp ý lập trình v2, answer 2): the code changes only before gate 3, the signed contract.
         var signed = await db.Contracts.AsNoTracking()
-            .Where(contract => contract.OperationalProjectId == id && SignedStatuses.Contains(contract.Status))
+            .Where(contract => contract.OperationalProjectId == id)
+            .Where(LocksProjectCode)
             .Select(contract => contract.ContractNumber)
             .FirstOrDefaultAsync(ct);
         if (signed is not null)

@@ -280,7 +280,7 @@ Mở **CRM → Dự án** để tạo hoặc tìm dự án trước khi làm vi�
 2. Nhập mã mới (2–40 ký tự) và lý do, rồi lưu.
 3. Nếu màn hình đã cũ (người khác vừa sửa), hệ thống từ chối; tải lại rồi làm lại.
 
-Nếu dự án đã có thư mục Drive, trang chi tiết hiển thị trạng thái đổi tên thư mục; lần đổi tên lỗi có thể xếp hàng chạy lại mà không tạo thư mục mới. Tìm theo mã cũ vẫn ra dự án. Dự án Hoàn thành hoặc Đã hủy phải mở lại trước khi đổi mã. Khi dự án đã có hợp đồng ký (đã ký, đang thực hiện, tạm dừng hoặc hoàn thành), nút **Đổi mã dự án** mờ đi kèm lý do: mã đã in trên hợp đồng và hồ sơ nên không đổi nữa. Hợp đồng nháp hoặc đã hủy không khoá mã. Mục **Lịch sử thay đổi** cuối trang ghi mã cũ → mã mới, lý do, người đổi và thời điểm, cùng các thay đổi thành viên và phân công, mới nhất ở trên.
+Nếu dự án đã có thư mục Drive, trang chi tiết hiển thị trạng thái đổi tên thư mục; lần đổi tên lỗi có thể xếp hàng chạy lại mà không tạo thư mục mới. Tìm theo mã cũ vẫn ra dự án. Dự án Hoàn thành hoặc Đã hủy phải mở lại trước khi đổi mã. Khi dự án đã có hợp đồng với khách hàng được ký (đã ký, đang thực hiện, tạm dừng, hoàn thành, hoặc đã ký rồi hủy), nút **Đổi mã dự án** mờ đi kèm lý do: mã đã in trên hợp đồng và hồ sơ nên không đổi nữa. Hợp đồng nháp, hợp đồng hủy khi chưa ký và hợp đồng mua vào (nhà cung cấp, thầu phụ) không khoá mã. Mục **Lịch sử thay đổi** cuối trang ghi mã cũ → mã mới, lý do, người đổi và thời điểm, cùng các thay đổi thành viên và phân công, mới nhất ở trên.
 
 **Phân công.** Khi quản lý đổi người phụ trách một phân công đang chạy, phân công cũ được đánh dấu đã bàn giao và giữ trong lịch sử; hệ thống tạo phân công mới cho người được chọn.
 
