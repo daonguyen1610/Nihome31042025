@@ -297,7 +297,9 @@ const OperationalProjects = () => {
     } finally {
       if (request === requestSequence.current) setLoading(false);
     }
-  }, [projectId, listFilters, page, uiError]);
+    // The language is a dependency: records come back with names in it (a sector, for example).
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, listFilters, page, uiError, lang]);
 
   const { exporting, exportList } = useListExport();
   const exportProjects = () =>

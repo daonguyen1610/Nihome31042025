@@ -81,7 +81,7 @@ public class MasterDataService(
         var names = await MasterDataNames.LocalizeAsync(db, entities, lang, ct);
 
         var items = entities
-            .Select(o => MapToResponse(o, new Dictionary<string, string> { ["Name"] = names[o.Id] }))
+            .Select(o => MapToResponse(o, names[o.Id]))
             .ToList();
 
         if (useCache)
@@ -215,14 +215,12 @@ public class MasterDataService(
         (value ?? string.Empty).Trim().ToLowerInvariant();
 
     private static MasterDataOptionResponse MapToResponse(
-        MasterDataOption entity, Dictionary<string, string>? translations = null) => new()
+        MasterDataOption entity, string? name = null) => new()
         {
             Id = entity.Id,
             Category = entity.Category,
             Code = entity.Code,
-            Name = translations != null && translations.TryGetValue("Name", out var name) && !string.IsNullOrWhiteSpace(name)
-                ? name
-                : entity.Name,
+            Name = name ?? entity.Name,
             LabelKey = entity.LabelKey,
             Description = entity.Description,
             IsActive = entity.IsActive,
