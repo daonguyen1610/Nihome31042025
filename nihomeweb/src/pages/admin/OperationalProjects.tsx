@@ -1440,47 +1440,109 @@ const OperationalProjects = () => {
               {t("operationalProjects.empty")}
             </div>
           ) : (
-            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-              {rows.map((project) => (
-                <div
-                  key={project.id}
-                  className="relative rounded-lg border bg-card p-4 text-left transition hover:border-primary/50 hover:shadow-sm"
-                >
-                  <button
-                    type="button"
-                    className="w-full text-left"
-                    onClick={() => navigate(`/admin/operational-projects/${project.id}`)}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+            // One project per row, read top to bottom (NICON feedback row 34). On phones the
+            // row keeps the name, customer, status and counts; wider screens add the columns.
+            <div className="overflow-x-auto rounded-lg border bg-card">
+              <table className="w-full text-sm">
+                <caption className="sr-only">
+                  {t("operationalProjects.total", { count: total })}
+                </caption>
+                <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
+                  <tr>
+                    <th scope="col" className="px-4 py-2.5 font-medium md:min-w-[18rem]">
+                      {t("operationalProjects.field.name")}
+                    </th>
+                    <th scope="col" className="px-4 py-2.5 font-medium">
+                      {t("operationalProjects.field.status")}
+                    </th>
+                    <th scope="col" className="hidden px-4 py-2.5 font-medium xl:table-cell">
+                      {t("operationalProjects.field.manager")}
+                    </th>
+                    <th scope="col" className="hidden px-4 py-2.5 font-medium 2xl:table-cell">
+                      {t("operationalProjects.field.period")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="hidden whitespace-nowrap px-4 py-2.5 text-right font-medium md:table-cell"
+                    >
+                      {t("operationalProjects.count.opportunities")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="hidden whitespace-nowrap px-4 py-2.5 text-right font-medium md:table-cell"
+                    >
+                      {t("operationalProjects.count.quotes")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="hidden whitespace-nowrap px-4 py-2.5 text-right font-medium md:table-cell"
+                    >
+                      {t("operationalProjects.count.contracts")}
+                    </th>
+                    <th
+                      scope="col"
+                      className="hidden whitespace-nowrap px-4 py-2.5 font-medium xl:table-cell"
+                    >
+                      {t("operationalProjects.field.updatedAt")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y">
+                  {rows.map((project) => (
+                    <tr
+                      key={project.id}
+                      data-testid="project-row"
+                      className="cursor-pointer align-top transition-colors hover:bg-muted/40"
+                      onClick={() => navigate(`/admin/operational-projects/${project.id}`)}
+                    >
+                      <td className="px-4 py-3">
                         <p className="font-mono text-xs text-muted-foreground">{project.code}</p>
-                        <h2 className="mt-1 font-semibold">{project.name}</h2>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={cn("shrink-0 whitespace-nowrap", statusClass[project.status])}
-                      >
-                        {t(`operationalProjects.status.${project.status}`)}
-                      </Badge>
-                    </div>
-                    <p className="mt-2 text-sm text-muted-foreground">{project.customerName}</p>
-                    <div className="mt-4 grid grid-cols-3 gap-2 border-t pt-3 text-center text-xs">
-                      <Count
-                        value={project.opportunityCount}
-                        label={t("operationalProjects.count.opportunities")}
-                      />
-                      <Count
-                        value={project.quoteCount}
-                        label={t("operationalProjects.count.quotes")}
-                      />
-                      <Count
-                        value={project.contractCount}
-                        label={t("operationalProjects.count.contracts")}
-                      />
-                    </div>
-                  </button>
-                </div>
-              ))}
+                        <Link
+                          to={`/admin/operational-projects/${project.id}`}
+                          className="mt-0.5 block font-medium text-foreground underline-offset-4 hover:underline focus-visible:underline"
+                          onClick={(event) => event.stopPropagation()}
+                        >
+                          {project.name}
+                        </Link>
+                        <p className="mt-0.5 text-muted-foreground">{project.customerName}</p>
+                        <p className="mt-1 text-xs text-muted-foreground tabular-nums md:hidden">
+                          {project.opportunityCount} {t("operationalProjects.count.opportunities")}{" "}
+                          · {project.quoteCount} {t("operationalProjects.count.quotes")} ·{" "}
+                          {project.contractCount} {t("operationalProjects.count.contracts")}
+                        </p>
+                      </td>
+                      <td className="px-4 py-3">
+                        <Badge
+                          variant="outline"
+                          className={cn("whitespace-nowrap", statusClass[project.status])}
+                        >
+                          {t(`operationalProjects.status.${project.status}`)}
+                        </Badge>
+                      </td>
+                      <td className="hidden px-4 py-3 xl:table-cell">
+                        {project.projectManagerName || "—"}
+                      </td>
+                      <td className="hidden whitespace-nowrap px-4 py-3 tabular-nums 2xl:table-cell">
+                        {project.startDate || project.endDate
+                          ? `${formatDate(project.startDate)} – ${formatDate(project.endDate)}`
+                          : "—"}
+                      </td>
+                      <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
+                        {project.opportunityCount}
+                      </td>
+                      <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
+                        {project.quoteCount}
+                      </td>
+                      <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
+                        {project.contractCount}
+                      </td>
+                      <td className="hidden whitespace-nowrap px-4 py-3 tabular-nums xl:table-cell">
+                        {formatDate(project.updatedAt)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -1837,11 +1899,4 @@ const ContractMetric = ({
     </div>
   </div>
 );
-const Count = ({ value, label }: { value: number; label: string }) => (
-  <div>
-    <strong className="block text-base">{value}</strong>
-    <span className="text-muted-foreground">{label}</span>
-  </div>
-);
-
 export default OperationalProjects;

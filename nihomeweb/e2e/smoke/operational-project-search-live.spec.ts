@@ -53,7 +53,7 @@ for (const width of [390, 768, 1440]) {
     );
     await search.fill(missingTerm);
     expect((await missingResult).status()).toBe(200);
-    await expect(page.locator("h2")).toHaveCount(0);
+    await expect(page.getByTestId("project-row")).toHaveCount(0);
     await expect(search).toBeFocused();
     await search.fill("");
     await expect(page.getByText(project.code, { exact: true })).toBeVisible();
@@ -72,7 +72,7 @@ test("project search ignores stale responses and remains usable after errors (si
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/operational-projects");
   const search = page.locator("#project-search");
-  await expect(page.locator("h2").first()).toBeVisible();
+  await expect(page.getByTestId("project-row").first()).toBeVisible();
   let releaseSlow!: () => void;
   let startedSlow!: () => void;
   const slowStarted = new Promise<void>((resolve) => {
@@ -100,7 +100,7 @@ test("project search ignores stale responses and remains usable after errors (si
   );
   await search.fill("latest");
   await latest;
-  await expect(page.locator("h2")).toHaveCount(0);
+  await expect(page.getByTestId("project-row")).toHaveCount(0);
   const stale = page.waitForResponse(
     (res) => new URL(res.url()).searchParams.get("search") === "slow",
   );
