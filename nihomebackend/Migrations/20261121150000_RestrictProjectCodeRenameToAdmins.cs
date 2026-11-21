@@ -10,7 +10,10 @@ namespace nihomebackend.Migrations;
 /// NICON (Góp ý lập trình v2, answer 2): only system administrators change a project code.
 /// The shipped defaults gave <c>operations.projects.rename</c> to SALES_MANAGER (through
 /// <c>operations.projects.**</c>) and BGD; RbacSeeder seeds business roles only once, so
-/// existing databases keep those grants until this removes them. SUPER_ADMIN and ADMIN keep it.
+/// existing databases keep those grants until this removes them. NICON's rule is about the
+/// action, not two roles, so it is removed from every role except SUPER_ADMIN and ADMIN,
+/// including roles an administrator copied from SALES_MANAGER. Down restores only the two
+/// shipped grants; a custom role's grant cannot be told apart and is not put back.
 /// </summary>
 [DbContext(typeof(AppDbContext))]
 [Migration("20261121150000_RestrictProjectCodeRenameToAdmins")]
@@ -21,7 +24,7 @@ public partial class RestrictProjectCodeRenameToAdmins : Migration
         FROM role_permissions existing
         INNER JOIN roles r ON r.Id = existing.RoleId
         INNER JOIN permissions p ON p.Id = existing.PermissionId
-        WHERE r.Code IN (N'SALES_MANAGER', N'BGD')
+        WHERE r.Code NOT IN (N'SUPER_ADMIN', N'ADMIN')
           AND p.Module = N'operations.projects' AND p.Action = N'rename';
         """;
 
