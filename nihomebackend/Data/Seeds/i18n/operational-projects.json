@@ -1838,5 +1838,13 @@
     "en": "Add them on the project page",
     "zh": "在项目页面补充",
     "ja": "プロジェクト画面で追加"
+  },
+  {
+    "key": "operationalProjects.count.summary",
+    "category": "operationalProjects",
+    "vi": "Cơ hội {opportunities} · Báo giá {quotes} · Hợp đồng {contracts}",
+    "en": "Opportunities {opportunities} · Quotes {quotes} · Contracts {contracts}",
+    "zh": "商机 {opportunities} · 报价 {quotes} · 合同 {contracts}",
+    "ja": "商談 {opportunities} · 見積 {quotes} · 契約 {contracts}"
   }
 ]
