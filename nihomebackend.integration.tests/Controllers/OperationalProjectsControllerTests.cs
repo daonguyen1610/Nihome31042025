@@ -337,6 +337,55 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
             item.OperationalProjectId == projectId))).Should().Be(1);
     }
 
+    // NICON (Góp ý lập trình v2, answer 2): no code change after the customer contract is signed.
+    [Fact]
+    public async Task RenameCode_AfterCustomerContractIsSigned_ReturnsCodedErrorWithoutMutation()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var customerId = await CreateCustomerAsync("Signed contract code lock");
+        var createResponse = await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            code = $"NICON-LOCK-{Guid.NewGuid():N}"[..30],
+            name = "Kho lạnh Thái Bình",
+            customerId,
+        });
+        createResponse.EnsureSuccessStatusCode();
+        var created = await ReadJsonAsync(createResponse);
+        var projectId = created.GetProperty("id").GetInt32();
+        var contractNumber = $"HD-LOCK-{Guid.NewGuid():N}"[..24];
+        await WithDbAsync(async db =>
+        {
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = contractNumber,
+                CustomerId = customerId,
+                OperationalProjectId = projectId,
+                Direction = ContractDirection.Upstream,
+                Status = ContractStatus.Signed,
+                SignedDate = DateTime.UtcNow.Date,
+            });
+            await db.SaveChangesAsync();
+        });
+
+        var response = await Client.PatchAsJsonAsync($"/api/operational-projects/{projectId}/code", new
+        {
+            newCode = $"NICON-NEW-{Guid.NewGuid():N}"[..30],
+            reason = "Sửa mã nhập nhầm",
+            rowVersion = created.GetProperty("rowVersion").GetString(),
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("code").GetString().Should().Be("OPERATIONAL_PROJECT_CODE_LOCKED");
+        body.GetProperty("params").GetProperty("contract").GetString().Should().Be(contractNumber);
+        (await WithDbAsync(db => db.OperationalProjects.AsNoTracking().Where(item => item.Id == projectId)
+            .Select(item => item.Code).SingleAsync())).Should().Be(created.GetProperty("code").GetString());
+        (await WithDbAsync(db => db.OperationalProjectCodeChanges.CountAsync(item =>
+            item.OperationalProjectId == projectId))).Should().Be(0);
+    }
+
     [Fact]
     public async Task RenameCode_WithoutSpecialPermission_IsForbiddenWithoutMutation()
     {

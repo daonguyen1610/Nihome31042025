@@ -12,7 +12,8 @@ namespace nihomebackend.Migrations;
 /// <c>operations.projects.**</c>) and BGD; RbacSeeder seeds business roles only once, so
 /// existing databases keep those grants until this removes them. NICON's rule is about the
 /// action, not two roles, so it is removed from every role except SUPER_ADMIN and ADMIN,
-/// including roles an administrator copied from SALES_MANAGER. Down restores only the two
+/// including roles an administrator copied from SALES_MANAGER, and from every role-group
+/// baseline (copied into roles created later; no shipped baseline holds it). Down restores only the two
 /// shipped grants; a custom role's grant cannot be told apart and is not put back.
 /// </summary>
 [DbContext(typeof(AppDbContext))]
@@ -26,6 +27,12 @@ public partial class RestrictProjectCodeRenameToAdmins : Migration
         INNER JOIN permissions p ON p.Id = existing.PermissionId
         WHERE r.Code NOT IN (N'SUPER_ADMIN', N'ADMIN')
           AND p.Module = N'operations.projects' AND p.Action = N'rename';
+
+        -- Role-group baselines are copied into new roles, so they must not carry it either.
+        DELETE baseline
+        FROM role_group_permissions baseline
+        INNER JOIN permissions p ON p.Id = baseline.PermissionId
+        WHERE p.Module = N'operations.projects' AND p.Action = N'rename';
         """;
 
     private const string GrantSql = """

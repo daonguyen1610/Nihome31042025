@@ -1410,11 +1410,12 @@ website hay `DesignProject`. Route `/api/operational-projects` (và `/api/v1`):
 (`OperationalProjectCodeAllocator`). `code` khi tạo được viết hoa, dài 2–40 ký tự an toàn,
 không trùng. Đổi mã sau đó cần lý do và row version, ghi lịch sử cũ/mới bất biến, và bị
 chặn (`OPERATIONAL_PROJECT_CODE_LOCKED`, tham số `contract`) khi dự án có hợp đồng khách
-hàng (`Upstream`) ở `ContractStatuses.Signed` (`Signed`/`InProgress`/`OnHold`/`Completed`) hoặc
-đã ký rồi hủy (`Cancelled` có `SignedDate`): cổng 3, NICON Góp ý lập trình v2 câu 2. Hợp đồng
-mua vào (`Downstream`) không khoá mã. Chi tiết dự án trả `codeLocked` để giao diện làm mờ
+hàng (`Upstream`) ở `ContractStatuses.Signed` (`Signed`/`InProgress`/`OnHold`/`Completed`): cổng
+3, NICON Góp ý lập trình v2 câu 2. Hợp đồng mua vào (`Downstream`) và hợp đồng đã hủy không
+khoá mã (không có lịch sử trạng thái để biết hợp đồng hủy từng ký hay chưa; bản nháp có thể
+đã ghi ngày ký dự kiến). Khoá tính theo hợp đồng đang gắn với dự án lúc đổi mã. Chi tiết dự án trả `codeLocked` để giao diện làm mờ
 nút. Quyền `operations.projects.rename` mặc định chỉ có `SUPER_ADMIN` và `ADMIN`; migration
-`RestrictProjectCodeRenameToAdmins` gỡ quyền này khỏi mọi vai trò khác trên DB đã seed (Down
+`RestrictProjectCodeRenameToAdmins` gỡ quyền này khỏi mọi vai trò khác và mọi baseline nhóm vai trò trên DB đã seed (Down
 chỉ trả lại cho `SALES_MANAGER` và `BGD`). Liên kết
 giữa module không đổi vì dùng `OperationalProjectId`; thư mục Drive gốc được đổi tên (giữ
 Drive ID), trạng thái ở `latestCodeChange`. Lịch sử mã có `entityType=ProjectCode`,
