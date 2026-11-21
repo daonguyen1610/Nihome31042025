@@ -55,5 +55,11 @@ public sealed class ProjectScheduleImportResponse
 {
     public string SourceName { get; set; } = string.Empty;
     public List<ProjectScheduleItemResponse> Items { get; set; } = new();
-    public List<string> Warnings { get; set; } = new();
+    public List<MsProjectImportWarning> Warnings { get; set; } = new();
 }
+
+/// <summary>
+/// Something the import adjusted, said by a stable code the client translates
+/// (<c>scheduleUx.import.warning.{Code}</c>) with the WBS code and a value where it needs one.
+/// </summary>
+public sealed record MsProjectImportWarning(string Code, string Wbs, string? Value = null);

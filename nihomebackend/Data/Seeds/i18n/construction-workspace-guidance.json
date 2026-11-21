@@ -1062,5 +1062,85 @@
     "en": "Baseline: {start} – {end}",
     "zh": "基准：{start} – {end}",
     "ja": "ベースライン：{start} – {end}"
+  },
+  {
+    "key": "scheduleUx.import.warning.titleTruncated",
+    "category": "construction",
+    "vi": "{wbs}: tên dài hơn 300 ký tự nên được cắt bớt.",
+    "en": "{wbs}: the name was longer than 300 characters and was shortened.",
+    "zh": "{wbs}：名称超过 300 个字符，已截短。",
+    "ja": "{wbs}：名称が300文字を超えたため短縮しました。"
+  },
+  {
+    "key": "scheduleUx.import.warning.wbsReplaced",
+    "category": "construction",
+    "vi": "{wbs}: mã WBS quá dài hoặc trùng nên dùng mã {value}.",
+    "en": "{wbs}: the WBS code was too long or repeated, so {value} is used.",
+    "zh": "{wbs}：WBS 编码过长或重复，改用 {value}。",
+    "ja": "{wbs}：WBSコードが長すぎるか重複のため {value} を使用します。"
+  },
+  {
+    "key": "scheduleUx.import.warning.linkMissing",
+    "category": "construction",
+    "vi": "{wbs}: bỏ một liên kết tới công việc không có trong tệp.",
+    "en": "{wbs}: a link to a task not in the file was dropped.",
+    "zh": "{wbs}：已删除指向文件中不存在任务的关联。",
+    "ja": "{wbs}：ファイルにないタスクへのリンクを除外しました。"
+  },
+  {
+    "key": "scheduleUx.import.warning.linksCapped",
+    "category": "construction",
+    "vi": "{wbs}: chỉ giữ {value} liên kết đầu tiên.",
+    "en": "{wbs}: only the first {value} links are kept.",
+    "zh": "{wbs}：仅保留前 {value} 个关联。",
+    "ja": "{wbs}：先頭の {value} 件のリンクのみ保持します。"
+  },
+  {
+    "key": "scheduleUx.import.warning.lagPercent",
+    "category": "construction",
+    "vi": "{wbs}: độ trễ tính theo % không đổi ra ngày được nên để 0.",
+    "en": "{wbs}: a percentage lag cannot be turned into days, so it is 0.",
+    "zh": "{wbs}：百分比延隔无法换算为天数，设为 0。",
+    "ja": "{wbs}：％指定のラグは日数に換算できないため0にしました。"
+  },
+  {
+    "key": "scheduleUx.import.warning.lagClamped",
+    "category": "construction",
+    "vi": "{wbs}: độ trễ quá {value} ngày nên được giới hạn.",
+    "en": "{wbs}: the lag was over {value} days and was capped.",
+    "zh": "{wbs}：延隔超过 {value} 天，已限制。",
+    "ja": "{wbs}：ラグが {value} 日を超えたため上限にしました。"
+  },
+  {
+    "key": "scheduleUx.import.warning.parentWidened",
+    "category": "construction",
+    "vi": "{wbs}: hạng mục cha được nới ngày để chứa đủ công việc con.",
+    "en": "{wbs}: the parent's dates were widened to cover its tasks.",
+    "zh": "{wbs}：已放宽上级条目的日期以涵盖其子任务。",
+    "ja": "{wbs}：子タスクを含むよう親項目の期間を広げました。"
+  },
+  {
+    "key": "scheduleUx.import.moreWarnings",
+    "category": "construction",
+    "vi": "và {count} điều chỉnh khác.",
+    "en": "and {count} more adjustments.",
+    "zh": "另有 {count} 项调整。",
+    "ja": "ほか {count} 件の調整があります。"
+  },
+  {
+    "key": "scheduleUx.import.baselineChanged",
+    "category": "construction",
+    "vi": "Baseline: {from} → {to}",
+    "en": "Baseline: {from} → {to}",
+    "zh": "基准：{from} → {to}",
+    "ja": "ベースライン：{from} → {to}"
+  },
+  {
+    "key": "scheduleUx.import.file",
+    "category": "construction",
+    "vi": "Tệp tiến độ MS Project (.xml)",
+    "en": "MS Project schedule file (.xml)",
+    "zh": "MS Project 进度文件（.xml）",
+    "ja": "MS Project 工程表ファイル（.xml）"
   }
 ]

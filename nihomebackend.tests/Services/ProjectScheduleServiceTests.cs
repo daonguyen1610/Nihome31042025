@@ -269,6 +269,69 @@ public sealed class ProjectScheduleServiceTests
         Assert.Equal(preview.Items.Sum(item => item.Predecessors.Count), draft.Items.Sum(item => item.Predecessors.Count));
     }
 
+    [Fact]
+    public async Task ReimportedSchedule_KeepsTheNodesOfMatchingWbsCodes()
+    {
+        await using var db = CreateDb();
+        var (parentNode, childNode) = SeedProject(db);
+        db.ProjectScheduleRevisions.Add(new ProjectScheduleRevision
+        {
+            OperationalProjectId = ProjectId,
+            Version = 1,
+            Status = ProjectScheduleRevisionStatus.Published,
+            CreatedByUserId = CallerId,
+            RowVersion = [1],
+            Items =
+            [
+                Item(parentNode, null, "1", "Móng", new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 30)),
+                Item(childNode, parentNode, "1.1", "Ép cọc", new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 10)),
+            ],
+        });
+        await db.SaveChangesAsync();
+        const string xml = """
+            <Project xmlns="http://schemas.microsoft.com/project"><Tasks>
+              <Task><UID>10</UID><OutlineLevel>1</OutlineLevel><WBS>1</WBS><Name>Móng</Name><Start>2026-06-01T08:00:00</Start><Finish>2026-07-05T17:00:00</Finish></Task>
+              <Task><UID>11</UID><OutlineLevel>2</OutlineLevel><WBS>1.1</WBS><Name>Ép cọc</Name><Start>2026-06-01T08:00:00</Start><Finish>2026-06-15T17:00:00</Finish></Task>
+              <Task><UID>12</UID><OutlineLevel>2</OutlineLevel><WBS>1.2</WBS><Name>Đài móng</Name><Start>2026-06-16T08:00:00</Start><Finish>2026-07-05T17:00:00</Finish>
+                <PredecessorLink><PredecessorUID>11</PredecessorUID><Type>1</Type></PredecessorLink></Task>
+            </Tasks></Project>
+            """;
+
+        var preview = await CreateService(db).PreviewImportAsync(
+            ProjectId, new MemoryStream(System.Text.Encoding.UTF8.GetBytes(xml)), "v2.xml", CallerId, default);
+
+        // The updated plan keeps the existing nodes, so work linked to them stays linked.
+        Assert.Equal(parentNode, preview.Items.Single(item => item.WbsCode == "1").NodeId);
+        Assert.Equal(childNode, preview.Items.Single(item => item.WbsCode == "1.1").NodeId);
+        var newTask = preview.Items.Single(item => item.WbsCode == "1.2");
+        Assert.Equal(parentNode, newTask.ParentNodeId);
+        Assert.Equal(childNode, newTask.Predecessors.Single().PredecessorNodeId);
+    }
+
+    [Theory]
+    [InlineData(true, "vòng lặp")]
+    [InlineData(false, "hai liên kết")]
+    public async Task Links_ThatRepeatOrGoRound_AreRefused(bool goesRound, string reason)
+    {
+        await using var db = CreateDb();
+        var (first, second) = SeedProject(db);
+        db.ProjectScheduleRevisions.RemoveRange(db.ProjectScheduleRevisions);
+        await db.SaveChangesAsync();
+        var request = new SaveProjectScheduleRevisionRequest
+        {
+            ChangeReason = "Liên kết",
+            Items =
+            [
+                SaveItem(first, null, "1", "Móng", new DateOnly(2026, 6, 1), new DateOnly(2026, 6, 10)),
+                SaveItem(second, null, "2", "Kết cấu", new DateOnly(2026, 6, 11), new DateOnly(2026, 6, 20)),
+            ],
+        }.WithLinks(goesRound ? [(first, second), (second, first)] : [(first, second), (first, second)]);
+
+        var error = await Assert.ThrowsAsync<ProjectScheduleOperationException>(() =>
+            CreateService(db).CreateRevisionAsync(ProjectId, request, CallerId, default));
+        Assert.Contains(reason, error.Message);
+    }
+
     private static AppDbContext CreateDb() => new(
         new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase($"project-schedule-{Guid.NewGuid()}")
@@ -286,5 +349,18 @@ public sealed class ProjectScheduleServiceTests
             .ReturnsAsync(true);
         return new ProjectScheduleService(db, access.Object, permissions.Object,
             Mock.Of<INotificationService>(), new EphemeralDataProtectionProvider(), NullLogger<ProjectScheduleService>.Instance);
+    }
+}
+
+internal static class ScheduleRequestLinks
+{
+    /// <summary>Adds "To after From" finish-to-start links.</summary>
+    public static SaveProjectScheduleRevisionRequest WithLinks(
+        this SaveProjectScheduleRevisionRequest request, params (Guid From, Guid To)[] links)
+    {
+        foreach (var (from, to) in links)
+            request.Items.Single(item => item.NodeId == to).Predecessors.Add(
+                new SaveProjectScheduleLinkRequest { PredecessorNodeId = from, Type = "FS" });
+        return request;
     }
 }

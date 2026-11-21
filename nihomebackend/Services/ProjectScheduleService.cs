@@ -110,14 +110,29 @@ public sealed class ProjectScheduleService(
         MsProjectImport import;
         try { import = MsProjectXmlImporter.Parse(xml); }
         catch (MsProjectImportException exception) { throw new ProjectScheduleOperationException(exception.Message); }
+
+        // An updated plan keeps the nodes it already has: a task whose WBS code matches the latest
+        // revision reuses that node, so links from department, design and site work stay valid.
+        var latestId = await db.ProjectScheduleRevisions.AsNoTracking()
+            .Where(item => item.OperationalProjectId == projectId)
+            .OrderByDescending(item => item.Version).Select(item => (int?)item.Id).FirstOrDefaultAsync(ct);
+        var existing = latestId is null
+            ? new Dictionary<string, Guid>()
+            : (await db.ProjectScheduleItems.AsNoTracking().Where(item => item.RevisionId == latestId)
+                .Select(item => new { item.WbsCode, item.NodeId }).ToListAsync(ct))
+                .ToDictionary(item => item.WbsCode, item => item.NodeId, StringComparer.OrdinalIgnoreCase);
+        var remap = import.Items.ToDictionary(item => item.NodeId!.Value,
+            item => existing.TryGetValue(item.WbsCode, out var nodeId) ? nodeId : item.NodeId!.Value);
+        Guid Map(Guid id) => remap.GetValueOrDefault(id, id);
+
         return new ProjectScheduleImportResponse
         {
             SourceName = Path.GetFileName(fileName),
             Warnings = import.Warnings,
             Items = import.Items.Select(item => new ProjectScheduleItemResponse
             {
-                NodeId = item.NodeId!.Value,
-                ParentNodeId = item.ParentNodeId,
+                NodeId = Map(item.NodeId!.Value),
+                ParentNodeId = item.ParentNodeId.HasValue ? Map(item.ParentNodeId.Value) : null,
                 WbsCode = item.WbsCode,
                 Title = item.Title,
                 PlannedStart = item.PlannedStart!.Value,
@@ -127,7 +142,7 @@ public sealed class ProjectScheduleService(
                 BaselineStart = item.BaselineStart,
                 BaselineEnd = item.BaselineEnd,
                 Predecessors = item.Predecessors
-                    .Select(link => new ProjectScheduleLinkResponse(link.PredecessorNodeId, link.Type, link.LagDays))
+                    .Select(link => new ProjectScheduleLinkResponse(Map(link.PredecessorNodeId), link.Type, link.LagDays))
                     .ToList(),
             }).ToList(),
         };
@@ -354,6 +369,9 @@ public sealed class ProjectScheduleService(
             if (item.Predecessors.Any(link => link.PredecessorNodeId == nodeId || !byId.ContainsKey(link.PredecessorNodeId)))
                 throw new ProjectScheduleOperationException(
                     $"Hạng mục {item.WbsCode} chỉ được phụ thuộc vào hạng mục khác trong cùng phiên bản tiến độ.");
+            if (item.Predecessors.GroupBy(link => link.PredecessorNodeId).Any(group => group.Count() > 1))
+                throw new ProjectScheduleOperationException(
+                    $"Hạng mục {item.WbsCode} có hai liên kết tới cùng một hạng mục; giữ một liên kết.");
             revision.Items.Add(new ProjectScheduleItem
             {
                 NodeId = nodeId,
@@ -373,6 +391,24 @@ public sealed class ProjectScheduleService(
             });
         }
         if (HasParentCycle(revision.Items)) throw new ProjectScheduleOperationException("Các hạng mục tiến độ không được liên kết cha-con thành vòng lặp.");
+        if (HasLinkCycle(byId)) throw new ProjectScheduleOperationException(
+            "Liên kết giữa các hạng mục tiến độ tạo thành vòng lặp (A sau B, B lại sau A). Hãy bỏ một liên kết.");
+    }
+
+    /// <summary>A depends on B and B (directly or not) on A: MS Project refuses this, so do we.</summary>
+    private static bool HasLinkCycle(IReadOnlyDictionary<Guid, SaveProjectScheduleItemRequest> items)
+    {
+        var state = new Dictionary<Guid, int>(); // 1 visiting, 2 done
+        bool Visit(Guid id)
+        {
+            if (state.TryGetValue(id, out var seen)) return seen == 1;
+            state[id] = 1;
+            if (items.TryGetValue(id, out var item) &&
+                item.Predecessors.Any(link => Visit(link.PredecessorNodeId))) return true;
+            state[id] = 2;
+            return false;
+        }
+        return items.Keys.Any(Visit);
     }
 
     private static bool HasParentCycle(IReadOnlyCollection<ProjectScheduleItem> items)
@@ -650,7 +686,9 @@ public sealed class ProjectScheduleService(
             !before.TryGetValue(id, out var oldItem) || !after.TryGetValue(id, out var newItem) ||
             oldItem.WbsCode != newItem.WbsCode || oldItem.Title != newItem.Title ||
             oldItem.PlannedStart != newItem.PlannedStart || oldItem.PlannedEnd != newItem.PlannedEnd ||
-            oldItem.ParentNodeId != newItem.ParentNodeId).OrderBy(id => id).ToList();
+            oldItem.ParentNodeId != newItem.ParentNodeId || oldItem.IsMilestone != newItem.IsMilestone ||
+            oldItem.BaselineStart != newItem.BaselineStart || oldItem.BaselineEnd != newItem.BaselineEnd ||
+            (oldItem.PredecessorsJson ?? "") != (newItem.PredecessorsJson ?? "")).OrderBy(id => id).ToList();
         if (changes.Count == 0) return "Không thay đổi nội dung so với bản đã phát hành.";
         return string.Join("; ", changes.Select(id => FormatChange(id, before, after)));
     }
@@ -664,7 +702,14 @@ public sealed class ProjectScheduleService(
             var parentCode = item.ParentNodeId.HasValue && items.TryGetValue(item.ParentNodeId.Value, out var parent)
                 ? parent.WbsCode
                 : "—";
-            return $"{item.WbsCode} · {item.Title} ({parentCode}) [{item.PlannedStart:yyyy-MM-dd}–{item.PlannedEnd:yyyy-MM-dd}]";
+            var links = item.PredecessorsJson is null
+                ? ""
+                : " sau " + string.Join(", ", (JsonSerializer.Deserialize<List<ProjectScheduleLinkResponse>>(item.PredecessorsJson) ?? [])
+                    .Select(link => $"{(items.TryGetValue(link.PredecessorNodeId, out var from) ? from.WbsCode : "?")} {link.Type}{(link.LagDays == 0 ? "" : $"{link.LagDays:+0;-0}d")}"));
+            var baseline = item.BaselineStart.HasValue
+                ? $" baseline {item.BaselineStart:yyyy-MM-dd}–{item.BaselineEnd:yyyy-MM-dd}"
+                : "";
+            return $"{item.WbsCode} · {item.Title}{(item.IsMilestone ? " (mốc)" : "")} ({parentCode}) [{item.PlannedStart:yyyy-MM-dd}–{item.PlannedEnd:yyyy-MM-dd}]{links}{baseline}";
         }
 
         before.TryGetValue(nodeId, out var oldItem);
