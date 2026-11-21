@@ -1447,9 +1447,8 @@ const OperationalProjects = () => {
                 <caption className="sr-only">{t("operationalProjects.title")}</caption>
                 <thead className="border-b bg-muted/40 text-left text-xs text-muted-foreground">
                   <tr>
-                    <th scope="col" className="px-4 py-2.5 font-medium md:min-w-[18rem]">
-                      {t("operationalProjects.field.name")} ·{" "}
-                      {t("operationalProjects.field.customer")}
+                    <th scope="col" className="px-4 py-2.5 font-medium md:min-w-[15rem]">
+                      {t("operationalProjects.list.projectColumn")}
                     </th>
                     <th scope="col" className="px-4 py-2.5 font-medium">
                       {t("operationalProjects.field.status")}
@@ -1457,7 +1456,7 @@ const OperationalProjects = () => {
                     <th scope="col" className="hidden px-4 py-2.5 font-medium xl:table-cell">
                       {t("operationalProjects.field.manager")}
                     </th>
-                    <th scope="col" className="hidden px-4 py-2.5 font-medium 2xl:table-cell">
+                    <th scope="col" className="hidden px-4 py-2.5 font-medium xl:table-cell">
                       {t("operationalProjects.field.period")}
                     </th>
                     <th
@@ -1478,10 +1477,7 @@ const OperationalProjects = () => {
                     >
                       {t("operationalProjects.count.contracts")}
                     </th>
-                    <th
-                      scope="col"
-                      className="hidden whitespace-nowrap px-4 py-2.5 font-medium xl:table-cell"
-                    >
+                    <th scope="col" className="hidden px-4 py-2.5 font-medium xl:table-cell">
                       {t("operationalProjects.field.updatedAt")}
                     </th>
                   </tr>
@@ -1493,14 +1489,23 @@ const OperationalProjects = () => {
                       data-testid="project-row"
                       className="cursor-pointer align-top transition-colors hover:bg-muted/40"
                       onClick={(event) => {
-                        // Selecting text (to copy a code) or a modified click is not "open".
-                        if (event.metaKey || event.ctrlKey || event.shiftKey) return;
+                        const href = `/admin/operational-projects/${project.id}`;
+                        // A modified click opens a new tab, as on a link.
+                        if (event.metaKey || event.ctrlKey || event.shiftKey) {
+                          window.open(href, "_blank", "noopener");
+                          return;
+                        }
+                        // A drag selects text to copy; it is not "open".
                         if (window.getSelection()?.toString()) return;
-                        navigate(`/admin/operational-projects/${project.id}`);
+                        navigate(href);
                       }}
                     >
                       <td className="px-4 py-3">
-                        <p className="break-all font-mono text-xs text-muted-foreground">
+                        {/* The code is for copying: clicking or double-clicking it never opens the project. */}
+                        <p
+                          className="break-all font-mono text-xs text-muted-foreground"
+                          onClick={(event) => event.stopPropagation()}
+                        >
                           {project.code}
                         </p>
                         <Link
@@ -1530,12 +1535,18 @@ const OperationalProjects = () => {
                       <td className="hidden px-4 py-3 xl:table-cell">
                         {project.projectManagerName || "—"}
                       </td>
-                      <td className="hidden whitespace-nowrap px-4 py-3 tabular-nums 2xl:table-cell">
-                        {project.startDate && project.endDate
-                          ? `${formatDate(project.startDate)} – ${formatDate(project.endDate)}`
-                          : project.startDate || project.endDate
-                            ? formatDate(project.startDate ?? project.endDate)
-                            : "—"}
+                      <td className="hidden px-4 py-3 tabular-nums xl:table-cell">
+                        {project.startDate || project.endDate ? (
+                          // Each date stays whole; the range may break after the dash.
+                          <>
+                            <span className="whitespace-nowrap">
+                              {formatDate(project.startDate)} –
+                            </span>{" "}
+                            <span className="whitespace-nowrap">{formatDate(project.endDate)}</span>
+                          </>
+                        ) : (
+                          "—"
+                        )}
                       </td>
                       <td className="hidden px-4 py-3 text-right tabular-nums md:table-cell">
                         {project.opportunityCount}
