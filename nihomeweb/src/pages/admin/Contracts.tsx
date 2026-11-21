@@ -591,12 +591,15 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // The chosen project's site details, read fresh each time (another tab may have just
   // completed them) and also for a prefilled project outside the loaded list (feedback row 25).
   const [siteProject, setSiteProject] = useState<OperationalProjectResponse | null>(null);
-  // Coming back from the project tab ("Bổ sung ở trang Dự án") reads the project again.
+  // Coming back after "Bổ sung ở trang Dự án" reads the project again; other tab switches don't.
   const [siteRefresh, setSiteRefresh] = useState(0);
+  const projectTabOpened = useRef(false);
   useEffect(() => {
     if (!dialogOpen) return;
     const refresh = () => {
-      if (document.visibilityState === "visible") setSiteRefresh((value) => value + 1);
+      if (document.visibilityState !== "visible" || !projectTabOpened.current) return;
+      projectTabOpened.current = false;
+      setSiteRefresh((value) => value + 1);
     };
     document.addEventListener("visibilitychange", refresh);
     return () => document.removeEventListener("visibilitychange", refresh);
@@ -613,9 +616,12 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
       .then(({ data }) => {
         if (!cancelled) setSiteProject(data);
       })
-      .catch(() => {
-        // Without access the form has no site panel; a failed refresh keeps what it showed.
-        if (!cancelled) setSiteProject((current) => (current?.id === projectId ? current : null));
+      .catch((reason: { response?: { status?: number } }) => {
+        if (cancelled) return;
+        // No access, or the project is gone: no panel. A network hiccup keeps what it showed.
+        const status = reason?.response?.status;
+        const gone = status === 401 || status === 403 || status === 404;
+        setSiteProject((current) => (!gone && current?.id === projectId ? current : null));
       });
     return () => {
       cancelled = true;
@@ -2130,6 +2136,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   site={siteProject}
                   projectHref={`/admin/operational-projects/${siteProject.id}`}
                   openInNewTab
+                  onOpenProject={() => {
+                    projectTabOpened.current = true;
+                  }}
                   className="mt-2 bg-muted/30 p-3"
                   compact
                   testId="contract-project-site"

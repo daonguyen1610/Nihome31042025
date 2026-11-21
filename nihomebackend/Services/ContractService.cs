@@ -356,6 +356,12 @@ public class ContractService(
                     c.OperationalProject.ConstructionKind,
                     c.OperationalProject.BusinessSectorCode,
                     c.OperationalProject.SiteAreaM2,
+                    // Read in the same query; the client prefers its localized sector list.
+                    BusinessSectorName = db.MasterDataOptions
+                        .Where(option => option.Category == BusinessSectors.Category &&
+                            option.Code == c.OperationalProject.BusinessSectorCode)
+                        .Select(option => option.Name)
+                        .FirstOrDefault(),
                 },
                 // Contract has no navigation to DesignProject — the foreign key
                 // lives on the other side — so this reads as a correlated subquery,
@@ -419,17 +425,22 @@ public class ContractService(
             ? null
             : new ContractProjectSiteResponse(row.ProjectSite.SiteAddress, row.ProjectSite.ConstructionKind,
                 row.ProjectSite.BusinessSectorCode, row.ProjectSite.SiteAreaM2,
-                await BusinessSectors.NameAsync(db, row.ProjectSite.BusinessSectorCode, ct));
+                row.ProjectSite.BusinessSectorName);
         return response;
     }
 
-    /// <summary>Same rule as the project page: project view, and all projects or this one.</summary>
+    /// <summary>
+    /// The project page's rule (OperationalProjectService.CanView): project view, and either all
+    /// projects or being this project's manager, creator or active team member.
+    /// </summary>
     private async Task<bool> CanViewProjectAsync(int callerUserId, int projectId, CancellationToken ct)
     {
-        if (permissions is null || projectAccess is null) return false;
+        if (permissions is null) return false;
         if (!await permissions.HasAsync(callerUserId, "operations.projects.view", ct)) return false;
         return await permissions.HasAsync(callerUserId, "operations.projects.view.all", ct) ||
-            await projectAccess.CanViewOperationalProjectAsync(callerUserId, projectId, ct);
+            await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId &&
+                (project.ProjectManagerUserId == callerUserId || project.CreatedByUserId == callerUserId ||
+                 project.TeamMembers.Any(member => member.UserId == callerUserId && member.EndedAt == null)), ct);
     }
 
     public Task<string> PreviewNextNumberAsync(CancellationToken ct = default) =>
