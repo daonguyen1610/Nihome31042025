@@ -62,7 +62,10 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() => {
     const saved =
       typeof window !== "undefined" ? (localStorage.getItem("nicon_lang") as Lang) : null;
-    return saved && LANGS.includes(saved) ? saved : "vi";
+    const initial = saved && LANGS.includes(saved) ? saved : "vi";
+    // Requests read the language from display settings: set it before any child fetches.
+    setDisplayLanguage(initial);
+    return initial;
   });
   const [fallbackViMap, setFallbackViMap] = useState<TranslationMap>({});
   const [currentMap, setCurrentMap] = useState<TranslationMap>({});
@@ -118,7 +121,11 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     };
   }, [lang, translationRevision]);
 
-  const setLang = (l: Lang) => setLangState(l);
+  const setLang = (l: Lang) => {
+    // Before the re-render, so fetches triggered by the new language send it.
+    setDisplayLanguage(l);
+    setLangState(l);
+  };
 
   const [t, tSource] = useMemo(() => {
     const format = (text: string, params?: Record<string, string | number>) => {

@@ -819,7 +819,12 @@ public class OperationalProjectService(
             project.ProjectManagerUserId == callerUserId ||
             project.CreatedByUserId == callerUserId;
 
-    private static bool CanView(
+    /// <summary>
+    /// Who may open a project (given project view): all-projects view, its manager, its creator
+    /// and its active team members (TeamMembers loaded). The one rule; ProjectAccessService
+    /// uses it too, for the project's site details on contracts.
+    /// </summary>
+    public static bool CanView(
         OperationalProject project,
         int callerUserId,
         bool canSeeAll) => CanManage(project, callerUserId, canSeeAll) ||

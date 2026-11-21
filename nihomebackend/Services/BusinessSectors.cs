@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using NihomeBackend.Constants;
 using NihomeBackend.Data;
 
 namespace NihomeBackend.Services;
@@ -18,9 +19,23 @@ public static class BusinessSectors
     public static async Task<string?> NameAsync(AppDbContext db, string? code, string lang, CancellationToken ct)
     {
         if (string.IsNullOrEmpty(code)) return null;
+        var isSource = lang == "vi";
+        // One query: the option with its translations in that language.
         var option = await db.MasterDataOptions.AsNoTracking()
-            .FirstOrDefaultAsync(o => o.Category == Category && o.Code == code, ct);
-        return option is null ? null : (await MasterDataNames.LocalizeAsync(db, [option], lang, ct))[option.Id];
+            .Where(o => o.Category == Category && o.Code == code)
+            .Select(o => new
+            {
+                o.Name,
+                Entered = isSource ? null : db.EntityTranslations
+                    .Where(row => row.EntityType == EntityTypes.MasterDataOption && row.EntityId == o.Id &&
+                        row.LanguageCode == lang && row.FieldName == "Name")
+                    .Select(row => row.Value).FirstOrDefault(),
+                Seeded = isSource || o.LabelKey == null ? null : db.Translations
+                    .Where(row => row.Key == o.LabelKey && row.LanguageCode == lang)
+                    .Select(row => row.Value).FirstOrDefault(),
+            })
+            .FirstOrDefaultAsync(ct);
+        return option is null ? null : MasterDataNames.Pick(option.Name, option.Entered, option.Seeded);
     }
 
     /// <summary>

@@ -626,7 +626,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     return () => {
       cancelled = true;
     };
-  }, [dialogOpen, form.operationalProjectId, canViewOperationalProjects, siteRefresh]);
+    // The language is a dependency: the project comes back with its sector named in it.
+  }, [dialogOpen, form.operationalProjectId, canViewOperationalProjects, siteRefresh, lang]);
 
   const sourceContractId = Number(searchParams.get("sourceContractId")) || null;
   const continuation = useContractContinuation(sourceContractId, form.opportunityId);

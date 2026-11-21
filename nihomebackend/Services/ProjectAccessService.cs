@@ -10,11 +10,12 @@ public sealed class ProjectAccessService(AppDbContext db, IPermissionService per
     public async Task<bool> CanOpenProjectPageAsync(int userId, int projectId, CancellationToken ct = default)
     {
         if (!await permissions.HasAsync(userId, "operations.projects.view", ct)) return false;
-        if (await permissions.HasAsync(userId, "operations.projects.view.all", ct))
-            return await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId, ct);
-        return await db.OperationalProjects.AsNoTracking().AnyAsync(project => project.Id == projectId &&
-            (project.ProjectManagerUserId == userId || project.CreatedByUserId == userId ||
-             project.TeamMembers.Any(member => member.UserId == userId && member.EndedAt == null)), ct);
+        if (await permissions.HasAsync(userId, "operations.projects.view.all", ct)) return true;
+        // The project page's own rule, on the project with only its active members loaded.
+        var project = await db.OperationalProjects.AsNoTracking()
+            .Include(item => item.TeamMembers.Where(member => member.EndedAt == null && member.UserId == userId))
+            .SingleOrDefaultAsync(item => item.Id == projectId, ct);
+        return project is not null && OperationalProjectService.CanView(project, userId, canSeeAll: false);
     }
 
     public async Task<bool> CanViewOperationalProjectAsync(

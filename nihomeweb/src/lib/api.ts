@@ -1,4 +1,5 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
+import { getDisplaySettings } from "@/lib/displaySettings";
 import { keepsStagedUploads, UPLOAD_SESSIONS_HEADER } from "@/lib/chunkedUpload";
 import { discardStagedUploads, forgetStagedUploads, stageUploadForm } from "@/lib/uploadStaging";
 import { uploadTracker } from "@/lib/uploadTracker";
@@ -23,11 +24,10 @@ api.interceptors.request.use(async (config) => {
   if (!config.headers["X-Correlation-Id"]) {
     config.headers["X-Correlation-Id"] = newCorrelationId();
   }
-  // The language the user reads the app in, so the server names data (master-data options on
-  // records, for example) the same way everywhere.
-  if (!config.headers["X-Nihome-Lang"] && typeof localStorage !== "undefined") {
-    const lang = localStorage.getItem("nicon_lang");
-    if (lang) config.headers["X-Nihome-Lang"] = lang;
+  // The language the user reads the app in (the same value the screen renders with), so the
+  // server names data (master-data options on records, for example) the same way everywhere.
+  if (!config.headers["X-Nihome-Lang"]) {
+    config.headers["X-Nihome-Lang"] = getDisplaySettings().language;
   }
 
   if (typeof FormData !== "undefined" && config.data instanceof FormData && config.headers) {

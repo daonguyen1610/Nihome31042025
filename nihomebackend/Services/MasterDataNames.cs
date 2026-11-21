@@ -31,13 +31,14 @@ public static class MasterDataNames
             .ToDictionaryAsync(row => row.Key, row => row.Value, ct);
 
         foreach (var option in options)
-        {
-            if (entered.TryGetValue(option.Id, out var value) && !string.IsNullOrWhiteSpace(value))
-                names[option.Id] = value;
-            else if (option.LabelKey is not null && seeded.TryGetValue(option.LabelKey, out var label) &&
-                !string.IsNullOrWhiteSpace(label))
-                names[option.Id] = label;
-        }
+            names[option.Id] = Pick(option.Name, entered.GetValueOrDefault(option.Id),
+                option.LabelKey is null ? null : seeded.GetValueOrDefault(option.LabelKey));
         return names;
     }
+
+    /// <summary>The rule itself: entered translation, else seeded translation, else the name.</summary>
+    public static string Pick(string name, string? entered, string? seeded) =>
+        !string.IsNullOrWhiteSpace(entered) ? entered
+        : !string.IsNullOrWhiteSpace(seeded) ? seeded
+        : name;
 }
