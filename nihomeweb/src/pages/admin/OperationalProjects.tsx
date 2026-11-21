@@ -221,7 +221,8 @@ const OperationalProjects = () => {
       canListUsers
         ? adminApi.getPeopleDirectory()
         : Promise.resolve({ data: { items: [], total: 0 } }),
-      adminApi.getMasterDataOptions("business_sector", lang),
+      // Switched-off sectors too, so a project that keeps one still shows its name.
+      adminApi.getMasterDataOptions("business_sector", lang, true),
     ])
       .then(([customerResponse, userResponse, sectorResponse]) => {
         if (cancelled) return;
@@ -697,7 +698,7 @@ const OperationalProjects = () => {
             />
           </section>
 
-          <ProjectSiteDetails site={detail} />
+          <ProjectSiteDetails site={detail} sectorName={sectorLabel} />
 
           <ProjectMasterSchedule
             projectId={detail.id}
@@ -1636,7 +1637,9 @@ const OperationalProjects = () => {
                   !sectors.some((s) => s.code === form.businessSectorCode)
                     ? [{ value: form.businessSectorCode, label: form.businessSectorCode }]
                     : []),
-                  ...sectors.map((s) => ({ value: s.code, label: s.name })),
+                  ...sectors
+                    .filter((s) => s.isActive || s.code === form.businessSectorCode)
+                    .map((s) => ({ value: s.code, label: s.name })),
                 ]}
               />
             </FieldScope>

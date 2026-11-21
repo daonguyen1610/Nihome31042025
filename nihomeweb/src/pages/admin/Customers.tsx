@@ -150,7 +150,9 @@ function BusinessSectorFields({
             { value: "__none", label: t("customers.businessSector.none") },
             // A sector an admin switched off still shows on the customers that have it.
             ...(known ? [] : [{ value: sectorCode!, label: sectorCode! }]),
-            ...sectors.map((s) => ({ value: s.code, label: s.name })),
+            ...sectors
+              .filter((s) => s.isActive || s.code === sectorCode)
+              .map((s) => ({ value: s.code, label: s.name })),
           ]}
         />
       </FieldScope>
@@ -307,7 +309,8 @@ const AdminCustomers = () => {
       try {
         const [source, sector] = await Promise.all([
           adminApi.getMasterDataOptions("customer_source", lang),
-          adminApi.getMasterDataOptions("business_sector", lang),
+          // Switched-off sectors too, so customers that keep one still show its name.
+          adminApi.getMasterDataOptions("business_sector", lang, true),
         ]);
         if (!cancelled) {
           setSources(source.data);
