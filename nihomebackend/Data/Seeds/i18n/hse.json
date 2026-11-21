@@ -2,7 +2,7 @@
   {"key":"nav.constructionHse","category":"nav","vi":"An toàn HSE","en":"HSE safety","zh":"HSE安全","ja":"HSE安全管理"},
   {"key":"hse.title","category":"hse","vi":"Vi phạm an toàn HSE","en":"HSE violations","zh":"HSE违规","ja":"HSE違反"},
   {"key":"hse.subtitle","category":"hse","vi":"Ghi nhận, xác nhận và theo dõi khắc phục tại công trường.","en":"Record, confirm, and track remediation at the worksite.","zh":"记录、确认并跟踪现场整改。","ja":"現場での記録、確認、是正を追跡します。"},
-  {"key":"hse.project","category":"hse","vi":"Dự án vận hành","en":"Operational project","zh":"运营项目","ja":"運用プロジェクト"},
+  {"key":"hse.project","category":"hse","vi":"Dự án","en":"Project","zh":"项目","ja":"プロジェクト"},
   {"key":"hse.selectProject","category":"hse","vi":"Chọn dự án để xem biên bản","en":"Select a project to view records","zh":"选择项目以查看记录","ja":"記録を表示するプロジェクトを選択"},
   {"key":"hse.new","category":"hse","vi":"Lập biên bản","en":"New record","zh":"新建记录","ja":"記録を作成"},
   {"key":"hse.edit","category":"hse","vi":"Sửa bản nháp","en":"Edit draft","zh":"编辑草稿","ja":"下書きを編集"},

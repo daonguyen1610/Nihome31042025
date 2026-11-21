@@ -330,7 +330,7 @@ public class OpportunityService(
         if (request.OperationalProjectId.HasValue &&
             !await projectAccess.CanViewOperationalProjectAsync(callerUserId, request.OperationalProjectId.Value, ct))
         {
-            throw new OpportunityOperationException("Dự án vận hành không tồn tại hoặc nằm ngoài phạm vi của bạn.");
+            throw new OpportunityOperationException("Dự án không tồn tại hoặc nằm ngoài phạm vi của bạn.");
         }
         await EnsureProjectMatchesCustomerAsync(request.OperationalProjectId, request.CustomerId, ct);
 
@@ -410,7 +410,7 @@ public class OpportunityService(
         if (operationalProjectId.HasValue && operationalProjectId != op.OperationalProjectId &&
             !await projectAccess.CanViewOperationalProjectAsync(callerUserId, operationalProjectId.Value, ct))
         {
-            throw new OpportunityOperationException("Dự án vận hành không tồn tại hoặc nằm ngoài phạm vi của bạn.");
+            throw new OpportunityOperationException("Dự án không tồn tại hoặc nằm ngoài phạm vi của bạn.");
         }
         await EnsureProjectMatchesCustomerAsync(operationalProjectId, request.CustomerId, ct);
 
@@ -625,7 +625,7 @@ public class OpportunityService(
         if (!opportunity.OperationalProjectId.HasValue)
         {
             throw new OpportunityOperationException(
-                "Cơ hội chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế.");
+                "Cơ hội chưa gắn Dự án. Hãy liên kết Dự án trước khi tạo dự án thiết kế.");
         }
         if (!await projectAccess.CanViewOperationalProjectAsync(
             callerUserId, opportunity.OperationalProjectId.Value, ct))

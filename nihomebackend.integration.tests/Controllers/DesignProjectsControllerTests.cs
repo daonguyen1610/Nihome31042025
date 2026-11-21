@@ -68,7 +68,7 @@ public class DesignProjectsControllerTests : IntegrationTestBase
             var operational = new OperationalProject
             {
                 Code = $"OP-DM-{Guid.NewGuid():N}"[..30].ToUpperInvariant(),
-                Name = "Dự án vận hành do PM toàn dự án quản lý",
+                Name = "Dự án do PM toàn dự án quản lý",
                 Customer = customer,
             };
             var design = new DesignProject
@@ -320,7 +320,7 @@ public class DesignProjectsControllerTests : IntegrationTestBase
         });
 
         res.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await ReadJsonAsync(res)).GetProperty("message").GetString().Should().Contain("Dự án vận hành");
+        (await ReadJsonAsync(res)).GetProperty("message").GetString().Should().Contain("Dự án");
         (await WithDbAsync(db => db.DesignProjects.AnyAsync(project => project.Name == name))).Should().BeFalse();
     }
 

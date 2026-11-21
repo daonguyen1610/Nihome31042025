@@ -179,7 +179,7 @@ public class DesignProjectService(
         if (!source.OperationalProjectId.HasValue)
         {
             throw new DesignProjectOperationException(
-                "Cơ hội chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế.");
+                "Cơ hội chưa gắn Dự án. Hãy liên kết Dự án trước khi tạo dự án thiết kế.");
         }
 
         await using var handoffTransaction = await BeginCodeAllocationAsync(DateTime.UtcNow.Year, ct);
@@ -236,7 +236,7 @@ public class DesignProjectService(
         if (request.OperationalProjectId != entity.OperationalProjectId)
         {
             throw new DesignProjectOperationException(
-                "Không thể chuyển dự án thiết kế sang Dự án vận hành khác.");
+                "Không thể chuyển dự án thiết kế sang Dự án khác.");
         }
         var designManagerUserId = ResolveDesignManagerId(request.DesignManagerUserId, request.ProjectManagerUserId);
         await EnsureRelationsAsync(request, designManagerUserId, id, ct);
@@ -499,7 +499,7 @@ public class DesignProjectService(
                 request.OperationalProjectId != contract.OperationalProjectId)
             {
                 throw new DesignProjectOperationException(
-                    "Dự án thiết kế và Hợp đồng phải thuộc cùng một Dự án vận hành.");
+                    "Dự án thiết kế và Hợp đồng phải thuộc cùng một Dự án.");
             }
             request.OperationalProjectId ??= contract.OperationalProjectId;
         }
@@ -518,7 +518,7 @@ public class DesignProjectService(
             if (projectCustomerId.Value != request.CustomerId)
             {
                 throw new DesignProjectOperationException(
-                    "Dự án thiết kế và Dự án vận hành phải thuộc cùng một Khách hàng.");
+                    "Dự án thiết kế và Dự án phải thuộc cùng một Khách hàng.");
             }
         }
         if (designManagerUserId.HasValue &&

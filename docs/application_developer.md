@@ -16,7 +16,7 @@ Last Updated: 17/11/2026
 6. [Quy ước backend](#6-quy-ước-backend)
 7. [Xoá vĩnh viễn aggregate (Permanent Aggregate Deletion)](#7-xoá-vĩnh-viễn-aggregate-permanent-aggregate-deletion)
 8. [CRM, báo giá, đấu thầu và hợp đồng](#8-crm-báo-giá-đấu-thầu-và-hợp-đồng)
-9. [Dự án vận hành và gói công việc](#9-dự-án-vận-hành-và-gói-công-việc)
+9. [Dự án và gói công việc](#9-dự-án-vận-hành-và-gói-công-việc)
 10. [BOQ](#10-boq)
 11. [Cung ứng: nhà cung cấp, MR, kho, cảnh báo, RFQ, IFC](#11-cung-ứng-nhà-cung-cấp-mr-kho-cảnh-báo-rfq-ifc)
 12. [Thiết kế và pháp lý](#12-thiết-kế-và-pháp-lý)
@@ -1044,7 +1044,7 @@ có luồng đang bật thì một bước `PROCUREMENT_MANAGER`, theo ghi chú 
   ở `Infrastructure/CodedErrorBody`.
 - `approval-email-preview` trả To (người duyệt bước 1),
   subject/HTML đã render, các CC hợp lệ và `previewToken` 15 phút. CC là thành
-  viên đang hoạt động của dự án vận hành có quyền xem báo giá (owner hoặc
+  viên đang hoạt động của dự án có quyền xem báo giá (owner hoặc
   `crm.quotes.view.all`).
 - `submit` cần cùng approver, row version và token; server render và kiểm lại báo
   giá, người nhận, CC, template, token rồi đổi trạng thái và xếp hàng dòng
@@ -1379,9 +1379,9 @@ thái Signed/InProgress/OnHold/Completed.
 
 ---
 
-## 9. Dự án vận hành và gói công việc
+## 9. Dự án và gói công việc
 
-### 9.1 API dự án vận hành
+### 9.1 API dự án
 
 `OperationalProject` là root nghiệp vụ dùng chung cho mọi module; không nhầm với dự án
 website hay `DesignProject`. Route `/api/operational-projects` (và `/api/v1`):

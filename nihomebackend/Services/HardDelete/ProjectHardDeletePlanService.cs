@@ -459,7 +459,7 @@ public sealed class OperationalProjectHardDeleteHandler(
             return;
         }
         var current = await plans.ForOperationalProjectAsync(projectId, ct)
-            ?? throw new HardDeleteOperationException("resource_not_found", "Không tìm thấy Dự án vận hành.");
+            ?? throw new HardDeleteOperationException("resource_not_found", "Không tìm thấy Dự án.");
         DesignProjectHardDeleteHandler.EnsurePlan(context.PlanToken, current.Impact.PlanToken);
         try
         {

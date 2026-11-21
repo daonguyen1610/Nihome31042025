@@ -35,7 +35,7 @@
   {"key":"deletionImpact.item.customer.tenders","category":"deletionImpact","vi":"Gói thầu phải được xử lý trước","en":"Tenders that must be resolved first","zh":"必须先处理的投标","ja":"先に処理が必要な入札"},
   {"key":"deletionImpact.item.customer.contracts","category":"deletionImpact","vi":"Hợp đồng phải được xử lý trước","en":"Contracts that must be resolved first","zh":"必须先处理的合同","ja":"先に処理が必要な契約"},
   {"key":"deletionImpact.item.customer.designProjects","category":"deletionImpact","vi":"Hồ Sơ Thiết Kế phải được xử lý trước","en":"Design dossiers that must be resolved first","zh":"必须先处理的设计档案","ja":"先に処理が必要な設計図書"},
-  {"key":"deletionImpact.item.customer.operationalProjects","category":"deletionImpact","vi":"Dự án vận hành phải được xử lý trước","en":"Operational projects that must be resolved first","zh":"必须先处理的运营项目","ja":"先に処理が必要な運用プロジェクト"},
+  {"key":"deletionImpact.item.customer.operationalProjects","category":"deletionImpact","vi":"Dự án phải được xử lý trước","en":"Projects that must be resolved first","zh":"必须先处理的项目","ja":"先に処理が必要なプロジェクト"},
   {"key":"deletionImpact.item.tender.checklistItems","category":"deletionImpact","vi":"Mục checklist của gói thầu","en":"Tender checklist items","zh":"投标检查项","ja":"入札チェックリスト項目"},
   {"key":"deletionImpact.item.tender.estimateRevisions","category":"deletionImpact","vi":"Phiên bản dự toán gói thầu","en":"Tender estimate revisions","zh":"投标估算版本","ja":"入札見積改訂版"},
   {"key":"deletionImpact.item.tender.estimateLines","category":"deletionImpact","vi":"Dòng dự toán gói thầu","en":"Tender estimate lines","zh":"投标估算明细","ja":"入札見積明細"},

@@ -177,7 +177,7 @@ public static class DepartmentWorkPackageSampleSeeder
             Code = code,
             Kind = WorkPackageKind.Internal,
             Name = "Đào tạo quy trình phối hợp liên phòng",
-            Description = "Công việc nội bộ không gắn khách hàng, hợp đồng hoặc dự án vận hành.",
+            Description = "Công việc nội bộ không gắn khách hàng, hợp đồng hoặc dự án.",
             DepartmentRoleGroupId = groupId,
             LeadUserId = leadId,
             Status = WorkPackageStatus.Planned,

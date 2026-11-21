@@ -23,7 +23,7 @@ public sealed class LegalActivationService(
         var contract = await db.Contracts.AsNoTracking().SingleOrDefaultAsync(item => item.Id == contractId, ct);
         if (contract is null) return null;
         if (!contract.OperationalProjectId.HasValue)
-            throw Error("LEGAL_PROJECT_REQUIRED", "Hợp đồng phải gắn với Dự án vận hành trước khi thiết lập Pháp lý.");
+            throw Error("LEGAL_PROJECT_REQUIRED", "Hợp đồng phải gắn với Dự án trước khi thiết lập Pháp lý.");
         return await BuildPreviewAsync(contract.OperationalProjectId.Value, callerUserId, contract, ct);
     }
 
@@ -46,7 +46,7 @@ public sealed class LegalActivationService(
         var contract = await db.Contracts.SingleOrDefaultAsync(item => item.Id == contractId, ct);
         if (contract is null) return null;
         if (!contract.OperationalProjectId.HasValue)
-            throw Error("LEGAL_PROJECT_REQUIRED", "Hợp đồng phải gắn với Dự án vận hành trước khi thiết lập Pháp lý.");
+            throw Error("LEGAL_PROJECT_REQUIRED", "Hợp đồng phải gắn với Dự án trước khi thiết lập Pháp lý.");
 
         await EnsureProjectManagerOrAdminAsync(contract.OperationalProjectId.Value, callerUserId, ct);
         var existingActivation = await db.ContractLegalActivations.AsNoTracking()

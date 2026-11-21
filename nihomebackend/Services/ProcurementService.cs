@@ -1664,7 +1664,7 @@ public sealed class ProcurementService(
     {
         var status = await db.OperationalProjects.AsNoTracking().Where(item => item.Id == projectId)
             .Select(item => (OperationalProjectStatus?)item.Status).SingleOrDefaultAsync(ct);
-        if (!status.HasValue) throw new ProcurementOperationException("Dự án vận hành không tồn tại.");
+        if (!status.HasValue) throw new ProcurementOperationException("Dự án không tồn tại.");
         if (mutable && status is OperationalProjectStatus.Completed or OperationalProjectStatus.Cancelled)
             throw new ProcurementOperationException("Không thể thay đổi dữ liệu mua sắm của dự án đã hoàn thành hoặc đã hủy.");
     }

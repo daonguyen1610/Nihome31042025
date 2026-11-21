@@ -789,7 +789,7 @@ test("material request detail edits safely and completes its workflow", async ({
   );
   await expect(
     page.getByRole("combobox", {
-      name: /Dự án vận hành|Operational Project|运营项目|運用プロジェクト/i,
+      name: /Dự án|Operational Project|运营项目|運用プロジェクト/i,
     }),
   ).toContainText("PJ-0180");
   await expect(page.getByRole("tab", { selected: true })).toContainText(

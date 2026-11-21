@@ -51,7 +51,7 @@ public sealed class SurveyMediaService(
         if (linkedProject.OperationalProjectId <= 0)
         {
             throw new SurveyMediaValidationException(
-                "Dự án vận hành của phiếu khảo sát không hợp lệ. Hãy chọn một dự án có mã số lớn hơn 0, ví dụ 1.");
+                "Dự án của phiếu khảo sát không hợp lệ. Hãy chọn một dự án có mã số lớn hơn 0, ví dụ 1.");
         }
         var currentSize = await db.SurveyMedia
             .Where(m => m.SurveyId == surveyId)

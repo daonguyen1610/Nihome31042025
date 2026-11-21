@@ -160,7 +160,7 @@ test("authorized manager changes the project code and retries Drive rename", asy
   expect(jsErrors, "project detail must mount without browser errors").toEqual([]);
   await page.getByRole("button", { name: /Đổi mã dự án|Change project code/i }).click();
   const dialog = page.getByRole("dialog", {
-    name: /Đổi mã dự án vận hành|Change operational project code/i,
+    name: /Đổi mã dự án|Change operational project code/i,
   });
   await dialog.getByRole("textbox", { name: /Mã Dự án|Project code/i }).fill("nicon-new-001");
   await dialog

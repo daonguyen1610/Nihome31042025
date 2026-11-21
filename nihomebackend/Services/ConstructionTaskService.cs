@@ -132,7 +132,7 @@ public partial class ConstructionTaskService(
             await ValidateProjectScheduleNodeAsync(project.OperationalProjectId.Value, request.ProjectScheduleNodeId,
                 request.PlannedStart, request.PlannedEnd, ct);
         else if (request.ProjectScheduleNodeId.HasValue)
-            throw new ConstructionTaskOperationException("Luồng Thiết kế chưa gắn với Dự án vận hành để liên kết WBS.");
+            throw new ConstructionTaskOperationException("Luồng Thiết kế chưa gắn với Dự án để liên kết WBS.");
 
         if (request.OwnerUserId.HasValue &&
             !await db.Users.AnyAsync(u => u.Id == request.OwnerUserId.Value, ct))
@@ -218,7 +218,7 @@ public partial class ConstructionTaskService(
             await ValidateProjectScheduleNodeAsync(operationalProjectId.Value, request.ProjectScheduleNodeId,
                 request.PlannedStart, request.PlannedEnd, ct);
         else if (request.ProjectScheduleNodeId.HasValue)
-            throw new ConstructionTaskOperationException("Luồng Thiết kế chưa gắn với Dự án vận hành để liên kết WBS.");
+            throw new ConstructionTaskOperationException("Luồng Thiết kế chưa gắn với Dự án để liên kết WBS.");
 
         var progressChanged = entity.ProgressPercent != request.ProgressPercent;
         if (progressChanged) await EnsureProgressReporterAsync(entity.Id, callerUserId, ct);

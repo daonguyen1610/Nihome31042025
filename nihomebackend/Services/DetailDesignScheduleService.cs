@@ -179,7 +179,7 @@ public sealed class DetailDesignScheduleService(
         var selectedDesignId = await GetDesignProjectIdAsync(projectId, ct, request.DesignProjectId);
         var project = await db.DesignProjects.SingleOrDefaultAsync(item =>
             item.OperationalProjectId == projectId && item.Id == selectedDesignId, ct)
-            ?? throw new DesignScheduleOperationException("Dự án thiết kế không tồn tại trong Dự án vận hành.");
+            ?? throw new DesignScheduleOperationException("Dự án thiết kế không tồn tại trong Dự án.");
         await EnsureCanManageFlowAsync(projectId, project.Id, callerUserId, ct);
         if (!project.StartDate.HasValue || !project.Deadline.HasValue)
             throw new DesignScheduleOperationException(
@@ -797,7 +797,7 @@ public sealed class DetailDesignScheduleService(
             item.DesignProjectId == designProjectId, ct);
         if (validCount != predecessorIds.Count)
             throw new DesignScheduleOperationException(
-                "Mọi công việc tiền nhiệm phải thuộc cùng Dự án vận hành.");
+                "Mọi công việc tiền nhiệm phải thuộc cùng Dự án.");
     }
 
     private static DateOnly RequireDate(DateOnly? value, string fieldName) =>

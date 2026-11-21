@@ -792,7 +792,7 @@ public class QuoteService(
         // The review is recorded on a project work package, so the quote must
         // belong to a shared project before it can be sent to the customer.
         if (!quote.OperationalProjectId.HasValue)
-            throw new QuoteOperationException("Gắn Dự án vận hành cho báo giá để Tài chính – Kế toán rà soát trước khi gửi khách hàng.");
+            throw new QuoteOperationException("Gắn Dự án cho báo giá để Tài chính – Kế toán rà soát trước khi gửi khách hàng.");
         // Only the most recent review of this quote speaks for Finance: an older
         // one may have been approved for a version that has since changed.
         var financePackage = await db.DepartmentWorkPackages.AsNoTracking()

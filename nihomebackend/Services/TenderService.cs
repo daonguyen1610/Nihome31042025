@@ -254,7 +254,7 @@ public class TenderService(
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == request.CustomerId, ct)
             ?? throw new TenderOperationException($"Khách hàng #{request.CustomerId} không tồn tại.");
         if (!request.OperationalProjectId.HasValue)
-            throw new TenderOperationException("Gói thầu phải gắn với Dự án vận hành đã có.");
+            throw new TenderOperationException("Gói thầu phải gắn với Dự án đã có.");
         await ValidateTenderProjectAsync(request.OperationalProjectId, customer.Id, ct);
 
         if (request.PreparerUserId.HasValue &&
@@ -943,7 +943,7 @@ public class TenderService(
             .FirstOrDefaultAsync(ct) ?? 0m;
 
         if (!tender.OperationalProjectId.HasValue)
-            throw new TenderOperationException("Gói thầu phải gắn với Dự án vận hành trước khi ghi nhận trúng thầu.");
+            throw new TenderOperationException("Gói thầu phải gắn với Dự án trước khi ghi nhận trúng thầu.");
         var opportunity = new Opportunity
         {
             Name = tender.Name,
@@ -993,7 +993,7 @@ public class TenderService(
             tender.InvitationReceivedByUserId <= 0)
             Block("INVITATION_METADATA_REQUIRED", "Invitation", "Chưa ghi đủ ngày, nguồn và người tiếp nhận HSMT.", "info");
         if (!tender.OperationalProjectId.HasValue)
-            Block("OPERATIONAL_PROJECT_REQUIRED", "Overview", "Gói thầu chưa gắn Dự án vận hành.", "info");
+            Block("OPERATIONAL_PROJECT_REQUIRED", "Overview", "Gói thầu chưa gắn Dự án.", "info");
 
         var plans = await db.DepartmentWorkPackages.AsNoTracking()
             .Where(package => package.SourceTenderId == tenderId &&
@@ -1690,6 +1690,6 @@ public class TenderService(
         if (!projectId.HasValue) return;
         if (!await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
                 project.Id == projectId.Value && project.CustomerId == customerId, ct))
-            throw new TenderOperationException("Dự án vận hành không tồn tại hoặc không thuộc khách hàng của gói thầu.");
+            throw new TenderOperationException("Dự án không tồn tại hoặc không thuộc khách hàng của gói thầu.");
     }
 }

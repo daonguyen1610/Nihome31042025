@@ -457,7 +457,7 @@ Trang chi tiết liệt kê các hợp đồng liên kết (với người có q
 
 **Thiết kế trước hợp đồng.** Kinh doanh có thể gắn Dự án của cùng khách hàng khi tạo/sửa Cơ hội.
 
-- **Liên kết Dự án vận hành** mở ô chọn dự án. **Tạo Dự án vận hành mới** mở form Dự án với khách hàng đã chọn sẵn; tạo xong quay lại Cơ hội và lưu để xác nhận liên kết. Tạo dự án ở đây cần cả quyền quản lý Cơ hội và quyền quản lý Dự án; PM quản lý được dự án được giao nhưng không tạo được bản ghi bán hàng này.
+- **Liên kết Dự án** mở ô chọn dự án. **Tạo Dự án mới** mở form Dự án với khách hàng đã chọn sẵn; tạo xong quay lại Cơ hội và lưu để xác nhận liên kết. Tạo dự án ở đây cần cả quyền quản lý Cơ hội và quyền quản lý Dự án; PM quản lý được dự án được giao nhưng không tạo được bản ghi bán hàng này.
 - **Tạo hồ sơ thiết kế** (cạnh **Tạo Báo giá**, khi Cơ hội chưa Thua): xác nhận dự án và tên hồ sơ rồi lưu. Nếu Cơ hội chưa có dự án, chọn dự án có sẵn hoặc tạo qua **CRM → Dự án**. Lưu sẽ gắn dự án vào Cơ hội và mở một Hồ sơ thiết kế ở giai đoạn Ý tưởng, không cần hợp đồng. Lưu lại lần nữa trả về hồ sơ đã có, không tạo trùng. Nhân sự thiết kế nhận hồ sơ sau khi được phân công vào dự án.
 - Tạo trực tiếp từ danh sách Hồ sơ thiết kế cần quyền quản lý Hồ sơ thiết kế, quản lý Cơ hội và quản lý đội ngũ Dự án; vai trò chỉ có quyền Thiết kế không khởi tạo được.
 

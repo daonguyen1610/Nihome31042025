@@ -262,7 +262,7 @@ public class SurveyServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
             _sut.CreateAsync(request, _userId));
 
-        Assert.Contains("Dự án vận hành", exception.Message);
+        Assert.Contains("Dự án", exception.Message);
     }
 
     [Fact]
@@ -739,7 +739,7 @@ public class SurveyServiceTests : IDisposable
         var exception = await Assert.ThrowsAsync<SurveyOperationException>(() =>
             _sut.UpdateAsync(created.Id, request, _userId));
 
-        Assert.Contains("Dự án vận hành là bắt buộc", exception.Message);
+        Assert.Contains("Dự án là bắt buộc", exception.Message);
         Assert.Equal("Original site", (await _db.Surveys.FindAsync(created.Id))!.Location);
     }
 

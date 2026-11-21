@@ -70,7 +70,7 @@ public class DesignProjectsController(
         {
             return BadRequest(new
             {
-                message = "Vui lòng chọn Dự án vận hành cho dự án thiết kế (ví dụ PJ-2026-0001), hoặc chọn Hợp đồng đã gắn dự án.",
+                message = "Vui lòng chọn Dự án cho dự án thiết kế (ví dụ PJ-2026-0001), hoặc chọn Hợp đồng đã gắn dự án.",
             });
         }
         if (!await projectAccess.CanViewOperationalProjectAsync(userId.Value, operationalProjectId.Value, ct))

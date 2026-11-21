@@ -512,7 +512,7 @@ public class ContractsController(
         }
         if (!contract.OperationalProjectId.HasValue)
         {
-            return BadRequest(new { message = "Hợp đồng chưa gắn Dự án vận hành. Hãy liên kết Dự án trước khi tạo dự án thiết kế." });
+            return BadRequest(new { message = "Hợp đồng chưa gắn Dự án. Hãy liên kết Dự án trước khi tạo dự án thiết kế." });
         }
         if (!await projectAccess.CanManageTeamAsync(userId.Value, contract.OperationalProjectId.Value, ct))
         {

@@ -273,7 +273,7 @@ public sealed class HseViolationService(AppDbContext db) : IHseViolationService
     private async Task ValidateProjectAndFieldsAsync(int projectId, HseViolationFieldsRequest request, CancellationToken ct)
     {
         if (!await db.OperationalProjects.AsNoTracking().AnyAsync(item => item.Id == projectId, ct))
-            throw new HseViolationOperationException($"Dự án vận hành #{projectId} không tồn tại.");
+            throw new HseViolationOperationException($"Dự án #{projectId} không tồn tại.");
         if (!request.OccurredAt.HasValue)
             throw new HseViolationOperationException("Thời điểm xảy ra là bắt buộc.");
         if (!Enum.TryParse<HseViolationSeverity>(request.Severity, true, out _))

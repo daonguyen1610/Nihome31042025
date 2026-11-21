@@ -526,7 +526,7 @@ public sealed class ProjectDocumentService(
                 "Tài liệu Thiết kế phải gắn với đúng hồ sơ nguồn Concept, Basic Design hoặc Shop Drawing.");
 
         if (!await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct))
-            throw new ProjectDocumentValidationException("Dự án vận hành chưa có Dự án Thiết kế liên kết.");
+            throw new ProjectDocumentValidationException("Dự án chưa có Dự án Thiết kế liên kết.");
 
         if (request.SourceRecordId.Value > int.MaxValue)
             throw new ProjectDocumentValidationException("Mã hồ sơ nguồn Thiết kế không hợp lệ.");

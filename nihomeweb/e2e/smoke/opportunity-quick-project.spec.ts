@@ -30,19 +30,17 @@ test("creating an opportunity can create and select its operational project in p
     const dialog = page.getByRole("dialog", { name: "Tạo Cơ hội mới" });
 
     // Without a customer there is nothing to attach a project to.
-    await expect(
-      dialog.getByText("Chọn khách hàng trước để chọn hoặc tạo dự án vận hành."),
-    ).toBeVisible();
+    await expect(dialog.getByText("Chọn khách hàng trước để chọn hoặc tạo dự án.")).toBeVisible();
     await expect(dialog.getByTestId("opportunity-project-quick-create")).toHaveCount(0);
 
     await dialog.locator("input").first().fill(opportunityName);
     await dialog.getByRole("combobox").first().click();
     await page.getByRole("option", { name: new RegExp(customerName) }).click();
-    await expect(dialog.getByText("Khách hàng này chưa có dự án vận hành nào.")).toBeVisible();
+    await expect(dialog.getByText("Khách hàng này chưa có dự án nào.")).toBeVisible();
 
     await dialog.getByTestId("opportunity-project-quick-create").click();
     const form = dialog.getByTestId("opportunity-project-quick-form");
-    const name = form.getByLabel("Tên dự án vận hành");
+    const name = form.getByLabel("Tên dự án");
     // Prefilled with the opportunity's name; an empty name is refused without a request.
     await expect(name).toHaveValue(opportunityName);
     let projectPosts = 0;
@@ -55,7 +53,7 @@ test("creating an opportunity can create and select its operational project in p
     });
     await name.fill("  ");
     await form.getByRole("button", { name: "Tạo dự án" }).click();
-    await expect(form.getByRole("alert")).toHaveText("Nhập tên dự án vận hành trước khi tạo.");
+    await expect(form.getByRole("alert")).toHaveText("Nhập tên dự án trước khi tạo.");
     expect(projectPosts).toBe(0);
 
     // The code is prefilled with the next PJ code, as on the Projects page, and can be edited.
@@ -78,7 +76,7 @@ test("creating an opportunity can create and select its operational project in p
     await name.press("Enter");
     await expect(form).toHaveCount(0);
     // The new project is selected under the edited code, upper-cased like on the Projects page.
-    await expect(dialog.getByRole("combobox", { name: "Dự án vận hành" })).toContainText(
+    await expect(dialog.getByRole("combobox", { name: "Dự án" })).toContainText(
       `${customCode.toUpperCase()} · ${projectName}`,
     );
     expect(projectPosts).toBe(2);
