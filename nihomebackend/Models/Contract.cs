@@ -105,7 +105,7 @@ public enum ContractStatus
 public static class ContractStatuses
 {
     /// <summary>A contract in one of these states has been signed and still stands.</summary>
-    public static readonly ContractStatus[] Signed =
+    public static readonly IReadOnlyList<ContractStatus> Signed =
         [ContractStatus.Signed, ContractStatus.InProgress, ContractStatus.OnHold, ContractStatus.Completed];
 }
 
