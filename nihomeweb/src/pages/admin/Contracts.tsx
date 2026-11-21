@@ -591,6 +591,20 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
   // The chosen project's site details, read fresh each time (another tab may have just
   // completed them) and also for a prefilled project outside the loaded list (feedback row 25).
   const [siteProject, setSiteProject] = useState<OperationalProjectResponse | null>(null);
+  // Coming back from the project tab ("Bổ sung ở trang Dự án") reads the project again.
+  const [siteRefresh, setSiteRefresh] = useState(0);
+  useEffect(() => {
+    if (!dialogOpen) return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") setSiteRefresh((value) => value + 1);
+    };
+    window.addEventListener("focus", refresh);
+    document.addEventListener("visibilitychange", refresh);
+    return () => {
+      window.removeEventListener("focus", refresh);
+      document.removeEventListener("visibilitychange", refresh);
+    };
+  }, [dialogOpen]);
   useEffect(() => {
     const projectId = form.operationalProjectId;
     if (!dialogOpen || projectId == null || !canViewOperationalProjects) {
@@ -610,7 +624,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
     return () => {
       cancelled = true;
     };
-  }, [dialogOpen, form.operationalProjectId, canViewOperationalProjects]);
+  }, [dialogOpen, form.operationalProjectId, canViewOperationalProjects, siteRefresh]);
 
   const sourceContractId = Number(searchParams.get("sourceContractId")) || null;
   const continuation = useContractContinuation(sourceContractId, form.opportunityId);

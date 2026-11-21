@@ -698,7 +698,7 @@ const OperationalProjects = () => {
             />
           </section>
 
-          <ProjectSiteDetails site={detail} sectorName={sectorLabel} />
+          <ProjectSiteDetails site={detail} />
 
           <ProjectMasterSchedule
             projectId={detail.id}

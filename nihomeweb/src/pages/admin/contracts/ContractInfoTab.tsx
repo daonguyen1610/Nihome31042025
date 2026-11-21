@@ -74,14 +74,9 @@ export const InfoTab = ({
         </dl>
       </div>
 
-      {contract.operationalProjectId != null && (
+      {contract.operationalProjectId != null && contract.projectSite && (
         <ProjectSiteDetails
-          site={{
-            siteAddress: contract.projectSiteAddress,
-            constructionKind: contract.projectConstructionKind,
-            businessSectorCode: contract.projectBusinessSectorCode,
-            siteAreaM2: contract.projectSiteAreaM2,
-          }}
+          site={contract.projectSite}
           projectHref={`/admin/operational-projects/${contract.operationalProjectId}`}
           className="shadow-sm"
           testId="contract-project-site"

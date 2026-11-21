@@ -412,10 +412,10 @@ public class ContractService(
             sourceTenderCode: row.SourceTender?.Code,
             sourceTenderName: row.SourceTender?.Name);
         // The contract reads the project's site details rather than keeping copies (feedback row 25).
-        response.ProjectSiteAddress = row.ProjectSite?.SiteAddress;
-        response.ProjectConstructionKind = row.ProjectSite?.ConstructionKind;
-        response.ProjectBusinessSectorCode = row.ProjectSite?.BusinessSectorCode;
-        response.ProjectSiteAreaM2 = row.ProjectSite?.SiteAreaM2;
+        response.ProjectSite = row.ProjectSite is null
+            ? null
+            : new ContractProjectSiteResponse(row.ProjectSite.SiteAddress, row.ProjectSite.ConstructionKind,
+                row.ProjectSite.BusinessSectorCode, row.ProjectSite.SiteAreaM2);
         return response;
     }
 
