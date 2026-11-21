@@ -16,7 +16,7 @@ test("work package creation identifies required fields and focuses invalid input
   const name = dialog.getByRole("textbox", { name: "Package name" });
   await expect(name).toHaveAttribute("aria-required", "true");
   await dialog.getByRole("button", { name: "Save changes" }).click();
-  await expect(dialog.getByRole("combobox", { name: "Operational project" })).toBeFocused();
+  await expect(dialog.getByRole("combobox", { name: "Project" })).toBeFocused();
   await expect(name).toHaveAttribute("aria-invalid", "true");
   // Work is filed under the project; there is no contract to choose.
   await expect(dialog.getByRole("combobox", { name: "Contract", exact: true })).toHaveCount(0);

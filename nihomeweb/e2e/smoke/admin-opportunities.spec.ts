@@ -1,6 +1,7 @@
 import { test, expect, TEST_USERS } from "../fixtures/auth";
 import type { APIRequestContext } from "@playwright/test";
 import { hardDeleteBusinessRoot } from "../fixtures/hardDelete";
+import { fillProjectSite } from "../fixtures/projectSite";
 
 // These browser journeys create and permanently delete related business roots.
 // Keep their cleanup transactions from contending with each other in SQL Server.
@@ -329,6 +330,7 @@ test("Sales can create the missing operational project and return to the design 
   const customProjectCode = `DB-E2E-${Date.now().toString().slice(-8)}`;
   await codeInput.fill(customProjectCode.toLowerCase());
   await projectDialog.getByLabel(/Tên dự án|Project name/i).fill("Project from design handoff");
+  await fillProjectSite(page, projectDialog);
   const projectCreateResponsePromise = page.waitForResponse(
     (response) =>
       response.request().method() === "POST" &&
@@ -464,6 +466,7 @@ test("Sales creates an operational project from Opportunity detail and confirms 
   const projectDialog = page.getByRole("dialog");
   await expect(projectDialog).toBeVisible();
   await projectDialog.getByLabel(/Tên dự án|Project name/i).fill(projectName);
+  await fillProjectSite(page, projectDialog);
   await expect(projectDialog.getByTestId("operational-project-code")).toHaveValue(
     /^[A-Za-z0-9][A-Za-z0-9_-]{1,39}$/,
   );
