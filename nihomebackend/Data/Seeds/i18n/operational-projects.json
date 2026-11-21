@@ -1846,5 +1846,13 @@
     "en": "Opportunities {opportunities} · Quotes {quotes} · Contracts {contracts}",
     "zh": "商机 {opportunities} · 报价 {quotes} · 合同 {contracts}",
     "ja": "商談 {opportunities} · 見積 {quotes} · 契約 {contracts}"
+  },
+  {
+    "key": "operationalProjects.list.projectColumn",
+    "category": "operationalProjects",
+    "vi": "Dự án · Khách hàng",
+    "en": "Project · Customer",
+    "zh": "项目 · 客户",
+    "ja": "プロジェクト · 顧客"
   }
 ]
