@@ -1702,5 +1702,125 @@
     "en": "The customer cannot be changed: the project already has {opportunities} opportunities, {quotes} quotes, {contracts} contracts and {designs} design dossiers of the current customer. If only the customer's name is wrong, fix it in Customers. If it really is another customer, deal with those records first (open them from the project page).",
     "zh": "暂不能更换客户：该项目已有当前客户的 {opportunities} 个商机、{quotes} 份报价、{contracts} 份合同和 {designs} 个设计档案。若只是客户名称填错，请在“客户管理”中修改名称；若确实是其他客户，请先处理上述记录（可在项目详情页打开）。",
     "ja": "顧客を変更できません。このプロジェクトには現在の顧客の商談 {opportunities} 件、見積 {quotes} 件、契約 {contracts} 件、設計書類 {designs} 件があります。顧客名の入力ミスだけなら「顧客管理」で名前を修正してください。本当に別の顧客の場合は、先にこれらの記録を処理してください（プロジェクト詳細から開けます）。"
+  },
+  {
+    "key": "operationalProjects.field.siteAddress",
+    "category": "operationalProjects",
+    "vi": "Địa chỉ dự án",
+    "en": "Project address",
+    "zh": "项目地址",
+    "ja": "プロジェクト所在地"
+  },
+  {
+    "key": "operationalProjects.field.constructionKind",
+    "category": "operationalProjects",
+    "vi": "Loại hình",
+    "en": "Type of works",
+    "zh": "工程类型",
+    "ja": "工事種別"
+  },
+  {
+    "key": "operationalProjects.field.businessSector",
+    "category": "operationalProjects",
+    "vi": "Ngành nghề kinh doanh",
+    "en": "Business sector",
+    "zh": "经营领域",
+    "ja": "事業分野"
+  },
+  {
+    "key": "operationalProjects.field.siteArea",
+    "category": "operationalProjects",
+    "vi": "Diện tích (m²)",
+    "en": "Area (m²)",
+    "zh": "面积（m²）",
+    "ja": "面積（m²）"
+  },
+  {
+    "key": "operationalProjects.constructionKind.NewBuild",
+    "category": "operationalProjects",
+    "vi": "Xây mới",
+    "en": "New build",
+    "zh": "新建",
+    "ja": "新築"
+  },
+  {
+    "key": "operationalProjects.constructionKind.Renovation",
+    "category": "operationalProjects",
+    "vi": "Cải tạo",
+    "en": "Renovation",
+    "zh": "改造",
+    "ja": "改修"
+  },
+  {
+    "key": "operationalProjects.constructionKind.placeholder",
+    "category": "operationalProjects",
+    "vi": "Chọn Xây mới hoặc Cải tạo",
+    "en": "Choose new build or renovation",
+    "zh": "选择新建或改造",
+    "ja": "新築か改修を選択"
+  },
+  {
+    "key": "operationalProjects.businessSector.placeholder",
+    "category": "operationalProjects",
+    "vi": "Chọn ngành nghề (mặc định theo khách hàng)",
+    "en": "Choose a sector (defaults to the customer's)",
+    "zh": "选择领域（默认取客户的）",
+    "ja": "分野を選択（既定は顧客の分野）"
+  },
+  {
+    "key": "operationalProjects.siteAddress.placeholder",
+    "category": "operationalProjects",
+    "vi": "Ví dụ: Lô C5, KCN Tân Uyên, Bình Dương",
+    "en": "E.g. Lot C5, Tan Uyen IP, Binh Duong",
+    "zh": "例如：平阳省新渊工业区C5地块",
+    "ja": "例：ビンズオン省タンウエン工業団地 C5区画"
+  },
+  {
+    "key": "operationalProjects.validation.siteAddress",
+    "category": "operationalProjects",
+    "vi": "Nhập địa chỉ dự án.",
+    "en": "Enter the project address.",
+    "zh": "请输入项目地址。",
+    "ja": "プロジェクト所在地を入力してください。"
+  },
+  {
+    "key": "operationalProjects.validation.constructionKind",
+    "category": "operationalProjects",
+    "vi": "Chọn loại hình: Xây mới hoặc Cải tạo.",
+    "en": "Choose the type of works: new build or renovation.",
+    "zh": "请选择工程类型：新建或改造。",
+    "ja": "工事種別（新築または改修）を選択してください。"
+  },
+  {
+    "key": "operationalProjects.validation.businessSector",
+    "category": "operationalProjects",
+    "vi": "Chọn ngành nghề kinh doanh của dự án.",
+    "en": "Choose the project's business sector.",
+    "zh": "请选择项目的经营领域。",
+    "ja": "プロジェクトの事業分野を選択してください。"
+  },
+  {
+    "key": "operationalProjects.validation.siteArea",
+    "category": "operationalProjects",
+    "vi": "Nhập diện tích lớn hơn 0 (m²).",
+    "en": "Enter an area above 0 (m²).",
+    "zh": "请输入大于0的面积（m²）。",
+    "ja": "0より大きい面積（m²）を入力してください。"
+  },
+  {
+    "key": "operationalProjects.site.title",
+    "category": "operationalProjects",
+    "vi": "Thông tin công trình",
+    "en": "Site details",
+    "zh": "工程信息",
+    "ja": "工事情報"
+  },
+  {
+    "key": "operationalProjects.site.missing",
+    "category": "operationalProjects",
+    "vi": "Còn thiếu: {fields}. Bấm Sửa để bổ sung.",
+    "en": "Still missing: {fields}. Use Edit to add them.",
+    "zh": "尚缺：{fields}。请点击编辑补充。",
+    "ja": "未入力：{fields}。「編集」から追加してください。"
   }
 ]

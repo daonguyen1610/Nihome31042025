@@ -19,7 +19,6 @@ public class CustomerService(
 {
     private const int MaxPageSize = 100;
     private const string SourceCategory = "customer_source";
-    private const string BusinessSectorCategory = "business_sector";
     private static readonly ConcurrentDictionary<int, SemaphoreSlim> ContactMutationGates = new();
 
     public async Task<CustomerListResponse> ListAsync(
@@ -709,18 +708,10 @@ public class CustomerService(
         return normalized;
     }
 
-    /// <summary>
-    /// The sector is optional and chosen from the active list. A sector an admin later switched
-    /// off stays on the customers that already have it, so saving them does not fail.
-    /// </summary>
     private async Task<string?> ValidateBusinessSectorAsync(string? code, string? current, CancellationToken ct)
     {
-        var normalized = code?.Trim();
-        if (string.IsNullOrEmpty(normalized)) return null;
-        if (normalized == current) return normalized;
-        if (!await db.MasterDataOptions.AsNoTracking().AnyAsync(
-                o => o.Category == BusinessSectorCategory && o.Code == normalized && o.IsActive, ct))
-            throw new CustomerOperationException("Lĩnh vực kinh doanh đã chọn không có trong danh mục. Hãy chọn lại.");
+        var (allowed, normalized) = await BusinessSectors.CheckAsync(db, code, current, ct);
+        if (!allowed) throw new CustomerOperationException(BusinessSectors.NotInListMessage);
         return normalized;
     }
 

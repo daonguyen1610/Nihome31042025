@@ -31,6 +31,14 @@ public class OperationalProject : IConcurrencyTracked
     public ProjectBoqRevision? FinalProjectBoqRevision { get; set; }
     public string? Note { get; set; }
 
+    /// <summary>Where the works are (NICON feedback row 27).</summary>
+    public string? SiteAddress { get; set; }
+    public ProjectConstructionKind? ConstructionKind { get; set; }
+    /// <summary>Master-data code from <c>business_sector</c>; defaults to the customer's.</summary>
+    public string? BusinessSectorCode { get; set; }
+    /// <summary>Site or floor area in square metres.</summary>
+    public decimal? SiteAreaM2 { get; set; }
+
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int? CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -92,4 +100,11 @@ public enum OperationalProjectStatus
     OnHold = 2,
     Completed = 3,
     Cancelled = 4,
+}
+
+/// <summary>Whether the project builds new or renovates (Xây mới / Cải tạo).</summary>
+public enum ProjectConstructionKind
+{
+    NewBuild = 1,
+    Renovation = 2,
 }

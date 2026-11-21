@@ -363,6 +363,10 @@ export interface OperationalProjectListItemResponse {
   status: OperationalProjectStatus;
   startDate?: string | null;
   endDate?: string | null;
+  siteAddress?: string | null;
+  constructionKind?: ProjectConstructionKind | null;
+  businessSectorCode?: string | null;
+  siteAreaM2?: number | null;
   opportunityCount: number;
   quoteCount: number;
   contractCount: number;
@@ -1070,6 +1074,10 @@ export interface CorrectHseViolationRequest extends UpdateHseViolationRequest {
   reason: string;
 }
 
+/** Xây mới / Cải tạo. */
+export type ProjectConstructionKind = "NewBuild" | "Renovation";
+export const PROJECT_CONSTRUCTION_KINDS: ProjectConstructionKind[] = ["NewBuild", "Renovation"];
+
 export interface CreateOperationalProjectRequest {
   code?: string | null;
   name: string;
@@ -1078,6 +1086,10 @@ export interface CreateOperationalProjectRequest {
   startDate?: string | null;
   endDate?: string | null;
   note?: string | null;
+  siteAddress?: string | null;
+  constructionKind?: ProjectConstructionKind | null;
+  businessSectorCode?: string | null;
+  siteAreaM2?: number | null;
 }
 
 export interface UpdateOperationalProjectRequest {
@@ -1087,6 +1099,10 @@ export interface UpdateOperationalProjectRequest {
   startDate?: string | null;
   endDate?: string | null;
   note?: string | null;
+  siteAddress?: string | null;
+  constructionKind?: ProjectConstructionKind | null;
+  businessSectorCode?: string | null;
+  siteAreaM2?: number | null;
   status: OperationalProjectStatus;
   rowVersion?: string;
 }

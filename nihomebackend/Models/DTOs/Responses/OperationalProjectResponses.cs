@@ -18,6 +18,10 @@ public class OperationalProjectListItemResponse
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public string? SiteAddress { get; set; }
+    public ProjectConstructionKind? ConstructionKind { get; set; }
+    public string? BusinessSectorCode { get; set; }
+    public decimal? SiteAreaM2 { get; set; }
     public int? FinalProjectBoqRevisionId { get; set; }
     public int OpportunityCount { get; set; }
     public int QuoteCount { get; set; }

@@ -672,6 +672,38 @@ public class OperationalProjectServiceTests : IDisposable
 
     public void Dispose() => _db.Dispose();
 
+    [Fact]
+    public async Task SiteDetails_AreSaved_AndTheSectorDefaultsToTheCustomers()
+    {
+        // NICON feedback row 27: address, new build or renovation, sector and area.
+        _db.MasterDataOptions.AddRange(
+            new MasterDataOption { Category = "business_sector", Code = "food-beverage", Name = "Thực phẩm & Đồ uống", IsActive = true },
+            new MasterDataOption { Category = "business_sector", Code = "warehousing-logistics", Name = "Kho bãi & Logistics", IsActive = true });
+        (await _db.Customers.FindAsync(_customerId))!.BusinessSectorCode = "food-beverage";
+        await _db.SaveChangesAsync();
+
+        // A quick create gives only a name: the sector is the customer's.
+        var quick = await _service.CreateAsync(ValidCreate("Kho lạnh Đức Hoà"), _managerId, false);
+        Assert.Equal("food-beverage", quick.BusinessSectorCode);
+        Assert.Null(quick.SiteAddress);
+
+        var full = ValidCreate("Kho trung chuyển Tân Uyên");
+        full.SiteAddress = "  Lô C5, KCN Tân Uyên, Bình Dương ";
+        full.ConstructionKind = ProjectConstructionKind.Renovation;
+        full.BusinessSectorCode = "warehousing-logistics";
+        full.SiteAreaM2 = 12500.5m;
+        var created = await _service.CreateAsync(full, _managerId, false);
+        Assert.Equal("Lô C5, KCN Tân Uyên, Bình Dương", created.SiteAddress);
+        Assert.Equal(ProjectConstructionKind.Renovation, created.ConstructionKind);
+        Assert.Equal("warehousing-logistics", created.BusinessSectorCode);
+        Assert.Equal(12500.5m, created.SiteAreaM2);
+
+        var unknown = ValidCreate("Dự án sai lĩnh vực");
+        unknown.BusinessSectorCode = "khong-co";
+        await Assert.ThrowsAsync<OperationalProjectOperationException>(() =>
+            _service.CreateAsync(unknown, _managerId, false));
+    }
+
     private CreateOperationalProjectRequest ValidCreate(string name = "Central project") => new()
     {
         Name = name,
