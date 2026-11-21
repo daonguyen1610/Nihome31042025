@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ProjectSiteDetails } from "@/components/admin/ProjectSiteDetails";
+import { useBusinessSectors } from "@/hooks/useBusinessSectors";
 import { personOption } from "@/lib/people";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -184,7 +185,8 @@ const OperationalProjects = () => {
     [customers, t],
   );
   const [users, setUsers] = useState<UserListItemResponse[]>([]);
-  const [sectors, setSectors] = useState<MasterDataOption[]>([]);
+  // Loaded on its own: a user who may not read master data still gets customers and people.
+  const sectors = useBusinessSectors(lang);
   const sectorLabel = useCallback(
     (code?: string | null) => (code ? (sectors.find((s) => s.code === code)?.name ?? code) : ""),
     [sectors],
@@ -221,14 +223,11 @@ const OperationalProjects = () => {
       canListUsers
         ? adminApi.getPeopleDirectory()
         : Promise.resolve({ data: { items: [], total: 0 } }),
-      // Switched-off sectors too, so a project that keeps one still shows its name.
-      adminApi.getMasterDataOptions("business_sector", lang, true),
     ])
-      .then(([customerResponse, userResponse, sectorResponse]) => {
+      .then(([customerResponse, userResponse]) => {
         if (cancelled) return;
         setCustomers(customerResponse.data.items ?? []);
         setUsers(userResponse.data.items ?? []);
-        setSectors(sectorResponse.data ?? []);
       })
       .catch(() => {
         // Lookup access is secondary; the main request reports its own error.
@@ -236,7 +235,7 @@ const OperationalProjects = () => {
     return () => {
       cancelled = true;
     };
-  }, [canListUsers, lang]);
+  }, [canListUsers]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setDebouncedSearch(search), 300);
@@ -698,10 +697,7 @@ const OperationalProjects = () => {
             />
           </section>
 
-          <ProjectSiteDetails
-            site={detail}
-            sectorName={sectors.find((s) => s.code === detail.businessSectorCode)?.name}
-          />
+          <ProjectSiteDetails site={detail} />
 
           <ProjectMasterSchedule
             projectId={detail.id}

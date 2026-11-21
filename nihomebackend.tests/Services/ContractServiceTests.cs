@@ -185,17 +185,22 @@ public class ContractServiceTests : IDisposable
         var project = _db.OperationalProjects.Single(item => item.Id == created.OperationalProjectId);
         project.SiteAddress = "Lô C5, KCN Tân Uyên, Bình Dương";
         project.SiteAreaM2 = 12500m;
+        // "On the project" as the project page counts it: an active team member (a past one is not).
+        _db.OperationalProjectMembers.Add(new OperationalProjectMember
+        {
+            OperationalProjectId = project.Id,
+            UserId = 7,
+            StartedAt = DateTime.UtcNow.AddDays(-30),
+            EndedAt = onProject ? null : DateTime.UtcNow.AddDays(-1),
+        });
         await _db.SaveChangesAsync();
         var permissions = new Mock<IPermissionService>();
         permissions.Setup(item => item.HasAsync(7, "operations.projects.view", It.IsAny<CancellationToken>()))
             .ReturnsAsync(projectView);
         permissions.Setup(item => item.HasAsync(7, "operations.projects.view.all", It.IsAny<CancellationToken>()))
             .ReturnsAsync(viewAll);
-        var access = new Mock<IProjectAccessService>();
-        access.Setup(item => item.CanViewOperationalProjectAsync(7, project.Id, It.IsAny<CancellationToken>()))
-            .ReturnsAsync(onProject);
         var service = new ContractService(_db, NullLogger<ContractService>.Instance, _projectDocuments.Object,
-            new OpportunityClosureInvariantService(_db), null, permissions.Object, access.Object);
+            new OpportunityClosureInvariantService(_db), null, permissions.Object);
 
         var detail = await service.GetAsync(created.Id, 7, canSeeAll: true);
 
