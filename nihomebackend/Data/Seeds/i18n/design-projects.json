@@ -422,5 +422,6 @@
   {"key": "designProjects.team.comments.delete", "category": "designProjects", "vi": "Xoá bình luận", "en": "Delete comment", "zh": "删除评论", "ja": "コメントを削除"},
   {"key": "designProjects.team.comments.confirmDelete", "category": "designProjects", "vi": "Xoá bình luận này?", "en": "Delete this comment?", "zh": "删除此评论？", "ja": "このコメントを削除しますか？"},
   {"key": "designProjects.team.comments.deleted", "category": "designProjects", "vi": "Đã xoá bình luận", "en": "Comment deleted", "zh": "评论已删除", "ja": "コメントを削除しました"},
-  {"key": "designProjects.team.comments.required", "category": "designProjects", "vi": "Nội dung bình luận không được để trống.", "en": "Comment cannot be empty.", "zh": "评论内容不能为空。", "ja": "コメントを入力してください。"}
+  {"key": "designProjects.team.comments.required", "category": "designProjects", "vi": "Nội dung bình luận không được để trống.", "en": "Comment cannot be empty.", "zh": "评论内容不能为空。", "ja": "コメントを入力してください。"},
+  {"key": "designProjects.form.datesFromContract", "category": "designProjects", "vi": "Ngày bắt đầu và hạn hoàn thành lấy từ hợp đồng {code} khi còn trống; có thể sửa.", "en": "Empty start and due dates are taken from contract {code}; you can change them.", "zh": "开始日期和截止日期为空时取自合同 {code}，可修改。", "ja": "開始日と期限が空欄の場合は契約 {code} から取得します。変更できます。"}
 ]

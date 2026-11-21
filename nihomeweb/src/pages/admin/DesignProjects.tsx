@@ -926,15 +926,21 @@ const AdminDesignProjects = () => {
                 className="mt-1"
                 value={form.contractId != null ? String(form.contractId) : ""}
                 onChange={(v) =>
-                  setForm((f) => ({
-                    ...f,
-                    contractId: v ? Number(v) : null,
-                    // The contract decides the customer and the project.
-                    customerId: v
-                      ? (contracts.find((c) => c.id === Number(v))?.customerId ?? f.customerId)
-                      : f.customerId,
-                    operationalProjectId: v ? null : f.operationalProjectId,
-                  }))
+                  setForm((f) => {
+                    const contract = v ? contracts.find((c) => c.id === Number(v)) : undefined;
+                    const fromContract = (date?: string | null) =>
+                      date ? toUtcMidnight(date.slice(0, 10)) : null;
+                    return {
+                      ...f,
+                      contractId: v ? Number(v) : null,
+                      // The contract decides the customer and the project.
+                      customerId: contract?.customerId ?? f.customerId,
+                      operationalProjectId: v ? null : f.operationalProjectId,
+                      // Its dates fill the dates not typed yet (NICON feedback row 33).
+                      startDate: f.startDate ?? fromContract(contract?.startDate),
+                      deadline: f.deadline ?? fromContract(contract?.endDate),
+                    };
+                  })
                 }
                 options={[
                   { value: "", label: t("designProjects.form.contractNone") },
@@ -1028,6 +1034,13 @@ const AdminDesignProjects = () => {
                 </FieldScope>
               </>
             ) : null}
+            {selectedContract && (selectedContract.startDate || selectedContract.endDate) && (
+              <p className="text-xs text-muted-foreground md:col-span-2">
+                {t("designProjects.form.datesFromContract", {
+                  code: selectedContract.contractNumber,
+                })}
+              </p>
+            )}
             <FieldScope>
               <Label>{t("designProjects.field.startDate")}</Label>
               <Input
