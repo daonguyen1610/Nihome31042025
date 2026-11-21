@@ -8,7 +8,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import { MoneyInput } from "@/components/ui/money-input";
 import { ProjectSiteDetails } from "@/components/admin/ProjectSiteDetails";
-import { masterDataLabel } from "@/lib/masterDataLabel";
 import { personOption } from "@/lib/people";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
@@ -193,10 +192,7 @@ const OperationalProjects = () => {
     adminApi
       .getMasterDataOptions("business_sector", lang, true)
       .then(({ data }) => {
-        if (!cancelled)
-          setSectors(
-            (data ?? []).map((option) => ({ ...option, name: masterDataLabel(t, option) })),
-          );
+        if (!cancelled) setSectors(data ?? []);
       })
       .catch(() => {
         // Without master data the picker is empty; the project card still names its sector.
@@ -204,7 +200,7 @@ const OperationalProjects = () => {
     return () => {
       cancelled = true;
     };
-  }, [lang, t]);
+  }, [lang]);
   const sectorLabel = useCallback(
     (code?: string | null) => (code ? (sectors.find((s) => s.code === code)?.name ?? code) : ""),
     [sectors],

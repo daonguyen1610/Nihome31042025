@@ -12,18 +12,15 @@ public static class BusinessSectors
     public const string NotInListMessage = "Lĩnh vực kinh doanh đã chọn không có trong danh mục. Hãy chọn lại.";
 
     /// <summary>
-    /// The sector's master-data name and translation key, also for one switched off; nulls when
-    /// unknown. The one lookup used wherever a sector is named.
+    /// The sector's name in a language by the master-data naming rule, also for one switched off;
+    /// null when unknown. The one lookup used wherever a record names its sector.
     /// </summary>
-    public static async Task<(string? Name, string? LabelKey)> LabelAsync(
-        AppDbContext db, string? code, CancellationToken ct)
+    public static async Task<string?> NameAsync(AppDbContext db, string? code, string lang, CancellationToken ct)
     {
-        if (string.IsNullOrEmpty(code)) return (null, null);
+        if (string.IsNullOrEmpty(code)) return null;
         var option = await db.MasterDataOptions.AsNoTracking()
-            .Where(o => o.Category == Category && o.Code == code)
-            .Select(o => new { o.Name, o.LabelKey })
-            .FirstOrDefaultAsync(ct);
-        return (option?.Name, option?.LabelKey);
+            .FirstOrDefaultAsync(o => o.Category == Category && o.Code == code, ct);
+        return option is null ? null : (await MasterDataNames.LocalizeAsync(db, [option], lang, ct))[option.Id];
     }
 
     /// <summary>

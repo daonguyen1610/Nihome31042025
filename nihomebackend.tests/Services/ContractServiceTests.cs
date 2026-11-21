@@ -210,17 +210,26 @@ public class ContractServiceTests : IDisposable
             .ReturnsAsync(projectView);
         permissions.Setup(item => item.HasAsync(7, "operations.projects.view.all", It.IsAny<CancellationToken>()))
             .ReturnsAsync(viewAll);
+        _db.Translations.Add(new Translation
+        {
+            Key = "masterData.business_sector.food-beverage.label",
+            LanguageCode = "en",
+            Value = "Food & beverage",
+        });
+        await _db.SaveChangesAsync();
+        var english = new Mock<IRequestLanguage>();
+        english.SetupGet(item => item.Lang).Returns("en");
         var service = new ContractService(_db, NullLogger<ContractService>.Instance, _projectDocuments.Object,
-            new OpportunityClosureInvariantService(_db), null, permissions.Object);
+            new OpportunityClosureInvariantService(_db), null, permissions.Object,
+            new ProjectAccessService(_db, permissions.Object), english.Object);
 
         var detail = await service.GetAsync(created.Id, 7, canSeeAll: true);
 
         Assert.Equal(expected, detail!.ProjectSite is not null);
         if (!expected) return;
         Assert.Equal("Lô C5, KCN Tân Uyên, Bình Dương", detail.ProjectSite!.SiteAddress);
-        // A switched-off sector still comes with its name and translation key.
-        Assert.Equal("Thực phẩm & Đồ uống", detail.ProjectSite.BusinessSectorName);
-        Assert.Equal("masterData.business_sector.food-beverage.label", detail.ProjectSite.BusinessSectorLabelKey);
+        // A switched-off sector is still named, in the reader's language.
+        Assert.Equal("Food & beverage", detail.ProjectSite.BusinessSectorName);
     }
 
     [Fact]

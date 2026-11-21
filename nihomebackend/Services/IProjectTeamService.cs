@@ -7,6 +7,11 @@ namespace NihomeBackend.Services;
 public interface IProjectAccessService
 {
     Task<bool> CanViewOperationalProjectAsync(int userId, int projectId, CancellationToken ct = default);
+    /// <summary>
+    /// Whether the user may open the project's own page: project view, and all projects or being
+    /// its manager, creator or an active team member (the project page's rule, in one query).
+    /// </summary>
+    Task<bool> CanOpenProjectPageAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanManageTeamAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanManageDesignScheduleAsync(int userId, int projectId, CancellationToken ct = default);
     Task<bool> CanManageDesignDocumentsAsync(int userId, int operationalProjectId, CancellationToken ct = default);

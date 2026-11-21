@@ -23,6 +23,12 @@ api.interceptors.request.use(async (config) => {
   if (!config.headers["X-Correlation-Id"]) {
     config.headers["X-Correlation-Id"] = newCorrelationId();
   }
+  // The language the user reads the app in, so the server names data (master-data options on
+  // records, for example) the same way everywhere.
+  if (!config.headers["X-Nihome-Lang"] && typeof localStorage !== "undefined") {
+    const lang = localStorage.getItem("nicon_lang");
+    if (lang) config.headers["X-Nihome-Lang"] = lang;
+  }
 
   if (typeof FormData !== "undefined" && config.data instanceof FormData && config.headers) {
     // Let the browser set multipart boundaries for FormData payloads.

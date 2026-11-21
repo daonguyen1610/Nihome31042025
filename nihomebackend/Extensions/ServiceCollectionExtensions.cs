@@ -195,6 +195,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<UploadSessionService>();
         services.AddScoped<IOperationalProjectService, OperationalProjectService>();
         services.AddScoped<IProjectAccessService, ProjectAccessService>();
+        services.AddScoped<IRequestLanguage, RequestLanguage>();
         services.AddScoped<ILegacyProjectTeamSyncService, LegacyProjectTeamSyncService>();
         services.AddScoped<IProjectTeamService, ProjectTeamService>();
         services.AddScoped<IDepartmentWorkPackageService, DepartmentWorkPackageService>();

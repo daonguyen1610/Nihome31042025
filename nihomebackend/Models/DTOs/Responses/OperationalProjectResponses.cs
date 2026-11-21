@@ -40,12 +40,8 @@ public class OperationalProjectListResponse
 public class OperationalProjectResponse : OperationalProjectListItemResponse
 {
     public string? Note { get; set; }
-    /// <summary>
-    /// The sector's master-data name and translation key (also for one switched off): the client
-    /// shows the translation when there is one, else the name.
-    /// </summary>
+    /// <summary>The sector's name in the user's language (also for one switched off).</summary>
     public string? BusinessSectorName { get; set; }
-    public string? BusinessSectorLabelKey { get; set; }
     public int? DesignProjectId { get; set; }
     public string? DesignProjectCode { get; set; }
     public List<OperationalProjectDesignResponse> DesignProjects { get; set; } = new();

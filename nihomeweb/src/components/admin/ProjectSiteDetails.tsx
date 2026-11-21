@@ -2,16 +2,14 @@ import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { formatNumber } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
-import { masterDataLabel } from "@/lib/masterDataLabel";
 import type { ProjectConstructionKind } from "@/services/admin/types/operationalProjects";
 
 export interface ProjectSite {
   siteAddress?: string | null;
   constructionKind?: ProjectConstructionKind | null;
   businessSectorCode?: string | null;
-  /** The sector's master-data name and translation key, sent with the project. */
+  /** The sector's name in the reader's language, sent with the project. */
   businessSectorName?: string | null;
-  businessSectorLabelKey?: string | null;
   siteAreaM2?: number | null;
 }
 
@@ -38,15 +36,9 @@ export function ProjectSiteDetails({
   testId?: string;
 }) {
   const { t } = useI18n();
-  // The server sends the sector's name and translation key with the project, so every viewer
-  // sees the same name in their language without loading the master-data list.
-  const sector = site.businessSectorCode
-    ? masterDataLabel(t, {
-        labelKey: site.businessSectorLabelKey,
-        name: site.businessSectorName,
-        code: site.businessSectorCode,
-      })
-    : "";
+  // The server names the sector in the reader's language by the same rule as every
+  // master-data list, so the card agrees with the pickers.
+  const sector = site.businessSectorCode ? site.businessSectorName || site.businessSectorCode : "";
   const fields = [
     { key: "siteAddress", value: site.siteAddress ?? "" },
     {
