@@ -1252,11 +1252,16 @@ export interface ContractResponse {
   operationalProjectId?: number | null;
   operationalProjectCode?: string | null;
   operationalProjectName?: string | null;
-  /** The project's site details, read from the project (contract detail only). */
-  projectSiteAddress?: string | null;
-  projectConstructionKind?: ProjectConstructionKind | null;
-  projectBusinessSectorCode?: string | null;
-  projectSiteAreaM2?: number | null;
+  /**
+   * The project's site details. Null when not provided (lists, or no right to view projects);
+   * present with empty fields when the project still lacks them.
+   */
+  projectSite?: {
+    siteAddress?: string | null;
+    constructionKind?: ProjectConstructionKind | null;
+    businessSectorCode?: string | null;
+    siteAreaM2?: number | null;
+  } | null;
   /** Derived from design_projects; present when a design project is attached. */
   designProjectId?: number | null;
   designProjectCode?: string | null;

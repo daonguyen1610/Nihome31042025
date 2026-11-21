@@ -32,11 +32,12 @@ public class ContractResponse
     public string? OperationalProjectCode { get; set; }
     public string? OperationalProjectName { get; set; }
 
-    /// <summary>The project's site details, read from the project (detail endpoint only).</summary>
-    public string? ProjectSiteAddress { get; set; }
-    public ProjectConstructionKind? ProjectConstructionKind { get; set; }
-    public string? ProjectBusinessSectorCode { get; set; }
-    public decimal? ProjectSiteAreaM2 { get; set; }
+    /// <summary>
+    /// The project's site details, read from the project. Null when not provided: in lists, and
+    /// for callers who may not view projects. A present value with empty fields means the
+    /// project still lacks them.
+    /// </summary>
+    public ContractProjectSiteResponse? ProjectSite { get; set; }
 
     public int? OpportunityId { get; set; }
     public string? OpportunityTitle { get; set; }
@@ -172,3 +173,9 @@ public class ContractFilterProjectOption
     public string Name { get; set; } = string.Empty;
     public int CustomerId { get; set; }
 }
+
+public sealed record ContractProjectSiteResponse(
+    string? SiteAddress,
+    ProjectConstructionKind? ConstructionKind,
+    string? BusinessSectorCode,
+    decimal? SiteAreaM2);

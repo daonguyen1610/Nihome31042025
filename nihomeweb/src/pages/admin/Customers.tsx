@@ -943,7 +943,10 @@ const AdminCustomers = () => {
               className="h-9"
               options={[
                 { value: "__all", label: t("customers.filter.all") },
-                ...sectors.map((s) => ({ value: s.code, label: s.name })),
+                // Only sectors still in use are offered as filters.
+                ...sectors
+                  .filter((s) => s.isActive || s.code === sectorFilter)
+                  .map((s) => ({ value: s.code, label: s.name })),
               ]}
             />
           </FieldScope>

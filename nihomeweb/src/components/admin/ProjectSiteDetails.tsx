@@ -1,9 +1,7 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useI18n } from "@/lib/i18n";
 import { formatNumber } from "@/lib/displaySettings";
 import { cn } from "@/lib/utils";
-import { adminApi, type MasterDataOption } from "@/services/adminApi";
 import type { ProjectConstructionKind } from "@/services/admin/types/operationalProjects";
 
 export interface ProjectSite {
@@ -22,7 +20,6 @@ export function ProjectSiteDetails({
   site,
   projectHref,
   openInNewTab = false,
-  sectorName,
   className,
   compact = false,
   testId = "project-site",
@@ -31,38 +28,18 @@ export function ProjectSiteDetails({
   projectHref?: string;
   /** Inside an unsaved form: the project opens in a new tab so the draft is kept. */
   openInNewTab?: boolean;
-  /** The sector name, when the page already has the list; otherwise it is loaded here. */
-  sectorName?: (code: string) => string;
   className?: string;
   /** Two columns at most, for narrow places such as a dialog. */
   compact?: boolean;
   testId?: string;
 }) {
-  const { t, lang } = useI18n();
-  const [sectors, setSectors] = useState<MasterDataOption[]>([]);
-  useEffect(() => {
-    if (sectorName) return;
-    let cancelled = false;
-    // Switched-off sectors too: a project keeps the sector it was given.
-    adminApi
-      .getMasterDataOptions("business_sector", lang, true)
-      .then(({ data }) => {
-        if (!cancelled) setSectors(data ?? []);
-      })
-      .catch(() => {
-        // The code still shows when the sector names cannot load.
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [lang, sectorName]);
-
-  const sector = !site.businessSectorCode
-    ? ""
-    : sectorName
-      ? sectorName(site.businessSectorCode)
-      : (sectors.find((item) => item.code === site.businessSectorCode)?.name ??
-        site.businessSectorCode);
+  const { t } = useI18n();
+  // Sector names come from the translations every user already has (the master-data list
+  // needs its own permission), and a sector an admin switched off keeps its name.
+  const sectorKey = site.businessSectorCode
+    ? `masterData.business_sector.${site.businessSectorCode}.label`
+    : "";
+  const sectorName = sectorKey ? t(sectorKey) : "";
   const fields = [
     { key: "siteAddress", value: site.siteAddress ?? "" },
     {
@@ -71,16 +48,22 @@ export function ProjectSiteDetails({
         ? t(`operationalProjects.constructionKind.${site.constructionKind}`)
         : "",
     },
-    { key: "businessSector", value: sector },
+    {
+      key: "businessSector",
+      value: sectorName === sectorKey ? (site.businessSectorCode ?? "") : sectorName,
+    },
     {
       key: "siteArea",
       value: site.siteAreaM2 != null ? `${formatNumber(site.siteAreaM2)} m²` : "",
     },
   ];
-  const missing = fields.filter((field) => !field.value);
+  const missing = fields
+    .filter((field) => !field.value)
+    .map((field) => t(`operationalProjects.field.${field.key}`))
+    .join(", ");
   return (
     <section className={cn("rounded-lg border bg-card p-4", className)} data-testid={testId}>
-      <h2 className="mb-3 text-sm font-medium">{t("operationalProjects.site.title")}</h2>
+      <h2 className="mb-3 font-medium">{t("operationalProjects.site.title")}</h2>
       <dl className={cn("grid gap-3 text-sm sm:grid-cols-2", !compact && "lg:grid-cols-4")}>
         {fields.map((field) => (
           <div key={field.key} className="min-w-0">
@@ -91,15 +74,11 @@ export function ProjectSiteDetails({
           </div>
         ))}
       </dl>
-      {missing.length > 0 && (
+      {missing && (
         <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
           {projectHref ? (
             <>
-              {t("operationalProjects.site.missingElsewhere", {
-                fields: missing
-                  .map((field) => t(`operationalProjects.field.${field.key}`))
-                  .join(", "),
-              })}{" "}
+              {t("operationalProjects.site.missingElsewhere", { fields: missing })}{" "}
               <Link
                 className="underline underline-offset-4"
                 to={projectHref}
@@ -109,11 +88,7 @@ export function ProjectSiteDetails({
               </Link>
             </>
           ) : (
-            t("operationalProjects.site.missing", {
-              fields: missing
-                .map((field) => t(`operationalProjects.field.${field.key}`))
-                .join(", "),
-            })
+            t("operationalProjects.site.missing", { fields: missing })
           )}
         </p>
       )}
