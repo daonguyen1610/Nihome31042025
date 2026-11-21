@@ -1484,22 +1484,20 @@ const OperationalProjects = () => {
                 </thead>
                 <tbody className="divide-y">
                   {rows.map((project) => (
-                    <tr
-                      key={project.id}
-                      data-testid="project-row"
-                      className="align-top transition-colors hover:bg-muted/40"
-                    >
+                    <tr key={project.id} data-testid="project-row" className="align-top">
                       <td className="px-4 py-3">
                         <p className="break-all font-mono text-xs text-muted-foreground">
                           {project.code}
                         </p>
                         <Link
                           to={`/admin/operational-projects/${project.id}`}
-                          className="mt-0.5 block font-medium text-foreground underline-offset-4 hover:underline focus-visible:underline"
+                          className="mt-0.5 block font-medium [overflow-wrap:anywhere] text-foreground underline-offset-4 hover:underline focus-visible:underline"
                         >
                           {project.name}
                         </Link>
-                        <p className="mt-0.5 text-muted-foreground">{project.customerName}</p>
+                        <p className="mt-0.5 text-muted-foreground [overflow-wrap:anywhere]">
+                          {project.customerName}
+                        </p>
                         <p className="mt-1 text-xs text-muted-foreground tabular-nums md:hidden">
                           {t("operationalProjects.count.summary", {
                             opportunities: formatNumber(project.opportunityCount),
@@ -1520,7 +1518,7 @@ const OperationalProjects = () => {
                         {project.projectManagerName || "—"}
                       </td>
                       <td className="hidden px-4 py-3 tabular-nums xl:table-cell">
-                        {project.startDate || project.endDate ? (
+                        {project.startDate && project.endDate ? (
                           // Each date stays whole; the range may break after the dash.
                           <>
                             <span className="whitespace-nowrap">
@@ -1528,6 +1526,14 @@ const OperationalProjects = () => {
                             </span>{" "}
                             <span className="whitespace-nowrap">{formatDate(project.endDate)}</span>
                           </>
+                        ) : project.startDate ? (
+                          t("operationalProjects.list.periodFrom", {
+                            date: formatDate(project.startDate),
+                          })
+                        ) : project.endDate ? (
+                          t("operationalProjects.list.periodUntil", {
+                            date: formatDate(project.endDate),
+                          })
                         ) : (
                           "—"
                         )}
