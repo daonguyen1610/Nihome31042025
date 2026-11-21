@@ -42,4 +42,18 @@ public sealed class ProjectScheduleItemResponse
     public DateOnly PlannedStart { get; set; }
     public DateOnly PlannedEnd { get; set; }
     public int SortOrder { get; set; }
+    public bool IsMilestone { get; set; }
+    public DateOnly? BaselineStart { get; set; }
+    public DateOnly? BaselineEnd { get; set; }
+    public List<ProjectScheduleLinkResponse> Predecessors { get; set; } = new();
+}
+
+public sealed record ProjectScheduleLinkResponse(Guid PredecessorNodeId, string Type, int LagDays);
+
+/// <summary>An MS Project file read into draft rows; nothing is saved until the user saves.</summary>
+public sealed class ProjectScheduleImportResponse
+{
+    public string SourceName { get; set; } = string.Empty;
+    public List<ProjectScheduleItemResponse> Items { get; set; } = new();
+    public List<string> Warnings { get; set; } = new();
 }

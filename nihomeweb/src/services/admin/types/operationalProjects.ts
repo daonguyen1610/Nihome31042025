@@ -489,6 +489,24 @@ export interface ProjectScheduleItemResponse {
   plannedStart: string;
   plannedEnd: string;
   sortOrder: number;
+  isMilestone?: boolean;
+  baselineStart?: string | null;
+  baselineEnd?: string | null;
+  predecessors?: ProjectScheduleLink[];
+}
+
+/** A link from another item of the same revision, as in MS Project. */
+export interface ProjectScheduleLink {
+  predecessorNodeId: string;
+  type: "FS" | "SS" | "FF" | "SF";
+  lagDays: number;
+}
+
+/** An MS Project XML file read into draft rows; nothing is saved until the draft is saved. */
+export interface ProjectScheduleImportResponse {
+  sourceName: string;
+  items: ProjectScheduleItemResponse[];
+  warnings: string[];
 }
 
 export interface ProjectScheduleRevisionResponse {
@@ -523,6 +541,10 @@ export interface SaveProjectScheduleItemRequest {
   plannedStart: string;
   plannedEnd: string;
   sortOrder: number;
+  isMilestone?: boolean;
+  baselineStart?: string | null;
+  baselineEnd?: string | null;
+  predecessors?: ProjectScheduleLink[];
 }
 
 export interface SaveProjectScheduleRevisionRequest {

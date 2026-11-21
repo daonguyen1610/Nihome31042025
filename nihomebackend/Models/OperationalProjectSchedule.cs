@@ -52,4 +52,9 @@ public sealed class ProjectScheduleItem
     public DateOnly PlannedStart { get; set; }
     public DateOnly PlannedEnd { get; set; }
     public int SortOrder { get; set; }
+    public bool IsMilestone { get; set; }
+    public DateOnly? BaselineStart { get; set; }
+    public DateOnly? BaselineEnd { get; set; }
+    /// <summary>JSON list of <c>{ PredecessorNodeId, Type, LagDays }</c> links within the revision.</summary>
+    public string? PredecessorsJson { get; set; }
 }

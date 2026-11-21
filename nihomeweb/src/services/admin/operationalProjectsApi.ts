@@ -27,6 +27,7 @@ import type {
   OperationalProjectResponse,
   ProjectScheduleResponse,
   SaveProjectScheduleRevisionRequest,
+  ProjectScheduleImportResponse,
   ConstructionPreparationResponse,
   UpdateConstructionPreparationRequest,
   ConstructionResourceRequestResponse,
@@ -337,6 +338,14 @@ export const operationalProjectsApi = {
     api.post<void>(`/operational-projects/${projectId}/master-schedule/emails/${emailId}/resolve`, {
       decision,
     }),
+  importProjectSchedule: (projectId: number, file: File) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    return api.post<ProjectScheduleImportResponse>(
+      `/operational-projects/${projectId}/master-schedule/import`,
+      formData,
+    );
+  },
   createProjectScheduleRevision: (projectId: number, body: SaveProjectScheduleRevisionRequest) =>
     api.post<ProjectScheduleResponse>(
       `/operational-projects/${projectId}/master-schedule/revisions`,

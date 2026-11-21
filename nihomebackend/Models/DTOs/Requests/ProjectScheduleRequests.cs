@@ -32,6 +32,27 @@ public sealed class SaveProjectScheduleItemRequest
     public DateOnly? PlannedEnd { get; set; }
 
     public int SortOrder { get; set; }
+
+    public bool IsMilestone { get; set; }
+
+    /// <summary>Original plan dates, as imported from MS Project; both or neither.</summary>
+    public DateOnly? BaselineStart { get; set; }
+    public DateOnly? BaselineEnd { get; set; }
+
+    [MaxLength(50)]
+    public List<SaveProjectScheduleLinkRequest> Predecessors { get; set; } = new();
+}
+
+/// <summary>A link from another item of the same revision: FS, SS, FF or SF, with lag in days.</summary>
+public sealed class SaveProjectScheduleLinkRequest
+{
+    public Guid PredecessorNodeId { get; set; }
+
+    [Required, RegularExpression("^(FS|SS|FF|SF)$")]
+    public string Type { get; set; } = "FS";
+
+    [Range(-3650, 3650)]
+    public int LagDays { get; set; }
 }
 
 public sealed class SubmitProjectScheduleRevisionRequest

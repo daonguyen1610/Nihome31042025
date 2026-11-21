@@ -1700,6 +1700,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.ToTable("project_schedule_items");
             b.Property(item => item.WbsCode).HasMaxLength(80).IsRequired();
             b.Property(item => item.Title).HasMaxLength(300).IsRequired();
+            b.Property(item => item.PredecessorsJson).HasMaxLength(8000);
             b.HasOne(item => item.Revision).WithMany(revision => revision.Items)
                 .HasForeignKey(item => item.RevisionId).OnDelete(DeleteBehavior.Cascade);
             b.HasOne(item => item.Node).WithMany().HasForeignKey(item => item.NodeId)

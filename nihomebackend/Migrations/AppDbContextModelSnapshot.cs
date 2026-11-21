@@ -8551,6 +8551,15 @@ namespace nihomebackend.Migrations
 
                     SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
 
+                    b.Property<DateOnly?>("BaselineEnd")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("BaselineStart")
+                        .HasColumnType("date");
+
+                    b.Property<bool>("IsMilestone")
+                        .HasColumnType("bit");
+
                     b.Property<Guid>("NodeId")
                         .HasColumnType("uniqueidentifier");
 
@@ -8562,6 +8571,10 @@ namespace nihomebackend.Migrations
 
                     b.Property<DateOnly>("PlannedStart")
                         .HasColumnType("date");
+
+                    b.Property<string>("PredecessorsJson")
+                        .HasMaxLength(8000)
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<int>("RevisionId")
                         .HasColumnType("int");
