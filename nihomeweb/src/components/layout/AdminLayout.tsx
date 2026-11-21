@@ -176,23 +176,19 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         label: t("nav.crm"),
         icon: UserPlus,
         items: [
+          // The order NICON works in (feedback row 31): customer, project, lead, opportunity,
+          // survey, quote, tender, contract, then reports and reference material.
+          {
+            to: "/admin/customers",
+            label: t("nav.customers"),
+            icon: UserRound,
+            permission: ADMIN_PERMS.customers,
+          },
           {
             to: "/admin/operational-projects",
             label: t("nav.operationalProjects"),
             icon: BriefcaseBusiness,
             permission: ADMIN_PERMS.operationalProjects,
-          },
-          {
-            to: "/admin/opportunities",
-            label: t("nav.opportunities"),
-            icon: Target,
-            permission: ADMIN_PERMS.opportunities,
-          },
-          {
-            to: "/admin/contracts",
-            label: t("nav.contracts"),
-            icon: FileText,
-            permission: ADMIN_PERMS.contracts,
           },
           {
             to: "/admin/leads",
@@ -201,34 +197,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             permission: ADMIN_PERMS.leads,
           },
           {
-            to: "/admin/customers",
-            label: t("nav.customers"),
-            icon: UserRound,
-            permission: ADMIN_PERMS.customers,
-          },
-          {
-            to: "/admin/quotes",
-            label: t("nav.quotes"),
-            icon: FileSpreadsheet,
-            permission: ADMIN_PERMS.quotes,
-          },
-          {
-            to: "/admin/material-rates",
-            label: t("nav.materialRates"),
-            icon: Database,
-            permission: ADMIN_PERMS.materialRates,
-          },
-          {
-            to: "/admin/tenders",
-            label: t("nav.tenders"),
-            icon: Briefcase,
-            permission: ADMIN_PERMS.tenders,
-          },
-          {
-            to: "/admin/capability-documents",
-            label: t("nav.capabilityDocs"),
-            icon: FolderTree,
-            permission: ADMIN_PERMS.capabilityDocs,
+            to: "/admin/opportunities",
+            label: t("nav.opportunities"),
+            icon: Target,
+            permission: ADMIN_PERMS.opportunities,
           },
           {
             to: "/admin/surveys",
@@ -237,10 +209,40 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             permission: ADMIN_PERMS.surveys,
           },
           {
+            to: "/admin/quotes",
+            label: t("nav.quotes"),
+            icon: FileSpreadsheet,
+            permission: ADMIN_PERMS.quotes,
+          },
+          {
+            to: "/admin/tenders",
+            label: t("nav.tenders"),
+            icon: Briefcase,
+            permission: ADMIN_PERMS.tenders,
+          },
+          {
+            to: "/admin/contracts",
+            label: t("nav.contracts"),
+            icon: FileText,
+            permission: ADMIN_PERMS.contracts,
+          },
+          {
             to: "/admin/reports/projects",
             label: t("nav.projectReports"),
             icon: ChartNoAxesCombined,
             permission: ADMIN_PERMS.projectReports,
+          },
+          {
+            to: "/admin/material-rates",
+            label: t("nav.materialRates"),
+            icon: Database,
+            permission: ADMIN_PERMS.materialRates,
+          },
+          {
+            to: "/admin/capability-documents",
+            label: t("nav.capabilityDocs"),
+            icon: FolderTree,
+            permission: ADMIN_PERMS.capabilityDocs,
           },
         ],
       },

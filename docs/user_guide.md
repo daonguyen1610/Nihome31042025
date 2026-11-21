@@ -82,7 +82,7 @@ Mọi phân hệ dùng chung một cấu trúc: **một Khách hàng (công ty h
 
 Khi tạo Dự án, hệ thống đề xuất mã tiếp theo. Người có quyền có thể sửa mã trước khi lưu, miễn đúng định dạng hiển thị và không trùng. Sau khi tạo, mã chỉ đổi được qua thao tác **Đổi mã dự án** (xem [3.0](#30-dự-án)).
 
-Menu CRM gồm, theo thứ tự: Dự án, Cơ hội, Sổ hợp đồng, Quản lý Lead, Quản lý Khách hàng, Báo giá, Mẫu báo giá, Đấu thầu, Hồ sơ năng lực, Khảo sát, Báo cáo dự án. Người dùng chỉ thấy mục mình có quyền.
+Menu CRM theo thứ tự NICON làm việc: Quản lý Khách hàng, Dự án, Quản lý Lead, Cơ hội, Khảo sát, Báo giá, Đấu thầu, Sổ hợp đồng, Báo cáo dự án, Mẫu báo giá (định mức, đơn giá vật liệu và mẫu BOQ), Hồ sơ năng lực. Người dùng chỉ thấy mục mình có quyền.
 
 | Phân hệ | Phạm vi |
 |---|---|
