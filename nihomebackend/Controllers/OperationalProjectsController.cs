@@ -133,7 +133,7 @@ public class OperationalProjectsController(
         }
         catch (OperationalProjectOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
     }
 
@@ -166,7 +166,7 @@ public class OperationalProjectsController(
         }
         catch (OperationalProjectOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
     }
 
@@ -199,7 +199,7 @@ public class OperationalProjectsController(
         }
         catch (OperationalProjectOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
     }
 
@@ -232,7 +232,7 @@ public class OperationalProjectsController(
         }
         catch (OperationalProjectOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
     }
 
@@ -263,7 +263,7 @@ public class OperationalProjectsController(
         }
         catch (OperationalProjectOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
     }
 
@@ -291,7 +291,7 @@ public class OperationalProjectsController(
         }
         catch (OperationalProjectOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(ex.ToResponse());
         }
         catch (DeletionPlanChangedException ex)
         {

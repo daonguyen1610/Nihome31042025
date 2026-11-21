@@ -12,6 +12,7 @@ const CODED_ERRORS: Record<string, string> = {
   LEGAL_MEMBER_INVALID: "people.legalMemberInvalid",
   PUNCH_DESIGN_MEMBER_INVALID: "people.designMemberInvalid",
   WORK_PACKAGE_NOT_COMPLETABLE: "workPackages.error.notCompletable",
+  OPERATIONAL_PROJECT_CUSTOMER_IN_USE: "operationalProjects.error.customerInUse",
   QUOTE_APPROVAL_NOT_PENDING: "quotes.error.notPending",
   QUOTE_APPROVAL_NOT_YOUR_TURN: "quotes.error.notYourTurn",
   QUOTE_APPROVAL_NOT_CHOSEN: "quotes.error.notChosen",

@@ -116,6 +116,56 @@ public class OperationalProjectsControllerTests : IntegrationTestBase
     }
 
     [Fact]
+    public async Task CustomerOfAProject_ChangesUntilCustomerRecordsHangOffIt()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SUPER_ADMIN"));
+        var wrongCustomer = await CreateCustomerAsync();
+        var rightCustomer = await CreateCustomerAsync();
+        var created = await ReadJsonAsync(await Client.PostAsJsonAsync("/api/operational-projects", new
+        {
+            name = $"Kho lạnh Đức Hoà {Guid.NewGuid():N}",
+            customerId = wrongCustomer,
+        }));
+        var id = created.GetProperty("id").GetInt32();
+        object Body(int customerId, string? rowVersion) => new
+        {
+            name = created.GetProperty("name").GetString(),
+            customerId,
+            projectManagerUserId = created.GetProperty("projectManagerUserId").GetInt32(),
+            status = "Planning",
+            rowVersion,
+        };
+
+        // Entered with the wrong customer and already staffed: it moves to the right one.
+        var moved = await Client.PutAsJsonAsync($"/api/operational-projects/{id}",
+            Body(rightCustomer, created.GetProperty("rowVersion").GetString()));
+        moved.StatusCode.Should().Be(HttpStatusCode.OK, await moved.Content.ReadAsStringAsync());
+        var movedBody = await ReadJsonAsync(moved);
+        movedBody.GetProperty("customerId").GetInt32().Should().Be(rightCustomer);
+
+        // Once a contract of that customer hangs off it, the change is refused with what blocks it.
+        await WithDbAsync(async db =>
+        {
+            db.Contracts.Add(new Contract
+            {
+                ContractNumber = $"HD-IT-{Guid.NewGuid():N}"[..20],
+                CustomerId = rightCustomer,
+                OperationalProjectId = id,
+            });
+            return await db.SaveChangesAsync();
+        });
+        var current = await ReadJsonAsync(await Client.GetAsync($"/api/operational-projects/{id}"));
+        var refused = await Client.PutAsJsonAsync($"/api/operational-projects/{id}",
+            Body(wrongCustomer, current.GetProperty("rowVersion").GetString()));
+        refused.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var error = await ReadJsonAsync(refused);
+        error.GetProperty("code").GetString().Should().Be("OPERATIONAL_PROJECT_CUSTOMER_IN_USE");
+        error.GetProperty("params").GetProperty("contracts").GetInt32().Should().Be(1);
+    }
+
+    [Fact]
     public async Task SuperAdmin_CanChooseCodeOnlyDuringCreation_AndDuplicateIsRejected()
     {
         await AuthTestHelper.AuthenticateAsync(
