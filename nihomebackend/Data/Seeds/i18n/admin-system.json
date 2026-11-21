@@ -3364,7 +3364,7 @@
     "key": "settings.drive.configuration.folder.designBasic", "category": "settings", "vi": "Thiết kế cơ sở", "en": "Basic design", "zh": "基础设计", "ja": "基本設計"
   },
   {
-    "key": "settings.drive.configuration.folder.designShopDrawing", "category": "settings", "vi": "Thiết kế chi tiết / Shop Drawing", "en": "Detailed design / Shop drawing", "zh": "详细设计 / 施工图", "ja": "詳細設計 / 施工図"
+    "key": "settings.drive.configuration.folder.designShopDrawing", "category": "settings", "vi": "Thiết kế chi tiết", "en": "Detail design", "zh": "详细设计", "ja": "詳細設計"
   },
   {
     "key": "settings.drive.configuration.folder.legalPermits", "category": "settings", "vi": "Xin phép / Pháp lý", "en": "Permits / Legal", "zh": "许可 / 法务", "ja": "許認可 / 法務"

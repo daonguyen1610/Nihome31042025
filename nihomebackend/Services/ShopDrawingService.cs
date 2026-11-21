@@ -175,7 +175,7 @@ public class ShopDrawingService(
         if (project.CurrentStage != DesignProjectStage.ShopDrawing)
         {
             throw new ShopDrawingOperationException(
-                "Chỉ tạo được bản vẽ Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
+                "Chỉ tạo được bản vẽ Thiết kế chi tiết khi dự án đang ở giai đoạn Thiết kế chi tiết.");
         }
 
         var disciplineExists = await db.MasterDataOptions
@@ -227,7 +227,7 @@ public class ShopDrawingService(
         if (entity.DesignProject.CurrentStage != DesignProjectStage.ShopDrawing)
         {
             throw new ShopDrawingOperationException(
-                "Chỉ chỉnh sửa Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
+                "Chỉ chỉnh sửa bản vẽ Thiết kế chi tiết khi dự án đang ở giai đoạn Thiết kế chi tiết.");
         }
 
         var title = (request.Title ?? string.Empty).Trim();
@@ -308,7 +308,7 @@ public class ShopDrawingService(
         if (entity.DesignProject.CurrentStage is DesignProjectStage.Concept or DesignProjectStage.BasicDesign)
         {
             throw new ShopDrawingOperationException(
-                "Chỉ xoá Shop Drawing từ giai đoạn Shop Drawing trở đi.");
+                "Chỉ xoá bản vẽ Thiết kế chi tiết từ giai đoạn Thiết kế chi tiết trở đi.");
         }
 
         var releaseItems = await db.IfcReleaseItems
@@ -356,7 +356,7 @@ public class ShopDrawingService(
         if (rows.Any(row => row.DesignProject.CurrentStage is DesignProjectStage.Concept or DesignProjectStage.BasicDesign))
         {
             throw new ShopDrawingOperationException(
-                "Chỉ xoá Shop Drawing từ giai đoạn Shop Drawing trở đi.");
+                "Chỉ xoá bản vẽ Thiết kế chi tiết từ giai đoạn Thiết kế chi tiết trở đi.");
         }
 
         var response = new ShopDrawingBulkDeleteResponse { Requested = distinctIds.Count };
@@ -415,7 +415,7 @@ public class ShopDrawingService(
         if (entity.DesignProject.CurrentStage != DesignProjectStage.ShopDrawing)
         {
             throw new ShopDrawingOperationException(
-                "Chỉ cập nhật trạng thái Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
+                "Chỉ cập nhật trạng thái bản vẽ Thiết kế chi tiết khi dự án đang ở giai đoạn Thiết kế chi tiết.");
         }
 
         EnsureTransitionAllowed(entity.Status, next);
@@ -504,7 +504,7 @@ public class ShopDrawingService(
         if (entity.DesignProject.CurrentStage != DesignProjectStage.ShopDrawing)
         {
             throw new ShopDrawingOperationException(
-                "Chỉ tải file Shop Drawing khi dự án đang ở giai đoạn Shop Drawing.");
+                "Chỉ tải tệp bản vẽ Thiết kế chi tiết khi dự án đang ở giai đoạn Thiết kế chi tiết.");
         }
         if (entity.Status == ShopDrawingStatus.Released ||
             await db.IfcReleaseItems.AnyAsync(item => item.ShopDrawingId == id &&
@@ -632,7 +632,7 @@ public class ShopDrawingService(
                     projectId, ProjectDocumentSourceModule.Design, nameof(ShopDrawing), "file",
                     entity.Id, entity.FilePath!, entity.UpdatedByUserId, ct))
                 throw new ShopDrawingOperationException(
-                    "Không thể tạo hàng đợi xoá an toàn cho tệp Shop Drawing. Dữ liệu được giữ nguyên.");
+                    "Không thể tạo hàng đợi xoá an toàn cho tệp Thiết kế chi tiết. Dữ liệu được giữ nguyên.");
         }
         catch (ProjectDocumentConflictException exception)
         {

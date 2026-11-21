@@ -124,7 +124,7 @@ public class IfcReleaseService(
             project.CurrentStage != DesignProjectStage.Completed)
         {
             throw new IfcReleaseOperationException(
-                "Chỉ tạo phiếu IFC khi dự án đang ở giai đoạn Shop Drawing.");
+                "Chỉ tạo phiếu IFC khi dự án đang ở giai đoạn Thiết kế chi tiết.");
         }
 
         var releaseNumber = await AllocateReleaseNumberAsync(request.DesignProjectId, ct);
@@ -365,7 +365,7 @@ public class IfcReleaseService(
         if (review?.Status != DesignReviewStatus.ClientApproved ||
             drawingIds.Any(drawingId => !approvedDrawingIds.Contains(drawingId)))
             throw new IfcReleaseOperationException(
-                "Hồ sơ khách duyệt phải bao phủ đúng mọi Shop Drawing trong gói IFC.");
+                "Hồ sơ khách duyệt phải bao phủ đúng mọi bản vẽ Thiết kế chi tiết trong gói IFC.");
 
         var invalid = entity.Items
             .Where(i => i.ShopDrawing.Status != ShopDrawingStatus.Approved

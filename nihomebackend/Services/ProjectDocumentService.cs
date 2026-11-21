@@ -523,7 +523,7 @@ public sealed class ProjectDocumentService(
         var sourceType = request.SourceEntityType?.Trim();
         if (string.IsNullOrWhiteSpace(sourceType) || !request.SourceRecordId.HasValue)
             throw new ProjectDocumentValidationException(
-                "Tài liệu Thiết kế phải gắn với đúng hồ sơ nguồn Concept, Basic Design hoặc Shop Drawing.");
+                "Tài liệu Thiết kế phải gắn với đúng hồ sơ nguồn Thiết kế ý tưởng, Thiết kế cơ sở hoặc Thiết kế chi tiết.");
 
         if (!await db.DesignProjects.AnyAsync(item => item.OperationalProjectId == projectId, ct))
             throw new ProjectDocumentValidationException("Dự án chưa có Dự án Thiết kế liên kết.");

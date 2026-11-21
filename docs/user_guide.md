@@ -173,7 +173,7 @@ Không phải dự án nào cũng đi đủ một chuỗi.
 | 4b. Đấu thầu | Kinh doanh/QS văn phòng; các phòng theo kế hoạch thầu; Tài chính | Đang chuẩn bị → Đã nộp → Trúng/Trượt | Nộp cần kế hoạch đã xong, checklist đủ, dự toán đã duyệt, Tài chính rà soát hồ sơ thầu đã duyệt |
 | 5. Hợp đồng | Kinh doanh; Kế toán theo dõi thu/chi | Bản nháp → Đã ký → Đang thực hiện → Hoàn thành (Tạm dừng, Đã huỷ) | Từ báo giá đã duyệt hoặc tạo trực tiếp khi khách đã đồng ý giá trị. Đã ký cần bản scan hợp đồng đã ký |
 | 6. Tiến độ tổng dự án | Người quản lý dự án lập; Trưởng phòng Kinh doanh (trước ký) hoặc PM (sau ký) duyệt | Nháp → chờ duyệt → phát hành | Ngày công việc phòng ban, thiết kế, thi công nằm trong mốc WBS |
-| 7. Thiết kế | Chủ nhiệm thiết kế, Chủ trì thiết kế, thành viên thiết kế | Ý tưởng → Cơ sở → Chi tiết → IFC | Mỗi giai đoạn cần revision mới nhất được khách duyệt. IFC chỉ phát hành khi Shop Drawing được khách duyệt |
+| 7. Thiết kế | Chủ nhiệm thiết kế, Chủ trì thiết kế, thành viên thiết kế | Ý tưởng → Cơ sở → Chi tiết → IFC | Mỗi giai đoạn cần revision mới nhất được khách duyệt. IFC chỉ phát hành khi bản vẽ Thiết kế chi tiết được khách duyệt |
 | 8. Pháp lý | PM/Admin kích hoạt; trưởng nhóm Pháp lý; người thực hiện và người duyệt từng giấy phép | Chưa chuẩn bị → Đang chuẩn bị → Đã nộp → Đang thẩm định → Đã cấp (Bổ sung hồ sơ, Bị từ chối, Hết hạn) | Hợp đồng thiết kế/thi công/D&B chỉ sang Đang thực hiện qua kích hoạt pháp lý. Giấy phép có hạn phải còn hiệu lực khi dùng |
 | 9. Chuẩn bị thi công | PM Phòng CM | Chuẩn bị CM → đủ điều kiện khởi công | Hợp đồng còn hiệu lực, IFC cần cho mốc khởi công đã phát hành, giấy phép bắt buộc đã cấp và còn hạn, tiến độ cơ sở đã công bố, BCH và kế hoạch nguồn lực đã duyệt, Ngân sách cơ sở đã khóa |
 | 10. Thi công | BCH thực hiện; Phòng CM kiểm soát chéo; Cung ứng; Thủ kho | Nhật ký, QA/QC, punchlist, HSE, đề xuất nguồn lực | Người lập không tự duyệt. Vật tư đi qua yêu cầu vật tư theo BOQ hợp đồng; máy/nhân công qua CM → Cung ứng ký hợp đồng và cấp → Tài chính thanh toán |
@@ -741,7 +741,7 @@ Theo dõi lịch sử revision bản vẽ, tạo revision mới kèm lý do thay
 
 Trình duyệt bản vẽ trước khi phát hành, đóng dấu điện tử "Issued For Construction", khóa bản vẽ đã phát hành, phân phối cho đội thi công và giám sát, lưu lịch sử phát hành.
 
-- Chỉ phát hành IFC khi revision Shop Drawing mới nhất đã được khách duyệt. Thi công chỉ dùng IFC đã phát hành. Hủy đợt phát hành không làm mất lịch sử.
+- Chỉ phát hành IFC khi revision Thiết kế chi tiết mới nhất đã được khách duyệt. Thi công chỉ dùng IFC đã phát hành. Hủy đợt phát hành không làm mất lịch sử.
 - Bản vẽ có tệp chính thì đúng tệp đó phải khớp bằng chứng khách đã duyệt. Tệp phụ được duyệt không thay cho tệp chính. Nếu bị chặn, thông báo chỉ rõ bản vẽ; khôi phục hoặc tải lại tệp chính, hoàn tất duyệt của khách rồi thử lại. Đợt phát hành vẫn ở Nháp.
 
 **Gửi IFC cho Cung ứng** (đã triển khai):
@@ -755,7 +755,7 @@ Xác nhận này không phải duyệt thiết kế và không tạo RFQ hay đ�
 
 - Hồ sơ đã trình khách thì không xóa vĩnh viễn được, kể cả khi khách từ chối. Sửa bằng cách ghi quyết định của khách và tạo revision thay thế.
 - Chỉ BGD hoặc SUPER_ADMIN xóa vĩnh viễn được hồ sơ thất bại/đã hủy: mở bảng ảnh hưởng, xử lý mọi vướng mắc về tệp, IFC, đợt trình dùng chung, rồi gõ đúng mã hồ sơ. Bảng ảnh hưởng hết hạn khi dữ liệu liên quan thay đổi; làm mới rồi thử lại.
-- Không xóa hàng loạt Shop Drawing; mỗi hồ sơ phải xem và xác nhận riêng.
+- Không xóa hàng loạt bản vẽ Thiết kế chi tiết; mỗi hồ sơ phải xem và xác nhận riêng.
 
 **Chưa có:** xem 3D trực tiếp, video walkthrough, ghi chú trên bản vẽ, xuất gói IFC, xem DWG trực tiếp (xem trước tùy loại tệp hỗ trợ), nhập đầy đủ MS Project.
 
@@ -1090,7 +1090,7 @@ Dự kiến: ghi thu từ chủ đầu tư, chi cho vật tư và thầu phụ; 
 
 ### 3.7 Tài liệu dự án và Google Drive
 
-Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo giá, Hợp đồng, Khảo sát, Thiết kế cơ sở, Shop Drawing, Giấy phép, Nghiệm thu, Hoàn công, Bàn giao và tệp tải trực tiếp lên dự án. Dữ liệu cũ không tự nhập vào.
+Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo giá, Hợp đồng, Khảo sát, Thiết kế cơ sở, Thiết kế chi tiết, Giấy phép, Nghiệm thu, Hoàn công, Bàn giao và tệp tải trực tiếp lên dự án. Dữ liệu cũ không tự nhập vào.
 
 **Quyền đọc.** Thành viên dự án đang hoạt động đọc được tài liệu của các phân hệ/danh mục mình có quyền xem. Là thành viên không tự thấy tài liệu Tài chính và không có quyền tải lên, xóa hay gửi lại. Kết thúc thành viên thì mất quyền đọc; chủ/quản lý dự án và người có quyền xem tất cả giữ phạm vi của mình.
 
@@ -1119,7 +1119,7 @@ Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo g
 Thư mục được tạo khi tệp đầu tiên của danh mục đồng bộ. Có 9 danh mục:
 
 - `01_Khao_sat` và `01_CRM_PreDesign` (hai thư mục ngang hàng)
-- `02_Thiet_ke` với 3 thư mục con (Ý tưởng, Cơ sở, Shop Drawing). Tạo Hồ sơ thiết kế sẽ lên lịch tạo 3 thư mục này ngay, kể cả chưa có hợp đồng hay tệp; Drive tắt thì chờ đến khi kết nối lại.
+- `02_Thiet_ke` với 3 thư mục con (Ý tưởng, Cơ sở, Chi tiết). Tạo Hồ sơ thiết kế sẽ lên lịch tạo 3 thư mục này ngay, kể cả chưa có hợp đồng hay tệp; Drive tắt thì chờ đến khi kết nối lại.
 - `03_Xin_phep_Phap_ly`
 - `04_Thi_cong_Nghiem_thu`
 - `05_Cung_ung_Vat_tu`
