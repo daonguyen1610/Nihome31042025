@@ -147,6 +147,21 @@ public class RbacSeedDataTests
         Assert.Contains(RbacSeedData.Default.BaseCatalog, e => e.Code == code);
     }
 
+    // NICON (Góp ý lập trình v2, answer 2): only system administrators change a project code.
+    [Fact]
+    public void ProjectCodeRename_IsGrantedOnlyToSystemAdministrators()
+    {
+        var bundle = RbacSeedData.Default;
+        var allCodes = bundle.BaseCatalog.Select(e => e.Code).ToList();
+        var granted = bundle.RolePermissions
+            .Where(role => PermissionCatalog.ExpandPatterns(role.Value.Patterns, allCodes, role.Value.Deny)
+                .Contains("operations.projects.rename"))
+            .Select(role => role.Key)
+            .OrderBy(code => code, StringComparer.Ordinal);
+
+        Assert.Equal(new[] { SystemRoleCodes.Admin, SystemRoleCodes.SuperAdmin }.Order(StringComparer.Ordinal), granted);
+    }
+
     [Fact]
     public void SalesManager_ExpandsToWriteAccessOnQuotesAndContracts()
     {

@@ -666,6 +666,8 @@ const OperationalProjects = () => {
                 {canRename && (
                   <Button
                     variant="outline"
+                    disabled={detail.codeLocked}
+                    aria-describedby={detail.codeLocked ? "project-code-locked" : undefined}
                     onClick={() => {
                       setRenameCode(detail.code);
                       setRenameReason("");
@@ -675,6 +677,11 @@ const OperationalProjects = () => {
                   >
                     {t("operationalProjects.rename.action")}
                   </Button>
+                )}
+                {canRename && detail.codeLocked && (
+                  <p id="project-code-locked" className="basis-full text-xs text-muted-foreground">
+                    {t("operationalProjects.rename.locked")}
+                  </p>
                 )}
               </div>
             )}

@@ -538,6 +538,48 @@ public class OperationalProjectServiceTests : IDisposable
         Assert.Empty(await _db.OperationalProjectCodeChanges.ToListAsync());
     }
 
+    // NICON (Góp ý lập trình v2, answer 2): the code changes only before gate 3, the signed contract.
+    [Theory]
+    [InlineData(ContractStatus.Draft, false)]
+    [InlineData(ContractStatus.Cancelled, false)]
+    [InlineData(ContractStatus.Signed, true)]
+    [InlineData(ContractStatus.InProgress, true)]
+    [InlineData(ContractStatus.OnHold, true)]
+    [InlineData(ContractStatus.Completed, true)]
+    public async Task RenameCodeAsync_IsLockedOnceAContractIsSigned(ContractStatus contractStatus, bool locked)
+    {
+        var created = await _service.CreateAsync(ValidCreate(), _managerId, false);
+        var project = await _db.OperationalProjects.SingleAsync(item => item.Id == created.Id);
+        project.RowVersion = BitConverter.GetBytes(1L);
+        _db.Contracts.Add(new Contract
+        {
+            ContractNumber = "HD-2026-GATE3",
+            CustomerId = _customerId,
+            OperationalProjectId = created.Id,
+            Status = contractStatus,
+        });
+        await _db.SaveChangesAsync();
+
+        Assert.Equal(locked, (await _service.GetAsync(created.Id, _managerId, false))!.CodeLocked);
+        var rename = () => _service.RenameCodeAsync(created.Id, new RenameOperationalProjectRequest
+        {
+            NewCode = "PJ-2026-GATE3",
+            Reason = "Sửa mã nhập nhầm",
+            RowVersion = CrmConcurrency.Encode(project.RowVersion),
+        }, _managerId, false);
+
+        if (!locked)
+        {
+            Assert.Equal("PJ-2026-GATE3", (await rename())!.Code);
+            return;
+        }
+        var error = await Assert.ThrowsAsync<OperationalProjectOperationException>(rename);
+        Assert.Equal("OPERATIONAL_PROJECT_CODE_LOCKED", error.Code);
+        Assert.Equal("HD-2026-GATE3", error.Parameters!["contract"]);
+        Assert.Equal(created.Code, (await _db.OperationalProjects.AsNoTracking().SingleAsync(item => item.Id == created.Id)).Code);
+        Assert.Empty(await _db.OperationalProjectCodeChanges.ToListAsync());
+    }
+
     [Fact]
     public async Task RetryDriveRenameAsync_RejectsWorkAlreadyBeingProcessed()
     {

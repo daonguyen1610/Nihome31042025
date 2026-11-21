@@ -19,7 +19,7 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
         { "SALE",       new[] { "dashboard.view", "contacts.view", "contacts.manage", "recruitment.applications.view", "profile.me.view", "crm.leads.view", "crm.leads.manage", "crm.customers.view", "crm.customers.manage", "crm.opportunities.view", "crm.opportunities.manage" },
                         new[] { "users.view", "users.manage", "content.news.manage", "processes.manage", "crm.leads.view.all", "crm.customers.view.all", "crm.opportunities.view.all" } },
         { "SALES_MANAGER", new[] { "dashboard.view", "contacts.view", "crm.leads.view", "crm.leads.manage", "crm.leads.view.all", "crm.customers.view", "crm.customers.manage", "crm.customers.view.all", "crm.opportunities.view", "crm.opportunities.manage", "crm.opportunities.view.all", "profile.me.view" },
-                        new[] { "users.view", "users.manage", "content.news.manage", "processes.manage" } },
+                        new[] { "users.view", "users.manage", "content.news.manage", "processes.manage", "operations.projects.rename" } },
         { "DESIGN",     new[] { "dashboard.view", "content.news.view", "content.news.manage", "content.projects.manage", "processes.view", "profile.me.view" },
                         new[] { "users.view", "users.manage", "processes.manage", "contacts.manage" } },
         { "PM",         new[] { "dashboard.view", "content.projects.view", "content.projects.manage", "processes.view", "processes.manage", "recruitment.applications.view", "profile.me.view" },
@@ -33,7 +33,7 @@ public class BusinessRolePermissionsTests : IntegrationTestBase
         { "WAREHOUSE",  new[] { "dashboard.view", "processes.view", "profile.me.view" },
                         new[] { "processes.manage", "users.view", "contacts.view" } },
         { "BGD",        new[] { "dashboard.view", "users.view", "content.projects.view", "processes.view", "system.audit.view", "profile.me.view" },
-                        new[] { "users.manage", "content.projects.manage", "processes.manage", "system.audit.manage" } },
+                        new[] { "users.manage", "content.projects.manage", "processes.manage", "system.audit.manage", "operations.projects.rename" } },
     };
 
     [Theory]

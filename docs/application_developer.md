@@ -1408,7 +1408,12 @@ website hay `DesignProject`. Route `/api/operational-projects` (và `/api/v1`):
 **Mã dự án.** Mã `PJ-`, `TD-`, `SV-` lấy số lớn nhất đang dùng cộng một
 (`SequentialCodes`), không đếm dòng; cấp mã dự án dùng SQL application lock theo năm
 (`OperationalProjectCodeAllocator`). `code` khi tạo được viết hoa, dài 2–40 ký tự an toàn,
-không trùng. Đổi mã sau đó cần lý do và row version, ghi lịch sử cũ/mới bất biến; liên kết
+không trùng. Đổi mã sau đó cần lý do và row version, ghi lịch sử cũ/mới bất biến, và bị
+chặn (`OPERATIONAL_PROJECT_CODE_LOCKED`, tham số `contract`) khi dự án có hợp đồng ở
+`Signed`/`InProgress`/`OnHold`/`Completed` (cổng 3, NICON Góp ý lập trình v2 câu 2); chi tiết
+dự án trả `codeLocked` để giao diện làm mờ nút. Quyền `operations.projects.rename` mặc định
+chỉ có `SUPER_ADMIN` và `ADMIN`; migration `RestrictProjectCodeRenameToAdmins` gỡ quyền này
+khỏi `SALES_MANAGER` và `BGD` trên DB đã seed. Liên kết
 giữa module không đổi vì dùng `OperationalProjectId`; thư mục Drive gốc được đổi tên (giữ
 Drive ID), trạng thái ở `latestCodeChange`. Lịch sử mã có `entityType=ProjectCode`,
 `action=Renamed`; client định danh mục lịch sử bằng cả entity type và ID. Migration

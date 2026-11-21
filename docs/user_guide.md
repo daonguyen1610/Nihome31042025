@@ -274,13 +274,13 @@ Mở **CRM → Dự án** để tạo hoặc tìm dự án trước khi làm vi�
 
 **Quyền xem và sửa.** Mặc định bạn thấy dự án mình tạo hoặc quản lý. Vai trò xem được tất cả dự án thì thấy toàn bộ danh mục. Tạo và sửa cần quyền quản lý dự án.
 
-**Đổi mã dự án** (cần quyền đổi mã dự án):
+**Đổi mã dự án** (chỉ Quản trị hệ thống, và chỉ trước khi ký hợp đồng, theo quyết định của NICON):
 
 1. Mở chi tiết dự án, chọn **Đổi mã dự án**.
 2. Nhập mã mới (2–40 ký tự) và lý do, rồi lưu.
 3. Nếu màn hình đã cũ (người khác vừa sửa), hệ thống từ chối; tải lại rồi làm lại.
 
-Nếu dự án đã có thư mục Drive, trang chi tiết hiển thị trạng thái đổi tên thư mục; lần đổi tên lỗi có thể xếp hàng chạy lại mà không tạo thư mục mới. Tìm theo mã cũ vẫn ra dự án. Dự án Hoàn thành hoặc Đã hủy phải mở lại trước khi đổi mã. Mục **Lịch sử thay đổi** cuối trang ghi mã cũ → mã mới, lý do, người đổi và thời điểm, cùng các thay đổi thành viên và phân công, mới nhất ở trên.
+Nếu dự án đã có thư mục Drive, trang chi tiết hiển thị trạng thái đổi tên thư mục; lần đổi tên lỗi có thể xếp hàng chạy lại mà không tạo thư mục mới. Tìm theo mã cũ vẫn ra dự án. Dự án Hoàn thành hoặc Đã hủy phải mở lại trước khi đổi mã. Khi dự án đã có hợp đồng ký (đã ký, đang thực hiện, tạm dừng hoặc hoàn thành), nút **Đổi mã dự án** mờ đi kèm lý do: mã đã in trên hợp đồng và hồ sơ nên không đổi nữa. Hợp đồng nháp hoặc đã hủy không khoá mã. Mục **Lịch sử thay đổi** cuối trang ghi mã cũ → mã mới, lý do, người đổi và thời điểm, cùng các thay đổi thành viên và phân công, mới nhất ở trên.
 
 **Phân công.** Khi quản lý đổi người phụ trách một phân công đang chạy, phân công cũ được đánh dấu đã bàn giao và giữ trong lịch sử; hệ thống tạo phân công mới cho người được chọn.
 
@@ -1253,7 +1253,7 @@ Trong **Quản lý vai trò**, quản trị viên:
 
 | Nghiệp vụ | Ai được làm |
 |---|---|
-| Dự án | Tạo Dự án: người có cả quyền quản lý Cơ hội và quản lý Dự án. Sửa, chuyển trạng thái: người tạo/quản lý dự án. Đổi mã: quyền riêng. Người chuyển Lead thành Cơ hội là người tạo dự án tự sinh |
+| Dự án | Tạo Dự án: người có cả quyền quản lý Cơ hội và quản lý Dự án. Sửa, chuyển trạng thái: người tạo/quản lý dự án. Đổi mã: chỉ Quản trị hệ thống, trước khi ký hợp đồng. Người chuyển Lead thành Cơ hội là người tạo dự án tự sinh |
 | Nhóm công việc | Tạo nhóm theo dự án: người phụ trách Cơ hội, PM dự án hoặc quản trị viên. Giao việc: trưởng phòng nhận việc. Cập nhật tiến độ: người thực hiện, khi nhóm đang thực hiện. Xác nhận: người xác nhận độc lập. Mở lại, xóa: người quản lý nhóm |
 | Báo giá | Kinh doanh tạo/sửa trong phạm vi cơ hội của mình; duyệt và gửi khách là quyền riêng |
 | Hợp đồng | Xem theo người phụ trách hoặc theo quyền xem toàn bộ. Chăm sóc khách hàng, email nhắc, tái ký: người quản lý hợp đồng và là người phụ trách (hoặc xem toàn bộ). Quyền Tài chính hay thành viên dự án không cho ghi chăm sóc hay gửi email nhắc |

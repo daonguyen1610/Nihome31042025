@@ -1870,5 +1870,21 @@
     "en": "Until {date}",
     "zh": "至 {date}",
     "ja": "{date} まで"
+  },
+  {
+    "key": "operationalProjects.rename.locked",
+    "category": "operationalProjects",
+    "vi": "Dự án đã ký hợp đồng nên không đổi mã được nữa. Mã dự án chỉ đổi trước khi ký hợp đồng.",
+    "en": "A contract is signed, so the project code can no longer change. The code can only change before the contract is signed.",
+    "zh": "项目合同已签署，不能再更改项目编号。项目编号只能在签署合同前更改。",
+    "ja": "契約が締結済みのため、プロジェクト番号は変更できません。番号は契約締結前のみ変更できます。"
+  },
+  {
+    "key": "operationalProjects.error.codeLocked",
+    "category": "operationalProjects",
+    "vi": "Không đổi được mã: dự án đã ký hợp đồng {contract}. Mã dự án chỉ đổi trước khi ký hợp đồng.",
+    "en": "The code was not changed: contract {contract} is signed. A project code can only change before the contract is signed.",
+    "zh": "未能更改编号：项目已签署合同 {contract}。项目编号只能在签署合同前更改。",
+    "ja": "番号を変更できません：契約 {contract} は締結済みです。プロジェクト番号は契約締結前のみ変更できます。"
   }
 ]

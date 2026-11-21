@@ -185,6 +185,7 @@ public class OperationalProjectService(
                         .Sum(milestone => milestone.PercentValue)));
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
+        response.CodeLocked = project.Contracts.Any(contract => SignedStatuses.Contains(contract.Status));
         response.BusinessSectorName =
             await BusinessSectors.NameAsync(db, project.BusinessSectorCode, requestLanguage?.Lang ?? "vi", ct);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
@@ -383,6 +384,10 @@ public class OperationalProjectService(
         return await GetAsync(id, callerUserId, canSeeAll, ct);
     }
 
+    /// <summary>A contract in one of these states has been signed: the project is past gate 3.</summary>
+    private static readonly ContractStatus[] SignedStatuses =
+        [ContractStatus.Signed, ContractStatus.InProgress, ContractStatus.OnHold, ContractStatus.Completed];
+
     public async Task<OperationalProjectResponse?> RenameCodeAsync(
         int id,
         RenameOperationalProjectRequest request,
@@ -400,6 +405,16 @@ public class OperationalProjectService(
                 "Không thể đổi mã Dự án đã hoàn thành hoặc hủy. Hãy mở lại Dự án theo quy trình trước khi đổi mã.");
         if (string.IsNullOrWhiteSpace(request.Reason) || request.Reason.Trim().Length < 3)
             throw new OperationalProjectOperationException("Lý do đổi mã Dự án phải có ít nhất 3 ký tự.");
+        // NICON (Góp ý lập trình v2, answer 2): the code changes only before gate 3, the signed contract.
+        var signed = await db.Contracts.AsNoTracking()
+            .Where(contract => contract.OperationalProjectId == id && SignedStatuses.Contains(contract.Status))
+            .Select(contract => contract.ContractNumber)
+            .FirstOrDefaultAsync(ct);
+        if (signed is not null)
+            throw new OperationalProjectOperationException(
+                $"Không đổi được mã: dự án đã ký hợp đồng {signed}. Mã dự án chỉ được đổi trước khi ký hợp đồng.",
+                "OPERATIONAL_PROJECT_CODE_LOCKED",
+                new Dictionary<string, object> { ["contract"] = signed });
 
         var newCode = await ValidateProjectCodeAsync(request.NewCode, id, ct);
         if (string.Equals(project.Code, newCode, StringComparison.Ordinal))
