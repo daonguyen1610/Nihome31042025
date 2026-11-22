@@ -12,6 +12,8 @@ export interface TimelineEntry {
   at: string;
   /** Optional extra line, e.g. a follow-up reminder date. */
   note?: string | null;
+  /** Recorded with a date and no time (a back-dated care entry): show no time. */
+  dateOnly?: boolean;
 }
 
 const dayKey = (iso: string) => formatDate(iso, "en-CA");
@@ -82,7 +84,8 @@ export const ActivityTimeline = ({
               <li key={entry.id} className="relative">
                 <span className="absolute -left-[19px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
                 <div className="text-xs text-muted-foreground">
-                  {entry.typeLabel} · {stamp(entry.at, locale)}
+                  {entry.typeLabel}
+                  {entry.dateOnly ? "" : ` · ${stamp(entry.at, locale)}`}
                   {entry.createdByName ? ` · ${entry.createdByName}` : ""}
                 </div>
                 <div className="whitespace-pre-wrap text-sm">{entry.content}</div>

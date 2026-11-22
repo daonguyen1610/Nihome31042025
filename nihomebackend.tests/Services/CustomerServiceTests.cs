@@ -434,6 +434,62 @@ public class CustomerServiceTests : IDisposable
         Assert.Equal("Site visit", response!.Content);
     }
 
+    // NICON feedback row 23: the care date is when the call or visit happened, never in the future.
+    [Fact]
+    public async Task AddActivity_RecordsAnEarlierCareDate_AndRejectsAFutureOne()
+    {
+        var sales = await SeedUserAsync();
+        SeedSource("marketing");
+        var created = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
+        var earlier = DateTime.UtcNow.Date.AddDays(-3);
+
+        var response = await _sut.AddActivityAsync(created.Id,
+            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Gọi chị Lan hỏi tiến độ", OccurredAt = earlier },
+            sales.Id, canSeeAll: false);
+
+        Assert.Equal(earlier, response!.OccurredAt);
+        await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
+            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredAt = DateTime.UtcNow.AddDays(3) },
+            sales.Id, canSeeAll: false));
+    }
+
+    // NICON feedback row 23: optional company details; an individual keeps none of them.
+    [Fact]
+    public async Task Create_KeepsCompanyOptionalDetails_OnlyForCompanies()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var company = BuildCreate(type: CustomerType.Company, name: "Công ty TNHH Thực phẩm Thái Bình");
+        company.EnglishName = "  Thai Binh Foods Co., Ltd  ";
+        company.RepresentativeBirthYear = 1975;
+        company.RepresentativeAddress = "12 Lý Bôn, Thái Bình";
+        var individual = BuildCreate(type: CustomerType.Individual, name: "Anh Hùng");
+        individual.TaxId = null;
+        individual.EnglishName = "Hung";
+        individual.RepresentativeBirthYear = 1980;
+
+        var savedCompany = await _sut.CreateAsync(company, user.Id, canManage: true);
+        var savedIndividual = await _sut.CreateAsync(individual, user.Id, canManage: true);
+
+        Assert.Equal("Thai Binh Foods Co., Ltd", savedCompany.EnglishName);
+        Assert.Equal(1975, savedCompany.RepresentativeBirthYear);
+        Assert.Equal("12 Lý Bôn, Thái Bình", savedCompany.RepresentativeAddress);
+        Assert.Null(savedIndividual.EnglishName);
+        Assert.Null(savedIndividual.RepresentativeBirthYear);
+    }
+
+    [Fact]
+    public async Task Create_RejectsARepresentativeBirthYearInTheFuture()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var req = BuildCreate(type: CustomerType.Company);
+        req.RepresentativeBirthYear = DateTime.UtcNow.Year + 1;
+
+        await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.CreateAsync(req, user.Id, canManage: true));
+        Assert.Empty(await _db.Customers.ToListAsync());
+    }
+
     // ---------------- Delete ----------------
 
     [Fact]

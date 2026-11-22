@@ -23,6 +23,14 @@ public class Customer : IConcurrencyTracked
     /// <summary>Legal representative name. Required when <see cref="Type"/> is Company.</summary>
     public string? RepresentativeName { get; set; }
 
+    /// <summary>Optional, companies only (NICON feedback row 23): may be filled in later.</summary>
+    public int? RepresentativeBirthYear { get; set; }
+
+    public string? RepresentativeAddress { get; set; }
+
+    /// <summary>The company's English name; <see cref="Name"/> is the Vietnamese one.</summary>
+    public string? EnglishName { get; set; }
+
     /// <summary>Master-data code from <c>customer_source</c> (marketing, referral, website…).</summary>
     public string SourceCode { get; set; } = string.Empty;
 

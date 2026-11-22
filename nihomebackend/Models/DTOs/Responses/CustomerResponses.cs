@@ -48,6 +48,9 @@ public class CustomerResponse
     public string? TaxId { get; set; }
     public string? Address { get; set; }
     public string? RepresentativeName { get; set; }
+    public int? RepresentativeBirthYear { get; set; }
+    public string? RepresentativeAddress { get; set; }
+    public string? EnglishName { get; set; }
     public int? LegalRepresentativeContactId { get; set; }
     public string SourceCode { get; set; } = string.Empty;
     public string? BusinessSectorCode { get; set; }

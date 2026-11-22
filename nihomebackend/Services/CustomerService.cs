@@ -164,6 +164,7 @@ public class CustomerService(
             callerUserId,
             ct);
 
+        EnsureBirthYear(request.RepresentativeBirthYear);
         var now = DateTime.UtcNow;
         // Tax id, address and representative may be filled in later; the contact person is the
         // legal representative only when one was named (contracts check this before signing).
@@ -180,6 +181,9 @@ public class CustomerService(
             TaxId = string.IsNullOrWhiteSpace(request.TaxId) ? null : request.TaxId.Trim(),
             Address = string.IsNullOrWhiteSpace(request.Address) ? null : request.Address.Trim(),
             RepresentativeName = representativeName,
+            RepresentativeBirthYear = request.Type == CustomerType.Company ? request.RepresentativeBirthYear : null,
+            RepresentativeAddress = request.Type == CustomerType.Company ? TrimOrNull(request.RepresentativeAddress) : null,
+            EnglishName = request.Type == CustomerType.Company ? TrimOrNull(request.EnglishName) : null,
             SourceCode = sourceCode,
             BusinessSectorCode = businessSectorCode,
             BusinessDetail = string.IsNullOrWhiteSpace(request.BusinessDetail) ? null : request.BusinessDetail.Trim(),
@@ -326,6 +330,11 @@ public class CustomerService(
                     previousRepresentative.FullName, callerUserId, DateTime.UtcNow, "cleared", customer.Id));
             }
         }
+        EnsureBirthYear(request.RepresentativeBirthYear);
+        var isCompany = request.Type == CustomerType.Company;
+        customer.RepresentativeBirthYear = isCompany ? request.RepresentativeBirthYear : null;
+        customer.RepresentativeAddress = isCompany ? TrimOrNull(request.RepresentativeAddress) : null;
+        customer.EnglishName = isCompany ? TrimOrNull(request.EnglishName) : null;
         customer.SourceCode = sourceCode;
         customer.BusinessSectorCode = businessSectorCode;
         customer.BusinessDetail = TrimOrNull(request.BusinessDetail);
@@ -620,8 +629,12 @@ public class CustomerService(
         var customer = await db.Customers.FirstOrDefaultAsync(c => c.Id == customerId, ct);
         if (customer is null) return null;
         if (!canSeeAll && customer.OwnerUserId != callerUserId) return null;
-        if (request.FollowUpDate < await DisplaySettings.TodayAsync(db, ct))
+        var today = await DisplaySettings.TodayAsync(db, ct);
+        if (request.FollowUpDate < today)
             throw new CustomerOperationException("Ngày nhắc gọi lại/thăm phải từ hôm nay trở đi.");
+        // The care date records when the call or visit happened (NICON feedback row 23).
+        if (request.OccurredAt.HasValue && DateOnly.FromDateTime(request.OccurredAt.Value) > today)
+            throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
 
         var activity = new CustomerActivity
         {
@@ -661,6 +674,12 @@ public class CustomerService(
     };
 
     // ---------- helpers ----------
+
+    private static void EnsureBirthYear(int? year)
+    {
+        if (year > DateTime.UtcNow.Year)
+            throw new CustomerOperationException("Năm sinh người đại diện không được sau năm hiện tại.");
+    }
 
     private static string? TrimOrNull(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -780,6 +799,9 @@ public class CustomerService(
             TaxId = customer.TaxId,
             Address = customer.Address,
             RepresentativeName = customer.RepresentativeName,
+            RepresentativeBirthYear = customer.RepresentativeBirthYear,
+            RepresentativeAddress = customer.RepresentativeAddress,
+            EnglishName = customer.EnglishName,
             LegalRepresentativeContactId = contacts?
                 .SingleOrDefault(contact => contact.IsLegalRepresentative)?.Id,
             SourceCode = customer.SourceCode,

@@ -424,6 +424,8 @@ Khi gửi duyệt giá đầu vào hoặc rà soát Tài chính, xem kỹ email 
 
 Lưu khách hàng cá nhân và doanh nghiệp, nhiều người liên hệ cho mỗi khách, thông tin pháp lý (mã số thuế, địa chỉ, người đại diện). Khách hàng liên kết với Lead, Cơ hội, Báo giá, Hợp đồng và Dự án. Trạng thái: tiềm năng, đang giao dịch, đã ký, ngừng giao dịch. Trang chi tiết có tổng quan, người liên hệ, lịch sử chăm sóc (nhắc gọi lại, nhắc thăm) và các bản ghi liên quan.
 
+Khi thêm khách hàng doanh nghiệp, **Người liên hệ chính** là người sales làm việc trực tiếp (tên, SĐT, email), tách khỏi người đại diện theo pháp luật. Các ô không bắt buộc, nhập sau được: tên tiếng Anh (tên khách hàng là tên tiếng Việt), năm sinh và địa chỉ người đại diện; năm sinh không được sau năm hiện tại. Khách hàng cá nhân không có các ô này. Khi ghi lịch sử chăm sóc, chọn **Ngày chăm sóc** (mặc định hôm nay, không chọn được ngày tương lai) để ghi lại cuộc gọi hoặc buổi thăm đã diễn ra trước đó.
+
 **Lĩnh vực kinh doanh** (không bắt buộc): chọn từ danh mục 35 lĩnh vực của NICON (dữ liệu chuẩn `business_sector`, quản trị viên chỉnh tập trung), gõ vài chữ để tìm. **Chi tiết ngành nghề** tự nhập, ví dụ "Sản xuất bao bì giấy cho ngành thực phẩm". Danh sách lọc được theo lĩnh vực; **Xuất Excel** có cả hai cột này. Lĩnh vực bị tắt trong danh mục vẫn giữ trên khách hàng đã chọn nó.
 
 Không xóa được khách hàng còn Cơ hội, Gói thầu, Hợp đồng hoặc Dự án độc lập; xử lý từng bản ghi đó trước (xem [3.4.7](#347-xóa-vĩnh-viễn)).

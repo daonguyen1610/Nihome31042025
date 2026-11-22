@@ -2916,6 +2916,10 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("CreatedByUserId")
                         .HasColumnType("int");
 
+                    b.Property<string>("EnglishName")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -2931,6 +2935,13 @@ namespace nihomebackend.Migrations
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("RepresentativeAddress")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<int?>("RepresentativeBirthYear")
+                        .HasColumnType("int");
 
                     b.Property<string>("RepresentativeName")
                         .HasMaxLength(200)
