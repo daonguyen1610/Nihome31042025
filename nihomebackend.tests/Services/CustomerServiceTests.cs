@@ -494,6 +494,31 @@ public class CustomerServiceTests : IDisposable
         Assert.Null(savedIndividual.RepresentativeBirthYear);
     }
 
+    // A different legal representative does not inherit the previous one's birth year and address.
+    [Fact]
+    public async Task ChangingTheRepresentativeContact_ClearsTheirBirthYearAndAddress()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var req = BuildCreate(type: CustomerType.Company, name: "Công ty TNHH Thực phẩm Thái Bình");
+        req.RepresentativeName = "Bà Mai";
+        req.RepresentativeBirthYear = 1975;
+        req.RepresentativeAddress = "12 Lý Bôn";
+        var created = await _sut.CreateAsync(req, user.Id, canManage: true);
+
+        await _sut.UpsertContactAsync(created.Id, new UpsertCustomerContactRequest
+        {
+            FullName = "Ông Phúc",
+            Phone = "0912345678",
+            IsLegalRepresentative = true,
+        }, user.Id, canManage: true, canSeeAll: true);
+
+        var saved = await _db.Customers.AsNoTracking().SingleAsync(item => item.Id == created.Id);
+        Assert.Equal("Ông Phúc", saved.RepresentativeName);
+        Assert.Null(saved.RepresentativeBirthYear);
+        Assert.Null(saved.RepresentativeAddress);
+    }
+
     [Fact]
     public async Task Create_RejectsARepresentativeBirthYearInTheFuture()
     {

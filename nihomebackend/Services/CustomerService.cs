@@ -332,8 +332,10 @@ public class CustomerService(
             }
         }
         var isCompany = request.Type == CustomerType.Company;
-        customer.RepresentativeBirthYear = isCompany ? request.RepresentativeBirthYear : null;
-        customer.RepresentativeAddress = isCompany ? TrimOrNull(request.RepresentativeAddress) : null;
+        // No representative, no representative details (the form sends them next to the name).
+        var hasRepresentative = customer.RepresentativeName is not null;
+        customer.RepresentativeBirthYear = isCompany && hasRepresentative ? request.RepresentativeBirthYear : null;
+        customer.RepresentativeAddress = isCompany && hasRepresentative ? TrimOrNull(request.RepresentativeAddress) : null;
         customer.EnglishName = isCompany ? TrimOrNull(request.EnglishName) : null;
         customer.SourceCode = sourceCode;
         customer.BusinessSectorCode = businessSectorCode;
@@ -532,6 +534,12 @@ public class CustomerService(
                 "Company customers must have exactly one legal representative contact.");
         }
         customer.RepresentativeName = currentRepresentative?.FullName;
+        // The birth year and address describe the representative; a different person has neither yet.
+        if (previousRepresentative?.Id != currentRepresentative?.Id)
+        {
+            customer.RepresentativeBirthYear = null;
+            customer.RepresentativeAddress = null;
+        }
         if (previousRepresentative?.Id != currentRepresentative?.Id ||
             !string.Equals(previousRepresentativeName, currentRepresentative?.FullName, StringComparison.Ordinal))
         {
@@ -644,6 +652,8 @@ public class CustomerService(
             : (DateTime?)null;
         if (request.OccurredOn is null && occurredAt > DateTime.UtcNow.AddMinutes(1))
             throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
+        if (occurredAt < EarliestCareDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+            throw new CustomerOperationException("Ngày chăm sóc phải từ 01/01/2000 trở đi.");
         // Today means now. An earlier day is stored at its midday in the display time zone so it
         // sorts within that day; shortcut: changing the display zone by 12h+ can move such entries
         // a day, store the DateOnly itself if NICON ever switches zones.
