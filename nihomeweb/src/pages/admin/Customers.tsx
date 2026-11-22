@@ -83,6 +83,11 @@ import { formatDate, formatDateTime, formatMoney, todayIsoDate } from "@/lib/dis
 import { formatTime } from "@/lib/displaySettings";
 
 const TYPES: CustomerType[] = ["Individual", "Company"];
+/** Same limits as CustomerService: earliest representative birth year and care date. */
+const EARLIEST_BIRTH_YEAR = 1900;
+const EARLIEST_CARE_DATE = "2000-01-01";
+/** This year in the display time zone, as the server checks it. */
+const currentYear = () => Number(todayIsoDate().slice(0, 4));
 const STATUSES: CustomerRelationshipStatus[] = ["Prospect", "InProgress", "Signed", "Suspended"];
 const ACTIVITY_TYPES: CustomerActivityType[] = ["Call", "Email", "Meeting", "Note"];
 
@@ -720,8 +725,8 @@ const AdminCustomers = () => {
   const handleAddActivity = async () => {
     if (!detail || !activityContent.trim()) return;
     // A typed date can bypass the picker's max; a care date is never in the future.
-    if (activityDate > todayIsoDate()) {
-      toast({ title: t("customers.validation.careDateFuture"), variant: "destructive" });
+    if (activityDate && (activityDate > todayIsoDate() || activityDate < EARLIEST_CARE_DATE)) {
+      toast({ title: t("customers.validation.careDateRange"), variant: "destructive" });
       return;
     }
     setAddingActivity(true);
@@ -1785,6 +1790,7 @@ const AdminCustomers = () => {
                               <Input
                                 id="customer-activity-date"
                                 type="date"
+                                min={EARLIEST_CARE_DATE}
                                 max={todayIsoDate()}
                                 value={activityDate || todayIsoDate()}
                                 onChange={(e) => setActivityDate(e.target.value)}
@@ -2527,8 +2533,8 @@ function CompanyOptionalFields({
             id={`${idPrefix}-rep-birth-year`}
             type="number"
             inputMode="numeric"
-            min={1900}
-            max={Number(todayIsoDate().slice(0, 4))}
+            min={EARLIEST_BIRTH_YEAR}
+            max={currentYear()}
             value={value.representativeBirthYear ?? ""}
             onChange={(e) =>
               onChange({
@@ -2569,5 +2575,5 @@ function companyOptional(
 function birthYearInvalid(form: CompanyOptionalValue & { type: CustomerType }): boolean {
   const year = form.representativeBirthYear;
   if (form.type !== "Company" || year == null) return false;
-  return !Number.isInteger(year) || year < 1900 || year > Number(todayIsoDate().slice(0, 4));
+  return !Number.isInteger(year) || year < EARLIEST_BIRTH_YEAR || year > currentYear();
 }

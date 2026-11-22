@@ -632,23 +632,34 @@ public class CustomerService(
         var today = await DisplaySettings.TodayAsync(db, ct);
         if (request.FollowUpDate < today)
             throw new CustomerOperationException("Ngày nhắc gọi lại/thăm phải từ hôm nay trở đi.");
-        // The care date records when the call or visit happened (NICON feedback row 23).
-        // The care date is when the call or visit happened, never later than today or now.
+        // The care date is when the call or visit happened (NICON feedback row 23): never later
+        // than today or now, and not before EarliestCareDate (a half-typed year such as 0026).
         if (request.OccurredOn > today)
             throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
-        var occurredAt = request.OccurredAt?.ToUniversalTime();
+        if (request.OccurredOn < EarliestCareDate)
+            throw new CustomerOperationException("Ngày chăm sóc phải từ 01/01/2000 trở đi.");
+        // A timestamp without an offset is UTC, whatever the server's own time zone is.
+        var occurredAt = request.OccurredAt is { } at
+            ? at.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(at, DateTimeKind.Utc) : at.ToUniversalTime()
+            : (DateTime?)null;
         if (request.OccurredOn is null && occurredAt > DateTime.UtcNow.AddMinutes(1))
             throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
-        if (request.OccurredOn is { } day)
+        // Today means now. An earlier day is stored at its midday in the display time zone so it
+        // sorts within that day; shortcut: changing the display zone by 12h+ can move such entries
+        // a day, store the DateOnly itself if NICON ever switches zones.
+        var dateOnly = request.OccurredOn is { } day && day < today;
+        if (dateOnly)
             occurredAt = TimeZoneInfo.ConvertTimeToUtc(
-                day.ToDateTime(new TimeOnly(12, 0)), await DisplaySettings.ZoneAsync(db, ct));
+                request.OccurredOn!.Value.ToDateTime(new TimeOnly(12, 0)), await DisplaySettings.ZoneAsync(db, ct));
+        else if (request.OccurredOn is not null)
+            occurredAt = DateTime.UtcNow;
 
         var activity = new CustomerActivity
         {
             CustomerId = customerId,
             Type = request.Type,
             OccurredAt = occurredAt ?? DateTime.UtcNow,
-            IsDateOnly = request.OccurredOn.HasValue,
+            IsDateOnly = dateOnly,
             Content = request.Content.Trim(),
             FollowUpDate = request.FollowUpDate,
             CreatedByUserId = callerUserId,
@@ -684,11 +695,14 @@ public class CustomerService(
 
     // ---------- helpers ----------
 
-    /// <summary>A company representative's birth year is from 1900 to this year (display time zone).</summary>
+    private const int EarliestBirthYear = 1900;
+    private static readonly DateOnly EarliestCareDate = new(2000, 1, 1);
+
+    /// <summary>A company representative's birth year is from EarliestBirthYear to this year (display time zone).</summary>
     private async Task EnsureBirthYearAsync(CustomerType type, int? year, CancellationToken ct)
     {
         if (type != CustomerType.Company || year is null) return;
-        if (year < 1900 || year > (await DisplaySettings.TodayAsync(db, ct)).Year)
+        if (year < EarliestBirthYear || year > (await DisplaySettings.TodayAsync(db, ct)).Year)
             throw new CustomerOperationException(
                 "Năm sinh người đại diện phải là năm từ 1900 đến năm nay, ví dụ 1975.");
     }

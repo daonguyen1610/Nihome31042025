@@ -32,7 +32,7 @@
   { "key": "customers.field.representativeBirthYear", "category": "customers", "vi": "Năm sinh người đại diện", "en": "Representative's birth year", "zh": "法人代表出生年份", "ja": "代表者の生年" },
   { "key": "customers.field.representativeAddress", "category": "customers", "vi": "Địa chỉ người đại diện", "en": "Representative's address", "zh": "法人代表地址", "ja": "代表者の住所" },
   { "key": "customers.validation.representativeBirthYear", "category": "customers", "vi": "Năm sinh người đại diện phải là năm từ 1900 đến năm nay, ví dụ 1975.", "en": "The representative's birth year must be a year from 1900 to this year, for example 1975.", "zh": "法人代表出生年份须在1900年至今年之间，例如1975。", "ja": "代表者の生年は1900年から今年までの年で入力してください（例：1975）。" },
-  { "key": "customers.validation.careDateFuture", "category": "customers", "vi": "Ngày chăm sóc không được sau hôm nay. Chọn hôm nay hoặc một ngày trước đó.", "en": "The date of contact cannot be after today. Pick today or an earlier day.", "zh": "跟进日期不能晚于今天。请选择今天或更早的日期。", "ja": "対応日は今日より後にできません。今日以前の日付を選んでください。" },
+  { "key": "customers.validation.careDateRange", "category": "customers", "vi": "Ngày chăm sóc phải từ 01/01/2000 đến hôm nay.", "en": "The date of contact must be from 01/01/2000 to today.", "zh": "跟进日期须在2000年1月1日至今天之间。", "ja": "対応日は2000年1月1日から今日までの日付にしてください。" },
   { "key": "customers.field.englishName", "category": "customers", "vi": "Tên tiếng Anh", "en": "English name", "zh": "英文名称", "ja": "英語名" },
   { "key": "customers.field.source", "category": "customers", "vi": "Nguồn", "en": "Source", "zh": "来源", "ja": "ソース" },
   { "key": "customers.field.status", "category": "customers", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "ステータス" },
