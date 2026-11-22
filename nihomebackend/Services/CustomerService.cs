@@ -332,10 +332,17 @@ public class CustomerService(
             }
         }
         var isCompany = request.Type == CustomerType.Company;
-        // No representative, no representative details (the form sends them next to the name).
-        var hasRepresentative = customer.RepresentativeName is not null;
-        customer.RepresentativeBirthYear = isCompany && hasRepresentative ? request.RepresentativeBirthYear : null;
-        customer.RepresentativeAddress = isCompany && hasRepresentative ? TrimOrNull(request.RepresentativeAddress) : null;
+        // A different representative does not inherit the previous one's birth year and address:
+        // values the form sent back unchanged are cleared; values the user re-entered are kept.
+        var birthYear = request.RepresentativeBirthYear;
+        var representativeAddress = TrimOrNull(request.RepresentativeAddress);
+        if (!string.Equals(previousRepresentativeName, customer.RepresentativeName, StringComparison.Ordinal))
+        {
+            if (birthYear == customer.RepresentativeBirthYear) birthYear = null;
+            if (representativeAddress == customer.RepresentativeAddress) representativeAddress = null;
+        }
+        customer.RepresentativeBirthYear = isCompany ? birthYear : null;
+        customer.RepresentativeAddress = isCompany ? representativeAddress : null;
         customer.EnglishName = isCompany ? TrimOrNull(request.EnglishName) : null;
         customer.SourceCode = sourceCode;
         customer.BusinessSectorCode = businessSectorCode;
@@ -652,11 +659,10 @@ public class CustomerService(
             : (DateTime?)null;
         if (request.OccurredOn is null && occurredAt > DateTime.UtcNow.AddMinutes(1))
             throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
-        if (occurredAt < EarliestCareDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
+        if (request.OccurredOn is null && occurredAt < EarliestCareDate.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc))
             throw new CustomerOperationException("Ngày chăm sóc phải từ 01/01/2000 trở đi.");
-        // Today means now. An earlier day is stored at its midday in the display time zone so it
-        // sorts within that day; shortcut: changing the display zone by 12h+ can move such entries
-        // a day, store the DateOnly itself if NICON ever switches zones.
+        // Today means now. An earlier day keeps its date (OccurredOn) and sorts at its midday in the
+        // display time zone set in Settings.
         var dateOnly = request.OccurredOn is { } day && day < today;
         if (dateOnly)
             occurredAt = TimeZoneInfo.ConvertTimeToUtc(
@@ -669,7 +675,7 @@ public class CustomerService(
             CustomerId = customerId,
             Type = request.Type,
             OccurredAt = occurredAt ?? DateTime.UtcNow,
-            IsDateOnly = dateOnly,
+            OccurredOn = dateOnly ? request.OccurredOn : null,
             Content = request.Content.Trim(),
             FollowUpDate = request.FollowUpDate,
             CreatedByUserId = callerUserId,
@@ -695,7 +701,7 @@ public class CustomerService(
         Id = activity.Id,
         Type = activity.Type,
         OccurredAt = activity.OccurredAt,
-        IsDateOnly = activity.IsDateOnly,
+        OccurredOn = activity.OccurredOn,
         Content = activity.Content,
         CreatedByUserId = activity.CreatedByUserId,
         CreatedByName = creatorName,

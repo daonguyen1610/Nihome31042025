@@ -27,8 +27,8 @@ export interface CustomerActivityResponse {
   id: number;
   type: CustomerActivityType;
   occurredAt: string;
-  /** Recorded for a day without a time. */
-  isDateOnly: boolean;
+  /** Set for an entry recorded for a day without a time: show this date. */
+  occurredOn?: string | null;
   content: string;
   createdByUserId: number;
   createdByName?: string;

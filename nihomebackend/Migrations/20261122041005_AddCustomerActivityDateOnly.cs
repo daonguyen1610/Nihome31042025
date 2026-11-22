@@ -1,4 +1,5 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+﻿using System;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
@@ -10,19 +11,18 @@ namespace nihomebackend.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "IsDateOnly",
+            migrationBuilder.AddColumn<DateOnly>(
+                name: "OccurredOn",
                 table: "customer_activities",
-                type: "bit",
-                nullable: false,
-                defaultValue: false);
+                type: "date",
+                nullable: true);
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.DropColumn(
-                name: "IsDateOnly",
+                name: "OccurredOn",
                 table: "customer_activities");
         }
     }

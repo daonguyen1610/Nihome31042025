@@ -12,7 +12,7 @@ using NihomeBackend.Data;
 namespace nihomebackend.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20261122035006_AddCustomerActivityDateOnly")]
+    [Migration("20261122041005_AddCustomerActivityDateOnly")]
     partial class AddCustomerActivityDateOnly
     {
         /// <inheritdoc />
@@ -3020,11 +3020,11 @@ namespace nihomebackend.Migrations
                     b.Property<DateOnly?>("FollowUpDate")
                         .HasColumnType("date");
 
-                    b.Property<bool>("IsDateOnly")
-                        .HasColumnType("bit");
-
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
+
+                    b.Property<DateOnly?>("OccurredOn")
+                        .HasColumnType("date");
 
                     b.Property<string>("Type")
                         .IsRequired()

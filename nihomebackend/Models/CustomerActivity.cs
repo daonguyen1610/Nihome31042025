@@ -23,10 +23,11 @@ public class CustomerActivity
     public DateOnly? FollowUpDate { get; set; }
 
     /// <summary>
-    /// Recorded for a past day without a time (NICON feedback row 23). OccurredAt then holds
-    /// midday of that day in the display time zone, so entries still sort by day.
+    /// The care date when the entry was recorded for a past day without a time (NICON feedback
+    /// row 23). It is shown as is, whatever the display time zone in Settings becomes; OccurredAt
+    /// holds midday of that day in the zone at save time so entries still sort by day.
     /// </summary>
-    public bool IsDateOnly { get; set; }
+    public DateOnly? OccurredOn { get; set; }
 
     public int CreatedByUserId { get; set; }
     public ApplicationUser CreatedBy { get; set; } = null!;

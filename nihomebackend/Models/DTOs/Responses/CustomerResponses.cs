@@ -19,8 +19,8 @@ public class CustomerActivityResponse
     public int Id { get; set; }
     public CustomerActivityType Type { get; set; }
     public DateTime OccurredAt { get; set; }
-    /// <summary>The entry has a date but no time; show only the date.</summary>
-    public bool IsDateOnly { get; set; }
+    /// <summary>Set when the entry has a date but no time; show this date, not OccurredAt.</summary>
+    public DateOnly? OccurredOn { get; set; }
     public string Content { get; set; } = string.Empty;
     public int CreatedByUserId { get; set; }
     public string? CreatedByName { get; set; }
