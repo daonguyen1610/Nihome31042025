@@ -79,7 +79,13 @@ import {
   type UpdateCustomerRequest,
   type UpsertCustomerContactRequest,
 } from "@/services/adminApi";
-import { formatDate, formatDateTime, formatMoney, todayIsoDate } from "@/lib/displaySettings";
+import {
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  isCalendarValue,
+  todayIsoDate,
+} from "@/lib/displaySettings";
 import { formatTime } from "@/lib/displaySettings";
 
 const TYPES: CustomerType[] = ["Individual", "Company"];
@@ -234,8 +240,9 @@ const AdminCustomers = () => {
   const [activityType, setActivityType] = useState<CustomerActivityType>("Call");
   const [activityContent, setActivityContent] = useState("");
   const [activityFollowUp, setActivityFollowUp] = useState("");
-  // When the call or visit happened; today unless the user records an earlier one.
-  const [activityDate, setActivityDate] = useState(() => todayIsoDate());
+  // When the call or visit happened. Empty means "now"; only an earlier day picked by the user
+  // is sent, so a page left open past midnight never back-dates an entry.
+  const [activityDate, setActivityDate] = useState("");
   const [addingActivity, setAddingActivity] = useState(false);
 
   const [documents, setDocuments] = useState<CustomerDocumentResponse[]>([]);
@@ -482,6 +489,7 @@ const AdminCustomers = () => {
     setContactForm(null);
     setActivityContent("");
     setActivityFollowUp("");
+    setActivityDate("");
     setDocuments([]);
     setDocumentsError(null);
     setOpportunities([]);
@@ -511,6 +519,10 @@ const AdminCustomers = () => {
       setCreateError(contactIssueMessage(createContactIssue));
       return;
     }
+    if (birthYearInvalid(createForm)) {
+      setCreateError(t("customers.validation.representativeBirthYear"));
+      return;
+    }
 
     setSaving(true);
     try {
@@ -521,8 +533,7 @@ const AdminCustomers = () => {
         taxId: createForm.taxId?.trim() || undefined,
         address: createForm.address?.trim() || undefined,
         representativeName: createForm.representativeName?.trim() || undefined,
-        representativeAddress: createForm.representativeAddress?.trim() || null,
-        englishName: createForm.englishName?.trim() || null,
+        ...companyOptional(createForm),
         note: createForm.note?.trim() || undefined,
         primaryContact: {
           // An individual is their own contact. A company's contact is the person
@@ -563,6 +574,10 @@ const AdminCustomers = () => {
 
   const handleSaveEdit = async () => {
     if (!detail || !editForm) return;
+    if (birthYearInvalid(editForm)) {
+      toast({ title: t("customers.validation.representativeBirthYear"), variant: "destructive" });
+      return;
+    }
     setSavingEdit(true);
     try {
       const { data } = await adminApi.updateCustomer(detail.id, {
@@ -570,8 +585,7 @@ const AdminCustomers = () => {
         taxId: editForm.taxId?.trim() || undefined,
         address: editForm.address?.trim() || undefined,
         representativeName: editForm.representativeName?.trim() || undefined,
-        representativeAddress: editForm.representativeAddress?.trim() || null,
-        englishName: editForm.englishName?.trim() || null,
+        ...companyOptional(editForm),
         note: editForm.note?.trim() || undefined,
       });
       setDetail(data);
@@ -717,14 +731,14 @@ const AdminCustomers = () => {
         type: activityType,
         content: activityContent.trim(),
         // Today keeps the exact time; an earlier day is recorded as that date.
-        occurredAt: activityDate && activityDate !== todayIsoDate() ? activityDate : undefined,
+        occurredAt: activityDate && activityDate < todayIsoDate() ? activityDate : undefined,
         followUpDate: activityFollowUp || undefined,
       });
       const { data } = await adminApi.getCustomer(detail.id);
       setDetail(data);
       setActivityContent("");
       setActivityFollowUp("");
-      setActivityDate(todayIsoDate());
+      setActivityDate("");
     } catch (err) {
       toast({
         title: t("common.error"),
@@ -1726,9 +1740,8 @@ const AdminCustomers = () => {
                               content: a.content,
                               createdByName: a.createdByName,
                               at: a.occurredAt,
-                              // A back-dated entry is stored at exactly midnight; one recorded
-                              // "now" always carries seconds, so only the former hides its time.
-                              dateOnly: /T00:00:00(\.0+)?Z?$/.test(a.occurredAt),
+                              // A back-dated entry is a bare date; one recorded "now" has a time.
+                              dateOnly: isCalendarValue(a.occurredAt),
                               note: a.followUpDate
                                 ? t("customers.activity.followUpOn", {
                                     date: formatDate(a.followUpDate),
@@ -1775,7 +1788,7 @@ const AdminCustomers = () => {
                                 id="customer-activity-date"
                                 type="date"
                                 max={todayIsoDate()}
-                                value={activityDate}
+                                value={activityDate || todayIsoDate()}
                                 onChange={(e) => setActivityDate(e.target.value)}
                                 className="h-9 w-full sm:w-44"
                               />
@@ -2539,4 +2552,24 @@ function CompanyOptionalFields({
       </div>
     </>
   );
+}
+
+/** Company-only details, sent only for companies so a value typed before switching type is dropped. */
+function companyOptional(
+  form: CompanyOptionalValue & { type: CustomerType },
+): CompanyOptionalValue {
+  if (form.type !== "Company")
+    return { englishName: null, representativeBirthYear: null, representativeAddress: null };
+  return {
+    englishName: form.englishName?.trim() || null,
+    representativeBirthYear: form.representativeBirthYear ?? null,
+    representativeAddress: form.representativeAddress?.trim() || null,
+  };
+}
+
+/** A representative's birth year is a whole year from 1900 to this year. */
+function birthYearInvalid(form: CompanyOptionalValue & { type: CustomerType }): boolean {
+  const year = form.representativeBirthYear;
+  if (form.type !== "Company" || year == null) return false;
+  return !Number.isInteger(year) || year < 1900 || year > new Date().getFullYear();
 }

@@ -151,6 +151,7 @@ public class CustomerService(
         }
 
         ValidateContactContact(request.PrimaryContact.Phone, request.PrimaryContact.Email);
+        await EnsureBirthYearAsync(request.Type, request.RepresentativeBirthYear, ct);
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
         var businessSectorCode = await ValidateBusinessSectorAsync(request.BusinessSectorCode, null, ct);
 
@@ -164,7 +165,6 @@ public class CustomerService(
             callerUserId,
             ct);
 
-        EnsureBirthYear(request.RepresentativeBirthYear);
         var now = DateTime.UtcNow;
         // Tax id, address and representative may be filled in later; the contact person is the
         // legal representative only when one was named (contracts check this before signing).
@@ -266,6 +266,7 @@ public class CustomerService(
             throw new CustomerOperationException("Chỉ Trưởng phòng Kinh doanh được giao lại Khách hàng cho người khác.");
         }
 
+        await EnsureBirthYearAsync(request.Type, request.RepresentativeBirthYear, ct);
         var sourceCode = await ValidateSourceCodeAsync(request.SourceCode, ct);
         var businessSectorCode = await ValidateBusinessSectorAsync(
             request.BusinessSectorCode, customer.BusinessSectorCode, ct);
@@ -330,7 +331,6 @@ public class CustomerService(
                     previousRepresentative.FullName, callerUserId, DateTime.UtcNow, "cleared", customer.Id));
             }
         }
-        EnsureBirthYear(request.RepresentativeBirthYear);
         var isCompany = request.Type == CustomerType.Company;
         customer.RepresentativeBirthYear = isCompany ? request.RepresentativeBirthYear : null;
         customer.RepresentativeAddress = isCompany ? TrimOrNull(request.RepresentativeAddress) : null;
@@ -633,7 +633,11 @@ public class CustomerService(
         if (request.FollowUpDate < today)
             throw new CustomerOperationException("Ngày nhắc gọi lại/thăm phải từ hôm nay trở đi.");
         // The care date records when the call or visit happened (NICON feedback row 23).
-        if (request.OccurredAt.HasValue && DateOnly.FromDateTime(request.OccurredAt.Value) > today)
+        // A bare date is a calendar day; a full timestamp must not be later than now.
+        var occurredAt = request.OccurredAt;
+        if (occurredAt.HasValue && (occurredAt.Value.TimeOfDay == TimeSpan.Zero
+                ? DateOnly.FromDateTime(occurredAt.Value) > today
+                : occurredAt.Value.ToUniversalTime() > DateTime.UtcNow.AddMinutes(1)))
             throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
 
         var activity = new CustomerActivity
@@ -675,10 +679,13 @@ public class CustomerService(
 
     // ---------- helpers ----------
 
-    private static void EnsureBirthYear(int? year)
+    /// <summary>A company representative's birth year is from 1900 to this year (display time zone).</summary>
+    private async Task EnsureBirthYearAsync(CustomerType type, int? year, CancellationToken ct)
     {
-        if (year > DateTime.UtcNow.Year)
-            throw new CustomerOperationException("Năm sinh người đại diện không được sau năm hiện tại.");
+        if (type != CustomerType.Company || year is null) return;
+        if (year < 1900 || year > (await DisplaySettings.TodayAsync(db, ct)).Year)
+            throw new CustomerOperationException(
+                "Năm sinh người đại diện phải là năm từ 1900 đến năm nay, ví dụ 1975.");
     }
 
     private static string? TrimOrNull(string? value) =>

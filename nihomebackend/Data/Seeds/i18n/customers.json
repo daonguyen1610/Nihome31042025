@@ -31,6 +31,7 @@
   { "key": "customers.field.representativeName", "category": "customers", "vi": "Người đại diện", "en": "Legal representative", "zh": "法人代表", "ja": "代表者" },
   { "key": "customers.field.representativeBirthYear", "category": "customers", "vi": "Năm sinh người đại diện", "en": "Representative's birth year", "zh": "法人代表出生年份", "ja": "代表者の生年" },
   { "key": "customers.field.representativeAddress", "category": "customers", "vi": "Địa chỉ người đại diện", "en": "Representative's address", "zh": "法人代表地址", "ja": "代表者の住所" },
+  { "key": "customers.validation.representativeBirthYear", "category": "customers", "vi": "Năm sinh người đại diện phải là năm từ 1900 đến năm nay, ví dụ 1975.", "en": "The representative's birth year must be a year from 1900 to this year, for example 1975.", "zh": "法人代表出生年份须在1900年至今年之间，例如1975。", "ja": "代表者の生年は1900年から今年までの年で入力してください（例：1975）。" },
   { "key": "customers.field.englishName", "category": "customers", "vi": "Tên tiếng Anh", "en": "English name", "zh": "英文名称", "ja": "英語名" },
   { "key": "customers.field.source", "category": "customers", "vi": "Nguồn", "en": "Source", "zh": "来源", "ja": "ソース" },
   { "key": "customers.field.status", "category": "customers", "vi": "Trạng thái", "en": "Status", "zh": "状态", "ja": "ステータス" },

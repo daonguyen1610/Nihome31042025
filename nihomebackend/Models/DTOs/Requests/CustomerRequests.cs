@@ -44,7 +44,7 @@ public class CreateCustomerRequest
     [StringLength(200)]
     public string? RepresentativeName { get; set; }
 
-    [Range(1900, 2100)]
+    /// <summary>Companies only; checked in the service (1900 to this year) with a clear message.</summary>
     public int? RepresentativeBirthYear { get; set; }
 
     [StringLength(500)]
@@ -108,7 +108,7 @@ public class UpdateCustomerRequest : IConcurrencyRequest
     [StringLength(200)]
     public string? RepresentativeName { get; set; }
 
-    [Range(1900, 2100)]
+    /// <summary>Companies only; checked in the service (1900 to this year) with a clear message.</summary>
     public int? RepresentativeBirthYear { get; set; }
 
     [StringLength(500)]
