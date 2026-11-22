@@ -152,6 +152,9 @@ public class CreateCustomerActivityRequest
     /// <summary>Optional back-dated occurrence time; defaults to now on the server.</summary>
     public DateTime? OccurredAt { get; set; }
 
+    /// <summary>Optional care date with no time (today or earlier); takes precedence over OccurredAt.</summary>
+    public DateOnly? OccurredOn { get; set; }
+
     /// <summary>Optional date to call back or visit; the author is reminded on that day.</summary>
     public DateOnly? FollowUpDate { get; set; }
 }

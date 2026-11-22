@@ -182,6 +182,43 @@ public class CustomersControllerTests : IntegrationTestBase
         (await ReadJsonAsync(res)).GetProperty("taxId").ValueKind.Should().Be(System.Text.Json.JsonValueKind.Null);
     }
 
+    // NICON feedback row 23: optional company details and a care date that is never in the future.
+    [Fact]
+    public async Task CompanyDetailsAndCareDate_AreValidatedOverHttp()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        object Company(int birthYear) => new
+        {
+            type = "Company",
+            name = "Thực phẩm Thái Bình " + Guid.NewGuid().ToString("N")[..6],
+            englishName = "Thai Binh Foods",
+            representativeBirthYear = birthYear,
+            sourceCode = "marketing",
+            primaryContact = new { fullName = "Chị Lan", phone = "0900" + Random.Shared.Next(100000, 999999) },
+        };
+
+        var badYear = await Client.PostAsJsonAsync("/api/customers", Company(1850));
+        badYear.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await badYear.Content.ReadAsStringAsync()).Should().Contain("Năm sinh người đại diện");
+
+        var created = await Client.PostAsJsonAsync("/api/customers", Company(1975));
+        created.StatusCode.Should().Be(HttpStatusCode.Created);
+        var customer = await ReadJsonAsync(created);
+        customer.GetProperty("representativeBirthYear").GetInt32().Should().Be(1975);
+        var id = customer.GetProperty("id").GetInt32();
+
+        var past = DateTime.UtcNow.AddDays(-5).ToString("yyyy-MM-dd");
+        var backdated = await Client.PostAsJsonAsync($"/api/customers/{id}/activities",
+            new { type = "Call", content = "Gọi chị Lan", occurredOn = past });
+        backdated.StatusCode.Should().Be(HttpStatusCode.Created);
+        (await ReadJsonAsync(backdated)).GetProperty("isDateOnly").GetBoolean().Should().BeTrue();
+
+        var future = await Client.PostAsJsonAsync($"/api/customers/{id}/activities",
+            new { type = "Call", content = "Sẽ gọi", occurredOn = DateTime.UtcNow.AddDays(5).ToString("yyyy-MM-dd") });
+        future.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await future.Content.ReadAsStringAsync()).Should().Contain("Ngày chăm sóc");
+    }
+
     [Fact]
     public async Task Create_DuplicateTaxId_Returns409WithoutReason()
     {

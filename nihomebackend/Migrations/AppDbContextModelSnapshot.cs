@@ -3017,6 +3017,9 @@ namespace nihomebackend.Migrations
                     b.Property<DateOnly?>("FollowUpDate")
                         .HasColumnType("date");
 
+                    b.Property<bool>("IsDateOnly")
+                        .HasColumnType("bit");
+
                     b.Property<DateTime>("OccurredAt")
                         .HasColumnType("datetime2");
 
