@@ -448,7 +448,7 @@ public class CustomerServiceTests : IDisposable
             sales.Id, canSeeAll: false);
 
         // Stored at midday of that day in the display time zone (Vietnam by default), shown date-only.
-        Assert.True(response!.IsDateOnly);
+        Assert.Equal(earlier, response!.OccurredOn);
         Assert.Equal(earlier.ToDateTime(new TimeOnly(5, 0)), response.OccurredAt);
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
             new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredOn = earlier.AddDays(6) },
@@ -460,7 +460,7 @@ public class CustomerServiceTests : IDisposable
         var today = await _sut.AddActivityAsync(created.Id,
             new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Hôm nay", OccurredOn = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7)) },
             sales.Id, canSeeAll: false);
-        Assert.False(today!.IsDateOnly);
+        Assert.Null(today!.OccurredOn);
         Assert.True(today.OccurredAt <= DateTime.UtcNow);
         // A time later today is still in the future.
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
@@ -517,6 +517,33 @@ public class CustomerServiceTests : IDisposable
         Assert.Equal("Ông Phúc", saved.RepresentativeName);
         Assert.Null(saved.RepresentativeBirthYear);
         Assert.Null(saved.RepresentativeAddress);
+    }
+
+    // Renaming the representative in the edit form drops the details sent back unchanged.
+    [Fact]
+    public async Task Update_NewRepresentativeName_DropsTheOldDetailsButKeepsNewOnes()
+    {
+        var user = await SeedUserAsync();
+        SeedSource("marketing");
+        var req = BuildCreate(type: CustomerType.Company, name: "Công ty TNHH Thực phẩm Thái Bình");
+        req.RepresentativeName = "Bà Mai";
+        req.RepresentativeBirthYear = 1975;
+        req.RepresentativeAddress = "12 Lý Bôn";
+        var created = await _sut.CreateAsync(req, user.Id, canManage: true);
+        var update = BuildUpdate();
+        update.Type = CustomerType.Company;
+        update.Name = created.Name;
+        update.OwnerUserId = user.Id;
+        update.RowVersion = created.RowVersion;
+        update.RepresentativeName = "Ông Phúc";
+        update.RepresentativeBirthYear = 1975;
+        update.RepresentativeAddress = "45 Trần Hưng Đạo";
+
+        var updated = await _sut.UpdateAsync(created.Id, update, user.Id, canManage: true, canSeeAll: true);
+
+        Assert.Equal("Ông Phúc", updated!.RepresentativeName);
+        Assert.Null(updated.RepresentativeBirthYear);
+        Assert.Equal("45 Trần Hưng Đạo", updated.RepresentativeAddress);
     }
 
     [Fact]

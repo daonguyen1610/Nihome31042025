@@ -1743,8 +1743,9 @@ const AdminCustomers = () => {
                               typeLabel: t(`customers.activity.${a.type}`),
                               content: a.content,
                               createdByName: a.createdByName,
-                              at: a.occurredAt,
-                              dateOnly: a.isDateOnly,
+                              // A date-only entry is its calendar date, whatever the display zone.
+                              at: a.occurredOn ?? a.occurredAt,
+                              dateOnly: !!a.occurredOn,
                               note: a.followUpDate
                                 ? t("customers.activity.followUpOn", {
                                     date: formatDate(a.followUpDate),

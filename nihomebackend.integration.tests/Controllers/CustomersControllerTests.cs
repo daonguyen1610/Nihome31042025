@@ -211,7 +211,7 @@ public class CustomersControllerTests : IntegrationTestBase
         var backdated = await Client.PostAsJsonAsync($"/api/customers/{id}/activities",
             new { type = "Call", content = "Gọi chị Lan", occurredOn = past });
         backdated.StatusCode.Should().Be(HttpStatusCode.Created);
-        (await ReadJsonAsync(backdated)).GetProperty("isDateOnly").GetBoolean().Should().BeTrue();
+        (await ReadJsonAsync(backdated)).GetProperty("occurredOn").GetString().Should().Be(past);
 
         var future = await Client.PostAsJsonAsync($"/api/customers/{id}/activities",
             new { type = "Call", content = "Sẽ gọi", occurredOn = DateTime.UtcNow.AddDays(5).ToString("yyyy-MM-dd") });
