@@ -234,6 +234,8 @@ const AdminCustomers = () => {
   const [activityType, setActivityType] = useState<CustomerActivityType>("Call");
   const [activityContent, setActivityContent] = useState("");
   const [activityFollowUp, setActivityFollowUp] = useState("");
+  // When the call or visit happened; today unless the user records an earlier one.
+  const [activityDate, setActivityDate] = useState(() => todayIsoDate());
   const [addingActivity, setAddingActivity] = useState(false);
 
   const [documents, setDocuments] = useState<CustomerDocumentResponse[]>([]);
@@ -439,6 +441,9 @@ const AdminCustomers = () => {
           taxId: data.taxId,
           address: data.address,
           representativeName: data.representativeName,
+          representativeBirthYear: data.representativeBirthYear ?? null,
+          representativeAddress: data.representativeAddress ?? null,
+          englishName: data.englishName ?? null,
           sourceCode: data.sourceCode,
           businessSectorCode: data.businessSectorCode ?? null,
           businessDetail: data.businessDetail ?? null,
@@ -516,6 +521,8 @@ const AdminCustomers = () => {
         taxId: createForm.taxId?.trim() || undefined,
         address: createForm.address?.trim() || undefined,
         representativeName: createForm.representativeName?.trim() || undefined,
+        representativeAddress: createForm.representativeAddress?.trim() || null,
+        englishName: createForm.englishName?.trim() || null,
         note: createForm.note?.trim() || undefined,
         primaryContact: {
           // An individual is their own contact. A company's contact is the person
@@ -563,6 +570,8 @@ const AdminCustomers = () => {
         taxId: editForm.taxId?.trim() || undefined,
         address: editForm.address?.trim() || undefined,
         representativeName: editForm.representativeName?.trim() || undefined,
+        representativeAddress: editForm.representativeAddress?.trim() || null,
+        englishName: editForm.englishName?.trim() || null,
         note: editForm.note?.trim() || undefined,
       });
       setDetail(data);
@@ -707,12 +716,15 @@ const AdminCustomers = () => {
       await adminApi.addCustomerActivity(detail.id, {
         type: activityType,
         content: activityContent.trim(),
+        // Today keeps the exact time; an earlier day is recorded as that date.
+        occurredAt: activityDate && activityDate !== todayIsoDate() ? activityDate : undefined,
         followUpDate: activityFollowUp || undefined,
       });
       const { data } = await adminApi.getCustomer(detail.id);
       setDetail(data);
       setActivityContent("");
       setActivityFollowUp("");
+      setActivityDate(todayIsoDate());
     } catch (err) {
       toast({
         title: t("common.error"),
@@ -1351,6 +1363,12 @@ const AdminCustomers = () => {
                     onChange={(e) => setCreateForm({ ...createForm, address: e.target.value })}
                   />
                 </FieldScope>
+                <CompanyOptionalFields
+                  idPrefix="create"
+                  value={createForm}
+                  onChange={(next) => setCreateForm({ ...createForm, ...next })}
+                  t={t}
+                />
                 <p className="text-xs text-muted-foreground">
                   {t("customers.companyFields.later")}
                 </p>
@@ -1615,6 +1633,28 @@ const AdminCustomers = () => {
                               </div>
                               <div className="whitespace-pre-wrap">{detail.address || "—"}</div>
                             </div>
+                            <div className="col-span-2">
+                              <div className="text-xs text-muted-foreground">
+                                {t("customers.field.englishName")}
+                              </div>
+                              <div>{detail.englishName || "—"}</div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("customers.field.representativeBirthYear")}
+                              </div>
+                              <div className="tabular-nums">
+                                {detail.representativeBirthYear ?? "—"}
+                              </div>
+                            </div>
+                            <div>
+                              <div className="text-xs text-muted-foreground">
+                                {t("customers.field.representativeAddress")}
+                              </div>
+                              <div className="whitespace-pre-wrap">
+                                {detail.representativeAddress || "—"}
+                              </div>
+                            </div>
                           </>
                         )}
                         <div>
@@ -1686,6 +1726,9 @@ const AdminCustomers = () => {
                               content: a.content,
                               createdByName: a.createdByName,
                               at: a.occurredAt,
+                              // A back-dated entry is stored at exactly midnight; one recorded
+                              // "now" always carries seconds, so only the former hides its time.
+                              dateOnly: /T00:00:00(\.0+)?Z?$/.test(a.occurredAt),
                               note: a.followUpDate
                                 ? t("customers.activity.followUpOn", {
                                     date: formatDate(a.followUpDate),
@@ -1722,6 +1765,19 @@ const AdminCustomers = () => {
                                 placeholder={t("customers.activity.title")}
                                 rows={2}
                                 className="flex-1"
+                              />
+                            </div>
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                              <Label htmlFor="customer-activity-date" className="text-xs">
+                                {t("customers.activity.occurredOn")}
+                              </Label>
+                              <Input
+                                id="customer-activity-date"
+                                type="date"
+                                max={todayIsoDate()}
+                                value={activityDate}
+                                onChange={(e) => setActivityDate(e.target.value)}
+                                className="h-9 w-full sm:w-44"
                               />
                             </div>
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
@@ -1842,6 +1898,12 @@ const AdminCustomers = () => {
                                 }
                               />
                             </FieldScope>
+                            <CompanyOptionalFields
+                              idPrefix="edit"
+                              value={editForm}
+                              onChange={(next) => setEditForm({ ...editForm, ...next })}
+                              t={t}
+                            />
                           </>
                         )}
                         <FieldScope>
@@ -2414,3 +2476,67 @@ const RelatedRow = ({
 
   return <li>{href ? <Link to={href}>{content}</Link> : content}</li>;
 };
+
+type CompanyOptionalValue = Pick<
+  CreateCustomerRequest,
+  "englishName" | "representativeBirthYear" | "representativeAddress"
+>;
+
+/**
+ * Optional company details NICON asked for (feedback row 23): the English name and the legal
+ * representative's birth year and address. All may be filled in later.
+ */
+function CompanyOptionalFields({
+  idPrefix,
+  value,
+  onChange,
+  t,
+}: {
+  idPrefix: string;
+  value: CompanyOptionalValue;
+  onChange: (next: CompanyOptionalValue) => void;
+  t: (key: string, params?: Record<string, string | number>) => string;
+}) {
+  return (
+    <>
+      <FieldScope>
+        <Label htmlFor={`${idPrefix}-english-name`}>{t("customers.field.englishName")}</Label>
+        <Input
+          id={`${idPrefix}-english-name`}
+          value={value.englishName ?? ""}
+          onChange={(e) => onChange({ englishName: e.target.value })}
+        />
+      </FieldScope>
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-[10rem_1fr]">
+        <FieldScope>
+          <Label htmlFor={`${idPrefix}-rep-birth-year`}>
+            {t("customers.field.representativeBirthYear")}
+          </Label>
+          <Input
+            id={`${idPrefix}-rep-birth-year`}
+            type="number"
+            inputMode="numeric"
+            min={1900}
+            max={new Date().getFullYear()}
+            value={value.representativeBirthYear ?? ""}
+            onChange={(e) =>
+              onChange({
+                representativeBirthYear: e.target.value ? Number(e.target.value) : null,
+              })
+            }
+          />
+        </FieldScope>
+        <FieldScope>
+          <Label htmlFor={`${idPrefix}-rep-address`}>
+            {t("customers.field.representativeAddress")}
+          </Label>
+          <Input
+            id={`${idPrefix}-rep-address`}
+            value={value.representativeAddress ?? ""}
+            onChange={(e) => onChange({ representativeAddress: e.target.value })}
+          />
+        </FieldScope>
+      </div>
+    </>
+  );
+}

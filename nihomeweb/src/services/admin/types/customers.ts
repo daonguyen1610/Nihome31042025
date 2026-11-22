@@ -71,6 +71,9 @@ export interface CustomerResponse {
   taxId?: string;
   address?: string;
   representativeName?: string;
+  representativeBirthYear?: number | null;
+  representativeAddress?: string | null;
+  englishName?: string | null;
   legalRepresentativeContactId?: number | null;
   sourceCode: string;
   businessSectorCode?: string | null;
@@ -109,6 +112,9 @@ export interface CreateCustomerRequest {
   taxId?: string;
   address?: string;
   representativeName?: string;
+  representativeBirthYear?: number | null;
+  representativeAddress?: string | null;
+  englishName?: string | null;
   sourceCode: string;
   businessSectorCode?: string | null;
   businessDetail?: string | null;
@@ -125,6 +131,9 @@ export interface UpdateCustomerRequest {
   taxId?: string;
   address?: string;
   representativeName?: string;
+  representativeBirthYear?: number | null;
+  representativeAddress?: string | null;
+  englishName?: string | null;
   sourceCode: string;
   businessSectorCode?: string | null;
   businessDetail?: string | null;

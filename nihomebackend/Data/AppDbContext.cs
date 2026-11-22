@@ -702,6 +702,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(c => c.TaxId).HasMaxLength(30);
             b.Property(c => c.Address).HasMaxLength(500);
             b.Property(c => c.RepresentativeName).HasMaxLength(200);
+            b.Property(c => c.RepresentativeAddress).HasMaxLength(500);
+            b.Property(c => c.EnglishName).HasMaxLength(200);
             b.Property(c => c.SourceCode).HasMaxLength(60).IsRequired();
             b.Property(c => c.BusinessSectorCode).HasMaxLength(60);
             b.Property(c => c.BusinessDetail).HasMaxLength(500);

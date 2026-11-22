@@ -44,6 +44,15 @@ public class CreateCustomerRequest
     [StringLength(200)]
     public string? RepresentativeName { get; set; }
 
+    [Range(1900, 2100)]
+    public int? RepresentativeBirthYear { get; set; }
+
+    [StringLength(500)]
+    public string? RepresentativeAddress { get; set; }
+
+    [StringLength(200)]
+    public string? EnglishName { get; set; }
+
     [Required]
     [StringLength(60, MinimumLength = 1)]
     public string SourceCode { get; set; } = string.Empty;
@@ -98,6 +107,15 @@ public class UpdateCustomerRequest : IConcurrencyRequest
 
     [StringLength(200)]
     public string? RepresentativeName { get; set; }
+
+    [Range(1900, 2100)]
+    public int? RepresentativeBirthYear { get; set; }
+
+    [StringLength(500)]
+    public string? RepresentativeAddress { get; set; }
+
+    [StringLength(200)]
+    public string? EnglishName { get; set; }
 
     [Required]
     [StringLength(60, MinimumLength = 1)]
