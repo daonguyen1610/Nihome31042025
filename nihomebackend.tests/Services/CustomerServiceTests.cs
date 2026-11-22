@@ -453,6 +453,15 @@ public class CustomerServiceTests : IDisposable
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
             new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredOn = earlier.AddDays(6) },
             sales.Id, canSeeAll: false));
+        // A half-typed year (0026) is refused; today means now, with a time.
+        await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
+            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Gõ dở", OccurredOn = new DateOnly(26, 11, 20) },
+            sales.Id, canSeeAll: false));
+        var today = await _sut.AddActivityAsync(created.Id,
+            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Hôm nay", OccurredOn = DateOnly.FromDateTime(DateTime.UtcNow.AddHours(7)) },
+            sales.Id, canSeeAll: false);
+        Assert.False(today!.IsDateOnly);
+        Assert.True(today.OccurredAt <= DateTime.UtcNow);
         // A time later today is still in the future.
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
             new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredAt = DateTime.UtcNow.AddHours(2).AddSeconds(7) },
