@@ -1793,7 +1793,12 @@ const AdminCustomers = () => {
                                 min={EARLIEST_CARE_DATE}
                                 max={todayIsoDate()}
                                 value={activityDate || todayIsoDate()}
-                                onChange={(e) => setActivityDate(e.target.value)}
+                                // Picking today again means "now", like leaving the field alone.
+                                onChange={(e) =>
+                                  setActivityDate(
+                                    e.target.value === todayIsoDate() ? "" : e.target.value,
+                                  )
+                                }
                                 className="h-9 w-full sm:w-44"
                               />
                             </div>

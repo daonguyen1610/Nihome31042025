@@ -924,6 +924,10 @@ OperationalProject có `SiteAddress`, `ConstructionKind` (`NewBuild`/`Renovation
 
 Customer có `BusinessSectorCode` (tuỳ chọn, mã master data `business_sector`, seed 35 lĩnh vực NICON trong `Seeds/master-data/defaults.json`) và `BusinessDetail` (tự nhập, tối đa 500 ký tự). Tạo hoặc đổi sang lĩnh vực phải đang bật; giữ nguyên lĩnh vực đã tắt vẫn lưu được. `GET /api/customers?businessSectorCode=` lọc theo lĩnh vực.
 
+Customer doanh nghiệp có thêm `EnglishName` (≤ 200), `RepresentativeBirthYear` (từ 1900 đến năm nay theo múi giờ hiển thị) và `RepresentativeAddress` (≤ 500), đều tuỳ chọn (NICON dòng 23). Khách cá nhân luôn lưu null; không có người đại diện thì năm sinh và địa chỉ cũng null, và đổi người đại diện qua upsert contact sẽ xoá hai trường này. Kiểm tra năm sinh chạy trước mọi kiểm tra khác trong create/update.
+
+`POST /api/customers/{id}/activities` nhận `occurredOn` (`DateOnly`, từ 01/01/2000 đến hôm nay) hoặc `occurredAt` (thời điểm; không kèm offset thì hiểu là UTC; không sau hiện tại, không trước 2000). `occurredOn` là hôm nay thì ghi thời điểm hiện tại; ngày trước đó lưu lúc 12:00 theo múi giờ hiển thị với `IsDateOnly = true` (migration `AddCustomerActivityDateOnly`), response trả `isDateOnly` để timeline không hiện giờ. Giới hạn: đổi múi giờ hiển thị lệch từ 12 giờ có thể làm các mục này lệch một ngày.
+
 | Method | Route | Permission | Ghi chú |
 |---|---|---|---|
 | `GET` | `/api/customers/{id}/documents` | `crm.customers.view` | Customer trong scope owner |
