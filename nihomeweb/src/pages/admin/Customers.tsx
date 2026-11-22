@@ -79,13 +79,7 @@ import {
   type UpdateCustomerRequest,
   type UpsertCustomerContactRequest,
 } from "@/services/adminApi";
-import {
-  formatDate,
-  formatDateTime,
-  formatMoney,
-  isCalendarValue,
-  todayIsoDate,
-} from "@/lib/displaySettings";
+import { formatDate, formatDateTime, formatMoney, todayIsoDate } from "@/lib/displaySettings";
 import { formatTime } from "@/lib/displaySettings";
 
 const TYPES: CustomerType[] = ["Individual", "Company"];
@@ -725,13 +719,18 @@ const AdminCustomers = () => {
 
   const handleAddActivity = async () => {
     if (!detail || !activityContent.trim()) return;
+    // A typed date can bypass the picker's max; a care date is never in the future.
+    if (activityDate > todayIsoDate()) {
+      toast({ title: t("customers.validation.careDateFuture"), variant: "destructive" });
+      return;
+    }
     setAddingActivity(true);
     try {
       await adminApi.addCustomerActivity(detail.id, {
         type: activityType,
         content: activityContent.trim(),
         // Today keeps the exact time; an earlier day is recorded as that date.
-        occurredAt: activityDate && activityDate < todayIsoDate() ? activityDate : undefined,
+        occurredOn: activityDate && activityDate < todayIsoDate() ? activityDate : undefined,
         followUpDate: activityFollowUp || undefined,
       });
       const { data } = await adminApi.getCustomer(detail.id);
@@ -1740,8 +1739,7 @@ const AdminCustomers = () => {
                               content: a.content,
                               createdByName: a.createdByName,
                               at: a.occurredAt,
-                              // A back-dated entry is a bare date; one recorded "now" has a time.
-                              dateOnly: isCalendarValue(a.occurredAt),
+                              dateOnly: a.isDateOnly,
                               note: a.followUpDate
                                 ? t("customers.activity.followUpOn", {
                                     date: formatDate(a.followUpDate),
@@ -2530,7 +2528,7 @@ function CompanyOptionalFields({
             type="number"
             inputMode="numeric"
             min={1900}
-            max={new Date().getFullYear()}
+            max={Number(todayIsoDate().slice(0, 4))}
             value={value.representativeBirthYear ?? ""}
             onChange={(e) =>
               onChange({
@@ -2571,5 +2569,5 @@ function companyOptional(
 function birthYearInvalid(form: CompanyOptionalValue & { type: CustomerType }): boolean {
   const year = form.representativeBirthYear;
   if (form.type !== "Company" || year == null) return false;
-  return !Number.isInteger(year) || year < 1900 || year > new Date().getFullYear();
+  return !Number.isInteger(year) || year < 1900 || year > Number(todayIsoDate().slice(0, 4));
 }

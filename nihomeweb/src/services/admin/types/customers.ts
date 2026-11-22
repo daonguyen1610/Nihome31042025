@@ -27,6 +27,8 @@ export interface CustomerActivityResponse {
   id: number;
   type: CustomerActivityType;
   occurredAt: string;
+  /** Recorded for a day without a time. */
+  isDateOnly: boolean;
   content: string;
   createdByUserId: number;
   createdByName?: string;
@@ -147,6 +149,8 @@ export interface CreateCustomerActivityRequest {
   type: CustomerActivityType;
   content: string;
   occurredAt?: string;
+  /** A care date with no time, today or earlier. */
+  occurredOn?: string;
   followUpDate?: string;
 }
 

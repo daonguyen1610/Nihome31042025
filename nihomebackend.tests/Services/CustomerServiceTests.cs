@@ -441,15 +441,17 @@ public class CustomerServiceTests : IDisposable
         var sales = await SeedUserAsync();
         SeedSource("marketing");
         var created = await _sut.CreateAsync(BuildCreate(), sales.Id, canManage: true);
-        var earlier = DateTime.UtcNow.Date.AddDays(-3);
+        var earlier = DateOnly.FromDateTime(DateTime.UtcNow).AddDays(-3);
 
         var response = await _sut.AddActivityAsync(created.Id,
-            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Gọi chị Lan hỏi tiến độ", OccurredAt = earlier },
+            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Gọi chị Lan hỏi tiến độ", OccurredOn = earlier },
             sales.Id, canSeeAll: false);
 
-        Assert.Equal(earlier, response!.OccurredAt);
+        // Stored at midday of that day in the display time zone (Vietnam by default), shown date-only.
+        Assert.True(response!.IsDateOnly);
+        Assert.Equal(earlier.ToDateTime(new TimeOnly(5, 0)), response.OccurredAt);
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
-            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredAt = DateTime.UtcNow.AddDays(3) },
+            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredOn = earlier.AddDays(6) },
             sales.Id, canSeeAll: false));
         // A time later today is still in the future.
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,

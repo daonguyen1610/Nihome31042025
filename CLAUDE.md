@@ -60,6 +60,57 @@ For multi-step tasks, state a brief plan:
 
 Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
+## 5. Cost-Aware Execution
+
+**Use resources proportionally to task complexity.**
+
+- Prefer focused investigation over exploring the entire codebase.
+- Read only relevant files and dependencies.
+- Avoid repeating tool calls or checks without a reason.
+- Prefer targeted tests before running the full test suite.
+- Do not sacrifice correctness or security just to save tokens.
+- Do not repeat explanations or summarize unchanged information.
+
+## 6. Adaptive Reasoning
+
+**Match reasoning effort to risk and complexity.**
+
+- Low: Simple changes, documentation, formatting,
+  straightforward fixes, and routine implementation.
+- Medium: Multi-file implementation, feature development,
+  and changes involving business logic.
+- High: Complex debugging, architectural decisions,
+  security-sensitive changes, and important PR reviews.
+- Extra High: Critical system changes or particularly
+  difficult problems requiring extensive investigation.
+
+Increase reasoning effort when new complexity or risks emerge.
+Do not use high reasoning for every routine task.
+
+## 7. Independent Code Review
+
+**Review code as if it were written by someone else.**
+
+- Do not assume implementation is correct because you wrote it.
+- Inspect the complete relevant diff.
+- Look for logic errors, security vulnerabilities,
+  race conditions, data integrity issues, and regressions.
+- Verify findings against actual code.
+- Distinguish confirmed bugs from potential risks.
+- Report findings by severity.
+- Never claim tests passed unless they were executed.
+- Do not approve changes with unresolved critical issues.
+
+## 8. Repository Instructions
+
+- Follow all applicable AGENTS.md instructions.
+- Inspect repository instructions before making changes.
+- Respect nested AGENTS.md files within their applicable directories.
+- If instructions conflict, identify the conflict and
+  resolve it according to repository guidance.
+- Do not override project-specific conventions with
+  generic preferences from this document.
+
 ---
 
 **These guidelines are working if:** fewer unnecessary changes in diffs, fewer rewrites due to overcomplication, and clarifying questions come before implementation rather than after mistakes.

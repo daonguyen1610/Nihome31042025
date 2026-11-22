@@ -22,6 +22,12 @@ public class CustomerActivity
     /// <summary>Optional date to call back or visit the customer ("nhắc gọi lại, nhắc thăm").</summary>
     public DateOnly? FollowUpDate { get; set; }
 
+    /// <summary>
+    /// Recorded for a past day without a time (NICON feedback row 23). OccurredAt then holds
+    /// midday of that day in the display time zone, so entries still sort by day.
+    /// </summary>
+    public bool IsDateOnly { get; set; }
+
     public int CreatedByUserId { get; set; }
     public ApplicationUser CreatedBy { get; set; } = null!;
 

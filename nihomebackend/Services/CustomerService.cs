@@ -633,18 +633,22 @@ public class CustomerService(
         if (request.FollowUpDate < today)
             throw new CustomerOperationException("Ngày nhắc gọi lại/thăm phải từ hôm nay trở đi.");
         // The care date records when the call or visit happened (NICON feedback row 23).
-        // A bare date is a calendar day; a full timestamp must not be later than now.
-        var occurredAt = request.OccurredAt;
-        if (occurredAt.HasValue && (occurredAt.Value.TimeOfDay == TimeSpan.Zero
-                ? DateOnly.FromDateTime(occurredAt.Value) > today
-                : occurredAt.Value.ToUniversalTime() > DateTime.UtcNow.AddMinutes(1)))
+        // The care date is when the call or visit happened, never later than today or now.
+        if (request.OccurredOn > today)
             throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
+        var occurredAt = request.OccurredAt?.ToUniversalTime();
+        if (request.OccurredOn is null && occurredAt > DateTime.UtcNow.AddMinutes(1))
+            throw new CustomerOperationException("Ngày chăm sóc không được sau hôm nay.");
+        if (request.OccurredOn is { } day)
+            occurredAt = TimeZoneInfo.ConvertTimeToUtc(
+                day.ToDateTime(new TimeOnly(12, 0)), await DisplaySettings.ZoneAsync(db, ct));
 
         var activity = new CustomerActivity
         {
             CustomerId = customerId,
             Type = request.Type,
-            OccurredAt = request.OccurredAt ?? DateTime.UtcNow,
+            OccurredAt = occurredAt ?? DateTime.UtcNow,
+            IsDateOnly = request.OccurredOn.HasValue,
             Content = request.Content.Trim(),
             FollowUpDate = request.FollowUpDate,
             CreatedByUserId = callerUserId,
@@ -670,6 +674,7 @@ public class CustomerService(
         Id = activity.Id,
         Type = activity.Type,
         OccurredAt = activity.OccurredAt,
+        IsDateOnly = activity.IsDateOnly,
         Content = activity.Content,
         CreatedByUserId = activity.CreatedByUserId,
         CreatedByName = creatorName,
