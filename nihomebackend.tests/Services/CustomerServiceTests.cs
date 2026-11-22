@@ -451,6 +451,10 @@ public class CustomerServiceTests : IDisposable
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
             new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredAt = DateTime.UtcNow.AddDays(3) },
             sales.Id, canSeeAll: false));
+        // A time later today is still in the future.
+        await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.AddActivityAsync(created.Id,
+            new CreateCustomerActivityRequest { Type = CustomerActivityType.Call, Content = "Sẽ gọi", OccurredAt = DateTime.UtcNow.AddHours(2).AddSeconds(7) },
+            sales.Id, canSeeAll: false));
     }
 
     // NICON feedback row 23: optional company details; an individual keeps none of them.
@@ -466,7 +470,8 @@ public class CustomerServiceTests : IDisposable
         var individual = BuildCreate(type: CustomerType.Individual, name: "Anh Hùng");
         individual.TaxId = null;
         individual.EnglishName = "Hung";
-        individual.RepresentativeBirthYear = 1980;
+        // A value typed before switching to Individual is ignored, not refused.
+        individual.RepresentativeBirthYear = 1880;
 
         var savedCompany = await _sut.CreateAsync(company, user.Id, canManage: true);
         var savedIndividual = await _sut.CreateAsync(individual, user.Id, canManage: true);
@@ -484,7 +489,7 @@ public class CustomerServiceTests : IDisposable
         var user = await SeedUserAsync();
         SeedSource("marketing");
         var req = BuildCreate(type: CustomerType.Company);
-        req.RepresentativeBirthYear = DateTime.UtcNow.Year + 1;
+        req.RepresentativeBirthYear = DateTime.UtcNow.Year + 2;
 
         await Assert.ThrowsAsync<CustomerOperationException>(() => _sut.CreateAsync(req, user.Id, canManage: true));
         Assert.Empty(await _db.Customers.ToListAsync());
