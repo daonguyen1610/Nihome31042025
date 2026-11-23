@@ -117,12 +117,13 @@ public sealed class WorkTaskAttachmentService(
 
     private static bool CanWrite(DepartmentWorkPackageResponse package,
         DepartmentWorkTaskResponse task, int callerId) =>
-        package.Status is not ("Completed" or "Cancelled") && task.Status != "Cancelled" &&
+        package.Status is not ("Completed" or "Cancelled") &&
+        task.Status is not ("Cancelled" or "Disabled") &&
         (package.CanAssignTasks || task.CanUpdateProgress);
 
     private static bool CanDelete(DepartmentWorkPackageResponse package,
         DepartmentWorkTaskResponse task, int callerId) =>
-        package.CanAssignTasks || task.CanDelete;
+        package.CanAssignTasks || task.CanDeleteAttachments || CanWrite(package, task, callerId);
 
     private static DepartmentWorkTaskAttachmentResponse Map(DepartmentWorkTaskAttachment item) =>
         new(item.Id, item.WorkTaskId, item.OriginalFileName, item.FileSize, item.CreatedAt);

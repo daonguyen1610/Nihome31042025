@@ -120,6 +120,11 @@ public sealed class VerifyDepartmentWorkTaskRequest : IConcurrencyRequest
     public string? RowVersion { get; set; }
 }
 
+public sealed class RestoreDepartmentWorkTaskRequest : IConcurrencyRequest
+{
+    public string? RowVersion { get; set; }
+}
+
 public sealed class DepartmentWorkPackageQuery
 {
     public string? Kind { get; set; }

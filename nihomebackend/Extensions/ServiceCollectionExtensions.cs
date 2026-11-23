@@ -281,6 +281,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IManagedFileReferenceProvider, ManagedFileReferenceProvider>();
         services.AddScoped<IOrphanedManagedFileCleanupService, OrphanedManagedFileCleanupService>();
         services.AddHostedService<OrphanedManagedFileCleanupWorker>();
+        services.AddHostedService<DisabledWorkTaskRetentionWorker>();
         services.AddHostedService<VendorDocumentUploadCleanupWorker>();
         services.AddHostedService<UploadSessionCleanupWorker>();
         services.AddHostedService<ProjectDriveSyncService>();

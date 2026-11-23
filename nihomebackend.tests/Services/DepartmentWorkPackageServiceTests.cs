@@ -7,6 +7,7 @@ using Moq;
 using NihomeBackend.Data;
 using NihomeBackend.Models;
 using NihomeBackend.Models.DTOs.Requests;
+using NihomeBackend.Models.DTOs.Responses;
 using NihomeBackend.Models.Rbac;
 using NihomeBackend.Services;
 using nihomebackend.tests.Helpers;
@@ -21,6 +22,7 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     private readonly DepartmentWorkPackageService _service;
     private readonly Mock<IEmailService> _email = new();
     private readonly Mock<IPermissionService> _permissions = new();
+    private readonly Mock<IBusinessDocumentStorageService> _taskStorage = new();
     private readonly WorkPackageApprovalEmailService _approvalEmails;
     private readonly RoleGroup _procurementGroup;
     private readonly RoleGroup _crmGroup;
@@ -76,7 +78,8 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
             _email.Object, NullLogger<WorkPackageApprovalEmailService>.Instance,
             TestHttpContext.ServedFrom("https://nicon.example.test"));
         _service = new DepartmentWorkPackageService(
-            _db, _access.Object, _notifications.Object, NullLogger<DepartmentWorkPackageService>.Instance, _approvalEmails);
+            _db, _access.Object, _notifications.Object, NullLogger<DepartmentWorkPackageService>.Instance, _approvalEmails,
+            _taskStorage.Object);
     }
 
     [Fact]
@@ -697,6 +700,336 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
         Assert.Equal(WorkTaskStatus.Cancelled,
             (await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == verifiedChild.Id)).Status);
     }
+
+    [Fact]
+    public async Task DisablingParentTask_DisablesDescendantsAndRestoreRecoversPriorStatuses()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-12"), _procurementLead.Id);
+        var child = await _service.AddTaskAsync(package.Id, new UpsertDepartmentWorkTaskRequest
+        {
+            ParentTaskId = parent.Id,
+            WbsCode = "SUP-12.1",
+            Title = "Kiểm tra vật tư đầu vào",
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
+        }, _procurementLead.Id);
+        var storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        storedChild.Status = WorkTaskStatus.Cancelled;
+        await _db.SaveChangesAsync();
+
+        Assert.True(await _service.DisableTaskAsync(package.Id, parent.Id, parent.RowVersion, _warehouseStaff.Id));
+        var disabledTasks = await _db.DepartmentWorkTasks.Where(task => task.WorkPackageId == package.Id).ToListAsync();
+        Assert.All(disabledTasks, task => Assert.Equal(WorkTaskStatus.Disabled, task.Status));
+        Assert.All(disabledTasks, task => Assert.Equal(parent.Id, task.DisabledRootTaskId));
+
+        Assert.True(await _service.RestoreTaskAsync(package.Id, parent.Id,
+            CrmConcurrency.Encode((await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id)).RowVersion),
+            _warehouseStaff.Id));
+        Assert.Equal(WorkTaskStatus.Planned,
+            (await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id)).Status);
+        var restoredChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        Assert.Equal(WorkTaskStatus.Cancelled, restoredChild.Status);
+        Assert.Null(restoredChild.DisabledAt);
+        Assert.Null(restoredChild.DisabledRootTaskId);
+    }
+
+    [Fact]
+    public async Task RestoreDisabledTask_RejectsAfterThirtyDays()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-13"), _procurementLead.Id);
+        var stored = await _db.DepartmentWorkTasks.SingleAsync(item => item.Id == task.Id);
+        stored.Status = WorkTaskStatus.Disabled;
+        stored.DisabledAt = DateTime.UtcNow.AddDays(-31);
+        stored.DisabledByUserId = _warehouseStaff.Id;
+        stored.DisabledRootTaskId = task.Id;
+        stored.StatusBeforeDisabled = WorkTaskStatus.Planned;
+        await _db.SaveChangesAsync();
+
+        var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.RestoreTaskAsync(package.Id, task.Id, CrmConcurrency.Encode(stored.RowVersion), _warehouseStaff.Id));
+
+        Assert.Contains("30 ngày", error.Message);
+        Assert.Equal(WorkTaskStatus.Disabled,
+            (await _db.DepartmentWorkTasks.SingleAsync(item => item.Id == task.Id)).Status);
+    }
+
+    [Fact]
+    public async Task PurgeExpiredDisabledTask_RemovesTheTreeAfterRetentionPeriod()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-14"), _procurementLead.Id);
+        var stored = await _db.DepartmentWorkTasks.SingleAsync(item => item.Id == task.Id);
+        stored.Status = WorkTaskStatus.Disabled;
+        stored.DisabledAt = DateTime.UtcNow.AddDays(-31);
+        stored.DisabledByUserId = _warehouseStaff.Id;
+        stored.DisabledRootTaskId = task.Id;
+        stored.StatusBeforeDisabled = WorkTaskStatus.Planned;
+        await _db.SaveChangesAsync();
+
+        var purged = await _service.PurgeExpiredDisabledTasksAsync(DateTime.UtcNow);
+
+        Assert.Equal(1, purged);
+        Assert.False(await _db.DepartmentWorkTasks.AnyAsync(item => item.Id == task.Id));
+        Assert.Contains(await _db.DepartmentWorkPackageHistory.Where(item => item.WorkPackageId == package.Id).ToListAsync(),
+            item => item.Action == "PermanentlyDeletedAfterRetention");
+    }
+
+    [Fact]
+    public async Task CancellingParentTask_KeepsDisabledSubtreeRetained()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-20"), _procurementLead.Id);
+        var openChild = await AddChildAsync(package.Id, parent.Id, "SUP-20.1", "Đối chiếu khối lượng vật tư");
+        var disabledChild = await AddChildAsync(package.Id, parent.Id, "SUP-20.2", "Hồ sơ vật tư đã hủy");
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var disabledView = detail!.Tasks.Single(task => task.Id == disabledChild.Id);
+        Assert.True(await _service.DisableTaskAsync(package.Id, disabledChild.Id, disabledView.RowVersion,
+            _procurementLead.Id));
+
+        detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var parentView = detail!.Tasks.Single(task => task.Id == parent.Id);
+        await _service.UpdateProgressAsync(package.Id, parent.Id, new UpdateDepartmentWorkTaskProgressRequest
+        {
+            Status = "Cancelled",
+            ProgressPercent = 0,
+            RowVersion = parentView.RowVersion,
+        }, _procurementLead.Id);
+
+        var storedDisabled = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == disabledChild.Id);
+        Assert.Equal(WorkTaskStatus.Disabled, storedDisabled.Status);
+        Assert.NotNull(storedDisabled.DisabledAt);
+        Assert.Equal(disabledChild.Id, storedDisabled.DisabledRootTaskId);
+        Assert.Equal(WorkTaskStatus.Planned, storedDisabled.StatusBeforeDisabled);
+        Assert.Equal(WorkTaskStatus.Cancelled,
+            (await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id)).Status);
+        Assert.Equal(WorkTaskStatus.Cancelled,
+            (await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == openChild.Id)).Status);
+    }
+
+    [Fact]
+    public async Task CompletingParentTask_ChecksTheParentsOwnPredecessors()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var predecessor = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-30"), _procurementLead.Id);
+        var parentRequest = TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-31");
+        parentRequest.PredecessorTaskIds = [predecessor.Id];
+        var parent = await _service.AddTaskAsync(package.Id, parentRequest, _procurementLead.Id);
+        var child = await AddChildAsync(package.Id, parent.Id, "SUP-31.1", "Kiểm tra hồ sơ thanh toán");
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        var storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        storedChild.Status = WorkTaskStatus.InProgress;
+        storedChild.ProgressPercent = 25;
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var parentView = detail!.Tasks.Single(task => task.Id == parent.Id);
+        var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateProgressAsync(package.Id, parent.Id, new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                ConfirmSubtasksCompletion = true,
+                RowVersion = parentView.RowVersion,
+            }, _procurementLead.Id));
+        Assert.Contains("tiên quyết", error.Message);
+
+        var predecessorView = detail.Tasks.Single(task => task.Id == predecessor.Id);
+        await _service.UpdateProgressAsync(package.Id, predecessor.Id, new UpdateDepartmentWorkTaskProgressRequest
+        {
+            Status = "Completed",
+            ProgressPercent = 100,
+            RowVersion = predecessorView.RowVersion,
+        }, _warehouseStaff.Id);
+
+        detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        parentView = detail!.Tasks.Single(task => task.Id == parent.Id);
+        var completed = await _service.UpdateProgressAsync(package.Id, parent.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                ConfirmSubtasksCompletion = true,
+                RowVersion = parentView.RowVersion,
+            }, _procurementLead.Id);
+
+        Assert.Equal("Completed", completed!.Status);
+    }
+
+    [Fact]
+    public async Task DisabledPredecessor_DoesNotBlockTheDependentTask()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var predecessor = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-40"), _procurementLead.Id);
+        var dependentRequest = TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-41");
+        dependentRequest.PredecessorTaskIds = [predecessor.Id];
+        var dependent = await _service.AddTaskAsync(package.Id, dependentRequest, _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var predecessorView = detail!.Tasks.Single(task => task.Id == predecessor.Id);
+        Assert.True(await _service.DisableTaskAsync(package.Id, predecessor.Id, predecessorView.RowVersion,
+            _procurementLead.Id));
+
+        detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var dependentView = detail!.Tasks.Single(task => task.Id == dependent.Id);
+        Assert.Empty(dependentView.BlockingPredecessorTaskIds);
+        var started = await _service.UpdateProgressAsync(package.Id, dependent.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "InProgress",
+                ProgressPercent = 10,
+                RowVersion = dependentView.RowVersion,
+            }, _warehouseStaff.Id);
+
+        Assert.Equal("InProgress", started!.Status);
+    }
+
+    [Fact]
+    public async Task DisablingTheLastActiveSubtask_KeepsTheParentStatusAndProgress()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-50"), _procurementLead.Id);
+        var child = await AddChildAsync(package.Id, parent.Id, "SUP-50.1", "Đóng gói hồ sơ vật tư");
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        var storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        storedChild.Status = WorkTaskStatus.InProgress;
+        storedChild.ProgressPercent = 40;
+        await _db.SaveChangesAsync();
+
+        var detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var childView = detail!.Tasks.Single(task => task.Id == child.Id);
+        await _service.UpdateProgressAsync(package.Id, child.Id, new UpdateDepartmentWorkTaskProgressRequest
+        {
+            Status = "InProgress",
+            ProgressPercent = 40,
+            RowVersion = childView.RowVersion,
+        }, _warehouseStaff.Id);
+        var parentBefore = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id);
+        Assert.Equal(WorkTaskStatus.InProgress, parentBefore.Status);
+        Assert.Equal(40, parentBefore.ProgressPercent);
+
+        detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        childView = detail!.Tasks.Single(task => task.Id == child.Id);
+        Assert.True(await _service.DisableTaskAsync(package.Id, child.Id, childView.RowVersion,
+            _procurementLead.Id));
+
+        var parentAfter = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id);
+        Assert.Equal(WorkTaskStatus.InProgress, parentAfter.Status);
+        Assert.Equal(40, parentAfter.ProgressPercent);
+    }
+
+    [Fact]
+    public async Task RestoringDisabledTask_RejectsWhenTenderIsFinalized()
+    {
+        var tender = new Tender
+        {
+            Code = "TD-RESTORE-001",
+            Name = "Gói thầu nhà máy NICON",
+            CustomerId = _project.CustomerId,
+            OperationalProjectId = _project.Id,
+            PreparerUserId = _sales.Id,
+            CreatedByUserId = _sales.Id,
+            SubmissionDeadline = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Tenders.Add(tender);
+        await _db.SaveChangesAsync();
+        var request = ProjectRequest();
+        request.Purpose = "TenderPlanning";
+        request.SourceTenderId = tender.Id;
+        var package = await _service.CreateAsync(request, _sales.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "TD-01"), _procurementLead.Id);
+        var detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var taskView = detail!.Tasks.Single(item => item.Id == task.Id);
+        Assert.True(await _service.DisableTaskAsync(package.Id, task.Id, taskView.RowVersion,
+            _procurementLead.Id));
+        tender.Status = TenderStatus.Won;
+        await _db.SaveChangesAsync();
+
+        detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        taskView = detail!.Tasks.Single(item => item.Id == task.Id);
+        var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.RestoreTaskAsync(package.Id, task.Id, taskView.RowVersion, _procurementLead.Id));
+
+        Assert.Contains("kết quả cuối", error.Message);
+        Assert.Equal(WorkTaskStatus.Disabled,
+            (await _db.DepartmentWorkTasks.SingleAsync(item => item.Id == task.Id)).Status);
+    }
+
+    [Fact]
+    public async Task Detail_HidesDisableWhenTheTreeHasADisabledSubtree()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-60"), _procurementLead.Id);
+        var child = await AddChildAsync(package.Id, parent.Id, "SUP-60.1", "Kiểm tra chứng từ vật tư");
+
+        var detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        var childView = detail!.Tasks.Single(task => task.Id == child.Id);
+        Assert.True(await _service.DisableTaskAsync(package.Id, child.Id, childView.RowVersion,
+            _procurementLead.Id));
+
+        detail = await _service.GetAsync(package.Id, _pm.Id, canViewAll: true);
+        Assert.False(detail!.Tasks.Single(task => task.Id == parent.Id).CanDisable);
+        Assert.True(detail.Tasks.Single(task => task.Id == child.Id).CanRestore);
+    }
+
+    [Fact]
+    public async Task Assignee_CanDeleteAttachmentOnAnActiveTask()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-70"), _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        var attachment = new DepartmentWorkTaskAttachment
+        {
+            WorkTaskId = task.Id,
+            Path = "/files/business-documents/work-tasks/bien-ban-vat-tu.pdf",
+            OriginalFileName = "bien-ban-vat-tu.pdf",
+            FileSize = 128,
+            ContentType = "application/pdf",
+            CreatedByUserId = _warehouseStaff.Id,
+        };
+        _db.DepartmentWorkTaskAttachments.Add(attachment);
+        await _db.SaveChangesAsync();
+        _taskStorage.Setup(storage => storage.Delete(attachment.Path, BusinessDocumentArea.WorkTasks))
+            .Returns(true);
+        var attachments = new WorkTaskAttachmentService(_db, _service, _taskStorage.Object,
+            NullLogger<WorkTaskAttachmentService>.Instance);
+
+        Assert.True(await attachments.DeleteAsync(package.Id, task.Id, attachment.Id,
+            _warehouseStaff.Id, canViewAll: false, default));
+        Assert.NotNull((await _db.DepartmentWorkTaskAttachments
+            .SingleAsync(item => item.Id == attachment.Id)).StorageDeletedAt);
+    }
+
+    private async Task<DepartmentWorkTaskResponse> AddChildAsync(
+        int packageId, int parentId, string wbsCode, string title) =>
+        await _service.AddTaskAsync(packageId, new UpsertDepartmentWorkTaskRequest
+        {
+            ParentTaskId = parentId,
+            WbsCode = wbsCode,
+            Title = title,
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
+        }, _procurementLead.Id);
 
     [Theory]
     [InlineData(WorkTaskStatus.Completed, 100)]

@@ -21,7 +21,10 @@ public interface IDepartmentWorkPackageService
     Task<DeletionImpactResponse?> GetDeletionImpactAsync(int id, int callerUserId, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default);
     Task<DeletionImpactResponse?> GetTaskDeletionImpactAsync(int packageId, int taskId, int callerUserId, CancellationToken ct = default);
-    Task<bool> DeleteTaskAsync(int packageId, int taskId, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default);
+    Task<bool> DisableTaskAsync(int packageId, int taskId, string? rowVersion, int callerUserId, CancellationToken ct = default);
+    Task<bool> RestoreTaskAsync(int packageId, int taskId, string? rowVersion, int callerUserId, CancellationToken ct = default);
+    Task<bool> PermanentlyDeleteTaskAsync(int packageId, int taskId, ConfirmDeletionRequest request, int callerUserId, CancellationToken ct = default);
+    Task<int> PurgeExpiredDisabledTasksAsync(DateTime utcNow, CancellationToken ct = default);
     Task<List<DepartmentOptionResponse>> DepartmentsAsync(CancellationToken ct = default);
     Task<ContractWorkProgress> GetContractProgressAsync(int contractId, int callerUserId, bool canViewAll, CancellationToken ct = default);
     Task<DepartmentWorkPackageListResponse> ListAsync(DepartmentWorkPackageQuery query, int callerUserId, bool canViewAll, CancellationToken ct = default);

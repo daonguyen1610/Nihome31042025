@@ -165,8 +165,52 @@ public sealed class DepartmentWorkPackagesController(
 
     [HttpDelete("{id:int}/tasks/{taskId:int}")]
     [RequirePermission("work.packages", "progress")]
-    [Idempotency("work.packages.tasks.delete", requireKey: true)]
-    public async Task<IActionResult> DeleteTask(
+    [Idempotency("work.packages.tasks.disable", requireKey: true)]
+    public async Task<IActionResult> DisableTask(
+        int id, int taskId, [FromBody] RestoreDepartmentWorkTaskRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            if (!await service.DisableTaskAsync(id, taskId, request.RowVersion, userId.Value, ct)) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "work-task.disable",
+                ResourceType = EntityTypes.DepartmentWorkTask,
+                ResourceId = taskId.ToString(),
+                Message = $"Work task #{taskId} and its subtasks disabled."
+            });
+            return NoContent();
+        }
+        catch (DepartmentWorkPackageScopeException) { return NotFound(); }
+        catch (DepartmentWorkPackageOperationException exception) { return BadRequest(new { message = exception.Message, code = exception.Code }); }
+        catch (DeletionPlanChangedException exception) { return Conflict(new { message = exception.Message }); }
+    }
+
+    [HttpPost("{id:int}/tasks/{taskId:int}/restore")]
+    [RequirePermission("work.packages", "progress")]
+    [Idempotency("work.packages.tasks.restore", requireKey: true)]
+    public async Task<IActionResult> RestoreTask(
+        int id, int taskId, [FromBody] RestoreDepartmentWorkTaskRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            if (!await service.RestoreTaskAsync(id, taskId, request.RowVersion, userId.Value, ct)) return NotFound();
+            return NoContent();
+        }
+        catch (DepartmentWorkPackageScopeException) { return NotFound(); }
+        catch (DepartmentWorkPackageOperationException exception) { return BadRequest(new { message = exception.Message, code = exception.Code }); }
+    }
+
+    [HttpDelete("{id:int}/tasks/{taskId:int}/permanent")]
+    [RequirePermission("work.packages", "progress")]
+    [Idempotency("work.packages.tasks.permanent-delete", requireKey: true)]
+    public async Task<IActionResult> PermanentlyDeleteTask(
         int id, int taskId, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
     {
         var userId = GetUserId();
@@ -174,13 +218,13 @@ public sealed class DepartmentWorkPackagesController(
         request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
         try
         {
-            if (!await service.DeleteTaskAsync(id, taskId, request, userId.Value, ct)) return NotFound();
+            if (!await service.PermanentlyDeleteTaskAsync(id, taskId, request, userId.Value, ct)) return NotFound();
             audit.Log(new AuditEvent
             {
-                Action = "work-task.delete",
+                Action = "work-task.permanent-delete",
                 ResourceType = EntityTypes.DepartmentWorkTask,
                 ResourceId = taskId.ToString(),
-                Message = $"Work task #{taskId} and its subtasks permanently deleted."
+                Message = $"Disabled work task #{taskId} and its subtasks permanently deleted."
             });
             return NoContent();
         }
