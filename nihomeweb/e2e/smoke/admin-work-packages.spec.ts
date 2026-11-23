@@ -85,7 +85,8 @@ test("ordinary task accepts multiple private attachments on mobile and tablet", 
     await page.setViewportSize({ width: 390, height: 844 });
     await page.goto(`/admin/work-packages/${workPackage.id}`);
     const row = page.getByTestId("work-task-row").filter({ hasText: task.title });
-    await row.getByRole("button", { name: /^(Sửa|Edit)$/i }).click();
+    await row.getByRole("button", { name: /^(Thao tác|Actions)$/i }).click();
+    await page.getByRole("menuitem", { name: /^(Sửa|Edit)$/i }).click();
     const form = page.getByRole("dialog");
     await form.locator('input[type="file"]').setInputFiles([
       {
@@ -98,9 +99,18 @@ test("ordinary task accepts multiple private attachments on mobile and tablet", 
         mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         buffer: Buffer.from("NICON material record"),
       },
+      {
+        name: "ban-ve-dien.png",
+        mimeType: "image/png",
+        buffer: Buffer.from(
+          "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2n1cAAAAASUVORK5CYII=",
+          "base64",
+        ),
+      },
     ]);
     await expect(form).toContainText("ban-ve-dien.pdf");
     await expect(form).toContainText("bien-ban-vat-tu.xlsx");
+    await expect(form).toContainText("ban-ve-dien.png");
     await form.getByRole("button", { name: /Lưu thay đổi|Save changes/i }).click();
     await expect(form).toHaveCount(0);
 
@@ -108,6 +118,7 @@ test("ordinary task accepts multiple private attachments on mobile and tablet", 
     const attachmentDialog = page.getByRole("dialog");
     await expect(attachmentDialog).toContainText("ban-ve-dien.pdf");
     await expect(attachmentDialog).toContainText("bien-ban-vat-tu.xlsx");
+    await expect(attachmentDialog).toContainText("ban-ve-dien.png");
     for (const width of [390, 768]) {
       await page.setViewportSize({ width, height: 900 });
       expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(
@@ -120,12 +131,21 @@ test("ordinary task accepts multiple private attachments on mobile and tablet", 
         })
         .toBe(true);
     }
+    const imageRow = attachmentDialog.locator("li").filter({ hasText: "ban-ve-dien.png" });
+    await imageRow.getByRole("button", { name: /Xem trước|Preview/i }).click();
+    const previewDialog = page.getByRole("dialog").last();
+    await expect(previewDialog.getByRole("img", { name: "ban-ve-dien.png" })).toBeVisible();
+    await previewDialog
+      .getByRole("button", { name: /^(Đóng|Close)$/i })
+      .last()
+      .click();
+    await expect(attachmentDialog).toBeVisible();
     const attachments = await (
       await api.get(`/api/work-packages/${workPackage.id}/tasks/${task.id}/attachments`, {
         headers,
       })
     ).json();
-    expect(attachments).toHaveLength(2);
+    expect(attachments).toHaveLength(3);
   } finally {
     const detail = await api.get(`/api/work-packages/${workPackage.id}`, { headers });
     if (detail.ok()) {
@@ -279,8 +299,9 @@ for (const width of [390, 768])
       await expect(rows.nth(1)).toContainText("Kiểm tra khối lượng vật tư");
       await rows
         .nth(0)
-        .getByRole("button", { name: /Thêm công việc con|Add subtask/ })
+        .getByRole("button", { name: /^(Thao tác|Actions)$/i })
         .click();
+      await page.getByRole("menuitem", { name: /Thêm công việc con|Add subtask/ }).click();
       const addTaskDialog = page.getByRole("dialog");
       await expect(addTaskDialog).toContainText("VT-01");
       await addTaskDialog.getByRole("button", { name: /Hủy|Huỷ|Cancel/ }).click();
@@ -514,7 +535,11 @@ test("editing a task excludes descendants from predecessor choices", async ({
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "vi"));
   await page.setViewportSize({ width: 768, height: 900 });
   await page.goto(`/admin/work-packages/${packageId}`);
-  await page.locator(`#task-${task!.id}`).getByRole("button", { name: "Sửa" }).click();
+  await page
+    .locator(`#task-${task!.id}`)
+    .getByRole("button", { name: /^(Thao tác|Actions)$/ })
+    .click();
+  await page.getByRole("menuitem", { name: /^(Sửa|Edit)$/ }).click();
   const dialog = page.getByRole("dialog");
   await expect(dialog.getByText(`${descendant.wbsCode} · ${descendant.title}`)).toHaveCount(0);
   await expect(dialog.getByText("Người theo dõi (CC)")).toBeVisible();

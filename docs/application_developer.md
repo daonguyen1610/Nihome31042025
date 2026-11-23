@@ -1513,13 +1513,27 @@ hai khi chưa có backfill, quy tắc unique, chính sách xung đột, rehearsa
   cập nhật tiến độ. Request cũ bỏ `parentTaskId` không gỡ liên kết.
 - Phụ thuộc trong cùng gói, không vòng; bắt đầu tiến độ cần gói Active và task trước đã
   xong. Tiến độ người được giao đơn điệu tăng; hủy là trạng thái kết thúc. Gói và lịch
-  sử snapshot commit cùng transaction.
+  sử snapshot commit cùng transaction. Hoàn thành task cha kiểm tra cả tiền nhiệm của
+  chính task cha, không chỉ của các task con được hoàn thành cùng. Task `Disabled`
+  không chặn tiền nhiệm và không có trong danh sách chọn tiền nhiệm.
+- Xóa task là vô hiệu hóa mềm: cả cây chuyển sang `Disabled`, lưu trạng thái
+  trước đó và người/thời điểm thao tác. Chỉ gốc cây mở được thao tác khôi phục;
+  khôi phục trong 30 ngày trả từng task về trạng thái cũ. Worker chạy mỗi giờ,
+  xóa cứng cây đã hết hạn sau khi dọn tệp; lỗi dọn tệp giữ nguyên cây để thử lại.
+  Có thể yêu cầu xóa vĩnh viễn sớm ở cây `Disabled` sau khi xem ảnh hưởng và
+  xác nhận mã, plan token, rowVersion. Không cho vô hiệu hóa một cây chứa cây
+  `Disabled` lồng bên trong; cần xử lý cây bên dưới trước để tránh nhập nhằng
+  thời hạn và khôi phục. Hủy task cha bỏ qua cây `Disabled` (giữ metadata
+  khôi phục/xóa); vô hiệu hóa hoặc xóa cứng toàn bộ việc con không đổi trạng
+  thái/tiến độ task cha. Task `Disabled` không tham gia kiểm tra phát hành tiến
+  độ tổng và không nhận email thay đổi tiến độ.
 - Gói Completed về `Active` qua PUT: xoá `CompletedAt`, ghi snapshot `Reopened`, giữ
   tiến độ/xác minh. Cancelled là trạng thái cuối.
 - File đính kèm task (`AddWorkTaskAttachments`): kiểm 20 MB và đuôi như tài liệu
-  nghiệp vụ, API không trả đường dẫn public. Xoá dọn file host trước rồi mới ẩn bản
-  ghi; dọn thất bại thì thử lại được và chặn plan xoá gói. Chưa stage lên Drive. Backup
-  thư mục `wwwroot/files/business-documents/work-tasks` cùng database.
+  nghiệp vụ, API không trả đường dẫn public. UI tải nội dung riêng tư và xem trước
+  PDF, Word, ảnh qua `AdminFilePreview`; Excel tải về. Xoá dọn file host trước rồi mới
+  ẩn bản ghi; dọn thất bại thì thử lại được và chặn plan xoá gói. Chưa stage lên Drive.
+  Backup thư mục `wwwroot/files/business-documents/work-tasks` cùng database.
 - KPI `VerifiedWorkTaskCount` chỉ đếm task được xác minh độc lập, giao cho người được
   đánh giá, trong kỳ. Định nghĩa seed mặc định inactive.
 
@@ -1531,8 +1545,10 @@ hai khi chưa có backfill, quy tắc unique, chính sách xung đột, rehearsa
 | `POST`/`PUT` | `/api/work-packages`, `/{id}` | `work.packages.manage` | Tạo/sửa gói, hợp đồng tuỳ chọn, vòng đời |
 | `GET`/`DELETE` | `/{id}/deletion-impact`, `/{id}` | `manage` + scope quản lý | Xoá cứng với mã, planToken, rowVersion, idempotency key |
 | `POST`/`PUT` | `/{id}/tasks`, `/{id}/tasks/{taskId}` | `work.packages.assign` | Thêm/sửa task (WBS, phụ thuộc, CC, KPI) chưa kết thúc |
-| `GET`/`DELETE` | `/{id}/tasks/{taskId}/deletion-impact`, `/{id}/tasks/{taskId}` | `work.packages.progress` + task scope | Xem ảnh hưởng và xóa cứng task cùng cây con; yêu cầu mã xác nhận, plan token, rowVersion và idempotency key; chặn nếu tệp đính kèm chưa dọn |
-| `GET`/`POST`/`DELETE` | `/{id}/tasks/{taskId}/attachments[/{attachmentId}[/content]]` | `view` + scope gói (upload: lead, thành viên phòng phụ trách hoặc PM dự án; xóa: thêm quyền xóa theo task; lead vẫn dọn được gói đã đóng) | Một file multipart `file` mỗi request kèm `Idempotency-Key`; mỗi tệp tối đa theo `GET /api/site-settings/upload-limits/workTasks` (mặc định 20 MB, 1–100 MB) |
+| `DELETE` | `/{id}/tasks/{taskId}` | `work.packages.progress` + task scope | Vô hiệu hóa task và toàn cây con; yêu cầu rowVersion, idempotency key |
+| `POST` | `/{id}/tasks/{taskId}/restore` | `work.packages.progress` + task scope | Khôi phục trạng thái trước đó trong 30 ngày khi nhóm và gói thầu nguồn chưa kết thúc; yêu cầu rowVersion, idempotency key |
+| `GET`/`DELETE` | `/{id}/tasks/{taskId}/deletion-impact`, `/{id}/tasks/{taskId}/permanent` | `work.packages.progress` + task scope | Xem ảnh hưởng và xóa cứng cây Disabled; xác nhận mã, plan token, rowVersion, idempotency key; chặn nếu tệp chưa dọn |
+| `GET`/`POST`/`DELETE` | `/{id}/tasks/{taskId}/attachments[/{attachmentId}[/content]]` | `view` + scope gói (upload: lead, thành viên phòng phụ trách hoặc PM dự án, không áp dụng task `Cancelled`/`Disabled`; xóa: cùng quyền đó, cộng quyền dọn cây `Disabled`; lead vẫn dọn được gói đã đóng) | Một file multipart `file` mỗi request kèm `Idempotency-Key`; mỗi tệp tối đa theo `GET /api/site-settings/upload-limits/workTasks` (mặc định 20 MB, 1–100 MB) |
 | `PUT` | `/{id}/tasks/{taskId}/progress` | `work.packages.progress` + task scope | Thành viên phòng phụ trách hoặc PM dự án cập nhật task; hoàn thành cha xác nhận các task con đang thực hiện, giữ nguyên task đã hủy; hủy cha cascade trạng thái xuống toàn cây con; task lá Completed/Cancelled có thể mở lại InProgress, không áp dụng cho Verified |
 | `POST` | `/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Xác minh độc lập task KPI đã xong |
 | `POST`/`PUT` | `/{id}/input-price-offers[/{offerId}]` | `work.packages.progress` | Thêm/sửa offer giá đầu vào (Draft/Rejected) |

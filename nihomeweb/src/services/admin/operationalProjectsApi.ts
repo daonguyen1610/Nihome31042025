@@ -103,13 +103,34 @@ export const operationalProjectsApi = {
     body: ConfirmDeletionRequest,
     idempotencyKey: string,
   ) =>
-    api.delete<void>(`/work-packages/${packageId}/tasks/${taskId}`, {
+    api.delete<void>(`/work-packages/${packageId}/tasks/${taskId}/permanent`, {
       data: body,
       headers: {
         "Idempotency-Key": idempotencyKey,
         ...withIfMatch(body.rowVersion ?? "").headers,
       },
     }),
+  disableWorkTask: (
+    packageId: number,
+    taskId: number,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.delete<void>(`/work-packages/${packageId}/tasks/${taskId}`, {
+      data: { rowVersion },
+      headers: { "Idempotency-Key": idempotencyKey, ...withIfMatch(rowVersion).headers },
+    }),
+  restoreWorkTask: (
+    packageId: number,
+    taskId: number,
+    rowVersion: string,
+    idempotencyKey: string,
+  ) =>
+    api.post<void>(
+      `/work-packages/${packageId}/tasks/${taskId}/restore`,
+      { rowVersion },
+      { headers: { "Idempotency-Key": idempotencyKey, ...withIfMatch(rowVersion).headers } },
+    ),
   getWorkPackage: (id: number) => api.get<DepartmentWorkPackageResponse>(`/work-packages/${id}`),
   getWorkPackageDepartments: () =>
     api.get<DepartmentWorkPackageOptionsResponse["departments"]>("/work-packages/departments"),
