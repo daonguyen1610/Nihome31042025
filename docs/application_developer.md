@@ -1533,6 +1533,11 @@ hai khi chưa có backfill, quy tắc unique, chính sách xung đột, rehearsa
   độ tổng và không nhận email thay đổi tiến độ.
 - Gói Completed về `Active` qua PUT: xoá `CompletedAt`, ghi snapshot `Reopened`, giữ
   tiến độ/xác minh. Cancelled là trạng thái cuối.
+- Trang chi tiết gói hiển thị đường hoàn tất và trạng thái giấy phép liên kết
+  của từng task Pháp lý. UI tải permit theo `operationalProjectId` để khóa nút
+  Hoàn thành khi permit chưa `Issued`, thiếu `IssuedAt` hoặc `IssuedFilePath`;
+  liên kết mở `/admin/permits?operationalProjectId=...&permitId=...`. Lỗi quyền
+  hoặc tải permit không chặn trang; server vẫn kiểm tra khi hoàn thành.
 - File đính kèm task (`AddWorkTaskAttachments`): kiểm 20 MB và đuôi như tài liệu
   nghiệp vụ, API không trả đường dẫn public. UI tải nội dung riêng tư và xem trước
   PDF, Word, ảnh qua `AdminFilePreview`; Excel tải về. Xoá dọn file host trước rồi mới

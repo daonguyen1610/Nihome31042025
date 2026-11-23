@@ -169,6 +169,40 @@ test("ordinary task accepts multiple private attachments on mobile and tablet", 
   }
 });
 
+test("legal package explains the permit step and disables completion until it is issued", async ({
+  page,
+  api,
+  loginAs,
+  loginInBrowserAs,
+}) => {
+  const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
+  const list = await api.get("/api/work-packages?search=LEGAL-3&pageSize=10", { headers });
+  expect(list.status()).toBe(200);
+  const packageId = (await list.json()).items[0]?.id;
+  expect(packageId, "seeded LEGAL-3 package required").toBeTruthy();
+
+  await loginInBrowserAs(page, TEST_USERS.superAdmin);
+  await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  await page.goto(`/admin/work-packages/${packageId}`);
+  const path = page.getByTestId("work-package-path");
+  await expect(path).toBeVisible();
+  await expect(path).toContainText("Path to close");
+  await expect(path).toContainText("Issue the permit for L-01");
+  await expect(path.getByRole("link", { name: "Open permit" })).toBeVisible();
+  await expect(path.getByRole("link", { name: "View task" })).toBeVisible();
+  await expect(path).toContainText("Disabled tasks: L-02");
+
+  const row = page.getByTestId("work-task-row").filter({ hasText: "L-01" }).first();
+  await expect(row.getByRole("button", { name: /^Complete$/ })).toBeDisabled();
+  await expect(row.getByRole("link", { name: /^Permit/ })).toBeVisible();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.getByTestId("work-package-path")).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+});
+
 for (const width of [390, 768])
   test(`ordinary work subtasks render as a hierarchy at ${width}px`, async ({
     page,
