@@ -11,7 +11,7 @@ test("package detail returns to its section with filters intact", async ({
     await page.goto("/admin/work-packages/projects");
     const card = page.getByTestId("work-package-card").first();
     await expect(card).toBeVisible();
-    const code = (await card.locator("div").first().locator("div").first().innerText()).trim();
+    const code = (await card.getByTestId("work-package-code").innerText()).trim();
     const listUrl = `/admin/work-packages/projects?search=${encodeURIComponent(code)}`;
     await page.goto(listUrl);
     await expect(page.getByTestId("work-package-card")).toHaveCount(1);

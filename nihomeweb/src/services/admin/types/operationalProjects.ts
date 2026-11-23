@@ -27,7 +27,8 @@ export type WorkPackagePurpose =
 
 export type WorkPackageStatus = "Planned" | "Active" | "Completed" | "Cancelled";
 
-export type WorkTaskStatus = "Planned" | "InProgress" | "Completed" | "Verified" | "Cancelled";
+export type WorkTaskStatus =
+  "Planned" | "InProgress" | "Completed" | "Verified" | "Cancelled" | "Disabled";
 
 export interface DepartmentWorkTaskResponse {
   id: number;
@@ -55,13 +56,19 @@ export interface DepartmentWorkTaskResponse {
   completedAt?: string | null;
   verifiedAt?: string | null;
   verifiedByUserId?: number | null;
+  disabledAt?: string | null;
+  restoreUntil?: string | null;
+  isDisabledRoot: boolean;
   ccUserIds: number[];
   predecessorTaskIds: number[];
   successorTaskIds: number[];
   blockingPredecessorTaskIds: number[];
   canUpdateProgress: boolean;
   canCancel: boolean;
-  canDelete: boolean;
+  canDisable: boolean;
+  canRestore: boolean;
+  canPermanentlyDelete: boolean;
+  canDeleteAttachments: boolean;
   canComplete: boolean;
   canVerify: boolean;
   isOverdue: boolean;

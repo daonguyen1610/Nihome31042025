@@ -24,8 +24,11 @@ import {
   CalendarDays,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   Download,
+  ListChecks,
   Loader2,
+  MoreHorizontal,
   Paperclip,
   Plus,
   Search,
@@ -33,9 +36,11 @@ import {
   RotateCcw,
   Trash2,
   Upload,
+  UserRound,
   Users,
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
+import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { WorkPackageBoqSection } from "@/components/admin/WorkPackageBoqSection";
 import type { WorkPackageApprovalPreview, DeletionImpactResponse } from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
@@ -52,6 +57,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { MoneyInput } from "@/components/ui/money-input";
 import { MultiFilePicker } from "@/components/ui/multi-file-picker";
 import { Label } from "@/components/ui/label";
@@ -71,6 +83,7 @@ import { newIdempotencyKey } from "@/lib/api";
 import { extractApiError } from "@/lib/apiError";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { formatDate } from "@/lib/displaySettings";
+import { formatFileSize } from "@/lib/numberFormat";
 import { translateError, useI18n } from "@/lib/i18n";
 import { isValidEmail } from "@/lib/validation";
 import { cn } from "@/lib/utils";
@@ -102,7 +115,6 @@ const DepartmentWorkPackages = () => {
     setParams,
     navigate,
     t,
-    currentUserId,
     has,
     packageId,
     kindFromPath,
@@ -222,11 +234,14 @@ const DepartmentWorkPackages = () => {
     openAttachments,
     addAttachments,
     downloadAttachment,
+    loadAttachmentBlob,
     deleteAttachment,
     previewDelete,
     confirmDelete,
     previewDeleteTask,
     confirmDeleteTask,
+    disableTask,
+    restoreTask,
     saveTask,
     transitionPackage,
     progressTask,
@@ -354,8 +369,19 @@ const DepartmentWorkPackages = () => {
                     <CalendarDays className="h-4 w-4 shrink-0" aria-hidden />
                     <span>
                       {t("workPackages.field.timeline")}:{" "}
-                      {formatDate(detail.plannedStart, lang, { timeZone: "UTC" })} →{" "}
-                      {formatDate(detail.plannedEnd, lang, { timeZone: "UTC" })}
+                      {detail.plannedStart || detail.plannedEnd ? (
+                        <>
+                          {detail.plannedStart
+                            ? formatDate(detail.plannedStart, lang, { timeZone: "UTC" })
+                            : "—"}{" "}
+                          →{" "}
+                          {detail.plannedEnd
+                            ? formatDate(detail.plannedEnd, lang, { timeZone: "UTC" })
+                            : "—"}
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </span>
                   </p>
                   <p className="text-sm text-muted-foreground">
@@ -419,7 +445,11 @@ const DepartmentWorkPackages = () => {
                     detail.canAssignTasks &&
                     detail.purpose !== "LegalPermitting" &&
                     !["Completed", "Cancelled"].includes(detail.status) && (
-                      <Button className="w-full sm:w-auto" onClick={() => openTask()}>
+                      <Button
+                        className="w-full sm:w-auto"
+                        variant={detail.status === "Active" ? "default" : "outline"}
+                        onClick={() => openTask()}
+                      >
                         <Plus className="mr-2 h-4 w-4" />
                         {t("workPackages.action.addTask")}
                       </Button>
@@ -744,109 +774,104 @@ const DepartmentWorkPackages = () => {
                 <Progress value={detail.progressPercent} />
               </div>
               <div className="divide-y">
-                {orderedTasks.map(({ task, depth }) => (
-                  <article
-                    key={task.id}
-                    id={`task-${task.id}`}
-                    data-testid="work-task-row"
-                    className={cn(
-                      "p-4",
-                      depth > 0 && "border-l-2 border-l-primary/30",
-                      params.get("taskId") === String(task.id) && "bg-amber-50",
-                    )}
-                    style={{ marginLeft: Math.min(depth, 3) * 12 }}
-                  >
-                    <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-                      <div className="min-w-0 space-y-1 lg:flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <Badge variant="outline">{task.wbsCode}</Badge>
-                          <h3 className="font-medium">{task.title}</h3>
-                          <Badge variant="secondary">
-                            {t(`workPackages.taskStatus.${task.status}`)}
-                          </Badge>
-                          {task.hasSubtasks && (
-                            <Badge variant="outline">{t("workPackages.task.aggregated")}</Badge>
-                          )}
-                          {task.kpiDefinitionCode && <Badge>{t("workPackages.tasks.kpi")}</Badge>}
-                          {task.isOverdue && (
-                            <Badge
-                              className="border-rose-200 bg-rose-50 text-rose-700"
-                              variant="outline"
-                              title={t("workPackages.overdue.help")}
-                            >
-                              <AlertTriangle className="mr-1 h-3.5 w-3.5" />
-                              {(task.overdueDays ?? 0) === 1
-                                ? t("workPackages.overdue.badgeOne")
-                                : t("workPackages.overdue.badge", { count: task.overdueDays ?? 0 })}
-                            </Badge>
+                {orderedTasks.map(({ task, depth }) => {
+                  const canAddSubtask =
+                    canAssign &&
+                    detail.canAssignTasks &&
+                    !task.kpiDefinitionId &&
+                    ["Planned", "InProgress"].includes(task.status);
+                  const canEditTask =
+                    canAssign &&
+                    detail.canAssignTasks &&
+                    ["Planned", "InProgress"].includes(task.status);
+                  const canCancelTask =
+                    detail.status === "Active" &&
+                    task.canCancel &&
+                    (task.hasSubtasks || ["Planned", "InProgress"].includes(task.status));
+                  const canReopenTask =
+                    detail.status === "Active" &&
+                    !task.hasSubtasks &&
+                    task.canUpdateProgress &&
+                    ["Completed", "Cancelled"].includes(task.status);
+                  const canProgressTask =
+                    detail.status === "Active" &&
+                    task.canUpdateProgress &&
+                    ["Planned", "InProgress"].includes(task.status);
+                  const canCompleteTask =
+                    detail.status === "Active" &&
+                    task.canComplete &&
+                    ["Planned", "InProgress"].includes(task.status);
+                  const hasMoreActions =
+                    canAddSubtask ||
+                    canEditTask ||
+                    canCancelTask ||
+                    task.canDisable ||
+                    task.canRestore ||
+                    task.canPermanentlyDelete;
+                  return (
+                    <article
+                      key={task.id}
+                      id={`task-${task.id}`}
+                      data-testid="work-task-row"
+                      className={cn(
+                        "p-4",
+                        depth > 0 && "border-l-2 border-l-primary/30",
+                        params.get("taskId") === String(task.id) && "bg-amber-50",
+                      )}
+                      style={{ marginLeft: Math.min(depth, 3) * 12 }}
+                    >
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div className="min-w-0 space-y-1 lg:flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <Badge variant="outline">{task.wbsCode}</Badge>
+                            <h3 className="font-medium">{task.title}</h3>
+                            <span className="inline-flex items-center gap-2">
+                              <Badge variant="secondary">
+                                {t(`workPackages.taskStatus.${task.status}`)}
+                              </Badge>
+                              <span className="text-sm font-medium tabular-nums text-muted-foreground">
+                                {task.progressPercent}%
+                              </span>
+                            </span>
+                            {task.hasSubtasks && (
+                              <Badge variant="outline">{t("workPackages.task.aggregated")}</Badge>
+                            )}
+                            {task.kpiDefinitionCode && <Badge>{t("workPackages.tasks.kpi")}</Badge>}
+                            {task.isOverdue && (
+                              <Badge
+                                className="border-rose-200 bg-rose-50 text-rose-700"
+                                variant="outline"
+                                title={t("workPackages.overdue.help")}
+                              >
+                                <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                                {(task.overdueDays ?? 0) === 1
+                                  ? t("workPackages.overdue.badgeOne")
+                                  : t("workPackages.overdue.badge", {
+                                      count: task.overdueDays ?? 0,
+                                    })}
+                              </Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-muted-foreground">
+                            {task.assigneeName} ·{" "}
+                            {formatDate(task.plannedStart, lang, { timeZone: "UTC" })} →{" "}
+                            {formatDate(task.plannedEnd, lang, { timeZone: "UTC" })}
+                          </p>
+                          {(task.blockingPredecessorTaskIds ?? []).length > 0 && (
+                            <p className="text-sm text-amber-700">
+                              {t("workPackages.blockers.predecessors", {
+                                tasks: blockingPredecessorCodes(task),
+                              })}
+                            </p>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {task.assigneeName} ·{" "}
-                          {formatDate(task.plannedStart, lang, { timeZone: "UTC" })} →{" "}
-                          {formatDate(task.plannedEnd, lang, { timeZone: "UTC" })}
-                        </p>
-                        {(task.blockingPredecessorTaskIds ?? []).length > 0 && (
-                          <p className="text-sm text-amber-700">
-                            {t("workPackages.blockers.predecessors", {
-                              tasks: blockingPredecessorCodes(task),
-                            })}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 lg:shrink-0 lg:justify-end">
-                        {canAssign &&
-                          detail.canAssignTasks &&
-                          !task.kpiDefinitionId &&
-                          ["Planned", "InProgress"].includes(task.status) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openTask(undefined, task)}
-                            >
-                              {t("workPackages.action.addSubtask")}
-                            </Button>
-                          )}
-                        <span className="w-12 text-right text-sm font-medium">
-                          {task.progressPercent}%
-                        </span>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => void openAttachments(task)}
-                        >
-                          <Paperclip className="mr-1.5 h-4 w-4" />
-                          {t("workPackages.attachments.title")}
-                        </Button>
-                        {canAssign &&
-                          detail.canAssignTasks &&
-                          ["Planned", "InProgress"].includes(task.status) && (
-                            <Button variant="outline" size="sm" onClick={() => openTask(task)}>
-                              {t("common.edit")}
-                            </Button>
-                          )}
-                        {detail.status === "Active" &&
-                          task.canUpdateProgress &&
-                          ["Planned", "InProgress"].includes(task.status) && (
+                        <div className="flex flex-wrap items-center gap-2 lg:max-w-[60%] lg:shrink-0 lg:justify-end">
+                          {canProgressTask && (
                             <Button variant="outline" size="sm" onClick={() => openProgress(task)}>
                               {t("workPackages.action.progress")}
                             </Button>
                           )}
-                        {detail.status === "Active" &&
-                          task.canCancel &&
-                          (task.hasSubtasks || ["Planned", "InProgress"].includes(task.status)) && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => void cancelTask(task)}
-                            >
-                              {t("workPackages.action.cancelTask")}
-                            </Button>
-                          )}
-                        {detail.status === "Active" &&
-                          !task.hasSubtasks &&
-                          task.canUpdateProgress &&
-                          ["Completed", "Cancelled"].includes(task.status) && (
+                          {canReopenTask && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -855,20 +880,7 @@ const DepartmentWorkPackages = () => {
                               {t("workPackages.action.reopenTask")}
                             </Button>
                           )}
-                        {task.canDelete && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-destructive hover:text-destructive"
-                            onClick={() => void previewDeleteTask(task)}
-                          >
-                            <Trash2 className="mr-1.5 h-4 w-4" />
-                            {t("common.delete")}
-                          </Button>
-                        )}
-                        {detail.status === "Active" &&
-                          task.canComplete &&
-                          ["Planned", "InProgress"].includes(task.status) && (
+                          {canCompleteTask && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -883,28 +895,92 @@ const DepartmentWorkPackages = () => {
                               {t("workPackages.action.completeTask")}
                             </Button>
                           )}
-                        {detail.status === "Active" && task.canVerify && (
-                          <>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setRejectTaskEditing(task);
-                                setRejectReason("");
-                              }}
-                            >
-                              {t("common.reject")}
-                            </Button>
-                            <Button size="sm" onClick={() => void verifyTask(task)}>
-                              <CheckCircle2 className="mr-2 h-4 w-4" />
-                              {t("workPackages.action.verify")}
-                            </Button>
-                          </>
-                        )}
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => void openAttachments(task)}
+                          >
+                            <Paperclip className="mr-1.5 h-4 w-4" />
+                            {t("workPackages.attachments.title")}
+                          </Button>
+                          {detail.status === "Active" && task.canVerify && (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setRejectTaskEditing(task);
+                                  setRejectReason("");
+                                }}
+                              >
+                                {t("common.reject")}
+                              </Button>
+                              <Button size="sm" onClick={() => void verifyTask(task)}>
+                                <CheckCircle2 className="mr-2 h-4 w-4" />
+                                {t("workPackages.action.verify")}
+                              </Button>
+                            </>
+                          )}
+                          {hasMoreActions && (
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-11 w-11 p-0 sm:h-9 sm:w-9"
+                                  aria-label={t("common.actions")}
+                                >
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-56">
+                                {canAddSubtask && (
+                                  <DropdownMenuItem onSelect={() => openTask(undefined, task)}>
+                                    {t("workPackages.action.addSubtask")}
+                                  </DropdownMenuItem>
+                                )}
+                                {canEditTask && (
+                                  <DropdownMenuItem onSelect={() => openTask(task)}>
+                                    {t("common.edit")}
+                                  </DropdownMenuItem>
+                                )}
+                                {canCancelTask && (
+                                  <DropdownMenuItem onSelect={() => void cancelTask(task)}>
+                                    {t("workPackages.action.cancelTask")}
+                                  </DropdownMenuItem>
+                                )}
+                                {(task.canDisable ||
+                                  task.canRestore ||
+                                  task.canPermanentlyDelete) && <DropdownMenuSeparator />}
+                                {task.canDisable && (
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onSelect={() => void disableTask(task)}
+                                  >
+                                    {t("workPackages.action.disableTask")}
+                                  </DropdownMenuItem>
+                                )}
+                                {task.canRestore && (
+                                  <DropdownMenuItem onSelect={() => void restoreTask(task)}>
+                                    {t("workPackages.action.restoreTask")}
+                                  </DropdownMenuItem>
+                                )}
+                                {task.canPermanentlyDelete && (
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onSelect={() => void previewDeleteTask(task)}
+                                  >
+                                    {t("workPackages.action.permanentlyDeleteTask")}
+                                  </DropdownMenuItem>
+                                )}
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                ))}
+                    </article>
+                  );
+                })}
                 {detail.tasks.length === 0 && (
                   <div className="p-10 text-center text-sm text-muted-foreground">
                     {t("workPackages.tasks.emptyAssigner")}
@@ -1147,40 +1223,108 @@ const DepartmentWorkPackages = () => {
             {loading && <PageLoading />}
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {!loading &&
-                rows.map((item) => (
-                  <Link
-                    key={item.id}
-                    data-testid="work-package-card"
-                    to={`/admin/work-packages/${item.id}${location.search}`}
-                    state={{ workPackageListPath: location.pathname }}
-                    className="min-w-0 rounded-xl border bg-card p-5 text-left transition hover:border-primary/50 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-                  >
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="whitespace-nowrap">
-                        {item.code}
-                      </Badge>
-                      <Badge
-                        className={cn("whitespace-nowrap", statusTone[item.status])}
-                        variant="outline"
-                      >
-                        {t(`workPackages.status.${item.status}`)}
-                      </Badge>
-                    </div>
-                    <h2 className="mt-4 font-semibold">{item.name}</h2>
-                    <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                      {item.kind === "Internal"
-                        ? t("workPackages.kind.Internal")
-                        : `${item.operationalProjectCode} · ${item.operationalProjectName}`}
-                    </p>
-                    <div className="mt-4 flex items-center justify-between text-sm">
-                      <span>
-                        {t(item.departmentLabelKey)} · {item.leadUserName}
-                      </span>
-                      <strong>{item.progressPercent}%</strong>
-                    </div>
-                    <Progress value={item.progressPercent} className="mt-2" />
-                  </Link>
-                ))}
+                rows.map((item) => {
+                  const tasks = item.tasks.filter((task) => task.status !== "Disabled");
+                  const overdueTasks = tasks.filter((task) => task.isOverdue).length;
+                  return (
+                    <Link
+                      key={item.id}
+                      data-testid="work-package-card"
+                      to={`/admin/work-packages/${item.id}${location.search}`}
+                      state={{ workPackageListPath: location.pathname }}
+                      className="group flex h-full min-w-0 flex-col rounded-xl border bg-card p-4 text-left transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex min-w-0 flex-wrap items-center gap-2">
+                          <Badge
+                            variant="outline"
+                            className="whitespace-nowrap tabular-nums"
+                            data-testid="work-package-code"
+                          >
+                            {item.code}
+                          </Badge>
+                          <Badge
+                            className={cn("whitespace-nowrap", statusTone[item.status])}
+                            variant="outline"
+                          >
+                            {t(`workPackages.status.${item.status}`)}
+                          </Badge>
+                          {item.isOverdue && (
+                            <Badge
+                              className="border-rose-200 bg-rose-50 text-rose-700"
+                              variant="outline"
+                              title={t("workPackages.overdue.help")}
+                            >
+                              <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                              {(item.overdueDays ?? 0) === 1
+                                ? t("workPackages.overdue.badgeOne")
+                                : t("workPackages.overdue.badge", {
+                                    count: item.overdueDays ?? 0,
+                                  })}
+                            </Badge>
+                          )}
+                        </div>
+                        <ChevronRight
+                          className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                          aria-hidden="true"
+                        />
+                      </div>
+                      <h2 className="mt-3 text-base font-semibold leading-6 [overflow-wrap:anywhere]">
+                        {item.name}
+                      </h2>
+                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
+                        {item.kind === "Internal"
+                          ? t("workPackages.kind.Internal")
+                          : `${item.operationalProjectCode} · ${item.operationalProjectName}`}
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                        <span className="inline-flex min-w-0 items-center gap-1">
+                          <Users className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="truncate">{t(item.departmentLabelKey)}</span>
+                        </span>
+                        <span
+                          className="inline-flex min-w-0 items-center gap-1"
+                          title={t("workPackages.field.assigner")}
+                        >
+                          <UserRound className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                          <span className="sr-only">{t("workPackages.field.assigner")}: </span>
+                          <span className="truncate">{item.leadUserName}</span>
+                        </span>
+                        {item.plannedEnd && (
+                          <span
+                            className="inline-flex items-center gap-1"
+                            title={t("workPackages.field.end")}
+                          >
+                            <CalendarDays className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                            <span className="sr-only">{t("workPackages.field.end")}: </span>
+                            <span>{formatDate(item.plannedEnd, lang, { timeZone: "UTC" })}</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-auto border-t pt-3">
+                        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+                          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            <span className="inline-flex items-center gap-1">
+                              <ListChecks className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                              {tasks.length} {t("workPackages.card.tasks")}
+                            </span>
+                            {overdueTasks > 0 && (
+                              <span className="inline-flex items-center gap-1 text-rose-700">
+                                <AlertTriangle
+                                  className="h-3.5 w-3.5 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                {overdueTasks} {t("workPackages.card.overdue")}
+                              </span>
+                            )}
+                          </div>
+                          <strong className="text-sm tabular-nums">{item.progressPercent}%</strong>
+                        </div>
+                        <Progress value={item.progressPercent} className="mt-2" />
+                      </div>
+                    </Link>
+                  );
+                })}
               {!loading && rows.length === 0 && (
                 <div className="col-span-full rounded-xl border border-dashed p-12 text-center text-muted-foreground">
                   {t("workPackages.empty")}
@@ -1944,7 +2088,9 @@ const DepartmentWorkPackages = () => {
                     : t("workPackages.predecessors.none")
                 }
                 items={(detail?.tasks ?? [])
-                  .filter((task) => !unavailablePredecessorIds.has(task.id))
+                  .filter(
+                    (task) => task.status !== "Disabled" && !unavailablePredecessorIds.has(task.id),
+                  )
                   .map((task) => ({ id: task.id, label: `${task.wbsCode} · ${task.title}` }))}
                 selected={taskForm.predecessorTaskIds}
                 onChange={(predecessorTaskIds) =>
@@ -2027,10 +2173,23 @@ const DepartmentWorkPackages = () => {
               {attachments.map((attachment) => (
                 <li
                   key={attachment.id}
-                  className="flex flex-wrap items-center justify-between gap-2 p-3"
+                  className="flex flex-col gap-3 p-3 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <span className="min-w-0 break-all text-sm">{attachment.originalFileName}</span>
-                  <div className="flex gap-2">
+                  <div className="min-w-0">
+                    <p className="break-words text-sm font-medium">{attachment.originalFileName}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {formatFileSize(attachment.fileSize)} ·{" "}
+                      {formatDate(attachment.createdAt, lang)}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2 sm:shrink-0">
+                    <AdminFilePreview
+                      fetchFile={() => loadAttachmentBlob(attachment)}
+                      fileName={attachment.originalFileName}
+                      label={t("common.previewFile")}
+                      showLabel
+                      testId={`work-task-attachment-preview-${attachment.id}`}
+                    />
                     <Button
                       variant="outline"
                       size="sm"
@@ -2043,13 +2202,16 @@ const DepartmentWorkPackages = () => {
                     {detail &&
                       attachmentTask &&
                       (detail.canAssignTasks ||
+                        attachmentTask.canDeleteAttachments ||
                         (detail.status !== "Completed" &&
                           detail.status !== "Cancelled" &&
                           attachmentTask.status !== "Cancelled" &&
-                          attachmentTask.assigneeUserId === currentUserId)) && (
+                          attachmentTask.status !== "Disabled" &&
+                          attachmentTask.canUpdateProgress)) && (
                         <Button
                           variant="outline"
                           size="sm"
+                          className="text-destructive hover:text-destructive"
                           disabled={attachmentBusy}
                           onClick={() => void deleteAttachment(attachment)}
                         >
@@ -2067,7 +2229,8 @@ const DepartmentWorkPackages = () => {
             detail.status !== "Completed" &&
             detail.status !== "Cancelled" &&
             attachmentTask.status !== "Cancelled" &&
-            (detail.canAssignTasks || attachmentTask.assigneeUserId === currentUserId) && (
+            attachmentTask.status !== "Disabled" &&
+            (detail.canAssignTasks || attachmentTask.canUpdateProgress) && (
               <div className="space-y-2">
                 <Label htmlFor="work-task-attachments">
                   {t("workPackages.attachments.addFiles")}

@@ -901,6 +901,16 @@ export function useDepartmentWorkPackages() {
       setAttachmentBusy(false);
     }
   };
+  const loadAttachmentBlob = async (attachment: DepartmentWorkTaskAttachmentResponse) => {
+    if (!detail || !attachmentTask)
+      throw new Error("Attachment context is no longer available. Reopen the task attachments.");
+    const response = await adminApi.downloadWorkTaskAttachment(
+      detail.id,
+      attachmentTask.id,
+      attachment.id,
+    );
+    return response.data;
+  };
   const deleteAttachment = async (attachment: DepartmentWorkTaskAttachmentResponse) => {
     if (
       !detail ||
@@ -990,6 +1000,38 @@ export function useDepartmentWorkPackages() {
       throw cause;
     } finally {
       setTaskDeleting(false);
+    }
+  };
+  const disableTask = async (task: DepartmentWorkTaskResponse) => {
+    if (
+      !detail ||
+      !(await confirmAction(t("workPackages.confirm.disableTask", { title: task.title }), {
+        destructive: false,
+        confirmLabel: t("workPackages.action.disableTask"),
+      }))
+    )
+      return;
+    try {
+      await adminApi.disableWorkTask(detail.id, task.id, task.rowVersion, newIdempotencyKey());
+      await load();
+    } catch (cause) {
+      toast({ variant: "destructive", title: uiError(cause, t("workPackages.error.save")) });
+    }
+  };
+  const restoreTask = async (task: DepartmentWorkTaskResponse) => {
+    if (
+      !detail ||
+      !(await confirmAction(t("workPackages.confirm.restoreTask", { title: task.title }), {
+        destructive: false,
+        confirmLabel: t("workPackages.action.restoreTask"),
+      }))
+    )
+      return;
+    try {
+      await adminApi.restoreWorkTask(detail.id, task.id, task.rowVersion, newIdempotencyKey());
+      await load();
+    } catch (cause) {
+      toast({ variant: "destructive", title: uiError(cause, t("workPackages.error.save")) });
     }
   };
   const saveTask = async () => {
@@ -1159,6 +1201,10 @@ export function useDepartmentWorkPackages() {
         task.hasSubtasks
           ? t("workPackages.confirm.cancelParent")
           : t("workPackages.confirm.cancelTask", { title: task.title }),
+        {
+          destructive: true,
+          confirmLabel: t("workPackages.action.cancelTask"),
+        },
       ))
     )
       return;
@@ -1667,6 +1713,7 @@ export function useDepartmentWorkPackages() {
     openAttachments,
     addAttachments,
     downloadAttachment,
+    loadAttachmentBlob,
     deleteAttachment,
     previewDelete,
     confirmDelete,
@@ -1678,6 +1725,8 @@ export function useDepartmentWorkPackages() {
     taskDeleting,
     previewDeleteTask,
     confirmDeleteTask,
+    disableTask,
+    restoreTask,
     saveTask,
     transitionPackage,
     progressTask,
