@@ -1306,7 +1306,12 @@ const DepartmentWorkPackages = () => {
                           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                             <span className="inline-flex items-center gap-1">
                               <ListChecks className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-                              {tasks.length} {t("workPackages.card.tasks")}
+                              {tasks.length}{" "}
+                              {t(
+                                tasks.length === 1
+                                  ? "workPackages.card.task"
+                                  : "workPackages.card.tasks",
+                              )}
                             </span>
                             {overdueTasks > 0 && (
                               <span className="inline-flex items-center gap-1 text-rose-700">
