@@ -488,7 +488,7 @@ public sealed class ProjectScheduleService(
             oldItem.ParentNodeId != newItem.ParentNodeId).ToHashSet();
         var relatedDepartmentTasks = db.DepartmentWorkTasks.AsNoTracking().Where(task => task.WorkPackage.OperationalProjectId == projectId &&
                 task.ProjectScheduleNodeId.HasValue && changed.Contains(task.ProjectScheduleNodeId.Value) &&
-                task.Status != WorkTaskStatus.Cancelled)
+                task.Status != WorkTaskStatus.Cancelled && task.Status != WorkTaskStatus.Disabled)
             .Select(task => new { task.AssigneeUserId, task.ApproverUserId, task.WorkPackage.LeadUserId });
         var departmentAssignees = await relatedDepartmentTasks.Select(task => task.AssigneeUserId).Distinct().ToListAsync(ct);
         var departmentApprovers = await relatedDepartmentTasks.Where(task => task.ApproverUserId.HasValue)
@@ -525,7 +525,7 @@ public sealed class ProjectScheduleService(
         var tasks = new List<ProjectScheduleLinkedTask>();
         var departmentTasks = await db.DepartmentWorkTasks.AsNoTracking()
             .Where(task => task.WorkPackage.OperationalProjectId == projectId && task.ProjectScheduleNodeId.HasValue &&
-                task.Status != WorkTaskStatus.Cancelled)
+                task.Status != WorkTaskStatus.Cancelled && task.Status != WorkTaskStatus.Disabled)
             .Select(task => new
             {
                 task.WbsCode,

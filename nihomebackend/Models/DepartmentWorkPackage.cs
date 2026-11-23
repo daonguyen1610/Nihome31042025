@@ -166,6 +166,10 @@ public class DepartmentWorkTask : IConcurrencyTracked
     public DateTime? VerifiedAt { get; set; }
     public int? VerifiedByUserId { get; set; }
     public ApplicationUser? VerifiedByUser { get; set; }
+    public DateTime? DisabledAt { get; set; }
+    public int? DisabledByUserId { get; set; }
+    public int? DisabledRootTaskId { get; set; }
+    public WorkTaskStatus? StatusBeforeDisabled { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public int CreatedByUserId { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
@@ -254,4 +258,5 @@ public enum WorkTaskStatus
     Completed = 2,
     Verified = 3,
     Cancelled = 4,
+    Disabled = 5,
 }

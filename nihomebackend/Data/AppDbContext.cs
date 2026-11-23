@@ -2588,6 +2588,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(item => item.Title).HasMaxLength(300).IsRequired();
             b.Property(item => item.Description).HasMaxLength(4000);
             b.Property(item => item.Status).HasConversion<string>().HasMaxLength(20).IsRequired();
+            b.Property(item => item.StatusBeforeDisabled).HasConversion<string>().HasMaxLength(20);
             b.Property(item => item.RowVersion).IsRowVersion();
             b.HasOne(item => item.WorkPackage).WithMany(package => package.Tasks)
                 .HasForeignKey(item => item.WorkPackageId).OnDelete(DeleteBehavior.Cascade);
@@ -2602,6 +2603,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
                 .HasForeignKey(item => item.ApproverUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.VerifiedByUser).WithMany()
                 .HasForeignKey(item => item.VerifiedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasOne<ApplicationUser>().WithMany()
+                .HasForeignKey(item => item.DisabledByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.KpiDefinition).WithMany()
                 .HasForeignKey(item => item.KpiDefinitionId).OnDelete(DeleteBehavior.Restrict);
             b.HasOne(item => item.ProjectScheduleNode).WithMany()
@@ -2610,11 +2613,14 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.HasIndex(item => new { item.WorkPackageId, item.DepartmentRoleGroupId, item.Status });
             b.HasIndex(item => new { item.AssigneeUserId, item.Status, item.PlannedEnd });
             b.HasIndex(item => new { item.KpiDefinitionId, item.VerifiedAt });
+            b.HasIndex(item => new { item.Status, item.DisabledAt, item.DisabledRootTaskId });
             b.ToTable(table =>
             {
                 table.HasCheckConstraint("CK_department_work_tasks_dates", "[PlannedEnd] >= [PlannedStart]");
                 table.HasCheckConstraint("CK_department_work_tasks_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
                 table.HasCheckConstraint("CK_department_work_tasks_approver", "[ApproverUserId] IS NULL OR [ApproverUserId] <> [AssigneeUserId]");
+                table.HasCheckConstraint("CK_department_work_tasks_disabled_metadata",
+                    "([Status] = 'Disabled' AND [DisabledAt] IS NOT NULL AND [DisabledByUserId] IS NOT NULL AND [DisabledRootTaskId] IS NOT NULL AND [StatusBeforeDisabled] IS NOT NULL) OR ([Status] <> 'Disabled' AND [DisabledAt] IS NULL AND [DisabledByUserId] IS NULL AND [DisabledRootTaskId] IS NULL AND [StatusBeforeDisabled] IS NULL)");
             });
         });
 

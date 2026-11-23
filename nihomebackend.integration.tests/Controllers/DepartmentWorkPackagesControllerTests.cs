@@ -183,7 +183,7 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
-    public async Task DeletingParentTask_RequiresImpactConfirmationAndDeletesItsSubtree()
+    public async Task DisablingParentTask_DisablesRestoresAndCanPermanentlyDeleteItsSubtree()
     {
         var seed = await SeedProjectScopeAsync();
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
@@ -191,14 +191,13 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         {
             kind = "Project",
             purpose = "General",
-            name = "Xóa cây công việc dự án NICON",
+            name = "Rà soát điều kiện thanh toán dự án NICON",
             operationalProjectId = seed.ProjectId,
             departmentRoleGroupId = seed.DepartmentGroupId,
             leadUserId = seed.DepartmentLeadId,
         });
         packageResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-        var package = await ReadJsonAsync(packageResponse);
-        var packageId = package.GetProperty("id").GetInt32();
+        var packageId = (await ReadJsonAsync(packageResponse)).GetProperty("id").GetInt32();
 
         async Task<System.Text.Json.JsonElement> AddTaskAsync(string wbs, string title, int? parentId = null)
         {
@@ -218,12 +217,49 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
 
         var parent = await AddTaskAsync("FIN-20", "Rà soát điều kiện thanh toán");
         var child = await AddTaskAsync("FIN-20.1", "Đối chiếu điều khoản", parent.GetProperty("id").GetInt32());
+        var taskId = parent.GetProperty("id").GetInt32();
+        var childId = child.GetProperty("id").GetInt32();
+        var details = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = details.GetProperty("tasks").EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == taskId);
+        var disabled = await SendAsync(HttpMethod.Delete, $"/api/work-packages/{packageId}/tasks/{taskId}", new
+        {
+            rowVersion = parent.GetProperty("rowVersion").GetString(),
+        }, parent.GetProperty("rowVersion").GetString());
+        disabled.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await WithDbAsync(async db =>
+        {
+            (await db.DepartmentWorkTasks.Where(item => item.Id == taskId || item.Id == childId)
+                .AllAsync(item => item.Status == WorkTaskStatus.Disabled && item.DisabledRootTaskId == taskId)).Should().BeTrue();
+        });
+
+        var disabledDetails = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = disabledDetails.GetProperty("tasks").EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == taskId);
+        var restored = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks/{taskId}/restore", new
+        {
+            rowVersion = parent.GetProperty("rowVersion").GetString(),
+        }, parent.GetProperty("rowVersion").GetString());
+        restored.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await WithDbAsync(async db =>
+        {
+            (await db.DepartmentWorkTasks.Where(item => item.Id == taskId || item.Id == childId)
+                .AllAsync(item => item.Status == WorkTaskStatus.Planned && item.DisabledAt == null)).Should().BeTrue();
+        });
+
+        details = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = details.GetProperty("tasks").EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == taskId);
+        disabled = await SendAsync(HttpMethod.Delete, $"/api/work-packages/{packageId}/tasks/{taskId}", new
+        {
+            rowVersion = parent.GetProperty("rowVersion").GetString(),
+        }, parent.GetProperty("rowVersion").GetString());
+        disabled.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        disabledDetails = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = disabledDetails.GetProperty("tasks").EnumerateArray().Single(item => item.GetProperty("id").GetInt32() == taskId);
         var (attachmentId, permitId) = await WithDbAsync(async db =>
         {
             var attachment = new DepartmentWorkTaskAttachment
             {
-                WorkTaskId = child.GetProperty("id").GetInt32(),
-                Path = $"/files/work-tasks/{Guid.NewGuid():N}.pdf",
+                WorkTaskId = childId,
+                Path = $"/files/business-documents/work-tasks/{Guid.NewGuid():N}.pdf",
                 OriginalFileName = "bien-ban-doi-chieu.pdf",
                 FileSize = 100,
                 ContentType = "application/pdf",
@@ -232,36 +268,56 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             var permit = new PermitChecklistItem
             {
                 OperationalProjectId = seed.ProjectId,
-                WorkTaskId = child.GetProperty("id").GetInt32(),
+                WorkTaskId = childId,
                 PermitTypeCode = "building-permit",
             };
             db.AddRange(attachment, permit);
             await db.SaveChangesAsync();
             return (attachment.Id, permit.Id);
         });
-        var currentPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
-        parent = currentPackage.GetProperty("tasks").EnumerateArray().Single(item =>
-            item.GetProperty("id").GetInt32() == parent.GetProperty("id").GetInt32());
-        var previewResponse = await Client.GetAsync(
-            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/deletion-impact");
-        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
-        var preview = await ReadJsonAsync(previewResponse);
-        preview.GetProperty("canDelete").GetBoolean().Should().BeFalse();
-        preview.GetProperty("items").EnumerateArray()
+        var impactResponse = await Client.GetAsync(
+            $"/api/work-packages/{packageId}/tasks/{taskId}/deletion-impact");
+        impactResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var impact = await ReadJsonAsync(impactResponse);
+        impact.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        impact.GetProperty("items").EnumerateArray()
             .Single(item => item.GetProperty("key").GetString() == "workTasks.descendants")
             .GetProperty("count").GetInt32().Should().Be(2);
+        impact.GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("key").GetString() == "workTasks.attachmentCleanup")
+            .GetProperty("count").GetInt32().Should().Be(1);
 
-        var blockedDelete = await SendAsync(HttpMethod.Delete,
-            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
-            {
-                confirmation = preview.GetProperty("requiredConfirmation").GetString(),
-                planToken = preview.GetProperty("planToken").GetString(),
-                rowVersion = parent.GetProperty("rowVersion").GetString(),
-            }, parent.GetProperty("rowVersion").GetString());
+        async Task<HttpResponseMessage> DeletePermanentlyAsync(
+            string? confirmation, string? planToken, string? rowVersion) =>
+            await SendAsync(HttpMethod.Delete,
+                $"/api/work-packages/{packageId}/tasks/{taskId}/permanent",
+                new { confirmation, planToken, rowVersion }, rowVersion);
+
+        var blockedDelete = await DeletePermanentlyAsync(
+            impact.GetProperty("requiredConfirmation").GetString(),
+            impact.GetProperty("planToken").GetString(),
+            parent.GetProperty("rowVersion").GetString());
         blockedDelete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
-        (await WithDbAsync(db => db.DepartmentWorkTasks.CountAsync(item =>
-            item.Id == parent.GetProperty("id").GetInt32() || item.Id == child.GetProperty("id").GetInt32())))
-            .Should().Be(2);
+        await WithDbAsync(async db =>
+        {
+            (await db.DepartmentWorkTasks.CountAsync(item => item.Id == taskId || item.Id == childId))
+                .Should().Be(2);
+            (await db.DepartmentWorkTasks.Where(item => item.Id == taskId || item.Id == childId)
+                .AllAsync(item => item.Status == WorkTaskStatus.Disabled)).Should().BeTrue();
+            (await db.DepartmentWorkTaskAttachments.SingleAsync(item => item.Id == attachmentId))
+                .StorageDeletedAt.Should().BeNull();
+            (await db.PermitChecklistItems.Where(item => item.Id == permitId)
+                .Select(item => item.WorkTaskId).SingleAsync()).Should().Be(childId);
+        });
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SALE"));
+        (await Client.GetAsync($"/api/work-packages/{packageId}/tasks/{taskId}/deletion-impact"))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+        (await DeletePermanentlyAsync(
+            impact.GetProperty("requiredConfirmation").GetString(),
+            impact.GetProperty("planToken").GetString(),
+            parent.GetProperty("rowVersion").GetString())).StatusCode.Should().Be(HttpStatusCode.NotFound);
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
 
         await WithDbAsync(async db =>
         {
@@ -269,51 +325,61 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
             attachment.StorageDeletedAt = DateTime.UtcNow;
             db.DepartmentWorkTaskCcUsers.Add(new DepartmentWorkTaskCc
             {
-                WorkTaskId = child.GetProperty("id").GetInt32(),
+                WorkTaskId = childId,
                 UserId = seed.DepartmentLeadId,
             });
             await db.SaveChangesAsync();
         });
-        var changedPlanDelete = await SendAsync(HttpMethod.Delete,
-            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
-            {
-                confirmation = preview.GetProperty("requiredConfirmation").GetString(),
-                planToken = preview.GetProperty("planToken").GetString(),
-                rowVersion = parent.GetProperty("rowVersion").GetString(),
-            }, parent.GetProperty("rowVersion").GetString());
-        changedPlanDelete.StatusCode.Should().Be(HttpStatusCode.Conflict);
-        (await WithDbAsync(db => db.DepartmentWorkTasks.CountAsync(item =>
-            item.Id == parent.GetProperty("id").GetInt32() || item.Id == child.GetProperty("id").GetInt32())))
+        var stalePlan = await DeletePermanentlyAsync(
+            impact.GetProperty("requiredConfirmation").GetString(),
+            impact.GetProperty("planToken").GetString(),
+            parent.GetProperty("rowVersion").GetString());
+        stalePlan.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.DepartmentWorkTasks.CountAsync(item => item.Id == taskId || item.Id == childId)))
             .Should().Be(2);
 
-        previewResponse = await Client.GetAsync(
-            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/deletion-impact");
-        preview = await ReadJsonAsync(previewResponse);
-        preview.GetProperty("canDelete").GetBoolean().Should().BeTrue();
-        var wrongConfirmation = await SendAsync(HttpMethod.Delete,
-            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
-            {
-                confirmation = "WRONG",
-                planToken = preview.GetProperty("planToken").GetString(),
-                rowVersion = parent.GetProperty("rowVersion").GetString(),
-            }, parent.GetProperty("rowVersion").GetString());
+        impact = await ReadJsonAsync(await Client.GetAsync(
+            $"/api/work-packages/{packageId}/tasks/{taskId}/deletion-impact"));
+        impact.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        disabledDetails = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = disabledDetails.GetProperty("tasks").EnumerateArray()
+            .Single(item => item.GetProperty("id").GetInt32() == taskId);
+        var wrongConfirmation = await DeletePermanentlyAsync("WRONG",
+            impact.GetProperty("planToken").GetString(), parent.GetProperty("rowVersion").GetString());
         wrongConfirmation.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await DeletePermanentlyAsync(
+            impact.GetProperty("requiredConfirmation").GetString(),
+            impact.GetProperty("planToken").GetString(), null))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        await WithDbAsync(async db =>
+        {
+            (await db.DepartmentWorkTasks.CountAsync(item => item.Id == taskId || item.Id == childId))
+                .Should().Be(2);
+            (await db.DepartmentWorkTasks.Where(item => item.Id == taskId || item.Id == childId)
+                .AllAsync(item => item.Status == WorkTaskStatus.Disabled)).Should().BeTrue();
+            (await db.DepartmentWorkTaskAttachments.AnyAsync(item => item.Id == attachmentId)).Should().BeTrue();
+            (await db.DepartmentWorkTaskCcUsers.AnyAsync(item => item.WorkTaskId == childId)).Should().BeTrue();
+            (await db.PermitChecklistItems.Where(item => item.Id == permitId)
+                .Select(item => item.WorkTaskId).SingleAsync()).Should().Be(childId);
+        });
 
-        var deleted = await SendAsync(HttpMethod.Delete,
-            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
-            {
-                confirmation = preview.GetProperty("requiredConfirmation").GetString(),
-                planToken = preview.GetProperty("planToken").GetString(),
-                rowVersion = parent.GetProperty("rowVersion").GetString(),
-            }, parent.GetProperty("rowVersion").GetString());
+        disabledDetails = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = disabledDetails.GetProperty("tasks").EnumerateArray()
+            .Single(item => item.GetProperty("id").GetInt32() == taskId);
+        var deleted = await DeletePermanentlyAsync(
+            impact.GetProperty("requiredConfirmation").GetString(),
+            impact.GetProperty("planToken").GetString(),
+            parent.GetProperty("rowVersion").GetString());
         deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
         await WithDbAsync(async db =>
         {
-            (await db.DepartmentWorkTasks.AnyAsync(item => item.Id == parent.GetProperty("id").GetInt32())).Should().BeFalse();
-            (await db.DepartmentWorkTasks.AnyAsync(item => item.Id == child.GetProperty("id").GetInt32())).Should().BeFalse();
+            (await db.DepartmentWorkTasks.AnyAsync(item => item.Id == taskId || item.Id == childId))
+                .Should().BeFalse();
             (await db.DepartmentWorkTaskAttachments.AnyAsync(item => item.Id == attachmentId)).Should().BeFalse();
+            (await db.DepartmentWorkTaskCcUsers.AnyAsync(item => item.WorkTaskId == childId)).Should().BeFalse();
             (await db.PermitChecklistItems.Where(item => item.Id == permitId)
                 .Select(item => item.WorkTaskId).SingleAsync()).Should().BeNull();
+            (await db.DepartmentWorkPackages.AnyAsync(item => item.Id == packageId)).Should().BeTrue();
         });
     }
 
@@ -443,6 +509,9 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         var listed = await ReadJsonAsync(await Client.GetAsync(path));
         listed.GetArrayLength().Should().Be(2);
         (await Client.GetAsync($"{path}/{firstId}/content")).StatusCode.Should().Be(HttpStatusCode.OK);
+        // The assignee may remove an attachment while the package is still open.
+        (await Client.DeleteAsync($"{path}/{secondId}")).StatusCode.Should().Be(HttpStatusCode.NoContent);
+        (await Client.GetAsync($"{path}/{secondId}/content")).StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsCustomerAsync);
         (await Client.GetAsync(path)).StatusCode.Should().Be(HttpStatusCode.Forbidden);

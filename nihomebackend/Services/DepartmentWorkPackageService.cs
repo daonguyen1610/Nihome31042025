@@ -14,7 +14,8 @@ public sealed partial class DepartmentWorkPackageService(
     IProjectAccessService projectAccess,
     INotificationService notifications,
     ILogger<DepartmentWorkPackageService> logger,
-    WorkPackageApprovalEmailService approvalEmails) : IDepartmentWorkPackageService
+    WorkPackageApprovalEmailService approvalEmails,
+    IBusinessDocumentStorageService taskStorage) : IDepartmentWorkPackageService
 {
     private const string NotTiedToContract =
         "Nhóm công việc gắn theo Dự án và giai đoạn, không gắn với hợp đồng. Bỏ chọn hợp đồng rồi lưu lại.";
@@ -100,7 +101,7 @@ public sealed partial class DepartmentWorkPackageService(
         var cancelled = await packages.CountAsync(item => item.Status == WorkPackageStatus.Cancelled, ct);
         var tasks = db.DepartmentWorkTasks.AsNoTracking().Where(item =>
             packages.Any(package => package.Id == item.WorkPackageId && package.Status != WorkPackageStatus.Cancelled) &&
-            !item.Subtasks.Any());
+            item.Status != WorkTaskStatus.Disabled && !item.Subtasks.Any());
         var counts = await tasks.GroupBy(item => item.Status).Select(group => new { Status = group.Key, Count = group.Count() }).ToListAsync(ct);
         var sources = await packages.OrderByDescending(item => item.UpdatedAt).ThenByDescending(item => item.Id).Take(10)
             .Select(item => new { item.Id, item.Code, item.Name, item.Status }).ToListAsync(ct);
@@ -393,7 +394,7 @@ public sealed partial class DepartmentWorkPackageService(
                 .Select(item => item.SubmissionDeadline).SingleAsync(ct);
             if (AsUtcDate(request.PlannedEnd.Value) > AsUtcDate(deadline))
                 throw Error("Ngày kết thúc nhóm hồ sơ không được sau hạn nộp thầu.");
-            if (entity.Tasks.Any(task => task.Status != WorkTaskStatus.Cancelled &&
+            if (entity.Tasks.Any(task => task.Status is not (WorkTaskStatus.Cancelled or WorkTaskStatus.Disabled) &&
                     (task.PlannedStart < AsUtcDate(request.PlannedStart.Value) ||
                      task.PlannedEnd > AsUtcDate(request.PlannedEnd.Value))))
                 throw Error("Khoảng thời gian kế hoạch phải bao gồm các đầu việc đang có.");
@@ -499,6 +500,8 @@ public sealed partial class DepartmentWorkPackageService(
         var task = await db.DepartmentWorkTasks.Include(item => item.CcUsers).Include(item => item.Predecessors)
             .SingleOrDefaultAsync(item => item.Id == taskId && item.WorkPackageId == packageId, ct);
         if (task is null) return null;
+        if (task.Status == WorkTaskStatus.Disabled)
+            throw Error("Đầu việc đã vô hiệu hóa. Hãy khôi phục trước khi chỉnh sửa.");
         if (task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Verified or WorkTaskStatus.Cancelled)
             throw Error("Đầu việc đã kết thúc và không thể chỉnh sửa nội dung phân công.");
         if (request.ParentTaskId.HasValue && request.ParentTaskId != task.ParentTaskId)
@@ -543,6 +546,8 @@ public sealed partial class DepartmentWorkPackageService(
             .ToListAsync(ct);
         var task = tasks.SingleOrDefault(item => item.Id == taskId);
         if (task is null) return null;
+        if (task.Status == WorkTaskStatus.Disabled)
+            throw Error("Đầu việc đã vô hiệu hóa. Hãy khôi phục trước khi cập nhật tiến độ.");
         var admin = await IsAdministratorAsync(callerUserId, ct);
         if (!await CanOperateTaskAsync(task, callerUserId, admin, ct))
             throw Error("Chỉ thành viên phòng ban phụ trách hoặc PM dự án mới được thao tác đầu việc này.");
@@ -585,6 +590,11 @@ public sealed partial class DepartmentWorkPackageService(
         var reopeningTask = !hasSubtasks && status == WorkTaskStatus.InProgress &&
             task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Cancelled;
         var descendantTasks = hasSubtasks ? GetTaskDescendants(taskId, tasks) : new List<DepartmentWorkTask>();
+        // A disabled subtree is pending restore or permanent deletion; cancelling
+        // the parent must not overwrite its retention metadata.
+        var cascadeDescendants = descendantTasks
+            .Where(item => item.Status != WorkTaskStatus.Disabled)
+            .ToList();
         var completionTasks = descendantTasks
             .Where(item => item.Status == WorkTaskStatus.InProgress)
             .ToList();
@@ -594,14 +604,13 @@ public sealed partial class DepartmentWorkPackageService(
                 "WORK_TASK_SUBTASKS_NOT_READY");
         if (status is WorkTaskStatus.InProgress or WorkTaskStatus.Completed)
         {
-            var completingIds = hasSubtasks
-                ? completionTasks.Select(item => item.Id).ToHashSet()
-                : new HashSet<int> { taskId };
+            var completingIds = completionTasks.Select(item => item.Id).ToHashSet();
+            completingIds.Add(taskId);
             var blocked = tasks.Where(item => completingIds.Contains(item.Id))
                 .SelectMany(item => item.Predecessors)
                 .Any(link => !hierarchyRelatedIds.Contains(link.PredecessorTaskId) &&
                     !completingIds.Contains(link.PredecessorTaskId) &&
-                    link.PredecessorTask.Status is not (WorkTaskStatus.Completed or WorkTaskStatus.Verified));
+                    link.PredecessorTask.Status is not (WorkTaskStatus.Completed or WorkTaskStatus.Verified or WorkTaskStatus.Disabled));
             if (blocked)
                 throw Error("Chỉ được bắt đầu đầu việc sau khi mọi công tác tiên quyết đã hoàn thành.");
         }
@@ -625,7 +634,7 @@ public sealed partial class DepartmentWorkPackageService(
         }
         else if (hasSubtasks && status == WorkTaskStatus.Cancelled)
         {
-            foreach (var child in descendantTasks)
+            foreach (var child in cascadeDescendants)
             {
                 child.Status = WorkTaskStatus.Cancelled;
                 child.CompletedAt = null;
@@ -672,7 +681,7 @@ public sealed partial class DepartmentWorkPackageService(
         }
 
         var changedChildren = hasSubtasks && status == WorkTaskStatus.Cancelled
-            ? descendantTasks
+            ? cascadeDescendants
             : completionTasks;
         foreach (var child in changedChildren)
         {
@@ -1008,7 +1017,7 @@ public sealed partial class DepartmentWorkPackageService(
         {
             var hierarchy = await db.DepartmentWorkTasks.AsNoTracking()
                 .Where(item => item.WorkPackageId == package.Id)
-                .Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId))
+                .Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId, item.Status))
                 .ToListAsync(ct);
             var relatedIds = taskId.HasValue
                 ? GetHierarchyRelatedTaskIds(taskId, hierarchy).ToHashSet()
@@ -1071,7 +1080,15 @@ public sealed partial class DepartmentWorkPackageService(
         {
             var parent = byId[currentId.Value];
             var children = tasks.Where(item => item.ParentTaskId == currentId.Value).ToList();
-            var active = children.Where(item => item.Status != WorkTaskStatus.Cancelled).ToList();
+            var visibleChildren = children.Where(item => item.Status != WorkTaskStatus.Disabled).ToList();
+            // Disabling or permanently deleting every child leaves no visible signal
+            // to roll up; the parent keeps its own status and progress.
+            if (visibleChildren.Count == 0)
+            {
+                currentId = parent.ParentTaskId;
+                continue;
+            }
+            var active = visibleChildren.Where(item => item.Status != WorkTaskStatus.Cancelled).ToList();
             parent.ProgressPercent = active.Count == 0
                 ? (parent.Status == WorkTaskStatus.Completed ? 100 : 0)
                 : (int)Math.Round(active.Average(item => item.ProgressPercent));
@@ -1148,7 +1165,24 @@ public sealed partial class DepartmentWorkPackageService(
         return related;
     }
 
-    private sealed record TaskHierarchyNode(int Id, int? ParentTaskId);
+    private sealed record TaskHierarchyNode(int Id, int? ParentTaskId, WorkTaskStatus Status = WorkTaskStatus.Planned);
+
+    private static IReadOnlySet<int> GetAncestorTaskIdsWithDisabledDescendant(
+        IReadOnlyCollection<TaskHierarchyNode> hierarchy)
+    {
+        var byId = hierarchy.ToDictionary(item => item.Id);
+        var related = new HashSet<int>();
+        foreach (var disabled in hierarchy.Where(item => item.Status == WorkTaskStatus.Disabled))
+        {
+            var parentId = disabled.ParentTaskId;
+            while (parentId.HasValue && byId.TryGetValue(parentId.Value, out var parent))
+            {
+                if (!related.Add(parent.Id)) break;
+                parentId = parent.ParentTaskId;
+            }
+        }
+        return related;
+    }
 
     private async Task<bool> CreatesDependencyCycleAsync(int taskId, IReadOnlyCollection<int> predecessors, CancellationToken ct)
     {
@@ -1241,18 +1275,19 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error($"Không thể chuyển nhóm công việc từ {package.Status} sang {status}.");
         if (status == WorkPackageStatus.Completed)
         {
+            var activeTasks = package.Tasks.Where(task => task.Status != WorkTaskStatus.Disabled).ToList();
             if (package.Tasks.Count == 0)
                 throw Error("Nhóm công việc phải có ít nhất một đầu việc trước khi hoàn thành.",
                     NotCompletableCode);
             if (IsTenderPlanningPackage(package) &&
-                package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
+                activeTasks.Any(task => task.Status != WorkTaskStatus.Verified))
                 throw Error("Mọi đầu việc trong Kế hoạch đấu thầu phải được người duyệt độc lập xác nhận trước khi đóng nhóm.",
                     NotCompletableCode);
             if (package.Purpose == WorkPackagePurpose.LegalPermitting &&
-                package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
+                activeTasks.Any(task => task.Status != WorkTaskStatus.Verified))
                 throw Error("Mọi giấy phép phải được người duyệt độc lập xác nhận trước khi đóng gói Pháp lý.",
                     NotCompletableCode);
-            if (package.Tasks.Any(task => task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress ||
+            if (activeTasks.Any(task => task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress ||
                 RequiresIndependentVerification(package, task.KpiDefinitionId) && task.Status != WorkTaskStatus.Verified))
                 throw Error("Mọi đầu việc phải hoàn tất; đầu việc thuộc luồng có duyệt phải được xác nhận trước khi đóng nhóm.",
                     NotCompletableCode);
@@ -1398,15 +1433,16 @@ public sealed partial class DepartmentWorkPackageService(
             .ToDictionaryAsync(item => item.Id, item => item.Status, ct);
         var hierarchy = await db.DepartmentWorkTasks.AsNoTracking()
             .Where(item => item.WorkPackageId == task.WorkPackageId)
-            .Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId))
+            .Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId, item.Status))
             .ToListAsync(ct);
+        var ancestorsWithDisabledSubtree = GetAncestorTaskIdsWithDisabledDescendant(hierarchy);
         var callerGroupId = await UserRoleGroupIdAsync(callerUserId, ct);
         var isProjectManager = task.WorkPackage.OperationalProjectId.HasValue &&
             await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
                 project.Id == task.WorkPackage.OperationalProjectId && project.ProjectManagerUserId == callerUserId, ct);
         return MapTask(task, callerUserId, admin, callerGroupId, isProjectManager,
             task.WorkPackage.LeadUserId, hasSubtasks, await DisplayClockAsync(ct), taskStatuses,
-            GetHierarchyRelatedTaskIds(task.Id, hierarchy));
+            GetHierarchyRelatedTaskIds(task.Id, hierarchy), ancestorsWithDisabledSubtree.Contains(task.Id));
     }
 
     /// <summary>
@@ -1440,12 +1476,14 @@ public sealed partial class DepartmentWorkPackageService(
     private static DepartmentWorkPackageResponse MapPackage(
         DepartmentWorkPackage item, int callerUserId, bool admin, int? callerGroupId, DisplayClock clock)
     {
-        var activeTasks = item.Tasks.Where(task => task.Status != WorkTaskStatus.Cancelled).ToList();
+        var activeTasks = item.Tasks.Where(task => task.Status is not (WorkTaskStatus.Cancelled or WorkTaskStatus.Disabled)).ToList();
         var parentIds = item.Tasks.Where(task => task.ParentTaskId.HasValue)
             .Select(task => task.ParentTaskId!.Value).ToHashSet();
         var leafTasks = activeTasks.Where(task => !parentIds.Contains(task.Id)).ToList();
         var taskStatuses = item.Tasks.ToDictionary(task => task.Id, task => task.Status);
-        var hierarchy = item.Tasks.Select(task => new TaskHierarchyNode(task.Id, task.ParentTaskId)).ToList();
+        var hierarchy = item.Tasks
+            .Select(task => new TaskHierarchyNode(task.Id, task.ParentTaskId, task.Status)).ToList();
+        var ancestorsWithDisabledSubtree = GetAncestorTaskIdsWithDisabledDescendant(hierarchy);
         var overdue = OverdueState(item.PlannedEnd, clock,
             item.Status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled);
         return new DepartmentWorkPackageResponse
@@ -1503,7 +1541,8 @@ public sealed partial class DepartmentWorkPackageService(
                 .Select(task => MapTask(task, callerUserId, admin, callerGroupId,
                     item.OperationalProject?.ProjectManagerUserId == callerUserId,
                     item.LeadUserId, parentIds.Contains(task.Id), clock,
-                    taskStatuses, GetHierarchyRelatedTaskIds(task.Id, hierarchy))).ToList(),
+                    taskStatuses, GetHierarchyRelatedTaskIds(task.Id, hierarchy),
+                    ancestorsWithDisabledSubtree.Contains(task.Id))).ToList(),
             InputPriceOffers = item.InputPriceOffers.OrderByDescending(offer => offer.UpdatedAt)
                 .Select(MapInputPriceOffer).ToList(),
             FinanceReview = item.FinanceReview is null ? null : MapFinanceReview(item.FinanceReview),
@@ -1520,7 +1559,8 @@ public sealed partial class DepartmentWorkPackageService(
         bool hasSubtasks,
         DisplayClock clock,
         IReadOnlyDictionary<int, WorkTaskStatus> taskStatuses,
-        IReadOnlySet<int> hierarchyRelatedTaskIds)
+        IReadOnlySet<int> hierarchyRelatedTaskIds,
+        bool hasDisabledDescendant)
     {
         var verifier = task.ApproverUserId ?? packageLeadUserId;
         var overdue = OverdueState(task.PlannedEnd, clock,
@@ -1558,20 +1598,33 @@ public sealed partial class DepartmentWorkPackageService(
                 ? task.Predecessors
                     .Where(link => !hierarchyRelatedTaskIds.Contains(link.PredecessorTaskId) &&
                         (!taskStatuses.TryGetValue(link.PredecessorTaskId, out var status) ||
-                        status is not (WorkTaskStatus.Completed or WorkTaskStatus.Verified))
+                        status is not (WorkTaskStatus.Completed or WorkTaskStatus.Verified or WorkTaskStatus.Disabled))
                     )
                     .Select(link => link.PredecessorTaskId).ToList()
                 : [],
-            CanUpdateProgress = !hasSubtasks && IsTenderMutable(task.WorkPackage) &&
+            DisabledAt = task.DisabledAt,
+            RestoreUntil = task.DisabledAt?.AddDays(30),
+            IsDisabledRoot = task.Status == WorkTaskStatus.Disabled && task.DisabledRootTaskId == task.Id,
+            CanUpdateProgress = task.Status != WorkTaskStatus.Disabled && !hasSubtasks && IsTenderMutable(task.WorkPackage) &&
                 task.Status != WorkTaskStatus.Verified &&
                 (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
-            CanCancel = IsTenderMutable(task.WorkPackage) &&
+            CanCancel = task.Status != WorkTaskStatus.Disabled && IsTenderMutable(task.WorkPackage) &&
                 task.Status is not (WorkTaskStatus.Cancelled or WorkTaskStatus.Verified) &&
                 (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
-            CanDelete = IsTenderMutable(task.WorkPackage) &&
+            CanDisable = task.Status != WorkTaskStatus.Disabled && !hasDisabledDescendant &&
+                IsTenderMutable(task.WorkPackage) &&
                 task.WorkPackage.Status is not (WorkPackageStatus.Completed or WorkPackageStatus.Cancelled) &&
                 (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
-            CanComplete = IsTenderMutable(task.WorkPackage) &&
+            CanRestore = task.Status == WorkTaskStatus.Disabled && task.DisabledRootTaskId == task.Id &&
+                task.DisabledAt.HasValue && task.DisabledAt.Value.AddDays(30) > DateTime.UtcNow &&
+                IsTenderMutable(task.WorkPackage) && task.WorkPackage.Status is not (WorkPackageStatus.Completed or WorkPackageStatus.Cancelled) &&
+                (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
+            CanPermanentlyDelete = task.Status == WorkTaskStatus.Disabled && task.DisabledRootTaskId == task.Id &&
+                IsTenderMutable(task.WorkPackage) &&
+                (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
+            CanDeleteAttachments = task.Status == WorkTaskStatus.Disabled &&
+                (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
+            CanComplete = task.Status != WorkTaskStatus.Disabled && IsTenderMutable(task.WorkPackage) &&
                 (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
             CanVerify = !hasSubtasks && IsTenderMutable(task.WorkPackage) && RequiresIndependentVerification(task.WorkPackage, task.KpiDefinitionId) &&
                 task.Status == WorkTaskStatus.Completed &&
@@ -1597,17 +1650,18 @@ public sealed partial class DepartmentWorkPackageService(
     private static List<string> PackageCompletionBlockers(DepartmentWorkPackage package)
     {
         var blockers = new List<string>();
-        if (package.Tasks.Count == 0)
+        var activeTasks = package.Tasks.Where(task => task.Status != WorkTaskStatus.Disabled).ToList();
+        if (activeTasks.Count == 0)
         {
             blockers.Add("NO_TASKS");
             return blockers;
         }
-        if (IsTenderPlanningPackage(package) && package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
+        if (IsTenderPlanningPackage(package) && activeTasks.Any(task => task.Status != WorkTaskStatus.Verified))
             blockers.Add("TENDER_TASKS_NOT_VERIFIED");
         if (package.Purpose == WorkPackagePurpose.LegalPermitting &&
-            package.Tasks.Any(task => task.Status != WorkTaskStatus.Verified))
+            activeTasks.Any(task => task.Status != WorkTaskStatus.Verified))
             blockers.Add("LEGAL_PERMITS_NOT_VERIFIED");
-        if (blockers.Count == 0 && package.Tasks.Any(task =>
+        if (blockers.Count == 0 && activeTasks.Any(task =>
                 task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress ||
                 RequiresIndependentVerification(package, task.KpiDefinitionId) && task.Status != WorkTaskStatus.Verified))
             blockers.Add("TASKS_NOT_COMPLETED");

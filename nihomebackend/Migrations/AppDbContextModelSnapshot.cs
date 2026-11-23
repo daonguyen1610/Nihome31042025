@@ -3438,6 +3438,15 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("nvarchar(4000)");
 
+                    b.Property<DateTime?>("DisabledAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("DisabledByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("DisabledRootTaskId")
+                        .HasColumnType("int");
+
                     b.Property<int?>("KpiDefinitionId")
                         .HasColumnType("int");
 
@@ -3464,6 +3473,10 @@ namespace nihomebackend.Migrations
 
                     b.Property<string>("Status")
                         .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<string>("StatusBeforeDisabled")
                         .HasMaxLength(20)
                         .HasColumnType("nvarchar(20)");
 
@@ -3498,6 +3511,8 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("DepartmentRoleGroupId");
 
+                    b.HasIndex("DisabledByUserId");
+
                     b.HasIndex("ParentTaskId");
 
                     b.HasIndex("ProjectScheduleNodeId");
@@ -3511,6 +3526,8 @@ namespace nihomebackend.Migrations
 
                     b.HasIndex("AssigneeUserId", "Status", "PlannedEnd");
 
+                    b.HasIndex("Status", "DisabledAt", "DisabledRootTaskId");
+
                     b.HasIndex("WorkPackageId", "DepartmentRoleGroupId", "Status");
 
                     b.ToTable("department_work_tasks", null, t =>
@@ -3518,6 +3535,8 @@ namespace nihomebackend.Migrations
                             t.HasCheckConstraint("CK_department_work_tasks_approver", "[ApproverUserId] IS NULL OR [ApproverUserId] <> [AssigneeUserId]");
 
                             t.HasCheckConstraint("CK_department_work_tasks_dates", "[PlannedEnd] >= [PlannedStart]");
+
+                            t.HasCheckConstraint("CK_department_work_tasks_disabled_metadata", "([Status] = 'Disabled' AND [DisabledAt] IS NOT NULL AND [DisabledByUserId] IS NOT NULL AND [DisabledRootTaskId] IS NOT NULL AND [StatusBeforeDisabled] IS NOT NULL) OR ([Status] <> 'Disabled' AND [DisabledAt] IS NULL AND [DisabledByUserId] IS NULL AND [DisabledRootTaskId] IS NULL AND [StatusBeforeDisabled] IS NULL)");
 
                             t.HasCheckConstraint("CK_department_work_tasks_progress", "[ProgressPercent] >= 0 AND [ProgressPercent] <= 100");
                         });
@@ -13684,6 +13703,11 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("DepartmentRoleGroupId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", null)
+                        .WithMany()
+                        .HasForeignKey("DisabledByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
 
                     b.HasOne("NihomeBackend.Models.KpiDefinition", "KpiDefinition")
                         .WithMany()

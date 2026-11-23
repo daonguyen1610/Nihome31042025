@@ -143,12 +143,18 @@ public sealed class DepartmentWorkTaskResponse
     public DateTime? CompletedAt { get; set; }
     public DateTime? VerifiedAt { get; set; }
     public int? VerifiedByUserId { get; set; }
+    public DateTime? DisabledAt { get; set; }
+    public DateTime? RestoreUntil { get; set; }
+    public bool IsDisabledRoot { get; set; }
     public List<int> CcUserIds { get; set; } = new();
     public List<int> PredecessorTaskIds { get; set; } = new();
     public List<int> BlockingPredecessorTaskIds { get; set; } = new();
     public bool CanUpdateProgress { get; set; }
     public bool CanCancel { get; set; }
-    public bool CanDelete { get; set; }
+    public bool CanDisable { get; set; }
+    public bool CanRestore { get; set; }
+    public bool CanPermanentlyDelete { get; set; }
+    public bool CanDeleteAttachments { get; set; }
     public bool CanComplete { get; set; }
     public bool CanVerify { get; set; }
     public bool IsOverdue { get; set; }

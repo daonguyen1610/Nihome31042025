@@ -421,6 +421,83 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
         otherApproverId.Should().BePositive();
     }
 
+    [Fact]
+    public async Task Publishing_IgnoresDisabledDepartmentTasksButStillBlocksOnActiveOnes()
+    {
+        var projectId = await CreateProjectAsync(await UserIdAsync("PM"));
+        var approverId = await UserIdAsync("SALES_MANAGER");
+        await AuthenticateAsync("SUPER_ADMIN");
+        using var createdResponse = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions",
+            RevisionPayload(), $"schedule-create-{Guid.NewGuid():N}");
+        createdResponse.StatusCode.Should().Be(HttpStatusCode.OK,
+            await createdResponse.Content.ReadAsStringAsync());
+        var revision = (await ReadJsonAsync(createdResponse)).GetProperty("revisions")[0];
+        var revisionId = revision.GetProperty("id").GetInt32();
+        var nodeId = revision.GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("wbsCode").GetString() == "1.1")
+            .GetProperty("nodeId").GetGuid();
+        var (packageId, taskId) = await SeedLinkedDepartmentTaskAsync(projectId, nodeId);
+
+        var submitPreviewPath =
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Submit&recipientUserId={approverId}";
+        var submitToken = (await ReadJsonAsync(await Client.GetAsync(submitPreviewPath)))
+            .GetProperty("previewToken").GetString();
+        using var submitted = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/submit",
+            new
+            {
+                approverUserId = approverId,
+                rowVersion = revision.GetProperty("rowVersion").GetString(),
+                previewToken = submitToken,
+            }, $"schedule-submit-linked-{Guid.NewGuid():N}");
+        submitted.StatusCode.Should().Be(HttpStatusCode.OK, await submitted.Content.ReadAsStringAsync());
+        var pendingVersion = (await ReadJsonAsync(submitted)).GetProperty("revisions")[0]
+            .GetProperty("rowVersion").GetString();
+
+        await AuthenticateAsync("SALES_MANAGER");
+        var publishPreviewPath =
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/email-preview?action=Publish";
+        var publishToken = (await ReadJsonAsync(await Client.GetAsync(publishPreviewPath)))
+            .GetProperty("previewToken").GetString();
+        using var blocked = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/review",
+            new { decision = "Approve", rowVersion = pendingVersion, previewToken = publishToken },
+            $"schedule-approve-linked-{Guid.NewGuid():N}");
+        blocked.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await blocked.Content.ReadAsStringAsync()).Should().Contain("ngoài khung hạng mục");
+        (await WithDbAsync(db => db.ProjectScheduleRevisions.AsNoTracking()
+                .SingleAsync(item => item.Id == revisionId))).Status
+            .Should().Be(ProjectScheduleRevisionStatus.PendingApproval);
+
+        await AuthenticateAsync("SUPER_ADMIN");
+        var package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var taskRowVersion = package.GetProperty("tasks").EnumerateArray()
+            .Single(item => item.GetProperty("id").GetInt32() == taskId)
+            .GetProperty("rowVersion").GetString();
+        using var disabled = await SendJsonWithKeyAsync(HttpMethod.Delete,
+            $"/api/work-packages/{packageId}/tasks/{taskId}",
+            new { rowVersion = taskRowVersion }, $"work-task-disable-{Guid.NewGuid():N}");
+        disabled.StatusCode.Should().Be(HttpStatusCode.NoContent,
+            await disabled.Content.ReadAsStringAsync());
+
+        await AuthenticateAsync("SALES_MANAGER");
+        var freshPublishToken = (await ReadJsonAsync(await Client.GetAsync(publishPreviewPath)))
+            .GetProperty("previewToken").GetString();
+        using var approved = await SendJsonWithKeyAsync(HttpMethod.Post,
+            $"/api/operational-projects/{projectId}/master-schedule/revisions/{revisionId}/review",
+            new
+            {
+                decision = "Approve",
+                comment = "Đã xử lý công việc phòng ban liên kết",
+                rowVersion = pendingVersion,
+                previewToken = freshPublishToken,
+            }, $"schedule-approve-after-disable-{Guid.NewGuid():N}");
+        approved.StatusCode.Should().Be(HttpStatusCode.OK, await approved.Content.ReadAsStringAsync());
+        (await ReadJsonAsync(approved)).GetProperty("revisions")[0].GetProperty("status").GetString()
+            .Should().Be("Published");
+    }
+
     private Task AuthenticateAsync(string roleCode) => AuthTestHelper.AuthenticateAsync(
         Client, client => AuthTestHelper.LoginAsRoleAsync(client, roleCode));
 
@@ -454,6 +531,57 @@ public sealed class ProjectScheduleControllerTests : IntegrationTestBase
         await db.SaveChangesAsync();
         return project.Id;
     });
+
+    private Task<(int PackageId, int TaskId)> SeedLinkedDepartmentTaskAsync(int projectId, Guid nodeId) =>
+        WithDbAsync(async db =>
+        {
+            var groupId = await db.RoleGroups.Where(item => item.Code == "PROCUREMENT")
+                .Select(item => item.Id).SingleAsync();
+            var leadId = await db.Users
+                .Where(item => item.RoleEntity != null && item.RoleEntity.Code == "PROCUREMENT")
+                .Select(item => item.Id).SingleAsync();
+            var staffId = await db.Users
+                .Where(item => item.RoleEntity != null && item.RoleEntity.Code == "WAREHOUSE")
+                .Select(item => item.Id).SingleAsync();
+            var adminId = await db.Users
+                .Where(item => item.RoleEntity != null && item.RoleEntity.Code == "SUPER_ADMIN")
+                .Select(item => item.Id).SingleAsync();
+            var package = new DepartmentWorkPackage
+            {
+                Code = $"WP-SCHED-{Guid.NewGuid():N}"[..24],
+                Kind = WorkPackageKind.Project,
+                Purpose = WorkPackagePurpose.General,
+                Name = "Điều phối vật tư phần móng",
+                OperationalProjectId = projectId,
+                DepartmentRoleGroupId = groupId,
+                LeadUserId = leadId,
+                Status = WorkPackageStatus.Active,
+                PlannedStart = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc),
+                PlannedEnd = new DateTime(2026, 6, 30, 0, 0, 0, DateTimeKind.Utc),
+                CreatedByUserId = adminId,
+                UpdatedByUserId = adminId,
+            };
+            db.DepartmentWorkPackages.Add(package);
+            await db.SaveChangesAsync();
+            var task = new DepartmentWorkTask
+            {
+                WorkPackageId = package.Id,
+                WbsCode = "SUP-SCHED-01",
+                Title = "Điều phối vật tư cọc móng",
+                DepartmentRoleGroupId = groupId,
+                AssigneeUserId = staffId,
+                ApproverUserId = leadId,
+                ProjectScheduleNodeId = nodeId,
+                Status = WorkTaskStatus.Planned,
+                PlannedStart = new DateTime(2026, 5, 1, 0, 0, 0, DateTimeKind.Utc),
+                PlannedEnd = new DateTime(2026, 5, 31, 0, 0, 0, DateTimeKind.Utc),
+                CreatedByUserId = adminId,
+                UpdatedByUserId = adminId,
+            };
+            db.DepartmentWorkTasks.Add(task);
+            await db.SaveChangesAsync();
+            return (package.Id, task.Id);
+        });
 
     private static object RevisionPayload()
     {
