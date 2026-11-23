@@ -85,6 +85,7 @@
   {"key":"workPackages.tasks.empty","category":"work-packages","vi":"Chưa có đầu việc. Người chủ trì phòng có thể bắt đầu phân công.","en":"No tasks yet. The department lead can begin assigning work.","zh":"暂无任务。部门负责人可以开始分配工作。","ja":"タスクはまだありません。部門責任者が割り当てを開始できます。"},
   {"key":"workPackages.tasks.kpi","category":"work-packages","vi":"KPI","en":"KPI","zh":"KPI","ja":"KPI"},
   {"key":"workPackages.attachments.title","category":"work-packages","vi":"Tệp đính kèm","en":"Attachments","zh":"附件","ja":"添付ファイル"},
+  {"key":"workPackages.card.task","category":"work-packages","vi":"đầu việc","en":"task","zh":"任务","ja":"タスク"},
   {"key":"workPackages.card.tasks","category":"work-packages","vi":"đầu việc","en":"tasks","zh":"任务","ja":"タスク"},
   {"key":"workPackages.card.overdue","category":"work-packages","vi":"quá hạn","en":"overdue","zh":"逾期","ja":"期限超過"},
   {"key":"workPackages.attachments.addFiles","category":"work-packages","vi":"Đính kèm nhiều tệp","en":"Attach multiple files","zh":"添加多个文件","ja":"複数ファイルを添付"},
