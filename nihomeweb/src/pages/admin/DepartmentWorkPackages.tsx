@@ -222,6 +222,7 @@ const DepartmentWorkPackages = () => {
     saveTask,
     transitionPackage,
     progressTask,
+    cancelTask,
     openProgress,
     verifyTask,
     rejectTask,
@@ -812,6 +813,17 @@ const DepartmentWorkPackages = () => {
                           )}
                         {detail.status === "Active" &&
                           task.canUpdateProgress &&
+                          ["Planned", "InProgress"].includes(task.status) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void cancelTask(task)}
+                            >
+                              {t("workPackages.action.cancelTask")}
+                            </Button>
+                          )}
+                        {detail.status === "Active" &&
+                          task.canComplete &&
                           ["Planned", "InProgress"].includes(task.status) && (
                             <Button
                               variant="outline"

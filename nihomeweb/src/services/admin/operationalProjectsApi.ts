@@ -158,7 +158,12 @@ export const operationalProjectsApi = {
   updateWorkTaskProgress: (
     packageId: number,
     taskId: number,
-    body: { progressPercent: number; status: WorkTaskStatus; rowVersion: string },
+    body: {
+      progressPercent: number;
+      status: WorkTaskStatus;
+      confirmSubtasksCompletion?: boolean;
+      rowVersion: string;
+    },
     idempotencyKey: string,
   ) =>
     api.put<DepartmentWorkTaskResponse>(

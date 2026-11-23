@@ -147,6 +147,7 @@ public sealed class DepartmentWorkTaskResponse
     public List<int> PredecessorTaskIds { get; set; } = new();
     public List<int> BlockingPredecessorTaskIds { get; set; } = new();
     public bool CanUpdateProgress { get; set; }
+    public bool CanComplete { get; set; }
     public bool CanVerify { get; set; }
     public bool IsOverdue { get; set; }
     public int? OverdueDays { get; set; }

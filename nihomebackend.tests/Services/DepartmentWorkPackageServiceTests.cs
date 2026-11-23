@@ -601,6 +601,118 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task CompletingParentTask_CompletesItsSubtasksAfterExplicitConfirmation()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-10"), _procurementLead.Id);
+        var child = await _service.AddTaskAsync(package.Id, new UpsertDepartmentWorkTaskRequest
+        {
+            ParentTaskId = parent.Id,
+            WbsCode = "SUP-10.1",
+            Title = "Kiểm tra vật tư đầu vào",
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
+        }, _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        await _db.SaveChangesAsync();
+
+        var confirmationRequired = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.UpdateProgressAsync(package.Id, parent.Id,
+                new UpdateDepartmentWorkTaskProgressRequest
+                {
+                    Status = "Completed",
+                    ProgressPercent = 100,
+                    RowVersion = parent.RowVersion,
+                }, _warehouseStaff.Id));
+        Assert.Equal("WORK_TASK_SUBTASK_CONFIRMATION_REQUIRED", confirmationRequired.Code);
+
+        var completed = await _service.UpdateProgressAsync(package.Id, parent.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Completed",
+                ProgressPercent = 100,
+                ConfirmSubtasksCompletion = true,
+                RowVersion = parent.RowVersion,
+            }, _warehouseStaff.Id);
+
+        var storedParent = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id);
+        var storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        Assert.Equal("Completed", completed!.Status);
+        Assert.Equal(WorkTaskStatus.Completed, storedParent.Status);
+        Assert.Equal(WorkTaskStatus.Completed, storedChild.Status);
+        Assert.Equal(100, storedChild.ProgressPercent);
+    }
+
+    [Theory]
+    [InlineData("Cancelled", 0)]
+    [InlineData("Completed", 100)]
+    public async Task ChildTask_CanFinishIndependentlyOfItsParent(string status, int progress)
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-20"), _procurementLead.Id);
+        var child = await _service.AddTaskAsync(package.Id, new UpsertDepartmentWorkTaskRequest
+        {
+            ParentTaskId = parent.Id,
+            WbsCode = "SUP-20.1",
+            Title = "Kiểm tra vật tư không còn cần dùng",
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
+        }, _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        await _db.SaveChangesAsync();
+        _db.DepartmentWorkTaskDependencies.Add(new DepartmentWorkTaskDependency
+        {
+            WorkTaskId = child.Id,
+            PredecessorTaskId = parent.Id,
+        });
+        await _db.SaveChangesAsync();
+        var detail = await _service.GetAsync(package.Id, _pm.Id, true);
+        Assert.Empty(detail!.Tasks.Single(task => task.Id == child.Id).BlockingPredecessorTaskIds);
+
+        var cancelled = await _service.UpdateProgressAsync(package.Id, child.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = status,
+                ProgressPercent = progress,
+                RowVersion = child.RowVersion,
+            }, _warehouseStaff.Id);
+
+        Assert.Equal(status, cancelled!.Status);
+        var storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        Assert.Equal(Enum.Parse<WorkTaskStatus>(status), storedChild.Status);
+        if (status == "Cancelled") Assert.Null(storedChild.ActualStart);
+    }
+
+    [Fact]
+    public async Task ChildTask_CannotDependOnItsParent()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-30"), _procurementLead.Id);
+        var childRequest = new UpsertDepartmentWorkTaskRequest
+        {
+            ParentTaskId = parent.Id,
+            WbsCode = "SUP-30.1",
+            Title = "Thực hiện kiểm tra vật tư",
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
+            PredecessorTaskIds = [parent.Id],
+        };
+
+        var error = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
+            _service.AddTaskAsync(package.Id, childRequest, _procurementLead.Id));
+        Assert.Equal("WORK_TASK_HIERARCHY_DEPENDENCY_INVALID", error.Code);
+    }
+
+    [Fact]
     public async Task Overdue_UsesConfiguredTimeZoneAndSkipsClosedWork()
     {
         _db.SiteSettings.Add(new SiteSettings { DisplayTimeZoneId = "Asia/Ho_Chi_Minh" });

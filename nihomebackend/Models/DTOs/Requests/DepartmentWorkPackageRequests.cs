@@ -104,6 +104,8 @@ public sealed class UpdateDepartmentWorkTaskProgressRequest : IConcurrencyReques
     [Required, StringLength(20)]
     public string Status { get; set; } = "InProgress";
 
+    public bool ConfirmSubtasksCompletion { get; set; }
+
     public string? RowVersion { get; set; }
 }
 

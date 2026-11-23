@@ -60,6 +60,7 @@ export interface DepartmentWorkTaskResponse {
   successorTaskIds: number[];
   blockingPredecessorTaskIds: number[];
   canUpdateProgress: boolean;
+  canComplete: boolean;
   canVerify: boolean;
   isOverdue: boolean;
   overdueDays?: number | null;

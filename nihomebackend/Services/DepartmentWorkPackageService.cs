@@ -534,63 +534,145 @@ public sealed partial class DepartmentWorkPackageService(
         int callerUserId,
         CancellationToken ct = default)
     {
-        var task = await db.DepartmentWorkTasks.Include(item => item.WorkPackage)
-            .Include(item => item.Predecessors)
-            .SingleOrDefaultAsync(item => item.Id == taskId && item.WorkPackageId == packageId, ct);
+        var tasks = await db.DepartmentWorkTasks
+            .Include(item => item.WorkPackage)
+            .Include(item => item.Predecessors).ThenInclude(link => link.PredecessorTask)
+            .Where(item => item.WorkPackageId == packageId)
+            .ToListAsync(ct);
+        var task = tasks.SingleOrDefault(item => item.Id == taskId);
         if (task is null) return null;
         var admin = await IsAdministratorAsync(callerUserId, ct);
         if (!admin && task.AssigneeUserId != callerUserId)
             throw Error("Chỉ người phụ trách đầu việc mới được cập nhật tiến độ.");
-        if (await db.DepartmentWorkTasks.AsNoTracking().AnyAsync(item => item.ParentTaskId == taskId, ct))
-            throw Error("Tiến độ công việc cha được tổng hợp từ các công việc con.");
+        var hasSubtasks = tasks.Any(item => item.ParentTaskId == taskId);
         await EnsureTenderIsMutableAsync(task.WorkPackage, ct);
         if (task.WorkPackage.Status != WorkPackageStatus.Active)
             throw Error("Nhóm công việc phải ở trạng thái Đang thực hiện trước khi cập nhật tiến độ.");
         if (!Enum.TryParse<WorkTaskStatus>(request.Status, true, out var status) ||
-            status is WorkTaskStatus.Verified or WorkTaskStatus.Cancelled)
-            throw Error("Người phụ trách chỉ được chuyển đầu việc sang Đang thực hiện hoặc Hoàn thành.");
-        ValidateTaskProgressTransition(task, status, request.ProgressPercent);
+            status is not (WorkTaskStatus.InProgress or WorkTaskStatus.Completed or WorkTaskStatus.Cancelled))
+            throw Error("Người phụ trách chỉ được chuyển đầu việc sang Đang thực hiện, Hoàn thành hoặc Hủy.");
+        if (hasSubtasks && status != WorkTaskStatus.Completed)
+            throw Error("Công việc cha chỉ được hoàn thành cùng các công việc con.");
+        if (hasSubtasks && !request.ConfirmSubtasksCompletion)
+            throw Error("Cần xác nhận hoàn thành các công việc con trước khi tiếp tục.",
+                "WORK_TASK_SUBTASK_CONFIRMATION_REQUIRED");
+        if (!hasSubtasks)
+            ValidateTaskProgressTransition(task, status, request.ProgressPercent);
+        else if (status != WorkTaskStatus.Completed || request.ProgressPercent != 100)
+            throw Error("Công việc cha chỉ được hoàn thành cùng các công việc con.");
+
         if (status == WorkTaskStatus.Completed && task.WorkPackage.Purpose == WorkPackagePurpose.LegalPermitting)
         {
-            var permitReady = await db.PermitChecklistItems.AsNoTracking().AnyAsync(item =>
-                item.WorkTaskId == task.Id && item.Status == PermitStatus.Issued &&
-                item.IssuedAt.HasValue && item.IssuedFilePath != null, ct);
-            if (!permitReady)
+            var completionIds = hasSubtasks
+                ? GetTaskDescendants(taskId, tasks)
+                    .Where(item => item.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress or WorkTaskStatus.Cancelled)
+                    .Select(item => item.Id).ToHashSet()
+                : new HashSet<int> { taskId };
+            var permits = await db.PermitChecklistItems.AsNoTracking()
+                .Where(item => item.WorkTaskId.HasValue && completionIds.Contains(item.WorkTaskId.Value))
+                .ToListAsync(ct);
+            var readyTaskIds = permits.Where(item => item.Status == PermitStatus.Issued &&
+                    item.IssuedAt.HasValue && item.IssuedFilePath != null)
+                .Select(item => item.WorkTaskId!.Value).ToHashSet();
+            if (completionIds.Any(id => !readyTaskIds.Contains(id)))
                 throw Error("Chỉ được trình duyệt khi giấy phép đã được cấp, có ngày cấp và tệp giấy phép.");
         }
-        if (status is (WorkTaskStatus.InProgress or WorkTaskStatus.Completed) &&
-            await db.DepartmentWorkTaskDependencies.AsNoTracking().AnyAsync(link =>
-                link.WorkTaskId == task.Id &&
-                link.PredecessorTask.Status != WorkTaskStatus.Completed &&
-                link.PredecessorTask.Status != WorkTaskStatus.Verified, ct))
-            throw Error("Chỉ được bắt đầu đầu việc sau khi mọi công tác tiên quyết đã hoàn thành.");
+
+        var hierarchyRelatedIds = GetHierarchyRelatedTaskIds(taskId,
+            tasks.Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId)).ToList());
+        var descendantTasks = hasSubtasks ? GetTaskDescendants(taskId, tasks) : new List<DepartmentWorkTask>();
+        var completionTasks = descendantTasks
+            .Where(item => item.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress or WorkTaskStatus.Cancelled)
+            .ToList();
+        if (status is WorkTaskStatus.InProgress or WorkTaskStatus.Completed)
+        {
+            var completingIds = hasSubtasks
+                ? completionTasks.Select(item => item.Id).ToHashSet()
+                : new HashSet<int> { taskId };
+            var blocked = tasks.Where(item => completingIds.Contains(item.Id))
+                .SelectMany(item => item.Predecessors)
+                .Any(link => !hierarchyRelatedIds.Contains(link.PredecessorTaskId) &&
+                    !completingIds.Contains(link.PredecessorTaskId) &&
+                    link.PredecessorTask.Status is not (WorkTaskStatus.Completed or WorkTaskStatus.Verified));
+            if (blocked)
+                throw Error("Chỉ được bắt đầu đầu việc sau khi mọi công tác tiên quyết đã hoàn thành.");
+        }
+
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, task, request.RowVersion);
         var now = DateTime.UtcNow;
-        task.Status = status;
-        task.ProgressPercent = request.ProgressPercent;
-        task.ActualStart ??= status != WorkTaskStatus.Planned ? now : null;
-        task.CompletedAt = status == WorkTaskStatus.Completed ? now : null;
-        task.UpdatedAt = now;
-        task.UpdatedByUserId = callerUserId;
+        if (hasSubtasks)
+        {
+            foreach (var child in completionTasks)
+            {
+                child.Status = WorkTaskStatus.Completed;
+                child.ProgressPercent = 100;
+                child.ActualStart ??= now;
+                child.CompletedAt = now;
+                child.VerifiedAt = null;
+                child.VerifiedByUserId = null;
+                child.UpdatedAt = now;
+                child.UpdatedByUserId = callerUserId;
+            }
+        }
+        else
+        {
+            task.Status = status;
+            task.ProgressPercent = status == WorkTaskStatus.Cancelled
+                ? task.ProgressPercent
+                : request.ProgressPercent;
+            if (status is WorkTaskStatus.InProgress or WorkTaskStatus.Completed)
+                task.ActualStart ??= now;
+            task.CompletedAt = status == WorkTaskStatus.Completed ? now : null;
+            task.UpdatedAt = now;
+            task.UpdatedByUserId = callerUserId;
+        }
         TouchPackage(task.WorkPackage, callerUserId, now);
         await CrmConcurrency.SaveChangesAsync(db, ct);
-        if (task.ParentTaskId.HasValue)
+        if (hasSubtasks)
+        {
+            await RollupParentTasksAsync(packageId, taskId, callerUserId, ct);
+            await CrmConcurrency.SaveChangesAsync(db, ct);
+        }
+        else if (task.ParentTaskId.HasValue)
         {
             await RollupParentTasksAsync(packageId, task.ParentTaskId.Value, callerUserId, ct);
             await CrmConcurrency.SaveChangesAsync(db, ct);
         }
-        var response = await LoadTaskAsync(task.Id, callerUserId, admin, ct);
-        await AddHistoryAsync(packageId, "Task", task.Id, "Progressed", response, callerUserId, ct);
-        await CommitAsync(transaction, ct);
-        if (status == WorkTaskStatus.Completed && RequiresIndependentVerification(task.WorkPackage, task.KpiDefinitionId))
+
+        foreach (var child in completionTasks)
         {
-            var verifierId = task.ApproverUserId ?? task.WorkPackage.LeadUserId;
-            await NotifySafelyAsync(verifierId, task.WorkPackage.Kind == WorkPackageKind.Project
+            var childResponse = await LoadTaskAsync(child.Id, callerUserId, admin, ct);
+            await AddHistoryAsync(packageId, "Task", child.Id, "CompletedByParent", childResponse,
+                callerUserId, ct);
+        }
+        var response = await LoadTaskAsync(task.Id, callerUserId, admin, ct);
+        await AddHistoryAsync(packageId, "Task", task.Id,
+            hasSubtasks ? "CompletedWithSubtasks" : status switch
+            {
+                WorkTaskStatus.Completed => "Progressed",
+                WorkTaskStatus.Cancelled => "Cancelled",
+                _ => "Progressed",
+            }, response, callerUserId, ct);
+        await CommitAsync(transaction, ct);
+
+        var completedTasks = hasSubtasks
+            ? completionTasks
+            : status == WorkTaskStatus.Completed ? new List<DepartmentWorkTask> { task } : new List<DepartmentWorkTask>();
+        foreach (var completedTask in completedTasks.Where(item =>
+                     RequiresIndependentVerification(item.WorkPackage, item.KpiDefinitionId)))
+        {
+            var verifierId = completedTask.ApproverUserId ?? completedTask.WorkPackage.LeadUserId;
+            await NotifySafelyAsync(verifierId, completedTask.WorkPackage.Kind == WorkPackageKind.Project
                     ? "work-task.project-awaiting-verification"
                     : "work-task.awaiting-verification",
-                new Dictionary<string, string> { ["taskTitle"] = task.Title, ["packageName"] = task.WorkPackage.Name },
-                "DepartmentWorkTask", task.Id, $"/admin/work-packages/{packageId}?taskId={task.Id}", ct);
+                new Dictionary<string, string>
+                {
+                    ["taskTitle"] = completedTask.Title,
+                    ["packageName"] = completedTask.WorkPackage.Name,
+                },
+                "DepartmentWorkTask", completedTask.Id,
+                $"/admin/work-packages/{packageId}?taskId={completedTask.Id}", ct);
         }
         return response;
     }
@@ -886,6 +968,21 @@ public sealed partial class DepartmentWorkPackageService(
             item.WorkPackageId == package.Id && predecessorIds.Contains(item.Id), ct);
         if (validCount != predecessorIds.Count)
             throw Error("Tất cả công tác trước phải thuộc cùng nhóm công việc.");
+        if (predecessorIds.Count > 0)
+        {
+            var hierarchy = await db.DepartmentWorkTasks.AsNoTracking()
+                .Where(item => item.WorkPackageId == package.Id)
+                .Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId))
+                .ToListAsync(ct);
+            var relatedIds = taskId.HasValue
+                ? GetHierarchyRelatedTaskIds(taskId, hierarchy).ToHashSet()
+                : GetHierarchyAncestorTaskIds(request.ParentTaskId, hierarchy).ToHashSet();
+            if (!taskId.HasValue && request.ParentTaskId.HasValue)
+                relatedIds.Add(request.ParentTaskId.Value);
+            if (predecessorIds.Any(relatedIds.Contains))
+                throw Error("Đầu việc không thể phụ thuộc vào công việc cha hoặc công việc con.",
+                    "WORK_TASK_HIERARCHY_DEPENDENCY_INVALID");
+        }
         if (taskId.HasValue && await CreatesDependencyCycleAsync(taskId.Value, predecessorIds, ct))
             throw Error("Quan hệ công tác trước tạo thành vòng lặp không hợp lệ.");
     }
@@ -959,6 +1056,61 @@ public sealed partial class DepartmentWorkPackageService(
             currentId = parent.ParentTaskId;
         }
     }
+
+    private static List<DepartmentWorkTask> GetTaskDescendants(
+        int taskId,
+        IReadOnlyCollection<DepartmentWorkTask> tasks)
+    {
+        var descendants = new List<DepartmentWorkTask>();
+        var parentIds = new HashSet<int> { taskId };
+        var remaining = tasks.Where(item => item.ParentTaskId.HasValue).ToList();
+        while (true)
+        {
+            var next = remaining.Where(item => parentIds.Contains(item.ParentTaskId!.Value)).ToList();
+            if (next.Count == 0) return descendants;
+            descendants.AddRange(next);
+            parentIds.UnionWith(next.Select(item => item.Id));
+            remaining.RemoveAll(item => parentIds.Contains(item.Id));
+        }
+    }
+
+    private static IReadOnlySet<int> GetHierarchyRelatedTaskIds(
+        int? taskId,
+        IReadOnlyCollection<TaskHierarchyNode> hierarchy)
+    {
+        if (!taskId.HasValue) return new HashSet<int>();
+        var byId = hierarchy.ToDictionary(item => item.Id);
+        if (!byId.ContainsKey(taskId.Value)) return new HashSet<int>();
+        var related = GetHierarchyAncestorTaskIds(taskId, hierarchy).ToHashSet();
+        related.Add(taskId.Value);
+        var parentIds = new HashSet<int> { taskId.Value };
+        while (true)
+        {
+            var children = hierarchy.Where(item => item.ParentTaskId.HasValue &&
+                parentIds.Contains(item.ParentTaskId.Value) && !related.Contains(item.Id)).ToList();
+            if (children.Count == 0) return related;
+            related.UnionWith(children.Select(item => item.Id));
+            parentIds.UnionWith(children.Select(item => item.Id));
+        }
+    }
+
+    private static IReadOnlySet<int> GetHierarchyAncestorTaskIds(
+        int? taskId,
+        IReadOnlyCollection<TaskHierarchyNode> hierarchy)
+    {
+        if (!taskId.HasValue) return new HashSet<int>();
+        var byId = hierarchy.ToDictionary(item => item.Id);
+        if (!byId.TryGetValue(taskId.Value, out var current)) return new HashSet<int>();
+        var related = new HashSet<int>();
+        while (current.ParentTaskId.HasValue && byId.TryGetValue(current.ParentTaskId.Value, out var parent))
+        {
+            related.Add(parent.Id);
+            current = parent;
+        }
+        return related;
+    }
+
+    private sealed record TaskHierarchyNode(int Id, int? ParentTaskId);
 
     private async Task<bool> CreatesDependencyCycleAsync(int taskId, IReadOnlyCollection<int> predecessors, CancellationToken ct)
     {
@@ -1187,8 +1339,12 @@ public sealed partial class DepartmentWorkPackageService(
         var taskStatuses = await db.DepartmentWorkTasks.AsNoTracking()
             .Where(item => predecessorIds.Contains(item.Id))
             .ToDictionaryAsync(item => item.Id, item => item.Status, ct);
+        var hierarchy = await db.DepartmentWorkTasks.AsNoTracking()
+            .Where(item => item.WorkPackageId == task.WorkPackageId)
+            .Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId))
+            .ToListAsync(ct);
         return MapTask(task, callerUserId, admin, task.WorkPackage.LeadUserId, hasSubtasks,
-            await DisplayClockAsync(ct), taskStatuses);
+            await DisplayClockAsync(ct), taskStatuses, GetHierarchyRelatedTaskIds(task.Id, hierarchy));
     }
 
     /// <summary>
@@ -1227,6 +1383,7 @@ public sealed partial class DepartmentWorkPackageService(
             .Select(task => task.ParentTaskId!.Value).ToHashSet();
         var leafTasks = activeTasks.Where(task => !parentIds.Contains(task.Id)).ToList();
         var taskStatuses = item.Tasks.ToDictionary(task => task.Id, task => task.Status);
+        var hierarchy = item.Tasks.Select(task => new TaskHierarchyNode(task.Id, task.ParentTaskId)).ToList();
         var overdue = OverdueState(item.PlannedEnd, clock,
             item.Status is WorkPackageStatus.Completed or WorkPackageStatus.Cancelled);
         return new DepartmentWorkPackageResponse
@@ -1281,7 +1438,8 @@ public sealed partial class DepartmentWorkPackageService(
             CanAssignTasks = IsTenderMutable(item) && (admin || item.LeadUserId == callerUserId),
             RowVersion = CrmConcurrency.Encode(item.RowVersion),
             Tasks = item.Tasks.OrderBy(task => task.WbsCode).ThenBy(task => task.Id)
-                .Select(task => MapTask(task, callerUserId, admin, item.LeadUserId, parentIds.Contains(task.Id), clock, taskStatuses)).ToList(),
+                .Select(task => MapTask(task, callerUserId, admin, item.LeadUserId, parentIds.Contains(task.Id), clock,
+                    taskStatuses, GetHierarchyRelatedTaskIds(task.Id, hierarchy))).ToList(),
             InputPriceOffers = item.InputPriceOffers.OrderByDescending(offer => offer.UpdatedAt)
                 .Select(MapInputPriceOffer).ToList(),
             FinanceReview = item.FinanceReview is null ? null : MapFinanceReview(item.FinanceReview),
@@ -1295,7 +1453,8 @@ public sealed partial class DepartmentWorkPackageService(
         int packageLeadUserId,
         bool hasSubtasks,
         DisplayClock clock,
-        IReadOnlyDictionary<int, WorkTaskStatus> taskStatuses)
+        IReadOnlyDictionary<int, WorkTaskStatus> taskStatuses,
+        IReadOnlySet<int> hierarchyRelatedTaskIds)
     {
         var verifier = task.ApproverUserId ?? packageLeadUserId;
         var overdue = OverdueState(task.PlannedEnd, clock,
@@ -1331,11 +1490,14 @@ public sealed partial class DepartmentWorkPackageService(
             PredecessorTaskIds = task.Predecessors.Select(item => item.PredecessorTaskId).ToList(),
             BlockingPredecessorTaskIds = task.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress
                 ? task.Predecessors
-                    .Where(link => !taskStatuses.TryGetValue(link.PredecessorTaskId, out var status) ||
+                    .Where(link => !hierarchyRelatedTaskIds.Contains(link.PredecessorTaskId) &&
+                        (!taskStatuses.TryGetValue(link.PredecessorTaskId, out var status) ||
                         status is not (WorkTaskStatus.Completed or WorkTaskStatus.Verified))
+                    )
                     .Select(link => link.PredecessorTaskId).ToList()
                 : [],
             CanUpdateProgress = !hasSubtasks && IsTenderMutable(task.WorkPackage) && (admin || task.AssigneeUserId == callerUserId),
+            CanComplete = IsTenderMutable(task.WorkPackage) && (admin || task.AssigneeUserId == callerUserId),
             CanVerify = !hasSubtasks && IsTenderMutable(task.WorkPackage) && RequiresIndependentVerification(task.WorkPackage, task.KpiDefinitionId) &&
                 task.Status == WorkTaskStatus.Completed &&
                 task.AssigneeUserId != callerUserId && (admin || verifier == callerUserId),

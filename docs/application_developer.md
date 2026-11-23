@@ -1509,11 +1509,15 @@ hai khi chưa có backfill, quy tắc unique, chính sách xung đột, rehearsa
   group phụ trách và kiểm assignee/approver theo nhóm đó.
 - Subtask (`department_work_tasks.ParentTaskId`, migration `AddWorkTaskSubtasks`):
   cha chưa kết thúc, cùng gói, không đổi cha sau khi tạo. Trạng thái và tiến độ cha
-  là rollup của con trực tiếp; tiến độ gói chỉ tính task lá. Task cha không nhận tiến
-  độ/xác minh trực tiếp, không có KPI. Request cũ bỏ `parentTaskId` không gỡ liên kết.
+  được rollup từ con trực tiếp; tiến độ gói chỉ tính task lá. Task cha không nhận cập
+  nhật tiến độ hoặc xác minh trực tiếp, không có KPI; lệnh hoàn thành cha yêu cầu xác
+  nhận và hoàn tất mọi hậu duệ chưa được xác minh trong cùng transaction. Task lá có
+  thể hoàn thành hoặc hủy độc lập với trạng thái cha. Không cho phép liên kết tiền
+  nhiệm giữa task với tổ tiên/hậu duệ; các liên kết loại này đã tồn tại không chặn
+  cập nhật tiến độ. Request cũ bỏ `parentTaskId` không gỡ liên kết.
 - Phụ thuộc trong cùng gói, không vòng; bắt đầu tiến độ cần gói Active và task trước đã
-  xong. Tiến độ người được giao đơn điệu tăng. Gói và lịch sử snapshot commit cùng
-  transaction.
+  xong. Tiến độ người được giao đơn điệu tăng; hủy là trạng thái kết thúc. Gói và lịch
+  sử snapshot commit cùng transaction.
 - Gói Completed về `Active` qua PUT: xoá `CompletedAt`, ghi snapshot `Reopened`, giữ
   tiến độ/xác minh. Cancelled là trạng thái cuối.
 - File đính kèm task (`AddWorkTaskAttachments`): kiểm 20 MB và đuôi như tài liệu
@@ -1532,7 +1536,7 @@ hai khi chưa có backfill, quy tắc unique, chính sách xung đột, rehearsa
 | `GET`/`DELETE` | `/{id}/deletion-impact`, `/{id}` | `manage` + scope quản lý | Xoá cứng với mã, planToken, rowVersion, idempotency key |
 | `POST`/`PUT` | `/{id}/tasks`, `/{id}/tasks/{taskId}` | `work.packages.assign` | Thêm/sửa task (WBS, phụ thuộc, CC, KPI) chưa kết thúc |
 | `GET`/`POST`/`DELETE` | `/{id}/tasks/{taskId}/attachments[/{attachmentId}[/content]]` | `view` + scope gói (upload/xoá: lead/assignee; lead dọn được gói đã đóng) | Một file multipart `file` mỗi request kèm `Idempotency-Key`; mỗi tệp tối đa theo `GET /api/site-settings/upload-limits/workTasks` (mặc định 20 MB, 1–100 MB) |
-| `PUT` | `/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Ghi tiến độ |
+| `PUT` | `/{id}/tasks/{taskId}/progress` | `work.packages.progress` | Task lá ghi tiến độ/hoàn thành/hủy; task cha chỉ hoàn thành khi `confirmSubtasksCompletion=true`, nếu thiếu trả `WORK_TASK_SUBTASK_CONFIRMATION_REQUIRED` |
 | `POST` | `/{id}/tasks/{taskId}/verify` | `work.packages.verify` | Xác minh độc lập task KPI đã xong |
 | `POST`/`PUT` | `/{id}/input-price-offers[/{offerId}]` | `work.packages.progress` | Thêm/sửa offer giá đầu vào (Draft/Rejected) |
 | `POST` | `/{id}/input-price-offers/{offerId}/approval-email-preview`, `/{id}/finance-review/approval-email-preview` | `progress` + scope phòng | Preview email duyệt, token 15 phút |

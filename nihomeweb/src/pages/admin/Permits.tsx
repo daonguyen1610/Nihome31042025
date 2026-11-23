@@ -4,6 +4,7 @@ import { useRequestGuard } from "@/hooks/useRequestGuard";
 import { collectLookupPages } from "@/lib/pagination";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
+import { useConfirm } from "@/components/ui/confirmation";
 import { personOption, type PersonIdentity } from "@/lib/people";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
@@ -160,6 +161,7 @@ const formFrom = (row: PermitChecklistItemResponse): PermitForm => ({
 const AdminPermits = () => {
   const uiError = useUiError();
   const { t, lang } = useI18n();
+  const confirmAction = useConfirm();
   const [searchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
@@ -404,6 +406,15 @@ const AdminPermits = () => {
 
   const updateViewedTaskProgress = async (complete: boolean) => {
     if (!viewing?.workPackageId || !viewTask) return;
+    if (
+      complete &&
+      viewTask.hasSubtasks &&
+      !(await confirmAction(t("workPackages.confirm.completeParent"), {
+        destructive: false,
+        confirmLabel: t("workPackages.action.completeTask"),
+      }))
+    )
+      return;
     setTaskSaving(true);
     try {
       await adminApi.updateWorkTaskProgress(
@@ -412,6 +423,7 @@ const AdminPermits = () => {
         {
           progressPercent: complete ? 100 : taskProgress,
           status: complete ? "Completed" : "InProgress",
+          confirmSubtasksCompletion: complete && viewTask.hasSubtasks,
           rowVersion: viewTask.rowVersion,
         },
         newIdempotencyKey(),
@@ -1320,6 +1332,16 @@ const AdminPermits = () => {
                         {t("workPackages.action.completeTask")}
                       </Button>
                     </div>
+                  ) : null}
+                  {viewTask.canComplete &&
+                  viewTask.hasSubtasks &&
+                  ["Planned", "InProgress"].includes(viewTask.status) ? (
+                    <Button
+                      disabled={taskSaving}
+                      onClick={() => void updateViewedTaskProgress(true)}
+                    >
+                      {t("workPackages.action.completeTask")}
+                    </Button>
                   ) : null}
                   {viewTask.canVerify && viewTask.status === "Completed" ? (
                     <div className="space-y-2 border-t pt-3">
