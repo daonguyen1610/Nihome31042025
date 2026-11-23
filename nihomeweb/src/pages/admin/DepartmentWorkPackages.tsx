@@ -816,7 +816,9 @@ const DepartmentWorkPackages = () => {
                       className={cn(
                         "p-4",
                         depth > 0 && "border-l-2 border-l-primary/30",
-                        params.get("taskId") === String(task.id) && "bg-amber-50",
+                        params.get("taskId") === String(task.id)
+                          ? "bg-amber-50"
+                          : task.status === "Disabled" && "bg-muted",
                       )}
                       style={{ marginLeft: Math.min(depth, 3) * 12 }}
                     >
