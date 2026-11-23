@@ -95,6 +95,21 @@ export const operationalProjectsApi = {
       data: body,
       headers: { "Idempotency-Key": idempotencyKey },
     }),
+  getWorkTaskDeletionImpact: (packageId: number, taskId: number) =>
+    api.get<DeletionImpactResponse>(`/work-packages/${packageId}/tasks/${taskId}/deletion-impact`),
+  deleteWorkTask: (
+    packageId: number,
+    taskId: number,
+    body: ConfirmDeletionRequest,
+    idempotencyKey: string,
+  ) =>
+    api.delete<void>(`/work-packages/${packageId}/tasks/${taskId}`, {
+      data: body,
+      headers: {
+        "Idempotency-Key": idempotencyKey,
+        ...withIfMatch(body.rowVersion ?? "").headers,
+      },
+    }),
   getWorkPackage: (id: number) => api.get<DepartmentWorkPackageResponse>(`/work-packages/${id}`),
   getWorkPackageDepartments: () =>
     api.get<DepartmentWorkPackageOptionsResponse["departments"]>("/work-packages/departments"),

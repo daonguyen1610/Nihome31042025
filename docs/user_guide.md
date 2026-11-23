@@ -319,12 +319,12 @@ Hồ sơ chuyên môn của Thiết kế và Thi công vẫn làm ở màn hình
 
 - Đính kèm tối đa 10 tệp mỗi lần (PDF, Word, Excel, JPG, PNG); dung lượng mỗi tệp theo **Cài đặt → Tệp công việc** (mặc định 20 MB). Công việc được lưu trước, tệp tải sau; tệp lỗi được giữ để thử lại.
 - Nút **Tệp đính kèm** trên mỗi công việc để xem và tải. Trưởng nhóm hoặc người thực hiện thêm/xóa tệp khi nhóm còn mở; trưởng nhóm vẫn xóa được sau khi đóng nhóm. Tệp công việc hiện lưu trên máy chủ, không vào danh mục Drive.
-- **Thêm công việc con** trên công việc chưa xong để chia nhỏ. Công việc cha tự cộng tiến độ và trạng thái từ các việc con; chỉ cập nhật tiến độ ở việc lá. Có thể nhiều cấp. Công việc đang gắn KPI phải bỏ KPI trước khi thêm việc con. Khi hoàn thành công việc cha, xác nhận hộp thoại để chuyển các việc con chưa được xác nhận thành hoàn thành. Công việc con có thể hoàn thành hoặc hủy độc lập; công việc cha/con không được chọn làm tiền nhiệm của nhau.
+- **Thêm công việc con** trên công việc chưa xong để chia nhỏ. Công việc cha tự cộng tiến độ và trạng thái từ các việc con; chỉ cập nhật tiến độ ở việc lá. Có thể nhiều cấp. Công việc đang gắn KPI phải bỏ KPI trước khi thêm việc con. Khi hoàn thành công việc cha, hộp thoại liệt kê các công việc con đang thực hiện sẽ chuyển sang hoàn thành; công việc đã hủy giữ nguyên. Công việc con chưa bắt đầu phải được bắt đầu hoặc hủy trước. Hủy công việc cha sẽ chuyển toàn bộ cây công việc sang trạng thái Hủy, kể cả công việc đã xác nhận KPI; lịch sử xác nhận trước đó vẫn được giữ. Xóa công việc cha sẽ xóa cả cây công việc sau bước xem ảnh hưởng, nhập mã xác nhận và dọn các tệp đính kèm. Công việc con có thể hoàn thành hoặc hủy độc lập; công việc con ở trạng thái Hoàn thành hoặc Đã hủy có thể được mở lại về Đang thực hiện theo yêu cầu. Công việc đã xác nhận KPI không thể mở lại. Công việc cha/con không được chọn làm tiền nhiệm của nhau.
 
 **Thực hiện và xác nhận**
 
 1. Bắt đầu nhóm (chuyển **Đang thực hiện**) trước khi giao người cập nhật tiến độ.
-2. Người thực hiện nhận thông báo có liên kết tới công việc, cập nhật tiến độ 1–99%, bấm **Hoàn thành** khi đạt 100%, hoặc **Hủy công việc** nếu không còn cần thực hiện. Công việc có tiền nhiệm chỉ bắt đầu được khi mọi tiền nhiệm đã xong.
+2. Người được giao nhận thông báo có liên kết tới công việc. Thành viên của phòng phụ trách hoặc PM dự án cũng có thể cập nhật tiến độ 1–99%, hoàn thành, hủy, mở lại hoặc xóa công việc trong phạm vi được giao. Công việc có tiền nhiệm chỉ bắt đầu được khi mọi tiền nhiệm đã xong.
 3. Công việc theo dự án chuyển **Chờ xác nhận**. Người xác nhận xác nhận, hoặc trả về **Đang thực hiện** kèm lý do. Công việc nội bộ không có KPI thì không cần xác nhận.
 4. Chỉ công việc có KPI đạt trạng thái đã xác nhận mới được tính KPI.
 5. Đóng nhóm theo dự án khi mọi công việc đã được xác nhận.

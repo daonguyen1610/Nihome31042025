@@ -171,5 +171,13 @@
   {"key":"deletionImpact.item.operations.projectScheduleRevisions","category":"deletionImpact","vi":"Các phiên bản tiến độ tổng thể","en":"Master schedule revisions","zh":"总体进度版本","ja":"全体工程の改訂"},
   {"key":"deletionImpact.item.operations.projectScheduleItems","category":"deletionImpact","vi":"Các mốc WBS tiến độ tổng thể","en":"Master schedule WBS items","zh":"总体进度 WBS 项","ja":"全体工程 WBS 項目"},
   {"key":"deletionImpact.item.operations.projectScheduleNodes","category":"deletionImpact","vi":"Danh tính liên kết các mốc WBS","en":"Master schedule WBS link identities","zh":"总体进度 WBS 关联标识","ja":"全体工程 WBS リンク ID"},
-  {"key":"deletionImpact.item.operations.assignmentAttachments","category":"deletionImpact","vi":"Tệp đính kèm phân công công việc","en":"Project assignment attachments","zh":"项目任务附件","ja":"プロジェクト作業割当の添付ファイル"}
+  {"key":"deletionImpact.item.operations.assignmentAttachments","category":"deletionImpact","vi":"Tệp đính kèm phân công công việc","en":"Project assignment attachments","zh":"项目任务附件","ja":"プロジェクト作業割当の添付ファイル"},
+  {"key":"deletionImpact.item.workTasks.descendants","category":"deletionImpact","vi":"Công việc cha và các công việc con","en":"Parent task and subtasks","zh":"父任务及其子任务","ja":"親タスクと子タスク"},
+  {"key":"deletionImpact.item.workTasks.attachments","category":"deletionImpact","vi":"Tệp đính kèm đã dọn khỏi máy chủ","en":"Attachments already removed from the server","zh":"已从服务器清理的附件","ja":"サーバーから削除済みの添付ファイル"},
+  {"key":"deletionImpact.item.workTasks.attachmentCleanup","category":"deletionImpact","vi":"Tệp đính kèm cần xóa trước","en":"Attachments that must be deleted first","zh":"必须先删除的附件","ja":"先に削除が必要な添付ファイル"},
+  {"key":"deletionImpact.item.workTasks.dependencies","category":"deletionImpact","vi":"Liên kết công việc tiền nhiệm và kế nhiệm","en":"Predecessor and successor task links","zh":"前置和后续任务链接","ja":"先行・後続タスクのリンク"},
+  {"key":"deletionImpact.item.workTasks.cc","category":"deletionImpact","vi":"Người theo dõi công việc","en":"Task followers","zh":"任务关注人","ja":"タスクのフォロワー"},
+  {"key":"deletionImpact.item.workTasks.permits","category":"deletionImpact","vi":"Mục giấy phép được giữ lại và gỡ liên kết","en":"Permit checklist items kept and unlinked","zh":"保留并解除关联的许可清单项","ja":"保持してリンクを解除する許可チェック項目"},
+  {"key":"deletionImpact.item.workTasks.tenderChecklist","category":"deletionImpact","vi":"Mục checklist đấu thầu được giữ lại và gỡ liên kết","en":"Tender checklist items kept and unlinked","zh":"保留并解除关联的投标清单项","ja":"保持してリンクを解除する入札チェック項目"},
+  {"key":"deletionImpact.item.workTasks.translations","category":"deletionImpact","vi":"Bản dịch của các công việc bị xóa","en":"Translations for deleted tasks","zh":"已删除任务的翻译","ja":"削除されたタスクの翻訳"}
 ]

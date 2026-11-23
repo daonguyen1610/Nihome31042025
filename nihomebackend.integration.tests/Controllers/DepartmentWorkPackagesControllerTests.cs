@@ -143,6 +143,17 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         active.StatusCode.Should().Be(HttpStatusCode.OK);
 
         await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var startedChild = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{packageId}/tasks/{child.GetProperty("id").GetInt32()}/progress", new
+            {
+                status = "InProgress",
+                progressPercent = 25,
+                rowVersion = child.GetProperty("rowVersion").GetString(),
+            }, child.GetProperty("rowVersion").GetString());
+        startedChild.StatusCode.Should().Be(HttpStatusCode.OK);
+        package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = package.GetProperty("tasks").EnumerateArray().Single(item =>
+            item.GetProperty("id").GetInt32() == parent.GetProperty("id").GetInt32());
         var missingConfirmation = await SendAsync(HttpMethod.Put,
             $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/progress", new
             {
@@ -169,6 +180,141 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
         var tasks = saved.GetProperty("tasks").EnumerateArray().ToDictionary(item => item.GetProperty("id").GetInt32());
         tasks[child.GetProperty("id").GetInt32()].GetProperty("status").GetString().Should().Be("Completed");
         tasks[parent.GetProperty("id").GetInt32()].GetProperty("canComplete").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task DeletingParentTask_RequiresImpactConfirmationAndDeletesItsSubtree()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var packageResponse = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "General",
+            name = "Xóa cây công việc dự án NICON",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var package = await ReadJsonAsync(packageResponse);
+        var packageId = package.GetProperty("id").GetInt32();
+
+        async Task<System.Text.Json.JsonElement> AddTaskAsync(string wbs, string title, int? parentId = null)
+        {
+            var response = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+            {
+                parentTaskId = parentId,
+                wbsCode = wbs,
+                title,
+                assigneeUserId = seed.DepartmentStaffId,
+                approverUserId = seed.DepartmentLeadId,
+                plannedStart = "2026-11-23T00:00:00Z",
+                plannedEnd = "2026-11-25T00:00:00Z",
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            return await ReadJsonAsync(response);
+        }
+
+        var parent = await AddTaskAsync("FIN-20", "Rà soát điều kiện thanh toán");
+        var child = await AddTaskAsync("FIN-20.1", "Đối chiếu điều khoản", parent.GetProperty("id").GetInt32());
+        var (attachmentId, permitId) = await WithDbAsync(async db =>
+        {
+            var attachment = new DepartmentWorkTaskAttachment
+            {
+                WorkTaskId = child.GetProperty("id").GetInt32(),
+                Path = $"/files/work-tasks/{Guid.NewGuid():N}.pdf",
+                OriginalFileName = "bien-ban-doi-chieu.pdf",
+                FileSize = 100,
+                ContentType = "application/pdf",
+                CreatedByUserId = seed.DepartmentStaffId,
+            };
+            var permit = new PermitChecklistItem
+            {
+                OperationalProjectId = seed.ProjectId,
+                WorkTaskId = child.GetProperty("id").GetInt32(),
+                PermitTypeCode = "building-permit",
+            };
+            db.AddRange(attachment, permit);
+            await db.SaveChangesAsync();
+            return (attachment.Id, permit.Id);
+        });
+        var currentPackage = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = currentPackage.GetProperty("tasks").EnumerateArray().Single(item =>
+            item.GetProperty("id").GetInt32() == parent.GetProperty("id").GetInt32());
+        var previewResponse = await Client.GetAsync(
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/deletion-impact");
+        previewResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var preview = await ReadJsonAsync(previewResponse);
+        preview.GetProperty("canDelete").GetBoolean().Should().BeFalse();
+        preview.GetProperty("items").EnumerateArray()
+            .Single(item => item.GetProperty("key").GetString() == "workTasks.descendants")
+            .GetProperty("count").GetInt32().Should().Be(2);
+
+        var blockedDelete = await SendAsync(HttpMethod.Delete,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
+            {
+                confirmation = preview.GetProperty("requiredConfirmation").GetString(),
+                planToken = preview.GetProperty("planToken").GetString(),
+                rowVersion = parent.GetProperty("rowVersion").GetString(),
+            }, parent.GetProperty("rowVersion").GetString());
+        blockedDelete.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await WithDbAsync(db => db.DepartmentWorkTasks.CountAsync(item =>
+            item.Id == parent.GetProperty("id").GetInt32() || item.Id == child.GetProperty("id").GetInt32())))
+            .Should().Be(2);
+
+        await WithDbAsync(async db =>
+        {
+            var attachment = await db.DepartmentWorkTaskAttachments.SingleAsync(item => item.Id == attachmentId);
+            attachment.StorageDeletedAt = DateTime.UtcNow;
+            db.DepartmentWorkTaskCcUsers.Add(new DepartmentWorkTaskCc
+            {
+                WorkTaskId = child.GetProperty("id").GetInt32(),
+                UserId = seed.DepartmentLeadId,
+            });
+            await db.SaveChangesAsync();
+        });
+        var changedPlanDelete = await SendAsync(HttpMethod.Delete,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
+            {
+                confirmation = preview.GetProperty("requiredConfirmation").GetString(),
+                planToken = preview.GetProperty("planToken").GetString(),
+                rowVersion = parent.GetProperty("rowVersion").GetString(),
+            }, parent.GetProperty("rowVersion").GetString());
+        changedPlanDelete.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await WithDbAsync(db => db.DepartmentWorkTasks.CountAsync(item =>
+            item.Id == parent.GetProperty("id").GetInt32() || item.Id == child.GetProperty("id").GetInt32())))
+            .Should().Be(2);
+
+        previewResponse = await Client.GetAsync(
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/deletion-impact");
+        preview = await ReadJsonAsync(previewResponse);
+        preview.GetProperty("canDelete").GetBoolean().Should().BeTrue();
+        var wrongConfirmation = await SendAsync(HttpMethod.Delete,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
+            {
+                confirmation = "WRONG",
+                planToken = preview.GetProperty("planToken").GetString(),
+                rowVersion = parent.GetProperty("rowVersion").GetString(),
+            }, parent.GetProperty("rowVersion").GetString());
+        wrongConfirmation.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        var deleted = await SendAsync(HttpMethod.Delete,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}", new
+            {
+                confirmation = preview.GetProperty("requiredConfirmation").GetString(),
+                planToken = preview.GetProperty("planToken").GetString(),
+                rowVersion = parent.GetProperty("rowVersion").GetString(),
+            }, parent.GetProperty("rowVersion").GetString());
+        deleted.StatusCode.Should().Be(HttpStatusCode.NoContent);
+        await WithDbAsync(async db =>
+        {
+            (await db.DepartmentWorkTasks.AnyAsync(item => item.Id == parent.GetProperty("id").GetInt32())).Should().BeFalse();
+            (await db.DepartmentWorkTasks.AnyAsync(item => item.Id == child.GetProperty("id").GetInt32())).Should().BeFalse();
+            (await db.DepartmentWorkTaskAttachments.AnyAsync(item => item.Id == attachmentId)).Should().BeFalse();
+            (await db.PermitChecklistItems.Where(item => item.Id == permitId)
+                .Select(item => item.WorkTaskId).SingleAsync()).Should().BeNull();
+        });
     }
 
     [Fact]
