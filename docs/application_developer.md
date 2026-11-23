@@ -2283,6 +2283,14 @@ Route `/api/permits` (và `/api/v1/permits`):
 | `GET` | `/api/permits`, `/{id}`, `/{id}/history` | `permit.checklists.view` | Lọc, phân trang, tóm tắt rủi ro; chi tiết; lịch sử trạng thái cơ quan/tài liệu |
 | `PATCH` | `/api/permits/{id}` | `permit.checklists.view` + scope actor dự án | Trạng thái cơ quan, cơ quan, ngày, ghi chú |
 | `POST` | `/api/permits/{id}/documents/{kind}` | như trên | Upload bằng chứng nộp/cấp, nguồn module `Legal` |
+
+UI workspace Pháp lý dùng bảng bảy cột (dự án, loại, người phụ trách/duyệt,
+ tiến độ, trạng thái + việc tiếp theo, hạn nộp/hết hạn, thao tác) và thẻ trên màn hình
+ nhỏ. Việc tiếp theo suy từ trạng thái và cờ rủi ro (`Expired`, `NeedMoreDocs`,
+ `Rejected`, `Submitted`, `UnderReview`, `Issued`); đây là hướng dẫn UI, không thay
+ điều kiện server. Chi tiết tải tài liệu qua API riêng tư, hiển thị tên tệp thay vì
+ đường dẫn lưu trữ, dịch trạng thái task/lịch sử, và khóa Hoàn thành task khi permit
+ chưa `Issued` hoặc thiếu ngày cấp/tệp.
 | `POST` | `/api/permits`, `/api/permits/design-project/{projectId}/ensure` | `permit.checklists.manage` | Đã ngừng: `410 LEGAL_SETUP_REQUIRED` |
 | `DELETE` | `/api/permits/{id}` | `permit.checklists.manage` | Bị chặn `409`; dùng luồng cấu hình/xoá an toàn theo aggregate |
 
