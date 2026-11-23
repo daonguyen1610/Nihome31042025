@@ -425,6 +425,35 @@ public class SiteSettingsControllerTests : IntegrationTestBase
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         (await Client.PostAsync("/api/site-settings/google-drive/oauth/disconnect", null))
             .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        (await Client.PostAsync("/api/site-settings/google-drive/test", null))
+            .StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task TestGoogleDriveConnection_AsSalesRole_ReturnsForbidden()
+    {
+        await AuthTestHelper.AuthenticateAsync(
+            Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+
+        (await Client.PostAsync("/api/site-settings/google-drive/test", null))
+            .StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task TestGoogleDriveConnection_AsAdmin_WhenDisconnected_ReturnsSafeBadRequest()
+    {
+        await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+
+        var response = await Client.PostAsync("/api/site-settings/google-drive/test", null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var body = await ReadJsonAsync(response);
+        body.GetProperty("code").GetString().Should().Be("DRIVE_NOT_CONNECTED");
+        body.GetProperty("message").GetString().Should().NotBeNullOrWhiteSpace();
+        var raw = await response.Content.ReadAsStringAsync();
+        raw.Should().NotContainEquivalentOf("refreshToken");
+        raw.Should().NotContainEquivalentOf("clientSecret");
     }
 
     [Fact]

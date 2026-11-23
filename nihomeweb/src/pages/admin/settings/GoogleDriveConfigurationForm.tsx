@@ -1,7 +1,7 @@
 import { useUiError } from "@/hooks/useUiError";
 import { getUiError } from "@/lib/apiError";
 import { useEffect, useState } from "react";
-import { BookOpen, Save, Trash2 } from "lucide-react";
+import { AlertTriangle, BookOpen, CheckCircle2, RefreshCw, Save, Trash2 } from "lucide-react";
 import {
   Accordion,
   AccordionContent,
@@ -18,6 +18,7 @@ import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
   type GoogleDriveAdminConfigurationResponse,
+  type GoogleDriveConnectionTestResponse,
   type GoogleDriveFolderConfiguration,
   type UpdateGoogleDriveConfigurationRequest,
 } from "@/services/adminApi";
@@ -166,6 +167,9 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
   const [clientSecret, setClientSecret] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testResult, setTestResult] = useState<GoogleDriveConnectionTestResponse | null>(null);
+  const [testError, setTestError] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -258,6 +262,20 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const testConnection = async () => {
+    setTesting(true);
+    setTestResult(null);
+    setTestError(null);
+    try {
+      const { data } = await adminApi.testGoogleDriveConnection();
+      setTestResult(data);
+    } catch (error) {
+      setTestError(uiError(error) || t("settings.drive.test.failed"));
+    } finally {
+      setTesting(false);
     }
   };
 
@@ -428,6 +446,85 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
             />
           ))}
         </div>
+      </div>
+
+      <div className="rounded-lg border bg-muted/20 p-4" data-testid="drive-connection-test">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div>
+            <h3 className="text-sm font-semibold">{t("settings.drive.test.title")}</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t("settings.drive.test.description")}
+            </p>
+          </div>
+          {canManage && (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => void testConnection()}
+              disabled={testing || saving}
+            >
+              <RefreshCw className={testing ? "mr-1.5 h-4 w-4 animate-spin" : "mr-1.5 h-4 w-4"} />
+              {testing ? t("settings.drive.test.running") : t("settings.drive.test.button")}
+            </Button>
+          )}
+        </div>
+
+        {testError && (
+          <p
+            className="mt-3 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
+            aria-live="polite"
+          >
+            {testError}
+          </p>
+        )}
+
+        {testResult && (
+          <div className="mt-3 space-y-2 text-sm" aria-live="polite">
+            <p className="flex items-center gap-2 font-medium text-emerald-700">
+              <CheckCircle2 className="h-4 w-4" />
+              {t("settings.drive.test.connected")}
+            </p>
+            <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-[10rem_1fr]">
+              <dt className="text-muted-foreground">{t("settings.drive.test.account")}</dt>
+              <dd>{testResult.accountEmail || "—"}</dd>
+              <dt className="text-muted-foreground">{t("settings.drive.test.folder")}</dt>
+              <dd>
+                <a
+                  className="text-primary underline-offset-4 hover:underline"
+                  href={testResult.folderLink}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {testResult.folderName}
+                </a>
+              </dd>
+              <dt className="text-muted-foreground">{t("settings.drive.test.sharedDrive")}</dt>
+              <dd>
+                {testResult.isSharedDrive
+                  ? t("settings.drive.test.yes")
+                  : t("settings.drive.test.no")}
+              </dd>
+              <dt className="text-muted-foreground">{t("settings.drive.test.writeAccess")}</dt>
+              <dd>
+                {testResult.canAddChildren
+                  ? t("settings.drive.test.yes")
+                  : t("settings.drive.test.no")}
+              </dd>
+            </dl>
+            {!testResult.isSharedDrive && (
+              <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                {t("settings.drive.test.warningSharedDrive")}
+              </p>
+            )}
+            {!testResult.canAddChildren && (
+              <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
+                {t("settings.drive.test.warningWrite")}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="space-y-4 border-t pt-5">

@@ -46,6 +46,7 @@ import type {
   UpdateDisplaySettingsRequest,
   TimeZoneOption,
   GoogleDriveAdminStatusResponse,
+  GoogleDriveConnectionTestResponse,
   GoogleDriveAdminConfigurationResponse,
   UpdateGoogleDriveConfigurationRequest,
   GoogleDriveOAuthStartResponse,
@@ -272,6 +273,8 @@ export const contentApi = {
     api.get<GoogleDriveAdminStatusResponse>("/site-settings/google-drive/status"),
   getGoogleDriveConfiguration: () =>
     api.get<GoogleDriveAdminConfigurationResponse>("/site-settings/google-drive/configuration"),
+  testGoogleDriveConnection: () =>
+    api.post<GoogleDriveConnectionTestResponse>("/site-settings/google-drive/test"),
   updateGoogleDriveConfiguration: (data: UpdateGoogleDriveConfigurationRequest) =>
     api.put<GoogleDriveAdminConfigurationResponse>(
       "/site-settings/google-drive/configuration",
