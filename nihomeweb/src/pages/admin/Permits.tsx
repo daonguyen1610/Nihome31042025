@@ -836,7 +836,7 @@ const AdminPermits = () => {
     <AdminLayout>
       <div className="space-y-4 p-3 md:p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex items-start gap-3">
+          <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </span>
@@ -848,9 +848,10 @@ const AdminPermits = () => {
             </div>
           </div>
           {canManage ? (
-            <div className="flex flex-col items-end gap-1">
+            <div className="flex w-full flex-col items-end gap-1 sm:w-auto">
               <Button
                 size="sm"
+                className="w-full sm:w-auto"
                 disabled={!projectId}
                 aria-describedby={!projectId ? "permit-setup-hint" : undefined}
                 onClick={() => projectId && setSetupProjectId(projectId)}
@@ -917,7 +918,7 @@ const AdminPermits = () => {
         <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
           <div className="grid gap-3 lg:grid-cols-4">
             <FieldScope className="lg:col-span-2">
-              <Label className="text-xs">{t("permits.filter.search")}</Label>
+              <Label className="text-xs">{t("permits.filter.searchLabel")}</Label>
               <div className="relative mt-1">
                 <Search className="pointer-events-none absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -966,7 +967,7 @@ const AdminPermits = () => {
           <div
             id="permit-filters-more"
             className={cn(
-              "mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4",
+              "mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-5",
               !filtersOpen && "hidden xl:grid",
             )}
           >
@@ -1280,15 +1281,15 @@ const AdminPermits = () => {
                           </div>
                         </td>
                         <td className="px-3 py-3 align-top text-xs text-foreground">
-                          <div>
+                          <div className="whitespace-nowrap">
                             <span className="text-muted-foreground">
-                              {t("permits.field.targetDeadline")}:{" "}
+                              {t("permits.field.targetDeadlineShort")}:{" "}
                             </span>
                             {formatDate(r.targetDeadline, lang)}
                           </div>
-                          <div className="mt-0.5">
+                          <div className="mt-0.5 whitespace-nowrap">
                             <span className="text-muted-foreground">
-                              {t("permits.field.expiresAt")}:{" "}
+                              {t("permits.field.expiresAtShort")}:{" "}
                             </span>
                             {formatDate(r.expiresAt, lang)}
                           </div>
@@ -1297,24 +1298,22 @@ const AdminPermits = () => {
                           <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
-                              size="sm"
+                              size="icon"
                               title={t("common.view")}
                               aria-label={t("common.view")}
                               onClick={() => setViewing(r)}
                             >
-                              <Eye className="mr-1 h-4 w-4" />
-                              {t("common.view")}
+                              <Eye className="h-4 w-4" />
                             </Button>
                             {canManage ? (
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
                                 title={t("common.edit")}
                                 aria-label={t("common.edit")}
                                 onClick={() => openEdit(r)}
                               >
-                                <Pencil className="mr-1 h-4 w-4" />
-                                {t("common.edit")}
+                                <Pencil className="h-4 w-4" />
                               </Button>
                             ) : null}
                           </div>
@@ -1559,7 +1558,7 @@ const AdminPermits = () => {
           data-testid="permit-detail-dialog"
         >
           <DialogHeader className="shrink-0 break-words pr-6">
-            <div className="flex items-start gap-3">
+            <div className="flex items-center gap-3">
               {viewing ? (
                 <PermitTypeGlyph code={viewing.permitTypeCode} className="h-10 w-10" />
               ) : null}

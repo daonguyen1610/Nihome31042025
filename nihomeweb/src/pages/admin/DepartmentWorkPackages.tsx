@@ -794,7 +794,7 @@ const DepartmentWorkPackages = () => {
               )}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
               <Summary
                 icon={<BriefcaseBusiness />}
                 label={t("workPackages.field.scope")}
@@ -1421,7 +1421,7 @@ const DepartmentWorkPackages = () => {
         ) : (
           <>
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <div className="flex items-start gap-3">
+              <div className="flex items-center gap-3">
                 <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
                   <ListChecks className="h-5 w-5" aria-hidden="true" />
                 </span>
@@ -1431,7 +1431,7 @@ const DepartmentWorkPackages = () => {
                 </div>
               </div>
               {canCreate && (
-                <Button onClick={openCreatePackage}>
+                <Button className="w-full sm:w-auto" onClick={openCreatePackage}>
                   <Plus className="mr-2 h-4 w-4" />
                   {t("workPackages.action.create")}
                 </Button>
@@ -1556,7 +1556,7 @@ const DepartmentWorkPackages = () => {
                     </select>
                   </div>
                 )}
-                <div className="min-w-0 space-y-1">
+                <div className="min-w-0 space-y-1 xl:col-span-2">
                   <Label htmlFor="wp-purpose">{t("workPackages.field.purpose")}</Label>
                   <select
                     id="wp-purpose"
