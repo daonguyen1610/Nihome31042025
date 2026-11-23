@@ -280,6 +280,12 @@ export function useDepartmentWorkPackages() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [taskDeleteOpen, setTaskDeleteOpen] = useState(false);
+  const [taskDeleteImpact, setTaskDeleteImpact] = useState<DeletionImpactResponse | null>(null);
+  const [taskDeleteTarget, setTaskDeleteTarget] = useState<DepartmentWorkTaskResponse | null>(null);
+  const [taskDeleteLoading, setTaskDeleteLoading] = useState(false);
+  const [taskDeleteError, setTaskDeleteError] = useState<string | null>(null);
+  const [taskDeleting, setTaskDeleting] = useState(false);
   const [taskEditing, setTaskEditing] = useState<DepartmentWorkTaskResponse | null>(null);
   const [progressTaskEditing, setProgressTaskEditing] = useState<DepartmentWorkTaskResponse | null>(
     null,
@@ -948,6 +954,44 @@ export function useDepartmentWorkPackages() {
       setDeleting(false);
     }
   };
+  const previewDeleteTask = async (task: DepartmentWorkTaskResponse) => {
+    if (!detail) return;
+    setTaskDeleteTarget(task);
+    setTaskDeleteOpen(true);
+    setTaskDeleteLoading(true);
+    setTaskDeleteError(null);
+    setTaskDeleteImpact(null);
+    try {
+      setTaskDeleteImpact((await adminApi.getWorkTaskDeletionImpact(detail.id, task.id)).data);
+    } catch (cause) {
+      setTaskDeleteError(uiError(cause));
+    } finally {
+      setTaskDeleteLoading(false);
+    }
+  };
+  const confirmDeleteTask = async (confirmation: string) => {
+    if (!detail || !taskDeleteImpact || !taskDeleteTarget) return null;
+    setTaskDeleting(true);
+    setTaskDeleteError(null);
+    try {
+      await adminApi.deleteWorkTask(
+        detail.id,
+        taskDeleteTarget.id,
+        {
+          confirmation,
+          planToken: taskDeleteImpact.planToken,
+          rowVersion: taskDeleteTarget.rowVersion,
+        },
+        newIdempotencyKey(),
+      );
+      return null;
+    } catch (cause) {
+      setTaskDeleteError(uiError(cause));
+      throw cause;
+    } finally {
+      setTaskDeleting(false);
+    }
+  };
   const saveTask = async () => {
     if (
       !detail ||
@@ -1058,13 +1102,30 @@ export function useDepartmentWorkPackages() {
     percent?: number,
   ) => {
     if (!detail) return;
+    const selectedSubtasks = task.hasSubtasks
+      ? detail.tasks
+          .filter((candidate) => candidate.status === "InProgress")
+          .filter((candidate) => {
+            let parentId = candidate.parentTaskId;
+            while (parentId != null) {
+              if (parentId === task.id) return true;
+              parentId = detail.tasks.find((item) => item.id === parentId)?.parentTaskId;
+            }
+            return false;
+          })
+      : [];
     if (
       complete &&
       task.hasSubtasks &&
-      !(await confirmAction(t("workPackages.confirm.completeParent"), {
-        destructive: false,
-        confirmLabel: t("workPackages.action.completeTask"),
-      }))
+      !(await confirmAction(
+        t("workPackages.confirm.completeParentCascade", {
+          tasks: selectedSubtasks.map((item) => `${item.wbsCode} · ${item.title}`).join(", "),
+        }),
+        {
+          destructive: false,
+          confirmLabel: t("workPackages.action.completeTask"),
+        },
+      ))
     )
       return;
     const nextProgress = complete
@@ -1094,7 +1155,11 @@ export function useDepartmentWorkPackages() {
   const cancelTask = async (task: DepartmentWorkTaskResponse) => {
     if (
       !detail ||
-      !(await confirmAction(t("workPackages.confirm.cancelTask", { title: task.title })))
+      !(await confirmAction(
+        task.hasSubtasks
+          ? t("workPackages.confirm.cancelParent")
+          : t("workPackages.confirm.cancelTask", { title: task.title }),
+      ))
     )
       return;
     try {
@@ -1605,6 +1670,14 @@ export function useDepartmentWorkPackages() {
     deleteAttachment,
     previewDelete,
     confirmDelete,
+    taskDeleteOpen,
+    setTaskDeleteOpen,
+    taskDeleteImpact,
+    taskDeleteLoading,
+    taskDeleteError,
+    taskDeleting,
+    previewDeleteTask,
+    confirmDeleteTask,
     saveTask,
     transitionPackage,
     progressTask,

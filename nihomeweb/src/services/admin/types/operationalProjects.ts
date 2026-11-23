@@ -60,6 +60,8 @@ export interface DepartmentWorkTaskResponse {
   successorTaskIds: number[];
   blockingPredecessorTaskIds: number[];
   canUpdateProgress: boolean;
+  canCancel: boolean;
+  canDelete: boolean;
   canComplete: boolean;
   canVerify: boolean;
   isOverdue: boolean;

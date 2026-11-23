@@ -152,6 +152,61 @@ internal static class DeletionImpactPlanner
         return Build(EntityTypes.DepartmentWorkPackage, id, $"{package.Code} · {package.Name}", package.Code, items);
     }
 
+    public static async Task<DeletionImpactResponse?> ForWorkTaskAsync(
+        AppDbContext db, int packageId, int taskId, CancellationToken ct)
+    {
+        var package = await db.DepartmentWorkPackages.AsNoTracking()
+            .SingleOrDefaultAsync(item => item.Id == packageId, ct);
+        if (package is null) return null;
+        var tasks = await db.DepartmentWorkTasks.AsNoTracking()
+            .Where(item => item.WorkPackageId == packageId)
+            .Select(item => new { item.Id, item.ParentTaskId, item.WbsCode, item.Title })
+            .ToListAsync(ct);
+        var root = tasks.SingleOrDefault(item => item.Id == taskId);
+        if (root is null) return null;
+        var taskIds = new HashSet<int> { taskId };
+        while (true)
+        {
+            var children = tasks.Where(item => item.ParentTaskId.HasValue && taskIds.Contains(item.ParentTaskId.Value))
+                .Select(item => item.Id).Where(id => taskIds.Add(id)).ToList();
+            if (children.Count == 0) break;
+        }
+
+        var ids = taskIds.ToList();
+        var items = new List<PlanItem>();
+        AddRaw(items, "workTasks.descendants", DeletionImpactActions.Delete,
+            tasks.Where(item => taskIds.Contains(item.Id)).Select(item => item.Id.ToString()),
+            tasks.Where(item => taskIds.Contains(item.Id)).Select(item => item.WbsCode + " · " + item.Title));
+        var attachments = db.DepartmentWorkTaskAttachments.Where(item => ids.Contains(item.WorkTaskId));
+        await AddAsync(items, "workTasks.attachments", DeletionImpactActions.Delete,
+            attachments.Where(item => item.StorageDeletedAt != null), item => item.Id,
+            item => item.OriginalFileName, ct);
+        await AddAsync(items, "workTasks.attachmentCleanup", DeletionImpactActions.Block,
+            attachments.Where(item => item.StorageDeletedAt == null), item => item.Id,
+            item => item.OriginalFileName, ct);
+        var dependencies = await db.DepartmentWorkTaskDependencies.AsNoTracking()
+            .Where(item => ids.Contains(item.WorkTaskId) || ids.Contains(item.PredecessorTaskId))
+            .Select(item => new { item.WorkTaskId, item.PredecessorTaskId }).ToListAsync(ct);
+        AddRaw(items, "workTasks.dependencies", DeletionImpactActions.Delete,
+            dependencies.Select(item => $"{item.WorkTaskId}:{item.PredecessorTaskId}"), []);
+        var cc = await db.DepartmentWorkTaskCcUsers.AsNoTracking().Where(item => ids.Contains(item.WorkTaskId))
+            .Select(item => new { item.WorkTaskId, item.UserId }).ToListAsync(ct);
+        AddRaw(items, "workTasks.cc", DeletionImpactActions.Delete,
+            cc.Select(item => $"{item.WorkTaskId}:{item.UserId}"), []);
+        await AddAsync(items, "workTasks.permits", DeletionImpactActions.Unlink,
+            db.PermitChecklistItems.Where(item => item.WorkTaskId.HasValue && ids.Contains(item.WorkTaskId.Value)),
+            item => item.Id, item => item.PermitTypeCode, ct);
+        await AddAsync(items, "workTasks.tenderChecklist", DeletionImpactActions.Unlink,
+            db.TenderChecklistItems.Where(item => item.WorkTaskId.HasValue && ids.Contains(item.WorkTaskId.Value)),
+            item => item.Id, item => item.Title, ct);
+        await AddTranslationsAsync(items, db, EntityTypes.DepartmentWorkTask,
+            db.DepartmentWorkTasks.Where(item => ids.Contains(item.Id)).Select(item => item.Id), ct,
+            "workTasks.translations");
+        var confirmation = $"{package.Code}:{root.WbsCode}";
+        return Build(EntityTypes.DepartmentWorkTask, taskId,
+            $"{root.WbsCode} · {root.Title}", confirmation, items);
+    }
+
     internal static IQueryable<ProjectDocument> WorkPackageDocuments(AppDbContext db, int id)
     {
         var taskIds = db.DepartmentWorkTasks.Where(item => item.WorkPackageId == id).Select(item => item.Id);

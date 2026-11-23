@@ -150,6 +150,45 @@ public sealed class DepartmentWorkPackagesController(
         catch (DeletionPlanChangedException exception) { return Conflict(new { message = exception.Message }); }
     }
 
+    [HttpGet("{id:int}/tasks/{taskId:int}/deletion-impact")]
+    [RequirePermission("work.packages", "progress")]
+    public async Task<ActionResult<DeletionImpactResponse>> TaskDeletionImpact(int id, int taskId, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return await ExecuteAsync<DeletionImpactResponse>("work-task.deletion-preview", taskId, async () =>
+        {
+            var result = await service.GetTaskDeletionImpactAsync(id, taskId, userId.Value, ct);
+            return result is null ? NotFound() : Ok(result);
+        });
+    }
+
+    [HttpDelete("{id:int}/tasks/{taskId:int}")]
+    [RequirePermission("work.packages", "progress")]
+    [Idempotency("work.packages.tasks.delete", requireKey: true)]
+    public async Task<IActionResult> DeleteTask(
+        int id, int taskId, [FromBody] ConfirmDeletionRequest request, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        request.RowVersion = CrmConcurrency.ResolveRequiredRequestToken(Request, request.RowVersion);
+        try
+        {
+            if (!await service.DeleteTaskAsync(id, taskId, request, userId.Value, ct)) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "work-task.delete",
+                ResourceType = EntityTypes.DepartmentWorkTask,
+                ResourceId = taskId.ToString(),
+                Message = $"Work task #{taskId} and its subtasks permanently deleted."
+            });
+            return NoContent();
+        }
+        catch (DepartmentWorkPackageScopeException) { return NotFound(); }
+        catch (DepartmentWorkPackageOperationException exception) { return BadRequest(new { message = exception.Message, code = exception.Code }); }
+        catch (DeletionPlanChangedException exception) { return Conflict(new { message = exception.Message }); }
+    }
+
     [HttpPost("{id:int}/tasks")]
     [RequirePermission("work.packages", "assign")]
     [Idempotency("work.packages.tasks.create", requireKey: true)]

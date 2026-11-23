@@ -178,6 +178,12 @@ const DepartmentWorkPackages = () => {
     deleteLoading,
     deleteError,
     deleting,
+    taskDeleteOpen,
+    setTaskDeleteOpen,
+    taskDeleteImpact,
+    taskDeleteLoading,
+    taskDeleteError,
+    taskDeleting,
     taskEditing,
     progressTaskEditing,
     progressPercent,
@@ -219,6 +225,8 @@ const DepartmentWorkPackages = () => {
     deleteAttachment,
     previewDelete,
     confirmDelete,
+    previewDeleteTask,
+    confirmDeleteTask,
     saveTask,
     transitionPackage,
     progressTask,
@@ -284,6 +292,19 @@ const DepartmentWorkPackages = () => {
         onCompleted={() => {
           setDeleteOpen(false);
           navigate(detailBackTarget);
+        }}
+      />
+      <DeletionImpactDialog
+        open={taskDeleteOpen}
+        impact={taskDeleteImpact}
+        loading={taskDeleteLoading}
+        deleting={taskDeleting}
+        error={taskDeleteError}
+        onOpenChange={setTaskDeleteOpen}
+        onConfirm={confirmDeleteTask}
+        onCompleted={() => {
+          setTaskDeleteOpen(false);
+          void load();
         }}
       />
       <div className="space-y-6" data-testid="work-packages-page">
@@ -714,7 +735,7 @@ const DepartmentWorkPackages = () => {
                 <div>
                   <h2 className="font-semibold">{t("workPackages.tasks.title")}</h2>
                   <p className="text-sm text-muted-foreground">
-                    {t("workPackages.tasks.helpAssigner")}
+                    {t("workPackages.tasks.helpCollaborators")}
                   </p>
                 </div>
                 <span className="text-sm font-medium">{detail.progressPercent}%</span>
@@ -812,8 +833,8 @@ const DepartmentWorkPackages = () => {
                             </Button>
                           )}
                         {detail.status === "Active" &&
-                          task.canUpdateProgress &&
-                          ["Planned", "InProgress"].includes(task.status) && (
+                          task.canCancel &&
+                          (task.hasSubtasks || ["Planned", "InProgress"].includes(task.status)) && (
                             <Button
                               variant="outline"
                               size="sm"
@@ -822,6 +843,29 @@ const DepartmentWorkPackages = () => {
                               {t("workPackages.action.cancelTask")}
                             </Button>
                           )}
+                        {detail.status === "Active" &&
+                          !task.hasSubtasks &&
+                          task.canUpdateProgress &&
+                          ["Completed", "Cancelled"].includes(task.status) && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => void progressTask(task, false, 99)}
+                            >
+                              {t("workPackages.action.reopenTask")}
+                            </Button>
+                          )}
+                        {task.canDelete && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-destructive hover:text-destructive"
+                            onClick={() => void previewDeleteTask(task)}
+                          >
+                            <Trash2 className="mr-1.5 h-4 w-4" />
+                            {t("common.delete")}
+                          </Button>
+                        )}
                         {detail.status === "Active" &&
                           task.canComplete &&
                           ["Planned", "InProgress"].includes(task.status) && (

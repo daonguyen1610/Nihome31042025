@@ -216,6 +216,20 @@ for (const width of [390, 768])
       });
       expect(childResponse.status(), await childResponse.text()).toBe(201);
       const child = await childResponse.json();
+      const canceledChildResponse = await api.post(`/api/work-packages/${workPackage.id}/tasks`, {
+        headers: writeHeaders(),
+        data: {
+          parentTaskId: parent.id,
+          wbsCode: "VT-01.2",
+          title: "Ngừng kiểm tra vật tư dự phòng",
+          assigneeUserId: assignee.userId,
+          approverUserId: lead.userId,
+          plannedStart: "2026-10-23T00:00:00Z",
+          plannedEnd: "2026-10-30T00:00:00Z",
+        },
+      });
+      expect(canceledChildResponse.status(), await canceledChildResponse.text()).toBe(201);
+      const canceledChild = await canceledChildResponse.json();
       const currentPackage = await (
         await api.get(`/api/work-packages/${workPackage.id}`, { headers })
       ).json();
@@ -231,11 +245,35 @@ for (const width of [390, 768])
         },
       });
       expect(activated.status(), await activated.text()).toBe(200);
+      const started = await api.put(
+        `/api/work-packages/${workPackage.id}/tasks/${child.id}/progress`,
+        {
+          headers: writeHeaders(),
+          data: {
+            status: "InProgress",
+            progressPercent: 25,
+            rowVersion: child.rowVersion,
+          },
+        },
+      );
+      expect(started.status(), await started.text()).toBe(200);
+      const canceled = await api.put(
+        `/api/work-packages/${workPackage.id}/tasks/${canceledChild.id}/progress`,
+        {
+          headers: writeHeaders(),
+          data: {
+            status: "Cancelled",
+            progressPercent: 0,
+            rowVersion: canceledChild.rowVersion,
+          },
+        },
+      );
+      expect(canceled.status(), await canceled.text()).toBe(200);
       await loginInBrowserAs(page, TEST_USERS.superAdmin);
       await page.setViewportSize({ width, height: 844 });
       await page.goto(`/admin/work-packages/${workPackage.id}`);
       const rows = page.getByTestId("work-task-row");
-      await expect(rows).toHaveCount(2);
+      await expect(rows).toHaveCount(3);
       await expect(rows.nth(0)).toContainText("Tổng hợp yêu cầu vật tư thi công");
       await expect(rows.nth(0)).toContainText(/Tự tổng hợp từ con|Rolled up from subtasks/);
       await expect(rows.nth(1)).toContainText("Kiểm tra khối lượng vật tư");
@@ -253,7 +291,9 @@ for (const width of [390, 768])
       const completeButton = parentRow.getByRole("button", { name: /Hoàn thành|Complete/ });
       await completeButton.click();
       const confirmation = page.getByRole("alertdialog");
-      await expect(confirmation).toContainText(/công việc con|subtasks/i);
+      await expect(confirmation).toContainText("Các công việc đang thực hiện");
+      await expect(confirmation).toContainText("Kiểm tra khối lượng vật tư");
+      await expect(confirmation).not.toContainText("Ngừng kiểm tra vật tư dự phòng");
       await confirmation.getByRole("button", { name: /Hủy|Huỷ|Cancel/ }).click();
       await expect(confirmation).toHaveCount(0);
 
@@ -278,6 +318,7 @@ for (const width of [390, 768])
       );
       expect(completedTasks.get(parent.id)).toBe("Completed");
       expect(completedTasks.get(child.id)).toBe("Completed");
+      expect(completedTasks.get(canceledChild.id)).toBe("Cancelled");
     } finally {
       await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${workPackage.id}`);
     }

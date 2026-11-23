@@ -59,13 +59,14 @@ public sealed partial class DepartmentWorkPackageService(
         var rows = await packages.OrderByDescending(item => item.UpdatedAt).ThenByDescending(item => item.Id)
             .Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(ct);
         var admin = await IsAdministratorAsync(callerUserId, ct);
+        var callerGroupId = await UserRoleGroupIdAsync(callerUserId, ct);
         var clock = await DisplayClockAsync(ct);
         return new DepartmentWorkPackageListResponse
         {
             Page = page,
             PageSize = pageSize,
             TotalCount = total,
-            Items = rows.Select(item => MapPackage(item, callerUserId, admin, clock)).ToList(),
+            Items = rows.Select(item => MapPackage(item, callerUserId, admin, callerGroupId, clock)).ToList(),
         };
     }
 
@@ -84,7 +85,7 @@ public sealed partial class DepartmentWorkPackageService(
                 db.ProcurementInputPriceOffers.Any(offer => offer.WorkPackageId == item.Id && offer.ApprovalApproverUserId == callerUserId) ||
                 db.ProjectBoqRevisions.Any(boq => boq.SourceWorkPackageId == item.Id && boq.ApprovalApproverUserId == callerUserId) ||
                 db.DepartmentFinanceReviews.Any(review => review.WorkPackageId == item.Id && review.ApprovalApproverUserId == callerUserId) ||
-                item.Tasks.Any(task => task.AssigneeUserId == callerUserId ||
+                item.Tasks.Any(task => task.DepartmentRoleGroupId == groupId || task.AssigneeUserId == callerUserId ||
                     task.ApproverUserId == callerUserId || task.CcUsers.Any(cc => cc.UserId == callerUserId)) ||
                 item.OperationalProjectId.HasValue && projectIds.Contains(item.OperationalProjectId.Value));
         }
@@ -119,7 +120,8 @@ public sealed partial class DepartmentWorkPackageService(
         var item = await BaseQuery().SingleOrDefaultAsync(package => package.Id == id, ct);
         if (item is null || !await CanViewAsync(item, callerUserId, canViewAll, ct)) return null;
         var admin = await IsAdministratorAsync(callerUserId, ct);
-        var response = MapPackage(item, callerUserId, admin, await DisplayClockAsync(ct));
+        var callerGroupId = await UserRoleGroupIdAsync(callerUserId, ct);
+        var response = MapPackage(item, callerUserId, admin, callerGroupId, await DisplayClockAsync(ct));
         if (item.Purpose == WorkPackagePurpose.ProcurementInputPricing)
             response.BoqWorkbooks = await ListBoqWorkbooksAsync(id, ct);
         // Decide buttons show only for the approver the sender chose (the
@@ -542,8 +544,8 @@ public sealed partial class DepartmentWorkPackageService(
         var task = tasks.SingleOrDefault(item => item.Id == taskId);
         if (task is null) return null;
         var admin = await IsAdministratorAsync(callerUserId, ct);
-        if (!admin && task.AssigneeUserId != callerUserId)
-            throw Error("Chỉ người phụ trách đầu việc mới được cập nhật tiến độ.");
+        if (!await CanOperateTaskAsync(task, callerUserId, admin, ct))
+            throw Error("Chỉ thành viên phòng ban phụ trách hoặc PM dự án mới được thao tác đầu việc này.");
         var hasSubtasks = tasks.Any(item => item.ParentTaskId == taskId);
         await EnsureTenderIsMutableAsync(task.WorkPackage, ct);
         if (task.WorkPackage.Status != WorkPackageStatus.Active)
@@ -551,21 +553,21 @@ public sealed partial class DepartmentWorkPackageService(
         if (!Enum.TryParse<WorkTaskStatus>(request.Status, true, out var status) ||
             status is not (WorkTaskStatus.InProgress or WorkTaskStatus.Completed or WorkTaskStatus.Cancelled))
             throw Error("Người phụ trách chỉ được chuyển đầu việc sang Đang thực hiện, Hoàn thành hoặc Hủy.");
-        if (hasSubtasks && status != WorkTaskStatus.Completed)
-            throw Error("Công việc cha chỉ được hoàn thành cùng các công việc con.");
-        if (hasSubtasks && !request.ConfirmSubtasksCompletion)
+        if (hasSubtasks && status is not (WorkTaskStatus.Completed or WorkTaskStatus.Cancelled))
+            throw Error("Công việc cha chỉ được hoàn thành hoặc hủy cùng các công việc con.");
+        if (hasSubtasks && status == WorkTaskStatus.Completed && !request.ConfirmSubtasksCompletion)
             throw Error("Cần xác nhận hoàn thành các công việc con trước khi tiếp tục.",
                 "WORK_TASK_SUBTASK_CONFIRMATION_REQUIRED");
         if (!hasSubtasks)
             ValidateTaskProgressTransition(task, status, request.ProgressPercent);
-        else if (status != WorkTaskStatus.Completed || request.ProgressPercent != 100)
-            throw Error("Công việc cha chỉ được hoàn thành cùng các công việc con.");
+        else if (status == WorkTaskStatus.Completed && request.ProgressPercent != 100)
+            throw Error("Công việc cha phải đạt tiến độ 100% trước khi hoàn thành.");
 
         if (status == WorkTaskStatus.Completed && task.WorkPackage.Purpose == WorkPackagePurpose.LegalPermitting)
         {
             var completionIds = hasSubtasks
                 ? GetTaskDescendants(taskId, tasks)
-                    .Where(item => item.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress or WorkTaskStatus.Cancelled)
+                    .Where(item => item.Status == WorkTaskStatus.InProgress)
                     .Select(item => item.Id).ToHashSet()
                 : new HashSet<int> { taskId };
             var permits = await db.PermitChecklistItems.AsNoTracking()
@@ -580,10 +582,16 @@ public sealed partial class DepartmentWorkPackageService(
 
         var hierarchyRelatedIds = GetHierarchyRelatedTaskIds(taskId,
             tasks.Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId)).ToList());
+        var reopeningTask = !hasSubtasks && status == WorkTaskStatus.InProgress &&
+            task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Cancelled;
         var descendantTasks = hasSubtasks ? GetTaskDescendants(taskId, tasks) : new List<DepartmentWorkTask>();
         var completionTasks = descendantTasks
-            .Where(item => item.Status is WorkTaskStatus.Planned or WorkTaskStatus.InProgress or WorkTaskStatus.Cancelled)
+            .Where(item => item.Status == WorkTaskStatus.InProgress)
             .ToList();
+        if (hasSubtasks && status == WorkTaskStatus.Completed &&
+            descendantTasks.Any(item => item.Status == WorkTaskStatus.Planned))
+            throw Error("Công việc con chưa bắt đầu phải được bắt đầu hoặc hủy trước khi hoàn thành công việc cha.",
+                "WORK_TASK_SUBTASKS_NOT_READY");
         if (status is WorkTaskStatus.InProgress or WorkTaskStatus.Completed)
         {
             var completingIds = hasSubtasks
@@ -601,7 +609,7 @@ public sealed partial class DepartmentWorkPackageService(
         await using var transaction = await BeginTransactionAsync(ct);
         CrmConcurrency.Apply(db, task, request.RowVersion);
         var now = DateTime.UtcNow;
-        if (hasSubtasks)
+        if (hasSubtasks && status == WorkTaskStatus.Completed)
         {
             foreach (var child in completionTasks)
             {
@@ -615,6 +623,24 @@ public sealed partial class DepartmentWorkPackageService(
                 child.UpdatedByUserId = callerUserId;
             }
         }
+        else if (hasSubtasks && status == WorkTaskStatus.Cancelled)
+        {
+            foreach (var child in descendantTasks)
+            {
+                child.Status = WorkTaskStatus.Cancelled;
+                child.CompletedAt = null;
+                child.VerifiedAt = null;
+                child.VerifiedByUserId = null;
+                child.UpdatedAt = now;
+                child.UpdatedByUserId = callerUserId;
+            }
+            task.Status = WorkTaskStatus.Cancelled;
+            task.CompletedAt = null;
+            task.VerifiedAt = null;
+            task.VerifiedByUserId = null;
+            task.UpdatedAt = now;
+            task.UpdatedByUserId = callerUserId;
+        }
         else
         {
             task.Status = status;
@@ -624,12 +650,17 @@ public sealed partial class DepartmentWorkPackageService(
             if (status is WorkTaskStatus.InProgress or WorkTaskStatus.Completed)
                 task.ActualStart ??= now;
             task.CompletedAt = status == WorkTaskStatus.Completed ? now : null;
+            if (status == WorkTaskStatus.InProgress)
+            {
+                task.VerifiedAt = null;
+                task.VerifiedByUserId = null;
+            }
             task.UpdatedAt = now;
             task.UpdatedByUserId = callerUserId;
         }
         TouchPackage(task.WorkPackage, callerUserId, now);
         await CrmConcurrency.SaveChangesAsync(db, ct);
-        if (hasSubtasks)
+        if (hasSubtasks && status != WorkTaskStatus.Cancelled)
         {
             await RollupParentTasksAsync(packageId, taskId, callerUserId, ct);
             await CrmConcurrency.SaveChangesAsync(db, ct);
@@ -640,15 +671,20 @@ public sealed partial class DepartmentWorkPackageService(
             await CrmConcurrency.SaveChangesAsync(db, ct);
         }
 
-        foreach (var child in completionTasks)
+        var changedChildren = hasSubtasks && status == WorkTaskStatus.Cancelled
+            ? descendantTasks
+            : completionTasks;
+        foreach (var child in changedChildren)
         {
             var childResponse = await LoadTaskAsync(child.Id, callerUserId, admin, ct);
-            await AddHistoryAsync(packageId, "Task", child.Id, "CompletedByParent", childResponse,
+            await AddHistoryAsync(packageId, "Task", child.Id,
+                status == WorkTaskStatus.Cancelled ? "CancelledByParent" : "CompletedByParent", childResponse,
                 callerUserId, ct);
         }
         var response = await LoadTaskAsync(task.Id, callerUserId, admin, ct);
         await AddHistoryAsync(packageId, "Task", task.Id,
-            hasSubtasks ? "CompletedWithSubtasks" : status switch
+            hasSubtasks ? status == WorkTaskStatus.Cancelled ? "CancelledWithSubtasks" : "CompletedWithSubtasks" :
+            reopeningTask ? "Reopened" : status switch
             {
                 WorkTaskStatus.Completed => "Progressed",
                 WorkTaskStatus.Cancelled => "Cancelled",
@@ -656,7 +692,7 @@ public sealed partial class DepartmentWorkPackageService(
             }, response, callerUserId, ct);
         await CommitAsync(transaction, ct);
 
-        var completedTasks = hasSubtasks
+        var completedTasks = hasSubtasks && status == WorkTaskStatus.Completed
             ? completionTasks
             : status == WorkTaskStatus.Completed ? new List<DepartmentWorkTask> { task } : new List<DepartmentWorkTask>();
         foreach (var completedTask in completedTasks.Where(item =>
@@ -1036,10 +1072,12 @@ public sealed partial class DepartmentWorkPackageService(
             var parent = byId[currentId.Value];
             var children = tasks.Where(item => item.ParentTaskId == currentId.Value).ToList();
             var active = children.Where(item => item.Status != WorkTaskStatus.Cancelled).ToList();
-            parent.ProgressPercent = active.Count == 0 ? 0 :
-                (int)Math.Round(active.Average(item => item.ProgressPercent));
-            parent.Status = active.Count == 0 ? WorkTaskStatus.Cancelled :
-                active.All(item => item.Status == WorkTaskStatus.Verified) ? WorkTaskStatus.Verified :
+            parent.ProgressPercent = active.Count == 0
+                ? (parent.Status == WorkTaskStatus.Completed ? 100 : 0)
+                : (int)Math.Round(active.Average(item => item.ProgressPercent));
+            parent.Status = active.Count == 0
+                ? (parent.Status == WorkTaskStatus.Completed ? WorkTaskStatus.Completed : WorkTaskStatus.Cancelled)
+                : active.All(item => item.Status == WorkTaskStatus.Verified) ? WorkTaskStatus.Verified :
                 active.All(item => item.Status is WorkTaskStatus.Completed or WorkTaskStatus.Verified)
                     ? WorkTaskStatus.Completed :
                 active.Any(item => item.Status != WorkTaskStatus.Planned) ? WorkTaskStatus.InProgress :
@@ -1161,7 +1199,10 @@ public sealed partial class DepartmentWorkPackageService(
 
     private static void ValidateTaskProgressTransition(DepartmentWorkTask task, WorkTaskStatus status, int progress)
     {
-        if (task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Verified or WorkTaskStatus.Cancelled)
+        var reopening = status == WorkTaskStatus.InProgress &&
+            task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Cancelled;
+        if (task.Status == WorkTaskStatus.Verified ||
+            task.Status is WorkTaskStatus.Completed or WorkTaskStatus.Cancelled && !reopening)
             throw Error("Đầu việc đã kết thúc và không thể cập nhật tiến độ.");
         if (status == WorkTaskStatus.Planned && progress != 0)
             throw Error("Đầu việc chưa bắt đầu phải có tiến độ 0%.");
@@ -1169,7 +1210,7 @@ public sealed partial class DepartmentWorkPackageService(
             throw Error("Đầu việc đang thực hiện phải có tiến độ từ 1% đến 99%.");
         if (status == WorkTaskStatus.Completed && progress != 100)
             throw Error("Đầu việc hoàn thành phải có tiến độ 100%.");
-        if (progress < task.ProgressPercent)
+        if (!reopening && progress < task.ProgressPercent)
             throw Error("Tiến độ đầu việc không được giảm.");
     }
 
@@ -1223,8 +1264,9 @@ public sealed partial class DepartmentWorkPackageService(
     private async Task<bool> CanViewAsync(DepartmentWorkPackage item, int callerUserId, bool canViewAll, CancellationToken ct)
     {
         if (canViewAll || await IsAdministratorAsync(callerUserId, ct)) return true;
+        var callerGroupId = await UserRoleGroupIdAsync(callerUserId, ct);
         if (item.CreatedByUserId == callerUserId || item.LeadUserId == callerUserId ||
-            item.Tasks.Any(task => task.AssigneeUserId == callerUserId || task.ApproverUserId == callerUserId ||
+            item.Tasks.Any(task => task.DepartmentRoleGroupId == callerGroupId || task.AssigneeUserId == callerUserId || task.ApproverUserId == callerUserId ||
                 task.CcUsers.Any(cc => cc.UserId == callerUserId))) return true;
         if (item.Purpose == WorkPackagePurpose.ProcurementInputPricing &&
             item.DepartmentRoleGroupId == await UserRoleGroupIdAsync(callerUserId, ct)) return true;
@@ -1236,6 +1278,18 @@ public sealed partial class DepartmentWorkPackageService(
                 review.WorkPackageId == item.Id && review.ApprovalApproverUserId == callerUserId, ct)) return true;
         return item.OperationalProjectId.HasValue &&
             await projectAccess.CanViewOperationalProjectAsync(callerUserId, item.OperationalProjectId.Value, ct);
+    }
+
+    private async Task<bool> CanOperateTaskAsync(
+        DepartmentWorkTask task, int callerUserId, bool admin, CancellationToken ct)
+    {
+        if (admin || task.AssigneeUserId == callerUserId) return true;
+        var callerGroupId = await UserRoleGroupIdAsync(callerUserId, ct);
+        if (callerGroupId == task.DepartmentRoleGroupId) return true;
+        return task.WorkPackage.OperationalProjectId.HasValue &&
+            await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
+                project.Id == task.WorkPackage.OperationalProjectId &&
+                project.ProjectManagerUserId == callerUserId, ct);
     }
 
     private async Task<bool> CanManagePackageAsync(DepartmentWorkPackage item, int callerUserId, bool admin, CancellationToken ct)
@@ -1323,8 +1377,11 @@ public sealed partial class DepartmentWorkPackageService(
     }
 
     private async Task<DepartmentWorkPackageResponse> LoadAndMapAsync(int id, int callerUserId, bool admin, CancellationToken ct)
-        => MapPackage(await BaseQuery().SingleAsync(item => item.Id == id, ct), callerUserId, admin,
-            await DisplayClockAsync(ct));
+    {
+        var callerGroupId = await UserRoleGroupIdAsync(callerUserId, ct);
+        return MapPackage(await BaseQuery().SingleAsync(item => item.Id == id, ct), callerUserId, admin,
+            callerGroupId, await DisplayClockAsync(ct));
+    }
 
     private async Task<DepartmentWorkTaskResponse> LoadTaskAsync(int taskId, int callerUserId, bool admin, CancellationToken ct)
     {
@@ -1343,8 +1400,13 @@ public sealed partial class DepartmentWorkPackageService(
             .Where(item => item.WorkPackageId == task.WorkPackageId)
             .Select(item => new TaskHierarchyNode(item.Id, item.ParentTaskId))
             .ToListAsync(ct);
-        return MapTask(task, callerUserId, admin, task.WorkPackage.LeadUserId, hasSubtasks,
-            await DisplayClockAsync(ct), taskStatuses, GetHierarchyRelatedTaskIds(task.Id, hierarchy));
+        var callerGroupId = await UserRoleGroupIdAsync(callerUserId, ct);
+        var isProjectManager = task.WorkPackage.OperationalProjectId.HasValue &&
+            await db.OperationalProjects.AsNoTracking().AnyAsync(project =>
+                project.Id == task.WorkPackage.OperationalProjectId && project.ProjectManagerUserId == callerUserId, ct);
+        return MapTask(task, callerUserId, admin, callerGroupId, isProjectManager,
+            task.WorkPackage.LeadUserId, hasSubtasks, await DisplayClockAsync(ct), taskStatuses,
+            GetHierarchyRelatedTaskIds(task.Id, hierarchy));
     }
 
     /// <summary>
@@ -1376,7 +1438,7 @@ public sealed partial class DepartmentWorkPackageService(
     private sealed record DisplayClock(TimeZoneInfo Zone, DateOnly Today);
 
     private static DepartmentWorkPackageResponse MapPackage(
-        DepartmentWorkPackage item, int callerUserId, bool admin, DisplayClock clock)
+        DepartmentWorkPackage item, int callerUserId, bool admin, int? callerGroupId, DisplayClock clock)
     {
         var activeTasks = item.Tasks.Where(task => task.Status != WorkTaskStatus.Cancelled).ToList();
         var parentIds = item.Tasks.Where(task => task.ParentTaskId.HasValue)
@@ -1438,7 +1500,9 @@ public sealed partial class DepartmentWorkPackageService(
             CanAssignTasks = IsTenderMutable(item) && (admin || item.LeadUserId == callerUserId),
             RowVersion = CrmConcurrency.Encode(item.RowVersion),
             Tasks = item.Tasks.OrderBy(task => task.WbsCode).ThenBy(task => task.Id)
-                .Select(task => MapTask(task, callerUserId, admin, item.LeadUserId, parentIds.Contains(task.Id), clock,
+                .Select(task => MapTask(task, callerUserId, admin, callerGroupId,
+                    item.OperationalProject?.ProjectManagerUserId == callerUserId,
+                    item.LeadUserId, parentIds.Contains(task.Id), clock,
                     taskStatuses, GetHierarchyRelatedTaskIds(task.Id, hierarchy))).ToList(),
             InputPriceOffers = item.InputPriceOffers.OrderByDescending(offer => offer.UpdatedAt)
                 .Select(MapInputPriceOffer).ToList(),
@@ -1450,6 +1514,8 @@ public sealed partial class DepartmentWorkPackageService(
         DepartmentWorkTask task,
         int callerUserId,
         bool admin,
+        int? callerGroupId,
+        bool isProjectManager,
         int packageLeadUserId,
         bool hasSubtasks,
         DisplayClock clock,
@@ -1496,8 +1562,17 @@ public sealed partial class DepartmentWorkPackageService(
                     )
                     .Select(link => link.PredecessorTaskId).ToList()
                 : [],
-            CanUpdateProgress = !hasSubtasks && IsTenderMutable(task.WorkPackage) && (admin || task.AssigneeUserId == callerUserId),
-            CanComplete = IsTenderMutable(task.WorkPackage) && (admin || task.AssigneeUserId == callerUserId),
+            CanUpdateProgress = !hasSubtasks && IsTenderMutable(task.WorkPackage) &&
+                task.Status != WorkTaskStatus.Verified &&
+                (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
+            CanCancel = IsTenderMutable(task.WorkPackage) &&
+                task.Status is not (WorkTaskStatus.Cancelled or WorkTaskStatus.Verified) &&
+                (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
+            CanDelete = IsTenderMutable(task.WorkPackage) &&
+                task.WorkPackage.Status is not (WorkPackageStatus.Completed or WorkPackageStatus.Cancelled) &&
+                (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
+            CanComplete = IsTenderMutable(task.WorkPackage) &&
+                (admin || task.AssigneeUserId == callerUserId || callerGroupId == task.DepartmentRoleGroupId || isProjectManager),
             CanVerify = !hasSubtasks && IsTenderMutable(task.WorkPackage) && RequiresIndependentVerification(task.WorkPackage, task.KpiDefinitionId) &&
                 task.Status == WorkTaskStatus.Completed &&
                 task.AssigneeUserId != callerUserId && (admin || verifier == callerUserId),

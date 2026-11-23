@@ -617,6 +617,9 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
             PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
         }, _procurementLead.Id);
         (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        var storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        storedChild.Status = WorkTaskStatus.InProgress;
+        storedChild.ProgressPercent = 25;
         await _db.SaveChangesAsync();
 
         var confirmationRequired = await Assert.ThrowsAsync<DepartmentWorkPackageOperationException>(() =>
@@ -639,11 +642,131 @@ public sealed class DepartmentWorkPackageServiceTests : IDisposable
             }, _warehouseStaff.Id);
 
         var storedParent = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id);
-        var storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
+        storedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id);
         Assert.Equal("Completed", completed!.Status);
         Assert.Equal(WorkTaskStatus.Completed, storedParent.Status);
         Assert.Equal(WorkTaskStatus.Completed, storedChild.Status);
         Assert.Equal(100, storedChild.ProgressPercent);
+    }
+
+    [Fact]
+    public async Task CancellingParentTask_CancelsItsSubtasks()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var parent = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-11"), _procurementLead.Id);
+        var child = await _service.AddTaskAsync(package.Id, new UpsertDepartmentWorkTaskRequest
+        {
+            ParentTaskId = parent.Id,
+            WbsCode = "SUP-11.1",
+            Title = "Kiểm tra vật tư đầu vào",
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
+        }, _procurementLead.Id);
+        var verifiedChild = await _service.AddTaskAsync(package.Id, new UpsertDepartmentWorkTaskRequest
+        {
+            ParentTaskId = parent.Id,
+            WbsCode = "SUP-11.2",
+            Title = "Đối chiếu nghiệm thu vật tư",
+            AssigneeUserId = _warehouseStaff.Id,
+            ApproverUserId = _procurementLead.Id,
+            PlannedStart = DateTime.UtcNow.Date,
+            PlannedEnd = DateTime.UtcNow.Date.AddDays(5),
+        }, _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        var storedVerifiedChild = await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == verifiedChild.Id);
+        storedVerifiedChild.Status = WorkTaskStatus.Verified;
+        storedVerifiedChild.VerifiedAt = DateTime.UtcNow;
+        storedVerifiedChild.VerifiedByUserId = _procurementLead.Id;
+        await _db.SaveChangesAsync();
+
+        await _service.UpdateProgressAsync(package.Id, parent.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "Cancelled",
+                ProgressPercent = 0,
+                RowVersion = parent.RowVersion,
+            }, _procurementLead.Id);
+
+        Assert.Equal(WorkTaskStatus.Cancelled,
+            (await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == parent.Id)).Status);
+        Assert.Equal(WorkTaskStatus.Cancelled,
+            (await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == child.Id)).Status);
+        Assert.Equal(WorkTaskStatus.Cancelled,
+            (await _db.DepartmentWorkTasks.SingleAsync(task => task.Id == verifiedChild.Id)).Status);
+    }
+
+    [Theory]
+    [InlineData(WorkTaskStatus.Completed, 100)]
+    [InlineData(WorkTaskStatus.Cancelled, 0)]
+    public async Task ChildTask_CanBeReopenedFromCompletedOrCancelled(WorkTaskStatus initialStatus, int initialProgress)
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-12"), _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        var storedTask = await _db.DepartmentWorkTasks.SingleAsync(item => item.Id == task.Id);
+        storedTask.Status = initialStatus;
+        storedTask.ProgressPercent = initialProgress;
+        await _db.SaveChangesAsync();
+
+        var reopened = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "InProgress",
+                ProgressPercent = 99,
+                RowVersion = task.RowVersion,
+            }, _warehouseStaff.Id);
+
+        Assert.Equal("InProgress", reopened!.Status);
+        Assert.Equal(99, reopened.ProgressPercent);
+        var stored = await _db.DepartmentWorkTasks.SingleAsync(item => item.Id == task.Id);
+        Assert.Null(stored.CompletedAt);
+        Assert.Null(stored.VerifiedAt);
+    }
+
+    [Fact]
+    public async Task DepartmentMember_CanUpdateTaskAssignedToAnotherMember()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-13"), _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        await _db.SaveChangesAsync();
+
+        var updated = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "InProgress",
+                ProgressPercent = 25,
+                RowVersion = task.RowVersion,
+            }, _procurementLead.Id);
+
+        Assert.Equal("InProgress", updated!.Status);
+        Assert.Equal(25, updated.ProgressPercent);
+    }
+
+    [Fact]
+    public async Task ProjectManager_CanUpdateDepartmentTask()
+    {
+        var package = await _service.CreateAsync(ProjectRequest(), _pm.Id);
+        var task = await _service.AddTaskAsync(package.Id,
+            TaskRequest(_warehouseStaff.Id, _procurementLead.Id, "SUP-14"), _procurementLead.Id);
+        (await _db.DepartmentWorkPackages.FindAsync(package.Id))!.Status = WorkPackageStatus.Active;
+        await _db.SaveChangesAsync();
+
+        var updated = await _service.UpdateProgressAsync(package.Id, task.Id,
+            new UpdateDepartmentWorkTaskProgressRequest
+            {
+                Status = "InProgress",
+                ProgressPercent = 25,
+                RowVersion = task.RowVersion,
+            }, _pm.Id);
+
+        Assert.Equal("InProgress", updated!.Status);
+        Assert.Equal(25, updated.ProgressPercent);
     }
 
     [Theory]

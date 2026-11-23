@@ -13,6 +13,7 @@ const CODED_ERRORS: Record<string, string> = {
   PUNCH_DESIGN_MEMBER_INVALID: "people.designMemberInvalid",
   WORK_PACKAGE_NOT_COMPLETABLE: "workPackages.error.notCompletable",
   WORK_TASK_SUBTASK_CONFIRMATION_REQUIRED: "workPackages.error.subtaskConfirmationRequired",
+  WORK_TASK_SUBTASKS_NOT_READY: "workPackages.error.subtasksNotReady",
   WORK_TASK_HIERARCHY_DEPENDENCY_INVALID: "workPackages.error.hierarchyDependency",
   OPERATIONAL_PROJECT_CUSTOMER_IN_USE: "operationalProjects.error.customerInUse",
   OPERATIONAL_PROJECT_CODE_LOCKED: "operationalProjects.error.codeLocked",
