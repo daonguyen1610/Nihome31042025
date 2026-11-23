@@ -20,13 +20,17 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from "reac
 import {
   AlertTriangle,
   ArrowLeft,
+  BadgeCheck,
+  Ban,
   BriefcaseBusiness,
+  Building2,
   CalendarDays,
   CheckCircle2,
   ChevronDown,
   ChevronRight,
   Circle,
   CircleDot,
+  Clock3,
   Download,
   FileCheck2,
   FileClock,
@@ -34,6 +38,7 @@ import {
   Loader2,
   MoreHorizontal,
   Paperclip,
+  PlayCircle,
   Plus,
   Search,
   SlidersHorizontal,
@@ -42,6 +47,8 @@ import {
   Upload,
   UserRound,
   Users,
+  XCircle,
+  type LucideIcon,
 } from "lucide-react";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
@@ -110,6 +117,22 @@ import {
   type WorkPackagePurpose,
   type WorkPackageStatus,
 } from "@/services/adminApi";
+
+const PACKAGE_STATUS_ICON: Record<WorkPackageStatus, LucideIcon> = {
+  Planned: Circle,
+  Active: PlayCircle,
+  Completed: CheckCircle2,
+  Cancelled: XCircle,
+};
+
+const WORK_TASK_STATUS_ICON: Record<string, LucideIcon> = {
+  Planned: Circle,
+  InProgress: CircleDot,
+  Completed: Clock3,
+  Verified: BadgeCheck,
+  Cancelled: XCircle,
+  Disabled: Ban,
+};
 
 type CompletionStepState = "done" | "current" | "blocked" | "pending";
 type CompletionStep = { key: string; label: string; state: CompletionStepState };
@@ -264,12 +287,31 @@ function buildCompletionPath(
 }
 
 const completionStepIcon = (state: CompletionStepState) => {
-  if (state === "done")
-    return <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
-  if (state === "current") return <CircleDot className="h-4 w-4 text-primary" aria-hidden="true" />;
-  if (state === "blocked")
-    return <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" />;
-  return <Circle className="h-4 w-4 text-muted-foreground/50" aria-hidden="true" />;
+  const icon =
+    state === "done" ? (
+      <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+    ) : state === "current" ? (
+      <CircleDot className="h-3.5 w-3.5" aria-hidden="true" />
+    ) : state === "blocked" ? (
+      <AlertTriangle className="h-3.5 w-3.5" aria-hidden="true" />
+    ) : (
+      <Circle className="h-3.5 w-3.5" aria-hidden="true" />
+    );
+  const tone =
+    state === "done"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : state === "current"
+        ? "border-primary/30 bg-primary/5 text-primary"
+        : state === "blocked"
+          ? "border-amber-200 bg-amber-50 text-amber-700"
+          : "border-border bg-muted text-muted-foreground";
+  return (
+    <span
+      className={cn("flex h-6 w-6 shrink-0 items-center justify-center rounded-full border", tone)}
+    >
+      {icon}
+    </span>
+  );
 };
 
 const DepartmentWorkPackages = () => {
@@ -450,6 +492,7 @@ const DepartmentWorkPackages = () => {
       .map((id) => detail?.tasks.find((item) => item.id === id)?.wbsCode ?? `#${id}`)
       .join(", ");
   const completionPath = detail ? buildCompletionPath(detail, taskPermits, permitsLoaded, t) : null;
+  const PackageStatusIcon = detail ? PACKAGE_STATUS_ICON[detail.status] : null;
   const permitHref = (permitId?: number) => {
     const query = new URLSearchParams();
     if (detail?.operationalProjectId)
@@ -525,6 +568,9 @@ const DepartmentWorkPackages = () => {
                       {detail.code} · {detail.name}
                     </h1>
                     <Badge className={statusTone[detail.status]} variant="outline">
+                      {PackageStatusIcon ? (
+                        <PackageStatusIcon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+                      ) : null}
                       {t(`workPackages.status.${detail.status}`)}
                     </Badge>
                     <Badge variant="secondary">{t(`workPackages.purpose.${detail.purpose}`)}</Badge>
@@ -1075,6 +1121,7 @@ const DepartmentWorkPackages = () => {
                     detail.status === "Active" &&
                     task.canComplete &&
                     ["Planned", "InProgress"].includes(task.status);
+                  const TaskStatusIcon = WORK_TASK_STATUS_ICON[task.status] ?? Circle;
                   const hasMoreActions =
                     canAddSubtask ||
                     canEditTask ||
@@ -1112,7 +1159,8 @@ const DepartmentWorkPackages = () => {
                             <Badge variant="outline">{task.wbsCode}</Badge>
                             <h3 className="font-medium">{task.title}</h3>
                             <span className="inline-flex items-center gap-2">
-                              <Badge variant="secondary">
+                              <Badge variant="secondary" className="gap-1">
+                                <TaskStatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
                                 {t(`workPackages.taskStatus.${task.status}`)}
                               </Badge>
                               <span className="text-sm font-medium tabular-nums text-muted-foreground">
@@ -1373,9 +1421,14 @@ const DepartmentWorkPackages = () => {
         ) : (
           <>
             <div className="flex flex-wrap items-end justify-between gap-4">
-              <div>
-                <h1 className="text-3xl font-bold">{t(activeSubPage.titleKey)}</h1>
-                <p className="mt-1 text-muted-foreground">{t(activeSubPage.descriptionKey)}</p>
+              <div className="flex items-start gap-3">
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
+                  <ListChecks className="h-5 w-5" aria-hidden="true" />
+                </span>
+                <div>
+                  <h1 className="text-3xl font-bold">{t(activeSubPage.titleKey)}</h1>
+                  <p className="mt-1 text-muted-foreground">{t(activeSubPage.descriptionKey)}</p>
+                </div>
               </div>
               {canCreate && (
                 <Button onClick={openCreatePackage}>
@@ -1552,6 +1605,7 @@ const DepartmentWorkPackages = () => {
                 rows.map((item) => {
                   const tasks = item.tasks.filter((task) => task.status !== "Disabled");
                   const overdueTasks = tasks.filter((task) => task.isOverdue).length;
+                  const PackageStatusIcon = PACKAGE_STATUS_ICON[item.status];
                   return (
                     <Link
                       key={item.id}
@@ -1573,6 +1627,7 @@ const DepartmentWorkPackages = () => {
                             className={cn("whitespace-nowrap", statusTone[item.status])}
                             variant="outline"
                           >
+                            <PackageStatusIcon className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
                             {t(`workPackages.status.${item.status}`)}
                           </Badge>
                           {item.isOverdue && (
@@ -1598,10 +1653,20 @@ const DepartmentWorkPackages = () => {
                       <h2 className="mt-3 text-base font-semibold leading-6 [overflow-wrap:anywhere]">
                         {item.name}
                       </h2>
-                      <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">
-                        {item.kind === "Internal"
-                          ? t("workPackages.kind.Internal")
-                          : `${item.operationalProjectCode} · ${item.operationalProjectName}`}
+                      <p className="mt-1 flex items-start gap-1.5 text-sm text-muted-foreground">
+                        {item.kind === "Internal" ? (
+                          <BriefcaseBusiness
+                            className="mt-0.5 h-4 w-4 shrink-0"
+                            aria-hidden="true"
+                          />
+                        ) : (
+                          <Building2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                        )}
+                        <span className="line-clamp-2">
+                          {item.kind === "Internal"
+                            ? t("workPackages.kind.Internal")
+                            : `${item.operationalProjectCode} · ${item.operationalProjectName}`}
+                        </span>
                       </p>
                       <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
                         <span className="inline-flex min-w-0 items-center gap-1">
