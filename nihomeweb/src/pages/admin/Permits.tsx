@@ -6,21 +6,39 @@ import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { FieldScope } from "@/components/ui/field-scope";
 import { useConfirm } from "@/components/ui/confirmation";
 import { personOption, type PersonIdentity } from "@/lib/people";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
+  BadgeCheck,
+  Building2,
   CheckCircle2,
+  CircleDashed,
+  ClipboardCheck,
   Clock,
+  Droplets,
   Eye,
   FileCheck2,
+  FilePlus2,
+  FileText,
+  FileUp,
   Filter,
+  Flame,
+  Footprints,
+  History,
+  Leaf,
+  ListChecks,
   Pencil,
   Plus,
   RefreshCcw,
   Search,
+  Send,
   ShieldAlert,
+  ShieldCheck,
   Trash2,
+  XCircle,
+  Zap,
+  type LucideIcon,
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminDocumentUpload from "@/components/admin/AdminDocumentUpload";
@@ -86,6 +104,31 @@ import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 // ------------------------------- helpers -------------------------------
 
+const PERMIT_STATUS_ICON: Record<PermitStatus, LucideIcon> = {
+  NotStarted: CircleDashed,
+  Preparing: Pencil,
+  Submitted: Send,
+  UnderReview: Clock,
+  NeedMoreDocs: FilePlus2,
+  Issued: BadgeCheck,
+  Rejected: XCircle,
+  Expired: ShieldAlert,
+};
+
+const permitTypeIcon = (code?: string | null): LucideIcon => {
+  const value = (code ?? "").toLowerCase();
+  if (value.includes("pccc") || value.includes("fire")) return Flame;
+  if (value.includes("dien") || value.includes("electric")) return Zap;
+  if (value.includes("moi-truong") || value.includes("environment")) return Leaf;
+  if (value.includes("nuoc") || value.includes("water")) return Droplets;
+  if (value.includes("via-he")) return Footprints;
+  if (value.includes("an-toan") || value.includes("safety")) return ShieldCheck;
+  if (value.includes("hoan-cong") || value.includes("completion")) return ClipboardCheck;
+  if (value.includes("gpxd") || value.includes("xay-dung") || value.includes("building"))
+    return Building2;
+  return FileText;
+};
+
 const STATUS_BADGE: Record<PermitStatus, string> = {
   NotStarted: "border-border bg-muted/30 text-foreground",
   Preparing: "border-sky-200 bg-sky-50 text-sky-700",
@@ -104,6 +147,63 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
   } catch {
     return iso;
   }
+};
+
+const permitTypeTone = (code?: string | null) => {
+  const value = (code ?? "").toLowerCase();
+  if (value.includes("pccc") || value.includes("fire"))
+    return "border-orange-200 bg-orange-50 text-orange-700";
+  if (value.includes("dien") || value.includes("electric"))
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  if (value.includes("moi-truong") || value.includes("environment"))
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  if (value.includes("nuoc") || value.includes("water"))
+    return "border-cyan-200 bg-cyan-50 text-cyan-700";
+  if (value.includes("via-he") || value.includes("an-toan") || value.includes("safety"))
+    return "border-lime-200 bg-lime-50 text-lime-700";
+  if (value.includes("hoan-cong") || value.includes("completion"))
+    return "border-indigo-200 bg-indigo-50 text-indigo-700";
+  if (value.includes("gpxd") || value.includes("xay-dung") || value.includes("building"))
+    return "border-sky-200 bg-sky-50 text-sky-700";
+  return "border-border/70 bg-muted/60 text-muted-foreground";
+};
+
+const PermitTypeGlyph = ({ code, className }: { code?: string | null; className?: string }) => {
+  const Icon = permitTypeIcon(code);
+  return (
+    <span
+      className={cn(
+        "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border",
+        permitTypeTone(code),
+        className,
+      )}
+      aria-hidden="true"
+    >
+      <Icon className="h-4 w-4" />
+    </span>
+  );
+};
+
+const PermitStatusBadge = ({ status, className }: { status: PermitStatus; className?: string }) => {
+  const { t } = useI18n();
+  const Icon = PERMIT_STATUS_ICON[status];
+  return (
+    <Badge
+      variant="outline"
+      className={cn("gap-1 whitespace-nowrap", STATUS_BADGE[status], className)}
+    >
+      <Icon className="h-3.5 w-3.5" aria-hidden="true" />
+      {t(`permits.status.${status}`)}
+    </Badge>
+  );
+};
+
+const nextActionIcon = (tone: NextTone): LucideIcon => {
+  if (tone === "danger") return AlertTriangle;
+  if (tone === "warning") return Clock;
+  if (tone === "info") return Clock;
+  if (tone === "success") return CheckCircle2;
+  return CircleDashed;
 };
 
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
@@ -736,9 +836,16 @@ const AdminPermits = () => {
     <AdminLayout>
       <div className="space-y-4 p-3 md:p-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-foreground md:text-2xl">{t("permits.title")}</h1>
-            <p className="text-sm text-muted-foreground">{t("permits.subtitle")}</p>
+          <div className="flex items-start gap-3">
+            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
+              <ShieldCheck className="h-5 w-5" aria-hidden="true" />
+            </span>
+            <div className="flex flex-col gap-1">
+              <h1 className="text-xl font-bold text-foreground md:text-2xl">
+                {t("permits.title")}
+              </h1>
+              <p className="text-sm text-muted-foreground">{t("permits.subtitle")}</p>
+            </div>
           </div>
           {canManage ? (
             <div className="flex flex-col items-end gap-1">
@@ -979,36 +1086,48 @@ const AdminPermits = () => {
             <div className="grid gap-3 xl:hidden">
               {rows.map((r) => {
                 const next = permitNextStep(r, t, lang);
+                const NextIcon = nextActionIcon(next.tone);
+                const risky = r.status === "Expired" || r.status === "Rejected" || r.isOverdue;
                 return (
-                  <article key={r.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                  <article
+                    key={r.id}
+                    className={cn(
+                      "rounded-lg border bg-card p-3 shadow-sm",
+                      risky && "border-rose-200 bg-rose-50/30",
+                    )}
+                  >
                     <header className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <h3 className="break-words text-sm font-semibold leading-tight">
-                          {r.permitTypeLabel ?? r.permitTypeCode}
-                          {r.isRequired ? (
-                            <Badge variant="outline" className="ml-2">
-                              {t("legalTemplates.required")}
-                            </Badge>
-                          ) : null}
-                        </h3>
-                        <p className="mt-0.5 break-words text-xs text-muted-foreground">
-                          {r.operationalProjectCode ? `${r.operationalProjectCode} — ` : ""}
-                          {r.operationalProjectName ?? "—"}
-                        </p>
+                      <div className="flex min-w-0 items-start gap-2">
+                        <PermitTypeGlyph code={r.permitTypeCode} />
+                        <div className="min-w-0">
+                          <h3 className="break-words text-sm font-semibold leading-tight">
+                            {r.permitTypeLabel ?? r.permitTypeCode}
+                            {r.isRequired ? (
+                              <Badge variant="outline" className="ml-2">
+                                {t("legalTemplates.required")}
+                              </Badge>
+                            ) : null}
+                          </h3>
+                          <p className="mt-0.5 break-words text-xs text-muted-foreground">
+                            {r.operationalProjectCode ? `${r.operationalProjectCode} — ` : ""}
+                            {r.operationalProjectName ?? "—"}
+                          </p>
+                        </div>
                       </div>
                       <div className="flex flex-col items-end gap-1">
-                        <Badge
-                          variant="outline"
-                          className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
-                        >
-                          {t(`permits.status.${r.status}`)}
-                        </Badge>
+                        <PermitStatusBadge status={r.status} />
                         <RiskPills row={r} t={t} />
                       </div>
                     </header>
                     {next.text ? (
-                      <p className={cn("mt-2 text-xs font-medium", NEXT_TONE[next.tone])}>
-                        {next.text}
+                      <p
+                        className={cn(
+                          "mt-2 flex items-start gap-1 text-xs font-medium",
+                          NEXT_TONE[next.tone],
+                        )}
+                      >
+                        <NextIcon className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                        <span>{next.text}</span>
                       </p>
                     ) : null}
                     <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
@@ -1075,8 +1194,16 @@ const AdminPermits = () => {
                 <tbody className="divide-y divide-border">
                   {rows.map((r) => {
                     const next = permitNextStep(r, t, lang);
+                    const NextIcon = nextActionIcon(next.tone);
+                    const risky = r.status === "Expired" || r.status === "Rejected" || r.isOverdue;
                     return (
-                      <tr key={r.id} className="transition-colors hover:bg-muted/70">
+                      <tr
+                        key={r.id}
+                        className={cn(
+                          "transition-colors",
+                          risky ? "bg-rose-50/30 hover:bg-rose-50/50" : "hover:bg-muted/70",
+                        )}
+                      >
                         <td className="px-3 py-3 align-top">
                           <div className="max-w-44">
                             <div className="font-mono text-xs text-muted-foreground">
@@ -1091,17 +1218,20 @@ const AdminPermits = () => {
                           </div>
                         </td>
                         <td className="px-3 py-3 align-top">
-                          <div className="max-w-44">
-                            <div className="font-medium text-foreground">
-                              {r.permitTypeLabel ?? r.permitTypeCode}
-                            </div>
-                            {r.isRequired ? (
-                              <Badge variant="outline" className="mt-1">
-                                {t("legalTemplates.required")}
-                              </Badge>
-                            ) : null}
-                            <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
-                              {r.issuingAgency ?? "—"}
+                          <div className="flex items-start gap-2">
+                            <PermitTypeGlyph code={r.permitTypeCode} />
+                            <div className="max-w-44">
+                              <div className="font-medium text-foreground">
+                                {r.permitTypeLabel ?? r.permitTypeCode}
+                              </div>
+                              {r.isRequired ? (
+                                <Badge variant="outline" className="mt-1">
+                                  {t("legalTemplates.required")}
+                                </Badge>
+                              ) : null}
+                              <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                                {r.issuingAgency ?? "—"}
+                              </div>
                             </div>
                           </div>
                         </td>
@@ -1131,15 +1261,21 @@ const AdminPermits = () => {
                         </td>
                         <td className="px-3 py-3 align-top">
                           <div className="flex max-w-52 flex-col items-start gap-1">
-                            <Badge
-                              variant="outline"
-                              className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
-                            >
-                              {t(`permits.status.${r.status}`)}
-                            </Badge>
+                            <PermitStatusBadge status={r.status} />
                             <RiskPills row={r} t={t} />
                             {next.text ? (
-                              <p className={cn("text-xs", NEXT_TONE[next.tone])}>{next.text}</p>
+                              <p
+                                className={cn(
+                                  "flex items-start gap-1 text-xs",
+                                  NEXT_TONE[next.tone],
+                                )}
+                              >
+                                <NextIcon
+                                  className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                                  aria-hidden="true"
+                                />
+                                <span>{next.text}</span>
+                              </p>
                             ) : null}
                           </div>
                         </td>
@@ -1423,12 +1559,19 @@ const AdminPermits = () => {
           data-testid="permit-detail-dialog"
         >
           <DialogHeader className="shrink-0 break-words pr-6">
-            <DialogTitle>{t("permits.viewTitle")}</DialogTitle>
-            <DialogDescription>
-              {viewing
-                ? `${viewing.operationalProjectCode ?? ""} — ${viewing.permitTypeLabel ?? viewing.permitTypeCode}`
-                : ""}
-            </DialogDescription>
+            <div className="flex items-start gap-3">
+              {viewing ? (
+                <PermitTypeGlyph code={viewing.permitTypeCode} className="h-10 w-10" />
+              ) : null}
+              <div className="min-w-0">
+                <DialogTitle>{t("permits.viewTitle")}</DialogTitle>
+                <DialogDescription>
+                  {viewing
+                    ? `${viewing.operationalProjectCode ?? ""} — ${viewing.permitTypeLabel ?? viewing.permitTypeCode}`
+                    : ""}
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
           {viewing ? (
             <dl className="grid min-h-0 min-w-0 gap-4 overflow-y-auto overscroll-contain rounded-lg border bg-muted/10 p-4 sm:grid-cols-2 [&>*]:min-w-0">
@@ -1462,12 +1605,7 @@ const AdminPermits = () => {
                   {t("permits.field.status")}
                 </dt>
                 <dd className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <Badge
-                    variant="outline"
-                    className={cn("whitespace-nowrap", STATUS_BADGE[viewing.status])}
-                  >
-                    {t(`permits.status.${viewing.status}`)}
-                  </Badge>
+                  <PermitStatusBadge status={viewing.status} />
                   <RiskPills row={viewing} t={t} />
                 </dd>
               </div>
@@ -1508,7 +1646,10 @@ const AdminPermits = () => {
                 >
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <h3 className="text-sm font-semibold">{t("workPackages.tasks.title")}</h3>
+                      <h3 className="flex items-center gap-2 text-sm font-semibold">
+                        <ListChecks className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                        {t("workPackages.tasks.title")}
+                      </h3>
                       <p className="text-xs text-muted-foreground">
                         {viewTask.wbsCode} · {viewTask.title}
                       </p>
@@ -1605,6 +1746,7 @@ const AdminPermits = () => {
                 <PermitDocumentField
                   permitId={viewing.id}
                   label={t("permits.document.submittedPackage")}
+                  icon={<FileUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
                   path={viewing.submittedFilePath}
                   uploadFile={(file) => uploadPermitFile(viewing.id, "SubmittedPackage", file)}
                   onUploaded={() => refreshPermitAfterUpload(viewing.id)}
@@ -1615,6 +1757,7 @@ const AdminPermits = () => {
                 <PermitDocumentField
                   permitId={viewing.id}
                   label={t("permits.document.issuedPermit")}
+                  icon={<BadgeCheck className="h-4 w-4 text-emerald-600" aria-hidden="true" />}
                   path={viewing.issuedFilePath}
                   uploadFile={(file) => uploadPermitFile(viewing.id, "IssuedPermit", file)}
                   onUploaded={() => refreshPermitAfterUpload(viewing.id)}
@@ -1624,7 +1767,10 @@ const AdminPermits = () => {
                 />
               </div>
               <div className="space-y-2 sm:col-span-2">
-                <h3 className="text-sm font-semibold">{t("permits.history")}</h3>
+                <h3 className="flex items-center gap-2 text-sm font-semibold">
+                  <History className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  {t("permits.history")}
+                </h3>
                 {permitHistory.length === 0 ? (
                   <p className="text-sm text-muted-foreground">{t("permits.historyEmpty")}</p>
                 ) : (
@@ -1727,6 +1873,7 @@ const DetailValue = ({ label, value }: { label: string; value?: string | null })
 const PermitDocumentField = ({
   permitId,
   label,
+  icon,
   path,
   uploadFile,
   onUploaded,
@@ -1736,6 +1883,7 @@ const PermitDocumentField = ({
 }: {
   permitId: number;
   label: string;
+  icon: ReactNode;
   path?: string | null;
   uploadFile: (file: File) => Promise<string>;
   onUploaded: (paths: string[]) => void | Promise<void>;
@@ -1748,7 +1896,10 @@ const PermitDocumentField = ({
   return (
     <div className="space-y-2 rounded-md border p-3">
       <div className="flex items-center justify-between gap-2">
-        <span className="text-sm font-medium">{label}</span>
+        <span className="flex items-center gap-2 text-sm font-medium">
+          {icon}
+          {label}
+        </span>
         {path ? (
           <AdminFilePreview
             url={path}
@@ -1806,14 +1957,16 @@ const RiskCard = ({
   const content = (
     <>
       <div className="flex items-center gap-2">
-        <span className="rounded-md bg-card/70 p-1">{icon}</span>
+        <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-card/80 shadow-sm">
+          {icon}
+        </span>
         <span className="text-xs font-medium">{title}</span>
       </div>
-      <span className="text-lg font-bold">{value}</span>
+      <span className="text-xl font-bold tabular-nums">{value}</span>
     </>
   );
   return onClick ? (
-    <button type="button" onClick={onClick} className={className}>
+    <button type="button" aria-pressed={active} onClick={onClick} className={className}>
       {content}
     </button>
   ) : (
@@ -1834,24 +1987,27 @@ const RiskPills = ({
       {row.isOverdue ? (
         <Badge
           variant="outline"
-          className="border-rose-200 bg-rose-50 text-rose-700 whitespace-nowrap"
+          className="gap-1 border-rose-200 bg-rose-50 text-rose-700 whitespace-nowrap"
         >
+          <AlertTriangle className="h-3 w-3" aria-hidden="true" />
           {t("permits.risk.overduePill")}
         </Badge>
       ) : null}
       {row.isDueSoon ? (
         <Badge
           variant="outline"
-          className="border-amber-200 bg-amber-50 text-amber-700 whitespace-nowrap"
+          className="gap-1 border-amber-200 bg-amber-50 text-amber-700 whitespace-nowrap"
         >
+          <Clock className="h-3 w-3" aria-hidden="true" />
           {t("permits.risk.dueSoonPill")}
         </Badge>
       ) : null}
       {row.isExpiringSoon ? (
         <Badge
           variant="outline"
-          className="border-orange-200 bg-orange-50 text-orange-700 whitespace-nowrap"
+          className="gap-1 border-orange-200 bg-orange-50 text-orange-700 whitespace-nowrap"
         >
+          <Clock className="h-3 w-3" aria-hidden="true" />
           {t("permits.risk.expiringSoonPill")}
         </Badge>
       ) : null}
