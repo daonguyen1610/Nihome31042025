@@ -493,7 +493,7 @@ export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onS
                   className="text-primary underline-offset-4 hover:underline"
                   href={testResult.folderLink}
                   target="_blank"
-                  rel="noreferrer"
+                  rel="noopener noreferrer"
                 >
                   {testResult.folderName}
                 </a>
