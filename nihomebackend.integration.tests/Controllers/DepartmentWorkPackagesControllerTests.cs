@@ -81,6 +81,97 @@ public sealed class DepartmentWorkPackagesControllerTests(NihomeWebApplicationFa
     }
 
     [Fact]
+    public async Task CompletingParent_RequiresConfirmationAndCompletesItsOpenSubtasks()
+    {
+        var seed = await SeedProjectScopeAsync();
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "SUPER_ADMIN"));
+        var packageResponse = await SendAsync(HttpMethod.Post, "/api/work-packages", new
+        {
+            kind = "Project",
+            purpose = "General",
+            name = "Rà soát điều kiện hợp đồng dự án NICON",
+            operationalProjectId = seed.ProjectId,
+            departmentRoleGroupId = seed.DepartmentGroupId,
+            leadUserId = seed.DepartmentLeadId,
+        });
+        packageResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var package = await ReadJsonAsync(packageResponse);
+        var packageId = package.GetProperty("id").GetInt32();
+
+        async Task<System.Text.Json.JsonElement> AddTaskAsync(string wbs, string title, int? parentId = null)
+        {
+            var response = await SendAsync(HttpMethod.Post, $"/api/work-packages/{packageId}/tasks", new
+            {
+                parentTaskId = parentId,
+                wbsCode = wbs,
+                title,
+                assigneeUserId = seed.DepartmentStaffId,
+                approverUserId = seed.DepartmentLeadId,
+                plannedStart = "2026-11-23T00:00:00Z",
+                plannedEnd = "2026-11-25T00:00:00Z",
+            });
+            response.StatusCode.Should().Be(HttpStatusCode.Created);
+            return await ReadJsonAsync(response);
+        }
+
+        var parent = await AddTaskAsync("FIN-01", "Rà soát điều kiện thanh toán");
+        var child = await AddTaskAsync("FIN-01.1", "Đối chiếu điều khoản thanh toán", parent.GetProperty("id").GetInt32());
+        var invalidHierarchyDependency = await SendAsync(HttpMethod.Post,
+            $"/api/work-packages/{packageId}/tasks", new
+            {
+                parentTaskId = parent.GetProperty("id").GetInt32(),
+                wbsCode = "FIN-01.2",
+                title = "Kiểm tra điều khoản bảo lãnh",
+                assigneeUserId = seed.DepartmentStaffId,
+                approverUserId = seed.DepartmentLeadId,
+                plannedStart = "2026-11-23T00:00:00Z",
+                plannedEnd = "2026-11-25T00:00:00Z",
+                predecessorTaskIds = new[] { parent.GetProperty("id").GetInt32() },
+            });
+        invalidHierarchyDependency.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await ReadJsonAsync(invalidHierarchyDependency)).GetProperty("code").GetString()
+            .Should().Be("WORK_TASK_HIERARCHY_DEPENDENCY_INVALID");
+        package = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        parent = package.GetProperty("tasks").EnumerateArray().Single(item =>
+            item.GetProperty("id").GetInt32() == parent.GetProperty("id").GetInt32());
+        var active = await SendAsync(HttpMethod.Put, $"/api/work-packages/{packageId}", new
+        {
+            name = package.GetProperty("name").GetString(),
+            status = "Active",
+            rowVersion = package.GetProperty("rowVersion").GetString(),
+        }, package.GetProperty("rowVersion").GetString());
+        active.StatusCode.Should().Be(HttpStatusCode.OK);
+
+        await AuthTestHelper.AuthenticateAsync(Client, c => AuthTestHelper.LoginAsRoleAsync(c, "WAREHOUSE"));
+        var missingConfirmation = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/progress", new
+            {
+                status = "Completed",
+                progressPercent = 100,
+                rowVersion = parent.GetProperty("rowVersion").GetString(),
+            }, parent.GetProperty("rowVersion").GetString());
+        missingConfirmation.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var missingConfirmationBody = await ReadJsonAsync(missingConfirmation);
+        missingConfirmationBody.GetProperty("code").GetString()
+            .Should().Be("WORK_TASK_SUBTASK_CONFIRMATION_REQUIRED");
+
+        var completed = await SendAsync(HttpMethod.Put,
+            $"/api/work-packages/{packageId}/tasks/{parent.GetProperty("id").GetInt32()}/progress", new
+            {
+                status = "Completed",
+                progressPercent = 100,
+                confirmSubtasksCompletion = true,
+                rowVersion = parent.GetProperty("rowVersion").GetString(),
+            }, parent.GetProperty("rowVersion").GetString());
+        completed.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(completed)).GetProperty("status").GetString().Should().Be("Completed");
+        var saved = await ReadJsonAsync(await Client.GetAsync($"/api/work-packages/{packageId}"));
+        var tasks = saved.GetProperty("tasks").EnumerateArray().ToDictionary(item => item.GetProperty("id").GetInt32());
+        tasks[child.GetProperty("id").GetInt32()].GetProperty("status").GetString().Should().Be("Completed");
+        tasks[parent.GetProperty("id").GetInt32()].GetProperty("canComplete").GetBoolean().Should().BeTrue();
+    }
+
+    [Fact]
     public async Task TaskAttachments_FollowTheWorkTaskFileLimitSetInSettings()
     {
         const string settingsPath = "/api/site-settings/upload-limits/workTasks";

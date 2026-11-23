@@ -215,6 +215,22 @@ for (const width of [390, 768])
         },
       });
       expect(childResponse.status(), await childResponse.text()).toBe(201);
+      const child = await childResponse.json();
+      const currentPackage = await (
+        await api.get(`/api/work-packages/${workPackage.id}`, { headers })
+      ).json();
+      const activated = await api.put(`/api/work-packages/${workPackage.id}`, {
+        headers: {
+          ...writeHeaders(),
+          "If-Match": `"${currentPackage.rowVersion}"`,
+        },
+        data: {
+          name: currentPackage.name,
+          status: "Active",
+          rowVersion: currentPackage.rowVersion,
+        },
+      });
+      expect(activated.status(), await activated.text()).toBe(200);
       await loginInBrowserAs(page, TEST_USERS.superAdmin);
       await page.setViewportSize({ width, height: 844 });
       await page.goto(`/admin/work-packages/${workPackage.id}`);
@@ -227,7 +243,41 @@ for (const width of [390, 768])
         .nth(0)
         .getByRole("button", { name: /Thêm công việc con|Add subtask/ })
         .click();
-      await expect(page.getByRole("dialog")).toContainText("VT-01");
+      const addTaskDialog = page.getByRole("dialog");
+      await expect(addTaskDialog).toContainText("VT-01");
+      await addTaskDialog.getByRole("button", { name: /Hủy|Huỷ|Cancel/ }).click();
+
+      const parentRow = page.getByTestId("work-task-row").filter({
+        hasText: "Tổng hợp yêu cầu vật tư thi công",
+      });
+      const completeButton = parentRow.getByRole("button", { name: /Hoàn thành|Complete/ });
+      await completeButton.click();
+      const confirmation = page.getByRole("alertdialog");
+      await expect(confirmation).toContainText(/công việc con|subtasks/i);
+      await confirmation.getByRole("button", { name: /Hủy|Huỷ|Cancel/ }).click();
+      await expect(confirmation).toHaveCount(0);
+
+      await completeButton.click();
+      const completionResponse = page.waitForResponse(
+        (response) =>
+          response.url().includes(`/api/work-packages/${workPackage.id}/tasks/`) &&
+          response.url().endsWith("/progress") &&
+          response.request().method() === "PUT",
+      );
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: /Hoàn thành|Complete/ })
+        .click();
+      expect((await completionResponse).status()).toBe(200);
+
+      const completed = await (
+        await api.get(`/api/work-packages/${workPackage.id}`, { headers })
+      ).json();
+      const completedTasks = new Map(
+        completed.tasks.map((task: { id: number; status: string }) => [task.id, task.status]),
+      );
+      expect(completedTasks.get(parent.id)).toBe("Completed");
+      expect(completedTasks.get(child.id)).toBe("Completed");
     } finally {
       await hardDeleteBusinessRoot(api, headers, `/api/work-packages/${workPackage.id}`);
     }

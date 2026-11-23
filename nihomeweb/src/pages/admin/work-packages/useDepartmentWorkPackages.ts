@@ -338,21 +338,33 @@ export function useDepartmentWorkPackages() {
     predecessorTaskIds: [],
   });
   const unavailablePredecessorIds = useMemo(() => {
-    if (!taskEditing) return new Set<number>();
-    const unavailable = new Set([taskEditing.id]);
+    const rootId = taskEditing?.id ?? taskForm.parentTaskId;
+    if (!rootId) return new Set<number>();
+    const unavailable = new Set([rootId]);
+    let parentId = (detail?.tasks ?? []).find((task) => task.id === rootId)?.parentTaskId;
+    while (parentId) {
+      unavailable.add(parentId);
+      parentId = (detail?.tasks ?? []).find((task) => task.id === parentId)?.parentTaskId;
+    }
+    if (!taskEditing) return unavailable;
     let changed = true;
     while (changed) {
       changed = false;
       for (const task of detail?.tasks ?? []) {
         if (unavailable.has(task.id)) continue;
-        if (task.predecessorTaskIds.some((id) => unavailable.has(id))) {
+        if (
+          (task.parentTaskId !== null &&
+            task.parentTaskId !== undefined &&
+            unavailable.has(task.parentTaskId)) ||
+          task.predecessorTaskIds.some((id) => unavailable.has(id))
+        ) {
           unavailable.add(task.id);
           changed = true;
         }
       }
     }
     return unavailable;
-  }, [detail?.tasks, taskEditing]);
+  }, [detail?.tasks, taskEditing, taskForm.parentTaskId]);
   const load = useCallback(async () => {
     const request = ++requestSequence.current;
     setLoading(true);
@@ -1046,6 +1058,15 @@ export function useDepartmentWorkPackages() {
     percent?: number,
   ) => {
     if (!detail) return;
+    if (
+      complete &&
+      task.hasSubtasks &&
+      !(await confirmAction(t("workPackages.confirm.completeParent"), {
+        destructive: false,
+        confirmLabel: t("workPackages.action.completeTask"),
+      }))
+    )
+      return;
     const nextProgress = complete
       ? 100
       : Math.min(99, Math.max(1, percent ?? task.progressPercent));
@@ -1056,11 +1077,37 @@ export function useDepartmentWorkPackages() {
         {
           progressPercent: nextProgress,
           status: complete ? "Completed" : "InProgress",
+          confirmSubtasksCompletion: complete && task.hasSubtasks,
           rowVersion: task.rowVersion,
         },
         newIdempotencyKey(),
       );
       setProgressOpen(false);
+      await load();
+    } catch (cause) {
+      toast({
+        variant: "destructive",
+        title: uiError(cause, t("workPackages.error.save")),
+      });
+    }
+  };
+  const cancelTask = async (task: DepartmentWorkTaskResponse) => {
+    if (
+      !detail ||
+      !(await confirmAction(t("workPackages.confirm.cancelTask", { title: task.title })))
+    )
+      return;
+    try {
+      await adminApi.updateWorkTaskProgress(
+        detail.id,
+        task.id,
+        {
+          progressPercent: task.progressPercent,
+          status: "Cancelled",
+          rowVersion: task.rowVersion,
+        },
+        newIdempotencyKey(),
+      );
       await load();
     } catch (cause) {
       toast({
@@ -1561,6 +1608,7 @@ export function useDepartmentWorkPackages() {
     saveTask,
     transitionPackage,
     progressTask,
+    cancelTask,
     openProgress,
     verifyTask,
     rejectTask,
