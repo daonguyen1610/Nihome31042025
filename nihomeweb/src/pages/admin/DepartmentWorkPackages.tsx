@@ -25,7 +25,11 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronRight,
+  Circle,
+  CircleDot,
   Download,
+  FileCheck2,
+  FileClock,
   ListChecks,
   Loader2,
   MoreHorizontal,
@@ -101,10 +105,172 @@ import {
   type ProjectScheduleResponse,
   type UpsertDepartmentWorkTaskRequest,
   type UpdateDepartmentWorkPackageRequest,
+  type PermitChecklistItemResponse,
   type WorkPackageKind,
   type WorkPackagePurpose,
   type WorkPackageStatus,
 } from "@/services/adminApi";
+
+type CompletionStepState = "done" | "current" | "blocked" | "pending";
+type CompletionStep = { key: string; label: string; state: CompletionStepState };
+type CompletionNext = {
+  kind: "permit" | "complete" | "verify" | "close" | "none";
+  title: string;
+  detail: string;
+  taskId?: number;
+  permitId?: number;
+};
+type CompletionPath = {
+  summary: string;
+  steps: CompletionStep[];
+  next: CompletionNext;
+  disabledNote: string | null;
+  readyToClose: boolean;
+};
+
+const permitIsReady = (permit?: PermitChecklistItemResponse) =>
+  permit?.status === "Issued" && Boolean(permit.issuedAt) && Boolean(permit.issuedFilePath);
+
+function buildCompletionPath(
+  detail: DepartmentWorkPackageResponse,
+  permits: Record<number, PermitChecklistItemResponse>,
+  permitsLoaded: boolean,
+  t: (key: string, params?: Record<string, string | number>) => string,
+): CompletionPath {
+  const active = detail.tasks.filter((task) => task.status !== "Disabled");
+  const verified = active.filter((task) => task.status === "Verified");
+  const inProgress = active.filter(
+    (task) => task.status === "Planned" || task.status === "InProgress",
+  );
+  const awaiting = active.filter((task) => task.status === "Completed");
+  const disabled = detail.tasks.filter((task) => task.status === "Disabled");
+  const isLegal = detail.purpose === "LegalPermitting";
+  const permitBlockedTask =
+    isLegal && permitsLoaded
+      ? active.find(
+          (task) =>
+            !task.hasSubtasks &&
+            ["Planned", "InProgress"].includes(task.status) &&
+            !permitIsReady(permits[task.id]),
+        )
+      : undefined;
+  const readyToClose =
+    detail.status === "Active" && active.length > 0 && verified.length === active.length;
+  const summary = t("workPackages.path.summary", {
+    verified: verified.length,
+    total: active.length,
+    inProgress: inProgress.length,
+    disabled: disabled.length,
+  });
+
+  const steps: CompletionStep[] = [];
+  if (isLegal)
+    steps.push({
+      key: "permit",
+      label: t("workPackages.path.permitStep"),
+      state: permitBlockedTask ? "blocked" : permitsLoaded ? "done" : "pending",
+    });
+  steps.push({
+    key: "complete",
+    label: t("workPackages.path.completeStep"),
+    state:
+      active.length === 0
+        ? "blocked"
+        : readyToClose
+          ? "done"
+          : permitBlockedTask
+            ? "pending"
+            : inProgress.length
+              ? "current"
+              : "done",
+  });
+  steps.push({
+    key: "verify",
+    label: t("workPackages.path.verifyStep"),
+    state: readyToClose ? "done" : awaiting.length ? "current" : "pending",
+  });
+  steps.push({
+    key: "close",
+    label: t("workPackages.path.closeStep"),
+    state: readyToClose ? "current" : "blocked",
+  });
+
+  let next: CompletionNext;
+  if (permitBlockedTask) {
+    const permit = permits[permitBlockedTask.id];
+    const taskLabel = `${permitBlockedTask.wbsCode} · ${permitBlockedTask.title}`;
+    const permitDetail = !permit
+      ? t("workPackages.path.permitMissing")
+      : permit.status !== "Issued"
+        ? t("workPackages.path.permitNotIssued", {
+            status: t(`permits.status.${permit.status}`),
+          })
+        : t("workPackages.path.permitIncomplete");
+    next = {
+      kind: "permit",
+      title: t("workPackages.path.permitTitle", { task: taskLabel }),
+      detail: permitDetail,
+      taskId: permitBlockedTask.id,
+      permitId: permit?.id,
+    };
+  } else if (inProgress.length > 0) {
+    const task = inProgress[0];
+    next = {
+      kind: "complete",
+      title: t("workPackages.path.completeTitle", { task: `${task.wbsCode} · ${task.title}` }),
+      detail:
+        isLegal && !permitsLoaded
+          ? t("workPackages.path.completeDetailCheckPermit")
+          : t("workPackages.path.completeDetail"),
+      taskId: task.id,
+    };
+  } else if (awaiting.length > 0) {
+    const task = awaiting[0];
+    next = {
+      kind: "verify",
+      title: t("workPackages.path.verifyTitle", {
+        name: task.approverName ?? detail.leadUserName,
+        task: `${task.wbsCode} · ${task.title}`,
+      }),
+      detail: t("workPackages.path.verifyDetail"),
+      taskId: task.id,
+    };
+  } else if (readyToClose) {
+    next = {
+      kind: "close",
+      title: t("workPackages.path.readyTitle"),
+      detail: t("workPackages.path.readyDetail"),
+    };
+  } else {
+    next = {
+      kind: "none",
+      title: t("workPackages.path.noActiveTitle"),
+      detail: t("workPackages.path.noActiveDetail"),
+    };
+  }
+
+  const disabledList = disabled
+    .slice(0, 3)
+    .map((task) => `${task.wbsCode} · ${task.title}`)
+    .join(", ");
+  const disabledNote =
+    disabled.length > 0
+      ? t("workPackages.path.disabledNote", {
+          tasks: `${disabledList}${disabled.length > 3 ? ` +${disabled.length - 3}` : ""}`,
+        })
+      : null;
+
+  return { summary, steps, next, disabledNote, readyToClose };
+}
+
+const completionStepIcon = (state: CompletionStepState) => {
+  if (state === "done")
+    return <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden="true" />;
+  if (state === "current") return <CircleDot className="h-4 w-4 text-primary" aria-hidden="true" />;
+  if (state === "blocked")
+    return <AlertTriangle className="h-4 w-4 text-amber-600" aria-hidden="true" />;
+  return <Circle className="h-4 w-4 text-muted-foreground/50" aria-hidden="true" />;
+};
 
 const DepartmentWorkPackages = () => {
   const {
@@ -163,6 +329,8 @@ const DepartmentWorkPackages = () => {
     attachmentFiles,
     attachmentBusy,
     attachmentError,
+    taskPermits,
+    permitsLoaded,
     progressOpen,
     setProgressOpen,
     saving,
@@ -281,6 +449,14 @@ const DepartmentWorkPackages = () => {
     (task.blockingPredecessorTaskIds ?? [])
       .map((id) => detail?.tasks.find((item) => item.id === id)?.wbsCode ?? `#${id}`)
       .join(", ");
+  const completionPath = detail ? buildCompletionPath(detail, taskPermits, permitsLoaded, t) : null;
+  const permitHref = (permitId?: number) => {
+    const query = new URLSearchParams();
+    if (detail?.operationalProjectId)
+      query.set("operationalProjectId", String(detail.operationalProjectId));
+    if (permitId) query.set("permitId", String(permitId));
+    return `/admin/permits${query.toString() ? `?${query}` : ""}`;
+  };
   if (loading && packageId)
     return (
       <AdminLayout>
@@ -456,21 +632,119 @@ const DepartmentWorkPackages = () => {
                     )}
                 </div>
               </div>
-              {detail.status === "Active" && detail.completionBlockers.length > 0 && (
-                <div
-                  id="work-package-completion-blockers"
-                  className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+              {detail.status === "Active" && completionPath && (
+                <section
+                  data-testid="work-package-path"
+                  aria-labelledby="work-package-path-title"
+                  className="rounded-xl border bg-card"
                 >
-                  <p className="flex items-center gap-2 font-medium">
-                    <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
-                    {t("workPackages.blockers.title")}
-                  </p>
-                  <ul className="mt-1 list-disc space-y-0.5 pl-6">
-                    {detail.completionBlockers.map((code) => (
-                      <li key={code}>{t(`workPackages.blockers.${code}`)}</li>
-                    ))}
-                  </ul>
-                </div>
+                  <div className="border-b p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h2 id="work-package-path-title" className="font-semibold">
+                          {t("workPackages.path.title")}
+                        </h2>
+                        <p className="text-sm text-muted-foreground">{completionPath.summary}</p>
+                      </div>
+                    </div>
+                    <ol
+                      className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1"
+                      aria-label={t("workPackages.path.aria")}
+                    >
+                      {completionPath.steps.map((step, index) => (
+                        <li key={step.key} className="inline-flex items-center gap-1.5 text-xs">
+                          {completionStepIcon(step.state)}
+                          <span
+                            className={cn(
+                              step.state === "current" && "font-medium text-foreground",
+                              step.state === "blocked" && "text-amber-900",
+                              step.state === "pending" && "text-muted-foreground",
+                            )}
+                          >
+                            {step.label}
+                          </span>
+                          {index < completionPath.steps.length - 1 && (
+                            <ChevronRight
+                              className="h-3.5 w-3.5 text-muted-foreground/60"
+                              aria-hidden="true"
+                            />
+                          )}
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                  <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="flex min-w-0 gap-3">
+                      <span
+                        className={cn(
+                          "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
+                          completionPath.next.kind === "close"
+                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            : completionPath.next.kind === "permit"
+                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              : "border-border bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {completionPath.next.kind === "permit" ? (
+                          <FileClock className="h-4 w-4" aria-hidden="true" />
+                        ) : completionPath.next.kind === "close" ? (
+                          <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                        ) : (
+                          <CircleDot className="h-4 w-4" aria-hidden="true" />
+                        )}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="font-medium">{completionPath.next.title}</p>
+                        <p className="mt-0.5 text-sm text-muted-foreground">
+                          {completionPath.next.detail}
+                        </p>
+                        {completionPath.disabledNote && (
+                          <p className="mt-1 text-sm text-muted-foreground">
+                            {completionPath.disabledNote}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex flex-wrap gap-2 sm:shrink-0">
+                      {completionPath.next.kind === "close" && (
+                        <Button onClick={() => void transitionPackage("Completed")}>
+                          {t("workPackages.action.completePackage")}
+                        </Button>
+                      )}
+                      {completionPath.next.kind === "permit" && (
+                        <Button variant="outline" asChild>
+                          <Link to={permitHref(completionPath.next.permitId)}>
+                            <FileCheck2 className="mr-1.5 h-4 w-4" />
+                            {t("workPackages.path.openPermit")}
+                          </Link>
+                        </Button>
+                      )}
+                      {completionPath.next.taskId != null && (
+                        <Button variant="outline" asChild>
+                          <a href={`#task-${completionPath.next.taskId}`}>
+                            {t("workPackages.path.openTask")}
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                  {detail.completionBlockers.length > 0 && (
+                    <div
+                      id="work-package-completion-blockers"
+                      className="border-t border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+                    >
+                      <p className="flex items-center gap-2 font-medium">
+                        <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                        {t("workPackages.blockers.title")}
+                      </p>
+                      <ul className="mt-1 list-disc space-y-0.5 pl-6">
+                        {detail.completionBlockers.map((code) => (
+                          <li key={code}>{t(`workPackages.blockers.${code}`)}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </section>
               )}
             </div>
 
@@ -808,6 +1082,16 @@ const DepartmentWorkPackages = () => {
                     task.canDisable ||
                     task.canRestore ||
                     task.canPermanentlyDelete;
+                  const permit =
+                    detail.purpose === "LegalPermitting" && !task.hasSubtasks
+                      ? taskPermits[task.id]
+                      : undefined;
+                  const permitReadyForTask = permitIsReady(permit);
+                  const permitBlocksTask =
+                    detail.purpose === "LegalPermitting" &&
+                    !task.hasSubtasks &&
+                    permitsLoaded &&
+                    !permitReadyForTask;
                   return (
                     <article
                       key={task.id}
@@ -835,6 +1119,41 @@ const DepartmentWorkPackages = () => {
                                 {task.progressPercent}%
                               </span>
                             </span>
+                            {detail.purpose === "LegalPermitting" &&
+                              !task.hasSubtasks &&
+                              !["Cancelled", "Disabled"].includes(task.status) &&
+                              (permitsLoaded ? (
+                                <Link
+                                  to={permitHref(permit?.id)}
+                                  className={cn(
+                                    "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
+                                    permitReadyForTask
+                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                                      : "border-amber-200 bg-amber-50 text-amber-800",
+                                  )}
+                                >
+                                  {permitReadyForTask ? (
+                                    <FileCheck2 className="h-3.5 w-3.5" aria-hidden="true" />
+                                  ) : (
+                                    <FileClock className="h-3.5 w-3.5" aria-hidden="true" />
+                                  )}
+                                  {permitReadyForTask
+                                    ? t("workPackages.path.permitIssued")
+                                    : permit
+                                      ? t("workPackages.path.permitStatus", {
+                                          status: t(`permits.status.${permit.status}`),
+                                        })
+                                      : t("workPackages.path.permitMissingChip")}
+                                </Link>
+                              ) : (
+                                <Link
+                                  to={permitHref()}
+                                  className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium text-muted-foreground"
+                                >
+                                  <FileClock className="h-3.5 w-3.5" aria-hidden="true" />
+                                  {t("workPackages.path.openPermit")}
+                                </Link>
+                              ))}
                             {task.hasSubtasks && (
                               <Badge variant="outline">{t("workPackages.task.aggregated")}</Badge>
                             )}
@@ -887,11 +1206,16 @@ const DepartmentWorkPackages = () => {
                               variant="outline"
                               size="sm"
                               onClick={() => void progressTask(task, true)}
-                              disabled={(task.blockingPredecessorTaskIds ?? []).length > 0}
+                              disabled={
+                                (task.blockingPredecessorTaskIds ?? []).length > 0 ||
+                                permitBlocksTask
+                              }
                               title={
-                                (task.blockingPredecessorTaskIds ?? []).length > 0
-                                  ? t("workPackages.blockers.completeTask")
-                                  : undefined
+                                permitBlocksTask
+                                  ? t("workPackages.path.completeBlockedByPermit")
+                                  : (task.blockingPredecessorTaskIds ?? []).length > 0
+                                    ? t("workPackages.blockers.completeTask")
+                                    : undefined
                               }
                             >
                               {t("workPackages.action.completeTask")}

@@ -37,6 +37,7 @@ import type {
   WorkPackageApprovalRecipients,
   WorkPackageApproverOption,
   DeletionImpactResponse,
+  PermitChecklistItemResponse,
 } from "@/services/adminApi";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { PageError, PageLoading } from "@/components/PageState";
@@ -170,6 +171,8 @@ export function useDepartmentWorkPackages() {
   const [rows, setRows] = useState<DepartmentWorkPackageResponse[]>([]);
   const [total, setTotal] = useState(0);
   const [detail, setDetail] = useState<DepartmentWorkPackageResponse | null>(null);
+  const [taskPermits, setTaskPermits] = useState<Record<number, PermitChecklistItemResponse>>({});
+  const [permitsLoaded, setPermitsLoaded] = useState(false);
   const originListPath = (location.state as { workPackageListPath?: string } | null)
     ?.workPackageListPath;
   const detailListPath =
@@ -421,6 +424,39 @@ export function useDepartmentWorkPackages() {
   useEffect(() => {
     void load();
   }, [load]);
+  // Legal tasks cannot complete until their linked permit is issued with a
+  // date and scan. Load those permits so the detail can show the real next
+  // step instead of letting the user hit the server guard.
+  const permitProjectId = detail?.operationalProjectId;
+  const permitPackagePurpose = detail?.purpose;
+  useEffect(() => {
+    if (!permitProjectId || permitPackagePurpose !== "LegalPermitting") {
+      setTaskPermits({});
+      setPermitsLoaded(false);
+      return;
+    }
+    let cancelled = false;
+    setPermitsLoaded(false);
+    void adminApi
+      .listPermits({ operationalProjectId: permitProjectId, pageSize: 200 })
+      .then(({ data }) => {
+        if (cancelled) return;
+        const byTask: Record<number, PermitChecklistItemResponse> = {};
+        for (const permit of data.items) {
+          if (permit.workTaskId != null) byTask[permit.workTaskId] = permit;
+        }
+        setTaskPermits(byTask);
+        setPermitsLoaded(true);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setTaskPermits({});
+        setPermitsLoaded(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [permitProjectId, permitPackagePurpose]);
   useEffect(() => {
     if (loading || packageId || page <= 1 || rows.length > 0 || total <= 0) return;
     setParams(
@@ -1648,6 +1684,8 @@ export function useDepartmentWorkPackages() {
     attachmentFiles,
     attachmentBusy,
     attachmentError,
+    taskPermits,
+    permitsLoaded,
     progressOpen,
     setProgressOpen,
     saving,
