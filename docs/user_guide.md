@@ -1112,7 +1112,7 @@ Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo g
 2. Đăng nhập tài khoản đó, tạo thư mục gốc trong **My Drive** hoặc Shared Drive đã duyệt, gửi đường dẫn cho quản trị viên. Mã thư mục là phần sau `/folders/` trong đường dẫn.
 3. Người có quyền quản lý cài đặt hệ thống mở **Cài đặt → Google Drive**, nhập và lưu thông tin OAuth client, client secret (chỉ ghi), callback URL, thư mục gốc, định danh triển khai, đường dẫn thư mục, thiết lập đồng bộ và hai công tắc hướng xóa.
 4. Chọn **Kết nối Google Drive**. Cửa sổ đăng nhập Google mở ra; chọn tài khoản đã duyệt và cấp quyền.
-5. Kiểm tra tài khoản và trạng thái **Connected**. Tải thử một ảnh nhỏ: thẻ tệp chuyển từ Pending/Processing sang Synced và có liên kết Drive. Còn treo thì bấm **Kiểm tra kết nối**.
+5. Kiểm tra tài khoản và trạng thái **Connected**. Bấm **Kiểm tra kết nối** để xem tài khoản, thư mục gốc, Shared Drive và quyền thêm tệp. Tải thử một ảnh nhỏ: thẻ tệp chuyển từ Pending/Processing sang Synced và có liên kết Drive.
 
 Đổi tài khoản: **Ngắt kết nối** rồi **Kết nối Google Drive**, hoặc **Đổi tài khoản Google**. Nếu đăng nhập tài khoản mới bị hủy hoặc lỗi, hệ thống ở trạng thái chưa kết nối. Ngắt kết nối không đăng xuất Google trên trình duyệt.
 

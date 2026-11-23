@@ -457,6 +457,14 @@ export interface GoogleDriveAdminStatusResponse {
   error: string | null;
 }
 
+export interface GoogleDriveConnectionTestResponse {
+  accountEmail: string | null;
+  folderName: string;
+  folderLink: string;
+  isSharedDrive: boolean;
+  canAddChildren: boolean;
+}
+
 export interface GoogleDriveOAuthStartResponse {
   authorizationUrl: string;
 }

@@ -3394,6 +3394,48 @@
     "key": "settings.drive.configuration.saveError", "category": "settings", "vi": "Không lưu được cấu hình. Kiểm tra dữ liệu và tải lại nếu cấu hình đã được người khác thay đổi.", "en": "Could not save the configuration. Check the values and reload if another user changed it.", "zh": "无法保存配置。请检查输入；如被其他用户修改，请重新加载。", "ja": "設定を保存できません。値を確認し、他のユーザーが変更した場合は再読み込みしてください。"
   },
   {
+    "key": "settings.drive.test.title", "category": "settings", "vi": "Kiểm tra kết nối Drive", "en": "Test Drive connection", "zh": "测试 Drive 连接", "ja": "Drive 接続をテスト"
+  },
+  {
+    "key": "settings.drive.test.description", "category": "settings", "vi": "Kiểm tra tài khoản, thư mục gốc, quyền thêm tệp và Shared Drive bằng cấu hình đã lưu.", "en": "Check the saved configuration for the account, root folder, Shared Drive and write access.", "zh": "使用已保存的配置检查账号、根文件夹、共享云端硬盘和写入权限。", "ja": "保存済みの設定でアカウント、ルートフォルダ、共有ドライブ、書き込み権限を確認します。"
+  },
+  {
+    "key": "settings.drive.test.button", "category": "settings", "vi": "Kiểm tra kết nối", "en": "Test connection", "zh": "测试连接", "ja": "接続をテスト"
+  },
+  {
+    "key": "settings.drive.test.running", "category": "settings", "vi": "Đang kiểm tra...", "en": "Testing...", "zh": "正在测试...", "ja": "テスト中..."
+  },
+  {
+    "key": "settings.drive.test.connected", "category": "settings", "vi": "Kết nối thành công", "en": "Connection successful", "zh": "连接成功", "ja": "接続に成功しました"
+  },
+  {
+    "key": "settings.drive.test.account", "category": "settings", "vi": "Tài khoản", "en": "Account", "zh": "账号", "ja": "アカウント"
+  },
+  {
+    "key": "settings.drive.test.folder", "category": "settings", "vi": "Thư mục gốc", "en": "Root folder", "zh": "根文件夹", "ja": "ルートフォルダ"
+  },
+  {
+    "key": "settings.drive.test.sharedDrive", "category": "settings", "vi": "Shared Drive", "en": "Shared Drive", "zh": "共享云端硬盘", "ja": "共有ドライブ"
+  },
+  {
+    "key": "settings.drive.test.writeAccess", "category": "settings", "vi": "Quyền thêm tệp", "en": "Write access", "zh": "写入权限", "ja": "書き込み権限"
+  },
+  {
+    "key": "settings.drive.test.yes", "category": "settings", "vi": "Có", "en": "Yes", "zh": "是", "ja": "はい"
+  },
+  {
+    "key": "settings.drive.test.no", "category": "settings", "vi": "Không", "en": "No", "zh": "否", "ja": "いいえ"
+  },
+  {
+    "key": "settings.drive.test.failed", "category": "settings", "vi": "Không kiểm tra được kết nối Google Drive.", "en": "Could not test the Google Drive connection.", "zh": "无法测试 Google Drive 连接。", "ja": "Google Drive 接続をテストできませんでした。"
+  },
+  {
+    "key": "settings.drive.test.warningSharedDrive", "category": "settings", "vi": "Thư mục gốc không nằm trong Shared Drive. NICON yêu cầu dùng Shared Drive của công ty.", "en": "The root folder is not in a Shared Drive. NICON requires the company Shared Drive.", "zh": "根文件夹不在共享云端硬盘中。NICON 要求使用公司共享云端硬盘。", "ja": "ルートフォルダが共有ドライブにありません。NICON は会社の共有ドライブを必須としています。"
+  },
+  {
+    "key": "settings.drive.test.warningWrite", "category": "settings", "vi": "Tài khoản không có quyền thêm tệp vào thư mục gốc.", "en": "The account cannot add files to the root folder.", "zh": "该账号无法向根文件夹添加文件。", "ja": "このアカウントはルートフォルダにファイルを追加できません。"
+  },
+  {
     "key": "settings.drive.deletionPolicy.title", "category": "settings", "vi": "Chính sách đồng bộ khi xóa", "en": "Deletion synchronization policy", "zh": "删除同步策略", "ja": "削除同期ポリシー"
   },
   {

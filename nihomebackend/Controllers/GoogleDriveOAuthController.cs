@@ -6,11 +6,19 @@ using NihomeBackend.Services.GoogleDrive;
 
 namespace NihomeBackend.Controllers;
 
+public sealed record GoogleDriveConnectionTestResponse(
+    string? AccountEmail,
+    string FolderName,
+    string FolderLink,
+    bool IsSharedDrive,
+    bool CanAddChildren);
+
 [ApiController]
 [Route("api/site-settings/google-drive")]
 public class GoogleDriveOAuthController(
     GoogleDriveOAuthService oauth,
     IGoogleDriveSettingsStore settingsStore,
+    IGoogleDriveAdapter drive,
     ILogger<GoogleDriveOAuthController> logger) : ControllerBase
 {
     [HttpGet("configuration")]
@@ -47,6 +55,57 @@ public class GoogleDriveOAuthController(
     [RequirePermission("system.settings", "view")]
     public async Task<ActionResult<GoogleDriveAdminStatusResponse>> Status(CancellationToken ct) =>
         Ok(await oauth.GetStatusAsync(ct));
+
+    [HttpPost("test")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public async Task<ActionResult<GoogleDriveConnectionTestResponse>> Test(CancellationToken ct)
+    {
+        try
+        {
+            var options = await settingsStore.GetRuntimeAsync(ct);
+            if (!options.Enabled || string.IsNullOrWhiteSpace(options.RefreshToken))
+            {
+                return BadRequest(new
+                {
+                    code = "DRIVE_NOT_CONNECTED",
+                    message = "Google Drive chưa được bật hoặc chưa kết nối tài khoản.",
+                });
+            }
+
+            var connection = await drive.CheckConnectionAsync(ct);
+            if (!connection.IsFolder || connection.IsTrashed)
+            {
+                return BadRequest(new
+                {
+                    code = "DRIVE_INVALID_ROOT",
+                    message = "Thư mục gốc không phải thư mục hợp lệ hoặc đang bị xóa.",
+                });
+            }
+
+            return Ok(new GoogleDriveConnectionTestResponse(
+                connection.AccountEmail,
+                connection.FolderName,
+                connection.FolderLink,
+                connection.IsSharedDrive,
+                connection.CanAddChildren));
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception exception)
+        {
+            logger.LogWarning(
+                "Google Drive connection test failed ({ExceptionType}).",
+                exception.GetType().Name);
+            return BadRequest(new
+            {
+                code = "DRIVE_TEST_FAILED",
+                message = "Không đọc được cấu hình hoặc không kết nối được Google Drive. Kiểm tra quyền truy cập thư mục gốc và kết nối tài khoản.",
+            });
+        }
+    }
 
     [HttpPost("oauth/start")]
     [Authorize]
