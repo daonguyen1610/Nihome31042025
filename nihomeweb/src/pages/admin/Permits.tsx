@@ -108,6 +108,103 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 
 const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
+type NextTone = "danger" | "warning" | "info" | "success" | "muted";
+const NEXT_TONE: Record<NextTone, string> = {
+  danger: "text-rose-700",
+  warning: "text-amber-800",
+  info: "text-sky-800",
+  success: "text-emerald-700",
+  muted: "text-muted-foreground",
+};
+const NEXT_BANNER: Record<NextTone, string> = {
+  danger: "border-rose-200 bg-rose-50 text-rose-900",
+  warning: "border-amber-200 bg-amber-50 text-amber-900",
+  info: "border-sky-200 bg-sky-50 text-sky-900",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  muted: "border-border bg-muted/30 text-foreground",
+};
+
+const permitNextStep = (
+  row: PermitChecklistItemResponse,
+  t: (key: string, params?: Record<string, string | number>) => string,
+  lang: string,
+): { text: string; tone: NextTone } => {
+  if (row.status === "Expired") return { text: t("permits.next.expired"), tone: "danger" };
+  if (row.status === "Rejected") return { text: t("permits.next.rejected"), tone: "danger" };
+  if (row.status === "NeedMoreDocs")
+    return { text: t("permits.next.needMoreDocs"), tone: "warning" };
+  if (row.status === "Issued") {
+    if (row.isExpiringSoon && row.expiresAt)
+      return {
+        text: t("permits.next.renewSoon", { date: formatDate(row.expiresAt, lang) }),
+        tone: "warning",
+      };
+    if (row.expiresAt)
+      return {
+        text: t("permits.next.validUntil", { date: formatDate(row.expiresAt, lang) }),
+        tone: "success",
+      };
+    return { text: t("permits.next.valid"), tone: "success" };
+  }
+  if (row.status === "Submitted" || row.status === "UnderReview")
+    return { text: t("permits.next.underReview"), tone: "info" };
+  if (row.status === "NotStarted" || row.status === "Preparing") {
+    if (row.isOverdue) return { text: t("permits.next.submitOverdue"), tone: "danger" };
+    return { text: t("permits.next.notSubmitted"), tone: "info" };
+  }
+  if (row.isOverdue) return { text: t("permits.next.submitOverdue"), tone: "danger" };
+  return { text: "", tone: "muted" };
+};
+
+const WORK_TASK_STATUSES = [
+  "Planned",
+  "InProgress",
+  "Completed",
+  "Verified",
+  "Cancelled",
+  "Disabled",
+] as const;
+const taskStatusLabel = (
+  t: (key: string, params?: Record<string, string | number>) => string,
+  status?: string | null,
+) =>
+  status && (WORK_TASK_STATUSES as readonly string[]).includes(status)
+    ? t(`workPackages.taskStatus.${status}`)
+    : (status ?? "—");
+
+const PERMIT_HISTORY_ACTIONS = [
+  "Updated",
+  "StatusChanged",
+  "SubmittedPackageUploaded",
+  "IssuedPermitUploaded",
+  "SeededLegalScenario",
+] as const;
+const historyActionLabel = (
+  t: (key: string, params?: Record<string, string | number>) => string,
+  action: string,
+) =>
+  (PERMIT_HISTORY_ACTIONS as readonly string[]).includes(action)
+    ? t(`permits.historyAction.${action}`)
+    : t("permits.historyAction.Other");
+
+const permitStatusLabel = (
+  t: (key: string, params?: Record<string, string | number>) => string,
+  status?: string | null,
+) =>
+  status && PERMIT_STATUSES.includes(status as PermitStatus)
+    ? t(`permits.status.${status}`)
+    : (status ?? "—");
+
+const fileDisplayName = (path?: string | null) => {
+  if (!path) return null;
+  const name = path.split("/").pop() ?? path;
+  try {
+    return decodeURIComponent(name);
+  } catch {
+    return name;
+  }
+};
+
 /** Local YYYY-MM-DD → `${YYYY-MM-DD}T00:00:00.000Z`. Keeps the picked
  * calendar date intact across the UTC+7 boundary. */
 const toUtcMidnight = (yyyyMmDd: string): string => (yyyyMmDd ? `${yyyyMmDd}T00:00:00.000Z` : "");
@@ -192,6 +289,7 @@ const AdminPermits = () => {
   const [ownerUserId, setOwnerUserId] = useState<number | null>(null);
   const [approverUserId, setApproverUserId] = useState<number | null>(null);
   const [flag, setFlag] = useState<"" | "overdue" | "dueSoon" | "expiringSoon">("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
@@ -303,6 +401,14 @@ const AdminPermits = () => {
     approverUserId != null ||
     flag !== "";
 
+  const advancedFilterCount = [
+    projectId != null,
+    permitTypeCode !== "",
+    status !== "",
+    ownerUserId != null,
+    approverUserId != null,
+    flag !== "",
+  ].filter(Boolean).length;
   const projectOptions = useMemo(
     () =>
       projects.map((p) => ({
@@ -617,6 +723,13 @@ const AdminPermits = () => {
     }
   };
 
+  const viewingNext = viewing ? permitNextStep(viewing, t, lang) : null;
+  const viewingPermitReady =
+    viewing != null &&
+    viewing.status === "Issued" &&
+    Boolean(viewing.issuedAt) &&
+    Boolean(viewing.issuedFilePath);
+
   // ----------------------------- render -----------------------------
 
   return (
@@ -628,20 +741,31 @@ const AdminPermits = () => {
             <p className="text-sm text-muted-foreground">{t("permits.subtitle")}</p>
           </div>
           {canManage ? (
-            <Button
-              size="sm"
-              disabled={!projectId}
-              onClick={() => projectId && setSetupProjectId(projectId)}
-            >
-              <Plus className="mr-1 h-4 w-4" />
-              {t("permits.setupLegal")}
-            </Button>
+            <div className="flex flex-col items-end gap-1">
+              <Button
+                size="sm"
+                disabled={!projectId}
+                aria-describedby={!projectId ? "permit-setup-hint" : undefined}
+                onClick={() => projectId && setSetupProjectId(projectId)}
+              >
+                <Plus className="mr-1 h-4 w-4" />
+                {t("permits.setupLegal")}
+              </Button>
+              {!projectId ? (
+                <p
+                  id="permit-setup-hint"
+                  className="max-w-64 text-right text-xs text-muted-foreground"
+                >
+                  {t("permits.setupLegalHint")}
+                </p>
+              ) : null}
+            </div>
           ) : null}
         </header>
 
         {/* Risk register */}
         {has("permit.templates.view") ? <LegalChecklistTemplates /> : null}
-        <section className="grid gap-2 md:grid-cols-4">
+        <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <RiskCard
             title={t("permits.risk.overdue")}
             value={risk.overdue}
@@ -684,7 +808,7 @@ const AdminPermits = () => {
         </section>
 
         <section className="rounded-lg border border-border bg-card p-3 shadow-sm">
-          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-3 lg:grid-cols-4">
             <FieldScope className="lg:col-span-2">
               <Label className="text-xs">{t("permits.filter.search")}</Label>
               <div className="relative mt-1">
@@ -700,6 +824,45 @@ const AdminPermits = () => {
                 />
               </div>
             </FieldScope>
+            <div className="flex flex-wrap items-end gap-2 lg:col-span-2 lg:justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void fetchList()}
+                disabled={loading}
+              >
+                <RefreshCcw className={cn("mr-1 h-4 w-4", loading && "animate-spin")} />
+                {t("common.refresh")}
+              </Button>
+              <Button variant="ghost" size="sm" onClick={resetFilters} disabled={loading}>
+                <Filter className="mr-1 h-4 w-4" />
+                {t("common.reset")}
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                {t("permits.total").replace("{count}", String(total))}
+              </span>
+            </div>
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="mt-3 w-full xl:hidden"
+            aria-expanded={filtersOpen}
+            aria-controls="permit-filters-more"
+            onClick={() => setFiltersOpen((open) => !open)}
+          >
+            <Filter className="mr-1 h-4 w-4" />
+            {t("permits.filter.toggle")}
+            {advancedFilterCount > 0 ? ` (${advancedFilterCount})` : ""}
+          </Button>
+          <div
+            id="permit-filters-more"
+            className={cn(
+              "mt-3 grid gap-3 md:grid-cols-2 lg:grid-cols-4",
+              !filtersOpen && "hidden xl:grid",
+            )}
+          >
             <FieldScope>
               <Label className="text-xs">{t("permits.field.status")}</Label>
               <Select
@@ -795,19 +958,6 @@ const AdminPermits = () => {
               </FieldScope>
             ) : null}
           </div>
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchList()} disabled={loading}>
-              <RefreshCcw className={cn("mr-1 h-4 w-4", loading && "animate-spin")} />
-              {t("common.refresh")}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={resetFilters} disabled={loading}>
-              <Filter className="mr-1 h-4 w-4" />
-              {t("common.reset")}
-            </Button>
-            <span className="ml-auto text-xs text-muted-foreground">
-              {t("permits.total").replace("{count}", String(total))}
-            </span>
-          </div>
         </section>
 
         {loading ? (
@@ -826,174 +976,216 @@ const AdminPermits = () => {
         ) : (
           <>
             {/* Mobile / tablet card view */}
-            <div className="grid gap-3 lg:hidden">
-              {rows.map((r) => (
-                <article key={r.id} className="rounded-lg border bg-card p-3 shadow-sm">
-                  <header className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <h3 className="break-words text-sm font-semibold leading-tight">
-                        {r.permitTypeLabel ?? r.permitTypeCode}
-                        {r.isRequired ? (
-                          <Badge variant="outline" className="ml-2">
-                            {t("legalTemplates.required")}
-                          </Badge>
-                        ) : null}
-                      </h3>
-                      <p className="mt-0.5 break-words text-xs text-muted-foreground">
-                        {r.operationalProjectCode ? `${r.operationalProjectCode} — ` : ""}
-                        {r.operationalProjectName ?? "—"}
+            <div className="grid gap-3 xl:hidden">
+              {rows.map((r) => {
+                const next = permitNextStep(r, t, lang);
+                return (
+                  <article key={r.id} className="rounded-lg border bg-card p-3 shadow-sm">
+                    <header className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <h3 className="break-words text-sm font-semibold leading-tight">
+                          {r.permitTypeLabel ?? r.permitTypeCode}
+                          {r.isRequired ? (
+                            <Badge variant="outline" className="ml-2">
+                              {t("legalTemplates.required")}
+                            </Badge>
+                          ) : null}
+                        </h3>
+                        <p className="mt-0.5 break-words text-xs text-muted-foreground">
+                          {r.operationalProjectCode ? `${r.operationalProjectCode} — ` : ""}
+                          {r.operationalProjectName ?? "—"}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <Badge
+                          variant="outline"
+                          className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
+                        >
+                          {t(`permits.status.${r.status}`)}
+                        </Badge>
+                        <RiskPills row={r} t={t} />
+                      </div>
+                    </header>
+                    {next.text ? (
+                      <p className={cn("mt-2 text-xs font-medium", NEXT_TONE[next.tone])}>
+                        {next.text}
                       </p>
-                    </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge
-                        variant="outline"
-                        className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
-                      >
-                        {t(`permits.status.${r.status}`)}
-                      </Badge>
-                      <RiskPills row={r} t={t} />
-                    </div>
-                  </header>
-                  <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                      <dt className="text-muted-foreground">{t("permits.field.owner")}</dt>
-                      <dd className="font-medium">{r.ownerName ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("permits.field.agency")}</dt>
-                      <dd className="font-medium">{r.issuingAgency ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("permits.field.approver")}</dt>
-                      <dd className="font-medium">{r.approverName ?? "—"}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("permits.field.progress")}</dt>
-                      <dd className="font-medium">
-                        {r.progressPercent}% · {r.workTaskStatus ?? "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("permits.field.targetDeadline")}</dt>
-                      <dd className="font-medium">{formatDate(r.targetDeadline, lang)}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-muted-foreground">{t("permits.field.expiresAt")}</dt>
-                      <dd className="font-medium">{formatDate(r.expiresAt, lang)}</dd>
-                    </div>
-                  </dl>
-                  <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
-                    <Button variant="ghost" size="sm" onClick={() => setViewing(r)}>
-                      <Eye className="mr-1 h-4 w-4" />
-                      {t("common.view")}
-                    </Button>
-                    {canManage ? (
-                      <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                        <Pencil className="mr-1 h-4 w-4" />
-                        {t("common.edit")}
-                      </Button>
                     ) : null}
-                  </div>
-                </article>
-              ))}
+                    <dl className="mt-2 grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <dt className="text-muted-foreground">{t("permits.field.owner")}</dt>
+                        <dd className="font-medium">{r.ownerName ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("permits.field.agency")}</dt>
+                        <dd className="font-medium">{r.issuingAgency ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("permits.field.approver")}</dt>
+                        <dd className="font-medium">{r.approverName ?? "—"}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("permits.field.progress")}</dt>
+                        <dd className="font-medium">
+                          {r.progressPercent}% · {taskStatusLabel(t, r.workTaskStatus)}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">
+                          {t("permits.field.targetDeadline")}
+                        </dt>
+                        <dd className="font-medium">{formatDate(r.targetDeadline, lang)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-muted-foreground">{t("permits.field.expiresAt")}</dt>
+                        <dd className="font-medium">{formatDate(r.expiresAt, lang)}</dd>
+                      </div>
+                    </dl>
+                    <div className="mt-3 flex flex-wrap justify-end gap-1 border-t pt-2">
+                      <Button variant="ghost" size="sm" onClick={() => setViewing(r)}>
+                        <Eye className="mr-1 h-4 w-4" />
+                        {t("common.view")}
+                      </Button>
+                      {canManage ? (
+                        <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                          <Pencil className="mr-1 h-4 w-4" />
+                          {t("common.edit")}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
 
             {/* Desktop table */}
-            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm lg:block">
-              <table className="min-w-[1024px] text-sm">
-                <thead className="bg-muted/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+            <div className="hidden overflow-x-auto rounded-lg border border-border bg-card shadow-sm xl:block">
+              <table className="min-w-[900px] text-sm">
+                <thead className="bg-muted/30 text-left text-xs font-medium text-muted-foreground">
                   <tr>
                     <th className="px-3 py-2">{t("permits.field.project")}</th>
                     <th className="px-3 py-2">{t("permits.field.permitType")}</th>
-                    <th className="px-3 py-2">{t("permits.field.agency")}</th>
-                    <th className="px-3 py-2">{t("permits.field.owner")}</th>
-                    <th className="px-3 py-2">{t("permits.field.approver")}</th>
+                    <th className="px-3 py-2">{t("permits.table.people")}</th>
                     <th className="px-3 py-2">{t("permits.field.progress")}</th>
                     <th className="px-3 py-2">{t("permits.field.status")}</th>
-                    <th className="px-3 py-2">{t("permits.field.targetDeadline")}</th>
-                    <th className="px-3 py-2">{t("permits.field.expiresAt")}</th>
+                    <th className="px-3 py-2">{t("permits.table.dates")}</th>
                     <th className="px-3 py-2 text-right">{t("common.actions")}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {rows.map((r) => (
-                    <tr key={r.id} className="transition-colors hover:bg-muted/70">
-                      <td className="px-3 py-2 text-foreground">
-                        <div className="whitespace-nowrap font-mono text-xs text-muted-foreground">
-                          {r.operationalProjectCode ?? "—"}
-                        </div>
-                        <div className="text-foreground">{r.operationalProjectName ?? "—"}</div>
-                      </td>
-                      <td className="px-3 py-2 font-medium text-foreground">
-                        {r.permitTypeLabel ?? r.permitTypeCode}
-                        {r.isRequired ? (
-                          <Badge variant="outline" className="ml-2">
-                            {t("legalTemplates.required")}
-                          </Badge>
-                        ) : null}
-                      </td>
-                      <td className="px-3 py-2 text-foreground">{r.issuingAgency ?? "—"}</td>
-                      <td className="px-3 py-2 text-foreground">{r.ownerName ?? "—"}</td>
-                      <td className="px-3 py-2 text-foreground">{r.approverName ?? "—"}</td>
-                      <td className="px-3 py-2 text-foreground">
-                        <div className="min-w-28">
-                          <div className="mb-1 flex justify-between gap-2 text-xs">
-                            <span className="whitespace-nowrap">{r.workTaskStatus ?? "—"}</span>
-                            <span className="whitespace-nowrap tabular-nums">
-                              {r.progressPercent}%
-                            </span>
-                          </div>
-                          <div className="h-1.5 overflow-hidden rounded bg-muted">
+                  {rows.map((r) => {
+                    const next = permitNextStep(r, t, lang);
+                    return (
+                      <tr key={r.id} className="transition-colors hover:bg-muted/70">
+                        <td className="px-3 py-3 align-top">
+                          <div className="max-w-44">
+                            <div className="font-mono text-xs text-muted-foreground">
+                              {r.operationalProjectCode ?? "—"}
+                            </div>
                             <div
-                              className="h-full bg-primary"
-                              style={{ width: `${r.progressPercent}%` }}
-                            />
+                              className="mt-0.5 line-clamp-2 break-words text-sm font-medium text-foreground"
+                              title={r.operationalProjectName ?? undefined}
+                            >
+                              {r.operationalProjectName ?? "—"}
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex flex-col items-start gap-1">
-                          <Badge
-                            variant="outline"
-                            className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
-                          >
-                            {t(`permits.status.${r.status}`)}
-                          </Badge>
-                          <RiskPills row={r} t={t} />
-                        </div>
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-foreground">
-                        {formatDate(r.targetDeadline, lang)}
-                      </td>
-                      <td className="px-3 py-2 whitespace-nowrap text-foreground">
-                        {formatDate(r.expiresAt, lang)}
-                      </td>
-                      <td className="px-3 py-2">
-                        <div className="flex justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            title={t("common.view")}
-                            aria-label={t("common.view")}
-                            onClick={() => setViewing(r)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          {canManage ? (
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <div className="max-w-44">
+                            <div className="font-medium text-foreground">
+                              {r.permitTypeLabel ?? r.permitTypeCode}
+                            </div>
+                            {r.isRequired ? (
+                              <Badge variant="outline" className="mt-1">
+                                {t("legalTemplates.required")}
+                              </Badge>
+                            ) : null}
+                            <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                              {r.issuingAgency ?? "—"}
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <div className="text-sm text-foreground">{r.ownerName ?? "—"}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">
+                            {r.approverName ?? "—"}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <div className="min-w-32">
+                            <div className="mb-1 flex justify-between gap-2 text-xs">
+                              <span className="whitespace-nowrap">
+                                {taskStatusLabel(t, r.workTaskStatus)}
+                              </span>
+                              <span className="whitespace-nowrap tabular-nums">
+                                {r.progressPercent}%
+                              </span>
+                            </div>
+                            <div className="h-1.5 overflow-hidden rounded bg-muted">
+                              <div
+                                className="h-full bg-primary"
+                                style={{ width: `${r.progressPercent}%` }}
+                              />
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <div className="flex max-w-52 flex-col items-start gap-1">
+                            <Badge
+                              variant="outline"
+                              className={cn("whitespace-nowrap", STATUS_BADGE[r.status])}
+                            >
+                              {t(`permits.status.${r.status}`)}
+                            </Badge>
+                            <RiskPills row={r} t={t} />
+                            {next.text ? (
+                              <p className={cn("text-xs", NEXT_TONE[next.tone])}>{next.text}</p>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-top text-xs text-foreground">
+                          <div>
+                            <span className="text-muted-foreground">
+                              {t("permits.field.targetDeadline")}:{" "}
+                            </span>
+                            {formatDate(r.targetDeadline, lang)}
+                          </div>
+                          <div className="mt-0.5">
+                            <span className="text-muted-foreground">
+                              {t("permits.field.expiresAt")}:{" "}
+                            </span>
+                            {formatDate(r.expiresAt, lang)}
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 align-top">
+                          <div className="flex justify-end gap-1">
                             <Button
                               variant="ghost"
-                              size="icon"
-                              title={t("common.edit")}
-                              aria-label={t("common.edit")}
-                              onClick={() => openEdit(r)}
+                              size="sm"
+                              title={t("common.view")}
+                              aria-label={t("common.view")}
+                              onClick={() => setViewing(r)}
                             >
-                              <Pencil className="h-4 w-4" />
+                              <Eye className="mr-1 h-4 w-4" />
+                              {t("common.view")}
                             </Button>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                            {canManage ? (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                title={t("common.edit")}
+                                aria-label={t("common.edit")}
+                                onClick={() => openEdit(r)}
+                              >
+                                <Pencil className="mr-1 h-4 w-4" />
+                                {t("common.edit")}
+                              </Button>
+                            ) : null}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1240,6 +1432,23 @@ const AdminPermits = () => {
           </DialogHeader>
           {viewing ? (
             <dl className="grid min-h-0 min-w-0 gap-4 overflow-y-auto overscroll-contain rounded-lg border bg-muted/10 p-4 sm:grid-cols-2 [&>*]:min-w-0">
+              {viewingNext?.text ? (
+                <div
+                  className={cn(
+                    "flex items-start gap-2 rounded-md border p-3 text-sm sm:col-span-2",
+                    NEXT_BANNER[viewingNext.tone],
+                  )}
+                >
+                  {viewingNext.tone === "success" ? (
+                    <FileCheck2 className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  ) : viewingNext.tone === "danger" ? (
+                    <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  ) : (
+                    <Clock className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />
+                  )}
+                  <p>{viewingNext.text}</p>
+                </div>
+              ) : null}
               <DetailValue
                 label={t("permits.field.project")}
                 value={`${viewing.operationalProjectCode ?? ""} — ${viewing.operationalProjectName ?? "—"}`}
@@ -1248,10 +1457,20 @@ const AdminPermits = () => {
                 label={t("permits.field.permitType")}
                 value={viewing.permitTypeLabel ?? viewing.permitTypeCode}
               />
-              <DetailValue
-                label={t("permits.field.status")}
-                value={t(`permits.status.${viewing.status}`)}
-              />
+              <div>
+                <dt className="text-xs font-medium text-muted-foreground">
+                  {t("permits.field.status")}
+                </dt>
+                <dd className="mt-1 flex flex-wrap items-center gap-1.5">
+                  <Badge
+                    variant="outline"
+                    className={cn("whitespace-nowrap", STATUS_BADGE[viewing.status])}
+                  >
+                    {t(`permits.status.${viewing.status}`)}
+                  </Badge>
+                  <RiskPills row={viewing} t={t} />
+                </dd>
+              </div>
               <DetailValue label={t("permits.field.agency")} value={viewing.issuingAgency} />
               <DetailValue label={t("permits.field.owner")} value={viewing.ownerName} />
               <DetailValue label={t("permits.field.approver")} value={viewing.approverName} />
@@ -1295,7 +1514,7 @@ const AdminPermits = () => {
                       </p>
                     </div>
                     <Badge variant="outline">
-                      {viewTask.status} · {viewTask.progressPercent}%
+                      {taskStatusLabel(t, viewTask.status)} · {viewTask.progressPercent}%
                     </Badge>
                   </div>
                   {viewTask.canUpdateProgress &&
@@ -1326,7 +1545,8 @@ const AdminPermits = () => {
                         {t("workPackages.action.progress")}
                       </Button>
                       <Button
-                        disabled={taskSaving}
+                        disabled={taskSaving || !viewingPermitReady}
+                        title={!viewingPermitReady ? t("permits.next.completeBlocked") : undefined}
                         onClick={() => void updateViewedTaskProgress(true)}
                       >
                         {t("workPackages.action.completeTask")}
@@ -1337,7 +1557,8 @@ const AdminPermits = () => {
                   viewTask.hasSubtasks &&
                   ["Planned", "InProgress"].includes(viewTask.status) ? (
                     <Button
-                      disabled={taskSaving}
+                      disabled={taskSaving || !viewingPermitReady}
+                      title={!viewingPermitReady ? t("permits.next.completeBlocked") : undefined}
                       onClick={() => void updateViewedTaskProgress(true)}
                     >
                       {t("workPackages.action.completeTask")}
@@ -1411,9 +1632,9 @@ const AdminPermits = () => {
                     <div key={entry.id} className="rounded-md border p-2 text-xs">
                       <div className="flex flex-wrap justify-between gap-2">
                         <span className="font-medium">
-                          {entry.action}
+                          {historyActionLabel(t, entry.action)}
                           {entry.fromStatus && entry.fromStatus !== entry.toStatus
-                            ? ` · ${entry.fromStatus} → ${entry.toStatus}`
+                            ? ` · ${permitStatusLabel(t, entry.fromStatus)} → ${permitStatusLabel(t, entry.toStatus)}`
                             : ""}
                         </span>
                         <span className="text-muted-foreground">
@@ -1498,7 +1719,7 @@ const AdminPermits = () => {
 
 const DetailValue = ({ label, value }: { label: string; value?: string | null }) => (
   <div>
-    <dt className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</dt>
+    <dt className="text-xs font-medium text-muted-foreground">{label}</dt>
     <dd className="mt-1 break-words text-sm font-medium">{value || "—"}</dd>
   </div>
 );
@@ -1521,33 +1742,39 @@ const PermitDocumentField = ({
   disabled: boolean;
   testId: string;
   hideUpload?: boolean;
-}) => (
-  <div className="space-y-2 rounded-md border p-3">
-    <div className="flex items-center justify-between gap-2">
-      <span className="text-sm font-medium">{label}</span>
-      {path ? (
-        <AdminFilePreview
-          url={path}
-          fileName={path.split("/").pop()}
-          fetchFile={
-            isManagedDocumentPath(path, "/files/business-documents/permits")
-              ? async () => (await adminApi.getPermitDocumentContent(permitId, path)).data
-              : undefined
-          }
+}) => {
+  const { t } = useI18n();
+  const fileName = fileDisplayName(path);
+  return (
+    <div className="space-y-2 rounded-md border p-3">
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium">{label}</span>
+        {path ? (
+          <AdminFilePreview
+            url={path}
+            fileName={fileName}
+            fetchFile={
+              isManagedDocumentPath(path, "/files/business-documents/permits")
+                ? async () => (await adminApi.getPermitDocumentContent(permitId, path)).data
+                : undefined
+            }
+          />
+        ) : null}
+      </div>
+      <p className="break-words text-xs text-muted-foreground">
+        {fileName ?? t("permits.document.none")}
+      </p>
+      {!hideUpload ? (
+        <AdminDocumentUpload
+          uploadFile={uploadFile}
+          onUploaded={onUploaded}
+          disabled={disabled}
+          testId={testId}
         />
       ) : null}
     </div>
-    <p className="break-all text-xs text-muted-foreground">{path ?? "—"}</p>
-    {!hideUpload ? (
-      <AdminDocumentUpload
-        uploadFile={uploadFile}
-        onUploaded={onUploaded}
-        disabled={disabled}
-        testId={testId}
-      />
-    ) : null}
-  </div>
-);
+  );
+};
 
 const RiskCard = ({
   title,
@@ -1570,24 +1797,27 @@ const RiskCard = ({
     orange: "border-orange-200 bg-orange-50/60 text-orange-800",
     slate: "border-border bg-muted/30 text-foreground",
   };
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      disabled={!onClick}
-      className={cn(
-        "flex items-center justify-between rounded-lg border px-3 py-2.5 text-left shadow-sm transition-colors",
-        tones[tone],
-        onClick ? "cursor-pointer hover:brightness-95" : "cursor-default",
-        active && "ring-2 ring-offset-1 ring-slate-800/40",
-      )}
-    >
+  const className = cn(
+    "flex items-center justify-between rounded-lg border px-3 py-2.5 text-left shadow-sm transition-colors",
+    tones[tone],
+    onClick ? "cursor-pointer hover:brightness-95" : "cursor-default",
+    active && "ring-2 ring-offset-1 ring-slate-800/40",
+  );
+  const content = (
+    <>
       <div className="flex items-center gap-2">
         <span className="rounded-md bg-card/70 p-1">{icon}</span>
         <span className="text-xs font-medium">{title}</span>
       </div>
       <span className="text-lg font-bold">{value}</span>
+    </>
+  );
+  return onClick ? (
+    <button type="button" onClick={onClick} className={className}>
+      {content}
     </button>
+  ) : (
+    <div className={className}>{content}</div>
   );
 };
 

@@ -480,7 +480,9 @@ test("legal workspace updates progress and preserves input on concurrency confli
     await details.evaluate((element) => {
       element.scrollTop = element.scrollHeight;
     });
-    await expect(dialog.getByText("StatusChanged", { exact: false })).toBeInViewport();
+    await expect(
+      dialog.getByText(/StatusChanged|Đổi trạng thái|Status changed|状态变更|ステータス変更/),
+    ).toBeInViewport();
     await expect(dialog.locator("button").last()).toBeInViewport();
     await details.evaluate((element) => {
       element.scrollTop = 0;
@@ -501,7 +503,7 @@ test("legal workspace updates progress and preserves input on concurrency confli
   await reason.fill("Bá»• sung biÃªn báº£n Ä‘á»‘i chiáº¿u báº£n gá»‘c");
   await taskSection.getByRole("button").nth(0).click();
   expect(rejectReason).toContain("biÃªn báº£n");
-  await expect(dialog).toContainText("InProgress");
+  await expect(dialog).toContainText(/InProgress|Đang thực hiện|In progress|进行中|進行中/);
   await dialog.getByRole("button", { name: /Edit|S\u1eeda|\u7f16\u8f91|\u7de8\u96c6/i }).click();
   const editDialog = page.getByTestId("permit-form-dialog");
   await expect(editDialog).toBeVisible();

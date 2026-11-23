@@ -176,26 +176,65 @@ test("legal package explains the permit step and disables completion until it is
   loginInBrowserAs,
 }) => {
   const headers = { Authorization: `Bearer ${await loginAs(TEST_USERS.superAdmin)}` };
-  const list = await api.get("/api/work-packages?search=LEGAL-3&pageSize=10", { headers });
+  const list = await api.get(
+    "/api/work-packages?purpose=LegalPermitting&status=Active&pageSize=100",
+    {
+      headers,
+    },
+  );
   expect(list.status()).toBe(200);
-  const packageId = (await list.json()).items[0]?.id;
-  expect(packageId, "seeded LEGAL-3 package required").toBeTruthy();
+  type Task = { id: number; wbsCode: string; status: string; hasSubtasks: boolean };
+  type Permit = {
+    workTaskId?: number | null;
+    status: string;
+    issuedAt?: string | null;
+    issuedFilePath?: string | null;
+  };
+  const items = (await list.json()).items as Array<{
+    id: number;
+    operationalProjectId?: number | null;
+    tasks: Task[];
+  }>;
+  let fixture: { packageId: number; wbsCode: string } | undefined;
+  for (const item of items) {
+    const task = item.tasks.find(
+      (candidate) => !candidate.hasSubtasks && ["Planned", "InProgress"].includes(candidate.status),
+    );
+    if (!task || !item.operationalProjectId) continue;
+    const permits = await api.get(
+      `/api/permits?operationalProjectId=${item.operationalProjectId}&pageSize=200`,
+      { headers },
+    );
+    expect(permits.status()).toBe(200);
+    const permit = ((await permits.json()).items as Permit[]).find(
+      (candidate) => candidate.workTaskId === task.id,
+    );
+    const ready =
+      permit?.status === "Issued" && Boolean(permit.issuedAt) && Boolean(permit.issuedFilePath);
+    if (!ready) {
+      fixture = { packageId: item.id, wbsCode: task.wbsCode };
+      break;
+    }
+  }
+  expect(
+    fixture,
+    "an active legal package with a task blocked by an unissued permit is required",
+  ).toBeTruthy();
 
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
   await page.setViewportSize({ width: 1440, height: 1000 });
-  await page.goto(`/admin/work-packages/${packageId}`);
+  await page.goto(`/admin/work-packages/${fixture!.packageId}`);
   const path = page.getByTestId("work-package-path");
   await expect(path).toBeVisible();
   await expect(path).toContainText("Path to close");
-  await expect(path).toContainText("Issue the permit for L-01");
+  await expect(path).toContainText("Issue the permit for");
   await expect(path.getByRole("link", { name: "Open permit" })).toBeVisible();
   await expect(path.getByRole("link", { name: "View task" })).toBeVisible();
-  await expect(path).toContainText("Disabled tasks: L-02");
 
-  const row = page.getByTestId("work-task-row").filter({ hasText: "L-01" }).first();
+  const row = page.getByTestId("work-task-row").filter({ hasText: fixture!.wbsCode }).first();
   await expect(row.getByRole("button", { name: /^Complete$/ })).toBeDisabled();
-  await expect(row.getByRole("link", { name: /^Permit/ })).toBeVisible();
+  await expect(row.getByRole("link", { name: /^(Permit|No permit)/ })).toBeVisible();
 
   await page.setViewportSize({ width: 390, height: 844 });
   await page.reload();

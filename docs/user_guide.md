@@ -800,6 +800,8 @@ Khi gặp lỗi dữ liệu cũ, làm mới để xem bản mới nhất (dữ l
 
 Theo dõi giấy phép xây dựng (GPXD), PCCC, cấp điện, cấp nước, vỉa hè, môi trường, an toàn, hoàn công và các loại đã cấu hình: trạng thái, cơ quan cấp, người phụ trách, ngày nộp, ngày cấp, hạn, hạn mục tiêu, ghi chú. Thẻ rủi ro và bộ lọc làm nổi giấy phép quá hạn, sắp đến hạn, sắp hết hiệu lực. Màn hình lọc theo dự án, loại, trạng thái, người thực hiện, người duyệt, hạn; có lịch sử.
 
+Bảng giấy phép hiển thị việc cần làm tiếp theo theo trạng thái: gia hạn giấy phép hết hạn/sắp hết hiệu lực, bổ sung hồ sơ, nộp hồ sơ, chờ cơ quan thẩm định, hoặc còn hiệu lực đến ngày nào. Trên điện thoại, bộ lọc nâng cao thu gọn sau nút **Bộ lọc**; chọn dự án trong bộ lọc trước khi **Thiết lập Pháp lý**. Chi tiết hiển thị cảnh báo hết hạn, tên tệp hồ sơ/giấy phép đã cấp và lịch sử thay đổi đã dịch; không hiển thị đường dẫn máy chủ.
+
 | Trạng thái với cơ quan | Điều kiện |
 |---|---|
 | Chưa chuẩn bị, Đang chuẩn bị | — |
