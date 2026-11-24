@@ -30,10 +30,6 @@ const CODED_ERRORS: Record<string, string> = {
   QUOTE_APPROVAL_PERSON_TWICE: "quotes.error.personTwice",
   QUOTE_WORKFLOW_STEPS_BLOCKED: "workflow.error.stepsBlocked",
   QUOTE_WORKFLOW_EVERYONE_ROLE_REPEATED: "workflow.error.everyoneRoleRepeated",
-  DRIVE_NOT_CONNECTED: "settings.drive.test.notConnected",
-  DRIVE_INVALID_ROOT: "settings.drive.test.invalidRoot",
-  DRIVE_RECONNECT_REQUIRED: "settings.drive.test.reconnectRequired",
-  DRIVE_TEST_FAILED: "settings.drive.test.failed",
 };
 
 /** The localized message for a coded business error, or null when the code is not one of them. */

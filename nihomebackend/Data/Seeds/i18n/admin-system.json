@@ -3430,16 +3430,7 @@
     "key": "settings.drive.test.failed", "category": "settings", "vi": "Không kiểm tra được kết nối Google Drive.", "en": "Could not test the Google Drive connection.", "zh": "无法测试 Google Drive 连接。", "ja": "Google Drive 接続をテストできませんでした。"
   },
   {
-    "key": "settings.drive.test.notConnected", "category": "settings", "vi": "Google Drive chưa được bật hoặc chưa kết nối tài khoản.", "en": "Google Drive is not enabled or no account is connected.", "zh": "Google Drive 未启用或未连接账号。", "ja": "Google Drive が有効になっていないか、アカウントが接続されていません。"
-  },
-  {
-    "key": "settings.drive.test.invalidRoot", "category": "settings", "vi": "Thư mục gốc không phải thư mục hợp lệ hoặc đang bị xóa.", "en": "The root folder is not a valid folder or is in the trash.", "zh": "根文件夹不是有效文件夹或已被删除。", "ja": "ルートフォルダが有効なフォルダでないか、ゴミ箱にあります。"
-  },
-  {
-    "key": "settings.drive.test.reconnectRequired", "category": "settings", "vi": "Kết nối Google Drive đã hết hạn hoặc bị thu hồi. Kết nối lại tài khoản.", "en": "The Google Drive connection expired or was revoked. Reconnect the account.", "zh": "Google Drive 连接已过期或被撤销。请重新连接账号。", "ja": "Google Drive 接続の有効期限が切れたか、取り消されました。アカウントを再接続してください。"
-  },
-  {
-    "key": "settings.drive.test.warningSharedDrive", "category": "settings", "vi": "Thư mục gốc không nằm trong Shared Drive. NICON khuyến nghị dùng Shared Drive của công ty; My Drive vẫn hoạt động nhưng phụ thuộc tài khoản cá nhân.", "en": "The root folder is not in a Shared Drive. NICON recommends the company Shared Drive; My Drive still works but depends on a personal account.", "zh": "根文件夹不在共享云端硬盘中。NICON 建议使用公司共享云端硬盘；My Drive 仍可使用，但依赖个人账号。", "ja": "ルートフォルダが共有ドライブにありません。NICON は会社の共有ドライブを推奨します。My Drive も使用できますが、個人アカウントに依存します。"
+    "key": "settings.drive.test.warningSharedDrive", "category": "settings", "vi": "Thư mục gốc không nằm trong Shared Drive. NICON yêu cầu dùng Shared Drive của công ty.", "en": "The root folder is not in a Shared Drive. NICON requires the company Shared Drive.", "zh": "根文件夹不在共享云端硬盘中。NICON 要求使用公司共享云端硬盘。", "ja": "ルートフォルダが共有ドライブにありません。NICON は会社の共有ドライブを必須としています。"
   },
   {
     "key": "settings.drive.test.warningWrite", "category": "settings", "vi": "Tài khoản không có quyền thêm tệp vào thư mục gốc.", "en": "The account cannot add files to the root folder.", "zh": "该账号无法向根文件夹添加文件。", "ja": "このアカウントはルートフォルダにファイルを追加できません。"

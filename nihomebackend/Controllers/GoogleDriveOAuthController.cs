@@ -90,20 +90,9 @@ public class GoogleDriveOAuthController(
                 connection.IsSharedDrive,
                 connection.CanAddChildren));
         }
-        catch (OperationCanceledException) when (ct.IsCancellationRequested)
+        catch (OperationCanceledException)
         {
             throw;
-        }
-        catch (Exception exception) when (GoogleDriveAuthenticationErrors.IsInvalidGrant(exception))
-        {
-            logger.LogWarning(
-                "Google Drive connection test requires reconnecting ({ExceptionType}).",
-                exception.GetType().Name);
-            return BadRequest(new
-            {
-                code = "DRIVE_RECONNECT_REQUIRED",
-                message = "Kết nối Google Drive đã hết hạn hoặc bị thu hồi. Kết nối lại tài khoản.",
-            });
         }
         catch (Exception exception)
         {

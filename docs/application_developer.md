@@ -2953,8 +2953,8 @@ Sau khi giải nén gói trên IIS:
    thư mục gốc). Kiểm trạng thái `Connected`, upload thử. Cấu hình có hiệu lực ngay, không
    cần recycle. `POST /api/site-settings/google-drive/test` (quyền `system.settings.manage`)
    trả tài khoản, thư mục gốc, `isSharedDrive`, `canAddChildren`; lỗi cấu hình hoặc quyền
-   trả `400` với mã `DRIVE_NOT_CONNECTED`, `DRIVE_INVALID_ROOT`,
-   `DRIVE_RECONNECT_REQUIRED` hoặc `DRIVE_TEST_FAILED`, không trả secret.
+   trả `400` với mã `DRIVE_NOT_CONNECTED`, `DRIVE_INVALID_ROOT` hoặc `DRIVE_TEST_FAILED`,
+   không trả secret.
 
 | Trạng thái | Nghĩa |
 |---|---|
