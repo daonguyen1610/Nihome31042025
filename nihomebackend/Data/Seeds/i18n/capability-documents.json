@@ -15,6 +15,7 @@
   { "key": "capDocs.field.tag", "category": "capability-docs", "vi": "Phân loại", "en": "Tag", "zh": "分类", "ja": "分類" },
   { "key": "capDocs.field.issuedDate", "category": "capability-docs", "vi": "Ngày cấp", "en": "Issued date", "zh": "签发日期", "ja": "発行日" },
   { "key": "capDocs.field.expiryDate", "category": "capability-docs", "vi": "Ngày hết hạn", "en": "Expiry date", "zh": "到期日期", "ja": "有効期限" },
+  { "key": "capDocs.field.expiryState", "category": "capability-docs", "vi": "Trạng thái hiệu lực", "en": "Expiry status", "zh": "有效状态", "ja": "有効状態" },
   { "key": "capDocs.field.description", "category": "capability-docs", "vi": "Mô tả", "en": "Description", "zh": "描述", "ja": "説明" },
   { "key": "capDocs.field.file", "category": "capability-docs", "vi": "File", "en": "File", "zh": "文件", "ja": "ファイル" },
   { "key": "capDocs.field.fileSize", "category": "capability-docs", "vi": "Dung lượng", "en": "Size", "zh": "大小", "ja": "サイズ" },

@@ -6,7 +6,9 @@ import { useSearchParams } from "react-router-dom";
 import { Download, Loader2, Pencil, Plus, RefreshCcw, Search, Trash2, Upload } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
+import AdminExportButton from "@/components/admin/AdminExportButton";
 import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
+import { useListExport } from "@/hooks/useListExport";
 import { useI18n } from "@/lib/i18n";
 import { useBusinessFileCheck } from "@/hooks/useBusinessFileCheck";
 import { cn } from "@/lib/utils";
@@ -86,6 +88,7 @@ const CapabilityDocuments = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { toast } = useToast();
   const { has } = usePermissions();
+  const { exporting, exportList } = useListExport();
   const canManage = has(ADMIN_PERMS.capabilityDocsManage);
 
   // -------- state --------
@@ -439,6 +442,33 @@ const CapabilityDocuments = () => {
   const localTagLabel = (code: string, fallback?: string | null) =>
     tagsById.get(code)?.name ?? fallback ?? code;
 
+  const exportCapabilityDocuments = () =>
+    exportList<CapabilityDocumentResponse>({
+      filename: "capability-documents",
+      loadPage: (page) =>
+        adminApi.listCapabilityDocuments({
+          page,
+          pageSize: 100,
+          ...(tagFilter ? { tagCode: tagFilter } : {}),
+          ...(expiryFilter ? { expiryState: expiryFilter } : {}),
+          ...(search.trim() ? { search: search.trim() } : {}),
+        }),
+      columns: [
+        { header: t("capDocs.field.name"), value: "name" },
+        {
+          header: t("capDocs.field.tag"),
+          value: (row) => localTagLabel(row.tagCode, row.tagLabel),
+        },
+        { header: t("capDocs.field.issuedDate"), value: (row) => formatDate(row.issuedDate, lang) },
+        { header: t("capDocs.field.expiryDate"), value: (row) => formatDate(row.expiryDate, lang) },
+        { header: t("capDocs.field.expiryState"), value: (row) => expiryLabel(row.expiryState) },
+        { header: t("capDocs.field.file"), value: "originalFileName" },
+        { header: t("capDocs.field.version"), value: "currentVersion" },
+        { header: t("capDocs.field.uploadedBy"), value: (row) => row.uploadedByName ?? "" },
+        { header: t("capDocs.field.updatedAt"), value: (row) => formatDate(row.updatedAt, lang) },
+      ],
+    });
+
   const renderRowActions = (r: CapabilityDocumentResponse) => (
     <>
       <AdminFilePreview
@@ -487,6 +517,12 @@ const CapabilityDocuments = () => {
             <p className="mt-1 text-sm text-muted-foreground">{t("capDocs.subtitle")}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <AdminExportButton
+              onClick={() => void exportCapabilityDocuments()}
+              disabled={total === 0 || loading || exporting}
+              label={exporting ? t("common.exporting") : undefined}
+              className="flex-1 md:flex-none"
+            />
             <Button
               variant="outline"
               size="sm"
