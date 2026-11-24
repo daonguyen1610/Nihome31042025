@@ -584,7 +584,6 @@ const DriveTab = () => {
           setConfigurationVersion((value) => value + 1);
           void loadStatus();
         }}
-        onTested={() => void loadStatus()}
       />
       <section className="rounded-lg border bg-card p-4 sm:p-6">
         <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">

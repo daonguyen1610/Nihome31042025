@@ -156,15 +156,9 @@ type Props = {
   canManage: boolean;
   reloadKey: number;
   onSaved: () => void;
-  onTested: () => void;
 };
 
-export default function GoogleDriveConfigurationForm({
-  canManage,
-  reloadKey,
-  onSaved,
-  onTested,
-}: Props) {
+export default function GoogleDriveConfigurationForm({ canManage, reloadKey, onSaved }: Props) {
   const uiError = useUiError();
   const { t } = useI18n();
   const { toast } = useToast();
@@ -180,8 +174,6 @@ export default function GoogleDriveConfigurationForm({
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    setTestResult(null);
-    setTestError(null);
     adminApi
       .getGoogleDriveConfiguration()
       .then(({ data }) => {
@@ -280,7 +272,6 @@ export default function GoogleDriveConfigurationForm({
     try {
       const { data } = await adminApi.testGoogleDriveConnection();
       setTestResult(data);
-      onTested();
     } catch (error) {
       setTestError(uiError(error) || t("settings.drive.test.failed"));
     } finally {
@@ -489,13 +480,13 @@ export default function GoogleDriveConfigurationForm({
 
         {testResult && (
           <div className="mt-3 space-y-2 text-sm" aria-live="polite">
-            <p className="flex items-center gap-2 font-medium text-success-strong">
+            <p className="flex items-center gap-2 font-medium text-emerald-700">
               <CheckCircle2 className="h-4 w-4" />
               {t("settings.drive.test.connected")}
             </p>
-            <dl className="grid min-w-0 gap-x-4 gap-y-1 sm:grid-cols-[10rem_1fr]">
+            <dl className="grid gap-x-4 gap-y-1 sm:grid-cols-[10rem_1fr]">
               <dt className="text-muted-foreground">{t("settings.drive.test.account")}</dt>
-              <dd className="break-all">{testResult.accountEmail || "—"}</dd>
+              <dd>{testResult.accountEmail || "—"}</dd>
               <dt className="text-muted-foreground">{t("settings.drive.test.folder")}</dt>
               <dd>
                 <a
@@ -521,13 +512,13 @@ export default function GoogleDriveConfigurationForm({
               </dd>
             </dl>
             {!testResult.isSharedDrive && (
-              <p className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-warning-strong">
+              <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 {t("settings.drive.test.warningSharedDrive")}
               </p>
             )}
             {!testResult.canAddChildren && (
-              <p className="flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-warning-strong">
+              <p className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-100">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 {t("settings.drive.test.warningWrite")}
               </p>
