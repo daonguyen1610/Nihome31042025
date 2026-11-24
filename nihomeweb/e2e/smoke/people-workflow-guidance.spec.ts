@@ -137,7 +137,9 @@ test("legal member rejection preserves the task form and renders localized guida
   await page.addInitScript(() => localStorage.setItem("nicon_lang", "en"));
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto(`/admin/work-packages/${packageId}`, { waitUntil: "networkidle" });
-  await page.locator(`#task-${task.id}`).getByRole("button", { name: "Edit", exact: true }).click();
+  const taskRow = page.locator(`#task-${task.id}`);
+  await taskRow.getByRole("button", { name: "Actions", exact: true }).click();
+  await page.getByRole("menuitem", { name: "Edit", exact: true }).click();
   const dialog = page.getByRole("dialog", { name: "Edit task", exact: true });
   await dialog.getByRole("button", { name: "Save changes", exact: true }).click();
   await expect(
