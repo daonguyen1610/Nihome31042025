@@ -170,7 +170,7 @@ export default function RoleGroupPermissionsDialog({
                   <section key={module} className="mb-5 last:mb-0">
                     <h3 className="mb-2 font-semibold">{t(`adminRbac.module.${module}`)}</h3>
                     <div className="grid gap-2 sm:grid-cols-2">
-                      {items.map((permission) => (
+                      {items.map((permission, index) => (
                         <label
                           key={permission.id}
                           className="flex min-w-0 items-start gap-3 rounded-lg border p-3 hover:bg-muted/40"
@@ -189,6 +189,12 @@ export default function RoleGroupPermissionsDialog({
                               })
                             }
                           />
+                          <span
+                            className="mt-0.5 w-6 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground"
+                            aria-hidden="true"
+                          >
+                            {index + 1}.
+                          </span>
                           <span className="min-w-0">
                             <span className="block text-sm font-medium">
                               {t(`rbac.perm.${permission.code}.label`)}
