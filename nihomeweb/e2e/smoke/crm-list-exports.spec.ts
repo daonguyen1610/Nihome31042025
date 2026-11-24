@@ -80,6 +80,7 @@ const LISTS = [
   { path: "/admin/tenders", file: "tenders", header: "Nguồn nhận HSMT" },
   { path: "/admin/surveys", file: "surveys", header: "Ngày khảo sát" },
   { path: "/admin/operational-projects", file: "projects", header: "Mã dự án" },
+  { path: "/admin/capability-documents", file: "capability-documents", header: "Tên hồ sơ" },
 ];
 
 for (const list of LISTS) {
