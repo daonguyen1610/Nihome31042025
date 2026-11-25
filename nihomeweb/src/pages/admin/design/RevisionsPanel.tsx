@@ -221,7 +221,7 @@ export const RevisionsPanel = ({
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
-          <p className="rounded-md border border-rose-200 bg-rose-50/60 p-3 text-sm text-rose-700">
+          <p className="rounded-md border border-destructive/20 bg-rose-50/60 p-3 text-sm text-destructive">
             {error}
           </p>
         ) : (
@@ -255,7 +255,7 @@ export const RevisionsPanel = ({
                     className={cn(
                       "rounded-md border p-3",
                       row.isCurrent
-                        ? "border-emerald-200 bg-emerald-50/60"
+                        ? "border-success/30 bg-emerald-50/60"
                         : "border-border bg-card",
                     )}
                     data-testid={`revision-row-${row.id}`}
@@ -267,7 +267,7 @@ export const RevisionsPanel = ({
                           {row.isCurrent ? (
                             <Badge
                               variant="outline"
-                              className="border-emerald-300 bg-emerald-100 text-emerald-800"
+                              className="border-emerald-300 bg-emerald-100 text-success-strong"
                             >
                               <CheckCircle2 className="mr-1 h-3 w-3" />
                               {t("drawingRevision.badge.current")}
@@ -289,7 +289,7 @@ export const RevisionsPanel = ({
                           {row.note}
                         </p>
                       </div>
-                      <div className="text-right text-[11px] text-muted-foreground">
+                      <div className="text-right text-xs text-muted-foreground">
                         <p>{formatDate(row.createdAt, lang)}</p>
                         {row.createdByName ? <p>{row.createdByName}</p> : null}
                       </div>
@@ -412,7 +412,7 @@ export const RevisionsPanel = ({
               </FieldScope>
             </div>
             {formError ? (
-              <p className="text-sm text-rose-600" data-testid="revisions-form-error">
+              <p className="text-sm text-destructive" data-testid="revisions-form-error">
                 {formError}
               </p>
             ) : null}

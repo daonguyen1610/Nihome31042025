@@ -48,9 +48,9 @@ import {
 
 const DRIVE_STATUS_BADGE: Record<SurveyDriveSyncStatus, string> = {
   NotSynced: "border-border bg-muted/30 text-foreground",
-  Syncing: "border-amber-200 bg-amber-50 text-amber-700",
-  Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Failed: "border-rose-200 bg-rose-50 text-rose-700",
+  Syncing: "border-warning/40 bg-warning-soft text-warning-strong",
+  Synced: "border-success/30 bg-success-soft text-success-strong",
+  Failed: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 /** Same look as the list's badge — kept local because SurveyDetail is a
@@ -358,7 +358,7 @@ const AdminSurveyDetail = () => {
               {surveyProgress(survey, todayIsoDate()) === "overdue" ? (
                 <p
                   role="status"
-                  className="mt-3 flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+                  className="mt-3 flex items-start gap-2 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-amber-900"
                 >
                   <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
                   {t(

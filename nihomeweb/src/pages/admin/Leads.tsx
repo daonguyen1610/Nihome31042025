@@ -10,7 +10,7 @@ import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -66,12 +66,12 @@ const ACTIVITY_TYPES: LeadActivityType[] = ["Call", "Email", "Meeting", "Note"];
 // Soft-colored pills so every status looks equally weighted in the table.
 // Kept as tailwind class strings so we don't need extra Badge variants.
 const LEAD_STATUS_STYLES: Record<LeadStatus, string> = {
-  New: "border-sky-200 bg-sky-50 text-sky-700",
-  Contacted: "border-amber-200 bg-amber-50 text-amber-700",
-  Interested: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  New: "border-info/30 bg-info-soft text-info-strong",
+  Contacted: "border-warning/40 bg-warning-soft text-warning-strong",
+  Interested: "border-success/30 bg-success-soft text-success-strong",
   NotInterested: "border-border bg-muted text-muted-foreground",
   Converted: "border-green-300 bg-green-100 text-green-800",
-  Junk: "border-rose-200 bg-rose-50 text-rose-700",
+  Junk: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const LEAD_STATUS_DOT: Record<LeadStatus, string> = {
@@ -817,7 +817,7 @@ const AdminLeads = () => {
                     <tr
                       key={lead.id}
                       className="cursor-pointer hover:bg-muted/40"
-                      onClick={() => void openDetail(lead.id)}
+                      {...rowAction(() => void openDetail(lead.id))}
                     >
                       <td className="px-3 py-3 font-medium">{lead.name}</td>
                       <td className="px-3 py-3 text-muted-foreground">{lead.companyName || "—"}</td>
@@ -857,7 +857,7 @@ const AdminLeads = () => {
                       )}
                       <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
                         <div>{formatDate(lead.createdAt)}</div>
-                        <div className="text-[11px] opacity-70">
+                        <div className="text-xs opacity-70">
                           {formatTime(lead.createdAt, lang, {
                             hour: "2-digit",
                             minute: "2-digit",
@@ -1429,7 +1429,7 @@ const AdminLeads = () => {
           )}
 
           {duplicate && (
-            <div className="space-y-2 rounded border border-amber-300 bg-amber-50 p-3 text-sm">
+            <div className="space-y-2 rounded border border-amber-300 bg-warning-soft p-3 text-sm">
               <p className="text-amber-900">
                 {t("leads.convert.duplicate.found")}{" "}
                 <span className="font-medium">

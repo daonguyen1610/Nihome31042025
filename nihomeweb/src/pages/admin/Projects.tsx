@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Plus, MapPin, Maximize2, Edit, Trash2, Eye, Search } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/components/ui/confirmation";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useProjects, useProjectCategories } from "@/hooks/useContentApi";
@@ -29,7 +30,7 @@ import { matchesSearch } from "@/lib/utils";
 import { resolveCategoryLabel } from "@/lib/category";
 
 const PROJECT_STATUS_STYLES = {
-  ongoing: "border-amber-200 bg-amber-50 text-amber-700",
+  ongoing: "border-warning/40 bg-warning-soft text-warning-strong",
   completed: "border-green-300 bg-green-100 text-green-800",
 } as const;
 
@@ -40,6 +41,7 @@ const PROJECT_STATUS_DOT = {
 
 const AdminProjects = () => {
   const { t, lang } = useI18n();
+  const confirmAction = useConfirm();
   const { toast } = useToast();
   const [tab, setTab] = useState<"all" | "ongoing" | "completed">("all");
   const [catId, setCatId] = useState<number | "all">("all");
@@ -79,7 +81,7 @@ const AdminProjects = () => {
   }, [list, tab, catId, q]);
 
   const handleDelete = async (p: ProjectResponse) => {
-    if (!confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteProject(p.id);
       toast({ title: t("form.deleted"), description: p.name });
@@ -303,7 +305,7 @@ const AdminProjects = () => {
                         lang,
                       );
                       return label ? (
-                        <p className="text-[10px] uppercase tracking-wide font-medium mb-1 text-primary">
+                        <p className="text-xs uppercase tracking-wide font-medium mb-1 text-primary">
                           {label}
                         </p>
                       ) : null;

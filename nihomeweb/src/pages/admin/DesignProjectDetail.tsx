@@ -34,17 +34,17 @@ import {
 } from "@/lib/displaySettings";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
-  Concept: "border-sky-200 bg-sky-50 text-sky-700",
+  Concept: "border-info/30 bg-info-soft text-info-strong",
   BasicDesign: "border-indigo-200 bg-indigo-50 text-indigo-700",
   ShopDrawing: "border-violet-200 bg-violet-50 text-violet-700",
-  Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Completed: "border-success/30 bg-success-soft text-success-strong",
 };
 
 const STATUS_BADGE: Record<DesignProjectStatus, string> = {
-  Active: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  OnHold: "border-amber-200 bg-amber-50 text-amber-700",
+  Active: "border-success/30 bg-success-soft text-success-strong",
+  OnHold: "border-warning/40 bg-warning-soft text-warning-strong",
   Completed: "border-border bg-muted/30 text-foreground",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  Cancelled: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const STAGE_ORDER: DesignProjectStage[] = ["Concept", "BasicDesign", "ShopDrawing", "Completed"];

@@ -119,7 +119,7 @@ const TenderStagePanel = ({ tender, canManage, onChanged }: Props) => {
             >
               <Icon
                 aria-hidden
-                className={cn("mt-0.5 h-4 w-4 shrink-0", state === "done" && "text-emerald-700")}
+                className={cn("mt-0.5 h-4 w-4 shrink-0", state === "done" && "text-success-strong")}
               />
               <span className="min-w-0">
                 <span className="block break-words">
@@ -138,7 +138,7 @@ const TenderStagePanel = ({ tender, canManage, onChanged }: Props) => {
         {tender.status === "Cancelled" ? (
           <p className="text-muted-foreground">{t("tenders.stage.hint.cancelled")}</p>
         ) : pending && needsApproval ? (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-amber-900">
+          <div className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-amber-900">
             <p data-testid="tender-stage-pending">
               {t("tenders.stage.pending", {
                 approver: tender.stageApproverName ?? "—",
@@ -249,7 +249,7 @@ const TenderStagePanel = ({ tender, canManage, onChanged }: Props) => {
           <p className="text-muted-foreground">{t("tenders.stage.hint.submission")}</p>
         ) : tender.status === "Won" ? (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <p className="text-emerald-800">{t("tenders.stage.hint.won")}</p>
+            <p className="text-success-strong">{t("tenders.stage.hint.won")}</p>
             {tender.wonOpportunityId && tender.operationalProjectId ? (
               <Button asChild className="w-full sm:w-auto">
                 <Link

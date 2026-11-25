@@ -366,7 +366,7 @@ const AdminContacts = () => {
                     ) : (
                       <Badge
                         variant="outline"
-                        className="gap-1.5 whitespace-nowrap border-sky-200 bg-sky-50 font-medium text-sky-700"
+                        className="gap-1.5 whitespace-nowrap border-info/30 bg-info-soft font-medium text-info-strong"
                       >
                         <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />
                         {t("contacts.new")}

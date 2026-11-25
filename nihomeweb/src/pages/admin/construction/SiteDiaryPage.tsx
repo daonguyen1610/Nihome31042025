@@ -855,9 +855,7 @@ export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopePro
                             {row.weatherLabel ?? row.weatherCode}
                           </div>
                           {row.weatherNote && (
-                            <div className="text-[11px] text-muted-foreground">
-                              {row.weatherNote}
-                            </div>
+                            <div className="text-xs text-muted-foreground">{row.weatherNote}</div>
                           )}
                         </td>
                         <td className="px-3 py-2 text-sm tabular-nums text-foreground">
@@ -868,7 +866,7 @@ export const SiteDiaryPanel = ({ designProjectId, scope }: DesignProjectScopePro
                             {row.workPerformed}
                           </div>
                           {row.incidents && (
-                            <div className="mt-0.5 flex items-start gap-1 text-[11px] text-warning-strong">
+                            <div className="mt-0.5 flex items-start gap-1 text-xs text-warning-strong">
                               <AlertTriangle className="mt-0.5 h-3 w-3 shrink-0" />
                               <span className="line-clamp-1">{row.incidents}</span>
                             </div>

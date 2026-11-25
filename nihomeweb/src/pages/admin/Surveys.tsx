@@ -24,7 +24,7 @@ import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { PeopleChecklist } from "@/components/admin/PeopleChecklist";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -77,9 +77,9 @@ import { DriveStatusHelp, SurveyStatusBadge } from "@/components/admin/SurveySta
 
 const DRIVE_STATUS_BADGE: Record<SurveyDriveSyncStatus, string> = {
   NotSynced: "border-border bg-muted/30 text-foreground",
-  Syncing: "border-amber-200 bg-amber-50 text-amber-700",
-  Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Failed: "border-rose-200 bg-rose-50 text-rose-700",
+  Syncing: "border-warning/40 bg-warning-soft text-warning-strong",
+  Synced: "border-success/30 bg-success-soft text-success-strong",
+  Failed: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
@@ -818,7 +818,7 @@ const AdminSurveys = () => {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            className="text-destructive hover:bg-destructive/10 hover:text-rose-800"
                             onClick={() => void openDelete(r)}
                           >
                             <Trash2 className="mr-1 h-3.5 w-3.5" />
@@ -858,7 +858,7 @@ const AdminSurveys = () => {
                       <tr
                         key={r.id}
                         className="cursor-pointer border-t align-top hover:bg-muted/60"
-                        onClick={() => openDetail(r.id)}
+                        {...rowAction(() => openDetail(r.id))}
                       >
                         <td className="whitespace-nowrap px-3 py-2 font-mono text-xs">{r.code}</td>
                         <td className="min-w-[200px] px-3 py-2 break-words">
@@ -900,7 +900,7 @@ const AdminSurveys = () => {
                                 aria-label={t("common.delete")}
                                 variant="ghost"
                                 size="sm"
-                                className="text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                                className="text-destructive hover:bg-destructive/10 hover:text-rose-800"
                                 onClick={() => void openDelete(r)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -1115,7 +1115,7 @@ const AdminSurveys = () => {
               />
             </FieldScope>
 
-            {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
+            {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
           </div>
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">

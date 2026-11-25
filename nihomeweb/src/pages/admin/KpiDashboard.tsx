@@ -56,9 +56,9 @@ import {
 import { todayIsoDate } from "@/lib/displaySettings";
 
 const statusStyle: Record<KpiScoreStatus, string> = {
-  Available: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  MissingData: "border-amber-200 bg-amber-50 text-amber-800",
-  MissingConfiguration: "border-rose-200 bg-rose-50 text-rose-700",
+  Available: "border-success/30 bg-success-soft text-success-strong",
+  MissingData: "border-warning/40 bg-warning-soft text-warning-strong",
+  MissingConfiguration: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 export interface KpiDashboardProps {
@@ -442,16 +442,16 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                   key={item.roleCode}
                   className={`flex min-h-40 flex-col rounded-md border p-3 shadow-sm ${
                     item.ready
-                      ? "border-emerald-200 bg-emerald-50/40"
-                      : "border-amber-200 bg-amber-50/40"
+                      ? "border-success/30 bg-emerald-50/40"
+                      : "border-warning/40 bg-amber-50/40"
                   }`}
                 >
                   <div>
                     <span
                       className={`flex h-8 w-8 items-center justify-center rounded-md ${
                         item.ready
-                          ? "bg-emerald-100 text-emerald-700"
-                          : "bg-amber-100 text-amber-700"
+                          ? "bg-emerald-100 text-success-strong"
+                          : "bg-amber-100 text-warning-strong"
                       }`}
                     >
                       {item.ready ? (
@@ -480,8 +480,8 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                     variant="outline"
                     className={
                       item.ready
-                        ? "mt-auto w-fit border-emerald-200 bg-card text-emerald-700"
-                        : "mt-auto w-fit border-amber-200 bg-card text-amber-800"
+                        ? "mt-auto w-fit border-success/30 bg-card text-success-strong"
+                        : "mt-auto w-fit border-warning/40 bg-card text-warning-strong"
                     }
                   >
                     {t(item.ready ? "kpi.guide.config.ready" : "kpi.guide.config.needsAttention")}

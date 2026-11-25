@@ -237,7 +237,7 @@ export const DesignProjectDocumentsTab = ({ project }: Props) => {
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
-          <div className="mt-4 rounded-md border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700">
+          <div className="mt-4 rounded-md border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
             <p>{error}</p>
             <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
               <RefreshCw className="mr-1.5 h-3.5 w-3.5" />

@@ -682,7 +682,7 @@ const Workflows = () => {
                         {w.isActive ? (
                           <Badge
                             variant="outline"
-                            className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                            className="border-success/30 bg-success-soft text-success-strong"
                           >
                             <Check className="mr-1 h-3 w-3" />
                             {t("common.on")}

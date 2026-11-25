@@ -21,7 +21,7 @@ import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSelector } from "@/store";
@@ -66,11 +66,11 @@ import { formatDate, formatMoney, formatNumber } from "@/lib/displaySettings";
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  PendingApproval: "border-amber-200 bg-amber-50 text-amber-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  SentToCustomer: "border-sky-200 bg-sky-50 text-sky-700",
+  PendingApproval: "border-warning/40 bg-warning-soft text-warning-strong",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
+  SentToCustomer: "border-info/30 bg-info-soft text-info-strong",
   CustomerApproved: "border-green-300 bg-green-100 text-green-800",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
   Expired: "border-orange-200 bg-orange-50 text-orange-700",
   Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
@@ -494,7 +494,7 @@ const AdminQuotes = () => {
                     <tr
                       key={r.id}
                       className="cursor-pointer hover:bg-muted/20"
-                      onClick={() => navigate(`/admin/quotes/${r.id}`)}
+                      {...rowAction(() => navigate(`/admin/quotes/${r.id}`))}
                     >
                       <Td className="whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
                         <Link
@@ -552,7 +552,7 @@ const AdminQuotes = () => {
                 <li
                   key={r.id}
                   className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/20"
-                  onClick={() => navigate(`/admin/quotes/${r.id}`)}
+                  {...rowAction(() => navigate(`/admin/quotes/${r.id}`))}
                 >
                   <div className="mb-1 flex items-start justify-between gap-2">
                     <div className="flex min-w-0 items-start gap-2">
@@ -859,7 +859,7 @@ const StatusCell = ({
     </Badge>
     {expiring && (
       <span
-        className="inline-flex items-center gap-1 rounded bg-rose-50 px-1.5 py-0.5 text-[10px] font-medium text-rose-700"
+        className="inline-flex items-center gap-1 rounded bg-destructive/10 px-1.5 py-0.5 text-xs font-medium text-destructive"
         title={t("quotes.expiringSoon")}
       >
         <AlertTriangle className="h-3 w-3" />

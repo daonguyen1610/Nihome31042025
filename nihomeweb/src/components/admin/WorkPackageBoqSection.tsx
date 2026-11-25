@@ -104,7 +104,7 @@ export function WorkPackageBoqSection({
                 </Button>
               </div>
               {boq.missingPriceCount > 0 && (
-                <p className="flex gap-2 rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+                <p className="flex gap-2 rounded-md bg-warning-soft p-2 text-xs text-amber-900">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   {t("workPackageBoq.missingPrices", { count: boq.missingPriceCount })}
                 </p>

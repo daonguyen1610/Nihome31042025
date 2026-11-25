@@ -123,6 +123,13 @@
     scroll-behavior: smooth;
   }
 
+  /* Rows and list items opened with rowAction() need a visible keyboard focus. */
+  tr[tabindex]:focus-visible,
+  li[tabindex]:focus-visible {
+    outline: 2px solid hsl(var(--ring));
+    outline-offset: -2px;
+  }
+
   body {
     @apply bg-background text-foreground antialiased;
     font-family: "Be Vietnam Pro", "Inter", system-ui, sans-serif;
@@ -378,6 +385,17 @@
 /* ============================================
    Admin — nihome inspired (indigo + soft cards)
    ============================================ */
+/* Status tokens live on :root so dialogs portaled outside .admin-scope still resolve them. */
+:root {
+  --admin-success: 150 62% 46%;
+  --admin-success-soft: 150 62% 94%;
+  --admin-warning: 38 92% 55%;
+  --admin-warning-soft: 38 92% 94%;
+  --admin-danger: 354 84% 60%;
+  --admin-danger-soft: 354 78% 95%;
+  --admin-info: 195 85% 50%;
+  --admin-info-soft: 195 85% 94%;
+}
 .admin-scope {
   --admin-bg: 230 25% 97%;
   --admin-surface: 0 0% 100%;
@@ -387,14 +405,6 @@
   --admin-primary: 354 84% 57%;
   --admin-primary-foreground: 0 0% 100%;
   --admin-primary-soft: 354 84% 96%;
-  --admin-success: 150 62% 46%;
-  --admin-success-soft: 150 62% 94%;
-  --admin-warning: 38 92% 55%;
-  --admin-warning-soft: 38 92% 94%;
-  --admin-danger: 354 84% 60%;
-  --admin-danger-soft: 354 78% 95%;
-  --admin-info: 195 85% 50%;
-  --admin-info-soft: 195 85% 94%;
   --admin-sidebar: 0 0% 100%;
   --admin-sidebar-text: 230 20% 35%;
   --admin-shadow: 230 30% 15%;

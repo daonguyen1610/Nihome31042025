@@ -251,9 +251,9 @@ Use circles for avatars and compact pills for statuses. Buttons remain recognisa
 controls. Icons come from the existing Lucide set: usually 16px in controls,
 with consistent stroke and an accessible name when the icon is the whole action.
 
-Shared controls currently default to 40px high, with 36px small buttons. For site
-phone workflows, provide a touch target of at least 44px, including icon-only
-buttons; do not claim the 36px default meets that requirement. Keep visible focus
+Shared buttons are 40px high (36px small) with a mouse, and 44px on touch
+screens (`pointer-coarse`), including icon-only buttons. Custom tappable
+controls outside `Button` still need their own 44px target. Keep visible focus
 and enough separation to avoid approving, rejecting or deleting by mistake.
 
 ## Components

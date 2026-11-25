@@ -75,23 +75,23 @@ const ACTIVE_SYNC_STATUSES = new Set<SurveyMediaSyncStatus>(["Pending", "Process
 
 const SYNC_BADGE: Record<SurveyMediaSyncStatus, string> = {
   Pending: "border-border bg-muted/30 text-foreground",
-  Processing: "border-amber-200 bg-amber-50 text-amber-700",
-  Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Failed: "border-rose-200 bg-rose-50 text-rose-700",
+  Processing: "border-warning/40 bg-warning-soft text-warning-strong",
+  Synced: "border-success/30 bg-success-soft text-success-strong",
+  Failed: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const CHECKLIST_BADGE: Record<SurveyChecklistStatus, string> = {
-  Ok: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  NeedsAttention: "border-amber-200 bg-amber-50 text-amber-700",
-  Failed: "border-rose-200 bg-rose-50 text-rose-700",
+  Ok: "border-success/30 bg-success-soft text-success-strong",
+  NeedsAttention: "border-warning/40 bg-warning-soft text-warning-strong",
+  Failed: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const CONNECTION_BADGE: Record<SurveyDriveConnectionStatusResponse["status"], string> = {
-  Connected: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  ReadOnly: "border-amber-200 bg-amber-50 text-amber-700",
-  InvalidRoot: "border-rose-200 bg-rose-50 text-rose-700",
-  ReconnectRequired: "border-rose-200 bg-rose-50 text-rose-700",
-  Unavailable: "border-rose-200 bg-rose-50 text-rose-700",
+  Connected: "border-success/30 bg-success-soft text-success-strong",
+  ReadOnly: "border-warning/40 bg-warning-soft text-warning-strong",
+  InvalidRoot: "border-destructive/20 bg-destructive/10 text-destructive",
+  ReconnectRequired: "border-destructive/20 bg-destructive/10 text-destructive",
+  Unavailable: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 type Props = {
@@ -576,7 +576,7 @@ export default function SurveyMediaPanel({
                 </p>
               ) : null}
               {driveConnection?.error ? (
-                <p className="mt-2 rounded bg-rose-50 p-2 text-xs text-rose-700">
+                <p className="mt-2 rounded bg-destructive/10 p-2 text-xs text-destructive">
                   {driveConnection.error}
                 </p>
               ) : null}
@@ -800,7 +800,7 @@ export default function SurveyMediaPanel({
                   ) : null}
                   {media.latitude != null && media.longitude != null ? (
                     <a
-                      className="mt-2 inline-flex items-center gap-1 text-xs text-sky-700 hover:underline"
+                      className="mt-2 inline-flex items-center gap-1 text-xs text-info-strong hover:underline"
                       href={`https://www.openstreetmap.org/?mlat=${media.latitude}&mlon=${media.longitude}#map=18/${media.latitude}/${media.longitude}`}
                       target="_blank"
                       rel="noreferrer noopener"
@@ -810,7 +810,7 @@ export default function SurveyMediaPanel({
                     </a>
                   ) : null}
                   {media.syncError ? (
-                    <p className="mt-2 rounded bg-rose-50 p-2 text-xs text-rose-700">
+                    <p className="mt-2 rounded bg-destructive/10 p-2 text-xs text-destructive">
                       {media.syncError}
                     </p>
                   ) : null}
@@ -844,7 +844,7 @@ export default function SurveyMediaPanel({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-rose-700 hover:text-rose-800"
+                        className="text-destructive hover:text-rose-800"
                         onClick={() => setDeleting(media)}
                         disabled={busyMediaId === media.id}
                       >
@@ -853,7 +853,7 @@ export default function SurveyMediaPanel({
                       </Button>
                     ) : null}
                   </div>
-                  <p className="mt-2 text-[11px] text-muted-foreground">
+                  <p className="mt-2 text-xs text-muted-foreground">
                     {t("surveys.media.attempts")}: {media.syncAttemptCount}/{media.maxSyncAttempts}
                   </p>
                 </div>
@@ -977,7 +977,7 @@ export default function SurveyMediaPanel({
                     <td className="py-2 pr-3">
                       <p className="max-w-xs truncate">{entry.fileName}</p>
                       {entry.error ? (
-                        <p className="max-w-md text-xs text-rose-600">{entry.error}</p>
+                        <p className="max-w-md text-xs text-destructive">{entry.error}</p>
                       ) : null}
                     </td>
                     <td className="py-2 pr-3">{t(`surveys.media.syncStatus.${entry.status}`)}</td>

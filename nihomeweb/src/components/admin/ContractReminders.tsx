@@ -195,7 +195,7 @@ export default function ContractReminders({
               <p className="break-words">{row.toEmail}</p>
               <p className="break-words">{row.subject}</p>
               {(row.errorCode || row.status === "Sending") && (
-                <p className="text-amber-700">
+                <p className="text-warning-strong">
                   {t(`contractReminder.${row.errorCode ?? "deliveryWarning"}`)}
                 </p>
               )}

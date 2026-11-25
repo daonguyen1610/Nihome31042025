@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { type DesignProjectScopeProps } from "./constructionScope";
 import { useI18n } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -830,13 +830,13 @@ export const PunchListPanel = ({
                   )}
                   <div className="mt-2 grid grid-cols-2 gap-x-2 gap-y-1 text-xs text-muted-foreground">
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
                         {t("punch.field.assignee")}
                       </div>
                       <div>{row.assigneeName ?? "—"}</div>
                     </div>
                     <div>
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">
                         {t("punch.field.deadline")}
                       </div>
                       <div>{formatDate(row.deadline, lang)}</div>
@@ -914,7 +914,7 @@ export const PunchListPanel = ({
                           "cursor-pointer hover:bg-muted/30",
                           row.isOverdue && "bg-warning-soft/50",
                         )}
-                        onClick={() => openDetail(row)}
+                        {...rowAction(() => openDetail(row))}
                         data-testid={`punch-row-${row.id}`}
                       >
                         {canManage && (
@@ -932,7 +932,7 @@ export const PunchListPanel = ({
                         <td className="px-3 py-2">
                           <div className="font-medium text-foreground">{row.title}</div>
                           {row.location && (
-                            <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                            <div className="mt-0.5 inline-flex items-center gap-1 text-xs text-muted-foreground">
                               <MapPin className="h-3 w-3" /> {row.location}
                             </div>
                           )}

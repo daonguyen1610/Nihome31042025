@@ -50,7 +50,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import {
   adminApi,
   type CorrectHseViolationRequest,
@@ -617,7 +617,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
                   {rows.map((row) => (
                     <tr
                       key={row.id}
-                      onClick={() => setDetail(row)}
+                      {...rowAction(() => setDetail(row))}
                       className="cursor-pointer bg-card hover:bg-muted/50"
                     >
                       <td className="max-w-md px-4 py-3">

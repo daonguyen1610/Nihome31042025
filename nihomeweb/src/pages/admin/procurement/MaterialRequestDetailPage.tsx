@@ -51,11 +51,11 @@ type Decision = { approved: boolean } | null;
 
 const statusClass: Record<string, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
-  PartiallyFulfilled: "border-amber-200 bg-amber-50 text-amber-800",
-  Fulfilled: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Submitted: "border-info/30 bg-info-soft text-info-strong",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
+  PartiallyFulfilled: "border-warning/40 bg-warning-soft text-warning-strong",
+  Fulfilled: "border-success/30 bg-success-soft text-success-strong",
   Cancelled: "border-border bg-muted/30 text-muted-foreground",
 };
 

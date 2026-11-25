@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Edit, Trash2, MapPin, Maximize2, Calendar, Building, Tag } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/components/ui/confirmation";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useProject } from "@/hooks/useContentApi";
@@ -16,6 +17,7 @@ const ProjectView = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const confirmAction = useConfirm();
   const { toast } = useToast();
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const { data: project, loading, error, refetch } = useProject(slug ?? "");
@@ -49,7 +51,7 @@ const ProjectView = () => {
   }
 
   const handleDelete = async () => {
-    if (!confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteProject(project.id);
       toast({ title: t("form.deleted"), description: project.name });
@@ -182,7 +184,7 @@ const ProjectView = () => {
                   className={cn(
                     "gap-1.5 whitespace-nowrap font-medium",
                     project.status === "ongoing"
-                      ? "border-amber-200 bg-amber-50 text-amber-700"
+                      ? "border-warning/40 bg-warning-soft text-warning-strong"
                       : "border-green-300 bg-green-100 text-green-800",
                   )}
                 >
@@ -230,9 +232,7 @@ const Info = ({
   <div className="flex items-start gap-3">
     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="font-medium break-words">{value}</p>
     </div>
   </div>

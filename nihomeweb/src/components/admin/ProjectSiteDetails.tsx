@@ -71,7 +71,7 @@ export function ProjectSiteDetails({
         ))}
       </dl>
       {missing && (
-        <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
+        <p className="mt-3 text-sm text-warning-strong dark:text-amber-400">
           {projectHref ? (
             <>
               {t("operationalProjects.site.missingElsewhere", { fields: missing })}{" "}

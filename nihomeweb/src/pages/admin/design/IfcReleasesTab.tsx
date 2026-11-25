@@ -59,8 +59,8 @@ import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STATUS_BADGE: Record<IfcReleaseStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  Released: "border-emerald-200 bg-emerald-50 text-emerald-800",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  Released: "border-success/30 bg-success-soft text-success-strong",
+  Cancelled: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
@@ -432,7 +432,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700">
+      <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -442,7 +442,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
     <div className="space-y-4" data-testid="ifc-releases-tab">
       {!isShopStage ? (
         <p
-          className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+          className="rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-warning-strong"
           data-testid="ifc-locked-before"
         >
           {t("ifcRelease.lockedBefore")}
@@ -527,7 +527,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                     >
                       {t(`ifcRelease.status.${row.status}`)}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-xs text-muted-foreground">
                       {row.releaseDate
                         ? formatDate(row.releaseDate, lang)
                         : formatDate(row.createdAt, lang)}
@@ -590,7 +590,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                               {item.drawingCode}
                             </p>
                             <p className="text-sm text-foreground">{item.title}</p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {item.disciplineLabel ?? item.disciplineCode} ·{" "}
                               {t(`shopDrawing.status.${item.status}`)}
                             </p>
@@ -600,7 +600,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                               aria-label={t("common.delete")}
                               variant="ghost"
                               size="sm"
-                              className="h-7 text-rose-700 hover:bg-rose-50"
+                              className="h-7 text-destructive hover:bg-destructive/10"
                               onClick={() => void removeItem(item.id)}
                               data-testid={`ifc-item-remove-${item.id}`}
                             >
@@ -631,13 +631,13 @@ export const IfcReleasesTab = ({ project }: Props) => {
                               }}
                               data-testid={`ifc-picker-${d.id}`}
                             />
-                            <span className="font-mono text-[10px] text-muted-foreground">
+                            <span className="font-mono text-xs text-muted-foreground">
                               {d.drawingCode}
                             </span>
                             <span className="min-w-0 flex-1 truncate">{d.title}</span>
                             <Badge
                               variant="outline"
-                              className="border-border bg-card text-[10px] text-muted-foreground"
+                              className="border-border bg-card text-xs text-muted-foreground"
                             >
                               {t(`shopDrawing.status.${d.status}`)}
                             </Badge>
@@ -677,7 +677,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                         >
                           <div className="min-w-0">
                             <p className="text-sm text-foreground">{r.name}</p>
-                            <p className="text-[10px] text-muted-foreground">
+                            <p className="text-xs text-muted-foreground">
                               {r.recipientTypeLabel ?? r.recipientTypeCode}
                               {r.acknowledgedByName ? ` · ${r.acknowledgedByName}` : ""}
                               {r.acknowledgedAt
@@ -706,7 +706,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                                 aria-label={t("common.delete")}
                                 variant="ghost"
                                 size="sm"
-                                className="h-7 text-rose-700 hover:bg-rose-50"
+                                className="h-7 text-destructive hover:bg-destructive/10"
                                 onClick={() => void removeRecipient(r.id)}
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
@@ -788,7 +788,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
                     variant="ghost"
                     onClick={() => setDeleting(selected)}
                     disabled={busy}
-                    className="text-rose-700 hover:bg-rose-50"
+                    className="text-destructive hover:bg-destructive/10"
                   >
                     <Trash2 className="mr-1 h-4 w-4" />
                     {t("ifcRelease.action.deleteRelease")}
@@ -848,7 +848,7 @@ export const IfcReleasesTab = ({ project }: Props) => {
               <Textarea rows={3} value={formNote} onChange={(e) => setFormNote(e.target.value)} />
             </FieldScope>
           </div>
-          {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
+          {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)} disabled={saving}>
               {t("common.cancel")}
@@ -949,8 +949,8 @@ export const IfcReleasesTab = ({ project }: Props) => {
 
 const TONE_BG: Record<string, string> = {
   slate: "border-border bg-muted/30 text-foreground",
-  emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  rose: "border-rose-200 bg-rose-50 text-rose-700",
+  emerald: "border-success/30 bg-success-soft text-success-strong",
+  rose: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const StatPill = ({
@@ -965,7 +965,7 @@ const StatPill = ({
   icon?: React.ReactNode;
 }) => (
   <div className={cn("rounded-md border px-2.5 py-1.5", TONE_BG[tone] ?? TONE_BG.slate)}>
-    <p className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide opacity-80">
+    <p className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide opacity-80">
       {icon}
       {label}
     </p>

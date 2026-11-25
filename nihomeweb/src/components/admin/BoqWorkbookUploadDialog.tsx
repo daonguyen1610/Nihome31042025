@@ -297,7 +297,7 @@ export function BoqWorkbookUploadDialog({
                 .map((key) => (
                   <p
                     key={key}
-                    className="flex gap-2 rounded-md border border-amber-300/70 bg-amber-50 p-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
+                    className="flex gap-2 rounded-md border border-amber-300/70 bg-warning-soft p-2 text-xs text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100"
                   >
                     <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                     {t(key)}

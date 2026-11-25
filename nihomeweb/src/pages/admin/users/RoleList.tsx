@@ -540,7 +540,7 @@ export default function RoleList() {
                     ) : (
                       rolesByGroup.map((section) => (
                         <section key={section.key} className="space-y-1">
-                          <div className="flex items-center justify-between px-2 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          <div className="flex items-center justify-between px-2 pb-1 pt-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                             <span>{section.label}</span>
                             <span>{section.roles.length}</span>
                           </div>
@@ -616,7 +616,7 @@ export default function RoleList() {
                               <Badge variant="secondary">{t("adminRbac.systemRoleBadge")}</Badge>
                             )}
                             {isDirty(selectedRole.id) && (
-                              <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100">
+                              <Badge className="bg-amber-100 text-warning-strong hover:bg-amber-100">
                                 {t("adminRbac.unsaved")}
                               </Badge>
                             )}
@@ -819,7 +819,7 @@ export default function RoleList() {
                                               {translatedDescription}
                                             </span>
                                           )}
-                                        <span className="mt-1.5 block break-all font-mono text-[10px] text-muted-foreground/80">
+                                        <span className="mt-1.5 block break-all font-mono text-xs text-muted-foreground/80">
                                           {permission.code}
                                         </span>
                                       </span>
@@ -1075,7 +1075,7 @@ export default function RoleList() {
                               <ShieldCheck className="h-4 w-4 text-muted-foreground" />
                               <span>{role.labelKey ? t(role.labelKey) : role.name}</span>
                             </div>
-                            <div className="mt-0.5 text-[10px] font-normal normal-case text-muted-foreground">
+                            <div className="mt-0.5 text-xs font-normal normal-case text-muted-foreground">
                               {role.code} · {role.userCount} {t("adminRbac.usersAbbrev")}
                             </div>
                             {role.isSystem ? (

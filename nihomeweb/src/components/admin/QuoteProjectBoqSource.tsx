@@ -54,7 +54,7 @@ export function QuoteProjectBoqSource({
       ) : latest === undefined ? (
         <p className="text-muted-foreground">{t("common.loading")}</p>
       ) : latest === null ? (
-        <div className="rounded-md border border-amber-300 bg-amber-50 p-3 text-amber-900">
+        <div className="rounded-md border border-amber-300 bg-warning-soft p-3 text-amber-900">
           <p>{t("quotes.projectBoq.none")}</p>
           {projectId && (
             <Link
@@ -95,7 +95,7 @@ export function QuoteProjectBoqSource({
         </div>
       )}
       {outdated && (
-        <p className="flex items-start gap-2 rounded-md bg-amber-50 p-2 text-xs text-amber-900">
+        <p className="flex items-start gap-2 rounded-md bg-warning-soft p-2 text-xs text-amber-900">
           <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
           {t("quotes.projectBoq.outdated", { revision: `R${latest!.revisionNumber}` })}
         </p>

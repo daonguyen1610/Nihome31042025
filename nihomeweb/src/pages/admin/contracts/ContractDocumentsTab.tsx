@@ -225,7 +225,7 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
                         className={cn(
                           "border",
                           att.kind === "SignedScan"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            ? "border-success/30 bg-success-soft text-success-strong"
                             : "border-border bg-muted/30 text-foreground",
                         )}
                       >
@@ -263,7 +263,7 @@ export const DocumentsTab = ({ contract, rows, canManage, error, refresh }: Docu
                       variant="ghost"
                       disabled={deletingId === att.id}
                       onClick={() => handleDelete(att.id)}
-                      className="text-rose-700 hover:bg-rose-50"
+                      className="text-destructive hover:bg-destructive/10"
                       aria-label={`${t("common.delete")} · ${att.originalFileName}`}
                     >
                       {deletingId === att.id ? (

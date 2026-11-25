@@ -204,7 +204,7 @@ export default function RoleGroupPermissionsDialog({
                             <span className="mt-1 block text-xs text-muted-foreground">
                               {t(`rbac.perm.${permission.code}.description`)}
                             </span>
-                            <span className="mt-0.5 block break-all font-mono text-[11px] text-muted-foreground/70">
+                            <span className="mt-0.5 block break-all font-mono text-xs text-muted-foreground/70">
                               {permission.code}
                             </span>
                           </span>

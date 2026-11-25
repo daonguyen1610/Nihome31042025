@@ -99,11 +99,7 @@ export const DesignScheduleTimeline = ({ tasks, members }: Props) => {
                       <Link2 className="h-3 w-3" />
                       <span>{t("designProjects.schedule.timeline.after")}</span>
                       {task.predecessorTaskIds.map((id) => (
-                        <Badge
-                          key={id}
-                          variant="outline"
-                          className="px-1 py-0 font-mono text-[10px]"
-                        >
+                        <Badge key={id} variant="outline" className="px-1 py-0 font-mono text-xs">
                           {taskById.get(id)?.code ?? `#${id}`}
                         </Badge>
                       ))}

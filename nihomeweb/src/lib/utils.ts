@@ -1,4 +1,5 @@
 import { clsx, type ClassValue } from "clsx";
+import type { KeyboardEvent } from "react";
 import { twMerge } from "tailwind-merge";
 
 export function cn(...inputs: ClassValue[]) {
@@ -21,4 +22,18 @@ export function matchesSearch(haystack: string | null | undefined, needle: strin
   const n = normalizeSearch(needle);
   if (!n) return true;
   return normalizeSearch(haystack).includes(n);
+}
+
+/** Click and keyboard (Enter/Space) props for a table row or list item that opens a record. */
+export function rowAction(open: () => void) {
+  return {
+    tabIndex: 0,
+    onClick: open,
+    onKeyDown: (e: KeyboardEvent<HTMLElement>) => {
+      // Keys pressed on buttons or inputs inside the row keep their own behaviour.
+      if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+      e.preventDefault();
+      open();
+    },
+  };
 }

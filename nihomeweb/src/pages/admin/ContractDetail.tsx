@@ -710,7 +710,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         {supplementalError && (
           <div
             role="alert"
-            className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+            className="rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning-strong"
           >
             {supplementalError}
           </div>

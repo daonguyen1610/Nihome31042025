@@ -236,9 +236,12 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
         </div>
 
         {errors.length > 0 && (
-          <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3" role="alert">
+          <div
+            className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3"
+            role="alert"
+          >
             <p className="font-medium text-rose-800">{t("surveys.conditions.importErrors")}</p>
-            <ul className="mt-1 space-y-1 text-sm text-rose-700">
+            <ul className="mt-1 space-y-1 text-sm text-destructive">
               {errors.map((error, index) => (
                 <li key={`${error.row}-${error.column}-${index}`}>
                   {t("surveys.conditions.errorLocation")
@@ -251,7 +254,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
           </div>
         )}
         {formError && (
-          <p className="mt-3 text-sm text-rose-600" role="alert">
+          <p className="mt-3 text-sm text-destructive" role="alert">
             {formError}
           </p>
         )}

@@ -436,7 +436,7 @@ export const DesignReviewsTab = ({
           <p className="font-medium text-foreground">{t("designProjects.reviews.guide.title")}</p>
           <ol className="mt-2 grid gap-3 md:grid-cols-3">
             <li className="flex gap-2">
-              <UserCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-sky-700" />
+              <UserCheck aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-info-strong" />
               <span>{t("designProjects.reviews.guide.taskApproval")}</span>
             </li>
             <li className="flex gap-2">
@@ -444,7 +444,10 @@ export const DesignReviewsTab = ({
               <span>{t("designProjects.reviews.guide.internalReview")}</span>
             </li>
             <li className="flex gap-2">
-              <FileCheck2 aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700" />
+              <FileCheck2
+                aria-hidden="true"
+                className="mt-0.5 h-4 w-4 shrink-0 text-success-strong"
+              />
               <span>{t("designProjects.reviews.guide.clientDecision")}</span>
             </li>
           </ol>
@@ -452,7 +455,7 @@ export const DesignReviewsTab = ({
         {error && !open ? (
           <div
             role="alert"
-            className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+            className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
           >
             <div className="flex items-start gap-2">
               <AlertCircle aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0" />
@@ -561,7 +564,7 @@ export const DesignReviewsTab = ({
               </p>
             ) : null}
             {review.clientAcceptanceDocumentId ? (
-              <p className="mt-2 text-xs text-emerald-700">
+              <p className="mt-2 text-xs text-success-strong">
                 {t("concepts.dossier.acceptanceRecorded")}: {review.clientAcceptanceSignedBy} ·{" "}
                 {review.clientAcceptanceSignedAt
                   ? formatDate(review.clientAcceptanceSignedAt, lang)
@@ -664,7 +667,7 @@ export const DesignReviewsTab = ({
                     item.id === Number(acceptanceDocumentIds[review.id]) &&
                     item.syncStatus !== "Synced",
                 ) ? (
-                  <p role="status" className="text-sm text-amber-800">
+                  <p role="status" className="text-sm text-warning-strong">
                     {t("concepts.dossier.awaitingSync")}
                   </p>
                 ) : null}
@@ -1022,7 +1025,7 @@ export const DesignReviewsTab = ({
                         {t(`operationalProjects.documents.syncStatus.${document.syncStatus}`)}
                       </span>
                       {document.syncStatus !== "Synced" ? (
-                        <span className="block text-xs text-amber-700">
+                        <span className="block text-xs text-warning-strong">
                           {t(
                             ["Pending", "Processing"].includes(document.syncStatus)
                               ? "designProjects.reviews.documentWaiting"
@@ -1046,7 +1049,7 @@ export const DesignReviewsTab = ({
             </fieldset>
           </div>
           {error ? (
-            <p role="alert" className="text-sm text-rose-700">
+            <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
           ) : null}

@@ -380,7 +380,7 @@ const Categories = () => {
                 />
                 <p className="text-xs text-muted-foreground">{t("cat.sourceNameHint")}</p>
               </div>
-              <div className="flex flex-col gap-3 rounded-lg border border-sky-200 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 rounded-lg border border-info/30 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-sky-900">{t("cat.manageTranslationsHint")}</p>
                 {canViewTranslations && (
                   <Button

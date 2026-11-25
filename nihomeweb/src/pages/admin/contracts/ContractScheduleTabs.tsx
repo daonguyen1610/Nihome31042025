@@ -93,7 +93,7 @@ export const ScheduleTab = ({
                     {statusLabel(m.status)}
                   </Badge>
                   {overdue ? (
-                    <Badge className="border border-rose-300 bg-rose-100 text-rose-700">
+                    <Badge className="border border-rose-300 bg-rose-100 text-destructive">
                       {t("contracts.schedule.overdue")}
                     </Badge>
                   ) : null}
@@ -363,7 +363,9 @@ export const EditScheduleTab = ({
         <div
           className={cn(
             "flex items-center justify-between rounded px-3 py-2 text-sm",
-            totalValid ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700",
+            totalValid
+              ? "bg-success-soft text-success-strong"
+              : "bg-destructive/10 text-destructive",
           )}
         >
           <span>{t("contracts.milestonesSum")}</span>

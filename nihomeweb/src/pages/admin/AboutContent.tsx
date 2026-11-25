@@ -1986,7 +1986,7 @@ const AboutContent = () => {
             }}
           >
             <p
-              className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3"
+              className="text-xs font-bold uppercase tracking-[0.18em] mb-3"
               style={{ color: "hsl(var(--primary))" }}
             >
               NICON • {t("nav.about")}
@@ -2092,7 +2092,7 @@ const AboutContent = () => {
                 >
                   <div>
                     <p
-                      className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2"
+                      className="text-xs font-bold uppercase tracking-[0.18em] mb-2"
                       style={{ color: "hsl(var(--primary))" }}
                     >
                       {t("aboutAdmin.previewTitle")}
@@ -2208,7 +2208,7 @@ const AboutContent = () => {
             }}
           >
             <p
-              className="text-[11px] font-bold uppercase tracking-[0.18em] mb-3"
+              className="text-xs font-bold uppercase tracking-[0.18em] mb-3"
               style={{ color: "hsl(var(--primary))" }}
             >
               NICON • {t("nav.about")}
@@ -2314,7 +2314,7 @@ const AboutContent = () => {
                 >
                   <div>
                     <p
-                      className="text-[11px] font-bold uppercase tracking-[0.18em] mb-2"
+                      className="text-xs font-bold uppercase tracking-[0.18em] mb-2"
                       style={{ color: "hsl(var(--primary))" }}
                     >
                       {t("aboutAdmin.previewTitle")}

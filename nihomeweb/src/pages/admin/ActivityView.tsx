@@ -3,6 +3,7 @@ import { useState } from "react";
 import { ArrowLeft, Edit, Trash2, Calendar, Grid3X3, List, Tag, User } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useToast } from "@/hooks/use-toast";
 import { useActivity } from "@/hooks/useContentApi";
 import { adminApi } from "@/services/adminApi";
@@ -14,6 +15,7 @@ const ActivityView = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { t } = useI18n();
+  const confirmAction = useConfirm();
   const { toast } = useToast();
   const { data: post, loading, error, refetch } = useActivity(slug ?? "");
   const [galleryMode, setGalleryMode] = useState<"grid" | "list">("grid");
@@ -47,7 +49,7 @@ const ActivityView = () => {
   }
 
   const handleDelete = async () => {
-    if (!confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteActivity(post.id);
       toast({ title: t("form.deleted"), description: post.title });
@@ -177,9 +179,7 @@ const Info = ({
   <div className="flex items-start gap-3">
     <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
     <div className="min-w-0">
-      <p className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-        {label}
-      </p>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
       <p className="font-medium break-words">{value}</p>
     </div>
   </div>

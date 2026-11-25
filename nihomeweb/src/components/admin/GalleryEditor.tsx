@@ -123,13 +123,13 @@ const GalleryEditor = ({ items, onChange, folder }: GalleryEditorProps) => {
                 type="button"
                 size="icon"
                 variant="secondary"
-                className="absolute right-1 top-1 h-7 w-7 bg-card/90 text-destructive opacity-0 shadow transition group-hover:opacity-100 hover:bg-card hover:text-destructive"
+                className="absolute right-1 top-1 h-7 w-7 bg-card/90 text-destructive opacity-0 shadow transition group-hover:opacity-100 focus-visible:opacity-100 pointer-coarse:opacity-100 hover:bg-card hover:text-destructive"
                 onClick={() => remove(idx)}
                 aria-label={t("media.gallery.delete")}
               >
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
-              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-[10px] text-white">
+              <span className="absolute bottom-1 left-1 rounded bg-black/60 px-1.5 py-0.5 text-xs text-white">
                 #{idx + 1}
               </span>
             </div>

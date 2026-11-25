@@ -64,8 +64,8 @@ import {
 
 const STATUS_STYLES: Record<MaterialRateRevisionStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
   Retired: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
@@ -1223,7 +1223,7 @@ const AdminMaterialRates = () => {
                                   </Button>
                                 </div>
                               )}
-                              <div className="mt-3 flex gap-2 rounded-md border border-amber-300/70 bg-amber-50 p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                              <div className="mt-3 flex gap-2 rounded-md border border-amber-300/70 bg-warning-soft p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
                                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                                 <span>{t("materialRates.import.replaceWarning")}</span>
                               </div>
@@ -1231,7 +1231,7 @@ const AdminMaterialRates = () => {
                           )}
 
                           {importedCount !== null && (
-                            <div className="flex flex-col gap-3 rounded-md border border-emerald-300 bg-emerald-50 p-3 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-3 rounded-md border border-emerald-300 bg-success-soft p-3 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
                               <div className="flex gap-2">
                                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
                                 <div>
@@ -1628,7 +1628,7 @@ const AdminMaterialRates = () => {
               })}
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-md border border-amber-300/70 bg-amber-50 p-3 text-sm leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          <div className="rounded-md border border-amber-300/70 bg-warning-soft p-3 text-sm leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
             {t("materialRates.import.replaceWarning")}
           </div>
           <DialogFooter>

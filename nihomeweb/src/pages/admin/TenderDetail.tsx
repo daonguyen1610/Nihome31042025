@@ -86,17 +86,17 @@ import { todayIsoDate } from "@/lib/displaySettings";
 
 const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
   Preparing: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Won: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Lost: "border-rose-200 bg-rose-50 text-rose-700",
+  Submitted: "border-info/30 bg-info-soft text-info-strong",
+  Won: "border-success/30 bg-success-soft text-success-strong",
+  Lost: "border-destructive/20 bg-destructive/10 text-destructive",
   Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
 const CHECKLIST_STATUS_STYLES: Record<TenderChecklistItemStatus, string> = {
   NotStarted: "border-border bg-muted/30 text-foreground",
-  Preparing: "border-amber-200 bg-amber-50 text-amber-700",
-  Done: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
+  Preparing: "border-warning/40 bg-warning-soft text-warning-strong",
+  Done: "border-success/30 bg-success-soft text-success-strong",
+  Submitted: "border-info/30 bg-info-soft text-info-strong",
   NotApplicable: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
@@ -209,9 +209,9 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
             isTerminal
               ? "bg-muted/30"
               : days < 0
-                ? "bg-rose-50"
+                ? "bg-destructive/10"
                 : days <= DEADLINE_ALERT_DAYS
-                  ? "bg-amber-50"
+                  ? "bg-warning-soft"
                   : "bg-muted/30",
           )}
         >
@@ -224,9 +224,9 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
               className={cn(
                 "mt-1 inline-flex items-center gap-1 text-xs font-medium",
                 days < 0
-                  ? "text-rose-700"
+                  ? "text-destructive"
                   : days <= DEADLINE_ALERT_DAYS
-                    ? "text-amber-700"
+                    ? "text-warning-strong"
                     : "text-muted-foreground",
               )}
             >
@@ -626,7 +626,7 @@ const ChecklistTab = ({
               >
                 <td className="px-3 py-2 font-medium text-foreground">
                   <div>{item.title}</div>
-                  <label className="mt-1 flex items-center gap-1 text-[11px] font-normal text-muted-foreground">
+                  <label className="mt-1 flex items-center gap-1 text-xs font-normal text-muted-foreground">
                     <input
                       type="checkbox"
                       checked={item.isRequired}
@@ -637,7 +637,7 @@ const ChecklistTab = ({
                     />
                     {t("tenders.detail.checklist.required")}
                   </label>
-                  <Badge variant="outline" className="mt-1 text-[10px] font-normal">
+                  <Badge variant="outline" className="mt-1 text-xs font-normal">
                     {t(
                       item.templateCode === "capability" && !item.capabilityDocumentId
                         ? "tenders.detail.checklist.sharedDocumentRequired"
@@ -785,7 +785,7 @@ const ChecklistTab = ({
                           aria-label={t("tenders.detail.checklist.delete")}
                           onClick={() => void onDelete(item.id).catch(() => undefined)}
                         >
-                          <Trash2 className="h-3.5 w-3.5 text-rose-600" />
+                          <Trash2 className="h-3.5 w-3.5 text-destructive" />
                         </Button>
                       ) : null}
                     </div>
@@ -819,7 +819,7 @@ const ChecklistTab = ({
                   />
                   {t("tenders.detail.checklist.required")}
                 </label>
-                <Badge variant="outline" className="mt-1 text-[10px] font-normal">
+                <Badge variant="outline" className="mt-1 text-xs font-normal">
                   {t(
                     item.templateCode === "capability" && !item.capabilityDocumentId
                       ? "tenders.detail.checklist.sharedDocumentRequired"
@@ -982,7 +982,7 @@ const ChecklistTab = ({
 
       {tender.submissions.length > 0 ? (
         <section
-          className="space-y-2 rounded-lg border border-sky-200 bg-sky-50/50 p-3 sm:p-4"
+          className="space-y-2 rounded-lg border border-info/30 bg-sky-50/50 p-3 sm:p-4"
           data-testid="tender-submission-snapshots"
         >
           <div>
@@ -1012,7 +1012,7 @@ const ChecklistTab = ({
                     className="min-w-0 rounded bg-muted/30 px-2 py-1.5 text-xs text-foreground"
                   >
                     <div className="break-words font-medium">{item.title}</div>
-                    <div className="mt-0.5 flex flex-wrap gap-x-2 text-[11px] text-muted-foreground">
+                    <div className="mt-0.5 flex flex-wrap gap-x-2 text-xs text-muted-foreground">
                       <span>{t(`tenders.detail.checklist.itemStatus.${item.status}`)}</span>
                       <span>
                         {item.isRequired
@@ -1209,7 +1209,7 @@ const TenderPlanTab = ({
               key={stage.key}
               className={cn(
                 "rounded-lg border px-3 py-2 text-xs",
-                stage.done && "border-emerald-200 bg-emerald-50 text-emerald-800",
+                stage.done && "border-success/30 bg-success-soft text-success-strong",
                 stage.active && !stage.done && "border-primary/30 bg-primary/5 text-primary",
                 !stage.done && !stage.active && "border-border bg-muted/30 text-muted-foreground",
               )}
@@ -1238,7 +1238,7 @@ const TenderPlanTab = ({
       </div>
       {loadError ? (
         <div
-          className="flex flex-col gap-3 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between"
           role="alert"
         >
           <span>{loadError}</span>
@@ -1251,8 +1251,8 @@ const TenderPlanTab = ({
           className={cn(
             "rounded-lg border p-3 text-sm",
             complete
-              ? "border-emerald-200 bg-emerald-50 text-emerald-800"
-              : "border-amber-200 bg-amber-50 text-amber-900",
+              ? "border-success/30 bg-success-soft text-success-strong"
+              : "border-warning/40 bg-warning-soft text-amber-900",
           )}
         >
           {active.length === 0
@@ -1394,7 +1394,7 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
               {t("common.loading")}
             </div>
           ) : error ? (
-            <p className="text-sm text-rose-600">{error}</p>
+            <p className="text-sm text-destructive">{error}</p>
           ) : docs.length === 0 ? (
             <p className="text-sm text-muted-foreground">{t("tenders.detail.library.empty")}</p>
           ) : (
@@ -1408,7 +1408,7 @@ const LibraryPicker = ({ open, onClose, tender, targetItemId, onSubmit }: Librar
                   key={d.id}
                   className={cn(
                     "flex cursor-pointer items-start gap-3 rounded-md border p-2.5 text-sm hover:bg-muted/30",
-                    selectedDocId === d.id && "border-sky-200 bg-sky-50",
+                    selectedDocId === d.id && "border-info/30 bg-info-soft",
                   )}
                 >
                   <RadioGroupItem value={String(d.id)} className="mt-0.5" />
@@ -1573,7 +1573,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
                   {t("common.loading")}
                 </div>
               ) : opps.length === 0 ? (
-                <p className="mt-1 text-xs text-rose-600">
+                <p className="mt-1 text-xs text-destructive">
                   {t("tenders.detail.result.noOpportunity")}
                 </p>
               ) : (
@@ -1606,7 +1606,7 @@ const MarkWonDialog = ({ open, onClose, tender, onSubmit }: MarkWonDialogProps) 
               disabled={submitting}
             />
           </FieldScope>
-          {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
@@ -1726,7 +1726,7 @@ const MarkLostDialog = ({ open, onClose, onSubmit }: MarkLostDialogProps) => {
               disabled={submitting}
             />
           </FieldScope>
-          {error ? <p className="text-sm text-rose-600">{error}</p> : null}
+          {error ? <p className="text-sm text-destructive">{error}</p> : null}
         </div>
         <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
           <Button variant="outline" onClick={onClose} disabled={submitting}>
@@ -1779,14 +1779,14 @@ const ResultTab = ({
         </h2>
 
         {tender.status === "Won" ? (
-          <div className="mt-3 rounded-md border border-emerald-200 bg-emerald-50 p-3">
-            <div className="inline-flex items-center gap-2 text-sm font-semibold text-emerald-800">
+          <div className="mt-3 rounded-md border border-success/30 bg-success-soft p-3">
+            <div className="inline-flex items-center gap-2 text-sm font-semibold text-success-strong">
               <Trophy className="h-4 w-4" />
               {t("tenders.detail.result.wonBadge")}
             </div>
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-emerald-700">
+                <dt className="text-xs text-success-strong">
                   {t("tenders.detail.result.opportunity")}
                 </dt>
                 <dd className="break-words font-medium text-emerald-900">
@@ -1803,7 +1803,9 @@ const ResultTab = ({
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-emerald-700">{t("tenders.detail.result.closedAt")}</dt>
+                <dt className="text-xs text-success-strong">
+                  {t("tenders.detail.result.closedAt")}
+                </dt>
                 <dd className="font-medium text-emerald-900">
                   {formatDateTime(tender.closedAt, lang)}
                 </dd>
@@ -1811,7 +1813,7 @@ const ResultTab = ({
             </dl>
             {tender.note ? (
               <div className="mt-2">
-                <div className="text-xs text-emerald-700">{t("tenders.detail.result.note")}</div>
+                <div className="text-xs text-success-strong">{t("tenders.detail.result.note")}</div>
                 <p className="text-sm text-emerald-900">{tender.note}</p>
               </div>
             ) : null}
@@ -1826,20 +1828,20 @@ const ResultTab = ({
             ) : null}
           </div>
         ) : tender.status === "Lost" ? (
-          <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3">
+          <div className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3">
             <div className="inline-flex items-center gap-2 text-sm font-semibold text-rose-800">
               <XCircle className="h-4 w-4" />
               {t("tenders.detail.result.lostBadge")}
             </div>
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
-                <dt className="text-xs text-rose-700">{t("tenders.detail.result.reason")}</dt>
+                <dt className="text-xs text-destructive">{t("tenders.detail.result.reason")}</dt>
                 <dd className="font-medium text-rose-900">
                   {tender.lostReasonLabel ?? tender.lostReasonCode ?? "—"}
                 </dd>
               </div>
               <div>
-                <dt className="text-xs text-rose-700">{t("tenders.detail.result.closedAt")}</dt>
+                <dt className="text-xs text-destructive">{t("tenders.detail.result.closedAt")}</dt>
                 <dd className="font-medium text-rose-900">
                   {formatDateTime(tender.closedAt, lang)}
                 </dd>
@@ -1847,7 +1849,7 @@ const ResultTab = ({
             </dl>
             {tender.lostNote ? (
               <div className="mt-2">
-                <div className="text-xs text-rose-700">{t("tenders.detail.result.note")}</div>
+                <div className="text-xs text-destructive">{t("tenders.detail.result.note")}</div>
                 <p className="text-sm text-rose-900">{tender.lostNote}</p>
               </div>
             ) : null}
@@ -1873,7 +1875,7 @@ const ResultTab = ({
             </Button>
             <Button
               variant="outline"
-              className="border-rose-200 text-rose-700 hover:bg-rose-50"
+              className="border-destructive/20 text-destructive hover:bg-destructive/10"
               size="sm"
               onClick={onMarkLostClick}
             >
@@ -2244,7 +2246,7 @@ const AdminTenderDetail = () => {
             />
 
             {showDeadlineAlert ? (
-              <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-amber-900">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
                   {t("tenders.detail.alert.deadlineNear")

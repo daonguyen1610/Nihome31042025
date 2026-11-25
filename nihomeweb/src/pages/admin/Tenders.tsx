@@ -14,7 +14,7 @@ import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { customerSelectOptions } from "@/lib/customerOptions";
 import { focusFormField } from "@/lib/formFocus";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -63,9 +63,9 @@ const ALL_VALUE = "__all__";
 
 const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
   Preparing: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Won: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Lost: "border-rose-200 bg-rose-50 text-rose-700",
+  Submitted: "border-info/30 bg-info-soft text-info-strong",
+  Won: "border-success/30 bg-success-soft text-success-strong",
+  Lost: "border-destructive/20 bg-destructive/10 text-destructive",
   Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
@@ -486,7 +486,7 @@ const AdminTenders = () => {
           <Button
             size="icon"
             variant="ghost"
-            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => void openDelete(r)}
             title={t("common.delete")}
             aria-label={t("common.delete")}
@@ -661,7 +661,7 @@ const AdminTenders = () => {
                     </header>
 
                     {r.isDeadlineImminent && (
-                      <div className="mt-2 flex items-center gap-1 text-xs text-rose-700">
+                      <div className="mt-2 flex items-center gap-1 text-xs text-destructive">
                         <AlertTriangle className="h-3.5 w-3.5" />
                         <span>{t("tenders.badge.deadlineImminent")}</span>
                       </div>
@@ -670,7 +670,9 @@ const AdminTenders = () => {
                     <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-2 text-xs">
                       <div>
                         <dt className="text-muted-foreground">{t("tenders.field.deadline")}</dt>
-                        <dd className={cn("font-medium", r.isDeadlineImminent && "text-rose-700")}>
+                        <dd
+                          className={cn("font-medium", r.isDeadlineImminent && "text-destructive")}
+                        >
                           {formatDate(r.submissionDeadline, lang)}
                         </dd>
                       </div>
@@ -733,7 +735,7 @@ const AdminTenders = () => {
                       <tr
                         key={r.id}
                         className="cursor-pointer border-t align-top hover:bg-muted/50"
-                        onClick={() => openDetail(r.id)}
+                        {...rowAction(() => openDetail(r.id))}
                       >
                         <td className="min-w-[220px] px-3 py-2">
                           <div className="font-medium">{r.name}</div>
@@ -744,14 +746,14 @@ const AdminTenders = () => {
                         <td className="min-w-[160px] px-3 py-2">{r.customerName}</td>
                         <td className="whitespace-nowrap px-3 py-2">
                           <div
-                            className={cn(r.isDeadlineImminent && "font-semibold text-rose-700")}
+                            className={cn(r.isDeadlineImminent && "font-semibold text-destructive")}
                           >
                             {formatDate(r.submissionDeadline, lang)}
                           </div>
                           {r.isDeadlineImminent && (
                             <Badge
                               variant="outline"
-                              className="mt-1 border-rose-200 bg-rose-50 text-rose-700"
+                              className="mt-1 border-destructive/20 bg-destructive/10 text-destructive"
                             >
                               {t("tenders.badge.deadlineImminent")}
                             </Badge>
@@ -1009,7 +1011,7 @@ const AdminTenders = () => {
               />
             </FieldScope>
 
-            {formError && <p className="text-sm text-rose-600">{formError}</p>}
+            {formError && <p className="text-sm text-destructive">{formError}</p>}
           </div>
 
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">

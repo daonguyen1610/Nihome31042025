@@ -419,7 +419,7 @@ function RfqWorkspace({
         )}
       </div>
       {success && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" className="text-sm text-success-strong">
           {success}
         </p>
       )}
@@ -773,7 +773,7 @@ function RfqWorkspace({
                           return (
                             <td
                               key={v.id}
-                              className={`p-3 ${v.isActive && cell && Date.parse(bid!.validUntil) >= Date.now() && cell.unitPrice === line.lowestUnitPrice ? "bg-emerald-50 text-emerald-900" : ""}`}
+                              className={`p-3 ${v.isActive && cell && Date.parse(bid!.validUntil) >= Date.now() && cell.unitPrice === line.lowestUnitPrice ? "bg-success-soft text-emerald-900" : ""}`}
                             >
                               {cell ? (
                                 <>
@@ -798,7 +798,10 @@ function RfqWorkspace({
                           (b) => b.vendorId === v.id && b.isCurrent && !b.withdrawnAt,
                         );
                         return (
-                          <td key={v.id} className={`p-3 ${bid?.isLowest ? "bg-emerald-50" : ""}`}>
+                          <td
+                            key={v.id}
+                            className={`p-3 ${bid?.isLowest ? "bg-success-soft" : ""}`}
+                          >
                             {bid ? (
                               <>
                                 <strong>{formatMoney(bid.totalOriginal, bid.currency)}</strong>
@@ -828,7 +831,7 @@ function RfqWorkspace({
               </div>
             </section>
             {(detail.awards.length > 0 || detail.contractId) && (
-              <section className="space-y-2 rounded-lg border border-emerald-200 bg-emerald-50 p-4">
+              <section className="space-y-2 rounded-lg border border-success/30 bg-success-soft p-4">
                 <h2 className="font-semibold">{t("rfq.awardResult")}</h2>
                 {detail.awards.length ? (
                   detail.awards.map((award) => (

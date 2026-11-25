@@ -651,7 +651,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
               <div className="flex-1 overflow-y-auto px-6 py-5 space-y-6">
                 {/* Basic info */}
                 <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 rounded-full bg-rose-500" />
                     {t("proc.basicInfo")}
                   </h3>
@@ -704,7 +704,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
 
                 {/* Assets */}
                 <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
-                  <h3 className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
                     <span className="w-1 h-4 rounded-full bg-rose-500" />
                     {t("proc.assets")}
                   </h3>
@@ -787,7 +787,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                               <X className="w-3.5 h-3.5" />
                             </button>
                             <div
-                              className="px-2 py-1 text-[10px] truncate text-muted-foreground bg-muted/30 border-t border-border"
+                              className="px-2 py-1 text-xs truncate text-muted-foreground bg-muted/30 border-t border-border"
                               title={img.displayName}
                             >
                               {img.displayName}
@@ -859,9 +859,9 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                         {form.files.map((file, i) => (
                           <div
                             key={i}
-                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-rose-200 transition"
+                            className="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-border bg-card hover:border-destructive/20 transition"
                           >
-                            <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                            <div className="w-9 h-9 rounded-lg bg-destructive/10 text-rose-500 flex items-center justify-center shrink-0">
                               <FileText className="w-4 h-4" />
                             </div>
                             <div className="min-w-0 flex-1">
@@ -878,7 +878,7 @@ const ProcessList = ({ groupKey, titleKey }: Props) => {
                             <button
                               type="button"
                               onClick={() => removeAsset("files", i)}
-                              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-rose-50 hover:text-rose-600 transition"
+                              className="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition"
                               title={t("proc.removeAsset")}
                               aria-label={t("proc.removeAsset")}
                             >
