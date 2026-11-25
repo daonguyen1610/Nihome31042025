@@ -38,6 +38,20 @@
       ]
     },
     {
+      "module": "tenders",
+      "action": "advance-stage",
+      "name": "Duyệt chuyển bước gói thầu",
+      "description": "Mỗi bước theo thứ tự là vai trò duyệt hoàn tất một bước của gói thầu: 1 Nhận thông tin, 2 Lập kế hoạch đấu thầu, 3 Triển khai lập hồ sơ thầu, 4 Đánh giá hồ sơ thầu. Người phụ trách chọn một người có vai trò này; duyệt xong gói thầu tự chuyển sang bước kế tiếp.",
+      "sortOrder": 35,
+      "isActive": true,
+      "steps": [
+        { "order": 1, "name": "Duyệt hoàn tất Nhận thông tin", "approverRoleCode": "SALES_MANAGER", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 2, "name": "Duyệt Kế hoạch đấu thầu", "approverRoleCode": "SALES_MANAGER", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 3, "name": "Duyệt hồ sơ thầu đã lập", "approverRoleCode": "QS", "slaHours": 24, "requireAllApprovers": false },
+        { "order": 4, "name": "Duyệt đánh giá hồ sơ thầu", "approverRoleCode": "SALES_MANAGER", "slaHours": 24, "requireAllApprovers": false }
+      ]
+    },
+    {
       "module": "design.concepts",
       "action": "approve",
       "name": "Duyệt thiết kế Concept",

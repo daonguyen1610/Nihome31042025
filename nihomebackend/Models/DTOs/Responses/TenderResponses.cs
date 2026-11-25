@@ -111,6 +111,13 @@ public class TenderResponse
 
     public string? InfoSource { get; set; }
     public string Status { get; set; } = string.Empty;
+    public string Stage { get; set; } = string.Empty;
+    public int? StageApproverUserId { get; set; }
+    public string? StageApproverName { get; set; }
+    public int? StageRequestedByUserId { get; set; }
+    public string? StageRequestedByName { get; set; }
+    public DateTime? StageRequestedAt { get; set; }
+    public string? StageRequestNote { get; set; }
     public string? Note { get; set; }
 
     public int? WonOpportunityId { get; set; }
@@ -218,4 +225,14 @@ public class TenderTimelineEvent
     public string? Message { get; set; }
     public int? UserId { get; set; }
     public string? UserName { get; set; }
+}
+
+/// <summary>Who may approve finishing the tender's current stage, by the role set in Luồng duyệt.</summary>
+public class TenderStageApproverOptionsResponse
+{
+    /// <summary>Null when Luồng duyệt has no active step for this stage.</summary>
+    public string? RoleCode { get; set; }
+    public string? RoleName { get; set; }
+    public string? RoleLabelKey { get; set; }
+    public List<TenderAssigneeOptionResponse> Candidates { get; set; } = new();
 }

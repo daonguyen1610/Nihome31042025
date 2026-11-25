@@ -1296,6 +1296,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.Property(t => t.InvitationPortalUrl).HasMaxLength(1000);
             b.Property(t => t.Note).HasMaxLength(4000);
             b.Property(t => t.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(t => t.Stage).HasConversion<string>().HasMaxLength(20);
+            b.Property(t => t.StageRequestNote).HasMaxLength(1000);
+            b.HasOne(t => t.StageApprover)
+                .WithMany()
+                .HasForeignKey(t => t.StageApproverUserId)
+                .OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(t => t.StageRequestedBy)
+                .WithMany()
+                .HasForeignKey(t => t.StageRequestedByUserId)
+                .OnDelete(DeleteBehavior.Restrict);
             b.Property(t => t.LostReasonCode).HasMaxLength(80);
             b.Property(t => t.LostNote).HasMaxLength(2000);
             b.HasOne(t => t.Customer)

@@ -401,5 +401,285 @@
     "en": "Clear report filter",
     "zh": "清除核对筛选",
     "ja": "照合フィルターを解除"
+  },
+  {
+    "key": "tenders.stage.title",
+    "category": "tenders",
+    "vi": "Quy trình đấu thầu",
+    "en": "Bidding process",
+    "zh": "投标流程",
+    "ja": "入札プロセス"
+  },
+  {
+    "key": "tenders.stage.Received",
+    "category": "tenders",
+    "vi": "Nhận thông tin",
+    "en": "Information received",
+    "zh": "接收信息",
+    "ja": "情報受領"
+  },
+  {
+    "key": "tenders.stage.Planning",
+    "category": "tenders",
+    "vi": "Lập kế hoạch đấu thầu",
+    "en": "Bid planning",
+    "zh": "制定投标计划",
+    "ja": "入札計画の作成"
+  },
+  {
+    "key": "tenders.stage.Preparing",
+    "category": "tenders",
+    "vi": "Triển khai lập hồ sơ thầu",
+    "en": "Bid dossier preparation",
+    "zh": "编制投标文件",
+    "ja": "入札書類の作成"
+  },
+  {
+    "key": "tenders.stage.Evaluating",
+    "category": "tenders",
+    "vi": "Đánh giá hồ sơ thầu",
+    "en": "Bid dossier review",
+    "zh": "评审投标文件",
+    "ja": "入札書類の評価"
+  },
+  {
+    "key": "tenders.stage.Submission",
+    "category": "tenders",
+    "vi": "Nộp thầu",
+    "en": "Bid submission",
+    "zh": "递交投标",
+    "ja": "入札提出"
+  },
+  {
+    "key": "tenders.stage.Result",
+    "category": "tenders",
+    "vi": "Kết quả đấu thầu",
+    "en": "Bid result",
+    "zh": "投标结果",
+    "ja": "入札結果"
+  },
+  {
+    "key": "tenders.stage.state.done",
+    "category": "tenders",
+    "vi": "Đã duyệt xong",
+    "en": "Approved",
+    "zh": "已审批完成",
+    "ja": "承認済み"
+  },
+  {
+    "key": "tenders.stage.state.current",
+    "category": "tenders",
+    "vi": "Bước hiện tại",
+    "en": "Current step",
+    "zh": "当前步骤",
+    "ja": "現在のステップ"
+  },
+  {
+    "key": "tenders.stage.state.next",
+    "category": "tenders",
+    "vi": "Chưa tới",
+    "en": "Not started",
+    "zh": "尚未开始",
+    "ja": "未着手"
+  },
+  {
+    "key": "tenders.stage.pending",
+    "category": "tenders",
+    "vi": "Đang chờ {approver} duyệt. Gửi bởi {requester} lúc {at}.",
+    "en": "Waiting for {approver} to approve. Sent by {requester} at {at}.",
+    "zh": "等待 {approver} 审批。由 {requester} 于 {at} 提交。",
+    "ja": "{approver} さんの承認待ちです。{requester} さんが {at} に送信しました。"
+  },
+  {
+    "key": "tenders.stage.noteLabel",
+    "category": "tenders",
+    "vi": "Ghi chú cho người duyệt",
+    "en": "Note for the approver",
+    "zh": "给审批人的备注",
+    "ja": "承認者へのメモ"
+  },
+  {
+    "key": "tenders.stage.approve",
+    "category": "tenders",
+    "vi": "Duyệt và chuyển sang \"{next}\"",
+    "en": "Approve and move to \"{next}\"",
+    "zh": "审批并进入“{next}”",
+    "ja": "承認して「{next}」へ進む"
+  },
+  {
+    "key": "tenders.stage.approved",
+    "category": "tenders",
+    "vi": "Đã duyệt. Gói thầu đã chuyển sang bước kế tiếp.",
+    "en": "Approved. The tender moved to the next step.",
+    "zh": "已审批。投标已进入下一步。",
+    "ja": "承認しました。入札は次のステップへ進みました。"
+  },
+  {
+    "key": "tenders.stage.return",
+    "category": "tenders",
+    "vi": "Trả lại",
+    "en": "Return",
+    "zh": "退回",
+    "ja": "差し戻す"
+  },
+  {
+    "key": "tenders.stage.returnTitle",
+    "category": "tenders",
+    "vi": "Trả lại bước này",
+    "en": "Return this step",
+    "zh": "退回此步骤",
+    "ja": "このステップを差し戻す"
+  },
+  {
+    "key": "tenders.stage.returnDescription",
+    "category": "tenders",
+    "vi": "Gói thầu vẫn ở bước \"{stage}\". Người gửi nhận được lý do để bổ sung rồi gửi duyệt lại.",
+    "en": "The tender stays at \"{stage}\". The sender gets your reason, completes the work, and sends it again.",
+    "zh": "投标仍停留在“{stage}”。提交人会收到原因，补充后重新提交审批。",
+    "ja": "入札は「{stage}」のままです。送信者は理由を受け取り、補完して再度承認を依頼します。"
+  },
+  {
+    "key": "tenders.stage.returnReason",
+    "category": "tenders",
+    "vi": "Lý do trả lại",
+    "en": "Reason for returning",
+    "zh": "退回原因",
+    "ja": "差し戻し理由"
+  },
+  {
+    "key": "tenders.stage.returnReasonExample",
+    "category": "tenders",
+    "vi": "Ví dụ: Kế hoạch chưa phân công phòng Thiết kế.",
+    "en": "Example: The plan does not assign the Design department yet.",
+    "zh": "例如：计划尚未分配设计部门。",
+    "ja": "例：計画に設計部門の担当が割り当てられていません。"
+  },
+  {
+    "key": "tenders.stage.returnConfirm",
+    "category": "tenders",
+    "vi": "Trả lại cho người gửi",
+    "en": "Return to sender",
+    "zh": "退回给提交人",
+    "ja": "送信者に差し戻す"
+  },
+  {
+    "key": "tenders.stage.returned",
+    "category": "tenders",
+    "vi": "Đã trả lại. Người gửi đã được thông báo.",
+    "en": "Returned. The sender has been notified.",
+    "zh": "已退回。已通知提交人。",
+    "ja": "差し戻しました。送信者に通知しました。"
+  },
+  {
+    "key": "tenders.stage.requestHint",
+    "category": "tenders",
+    "vi": "Khi xong bước \"{stage}\", chọn một {role} để duyệt. Duyệt xong, gói thầu tự chuyển sang \"{next}\".",
+    "en": "When \"{stage}\" is done, choose a {role} to approve it. Once approved, the tender moves to \"{next}\" automatically.",
+    "zh": "完成“{stage}”后，请选择一位{role}审批。审批通过后，投标自动进入“{next}”。",
+    "ja": "「{stage}」が完了したら、承認する{role}を選んでください。承認されると入札は自動的に「{next}」へ進みます。"
+  },
+  {
+    "key": "tenders.stage.approver",
+    "category": "tenders",
+    "vi": "Người duyệt chuyển bước",
+    "en": "Step approver",
+    "zh": "步骤审批人",
+    "ja": "ステップ承認者"
+  },
+  {
+    "key": "tenders.stage.approverPlaceholder",
+    "category": "tenders",
+    "vi": "Chọn người duyệt",
+    "en": "Choose an approver",
+    "zh": "选择审批人",
+    "ja": "承認者を選択"
+  },
+  {
+    "key": "tenders.stage.chooseApproverFirst",
+    "category": "tenders",
+    "vi": "Chọn người duyệt để gửi.",
+    "en": "Choose an approver to send.",
+    "zh": "请选择审批人后提交。",
+    "ja": "送信するには承認者を選んでください。"
+  },
+  {
+    "key": "tenders.stage.request",
+    "category": "tenders",
+    "vi": "Gửi duyệt chuyển bước",
+    "en": "Send for step approval",
+    "zh": "提交步骤审批",
+    "ja": "ステップ承認を依頼"
+  },
+  {
+    "key": "tenders.stage.requested",
+    "category": "tenders",
+    "vi": "Đã gửi duyệt. Người duyệt đã được thông báo.",
+    "en": "Sent for approval. The approver has been notified.",
+    "zh": "已提交审批。已通知审批人。",
+    "ja": "承認を依頼しました。承認者に通知しました。"
+  },
+  {
+    "key": "tenders.stage.notConfigured",
+    "category": "tenders",
+    "vi": "Chưa có vai trò duyệt bước \"{stage}\". Nhờ quản trị cấu hình tại Cấu hình → Luồng duyệt → Gói thầu – duyệt chuyển bước.",
+    "en": "No approver role is set for \"{stage}\". Ask an administrator to set it in Settings → Approval flows → Tender – step approval.",
+    "zh": "尚未设置“{stage}”的审批角色。请管理员在 设置 → 审批流程 → 投标 – 步骤审批 中配置。",
+    "ja": "「{stage}」の承認ロールが未設定です。管理者に 設定 → 承認フロー → 入札 – ステップ承認 で設定を依頼してください。"
+  },
+  {
+    "key": "tenders.stage.noApprover",
+    "category": "tenders",
+    "vi": "Chưa có {role} nào đủ điều kiện duyệt (đang hoạt động, có quyền xem gói thầu, khác bạn và người phụ trách). Nhờ quản trị kiểm tra Phân quyền.",
+    "en": "No {role} can approve yet (active, allowed to view tenders, not you or the preparer). Ask an administrator to check permissions.",
+    "zh": "暂无符合条件的{role}可审批（在职、可查看投标、且不是您或负责人）。请管理员检查权限。",
+    "ja": "承認できる{role}がいません（有効、入札の閲覧権限あり、あなたと担当者以外）。管理者に権限の確認を依頼してください。"
+  },
+  {
+    "key": "tenders.stage.hint.waitingForPreparer",
+    "category": "tenders",
+    "vi": "Người phụ trách gói thầu gửi duyệt khi xong bước này.",
+    "en": "The tender preparer sends this step for approval when it is done.",
+    "zh": "此步骤完成后由投标负责人提交审批。",
+    "ja": "このステップが完了したら入札担当者が承認を依頼します。"
+  },
+  {
+    "key": "tenders.stage.hint.submission",
+    "category": "tenders",
+    "vi": "Đã được duyệt nộp thầu. Nộp hồ sơ ở tab Dự toán dự thầu; gói thầu sẽ chuyển sang Kết quả đấu thầu.",
+    "en": "Approved for submission. Submit the bid in the Bid estimate tab; the tender then moves to Bid result.",
+    "zh": "已批准递交。请在投标预算标签页递交，之后投标进入投标结果。",
+    "ja": "提出が承認されました。入札見積タブで提出すると、入札結果へ進みます。"
+  },
+  {
+    "key": "tenders.stage.hint.result",
+    "category": "tenders",
+    "vi": "Đã nộp thầu. Khi có kết quả, ghi nhận Trúng hoặc Trượt ở tab Kết quả.",
+    "en": "Bid submitted. When the result is known, record Won or Lost in the Result tab.",
+    "zh": "已递交投标。有结果后，请在结果标签页记录中标或未中标。",
+    "ja": "入札を提出しました。結果が出たら結果タブで落札または失注を記録してください。"
+  },
+  {
+    "key": "tenders.stage.hint.won",
+    "category": "tenders",
+    "vi": "Trúng thầu. Bước tiếp theo: lập hợp đồng.",
+    "en": "Bid won. Next step: create the contract.",
+    "zh": "已中标。下一步：创建合同。",
+    "ja": "落札しました。次のステップ：契約の作成。"
+  },
+  {
+    "key": "tenders.stage.hint.lost",
+    "category": "tenders",
+    "vi": "Trượt thầu. Quy trình đã kết thúc.",
+    "en": "Bid lost. The process has ended.",
+    "zh": "未中标。流程已结束。",
+    "ja": "失注しました。プロセスは終了しました。"
+  },
+  {
+    "key": "tenders.stage.hint.cancelled",
+    "category": "tenders",
+    "vi": "Gói thầu đã hủy. Quy trình đã dừng.",
+    "en": "The tender was cancelled. The process has stopped.",
+    "zh": "投标已取消。流程已停止。",
+    "ja": "入札は取り消されました。プロセスは停止しました。"
   }
 ]

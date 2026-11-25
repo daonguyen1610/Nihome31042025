@@ -1730,6 +1730,7 @@ public static class SampleCrmDataSeeder
                 PreparerUserId = owner.Id,
                 InfoSource = i % 2 == 0 ? "Referral" : "Website",
                 Status = status,
+                Stage = status == TenderStatus.Preparing ? TenderStage.Preparing : TenderStage.Result,
                 Note = $"{SampleTenderMarker} Theo dõi hồ sơ dự thầu, hạn nộp và kết quả cho {name}.",
                 WonOpportunityId = wonOppId,
                 LostReasonCode = lostReason,

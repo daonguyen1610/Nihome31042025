@@ -181,6 +181,8 @@ public class TenderService(
             .Include(t => t.Customer)
             .Include(t => t.Preparer)
             .Include(t => t.InvitationReceivedByUser)
+            .Include(t => t.StageApprover)
+            .Include(t => t.StageRequestedBy)
             .Include(t => t.OperationalProject)
             .Include(t => t.ChecklistItems).ThenInclude(i => i.Owner)
             .Include(t => t.ChecklistItems).ThenInclude(i => i.EvidenceRevisions)
@@ -972,6 +974,174 @@ public class TenderService(
             Note = request.Note,
         }, callerUserId, ct);
 
+    // ------------------------------ Stage approval ---------------------------
+
+    public async Task<TenderStageApproverOptionsResponse?> ListStageApproverOptionsAsync(
+        int tenderId, int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        if (tender is null) return null;
+        var roleCode = await TenderStageFlow.ApproverRoleAsync(db, tender.Stage, ct);
+        if (roleCode is null) return new TenderStageApproverOptionsResponse();
+        var role = await db.Roles.AsNoTracking().Where(r => r.Code == roleCode)
+            .Select(r => new { r.Name, r.LabelKey }).FirstOrDefaultAsync(ct);
+        return new TenderStageApproverOptionsResponse
+        {
+            RoleCode = roleCode,
+            RoleName = role?.Name ?? roleCode,
+            RoleLabelKey = role?.LabelKey,
+            Candidates = await StageApproverCandidates(roleCode, callerUserId, tender.PreparerUserId)
+                .OrderBy(user => user.FullName).ThenBy(user => user.Id)
+                .Select(user => new TenderAssigneeOptionResponse
+                {
+                    Id = user.Id,
+                    FullName = user.FullName ?? user.Email,
+                    RoleCode = user.RoleEntity!.Code,
+                    RoleName = user.RoleEntity.Name,
+                    RoleLabelKey = user.RoleEntity.LabelKey,
+                })
+                .ToListAsync(ct),
+        };
+    }
+
+    public async Task<TenderResponse?> RequestStageApprovalAsync(int tenderId,
+        RequestTenderStageApprovalRequest request, int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        if (tender is null) return null;
+        GuardNotTerminal(tender, "gửi duyệt chuyển bước");
+        if (!TenderStageFlow.NeedsApproval(tender.Stage))
+            throw new TenderOperationException(
+                "Bước hiện tại không cần duyệt chuyển bước: nộp thầu ở tab Dự toán, ghi nhận kết quả ở tab Kết quả.");
+        if (tender.StageApproverUserId.HasValue)
+            throw new TenderOperationException("Bước này đang chờ duyệt. Chờ người duyệt quyết định trước khi gửi lại.");
+        var roleCode = await TenderStageFlow.ApproverRoleAsync(db, tender.Stage, ct)
+            ?? throw new TenderOperationException(
+                $"Luồng duyệt chưa có vai trò duyệt bước \"{TenderStageFlow.Label(tender.Stage)}\". Nhờ quản trị cấu hình Cấu hình → Luồng duyệt → Duyệt chuyển bước gói thầu.");
+        var approver = await StageApproverCandidates(roleCode, callerUserId, tender.PreparerUserId)
+            .FirstOrDefaultAsync(user => user.Id == request.ApproverUserId, ct)
+            ?? throw new TenderOperationException(
+                "Người duyệt phải đang hoạt động, có vai trò duyệt bước này, có quyền xem gói thầu, và khác người gửi, người phụ trách gói thầu.");
+        CrmConcurrency.Apply(db, tender, request.RowVersion);
+        var now = DateTime.UtcNow;
+        tender.StageApproverUserId = approver.Id;
+        tender.StageRequestedByUserId = callerUserId;
+        tender.StageRequestedAt = now;
+        tender.StageRequestNote = TrimOrNull(request.Note);
+        tender.UpdatedAt = now;
+        tender.UpdatedByUserId = callerUserId;
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        var requesterName = await UserNameAsync(callerUserId, ct);
+        await NotifyStageAsync(approver.Id, "tender.stage.approval-requested", tender, new()
+        {
+            ["stage"] = TenderStageFlow.Label(tender.Stage),
+            ["nextStage"] = TenderStageFlow.Label(tender.Stage + 1),
+            ["requesterName"] = requesterName,
+        });
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> ApproveStageAsync(int tenderId, TenderStageDecisionRequest request,
+        int callerUserId, CancellationToken ct = default)
+    {
+        var tender = await LoadStageDecisionAsync(tenderId, request, callerUserId, "duyệt", ct);
+        if (tender is null) return null;
+        // Author ≠ approver: the preparer may have been changed to the approver after the request.
+        if (tender.StageRequestedByUserId == callerUserId || tender.PreparerUserId == callerUserId)
+            throw new TenderOperationException(
+                "Người gửi hoặc người phụ trách gói thầu không tự duyệt bước của mình. Hãy Trả lại để chọn người duyệt khác.");
+        var finished = tender.Stage;
+        tender.Stage = finished + 1;
+        var requesterId = tender.StageRequestedByUserId;
+        ClearStageRequest(tender, callerUserId);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        var approverName = await UserNameAsync(callerUserId, ct);
+        var data = new Dictionary<string, string>
+        {
+            ["finishedStage"] = TenderStageFlow.Label(finished),
+            ["stage"] = TenderStageFlow.Label(tender.Stage),
+            ["approverName"] = approverName,
+        };
+        foreach (var userId in new[] { tender.PreparerUserId, requesterId }.OfType<int>().Distinct())
+            await NotifyStageAsync(userId, "tender.stage.advanced", tender, data);
+        logger.LogInformation("Tender {TenderId} stage {From} → {To} approved by user {UserId}",
+            tenderId, finished, tender.Stage, callerUserId);
+        return await GetAsync(tenderId, ct);
+    }
+
+    public async Task<TenderResponse?> ReturnStageAsync(int tenderId, TenderStageDecisionRequest request,
+        int callerUserId, CancellationToken ct = default)
+    {
+        var reason = TrimOrNull(request.Note)
+            ?? throw new TenderOperationException("Nhập lý do trả lại, ví dụ: Kế hoạch chưa phân công phòng Thiết kế.");
+        var tender = await LoadStageDecisionAsync(tenderId, request, callerUserId, "trả lại", ct);
+        if (tender is null) return null;
+        var requesterId = tender.StageRequestedByUserId;
+        ClearStageRequest(tender, callerUserId);
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (requesterId.HasValue)
+            await NotifyStageAsync(requesterId.Value, "tender.stage.returned", tender, new()
+            {
+                ["stage"] = TenderStageFlow.Label(tender.Stage),
+                ["approverName"] = await UserNameAsync(callerUserId, ct),
+                ["reason"] = reason,
+            });
+        return await GetAsync(tenderId, ct);
+    }
+
+    /// <summary>Active users in the stage's role who can view tenders, other than the requester and preparer.</summary>
+    private IQueryable<ApplicationUser> StageApproverCandidates(string roleCode, int callerUserId, int? preparerUserId) =>
+        db.Users.AsNoTracking().Where(user => user.IsActive && user.Id != callerUserId &&
+            user.Id != preparerUserId &&
+            user.RoleEntity != null && user.RoleEntity.IsActive && user.RoleEntity.Code == roleCode &&
+            user.RoleEntity.RolePermissions.Any(grant =>
+                grant.Permission.Module == "crm.tenders" && grant.Permission.Action == "view"));
+
+    private async Task<Tender?> LoadStageDecisionAsync(int tenderId, TenderStageDecisionRequest request,
+        int callerUserId, string action, CancellationToken ct)
+    {
+        var tender = await db.Tenders.FirstOrDefaultAsync(t => t.Id == tenderId, ct);
+        if (tender is null) return null;
+        GuardNotTerminal(tender, $"{action} chuyển bước");
+        if (!tender.StageApproverUserId.HasValue)
+            throw new TenderOperationException("Bước hiện tại không có yêu cầu duyệt nào đang chờ.");
+        if (tender.StageApproverUserId != callerUserId)
+            throw new TenderOperationException($"Chỉ người được chỉ định duyệt bước này mới được {action}.");
+        CrmConcurrency.Apply(db, tender, request.RowVersion);
+        return tender;
+    }
+
+    private static void ClearStageRequest(Tender tender, int callerUserId)
+    {
+        tender.StageApproverUserId = null;
+        tender.StageRequestedByUserId = null;
+        tender.StageRequestedAt = null;
+        tender.StageRequestNote = null;
+        tender.UpdatedAt = DateTime.UtcNow;
+        tender.UpdatedByUserId = callerUserId;
+    }
+
+    private async Task<string> UserNameAsync(int userId, CancellationToken ct) =>
+        await db.Users.AsNoTracking().Where(user => user.Id == userId)
+            .Select(user => user.FullName ?? user.Email).FirstOrDefaultAsync(ct) ?? $"#{userId}";
+
+    private async Task NotifyStageAsync(int userId, string templateCode, Tender tender, Dictionary<string, string> data)
+    {
+        data["tenderCode"] = tender.Code;
+        data["tenderName"] = tender.Name;
+        try
+        {
+            await notifications.NotifyFromTemplateAsync(userId, templateCode, data, EntityTypes.Tender, tender.Id,
+                $"/admin/tenders/{tender.Id}");
+        }
+        catch (Exception ex)
+        {
+            // The stage change is saved; a failed notification must not undo it.
+            logger.LogWarning(ex, "Tender {TenderId} stage notification {Template} to user {UserId} failed.",
+                tender.Id, templateCode, userId);
+        }
+    }
+
     public async Task<TenderReadinessResponse?> GetReadinessAsync(
         int tenderId, int callerUserId, CancellationToken ct = default)
     {
@@ -994,6 +1164,9 @@ public class TenderService(
             Block("INVITATION_METADATA_REQUIRED", "Invitation", "Chưa ghi đủ ngày, nguồn và người tiếp nhận HSMT.", "info");
         if (!tender.OperationalProjectId.HasValue)
             Block("OPERATIONAL_PROJECT_REQUIRED", "Overview", "Gói thầu chưa gắn Dự án.", "info");
+        if (tender.Status == TenderStatus.Preparing && TenderStageFlow.NeedsApproval(tender.Stage))
+            Block("STAGE_APPROVAL_REQUIRED", "Stage",
+                $"Gói thầu đang ở bước \"{TenderStageFlow.Label(tender.Stage)}\": cần được duyệt chuyển tới bước Nộp thầu.", "info");
 
         var plans = await db.DepartmentWorkPackages.AsNoTracking()
             .Where(package => package.SourceTenderId == tenderId &&
@@ -1244,6 +1417,7 @@ public class TenderService(
         };
         db.TenderSubmissions.Add(submission);
         tender.Status = TenderStatus.Submitted;
+        tender.Stage = TenderStage.Result;
         tender.SubmittedAt ??= submittedAt;
         tender.Note = TrimOrNull(request.Note) ?? tender.Note;
         tender.UpdatedAt = submittedAt;
@@ -1581,6 +1755,13 @@ public class TenderService(
             PreparerName = t.Preparer?.FullName,
             InfoSource = t.InfoSource,
             Status = t.Status.ToString(),
+            Stage = t.Stage.ToString(),
+            StageApproverUserId = t.StageApproverUserId,
+            StageApproverName = t.StageApprover?.FullName,
+            StageRequestedByUserId = t.StageRequestedByUserId,
+            StageRequestedByName = t.StageRequestedBy?.FullName,
+            StageRequestedAt = t.StageRequestedAt,
+            StageRequestNote = t.StageRequestNote,
             Note = t.Note,
             WonOpportunityId = t.WonOpportunityId,
             WonOpportunityName = wonOpportunityName,

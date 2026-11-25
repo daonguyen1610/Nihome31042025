@@ -1270,6 +1270,8 @@ public class TenderServiceTests : IDisposable
             ImportedByUserId = _userId,
             ImportedAt = DateTime.UtcNow,
         });
+        // Readiness also needs the stage approvals up to Nộp thầu.
+        (await _db.Tenders.SingleAsync(t => t.Id == created.Id)).Stage = TenderStage.Submission;
         await _db.SaveChangesAsync();
 
         var submitted = await _sut.SubmitAsync(created.Id, new SubmitTenderRequest
@@ -1279,6 +1281,7 @@ public class TenderServiceTests : IDisposable
         }, _userId);
 
         Assert.Equal("Submitted", submitted!.Status);
+        Assert.Equal("Result", submitted.Stage);
         Assert.NotNull(submitted.SubmittedAt);
         var snapshot = Assert.Single(submitted.Submissions);
         Assert.Equal(_userId, snapshot.SubmittedByUserId);
@@ -1697,5 +1700,145 @@ public class TenderServiceTests : IDisposable
         Assert.Equal(2, events!.Count);
         Assert.Equal("newer", events[0].Message);
         Assert.Equal("older", events[1].Message);
+    }
+
+    // ---------------- Stage approval (NICON feedback rows 10–11) ----------------
+
+    private ApplicationUser AddStageUser(string name, string roleCode, bool canView = true)
+    {
+        var role = _db.Roles.FirstOrDefault(r => r.Code == roleCode)
+            ?? new Role { Code = roleCode, Name = roleCode, IsActive = true };
+        if (canView && role.RolePermissions.Count == 0)
+            role.RolePermissions.Add(new RolePermission
+            {
+                Role = role,
+                Permission = new Permission { Module = "crm.tenders", Action = "view" },
+            });
+        var user = new ApplicationUser
+        {
+            PhoneNumber = $"09{Random.Shared.Next(10000000, 99999999)}",
+            FullName = name,
+            Email = $"{Guid.NewGuid():N}@nicon.vn",
+            Role = UserRole.USER,
+            IsActive = true,
+            PasswordHash = "x",
+            RoleEntity = role,
+        };
+        _db.Users.Add(user);
+        _db.SaveChanges();
+        return user;
+    }
+
+    private void ConfigureStageFlow(string roleCode)
+    {
+        _db.WorkflowConfigs.Add(new WorkflowConfig
+        {
+            Module = TenderStageFlow.Module,
+            Action = TenderStageFlow.Action,
+            Name = "Duyệt chuyển bước gói thầu",
+            StepsJson = System.Text.Json.JsonSerializer.Serialize(
+                Enumerable.Range(1, 4).Select(order => new WorkflowStepResponse
+                {
+                    Order = order,
+                    Name = $"Bước {order}",
+                    ApproverRoleCode = roleCode,
+                    SlaHours = 24,
+                }), new System.Text.Json.JsonSerializerOptions(System.Text.Json.JsonSerializerDefaults.Web)),
+        });
+        _db.SaveChanges();
+    }
+
+    [Fact]
+    public async Task StageApproval_AssignedApproverAdvancesStageAndNotifiesNextActor()
+    {
+        ConfigureStageFlow("SALES_MANAGER");
+        var approver = AddStageUser("Trần Trưởng phòng KD", "SALES_MANAGER");
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        Assert.Equal("Received", created.Stage);
+
+        var options = await _sut.ListStageApproverOptionsAsync(created.Id, _userId);
+        Assert.Equal(approver.Id, Assert.Single(options!.Candidates).Id);
+
+        var pending = await _sut.RequestStageApprovalAsync(created.Id,
+            new RequestTenderStageApprovalRequest { ApproverUserId = approver.Id, Note = "Đã nhận HSMT" }, _userId);
+        Assert.Equal(approver.Id, pending!.StageApproverUserId);
+        Assert.Equal("Received", pending.Stage);
+        await Assert.ThrowsAsync<TenderOperationException>(() => _sut.RequestStageApprovalAsync(created.Id,
+            new RequestTenderStageApprovalRequest { ApproverUserId = approver.Id }, _userId));
+
+        var advanced = await _sut.ApproveStageAsync(created.Id, new TenderStageDecisionRequest(), approver.Id);
+
+        Assert.Equal("Planning", advanced!.Stage);
+        Assert.Null(advanced.StageApproverUserId);
+        Assert.Null(advanced.StageRequestNote);
+        _notifications.Verify(n => n.NotifyFromTemplateAsync(approver.Id, "tender.stage.approval-requested",
+            It.IsAny<IDictionary<string, string>>(), EntityTypes.Tender, created.Id, It.IsAny<string>(), "vi"), Times.Once);
+        _notifications.Verify(n => n.NotifyFromTemplateAsync(_userId, "tender.stage.advanced",
+            It.Is<IDictionary<string, string>>(d => d["stage"] == "Lập kế hoạch đấu thầu"),
+            EntityTypes.Tender, created.Id, It.IsAny<string>(), "vi"), Times.Once);
+    }
+
+    [Fact]
+    public async Task StageApproval_RejectsSelfApprovalWrongRoleAndOtherDeciders()
+    {
+        ConfigureStageFlow("SALES_MANAGER");
+        var approver = AddStageUser("Trưởng phòng KD", "SALES_MANAGER");
+        var qs = AddStageUser("Kỹ sư QS", "QS");
+        var noView = AddStageUser("Trưởng phòng KD mới", "SALES_MANAGER_NO_VIEW", canView: false);
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        // The preparer/requester cannot approve, nor can someone outside the role or without view.
+        foreach (var candidate in new[] { _userId, qs.Id, noView.Id })
+            await Assert.ThrowsAsync<TenderOperationException>(() => _sut.RequestStageApprovalAsync(created.Id,
+                new RequestTenderStageApprovalRequest { ApproverUserId = candidate }, _userId));
+
+        await _sut.RequestStageApprovalAsync(created.Id,
+            new RequestTenderStageApprovalRequest { ApproverUserId = approver.Id }, _userId);
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.ApproveStageAsync(created.Id, new TenderStageDecisionRequest(), qs.Id));
+
+        // Preparer handed to the approver after the request: approving would be self-approval.
+        var tender = await _db.Tenders.SingleAsync(t => t.Id == created.Id);
+        tender.PreparerUserId = approver.Id;
+        await _db.SaveChangesAsync();
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.ApproveStageAsync(created.Id, new TenderStageDecisionRequest(), approver.Id));
+
+        Assert.Equal(TenderStage.Received, (await _db.Tenders.AsNoTracking().SingleAsync(t => t.Id == created.Id)).Stage);
+    }
+
+    [Fact]
+    public async Task StageApproval_ReturnNeedsReasonAndKeepsStage()
+    {
+        ConfigureStageFlow("SALES_MANAGER");
+        var approver = AddStageUser("Trưởng phòng KD", "SALES_MANAGER");
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.RequestStageApprovalAsync(created.Id,
+            new RequestTenderStageApprovalRequest { ApproverUserId = approver.Id }, _userId);
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.ReturnStageAsync(created.Id, new TenderStageDecisionRequest { Note = "  " }, approver.Id));
+        var returned = await _sut.ReturnStageAsync(created.Id,
+            new TenderStageDecisionRequest { Note = "Thiếu HSMT bản gốc" }, approver.Id);
+
+        Assert.Equal("Received", returned!.Stage);
+        Assert.Null(returned.StageApproverUserId);
+        _notifications.Verify(n => n.NotifyFromTemplateAsync(_userId, "tender.stage.returned",
+            It.Is<IDictionary<string, string>>(d => d["reason"] == "Thiếu HSMT bản gốc"),
+            EntityTypes.Tender, created.Id, It.IsAny<string>(), "vi"), Times.Once);
+    }
+
+    [Fact]
+    public async Task StageApproval_WithoutConfiguredFlow_ExplainsAndSubmitStaysBlocked()
+    {
+        var approver = AddStageUser("Trưởng phòng KD", "SALES_MANAGER");
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+
+        var error = await Assert.ThrowsAsync<TenderOperationException>(() => _sut.RequestStageApprovalAsync(
+            created.Id, new RequestTenderStageApprovalRequest { ApproverUserId = approver.Id }, _userId));
+        Assert.Contains("Luồng duyệt", error.Message);
+        var readiness = await _sut.GetReadinessAsync(created.Id, _userId);
+        Assert.Contains(readiness!.Blockers, b => b.Code == "STAGE_APPROVAL_REQUIRED");
+        Assert.False(readiness.CanSubmit);
     }
 }

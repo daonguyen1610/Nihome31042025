@@ -11,6 +11,26 @@ export const TENDER_STATUSES: TenderStatus[] = [
   "Cancelled",
 ];
 
+/** Bidding steps in order; each before Submission advances only on its approver's approval. */
+export type TenderStage =
+  "Received" | "Planning" | "Preparing" | "Evaluating" | "Submission" | "Result";
+
+export const TENDER_STAGES: TenderStage[] = [
+  "Received",
+  "Planning",
+  "Preparing",
+  "Evaluating",
+  "Submission",
+  "Result",
+];
+
+export interface TenderStageApproverOptionsResponse {
+  roleCode?: string | null;
+  roleName?: string | null;
+  roleLabelKey?: string | null;
+  candidates: TenderAssigneeOptionResponse[];
+}
+
 export type TenderChecklistItemStatus =
   "NotStarted" | "Preparing" | "Done" | "Submitted" | "NotApplicable";
 
@@ -110,6 +130,13 @@ export interface TenderResponse {
   preparerName?: string | null;
   infoSource?: string | null;
   status: TenderStatus;
+  stage: TenderStage;
+  stageApproverUserId?: number | null;
+  stageApproverName?: string | null;
+  stageRequestedByUserId?: number | null;
+  stageRequestedByName?: string | null;
+  stageRequestedAt?: string | null;
+  stageRequestNote?: string | null;
   note?: string | null;
   wonOpportunityId?: number | null;
   wonOpportunityName?: string | null;

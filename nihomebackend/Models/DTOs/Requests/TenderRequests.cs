@@ -120,3 +120,24 @@ public class TenderListParams : TenderStatisticsParams
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 20;
 }
+
+/// <summary>Asks one person to approve finishing the tender's current stage.</summary>
+public class RequestTenderStageApprovalRequest
+{
+    [Range(1, int.MaxValue)]
+    public int ApproverUserId { get; set; }
+
+    [StringLength(1000)]
+    public string? Note { get; set; }
+
+    public string? RowVersion { get; set; }
+}
+
+/// <summary>The assigned approver's decision; a note is required to return the stage.</summary>
+public class TenderStageDecisionRequest
+{
+    [StringLength(1000)]
+    public string? Note { get; set; }
+
+    public string? RowVersion { get; set; }
+}

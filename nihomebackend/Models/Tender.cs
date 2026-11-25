@@ -58,6 +58,25 @@ public class Tender : IConcurrencyTracked
 
     public TenderStatus Status { get; set; } = TenderStatus.Preparing;
 
+    /// <summary>
+    /// Step of the bidding process (NICON feedback rows 10–11). Advances only when the
+    /// person assigned to approve the current step approves it; submitting the bid
+    /// moves it to <see cref="TenderStage.Result"/>.
+    /// </summary>
+    public TenderStage Stage { get; set; } = TenderStage.Received;
+
+    /// <summary>Person asked to approve finishing <see cref="Stage"/>; null while no request is waiting.</summary>
+    public int? StageApproverUserId { get; set; }
+    public ApplicationUser? StageApprover { get; set; }
+
+    /// <summary>Who asked for the waiting stage approval; never the approver.</summary>
+    public int? StageRequestedByUserId { get; set; }
+    public ApplicationUser? StageRequestedBy { get; set; }
+
+    public DateTime? StageRequestedAt { get; set; }
+
+    public string? StageRequestNote { get; set; }
+
     public string? Note { get; set; }
 
     // --- Result fields (set when transitioning to Won/Lost via NIH-97 workflow) ---
@@ -179,6 +198,20 @@ public enum TenderStatus
     Won = 2,
     Lost = 3,
     Cancelled = 4,
+}
+
+/// <summary>
+/// Bidding process steps in order: Nhận thông tin → Lập kế hoạch đấu thầu → Triển khai
+/// lập hồ sơ thầu → Đánh giá hồ sơ thầu → Nộp thầu → Kết quả đấu thầu.
+/// </summary>
+public enum TenderStage
+{
+    Received = 0,
+    Planning = 1,
+    Preparing = 2,
+    Evaluating = 3,
+    Submission = 4,
+    Result = 5,
 }
 
 public enum TenderChecklistItemStatus

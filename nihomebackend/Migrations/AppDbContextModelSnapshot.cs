@@ -11494,6 +11494,24 @@ namespace nihomebackend.Migrations
                         .ValueGeneratedOnAddOrUpdate()
                         .HasColumnType("rowversion");
 
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("StageApproverUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("StageRequestNote")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<DateTime?>("StageRequestedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("StageRequestedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -11528,6 +11546,10 @@ namespace nihomebackend.Migrations
                     b.HasIndex("OperationalProjectId");
 
                     b.HasIndex("PreparerUserId");
+
+                    b.HasIndex("StageApproverUserId");
+
+                    b.HasIndex("StageRequestedByUserId");
 
                     b.HasIndex("Status");
 
@@ -16095,6 +16117,16 @@ namespace nihomebackend.Migrations
                         .HasForeignKey("PreparerUserId")
                         .OnDelete(DeleteBehavior.SetNull);
 
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "StageApprover")
+                        .WithMany()
+                        .HasForeignKey("StageApproverUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "StageRequestedBy")
+                        .WithMany()
+                        .HasForeignKey("StageRequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Customer");
 
                     b.Navigation("InvitationReceivedByUser");
@@ -16102,6 +16134,10 @@ namespace nihomebackend.Migrations
                     b.Navigation("OperationalProject");
 
                     b.Navigation("Preparer");
+
+                    b.Navigation("StageApprover");
+
+                    b.Navigation("StageRequestedBy");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.TenderChecklistEvidence", b =>

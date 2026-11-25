@@ -132,6 +132,21 @@ public interface ITenderService
     Task<TenderResponse?> TransitionAsync(int tenderId, TransitionTenderRequest request,
         int callerUserId, CancellationToken ct = default);
 
+    /// <summary>People who may approve finishing the current stage (role from Luồng duyệt), excluding the caller and preparer.</summary>
+    Task<TenderStageApproverOptionsResponse?> ListStageApproverOptionsAsync(int tenderId, int callerUserId,
+        CancellationToken ct = default);
+
+    Task<TenderResponse?> RequestStageApprovalAsync(int tenderId, RequestTenderStageApprovalRequest request,
+        int callerUserId, CancellationToken ct = default);
+
+    /// <summary>Only the assigned approver, who is neither the requester nor the preparer, advances the stage.</summary>
+    Task<TenderResponse?> ApproveStageAsync(int tenderId, TenderStageDecisionRequest request,
+        int callerUserId, CancellationToken ct = default);
+
+    /// <summary>The assigned approver sends the stage back with a required reason; the stage stays.</summary>
+    Task<TenderResponse?> ReturnStageAsync(int tenderId, TenderStageDecisionRequest request,
+        int callerUserId, CancellationToken ct = default);
+
     Task<TenderReadinessResponse?> GetReadinessAsync(int tenderId, int callerUserId,
         CancellationToken ct = default);
 

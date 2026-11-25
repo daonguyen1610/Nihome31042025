@@ -542,6 +542,8 @@ Bảng đơn giá cũ (chưa cấu hình trường) có thể chọn nhiều b�
 | Trúng / Trượt | Kết quả; chỉ ghi được từ Đã nộp |
 | Đã huỷ | Ngừng |
 
+**Các bước đấu thầu.** Đầu trang chi tiết gói thầu hiện 6 bước: Nhận thông tin → Lập kế hoạch đấu thầu → Triển khai lập hồ sơ thầu → Đánh giá hồ sơ thầu → Nộp thầu → Kết quả đấu thầu. Xong một trong 4 bước đầu, người có quyền quản lý đấu thầu chọn một người duyệt có vai trò cấu hình cho bước đó (xem **Luồng duyệt** "Gói thầu – duyệt chuyển bước") rồi bấm **Gửi duyệt chuyển bước**. Người duyệt phải khác người gửi và người phụ trách gói thầu, và có quyền xem gói thầu. Người duyệt nhận thông báo; **Duyệt** thì gói thầu tự chuyển sang bước kế tiếp và người phụ trách được báo, **Trả lại** bắt buộc ghi lý do và gói thầu giữ nguyên bước. Chỉ khi đã tới bước Nộp thầu mới nộp được hồ sơ; nộp xong gói thầu sang Kết quả đấu thầu. Trúng thầu thì khung này có nút tạo hợp đồng. Gói thầu có trước khi có các bước được xếp: đã nộp/có kết quả → Kết quả đấu thầu; đã đủ điều kiện nộp → Nộp thầu; còn lại → Triển khai lập hồ sơ thầu.
+
 **Checklist hồ sơ thầu**
 
 - Mặc định có 7 dòng chuẩn; bản vẽ dự thầu là tùy chọn. Có thể thêm dòng riêng cho gói thầu, đặt dòng nào bắt buộc theo thư mời, hoặc đánh dấu dòng tùy chọn **Không áp dụng** kèm lý do. Chỉ xóa được dòng riêng còn trống; dòng chuẩn giữ lại để đối chiếu.
@@ -561,6 +563,7 @@ Bảng đơn giá cũ (chưa cấu hình trường) có thể chọn nhiều b�
 3. Có dự toán đã duyệt.
 4. Gói thầu thuộc một Dự án và có **Tài chính rà soát hồ sơ thầu** đã duyệt.
 5. Người nộp có quyền nộp thầu riêng (ghi kết quả Trúng/Trượt là quyền khác).
+6. Gói thầu đã được duyệt tới bước Nộp thầu (xem **Các bước đấu thầu**).
 
 Khi nộp, ghi kênh nộp và số biên nhận (nếu có). Hệ thống lưu một bản chụp không sửa được gồm đúng các phiên bản bằng chứng, dự toán, kế hoạch, rà soát Tài chính, người nộp và thời điểm. Nếu bên mời thầu yêu cầu bổ sung, thêm phiên bản bằng chứng mới và tạo lần nộp bổ sung; các bản chụp và thời điểm nộp đầu không đổi. Sau Trúng, Trượt hoặc Đã huỷ, checklist bị khóa.
 
@@ -1374,6 +1377,7 @@ Trang quản trị ở `/admin`, dành cho người đã đăng nhập và có q
 - Thêm hoặc sửa luồng: chọn **Nghiệp vụ cần duyệt** (nghiệp vụ đã có luồng sẽ mờ, vì mỗi nghiệp vụ chỉ có một luồng), đặt tên, rồi với mỗi bước chỉ cần chọn **Vai trò duyệt**. Tên bước để trống thì hệ thống ghi theo vai trò, ví dụ "Trưởng phòng Cung ứng duyệt". **Thời hạn xử lý** tính bằng giờ (24 giờ = 1 ngày). Tắt **Đang áp dụng** để tạm ngưng luồng mà không xoá.
 - Mã kỹ thuật chỉ cần nhập khi chọn **Nghiệp vụ khác**.
 - Luồng **Duyệt báo giá** được áp dụng thật: khi gửi duyệt, người gửi chọn người cho từng bước theo đúng thứ tự ở đây (xem mục **Gửi duyệt báo giá nội bộ** ở [12.2](#122-mẫu-email-và-email-gửi-duyệt)). Vai trò ở mỗi bước phải đang dùng và có quyền "Xem báo giá", "Duyệt báo giá"; vai trò có bước "mọi người đều phải duyệt" không lặp lại ở bước khác. Sai thì không lưu được, và hệ thống liệt kê một lần tất cả các bước cần sửa. Luồng đang tắt thì vẫn lưu được, nên có thể tắt một luồng đang lỗi trước rồi sửa sau. Nếu một bước đã lưu từ trước mà nay không ai duyệt được (vai trò ngừng dùng, thiếu quyền, hoặc chưa có ai đang hoạt động có email), danh sách đánh dấu bước đó và ghi cách xử lý. Sửa luồng chỉ áp dụng cho lần gửi duyệt sau; báo giá đang chờ giữ chuỗi lúc gửi.
+- Luồng **Gói thầu – duyệt chuyển bước** được áp dụng thật: bước 1–4 theo thứ tự là vai trò duyệt hoàn tất Nhận thông tin, Lập kế hoạch đấu thầu, Triển khai lập hồ sơ thầu, Đánh giá hồ sơ thầu. Mỗi bước gói thầu chỉ cần một người duyệt (ô "mọi người đều phải duyệt" không áp dụng cho luồng này). Thiếu bước hoặc tắt luồng thì trang gói thầu báo cần cấu hình.
 - Các luồng khác (hợp đồng, gói thầu, thiết kế) hiện là quy trình chung để mọi người làm theo; người duyệt trên từng phiếu do màn hình của nghiệp vụ đó áp dụng.
 
 **Xuất Excel.** Các danh sách liên hệ, hồ sơ ứng tuyển, bài đăng, dự án, bản dịch, danh mục hoạt động, hình thức làm việc, logo (khách hàng, đối tác, nhà cung cấp, giải thưởng) có nút **Xuất Excel**, tải dữ liệu đang lọc dưới dạng CSV UTF-8 mở được bằng Excel. Nút bị khóa khi danh sách trống.

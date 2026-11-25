@@ -272,6 +272,7 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
     /// </summary>
     protected async Task<HttpResponseMessage> SubmitTenderAsync(int tenderId)
     {
+        await AdvanceTenderToSubmissionStageAsync(tenderId);
         using var detailResponse = await Client.GetAsync($"/api/tenders/{tenderId}");
         detailResponse.EnsureSuccessStatusCode();
         var rowVersion = (await ReadJsonAsync(detailResponse)).GetProperty("rowVersion").GetString();
@@ -287,6 +288,18 @@ public abstract class IntegrationTestBase : IClassFixture<NihomeWebApplicationFa
         request.Headers.Add("Idempotency-Key", Guid.NewGuid().ToString("N"));
         return await Client.SendAsync(request);
     }
+
+    /// <summary>
+    /// Puts a tender at the Nộp thầu stage, as if its stage approvals were done, so tests of
+    /// the other submission gates do not repeat the approval chain (covered in TenderServiceTests).
+    /// </summary>
+    protected Task AdvanceTenderToSubmissionStageAsync(int tenderId) =>
+        WithDbAsync(async db =>
+        {
+            var tender = await db.Tenders.SingleAsync(item => item.Id == tenderId);
+            if (tender.Stage < TenderStage.Submission) tender.Stage = TenderStage.Submission;
+            await db.SaveChangesAsync();
+        });
 
     /// <summary>Builds a short unique slug suitable for column length limits.</summary>
     protected static string UniqueSlug(string prefix) =>

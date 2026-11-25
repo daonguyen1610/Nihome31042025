@@ -27,6 +27,24 @@
       "adminDescription": "Người phụ trách được thông báo khi được giao một mục hồ sơ dự thầu."
     },
     {
+      "code": "tender.stage.approval-requested",
+      "module": "crm.tenders",
+      "channel": "InApp",
+      "adminDescription": "Người được chọn duyệt chuyển bước gói thầu được thông báo có bước chờ duyệt."
+    },
+    {
+      "code": "tender.stage.advanced",
+      "module": "crm.tenders",
+      "channel": "InApp",
+      "adminDescription": "Người phụ trách và người gửi duyệt biết gói thầu đã được duyệt sang bước kế tiếp."
+    },
+    {
+      "code": "tender.stage.returned",
+      "module": "crm.tenders",
+      "channel": "InApp",
+      "adminDescription": "Người gửi duyệt biết bước gói thầu bị trả lại, kèm lý do."
+    },
+    {
       "code": "quote.submitted-for-approval",
       "module": "crm.quotes",
       "channel": "Both",

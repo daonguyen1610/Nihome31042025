@@ -63,6 +63,11 @@ const BUSINESS_ACTIONS = [
   { module: "contracts", action: "sign", labelKey: "workflow.business.contractsSign" },
   { module: "tenders", action: "submit", labelKey: "workflow.business.tendersSubmit" },
   {
+    module: "tenders",
+    action: "advance-stage",
+    labelKey: "workflow.business.tendersAdvanceStage",
+  },
+  {
     module: "design.concepts",
     action: "approve",
     labelKey: "workflow.business.designConceptsApprove",
