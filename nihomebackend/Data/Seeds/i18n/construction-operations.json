@@ -1386,7 +1386,7 @@
   {
     "key": "rbac.perm.construction.resource-request.cm-review.label",
     "category": "rbac",
-    "vi": "CM duyệt đề xuất nguồn lực",
+    "vi": "Phòng CM duyệt đề xuất nguồn lực",
     "en": "CM review resource requests",
     "zh": "CM审核资源申请",
     "ja": "CMリソース申請審査"
@@ -1402,7 +1402,7 @@
   {
     "key": "rbac.perm.construction.qa-qc.view.label",
     "category": "rbac",
-    "vi": "Xem hồ sơ QA/QC",
+    "vi": "Xem hồ sơ chất lượng (QA/QC)",
     "en": "View QA/QC dossiers",
     "zh": "查看QA/QC档案",
     "ja": "QA/QC記録を表示"
@@ -1418,7 +1418,7 @@
   {
     "key": "rbac.perm.construction.qa-qc.create.label",
     "category": "rbac",
-    "vi": "Lập hồ sơ QA/QC",
+    "vi": "Lập hồ sơ chất lượng (QA/QC)",
     "en": "Create QA/QC dossiers",
     "zh": "创建QA/QC档案",
     "ja": "QA/QC記録を作成"
@@ -1434,7 +1434,7 @@
   {
     "key": "rbac.perm.construction.qa-qc.cm-review.label",
     "category": "rbac",
-    "vi": "CM duyệt hồ sơ QA/QC",
+    "vi": "Phòng CM duyệt hồ sơ chất lượng (QA/QC)",
     "en": "CM review QA/QC dossiers",
     "zh": "CM审核QA/QC档案",
     "ja": "CM QA/QC審査"
@@ -1450,7 +1450,7 @@
   {
     "key": "rbac.perm.construction.qa-qc.template-manage.label",
     "category": "rbac",
-    "vi": "Quản lý mẫu QA/QC",
+    "vi": "Quản lý mẫu hồ sơ chất lượng (QA/QC)",
     "en": "Manage QA/QC templates",
     "zh": "管理QA/QC模板",
     "ja": "QA/QCテンプレートを管理"
@@ -1466,7 +1466,7 @@
   {
     "key": "rbac.perm.construction.qs.view.label",
     "category": "rbac",
-    "vi": "Xem hồ sơ QS",
+    "vi": "Xem hồ sơ khối lượng (QS)",
     "en": "View QS batches",
     "zh": "查看QS批次",
     "ja": "QSバッチを表示"
@@ -1482,7 +1482,7 @@
   {
     "key": "rbac.perm.construction.qs.create.label",
     "category": "rbac",
-    "vi": "Lập hồ sơ QS",
+    "vi": "Lập hồ sơ khối lượng (QS)",
     "en": "Create QS batches",
     "zh": "创建QS批次",
     "ja": "QSバッチを作成"
@@ -1498,7 +1498,7 @@
   {
     "key": "rbac.perm.construction.qs.cm-review.label",
     "category": "rbac",
-    "vi": "CM duyệt hồ sơ QS",
+    "vi": "Phòng CM duyệt hồ sơ khối lượng (QS)",
     "en": "CM review QS batches",
     "zh": "CM审核QS批次",
     "ja": "CM QS審査"

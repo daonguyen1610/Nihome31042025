@@ -2,7 +2,7 @@
   {
     "key": "rbac.perm.dashboard.view.label",
     "category": "rbac",
-    "vi": "Xem Dashboard",
+    "vi": "Xem trang tổng quan",
     "en": "View dashboard",
     "zh": "查看仪表板",
     "ja": "ダッシュボードを表示"
@@ -114,10 +114,10 @@
   {
     "key": "rbac.perm.system.audit.view.label",
     "category": "rbac",
-    "vi": "Xem nhật ký kiểm toán",
-    "en": "View audit log",
-    "zh": "查看审计日志",
-    "ja": "監査ログを表示"
+    "vi": "Xem nhật ký hoạt động hệ thống",
+    "en": "View system activity log",
+    "zh": "查看系统操作日志",
+    "ja": "システム操作ログを表示"
   },
   {
     "key": "rbac.perm.system.audit.view.description",
@@ -130,10 +130,10 @@
   {
     "key": "rbac.perm.system.audit.manage.label",
     "category": "rbac",
-    "vi": "Quản lý nhật ký kiểm toán",
-    "en": "Manage audit log",
-    "zh": "管理审计日志",
-    "ja": "監査ログを管理"
+    "vi": "Quản lý nhật ký hoạt động hệ thống",
+    "en": "Manage system activity log",
+    "zh": "管理系统操作日志",
+    "ja": "システム操作ログを管理"
   },
   {
     "key": "rbac.perm.system.audit.manage.description",
@@ -210,10 +210,10 @@
   {
     "key": "rbac.perm.content.activities.view.label",
     "category": "rbac",
-    "vi": "Xem hoạt động",
-    "en": "View activities",
-    "zh": "查看活动",
-    "ja": "アクティビティを表示"
+    "vi": "Xem bài hoạt động trên website",
+    "en": "View website activity posts",
+    "zh": "查看网站活动文章",
+    "ja": "ウェブサイトの活動記事を表示"
   },
   {
     "key": "rbac.perm.content.activities.view.description",
@@ -226,10 +226,10 @@
   {
     "key": "rbac.perm.content.activities.manage.label",
     "category": "rbac",
-    "vi": "Quản lý hoạt động",
-    "en": "Manage activities",
-    "zh": "管理活动",
-    "ja": "アクティビティを管理"
+    "vi": "Quản lý bài hoạt động trên website",
+    "en": "Manage website activity posts",
+    "zh": "管理网站活动文章",
+    "ja": "ウェブサイトの活動記事を管理"
   },
   {
     "key": "rbac.perm.content.activities.manage.description",
@@ -242,10 +242,10 @@
   {
     "key": "rbac.perm.content.activity-categories.view.label",
     "category": "rbac",
-    "vi": "Xem danh mục hoạt động",
-    "en": "View activity categories",
-    "zh": "查看活动分类",
-    "ja": "アクティビティのカテゴリを表示"
+    "vi": "Xem danh mục bài hoạt động trên website",
+    "en": "View website activity categories",
+    "zh": "查看网站活动分类",
+    "ja": "ウェブサイトの活動カテゴリを表示"
   },
   {
     "key": "rbac.perm.content.activity-categories.view.description",
@@ -258,10 +258,10 @@
   {
     "key": "rbac.perm.content.activity-categories.manage.label",
     "category": "rbac",
-    "vi": "Quản lý danh mục hoạt động",
-    "en": "Manage activity categories",
-    "zh": "管理活动分类",
-    "ja": "アクティビティのカテゴリを管理"
+    "vi": "Quản lý danh mục bài hoạt động trên website",
+    "en": "Manage website activity categories",
+    "zh": "管理网站活动分类",
+    "ja": "ウェブサイトの活動カテゴリを管理"
   },
   {
     "key": "rbac.perm.content.activity-categories.manage.description",
@@ -370,10 +370,10 @@
   {
     "key": "rbac.perm.content.projects.view.label",
     "category": "rbac",
-    "vi": "Xem dự án",
-    "en": "View projects",
-    "zh": "查看项目",
-    "ja": "プロジェクトを表示"
+    "vi": "Xem dự án trên website",
+    "en": "View website projects",
+    "zh": "查看网站项目",
+    "ja": "ウェブサイトのプロジェクトを表示"
   },
   {
     "key": "rbac.perm.content.projects.view.description",
@@ -386,10 +386,10 @@
   {
     "key": "rbac.perm.content.projects.manage.label",
     "category": "rbac",
-    "vi": "Quản lý dự án",
-    "en": "Manage projects",
-    "zh": "管理项目",
-    "ja": "プロジェクトを管理"
+    "vi": "Quản lý dự án trên website",
+    "en": "Manage website projects",
+    "zh": "管理网站项目",
+    "ja": "ウェブサイトのプロジェクトを管理"
   },
   {
     "key": "rbac.perm.content.projects.manage.description",
@@ -402,10 +402,10 @@
   {
     "key": "rbac.perm.content.project-categories.view.label",
     "category": "rbac",
-    "vi": "Xem danh mục dự án",
-    "en": "View project categories",
-    "zh": "查看项目分类",
-    "ja": "プロジェクトのカテゴリを表示"
+    "vi": "Xem danh mục dự án trên website",
+    "en": "View website project categories",
+    "zh": "查看网站项目分类",
+    "ja": "ウェブサイトのプロジェクトカテゴリを表示"
   },
   {
     "key": "rbac.perm.content.project-categories.view.description",
@@ -418,10 +418,10 @@
   {
     "key": "rbac.perm.content.project-categories.manage.label",
     "category": "rbac",
-    "vi": "Quản lý danh mục dự án",
-    "en": "Manage project categories",
-    "zh": "管理项目分类",
-    "ja": "プロジェクトのカテゴリを管理"
+    "vi": "Quản lý danh mục dự án trên website",
+    "en": "Manage website project categories",
+    "zh": "管理网站项目分类",
+    "ja": "ウェブサイトのプロジェクトカテゴリを管理"
   },
   {
     "key": "rbac.perm.content.project-categories.manage.description",
@@ -434,10 +434,10 @@
   {
     "key": "rbac.perm.content.services.view.label",
     "category": "rbac",
-    "vi": "Xem dịch vụ",
-    "en": "View services",
-    "zh": "查看服务",
-    "ja": "サービスを表示"
+    "vi": "Xem dịch vụ trên website",
+    "en": "View website services",
+    "zh": "查看网站服务",
+    "ja": "ウェブサイトのサービスを表示"
   },
   {
     "key": "rbac.perm.content.services.view.description",
@@ -450,10 +450,10 @@
   {
     "key": "rbac.perm.content.services.manage.label",
     "category": "rbac",
-    "vi": "Quản lý dịch vụ",
-    "en": "Manage services",
-    "zh": "管理服务",
-    "ja": "サービスを管理"
+    "vi": "Quản lý dịch vụ trên website",
+    "en": "Manage website services",
+    "zh": "管理网站服务",
+    "ja": "ウェブサイトのサービスを管理"
   },
   {
     "key": "rbac.perm.content.services.manage.description",
@@ -466,10 +466,10 @@
   {
     "key": "rbac.perm.content.slideshow.view.label",
     "category": "rbac",
-    "vi": "Xem trình chiếu",
-    "en": "View slideshow",
-    "zh": "查看幻灯片",
-    "ja": "スライドショーを表示"
+    "vi": "Xem ảnh trình chiếu trang chủ",
+    "en": "View home page slideshow",
+    "zh": "查看首页幻灯片",
+    "ja": "トップページのスライドショーを表示"
   },
   {
     "key": "rbac.perm.content.slideshow.view.description",
@@ -482,10 +482,10 @@
   {
     "key": "rbac.perm.content.slideshow.manage.label",
     "category": "rbac",
-    "vi": "Quản lý trình chiếu",
-    "en": "Manage slideshow",
-    "zh": "管理幻灯片",
-    "ja": "スライドショーを管理"
+    "vi": "Quản lý ảnh trình chiếu trang chủ",
+    "en": "Manage home page slideshow",
+    "zh": "管理首页幻灯片",
+    "ja": "トップページのスライドショーを管理"
   },
   {
     "key": "rbac.perm.content.slideshow.manage.description",
@@ -1242,10 +1242,10 @@
   {
     "key": "rbac.perm.master-data.view.label",
     "category": "rbac",
-    "vi": "Xem dữ liệu chuẩn",
-    "en": "View master data",
-    "zh": "查看主数据",
-    "ja": "マスターデータを表示"
+    "vi": "Xem danh mục dùng chung",
+    "en": "View shared lists",
+    "zh": "查看通用目录",
+    "ja": "共通リストを表示"
   },
   {
     "key": "rbac.perm.master-data.view.description",
@@ -1258,10 +1258,10 @@
   {
     "key": "rbac.perm.master-data.manage.label",
     "category": "rbac",
-    "vi": "Quản lý dữ liệu chuẩn",
-    "en": "Manage master data",
-    "zh": "管理主数据",
-    "ja": "マスターデータを管理"
+    "vi": "Quản lý danh mục dùng chung",
+    "en": "Manage shared lists",
+    "zh": "管理通用目录",
+    "ja": "共通リストを管理"
   },
   {
     "key": "rbac.perm.master-data.manage.description",
@@ -1722,10 +1722,10 @@
   {
     "key": "rbac.perm.crm.contracts.view.upstream.all.label",
     "category": "rbac",
-    "vi": "Xem toàn bộ hợp đồng chính",
-    "en": "View all primary contracts",
-    "zh": "查看全部主合同",
-    "ja": "すべての主要契約を表示"
+    "vi": "Xem toàn bộ hợp đồng với khách hàng",
+    "en": "View all customer contracts",
+    "zh": "查看全部客户合同",
+    "ja": "すべての顧客契約を表示"
   },
   {
     "key": "rbac.perm.crm.contracts.view.upstream.all.description",
@@ -1738,10 +1738,10 @@
   {
     "key": "rbac.perm.crm.contracts.view.downstream.all.label",
     "category": "rbac",
-    "vi": "Xem toàn bộ hợp đồng đầu vào",
-    "en": "View all input contracts",
-    "zh": "查看全部下游合同",
-    "ja": "すべての下流契約を表示"
+    "vi": "Xem toàn bộ hợp đồng với nhà cung cấp, thầu phụ",
+    "en": "View all supplier and subcontractor contracts",
+    "zh": "查看全部供应商及分包合同",
+    "ja": "すべての仕入先・下請契約を表示"
   },
   {
     "key": "rbac.perm.crm.contracts.view.downstream.all.description",
@@ -1770,10 +1770,10 @@
   {
     "key": "rbac.perm.crm.contracts.activate.label",
     "category": "rbac",
-    "vi": "Kích hoạt hợp đồng",
-    "en": "Activate contract",
-    "zh": "激活合同",
-    "ja": "契約を有効化"
+    "vi": "Chuyển hợp đồng sang Đang thực hiện",
+    "en": "Start contract execution",
+    "zh": "将合同转为执行中",
+    "ja": "契約を履行中にする"
   },
   {
     "key": "rbac.perm.crm.contracts.activate.description",
@@ -2026,7 +2026,7 @@
   {
     "key": "rbac.perm.design.ifc.view.label",
     "category": "rbac",
-    "vi": "Xem phiếu phát hành IFC",
+    "vi": "Xem phiếu phát hành bản vẽ thi công (IFC)",
     "en": "View IFC releases",
     "zh": "查看IFC发布",
     "ja": "IFC発行を表示"
@@ -2042,7 +2042,7 @@
   {
     "key": "rbac.perm.design.ifc.manage.label",
     "category": "rbac",
-    "vi": "Chuẩn bị phiếu IFC",
+    "vi": "Chuẩn bị phiếu phát hành bản vẽ thi công (IFC)",
     "en": "Prepare IFC releases",
     "zh": "准备IFC发布",
     "ja": "IFC発行を準備"
@@ -2058,7 +2058,7 @@
   {
     "key": "rbac.perm.design.ifc.release.label",
     "category": "rbac",
-    "vi": "Phát hành IFC",
+    "vi": "Phát hành bản vẽ thi công (IFC)",
     "en": "Release IFC package",
     "zh": "发布IFC包",
     "ja": "IFCを発行"
@@ -2154,7 +2154,7 @@
   {
     "key": "rbac.perm.construction.punch.view.label",
     "category": "rbac",
-    "vi": "Xem danh mục lỗi",
+    "vi": "Xem danh sách lỗi cần khắc phục",
     "en": "View punch list",
     "zh": "查看缺陷清单",
     "ja": "パンチリストを表示"
@@ -2170,7 +2170,7 @@
   {
     "key": "rbac.perm.construction.punch.manage.label",
     "category": "rbac",
-    "vi": "Quản lý danh mục lỗi",
+    "vi": "Quản lý danh sách lỗi cần khắc phục",
     "en": "Manage punch list",
     "zh": "管理缺陷清单",
     "ja": "パンチリストを管理"
@@ -2178,7 +2178,7 @@
   {
     "key": "rbac.perm.construction.punch.manage.description",
     "category": "rbac",
-    "vi": "Tạo/chỉnh sửa/xoá lỗi, gán người xử lý, chuyển sang In Progress / Fixed / Cancelled hoặc mở lại lỗi.",
+    "vi": "Tạo, sửa, xoá lỗi, giao người xử lý, chuyển sang Đang xử lý / Đã sửa / Đã huỷ hoặc mở lại lỗi.",
     "en": "Create / edit / delete items, assign owners, transition to InProgress / Fixed / Cancelled or reopen.",
     "zh": "创建/编辑/删除缺陷、分配负责人、切换至处理中/已修复/取消，或重新打开。",
     "ja": "項目の作成・編集・削除、担当者割当、対応中/修正済/取消への遷移および再オープンを行います。"
@@ -2186,7 +2186,7 @@
   {
     "key": "rbac.perm.construction.punch.verify.label",
     "category": "rbac",
-    "vi": "Xác nhận đóng lỗi",
+    "vi": "Xác nhận lỗi đã khắc phục",
     "en": "Verify punch close-out",
     "zh": "确认缺陷关闭",
     "ja": "パンチ完了を検証"
@@ -2665,9 +2665,9 @@
   {"key":"rbac.perm.proc.boq.manage.description","category":"rbac","vi":"Lập, sửa và trình duyệt phiên bản BOQ.","en":"Prepare, edit, and submit BOQ revisions.","zh":"编制、编辑并提交工程量清单版本。","ja":"BOQ版を作成・編集・申請します。"},
   {"key":"rbac.perm.proc.boq.approve.label","category":"rbac","vi":"Duyệt BOQ dự án","en":"Approve project BOQs","zh":"审批项目工程量清单","ja":"プロジェクトBOQを承認"},
   {"key":"rbac.perm.proc.boq.approve.description","category":"rbac","vi":"Phê duyệt phiên bản BOQ làm ngân sách vật tư chính thức.","en":"Approve a BOQ revision as the official material budget.","zh":"批准工程量清单版本作为正式材料预算。","ja":"BOQ版を正式な資材予算として承認します。"},
-  {"key":"rbac.perm.proc.contract-lines.view.label","category":"rbac","vi":"Xem dòng hợp đồng mua sắm","en":"View procurement contract lines","zh":"查看采购合同明细","ja":"調達契約明細を表示"},
+  {"key":"rbac.perm.proc.contract-lines.view.label","category":"rbac","vi":"Xem hạng mục hợp đồng với nhà cung cấp","en":"View supplier contract lines","zh":"查看供应商合同明细","ja":"仕入先契約明細を表示"},
   {"key":"rbac.perm.proc.contract-lines.view.description","category":"rbac","vi":"Xem các dòng hợp đồng với nhà cung cấp theo dự án.","en":"View supplier contract lines by project.","zh":"按项目查看供应商合同明细。","ja":"プロジェクト別の仕入先契約明細を表示します。"},
-  {"key":"rbac.perm.proc.contract-lines.manage.label","category":"rbac","vi":"Quản lý dòng hợp đồng mua sắm","en":"Manage procurement contract lines","zh":"管理采购合同明细","ja":"調達契約明細を管理"},
+  {"key":"rbac.perm.proc.contract-lines.manage.label","category":"rbac","vi":"Quản lý hạng mục hợp đồng với nhà cung cấp","en":"Manage supplier contract lines","zh":"管理供应商合同明细","ja":"仕入先契約明細を管理"},
   {"key":"rbac.perm.proc.contract-lines.manage.description","category":"rbac","vi":"Thêm, sửa và xóa dòng hợp đồng với nhà cung cấp.","en":"Create, edit, and delete supplier contract lines.","zh":"新增、编辑和删除供应商合同明细。","ja":"仕入先契約明細を作成・編集・削除します。"},
   {"key":"rbac.perm.proc.material-requests.view.label","category":"rbac","vi":"Xem yêu cầu vật tư","en":"View material requests","zh":"查看材料申请","ja":"資材依頼を表示"},
   {"key":"rbac.perm.proc.material-requests.view.description","category":"rbac","vi":"Xem yêu cầu vật tư của dự án.","en":"View project material requests.","zh":"查看项目材料申请。","ja":"プロジェクトの資材依頼を表示します。"},
@@ -2675,13 +2675,13 @@
   {"key":"rbac.perm.proc.material-requests.manage.description","category":"rbac","vi":"Tạo, sửa và trình duyệt yêu cầu vật tư.","en":"Create, edit, and submit material requests.","zh":"创建、编辑并提交材料申请。","ja":"資材依頼を作成・編集・申請します。"},
   {"key":"rbac.perm.proc.material-requests.approve.label","category":"rbac","vi":"Duyệt yêu cầu vật tư","en":"Approve material requests","zh":"审批材料申请","ja":"資材依頼を承認"},
   {"key":"rbac.perm.proc.material-requests.approve.description","category":"rbac","vi":"Phê duyệt hoặc từ chối yêu cầu vật tư.","en":"Approve or reject material requests.","zh":"批准或驳回材料申请。","ja":"資材依頼を承認または却下します。"},
-  {"key":"rbac.perm.proc.rfqs.view.label","category":"rbac","vi":"Xem RFQ dự án","en":"View project RFQs","zh":"查看项目询价","ja":"プロジェクト見積依頼を表示"},
+  {"key":"rbac.perm.proc.rfqs.view.label","category":"rbac","vi":"Xem yêu cầu báo giá nhà cung cấp (RFQ)","en":"View project RFQs","zh":"查看项目询价","ja":"プロジェクト見積依頼を表示"},
   {"key":"rbac.perm.proc.rfqs.view.description","category":"rbac","vi":"Xem yêu cầu báo giá và báo giá của nhà cung cấp.","en":"View requests for quotation and supplier bids.","zh":"查看询价单和供应商报价。","ja":"見積依頼と仕入先の見積を表示します。"},
-  {"key":"rbac.perm.proc.rfqs.manage.label","category":"rbac","vi":"Quản lý RFQ dự án","en":"Manage project RFQs","zh":"管理项目询价","ja":"プロジェクト見積依頼を管理"},
+  {"key":"rbac.perm.proc.rfqs.manage.label","category":"rbac","vi":"Quản lý yêu cầu báo giá nhà cung cấp (RFQ)","en":"Manage project RFQs","zh":"管理项目询价","ja":"プロジェクト見積依頼を管理"},
   {"key":"rbac.perm.proc.rfqs.manage.description","category":"rbac","vi":"Tạo, gửi RFQ và nhập báo giá của nhà cung cấp.","en":"Create and send RFQs and record supplier bids.","zh":"创建并发送询价单，录入供应商报价。","ja":"見積依頼を作成・送付し、仕入先の見積を登録します。"},
-  {"key":"rbac.perm.proc.rfqs.export.label","category":"rbac","vi":"Xuất RFQ dự án","en":"Export project RFQs","zh":"导出项目询价","ja":"プロジェクト見積依頼をエクスポート"},
+  {"key":"rbac.perm.proc.rfqs.export.label","category":"rbac","vi":"Xuất yêu cầu báo giá nhà cung cấp (RFQ)","en":"Export project RFQs","zh":"导出项目询价","ja":"プロジェクト見積依頼をエクスポート"},
   {"key":"rbac.perm.proc.rfqs.export.description","category":"rbac","vi":"Xuất RFQ và bảng so sánh báo giá ra tệp.","en":"Export RFQs and bid comparisons to a file.","zh":"将询价单和报价比较导出为文件。","ja":"見積依頼と見積比較をファイルに出力します。"},
-  {"key":"rbac.perm.proc.rfqs.award.label","category":"rbac","vi":"Duyệt chọn nhà cung cấp RFQ","en":"Approve RFQ awards","zh":"审批询价定标","ja":"見積依頼の選定を承認"},
+  {"key":"rbac.perm.proc.rfqs.award.label","category":"rbac","vi":"Duyệt chọn nhà cung cấp từ yêu cầu báo giá (RFQ)","en":"Approve RFQ awards","zh":"审批询价定标","ja":"見積依頼の選定を承認"},
   {"key":"rbac.perm.proc.rfqs.award.description","category":"rbac","vi":"Phê duyệt nhà cung cấp trúng thầu cho RFQ.","en":"Approve the winning supplier for an RFQ.","zh":"批准询价的中标供应商。","ja":"見積依頼の落札仕入先を承認します。"},
   {"key":"rbac.perm.proc.vendor-ratings.view.label","category":"rbac","vi":"Xem đánh giá nhà cung cấp","en":"View vendor ratings","zh":"查看供应商评价","ja":"仕入先評価を表示"},
   {"key":"rbac.perm.proc.vendor-ratings.view.description","category":"rbac","vi":"Xem điểm đánh giá nhà cung cấp theo dự án.","en":"View vendor rating scores by project.","zh":"按项目查看供应商评分。","ja":"プロジェクト別の仕入先評価を表示します。"},

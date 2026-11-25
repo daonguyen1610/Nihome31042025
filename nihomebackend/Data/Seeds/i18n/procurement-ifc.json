@@ -98,7 +98,7 @@
   {
     "key": "rbac.perm.proc.ifc.view.label",
     "category": "rbac",
-    "vi": "Xem hồ sơ IFC được gửi",
+    "vi": "Xem bản vẽ thi công (IFC) được gửi",
     "en": "View addressed IFC dossiers",
     "zh": "查看发送给自己的IFC档案",
     "ja": "自分宛のIFC図書を表示"
@@ -106,7 +106,7 @@
   {
     "key": "rbac.perm.proc.ifc.acknowledge.label",
     "category": "rbac",
-    "vi": "Xác nhận nhận IFC",
+    "vi": "Xác nhận đã nhận bản vẽ thi công (IFC)",
     "en": "Confirm IFC receipt",
     "zh": "确认收到IFC",
     "ja": "IFC受領を確認"
