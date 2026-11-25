@@ -270,7 +270,7 @@ export const DesignSchedulePhaseDialog = ({
         </div>
         {error ? (
           <div
-            className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+            className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
             role="alert"
           >
             <p>{error}</p>

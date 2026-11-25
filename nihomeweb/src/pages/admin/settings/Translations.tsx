@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { TRANSLATIONS_CHANGED_EVENT, useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -260,6 +261,7 @@ const contentFieldKey = (field: string) => `translations.contentField.${field}`;
 const TranslationsPage = () => {
   const uiError = useUiError();
   const { t } = useI18n();
+  const confirmAction = useConfirm();
   const { toast } = useToast();
   const { has } = usePermissions();
   const canManageTranslations = has(ADMIN_PERMS.translationsManage);
@@ -419,7 +421,7 @@ const TranslationsPage = () => {
   };
 
   const deletePair = async (key: string) => {
-    if (!confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await api.delete(`/translations/key/${encodeURIComponent(key)}`);
       toast({ title: t("form.deleted") });
@@ -558,7 +560,7 @@ const TranslationsPage = () => {
 
   const resetEntityTranslations = async () => {
     if (!entityModalItem || !entityModalType) return;
-    if (!confirm(t("translations.confirmReset"))) return;
+    if (!(await confirmAction(t("translations.confirmReset")))) return;
     setEntitySaving(true);
     try {
       await api.delete(`/translations/entity/${entityModalType.type}/${entityModalItem.id}`);
@@ -936,7 +938,7 @@ const TranslationsPage = () => {
                       {item.translationCount === item.expectedFields ? (
                         <Badge
                           variant="outline"
-                          className="gap-1 border-emerald-200 bg-emerald-50 font-medium text-emerald-700"
+                          className="gap-1 border-success/30 bg-success-soft font-medium text-success-strong"
                         >
                           <Check className="h-3 w-3" /> {t("translations.translated")} (
                           {item.translationCount}/{item.expectedFields})
@@ -944,7 +946,7 @@ const TranslationsPage = () => {
                       ) : item.translationCount > 0 ? (
                         <Badge
                           variant="outline"
-                          className="gap-1 border-sky-200 bg-sky-50 font-medium text-sky-700"
+                          className="gap-1 border-info/30 bg-info-soft font-medium text-info-strong"
                         >
                           <Check className="h-3 w-3" /> {t("translations.partiallyTranslated")} (
                           {item.translationCount}/{item.expectedFields})
@@ -952,7 +954,7 @@ const TranslationsPage = () => {
                       ) : (
                         <Badge
                           variant="outline"
-                          className="gap-1 border-amber-200 bg-amber-50 font-medium text-amber-700"
+                          className="gap-1 border-warning/40 bg-warning-soft font-medium text-warning-strong"
                         >
                           <X className="h-3 w-3" /> {t("translations.notTranslated")}
                         </Badge>
@@ -1126,7 +1128,7 @@ const TranslationsPage = () => {
                           className="resize-y font-mono"
                         />
                         {hintKey && (
-                          <p className="text-[11px] leading-relaxed text-muted-foreground">
+                          <p className="text-xs leading-relaxed text-muted-foreground">
                             {t(hintKey)}
                           </p>
                         )}

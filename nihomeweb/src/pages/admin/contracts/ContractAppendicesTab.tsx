@@ -211,7 +211,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
 
   return (
     <div className="space-y-4">
-      <div className="rounded-lg border border-sky-200 bg-sky-50 p-3 text-sm text-sky-950">
+      <div className="rounded-lg border border-info/30 bg-info-soft p-3 text-sm text-sky-950">
         <div className="flex items-start gap-2">
           <FileText className="mt-0.5 h-4 w-4 shrink-0" />
           <div>
@@ -296,7 +296,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                         <span
                           className={cn(
                             "font-semibold",
-                            vo.valueDelta > 0 ? "text-emerald-700" : "text-rose-700",
+                            vo.valueDelta > 0 ? "text-success-strong" : "text-destructive",
                           )}
                         >
                           {vo.valueDelta > 0 ? "+" : ""}
@@ -388,7 +388,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                           variant="outline"
                           disabled={pendingActionId === vo.id}
                           onClick={() => openReject(vo)}
-                          className="border-rose-200 text-rose-700 hover:bg-rose-50"
+                          className="border-destructive/20 text-destructive hover:bg-destructive/10"
                         >
                           <ShieldX className="mr-1 h-3 w-3" />
                           {t("contracts.appendix.reject")}
@@ -402,7 +402,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                         variant="ghost"
                         disabled={pendingActionId === vo.id}
                         onClick={() => runAction(vo, "delete")}
-                        className="text-rose-700 hover:bg-rose-50"
+                        className="text-destructive hover:bg-destructive/10"
                       >
                         <Trash2 className="h-3 w-3" />
                       </Button>

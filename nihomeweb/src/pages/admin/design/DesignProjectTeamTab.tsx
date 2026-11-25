@@ -134,9 +134,9 @@ const emptyAssignmentForm = (): AssignmentForm => ({
 });
 const assignmentBadge: Record<ProjectAssignmentStatus, string> = {
   Planned: "border-border bg-muted/30 text-foreground",
-  InProgress: "border-sky-200 bg-sky-50 text-sky-700",
-  Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  InProgress: "border-info/30 bg-info-soft text-info-strong",
+  Completed: "border-success/30 bg-success-soft text-success-strong",
+  Cancelled: "border-destructive/20 bg-destructive/10 text-destructive",
   Reassigned: "border-border bg-muted/30 text-foreground",
 };
 
@@ -417,7 +417,7 @@ const AssignmentAttachments = ({
                         aria-label={t("designProjects.team.attachments.delete")}
                         onClick={() => void remove(attachment)}
                       >
-                        <Trash2 className="h-4 w-4 text-rose-600" />
+                        <Trash2 className="h-4 w-4 text-destructive" />
                       </Button>
                     ) : null}
                   </div>
@@ -443,7 +443,7 @@ const AssignmentAttachments = ({
             />
           ) : null}
           {error ? (
-            <p role="alert" className="text-sm text-rose-600">
+            <p role="alert" className="text-sm text-destructive">
               {error}
             </p>
           ) : null}
@@ -620,7 +620,7 @@ const AssignmentComments = ({
             <p className="text-sm text-muted-foreground">{t("common.loading")}</p>
           ) : loadError ? (
             <div className="space-y-2">
-              <p role="alert" className="text-sm text-rose-600">
+              <p role="alert" className="text-sm text-destructive">
                 {translateError(t, loadError)}
               </p>
               <Button type="button" variant="outline" size="sm" onClick={() => void load()}>
@@ -664,7 +664,7 @@ const AssignmentComments = ({
                         setPendingDelete(comment);
                       }}
                     >
-                      <Trash2 className="h-4 w-4 text-rose-600" />
+                      <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   ) : null}
                 </li>
@@ -682,7 +682,7 @@ const AssignmentComments = ({
               aria-label={t("designProjects.team.comments.placeholder")}
             />
             {error && (
-              <p role="alert" className="text-sm text-rose-600">
+              <p role="alert" className="text-sm text-destructive">
                 {error}
               </p>
             )}
@@ -1285,7 +1285,7 @@ export const OperationalProjectTeamPanel = ({
     );
   if (error || !team)
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
+      <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-5 text-sm text-destructive">
         <p>{error ?? t("common.error")}</p>
         <Button variant="outline" size="sm" className="mt-3" onClick={() => void load()}>
           <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
@@ -1416,7 +1416,7 @@ export const OperationalProjectTeamPanel = ({
                             aria-label={t("designProjects.team.action.endMember")}
                             onClick={() => openMember(member, "end")}
                           >
-                            <UserRoundX className="h-4 w-4 text-rose-600" />
+                            <UserRoundX className="h-4 w-4 text-destructive" />
                           </Button>
                         )}
                       </div>
@@ -1574,7 +1574,7 @@ export const OperationalProjectTeamPanel = ({
                                 aria-label={t("designProjects.team.action.endMember")}
                                 onClick={() => openMember(member, "end")}
                               >
-                                <UserRoundX className="h-4 w-4 text-rose-600" />
+                                <UserRoundX className="h-4 w-4 text-destructive" />
                               </Button>
                             )}
                           </div>
@@ -1741,7 +1741,7 @@ export const OperationalProjectTeamPanel = ({
                       <Button
                         size="sm"
                         variant="outline"
-                        className="text-rose-600"
+                        className="text-destructive"
                         onClick={() => requestTerminalAction(assignment, "Cancelled")}
                       >
                         <XCircle className="mr-1 h-4 w-4" />

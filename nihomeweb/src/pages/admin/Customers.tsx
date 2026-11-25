@@ -29,7 +29,7 @@ import { DeletionImpactDialog } from "@/components/admin/DeletionImpactDialog";
 import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -93,8 +93,8 @@ const ACTIVITY_TYPES: CustomerActivityType[] = ["Call", "Email", "Meeting", "Not
 
 // Soft-colored pills so every relationship status looks equally weighted in the table.
 const CUSTOMER_STATUS_STYLES: Record<CustomerRelationshipStatus, string> = {
-  Prospect: "border-sky-200 bg-sky-50 text-sky-700",
-  InProgress: "border-amber-200 bg-amber-50 text-amber-700",
+  Prospect: "border-info/30 bg-info-soft text-info-strong",
+  InProgress: "border-warning/40 bg-warning-soft text-warning-strong",
   Signed: "border-green-300 bg-green-100 text-green-800",
   Suspended: "border-border bg-muted text-muted-foreground",
 };
@@ -1150,7 +1150,7 @@ const AdminCustomers = () => {
                       <tr
                         key={c.id}
                         className="cursor-pointer hover:bg-muted/40"
-                        onClick={() => void openDetail(c.id)}
+                        {...rowAction(() => void openDetail(c.id))}
                       >
                         <td className="px-3 py-3">
                           <Badge
@@ -1209,7 +1209,7 @@ const AdminCustomers = () => {
                         )}
                         <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
                           <div>{formatDate(c.createdAt)}</div>
-                          <div className="text-[11px] opacity-70">
+                          <div className="text-xs opacity-70">
                             {formatTime(c.createdAt, lang, {
                               hour: "2-digit",
                               minute: "2-digit",
@@ -2000,7 +2000,7 @@ const AdminCustomers = () => {
                           <div className="flex items-center gap-2 font-medium">
                             {c.fullName}
                             {c.isPrimary && (
-                              <Badge variant="default" className="text-[10px]">
+                              <Badge variant="default" className="text-xs">
                                 <Star className="mr-1 h-3 w-3" />
                                 {t("customers.contact.primaryBadge")}
                               </Badge>
@@ -2008,7 +2008,7 @@ const AdminCustomers = () => {
                             {c.isLegalRepresentative && (
                               <Badge
                                 variant="outline"
-                                className="border-amber-300 bg-amber-50 text-[10px] text-amber-800"
+                                className="border-amber-300 bg-warning-soft text-xs text-warning-strong"
                               >
                                 {t("customers.contact.legalRepresentativeBadge")}
                               </Badge>
@@ -2455,7 +2455,7 @@ const RelatedSection = ({
       <div className="flex min-w-0 items-center gap-2 text-sm font-semibold">
         {icon}
         <span className="truncate">{title}</span>
-        <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1.5 text-[11px]">
+        <Badge variant="secondary" className="h-5 min-w-5 justify-center px-1.5 text-xs">
           {count}
         </Badge>
       </div>

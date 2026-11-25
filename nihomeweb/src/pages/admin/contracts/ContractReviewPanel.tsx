@@ -143,7 +143,7 @@ export function ContractReviewPanel({ contract, currentUserId, canSubmit, onChan
                 <span
                   aria-hidden
                   className={cn(
-                    "flex h-5 w-5 items-center justify-center rounded-full border text-[11px]",
+                    "flex h-5 w-5 items-center justify-center rounded-full border text-xs",
                     isCurrent && "border-primary bg-primary text-primary-foreground",
                     done && "border-success-strong bg-success-strong text-white",
                   )}

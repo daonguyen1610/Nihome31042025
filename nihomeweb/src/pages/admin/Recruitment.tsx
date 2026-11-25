@@ -15,6 +15,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/components/ui/confirmation";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { adminApi } from "@/services/adminApi";
@@ -69,10 +70,10 @@ function getExperienceLabel(code: string, names: Map<string, string>, t: (key: s
 }
 
 const APP_STATUS_STYLES: Record<string, string> = {
-  new: "border-sky-200 bg-sky-50 text-sky-700",
-  interview: "border-amber-200 bg-amber-50 text-amber-700",
+  new: "border-info/30 bg-info-soft text-info-strong",
+  interview: "border-warning/40 bg-warning-soft text-warning-strong",
   hired: "border-green-300 bg-green-100 text-green-800",
-  rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const APP_STATUS_DOT: Record<string, string> = {
@@ -93,6 +94,7 @@ function getErrorMessage(error: unknown) {
 
 const AdminRecruitment = () => {
   const { t, lang } = useI18n();
+  const confirmAction = useConfirm();
   const { toast } = useToast();
 
   const [positions, setPositions] = useState<JobPositionResponse[]>([]);
@@ -182,7 +184,8 @@ const AdminRecruitment = () => {
   }, [applications, appQuery]);
 
   const deletePosition = async (id: number, title: string) => {
-    if (!confirm(t("recruit.deletePositionConfirm").replace("{title}", title))) return;
+    if (!(await confirmAction(t("recruit.deletePositionConfirm").replace("{title}", title))))
+      return;
     setDeletingId(id);
     try {
       await adminApi.deleteJobPosition(id);
@@ -218,7 +221,7 @@ const AdminRecruitment = () => {
   };
 
   const deleteApp = async (id: number) => {
-    if (!confirm(t("recruit.deleteAppConfirm"))) return;
+    if (!(await confirmAction(t("recruit.deleteAppConfirm")))) return;
     try {
       await adminApi.deleteApplication(id);
       setApplications((prev) => prev.filter((a) => a.id !== id));

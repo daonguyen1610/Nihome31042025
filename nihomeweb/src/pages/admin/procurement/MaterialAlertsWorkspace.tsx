@@ -41,9 +41,9 @@ interface MaterialAlertsWorkspaceProps {
 }
 
 const statusClass: Record<MaterialAlertStatus, string> = {
-  Open: "border-rose-200 bg-rose-50 text-rose-800",
-  Acknowledged: "border-amber-200 bg-amber-50 text-amber-800",
-  Resolved: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  Open: "border-destructive/20 bg-destructive/10 text-rose-800",
+  Acknowledged: "border-warning/40 bg-warning-soft text-warning-strong",
+  Resolved: "border-success/30 bg-success-soft text-success-strong",
 };
 
 const severityClass: Record<MaterialAlertSeverity, string> = {

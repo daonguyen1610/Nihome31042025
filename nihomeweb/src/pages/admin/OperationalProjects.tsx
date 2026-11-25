@@ -96,17 +96,17 @@ import { formatDate as formatDateInZone, formatMoney, formatNumber } from "@/lib
 import { formatVnd } from "@/lib/numberFormat";
 
 const statusClass: Record<OperationalProjectStatus, string> = {
-  Planning: "border-sky-200 bg-sky-50 text-sky-700",
-  Active: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  OnHold: "border-amber-200 bg-amber-50 text-amber-700",
+  Planning: "border-info/30 bg-info-soft text-info-strong",
+  Active: "border-success/30 bg-success-soft text-success-strong",
+  OnHold: "border-warning/40 bg-warning-soft text-warning-strong",
   Completed: "border-border bg-muted/30 text-foreground",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  Cancelled: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const milestoneStatusClass: Record<PaymentMilestoneStatus, string> = {
-  Pending: "border-amber-200 bg-amber-50 text-amber-700",
-  Requested: "border-sky-200 bg-sky-50 text-sky-700",
-  Paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Pending: "border-warning/40 bg-warning-soft text-warning-strong",
+  Requested: "border-info/30 bg-info-soft text-info-strong",
+  Paid: "border-success/30 bg-success-soft text-success-strong",
 };
 
 type OperationalProjectForm = UpdateOperationalProjectRequest & { code: string };

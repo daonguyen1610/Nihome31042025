@@ -120,9 +120,9 @@ export const ContractHeader = ({
             className={cn(
               "mt-1 text-lg font-semibold",
               contract.approvedVoTotal > 0
-                ? "text-emerald-700"
+                ? "text-success-strong"
                 : contract.approvedVoTotal < 0
-                  ? "text-rose-700"
+                  ? "text-destructive"
                   : "text-foreground",
             )}
           >
@@ -130,8 +130,8 @@ export const ContractHeader = ({
             {formatMoney(contract.approvedVoTotal, contract.currency)}
           </div>
         </div>
-        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
-          <div className="text-xs text-emerald-700">
+        <div className="rounded-lg border border-success/30 bg-success-soft p-3">
+          <div className="text-xs text-success-strong">
             {t("contracts.detail.header.currentValue")}
           </div>
           <div className="mt-1 text-lg font-bold text-emerald-900">
@@ -150,7 +150,8 @@ export const ContractHeader = ({
               disabled={transitionBusy !== null}
               onClick={() => onTransition(target)}
               className={cn(
-                target === "Cancelled" && "border-rose-200 text-rose-700 hover:bg-rose-50",
+                target === "Cancelled" &&
+                  "border-destructive/20 text-destructive hover:bg-destructive/10",
               )}
             >
               {transitionBusy === target ? (
@@ -164,7 +165,7 @@ export const ContractHeader = ({
         </div>
       ) : null}
       {!editing && contract.type === "Unclassified" ? (
-        <p className="mt-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+        <p className="mt-4 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong">
           {t("contracts.validation.classifyBeforeTransition")}
         </p>
       ) : null}

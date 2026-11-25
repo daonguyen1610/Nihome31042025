@@ -299,11 +299,11 @@ const completionStepIcon = (state: CompletionStepState) => {
     );
   const tone =
     state === "done"
-      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      ? "border-success/30 bg-success-soft text-success-strong"
       : state === "current"
         ? "border-primary/30 bg-primary/5 text-primary"
         : state === "blocked"
-          ? "border-amber-200 bg-amber-50 text-amber-700"
+          ? "border-warning/40 bg-warning-soft text-warning-strong"
           : "border-border bg-muted text-muted-foreground";
   return (
     <span
@@ -547,7 +547,7 @@ const DepartmentWorkPackages = () => {
             ref={approvalNoticeRef}
             role={approvalFeedback.failed ? "alert" : "status"}
             data-testid="approval-email-feedback"
-            className={`rounded-lg border p-4 text-sm ${approvalFeedback.failed ? "border-destructive text-destructive" : "border-emerald-300 bg-emerald-50 text-emerald-900"}`}
+            className={`rounded-lg border p-4 text-sm ${approvalFeedback.failed ? "border-destructive text-destructive" : "border-emerald-300 bg-success-soft text-emerald-900"}`}
           >
             {approvalFeedback.message}
           </div>
@@ -576,7 +576,7 @@ const DepartmentWorkPackages = () => {
                     <Badge variant="secondary">{t(`workPackages.purpose.${detail.purpose}`)}</Badge>
                     {detail.isOverdue && (
                       <Badge
-                        className="border-rose-200 bg-rose-50 text-rose-700"
+                        className="border-destructive/20 bg-destructive/10 text-destructive"
                         variant="outline"
                         title={t("workPackages.overdue.help")}
                       >
@@ -725,9 +725,9 @@ const DepartmentWorkPackages = () => {
                         className={cn(
                           "mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full border",
                           completionPath.next.kind === "close"
-                            ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                            ? "border-success/30 bg-success-soft text-success-strong"
                             : completionPath.next.kind === "permit"
-                              ? "border-amber-200 bg-amber-50 text-amber-700"
+                              ? "border-warning/40 bg-warning-soft text-warning-strong"
                               : "border-border bg-muted text-muted-foreground",
                         )}
                       >
@@ -777,7 +777,7 @@ const DepartmentWorkPackages = () => {
                   {detail.completionBlockers.length > 0 && (
                     <div
                       id="work-package-completion-blockers"
-                      className="border-t border-amber-200 bg-amber-50 p-4 text-sm text-amber-900"
+                      className="border-t border-warning/40 bg-warning-soft p-4 text-sm text-amber-900"
                     >
                       <p className="flex items-center gap-2 font-medium">
                         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -1148,7 +1148,7 @@ const DepartmentWorkPackages = () => {
                         "p-4",
                         depth > 0 && "border-l-2 border-l-primary/30",
                         params.get("taskId") === String(task.id)
-                          ? "bg-amber-50"
+                          ? "bg-warning-soft"
                           : task.status === "Disabled" && "bg-muted",
                       )}
                       style={{ marginLeft: Math.min(depth, 3) * 12 }}
@@ -1181,8 +1181,8 @@ const DepartmentWorkPackages = () => {
                                   className={cn(
                                     "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-medium",
                                     permitReadyForTask
-                                      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                                      : "border-amber-200 bg-amber-50 text-amber-800",
+                                      ? "border-success/30 bg-success-soft text-success-strong"
+                                      : "border-warning/40 bg-warning-soft text-warning-strong",
                                   )}
                                 >
                                   {permitReadyForTask ? (
@@ -1213,7 +1213,7 @@ const DepartmentWorkPackages = () => {
                             {task.kpiDefinitionCode && <Badge>{t("workPackages.tasks.kpi")}</Badge>}
                             {task.isOverdue && (
                               <Badge
-                                className="border-rose-200 bg-rose-50 text-rose-700"
+                                className="border-destructive/20 bg-destructive/10 text-destructive"
                                 variant="outline"
                                 title={t("workPackages.overdue.help")}
                               >
@@ -1232,7 +1232,7 @@ const DepartmentWorkPackages = () => {
                             {formatDate(task.plannedEnd, lang, { timeZone: "UTC" })}
                           </p>
                           {(task.blockingPredecessorTaskIds ?? []).length > 0 && (
-                            <p className="text-sm text-amber-700">
+                            <p className="text-sm text-warning-strong">
                               {t("workPackages.blockers.predecessors", {
                                 tasks: blockingPredecessorCodes(task),
                               })}
@@ -1458,7 +1458,7 @@ const DepartmentWorkPackages = () => {
                     to={query ? `${page.path}?${query}` : page.path}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "flex items-center justify-center whitespace-nowrap rounded-md px-1.5 py-2 text-center text-[11px] font-medium transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
+                      "flex items-center justify-center whitespace-nowrap rounded-md px-1.5 py-2 text-center text-xs font-medium transition-colors sm:px-3 sm:py-1.5 sm:text-sm",
                       active
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground",
@@ -1637,7 +1637,7 @@ const DepartmentWorkPackages = () => {
                           </Badge>
                           {item.isOverdue && (
                             <Badge
-                              className="border-rose-200 bg-rose-50 text-rose-700"
+                              className="border-destructive/20 bg-destructive/10 text-destructive"
                               variant="outline"
                               title={t("workPackages.overdue.help")}
                             >
@@ -1710,7 +1710,7 @@ const DepartmentWorkPackages = () => {
                               )}
                             </span>
                             {overdueTasks > 0 && (
-                              <span className="inline-flex items-center gap-1 text-rose-700">
+                              <span className="inline-flex items-center gap-1 text-destructive">
                                 <AlertTriangle
                                   className="h-3.5 w-3.5 shrink-0"
                                   aria-hidden="true"

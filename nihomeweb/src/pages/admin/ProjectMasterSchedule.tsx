@@ -2014,7 +2014,7 @@ export const ProjectMasterSchedule = ({
                                         width: `${year.width}%`,
                                       }}
                                     >
-                                      <span className="block truncate px-1 text-[10px] leading-4 text-muted-foreground">
+                                      <span className="block truncate px-1 text-xs leading-4 text-muted-foreground">
                                         {year.label}
                                       </span>
                                     </div>
@@ -2040,7 +2040,7 @@ export const ProjectMasterSchedule = ({
                                       >
                                         {labelled && (
                                           <span
-                                            className="absolute inset-y-0 left-0 block truncate px-1 text-[10px] leading-5 text-muted-foreground"
+                                            className="absolute inset-y-0 left-0 block truncate px-1 text-xs leading-5 text-muted-foreground"
                                             style={{ width: `${span * 100}%` }}
                                           >
                                             {month.label}

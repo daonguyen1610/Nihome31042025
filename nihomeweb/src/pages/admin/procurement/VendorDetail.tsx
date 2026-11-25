@@ -152,7 +152,7 @@ export default function VendorDetail() {
                     variant="outline"
                     className={
                       vendor.isActive
-                        ? "whitespace-nowrap border-emerald-200 bg-emerald-50 text-emerald-700"
+                        ? "whitespace-nowrap border-success/30 bg-success-soft text-success-strong"
                         : "whitespace-nowrap"
                     }
                   >
@@ -185,7 +185,7 @@ export default function VendorDetail() {
               )}
             </div>
             {!vendor.isActive && (
-              <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+              <div className="rounded-md border border-amber-300 bg-warning-soft px-4 py-3 text-sm text-amber-900">
                 {t("proc.vendors.inactiveWarning")}
               </div>
             )}

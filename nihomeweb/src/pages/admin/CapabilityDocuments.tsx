@@ -54,8 +54,8 @@ const ALL_VALUE = "__all__";
 
 const EXPIRY_BADGE_STYLES: Record<CapabilityDocumentExpiryState, string> = {
   none: "border-border bg-muted/30 text-muted-foreground",
-  ok: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  warning: "border-amber-200 bg-amber-50 text-amber-800",
+  ok: "border-success/30 bg-success-soft text-success-strong",
+  warning: "border-warning/40 bg-warning-soft text-warning-strong",
   critical: "border-orange-300 bg-orange-100 text-orange-800",
   expired: "border-rose-300 bg-rose-100 text-rose-800",
 };
@@ -492,7 +492,7 @@ const CapabilityDocuments = () => {
           <Button
             size="icon"
             variant="ghost"
-            className="text-rose-600 hover:bg-rose-50 hover:text-rose-700"
+            className="text-destructive hover:bg-destructive/10 hover:text-destructive"
             onClick={() => void openDelete(r)}
             title={t("capDocs.action.delete")}
             aria-label={t("capDocs.action.delete")}
@@ -960,7 +960,7 @@ const CapabilityDocuments = () => {
                 )}
               </div>
 
-              {editError && <p className="text-sm text-rose-600">{editError}</p>}
+              {editError && <p className="text-sm text-destructive">{editError}</p>}
             </div>
           )}
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
@@ -1210,7 +1210,7 @@ const CapabilityDocuments = () => {
                 )}
               </div>
             </FieldScope>
-            {createError && <p className="text-sm text-rose-600">{createError}</p>}
+            {createError && <p className="text-sm text-destructive">{createError}</p>}
           </div>
           <DialogFooter className="flex-col-reverse gap-2 sm:flex-row">
             <Button

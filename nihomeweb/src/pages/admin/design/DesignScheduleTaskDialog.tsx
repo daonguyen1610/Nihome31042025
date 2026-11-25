@@ -837,7 +837,7 @@ export const DesignScheduleTaskDialog = ({
                 return (
                   <p
                     id="task-weight-hint"
-                    className={`mt-1 text-xs ${exact ? "text-muted-foreground" : "text-amber-700 dark:text-amber-400"}`}
+                    className={`mt-1 text-xs ${exact ? "text-muted-foreground" : "text-warning-strong dark:text-amber-400"}`}
                   >
                     {t("designProjects.schedule.hint.weightAfterSave", {
                       others,
@@ -913,7 +913,7 @@ export const DesignScheduleTaskDialog = ({
         </div>
         {error ? (
           <div
-            className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+            className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
             role="alert"
           >
             <p>{error}</p>

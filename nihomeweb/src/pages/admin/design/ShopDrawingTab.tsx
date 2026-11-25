@@ -70,12 +70,12 @@ import { RevisionsPanel } from "./RevisionsPanel";
 import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STATUS_BADGE: Record<ShopDrawingStatus, string> = {
-  Drafting: "border-sky-200 bg-sky-50 text-sky-700",
-  InReview: "border-amber-200 bg-amber-50 text-amber-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Drafting: "border-info/30 bg-info-soft text-info-strong",
+  InReview: "border-warning/40 bg-warning-soft text-warning-strong",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
   PendingIfc: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  Released: "border-emerald-300 bg-emerald-100 text-emerald-800",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  Released: "border-emerald-300 bg-emerald-100 text-success-strong",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const STATUS_STAT_KEY: Record<ShopDrawingStatus, string> = {
@@ -458,7 +458,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700">
+      <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -468,7 +468,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
     <div className="space-y-4" data-testid="shop-drawing-tab">
       {isBeforeShop ? (
         <p
-          className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800"
+          className="rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-warning-strong"
           data-testid="shop-drawing-locked-before"
         >
           {t("shopDrawing.lockedBefore")}
@@ -721,7 +721,7 @@ export const ShopDrawingTab = ({ project }: Props) => {
             </FieldScope>
           </div>
           {formError ? (
-            <p className="text-sm text-rose-600" data-testid="shop-drawing-form-error">
+            <p className="text-sm text-destructive" data-testid="shop-drawing-form-error">
               {formError}
             </p>
           ) : null}
@@ -763,9 +763,9 @@ export const ShopDrawingTab = ({ project }: Props) => {
 
 const TONE_BG: Record<string, string> = {
   slate: "border-border bg-muted/30 text-foreground",
-  sky: "border-sky-200 bg-sky-50 text-sky-700",
-  amber: "border-amber-200 bg-amber-50 text-amber-700",
-  emerald: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  sky: "border-info/30 bg-info-soft text-info-strong",
+  amber: "border-warning/40 bg-warning-soft text-warning-strong",
+  emerald: "border-success/30 bg-success-soft text-success-strong",
   indigo: "border-indigo-200 bg-indigo-50 text-indigo-700",
 };
 
@@ -781,7 +781,7 @@ const StatPill = ({
   icon?: React.ReactNode;
 }) => (
   <div className={cn("rounded-md border px-2.5 py-1.5", TONE_BG[tone] ?? TONE_BG.slate)}>
-    <p className="flex items-center gap-1 text-[11px] font-medium uppercase tracking-wide opacity-80">
+    <p className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide opacity-80">
       {icon}
       {label}
     </p>
@@ -860,7 +860,7 @@ const DisciplineSection = ({
             <div key={itemName} className="p-3">
               <p className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
                 {itemName}
-                <span className="ml-1 text-[10px] font-normal text-muted-foreground">
+                <span className="ml-1 text-xs font-normal text-muted-foreground">
                   · {docs.length}
                 </span>
               </p>
@@ -927,14 +927,14 @@ const DisciplineSection = ({
                         >
                           {t(`shopDrawing.status.${row.status}`)}
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {formatDate(row.updatedAt, lang)}
                         </span>
                         {canViewRevisions ? (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                            className="h-6 gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
                             onClick={() => onOpenRevisions(row)}
                             data-testid={`shop-drawing-revisions-${row.id}`}
                           >
@@ -961,7 +961,7 @@ const DisciplineSection = ({
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-xs text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-rose-800"
                             onClick={() => onDelete(row)}
                             data-testid={`shop-drawing-delete-${row.id}`}
                           >
@@ -975,7 +975,7 @@ const DisciplineSection = ({
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="mt-2 h-8 text-xs text-rose-700"
+                        className="mt-2 h-8 text-xs text-destructive"
                         onClick={() => onDelete(row)}
                       >
                         <Trash2 className="mr-1 h-3.5 w-3.5" />
@@ -1074,7 +1074,7 @@ const RowActions = ({
           <Button
             size="sm"
             variant="ghost"
-            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            className={cn(btn, "text-destructive hover:bg-destructive/10")}
             disabled={busy}
             onClick={() => onTransition("Rejected")}
           >
@@ -1116,7 +1116,7 @@ const RowActions = ({
           <Button
             size="sm"
             variant="ghost"
-            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            className={cn(btn, "text-destructive hover:bg-destructive/10")}
             disabled={busy}
             onClick={() => onTransition("Rejected")}
           >
@@ -1126,13 +1126,16 @@ const RowActions = ({
         </>
       )}
       {s === "Released" && (
-        <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-emerald-800">
+        <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-success-strong">
           <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
           {t("shopDrawing.status.Released")}
         </Badge>
       )}
       {s === "Rejected" && (
-        <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">
+        <Badge
+          variant="outline"
+          className="border-destructive/20 bg-destructive/10 text-destructive"
+        >
           <XCircle className="mr-1 h-3.5 w-3.5" />
           {t("shopDrawing.status.Rejected")}
         </Badge>
@@ -1141,7 +1144,7 @@ const RowActions = ({
         <Button
           size="sm"
           variant="ghost"
-          className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-rose-800")}
           onClick={onDelete}
           data-testid={`shop-drawing-delete-${row.id}`}
         >

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Plus, Pencil, Check, X, Trash2 } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/components/ui/confirmation";
 import { useToast } from "@/hooks/use-toast";
 import { getLanguages, saveLanguages, newId, type Language } from "@/lib/settingsStore";
 import { Button } from "@/components/ui/button";
@@ -27,6 +28,7 @@ const blank: Language = {
 
 const LanguagesPage = () => {
   const { t } = useI18n();
+  const confirmAction = useConfirm();
   const { toast } = useToast();
   const [rows, setRows] = useState<Language[]>(() => getLanguages());
   const [editing, setEditing] = useState<Language | null>(null);
@@ -42,8 +44,8 @@ const LanguagesPage = () => {
     setRows(next);
     saveLanguages(next);
   };
-  const remove = (id: string) => {
-    if (!confirm(t("form.confirmDelete"))) return;
+  const remove = async (id: string) => {
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     persist(rows.filter((r) => r.id !== id));
     toast({ title: t("form.deleted") });
   };

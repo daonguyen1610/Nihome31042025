@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { Plus, Search, Edit, Trash2, Eye } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
 import { useI18n } from "@/lib/i18n";
+import { useConfirm } from "@/components/ui/confirmation";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { useActivities, useActivityCategories } from "@/hooks/useContentApi";
@@ -30,6 +31,7 @@ import { resolveCategoryLabel } from "@/lib/category";
 
 const AdminActivities = () => {
   const { t, lang } = useI18n();
+  const confirmAction = useConfirm();
   const { toast } = useToast();
   const [q, setQ] = useState("");
   const [catId, setCatId] = useState<number | "all">("all");
@@ -66,7 +68,7 @@ const AdminActivities = () => {
   );
 
   const handleDelete = async (a: ActivityResponse) => {
-    if (!confirm(t("form.confirmDelete"))) return;
+    if (!(await confirmAction(t("form.confirmDelete")))) return;
     try {
       await adminApi.deleteActivity(a.id);
       toast({ title: t("form.deleted"), description: a.title });

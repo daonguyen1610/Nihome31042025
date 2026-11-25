@@ -88,9 +88,9 @@ const loadAllScheduleTasks = async (projectId: number, designProjectId: number) 
 
 const statusClass: Record<string, string> = {
   NotStarted: "border-border bg-muted/30 text-foreground",
-  InProgress: "border-sky-200 bg-sky-50 text-sky-700",
-  Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  OnHold: "border-amber-200 bg-amber-50 text-amber-700",
+  InProgress: "border-info/30 bg-info-soft text-info-strong",
+  Completed: "border-success/30 bg-success-soft text-success-strong",
+  OnHold: "border-warning/40 bg-warning-soft text-warning-strong",
   WaitingForDepartment: "border-violet-200 bg-violet-50 text-violet-700",
 };
 
@@ -355,7 +355,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
     );
   if (error && !schedule)
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">
+      <div className="rounded-lg border border-destructive/20 bg-destructive/10 p-5 text-sm text-destructive">
         <p>{error}</p>
         <Button variant="outline" className="mt-3 min-h-11" onClick={() => void load()}>
           <RefreshCw className="mr-1.5 h-4 w-4" />
@@ -394,7 +394,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
           </p>
         )}
         {error ? (
-          <p className="mt-3 text-sm text-rose-600" role="alert">
+          <p className="mt-3 text-sm text-destructive" role="alert">
             {error}
           </p>
         ) : null}
@@ -436,8 +436,8 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 variant="outline"
                 className={
                   schedule.baselineReady
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-                    : "border-amber-200 bg-amber-50 text-amber-700"
+                    ? "border-success/30 bg-success-soft text-success-strong"
+                    : "border-warning/40 bg-warning-soft text-warning-strong"
                 }
               >
                 {t(
@@ -479,7 +479,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                 {phase.overdue ? (
                   <Badge
                     variant="outline"
-                    className="ml-1 border-rose-200 bg-rose-50 text-rose-700"
+                    className="ml-1 border-destructive/20 bg-destructive/10 text-destructive"
                   >
                     {t("designProjects.schedule.overdue")}
                   </Badge>
@@ -737,7 +737,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
         </div>
         {error ? (
           <div
-            className="m-4 rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700"
+            className="m-4 rounded-md border border-destructive/20 bg-destructive/10 p-3 text-sm text-destructive"
             role="alert"
           >
             <p>{error}</p>
@@ -1003,7 +1003,9 @@ export const DesignScheduleTab = ({ project }: Props) => {
                     </div>
                   ) : null}
                   {task.reviewComment ? (
-                    <p className="mt-2 break-words text-sm text-rose-700">{task.reviewComment}</p>
+                    <p className="mt-2 break-words text-sm text-destructive">
+                      {task.reviewComment}
+                    </p>
                   ) : null}
                 </article>
               );

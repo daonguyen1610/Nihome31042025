@@ -131,13 +131,13 @@ const permitTypeIcon = (code?: string | null): LucideIcon => {
 
 const STATUS_BADGE: Record<PermitStatus, string> = {
   NotStarted: "border-border bg-muted/30 text-foreground",
-  Preparing: "border-sky-200 bg-sky-50 text-sky-700",
+  Preparing: "border-info/30 bg-info-soft text-info-strong",
   Submitted: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  UnderReview: "border-amber-200 bg-amber-50 text-amber-700",
+  UnderReview: "border-warning/40 bg-warning-soft text-warning-strong",
   NeedMoreDocs: "border-orange-200 bg-orange-50 text-orange-700",
-  Issued: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
-  Expired: "border-rose-200 bg-rose-50 text-rose-700",
+  Issued: "border-success/30 bg-success-soft text-success-strong",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
+  Expired: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
@@ -154,9 +154,9 @@ const permitTypeTone = (code?: string | null) => {
   if (value.includes("pccc") || value.includes("fire"))
     return "border-orange-200 bg-orange-50 text-orange-700";
   if (value.includes("dien") || value.includes("electric"))
-    return "border-amber-200 bg-amber-50 text-amber-700";
+    return "border-warning/40 bg-warning-soft text-warning-strong";
   if (value.includes("moi-truong") || value.includes("environment"))
-    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+    return "border-success/30 bg-success-soft text-success-strong";
   if (value.includes("nuoc") || value.includes("water"))
     return "border-cyan-200 bg-cyan-50 text-cyan-700";
   if (value.includes("via-he") || value.includes("an-toan") || value.includes("safety"))
@@ -164,7 +164,7 @@ const permitTypeTone = (code?: string | null) => {
   if (value.includes("hoan-cong") || value.includes("completion"))
     return "border-indigo-200 bg-indigo-50 text-indigo-700";
   if (value.includes("gpxd") || value.includes("xay-dung") || value.includes("building"))
-    return "border-sky-200 bg-sky-50 text-sky-700";
+    return "border-info/30 bg-info-soft text-info-strong";
   return "border-border/70 bg-muted/60 text-muted-foreground";
 };
 
@@ -210,17 +210,17 @@ const toDateInputValue = (iso?: string | null) => (iso ? iso.slice(0, 10) : "");
 
 type NextTone = "danger" | "warning" | "info" | "success" | "muted";
 const NEXT_TONE: Record<NextTone, string> = {
-  danger: "text-rose-700",
-  warning: "text-amber-800",
+  danger: "text-destructive",
+  warning: "text-warning-strong",
   info: "text-sky-800",
-  success: "text-emerald-700",
+  success: "text-success-strong",
   muted: "text-muted-foreground",
 };
 const NEXT_BANNER: Record<NextTone, string> = {
-  danger: "border-rose-200 bg-rose-50 text-rose-900",
-  warning: "border-amber-200 bg-amber-50 text-amber-900",
-  info: "border-sky-200 bg-sky-50 text-sky-900",
-  success: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  danger: "border-destructive/20 bg-destructive/10 text-rose-900",
+  warning: "border-warning/40 bg-warning-soft text-amber-900",
+  info: "border-info/30 bg-info-soft text-sky-900",
+  success: "border-success/30 bg-success-soft text-emerald-900",
   muted: "border-border bg-muted/30 text-foreground",
 };
 
@@ -1094,7 +1094,7 @@ const AdminPermits = () => {
                     key={r.id}
                     className={cn(
                       "rounded-lg border bg-card p-3 shadow-sm",
-                      risky && "border-rose-200 bg-rose-50/30",
+                      risky && "border-destructive/20 bg-rose-50/30",
                     )}
                   >
                     <header className="flex items-start justify-between gap-2">
@@ -1535,7 +1535,7 @@ const AdminPermits = () => {
               ) : null}
             </div>
           ) : null}
-          {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
+          {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
           <DialogFooter className="shrink-0 gap-2">
             <Button variant="outline" onClick={closeForm} disabled={saving}>
               {t("common.cancel")}
@@ -1944,8 +1944,8 @@ const RiskCard = ({
   active?: boolean;
 }) => {
   const tones: Record<typeof tone, string> = {
-    rose: "border-rose-200 bg-rose-50/60 text-rose-800",
-    amber: "border-amber-200 bg-amber-50/60 text-amber-800",
+    rose: "border-destructive/20 bg-rose-50/60 text-rose-800",
+    amber: "border-warning/40 bg-amber-50/60 text-warning-strong",
     orange: "border-orange-200 bg-orange-50/60 text-orange-800",
     slate: "border-border bg-muted/30 text-foreground",
   };
@@ -1988,7 +1988,7 @@ const RiskPills = ({
       {row.isOverdue ? (
         <Badge
           variant="outline"
-          className="gap-1 border-rose-200 bg-rose-50 text-rose-700 whitespace-nowrap"
+          className="gap-1 border-destructive/20 bg-destructive/10 text-destructive whitespace-nowrap"
         >
           <AlertTriangle className="h-3 w-3" aria-hidden="true" />
           {t("permits.risk.overduePill")}
@@ -1997,7 +1997,7 @@ const RiskPills = ({
       {row.isDueSoon ? (
         <Badge
           variant="outline"
-          className="gap-1 border-amber-200 bg-amber-50 text-amber-700 whitespace-nowrap"
+          className="gap-1 border-warning/40 bg-warning-soft text-warning-strong whitespace-nowrap"
         >
           <Clock className="h-3 w-3" aria-hidden="true" />
           {t("permits.risk.dueSoonPill")}

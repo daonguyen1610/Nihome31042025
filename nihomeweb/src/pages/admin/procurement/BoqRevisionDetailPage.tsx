@@ -67,10 +67,10 @@ const emptyLine = (): BoqLineDraft => ({
 
 const statusClass: Record<string, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Submitted: "border-info/30 bg-info-soft text-info-strong",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
   TenderApproved: "border-teal-200 bg-teal-50 text-teal-700",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const BoqRevisionDetailPage = () => {
@@ -741,7 +741,7 @@ const BoqRevisionDetailPage = () => {
             <DialogDescription>{t("boqWorkbook.contractConvert.hint")}</DialogDescription>
           </DialogHeader>
           {upstreamContracts.length === 0 ? (
-            <p className="rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            <p className="rounded-md border border-amber-300 bg-warning-soft p-3 text-sm text-amber-900">
               {t("boqWorkbook.contractConvert.noContract")}
             </p>
           ) : (

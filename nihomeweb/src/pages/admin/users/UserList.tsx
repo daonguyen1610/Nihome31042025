@@ -37,9 +37,9 @@ import UserFormModal from "./UserFormModal";
 const PAGE_SIZE = 20;
 
 const ROLE_STYLES: Record<string, string> = {
-  SUPER_ADMIN: "border-rose-200 bg-rose-50 text-rose-700",
+  SUPER_ADMIN: "border-destructive/20 bg-destructive/10 text-destructive",
   ADMIN: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  USER: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  USER: "border-success/30 bg-success-soft text-success-strong",
 };
 
 const getErrorMessage = (error: unknown, t: (key: string) => string) => {

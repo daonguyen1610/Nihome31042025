@@ -261,7 +261,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
             {partial && (
               <Badge
                 variant="outline"
-                className="border-amber-300 text-amber-700"
+                className="border-amber-300 text-warning-strong"
                 title={t("projectReports.partialDataHelp")}
               >
                 {t("projectReports.partialData")}
@@ -592,7 +592,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
 
         {unavailableGroups.length > 0 && (
           <section
-            className="border-t border-amber-200 pt-4 dark:border-amber-900"
+            className="border-t border-warning/40 pt-4 dark:border-amber-900"
             aria-labelledby={`project-report-data-quality-${projectValue}`}
           >
             <div className="flex items-start gap-3">

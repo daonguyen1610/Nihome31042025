@@ -977,8 +977,8 @@ export function RfqBatchAwardForm({
               <p
                 className={
                   allocated === line.quantity
-                    ? "text-sm text-emerald-700"
-                    : "text-sm text-amber-700"
+                    ? "text-sm text-success-strong"
+                    : "text-sm text-warning-strong"
                 }
               >
                 {t("rfq.award.lineSummary", {
@@ -1000,7 +1000,7 @@ export function RfqBatchAwardForm({
         />
       </RfqField>
       {needsOverride && (
-        <section className="border-l-4 border-amber-500 bg-amber-50 p-3">
+        <section className="border-l-4 border-amber-500 bg-warning-soft p-3">
           <p className="mb-2 text-sm font-medium text-amber-900">
             {t("rfq.award.overrideWarning")}
           </p>

@@ -56,16 +56,16 @@ const formatDate = (iso: string) => {
 };
 
 const statusStyles: Record<string, string> = {
-  success: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  failure: "border-rose-200 bg-rose-50 text-rose-700",
-  denied: "border-amber-200 bg-amber-50 text-amber-700",
+  success: "border-success/30 bg-success-soft text-success-strong",
+  failure: "border-destructive/20 bg-destructive/10 text-destructive",
+  denied: "border-warning/40 bg-warning-soft text-warning-strong",
 };
 
 const StatusBadge = ({ status }: { status: string }) => (
   <Badge
     variant="outline"
     className={cn(
-      "text-[10px] font-medium uppercase tracking-wide",
+      "text-xs font-medium uppercase tracking-wide",
       statusStyles[status] ?? "border-border bg-muted/30 text-foreground",
     )}
   >
@@ -84,7 +84,7 @@ const prettyJson = (raw: string | null) => {
 
 const Field = ({ label, value, mono }: { label: string; value: string; mono?: boolean }) => (
   <div>
-    <div className="mb-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
+    <div className="mb-0.5 text-xs font-medium uppercase tracking-wide text-muted-foreground">
       {label}
     </div>
     <div className={mono ? "break-all font-mono text-xs" : "text-xs"}>{value}</div>
@@ -145,7 +145,7 @@ const DetailDrawer = ({ item, onClose }: { item: AuditLogItem | null; onClose: (
           s.value ? (
             <div className="mt-4" key={s.label}>
               <div className="mb-1 text-xs font-medium text-muted-foreground">{s.label}</div>
-              <pre className="overflow-x-auto rounded-lg border bg-card p-3 font-mono text-[11px]">
+              <pre className="overflow-x-auto rounded-lg border bg-card p-3 font-mono text-xs">
                 {s.value}
               </pre>
             </div>
@@ -605,7 +605,7 @@ const ActivityLog = () => {
                   <dd className="min-w-0">
                     <span className="font-medium">{l.resourceType}</span>
                     {l.resourceId && (
-                      <span className="ml-1 font-mono text-[10px] text-muted-foreground">
+                      <span className="ml-1 font-mono text-xs text-muted-foreground">
                         #{l.resourceId}
                       </span>
                     )}
@@ -617,9 +617,7 @@ const ActivityLog = () => {
                       <>
                         <span className="font-medium">{l.actorPhone}</span>
                         {l.actorRole && (
-                          <span className="ml-1 text-[10px] text-muted-foreground">
-                            {l.actorRole}
-                          </span>
+                          <span className="ml-1 text-xs text-muted-foreground">{l.actorRole}</span>
                         )}
                       </>
                     ) : (
@@ -725,7 +723,7 @@ const ActivityLog = () => {
                     <td className="px-4 py-3 text-xs">
                       <div className="font-medium">{l.resourceType}</div>
                       {l.resourceId && (
-                        <div className="font-mono text-[10px] text-muted-foreground">
+                        <div className="font-mono text-xs text-muted-foreground">
                           #{l.resourceId}
                         </div>
                       )}
@@ -735,7 +733,7 @@ const ActivityLog = () => {
                         <>
                           <div className="font-medium">{l.actorPhone}</div>
                           {l.actorRole && (
-                            <div className="text-[10px] text-muted-foreground">{l.actorRole}</div>
+                            <div className="text-xs text-muted-foreground">{l.actorRole}</div>
                           )}
                         </>
                       ) : (

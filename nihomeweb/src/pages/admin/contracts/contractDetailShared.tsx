@@ -17,24 +17,24 @@ export const STATUS_STYLES: Record<ContractStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
   UnderReview: "border-info-strong/30 bg-info-soft text-info-strong",
   Approved: "border-success-strong/30 bg-success-soft text-success-strong",
-  Signed: "border-sky-200 bg-sky-50 text-sky-700",
-  InProgress: "border-amber-200 bg-amber-50 text-amber-800",
+  Signed: "border-info/30 bg-info-soft text-info-strong",
+  InProgress: "border-warning/40 bg-warning-soft text-warning-strong",
   OnHold: "border-orange-200 bg-orange-50 text-orange-700",
-  Completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Completed: "border-success/30 bg-success-soft text-success-strong",
   Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
 
 export const VO_STATUS_STYLES: Record<ContractAppendixStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  Submitted: "border-amber-200 bg-amber-50 text-amber-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  Submitted: "border-warning/40 bg-warning-soft text-warning-strong",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 export const MILESTONE_STATUS_STYLES: Record<PaymentMilestoneStatus, string> = {
   Pending: "border-border bg-muted/30 text-foreground",
-  Requested: "border-amber-200 bg-amber-50 text-amber-700",
-  Paid: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  Requested: "border-warning/40 bg-warning-soft text-warning-strong",
+  Paid: "border-success/30 bg-success-soft text-success-strong",
 };
 
 export const formatDate = (value?: string | null): string => {

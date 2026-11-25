@@ -119,17 +119,17 @@ const emptyCorrection = () => ({
 
 const statusClass: Record<string, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  UnderValidation: "border-sky-200 bg-sky-50 text-sky-700",
-  ReadyForApproval: "border-amber-200 bg-amber-50 text-amber-800",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Paid: "border-emerald-300 bg-emerald-100 text-emerald-800",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  UnderValidation: "border-info/30 bg-info-soft text-info-strong",
+  ReadyForApproval: "border-warning/40 bg-warning-soft text-warning-strong",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
+  Paid: "border-emerald-300 bg-emerald-100 text-success-strong",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
   Cancelled: "border-border bg-muted/30 text-muted-foreground",
-  Open: "border-sky-200 bg-sky-50 text-sky-700",
-  Closing: "border-amber-200 bg-amber-50 text-amber-800",
+  Open: "border-info/30 bg-info-soft text-info-strong",
+  Closing: "border-warning/40 bg-warning-soft text-warning-strong",
   Closed: "border-input bg-muted text-foreground",
-  Submitted: "border-sky-200 bg-sky-50 text-sky-700",
-  Reversed: "border-rose-200 bg-rose-50 text-rose-700",
+  Submitted: "border-info/30 bg-info-soft text-info-strong",
+  Reversed: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const ALL_STATUSES = "all";

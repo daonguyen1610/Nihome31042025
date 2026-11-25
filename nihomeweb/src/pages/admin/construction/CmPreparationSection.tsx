@@ -455,10 +455,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                         <th scope="col" className="pb-2">
                           <div className="flex items-center gap-2">
                             {t("construction.cm.documentNumberLabel")}
-                            <Badge
-                              variant="outline"
-                              className="px-1.5 py-0 text-[10px] font-medium"
-                            >
+                            <Badge variant="outline" className="px-1.5 py-0 text-xs font-medium">
                               {t("construction.cm.requiredTag")}
                             </Badge>
                           </div>

@@ -69,12 +69,12 @@ import { RevisionsPanel } from "./RevisionsPanel";
 import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STATUS_BADGE: Record<BasicDesignDocStatus, string> = {
-  InProgress: "border-sky-200 bg-sky-50 text-sky-700",
-  SubmittedForReview: "border-amber-200 bg-amber-50 text-amber-700",
-  InternallyApproved: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  InProgress: "border-info/30 bg-info-soft text-info-strong",
+  SubmittedForReview: "border-warning/40 bg-warning-soft text-warning-strong",
+  InternallyApproved: "border-success/30 bg-success-soft text-success-strong",
   SubmittedForPermit: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  PermitApproved: "border-emerald-300 bg-emerald-100 text-emerald-800",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  PermitApproved: "border-emerald-300 bg-emerald-100 text-success-strong",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const formatDate = (iso?: string | null, lang: string = "vi"): string => {
@@ -428,7 +428,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
   }
   if (error) {
     return (
-      <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700">
+      <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive">
         {error}
       </div>
     );
@@ -437,7 +437,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
   return (
     <div className="space-y-4">
       {isConceptStage ? (
-        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <p className="rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-warning-strong">
           {t("basicDesign.locked")}
         </p>
       ) : project.currentStage !== "BasicDesign" ? (
@@ -452,7 +452,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
           className={cn(
             "rounded-lg border p-3 shadow-sm",
             readiness.readyForDetailDesign
-              ? "border-emerald-200 bg-emerald-50/60"
+              ? "border-success/30 bg-emerald-50/60"
               : "border-border bg-muted/30",
           )}
         >
@@ -479,13 +479,13 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                       className={cn(
                         "gap-1 whitespace-nowrap",
                         ok
-                          ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+                          ? "border-success/30 bg-success-soft text-success-strong"
                           : "border-input bg-card text-muted-foreground",
                       )}
                     >
                       {ok ? <CheckCircle2 className="h-3 w-3" /> : <Circle className="h-3 w-3" />}
                       {disciplineLabelByCode.get(code) ?? code}
-                      <span className="text-[10px] opacity-80">
+                      <span className="text-xs opacity-80">
                         ·{" "}
                         {ok
                           ? t("basicDesign.readiness.approved")
@@ -577,7 +577,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                     className={cn(
                       "p-3",
                       focusedDocumentId === row.id &&
-                        "bg-amber-50 ring-2 ring-inset ring-amber-300",
+                        "bg-warning-soft ring-2 ring-inset ring-amber-300",
                     )}
                   >
                     <div className="flex flex-wrap items-start justify-between gap-2">
@@ -628,14 +628,14 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                         >
                           {t(`basicDesign.status.${row.status}`)}
                         </Badge>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="text-xs text-muted-foreground">
                           {formatDate(row.updatedAt, lang)}
                         </span>
                         {canViewRevisions ? (
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="h-6 gap-1 px-1.5 text-[11px] text-muted-foreground hover:text-foreground"
+                            className="h-6 gap-1 px-1.5 text-xs text-muted-foreground hover:text-foreground"
                             onClick={() => setRevisionsFor(row)}
                             data-testid={`basic-design-revisions-${row.id}`}
                           >
@@ -662,7 +662,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="h-8 text-xs text-rose-700 hover:bg-rose-50 hover:text-rose-800"
+                            className="h-8 text-xs text-destructive hover:bg-destructive/10 hover:text-rose-800"
                             onClick={() => setDeleting(row)}
                             data-testid={`basic-design-delete-${row.id}`}
                           >
@@ -676,7 +676,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                       <Button
                         size="sm"
                         variant="ghost"
-                        className="mt-2 h-8 text-xs text-rose-700"
+                        className="mt-2 h-8 text-xs text-destructive"
                         onClick={() => setDeleting(row)}
                       >
                         <Trash2 className="mr-1 h-3.5 w-3.5" />
@@ -766,7 +766,7 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
               />
             </FieldScope>
           </div>
-          {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
+          {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               {t("common.cancel")}
@@ -882,7 +882,7 @@ const RowActions = ({
           <Button
             size="sm"
             variant="ghost"
-            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            className={cn(btn, "text-destructive hover:bg-destructive/10")}
             disabled={busy}
             onClick={() => onTransition("Rejected")}
           >
@@ -922,7 +922,7 @@ const RowActions = ({
           <Button
             size="sm"
             variant="ghost"
-            className={cn(btn, "text-rose-700 hover:bg-rose-50")}
+            className={cn(btn, "text-destructive hover:bg-destructive/10")}
             disabled={busy}
             onClick={() => onTransition("Rejected")}
           >
@@ -932,13 +932,16 @@ const RowActions = ({
         </>
       )}
       {s === "PermitApproved" && (
-        <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-emerald-800">
+        <Badge variant="outline" className="border-emerald-300 bg-emerald-100 text-success-strong">
           <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
           {t("basicDesign.status.PermitApproved")}
         </Badge>
       )}
       {s === "Rejected" && (
-        <Badge variant="outline" className="border-rose-200 bg-rose-50 text-rose-700">
+        <Badge
+          variant="outline"
+          className="border-destructive/20 bg-destructive/10 text-destructive"
+        >
           <XCircle className="mr-1 h-3.5 w-3.5" />
           {t("basicDesign.status.Rejected")}
         </Badge>
@@ -947,7 +950,7 @@ const RowActions = ({
         <Button
           size="sm"
           variant="ghost"
-          className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-rose-800")}
           onClick={onDelete}
           data-testid={`basic-design-delete-${row.id}`}
         >

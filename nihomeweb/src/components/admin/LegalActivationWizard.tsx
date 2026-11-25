@@ -314,7 +314,7 @@ export default function LegalActivationWizard({
         <DialogHeader className="border-b px-4 py-4 sm:px-6">
           <DialogTitle>{t("contracts.legal.title")}</DialogTitle>
           <DialogDescription>{t("contracts.legal.description")}</DialogDescription>
-          <ol className="grid grid-cols-4 gap-1 pt-2 text-center text-[11px] sm:text-xs">
+          <ol className="grid grid-cols-4 gap-1 pt-2 text-center text-xs">
             {["check", "permits", "assignment", "review"].map((key, index) => (
               <li
                 key={key}
@@ -346,7 +346,7 @@ export default function LegalActivationWizard({
             </div>
           ) : null}
           {concurrency ? (
-            <div className="mb-4 space-y-2 text-sm font-medium text-amber-700">
+            <div className="mb-4 space-y-2 text-sm font-medium text-warning-strong">
               {t("contracts.legal.error.concurrency")}
               <Button
                 type="button"
@@ -380,7 +380,7 @@ export default function LegalActivationWizard({
                 }
               />
               {preview.alreadyActivated ? (
-                <p className="sm:col-span-2 rounded-md bg-emerald-50 p-3 text-sm text-emerald-800">
+                <p className="sm:col-span-2 rounded-md bg-success-soft p-3 text-sm text-success-strong">
                   {t("contracts.legal.alreadyActivated")}
                 </p>
               ) : null}
@@ -437,7 +437,7 @@ export default function LegalActivationWizard({
                         : template.scope}
                 </p>
               ) : (
-                <p className="text-sm text-amber-700">{t("legalTemplates.chooseRequired")}</p>
+                <p className="text-sm text-warning-strong">{t("legalTemplates.chooseRequired")}</p>
               )}
               {preview.templateAppliedAt ? (
                 <p className="text-xs text-muted-foreground">
@@ -468,7 +468,7 @@ export default function LegalActivationWizard({
                     <span className="text-xs text-muted-foreground">{permit.code}</span>
                   </span>
                   {permit.alreadyExists && !permit.requiresSetup ? (
-                    <span className="shrink-0 text-xs text-emerald-700">
+                    <span className="shrink-0 text-xs text-success-strong">
                       {t("contracts.legal.existing")}
                     </span>
                   ) : null}

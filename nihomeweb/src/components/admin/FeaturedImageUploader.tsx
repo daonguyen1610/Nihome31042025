@@ -56,7 +56,7 @@ const FeaturedImageUploader = ({
             onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
           />
           {pendingPreview && (
-            <span className="absolute top-2 left-2 text-[10px] px-2 py-1 rounded bg-amber-500 text-white font-bold uppercase tracking-wider">
+            <span className="absolute top-2 left-2 text-xs px-2 py-1 rounded bg-amber-500 text-white font-bold uppercase tracking-wider">
               {t("media.featured.pendingBadge")}
             </span>
           )}

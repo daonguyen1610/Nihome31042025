@@ -89,7 +89,7 @@ export function QuoteProgressPanel({
               >
                 <span
                   className={cn(
-                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold",
+                    "mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs font-semibold",
                     current && "border-primary bg-primary text-primary-foreground",
                     done && "border-success-strong bg-success-strong text-white",
                   )}

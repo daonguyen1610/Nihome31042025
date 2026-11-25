@@ -55,9 +55,9 @@ const BLOCKED_EXTENSIONS = new Set([
 
 const statusClass: Record<ProjectDocumentSyncStatus, string> = {
   Pending: "border-border bg-muted/30 text-foreground",
-  Processing: "border-amber-200 bg-amber-50 text-amber-700",
-  Synced: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  Failed: "border-rose-200 bg-rose-50 text-rose-700",
+  Processing: "border-warning/40 bg-warning-soft text-warning-strong",
+  Synced: "border-success/30 bg-success-soft text-success-strong",
+  Failed: "border-destructive/20 bg-destructive/10 text-destructive",
   Deleted: "border-border bg-muted/30 text-muted-foreground",
   Conflict: "border-orange-200 bg-orange-50 text-orange-700",
 };

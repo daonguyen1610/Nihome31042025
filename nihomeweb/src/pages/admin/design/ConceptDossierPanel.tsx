@@ -284,12 +284,15 @@ export const ConceptDossierPanel = ({
         </div>
       </div>
       {error ? (
-        <p role="alert" className="rounded-md border border-rose-200 bg-rose-50 p-3 text-rose-700">
+        <p
+          role="alert"
+          className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-destructive"
+        >
           {error}
         </p>
       ) : null}
       {saved && !working ? (
-        <p role="status" className="flex items-center gap-2 text-emerald-800">
+        <p role="status" className="flex items-center gap-2 text-success-strong">
           <CheckCircle2 aria-hidden="true" className="h-4 w-4" />
           {t("concepts.dossier.saved")}
         </p>
@@ -354,10 +357,10 @@ export const ConceptDossierPanel = ({
                     <p
                       className={
                         artifacts.length
-                          ? "mt-1 text-emerald-800"
+                          ? "mt-1 text-success-strong"
                           : waiver
                             ? "mt-1 text-muted-foreground"
-                            : "mt-1 text-amber-800"
+                            : "mt-1 text-warning-strong"
                       }
                     >
                       {t(

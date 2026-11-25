@@ -76,7 +76,7 @@ export const ActivityTimeline = ({
     <div className={cn("max-h-96 overflow-y-auto pr-1", className)}>
       {grouped.map((group) => (
         <Fragment key={group.day}>
-          <div className="sticky top-0 z-10 bg-background py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          <div className="sticky top-0 z-10 bg-background py-1 text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {dayHeading(group.items[0].at, locale, todayLabel)}
           </div>
           <ol className="mb-2 space-y-2 border-l pl-4">

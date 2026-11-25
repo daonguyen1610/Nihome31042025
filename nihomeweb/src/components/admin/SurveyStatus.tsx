@@ -9,8 +9,8 @@ import type { SurveyDriveSyncStatus, SurveyStatus } from "@/services/adminApi";
 
 const PROGRESS_STYLE: Record<SurveyProgress, string> = {
   planned: "border-border bg-muted/30 text-foreground",
-  overdue: "border-amber-200 bg-amber-50 text-amber-800",
-  completed: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  overdue: "border-warning/40 bg-warning-soft text-warning-strong",
+  completed: "border-success/30 bg-success-soft text-success-strong",
 };
 
 const PROGRESS_ICON = {

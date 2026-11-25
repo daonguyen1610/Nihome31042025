@@ -265,7 +265,7 @@ export default function TenderEstimatePanel({
         {(tender.status === "Preparing" || tender.status === "Submitted") && (
           <div className="mt-3 grid gap-2 sm:grid-cols-2">
             <div
-              className={`rounded-md border p-3 text-sm ${checklistReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+              className={`rounded-md border p-3 text-sm ${checklistReady ? "border-success/30 bg-success-soft" : "border-warning/40 bg-warning-soft"}`}
             >
               {checklistReady ? (
                 <CheckCircle2 className="mr-2 inline h-4 w-4" />
@@ -280,7 +280,7 @@ export default function TenderEstimatePanel({
                   )}
             </div>
             <div
-              className={`rounded-md border p-3 text-sm ${approved ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+              className={`rounded-md border p-3 text-sm ${approved ? "border-success/30 bg-success-soft" : "border-warning/40 bg-warning-soft"}`}
             >
               {approved ? (
                 <CheckCircle2 className="mr-2 inline h-4 w-4" />
@@ -292,7 +292,7 @@ export default function TenderEstimatePanel({
                 : t("tenders.lifecycle.estimateGate")}
             </div>
             <div
-              className={`rounded-md border p-3 text-sm ${planReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+              className={`rounded-md border p-3 text-sm ${planReady ? "border-success/30 bg-success-soft" : "border-warning/40 bg-warning-soft"}`}
             >
               {planReady ? (
                 <CheckCircle2 className="mr-2 inline h-4 w-4" />
@@ -302,7 +302,7 @@ export default function TenderEstimatePanel({
               {planReady ? t("tenders.lifecycle.planReady") : t("tenders.lifecycle.planGate")}
             </div>
             <div
-              className={`rounded-md border p-3 text-sm ${financeReady ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}
+              className={`rounded-md border p-3 text-sm ${financeReady ? "border-success/30 bg-success-soft" : "border-warning/40 bg-warning-soft"}`}
             >
               {financeReady ? (
                 <CheckCircle2 className="mr-2 inline h-4 w-4" />
@@ -317,7 +317,7 @@ export default function TenderEstimatePanel({
         )}
         {readiness && readiness.blockers.length > 0 ? (
           <div
-            className="mt-3 rounded-md border border-amber-200 bg-amber-50 p-3"
+            className="mt-3 rounded-md border border-warning/40 bg-warning-soft p-3"
             data-testid="tender-readiness-blockers"
           >
             <div className="text-sm font-medium text-amber-950">
@@ -439,9 +439,12 @@ export default function TenderEstimatePanel({
         </div>
 
         {importErrors.length > 0 && (
-          <div className="mt-3 rounded-md border border-rose-200 bg-rose-50 p-3" role="alert">
+          <div
+            className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3"
+            role="alert"
+          >
             <p className="font-medium text-rose-800">{t("tenders.estimate.importErrors")}</p>
-            <ul className="mt-1 space-y-1 text-sm text-rose-700">
+            <ul className="mt-1 space-y-1 text-sm text-destructive">
               {importErrors.map((error, index) => (
                 <li key={`${error.row}-${error.column}-${index}`}>
                   {t("tenders.estimate.errorLocation")

@@ -70,6 +70,7 @@ import { createCsvFilename, downloadCsv } from "@/lib/exportCsv";
 import { formatDate as formatDateInZone, formatMoney } from "@/lib/displaySettings";
 import { todayIsoDate } from "@/lib/displaySettings";
 import { randomId } from "@/lib/randomId";
+import { rowAction } from "@/lib/utils";
 
 // Number of days before end-date that triggers the red "ending soon" badge.
 const ENDING_SOON_DAYS = 30;
@@ -102,10 +103,10 @@ const STATUS_VARIANT: Record<ContractStatus, string> = {
   UnderReview: "border-info-strong/30 bg-info-soft text-info-strong",
   Approved: "border-success-strong/30 bg-success-soft text-success-strong",
   Signed: "border-blue-200 bg-blue-50 text-blue-700",
-  InProgress: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  OnHold: "border-amber-200 bg-amber-50 text-amber-700",
+  InProgress: "border-success/30 bg-success-soft text-success-strong",
+  OnHold: "border-warning/40 bg-warning-soft text-warning-strong",
   Completed: "border-purple-200 bg-purple-50 text-purple-700",
-  Cancelled: "border-rose-200 bg-rose-50 text-rose-700",
+  Cancelled: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 type MilestoneDraft = {
@@ -1201,8 +1202,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 {formatVnd(summary.totalCurrentValue)}
               </p>
             </div>
-            <div className="rounded-lg border border-rose-200 bg-rose-50/60 p-3">
-              <p className="text-xs text-rose-700">
+            <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-3">
+              <p className="text-xs text-destructive">
                 {t(
                   mode === "downstream"
                     ? "contracts.summary.overduePayment"
@@ -1213,15 +1214,15 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 {summary.overdueContractCount}
               </p>
             </div>
-            <div className="rounded-lg border border-amber-200 bg-amber-50/60 p-3">
-              <p className="text-xs text-amber-700">
+            <div className="rounded-lg border border-warning/40 bg-amber-50/60 p-3">
+              <p className="text-xs text-warning-strong">
                 {t(
                   mode === "downstream"
                     ? "contracts.summary.dueSoonPayment"
                     : "contracts.summary.dueSoonCollection",
                 )}
               </p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-amber-800">
+              <p className="mt-1 text-xl font-semibold tabular-nums text-warning-strong">
                 {summary.dueSoonContractCount}
               </p>
             </div>
@@ -1597,7 +1598,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         {metadataError && (
           <div
             role="status"
-            className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+            className="rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning-strong"
           >
             {metadataError}
           </div>
@@ -1674,8 +1675,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                               variant="outline"
                               className={
                                 deadlineState === "overdue"
-                                  ? "border-rose-300 bg-rose-50 text-rose-700"
-                                  : "border-amber-300 bg-amber-50 text-amber-800"
+                                  ? "border-rose-300 bg-destructive/10 text-destructive"
+                                  : "border-amber-300 bg-warning-soft text-warning-strong"
                               }
                               title={t(
                                 deadlineState === "overdue"
@@ -1846,7 +1847,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         data-testid={`contract-row-${row.id}`}
                         data-navigation-active={hoveredContractId === row.id ? "true" : "false"}
                         className={`cursor-pointer transition ${hoveredContractId === row.id ? "bg-muted/40" : ""}`}
-                        onClick={() => navigate(detailUrl(row.id))}
+                        {...rowAction(() => navigate(detailUrl(row.id)))}
                         onMouseEnter={() => setHoveredContractId(row.id)}
                         onMouseLeave={() => setHoveredContractId(null)}
                       >
@@ -1897,8 +1898,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                                 variant="outline"
                                 className={
                                   deadlineState === "overdue"
-                                    ? "border-rose-300 bg-rose-50 text-rose-700"
-                                    : "border-amber-300 bg-amber-50 text-amber-800"
+                                    ? "border-rose-300 bg-destructive/10 text-destructive"
+                                    : "border-amber-300 bg-warning-soft text-warning-strong"
                                 }
                                 title={t(
                                   deadlineState === "overdue"
@@ -1919,7 +1920,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         <td className="whitespace-nowrap px-3 py-3 text-right font-semibold">
                           <div>{formatMoney(row.currentValue, row.currency)}</div>
                           {row.approvedVoTotal !== 0 && (
-                            <div className="text-[11px] font-normal text-muted-foreground">
+                            <div className="text-xs font-normal text-muted-foreground">
                               {t("contracts.field.voShort")}{" "}
                               {formatMoney(row.approvedVoTotal, row.currency)}
                             </div>
@@ -1933,7 +1934,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                                 <div
                                   className={
                                     row.overduePaymentMilestoneCount > 0
-                                      ? "font-semibold text-rose-700"
+                                      ? "font-semibold text-destructive"
                                       : "text-muted-foreground"
                                   }
                                 >
@@ -2043,7 +2044,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
             {referenceError && (
               <div
                 role="alert"
-                className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+                className="rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning-strong"
               >
                 {referenceError}
                 <Button
@@ -2147,7 +2148,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               {form.customerId != null &&
                 customerProjects.length === 0 &&
                 form.operationalProjectId == null && (
-                  <p className="text-xs text-amber-700">{t("contracts.quickProject.noProjects")}</p>
+                  <p className="text-xs text-warning-strong">
+                    {t("contracts.quickProject.noProjects")}
+                  </p>
                 )}
               {canCreateOperationalProjects &&
                 form.customerId != null &&
@@ -2544,7 +2547,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                   })}
                   <div
                     className={`flex items-center justify-between rounded px-2 py-1 text-xs ${
-                      milestoneSumOk ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"
+                      milestoneSumOk
+                        ? "bg-success-soft text-success-strong"
+                        : "bg-destructive/10 text-destructive"
                     }`}
                   >
                     <span>{t("contracts.milestonesSum")}</span>

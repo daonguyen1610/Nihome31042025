@@ -110,11 +110,11 @@ const BOQ_PREVIEW_ROWS = 8;
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
-  PendingApproval: "border-amber-200 bg-amber-50 text-amber-700",
-  Approved: "border-emerald-200 bg-emerald-50 text-emerald-700",
-  SentToCustomer: "border-sky-200 bg-sky-50 text-sky-700",
+  PendingApproval: "border-warning/40 bg-warning-soft text-warning-strong",
+  Approved: "border-success/30 bg-success-soft text-success-strong",
+  SentToCustomer: "border-info/30 bg-info-soft text-info-strong",
   CustomerApproved: "border-green-300 bg-green-100 text-green-800",
-  Rejected: "border-rose-200 bg-rose-50 text-rose-700",
+  Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
   Expired: "border-orange-200 bg-orange-50 text-orange-700",
   Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
 };
@@ -1086,8 +1086,8 @@ const AdminQuoteDetail = () => {
                   <span
                     className={
                       step.state === "Approved"
-                        ? "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-strong text-[11px] font-semibold text-white"
-                        : "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold tabular-nums"
+                        ? "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-success-strong text-xs font-semibold text-white"
+                        : "mt-0.5 inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border text-xs font-semibold tabular-nums"
                     }
                     aria-hidden
                   >
@@ -1183,7 +1183,7 @@ const AdminQuoteDetail = () => {
       )}
 
       {awaitingInputPrice && !editing && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+        <div className="mb-4 rounded-lg border border-warning/40 bg-warning-soft p-4 text-sm text-amber-950">
           {t(
             inputOffersUnavailable
               ? "quotes.inputPrice.unavailable"
@@ -1280,7 +1280,7 @@ const AdminQuoteDetail = () => {
             {quote.isExpired && (
               <Badge
                 variant="outline"
-                className="ml-1 border-rose-200 bg-rose-50 text-[10px] text-rose-700"
+                className="ml-1 border-destructive/20 bg-destructive/10 text-xs text-destructive"
               >
                 {t("quotes.status.Expired")}
               </Badge>
@@ -1560,7 +1560,7 @@ const AdminQuoteDetail = () => {
                 {quote.grandTotalInWords}
               </p>
               {editing && preview && preview.grandTotal !== quote.grandTotal && (
-                <p className="mt-2 rounded bg-amber-50 p-2 text-[11px] text-amber-800">
+                <p className="mt-2 rounded bg-warning-soft p-2 text-xs text-warning-strong">
                   {t("quotes.preview.unsaved")}
                 </p>
               )}

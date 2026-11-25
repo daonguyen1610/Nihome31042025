@@ -52,7 +52,7 @@ import VendorForm from "./VendorForm";
 
 const TYPES: VendorType[] = ["Supplier", "SubContractor", "Both"];
 
-const ACTIVE_VENDOR = "border-emerald-200 bg-emerald-50 text-emerald-700";
+const ACTIVE_VENDOR = "border-success/30 bg-success-soft text-success-strong";
 
 export default function VendorPage() {
   const uiError = useUiError();

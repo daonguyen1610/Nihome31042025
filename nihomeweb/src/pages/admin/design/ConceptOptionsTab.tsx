@@ -60,11 +60,11 @@ import {
 import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STATUS_BADGE: Record<ConceptOptionStatus, string> = {
-  Drafting: "border-sky-200 bg-sky-50 text-sky-700",
+  Drafting: "border-info/30 bg-info-soft text-info-strong",
   PendingInternalReview: "border-indigo-200 bg-indigo-50 text-indigo-700",
   PresentedToClient: "border-violet-200 bg-violet-50 text-violet-700",
-  ClientRequestedChanges: "border-amber-200 bg-amber-50 text-amber-700",
-  Finalized: "border-emerald-200 bg-emerald-50 text-emerald-700",
+  ClientRequestedChanges: "border-warning/40 bg-warning-soft text-warning-strong",
+  Finalized: "border-success/30 bg-success-soft text-success-strong",
   Discarded: "border-border bg-muted/30 text-muted-foreground",
 };
 
@@ -365,7 +365,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
       {error ? (
         <div
           role="alert"
-          className="rounded-lg border border-rose-200 bg-rose-50/60 p-4 text-sm text-rose-700"
+          className="rounded-lg border border-destructive/20 bg-rose-50/60 p-4 text-sm text-destructive"
         >
           <p>{error}</p>
           <Button className="mt-2 min-h-11" variant="outline" onClick={() => void refreshRows()}>
@@ -374,7 +374,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
         </div>
       ) : null}
       {isLocked ? (
-        <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+        <p className="rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-xs text-warning-strong">
           {t("concepts.locked")}
         </p>
       ) : null}
@@ -477,7 +477,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="mt-3 h-8 text-xs text-rose-700"
+                  className="mt-3 h-8 text-xs text-destructive"
                   onClick={() => setDeleting(row)}
                 >
                   <Trash2 className="mr-1 h-3.5 w-3.5" />
@@ -594,7 +594,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
               </FieldScope>
             ) : null}
           </div>
-          {formError ? <p className="text-sm text-rose-600">{formError}</p> : null}
+          {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={saving}>
               {t("common.cancel")}
@@ -758,10 +758,10 @@ const RowActions = ({
         </>
       )}
       {s === "ClientRequestedChanges" && (
-        <span className="text-xs text-amber-700">{t("concepts.dossier.newRevision")}</span>
+        <span className="text-xs text-warning-strong">{t("concepts.dossier.newRevision")}</span>
       )}
       {s === "Finalized" && (
-        <Badge variant="outline" className="border-emerald-200 bg-emerald-50 text-emerald-700">
+        <Badge variant="outline" className="border-success/30 bg-success-soft text-success-strong">
           <Check className="mr-1 h-3.5 w-3.5" />
           {t("concepts.status.Finalized")}
         </Badge>
@@ -770,7 +770,7 @@ const RowActions = ({
         <Button
           size="sm"
           variant="ghost"
-          className={cn(btn, "text-rose-700 hover:bg-rose-50 hover:text-rose-800")}
+          className={cn(btn, "text-destructive hover:bg-destructive/10 hover:text-rose-800")}
           onClick={onDelete}
         >
           <Trash2 className="mr-1 h-3.5 w-3.5" />

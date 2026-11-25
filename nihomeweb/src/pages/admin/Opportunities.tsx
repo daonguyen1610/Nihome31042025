@@ -29,7 +29,7 @@ import { useI18n } from "@/lib/i18n";
 import { useListExport } from "@/hooks/useListExport";
 import AdminExportButton from "@/components/admin/AdminExportButton";
 import { customerSelectOptions } from "@/lib/customerOptions";
-import { cn } from "@/lib/utils";
+import { cn, rowAction } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -101,12 +101,12 @@ const DATE_MIN = "2000-01-01";
 const DATE_MAX = "2099-12-31";
 
 const OPPORTUNITY_STAGE_STYLES: Record<OpportunityStage, string> = {
-  Prospecting: "border-sky-200 bg-sky-50 text-sky-700",
+  Prospecting: "border-info/30 bg-info-soft text-info-strong",
   Qualification: "border-violet-200 bg-violet-50 text-violet-700",
   Proposal: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  Negotiation: "border-amber-200 bg-amber-50 text-amber-700",
+  Negotiation: "border-warning/40 bg-warning-soft text-warning-strong",
   Won: "border-green-300 bg-green-100 text-green-800",
-  Lost: "border-rose-200 bg-rose-50 text-rose-700",
+  Lost: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const OPPORTUNITY_STAGE_DOT: Record<OpportunityStage, string> = {
@@ -995,7 +995,7 @@ const AdminOpportunities = () => {
                       key={o.id}
                       data-testid={`opportunity-card-${o.id}`}
                       className="cursor-pointer rounded-lg border bg-card p-3 shadow-sm hover:bg-muted/30"
-                      onClick={() => void openDetail(o.id)}
+                      {...rowAction(() => void openDetail(o.id))}
                     >
                       <header className="flex items-start gap-2">
                         <div className="min-w-0 flex-1">
@@ -1138,7 +1138,7 @@ const AdminOpportunities = () => {
                       <tr
                         key={o.id}
                         className="cursor-pointer hover:bg-muted/40"
-                        onClick={() => void openDetail(o.id)}
+                        {...rowAction(() => void openDetail(o.id))}
                       >
                         <td className="px-3 py-3 font-medium">{o.name}</td>
                         <td className="px-3 py-3">
@@ -1281,7 +1281,7 @@ const AdminOpportunities = () => {
                           </div>
                           {o.expectedCloseDate && (
                             <div
-                              className={`mt-1 text-[11px] flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}
+                              className={`mt-1 text-xs flex items-center gap-1 ${overdue ? "text-destructive" : "text-muted-foreground"}`}
                             >
                               {overdue && <AlertTriangle className="h-3 w-3" />}
                               {formatDate(o.expectedCloseDate)}
@@ -2204,7 +2204,7 @@ const AdminOpportunities = () => {
                                 {detail.wonQuoteId === quote.id && (
                                   <Badge
                                     variant="outline"
-                                    className="border-emerald-200 bg-emerald-50 text-emerald-700"
+                                    className="border-success/30 bg-success-soft text-success-strong"
                                   >
                                     {t("opportunities.quotes.won")}
                                   </Badge>
