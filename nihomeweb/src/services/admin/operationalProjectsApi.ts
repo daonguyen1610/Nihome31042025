@@ -907,6 +907,8 @@ export const operationalProjectsApi = {
       {},
       withIdempotencyKey(idempotencyKey),
     ),
+  ensureOperationalProjectDriveFolders: (id: number) =>
+    api.post<OperationalProjectResponse>(`/operational-projects/${id}/drive-folders`, {}),
   reopenOperationalProject: (
     id: number,
     body: ReopenOperationalProjectRequest,

@@ -1128,6 +1128,30 @@
     "ja": "Drive フォルダー名変更を再度キューに追加しました。"
   },
   {
+    "key": "operationalProjects.driveFolders.missing",
+    "category": "operationalProjects",
+    "vi": "Cây thư mục Drive của dự án chưa được tạo đủ.",
+    "en": "The project's Drive folder tree is not complete yet.",
+    "zh": "项目的 Drive 文件夹结构尚未全部创建。",
+    "ja": "プロジェクトの Drive フォルダー構成がまだ揃っていません。"
+  },
+  {
+    "key": "operationalProjects.driveFolders.create",
+    "category": "operationalProjects",
+    "vi": "Tạo thư mục còn thiếu",
+    "en": "Create missing folders",
+    "zh": "创建缺少的文件夹",
+    "ja": "不足しているフォルダーを作成"
+  },
+  {
+    "key": "operationalProjects.driveFolders.created",
+    "category": "operationalProjects",
+    "vi": "Đã tạo đủ cây thư mục Drive.",
+    "en": "The Drive folder tree is complete.",
+    "zh": "Drive 文件夹结构已全部创建。",
+    "ja": "Drive フォルダー構成をすべて作成しました。"
+  },
+  {
     "key": "operationalProjects.rename.status.Pending",
     "category": "operationalProjects",
     "vi": "Đang chờ đồng bộ",

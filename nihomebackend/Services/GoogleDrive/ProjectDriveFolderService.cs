@@ -11,6 +11,9 @@ public interface IProjectDriveFolderService
         ProjectDocumentCategory category,
         int? userId = null,
         CancellationToken ct = default);
+
+    /// <summary>Creates the whole project folder tree and binds every category; safe to repeat.</summary>
+    Task EnsureTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default);
 }
 
 public sealed class ProjectDriveFolderService(
@@ -31,19 +34,8 @@ public sealed class ProjectDriveFolderService(
             folder.OperationalProjectId == project.Id && folder.Category == category, ct);
         if (existing is not null) return existing;
 
-        var projectFolder = SafeFolderName($"{project.Code}_{project.Name}");
-        var segments = new List<DriveFolderSegment>
-        {
-            new(projectFolder, CreateProjectIdentity(options.InstanceId, project.Id)),
-        };
-        var categoryPath = new List<string>();
-        foreach (var name in options.Folders.SegmentsFor(category))
-        {
-            categoryPath.Add(name);
-            segments.Add(new DriveFolderSegment(name,
-                CreatePathIdentity(options.InstanceId, project.Id, string.Join('/', categoryPath))));
-        }
-        var remote = await drive.EnsureFolderPathAsync(segments, ct);
+        var remote = await drive.EnsureFolderPathAsync(
+            Segments(options, project, options.Folders.SegmentsFor(category)), ct);
         var now = DateTime.UtcNow;
         var binding = new ProjectDriveFolder
         {
@@ -68,6 +60,36 @@ public sealed class ProjectDriveFolderService(
             return await db.ProjectDriveFolders.AsNoTracking().SingleAsync(folder =>
                 folder.OperationalProjectId == project.Id && folder.Category == category, ct);
         }
+    }
+
+    public async Task EnsureTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default)
+    {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        if (!options.Enabled || string.IsNullOrWhiteSpace(options.RefreshToken) || string.IsNullOrWhiteSpace(options.RootFolderId))
+            throw new ProjectDriveNotConnectedException();
+        foreach (var category in Enum.GetValues<ProjectDocumentCategory>()
+                     .Where(category => category != ProjectDocumentCategory.Unclassified))
+            await EnsureAsync(project, category, userId, ct);
+        // Folders no category uses yet are found again by their identity, so they are not stored.
+        foreach (var path in options.Folders.ExtraTreePaths())
+            await drive.EnsureFolderPathAsync(Segments(options, project, path.Split('/')), ct);
+    }
+
+    private static List<DriveFolderSegment> Segments(
+        GoogleDriveOptions options, OperationalProject project, IEnumerable<string> names)
+    {
+        var segments = new List<DriveFolderSegment>
+        {
+            new(SafeFolderName($"{project.Code}_{project.Name}"), CreateProjectIdentity(options.InstanceId, project.Id)),
+        };
+        var path = new List<string>();
+        foreach (var name in names)
+        {
+            path.Add(name);
+            segments.Add(new DriveFolderSegment(name,
+                CreatePathIdentity(options.InstanceId, project.Id, string.Join('/', path))));
+        }
+        return segments;
     }
 
     public static IReadOnlyDictionary<string, string> CreateProjectIdentity(
@@ -96,3 +118,6 @@ public sealed class ProjectDriveFolderService(
         Path.GetInvalidFileNameChars().Concat(['/']).ToArray(),
         StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries));
 }
+
+public sealed class ProjectDriveNotConnectedException()
+    : InvalidOperationException("Google Drive chưa được bật hoặc chưa kết nối tài khoản.");

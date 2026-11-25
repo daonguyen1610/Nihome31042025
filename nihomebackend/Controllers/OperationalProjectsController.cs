@@ -26,7 +26,8 @@ public class OperationalProjectsController(
     IPermissionService permissions,
     IAuditLogger audit,
     IGoogleDriveSettingsStore driveSettings,
-    SiteSettingsService siteSettings) : ControllerBase
+    SiteSettingsService siteSettings,
+    ILogger<OperationalProjectsController> logger) : ControllerBase
 {
     [HttpGet("code-suggestion")]
     [RequirePermission("operations.projects", "view")]
@@ -264,6 +265,44 @@ public class OperationalProjectsController(
         catch (OperationalProjectOperationException ex)
         {
             return BadRequest(ex.ToResponse());
+        }
+    }
+
+    [HttpPost("{id:int}/drive-folders")]
+    [RequirePermission("operations.projects", "manage")]
+    public async Task<ActionResult<OperationalProjectResponse>> EnsureDriveFolders(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var canSeeAll = await permissions.HasAsync(userId.Value, "operations.projects.view.all", ct);
+        try
+        {
+            var result = await service.EnsureDriveFoldersAsync(id, userId.Value, canSeeAll, ct);
+            if (result is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = "operational-project.drive-folders",
+                ResourceType = EntityTypes.OperationalProject,
+                ResourceId = id.ToString(),
+                Message = $"Google Drive folder tree ensured for operational project #{id}.",
+            });
+            return Ok(result);
+        }
+        catch (ProjectDriveNotConnectedException exception)
+        {
+            return BadRequest(new { code = "DRIVE_NOT_CONNECTED", message = exception.Message });
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // Only the type is logged: Drive errors can echo request details.
+            logger.LogWarning("Drive folder tree for project {ProjectId} failed ({ExceptionType})", id, exception.GetType().Name);
+            return GoogleDriveAuthenticationErrors.IsInvalidGrant(exception)
+                ? BadRequest(new { code = "DRIVE_RECONNECT_REQUIRED", message = "Kết nối Google Drive đã hết hạn hoặc bị thu hồi. Kết nối lại tài khoản." })
+                : StatusCode(StatusCodes.Status503ServiceUnavailable, new
+                {
+                    code = "DRIVE_TEST_FAILED",
+                    message = "Không đọc được cấu hình hoặc không kết nối được Google Drive. Kiểm tra quyền truy cập thư mục gốc và kết nối tài khoản.",
+                });
         }
     }
 

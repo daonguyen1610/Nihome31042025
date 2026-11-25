@@ -229,6 +229,7 @@ const OperationalProjects = () => {
   const [renameReason, setRenameReason] = useState("");
   const [renameError, setRenameError] = useState<string | null>(null);
   const [renaming, setRenaming] = useState(false);
+  const [creatingFolders, setCreatingFolders] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -597,6 +598,20 @@ const OperationalProjects = () => {
     }
   };
 
+  const ensureDriveFolders = async () => {
+    if (!detail) return;
+    setCreatingFolders(true);
+    try {
+      const response = await adminApi.ensureOperationalProjectDriveFolders(detail.id);
+      setDetail(response.data);
+      toast({ title: t("operationalProjects.driveFolders.created") });
+    } catch (reason) {
+      toast({ title: uiError(reason), variant: "destructive" });
+    } finally {
+      setCreatingFolders(false);
+    }
+  };
+
   return (
     <AdminLayout>
       {projectId != null && loading ? (
@@ -748,6 +763,21 @@ const OperationalProjects = () => {
               {detail.latestCodeChange.error && (
                 <p className="mt-1 text-destructive">{detail.latestCodeChange.error}</p>
               )}
+            </div>
+          )}
+
+          {detail.driveFoldersReady === false && canManage && (
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-3 text-sm">
+              <span>{t("operationalProjects.driveFolders.missing")}</span>
+              <Button
+                size="sm"
+                variant="outline"
+                disabled={creatingFolders}
+                onClick={() => void ensureDriveFolders()}
+              >
+                <RefreshCcw className="mr-2 h-4 w-4" />
+                {t("operationalProjects.driveFolders.create")}
+              </Button>
             </div>
           )}
 

@@ -20,16 +20,16 @@ public sealed class GoogleDriveOptionsTests
     }
 
     [Theory]
-    [InlineData(ProjectDocumentCategory.Survey, "01_Khao_sat")]
-    [InlineData(ProjectDocumentCategory.CrmPreDesign, "01_CRM_PreDesign")]
-    [InlineData(ProjectDocumentCategory.DesignConcept, "02_Thiet_ke/01_So_bo_Concept")]
-    [InlineData(ProjectDocumentCategory.DesignBasic, "02_Thiet_ke/02_Co_so")]
-    [InlineData(ProjectDocumentCategory.DesignShopDrawing, "02_Thiet_ke/03_Chi_tiet_ShopDrawing")]
-    [InlineData(ProjectDocumentCategory.LegalPermits, "03_Xin_phep_Phap_ly")]
-    [InlineData(ProjectDocumentCategory.ConstructionAcceptance, "04_Thi_cong_Nghiem_thu")]
-    [InlineData(ProjectDocumentCategory.Procurement, "05_Cung_ung_Vat_tu")]
-    [InlineData(ProjectDocumentCategory.FinanceContracts, "06_Tai_chinh_Hop_dong")]
-    public void ProjectCategoryPaths_MatchJiraHierarchy(ProjectDocumentCategory category, string expected)
+    [InlineData(ProjectDocumentCategory.Survey, "01_CoHoi_BaoGia/01_KhaoSat")]
+    [InlineData(ProjectDocumentCategory.CrmPreDesign, "01_CoHoi_BaoGia")]
+    [InlineData(ProjectDocumentCategory.DesignConcept, "03_ThietKe/01_Concept")]
+    [InlineData(ProjectDocumentCategory.DesignBasic, "03_ThietKe/02_CoSo")]
+    [InlineData(ProjectDocumentCategory.DesignShopDrawing, "03_ThietKe/04_ShopDrawing")]
+    [InlineData(ProjectDocumentCategory.LegalPermits, "04_PhapLy")]
+    [InlineData(ProjectDocumentCategory.ConstructionAcceptance, "05_ThiCong/03_ChatLuong_NghiemThu")]
+    [InlineData(ProjectDocumentCategory.Procurement, "06_CungUng")]
+    [InlineData(ProjectDocumentCategory.FinanceContracts, "02_HopDong")]
+    public void ProjectCategoryPaths_MatchPrdV2Tree(ProjectDocumentCategory category, string expected)
     {
         var folders = new GoogleDriveFolderOptions();
 
@@ -58,9 +58,62 @@ public sealed class GoogleDriveOptionsTests
         await service.EnsureAsync(project, ProjectDocumentCategory.DesignBasic);
 
         Assert.Equal(2, calls.Count);
-        Assert.Equal("02_Thiet_ke", calls[0][1].Name);
+        Assert.Equal("03_ThietKe", calls[0][1].Name);
         Assert.Equal(calls[0][1].AppProperties, calls[1][1].AppProperties);
         Assert.NotEqual(calls[0][2].AppProperties, calls[1][2].AppProperties);
+    }
+
+    [Fact]
+    public async Task ProjectFolderService_TreeBuildsEightTopFoldersOnceAndRepeatsWithoutDuplicates()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var project = new OperationalProject { Code = "PJ-2026-0001", Name = "Nhà xưởng", CustomerId = 1 };
+        db.OperationalProjects.Add(project);
+        await db.SaveChangesAsync();
+        var paths = new List<string>();
+        var drive = new Mock<IGoogleDriveAdapter>();
+        drive.Setup(item => item.EnsureFolderPathAsync(
+                It.IsAny<IReadOnlyList<DriveFolderSegment>>(), It.IsAny<CancellationToken>()))
+            .Callback<IReadOnlyList<DriveFolderSegment>, CancellationToken>((segments, _) =>
+                paths.Add(string.Join('/', segments.Skip(1).Select(segment => segment.Name))))
+            .ReturnsAsync((IReadOnlyList<DriveFolderSegment> segments, CancellationToken _) =>
+                new DriveFolder("id-" + segments[^1].AppProperties["niconFolderPath"], null!));
+        var service = new ProjectDriveFolderService(db, drive.Object, new TestGoogleDriveSettingsStore(
+            new GoogleDriveOptions { Enabled = true, RefreshToken = "token", RootFolderId = "root-folder", InstanceId = "test" }));
+
+        await service.EnsureTreeAsync(project);
+        await service.EnsureTreeAsync(project);
+
+        Assert.Equal(GoogleDriveFolderOptions.StandardTree.Append("01_CoHoi_BaoGia").Order(), paths.Distinct().Order());
+        Assert.Equal(16 + 7, paths.Count); // the repeat only re-checks the unbound folders
+        Assert.Equal(8, paths.Select(path => path.Split('/')[0]).Distinct().Count());
+        var bindings = await db.ProjectDriveFolders.ToListAsync();
+        Assert.Equal(9, bindings.Count);
+        Assert.Equal("id-03_ThietKe/02_CoSo",
+            bindings.Single(binding => binding.Category == ProjectDocumentCategory.DesignBasic).DriveFolderId);
+        drive.Verify(item => item.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task ProjectFolderService_TreeFailsClearlyWhenDriveIsNotConnected()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString()).Options);
+        var drive = new Mock<IGoogleDriveAdapter>();
+        var service = new ProjectDriveFolderService(db, drive.Object,
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions { Enabled = true, InstanceId = "test" }));
+
+        await Assert.ThrowsAsync<ProjectDriveNotConnectedException>(() =>
+            service.EnsureTreeAsync(new OperationalProject { Id = 1, Code = "PJ-1", Name = "P" }));
+        drive.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public void ExtraTreePaths_StayEmptyForAnOlderCustomTopology()
+    {
+        Assert.Equal(7, new GoogleDriveFolderOptions().ExtraTreePaths().Count());
+        Assert.Empty(new GoogleDriveFolderOptions { ConstructionAcceptance = "04_Thi_cong_Nghiem_thu" }.ExtraTreePaths());
     }
 
     [Fact]

@@ -19,7 +19,8 @@ public class OperationalProjectService(
     ILogger<OperationalProjectService> logger,
     IProjectHardDeletePlanService hardDeletePlans,
     IHardDeleteOperationService hardDeleteOperations,
-    IRequestLanguage? requestLanguage = null) : IOperationalProjectService
+    IRequestLanguage? requestLanguage = null,
+    GoogleDrive.IProjectDriveFolderService? driveFolders = null) : IOperationalProjectService
 {
     private static readonly Regex ProjectCodePattern = new(
         "^[A-Z0-9][A-Z0-9_-]{1,39}$",
@@ -187,6 +188,9 @@ public class OperationalProjectService(
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var response = Map(project, approvedVoTotals, milestoneSummaries, displayCurrency, usdVndRate);
         response.CodeLocked = project.Contracts.Any(LocksProjectCodeInMemory);
+        if (await db.GoogleDriveCredentials.AnyAsync(settings => settings.Enabled, ct))
+            response.DriveFoldersReady = await db.ProjectDriveFolders.CountAsync(folder =>
+                folder.OperationalProjectId == id, ct) >= Enum.GetValues<ProjectDocumentCategory>().Length - 1;
         response.BusinessSectorName =
             await BusinessSectors.NameAsync(db, project.BusinessSectorCode, requestLanguage?.Lang ?? "vi", ct);
         if (!CanManage(project, callerUserId, canSeeAll) && !await db.OperationalProjectMemberRoles.AnyAsync(role =>
@@ -461,6 +465,18 @@ public class OperationalProjectService(
         logger.LogInformation(
             "OperationalProject {ProjectId} code changed from {OldCode} to {NewCode} by user {UserId}",
             id, oldCode, newCode, callerUserId);
+        return await GetAsync(id, callerUserId, canSeeAll, ct);
+    }
+
+    public async Task<OperationalProjectResponse?> EnsureDriveFoldersAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default)
+    {
+        var project = await db.OperationalProjects.AsNoTracking().FirstOrDefaultAsync(item => item.Id == id, ct);
+        if (project is null || !CanManage(project, callerUserId, canSeeAll)) return null;
+        await driveFolders!.EnsureTreeAsync(project, callerUserId, ct);
         return await GetAsync(id, callerUserId, canSeeAll, ct);
     }
 

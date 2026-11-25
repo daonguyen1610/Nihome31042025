@@ -400,6 +400,8 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
   createdAt: string;
   /** A contract is signed (gate 3), so the project code can no longer change. */
   codeLocked: boolean;
+  /** Every category folder of the project's Drive tree exists; null while Drive is off. */
+  driveFoldersReady?: boolean | null;
   latestCodeChange?: {
     id: number;
     oldCode: string;
