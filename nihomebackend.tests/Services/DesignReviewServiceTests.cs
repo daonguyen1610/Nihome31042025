@@ -269,6 +269,37 @@ public sealed class DesignReviewServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task ClientApproval_StaysRecordedAndNotifiedWhenTheStageAdvanceFails()
+    {
+        access.Setup(item => item.CanApproveDesignProjectAsync(managerId, projectId, It.IsAny<CancellationToken>(), null))
+            .ReturnsAsync(true);
+        basicDesign.Setup(item => item.UnlockShopDrawingAsync(projectId, managerId, It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new DbUpdateException("conflict"));
+        var review = new DesignReview
+        {
+            DesignProjectId = projectId,
+            Stage = DesignReviewStage.BasicDesign,
+            RevisionNumber = 1,
+            Title = "Hồ sơ cơ sở",
+            Status = DesignReviewStatus.SubmittedToClient,
+            DesignManagerUserId = managerId,
+            CreatedByUserId = managerId,
+            UpdatedByUserId = managerId,
+            Recipients = [new DesignReviewRecipient { UserId = recipientId }],
+        };
+        db.Add(review);
+        db.SaveChanges();
+
+        var approved = await service.RecordClientDecisionAsync(projectId, review.Id,
+            new RecordDesignClientDecisionRequest { Decision = "ClientApproved", RowVersion = "" }, managerId, default);
+
+        Assert.Equal("ClientApproved", approved!.Status);
+        notifications.Verify(item => item.NotifyManyFromTemplateAsync(
+            It.IsAny<IEnumerable<int>>(), "design-review.client-decision", It.IsAny<IDictionary<string, string>>(),
+            It.IsAny<string>(), It.IsAny<int?>(), It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+    }
+
+    [Fact]
     public async Task SubmitClient_TellsInternalReviewersTheDossierWentToTheClient()
     {
         var created = await service.CreateAsync(projectId, new CreateDesignReviewRequest
