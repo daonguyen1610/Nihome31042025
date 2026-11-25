@@ -75,6 +75,7 @@
     { "module": "work.packages", "action": "assign" },
     { "module": "work.packages", "action": "progress" },
     { "module": "work.packages", "action": "verify" },
+    { "module": "work.daily-reports", "action": "review" },
     { "module": "analytics.kpi", "action": "view" },
     { "module": "analytics.kpi", "action": "view.all" },
     { "module": "analytics.kpi", "action": "manage" },
@@ -369,6 +370,7 @@
     },
     "SALES_MANAGER": {
       "patterns": [
+        "work.daily-reports.review",
         "design.reviews.receive",
         "dashboard.view",
         "contacts.*",
@@ -419,6 +421,7 @@
     "DESIGN_LEAD": {
       "deny": ["design.records.hard-delete"],
       "patterns": [
+        "work.daily-reports.review",
         "dashboard.view",
         "content.**",
         "processes.view",
@@ -443,6 +446,7 @@
     "DESIGN_MANAGER": {
       "deny": ["design.records.hard-delete"],
       "patterns": [
+        "work.daily-reports.review",
         "dashboard.view",
         "content.**",
         "processes.view",
@@ -546,6 +550,7 @@
 
     "PM": {
       "patterns": [
+        "work.daily-reports.review",
         "design.reviews.receive",
         "permit.templates.view", "permit.templates.publish",
         "dashboard.view",
@@ -682,6 +687,7 @@
     },
     "PROCUREMENT_MANAGER": {
       "patterns": [
+        "work.daily-reports.review",
         "proc.ifc.view", "proc.ifc.acknowledge",
         "dashboard.view", "master-data.view", "workflow.view",
         "operations.projects.view", "work.packages.view",

@@ -31,7 +31,10 @@ public sealed class MyWorkServiceTests : IDisposable
         _architect = AddUser("KTS Nguyễn Minh", _design);
         _engineer = AddUser("KS Trần Hà", _design);
         _financeHead = AddUser("Trưởng phòng Tài chính", _finance);
+        // Staff roles such as PROCUREMENT hold work.packages.assign too; only the review permission makes a head.
         _permissions.Setup(item => item.HasAsync(It.IsAny<int>(), "work.packages.assign", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        _permissions.Setup(item => item.HasAsync(It.IsAny<int>(), DailyWorkReportService.ReviewPermission, It.IsAny<CancellationToken>()))
             .ReturnsAsync((int userId, string _, CancellationToken _) => userId == _designHead.Id || userId == _financeHead.Id);
         _today = DisplaySettings.TodayAsync(_db, CancellationToken.None).GetAwaiter().GetResult();
         _package = new DepartmentWorkPackage

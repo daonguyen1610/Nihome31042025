@@ -17,14 +17,14 @@ public sealed class DailyWorkReportScopeException() : Exception("Not allowed.");
 /// <summary>
 /// Daily work report (N-09, QLNS-M05). A person submits today's report, prefilled
 /// from their in-progress work; the head of their department (a member of the
-/// same department who may assign work) reads it and comments.
+/// same department holding work.daily-reports.review) reads it and comments.
 /// </summary>
 public sealed class DailyWorkReportService(AppDbContext db, MyWorkService myWork, IPermissionService permissions)
 {
     public const string NoDepartment = "DAILY_REPORT_NO_DEPARTMENT";
     public const string Reviewed = "DAILY_REPORT_REVIEWED";
     public const string OwnReport = "DAILY_REPORT_OWN_REVIEW";
-    private const string AssignPermission = "work.packages.assign";
+    public const string ReviewPermission = "work.daily-reports.review";
     private const int HistorySize = 30;
 
     /// <summary>Today's report, or a draft prefilled from the work the person is doing today.</summary>
@@ -102,7 +102,15 @@ public sealed class DailyWorkReportService(AppDbContext db, MyWorkService myWork
             Note = string.IsNullOrWhiteSpace(item.Note) ? null : item.Note.Trim(),
             SortOrder = index,
         }).ToList();
-        await CrmConcurrency.SaveChangesAsync(db, ct);
+        try
+        {
+            await CrmConcurrency.SaveChangesAsync(db, ct);
+        }
+        catch (DbUpdateException) when (db.Entry(report).State == EntityState.Added)
+        {
+            // A second first-submit of the same day (double click, two tabs) hits the unique (UserId, ReportDate) index.
+            throw new CrmConcurrencyException("Báo cáo hôm nay vừa được gửi từ nơi khác. Vui lòng tải lại trang rồi gửi lại.");
+        }
         return await GetTodayAsync(userId, ct);
     }
 
@@ -168,9 +176,9 @@ public sealed class DailyWorkReportService(AppDbContext db, MyWorkService myWork
             .Where(item => item.Id == userId && item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive)
             .Select(item => item.RoleEntity!.RoleGroupId).SingleOrDefaultAsync(ct);
 
-    /// <summary>The department the caller heads: their own, when they may assign work in it.</summary>
+    /// <summary>The department the caller heads: their own, when they hold the review permission.</summary>
     private async Task<int?> HeadedDepartmentAsync(int userId, CancellationToken ct) =>
-        await permissions.HasAsync(userId, AssignPermission, ct) ? await DepartmentOfAsync(userId, ct) : null;
+        await permissions.HasAsync(userId, ReviewPermission, ct) ? await DepartmentOfAsync(userId, ct) : null;
 
     private static DailyWorkReportResponse Map(DailyWorkReport item, int callerUserId, bool asReviewer, DateOnly today) => new()
     {

@@ -65,6 +65,7 @@ export const ADMIN_PERMS = {
   workPackagesAssign: "work.packages.assign",
   workPackagesProgress: "work.packages.progress",
   workPackagesVerify: "work.packages.verify",
+  dailyReportsReview: "work.daily-reports.review",
   kpi: "analytics.kpi.view",
   kpiViewAll: "analytics.kpi.view.all",
   kpiManage: "analytics.kpi.manage",
