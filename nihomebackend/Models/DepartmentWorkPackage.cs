@@ -159,6 +159,8 @@ public class DepartmentWorkTask : IConcurrencyTracked
     public ProjectScheduleNode? ProjectScheduleNode { get; set; }
     public WorkTaskStatus Status { get; set; } = WorkTaskStatus.Planned;
     public int ProgressPercent { get; set; }
+    /// <summary>Marked by whoever assigns the task; listed under "Ưu tiên" in My work.</summary>
+    public bool IsPriority { get; set; }
     public DateTime PlannedStart { get; set; }
     public DateTime PlannedEnd { get; set; }
     public DateTime? ActualStart { get; set; }

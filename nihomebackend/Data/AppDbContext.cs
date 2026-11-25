@@ -123,6 +123,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<DepartmentWorkTaskAttachment> DepartmentWorkTaskAttachments => Set<DepartmentWorkTaskAttachment>();
     public DbSet<DepartmentWorkPackageParticipantGroup> DepartmentWorkPackageParticipantGroups => Set<DepartmentWorkPackageParticipantGroup>();
     public DbSet<DepartmentWorkTask> DepartmentWorkTasks => Set<DepartmentWorkTask>();
+    public DbSet<DailyWorkReport> DailyWorkReports => Set<DailyWorkReport>();
+    public DbSet<DailyWorkReportItem> DailyWorkReportItems => Set<DailyWorkReportItem>();
     public DbSet<DepartmentWorkTaskCc> DepartmentWorkTaskCcUsers => Set<DepartmentWorkTaskCc>();
     public DbSet<DepartmentWorkTaskDependency> DepartmentWorkTaskDependencies => Set<DepartmentWorkTaskDependency>();
     public DbSet<DepartmentWorkPackageHistory> DepartmentWorkPackageHistory => Set<DepartmentWorkPackageHistory>();
@@ -2580,6 +2582,35 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.HasOne(item => item.ReviewedByUser).WithMany().HasForeignKey(item => item.ReviewedByUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasOne(item => item.ApprovalApprover).WithMany().HasForeignKey(item => item.ApprovalApproverUserId).OnDelete(DeleteBehavior.NoAction);
             b.HasIndex(item => item.WorkPackageId).IsUnique();
+        });
+
+        modelBuilder.Entity<DailyWorkReport>(b =>
+        {
+            b.ToTable("daily_work_reports");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.Proposals).HasMaxLength(4000);
+            b.Property(item => item.TomorrowPlan).HasMaxLength(4000).IsRequired();
+            b.Property(item => item.ReviewComment).HasMaxLength(4000);
+            b.Property(item => item.RowVersion).IsRowVersion();
+            b.HasOne(item => item.User).WithMany()
+                .HasForeignKey(item => item.UserId).OnDelete(DeleteBehavior.Cascade);
+            b.HasOne(item => item.DepartmentRoleGroup).WithMany()
+                .HasForeignKey(item => item.DepartmentRoleGroupId).OnDelete(DeleteBehavior.Restrict);
+            b.HasOne(item => item.ReviewedByUser).WithMany()
+                .HasForeignKey(item => item.ReviewedByUserId).OnDelete(DeleteBehavior.NoAction);
+            b.HasIndex(item => new { item.UserId, item.ReportDate }).IsUnique();
+            b.HasIndex(item => new { item.DepartmentRoleGroupId, item.ReportDate });
+        });
+
+        modelBuilder.Entity<DailyWorkReportItem>(b =>
+        {
+            b.ToTable("daily_work_report_items");
+            b.HasKey(item => item.Id);
+            b.Property(item => item.SourceType).HasMaxLength(40);
+            b.Property(item => item.Title).HasMaxLength(300).IsRequired();
+            b.Property(item => item.Note).HasMaxLength(1000);
+            b.HasOne(item => item.Report).WithMany(report => report.Items)
+                .HasForeignKey(item => item.ReportId).OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<DepartmentWorkTask>(b =>

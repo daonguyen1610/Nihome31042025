@@ -116,6 +116,8 @@ const OperationalProjects = lazyWithReload(() => import("./pages/admin/Operation
 const DepartmentWorkPackages = lazyWithReload(
   () => import("./pages/admin/DepartmentWorkPackages.tsx"),
 );
+const MyWork = lazyWithReload(() => import("./pages/admin/MyWork.tsx"));
+const DailyReports = lazyWithReload(() => import("./pages/admin/DailyReports.tsx"));
 const KpiDashboard = lazyWithReload(() => import("./pages/admin/KpiDashboard.tsx"));
 const KpiConfiguration = lazyWithReload(() => import("./pages/admin/KpiConfiguration.tsx"));
 const ProjectReports = lazyWithReload(() => import("@/pages/admin/ProjectReports"));
@@ -461,6 +463,8 @@ const App = () => (
                         />
                       </Route>
                       <Route element={<RequirePermission code={ADMIN_PERMS.workPackages} />}>
+                        <Route path="/admin/my-work" element={<MyWork />} />
+                        <Route path="/admin/daily-reports" element={<DailyReports />} />
                         <Route path="/admin/work-packages" element={<DepartmentWorkPackages />} />
                         <Route
                           path="/admin/work-packages/projects"

@@ -462,6 +462,7 @@ public sealed partial class DepartmentWorkPackageService(
             ApproverUserId = request.ApproverUserId,
             KpiDefinitionId = request.KpiDefinitionId,
             ProjectScheduleNodeId = request.ProjectScheduleNodeId,
+            IsPriority = request.IsPriority,
             PlannedStart = AsUtcDate(request.PlannedStart),
             PlannedEnd = AsUtcDate(request.PlannedEnd),
             CreatedAt = now,
@@ -518,6 +519,7 @@ public sealed partial class DepartmentWorkPackageService(
         task.ApproverUserId = request.ApproverUserId;
         task.KpiDefinitionId = request.KpiDefinitionId;
         task.ProjectScheduleNodeId = request.ProjectScheduleNodeId;
+        task.IsPriority = request.IsPriority;
         task.PlannedStart = AsUtcDate(request.PlannedStart);
         task.PlannedEnd = AsUtcDate(request.PlannedEnd);
         task.UpdatedAt = DateTime.UtcNow;
@@ -1586,6 +1588,7 @@ public sealed partial class DepartmentWorkPackageService(
             KpiDefinitionCode = task.KpiDefinition?.Code,
             Status = task.Status.ToString(),
             ProgressPercent = task.ProgressPercent,
+            IsPriority = task.IsPriority,
             PlannedStart = task.PlannedStart,
             PlannedEnd = task.PlannedEnd,
             ActualStart = task.ActualStart,

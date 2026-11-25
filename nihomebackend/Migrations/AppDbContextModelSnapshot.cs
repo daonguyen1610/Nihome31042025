@@ -3144,6 +3144,106 @@ namespace nihomebackend.Migrations
                     b.ToTable("customer_documents", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DailyWorkReport", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("DepartmentRoleGroupId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Proposals")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateOnly>("ReportDate")
+                        .HasColumnType("date");
+
+                    b.Property<string>("ReviewComment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int?>("ReviewedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<byte[]>("RowVersion")
+                        .IsConcurrencyToken()
+                        .IsRequired()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("rowversion");
+
+                    b.Property<DateTime>("SubmittedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("TomorrowPlan")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("nvarchar(4000)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReviewedByUserId");
+
+                    b.HasIndex("DepartmentRoleGroupId", "ReportDate");
+
+                    b.HasIndex("UserId", "ReportDate")
+                        .IsUnique();
+
+                    b.ToTable("daily_work_reports", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DailyWorkReportItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("nvarchar(1000)");
+
+                    b.Property<int>("ProgressPercent")
+                        .HasColumnType("int");
+
+                    b.Property<int>("ReportId")
+                        .HasColumnType("int");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("SourceId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("SourceType")
+                        .HasMaxLength(40)
+                        .HasColumnType("nvarchar(40)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("nvarchar(300)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReportId");
+
+                    b.ToTable("daily_work_report_items", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentFinanceReview", b =>
                 {
                     b.Property<int>("Id")
@@ -3460,6 +3560,9 @@ namespace nihomebackend.Migrations
 
                     b.Property<int?>("DisabledRootTaskId")
                         .HasColumnType("int");
+
+                    b.Property<bool>("IsPriority")
+                        .HasColumnType("bit");
 
                     b.Property<int?>("KpiDefinitionId")
                         .HasColumnType("int");
@@ -13569,6 +13672,43 @@ namespace nihomebackend.Migrations
                     b.Navigation("UploadedBy");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DailyWorkReport", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.Rbac.RoleGroup", "DepartmentRoleGroup")
+                        .WithMany()
+                        .HasForeignKey("DepartmentRoleGroupId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "ReviewedByUser")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByUserId")
+                        .OnDelete(DeleteBehavior.NoAction);
+
+                    b.HasOne("NihomeBackend.Models.ApplicationUser", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("DepartmentRoleGroup");
+
+                    b.Navigation("ReviewedByUser");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DailyWorkReportItem", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.DailyWorkReport", "Report")
+                        .WithMany("Items")
+                        .HasForeignKey("ReportId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Report");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.DepartmentFinanceReview", b =>
                 {
                     b.HasOne("NihomeBackend.Models.ApplicationUser", "ApprovalApprover")
@@ -16443,6 +16583,11 @@ namespace nihomebackend.Migrations
                     b.Navigation("Documents");
 
                     b.Navigation("OperationalProjects");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DailyWorkReport", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.DepartmentWorkPackage", b =>

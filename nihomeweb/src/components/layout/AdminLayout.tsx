@@ -42,6 +42,8 @@ import {
   FileSpreadsheet,
   KeyRound,
   ClipboardList,
+  ListTodo,
+  NotebookPen,
   PenTool,
   Scale,
   HardHat,
@@ -164,6 +166,24 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       to: "/admin/work-packages",
       label: t("nav.workPackages"),
       icon: ClipboardList,
+      permission: ADMIN_PERMS.workPackages,
+    }),
+    [t],
+  );
+  const myWorkItem: NavItem = useMemo(
+    () => ({
+      to: "/admin/my-work",
+      label: t("nav.myWork"),
+      icon: ListTodo,
+      permission: ADMIN_PERMS.workPackages,
+    }),
+    [t],
+  );
+  const dailyReportItem: NavItem = useMemo(
+    () => ({
+      to: "/admin/daily-reports",
+      label: t("nav.dailyReports"),
+      icon: NotebookPen,
       permission: ADMIN_PERMS.workPackages,
     }),
     [t],
@@ -734,6 +754,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       { to: dashboardItem.to, label: dashboardItem.label },
       { to: notificationsItem.to, label: notificationsItem.label },
       { to: workPackagesItem.to, label: workPackagesItem.label },
+      { to: myWorkItem.to, label: myWorkItem.label },
+      { to: dailyReportItem.to, label: dailyReportItem.label },
     ];
     for (const g of rawGroups) {
       for (const it of g.items) {
@@ -741,7 +763,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       }
     }
     return all;
-  }, [dashboardItem, notificationsItem, workPackagesItem, rawGroups]);
+  }, [dashboardItem, notificationsItem, workPackagesItem, myWorkItem, dailyReportItem, rawGroups]);
 
   const breadcrumb = useMemo(() => {
     // find longest matching route so nested routes still resolve correctly
@@ -826,6 +848,8 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           {/* Dashboard */}
           {showDashboard && renderItem(dashboardItem)}
           {showNotifications && renderItem(notificationsItem)}
+          {showWorkPackages && renderItem(myWorkItem)}
+          {showWorkPackages && renderItem(dailyReportItem)}
           {showWorkPackages && renderItem(workPackagesItem)}
 
           {/* Groups */}

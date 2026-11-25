@@ -347,6 +347,15 @@ Nhóm công việc đi theo **Dự kiến → Đang thực hiện → Hoàn thà
 - **Xóa** mở bảng xem trước ảnh hưởng gồm ba nhóm: sẽ xóa, sẽ gỡ liên kết, đang chặn. Gõ đúng mã nhóm để xác nhận. Dự án và hợp đồng cha được giữ; checklist pháp lý/đấu thầu độc lập chỉ bị gỡ liên kết. Phải xử lý trước: bằng chứng giá/tài chính đã dùng, kích hoạt pháp lý, tệp còn lại (xóa tệp công việc trước). Xóa công việc đã xác nhận sẽ làm mất phần đóng góp của nó vào KPI.
 - Xóa Dự án thì xóa luôn các nhóm công việc của dự án (có trong bảng xem trước). Xóa Hợp đồng hoặc Cơ hội nguồn chỉ gỡ liên kết; nhóm vẫn thuộc dự án.
 
+**Việc ưu tiên.** Khi tạo hoặc sửa công việc, người giao tích **Việc ưu tiên** để công việc hiện trong mục **Ưu tiên** của trang Việc của tôi.
+
+**Việc của tôi** (menu quản trị, cần quyền xem nhóm công việc) gom các công việc trong nhóm công việc và các đầu việc tiến độ thiết kế mà bạn được giao hoặc đã giao cho người khác; bộ lọc **Hiển thị** tách hai loại này. Mỗi dòng mở thẳng hồ sơ của việc.
+
+- Tab **Cần chú ý**: Quá hạn, Hôm nay (đang trong thời gian kế hoạch), Sắp đến hạn (trong 3 ngày tới), Việc ưu tiên (người giao đánh dấu, hoặc việc thiết kế trên đường găng) và toàn bộ việc đang thực hiện. Chỉ tính việc chưa xong; ngày "hôm nay" theo múi giờ hiển thị trong Cài đặt.
+- Tab **Kế hoạch**: chọn Ngày/Tuần (thứ Hai–Chủ nhật)/Tháng/Năm và một ngày trong kỳ để xem mọi việc có thời gian kế hoạch giao với kỳ đó, kể cả việc đã xong.
+
+**Báo cáo ngày** (CV-02, theo mẫu QLNS-M05). Mỗi người mở **Báo cáo ngày**, hệ thống điền sẵn việc được giao đang thực hiện, đang trong kế hoạch hôm nay hoặc quá hạn, kèm % hiện tại. Sửa %, ghi chú, thêm/xóa dòng, nhập đề xuất và **kế hoạch ngày mai** (bắt buộc) rồi **Gửi báo cáo**. Chỉ báo cáo cho ngày hôm nay; gửi lại sẽ thay báo cáo cũ cho đến khi trưởng bộ phận nhận xét. Báo cáo không tự thay đổi tiến độ công việc — cập nhật tiến độ vẫn làm trên công việc. Trưởng bộ phận (thành viên của phòng có quyền phân công) thấy mục **Báo cáo của phòng**: chọn ngày, xem báo cáo, danh sách người chưa gửi và gửi nhận xét. Người có quyền xem mọi nhóm công việc chọn được phòng ban bất kỳ. Không ai tự nhận xét báo cáo của chính mình.
+
 #### 3.0.2 Công việc phòng ban trước hợp đồng
 
 Trước khi gửi báo giá hoặc nộp thầu, các phòng ban làm phần việc của mình trong một nhóm công việc của dự án. **Mục đích nghiệp vụ** của nhóm quyết định nó gắn với báo giá hay gói thầu nào và trang hiển thị thao tác gì.

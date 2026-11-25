@@ -137,6 +137,7 @@ public sealed class DepartmentWorkTaskResponse
     public string? KpiDefinitionCode { get; set; }
     public string Status { get; set; } = string.Empty;
     public int ProgressPercent { get; set; }
+    public bool IsPriority { get; set; }
     public DateTime PlannedStart { get; set; }
     public DateTime PlannedEnd { get; set; }
     public DateTime? ActualStart { get; set; }
