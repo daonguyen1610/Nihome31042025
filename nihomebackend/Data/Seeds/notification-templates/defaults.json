@@ -187,6 +187,12 @@
       "adminDescription": "Notify the assignee when a design task is approved."
     },
     {
+      "code": "design-task.opened",
+      "module": "design.schedule",
+      "channel": "InApp",
+      "adminDescription": "Notify the next assignee when approval of the previous design step starts their task."
+    },
+    {
       "code": "design-task.rejected",
       "module": "design.schedule",
       "channel": "InApp",

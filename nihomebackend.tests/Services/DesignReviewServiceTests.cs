@@ -16,6 +16,9 @@ public sealed class DesignReviewServiceTests : IDisposable
     private readonly AppDbContext db = DbContextFactory.Create();
     private readonly DesignReviewService service;
     private readonly Mock<INotificationService> notifications = new();
+    private readonly Mock<IProjectAccessService> access = new();
+    private readonly Mock<IPermissionService> permissions = new();
+    private readonly Mock<IBasicDesignDocService> basicDesign = new();
     private readonly int managerId;
     private readonly int recipientId;
     private readonly int projectId;
@@ -180,18 +183,25 @@ public sealed class DesignReviewServiceTests : IDisposable
         perspectiveDocumentId = perspective.Id;
         acceptanceDocumentId = acceptance.Id;
         conceptRevisionId = revision.Id;
-        var access = new Mock<IProjectAccessService>();
         access.Setup(item => item.CanViewDesignProjectAsync(It.IsAny<int>(), projectId, It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         access.Setup(item => item.HasAdministrativeBypassAsync(It.IsAny<int>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(false);
         service = new DesignReviewService(db, new ConceptDossierService(db), access.Object, notifications.Object,
-            NullLogger<DesignReviewService>.Instance);
+            NullLogger<DesignReviewService>.Instance,
+            new ConceptOptionService(db, NullLogger<ConceptOptionService>.Instance), basicDesign.Object,
+            permissions.Object);
     }
 
-    [Fact]
-    public async Task Lifecycle_RestrictsRecipientToViewAndComment_ThenRecordsClientDecision()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Lifecycle_RestrictsRecipientToViewAndComment_ThenRecordsClientDecision(bool canFinalize)
     {
+        access.Setup(item => item.CanApproveDesignProjectAsync(managerId, projectId, It.IsAny<CancellationToken>(), null))
+            .ReturnsAsync(canFinalize);
+        permissions.Setup(item => item.HasAsync(managerId, "design.concepts.finalize", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
         var created = await service.CreateAsync(projectId, new CreateDesignReviewRequest
         {
             Stage = "Concept",
@@ -228,6 +238,34 @@ public sealed class DesignReviewServiceTests : IDisposable
                 ClientAcceptanceSignedAt = DateTime.UtcNow,
             }, managerId, default);
         Assert.Equal("ClientApproved", approved!.Status);
+        // Client approval moves the dossier on only when the recorder could finalize the option by hand.
+        var stage = db.DesignProjects.AsNoTracking().Single(item => item.Id == projectId).CurrentStage;
+        Assert.Equal(canFinalize ? DesignProjectStage.BasicDesign : DesignProjectStage.Concept, stage);
+    }
+
+    [Fact]
+    public async Task ClientApprovalOfBasicDesign_OpensDetailDesignThroughTheGuardedUnlock()
+    {
+        access.Setup(item => item.CanApproveDesignProjectAsync(managerId, projectId, It.IsAny<CancellationToken>(), null))
+            .ReturnsAsync(true);
+        var review = new DesignReview
+        {
+            DesignProjectId = projectId,
+            Stage = DesignReviewStage.BasicDesign,
+            RevisionNumber = 1,
+            Title = "Hồ sơ cơ sở",
+            Status = DesignReviewStatus.SubmittedToClient,
+            DesignManagerUserId = managerId,
+            CreatedByUserId = managerId,
+            UpdatedByUserId = managerId,
+        };
+        db.Add(review);
+        db.SaveChanges();
+
+        await service.RecordClientDecisionAsync(projectId, review.Id,
+            new RecordDesignClientDecisionRequest { Decision = "ClientApproved", RowVersion = "" }, managerId, default);
+
+        basicDesign.Verify(item => item.UnlockShopDrawingAsync(projectId, managerId, It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]

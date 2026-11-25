@@ -263,7 +263,8 @@ public sealed class DetailDesignScheduleService(
         if (phase is null) return null;
         await EnsureCanManageFlowAsync(projectId, phase.DesignProjectId, callerUserId, ct);
         var status = DesignScheduleRules.ParseStatus(request.Status);
-        if (status == DesignScheduleStatus.Completed)
+        // Phases complete only when their last task is approved; a completed phase can still have its dates corrected.
+        if (status == DesignScheduleStatus.Completed && phase.Status != DesignScheduleStatus.Completed)
             throw new DesignScheduleOperationException(
                 "Dùng thao tác Hoàn thành để tự động gửi đầu việc đến đúng người duyệt.");
         DesignScheduleRules.ValidateTransition(phase.Status, status);
@@ -566,11 +567,85 @@ public sealed class DetailDesignScheduleService(
         task.UpdatedByUserId = callerUserId;
         await CrmConcurrency.SaveChangesAsync(db, ct);
         await AddHistoryAsync(task, "Task", task.Id, approved ? "Approved" : "Rejected", callerUserId, ct);
+        var opened = approved ? await OpenNextStepsAsync(task, callerUserId, ct) : [];
         if (transaction is not null) await transaction.CommitAsync(ct);
 
         await NotifyTaskAsync([task.AssigneeMember.UserId],
             approved ? "design-task.approved" : "design-task.rejected", task, projectId);
+        foreach (var next in opened)
+            await NotifyTaskAsync([next.AssigneeMember.UserId], "design-task.opened", next, projectId);
         return await MapTaskAsync(task.Id, ct);
+    }
+
+    /// <summary>
+    /// Approval moves the flow on: successors whose predecessors are now all approved start, and once
+    /// every task of the phase is approved the phase completes and the next phase starts with its ready tasks.
+    /// </summary>
+    private async Task<List<DesignScheduleTask>> OpenNextStepsAsync(
+        DesignScheduleTask approved, int callerUserId, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var today = await DisplaySettings.TodayAsync(db, ct);
+        var phases = await db.DesignSchedulePhases.Where(item =>
+                item.OperationalProjectId == approved.OperationalProjectId &&
+                item.DesignProjectId == approved.DesignProjectId)
+            .OrderBy(item => item.Code).ToListAsync(ct);
+        var phase = phases.Single(item => item.Id == approved.PhaseId);
+        int? openedPhaseId = null;
+        var phaseCompleted = false;
+        var phaseTasks = await db.DesignScheduleTasks.AsNoTracking().Where(item => item.PhaseId == phase.Id)
+            .Select(item => new { item.ApprovalStatus, item.ActualStart }).ToListAsync(ct);
+        if (phase.Status != DesignScheduleStatus.Completed &&
+            phaseTasks.All(item => item.ApprovalStatus == DesignTaskApprovalStatus.Approved))
+        {
+            var firstStart = phaseTasks.Min(item => item.ActualStart);
+            phase.ActualStart ??= firstStart is { } start && start < today ? start : today;
+            phase.ActualEnd = today;
+            phase.Status = DesignScheduleStatus.Completed;
+            phase.ProgressPercent = 100;
+            phase.UpdatedAt = now;
+            phase.UpdatedByUserId = callerUserId;
+            phaseCompleted = true;
+            var next = phases.FirstOrDefault(item => item.Code > phase.Code);
+            if (next?.Status == DesignScheduleStatus.NotStarted)
+            {
+                next.Status = DesignScheduleStatus.InProgress;
+                next.ActualStart = today;
+                next.UpdatedAt = now;
+                next.UpdatedByUserId = callerUserId;
+                openedPhaseId = next.Id;
+            }
+        }
+
+        var opened = await db.DesignScheduleTasks
+            .Include(item => item.AssigneeMember)
+            .Where(item => item.DesignProjectId == approved.DesignProjectId &&
+                item.Status == DesignScheduleStatus.NotStarted &&
+                (item.PhaseId == openedPhaseId ||
+                 item.Predecessors.Any(link => link.PredecessorTaskId == approved.Id) &&
+                 (item.PhaseId == approved.PhaseId || item.Phase.Status == DesignScheduleStatus.InProgress)) &&
+                item.Predecessors.All(link =>
+                    link.PredecessorTask.Status == DesignScheduleStatus.Completed &&
+                    link.PredecessorTask.ApprovalStatus == DesignTaskApprovalStatus.Approved))
+            .ToListAsync(ct);
+        foreach (var next in opened)
+        {
+            next.Status = DesignScheduleStatus.InProgress;
+            next.ActualStart = today;
+            next.UpdatedAt = now;
+            next.UpdatedByUserId = callerUserId;
+        }
+        await CrmConcurrency.SaveChangesAsync(db, ct);
+        if (phaseCompleted)
+        {
+            await AddHistoryAsync(phase, "Phase", phase.Id, "Completed", callerUserId, ct);
+            if (openedPhaseId.HasValue)
+                await AddHistoryAsync(phases.Single(item => item.Id == openedPhaseId), "Phase", openedPhaseId.Value,
+                    "Started", callerUserId, ct);
+        }
+        foreach (var next in opened)
+            await AddHistoryAsync(next, "Task", next.Id, "Opened", callerUserId, ct);
+        return opened;
     }
 
     private async Task EnsureActiveAssignmentAsync(DesignScheduleTask task, CancellationToken ct)
