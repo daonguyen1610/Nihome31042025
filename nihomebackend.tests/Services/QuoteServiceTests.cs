@@ -933,6 +933,45 @@ public class QuoteServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task EmailPreview_LongBoq_ListsFirstLinesAndStaysSendable()
+    {
+        var (user, quote) = await SeedApprovedReadyQuoteAsync();
+        await _sut.SubmitAsync(quote.Id, new(), user.Id, true, true);
+        await _sut.ApproveAsync(quote.Id, new(), user.Id + 1, true);
+        var tracked = await _db.Quotes.SingleAsync(q => q.Id == quote.Id);
+        tracked.Method = QuoteMethod.Boq;
+        _db.QuoteItems.AddRange(Enumerable.Range(1, 60).Select(index => new QuoteItem
+        {
+            QuoteId = quote.Id,
+            // 500-char names full of letters HTML-encoding expands (à → &#224;).
+            Name = $"Hạng mục thi công số {index:00} " + new string('à', 470),
+            Unit = "m2",
+            Quantity = 125.5m,
+            UnitPrice = 1_250_000m,
+            Amount = 156_875_000m,
+            SortOrder = index,
+        }));
+        await _db.SaveChangesAsync();
+
+        var preview = (await _sut.GetEmailPreviewAsync(quote.Id, user.Id, true, true))!;
+
+        Assert.Contains("số 05", preview.Body);
+        Assert.DoesNotContain("số 06", preview.Body);
+        Assert.Contains($"… và 55 hạng mục khác. Chi tiết đầy đủ 60 hạng mục trong file {quote.Code}.xlsx",
+            System.Net.WebUtility.HtmlDecode(preview.Body));
+        Assert.True(preview.Body.Length <= 8000, $"Body is {preview.Body.Length} characters.");
+        var rowVersion = (await _sut.GetAsync(quote.Id, user.Id, true))!.RowVersion;
+        await _sut.SendToCustomerAsync(quote.Id, new SendQuoteEmailRequest
+        {
+            RowVersion = rowVersion,
+            ToEmail = "khach@example.com",
+            Subject = preview.Subject,
+            Body = preview.Body,
+        }, user.Id, canSend: true, canSeeAll: true, canEdit: true);
+        Assert.Equal(QuoteStatus.SentToCustomer, (await _db.Quotes.SingleAsync(q => q.Id == quote.Id)).Status);
+    }
+
+    [Fact]
     public async Task EmailPreview_UsesSavedQuoteTemplateAndActualQuoteValues()
     {
         var (user, quote) = await SeedApprovedReadyQuoteAsync();
