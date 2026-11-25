@@ -2324,6 +2324,15 @@ namespace nihomebackend.Migrations
                     b.Property<int?>("QuoteId")
                         .HasColumnType("int");
 
+                    b.Property<int?>("ReviewStepIndex")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ReviewStepsJson")
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int?>("ReviewSubmittedByUserId")
+                        .HasColumnType("int");
+
                     b.Property<byte[]>("RowVersion")
                         .IsConcurrencyToken()
                         .IsRequired()

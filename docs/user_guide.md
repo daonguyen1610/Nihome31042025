@@ -171,7 +171,7 @@ Không phải dự án nào cũng đi đủ một chuỗi.
 | 3. Dự án | Kinh doanh hoặc PM | Lập kế hoạch → Đang thực hiện / Tạm dừng / Hoàn thành / Đã hủy | Có khách hàng, mã, tên, người phụ trách. Mã đổi được sau khi tạo, có lý do và lịch sử |
 | 4a. Báo giá | Kinh doanh; Cung ứng (giá đầu vào; cả phòng xem mọi báo giá); người duyệt theo Luồng duyệt báo giá, mặc định Trưởng phòng Cung ứng (duyệt lần lượt từng bước, nhận thông báo kèm link khi tới lượt); Tài chính (rà soát) | Nháp → Chờ duyệt nội bộ → Đã duyệt → Đã gửi khách → Khách đã duyệt | Gửi khách cần báo giá gắn Dự án và Tài chính rà soát đã duyệt đúng phiên bản |
 | 4b. Đấu thầu | Kinh doanh/QS văn phòng; các phòng theo kế hoạch thầu; Tài chính | Đang chuẩn bị → Đã nộp → Trúng/Trượt | Nộp cần kế hoạch đã xong, checklist đủ, dự toán đã duyệt, Tài chính rà soát hồ sơ thầu đã duyệt |
-| 5. Hợp đồng | Kinh doanh; Kế toán theo dõi thu/chi | Bản nháp → Đã ký → Đang thực hiện → Hoàn thành (Tạm dừng, Đã huỷ) | Từ báo giá đã duyệt hoặc tạo trực tiếp khi khách đã đồng ý giá trị. Đã ký cần bản scan hợp đồng đã ký |
+| 5. Hợp đồng | Kinh doanh; Kế toán theo dõi thu/chi | Bản nháp → Đang xem xét → Đã duyệt → Đã ký → Đang thực hiện → Hoàn thành (Tạm dừng, Đã huỷ) | Từ báo giá đã duyệt hoặc tạo trực tiếp khi khách đã đồng ý giá trị. Đã ký cần bản scan hợp đồng đã ký |
 | 6. Tiến độ tổng dự án | Người quản lý dự án lập; Trưởng phòng Kinh doanh (trước ký) hoặc PM (sau ký) duyệt | Nháp → chờ duyệt → phát hành | Ngày công việc phòng ban, thiết kế, thi công nằm trong mốc WBS |
 | 7. Thiết kế | Chủ nhiệm thiết kế, Chủ trì thiết kế, thành viên thiết kế | Ý tưởng → Cơ sở → Chi tiết → IFC | Mỗi giai đoạn cần revision mới nhất được khách duyệt. IFC chỉ phát hành khi bản vẽ Thiết kế chi tiết được khách duyệt |
 | 8. Pháp lý | PM/Admin kích hoạt; trưởng nhóm Pháp lý; người thực hiện và người duyệt từng giấy phép | Chưa chuẩn bị → Đang chuẩn bị → Đã nộp → Đang thẩm định → Đã cấp (Bổ sung hồ sơ, Bị từ chối, Hết hạn) | Hợp đồng thiết kế/thi công/D&B chỉ sang Đang thực hiện qua kích hoạt pháp lý. Giấy phép có hạn phải còn hiệu lực khi dùng |
@@ -592,12 +592,16 @@ Ghi khảo sát gắn với Cơ hội hoặc Dự án: chụp ảnh, quay video 
 
 | Trạng thái | Chuyển bằng | Điều kiện |
 |---|---|---|
-| Bản nháp | — | Trạng thái khi tạo |
-| Đã ký | **Đánh dấu Đã ký** | Đã tải **Bản scan hợp đồng đã ký** ở tab **Tài liệu**; có ngày ký |
+| Bản nháp | — / **Chuyển về Nháp để sửa** | Trạng thái khi tạo; từ Đang xem xét hoặc Đã duyệt khi cần sửa (phải gửi xem xét lại) |
+| Đang xem xét | **Gửi xem xét** | Hợp đồng đã phân loại. Chỉ đọc trong lúc xem xét |
+| Đã duyệt | Người xem xét cuối bấm **Duyệt bước này** | Mọi bước xem xét đã duyệt. Chỉ đọc |
+| Đã ký | **Đánh dấu Đã ký** | Từ Bản nháp hoặc Đã duyệt. Đã tải **Bản scan hợp đồng đã ký** ở tab **Tài liệu**; có ngày ký |
 | Đang thực hiện | **Chuyển Đang thực hiện** | Có ngày ký. Với hợp đồng thiết kế/thi công/D&B, PM hoặc Admin hoàn tất kích hoạt pháp lý ([3.3](#33-pháp-lý)) |
 | Tạm dừng | **Tạm dừng** / **Tiếp tục thực hiện** | — |
 | Hoàn thành | **Hoàn thành** | — |
 | Đã huỷ | **Huỷ hợp đồng** | — |
+
+**Xem xét nội bộ.** Khung **Quy trình hợp đồng** trên trang chi tiết hiện các bước Nháp → Đang xem xét → Đã duyệt → Đã ký → Đang thực hiện → Hoàn thành và việc cần làm tiếp. Bấm **Gửi xem xét**, tag người review nội bộ (không bắt buộc, xem xét trước và lần lượt) và chọn người duyệt cho từng bước của luồng **Ký hợp đồng** trong **Cấu hình → Luồng duyệt** (bước chỉ có một người đủ điều kiện được chọn sẵn). Mỗi người chỉ ở một bước; người gửi và người phụ trách hợp đồng không duyệt. Người đến lượt nhận thông báo, mở hợp đồng và bấm **Duyệt bước này** (hợp đồng tự chuyển sang người kế tiếp, bước cuối thì sang **Đã duyệt** và báo người gửi) hoặc **Trả lại** kèm lý do bắt buộc (hợp đồng về Nháp, người gửi nhận lý do). Người khác bấm trước lượt bị từ chối. Người gửi có thể **Chuyển về Nháp để sửa** bất cứ lúc nào; khi đó chuỗi xem xét bị hủy.
 
 - Bản scan phải có loại tài liệu là bản scan hợp đồng đã ký và thuộc đúng hợp đồng này; tài liệu hỗ trợ không thay được. Thiếu bản scan thì ứng dụng mở tab Tài liệu và hợp đồng giữ Bản nháp. Hợp đồng đã ký trước đây mà chưa có bản scan vẫn giữ trạng thái; hãy bổ sung trước khi triển khai.
 - Ngày phải theo thứ tự ký → bắt đầu → kết thúc. Sửa thông tin chung không bỏ qua được các kiểm tra trạng thái.

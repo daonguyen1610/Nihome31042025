@@ -11,6 +11,7 @@ import {
   toMilestoneRequests,
 } from "./contracts/contractDetailShared";
 import { ContractHeader } from "./contracts/ContractHeader";
+import { ContractReviewPanel } from "./contracts/ContractReviewPanel";
 import { InfoTab } from "./contracts/ContractInfoTab";
 import { EditInfoTab } from "./contracts/ContractEditTab";
 import { ScheduleTab, EditScheduleTab } from "./contracts/ContractScheduleTabs";
@@ -678,7 +679,9 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         <ContractHeader
           contract={contract}
           returnTo={returnTo}
-          canEdit={canManageMaster}
+          canEdit={
+            canManageMaster && contract.status !== "UnderReview" && contract.status !== "Approved"
+          }
           canTransition={canManageMaster}
           editing={editing}
           saving={saving}
@@ -687,6 +690,12 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           onSave={() => void saveEdit()}
           onTransition={handleTransition}
           transitionBusy={transitionBusy}
+        />
+        <ContractReviewPanel
+          contract={contract}
+          currentUserId={currentUserId}
+          canSubmit={canManageMaster}
+          onChanged={setContract}
         />
         {contract.direction === "Upstream" && (
           <ContractFinanceReviewLink quoteId={contract.quoteId} />

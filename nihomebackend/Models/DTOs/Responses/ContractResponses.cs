@@ -70,6 +70,12 @@ public class ContractResponse
 
     public ContractStatus Status { get; set; }
 
+    /// <summary>The internal review chain, in order; empty before the contract is sent for review.</summary>
+    public List<QuoteApprovalStepResponse> ReviewSteps { get; set; } = [];
+    /// <summary>Index of the step deciding now, while <see cref="Status"/> is UnderReview.</summary>
+    public int? ReviewStepIndex { get; set; }
+    public int? ReviewSubmittedByUserId { get; set; }
+
     public DateTime? SignedDate { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
@@ -180,3 +186,10 @@ public sealed record ContractProjectSiteResponse(
     string? BusinessSectorCode,
     decimal? SiteAreaM2,
     string? BusinessSectorName = null);
+
+/// <summary>
+/// Who a contract can be sent to for internal review: the "contracts / sign" workflow steps
+/// with the people who may decide each, and everyone who may be tagged as an extra reviewer.
+/// </summary>
+public sealed record ContractReviewChainResponse(IReadOnlyList<QuoteApprovalChainStepResponse> Steps,
+    IReadOnlyList<QuoteApprovalCandidateResponse> Reviewers);

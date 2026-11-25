@@ -1767,15 +1767,8 @@ public class QuoteService(
         return response;
     }
 
-    private static List<QuoteApprovalStepResponse> MapApprovalSteps(Quote q)
-    {
-        var steps = QuoteApprovalChain.Read(q.ApprovalStepsJson);
-        var waiting = q.Status == QuoteStatus.PendingApproval;
-        return steps.Select((step, index) => new QuoteApprovalStepResponse(step.Order, step.Name, step.RoleCode,
-            step.RoleLabelKey, step.ApproverUserId, step.ApproverName,
-            step.DecidedAt is not null ? "Approved" : waiting && index == q.ApprovalStepIndex ? "Current" : "Waiting",
-            step.DecidedAt, step.StartedAt?.AddHours(step.SlaHours))).ToList();
-    }
+    private static List<QuoteApprovalStepResponse> MapApprovalSteps(Quote q) =>
+        QuoteApprovalChain.MapSteps(q.ApprovalStepsJson, q.Status == QuoteStatus.PendingApproval, q.ApprovalStepIndex);
 
     private static QuoteResponse Map(Quote q) => new()
     {

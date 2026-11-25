@@ -448,7 +448,12 @@ thiết kế/thi công chỉ seed ở môi trường `Development`
   không xoá dòng tự tạo, không ghi đè giá trị admin.
 - Luồng duyệt mặc định (`Seeds/workflows/defaults.json`) chỉ điền dòng còn trống; admin
   sửa tại `/admin/workflows`. Luồng `quotes|approve` được áp dụng khi gửi duyệt báo giá
-  ([8.2](#82-báo-giá)); các luồng khác là cấu hình tham chiếu. Mặc định
+  ([8.2](#82-báo-giá)); luồng `contracts|sign` là các bước xem xét hợp đồng
+  (`ContractReviewService`: người được tag trước, rồi các bước của luồng, cố định trong
+  `contracts.ReviewStepsJson` khi gửi; Draft → UnderReview → Approved; API
+  `GET /contracts/{id}/review-chain`, `POST /contracts/{id}/review/{submit|approve|reject}`;
+  người duyệt cần `crm.contracts.view` và đúng vai trò của bước; migration
+  `AddContractReview`, `Down` đưa UnderReview/Approved về Draft); các luồng khác là cấu hình tham chiếu. Mặc định
   `quotes|approve` là một bước `PROCUREMENT_MANAGER`. Migration `AlignQuoteApprovalWorkflow` sửa chuỗi cũ (Sales
   Manager → BGĐ) và ghi chú mẫu thông báo trên DB đang chạy, chỉ khi admin chưa sửa; `Down`
   khôi phục. Một dòng chỉ được coi là "chưa sửa" khi mô tả khớp và từng bước (tên, vai trò,

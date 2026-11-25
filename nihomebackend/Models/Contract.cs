@@ -60,6 +60,17 @@ public class Contract : IConcurrencyTracked
 
     public ContractStatus Status { get; set; } = ContractStatus.Draft;
 
+    /// <summary>
+    /// Internal review chain fixed when the contract is sent for review (status UnderReview):
+    /// the people tagged by name, then the steps of the "contracts / sign" workflow in
+    /// Cấu hình → Luồng duyệt. Kept after approval as the record of who approved.
+    /// </summary>
+    public string? ReviewStepsJson { get; set; }
+    /// <summary>Index into <see cref="ReviewStepsJson"/> of the step deciding now.</summary>
+    public int? ReviewStepIndex { get; set; }
+    /// <summary>Who sent the contract for review; never one of its reviewers.</summary>
+    public int? ReviewSubmittedByUserId { get; set; }
+
     /// <summary>Date the contract was signed. Null until moved out of Draft.</summary>
     public DateTime? SignedDate { get; set; }
 
@@ -100,6 +111,10 @@ public enum ContractStatus
     Completed = 4,
     /// <summary>Cancelled before or during execution.</summary>
     Cancelled = 5,
+    /// <summary>Đang xem xét: the review chain decides step by step; the contract is read-only.</summary>
+    UnderReview = 6,
+    /// <summary>Đã duyệt: every reviewer approved; the contract can be signed.</summary>
+    Approved = 7,
 }
 
 public static class ContractStatuses

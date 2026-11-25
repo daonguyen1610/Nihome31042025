@@ -15,6 +15,8 @@ import { todayIsoDate } from "@/lib/displaySettings";
 
 export const STATUS_STYLES: Record<ContractStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
+  UnderReview: "border-info-strong/30 bg-info-soft text-info-strong",
+  Approved: "border-success-strong/30 bg-success-soft text-success-strong",
   Signed: "border-sky-200 bg-sky-50 text-sky-700",
   InProgress: "border-amber-200 bg-amber-50 text-amber-800",
   OnHold: "border-orange-200 bg-orange-50 text-orange-700",
@@ -159,6 +161,9 @@ export const toMilestoneRequests = (
 
 export const AVAILABLE_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
   Draft: ["Signed", "Cancelled"],
+  // Sending for review and deciding a step happen in ContractReviewPanel.
+  UnderReview: ["Draft", "Cancelled"],
+  Approved: ["Signed", "Draft", "Cancelled"],
   Signed: ["InProgress", "Cancelled"],
   InProgress: ["OnHold", "Completed", "Cancelled"],
   OnHold: ["InProgress", "Cancelled"],
@@ -173,6 +178,8 @@ export const TRANSITION_ICON: Record<ContractStatus, JSX.Element> = {
   Completed: <ShieldCheck className="h-4 w-4" />,
   Cancelled: <XCircle className="h-4 w-4" />,
   Draft: <Pencil className="h-4 w-4" />,
+  UnderReview: <Clock className="h-4 w-4" />,
+  Approved: <CheckCircle2 className="h-4 w-4" />,
 };
 
 export const TRANSITION_LABEL_KEY: Record<ContractStatus, string> = {
@@ -183,7 +190,9 @@ export const TRANSITION_LABEL_KEY: Record<ContractStatus, string> = {
   OnHold: "contracts.detail.transition.markOnHold",
   Completed: "contracts.detail.transition.markCompleted",
   Cancelled: "contracts.detail.transition.markCancelled",
-  Draft: "",
+  Draft: "contracts.detail.transition.backToDraft",
+  UnderReview: "",
+  Approved: "",
 };
 
 export const blankVoDraft = (): VoDraft => ({

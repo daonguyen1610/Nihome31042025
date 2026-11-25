@@ -442,5 +442,11 @@
     "en": "Quote {{code}} expires on {{dueDate}}. Follow up with the customer or extend the quote if needed.",
     "zh": "报价 {{code}} 将于 {{dueDate}} 失效。请联系客户，或在需要时延长报价有效期。",
     "ja": "見積 {{code}} は {{dueDate}} に有効期限が切れます。顧客に連絡するか、必要に応じて延長してください。"
-  }
+  },
+  {"key": "notification.contract.review-requested.title", "category": "notification", "vi": "Hợp đồng {{contractNumber}} chờ bạn xem xét", "en": "Contract {{contractNumber}} awaits your review", "zh": "合同 {{contractNumber}} 待您审核", "ja": "契約 {{contractNumber}} があなたのレビュー待ちです"},
+  {"key": "notification.contract.review-requested.body", "category": "notification", "vi": "Đến lượt bạn xem xét hợp đồng {{contractNumber}}. Mở hợp đồng để Duyệt bước này hoặc Trả lại.", "en": "It is your turn to review contract {{contractNumber}}. Open it to approve this step or send it back.", "zh": "轮到您审核合同 {{contractNumber}}。请打开合同批准此步骤或退回。", "ja": "契約 {{contractNumber}} のレビューの番です。開いてこのステップを承認するか差し戻してください。"},
+  {"key": "notification.contract.review-approved.title", "category": "notification", "vi": "Hợp đồng {{contractNumber}} đã duyệt", "en": "Contract {{contractNumber}} approved", "zh": "合同 {{contractNumber}} 已批准", "ja": "契約 {{contractNumber}} が承認されました"},
+  {"key": "notification.contract.review-approved.body", "category": "notification", "vi": "Tất cả người xem xét đã duyệt hợp đồng {{contractNumber}}. Có thể trình ký.", "en": "Every reviewer approved contract {{contractNumber}}. It can now go for signing.", "zh": "所有审核人已批准合同 {{contractNumber}}，可以提交签署。", "ja": "すべてのレビュー担当者が契約 {{contractNumber}} を承認しました。署名に進めます。"},
+  {"key": "notification.contract.review-rejected.title", "category": "notification", "vi": "Hợp đồng {{contractNumber}} bị trả lại", "en": "Contract {{contractNumber}} sent back", "zh": "合同 {{contractNumber}} 被退回", "ja": "契約 {{contractNumber}} が差し戻されました"},
+  {"key": "notification.contract.review-rejected.body", "category": "notification", "vi": "Hợp đồng {{contractNumber}} được trả về Nháp. Lý do: {{reason}}.", "en": "Contract {{contractNumber}} was returned to Draft. Reason: {{reason}}.", "zh": "合同 {{contractNumber}} 已退回草稿。原因：{{reason}}。", "ja": "契約 {{contractNumber}} は下書きに戻されました。理由: {{reason}}。"}
 ]
