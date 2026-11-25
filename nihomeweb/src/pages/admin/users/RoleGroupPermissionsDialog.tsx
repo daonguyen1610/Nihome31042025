@@ -60,7 +60,8 @@ export default function RoleGroupPermissionsDialog({
       (!moduleFilter || permission.code.startsWith(`${moduleFilter}.`)) &&
       (!term ||
         permission.code.toLowerCase().includes(term) ||
-        t(`rbac.perm.${permission.code}.label`).toLowerCase().includes(term)),
+        t(`rbac.perm.${permission.code}.label`).toLowerCase().includes(term) ||
+        t(`rbac.perm.${permission.code}.description`).toLowerCase().includes(term)),
   );
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -199,7 +200,11 @@ export default function RoleGroupPermissionsDialog({
                             <span className="block text-sm font-medium">
                               {t(`rbac.perm.${permission.code}.label`)}
                             </span>
-                            <span className="mt-1 block break-all font-mono text-xs text-muted-foreground">
+                            {/* The description says what the right allows; the code stays for support. */}
+                            <span className="mt-1 block text-xs text-muted-foreground">
+                              {t(`rbac.perm.${permission.code}.description`)}
+                            </span>
+                            <span className="mt-0.5 block break-all font-mono text-[11px] text-muted-foreground/70">
                               {permission.code}
                             </span>
                           </span>
