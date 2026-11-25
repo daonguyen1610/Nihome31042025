@@ -64,6 +64,54 @@
     "ja": "入札「{{tenderName}}」の「{{itemTitle}}」書類の社内期限は {{internalDeadline}} です。"
   },
   {
+    "key": "notification.tender.stage.approval-requested.title",
+    "category": "notification",
+    "vi": "Gói thầu {{tenderCode}} chờ bạn duyệt bước \"{{stage}}\"",
+    "en": "Tender {{tenderCode}} awaits your approval of step \"{{stage}}\"",
+    "zh": "投标 {{tenderCode}} 的“{{stage}}”步骤等待您审批",
+    "ja": "入札 {{tenderCode}} の「{{stage}}」ステップの承認をお願いします"
+  },
+  {
+    "key": "notification.tender.stage.approval-requested.body",
+    "category": "notification",
+    "vi": "{{requesterName}} đề nghị duyệt hoàn tất bước \"{{stage}}\" của gói thầu \"{{tenderName}}\". Duyệt để chuyển sang bước \"{{nextStage}}\".",
+    "en": "{{requesterName}} asks you to approve completion of step \"{{stage}}\" for tender \"{{tenderName}}\". Approving moves it to \"{{nextStage}}\".",
+    "zh": "{{requesterName}} 请您审批投标“{{tenderName}}”的“{{stage}}”步骤已完成。审批后将进入“{{nextStage}}”。",
+    "ja": "{{requesterName}} さんが入札「{{tenderName}}」の「{{stage}}」ステップ完了の承認を依頼しました。承認すると「{{nextStage}}」へ進みます。"
+  },
+  {
+    "key": "notification.tender.stage.advanced.title",
+    "category": "notification",
+    "vi": "Gói thầu {{tenderCode}} đã chuyển sang bước \"{{stage}}\"",
+    "en": "Tender {{tenderCode}} moved to step \"{{stage}}\"",
+    "zh": "投标 {{tenderCode}} 已进入“{{stage}}”步骤",
+    "ja": "入札 {{tenderCode}} は「{{stage}}」ステップへ進みました"
+  },
+  {
+    "key": "notification.tender.stage.advanced.body",
+    "category": "notification",
+    "vi": "{{approverName}} đã duyệt hoàn tất bước \"{{finishedStage}}\" của gói thầu \"{{tenderName}}\". Bước tiếp theo: \"{{stage}}\".",
+    "en": "{{approverName}} approved completion of step \"{{finishedStage}}\" for tender \"{{tenderName}}\". Next step: \"{{stage}}\".",
+    "zh": "{{approverName}} 已审批投标“{{tenderName}}”的“{{finishedStage}}”步骤完成。下一步：“{{stage}}”。",
+    "ja": "{{approverName}} さんが入札「{{tenderName}}」の「{{finishedStage}}」ステップ完了を承認しました。次のステップ：「{{stage}}」。"
+  },
+  {
+    "key": "notification.tender.stage.returned.title",
+    "category": "notification",
+    "vi": "Bước \"{{stage}}\" của gói thầu {{tenderCode}} bị trả lại",
+    "en": "Step \"{{stage}}\" of tender {{tenderCode}} was returned",
+    "zh": "投标 {{tenderCode}} 的“{{stage}}”步骤被退回",
+    "ja": "入札 {{tenderCode}} の「{{stage}}」ステップが差し戻されました"
+  },
+  {
+    "key": "notification.tender.stage.returned.body",
+    "category": "notification",
+    "vi": "{{approverName}} trả lại bước \"{{stage}}\" của gói thầu \"{{tenderName}}\" với lý do: {{reason}}",
+    "en": "{{approverName}} returned step \"{{stage}}\" of tender \"{{tenderName}}\". Reason: {{reason}}",
+    "zh": "{{approverName}} 退回了投标“{{tenderName}}”的“{{stage}}”步骤。原因：{{reason}}",
+    "ja": "{{approverName}} さんが入札「{{tenderName}}」の「{{stage}}」ステップを差し戻しました。理由：{{reason}}"
+  },
+  {
     "key": "notification.quote.submitted-for-approval.title",
     "category": "notification",
     "vi": "Báo giá {{quoteNumber}} chờ bạn duyệt",

@@ -232,6 +232,14 @@
     "ja": "入札 – 入札書類の提出"
   },
   {
+    "key": "workflow.business.tendersAdvanceStage",
+    "category": "workflow",
+    "vi": "Gói thầu – duyệt chuyển bước",
+    "en": "Tender – step approval",
+    "zh": "投标 – 步骤审批",
+    "ja": "入札 – ステップ承認"
+  },
+  {
     "key": "workflow.business.designConceptsApprove",
     "category": "workflow",
     "vi": "Thiết kế ý tưởng (Concept) – duyệt",

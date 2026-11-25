@@ -487,6 +487,63 @@ public class TendersController(
         }
     }
 
+    [HttpGet("{id:int}/stage-approval/approvers")]
+    [RequirePermission("crm.tenders", "manage")]
+    public async Task<ActionResult<TenderStageApproverOptionsResponse>> StageApprovers(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        var options = await svc.ListStageApproverOptionsAsync(id, userId.Value, ct);
+        return options is null ? NotFound() : Ok(options);
+    }
+
+    [HttpPost("{id:int}/stage-approval/request")]
+    [RequirePermission("crm.tenders", "manage")]
+    public Task<ActionResult<TenderResponse>> RequestStageApproval(
+        int id, [FromBody] RequestTenderStageApprovalRequest request, CancellationToken ct) =>
+        StageActionAsync(id, "tender.stage.request",
+            userId => svc.RequestStageApprovalAsync(id, request, userId, ct));
+
+    // The assigned approver needs only view; the service checks they are the one assigned.
+    [HttpPost("{id:int}/stage-approval/approve")]
+    [RequirePermission("crm.tenders", "view")]
+    public Task<ActionResult<TenderResponse>> ApproveStage(
+        int id, [FromBody] TenderStageDecisionRequest request, CancellationToken ct) =>
+        StageActionAsync(id, "tender.stage.approve",
+            userId => svc.ApproveStageAsync(id, request, userId, ct));
+
+    [HttpPost("{id:int}/stage-approval/return")]
+    [RequirePermission("crm.tenders", "view")]
+    public Task<ActionResult<TenderResponse>> ReturnStage(
+        int id, [FromBody] TenderStageDecisionRequest request, CancellationToken ct) =>
+        StageActionAsync(id, "tender.stage.return",
+            userId => svc.ReturnStageAsync(id, request, userId, ct));
+
+    private async Task<ActionResult<TenderResponse>> StageActionAsync(
+        int id, string action, Func<int, Task<TenderResponse?>> run)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        try
+        {
+            var updated = await run(userId.Value);
+            if (updated is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = action,
+                ResourceType = EntityTypes.Tender,
+                ResourceId = id.ToString(),
+                Message = $"Tender #{id} stage {updated.Stage}" +
+                    (updated.StageApproverName is null ? "." : $", chờ {updated.StageApproverName} duyệt."),
+            });
+            return Ok(updated);
+        }
+        catch (TenderOperationException ex)
+        {
+            return LogAndBadRequest(action, ex, id);
+        }
+    }
+
     [HttpPost("{id:int}/transition")]
     [RequirePermission("crm.tenders", "view")]
     public async Task<ActionResult<TenderResponse>> Transition(

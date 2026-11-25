@@ -35,6 +35,7 @@ import type {
   SubmitTenderRequest,
   TenderEstimateRevisionResponse,
   TenderEstimateImportResponse,
+  TenderStageApproverOptionsResponse,
 } from "./types/tenders";
 import { managedFileName } from "./helpers";
 
@@ -139,6 +140,17 @@ export const tendersApi = {
     api.post<TenderResponse>(`/tenders/${tenderId}/mark-won`, body),
   markTenderLost: (tenderId: number, body: MarkTenderLostRequest) =>
     api.post<TenderResponse>(`/tenders/${tenderId}/mark-lost`, body),
+  listTenderStageApprovers: (tenderId: number) =>
+    api.get<TenderStageApproverOptionsResponse>(`/tenders/${tenderId}/stage-approval/approvers`),
+  requestTenderStageApproval: (
+    tenderId: number,
+    body: { approverUserId: number; note?: string | null; rowVersion: string },
+  ) => api.post<TenderResponse>(`/tenders/${tenderId}/stage-approval/request`, body),
+  decideTenderStage: (
+    tenderId: number,
+    decision: "approve" | "return",
+    body: { note?: string | null; rowVersion: string },
+  ) => api.post<TenderResponse>(`/tenders/${tenderId}/stage-approval/${decision}`, body),
   getTenderTimeline: (tenderId: number, limit = 100) =>
     api.get<TenderTimelineEvent[]>(`/tenders/${tenderId}/timeline`, { params: { limit } }),
   transitionTender: (tenderId: number, body: TransitionTenderRequest) =>

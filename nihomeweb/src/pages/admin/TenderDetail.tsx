@@ -29,6 +29,7 @@ import {
 import AdminLayout from "@/components/layout/AdminLayout";
 import AdminFilePreview from "@/components/admin/AdminFilePreview";
 import TenderEstimatePanel from "./TenderEstimatePanel";
+import TenderStagePanel from "./TenderStagePanel";
 import { isTenderChecklistEvidenceReady } from "./tenderChecklist";
 import { useI18n } from "@/lib/i18n";
 import { useBusinessFileCheck } from "@/hooks/useBusinessFileCheck";
@@ -2232,6 +2233,15 @@ const AdminTenderDetail = () => {
         ) : (
           <>
             <HeaderCard tender={tender} canRequestFinance={canManage} />
+
+            <TenderStagePanel
+              tender={tender}
+              canManage={canManage}
+              onChanged={(updated) => {
+                setTender(updated);
+                void fetchTimeline();
+              }}
+            />
 
             {showDeadlineAlert ? (
               <div className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">

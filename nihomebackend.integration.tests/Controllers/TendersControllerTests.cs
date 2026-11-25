@@ -1146,6 +1146,7 @@ public class TendersControllerTests : IntegrationTestBase
         (await WithDbAsync(db => db.Tenders.AsNoTracking().SingleAsync(item => item.Id == tenderId)))
             .Status.Should().Be(TenderStatus.Preparing);
 
+        await AdvanceTenderToSubmissionStageAsync(tenderId);
         var detail = await Client.GetFromJsonAsync<JsonElement>($"/api/tenders/{tenderId}");
         var rowVersion = detail.GetProperty("rowVersion").GetString();
         var key = Guid.NewGuid().ToString("N");
@@ -1595,4 +1596,54 @@ public class TendersControllerTests : IntegrationTestBase
         tender.Status = status;
         await db.SaveChangesAsync();
     });
+
+    [Fact]
+    public async Task StageApproval_OnlyAssignedApproverAdvancesOverHttp()
+    {
+        // The test seeder does not load workflows; add the shipped default (Trưởng phòng KD first).
+        await WithDbAsync(async db =>
+        {
+            if (await db.WorkflowConfigs.AnyAsync(item => item.Module == "tenders" && item.Action == "advance-stage"))
+                return;
+            db.WorkflowConfigs.Add(new WorkflowConfig
+            {
+                Module = "tenders",
+                Action = "advance-stage",
+                Name = "Duyệt chuyển bước gói thầu",
+                StepsJson = """[{"order":1,"name":"Duyệt hoàn tất Nhận thông tin","approverRoleCode":"SALES_MANAGER","slaHours":24}]""",
+            });
+            await db.SaveChangesAsync();
+        });
+        await AuthTestHelper.AuthenticateAsync(Client, client => AuthTestHelper.LoginAsRoleAsync(client, "SALE"));
+        var tenderId = await CreateTenderAsync("Gói thầu nhà xưởng duyệt chuyển bước");
+        var approvers = await ReadJsonAsync(await Client.GetAsync($"/api/tenders/{tenderId}/stage-approval/approvers"));
+        approvers.GetProperty("roleCode").GetString().Should().Be("SALES_MANAGER");
+        var managerId = await WithDbAsync(db => db.Users.AsNoTracking()
+            .Where(user => user.PhoneNumber == TestDataSeeder.BusinessRolePhonesByCode["SALES_MANAGER"])
+            .Select(user => user.Id).SingleAsync());
+        approvers.GetProperty("candidates").EnumerateArray().Select(item => item.GetProperty("id").GetInt32())
+            .Should().Contain(managerId);
+        var detail = await Client.GetFromJsonAsync<JsonElement>($"/api/tenders/{tenderId}");
+
+        var requested = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/stage-approval/request", new
+        {
+            approverUserId = managerId,
+            note = "Đã nhận đủ hồ sơ mời thầu",
+            rowVersion = detail.GetProperty("rowVersion").GetString(),
+        });
+        requested.StatusCode.Should().Be(HttpStatusCode.OK);
+        var pending = await ReadJsonAsync(requested);
+
+        // The requester is not the approver, so approving their own request is refused.
+        (await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/stage-approval/approve",
+            new { rowVersion = pending.GetProperty("rowVersion").GetString() }))
+            .StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        await AuthTestHelper.AuthenticateAsync(Client,
+            client => AuthTestHelper.LoginAsRoleAsync(client, "SALES_MANAGER"));
+        var approved = await Client.PostAsJsonAsync($"/api/tenders/{tenderId}/stage-approval/approve",
+            new { rowVersion = pending.GetProperty("rowVersion").GetString() });
+        approved.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(approved)).GetProperty("stage").GetString().Should().Be("Planning");
+    }
 }

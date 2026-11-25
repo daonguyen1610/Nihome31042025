@@ -86,6 +86,7 @@ test("tender detail renders estimate revisions, totals, and blocked submission g
     preparerName: "Manager",
     infoSource: null,
     status: "Preparing",
+    stage: "Submission",
     note: null,
     wonOpportunityId: null,
     wonOpportunityName: null,
