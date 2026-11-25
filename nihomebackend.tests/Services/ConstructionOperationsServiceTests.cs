@@ -632,6 +632,23 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         Assert.Equal(ConstructionReviewStatus.Draft, _db.ConstructionResourceRequests.Single().Status);
     }
 
+    [Fact]
+    public async Task Pending_requests_count_against_the_boq_line_once()
+    {
+        var lineId = await SeedMaterialReferencesAsync(100m);
+        var first = await _sut.CreateResourceAsync(ProjectId, MaterialRequest(lineId, 60m), BchUserId, default);
+        await _sut.SubmitResourceAsync(ProjectId, first.Id, first.RowVersion, BchUserId, default);
+
+        // NICON answer 9: the pending 60 counts, so 41 more would pass 100%.
+        await Assert.ThrowsAsync<ConstructionOperationException>(
+            () => _sut.CreateResourceAsync(ProjectId, MaterialRequest(lineId, 41m), BchUserId, default));
+        await _sut.CreateResourceAsync(ProjectId, MaterialRequest(lineId, 30m), BchUserId, default);
+
+        var levels = (await _sut.ListResourcesAsync(ProjectId, default)).ToDictionary(x => x.Quantity, x => x.BoqUsageLevel);
+        Assert.Equal(BoqUsageLevel.Normal, levels[60m]); // its own 60, not 120
+        Assert.Equal(BoqUsageLevel.Yellow, levels[30m]); // 60 pending + 30 draft = 90%
+    }
+
     private const int ProcurementUserId = 303;
 
     private async Task<int> SeedMaterialReferencesAsync(decimal approvedQuantity)

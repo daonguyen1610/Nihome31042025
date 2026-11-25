@@ -1098,8 +1098,10 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     {
         db.HardDeleteOperations.Add(new HardDeleteOperation
         {
-            Id = Guid.NewGuid(), ResourceType = EntityTypes.OperationalProject,
-            ResourceId = project.Id.ToString(), Status = HardDeleteOperationStatus.Processing,
+            Id = Guid.NewGuid(),
+            ResourceType = EntityTypes.OperationalProject,
+            ResourceId = project.Id.ToString(),
+            Status = HardDeleteOperationStatus.Processing,
         });
         await db.SaveChangesAsync();
 

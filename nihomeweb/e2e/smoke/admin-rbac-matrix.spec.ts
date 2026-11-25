@@ -620,6 +620,8 @@ const MATRIX_PATH_EXCLUSIONS = new Set<string>([
   "/admin/work-packages/projects",
   "/admin/work-packages/contracts",
   "/admin/work-packages/internal",
+  "/admin/my-work",
+  "/admin/daily-reports",
   // Process sub-groups all gated by ADMIN_PERMS.processes; /admin/processes/general
   // already proves the gate works for the whole group.
   "/admin/processes/ptcskh",

@@ -658,7 +658,9 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         var basic = Task(projectId, designProjectId, nextPhase.Id, activeMemberId, approverMemberId, "STEP-101");
         db.AddRange(basic, new DesignScheduleTaskDependency
         {
-            OperationalProjectId = projectId, TaskId = second.Id, PredecessorTaskId = first.Id,
+            OperationalProjectId = projectId,
+            TaskId = second.Id,
+            PredecessorTaskId = first.Id,
         });
         db.SaveChanges();
         db.ChangeTracker.Clear();

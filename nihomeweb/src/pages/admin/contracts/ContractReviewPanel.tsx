@@ -232,8 +232,9 @@ export function ContractReviewPanel({ contract, currentUserId, canSubmit, onChan
           {chain && (
             <div className="space-y-4">
               <div className="space-y-1.5">
-                <Label>{t("contracts.review.tagReviewers")}</Label>
+                <Label htmlFor="contract-review-tag">{t("contracts.review.tagReviewers")}</Label>
                 <SearchableSelect
+                  id="contract-review-tag"
                   ariaLabel={t("contracts.review.tagReviewers")}
                   value={null}
                   onChange={(value) => setReviewers((prev) => [...prev, Number(value)])}
@@ -270,7 +271,11 @@ export function ContractReviewPanel({ contract, currentUserId, canSubmit, onChan
                 const title = t("contracts.review.stepTitle", { n: index + 1, role });
                 return (
                   <div key={`${step.order}-${index}`} className="space-y-1.5">
-                    <Label>{title}</Label>
+                    {step.everyoneApproves ? (
+                      <p className="text-sm font-medium">{title}</p>
+                    ) : (
+                      <Label htmlFor={`contract-review-step-${index}`}>{title}</Label>
+                    )}
                     {step.everyoneApproves ? (
                       <p className="text-sm text-muted-foreground">
                         {t("contracts.review.everyoneInOrder", {
@@ -279,6 +284,7 @@ export function ContractReviewPanel({ contract, currentUserId, canSubmit, onChan
                       </p>
                     ) : (
                       <SearchableSelect
+                        id={`contract-review-step-${index}`}
                         ariaLabel={title}
                         value={approvers[index]?.toString() ?? null}
                         onChange={(value) =>
