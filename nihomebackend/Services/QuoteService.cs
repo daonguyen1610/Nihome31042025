@@ -855,6 +855,10 @@ public class QuoteService(
             ct, requireOpenOpportunity: true);
     }
 
+    private const int EmailQuoteLineLimit = 5;
+    // Names reach 500 chars and HTML-encoding can grow Vietnamese text up to 6x; the workbook keeps the full name.
+    private const int EmailQuoteNameLimit = 150;
+
     private static QuoteEmailPreviewResponse BuildEmailPreview(Quote quote, bool canEdit, SiteSettings? settings)
     {
         var customer = quote.Opportunity.Customer;
@@ -864,9 +868,15 @@ public class QuoteService(
         var culture = System.Globalization.CultureInfo.GetCultureInfo("vi-VN");
         var amount = quote.GrandTotal.ToString("N0", culture);
         var currency = quote.Currency;
+        // The email lists only the first BOQ lines; the attached workbook carries every line,
+        // so a long BOQ cannot push the body past the send limit or get clipped by mail clients.
+        var boqLines = quote.Items.OrderBy(item => item.SortOrder).ToList();
         var details = quote.Method == QuoteMethod.Boq
-            ? string.Join("\n", quote.Items.OrderBy(item => item.SortOrder).Select(item =>
-                $"- {item.Name}: {item.Quantity:N2} {item.Unit} × {item.UnitPrice.ToString("N0", culture)} {currency} = {item.Amount.ToString("N0", culture)} {currency}"))
+            ? string.Join("\n", boqLines.Take(EmailQuoteLineLimit).Select(item =>
+                $"- {(item.Name.Length > EmailQuoteNameLimit ? item.Name[..EmailQuoteNameLimit] + "…" : item.Name)}: {item.Quantity:N2} {item.Unit} × {item.UnitPrice.ToString("N0", culture)} {currency} = {item.Amount.ToString("N0", culture)} {currency}")
+                .Concat(boqLines.Count > EmailQuoteLineLimit
+                    ? [$"… và {boqLines.Count - EmailQuoteLineLimit} hạng mục khác. Chi tiết đầy đủ {boqLines.Count} hạng mục trong file {quote.Code}.xlsx đính kèm."]
+                    : []))
             : $"Diện tích: {quote.AreaSqm:N2} m²; đơn giá: {quote.UnitPricePerSqm?.ToString("N0", culture)} {currency}/m².";
         var tokens = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
         {

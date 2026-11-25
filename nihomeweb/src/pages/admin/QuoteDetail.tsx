@@ -11,6 +11,8 @@ import {
   Calendar,
   Check,
   CheckCheck,
+  ChevronDown,
+  ChevronUp,
   Download,
   FileText,
   History,
@@ -100,6 +102,11 @@ import {
   normalizeCurrency,
   useDisplaySettings,
 } from "@/lib/displaySettings";
+
+// Matches the server-side body limit in QuoteService.SendToCustomerAsync.
+const QUOTE_EMAIL_BODY_MAX = 8000;
+// A BOQ preview shows this many lines until the user expands it.
+const BOQ_PREVIEW_ROWS = 8;
 
 const STATUS_STYLES: Record<QuoteStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
@@ -237,6 +244,7 @@ const AdminQuoteDetail = () => {
   const [workflowBusy, setWorkflowBusy] = useState(false);
   const [sendPreview, setSendPreview] = useState<QuoteEmailPreviewResponse | null>(null);
   const [sendDraft, setSendDraft] = useState<QuoteEmailPreviewResponse | null>(null);
+  const [htmlBodyOpen, setHtmlBodyOpen] = useState(false);
   // The approval chain from Cấu hình → Luồng duyệt, and the person chosen for each step.
   const [approvalChain, setApprovalChain] = useState<QuoteApprovalChainStep[]>([]);
   const [chosenApprovers, setChosenApprovers] = useState<(number | null)[]>([]);
@@ -616,6 +624,7 @@ const AdminQuoteDetail = () => {
         setWorkflowNote("");
         setSendPreview(data);
         setSendDraft(data);
+        setHtmlBodyOpen(false);
         setWorkflow(k);
       } catch (err) {
         toast({
@@ -1929,15 +1938,48 @@ const AdminQuoteDetail = () => {
                 )}
               </div>
               <div className="space-y-1">
-                <Label htmlFor="quote-email-body">{t("quotes.email.body")}</Label>
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Label htmlFor="quote-email-body">{t("quotes.email.body")}</Label>
+                  <span
+                    className={cn(
+                      "text-xs tabular-nums",
+                      sendDraft.body.length > QUOTE_EMAIL_BODY_MAX
+                        ? "text-destructive"
+                        : "text-muted-foreground",
+                    )}
+                  >
+                    {sendDraft.body.length.toLocaleString()} /{" "}
+                    {QUOTE_EMAIL_BODY_MAX.toLocaleString()}
+                  </span>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  aria-expanded={htmlBodyOpen}
+                  aria-controls="quote-email-body"
+                  onClick={() => setHtmlBodyOpen((open) => !open)}
+                >
+                  {htmlBodyOpen ? (
+                    <ChevronUp className="mr-1.5 h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="mr-1.5 h-4 w-4" />
+                  )}
+                  {t(htmlBodyOpen ? "quotes.email.hideHtml" : "quotes.email.showHtml")}
+                </Button>
                 <Textarea
                   id="quote-email-body"
                   rows={10}
-                  maxLength={8000}
+                  className={cn("font-mono text-xs", !htmlBodyOpen && "hidden")}
                   value={sendDraft.body}
                   disabled={!sendPreview?.canEdit}
                   onChange={(event) => setSendDraft({ ...sendDraft, body: event.target.value })}
                 />
+                {sendDraft.body.length > QUOTE_EMAIL_BODY_MAX && (
+                  <p className="text-xs text-destructive">
+                    {t("quotes.email.tooLong", { max: QUOTE_EMAIL_BODY_MAX.toLocaleString() })}
+                  </p>
+                )}
                 {!sendDraft.body.trim() && (
                   <p className="text-xs text-destructive">{t("quotes.email.bodyRequired")}</p>
                 )}
@@ -1955,11 +1997,26 @@ const AdminQuoteDetail = () => {
                 />
               </div>
               <div
-                className="rounded-md border bg-muted/30 p-3 text-sm"
+                className="flex flex-wrap items-center gap-x-1 gap-y-2 rounded-md border bg-muted/30 p-3 text-sm"
                 data-testid="quote-email-attachment"
               >
-                <span className="font-medium">{t("quotes.email.attachment")}: </span>
-                <span>{sendDraft.attachmentFileName}</span>
+                <span className="font-medium">{t("quotes.email.attachment")}:</span>
+                {/* Same export endpoint and language the send request attaches. */}
+                <Button
+                  type="button"
+                  variant="link"
+                  className="h-auto p-0"
+                  title={t("quotes.action.downloadExcel")}
+                  onClick={() => void downloadSpreadsheet()}
+                  disabled={exportingSpreadsheet}
+                >
+                  {exportingSpreadsheet ? (
+                    <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Download className="mr-1.5 h-4 w-4" />
+                  )}
+                  <span className="break-all">{sendDraft.attachmentFileName}</span>
+                </Button>
               </div>
             </div>
           )}
@@ -1991,6 +2048,7 @@ const AdminQuoteDetail = () => {
                     !sendDraft.toEmail.trim() ||
                     !sendDraft.subject.trim() ||
                     !sendDraft.body.trim() ||
+                    sendDraft.body.length > QUOTE_EMAIL_BODY_MAX ||
                     !sendDraft.body.trimStart().startsWith("<")))
               }
             >
@@ -2139,7 +2197,7 @@ const QuoteVersionDetails = ({
   t,
 }: {
   version: QuoteVersionResponse;
-  t: (k: string) => string;
+  t: (k: string, params?: Record<string, string | number>) => string;
 }) => (
   <div className="space-y-4">
     <dl className="grid grid-cols-2 gap-3 rounded-lg border bg-muted/20 p-4 text-sm sm:grid-cols-4">
@@ -2198,61 +2256,7 @@ const QuoteVersionDetails = ({
         </div>
       </div>
     ) : (
-      <div className="rounded-lg border bg-card">
-        <div className="border-b bg-muted/30 p-2 text-xs uppercase tracking-wide text-muted-foreground">
-          {t("quotes.boq.title")}
-        </div>
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[560px] divide-y text-sm">
-            <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.code")}</th>
-                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
-                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
-                <th className="px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
-                <th className="px-2 py-1.5 text-right font-medium">{t("quotes.boq.unitPrice")}</th>
-                <th className="px-2 py-1.5 text-right font-medium">{t("quotes.boq.amount")}</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {version.items.map((item, index) => (
-                <tr key={`${item.id}-${index}`}>
-                  <td className="px-2 py-2">{item.itemCode || "—"}</td>
-                  <td className="px-2 py-2 font-medium">{item.name}</td>
-                  <td className="px-2 py-2">{item.unit}</td>
-                  <td className="px-2 py-2 text-right">{item.quantity}</td>
-                  <td className="px-2 py-2 text-right">
-                    {formatMoney(item.unitPrice, version.currency)}
-                  </td>
-                  <td className="px-2 py-2 text-right font-medium">
-                    {formatMoney(item.amount, version.currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        <ul className="divide-y md:hidden">
-          {version.items.map((item, index) => (
-            <li key={`${item.id}-${index}`} className="space-y-1 p-3 text-sm">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-medium">{item.name}</span>
-                <span className="whitespace-nowrap font-semibold">
-                  {formatMoney(item.amount, version.currency)}
-                </span>
-              </div>
-              {item.itemCode && (
-                <div className="text-xs text-muted-foreground">
-                  {t("quotes.boq.code")}: {item.itemCode}
-                </div>
-              )}
-              <div className="text-xs text-muted-foreground">
-                {item.quantity} {item.unit} × {formatMoney(item.unitPrice, version.currency)}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </div>
+      <BoqTable items={version.items} t={t} currency={version.currency} />
     )}
 
     <div className="flex items-center justify-between rounded-lg border border-primary/20 bg-primary/5 p-4">
@@ -2340,90 +2344,131 @@ const BoqTable = ({
   currency,
 }: {
   items: QuoteItemResponse[] | null;
-  t: (k: string) => string;
+  t: (k: string, params?: Record<string, string | number>) => string;
   currency: string;
-}) => (
-  <div className="rounded-lg border bg-card" data-testid="quote-boq-lines">
-    <div className="border-b bg-muted/30 p-2 text-xs uppercase tracking-wide text-muted-foreground">
-      {t("quotes.boq.title")}
-    </div>
-    {items === null ? (
-      <p className="p-4 text-sm text-muted-foreground">{t("quotes.projectBoq.pendingSave")}</p>
-    ) : items.length === 0 ? (
-      <p className="p-4 text-center text-sm text-muted-foreground">
-        {t("quotes.projectBoq.noLines")}
-      </p>
-    ) : (
-      <>
-        {/* Desktop table (md+). */}
-        <div className="hidden overflow-x-auto md:block">
-          <table className="w-full min-w-[560px] divide-y text-sm">
-            <thead className="bg-muted/20 text-xs uppercase text-muted-foreground">
-              <tr>
-                <th className="hidden w-24 px-2 py-1.5 text-left font-medium lg:table-cell">
-                  {t("quotes.boq.code")}
-                </th>
-                <th className="px-2 py-1.5 text-left font-medium">{t("quotes.boq.name")}</th>
-                <th className="w-16 px-2 py-1.5 text-left font-medium">{t("quotes.boq.unit")}</th>
-                <th className="w-24 px-2 py-1.5 text-right font-medium">{t("quotes.boq.qty")}</th>
-                <th className="w-32 px-2 py-1.5 text-right font-medium">
-                  {t("quotes.boq.unitPrice")}
-                  <span className="ml-1 font-normal normal-case text-muted-foreground">
-                    ({currency})
-                  </span>
-                </th>
-                <th className="w-32 px-2 py-1.5 text-right font-medium">
-                  {t("quotes.boq.amount")}
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {items.map((row) => (
-                <tr key={row.id}>
-                  <td className="hidden px-2 py-1.5 text-muted-foreground lg:table-cell">
-                    {row.itemCode}
-                  </td>
-                  <td className="px-2 py-1.5">{row.name}</td>
-                  <td className="px-2 py-1.5">{row.unit}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">{row.quantity}</td>
-                  <td className="px-2 py-1.5 text-right tabular-nums">
-                    {formatMoney(row.unitPrice, currency)}
-                  </td>
-                  <td className="px-2 py-1.5 text-right font-medium tabular-nums">
-                    {formatMoney(row.amount, currency)}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+}) => {
+  const [expanded, setExpanded] = useState(false);
+  const total = items?.reduce((sum, row) => sum + Number(row.amount), 0) ?? 0;
+  const collapsible = (items?.length ?? 0) > BOQ_PREVIEW_ROWS;
+  const rows = items && collapsible && !expanded ? items.slice(0, BOQ_PREVIEW_ROWS) : items;
 
-        {/* Mobile card list (<md): every row becomes a stacked card. */}
-        <ul className="divide-y md:hidden">
-          {items.map((row) => (
-            <li key={row.id} className="space-y-1 p-3">
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0 flex-1">
-                  <div className="break-words text-sm font-medium">{row.name}</div>
-                  {row.itemCode && (
-                    <div className="text-xs text-muted-foreground">
-                      {t("quotes.boq.code")}: {row.itemCode}
-                    </div>
-                  )}
+  return (
+    <div className="rounded-lg border bg-card" data-testid="quote-boq-lines">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b px-4 py-3">
+        <h3 className="text-sm font-medium">{t("quotes.boq.title")}</h3>
+        {items && items.length > 0 && (
+          <span className="text-xs text-muted-foreground">
+            {t("quotes.boq.summary", {
+              count: items.length,
+              total: formatMoney(total, currency),
+            })}
+          </span>
+        )}
+      </div>
+      {rows === null ? (
+        <p className="p-4 text-sm text-muted-foreground">{t("quotes.projectBoq.pendingSave")}</p>
+      ) : rows.length === 0 ? (
+        <p className="p-4 text-center text-sm text-muted-foreground">
+          {t("quotes.projectBoq.noLines")}
+        </p>
+      ) : (
+        <>
+          {/* Desktop table (md+); expanded long lists scroll inside the panel. */}
+          <div
+            className={cn(
+              "hidden overflow-x-auto md:block",
+              expanded && "max-h-[32rem] overflow-y-auto",
+            )}
+          >
+            <table className="w-full min-w-[560px] divide-y text-sm">
+              <thead className="sticky top-0 z-10 bg-muted text-xs text-muted-foreground">
+                <tr>
+                  <th className="px-3 py-2 text-left font-medium">{t("quotes.boq.name")}</th>
+                  <th className="w-16 px-3 py-2 text-left font-medium">{t("quotes.boq.unit")}</th>
+                  <th className="w-24 px-3 py-2 text-right font-medium">{t("quotes.boq.qty")}</th>
+                  <th className="w-32 px-3 py-2 text-right font-medium">
+                    {t("quotes.boq.unitPrice")}
+                    <span className="ml-1 font-normal">({currency})</span>
+                  </th>
+                  <th className="w-32 px-3 py-2 text-right font-medium">
+                    {t("quotes.boq.amount")}
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y">
+                {rows.map((row, index) => (
+                  <tr key={`${row.id}-${index}`}>
+                    <td className="px-3 py-2">
+                      <div>{row.name}</div>
+                      {row.itemCode && (
+                        <div className="text-xs text-muted-foreground">{row.itemCode}</div>
+                      )}
+                    </td>
+                    <td className="px-3 py-2">{row.unit}</td>
+                    <td className="px-3 py-2 text-right tabular-nums">{row.quantity}</td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right tabular-nums">
+                      {formatMoney(row.unitPrice, currency)}
+                    </td>
+                    <td className="whitespace-nowrap px-3 py-2 text-right font-medium tabular-nums">
+                      {formatMoney(row.amount, currency)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile card list (<md): every row becomes a stacked card. */}
+          <ul className={cn("divide-y md:hidden", expanded && "max-h-[32rem] overflow-y-auto")}>
+            {rows.map((row, index) => (
+              <li key={`${row.id}-${index}`} className="space-y-1 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="break-words text-sm font-medium">{row.name}</div>
+                    {row.itemCode && (
+                      <div className="text-xs text-muted-foreground">
+                        {t("quotes.boq.code")}: {row.itemCode}
+                      </div>
+                    )}
+                  </div>
+                  <div className="whitespace-nowrap text-sm font-semibold tabular-nums">
+                    {formatMoney(row.amount, currency)}
+                  </div>
                 </div>
-                <div className="whitespace-nowrap text-sm font-semibold">
-                  {formatMoney(row.amount, currency)}
+                <div className="text-xs text-muted-foreground">
+                  {row.quantity} {row.unit} × {formatMoney(row.unitPrice, currency)}
                 </div>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                {row.quantity} {row.unit} × {formatMoney(row.unitPrice, currency)}
-              </div>
-            </li>
-          ))}
-        </ul>
-      </>
-    )}
-  </div>
-);
+              </li>
+            ))}
+          </ul>
+
+          {collapsible && items && (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t px-4 py-2">
+              <span className="text-xs text-muted-foreground">
+                {t("quotes.boq.showing", { shown: rows.length, count: items.length })}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((open) => !open)}
+              >
+                {expanded ? (
+                  <ChevronUp className="mr-1.5 h-4 w-4" />
+                ) : (
+                  <ChevronDown className="mr-1.5 h-4 w-4" />
+                )}
+                {expanded
+                  ? t("quotes.boq.collapse")
+                  : t("quotes.boq.showAll", { count: items.length })}
+              </Button>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
+};
 
 export default AdminQuoteDetail;
