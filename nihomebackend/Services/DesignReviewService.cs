@@ -28,7 +28,10 @@ public sealed class DesignReviewService(
     IConceptDossierService dossier,
     IProjectAccessService access,
     INotificationService notifications,
-    ILogger<DesignReviewService> logger) : IDesignReviewService
+    ILogger<DesignReviewService> logger,
+    IConceptOptionService conceptOptions,
+    IBasicDesignDocService basicDesign,
+    IPermissionService permissions) : IDesignReviewService
 {
     private const string RecipientPermissionModule = "design.reviews";
 
@@ -324,6 +327,7 @@ public sealed class DesignReviewService(
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
+        if (decision == DesignReviewStatus.ClientApproved) await AdvanceStageAsync(review, callerUserId, ct);
         await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.client-decision", review, ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
     }
@@ -459,6 +463,35 @@ public sealed class DesignReviewService(
     {
         if (project.ProjectManagerUserId == callerUserId && review.DesignManagerUserId != callerUserId)
             review.DesignManagerUserId = callerUserId;
+    }
+
+    /// <summary>
+    /// Client approval signs off the stage, so move the dossier to the next stage through the same guarded
+    /// action a person would use. Without that right, or while the stage gate is unmet, the manual button stays.
+    /// </summary>
+    private async Task AdvanceStageAsync(DesignReview review, int callerUserId, CancellationToken ct)
+    {
+        if (!await access.CanApproveDesignProjectAsync(callerUserId, review.DesignProjectId, ct)) return;
+        try
+        {
+            if (review.Stage == DesignReviewStage.BasicDesign)
+                await basicDesign.UnlockShopDrawingAsync(review.DesignProjectId, callerUserId, ct);
+            else if (review.Stage == DesignReviewStage.Concept && review.ConceptRevisionId.HasValue &&
+                     await permissions.HasAsync(callerUserId, "design.concepts.finalize", ct))
+            {
+                var optionId = await db.ConceptRevisions.AsNoTracking()
+                    .Where(item => item.Id == review.ConceptRevisionId.Value)
+                    .Select(item => item.ConceptOptionId).SingleAsync(ct);
+                await conceptOptions.TransitionStatusAsync(optionId,
+                    new TransitionConceptOptionStatusRequest { Status = nameof(ConceptOptionStatus.Finalized) },
+                    callerUserId, ct);
+            }
+        }
+        catch (Exception exception) when (exception is BasicDesignDocOperationException or ConceptOptionOperationException)
+        {
+            logger.LogInformation("Design project {ProjectId} stays in its stage after client approval: {Reason}",
+                review.DesignProjectId, exception.Message);
+        }
     }
 
     private async Task EnsureStageTasksApprovedAsync(

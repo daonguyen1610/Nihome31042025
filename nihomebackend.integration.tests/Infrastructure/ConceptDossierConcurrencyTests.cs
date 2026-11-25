@@ -28,7 +28,7 @@ public sealed class ConceptDossierConcurrencyTests
         await using var firstContext = database.Context(beforeSave);
         await using var secondContext = database.Context(waitingForLock);
         Task Submit(AppDbContext db) => new DesignReviewService(db, new ConceptDossierService(db), null!, null!,
-            NullLogger<DesignReviewService>.Instance).SubmitInternalAsync(database.ProjectId, database.ReviewId,
+            NullLogger<DesignReviewService>.Instance, null!, null!, null!).SubmitInternalAsync(database.ProjectId, database.ReviewId,
                 database.ReviewVersion, database.UserId, default);
         Task Edit(AppDbContext db) => deleteDocument
             ? new ProjectDocumentService(db, null!, null!, null!, null!).DeleteAsync(

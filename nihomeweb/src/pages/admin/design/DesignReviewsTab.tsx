@@ -61,7 +61,7 @@ import { formatDate, formatDateTime } from "@/lib/displaySettings";
 type Props = (
   | { project: DesignProjectResponse; recipientProjectId?: never }
   | { project?: never; recipientProjectId: number }
-) & { focusedReviewId?: number };
+) & { focusedReviewId?: number; onProjectMayHaveChanged?: () => void };
 const categoryByStage: Record<DesignReviewStage, string> = {
   Concept: "DesignConcept",
   BasicDesign: "DesignBasic",
@@ -81,7 +81,12 @@ const REVIEW_ACTION_LABELS = {
   changes: "designProjects.reviews.changes",
   reject: "designProjects.reviews.reject",
 } as const;
-export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId }: Props) => {
+export const DesignReviewsTab = ({
+  project,
+  recipientProjectId,
+  focusedReviewId,
+  onProjectMayHaveChanged,
+}: Props) => {
   const uiError = useUiError();
   const projectId = project?.id ?? recipientProjectId ?? 0;
   const operationalProjectId = project?.operationalProjectId;
@@ -366,6 +371,8 @@ export const DesignReviewsTab = ({ project, recipientProjectId, focusedReviewId 
       if (action === "comment")
         setCommentDocumentIds((current) => ({ ...current, [review.id]: "general" }));
       toast({ title: t(`designProjects.reviews.done.${action}`) });
+      // Client approval can move the dossier to the next stage on the server.
+      if (action === "approve") onProjectMayHaveChanged?.();
       await load();
     } catch (reason) {
       setError(actionableError(reason));

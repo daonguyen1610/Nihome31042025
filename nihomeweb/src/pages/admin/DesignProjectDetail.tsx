@@ -367,7 +367,7 @@ const AdminDesignProjectDetail = () => {
               ) : tab === "schedule" ? (
                 <DesignScheduleTab project={project} />
               ) : tab === "reviews" ? (
-                <DesignReviewsTab project={project} />
+                <DesignReviewsTab project={project} onProjectMayHaveChanged={fetchProject} />
               ) : (
                 <DesignProjectDocumentsTab project={project} />
               )}

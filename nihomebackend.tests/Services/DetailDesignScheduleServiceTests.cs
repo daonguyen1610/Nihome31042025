@@ -645,6 +645,69 @@ public sealed class DetailDesignScheduleServiceTests : IDisposable
         Assert.Equal(status, stored.Status);
     }
 
+    [Fact]
+    public async Task ReviewTaskAsync_ApprovalOpensTheNextStepAndCompletesThePhase()
+    {
+        var approverUserId = db.OperationalProjectMembers.Single(item => item.Id == approverMemberId).UserId;
+        var nextPhase = Phase(projectId, designProjectId);
+        nextPhase.Code = DesignSchedulePhaseCode.BasicDesign;
+        db.Add(nextPhase);
+        db.SaveChanges();
+        var first = AddOwnTask("STEP-001", DesignScheduleStatus.Completed, DesignTaskApprovalStatus.Pending);
+        var second = AddOwnTask("STEP-002");
+        var basic = Task(projectId, designProjectId, nextPhase.Id, activeMemberId, approverMemberId, "STEP-101");
+        db.AddRange(basic, new DesignScheduleTaskDependency
+        {
+            OperationalProjectId = projectId, TaskId = second.Id, PredecessorTaskId = first.Id,
+        });
+        db.SaveChanges();
+        db.ChangeTracker.Clear();
+
+        await service.ReviewTaskAsync(projectId, first.Id,
+            new ReviewDesignScheduleTaskRequest { Decision = "Approve", RowVersion = Version(first) },
+            approverUserId, CancellationToken.None);
+
+        Assert.Equal(DesignScheduleStatus.InProgress, db.DesignScheduleTasks.AsNoTracking().Single(item => item.Id == second.Id).Status);
+        Assert.Equal(DesignScheduleStatus.NotStarted, db.DesignScheduleTasks.AsNoTracking().Single(item => item.Id == basic.Id).Status);
+        notifications.Verify(item => item.NotifyManyFromTemplateAsync(
+            It.Is<IEnumerable<int>>(ids => ids.SequenceEqual(new[] { assigneeUserId })), "design-task.opened",
+            It.IsAny<IDictionary<string, string>>(), "DesignScheduleTask", second.Id,
+            It.IsAny<string>(), It.IsAny<string>()), Times.Once);
+
+        var started = await service.UpdateTaskProgressAsync(projectId, second.Id,
+            new UpdateDesignScheduleTaskProgressRequest { ProgressPercent = 50, RowVersion = Version(second) },
+            assigneeUserId, CancellationToken.None);
+        await service.CompleteTaskAsync(projectId, second.Id, started!.RowVersion, assigneeUserId, CancellationToken.None);
+        await service.ReviewTaskAsync(projectId, second.Id,
+            new ReviewDesignScheduleTaskRequest { Decision = "Approve", RowVersion = Version(second) },
+            approverUserId, CancellationToken.None);
+
+        var phases = db.DesignSchedulePhases.AsNoTracking().Where(item => item.DesignProjectId == designProjectId)
+            .ToDictionary(item => item.Code);
+        Assert.Equal(DesignScheduleStatus.Completed, phases[DesignSchedulePhaseCode.Concept].Status);
+        Assert.Equal(100, phases[DesignSchedulePhaseCode.Concept].ProgressPercent);
+        Assert.Equal(DesignScheduleStatus.InProgress, phases[DesignSchedulePhaseCode.BasicDesign].Status);
+        Assert.Equal(DesignScheduleStatus.InProgress, db.DesignScheduleTasks.AsNoTracking().Single(item => item.Id == basic.Id).Status);
+    }
+
+    [Fact]
+    public async Task ReviewTaskAsync_RejectionDoesNotOpenTheNextStep()
+    {
+        var approverUserId = db.OperationalProjectMembers.Single(item => item.Id == approverMemberId).UserId;
+        var first = AddOwnTask("STEP-201", DesignScheduleStatus.Completed, DesignTaskApprovalStatus.Pending);
+        var second = AddOwnTask("STEP-202");
+        db.Add(new DesignScheduleTaskDependency { OperationalProjectId = projectId, TaskId = second.Id, PredecessorTaskId = first.Id });
+        db.SaveChanges();
+        db.ChangeTracker.Clear();
+
+        await service.ReviewTaskAsync(projectId, first.Id,
+            new ReviewDesignScheduleTaskRequest { Decision = "Reject", Comment = "Sửa trục A-3", RowVersion = Version(first) },
+            approverUserId, CancellationToken.None);
+
+        Assert.Equal(DesignScheduleStatus.NotStarted, db.DesignScheduleTasks.AsNoTracking().Single(item => item.Id == second.Id).Status);
+        Assert.Equal(DesignScheduleStatus.NotStarted, db.DesignSchedulePhases.AsNoTracking().Single(item => item.Id == phaseId).Status);
+    }
+
     public void Dispose() => db.Dispose();
 
     private DesignScheduleTask AddOwnTask(

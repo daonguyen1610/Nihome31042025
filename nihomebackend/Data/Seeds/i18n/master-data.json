@@ -576,6 +576,14 @@
     "ja": "顧客要望"
   },
   {
+    "key": "masterData.drawing_revision_reason.authority-request.label",
+    "category": "masterData",
+    "vi": "Cơ quan nhà nước yêu cầu",
+    "en": "Authority request",
+    "zh": "政府主管部门要求",
+    "ja": "行政機関の要請"
+  },
+  {
     "key": "masterData.drawing_revision_reason.technical-fix.label",
     "category": "masterData",
     "vi": "Sai kỹ thuật",
