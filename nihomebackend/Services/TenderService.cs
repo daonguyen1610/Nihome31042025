@@ -1050,6 +1050,12 @@ public class TenderService(
         if (tender.StageRequestedByUserId == callerUserId || tender.PreparerUserId == callerUserId)
             throw new TenderOperationException(
                 "Người gửi hoặc người phụ trách gói thầu không tự duyệt bước của mình. Hãy Trả lại để chọn người duyệt khác.");
+        // The approver was valid when chosen; their role or tender access may have changed since.
+        var roleCode = await TenderStageFlow.ApproverRoleAsync(db, tender.Stage, ct);
+        if (roleCode is null || !await StageApproverCandidates(roleCode, tender.StageRequestedByUserId ?? 0,
+                tender.PreparerUserId).AnyAsync(user => user.Id == callerUserId, ct))
+            throw new TenderOperationException(
+                "Bạn không còn đủ điều kiện duyệt bước này (vai trò hoặc quyền xem gói thầu đã đổi). Hãy Trả lại để người gửi chọn người duyệt khác.");
         var finished = tender.Stage;
         tender.Stage = finished + 1;
         var requesterId = tender.StageRequestedByUserId;

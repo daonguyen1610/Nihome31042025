@@ -1808,6 +1808,28 @@ public class TenderServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task StageApproval_ApproverWhoLostTheRoleCannotApproveButCanReturn()
+    {
+        ConfigureStageFlow("SALES_MANAGER");
+        var approver = AddStageUser("Trưởng phòng KD", "SALES_MANAGER");
+        var qs = AddStageUser("Kỹ sư QS", "QS");
+        var created = await _sut.CreateAsync(ValidCreate(), _userId);
+        await _sut.RequestStageApprovalAsync(created.Id,
+            new RequestTenderStageApprovalRequest { ApproverUserId = approver.Id }, _userId);
+
+        var moved = await _db.Users.SingleAsync(u => u.Id == approver.Id);
+        moved.RoleEntityId = (await _db.Users.AsNoTracking().SingleAsync(u => u.Id == qs.Id)).RoleEntityId;
+        await _db.SaveChangesAsync();
+
+        await Assert.ThrowsAsync<TenderOperationException>(() =>
+            _sut.ApproveStageAsync(created.Id, new TenderStageDecisionRequest(), approver.Id));
+        var returned = await _sut.ReturnStageAsync(created.Id,
+            new TenderStageDecisionRequest { Note = "Đã chuyển phòng" }, approver.Id);
+        Assert.Equal("Received", returned!.Stage);
+        Assert.Null(returned.StageApproverUserId);
+    }
+
+    [Fact]
     public async Task StageApproval_ReturnNeedsReasonAndKeepsStage()
     {
         ConfigureStageFlow("SALES_MANAGER");

@@ -476,7 +476,9 @@ public class ContractsController(
                 Action = $"contract.review-{action}",
                 ResourceType = EntityTypes.Contract,
                 ResourceId = id.ToString(),
-                Message = $"Contract #{id} review {action} → {updated.Status}.",
+                // Keep the return reason on record; the chain it belonged to is cleared.
+                Message = $"Contract #{id} review {action} → {updated.Status}." +
+                    ((req as ContractReviewDecisionRequest)?.Note?.Trim() is { Length: > 0 } note ? $" Lý do: {note}" : ""),
             });
             CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
             return Ok(updated);
