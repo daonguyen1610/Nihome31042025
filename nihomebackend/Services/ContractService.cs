@@ -581,6 +581,13 @@ public class ContractService(
             throw new ContractValidationException(
                 "Không được đổi trạng thái qua thao tác chỉnh sửa. Hãy dùng thao tác chuyển trạng thái của Hợp đồng.");
         }
+        if (entity.Status is ContractStatus.UnderReview or ContractStatus.Approved)
+        {
+            // Reviewers approved this content; changing it needs a new review.
+            throw new ContractValidationException(
+                "Hợp đồng đang xem xét hoặc đã duyệt nên không sửa được. Chuyển về Nháp để sửa rồi gửi xem xét lại.",
+                "CONTRACT_REVIEW_LOCKED");
+        }
 
         // An RFQ award is the authority for this contract's commercial terms.
         // Check the RFQ binding independently of the current line collection.
@@ -1091,6 +1098,7 @@ public class ContractService(
         await closureInvariant.EnsureContractMutationPreservesWonAsync(
             entity, entity.OpportunityId, entity.CustomerId, newStatus, entity.SignedDate, deleting: false, ct: ct);
 
+        if (newStatus == ContractStatus.Draft) ContractReviewService.ClearReview(entity);
         entity.Status = newStatus;
         entity.UpdatedAt = DateTime.UtcNow;
         entity.UpdatedByUserId = callerUserId;
@@ -1185,7 +1193,9 @@ public class ContractService(
     /// <summary>
     /// Contract state machine. Only these transitions are allowed:
     /// <list type="bullet">
-    ///   <item>Draft → Signed | Cancelled</item>
+    ///   <item>Draft → Signed | Cancelled (UnderReview via ContractReviewService)</item>
+    ///   <item>UnderReview → Draft | Cancelled (Approved via ContractReviewService)</item>
+    ///   <item>Approved → Signed | Draft | Cancelled</item>
     ///   <item>Signed → InProgress | Cancelled</item>
     ///   <item>InProgress → OnHold | Completed | Cancelled</item>
     ///   <item>OnHold → InProgress | Cancelled</item>
@@ -1198,6 +1208,13 @@ public class ContractService(
         {
             (ContractStatus.Draft, ContractStatus.Signed) => true,
             (ContractStatus.Draft, ContractStatus.Cancelled) => true,
+            // Draft → UnderReview → Approved only through ContractReviewService. The author
+            // may withdraw a contract from review, or reopen an approved one, to edit it.
+            (ContractStatus.UnderReview, ContractStatus.Draft) => true,
+            (ContractStatus.UnderReview, ContractStatus.Cancelled) => true,
+            (ContractStatus.Approved, ContractStatus.Signed) => true,
+            (ContractStatus.Approved, ContractStatus.Draft) => true,
+            (ContractStatus.Approved, ContractStatus.Cancelled) => true,
             (ContractStatus.Signed, ContractStatus.InProgress) => true,
             (ContractStatus.Signed, ContractStatus.Cancelled) => true,
             (ContractStatus.InProgress, ContractStatus.OnHold) => true,
@@ -1848,6 +1865,10 @@ public class ContractService(
             OwnerUserId = entity.OwnerUserId,
             OwnerName = ownerName,
             Status = entity.Status,
+            ReviewSteps = QuoteApprovalChain.MapSteps(entity.ReviewStepsJson,
+                entity.Status == ContractStatus.UnderReview, entity.ReviewStepIndex),
+            ReviewStepIndex = entity.ReviewStepIndex,
+            ReviewSubmittedByUserId = entity.ReviewSubmittedByUserId,
             SignedDate = entity.SignedDate,
             StartDate = entity.StartDate,
             EndDate = entity.EndDate,

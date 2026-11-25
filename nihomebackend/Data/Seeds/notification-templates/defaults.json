@@ -57,6 +57,24 @@
       "adminDescription": "PM và Design Lead được thông báo hợp đồng chuyển sang Đang thực hiện."
     },
     {
+      "code": "contract.review-requested",
+      "module": "crm.contracts",
+      "channel": "InApp",
+      "adminDescription": "Người xem xét kế tiếp trong chuỗi review hợp đồng được báo đến lượt mình."
+    },
+    {
+      "code": "contract.review-approved",
+      "module": "crm.contracts",
+      "channel": "InApp",
+      "adminDescription": "Người gửi xem xét biết hợp đồng đã được duyệt hết các bước và có thể trình ký."
+    },
+    {
+      "code": "contract.review-rejected",
+      "module": "crm.contracts",
+      "channel": "InApp",
+      "adminDescription": "Người gửi xem xét biết hợp đồng bị trả về Nháp, kèm lý do."
+    },
+    {
       "code": "design.revision.created",
       "module": "design.revisions",
       "channel": "Both",

@@ -147,6 +147,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ContractExecutionProgressService>();
         services.AddScoped<ContractCareActivityService>();
         services.AddScoped<ContractReminderService>();
+        services.AddScoped<ContractReviewService>();
         services.AddHostedService<ContractReminderWorker>();
         services.AddScoped<WorkPackageApprovalEmailService>();
         services.AddHostedService<WorkPackageApprovalEmailWorker>();

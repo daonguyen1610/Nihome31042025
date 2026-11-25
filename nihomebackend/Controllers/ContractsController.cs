@@ -41,6 +41,7 @@ public class ContractsController(
     ContractExecutionProgressService executionProgress,
     ContractCareActivityService careActivities,
     ContractReminderService reminders,
+    ContractReviewService review,
     IWebHostEnvironment env,
     AppDbContext db,
     IAuditLogger audit) : ControllerBase
@@ -423,6 +424,74 @@ public class ContractsController(
         catch (ContractValidationException ex)
         {
             return BadRequest(new { code = ex.Code, message = ex.Message });
+        }
+    }
+
+    // -------- internal review (Draft → UnderReview → Approved) --------
+
+    /// <summary>The review steps from Cấu hình → Luồng duyệt and who may be chosen or tagged.</summary>
+    [HttpGet("{id:int}/review-chain")]
+    [RequirePermission("crm.contracts", "manage")]
+    public async Task<ActionResult<ContractReviewChainResponse>> ReviewChain(int id, CancellationToken ct)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        return Ok(await review.ChainAsync(id, userId.Value, ct));
+    }
+
+    [HttpPost("{id:int}/review/submit")]
+    [RequirePermission("crm.contracts", "manage")]
+    [Idempotency("crm.contracts.review-submit")]
+    public Task<ActionResult<ContractResponse>> SubmitReview(int id, [FromBody] SubmitContractReviewRequest req,
+        CancellationToken ct) =>
+        ReviewActionAsync(id, req, "submit", async userId => await review.SubmitAsync(id, req, userId,
+            await permissions.HasAsync(userId, "crm.contracts.view.all", ct), ct));
+
+    [HttpPost("{id:int}/review/approve")]
+    [RequirePermission("crm.contracts", "view")]
+    [Idempotency("crm.contracts.review-approve")]
+    public Task<ActionResult<ContractResponse>> ApproveReview(int id, [FromBody] ContractReviewDecisionRequest req,
+        CancellationToken ct) =>
+        ReviewActionAsync(id, req, "approve", userId => review.ApproveAsync(id, req, userId, ct));
+
+    [HttpPost("{id:int}/review/reject")]
+    [RequirePermission("crm.contracts", "view")]
+    [Idempotency("crm.contracts.review-reject")]
+    public Task<ActionResult<ContractResponse>> RejectReview(int id, [FromBody] ContractReviewDecisionRequest req,
+        CancellationToken ct) =>
+        ReviewActionAsync(id, req, "reject", userId => review.RejectAsync(id, req, userId, ct));
+
+    private async Task<ActionResult<ContractResponse>> ReviewActionAsync(int id, IConcurrencyRequest req,
+        string action, Func<int, Task<ContractResponse?>> run)
+    {
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+        req.RowVersion = CrmConcurrency.ResolveRequestToken(Request, req.RowVersion);
+        try
+        {
+            var updated = await run(userId.Value);
+            if (updated is null) return NotFound();
+            audit.Log(new AuditEvent
+            {
+                Action = $"contract.review-{action}",
+                ResourceType = EntityTypes.Contract,
+                ResourceId = id.ToString(),
+                Message = $"Contract #{id} review {action} → {updated.Status}.",
+            });
+            CrmConcurrency.SetResponseEntityTag(Response, updated.RowVersion);
+            return Ok(updated);
+        }
+        catch (ContractValidationException ex)
+        {
+            return BadRequest(new { code = ex.Code, message = ex.Message });
+        }
+        catch (CrmConcurrencyTokenException ex)
+        {
+            return BadRequest(new { code = "INVALID_ROW_VERSION", message = ex.Message });
+        }
+        catch (CrmConcurrencyException ex)
+        {
+            return Conflict(new { code = "CONCURRENCY_CONFLICT", message = ex.Message });
         }
     }
 
@@ -1214,9 +1283,11 @@ public class ContractsController(
 
         var scope = await db.Contracts.AsNoTracking()
             .Where(contract => contract.Id == contractId)
-            .Select(contract => new { contract.Direction, contract.OperationalProjectId })
+            .Select(contract => new { contract.Direction, contract.OperationalProjectId, contract.ReviewStepsJson })
             .SingleOrDefaultAsync(ct);
         if (scope is null) return false;
+        // Reviewers read the contract they are asked to review, before and after their turn.
+        if (ContractReviewService.InChain(scope.ReviewStepsJson, userId)) return true;
 
         // Project members read the contracts of their own project (see
         // WidenToRequestedProjectAsync); portfolio roles need the permission

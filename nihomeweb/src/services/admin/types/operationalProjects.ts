@@ -1,6 +1,6 @@
 import type { WorkPackageBoqWorkbook } from "./procurement";
 import type { OpportunityStage } from "./opportunities";
-import type { QuoteStatus, QuoteMethod } from "./quotes";
+import type { QuoteStatus, QuoteMethod, QuoteApprovalStep } from "./quotes";
 import type { ContractStatus } from "./contracts";
 import type { PersonIdentity } from "@/lib/people";
 import type { VendorResponse } from "./vendors";
@@ -1293,6 +1293,10 @@ export interface ContractResponse {
   ownerUserId?: number | null;
   ownerName?: string | null;
   status: ContractStatus;
+  /** Internal review chain; empty before the contract is sent for review. */
+  reviewSteps: QuoteApprovalStep[];
+  reviewStepIndex?: number | null;
+  reviewSubmittedByUserId?: number | null;
   signedDate?: string | null;
   startDate?: string | null;
   endDate?: string | null;

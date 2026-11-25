@@ -19,7 +19,7 @@ import type {
   UpdateContractPaymentScheduleRequest,
 } from "./types/operationalProjects";
 import type { DesignProjectResponse } from "./types/designProjects";
-import type { ContractStatus } from "./types/contracts";
+import type { ContractReviewChain, ContractStatus } from "./types/contracts";
 import type {
   LegalActivationPreview,
   ActivateContractWithLegalRequest,
@@ -87,6 +87,17 @@ export const contractsApi = {
     postIdempotent<ContractResponse>(`/contracts/${id}/link-quote`, { quoteId, rowVersion }),
   transitionContract: (id: number, newStatus: ContractStatus, rowVersion?: string) =>
     api.post<ContractResponse>(`/contracts/${id}/transition`, { newStatus, rowVersion }),
+  getContractReviewChain: (id: number) =>
+    api.get<ContractReviewChain>(`/contracts/${id}/review-chain`),
+  submitContractReview: (
+    id: number,
+    body: { reviewerUserIds: number[]; approverUserIds: number[]; rowVersion: string },
+  ) => postIdempotent<ContractResponse>(`/contracts/${id}/review/submit`, body),
+  decideContractReview: (
+    id: number,
+    decision: "approve" | "reject",
+    body: { note?: string; rowVersion: string },
+  ) => postIdempotent<ContractResponse>(`/contracts/${id}/review/${decision}`, body),
   listLegalChecklistTemplates: () =>
     api.get<LegalChecklistTemplate[]>("/legal-checklist-templates"),
   saveLegalChecklistTemplate: (id: number | null, body: SaveLegalChecklistTemplate) =>

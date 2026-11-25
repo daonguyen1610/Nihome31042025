@@ -55,39 +55,12 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
     /// </summary>
     public async Task<IReadOnlyList<QuoteApprovalChainStepResponse>> ChainAsync(int callerId, CancellationToken ct)
     {
-        var steps = await QuoteApprovalChain.ConfiguredAsync(db, ct);
-        var codes = steps.Select(step => step.RoleCode).Distinct().ToList();
-        var roles = await db.Roles.AsNoTracking().Where(r => r.IsActive && codes.Contains(r.Code))
-            .Select(r => new
-            {
-                r.Id,
-                r.Code,
-                r.Name,
-                r.LabelKey,
-                DepartmentId = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroupId : null,
-                DepartmentLabelKey = r.RoleGroup != null && r.RoleGroup.IsActive ? r.RoleGroup.LabelKey : null
-            }).ToListAsync(ct);
-        var roleIds = roles.Select(role => role.Id).ToList();
-        var users = await db.Users.AsNoTracking()
-            .Where(u => u.IsActive && u.Id != callerId && u.RoleEntityId != null && roleIds.Contains(u.RoleEntityId.Value))
-            .Select(u => new { u.Id, u.FullName, u.Email, RoleId = u.RoleEntityId!.Value }).ToListAsync(ct);
-        var candidatesByRole = roles.ToDictionary(role => role.Id, _ => new List<QuoteApprovalCandidateResponse>());
-        // The rule for deciding a step, plus an email to receive the request.
-        var canDecide = await CanDecideAsync(users
-            .Select(user => (user.Id, roles.Single(role => role.Id == user.RoleId).Code)).ToList(), ct);
-        foreach (var user in users.Where(user => ContactValidation.IsValidEmail(user.Email)))
+        var chain = await QuoteApprovalChain.WithCandidatesAsync(db, permissions,
+            await QuoteApprovalChain.ConfiguredAsync(db, ct), [callerId], ApprovePermissions, ct);
+        // The approval request goes by email, so each approver needs a usable address.
+        return chain.Select(step => step with
         {
-            var role = roles.Single(item => item.Id == user.RoleId);
-            if (!canDecide.Contains((user.Id, role.Code))) continue;
-            candidatesByRole[role.Id].Add(new QuoteApprovalCandidateResponse(user.Id, user.FullName ?? user.Email,
-                user.Email, role.Code, role.Name, role.LabelKey, role.DepartmentId, role.DepartmentLabelKey));
-        }
-        return steps.Select(step =>
-        {
-            var role = roles.FirstOrDefault(item => string.Equals(item.Code, step.RoleCode, StringComparison.OrdinalIgnoreCase));
-            return new QuoteApprovalChainStepResponse(step.Order, step.Name, step.RoleCode, role?.Name ?? step.RoleCode,
-                role?.LabelKey, step.SlaHours, step.EveryoneApproves,
-                role is null ? [] : candidatesByRole[role.Id].OrderBy(user => user.Name).ToList());
+            Candidates = step.Candidates.Where(user => ContactValidation.IsValidEmail(user.Email)).ToList()
         }).ToList();
     }
 
@@ -152,25 +125,11 @@ public sealed class QuoteApprovalEmailService(AppDbContext db, IDataProtectionPr
                 ["roleName"] = step.RoleName,
             });
 
-    public async Task<IReadOnlySet<(int UserId, string RoleCode)>> CanDecideAsync(
-        IReadOnlyCollection<(int UserId, string RoleCode)> approvers, CancellationToken ct)
-    {
-        var result = new HashSet<(int UserId, string RoleCode)>();
-        if (approvers.Count == 0) return result;
-        var ids = approvers.Select(approver => approver.UserId).Distinct().ToList();
-        var roles = await db.Users.AsNoTracking()
-            .Where(user => ids.Contains(user.Id) && user.IsActive && user.RoleEntity != null && user.RoleEntity.IsActive)
-            .Select(user => new { user.Id, user.RoleEntity!.Code }).ToListAsync(ct);
-        var permitted = await permissions.FilterByRolePermissionsAsync(ids, ["crm.quotes.view", "crm.quotes.approve"], ct);
-        foreach (var approver in approvers)
-        {
-            if (permitted.Contains(approver.UserId) &&
-                roles.Any(role => role.Id == approver.UserId &&
-                    string.Equals(role.Code, approver.RoleCode, StringComparison.OrdinalIgnoreCase)))
-                result.Add(approver);
-        }
-        return result;
-    }
+    public Task<IReadOnlySet<(int UserId, string RoleCode)>> CanDecideAsync(
+        IReadOnlyCollection<(int UserId, string RoleCode)> approvers, CancellationToken ct) =>
+        QuoteApprovalChain.CanDecideAsync(db, permissions, approvers, ApprovePermissions, ct);
+
+    private static readonly string[] ApprovePermissions = ["crm.quotes.view", "crm.quotes.approve"];
 
     private async Task<bool> CanDecideAsync(int userId, string roleCode, CancellationToken ct) =>
         (await CanDecideAsync([(userId, roleCode)], ct)).Count == 1;

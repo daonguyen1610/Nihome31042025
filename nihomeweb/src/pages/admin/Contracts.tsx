@@ -99,6 +99,8 @@ type ContractsProps = {
 
 const STATUS_VARIANT: Record<ContractStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
+  UnderReview: "border-info-strong/30 bg-info-soft text-info-strong",
+  Approved: "border-success-strong/30 bg-success-soft text-success-strong",
   Signed: "border-blue-200 bg-blue-50 text-blue-700",
   InProgress: "border-emerald-200 bg-emerald-50 text-emerald-700",
   OnHold: "border-amber-200 bg-amber-50 text-amber-700",
