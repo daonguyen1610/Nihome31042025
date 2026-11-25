@@ -48,6 +48,8 @@ public class OperationalProjectResponse : OperationalProjectListItemResponse
     public string RowVersion { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public ProjectDriveRenameResponse? LatestCodeChange { get; set; }
+    /// <summary>Every category folder of the project tree exists on Drive; null while Drive is off.</summary>
+    public bool? DriveFoldersReady { get; set; }
     /// <summary>A contract is signed (gate 3), so the project code can no longer change.</summary>
     public bool CodeLocked { get; set; }
     public OperationalProjectContractSummaryResponse ContractSummary { get; set; } = new();

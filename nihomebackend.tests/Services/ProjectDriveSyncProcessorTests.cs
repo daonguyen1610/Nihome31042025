@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
+using NihomeBackend.Constants;
 using NihomeBackend.Models;
 using NihomeBackend.Services;
 using NihomeBackend.Services.Audit;
@@ -1073,64 +1074,64 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task DesignFolderInitialization_RequiresNoFileOrContractAndResumesMissingBindings()
+    public async Task FolderInitialization_BuildsEveryProjectTreeOnceWithoutFilesOrDesign()
     {
-        db.DesignProjects.Add(new DesignProject
+        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .Returns(async (OperationalProject root, int? actor, CancellationToken ct) =>
+            {
+                foreach (var category in Enum.GetValues<ProjectDocumentCategory>().Skip(1))
+                    await EnsureBindingAsync(root, category, ct);
+            });
+
+        var cursor = await processor.InitializeProjectFoldersAsync(0);
+        Assert.Equal(project.Id, cursor);
+        Assert.Equal(9, await db.ProjectDriveFolders.CountAsync(item => item.OperationalProjectId == project.Id));
+        Assert.Empty(db.ProjectDocuments);
+        Assert.Equal(0, await processor.InitializeProjectFoldersAsync(cursor));
+        Assert.Equal(0, await processor.InitializeProjectFoldersAsync(0));
+        folders.Verify(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()), Times.Once);
+    }
+
+    [Fact]
+    public async Task FolderInitialization_SkipsProjectsBeingDeleted()
+    {
+        db.HardDeleteOperations.Add(new HardDeleteOperation
         {
-            OperationalProjectId = project.Id,
-            ProjectCode = "DP-NICON-ZERO-FILE",
-            Name = "Concept nhà xưởng trước hợp đồng",
-            CustomerId = project.CustomerId,
+            Id = Guid.NewGuid(), ResourceType = EntityTypes.OperationalProject,
+            ResourceId = project.Id.ToString(), Status = HardDeleteOperationStatus.Processing,
         });
         await db.SaveChangesAsync();
-        folders.Setup(item => item.EnsureAsync(It.IsAny<OperationalProject>(), It.IsAny<ProjectDocumentCategory>(),
-                It.IsAny<int?>(), It.IsAny<CancellationToken>()))
-            .Returns((OperationalProject root, ProjectDocumentCategory category, int? actor, CancellationToken ct) =>
-                EnsureBindingAsync(root, category, ct));
 
-        var cursor = await processor.InitializeDesignFoldersAsync(0);
-        Assert.Equal(project.Id, cursor);
-        Assert.Equal(3, await db.ProjectDriveFolders.CountAsync(item => item.OperationalProjectId == project.Id));
-        Assert.Empty(db.ProjectDocuments);
-        Assert.Null((await db.DesignProjects.SingleAsync()).ContractId);
-        Assert.Equal(0, await processor.InitializeDesignFoldersAsync(cursor));
-        Assert.Equal(0, await processor.InitializeDesignFoldersAsync(0));
-        folders.Verify(item => item.EnsureAsync(It.IsAny<OperationalProject>(), It.IsAny<ProjectDocumentCategory>(),
-            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Exactly(3));
+        Assert.Equal(0, await processor.InitializeProjectFoldersAsync(0));
+        folders.VerifyNoOtherCalls();
     }
 
     [Fact]
-    public async Task DesignFolderInitialization_RotatesFailuresAndRetriesAfterWrap()
+    public async Task FolderInitialization_RotatesFailuresAndRetriesAfterWrap()
     {
-        var roots = new List<OperationalProject>();
         for (var index = 0; index < 7; index++)
-        {
-            var root = new OperationalProject { Code = $"NIC-FOLDER-{index}", Name = "NICON handoff", CustomerId = 10 };
-            root.DesignProjects.Add(new DesignProject { ProjectCode = $"DP-FOLDER-{index}", Name = root.Name, CustomerId = 10 });
-            roots.Add(root);
-        }
-        db.AddRange(roots);
+            db.Add(new OperationalProject { Code = $"NIC-FOLDER-{index}", Name = "NICON handoff", CustomerId = 10 });
         await db.SaveChangesAsync();
-        folders.Setup(item => item.EnsureAsync(It.IsAny<OperationalProject>(), It.IsAny<ProjectDocumentCategory>(),
-                It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+        var ids = await db.OperationalProjects.OrderBy(item => item.Id).Select(item => item.Id).ToListAsync();
+        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
             .ThrowsAsync(new IOException("Temporary Drive outage"));
 
-        var cursor = await processor.InitializeDesignFoldersAsync(0);
-        Assert.Equal(roots[4].Id, cursor);
-        var next = await processor.InitializeDesignFoldersAsync(cursor);
-        Assert.Equal(roots[6].Id, next);
-        Assert.Equal(0, await processor.InitializeDesignFoldersAsync(next));
-        Assert.Equal(roots[4].Id, await processor.InitializeDesignFoldersAsync(0));
-        folders.Verify(item => item.EnsureAsync(It.Is<OperationalProject>(root => root.Id == roots[6].Id),
-            ProjectDocumentCategory.DesignConcept, It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
-        Assert.Equal(7, await db.DesignProjects.CountAsync());
+        var cursor = await processor.InitializeProjectFoldersAsync(0);
+        Assert.Equal(ids[4], cursor);
+        var next = await processor.InitializeProjectFoldersAsync(cursor);
+        Assert.Equal(ids[^1], next);
+        Assert.Equal(0, await processor.InitializeProjectFoldersAsync(next));
+        Assert.Equal(ids[4], await processor.InitializeProjectFoldersAsync(0));
+        folders.Verify(item => item.EnsureTreeAsync(It.Is<OperationalProject>(root => root.Id == ids.Last()),
+            It.IsAny<int?>(), It.IsAny<CancellationToken>()), Times.Once);
     }
 
     [Fact]
-    public async Task DesignFolderInitialization_DisabledDriveDoesNotCallProviderOrChangeCursor()
+    public async Task FolderInitialization_DisabledDriveDoesNotCallProviderOrChangeCursor()
     {
         options.Enabled = false;
-        Assert.Equal(123, await processor.InitializeDesignFoldersAsync(123));
+        Assert.Equal(123, await processor.InitializeProjectFoldersAsync(123));
         drive.VerifyNoOtherCalls();
         folders.VerifyNoOtherCalls();
     }

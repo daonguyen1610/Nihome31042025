@@ -64,6 +64,13 @@ public interface IOperationalProjectService
         bool canSeeAll,
         CancellationToken ct = default);
 
+    /// <summary>Creates the missing Drive folders of the project tree now (admin retry).</summary>
+    Task<OperationalProjectResponse?> EnsureDriveFoldersAsync(
+        int id,
+        int callerUserId,
+        bool canSeeAll,
+        CancellationToken ct = default);
+
     Task<OperationalProjectResponse?> RetryDriveRenameAsync(
         int id,
         int callerUserId,

@@ -105,7 +105,7 @@ public sealed class OperationalProjectDocumentsControllerTests(
             category.GetProperty("translationKey").GetString() ==
             $"operationalProjects.documents.category.{category.GetProperty("value").GetString()}");
         categories.Single(category => category.GetProperty("value").GetString() == "Survey")
-            .GetProperty("folderPath").GetString().Should().Be("01_Khao_sat");
+            .GetProperty("folderPath").GetString().Should().Be("01_CoHoi_BaoGia/01_KhaoSat");
     }
 
     [Fact]
