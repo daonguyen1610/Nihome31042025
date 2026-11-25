@@ -444,4 +444,29 @@ public class PermissionServiceTests : IDisposable
 
         Assert.DoesNotContain("rbac.roles.manage", await _svc.GetForUserAsync(user.Id));
     }
+
+    [Theory]
+    [InlineData("finance", "finance.payments.view", "finance.payments.manage")]
+    [InlineData("permit", "permit.checklists.view", "permit.templates.publish")]
+    [InlineData("proc", "proc.boq.view", "proc.warehouse.post")]
+    [InlineData("construction", "construction.qa-qc.view", "construction.qa-qc.create")]
+    public async Task ModuleView_GrantsEveryViewOfItsModuleButNoWrite(string module, string read, string write)
+    {
+        var role = new NihomeBackend.Models.Rbac.Role { Code = $"{module.ToUpperInvariant()}_VIEWER", Name = "Module viewer", IsActive = true };
+        _db.Roles.Add(role);
+        _db.SaveChanges();
+        var moduleView = _db.Permissions.Single(p => p.Module == module && p.Action == "view");
+        _db.RolePermissions.Add(new NihomeBackend.Models.Rbac.RolePermission { RoleId = role.Id, PermissionId = moduleView.Id });
+        _db.SaveChanges();
+        var user = AddUser("0900000096", UserRole.USER, role.Id);
+
+        var perms = await _svc.GetForUserAsync(user.Id);
+
+        var moduleViews = _db.Permissions.Where(p => p.Module.StartsWith(module + ".") && p.Action == "view")
+            .Select(p => p.Module + "." + p.Action).ToList();
+        Assert.Contains(read, moduleViews);
+        Assert.All(moduleViews, code => Assert.Contains(code, perms));
+        Assert.DoesNotContain(write, perms);
+        Assert.All(perms, code => Assert.True(code == $"{module}.view" || code.StartsWith(module + ".") && code.EndsWith(".view"), code));
+    }
 }

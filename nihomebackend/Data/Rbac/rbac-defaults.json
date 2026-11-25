@@ -122,6 +122,7 @@
     { "module": "crm.contracts", "action": "activate" },
     { "module": "crm.contracts", "action": "appendix-manage" },
 
+    { "module": "proc", "action": "view" },
     { "module": "proc.vendors", "action": "view" },
     { "module": "proc.vendors", "action": "manage" },
     { "module": "proc.vendors", "action": "export" },
@@ -145,6 +146,7 @@
     { "module": "proc.vendor-ratings", "action": "manage" },
     { "module": "proc.vendor-ratings", "action": "approve" },
 
+    { "module": "finance", "action": "view" },
     { "module": "finance.payments", "action": "view" },
     { "module": "finance.payments", "action": "manage" },
     { "module": "finance.payments", "action": "approve" },
@@ -176,6 +178,7 @@
     { "module": "design.ifc", "action": "manage" },
     { "module": "design.ifc", "action": "release" },
 
+    { "module": "construction", "action": "view" },
     { "module": "construction.tasks", "action": "view" },
     { "module": "construction.tasks", "action": "manage" },
 
@@ -228,6 +231,7 @@
     { "module": "construction.handover", "action": "manage.all" },
     { "module": "construction.handover", "action": "complete" },
 
+    { "module": "permit", "action": "view" },
     { "module": "permit.templates", "action": "view" },
     { "module": "permit.templates", "action": "manage" },
     { "module": "permit.templates", "action": "publish" },

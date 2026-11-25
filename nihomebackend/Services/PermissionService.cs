@@ -26,6 +26,19 @@ public sealed class PermissionService(AppDbContext db) : IPermissionService
         "design.ifc.view",
     ];
 
+    /// <summary>
+    /// Module-wide read rights (NICON N-05): each grants every
+    /// <c>{module}.*.view</c> code of its module, never manage/approve or
+    /// the <c>view.all</c> scope widening.
+    /// </summary>
+    private static readonly string[] ModuleViewCodes =
+    [
+        "finance.view",
+        "permit.view",
+        "proc.view",
+        "construction.view",
+    ];
+
     private static readonly FrozenSet<string> Empty =
         FrozenSet<string>.Empty.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
 
@@ -49,8 +62,24 @@ public sealed class PermissionService(AppDbContext db) : IPermissionService
             .ToListAsync(ct);
 
         var granted = codes.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        await AddModuleViewPermissionsAsync(granted, ct);
         await AddMembershipPermissionsAsync(user.Id, granted, ct);
         return granted.ToFrozenSet(StringComparer.OrdinalIgnoreCase);
+    }
+
+    private async Task AddModuleViewPermissionsAsync(HashSet<string> granted, CancellationToken ct)
+    {
+        var prefixes = ModuleViewCodes.Where(granted.Contains)
+            .Select(code => code[..(code.LastIndexOf(RbacConventions.CodeSeparator, StringComparison.Ordinal) + 1)])
+            .ToList();
+        if (prefixes.Count == 0) return;
+
+        var viewCodes = await db.Permissions.AsNoTracking()
+            .Where(permission => permission.IsActive && permission.Action == "view")
+            .Select(permission => permission.Module + RbacConventions.CodeSeparator + permission.Action)
+            .ToListAsync(ct);
+        granted.UnionWith(viewCodes.Where(code =>
+            prefixes.Any(prefix => code.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))));
     }
 
     /// <summary>
