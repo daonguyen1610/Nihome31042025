@@ -392,6 +392,46 @@
     "ja": "実行BOQ明細"
   },
   {
+    "key": "construction.resource.boqRemaining",
+    "category": "construction",
+    "vi": "Còn lại {remaining} / {approved} {unit} theo BOQ",
+    "en": "{remaining} of {approved} {unit} left in the BOQ",
+    "zh": "BOQ剩余 {remaining} / {approved} {unit}",
+    "ja": "BOQ残量 {remaining} / {approved} {unit}"
+  },
+  {
+    "key": "construction.resource.boqExceeded",
+    "category": "construction",
+    "vi": "Vượt hạn mức BOQ: chỉ còn {remaining} / {approved} {unit}. Phần vượt bị chặn cho tới khi có phát sinh (VO) được duyệt.",
+    "en": "Over the BOQ limit: only {remaining} of {approved} {unit} left. The excess is blocked until an approved variation order (VO).",
+    "zh": "超出BOQ限额：仅剩 {remaining} / {approved} {unit}。超出部分在变更单（VO）获批前被阻止。",
+    "ja": "BOQ上限超過：残り {remaining} / {approved} {unit} のみ。超過分は承認済みの変更指示（VO）まで登録できません。"
+  },
+  {
+    "key": "construction.resource.boqUsage.Yellow",
+    "category": "construction",
+    "vi": "BOQ ≥ 85%",
+    "en": "BOQ ≥ 85%",
+    "zh": "BOQ ≥ 85%",
+    "ja": "BOQ ≥ 85%"
+  },
+  {
+    "key": "construction.resource.boqUsage.Orange",
+    "category": "construction",
+    "vi": "BOQ ≥ 95%: QS cần dự báo",
+    "en": "BOQ ≥ 95%: QS forecast needed",
+    "zh": "BOQ ≥ 95%：需QS预测",
+    "ja": "BOQ ≥ 95%：QS予測が必要"
+  },
+  {
+    "key": "construction.resource.boqUsage.Red",
+    "category": "construction",
+    "vi": "Chạm 100% BOQ",
+    "en": "BOQ 100% reached",
+    "zh": "已达BOQ 100%",
+    "ja": "BOQ 100%到達"
+  },
+  {
     "key": "construction.resource.handoff",
     "category": "construction",
     "vi": "Trạng thái bàn giao",

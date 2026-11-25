@@ -1,6 +1,7 @@
 import type {
   AcceptanceStatus,
   AsBuiltStatus,
+  BoqUsageLevel,
   ConstructionTaskStatus,
   ConstructionWorkflowStatus,
   HandoverStatus,
@@ -40,6 +41,13 @@ export const REVIEW_STATUS_TONE: Record<ConstructionWorkflowStatus, StatusTone> 
   PendingCmReview: "info",
   CmApproved: "success",
   CmRejected: "danger",
+};
+
+export const BOQ_USAGE_TONE: Record<BoqUsageLevel, StatusTone> = {
+  Normal: "muted",
+  Yellow: "warning",
+  Orange: "warning",
+  Red: "danger",
 };
 
 export const ACCEPTANCE_STATUS_TONE: Record<AcceptanceStatus, StatusTone> = {

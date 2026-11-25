@@ -133,8 +133,10 @@ test("BCH resource workspace renders the assigned project on mobile", async ({
   await expect(page.getByTestId("bch-resource-page-project")).toContainText("NICON-M4-01");
   await page.getByTestId("resource-new").click();
   await page.getByTestId("resource-boq-line").click();
-  await expect(page.getByRole("option", { name: /MAT-STEEL-01/ })).toBeVisible();
-  await page.keyboard.press("Escape");
+  await page.getByRole("option", { name: /MAT-STEEL-01/ }).click();
+  await expect(page.getByTestId("resource-boq-remaining")).not.toHaveClass(/text-destructive/);
+  await page.locator("#resource-quantity").fill("1200");
+  await expect(page.getByTestId("resource-boq-remaining")).toHaveClass(/text-destructive/);
   await page.getByTestId("resource-site-user").click();
   await expect(page.getByRole("option", { name: "Nguyen Van BCH" })).toBeVisible();
   await page.keyboard.press("Escape");

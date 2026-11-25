@@ -630,8 +630,11 @@ export interface ConstructionResourceRequestResponse {
   suppliedAt?: string | null;
   suppliedByUserId?: number | null;
   supplyDocumentId?: number | null;
+  boqUsageLevel?: BoqUsageLevel | null;
   rowVersion: string;
 }
+
+export type BoqUsageLevel = "Normal" | "Yellow" | "Orange" | "Red";
 
 export interface ConstructionResourceRequestListResponse {
   items: ConstructionResourceRequestResponse[];
