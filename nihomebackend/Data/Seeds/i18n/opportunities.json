@@ -4,7 +4,7 @@
   { "key": "opportunities.title", "category": "opportunities", "vi": "Quản lý Cơ hội", "en": "Opportunity Management", "zh": "商机管理", "ja": "商談管理" },
   { "key": "opportunities.subtitle", "category": "opportunities", "vi": "Tiếp cận → Khảo sát → Báo giá/Đấu thầu → Thương thảo → Ký hợp đồng.", "en": "Approach → Survey → Quotation/Tender → Negotiation → Contract signed.", "zh": "接洽 → 勘察 → 报价／投标 → 商务谈判 → 合同签署。", "ja": "アプローチ → 現地調査 → 見積／入札 → 交渉 → 契約締結。" },
   { "key": "opportunities.new", "category": "opportunities", "vi": "Tạo Cơ hội mới", "en": "New opportunity", "zh": "新建商机", "ja": "新規商談" },
-  { "key": "opportunities.empty", "category": "opportunities", "vi": "Chưa có cơ hội nào — nhấn \"Tạo Cơ hội mới\" để bắt đầu.", "en": "No opportunities yet — click \"New opportunity\" to start.", "zh": "暂无商机 — 点击 \"新建商机\" 开始。", "ja": "商談はまだありません — 「新規商談」から始めましょう。" },
+  { "key": "opportunities.empty", "category": "opportunities", "vi": "Chưa có cơ hội nào. Bấm \"Tạo Cơ hội mới\" để bắt đầu.", "en": "No opportunities yet. Click \"New opportunity\" to add one.", "zh": "暂无商机 — 点击 \"新建商机\" 开始。", "ja": "商談はまだありません — 「新規商談」から始めましょう。" },
   { "key": "opportunities.searchPlaceholder", "category": "opportunities", "vi": "Tìm theo tên cơ hội hoặc khách hàng…", "en": "Search opportunity or customer…", "zh": "按商机或客户搜索…", "ja": "商談名または顧客名で検索…" },
   { "key": "opportunities.myScopeCount", "category": "opportunities", "vi": "Chỉ hiển thị cơ hội của bạn · Tổng {count}", "en": "Showing only your opportunities · Total {count}", "zh": "仅显示您的商机 · 共 {count} 条", "ja": "自分の商談のみ表示 · 合計 {count} 件" },
   { "key": "opportunities.totalCount", "category": "opportunities", "vi": "Tổng {count} cơ hội", "en": "{count} opportunities total", "zh": "共 {count} 个商机", "ja": "商談合計 {count} 件" },

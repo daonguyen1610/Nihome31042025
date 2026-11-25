@@ -1928,8 +1928,8 @@
   {
     "key": "construction.qs.evidenceHint",
     "category": "construction",
-    "vi": "Tuỳ chọn — mã tài liệu minh chứng kèm theo, phân cách bằng dấu phẩy. Ví dụ: 101, 102.",
-    "en": "Optional — evidence document IDs, comma separated. e.g. 101, 102.",
+    "vi": "Không bắt buộc. Nhập mã tài liệu minh chứng, cách nhau bằng dấu phẩy, ví dụ: 101, 102.",
+    "en": "Optional. Enter evidence document IDs separated by commas, for example 101, 102.",
     "zh": "可选——附带的证明材料编号，以逗号分隔。例如：101, 102。",
     "ja": "任意 — 証拠資料IDをカンマ区切りで入力。例：101, 102。"
   },
@@ -2273,7 +2273,7 @@
     "key": "construction.cm.baselineRequiredBeforeSave",
     "category": "construction",
     "vi": "Nhập đủ 6 tham chiếu WBS, tiến độ, S-Curve, tổ chức BCH, kế hoạch nguồn lực và ngân sách để lưu hoặc đánh giá điều kiện khởi công.",
-    "en": "Enter all six references—WBS, schedule, S-curve, site team, resource plan, and budget—to save or evaluate readiness.",
+    "en": "Enter all six references (WBS, schedule, S-curve, site team, resource plan and budget) before you save or check readiness to start.",
     "zh": "请填写全部6项引用信息——WBS、进度、S曲线、现场团队、资源计划和预算——以保存或评估开工条件。",
     "ja": "保存または着工条件を評価するには、WBS、工程、Sカーブ、現場体制、資源計画、予算の6つの参照をすべて入力してください。"
   }

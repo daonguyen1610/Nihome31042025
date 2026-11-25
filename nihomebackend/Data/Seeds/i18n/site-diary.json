@@ -5,7 +5,7 @@
 
   { "key": "siteDiary.title", "category": "siteDiary", "vi": "Nhật ký công trường", "en": "Site diary", "zh": "施工日志", "ja": "現場日誌" },
   { "key": "siteDiary.subtitle", "category": "siteDiary", "vi": "Ghi nhật ký thi công hằng ngày: thời tiết, nhân sự, công việc, vật tư, sự cố.", "en": "Daily construction log: weather, headcount, work performed, materials, incidents.", "zh": "日常施工记录：天气、人员、工作内容、材料、事故。", "ja": "日々の施工記録：天候・人員・作業内容・資材・事故。" },
-  { "key": "siteDiary.empty", "category": "siteDiary", "vi": "Chưa có nhật ký nào — tạo nhật ký đầu tiên cho ngày hôm nay.", "en": "No diaries yet — create today's entry.", "zh": "尚无日志 — 创建今天的第一份记录。", "ja": "まだ日誌がありません — 本日の記録を作成してください。" },
+  { "key": "siteDiary.empty", "category": "siteDiary", "vi": "Chưa có nhật ký nào. Tạo nhật ký cho hôm nay.", "en": "No diary entries yet. Create today's entry.", "zh": "尚无日志 — 创建今天的第一份记录。", "ja": "まだ日誌がありません — 本日の記録を作成してください。" },
   { "key": "siteDiary.new", "category": "siteDiary", "vi": "Tạo nhật ký", "en": "New diary", "zh": "新建日志", "ja": "新規日誌" },
   { "key": "siteDiary.view", "category": "siteDiary", "vi": "Xem nhật ký", "en": "View diary", "zh": "查看日志", "ja": "日誌を表示" },
   { "key": "siteDiary.edit", "category": "siteDiary", "vi": "Chỉnh sửa nhật ký", "en": "Edit diary", "zh": "编辑日志", "ja": "日誌を編集" },

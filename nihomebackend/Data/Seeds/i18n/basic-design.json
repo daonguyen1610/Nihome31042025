@@ -2,7 +2,7 @@
   { "key": "basicDesign.title", "category": "basicDesign", "vi": "Hồ sơ thiết kế cơ sở", "en": "Basic Design documents", "zh": "基本设计文档", "ja": "基本設計ドキュメント" },
   { "key": "basicDesign.empty", "category": "basicDesign", "vi": "Chưa có hồ sơ thiết kế cơ sở nào cho dự án này.", "en": "No Basic Design documents yet.", "zh": "该项目尚无基本设计文档。", "ja": "基本設計ドキュメントはまだありません。" },
   { "key": "basicDesign.locked", "category": "basicDesign", "vi": "Dự án chưa ở giai đoạn Thiết kế cơ sở. Hãy chốt phương án thiết kế ý tưởng trước.", "en": "Project is not at the Basic Design stage yet. Finalize a Concept option first.", "zh": "项目尚未进入基本设计阶段。请先确认方案设计选项。", "ja": "案件は基本設計段階に達していません。先にコンセプト案を確定してください。" },
-  { "key": "basicDesign.lockedShop", "category": "basicDesign", "vi": "Dự án đã chuyển sang Thiết kế chi tiết — hồ sơ thiết kế cơ sở chỉ đọc.", "en": "Project has moved to Detail Design — Basic Design documents are read-only.", "zh": "项目已进入详细设计阶段——基本设计文档只读。", "ja": "案件は詳細設計段階に移行しました — 基本設計ドキュメントは読み取り専用です。" },
+  { "key": "basicDesign.lockedShop", "category": "basicDesign", "vi": "Dự án đã sang Thiết kế chi tiết nên hồ sơ thiết kế cơ sở chỉ xem được, không sửa được.", "en": "This project has moved to Detail Design, so Basic Design documents are read-only.", "zh": "项目已进入详细设计阶段——基本设计文档只读。", "ja": "案件は詳細設計段階に移行しました — 基本設計ドキュメントは読み取り専用です。" },
 
   { "key": "basicDesign.new", "category": "basicDesign", "vi": "Tạo bản vẽ", "en": "New document", "zh": "新建文档", "ja": "新規ドキュメント" },
   { "key": "basicDesign.edit", "category": "basicDesign", "vi": "Chỉnh sửa bản vẽ", "en": "Edit document", "zh": "编辑文档", "ja": "ドキュメントを編集" },

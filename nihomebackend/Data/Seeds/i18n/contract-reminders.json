@@ -11,7 +11,7 @@
   {"key":"contractReminder.confirm","category":"contracts","vi":"Xác nhận lịch gửi tự động","en":"Confirm automatic delivery","zh":"确认自动发送","ja":"自動送信を確定"},
   {"key":"contractReminder.empty","category":"contracts","vi":"Chưa có lịch gửi email.","en":"No email reminders scheduled.","zh":"暂无邮件提醒。","ja":"メールの予約はありません。"},
   {"key":"contractReminder.Scheduled","category":"contracts","vi":"Đã lên lịch","en":"Scheduled","zh":"已安排","ja":"予約済み"},
-  {"key":"contractReminder.Sending","category":"contracts","vi":"Đã bắt đầu gửi — chưa xác nhận kết quả","en":"Delivery started — outcome unconfirmed","zh":"已开始发送，结果未确认","ja":"送信開始・結果未確認"},
+  {"key":"contractReminder.Sending","category":"contracts","vi":"Đang gửi, chưa có kết quả","en":"Sending, result not confirmed yet","zh":"已开始发送，结果未确认","ja":"送信開始・結果未確認"},
   {"key":"contractReminder.Sent","category":"contracts","vi":"SMTP đã tiếp nhận","en":"Accepted by SMTP","zh":"SMTP已接受","ja":"SMTP受付済み"},
   {"key":"contractReminder.Cancelled","category":"contracts","vi":"Đã hủy lịch","en":"Cancelled","zh":"已取消","ja":"予約取消済み"},
   {"key":"contractReminder.NeedsReview","category":"contracts","vi":"Cần kiểm tra","en":"Needs review","zh":"需要检查","ja":"確認が必要"},

@@ -2,7 +2,7 @@
   { "key": "nav.capabilityDocs", "category": "nav", "vi": "Hồ sơ năng lực", "en": "Capability docs", "zh": "能力文件", "ja": "能力書類" },
 
   { "key": "capDocs.title", "category": "capability-docs", "vi": "Kho hồ sơ năng lực", "en": "Capability documents", "zh": "能力文件库", "ja": "能力書類ライブラリ" },
-  { "key": "capDocs.subtitle", "category": "capability-docs", "vi": "Kho hồ sơ dùng chung cho mọi gói thầu — không cần upload lại mỗi lần dự thầu.", "en": "Shared repository re-used by every tender — never re-upload the same file twice.", "zh": "所有投标共享的文档库，无需重复上传。", "ja": "全ての入札で共有するリポジトリ。同じファイルを再アップロード不要。" },
+  { "key": "capDocs.subtitle", "category": "capability-docs", "vi": "Hồ sơ năng lực dùng chung cho mọi gói thầu. Tải lên một lần, lần dự thầu sau không cần tải lại.", "en": "Company documents shared by every tender. Upload them once and reuse them for each bid.", "zh": "所有投标共享的文档库，无需重复上传。", "ja": "全ての入札で共有するリポジトリ。同じファイルを再アップロード不要。" },
   { "key": "capDocs.new", "category": "capability-docs", "vi": "Tải lên hồ sơ", "en": "Upload document", "zh": "上传文件", "ja": "書類をアップロード" },
   { "key": "capDocs.empty", "category": "capability-docs", "vi": "Chưa có hồ sơ nào.", "en": "No documents yet.", "zh": "暂无文件。", "ja": "まだ書類がありません。" },
   { "key": "capDocs.emptyCta", "category": "capability-docs", "vi": "Tải lên hồ sơ đầu tiên", "en": "Upload the first document", "zh": "上传第一份文件", "ja": "最初の書類をアップロード" },
