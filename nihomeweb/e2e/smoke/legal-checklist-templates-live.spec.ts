@@ -199,7 +199,7 @@ test("live legal draft, independent approval and mandatory project setup", async
   expect((await rejected).status()).toBe(409);
   await dialog
     .getByRole("button", {
-      name: /Tải phiên bản mới|Load latest version|加载最新版本|確認用に最新版/,
+      name: /Tải bản mới nhất|Load the latest version|加载最新版本|確認用に最新版/,
     })
     .click();
   await expect(additional).toBeChecked();
@@ -290,7 +290,9 @@ test("live stale template editing preserves local draft through review and retry
   await expect(page.locator("#legal-nameVi")).toHaveValue(`Local legal draft ${code}`);
   await expect(templates.getByText(`CM revised scope ${code}`, { exact: false })).toBeVisible();
   await templates
-    .getByRole("button", { name: /Đã đối chiếu|Reviewed latest|已核对|最新内容を確認済み/ })
+    .getByRole("button", {
+      name: /Đã xem bản mới nhất|checked the latest version|已核对|最新内容を確認済み/,
+    })
     .click();
   const saved = page.waitForResponse(
     (response) =>

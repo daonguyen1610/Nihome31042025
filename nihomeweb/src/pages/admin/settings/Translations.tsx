@@ -560,7 +560,12 @@ const TranslationsPage = () => {
 
   const resetEntityTranslations = async () => {
     if (!entityModalItem || !entityModalType) return;
-    if (!(await confirmAction(t("translations.confirmReset")))) return;
+    if (
+      !(await confirmAction(t("translations.confirmReset"), {
+        confirmLabel: t("translations.reset"),
+      }))
+    )
+      return;
     setEntitySaving(true);
     try {
       await api.delete(`/translations/entity/${entityModalType.type}/${entityModalItem.id}`);
