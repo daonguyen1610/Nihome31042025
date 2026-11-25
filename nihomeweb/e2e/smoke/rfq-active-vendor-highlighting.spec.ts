@@ -94,8 +94,8 @@ test("RFQ matrix keeps active partial zero-price ties but removes inactive vendo
   await expect(page.getByText("Received / invited: 2/2", { exact: true })).toBeVisible();
   const firstRow = matrix.locator("tbody tr").nth(0);
   const secondRow = matrix.locator("tbody tr").nth(1);
-  await expect(firstRow.locator("td").nth(0)).toHaveClass(/bg-emerald-50/);
-  await expect(firstRow.locator("td").nth(1)).toHaveClass(/bg-emerald-50/);
+  await expect(firstRow.locator("td").nth(0)).toHaveClass(/bg-success-soft/);
+  await expect(firstRow.locator("td").nth(1)).toHaveClass(/bg-success-soft/);
   await expect(firstRow.locator("td").nth(1)).toContainText("0 ₫");
   await expect(secondRow.locator("td").nth(1)).toHaveText("Not quoted");
   await expect(matrix).toContainText("Partial quote");
@@ -107,10 +107,10 @@ test("RFQ matrix keeps active partial zero-price ties but removes inactive vendo
   expect(updated.ok(), await updated.text()).toBe(true);
   await page.reload();
   await expect(matrix).toBeVisible();
-  await expect(firstRow.locator("td").nth(0)).not.toHaveClass(/bg-emerald-50/);
+  await expect(firstRow.locator("td").nth(0)).not.toHaveClass(/bg-success-soft/);
   await expect(firstRow.locator("td").nth(0)).toContainText("0 ₫");
-  await expect(firstRow.locator("td").nth(1)).toHaveClass(/bg-emerald-50/);
-  await expect(secondRow.locator("td").nth(0)).not.toHaveClass(/bg-emerald-50/);
+  await expect(firstRow.locator("td").nth(1)).toHaveClass(/bg-success-soft/);
+  await expect(secondRow.locator("td").nth(0)).not.toHaveClass(/bg-success-soft/);
   await expect(secondRow.locator("td").nth(1)).toHaveText("Not quoted");
   await expect(page.getByText("Received / invited: 2/2", { exact: true })).toBeVisible();
   await page.screenshot({

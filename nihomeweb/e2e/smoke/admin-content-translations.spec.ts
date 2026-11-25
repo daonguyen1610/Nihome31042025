@@ -216,8 +216,11 @@ test.describe("Content translations — browser coverage", () => {
       editor = await openEntityEditor(page, "Slideshow", created.id);
       await expect(translatedField(editor, "Title")).toHaveValue(translatedTitle);
 
-      page.once("dialog", (dialog) => dialog.accept());
       await editor.getByRole("button", { name: "Reset translations", exact: true }).click();
+      await page
+        .getByRole("alertdialog")
+        .getByRole("button", { name: "Reset translations", exact: true })
+        .click();
       await expect(editor).toBeHidden();
       await expect(card).toContainText("Not translated");
 
