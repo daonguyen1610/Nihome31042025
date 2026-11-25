@@ -1158,6 +1158,11 @@ const DepartmentWorkPackages = () => {
                           <div className="flex flex-wrap items-center gap-2">
                             <Badge variant="outline">{task.wbsCode}</Badge>
                             <h3 className="font-medium">{task.title}</h3>
+                            {task.isPriority && (
+                              <Badge variant="destructive">
+                                {t("workPackages.priority.badge")}
+                              </Badge>
+                            )}
                             <span className="inline-flex items-center gap-2">
                               <Badge variant="secondary" className="gap-1">
                                 <TaskStatusIcon className="h-3.5 w-3.5" aria-hidden="true" />
@@ -2476,6 +2481,15 @@ const DepartmentWorkPackages = () => {
                 </SelectContent>
               </Select>
             </Field>
+            <label className="flex items-center gap-2 text-sm sm:col-span-2">
+              <Checkbox
+                checked={taskForm.isPriority}
+                onCheckedChange={(value) =>
+                  setTaskForm((current) => ({ ...current, isPriority: value === true }))
+                }
+              />
+              {t("workPackages.priority.label")}
+            </label>
             <Field label={t("workPackages.field.predecessors")} className="sm:col-span-2">
               <ChoiceGrid
                 emptyLabel={

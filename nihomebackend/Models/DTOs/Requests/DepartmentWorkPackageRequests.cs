@@ -91,6 +91,8 @@ public sealed class UpsertDepartmentWorkTaskRequest : IConcurrencyRequest
     [Required]
     public DateTime PlannedEnd { get; set; }
 
+    public bool IsPriority { get; set; }
+
     public List<int> CcUserIds { get; set; } = new();
     public List<int> PredecessorTaskIds { get; set; } = new();
     public string? RowVersion { get; set; }

@@ -34,6 +34,9 @@ const CODED_ERRORS: Record<string, string> = {
   DRIVE_INVALID_ROOT: "settings.drive.test.invalidRoot",
   DRIVE_RECONNECT_REQUIRED: "settings.drive.test.reconnectRequired",
   DRIVE_TEST_FAILED: "settings.drive.test.failed",
+  DAILY_REPORT_NO_DEPARTMENT: "dailyReport.error.noDepartment",
+  DAILY_REPORT_REVIEWED: "dailyReport.error.reviewed",
+  DAILY_REPORT_OWN_REVIEW: "dailyReport.error.ownReview",
 };
 
 /** The localized message for a coded business error, or null when the code is not one of them. */

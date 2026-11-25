@@ -50,6 +50,7 @@ export interface DepartmentWorkTaskResponse {
   kpiDefinitionCode?: string | null;
   status: WorkTaskStatus;
   progressPercent: number;
+  isPriority: boolean;
   plannedStart: string;
   plannedEnd: string;
   actualStart?: string | null;
@@ -310,6 +311,7 @@ export interface UpsertDepartmentWorkTaskRequest {
   approverUserId?: number | null;
   kpiDefinitionId?: number | null;
   projectScheduleNodeId?: string | null;
+  isPriority: boolean;
   plannedStart: string;
   plannedEnd: string;
   ccUserIds: number[];

@@ -199,6 +199,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILegacyProjectTeamSyncService, LegacyProjectTeamSyncService>();
         services.AddScoped<IProjectTeamService, ProjectTeamService>();
         services.AddScoped<IDepartmentWorkPackageService, DepartmentWorkPackageService>();
+        services.AddScoped<MyWorkService>();
+        services.AddScoped<DailyWorkReportService>();
         services.AddScoped<WorkTaskAttachmentService>();
         services.AddScoped<WorkTaskAttachmentIdempotencyGuard>();
         services.AddScoped<ProjectAssignmentAttachmentService>();
