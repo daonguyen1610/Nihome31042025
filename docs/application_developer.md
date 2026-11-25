@@ -638,6 +638,10 @@ Các module bên dưới chỉ ghi phần khác biệt; mặc định áp dụng
   ngoài scope hoặc không tồn tại trả `404` để không lộ sự tồn tại; thiếu đăng
   nhập `401`; thiếu permission `403`. Permission `*.view.all` chỉ mở rộng phạm vi
   đọc, không cấp quyền ghi.
+  `finance.view`, `permit.view`, `proc.view`, `construction.view` được
+  `PermissionService.GetForUserAsync` mở thành mọi `{module}.*.view` đang hoạt
+  động của phân hệ (không gồm `view.all`, không quyền ghi). Bộ lọc chỉ theo vai
+  trò `FilterByRolePermission(s)Async` không mở rộng các mã này.
 - **Tách người làm và người duyệt.** Người tạo/trình không tự duyệt bản ghi của
   mình; server kiểm, UI chỉ ẩn nút.
 - **Từ chối không để lại dấu vết.** Thao tác bị từ chối không đổi bản ghi gốc,

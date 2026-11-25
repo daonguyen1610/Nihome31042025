@@ -1210,6 +1210,7 @@ Quyền gắn với vai trò; mỗi vai trò là một bộ quyền quản trị
 - Người lập không được thẩm định độc lập chính chứng từ của mình khi quy trình cần kiểm soát chéo.
 - Quyền theo từng Dự án và từng luồng thiết kế; vào được dự án hay luồng này không mở dự án hay luồng khác.
 - Quyền trên một phân hệ không mở rộng sang phân hệ khác. Ví dụ xem được Hợp đồng không có nghĩa xem được Lead nguồn của nó.
+- Bốn quyền xem cả phân hệ (Tài chính, Pháp lý, Mua hàng, Thi công) cho xem mọi trang của phân hệ đó mà không cần tích từng quyền xem. Chúng không cho tạo, sửa, duyệt, và phạm vi dự án vẫn như quyền xem từng mục.
 
 ### 4.1 Vai trò hệ thống
 
