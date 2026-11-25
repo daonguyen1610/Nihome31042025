@@ -78,6 +78,8 @@ function TodayReport() {
   const [items, setItems] = useState<DailyWorkReportItem[]>([]);
   const [proposals, setProposals] = useState("");
   const [tomorrowPlan, setTomorrowPlan] = useState("");
+  // Flag the empty plan only after the person has left the field, not on first load.
+  const [tomorrowTouched, setTomorrowTouched] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
 
@@ -245,11 +247,15 @@ function TodayReport() {
               id="report-tomorrow"
               maxLength={4000}
               value={tomorrowPlan}
-              aria-invalid={tomorrowMissing}
+              aria-invalid={tomorrowTouched && tomorrowMissing}
+              aria-describedby={tomorrowMissing ? "report-tomorrow-hint" : undefined}
+              onBlur={() => setTomorrowTouched(true)}
               onChange={(event) => setTomorrowPlan(event.target.value)}
             />
             {tomorrowMissing && (
-              <p className="text-sm text-muted-foreground">{t("dailyReport.tomorrowRequired")}</p>
+              <p id="report-tomorrow-hint" className="text-sm text-muted-foreground">
+                {t("dailyReport.tomorrowRequired")}
+              </p>
             )}
           </div>
           {error && (
