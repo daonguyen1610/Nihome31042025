@@ -343,7 +343,8 @@ export default function RoleList() {
       // Match the code and the translated label, since people search by either.
       return (
         p.code.toLowerCase().includes(term) ||
-        t(`rbac.perm.${p.code}.label`).toLowerCase().includes(term)
+        t(`rbac.perm.${p.code}.label`).toLowerCase().includes(term) ||
+        t(`rbac.perm.${p.code}.description`).toLowerCase().includes(term)
       );
     });
   }, [allPerms, permSearch, moduleFilter, t]);
@@ -782,12 +783,12 @@ export default function RoleList() {
                                 <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" />
                               </summary>
                               <div className="grid gap-px border-t bg-border sm:grid-cols-2">
-                                {modulePermissions.map((permission) => {
+                                {modulePermissions.map((permission, index) => {
                                   const inputId = `rbac-${selectedRole.id}-${permission.id}`;
                                   const disabled = selectedRole.isSystem || !canManage;
-                                  const translatedDescription = permission.descriptionKey
-                                    ? t(permission.descriptionKey)
-                                    : null;
+                                  // Same description key as the role-group dialog; descriptionKey names the label.
+                                  const descriptionKey = `rbac.perm.${permission.code}.description`;
+                                  const translatedDescription = t(descriptionKey);
                                   return (
                                     <label
                                       key={permission.id}
@@ -799,6 +800,12 @@ export default function RoleList() {
                                           : "cursor-pointer hover:bg-muted/50",
                                       )}
                                     >
+                                      <span
+                                        className="mt-0.5 w-6 shrink-0 text-right font-mono text-xs tabular-nums text-muted-foreground"
+                                        aria-hidden="true"
+                                      >
+                                        {index + 1}.
+                                      </span>
                                       <Checkbox
                                         id={inputId}
                                         className="mt-0.5"
@@ -813,12 +820,11 @@ export default function RoleList() {
                                         <span className="block text-sm font-medium leading-tight">
                                           {t(`rbac.perm.${permission.code}.label`)}
                                         </span>
-                                        {permission.descriptionKey &&
-                                          translatedDescription !== permission.descriptionKey && (
-                                            <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
-                                              {translatedDescription}
-                                            </span>
-                                          )}
+                                        {translatedDescription !== descriptionKey && (
+                                          <span className="mt-1 block text-xs leading-relaxed text-muted-foreground">
+                                            {translatedDescription}
+                                          </span>
+                                        )}
                                         <span className="mt-1.5 block break-all font-mono text-xs text-muted-foreground/80">
                                           {permission.code}
                                         </span>
