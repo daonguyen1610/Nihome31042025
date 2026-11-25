@@ -327,8 +327,8 @@ public sealed class DesignReviewService(
         Touch(review, callerUserId);
         await CrmConcurrency.SaveChangesAsync(db, ct);
         if (transaction is not null) await transaction.CommitAsync(ct);
-        if (decision == DesignReviewStatus.ClientApproved) await AdvanceStageAsync(review, callerUserId, ct);
         await NotifyAsync(review.Recipients.Select(item => item.UserId), "design-review.client-decision", review, ct);
+        if (decision == DesignReviewStatus.ClientApproved) await AdvanceStageAsync(review, callerUserId, ct);
         return Map(await LoadAsync(projectId, reviewId, ct), callerUserId, true);
     }
 
@@ -487,10 +487,11 @@ public sealed class DesignReviewService(
                     callerUserId, ct);
             }
         }
-        catch (Exception exception) when (exception is BasicDesignDocOperationException or ConceptOptionOperationException)
+        // The decision is already committed, so a failed advance must not fail the request; the manual button remains.
+        catch (Exception exception) when (exception is not OperationCanceledException)
         {
-            logger.LogInformation("Design project {ProjectId} stays in its stage after client approval: {Reason}",
-                review.DesignProjectId, exception.Message);
+            logger.LogWarning(exception, "Design project {ProjectId} stays in its stage after client approval",
+                review.DesignProjectId);
         }
     }
 
