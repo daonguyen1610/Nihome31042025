@@ -296,6 +296,9 @@ test("approved opportunity quote sends the edited preview through SMTP before cu
     await expect(dialog.getByRole("button", { name: "Gửi khách" })).toBeDisabled();
     await dialog.getByLabel("Email khách hàng").fill(recipient);
     await dialog.getByLabel("Tiêu đề email").fill(`NICON quote ${marker}`);
+    // The raw HTML is collapsed until the user opens it.
+    await expect(dialog.getByLabel("Nội dung email sắp gửi")).toBeHidden();
+    await dialog.getByRole("button", { name: "Mở mã HTML để chỉnh sửa" }).click();
     await dialog
       .getByLabel("Nội dung email sắp gửi")
       .fill(
