@@ -1,7 +1,7 @@
 [
   { "key": "drawingRevision.title", "category": "drawingRevision", "vi": "Lịch sử phiên bản", "en": "Revision history", "zh": "修订历史", "ja": "リビジョン履歴" },
   { "key": "drawingRevision.button", "category": "drawingRevision", "vi": "Xem phiên bản", "en": "Revisions", "zh": "修订", "ja": "リビジョン" },
-  { "key": "drawingRevision.empty", "category": "drawingRevision", "vi": "Bản vẽ này chưa có phiên bản cập nhật nào — hiện vẫn là bản gốc R0.", "en": "This drawing has no revisions yet — still at original R0.", "zh": "该图纸尚无修订——仍为初始版本 R0。", "ja": "この図面にはまだリビジョンがありません — 原本 R0 のままです。" },
+  { "key": "drawingRevision.empty", "category": "drawingRevision", "vi": "Bản vẽ này chưa được cập nhật, vẫn là bản gốc R0.", "en": "This drawing has no revisions yet. It is still the original R0.", "zh": "该图纸尚无修订——仍为初始版本 R0。", "ja": "この図面にはまだリビジョンがありません — 原本 R0 のままです。" },
 
   { "key": "drawingRevision.new", "category": "drawingRevision", "vi": "Tạo phiên bản mới", "en": "New revision", "zh": "新建修订", "ja": "新規リビジョン" },
   { "key": "drawingRevision.created", "category": "drawingRevision", "vi": "Đã tạo phiên bản", "en": "Revision created", "zh": "已创建修订", "ja": "リビジョンを作成しました" },
@@ -21,7 +21,7 @@
   { "key": "drawingRevision.form.noteRequired", "category": "drawingRevision", "vi": "Ghi chú thay đổi là bắt buộc.", "en": "Change note is required.", "zh": "变更说明为必填项。", "ja": "変更メモは必須です。" },
   { "key": "drawingRevision.form.hint", "category": "drawingRevision", "vi": "Phiên bản mới sẽ tự động được đánh số tiếp theo và các phiên bản cũ sẽ chuyển sang trạng thái Đã thu hồi.", "en": "The new revision is auto-numbered and prior revisions flip to Superseded.", "zh": "新修订将自动编号，之前的修订将标记为已作废。", "ja": "新しいリビジョンは自動採番され、以前のリビジョンは廃止扱いになります。" },
 
-  { "key": "drawingRevision.warn.supersededOpen", "category": "drawingRevision", "vi": "Bạn đang xem phiên bản đã bị thu hồi. Hãy dùng phiên bản hiện tại thay thế.", "en": "You are viewing a superseded revision — use the current one instead.", "zh": "您正在查看已作废的修订，请使用当前修订。", "ja": "廃止済みリビジョンを表示中です — 現行リビジョンを使用してください。" },
+  { "key": "drawingRevision.warn.supersededOpen", "category": "drawingRevision", "vi": "Bạn đang xem phiên bản đã bị thu hồi. Hãy dùng phiên bản hiện tại thay thế.", "en": "You are viewing an old revision. Use the current one instead.", "zh": "您正在查看已作废的修订，请使用当前修订。", "ja": "廃止済みリビジョンを表示中です — 現行リビジョンを使用してください。" },
   { "key": "drawingRevision.diff.title", "category": "drawingRevision", "vi": "So sánh phiên bản", "en": "Compare revisions", "zh": "比较版本", "ja": "改訂を比較" },
   { "key": "drawingRevision.diff.from", "category": "drawingRevision", "vi": "Từ phiên bản", "en": "From revision", "zh": "起始版本", "ja": "比較元の改訂" },
   { "key": "drawingRevision.diff.to", "category": "drawingRevision", "vi": "Đến phiên bản", "en": "To revision", "zh": "目标版本", "ja": "比較先の改訂" },

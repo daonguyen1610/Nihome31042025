@@ -698,8 +698,8 @@
   {
     "key": "media.featured.pendingHint",
     "category": "media",
-    "vi": "Đã chọn: {name} — bấm \"Cập nhật\" để lưu.",
-    "en": "Selected: {name} — click \"Update\" to save.",
+    "vi": "Đã chọn {name}. Bấm \"Cập nhật\" để lưu.",
+    "en": "Selected {name}. Click \"Update\" to save.",
     "zh": "已选择:{name} — 点击“更新”保存。",
     "ja": "選択中: {name} — 「更新」を押して保存。"
   },

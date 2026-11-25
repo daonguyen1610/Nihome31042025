@@ -883,7 +883,7 @@
     "key": "scheduleUx.approverHint",
     "category": "construction",
     "vi": "Trước hợp đồng: Trưởng phòng CRM. Sau hợp đồng: PM dự án. Chọn người duyệt để gửi yêu cầu cho đúng người đó.",
-    "en": "Before contract: CRM department head. After contract: project PM. Choose the approver — the request goes only to that person.",
+    "en": "Before the contract: the CRM department head. After the contract: the project PM. The request goes only to the approver you choose.",
     "zh": "合同前：CRM 部门负责人。合同后：项目经理。选择审批人后，请求只发送给该人员。",
     "ja": "契約前：CRM 部門長。契約後：プロジェクトPM。承認者を選ぶと、依頼はその本人にのみ送信されます。"
   },

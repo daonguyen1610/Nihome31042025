@@ -3271,7 +3271,7 @@
     "key": "settings.drive.configuration.guide.step.credentials", "category": "settings", "vi": "Sau khi tạo OAuth Client, sao chép Client ID và Client Secret vào hai trường tương ứng bên dưới. Không gửi hoặc lưu Secret trong tài liệu, ảnh chụp hay mã nguồn.", "en": "After creating the OAuth client, copy its Client ID and Client Secret into the matching fields below. Never send or store the secret in documentation, screenshots, or source code.", "zh": "创建 OAuth 客户端后，将其 Client ID 和 Client Secret 复制到下方对应字段。切勿在文档、截图或源代码中发送或保存密钥。", "ja": "OAuth クライアントの作成後、Client ID と Client Secret を下の対応する欄にコピーします。シークレットを文書、スクリーンショット、ソースコードに保存・共有しないでください。"
   },
   {
-    "key": "settings.drive.configuration.guide.step.rootFolder", "category": "settings", "vi": "Trong Google Drive, tạo hoặc chọn thư mục gốc mà Nicon được phép quản lý. Sao chép ID nằm sau /folders/ và trước dấu ? hoặc dấu / tiếp theo trong URL, rồi bảo đảm tài khoản kết nối có quyền thêm tệp.", "en": "In Google Drive, create or select the root folder that Nicon may manage. Copy the ID after /folders/ and before the next ? or / in the URL, then ensure the connected account can add files.", "zh": "在 Google Drive 中创建或选择允许 Nicon 管理的根文件夹。复制 URL 中 /folders/ 之后、下一个 ? 或 / 之前的 ID，并确保连接的帐户可以添加文件。", "ja": "Google Drive で Nicon が管理するルートフォルダーを作成または選択します。URL の /folders/ より後、次の ? または / より前の ID をコピーし、接続アカウントにファイル追加権限があることを確認します。"
+    "key": "settings.drive.configuration.guide.step.rootFolder", "category": "settings", "vi": "Trong Google Drive, tạo hoặc chọn thư mục gốc mà Nicon được phép quản lý. Sao chép ID nằm sau /folders/ và trước dấu ? hoặc dấu / tiếp theo trong URL, rồi bảo đảm tài khoản kết nối có quyền thêm tệp.", "en": "In Google Drive, create or pick the root folder Nicon may manage. Copy the ID between /folders/ and the next ? or / in the URL. Check that the connected account can add files there.", "zh": "在 Google Drive 中创建或选择允许 Nicon 管理的根文件夹。复制 URL 中 /folders/ 之后、下一个 ? 或 / 之前的 ID，并确保连接的帐户可以添加文件。", "ja": "Google Drive で Nicon が管理するルートフォルダーを作成または選択します。URL の /folders/ より後、次の ? または / より前の ID をコピーし、接続アカウントにファイル追加権限があることを確認します。"
   },
   {
     "key": "settings.drive.configuration.guide.step.deploymentValues", "category": "settings", "vi": "Nhập mã hệ thống duy nhất cho môi trường này, tên ứng dụng dễ nhận biết, đường dẫn quay lại Admin, chu kỳ đồng bộ và các đường dẫn thư mục nghiệp vụ bên dưới thư mục gốc.", "en": "Enter a unique ID for this deployment, a recognizable application name, the Admin return path, the sync interval, and the business folder paths beneath the root folder.", "zh": "输入此部署的唯一 ID、易识别的应用名称、管理后台返回路径、同步间隔，以及根文件夹下的业务文件夹路径。", "ja": "この環境固有の ID、識別しやすいアプリ名、管理画面の戻り先、同期間隔、およびルートフォルダー配下の業務フォルダーパスを入力します。"
@@ -4581,8 +4581,8 @@
   {
     "key": "adminTranslations.hint.content",
     "category": "adminTranslations",
-    "vi": "Các đoạn văn cách nhau bằng dòng trống. Ảnh hiển thị dạng [IMAGE: /path.jpg] — chỉ dịch các đoạn văn bản; giữ nguyên các dòng ảnh/video.",
-    "en": "Paragraphs separated by blank lines. Images are shown as [IMAGE: /path.jpg] — translate only the text paragraphs; keep image/video lines unchanged.",
+    "vi": "Các đoạn văn cách nhau bằng một dòng trống. Ảnh hiển thị dạng [IMAGE: /path.jpg]. Chỉ dịch phần chữ, giữ nguyên các dòng ảnh và video.",
+    "en": "Leave a blank line between paragraphs. Images appear as [IMAGE: /path.jpg]. Translate only the text and leave image and video lines as they are.",
     "zh": "段落之间用空行分隔。图片显示为 [IMAGE: /path.jpg] —— 只翻译文字段落，图片/视频行请保持不变。",
     "ja": "段落は空行で区切ります。画像は [IMAGE: /path.jpg] の形式で表示されます — テキスト段落のみ翻訳し、画像/動画の行はそのままにしてください。"
   },

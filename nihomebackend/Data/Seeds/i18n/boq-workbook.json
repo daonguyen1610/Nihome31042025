@@ -178,8 +178,8 @@
   {
     "key": "boqWorkbook.previewTitle",
     "category": "procurement",
-    "vi": "Kết quả kiểm tra — chưa lưu",
-    "en": "Validation result — not saved yet",
+    "vi": "Kết quả kiểm tra (chưa lưu)",
+    "en": "Check result (not saved yet)",
     "zh": "校验结果 — 尚未保存",
     "ja": "検証結果 — 未保存"
   },

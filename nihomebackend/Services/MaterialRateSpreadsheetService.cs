@@ -229,7 +229,7 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
         sheet.Range("A3:G8").Style.Fill.SetBackgroundColor(XLColor.FromHtml("#D9EAF7"));
         sheet.Row(8).Height = 34;
 
-        sheet.Range("A10:G10").Merge().Value = text("materialRates.excel.exampleTitle", "VÍ DỤ THAM KHẢO — KHÔNG CẦN XÓA");
+        sheet.Range("A10:G10").Merge().Value = text("materialRates.excel.exampleTitle", "VÍ DỤ THAM KHẢO (KHÔNG CẦN XÓA)");
         sheet.Range("A10:G10").Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#E2F0D9"));
         var headers = new[]
         {
@@ -341,7 +341,7 @@ public sealed class MaterialRateSpreadsheetService : IMaterialRateSpreadsheetSer
         sheet.Range("A3:F3").Merge().Value = text("materialRates.boq.excel.guide", "Nhập mã công việc, tên công việc, đơn vị, khối lượng mẫu và đơn giá. Thành tiền được tự động tính bằng Khối lượng × Đơn giá.");
         sheet.Range("A3:F3").Style.Alignment.SetWrapText().Fill.SetBackgroundColor(XLColor.FromHtml("#D9EAF7"));
         sheet.Row(3).Height = 42;
-        sheet.Range("A5:F5").Merge().Value = text("materialRates.excel.exampleTitle", "VÍ DỤ THAM KHẢO — KHÔNG CẦN XÓA");
+        sheet.Range("A5:F5").Merge().Value = text("materialRates.excel.exampleTitle", "VÍ DỤ THAM KHẢO (KHÔNG CẦN XÓA)");
         sheet.Range("A5:F5").Style.Font.SetBold().Fill.SetBackgroundColor(XLColor.FromHtml("#E2F0D9"));
         var example = new object[] { "CV-BT-01", text("materialRates.boq.excel.example", "Bê tông móng"), "m3", 10, 1500000, 15000000 };
         for (var column = 0; column < example.Length; column++) sheet.Cell(6, column + 1).Value = XLCellValue.FromObject(example[column]);

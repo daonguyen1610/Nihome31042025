@@ -92,7 +92,7 @@
   { "key": "tenders.detail.library.confirm", "category": "tenders", "vi": "Đính kèm", "en": "Attach", "zh": "附加", "ja": "添付" },
   { "key": "tenders.detail.library.empty", "category": "tenders", "vi": "Thư viện dùng chung chưa có tài liệu. Vui lòng bổ sung tại Hồ sơ năng lực hoặc tải file mới trực tiếp cho mục này.", "en": "The shared library is empty. Add a document under Capability documents or upload a new file directly to this item.", "zh": "共享资料库暂无文档。请在资质文档中添加，或直接为此项目上传新文件。", "ja": "共有ライブラリに文書がありません。資格文書で追加するか、この項目へ直接新規ファイルをアップロードしてください。" },
 
-  { "key": "tenders.detail.result.summaryOpen", "category": "tenders", "vi": "Chưa có kết quả — cập nhật khi có phản hồi chính thức.", "en": "No result yet — update once the outcome is confirmed.", "zh": "尚无结果 — 一旦确认请更新。", "ja": "結果未定 — 確定次第更新してください。" },
+  { "key": "tenders.detail.result.summaryOpen", "category": "tenders", "vi": "Chưa có kết quả. Cập nhật khi có phản hồi chính thức.", "en": "No result yet. Update this when the official outcome arrives.", "zh": "尚无结果 — 一旦确认请更新。", "ja": "結果未定 — 確定次第更新してください。" },
   { "key": "tenders.detail.result.wonBadge", "category": "tenders", "vi": "Trúng thầu", "en": "Won the bid", "zh": "中标", "ja": "落札" },
   { "key": "tenders.detail.result.lostBadge", "category": "tenders", "vi": "Trượt thầu", "en": "Lost the bid", "zh": "落标", "ja": "失注" },
   { "key": "tenders.detail.result.cancelledBadge", "category": "tenders", "vi": "Đã huỷ", "en": "Cancelled", "zh": "已取消", "ja": "キャンセル" },

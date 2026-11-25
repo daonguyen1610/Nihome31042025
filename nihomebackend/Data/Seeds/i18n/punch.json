@@ -3,7 +3,7 @@
 
   { "key": "punch.title", "category": "punch", "vi": "Danh mục lỗi (Punchlist)", "en": "Punch list", "zh": "缺陷清单", "ja": "パンチリスト" },
   { "key": "punch.subtitle", "category": "punch", "vi": "Theo dõi lỗi tồn đọng, người xử lý, hạn xử lý và nghiệm thu đóng lỗi.", "en": "Track outstanding defects, owners, deadlines and verification sign-off.", "zh": "跟踪未处理缺陷、负责人、截止日期与验证签收。", "ja": "残存不具合・担当者・期限・確認サインオフを追跡します。" },
-  { "key": "punch.empty", "category": "punch", "vi": "Chưa có lỗi nào — tạo bản ghi đầu tiên.", "en": "No punch items yet — create the first one.", "zh": "尚无缺陷 — 请先创建第一项。", "ja": "まだ項目がありません — 最初の項目を作成してください。" },
+  { "key": "punch.empty", "category": "punch", "vi": "Chưa có lỗi nào. Tạo bản ghi đầu tiên.", "en": "No punch items yet. Create the first one.", "zh": "尚无缺陷 — 请先创建第一项。", "ja": "まだ項目がありません — 最初の項目を作成してください。" },
   { "key": "punch.new", "category": "punch", "vi": "Ghi nhận lỗi", "en": "New punch", "zh": "新建缺陷", "ja": "新規パンチ" },
   { "key": "punch.created", "category": "punch", "vi": "Đã ghi nhận lỗi", "en": "Punch created", "zh": "缺陷已创建", "ja": "パンチを作成しました" },
   { "key": "punch.updated", "category": "punch", "vi": "Đã cập nhật lỗi", "en": "Punch updated", "zh": "缺陷已更新", "ja": "パンチを更新しました" },

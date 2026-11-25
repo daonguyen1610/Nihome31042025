@@ -1298,8 +1298,8 @@
   {
     "key": "rbac.perm.crm.leads.view.all.description",
     "category": "rbac",
-    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy lead của mọi Sales.",
-    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see leads owned by any user.",
+    "vi": "Xem lead của mọi nhân viên Sales, không chỉ của mình. Dành cho Sales Manager, BGĐ và Admin.",
+    "en": "See leads owned by every salesperson, not only your own. For Sales Manager, BOD and Admin.",
     "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的线索。",
     "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者のリードを閲覧可能。"
   },
@@ -1362,8 +1362,8 @@
   {
     "key": "rbac.perm.crm.customers.view.all.description",
     "category": "rbac",
-    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / Kế toán / BGĐ / Admin thấy khách hàng của mọi Sales.",
-    "en": "Bypasses owner filtering — Sales Manager / Accountant / BOD / Admin can see customers owned by any user.",
+    "vi": "Xem khách hàng của mọi nhân viên Sales, không chỉ của mình. Dành cho Sales Manager, Kế toán, BGĐ và Admin.",
+    "en": "See customers owned by every salesperson, not only your own. For Sales Manager, Accountant, BOD and Admin.",
     "zh": "忽略负责人过滤 — 销售经理 / 会计 / 董事会 / 管理员可查看所有销售的客户。",
     "ja": "担当者フィルタを無視 — セールスマネージャー・経理・役員・管理者は全担当者の顧客を閲覧可能。"
   },
@@ -1426,8 +1426,8 @@
   {
     "key": "rbac.perm.crm.opportunities.view.all.description",
     "category": "rbac",
-    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy cơ hội của mọi Sales.",
-    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see opportunities owned by any user.",
+    "vi": "Xem cơ hội của mọi nhân viên Sales, không chỉ của mình. Dành cho Sales Manager, BGĐ và Admin.",
+    "en": "See opportunities owned by every salesperson, not only your own. For Sales Manager, BOD and Admin.",
     "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的商机。",
     "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者の案件を閲覧可能。"
   },
@@ -1474,8 +1474,8 @@
   {
     "key": "rbac.perm.crm.quotes.view.all.description",
     "category": "rbac",
-    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy báo giá của mọi Sales.",
-    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see quotes owned by any user.",
+    "vi": "Xem báo giá của mọi nhân viên Sales, không chỉ của mình. Dành cho Sales Manager, BGĐ và Admin.",
+    "en": "See quotes owned by every salesperson, not only your own. For Sales Manager, BOD and Admin.",
     "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的报价。",
     "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者の見積を閲覧可能。"
   },
@@ -1714,8 +1714,8 @@
   {
     "key": "rbac.perm.crm.contracts.view.all.description",
     "category": "rbac",
-    "vi": "Bỏ qua bộ lọc chủ sở hữu — Sales Manager / BGĐ / Admin thấy hợp đồng của mọi Sales.",
-    "en": "Bypasses owner filtering — Sales Manager / BOD / Admin can see contracts owned by any user.",
+    "vi": "Xem hợp đồng của mọi nhân viên Sales, không chỉ của mình. Dành cho Sales Manager, BGĐ và Admin.",
+    "en": "See contracts owned by every salesperson, not only your own. For Sales Manager, BOD and Admin.",
     "zh": "忽略负责人过滤 — 销售经理 / 董事会 / 管理员可查看所有销售的合同。",
     "ja": "担当者フィルタを無視 — セールスマネージャー・役員・管理者は全担当者の契約を閲覧可能。"
   },
@@ -2194,8 +2194,8 @@
   {
     "key": "rbac.perm.construction.punch.verify.description",
     "category": "rbac",
-    "vi": "Xác nhận lỗi đã được xử lý đúng và chuyển sang trạng thái Đã xác nhận — quyền dành cho PM / bên giám sát chất lượng.",
-    "en": "Sign off a resolved item and move it to Verified — reserved for PM / QA / handover.",
+    "vi": "Xác nhận lỗi đã được sửa đúng và chuyển sang Đã xác nhận. Dành cho PM và bên giám sát chất lượng.",
+    "en": "Confirm a fixed item and mark it Verified. For the PM, QA and handover team.",
     "zh": "确认缺陷已妥善解决并转入已验证状态 — 权限保留给项目经理/QA/交付方。",
     "ja": "修正結果を確認して検証済に遷移させます — PM/QA/引渡担当向けの権限です。"
   },
@@ -2306,8 +2306,8 @@
   {
     "key": "rbac.perm.construction.asbuilt.approve.description",
     "category": "rbac",
-    "vi": "Ký duyệt và lưu trữ tài liệu hoàn công — quyền dành cho PM / DESIGN_LEAD.",
-    "en": "Sign off and archive an as-built document — reserved for PM / DESIGN_LEAD.",
+    "vi": "Ký duyệt và lưu trữ tài liệu hoàn công. Dành cho PM và DESIGN_LEAD.",
+    "en": "Sign off and archive an as-built document. For the PM and DESIGN_LEAD.",
     "zh": "签署并归档竣工资料 — 权限保留给项目经理/DESIGN_LEAD。",
     "ja": "竣工資料を承認・保管します — PM/DESIGN_LEAD 向けの権限です。"
   },
