@@ -10,7 +10,7 @@ import { ConstructionDeletionControl } from "./ConstructionDeletionControl";
 import { type ScopeProps, useConstructionActions } from "./constructionScope";
 import { PageEmpty, PageError, PageLoading } from "@/components/PageState";
 import { ConstructionStatusBadge } from "./constructionUi";
-import { REVIEW_STATUS_TONE } from "./constructionStatus";
+import { BOQ_USAGE_TONE, REVIEW_STATUS_TONE } from "./constructionStatus";
 import { ProjectWbsField } from "./ProjectWbsField";
 import { usePublishedProjectWbs } from "./usePublishedProjectWbs";
 import { Button } from "@/components/ui/button";
@@ -106,6 +106,8 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
       active = false;
     };
   }, [projectId, reload, t, uiError]);
+
+  const selectedBoqLine = boqLines.find((line) => String(line.id) === form.projectBoqLineId);
 
   const emptyForm = () => ({
     type: "Material" as ConstructionResourceType,
@@ -285,9 +287,16 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
                       {t(`construction.resource.type.${row.type}`)}
                     </p>
                   </div>
-                  <ConstructionStatusBadge tone={REVIEW_STATUS_TONE[row.status]}>
-                    {t(`construction.status.${row.status}`)}
-                  </ConstructionStatusBadge>
+                  <div className="flex flex-wrap justify-end gap-1">
+                    <ConstructionStatusBadge tone={REVIEW_STATUS_TONE[row.status]}>
+                      {t(`construction.status.${row.status}`)}
+                    </ConstructionStatusBadge>
+                    {row.boqUsageLevel && row.boqUsageLevel !== "Normal" && (
+                      <ConstructionStatusBadge tone={BOQ_USAGE_TONE[row.boqUsageLevel]}>
+                        {t(`construction.resource.boqUsage.${row.boqUsageLevel}`)}
+                      </ConstructionStatusBadge>
+                    )}
+                  </div>
                 </div>
                 <dl className="grid grid-cols-2 gap-2 text-sm">
                   <div>
@@ -455,6 +464,27 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
                         ))}
                       </SelectContent>
                     </Select>
+                    {selectedBoqLine && (
+                      <p
+                        className={
+                          Number(form.quantity) > selectedBoqLine.remainingQuantity
+                            ? "text-sm text-destructive"
+                            : "text-sm text-muted-foreground"
+                        }
+                        data-testid="resource-boq-remaining"
+                      >
+                        {t(
+                          Number(form.quantity) > selectedBoqLine.remainingQuantity
+                            ? "construction.resource.boqExceeded"
+                            : "construction.resource.boqRemaining",
+                          {
+                            remaining: selectedBoqLine.remainingQuantity.toLocaleString(lang),
+                            approved: selectedBoqLine.approvedQuantity.toLocaleString(lang),
+                            unit: selectedBoqLine.unit,
+                          },
+                        )}
+                      </p>
+                    )}
                   </div>
                   <UserSelect
                     id="resource-site-user"

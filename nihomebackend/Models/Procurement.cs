@@ -78,6 +78,8 @@ public sealed class ProjectBoqLine
     public bool PriceMissing { get; set; }
 }
 
+public enum BoqUsageLevel { Normal, Yellow, Orange, Red }
+
 public sealed class MaterialRequest : IConcurrencyTracked
 {
     public int Id { get; set; }

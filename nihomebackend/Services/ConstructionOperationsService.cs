@@ -126,8 +126,43 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         return Map(item, missing)!;
     }
 
-    public async Task<List<ConstructionResourceRequestResponse>> ListResourcesAsync(int projectId, CancellationToken ct) =>
-        (await db.ConstructionResourceRequests.AsNoTracking().Where(x => x.OperationalProjectId == projectId).OrderByDescending(x => x.Id).ToListAsync(ct)).Select(Map).ToList();
+    public async Task<List<ConstructionResourceRequestResponse>> ListResourcesAsync(int projectId, CancellationToken ct)
+    {
+        var items = await db.ConstructionResourceRequests.AsNoTracking().Where(x => x.OperationalProjectId == projectId).OrderByDescending(x => x.Id).ToListAsync(ct);
+        // Level shows where an open material request would take its BOQ line once approved.
+        var open = items.Where(x => x.Type == ConstructionResourceType.Material && x.ProjectBoqLineId.HasValue &&
+            x.Status is ConstructionReviewStatus.Draft or ConstructionReviewStatus.PendingCmReview).ToList();
+        var lineIds = open.Select(x => x.ProjectBoqLineId!.Value).Distinct().ToList();
+        var approved = await db.ProjectBoqLines.AsNoTracking().Where(x => lineIds.Contains(x.Id))
+            .ToDictionaryAsync(x => x.Id, x => x.ApprovedQuantity, ct);
+        var committed = await CommittedBoqQuantitiesAsync(lineIds, ct);
+        var levels = open.ToDictionary(x => x.Id, x => BoqLimitRules.Classify(
+            approved.GetValueOrDefault(x.ProjectBoqLineId!.Value),
+            committed.GetValueOrDefault(x.ProjectBoqLineId!.Value) + x.Quantity));
+        return items.Select(x => Map(x) with { BoqUsageLevel = levels.TryGetValue(x.Id, out var level) ? level : null }).ToList();
+    }
+
+    // Approved material requests are the quantity already taken from a BOQ line.
+    private Task<Dictionary<int, decimal>> CommittedBoqQuantitiesAsync(List<int> lineIds, CancellationToken ct) =>
+        db.MaterialRequestLines.AsNoTracking()
+            .Where(x => lineIds.Contains(x.ProjectBoqLineId) &&
+                (x.MaterialRequest.Status == MaterialRequestStatus.Approved ||
+                 x.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled ||
+                 x.MaterialRequest.Status == MaterialRequestStatus.Fulfilled))
+            .GroupBy(x => x.ProjectBoqLineId)
+            .Select(group => new { ProjectBoqLineId = group.Key, Quantity = group.Sum(x => x.RequestedQuantity) })
+            .ToDictionaryAsync(x => x.ProjectBoqLineId, x => x.Quantity, ct);
+
+    private async Task EnsureWithinBoqLimitAsync(ConstructionResourceType type, int? boqLineId, decimal quantity, CancellationToken ct)
+    {
+        if (type != ConstructionResourceType.Material || boqLineId is not int lineId) return;
+        var approved = await db.ProjectBoqLines.AsNoTracking().Where(x => x.Id == lineId).Select(x => x.ApprovedQuantity).SingleAsync(ct);
+        var committed = (await CommittedBoqQuantitiesAsync([lineId], ct)).GetValueOrDefault(lineId);
+        if (committed + quantity > approved)
+            throw new ConstructionOperationException(
+                $"Số lượng yêu cầu vượt hạn mức BOQ còn lại ({Math.Max(approved - committed, 0m):0.######}). Phần vượt bị chặn cho tới khi có phát sinh (VO) được duyệt cập nhật BOQ.");
+    }
+
     public async Task<ConstructionResourceReferenceDataResponse> GetResourceReferencesAsync(int projectId, CancellationToken ct)
     {
         var revisionId = await db.ProjectBoqRevisions.AsNoTracking()
@@ -146,14 +181,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
                 .Select(x => new { x.Id, x.ItemCode, x.Description, x.Unit, x.ApprovedQuantity })
                 .ToListAsync(ct);
             var lineIds = lines.Select(x => x.Id).ToList();
-            var committed = await db.MaterialRequestLines.AsNoTracking()
-                .Where(x => lineIds.Contains(x.ProjectBoqLineId) &&
-                    (x.MaterialRequest.Status == MaterialRequestStatus.Approved ||
-                     x.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled ||
-                     x.MaterialRequest.Status == MaterialRequestStatus.Fulfilled))
-                .GroupBy(x => x.ProjectBoqLineId)
-                .Select(group => new { ProjectBoqLineId = group.Key, Quantity = group.Sum(x => x.RequestedQuantity) })
-                .ToDictionaryAsync(x => x.ProjectBoqLineId, x => x.Quantity, ct);
+            var committed = await CommittedBoqQuantitiesAsync(lineIds, ct);
             boqLines.AddRange(lines.Select(x => new ConstructionResourceBoqLineReferenceResponse(
                 x.Id, x.ItemCode, x.Description, x.Unit, x.ApprovedQuantity,
                 Math.Max(x.ApprovedQuantity - committed.GetValueOrDefault(x.Id), 0m))));
@@ -241,6 +269,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         if (item is null) return null;
         if (item.Status == ConstructionReviewStatus.PendingCmReview) return Map(item);
         EnsureDraftOwner(item.Status, item.CreatedByUserId, userId, supervisor);
+        await EnsureWithinBoqLimitAsync(item.Type, item.ProjectBoqLineId, item.Quantity, ct);
         CrmConcurrency.Apply(db, item, rowVersion); item.Status = ConstructionReviewStatus.PendingCmReview; item.SubmittedAt = DateTime.UtcNow; item.UpdatedAt = DateTime.UtcNow;
         await CrmConcurrency.SaveChangesAsync(db, ct); return Map(item);
     }
@@ -542,6 +571,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
             (request.ResponsibleSiteUserId is null || request.AssignedProcurementUserId is null))
             throw new ConstructionOperationException("Yêu cầu vật tư phải có người phụ trách tại công trường và người mua hàng được phân công.");
         if (request.ProjectBoqLineId is not null && !await db.ProjectBoqLines.AnyAsync(x => x.Id == request.ProjectBoqLineId && x.ProjectBoqRevision.OperationalProjectId == projectId && x.ProjectBoqRevision.Status == ProjectBoqRevisionStatus.Approved, ct)) throw new ConstructionOperationException("Dòng BOQ phải thuộc một phiên bản BOQ dự án đã được duyệt.");
+        await EnsureWithinBoqLimitAsync(request.Type, request.ProjectBoqLineId, request.Quantity, ct);
         if (request.ResponsibleSiteUserId is int siteUserId &&
             !await IsActiveProjectUserAsync(projectId, siteUserId, ct))
             throw new ConstructionOperationException("Người phụ trách tại công trường phải là thành viên đang hoạt động của dự án.");

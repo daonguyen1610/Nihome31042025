@@ -572,6 +572,70 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     [Fact]
     public async Task Resource_reference_data_returns_project_users_and_current_boq_allowance()
     {
+        await SeedMaterialReferencesAsync(1000m);
+
+        var result = await _sut.GetResourceReferencesAsync(ProjectId, default);
+
+        var line = Assert.Single(result.BoqLines);
+        Assert.Equal(1000m, line.RemainingQuantity);
+        Assert.Contains(result.SiteUsers, user => user.UserId == BchUserId);
+        Assert.Equal(ProcurementUserId, Assert.Single(result.ProcurementUsers).UserId);
+    }
+
+    [Theory]
+    [InlineData(84.99, BoqUsageLevel.Normal)]
+    [InlineData(85, BoqUsageLevel.Yellow)]
+    [InlineData(94.99, BoqUsageLevel.Yellow)]
+    [InlineData(95, BoqUsageLevel.Orange)]
+    [InlineData(99.99, BoqUsageLevel.Orange)]
+    [InlineData(100, BoqUsageLevel.Red)]
+    [InlineData(120, BoqUsageLevel.Red)]
+    public void Boq_usage_level_follows_85_95_100_thresholds(decimal used, BoqUsageLevel expected) =>
+        Assert.Equal(expected, BoqLimitRules.Classify(100m, used));
+
+    [Fact]
+    public async Task Material_resource_request_up_to_boq_limit_is_saved_and_marked_red()
+    {
+        var lineId = await SeedMaterialReferencesAsync(100m);
+        SeedApprovedMaterialRequest(lineId, 60m);
+
+        await _sut.CreateResourceAsync(ProjectId, MaterialRequest(lineId, 40m), BchUserId, default);
+
+        var row = Assert.Single(await _sut.ListResourcesAsync(ProjectId, default));
+        Assert.Equal(BoqUsageLevel.Red, row.BoqUsageLevel);
+    }
+
+    [Fact]
+    public async Task Material_resource_request_beyond_remaining_boq_is_blocked()
+    {
+        var lineId = await SeedMaterialReferencesAsync(100m);
+        SeedApprovedMaterialRequest(lineId, 60m);
+
+        var error = await Assert.ThrowsAsync<ConstructionOperationException>(
+            () => _sut.CreateResourceAsync(ProjectId, MaterialRequest(lineId, 40.5m), BchUserId, default));
+
+        Assert.Contains("vượt hạn mức BOQ", error.Message);
+        Assert.Empty(_db.ConstructionResourceRequests);
+    }
+
+    [Fact]
+    public async Task Submit_rechecks_boq_limit_after_other_requests_were_approved()
+    {
+        var lineId = await SeedMaterialReferencesAsync(100m);
+        var created = await _sut.CreateResourceAsync(ProjectId, MaterialRequest(lineId, 95m), BchUserId, default);
+        Assert.Equal(BoqUsageLevel.Orange, Assert.Single(await _sut.ListResourcesAsync(ProjectId, default)).BoqUsageLevel);
+        SeedApprovedMaterialRequest(lineId, 10m);
+
+        await Assert.ThrowsAsync<ConstructionOperationException>(
+            () => _sut.SubmitResourceAsync(ProjectId, created.Id, created.RowVersion, BchUserId, default));
+
+        Assert.Equal(ConstructionReviewStatus.Draft, _db.ConstructionResourceRequests.Single().Status);
+    }
+
+    private const int ProcurementUserId = 303;
+
+    private async Task<int> SeedMaterialReferencesAsync(decimal approvedQuantity)
+    {
         var pmRole = new NihomeBackend.Models.Rbac.Role { Code = "PM", Name = "Project Manager" };
         var procurementRole = new NihomeBackend.Models.Rbac.Role { Code = "PROCUREMENT", Name = "Procurement" };
         _db.Roles.AddRange(pmRole, procurementRole);
@@ -586,7 +650,7 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
         };
         var procurementUser = new ApplicationUser
         {
-            Id = 303,
+            Id = ProcurementUserId,
             PhoneNumber = "0900000303",
             Email = "procurement@nicon.test",
             PasswordHash = "test",
@@ -624,21 +688,44 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
                     ItemCode = "MAT-STEEL-01",
                     Description = "Reinforcement steel",
                     Unit = "kg",
-                    ApprovedQuantity = 1000m,
+                    ApprovedQuantity = approvedQuantity,
                     SortOrder = 0,
                 },
             ],
         };
         _db.ProjectBoqRevisions.Add(revision);
         await _db.SaveChangesAsync();
-
-        var result = await _sut.GetResourceReferencesAsync(ProjectId, default);
-
-        var line = Assert.Single(result.BoqLines);
-        Assert.Equal(1000m, line.RemainingQuantity);
-        Assert.Contains(result.SiteUsers, user => user.UserId == siteUser.Id);
-        Assert.Equal(procurementUser.Id, Assert.Single(result.ProcurementUsers).UserId);
+        return revision.Lines[0].Id;
     }
+
+    private void SeedApprovedMaterialRequest(int boqLineId, decimal quantity)
+    {
+        _db.MaterialRequests.Add(new MaterialRequest
+        {
+            OperationalProjectId = ProjectId,
+            Code = $"MR-{quantity}",
+            Status = MaterialRequestStatus.Approved,
+            SiteRequesterUserId = BchUserId,
+            ResponsibleSiteUserId = BchUserId,
+            AssignedProcurementUserId = ProcurementUserId,
+            Lines = [new MaterialRequestLine { ProjectBoqLineId = boqLineId, RequestedQuantity = quantity }],
+        });
+        _db.SaveChanges();
+    }
+
+    private static UpsertConstructionResourceRequest MaterialRequest(int boqLineId, decimal quantity) => new()
+    {
+        Type = ConstructionResourceType.Material,
+        ProjectScheduleNodeId = WbsNodeId,
+        WbsCode = "1.2.1",
+        NeedByDate = DateTime.UtcNow.AddDays(7),
+        Quantity = quantity,
+        Unit = "kg",
+        Reason = "Reinforcement steel for the foundation pour.",
+        ProjectBoqLineId = boqLineId,
+        ResponsibleSiteUserId = BchUserId,
+        AssignedProcurementUserId = ProcurementUserId,
+    };
 
     private static UpsertConstructionResourceRequest EquipmentRequest() => new()
     {
