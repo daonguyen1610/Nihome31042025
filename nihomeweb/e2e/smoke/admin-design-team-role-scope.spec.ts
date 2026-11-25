@@ -111,7 +111,12 @@ test("design team assigns roles in the current design project without a scope pi
     "href",
     "/admin/notifications",
   );
-  await expect(page.locator("aside nav > a").nth(2)).toHaveAttribute(
+  await expect(page.locator("aside nav > a").nth(2)).toHaveAttribute("href", "/admin/my-work");
+  await expect(page.locator("aside nav > a").nth(3)).toHaveAttribute(
+    "href",
+    "/admin/daily-reports",
+  );
+  await expect(page.locator("aside nav > a").nth(4)).toHaveAttribute(
     "href",
     "/admin/work-packages",
   );

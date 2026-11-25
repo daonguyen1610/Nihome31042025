@@ -138,20 +138,34 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
         var committed = await CommittedBoqQuantitiesAsync(lineIds, ct);
         var levels = open.ToDictionary(x => x.Id, x => BoqLimitRules.Classify(
             approved.GetValueOrDefault(x.ProjectBoqLineId!.Value),
-            committed.GetValueOrDefault(x.ProjectBoqLineId!.Value) + x.Quantity));
+            // A pending request is already in the committed total; only a draft adds its own quantity.
+            committed.GetValueOrDefault(x.ProjectBoqLineId!.Value) +
+            (x.Status == ConstructionReviewStatus.Draft ? x.Quantity : 0m)));
         return items.Select(x => Map(x) with { BoqUsageLevel = levels.TryGetValue(x.Id, out var level) ? level : null }).ToList();
     }
 
-    // Approved material requests are the quantity already taken from a BOQ line.
-    private Task<Dictionary<int, decimal>> CommittedBoqQuantitiesAsync(List<int> lineIds, CancellationToken ct) =>
-        db.MaterialRequestLines.AsNoTracking()
+    // NICON answer 9: usage = approved + pending MRs on the line. Pending means material requests
+    // submitted to procurement and BCH material requests waiting for CM; drafts don't count.
+    private async Task<Dictionary<int, decimal>> CommittedBoqQuantitiesAsync(List<int> lineIds, CancellationToken ct)
+    {
+        var procurement = await db.MaterialRequestLines.AsNoTracking()
             .Where(x => lineIds.Contains(x.ProjectBoqLineId) &&
-                (x.MaterialRequest.Status == MaterialRequestStatus.Approved ||
+                (x.MaterialRequest.Status == MaterialRequestStatus.Submitted ||
+                 x.MaterialRequest.Status == MaterialRequestStatus.Approved ||
                  x.MaterialRequest.Status == MaterialRequestStatus.PartiallyFulfilled ||
                  x.MaterialRequest.Status == MaterialRequestStatus.Fulfilled))
             .GroupBy(x => x.ProjectBoqLineId)
             .Select(group => new { ProjectBoqLineId = group.Key, Quantity = group.Sum(x => x.RequestedQuantity) })
-            .ToDictionaryAsync(x => x.ProjectBoqLineId, x => x.Quantity, ct);
+            .ToListAsync(ct);
+        var site = await db.ConstructionResourceRequests.AsNoTracking()
+            .Where(x => x.Type == ConstructionResourceType.Material && x.ProjectBoqLineId.HasValue &&
+                lineIds.Contains(x.ProjectBoqLineId.Value) && x.Status == ConstructionReviewStatus.PendingCmReview)
+            .GroupBy(x => x.ProjectBoqLineId!.Value)
+            .Select(group => new { ProjectBoqLineId = group.Key, Quantity = group.Sum(x => x.Quantity) })
+            .ToListAsync(ct);
+        return procurement.Concat(site).GroupBy(x => x.ProjectBoqLineId)
+            .ToDictionary(group => group.Key, group => group.Sum(x => x.Quantity));
+    }
 
     private async Task EnsureWithinBoqLimitAsync(ConstructionResourceType type, int? boqLineId, decimal quantity, CancellationToken ct)
     {

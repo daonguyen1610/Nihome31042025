@@ -1514,6 +1514,7 @@ const AdminPermits = () => {
                   <PermitDocumentField
                     permitId={editing.id}
                     label={t("permits.document.submittedPackage")}
+                    icon={<FileUp className="h-4 w-4 text-muted-foreground" aria-hidden="true" />}
                     path={editing.submittedFilePath}
                     uploadFile={(file) => uploadPermitFile(editing.id, "SubmittedPackage", file)}
                     onUploaded={() => refreshPermitAfterUpload(editing.id)}
@@ -1523,6 +1524,7 @@ const AdminPermits = () => {
                   <PermitDocumentField
                     permitId={editing.id}
                     label={t("permits.document.issuedPermit")}
+                    icon={<BadgeCheck className="h-4 w-4 text-emerald-600" aria-hidden="true" />}
                     path={editing.issuedFilePath}
                     uploadFile={(file) => uploadPermitFile(editing.id, "IssuedPermit", file)}
                     onUploaded={() => refreshPermitAfterUpload(editing.id)}
