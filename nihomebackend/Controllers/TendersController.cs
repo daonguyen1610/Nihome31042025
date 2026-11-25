@@ -517,10 +517,10 @@ public class TendersController(
     public Task<ActionResult<TenderResponse>> ReturnStage(
         int id, [FromBody] TenderStageDecisionRequest request, CancellationToken ct) =>
         StageActionAsync(id, "tender.stage.return",
-            userId => svc.ReturnStageAsync(id, request, userId, ct));
+            userId => svc.ReturnStageAsync(id, request, userId, ct), request.Note);
 
     private async Task<ActionResult<TenderResponse>> StageActionAsync(
-        int id, string action, Func<int, Task<TenderResponse?>> run)
+        int id, string action, Func<int, Task<TenderResponse?>> run, string? reason = null)
     {
         var userId = GetUserId();
         if (userId is null) return Unauthorized();
@@ -534,7 +534,8 @@ public class TendersController(
                 ResourceType = EntityTypes.Tender,
                 ResourceId = id.ToString(),
                 Message = $"Tender #{id} stage {updated.Stage}" +
-                    (updated.StageApproverName is null ? "." : $", chờ {updated.StageApproverName} duyệt."),
+                    (updated.StageApproverName is null ? "." : $", chờ {updated.StageApproverName} duyệt.") +
+                    (string.IsNullOrWhiteSpace(reason) ? "" : $" Lý do: {reason.Trim()}"),
             });
             return Ok(updated);
         }
