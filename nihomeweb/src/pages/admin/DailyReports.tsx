@@ -461,7 +461,7 @@ export default function DailyReports() {
   const { t } = useI18n();
   const { has } = usePermissions();
   const canViewAll = has(ADMIN_PERMS.workPackagesViewAll);
-  const isHead = has(ADMIN_PERMS.workPackagesAssign);
+  const isHead = has(ADMIN_PERMS.dailyReportsReview);
   return (
     <AdminLayout>
       <div className="space-y-5">
