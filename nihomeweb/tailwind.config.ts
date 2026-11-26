@@ -61,6 +61,11 @@ export default {
           soft: "hsl(var(--admin-warning-soft))",
           strong: "hsl(28 85% 30%)",
         },
+        danger: {
+          DEFAULT: "hsl(var(--admin-danger))",
+          soft: "hsl(var(--admin-danger-soft))",
+          strong: "hsl(354 75% 40%)",
+        },
         info: {
           DEFAULT: "hsl(var(--admin-info))",
           soft: "hsl(var(--admin-info-soft))",

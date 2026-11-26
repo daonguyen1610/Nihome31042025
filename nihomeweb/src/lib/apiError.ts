@@ -151,6 +151,12 @@ export function extractApiError(err: unknown, fallback?: string, translate?: Tra
     }
   }
 
+  // A failed request with nothing readable from the server: staff must not see axios's
+  // English text ("Request failed with status code 500").
+  if ("response" in anyErr || "isAxiosError" in anyErr) {
+    const localized = fallback ?? translate?.("auth.err.unexpected");
+    if (localized) return localized;
+  }
   return anyErr.message ?? fallback ?? String(err);
 }
 

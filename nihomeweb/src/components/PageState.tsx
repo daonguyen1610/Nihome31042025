@@ -37,12 +37,25 @@ export function PageError({ message, onRetry }: { message: string; onRetry?: () 
   );
 }
 
+/** A list that is still loading keeps its shape, so the page does not jump when data lands. */
+export function ListSkeleton() {
+  const { t } = useI18n();
+  return (
+    <div className="space-y-2" role="status" aria-live="polite">
+      <span className="sr-only">{t("common.loading")}</span>
+      {[0, 1, 2, 3, 4].map((row) => (
+        <div key={row} className="h-12 animate-pulse rounded-md bg-muted" aria-hidden />
+      ))}
+    </div>
+  );
+}
+
 /** Non-blocking warning for data the page can live without, e.g. dropdown options. */
 export function InlineWarning({ message, onRetry }: { message: string; onRetry?: () => void }) {
   const { t } = useI18n();
   return (
     <div
-      className="flex flex-wrap items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800"
+      className="flex flex-wrap items-center gap-2 rounded-md border border-warning/40 bg-warning-soft px-3 py-2 text-sm text-warning-strong"
       role="alert"
     >
       <AlertCircle className="h-4 w-4 shrink-0" aria-hidden />
@@ -65,6 +78,21 @@ export function PageEmpty({ message, action }: { message: string; action?: React
       <p>{message}</p>
       {action}
     </div>
+  );
+}
+
+/** Search or filters hide every record: never offer "create the first one" here. */
+export function PageNoMatches({ onClear }: { onClear: () => void }) {
+  const { t } = useI18n();
+  return (
+    <PageEmpty
+      message={t("common.noResults")}
+      action={
+        <Button type="button" variant="outline" size="sm" onClick={onClear}>
+          {t("common.clearFilters")}
+        </Button>
+      }
+    />
   );
 }
 

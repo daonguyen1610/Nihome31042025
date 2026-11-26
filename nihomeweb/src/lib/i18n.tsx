@@ -58,6 +58,24 @@ const I18nContext = createContext<Ctx | null>(null);
 
 const LANGS: Lang[] = ["vi", "en", "zh", "ja"];
 
+// The last loaded text, so a reload does not show raw keys while translations arrive.
+// shortcut: a first-ever visit still shows keys briefly; gate rendering if that matters.
+const cacheKey = (lang: Lang) => `nicon_i18n_${lang}`;
+const readCache = (lang: Lang): TranslationMap => {
+  try {
+    return JSON.parse(localStorage.getItem(cacheKey(lang)) ?? "{}") as TranslationMap;
+  } catch {
+    return {};
+  }
+};
+const writeCache = (lang: Lang, map: TranslationMap) => {
+  try {
+    localStorage.setItem(cacheKey(lang), JSON.stringify(map));
+  } catch {
+    // Storage full or blocked: the next load simply fetches again.
+  }
+};
+
 export const I18nProvider = ({ children }: { children: ReactNode }) => {
   const [lang, setLangState] = useState<Lang>(() => {
     const saved =
@@ -67,8 +85,8 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
     setDisplayLanguage(initial);
     return initial;
   });
-  const [fallbackViMap, setFallbackViMap] = useState<TranslationMap>({});
-  const [currentMap, setCurrentMap] = useState<TranslationMap>({});
+  const [fallbackViMap, setFallbackViMap] = useState<TranslationMap>(() => readCache("vi"));
+  const [currentMap, setCurrentMap] = useState<TranslationMap>(() => readCache(lang));
   const [translationRevision, setTranslationRevision] = useState(0);
 
   useEffect(() => {
@@ -107,10 +125,12 @@ export const I18nProvider = ({ children }: { children: ReactNode }) => {
 
         setFallbackViMap(viMap);
         setCurrentMap(selectedMap);
+        writeCache("vi", viMap);
+        writeCache(lang, selectedMap);
       } catch {
         if (canceled) return;
-        setFallbackViMap({});
-        setCurrentMap({});
+        setFallbackViMap(readCache("vi"));
+        setCurrentMap(readCache(lang));
       }
     };
 
