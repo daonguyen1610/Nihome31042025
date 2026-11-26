@@ -155,7 +155,10 @@ test.describe.serial("quote document management", () => {
 
       await loginInBrowserAs(page, TEST_USERS.salesManager);
       await page.goto("/admin/quotes", { waitUntil: "networkidle" });
-      await page.getByPlaceholder(/Tìm|Search|搜索|検索/i).fill(quoteCode);
+      await page
+        .locator("main")
+        .getByPlaceholder(/Tìm|Search|搜索|検索/i)
+        .fill(quoteCode);
 
       const quoteRecord = page
         .locator("tr:visible, li:visible")
@@ -371,7 +374,10 @@ test.describe.serial("quote document management", () => {
       await page.setViewportSize({ width: 390, height: 844 });
       await loginInBrowserAs(page, TEST_USERS.salesManager);
       await page.goto("/admin/quotes", { waitUntil: "networkidle" });
-      await page.getByPlaceholder(/Tìm|Search|搜索|検索/i).fill(quoteCode);
+      await page
+        .locator("main")
+        .getByPlaceholder(/Tìm|Search|搜索|検索/i)
+        .fill(quoteCode);
 
       const quoteCard = page.locator("li:visible").filter({ hasText: quoteCode }).first();
       await expect(quoteCard).toBeVisible({ timeout: 10_000 });

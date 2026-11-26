@@ -24,9 +24,10 @@ test("sales creates a customer and schedules a call-back from the care history",
   await create.getByRole("button", { name: "Save", exact: true }).click();
   await expect(create).not.toBeVisible();
 
-  await page
+  const content = page.locator("main");
+  await content
     .getByRole("searchbox")
-    .or(page.getByPlaceholder(/Search/i))
+    .or(content.getByPlaceholder(/Search/i))
     .first()
     .fill(name);
   await page.getByRole("cell", { name, exact: true }).click();

@@ -136,7 +136,12 @@ test.describe("NIH-145 — As-built dossier (real-user flow)", () => {
       .locator('[data-testid^="asbuilt-row-"]')
       .filter({ hasText: updatedTitle });
     await expect(updatedRow).toBeVisible();
-    await page.getByRole("dialog").getByRole("button", { name: "Close" }).click();
+    // Close the record's own drawer: the edit dialog above it may still be fading out, and
+    // both close buttons are translated. Escape would go to whichever layer is on top.
+    await page
+      .getByRole("dialog", { name: updatedTitle })
+      .getByRole("button", { name: /^(Close|Đóng)$/ })
+      .click();
 
     await page.getByTestId("asbuilt-sort").click();
     await page.getByRole("option", { name: /Recently updated|Mới cập nhật/i }).click();
