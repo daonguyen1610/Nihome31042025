@@ -16,6 +16,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { PageLoading } from "@/components/PageState";
+import { PageHeader } from "@/components/admin/ListLayout";
+import { AttentionPanel } from "@/components/admin/AttentionPanel";
 import { SalesFunnelPanel } from "@/components/admin/SalesFunnelPanel";
 import { useActivities, useProjects, useJobPositions } from "@/hooks/useContentApi";
 
@@ -140,28 +142,24 @@ const Dashboard = () => {
       label: t("dash.totalPosts"),
       value: activities ? totalPosts : undefined,
       icon: FileText,
-      iconClass: "bg-muted text-foreground",
       to: "/admin/activities",
     },
     {
       label: t("dash.activeProjects"),
       value: projects ? `${ongoingProjects}/${totalProjects}` : undefined,
       icon: Building2,
-      iconClass: "bg-primary/10 text-primary",
       to: "/admin/projects",
     },
     {
       label: t("dash.openPositions"),
       value: jobPositions ? openPositions : undefined,
       icon: Briefcase,
-      iconClass: "bg-success-soft text-success-strong",
       to: "/admin/recruitment",
     },
     {
       label: t("dash.totalApplications"),
       value: jobPositions ? totalApplications : undefined,
       icon: Users,
-      iconClass: "bg-info-soft text-info-strong",
       to: "/admin/recruitment",
     },
   ];
@@ -169,32 +167,41 @@ const Dashboard = () => {
   return (
     <AdminLayout>
       <div className="space-y-5">
-        {/* Welcome */}
-        <header>
-          <p className="text-sm font-medium text-primary">
-            {t("dash.welcome")}, {user?.name ?? "Admin"} 👋
-          </p>
-          <h1 className="mt-1 text-2xl font-semibold tracking-tight">{t("dash.overview")}</h1>
-        </header>
+        <PageHeader
+          title={t("dash.overview")}
+          description={`${t("dash.welcome")}, ${user?.name ?? "Admin"}`}
+          actions={
+            has(ADMIN_PERMS.activitiesManage) && (
+              <Button asChild variant="outline">
+                <Link to="/admin/activities/new">
+                  <Plus /> {t("activities.create")}
+                </Link>
+              </Button>
+            )
+          }
+        />
 
-        {/* Stat cards */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
-          {stats.map((s, i) => (
+        {has(ADMIN_PERMS.workPackages) && <AttentionPanel />}
+
+        {/* One quiet strip of company numbers: context, not the day's work. */}
+        <div className="grid grid-cols-2 overflow-hidden rounded-lg border bg-card xl:grid-cols-4">
+          {stats.map((s) => (
             <Link
-              key={i}
+              key={s.label}
               to={s.to}
-              className="rounded-lg border bg-card p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="flex items-center gap-3 border-b border-r p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring xl:border-b-0"
             >
-              <div className="mb-4 flex items-start justify-between">
-                <div
-                  className={`flex h-10 w-10 items-center justify-center rounded-md ${s.iconClass}`}
-                >
-                  <s.icon className="h-5 w-5" strokeWidth={1.75} />
-                </div>
-                <ArrowUpRight className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <p className="mb-1 text-2xl font-semibold leading-8 tabular-nums">{s.value ?? "—"}</p>
-              <p className="text-sm text-muted-foreground">{s.label}</p>
+              <s.icon
+                className="h-5 w-5 shrink-0 text-muted-foreground"
+                strokeWidth={1.75}
+                aria-hidden
+              />
+              <span className="min-w-0">
+                <span className="block text-xl font-semibold leading-7 tabular-nums">
+                  {s.value ?? "—"}
+                </span>
+                <span className="block text-sm text-muted-foreground">{s.label}</span>
+              </span>
             </Link>
           ))}
         </div>
@@ -282,17 +289,6 @@ const Dashboard = () => {
                 ))}
               </div>
             )}
-          </section>
-
-          {/* Quick action */}
-          <section className="rounded-lg border bg-card p-6">
-            <h3 className="text-lg font-semibold">{t("dash.createPost")}</h3>
-            <p className="mb-5 mt-2 text-sm text-muted-foreground">{t("dash.createPostDesc")}</p>
-            <Button asChild size="sm">
-              <Link to="/admin/activities/new">
-                <Plus /> {t("activities.create")}
-              </Link>
-            </Button>
           </section>
         </div>
 

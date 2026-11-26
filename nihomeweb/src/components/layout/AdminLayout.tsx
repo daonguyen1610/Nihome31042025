@@ -57,10 +57,13 @@ import {
   FileCheck2,
   CircleDollarSign,
   MonitorCheck,
+  Search,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import { matchesAllTerms } from "@/lib/searchMatch";
+import { Input } from "@/components/ui/input";
 import { useAppSelector } from "@/store";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
@@ -102,6 +105,24 @@ function matchesNavRoute(to: string, pathname: string, search: string, end = fal
     Array.from(new URLSearchParams(routeSearch)).every(([key, value]) => params.get(key) === value)
   );
 }
+
+/** Which part of the company each menu group belongs to; groups keep their own order. */
+const NAV_SECTIONS: { labelKey: string; groupIds: string[] }[] = [
+  {
+    labelKey: "nav.section.projects",
+    groupIds: [
+      "crm",
+      "design",
+      "procurement",
+      "finance",
+      "permits",
+      "construction-bch",
+      "construction-cm",
+    ],
+  },
+  { labelKey: "nav.section.company", groupIds: ["analytics", "content", "branding", "processes"] },
+  { labelKey: "nav.section.admin", groupIds: ["users", "config"] },
+];
 
 const AdminLayout = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
@@ -796,6 +817,27 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     return crumbs;
   }, [flatItems, location.pathname, location.search, t]);
 
+  const [pageQuery, setPageQuery] = useState("");
+  // The top items are listed for the breadcrumb even when this account cannot open them.
+  const hiddenTopItems = [
+    ...(showDashboard ? [] : [dashboardItem.to]),
+    ...(showNotifications ? [] : [notificationsItem.to]),
+    ...(showWorkPackages ? [] : [myWorkItem.to, dailyReportItem.to, workPackagesItem.to]),
+  ];
+  const pageResults = pageQuery.trim()
+    ? flatItems.filter(
+        (item, index) =>
+          !hiddenTopItems.includes(item.to) &&
+          matchesAllTerms(`${item.label} ${item.groupLabel ?? ""}`, pageQuery) &&
+          flatItems.findIndex((other) => other.to === item.to) === index,
+      )
+    : null;
+  const openResult = (to: string) => {
+    setPageQuery("");
+    setOpen(false);
+    navigate(to);
+  };
+
   const pageName = breadcrumb[breadcrumb.length - 1]?.label;
   useEffect(() => {
     if (pageName) document.title = `${pageName} · Nicon`;
@@ -851,7 +893,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       >
         <div
           className={cn(
-            "py-7 flex items-center justify-between",
+            "py-4 flex items-center justify-between",
             effectiveCollapsed ? "px-4" : "px-7",
           )}
         >
@@ -876,58 +918,123 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           </button>
         </div>
 
-        <nav className="flex-1 overflow-y-auto px-4 pb-6 space-y-1">
-          {/* Dashboard */}
-          {showDashboard && renderItem(dashboardItem)}
-          {showNotifications && renderItem(notificationsItem)}
-          {showWorkPackages && renderItem(myWorkItem)}
-          {showWorkPackages && renderItem(dailyReportItem)}
-          {showWorkPackages && renderItem(workPackagesItem)}
+        {!effectiveCollapsed && (
+          <form
+            role="search"
+            className="relative px-4 pb-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (pageResults?.[0]) openResult(pageResults[0].to);
+            }}
+          >
+            <Search
+              className="pointer-events-none absolute left-7 top-3 h-4 w-4 text-muted-foreground"
+              aria-hidden
+            />
+            <Input
+              type="search"
+              value={pageQuery}
+              onChange={(event) => setPageQuery(event.target.value)}
+              aria-label={t("nav.findPage")}
+              placeholder={t("nav.findPage")}
+              className="pl-9"
+            />
+          </form>
+        )}
 
-          {/* Groups */}
-          {groups.map((g) => {
-            const groupActive = g.items.some((it) =>
-              matchesNavRoute(it.to, location.pathname, location.search, it.end),
-            );
-            const isOpen = openGroups[g.id] ?? false;
-            if (effectiveCollapsed) {
-              // In collapsed mode: render items directly as icons
-              return (
-                <div key={g.id} className="pt-1">
-                  {g.items.map(renderItem)}
-                </div>
-              );
-            }
-            return (
-              <div key={g.id} className="pt-2">
-                <button
-                  onClick={() => toggleGroup(g.id)}
-                  aria-expanded={isOpen}
-                  aria-controls={`admin-nav-group-${g.id}`}
-                  className={cn(
-                    "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors",
-                    groupActive
-                      ? "bg-primary/10 text-primary"
-                      : "text-muted-foreground hover:bg-muted/60",
-                  )}
-                >
-                  <g.icon className="w-4 h-4 shrink-0" />
-                  <span className="flex-1 text-left">{g.label}</span>
-                  <ChevronDown
-                    className={cn("w-3.5 h-3.5 transition-transform", isOpen ? "rotate-180" : "")}
-                  />
-                </button>
-                {isOpen && (
-                  <div
-                    id={`admin-nav-group-${g.id}`}
-                    className="mt-1 space-y-1 rounded-xl bg-muted/40 py-1 pl-4"
+        <nav className="flex-1 overflow-y-auto px-4 pb-6 space-y-1">
+          {pageResults && !effectiveCollapsed ? (
+            <ul className="space-y-1" aria-live="polite">
+              {pageResults.length === 0 && (
+                <li className="px-4 py-2 text-sm text-muted-foreground">{t("common.noResults")}</li>
+              )}
+              {pageResults.map((item) => (
+                <li key={item.to}>
+                  <button
+                    type="button"
+                    onClick={() => openResult(item.to)}
+                    className="w-full rounded-md px-4 py-2 text-left text-sm transition-colors hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
-                    {g.items.map(renderItem)}
+                    <span className="block font-medium">{item.label}</span>
+                    {item.groupLabel && (
+                      <span className="block text-xs text-muted-foreground">{item.groupLabel}</span>
+                    )}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <>
+              {!effectiveCollapsed && (
+                <p className="px-4 pb-1 pt-1 text-xs font-semibold text-muted-foreground">
+                  {t("nav.section.mine")}
+                </p>
+              )}
+              {/* Dashboard */}
+              {showDashboard && renderItem(dashboardItem)}
+              {showNotifications && renderItem(notificationsItem)}
+              {showWorkPackages && renderItem(myWorkItem)}
+              {showWorkPackages && renderItem(dailyReportItem)}
+              {showWorkPackages && renderItem(workPackagesItem)}
+
+              {/* Groups */}
+              {groups.map((g, index) => {
+                const section = NAV_SECTIONS.find((entry) => entry.groupIds.includes(g.id));
+                const startsSection =
+                  section &&
+                  !groups.slice(0, index).some((other) => section.groupIds.includes(other.id));
+                const groupActive = g.items.some((it) =>
+                  matchesNavRoute(it.to, location.pathname, location.search, it.end),
+                );
+                const isOpen = openGroups[g.id] ?? false;
+                if (effectiveCollapsed) {
+                  // In collapsed mode: render items directly as icons
+                  return (
+                    <div key={g.id} className="pt-1">
+                      {g.items.map(renderItem)}
+                    </div>
+                  );
+                }
+                return (
+                  <div key={g.id} className="pt-1">
+                    {startsSection && (
+                      <p className="px-4 pb-1 pt-4 text-xs font-semibold text-muted-foreground">
+                        {t(section.labelKey)}
+                      </p>
+                    )}
+                    <button
+                      onClick={() => toggleGroup(g.id)}
+                      aria-expanded={isOpen}
+                      aria-controls={`admin-nav-group-${g.id}`}
+                      className={cn(
+                        "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors",
+                        groupActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted/60",
+                      )}
+                    >
+                      <g.icon className="w-4 h-4 shrink-0" />
+                      <span className="flex-1 text-left">{g.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          "w-3.5 h-3.5 transition-transform",
+                          isOpen ? "rotate-180" : "",
+                        )}
+                      />
+                    </button>
+                    {isOpen && (
+                      <div
+                        id={`admin-nav-group-${g.id}`}
+                        className="mt-1 space-y-1 rounded-xl bg-muted/40 py-1 pl-4"
+                      >
+                        {g.items.map(renderItem)}
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-            );
-          })}
+                );
+              })}
+            </>
+          )}
         </nav>
 
         <div className="px-4 py-5 border-t space-y-1">
