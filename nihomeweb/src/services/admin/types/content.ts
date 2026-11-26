@@ -447,7 +447,13 @@ export interface TimeZoneOption {
 
 export interface GoogleDriveAdminStatusResponse {
   status:
-    "Disabled" | "Connected" | "ReadOnly" | "InvalidRoot" | "ReconnectRequired" | "Unavailable";
+    | "Disabled"
+    | "Connected"
+    | "ReadOnly"
+    | "InvalidRoot"
+    | "ReconnectRequired"
+    | "ConfigurationError"
+    | "Unavailable";
   oauthConfigured: boolean;
   hasStoredCredential: boolean;
   accountEmail: string | null;

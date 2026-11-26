@@ -2972,14 +2972,18 @@ Sau khi giải nén gói trên IIS:
 | `Connected` | Đã xác thực, thư mục gốc tồn tại và được thêm file |
 | `ReadOnly` | Thấy thư mục nhưng không được thêm |
 | `InvalidRoot` | `RootFolderId` không phải thư mục, nằm trong thùng rác hoặc Google trả 404 |
-| `ReconnectRequired` | Cần admin: refresh token thiếu, hết hạn, bị thu hồi hoặc không giải mã được; `invalid_client`/`unauthorized_client` (kiểm Client ID/Secret), chính sách Workspace, 401 |
-| `Unavailable` | Lỗi tạm thời hoặc chưa phân loại được; trang tự kiểm tra lại mỗi 30 giây |
+| `ReconnectRequired` | Cần admin: refresh token thiếu, hết hạn, bị thu hồi hoặc không giải mã được; chính sách Workspace, 401 |
+| `ConfigurationError` | Cần admin: `invalid_client`/`unauthorized_client`, hoặc lỗi kiểm tra không tự hết (Drive API chưa bật, thiếu scope, lỗi chưa phân loại) |
+| `Unavailable` | Chỉ lỗi `Transient`; trang tự kiểm tra lại mỗi 30 giây |
 
 `GoogleDriveFailure.Classify` chia lỗi thành ba loại, dùng chung cho trạng thái và worker:
-`Transient` (timeout, mạng, 408/429/5xx, giới hạn tần suất hay dung lượng) thử lại sau 1
-phút; `Connection` (cấu hình hoặc credential) thử lại sau 5 phút; cả hai không tính lượt.
-`Permanent` (còn lại, gồm mất tệp nguồn) tính lượt, quá ba lần thì `Failed` và báo Admin
-một lần.
+`Transient` (timeout, mạng, 408/429/5xx, giới hạn tần suất) thử lại sau 1 phút;
+`Connection` (cấu hình, credential hoặc `storageQuotaExceeded`) thử lại sau 5 phút; cả hai
+không tính lượt. `Permanent` (còn lại, gồm mất tệp nguồn) tính lượt, quá ba lần thì
+`Failed` và báo Admin một lần. Khi kiểm tra kết nối gặp lỗi `Connection`/`Permanent`, thư
+mục gốc không ghi được, hoặc một tệp lỗi `Connection`, worker báo Admin "Google Drive đã
+ngừng đồng bộ" tối đa một lần mỗi 24 giờ (dò theo thông báo đã lưu); không báo khi không
+còn refresh token hoặc lỗi `Transient`.
 
 - `FrontendReturnUrl` phải là đường dẫn nội bộ `/admin/` (không backslash, fragment, ký tự
   điều khiển), mặc định quay về `/admin/settings?tab=drive`.

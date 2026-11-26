@@ -56,6 +56,9 @@ public sealed class GoogleDriveOAuthService(
 {
     private const string InvalidRootError =
         "RootFolderId phải trỏ đến một thư mục Google Drive chưa bị chuyển vào thùng rác.";
+    private const string ConfigurationError =
+        "Cấu hình Google Drive chưa đúng. Kiểm tra Client ID, Client Secret và việc bật Drive API " +
+        "trong Google Cloud, rồi kết nối lại.";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IDataProtector stateProtector = dataProtectionProvider.CreateProtector(
         "Nicon.GoogleDrive.OAuthState.v1");
@@ -261,14 +264,15 @@ public sealed class GoogleDriveOAuthService(
                 kind);
             var (status, error) = kind switch
             {
-                GoogleDriveFailureKind.Connection => ("ReconnectRequired", IsOAuthClientError(exception)
-                    ? "Google từ chối ứng dụng OAuth. Hãy kiểm tra Client ID và Client Secret, lưu cấu hình rồi kết nối lại."
-                    : "Quyền truy cập Google Drive đã hết hạn hoặc bị thu hồi. Hãy kết nối lại."),
+                // Signing in again cannot fix a rejected OAuth client.
+                _ when IsOAuthClientError(exception) => ("ConfigurationError", ConfigurationError),
+                GoogleDriveFailureKind.Connection => ("ReconnectRequired",
+                    "Quyền truy cập Google Drive đã hết hạn hoặc bị thu hồi. Hãy kết nối lại."),
                 _ when exception is GoogleApiException { HttpStatusCode: HttpStatusCode.NotFound } =>
                     ("InvalidRoot", InvalidRootError),
                 GoogleDriveFailureKind.Transient => ("Unavailable",
                     "Google Drive tạm thời không phản hồi. Hệ thống tự thử lại, không cần kết nối lại."),
-                _ => ("Unavailable", "Không thể xác thực hoặc truy cập Google Drive."),
+                _ => ("ConfigurationError", ConfigurationError),
             };
             return new(status, configured, metadata.HasRefreshToken,
                 metadata.AccountEmail, metadata.ConnectedAt, null, null, error);

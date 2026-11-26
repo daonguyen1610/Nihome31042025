@@ -260,29 +260,30 @@ public sealed class GoogleDriveSettingsStore(
         {
             throw new GoogleDriveSettingsConcurrencyException();
         }
-        await RequeueFailedDocumentsAsync(ct);
+        await RequeueFailedDocumentsAsync();
     }
 
-    // A new sign-in is the moment files stranded by the old one can succeed. It is saved
-    // separately so that it can never undo the connection.
-    private async Task RequeueFailedDocumentsAsync(CancellationToken ct)
+    // A new sign-in is the moment files stranded by the old one can succeed. The token is
+    // already saved, so nothing here, not even a closed callback request, may fail the connect.
+    private async Task RequeueFailedDocumentsAsync()
     {
-        var failed = await db.ProjectDocuments
-            .Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Failed)
-            .ToListAsync(ct);
-        foreach (var document in failed)
-        {
-            document.SyncStatus = ProjectDocumentSyncStatus.Pending;
-            document.SyncAttemptCount = 0;
-            document.NextSyncAttemptAt = null;
-            document.SyncError = null;
-            document.UpdatedAt = DateTime.UtcNow;
-        }
+        List<ProjectDocument> failed = [];
         try
         {
-            await db.SaveChangesAsync(ct);
+            failed = await db.ProjectDocuments
+                .Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Failed)
+                .ToListAsync(CancellationToken.None);
+            foreach (var document in failed)
+            {
+                document.SyncStatus = ProjectDocumentSyncStatus.Pending;
+                document.SyncAttemptCount = 0;
+                document.NextSyncAttemptAt = null;
+                document.SyncError = null;
+                document.UpdatedAt = DateTime.UtcNow;
+            }
+            await db.SaveChangesAsync(CancellationToken.None);
         }
-        catch (DbUpdateConcurrencyException exception)
+        catch (Exception exception)
         {
             foreach (var document in failed) db.Entry(document).State = EntityState.Detached;
             logger?.LogWarning(exception,

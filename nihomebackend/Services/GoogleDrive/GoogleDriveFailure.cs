@@ -7,10 +7,10 @@ namespace NihomeBackend.Services.GoogleDrive;
 
 public enum GoogleDriveFailureKind
 {
-    /// <summary>Timeout, network, outage or rate/storage limit: retrying is enough.</summary>
+    /// <summary>Timeout, network, outage or rate limit: retrying is enough.</summary>
     Transient,
 
-    /// <summary>Configuration or credential problem: needs an administrator.</summary>
+    /// <summary>Configuration, credential or full-storage problem: needs an administrator.</summary>
     Connection,
 
     /// <summary>A problem with this file or request: retrying will not fix it.</summary>
@@ -27,7 +27,7 @@ public static class GoogleDriveFailure
     private static readonly HashSet<string> LimitReasons = new(StringComparer.Ordinal)
     {
         "rateLimitExceeded", "userRateLimitExceeded", "sharingRateLimitExceeded",
-        "quotaExceeded", "dailyLimitExceeded", "storageQuotaExceeded",
+        "quotaExceeded", "dailyLimitExceeded",
     };
 
     public static GoogleDriveFailureKind Classify(Exception exception)
@@ -48,7 +48,9 @@ public static class GoogleDriveFailure
     private static bool IsConnection(Exception exception) => exception switch
     {
         TokenResponseException token => ConnectionTokenErrors.Contains(token.Error?.Error ?? string.Empty),
-        GoogleApiException api => api.HttpStatusCode == HttpStatusCode.Unauthorized,
+        // A full Drive does not empty by itself.
+        GoogleApiException api => api.HttpStatusCode == HttpStatusCode.Unauthorized ||
+            IsForbiddenFor(api, reason => reason == "storageQuotaExceeded"),
         _ => false,
     };
 
@@ -61,12 +63,15 @@ public static class GoogleDriveFailure
         FileNotFoundException or DirectoryNotFoundException => false,
         IOException => true,
         GoogleApiException api => IsTemporary(api.HttpStatusCode) ||
-            api.HttpStatusCode == HttpStatusCode.Forbidden &&
-            api.Error?.Errors?.Any(error => LimitReasons.Contains(error.Reason ?? string.Empty)) == true,
+            IsForbiddenFor(api, LimitReasons.Contains),
         TokenResponseException token => token.StatusCode is HttpStatusCode.TooManyRequests or
             >= HttpStatusCode.InternalServerError,
         _ => false,
     };
+
+    private static bool IsForbiddenFor(GoogleApiException api, Func<string, bool> reasonMatches) =>
+        api.HttpStatusCode == HttpStatusCode.Forbidden &&
+        api.Error?.Errors?.Any(error => reasonMatches(error.Reason ?? string.Empty)) == true;
 
     private static bool IsTemporary(HttpStatusCode? status) =>
         status is HttpStatusCode.RequestTimeout or HttpStatusCode.TooManyRequests or

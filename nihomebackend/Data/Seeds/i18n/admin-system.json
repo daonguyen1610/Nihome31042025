@@ -3205,6 +3205,9 @@
     "key": "settings.drive.status.reconnectRequired", "category": "settings", "vi": "Cần kết nối lại", "en": "Reconnect required", "zh": "需要重新连接", "ja": "再接続が必要"
   },
   {
+    "key": "settings.drive.status.configurationError", "category": "settings", "vi": "Lỗi cấu hình", "en": "Configuration error", "zh": "配置错误", "ja": "設定エラー"
+  },
+  {
     "key": "settings.drive.status.unavailable", "category": "settings", "vi": "Không khả dụng", "en": "Unavailable", "zh": "不可用", "ja": "利用不可"
   },
   {
@@ -3212,6 +3215,9 @@
   },
   {
     "key": "settings.drive.error.reconnectRequired", "category": "settings", "vi": "Quyền truy cập đã hết hạn hoặc bị thu hồi. Hãy kết nối lại.", "en": "Access expired or was revoked. Reconnect Google Drive.", "zh": "访问权限已过期或被撤销，请重新连接。", "ja": "アクセスの有効期限が切れたか取り消されました。再接続してください。"
+  },
+  {
+    "key": "settings.drive.error.configuration", "category": "settings", "vi": "Cấu hình Google Drive chưa đúng. Kiểm tra Client ID, Client Secret và việc bật Drive API trong Google Cloud, rồi kết nối lại.", "en": "Google Drive is not configured correctly. Check the Client ID, the Client Secret and that the Drive API is enabled in Google Cloud, then reconnect.", "zh": "Google Drive 配置不正确。请检查 Client ID、Client Secret 以及 Google Cloud 中是否已启用 Drive API，然后重新连接。", "ja": "Google Drive の設定が正しくありません。Client ID、Client Secret、および Google Cloud で Drive API が有効になっていることを確認してから、再接続してください。"
   },
   {
     "key": "settings.drive.error.unavailableRetrying", "category": "settings", "vi": "Google Drive tạm thời không phản hồi. Hệ thống tự thử lại, không cần kết nối lại.", "en": "Google Drive is temporarily not responding. The system retries automatically; there is no need to reconnect.", "zh": "Google Drive 暂时没有响应。系统会自动重试，无需重新连接。", "ja": "Google Drive が一時的に応答していません。システムが自動で再試行するため、再接続は不要です。"

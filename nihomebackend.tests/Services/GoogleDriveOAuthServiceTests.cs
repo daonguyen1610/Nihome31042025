@@ -939,18 +939,23 @@ public sealed class GoogleDriveOAuthServiceTests
     public static TheoryData<Exception, string, string> StatusFailures() => new()
     {
         { OAuthFailure("invalid_grant"), "ReconnectRequired", "Hãy kết nối lại" },
-        { OAuthFailure("invalid_client"), "ReconnectRequired", "Client ID và Client Secret" },
-        { OAuthFailure("unauthorized_client"), "ReconnectRequired", "Client ID và Client Secret" },
-        {
-            new Google.GoogleApiException("Drive", "File not found") { HttpStatusCode = HttpStatusCode.NotFound },
-            "InvalidRoot", "RootFolderId"
-        },
+        { OAuthFailure("admin_policy_enforced"), "ReconnectRequired", "Hãy kết nối lại" },
+        { ApiFailure(HttpStatusCode.Unauthorized), "ReconnectRequired", "Hãy kết nối lại" },
+        { OAuthFailure("invalid_client"), "ConfigurationError", "Client ID, Client Secret" },
+        { OAuthFailure("unauthorized_client"), "ConfigurationError", "Client ID, Client Secret" },
+        // Drive API disabled or a missing scope: it never fixes itself.
+        { ApiFailure(HttpStatusCode.Forbidden), "ConfigurationError", "bật Drive API" },
+        { new InvalidOperationException("unexpected"), "ConfigurationError", "bật Drive API" },
+        { ApiFailure(HttpStatusCode.NotFound), "InvalidRoot", "RootFolderId" },
         {
             new TaskCanceledException("timeout"), "Unavailable",
             "Google Drive tạm thời không phản hồi. Hệ thống tự thử lại, không cần kết nối lại."
         },
-        { new InvalidOperationException("unexpected"), "Unavailable", "Không thể xác thực hoặc truy cập Google Drive." },
+        { ApiFailure(HttpStatusCode.ServiceUnavailable), "Unavailable", "tạm thời không phản hồi" },
     };
+
+    private static Google.GoogleApiException ApiFailure(HttpStatusCode status) =>
+        new("Drive", "request failed") { HttpStatusCode = status };
 
     [Theory]
     [MemberData(nameof(StatusFailures))]
@@ -997,12 +1002,20 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.Equal(3, documents[1].SyncAttemptCount);
     }
 
-    [Fact]
-    public async Task Requeue_concurrency_conflict_does_not_fail_the_connect()
+    public static TheoryData<Exception> RequeueFailures() => new()
+    {
+        new DbUpdateConcurrencyException("document changed by the sync worker"),
+        new DbUpdateException("database unavailable"),
+        new TaskCanceledException("database timeout"),
+    };
+
+    [Theory]
+    [MemberData(nameof(RequeueFailures))]
+    public async Task Requeue_error_does_not_fail_the_connect(Exception failure)
     {
         await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
-            .AddInterceptors(new ConflictOnDocumentSave())
+            .AddInterceptors(new FailOnDocumentSave(failure))
             .Options);
         var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
         await store.UpdateAsync(ValidConfiguration("client-secret-value"), 7);
@@ -1018,6 +1031,26 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.DoesNotContain(db.ChangeTracker.Entries(), entry => entry.State == EntityState.Modified);
     }
 
+    [Fact]
+    public async Task Callback_cancelled_after_the_token_is_saved_still_requeues_and_succeeds()
+    {
+        using var request = new CancellationTokenSource();
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(new CancelAfterTokenSave(request))
+            .Options);
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        await store.UpdateAsync(ValidConfiguration("client-secret-value"), 7);
+        db.ProjectDocuments.Add(StrandedDocument("NICON-IFC-R02.pdf", ProjectDocumentSyncStatus.Failed));
+        await db.SaveChangesAsync();
+
+        await store.SaveRefreshTokenAsync("refresh-token-value", "owner@example.com", 7, string.Empty, request.Token);
+
+        Assert.True(request.IsCancellationRequested);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending,
+            (await db.ProjectDocuments.AsNoTracking().SingleAsync()).SyncStatus);
+    }
+
     private static ProjectDocument StrandedDocument(string fileName, ProjectDocumentSyncStatus status) => new()
     {
         OperationalProjectId = 42,
@@ -1028,12 +1061,24 @@ public sealed class GoogleDriveOAuthServiceTests
         NextSyncAttemptAt = DateTime.UtcNow.AddHours(1),
     };
 
-    private sealed class ConflictOnDocumentSave : SaveChangesInterceptor
+    private sealed class CancelAfterTokenSave(CancellationTokenSource request) : SaveChangesInterceptor
+    {
+        public override ValueTask<int> SavedChangesAsync(
+            SaveChangesCompletedEventData eventData, int result, CancellationToken cancellationToken = default)
+        {
+            if (eventData.Context!.ChangeTracker.Entries<GoogleDriveCredential>()
+                .Any(entry => entry.Entity.ProtectedRefreshToken is not null))
+                request.Cancel();
+            return ValueTask.FromResult(result);
+        }
+    }
+
+    private sealed class FailOnDocumentSave(Exception failure) : SaveChangesInterceptor
     {
         public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
             DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default) =>
             eventData.Context!.ChangeTracker.Entries<ProjectDocument>().Any(entry => entry.State == EntityState.Modified)
-                ? throw new DbUpdateConcurrencyException("document changed by the sync worker")
+                ? throw failure
                 : ValueTask.FromResult(result);
     }
 

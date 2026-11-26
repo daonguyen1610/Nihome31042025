@@ -115,8 +115,9 @@ Connection status troubleshooting:
 
 | Status | Check |
 |--------|-------|
-| `Unavailable` | Usually temporary: the system retries by itself and the page rechecks every 30 seconds, so do not reconnect. If it persists, confirm Drive API is enabled and the account still has access to the root folder. |
-| `ReconnectRequired` | Check the client ID and secret (`invalid_client`, `unauthorized_client`) or the Google Workspace app policy; otherwise reconnect with **Switch Google account**. |
+| `Unavailable` | Temporary: the system retries by itself and the page rechecks every 30 seconds, so do not reconnect. |
+| `ConfigurationError` | Check the client ID and secret (`invalid_client`, `unauthorized_client`), that Drive API is enabled, the granted scope, and the account's access to the root folder; then reconnect. |
+| `ReconnectRequired` | Check the Google Workspace app policy; otherwise reconnect with **Switch Google account**. |
 | `ReadOnly` | Grant the authenticated account permission to add and delete files in the root folder. |
 | `InvalidRoot` | Confirm `RootFolderId` identifies a live folder rather than a file or a trashed folder, and that the account can see it. |
 | `invalid_grant` in logs | The refresh token was expired, revoked, or issued for a different client. Repeat step 5 with the same OAuth client and account. |
@@ -125,9 +126,11 @@ Sync errors fall into three kinds:
 
 | Kind | Worker behaviour | Administrator action |
 |------|------------------|----------------------|
-| Temporary: timeout, network, Google 408/429/5xx, rate or storage limit | File stays queued and retries after 1 minute; no attempt is used | None. If it persists, check the server network and Drive storage |
-| Configuration or credential: expired or revoked token, rejected OAuth client, Workspace policy, 401 | File stays queued and retries after 5 minutes; no attempt is used | Fix the client ID/secret or policy, or reconnect; queued files then sync within 5 minutes |
+| Temporary: timeout, network, Google 408/429/5xx, rate limit | File stays queued and retries after 1 minute; no attempt is used | None. If it persists, check the server network |
+| Configuration, credential or full storage: expired or revoked token, rejected OAuth client, Workspace policy, 401, `storageQuotaExceeded` | File stays queued and retries after 5 minutes; no attempt is used | Fix the client ID/secret or policy, free Drive storage, or reconnect; queued files then sync within 5 minutes |
 | File or request: missing source file, no permission on that file, not found, content mismatch | Fails after 3 attempts and notifies admins once | Fix the cause, then retry the file. A successful reconnect also requeues every failed file |
+
+When sync stops for a reason only a person can fix (configuration, credential, unwritable root or full storage), admins get one **Google Drive đã ngừng đồng bộ** notification, at most once every 24 hours. The check runs when there is work to sync. A disconnected Drive and temporary errors do not alert.
 
 An **External** OAuth app in **Testing** publishing status gets refresh tokens that [expire after 7 days](https://developers.google.com/identity/protocols/oauth2#expiration) when the Drive scope is requested. Publish it (**In production**), or use the **Internal** user type with Google Workspace, then reconnect once so Google issues a new token: select **Switch Google account** and choose the same account. Before production use, also complete any Google verification required for the Drive scope. See the [Google installed-app OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app) and [Drive scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) for current requirements.
 

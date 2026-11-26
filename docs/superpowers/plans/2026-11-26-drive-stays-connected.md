@@ -52,8 +52,8 @@ Classification (walk `InnerException`; first match wins; Connection is checked b
 
 | Kind | Exceptions |
 |---|---|
-| Connection | `GoogleDriveReconnectRequiredException`; anything `GoogleDriveAuthenticationErrors.IsInvalidGrant` accepts; `TokenResponseException` with error `invalid_client`, `unauthorized_client`, `admin_policy_enforced` or `invalid_rapt`; `GoogleApiException` 401 |
-| Transient | `OperationCanceledException` (a timeout; the worker handles real shutdown before classifying); `HttpRequestException` with no status code, 408, 429 or ≥500; `SocketException`; `IOException` except `FileNotFoundException` and `DirectoryNotFoundException`; `GoogleApiException` 408, 429, ≥500; `GoogleApiException` 403 whose `Error.Errors[].Reason` is `rateLimitExceeded`, `userRateLimitExceeded`, `sharingRateLimitExceeded`, `quotaExceeded`, `dailyLimitExceeded` or `storageQuotaExceeded`; `TokenResponseException` with status 429 or ≥500 |
+| Connection | `GoogleDriveReconnectRequiredException`; anything `GoogleDriveAuthenticationErrors.IsInvalidGrant` accepts; `TokenResponseException` with error `invalid_client`, `unauthorized_client`, `admin_policy_enforced` or `invalid_rapt`; `GoogleApiException` 401; `GoogleApiException` 403 with reason `storageQuotaExceeded` |
+| Transient | `OperationCanceledException` (a timeout; the worker handles real shutdown before classifying); `HttpRequestException` with no status code, 408, 429 or ≥500; `SocketException`; `IOException` except `FileNotFoundException` and `DirectoryNotFoundException`; `GoogleApiException` 408, 429, ≥500; `GoogleApiException` 403 whose `Error.Errors[].Reason` is `rateLimitExceeded`, `userRateLimitExceeded`, `sharingRateLimitExceeded`, `quotaExceeded` or `dailyLimitExceeded`; `TokenResponseException` with status 429 or ≥500 |
 | Permanent | everything else |
 
 Worker rules in `RecordFailureAsync`:

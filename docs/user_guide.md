@@ -1136,8 +1136,8 @@ Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo g
 
 | Loại lỗi đồng bộ | Hệ thống làm gì | Quản trị viên cần làm |
 |---|---|---|
-| Tạm thời: hết thời gian chờ, mất mạng, Google đang lỗi, vượt giới hạn tần suất hoặc hết dung lượng | Giữ tệp ở **Pending**, thử lại sau 1 phút, không tính lượt thử | Không cần làm gì. Nếu kéo dài, kiểm tra mạng của máy chủ và dung lượng Drive |
-| Cấu hình hoặc đăng nhập: mã đăng nhập hết hạn hay bị thu hồi, Client ID/Secret sai, chính sách Google Workspace chặn | Giữ tệp ở **Pending**, thử lại sau 5 phút, không tính lượt thử | Client ID/Secret sai thì nhập lại, lưu rồi kết nối lại; bị chính sách chặn thì nhờ quản trị Google Workspace cho phép ứng dụng; còn lại bấm **Đổi tài khoản Google** để đăng nhập lại. Tệp tự đồng bộ tiếp trong vòng 5 phút |
+| Tạm thời: hết thời gian chờ, mất mạng, Google đang lỗi, vượt giới hạn tần suất | Giữ tệp ở **Pending**, thử lại sau 1 phút, không tính lượt thử | Không cần làm gì. Nếu kéo dài, kiểm tra mạng của máy chủ |
+| Cấu hình, đăng nhập hoặc hết dung lượng: mã đăng nhập hết hạn hay bị thu hồi, Client ID/Secret sai, chính sách Google Workspace chặn, Drive đã đầy | Giữ tệp ở **Pending**, thử lại sau 5 phút, không tính lượt thử | Client ID/Secret sai thì nhập lại, lưu rồi kết nối lại; bị chính sách chặn thì nhờ quản trị Google Workspace cho phép ứng dụng; Drive đầy thì giải phóng hoặc mua thêm dung lượng; còn lại bấm **Đổi tài khoản Google** để đăng nhập lại. Tệp tự đồng bộ tiếp trong vòng 5 phút |
 | Lỗi của riêng tệp: mất tệp nguồn trên máy chủ, không có quyền với tệp trên Drive, không tìm thấy thư mục, nội dung không khớp | Thử tối đa 3 lần rồi chuyển **Failed** và thông báo Admin một lần | Mở dự án trong thông báo, sửa nguyên nhân rồi bấm **Gửi lại lên Drive**. Kết nối lại tài khoản cũng đưa mọi tệp **Failed** về hàng đợi |
 
 | Trạng thái kết nối | Nghĩa |
@@ -1145,8 +1145,11 @@ Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo g
 | `Connected` | Đang đồng bộ |
 | `Read only` | Tài khoản thấy thư mục nhưng không thêm tệp được |
 | `Invalid folder` | Mã thư mục không phải thư mục đang tồn tại, hoặc tài khoản không thấy thư mục đó |
-| `Reconnect required` | Cần quản trị viên: kiểm tra cấu hình OAuth hoặc kết nối lại |
-| `Unavailable` | Chưa kiểm tra được Drive; trang tự kiểm tra lại mỗi 30 giây, không cần kết nối lại. Nếu kéo dài, kiểm tra Google Drive API đã bật và quyền của tài khoản với thư mục gốc |
+| `Reconnect required` | Cần quản trị viên đăng nhập lại: mã đăng nhập thiếu, hết hạn, bị thu hồi hoặc bị chính sách Google Workspace chặn |
+| `Configuration error` | Cần quản trị viên: kiểm tra Client ID, Client Secret, việc bật Google Drive API trong Google Cloud và quyền đã cấp, rồi kết nối lại |
+| `Unavailable` | Lỗi tạm thời; trang tự kiểm tra lại mỗi 30 giây, không cần kết nối lại |
+
+**Cảnh báo cho Admin.** Khi đồng bộ dừng vì lỗi chỉ người mới sửa được (cấu hình, đăng nhập, thư mục gốc không ghi được, Drive đầy), Admin nhận thông báo **Google Drive đã ngừng đồng bộ**, tối đa một lần trong 24 giờ. Hệ thống kiểm tra khi có việc cần đồng bộ. Không cảnh báo khi bạn đã **Ngắt kết nối** hoặc khi lỗi chỉ tạm thời.
 
 **Đổi thư mục gốc, định danh triển khai hoặc đường dẫn** chỉ áp dụng cho thư mục tạo sau đó; tệp và thư mục cũ không bị chuyển hay xóa. Với thư mục đã liên kết: lưu đồng bộ ở trạng thái tắt, chờ các tệp đang xử lý xong, lưu cấu trúc mới khi vẫn tắt, kiểm tra đường dẫn rồi mới bật lại. Hệ thống từ chối đổi cấu trúc khi đang xử lý hoặc đồng bộ đang bật.
 
