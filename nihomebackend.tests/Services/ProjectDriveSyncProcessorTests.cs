@@ -17,6 +17,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     private readonly Mock<IGoogleDriveAdapter> drive = new();
     private readonly Mock<IProjectDriveClaimLease> claimLease = new();
     private readonly Mock<IProjectDriveFolderService> folders = new();
+    private readonly Mock<INotificationService> notifications = new();
     private readonly OperationalProject project;
     private readonly ProjectDriveFolder folder;
     private readonly ProjectDriveSyncProcessor processor;
@@ -47,7 +48,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
                 operation(ct));
         processor = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object,
             new TestGoogleDriveSettingsStore(options), claimLease.Object,
-            Mock.Of<IAuditLogger>(), NullLogger<ProjectDriveSyncProcessor>.Instance);
+            Mock.Of<IAuditLogger>(), notifications.Object, NullLogger<ProjectDriveSyncProcessor>.Instance);
     }
 
     [Fact]
@@ -112,7 +113,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     {
         var disabled = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object,
             new TestGoogleDriveSettingsStore(new GoogleDriveOptions()), claimLease.Object,
-            Mock.Of<IAuditLogger>(), NullLogger<ProjectDriveSyncProcessor>.Instance);
+            Mock.Of<IAuditLogger>(), notifications.Object, NullLogger<ProjectDriveSyncProcessor>.Instance);
 
         Assert.False(await disabled.ProcessNextProjectRenameAsync());
         Assert.False(await disabled.ProcessNextOutboundAsync());
@@ -325,6 +326,149 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         Assert.False(fence(new ProjectDocument { Id = 8, ClaimToken = token, Generation = 5 }));
         Assert.False(fence(new ProjectDocument { Id = 8, ClaimToken = Guid.NewGuid(), Generation = 4 }));
     }
+
+    [Fact]
+    public async Task Timeout_does_not_use_up_an_attempt_and_retries_in_a_minute()
+    {
+        var document = AddPendingDocument();
+        UploadThrows(new TaskCanceledException("request timed out"));
+
+        for (var pass = 0; pass < 5; pass++)
+        {
+            await MakeDueAsync(document.Id);
+            Assert.True(await processor.ProcessNextOutboundAsync());
+        }
+
+        var persisted = await LoadAsync(document.Id);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, persisted.SyncStatus);
+        Assert.Equal(0, persisted.SyncAttemptCount);
+        Assert.Equal("Google Drive tạm thời không phản hồi. Hệ thống sẽ tự thử lại.", persisted.SyncError);
+        AssertRetryIn(TimeSpan.FromMinutes(1), persisted);
+    }
+
+    [Fact]
+    public async Task Credential_failure_keeps_the_file_queued()
+    {
+        var document = AddPendingDocument();
+        UploadThrows(new Google.Apis.Auth.OAuth2.Responses.TokenResponseException(
+            new Google.Apis.Auth.OAuth2.Responses.TokenErrorResponse { Error = "invalid_grant" }));
+
+        Assert.True(await processor.ProcessNextOutboundAsync());
+
+        var persisted = await LoadAsync(document.Id);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, persisted.SyncStatus);
+        Assert.Equal(0, persisted.SyncAttemptCount);
+        Assert.Equal(
+            "Google Drive cần kiểm tra cấu hình hoặc kết nối lại. Tệp sẽ tự đồng bộ sau khi kết nối lại.",
+            persisted.SyncError);
+        AssertRetryIn(TimeSpan.FromMinutes(5), persisted);
+    }
+
+    [Fact]
+    public async Task Permanent_failure_still_fails_after_three_attempts_and_notifies_admins_once()
+    {
+        var document = AddPendingDocument();
+        UploadThrows(new FileNotFoundException("source is gone"));
+
+        for (var pass = 0; pass < 5; pass++)
+        {
+            await MakeDueAsync(document.Id);
+            await processor.ProcessNextOutboundAsync();
+        }
+
+        var persisted = await LoadAsync(document.Id);
+        Assert.Equal(ProjectDocumentSyncStatus.Failed, persisted.SyncStatus);
+        Assert.Equal(3, persisted.SyncAttemptCount);
+        const string error = "Không thể đồng bộ Google Drive. Vui lòng kiểm tra kết nối hoặc thử lại sau.";
+        Assert.Equal(error, persisted.SyncError);
+        notifications.Verify(item => item.CreateForAdminsAsync(
+            "GoogleDrive", "Đồng bộ Google Drive thất bại: pending.pdf", $"OP-002 · {error}",
+            $"/admin/operational-projects/{project.Id}"), Times.Once);
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Retryable_failure_does_not_notify()
+    {
+        AddPendingDocument();
+        UploadThrows(new HttpRequestException("network is down"));
+
+        Assert.True(await processor.ProcessNextOutboundAsync());
+
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Notification_error_does_not_undo_the_failed_state()
+    {
+        var document = AddPendingDocument();
+        document.SyncAttemptCount = 2;
+        db.SaveChanges();
+        UploadThrows(new FileNotFoundException("source is gone"));
+        notifications.Setup(item => item.CreateForAdminsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .ThrowsAsync(new DbUpdateException("notifications unavailable"));
+
+        Assert.True(await processor.ProcessNextOutboundAsync());
+
+        Assert.Equal(ProjectDocumentSyncStatus.Failed, (await LoadAsync(document.Id)).SyncStatus);
+    }
+
+    [Fact]
+    public async Task Shutdown_cancellation_is_not_recorded_as_a_drive_failure()
+    {
+        var document = AddPendingDocument();
+        using var shutdown = new CancellationTokenSource();
+        UploadThrows(new OperationCanceledException(), shutdown.Cancel);
+
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            processor.ProcessNextOutboundAsync(shutdown.Token));
+
+        var persisted = await LoadAsync(document.Id);
+        Assert.Equal(ProjectDocumentSyncStatus.Processing, persisted.SyncStatus);
+        Assert.Null(persisted.SyncError);
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Survey_media_mirrors_a_failure_that_is_not_counted()
+    {
+        var (_, media, document) = AddSurveySidecar();
+        UploadThrows(new TaskCanceledException("request timed out"));
+
+        Assert.True(await processor.ProcessNextOutboundAsync());
+
+        var persisted = await LoadAsync(document.Id);
+        Assert.Equal(SurveyMediaSyncStatus.Pending, media.SyncStatus);
+        Assert.Equal(0, media.SyncAttemptCount);
+        Assert.Equal(persisted.NextSyncAttemptAt, media.NextSyncAttemptAt);
+        Assert.Equal(persisted.SyncError, media.SyncError);
+    }
+
+    private void UploadThrows(Exception exception, Action? beforeThrow = null)
+    {
+        folders.Setup(item => item.EnsureAsync(It.IsAny<OperationalProject>(), It.IsAny<ProjectDocumentCategory>(),
+                It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ReturnsAsync(folder);
+        storage.Setup(item => item.OpenRead(It.IsAny<int>(), It.IsAny<string>()))
+            .Returns(() => new MemoryStream([1]));
+        drive.Setup(item => item.UploadAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<long>(),
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<CancellationToken>()))
+            .Callback(() => beforeThrow?.Invoke())
+            .ThrowsAsync(exception);
+    }
+
+    private Task<int> MakeDueAsync(long documentId) =>
+        db.ProjectDocuments.Where(item => item.Id == documentId && item.NextSyncAttemptAt != null)
+            .ExecuteUpdateAsync(setters => setters
+                .SetProperty(item => item.NextSyncAttemptAt, DateTime.UtcNow.AddMinutes(-1)));
+
+    private Task<ProjectDocument> LoadAsync(long documentId) =>
+        db.ProjectDocuments.AsNoTracking().SingleAsync(item => item.Id == documentId);
+
+    private static void AssertRetryIn(TimeSpan delay, ProjectDocument document) =>
+        Assert.InRange(document.NextSyncAttemptAt!.Value - DateTime.UtcNow,
+            delay - TimeSpan.FromSeconds(30), delay);
 
     [Fact]
     public void ReplicaKey_IsStableAndIndependentFromGeneration()

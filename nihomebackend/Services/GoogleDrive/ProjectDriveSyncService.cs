@@ -24,6 +24,7 @@ public sealed class ProjectDriveSyncProcessor(
     IGoogleDriveSettingsStore settingsStore,
     IProjectDriveClaimLease claimLease,
     IAuditLogger audit,
+    INotificationService notifications,
     ILogger<ProjectDriveSyncProcessor> logger) : IProjectDriveSyncProcessor
 {
     private static readonly TimeSpan ReconciliationLease = TimeSpan.FromMinutes(5);
@@ -638,9 +639,10 @@ public sealed class ProjectDriveSyncProcessor(
                 });
             }
         }
-        catch (Exception exception)
+        // A request cancelled by shutdown is not a Drive failure: the claim expires and is taken again.
+        catch (Exception exception) when (!ct.IsCancellationRequested)
         {
-            await RecordFailureAsync(documentId, token, generation, exception, ct);
+            await RecordFailureAsync(document, token, generation, exception, ct);
         }
     }
 
@@ -690,28 +692,45 @@ public sealed class ProjectDriveSyncProcessor(
                 .SetProperty(item => item.UpdatedAt, now), ct) == 1;
     }
 
-    private async Task RecordFailureAsync(long documentId, Guid token, long generation, Exception exception, CancellationToken ct)
+    private async Task RecordFailureAsync(
+        ProjectDocument document, Guid token, long generation, Exception exception, CancellationToken ct)
     {
+        var documentId = document.Id;
         var attempt = await db.ProjectDocuments.AsNoTracking().Where(item => item.Id == documentId && item.ClaimToken == token)
             .Select(item => item.SyncAttemptCount).SingleOrDefaultAsync(ct);
-        var terminal = attempt >= ProjectDocumentService.MaxSyncAttempts;
+        var kind = GoogleDriveFailure.Classify(exception);
+        // Only a problem with the file itself uses up an attempt; anything else keeps it queued.
+        var permanent = kind == GoogleDriveFailureKind.Permanent;
+        var countedAttempts = permanent ? attempt : Math.Max(attempt - 1, 0);
+        var terminal = permanent && attempt >= ProjectDocumentService.MaxSyncAttempts;
         var now = DateTime.UtcNow;
-        const string safeError = "Không thể đồng bộ Google Drive. Vui lòng kiểm tra kết nối hoặc thử lại sau.";
+        var (safeError, retryDelay) = kind switch
+        {
+            GoogleDriveFailureKind.Transient => (
+                "Google Drive tạm thời không phản hồi. Hệ thống sẽ tự thử lại.", TimeSpan.FromMinutes(1)),
+            GoogleDriveFailureKind.Connection => (
+                "Google Drive cần kiểm tra cấu hình hoặc kết nối lại. Tệp sẽ tự đồng bộ sau khi kết nối lại.",
+                TimeSpan.FromMinutes(5)),
+            _ => ("Không thể đồng bộ Google Drive. Vui lòng kiểm tra kết nối hoặc thử lại sau.", Backoff(attempt)),
+        };
+        DateTime? nextAttemptAt = terminal ? null : now.Add(retryDelay);
         await using var failureTransaction = db.Database.IsRelational()
             ? await db.Database.BeginTransactionAsync(ct)
             : null;
         var failed = await db.ProjectDocuments.Where(MatchesFence(documentId, token, generation))
             .ExecuteUpdateAsync(setters => setters
                 .SetProperty(item => item.SyncStatus, terminal ? ProjectDocumentSyncStatus.Failed : ProjectDocumentSyncStatus.Pending)
+                .SetProperty(item => item.SyncAttemptCount, countedAttempts)
                 .SetProperty(item => item.SyncError, safeError)
-                .SetProperty(item => item.NextSyncAttemptAt, terminal ? null : now.Add(Backoff(attempt)))
+                .SetProperty(item => item.NextSyncAttemptAt, nextAttemptAt)
                 .SetProperty(item => item.ClaimToken, (Guid?)null)
                 .SetProperty(item => item.ClaimExpiresAt, (DateTime?)null)
                 .SetProperty(item => item.UpdatedAt, now), ct);
         if (failed == 1)
         {
-            await PropagateSurveyFailureAsync(documentId, attempt, terminal, safeError, now, ct);
+            await PropagateSurveyFailureAsync(documentId, countedAttempts, terminal, safeError, now, ct);
             if (failureTransaction is not null) await failureTransaction.CommitAsync(ct);
+            if (terminal) await NotifyAdminsOfFailedSyncAsync(document, safeError);
         }
         logger.LogWarning(exception, "Project document {DocumentId} Drive sync attempt {Attempt} failed", documentId, attempt);
         audit.Log(new AuditEvent
@@ -724,6 +743,26 @@ public sealed class ProjectDriveSyncProcessor(
             FailureReason = safeError,
             TargetSystem = "GoogleDrive",
         });
+    }
+
+    private async Task NotifyAdminsOfFailedSyncAsync(ProjectDocument document, string safeError)
+    {
+        var title = $"Đồng bộ Google Drive thất bại: {document.OriginalFileName}";
+        try
+        {
+            await notifications.CreateForAdminsAsync("GoogleDrive",
+                title.Length <= 200 ? title : title[..200], // notification title column limit
+                $"{document.OperationalProject.Code} · {safeError}",
+                $"/admin/operational-projects/{document.OperationalProjectId}");
+        }
+        catch (Exception exception)
+        {
+            // Unsaved rows left in the shared context would break the worker's next save.
+            foreach (var entry in db.ChangeTracker.Entries<Notification>().ToList())
+                entry.State = EntityState.Detached;
+            logger.LogWarning(exception,
+                "Could not notify administrators that project document {DocumentId} failed to sync", document.Id);
+        }
     }
 
     private async Task PropagateSurveyClaimAsync(long documentId, DateTime claimedAt, CancellationToken ct)
@@ -771,7 +810,7 @@ public sealed class ProjectDriveSyncProcessor(
         media.SyncStatus = terminal ? SurveyMediaSyncStatus.Failed : SurveyMediaSyncStatus.Pending;
         media.SyncAttemptCount = attempt;
         media.SyncError = safeError;
-        media.NextSyncAttemptAt = terminal ? null : failedAt.Add(Backoff(attempt));
+        media.NextSyncAttemptAt = terminal ? null : source.NextSyncAttemptAt;
         media.LastSyncAttemptAt = source.LastSyncAttemptAt;
         media.UpdatedAt = failedAt;
         await RecalculateSurveyAggregateAsync(media, ct);
@@ -830,7 +869,8 @@ public sealed class ProjectDriveSyncProcessor(
             .Select(document => new SurveySource(
                 document.SourceRecordId!.Value,
                 document.SyncAttemptCount,
-                document.LastSyncAttemptAt))
+                document.LastSyncAttemptAt,
+                document.NextSyncAttemptAt))
             .SingleOrDefaultAsync(ct);
 
     private static bool IsSurveyMedia(ProjectDocument document) =>
@@ -838,7 +878,8 @@ public sealed class ProjectDriveSyncProcessor(
         document.SourceEntityType == EntityTypes.SurveyMedia &&
         document.SourceRecordId.HasValue;
 
-    private sealed record SurveySource(long MediaId, int SyncAttemptCount, DateTime? LastSyncAttemptAt);
+    private sealed record SurveySource(
+        long MediaId, int SyncAttemptCount, DateTime? LastSyncAttemptAt, DateTime? NextSyncAttemptAt);
 
     private async Task ImportUnknownAsync(int projectId, ProjectDriveFolder folder, DriveItem remote, CancellationToken ct)
     {
