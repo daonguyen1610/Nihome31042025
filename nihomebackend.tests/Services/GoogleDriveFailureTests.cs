@@ -20,6 +20,8 @@ public sealed class GoogleDriveFailureTests
             { Token("admin_policy_enforced"), GoogleDriveFailureKind.Connection },
             { Token("invalid_rapt"), GoogleDriveFailureKind.Connection },
             { Api(HttpStatusCode.Unauthorized), GoogleDriveFailureKind.Connection },
+            // A full Drive stays full until a person frees space.
+            { Api(HttpStatusCode.Forbidden, "storageQuotaExceeded"), GoogleDriveFailureKind.Connection },
             { new InvalidOperationException("outer", Token("invalid_grant")), GoogleDriveFailureKind.Connection },
             { new AggregateException(Token("invalid_grant")), GoogleDriveFailureKind.Connection },
             // Connection wins over a Transient wrapper.
@@ -42,7 +44,6 @@ public sealed class GoogleDriveFailureTests
             { Api(HttpStatusCode.Forbidden, "sharingRateLimitExceeded"), GoogleDriveFailureKind.Transient },
             { Api(HttpStatusCode.Forbidden, "quotaExceeded"), GoogleDriveFailureKind.Transient },
             { Api(HttpStatusCode.Forbidden, "dailyLimitExceeded"), GoogleDriveFailureKind.Transient },
-            { Api(HttpStatusCode.Forbidden, "storageQuotaExceeded"), GoogleDriveFailureKind.Transient },
             { Token("temporarily_unavailable", HttpStatusCode.TooManyRequests), GoogleDriveFailureKind.Transient },
             { Token("internal_failure", HttpStatusCode.ServiceUnavailable), GoogleDriveFailureKind.Transient },
 

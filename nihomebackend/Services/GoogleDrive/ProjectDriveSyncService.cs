@@ -28,6 +28,7 @@ public sealed class ProjectDriveSyncProcessor(
     ILogger<ProjectDriveSyncProcessor> logger) : IProjectDriveSyncProcessor
 {
     private static readonly TimeSpan ReconciliationLease = TimeSpan.FromMinutes(5);
+    private const string StoppedSyncTitle = "Google Drive đã ngừng đồng bộ";
     private const string NativeMimePrefix = "application/vnd.google-apps.";
     private const string UnsupportedNativeReason = "Tệp Google Workspace gốc chưa hỗ trợ tải xuống; có thể mở bằng liên kết Google Drive.";
     private string currentInstanceId = string.Empty;
@@ -53,7 +54,7 @@ public sealed class ProjectDriveSyncProcessor(
             {
                 await folderService.EnsureTreeAsync(project, project.CreatedByUserId, ct);
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception) when (!ct.IsCancellationRequested)
             {
                 logger.LogWarning(exception, "Drive folders for project {ProjectId} remain pending and will retry", project.Id);
             }
@@ -206,7 +207,7 @@ public sealed class ProjectDriveSyncProcessor(
                 await PurgeLocalReplicaAsync(localReplica, ct);
                 return true;
             }
-            catch (Exception exception) when (exception is not OperationCanceledException)
+            catch (Exception exception) when (!ct.IsCancellationRequested)
             {
                 logger.LogWarning(exception, "Local replica cleanup deferred for document {DocumentId}", localReplica.Id);
                 await db.ProjectDocuments.Where(item => item.Id == localReplica.Id &&
@@ -260,7 +261,9 @@ public sealed class ProjectDriveSyncProcessor(
         {
             logger.LogWarning(exception,
                 "Project Drive synchronization paused because connection validation failed");
+            if (GoogleDriveFailure.Classify(exception) == GoogleDriveFailureKind.Transient) return false;
         }
+        await NotifyAdminsOfStoppedSyncAsync(ct);
         return false;
     }
 
@@ -307,7 +310,7 @@ public sealed class ProjectDriveSyncProcessor(
                 folder.OperationalProjectId, folder, deleteWebRecordsOnDriveDelete, ct);
             completed = true;
         }
-        catch (Exception exception) when (exception is not OperationCanceledException)
+        catch (Exception exception) when (!ct.IsCancellationRequested)
         {
             logger.LogWarning(exception, "Project Drive folder {FolderId} reconciliation failed; remaining folders will continue", folder.Id);
         }
@@ -731,6 +734,7 @@ public sealed class ProjectDriveSyncProcessor(
             await PropagateSurveyFailureAsync(documentId, countedAttempts, terminal, safeError, now, ct);
             if (failureTransaction is not null) await failureTransaction.CommitAsync(ct);
             if (terminal) await NotifyAdminsOfFailedSyncAsync(document, safeError);
+            if (kind == GoogleDriveFailureKind.Connection) await NotifyAdminsOfStoppedSyncAsync(ct);
         }
         logger.LogWarning(exception, "Project document {DocumentId} Drive sync attempt {Attempt} failed", documentId, attempt);
         audit.Log(new AuditEvent
@@ -757,12 +761,40 @@ public sealed class ProjectDriveSyncProcessor(
         }
         catch (Exception exception)
         {
-            // Unsaved rows left in the shared context would break the worker's next save.
-            foreach (var entry in db.ChangeTracker.Entries<Notification>().ToList())
-                entry.State = EntityState.Detached;
+            DiscardUnsavedNotifications();
             logger.LogWarning(exception,
                 "Could not notify administrators that project document {DocumentId} failed to sync", document.Id);
         }
+    }
+
+    // Only a person can restart sync. At most one alert a day, judged from the stored rows
+    // so that a restart does not repeat it.
+    private async Task NotifyAdminsOfStoppedSyncAsync(CancellationToken ct)
+    {
+        try
+        {
+            // No stored sign-in means someone disconnected Drive on purpose.
+            if (!(await settingsStore.GetAdminAsync(ct)).HasRefreshToken) return;
+            var since = DateTime.UtcNow.AddHours(-24);
+            if (await db.Notifications.AnyAsync(item => item.Module == "GoogleDrive" &&
+                    item.Title == StoppedSyncTitle && item.CreatedAt > since, ct)) return;
+            await notifications.CreateForAdminsAsync("GoogleDrive", StoppedSyncTitle,
+                "Cần kiểm tra cấu hình hoặc kết nối lại trong Cài đặt → Google Drive. Tệp đang chờ sẽ tự đồng bộ sau khi sửa.",
+                "/admin/settings?tab=drive");
+        }
+        catch (Exception exception) when (!ct.IsCancellationRequested)
+        {
+            DiscardUnsavedNotifications();
+            logger.LogWarning(exception,
+                "Could not notify administrators that Google Drive synchronization stopped");
+        }
+    }
+
+    // Unsaved rows left in the shared context would break the worker's next save.
+    private void DiscardUnsavedNotifications()
+    {
+        foreach (var entry in db.ChangeTracker.Entries<Notification>().ToList())
+            entry.State = EntityState.Detached;
     }
 
     private async Task PropagateSurveyClaimAsync(long documentId, DateTime claimedAt, CancellationToken ct)

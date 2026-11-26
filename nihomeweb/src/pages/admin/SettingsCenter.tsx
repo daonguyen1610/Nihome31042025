@@ -112,12 +112,14 @@ const DRIVE_STATUS_KEYS: Record<GoogleDriveAdminStatusResponse["status"], string
   ReadOnly: "settings.drive.status.readOnly",
   InvalidRoot: "settings.drive.status.invalidRoot",
   ReconnectRequired: "settings.drive.status.reconnectRequired",
+  ConfigurationError: "settings.drive.status.configurationError",
   Unavailable: "settings.drive.status.unavailable",
 };
 
 const DRIVE_ERROR_KEYS: Partial<Record<GoogleDriveAdminStatusResponse["status"], string>> = {
   InvalidRoot: "settings.drive.error.invalidRoot",
   ReconnectRequired: "settings.drive.error.reconnectRequired",
+  ConfigurationError: "settings.drive.error.configuration",
   Unavailable: "settings.drive.error.unavailableRetrying",
 };
 

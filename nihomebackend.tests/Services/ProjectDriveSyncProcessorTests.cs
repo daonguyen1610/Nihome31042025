@@ -21,7 +21,13 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     private readonly OperationalProject project;
     private readonly ProjectDriveFolder folder;
     private readonly ProjectDriveSyncProcessor processor;
-    private readonly GoogleDriveOptions options = new() { Enabled = true, InstanceId = "test-instance" };
+    private readonly GoogleDriveOptions options = new()
+    {
+        Enabled = true,
+        InstanceId = "test-instance",
+        RefreshToken = "stored-refresh-token",
+    };
+    private const string StoppedTitle = "Google Drive đã ngừng đồng bộ";
 
     public ProjectDriveSyncProcessorTests()
     {
@@ -443,6 +449,204 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         Assert.Equal(0, media.SyncAttemptCount);
         Assert.Equal(persisted.NextSyncAttemptAt, media.NextSyncAttemptAt);
         Assert.Equal(persisted.SyncError, media.SyncError);
+    }
+
+    public static TheoryData<Exception?> FailuresOnlyAPersonCanFix() => new()
+    {
+        new Google.Apis.Auth.OAuth2.Responses.TokenResponseException(
+            new Google.Apis.Auth.OAuth2.Responses.TokenErrorResponse { Error = "invalid_grant" }),
+        new Google.GoogleApiException("Drive", "Drive API disabled")
+        {
+            HttpStatusCode = System.Net.HttpStatusCode.Forbidden,
+        },
+        null, // the check succeeds but the root is not a writable folder
+    };
+
+    [Theory]
+    [MemberData(nameof(FailuresOnlyAPersonCanFix))]
+    public async Task Stopped_sync_alerts_admins_once_across_passes(Exception? failure)
+    {
+        StoreAdminAlerts();
+        AddPendingDocument();
+        ConnectionCheckFails(failure);
+
+        for (var pass = 0; pass < 3; pass++)
+            Assert.False(await processor.ProcessNextOutboundAsync());
+
+        var alert = Assert.Single(db.Notifications.AsNoTracking());
+        Assert.Equal("GoogleDrive", alert.Module);
+        Assert.Equal(StoppedTitle, alert.Title);
+        Assert.Equal(
+            "Cần kiểm tra cấu hình hoặc kết nối lại trong Cài đặt → Google Drive. Tệp đang chờ sẽ tự đồng bộ sau khi sửa.",
+            alert.Body);
+        Assert.Equal("/admin/settings?tab=drive", alert.LinkUrl);
+    }
+
+    [Theory]
+    [InlineData(23, 1)]
+    [InlineData(25, 2)]
+    public async Task Stopped_sync_alert_repeats_only_after_24_hours(int hoursSinceLastAlert, int expectedAlerts)
+    {
+        StoreAdminAlerts();
+        AddPendingDocument();
+        ConnectionCheckFails(null);
+        // Already stored by an earlier worker process.
+        db.Notifications.Add(new Notification
+        {
+            UserId = 1,
+            Module = "GoogleDrive",
+            Title = StoppedTitle,
+            CreatedAt = DateTime.UtcNow.AddHours(-hoursSinceLastAlert),
+        });
+        db.SaveChanges();
+
+        await processor.ProcessNextOutboundAsync();
+
+        Assert.Equal(expectedAlerts, db.Notifications.Count());
+    }
+
+    [Fact]
+    public async Task Temporary_connection_failure_does_not_alert()
+    {
+        AddPendingDocument();
+        ConnectionCheckFails(new TaskCanceledException("request timed out"));
+
+        await processor.ProcessNextOutboundAsync();
+
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Signed_out_drive_does_not_alert()
+    {
+        options.RefreshToken = string.Empty;
+        AddPendingDocument();
+        ConnectionCheckFails(new GoogleDriveReconnectRequiredException("not connected"));
+
+        await processor.ProcessNextOutboundAsync();
+
+        notifications.VerifyNoOtherCalls();
+    }
+
+    [Fact]
+    public async Task Upload_that_finds_the_drive_full_alerts_admins_once()
+    {
+        StoreAdminAlerts();
+        var first = AddPendingDocument();
+        UploadThrows(new Google.GoogleApiException("Drive", "storage full")
+        {
+            HttpStatusCode = System.Net.HttpStatusCode.Forbidden,
+            Error = new Google.Apis.Requests.RequestError
+            {
+                Errors = [new Google.Apis.Requests.SingleError { Reason = "storageQuotaExceeded" }],
+            },
+        });
+
+        for (var pass = 0; pass < 3; pass++)
+        {
+            await MakeDueAsync(first.Id);
+            Assert.True(await processor.ProcessNextOutboundAsync());
+        }
+
+        Assert.Equal(StoppedTitle, Assert.Single(db.Notifications.AsNoTracking()).Title);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, (await LoadAsync(first.Id)).SyncStatus);
+    }
+
+    [Fact]
+    public async Task Alert_error_is_swallowed_and_leaves_nothing_unsaved()
+    {
+        AddPendingDocument();
+        ConnectionCheckFails(null);
+        notifications.Setup(item => item.CreateForAdminsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Callback(() => db.Notifications.Add(new Notification { UserId = 1, Title = StoppedTitle }))
+            .ThrowsAsync(new DbUpdateException("notifications unavailable"));
+
+        Assert.False(await processor.ProcessNextOutboundAsync());
+
+        notifications.Verify(item => item.CreateForAdminsAsync(
+            "GoogleDrive", StoppedTitle, It.IsAny<string?>(), It.IsAny<string?>()), Times.Once);
+        Assert.Empty(db.ChangeTracker.Entries<Notification>());
+    }
+
+    [Fact]
+    public async Task Timed_out_replica_cleanup_is_deferred_and_does_not_block_uploads()
+    {
+        var replica = AddKnownDocument("remote-replica", "1", DateTime.UtcNow.AddMinutes(-5));
+        replica.SourceType = ProjectDocumentSourceType.ManualUpload;
+        replica.Origin = ProjectDocumentOrigin.Nicon;
+        db.SaveChanges();
+        var pending = AddPendingDocument();
+        storage.Setup(item => item.StoreDriveImportAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
+                It.IsAny<long>(), It.IsAny<Func<Stream, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TaskCanceledException("readback timed out"));
+        UploadThrows(new TaskCanceledException("request timed out"));
+
+        Assert.True(await processor.ProcessNextOutboundAsync());
+
+        var deferred = await LoadAsync(replica.Id);
+        Assert.Equal("operationalProjects.documents.cleanupDeferred", deferred.SyncError);
+        AssertRetryIn(TimeSpan.FromMinutes(5), deferred);
+        Assert.NotNull((await LoadAsync(pending.Id)).LastSyncAttemptAt);
+    }
+
+    [Fact]
+    public async Task Timed_out_folder_does_not_stop_reconciliation_of_the_others()
+    {
+        var bindings = AddReconciliationQueue(3);
+        var visited = new List<string>();
+        drive.Setup(item => item.ListChildrenAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback<string, CancellationToken>((id, _) => visited.Add(id))
+            .ThrowsAsync(new TaskCanceledException("request timed out"));
+
+        await processor.ReconcileBoundProjectsAsync();
+
+        Assert.Equal(bindings.Select(item => item.DriveFolderId), visited);
+    }
+
+    [Fact]
+    public async Task Timed_out_project_does_not_stop_folder_initialization_of_the_others()
+    {
+        db.Add(new OperationalProject { Code = "NIC-FOLDER-1", Name = "NICON handoff", CustomerId = 10 });
+        await db.SaveChangesAsync();
+        var lastId = await db.OperationalProjects.MaxAsync(item => item.Id);
+        folders.Setup(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(), It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new TaskCanceledException("request timed out"));
+
+        Assert.Equal(lastId, await processor.InitializeProjectFoldersAsync(0));
+
+        folders.Verify(item => item.EnsureTreeAsync(It.IsAny<OperationalProject>(), It.IsAny<int?>(),
+            It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    // Real notification rows, so the once-a-day rule is checked against what is stored.
+    private void StoreAdminAlerts()
+    {
+        db.Users.Add(new ApplicationUser
+        {
+            PhoneNumber = "0900000001",
+            Email = "admin@nicon.test",
+            PasswordHash = "hash",
+            Role = UserRole.ADMIN,
+            IsActive = true,
+        });
+        db.SaveChanges();
+        var stored = new NotificationService(db, Mock.Of<IEmailService>(), null!,
+            NullLogger<NotificationService>.Instance);
+        notifications.Setup(item => item.CreateForAdminsAsync(
+                It.IsAny<string>(), It.IsAny<string>(), It.IsAny<string?>(), It.IsAny<string?>()))
+            .Returns((string module, string title, string? body, string? link) =>
+                stored.CreateForAdminsAsync(module, title, body, link));
+    }
+
+    private void ConnectionCheckFails(Exception? failure)
+    {
+        var check = drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()));
+        if (failure is null)
+            check.ReturnsAsync(new DriveConnection(
+                "integration@nicon.test", "root", "https://drive.test/root", true, false, false, false));
+        else
+            check.ThrowsAsync(failure);
     }
 
     private void UploadThrows(Exception exception, Action? beforeThrow = null)
