@@ -4548,6 +4548,9 @@ namespace nihomebackend.Migrations
                     b.Property<long?>("ProjectDocumentId")
                         .HasColumnType("bigint");
 
+                    b.Property<DateTime?>("RevertedAt")
+                        .HasColumnType("datetime2");
+
                     b.Property<string>("SkipReason")
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");

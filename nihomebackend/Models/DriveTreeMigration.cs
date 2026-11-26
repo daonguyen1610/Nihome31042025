@@ -31,4 +31,5 @@ public class DriveTreeMigrationItem
     public string? ToFolderId { get; set; }
     public DateTime? MovedAt { get; set; }
     public string? SkipReason { get; set; }
+    public DateTime? RevertedAt { get; set; }
 }

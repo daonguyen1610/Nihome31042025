@@ -33,6 +33,7 @@ public interface IDriveTreeMigrationService
 {
     Task<DriveTreeMigrationPreview> PreviewAsync(CancellationToken ct);
     Task<DriveTreeMigrationResult> RunAsync(int userId, CancellationToken ct);
+    Task<DriveTreeMigrationResult> UndoAsync(int migrationId, int userId, CancellationToken ct);
 }
 
 /// <summary>Moves existing project Drive folders onto the PRD v2 tree; the preview is read-only.</summary>
@@ -126,6 +127,10 @@ public sealed class DriveTreeMigrationService(
         // A run that stopped (Failed) or was interrupted (Running) is resumed; its old bindings exist only in its items.
         var resume = await db.DriveTreeMigrations.OrderByDescending(m => m.Id).FirstOrDefaultAsync(ct);
         if (resume is not { Status: DriveTreeMigrationStatus.Running or DriveTreeMigrationStatus.Failed }) resume = null;
+        // A failed undo has already returned some files; only UndoAsync may finish it.
+        if (resume is not null && await db.DriveTreeMigrationItems.AnyAsync(i => i.MigrationId == resume.Id
+                && i.RevertedAt != null, ct))
+            throw new DriveTreeMigrationBlockedException("DRIVE_TREE_UNDO_IN_PROGRESS");
         var preview = await PreviewAsync(ct);
         var blocker = preview.Blockers.FirstOrDefault(code => resume is null
             || code is not ("DRIVE_TREE_MIGRATION_RUNNING" or "DRIVE_TREE_ALREADY_STANDARD"));
@@ -296,6 +301,82 @@ public sealed class DriveTreeMigrationService(
                 await db.SaveChangesAsync(ct);
             }
         }
+    }
+
+    public async Task<DriveTreeMigrationResult> UndoAsync(int migrationId, int userId, CancellationToken ct)
+    {
+        var migration = await db.DriveTreeMigrations.OrderByDescending(m => m.Id).FirstOrDefaultAsync(ct);
+        if (migration is not { Status: DriveTreeMigrationStatus.Completed or DriveTreeMigrationStatus.Failed }
+            || migration.Id != migrationId)
+            throw new DriveTreeMigrationBlockedException("DRIVE_TREE_MIGRATION_NOT_COMPLETED");
+        if ((await settingsStore.GetRuntimeAsync(ct)).Enabled)
+            throw new DriveTreeMigrationBlockedException("DRIVE_SYNC_ENABLED");
+        if (await db.ProjectDocuments.AnyAsync(d => d.SyncStatus == ProjectDocumentSyncStatus.Processing, ct))
+            throw new DriveTreeMigrationBlockedException("DRIVE_DOCUMENTS_PROCESSING");
+
+        var items = await db.DriveTreeMigrationItems.Where(i => i.MigrationId == migration.Id)
+            .OrderBy(i => i.Id).ToListAsync(ct);
+        try
+        {
+            // Each return is saved on its own, so a rerun after a Drive failure skips it.
+            foreach (var item in items.Where(i => i.Kind != DriveTreeMigrationItemKind.Binding
+                         && i.MovedAt != null && i.RevertedAt == null))
+            {
+                if (await drive.GetMetadataAsync(item.DriveFileId!, ct) is null)
+                    item.SkipReason = DriveFileMissing;
+                else
+                    await drive.MoveAsync(item.DriveFileId!, item.FromFolderId, ct);
+                item.RevertedAt = DateTime.UtcNow;
+                await db.SaveChangesAsync(ct);
+            }
+
+            // Files are back; restore paths, bindings and document folders in one transaction.
+            var old = JsonSerializer.Deserialize<GoogleDriveFolderOptions>(migration.OldFoldersJson)!;
+            var settings = await db.GoogleDriveCredentials.SingleAsync(item => item.Id == 1, ct);
+            settings.SurveyMediaFolder = old.SurveyMedia;
+            settings.CrmPreDesignFolder = old.CrmPreDesign;
+            settings.DesignConceptFolder = old.DesignConcept;
+            settings.DesignBasicFolder = old.DesignBasic;
+            settings.DesignShopDrawingFolder = old.DesignShopDrawing;
+            settings.LegalPermitsFolder = old.LegalPermits;
+            settings.ConstructionAcceptanceFolder = old.ConstructionAcceptance;
+            settings.ProcurementFolder = old.Procurement;
+            settings.FinanceContractsFolder = old.FinanceContracts;
+            settings.HandoverFolder = old.Handover;
+            settings.UpdatedByUserId = userId;
+            settings.UpdatedAt = DateTime.UtcNow;
+            db.ProjectDriveFolders.RemoveRange(await db.ProjectDriveFolders.ToListAsync(ct));
+            db.ProjectDriveFolders.AddRange(items.Where(i => i.Kind == DriveTreeMigrationItemKind.Binding)
+                .Select(i => new ProjectDriveFolder
+                {
+                    OperationalProjectId = i.OperationalProjectId,
+                    Category = i.Category,
+                    DriveFolderId = i.FromFolderId,
+                }));
+            var returned = items.Where(i => i.Kind == DriveTreeMigrationItemKind.Document
+                    && i.RevertedAt != null && i.SkipReason == null)
+                .ToDictionary(i => i.ProjectDocumentId!.Value, i => i.FromFolderId);
+            var documentIds = returned.Keys.ToList();
+            foreach (var document in await db.ProjectDocuments.Where(d => documentIds.Contains(d.Id)).ToListAsync(ct))
+                document.DriveFolderId = returned[document.Id];
+            migration.Status = DriveTreeMigrationStatus.RolledBack;
+            migration.Error = null;
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            db.ChangeTracker.Clear();
+            migration = await db.DriveTreeMigrations.SingleAsync(m => m.Id == migrationId, ct);
+            migration.Status = DriveTreeMigrationStatus.Failed;
+            migration.Error = ex.Message;
+        }
+        migration.FinishedAt = DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
+
+        var all = db.DriveTreeMigrationItems.Where(i => i.MigrationId == migration.Id);
+        return new DriveTreeMigrationResult(migration.Id, migration.Status,
+            await all.CountAsync(i => i.RevertedAt != null && i.SkipReason == null, ct),
+            await all.CountAsync(i => i.SkipReason != null, ct),
+            migration.Error);
     }
 
     private DriveTreeMigrationItem Track(List<DriveTreeMigrationItem> items, DriveTreeMigrationItem item)
