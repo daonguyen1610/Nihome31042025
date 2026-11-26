@@ -1210,3 +1210,112 @@
     height: 10rem;
   }
 }
+
+/* ---- Module colour (DESIGN.md "Module colour") ------------------------------------------
+   Unlayered on purpose: these accents win over the neutral utilities on every admin page.
+   Every gradient stop carries white text at 4.5:1 or better. */
+.tone-indigo {
+  --tone-a: 243 75% 55%;
+  --tone-b: 262 62% 52%;
+}
+.tone-violet {
+  --tone-a: 262 68% 52%;
+  --tone-b: 292 60% 44%;
+}
+.tone-blue {
+  --tone-a: 221 80% 48%;
+  --tone-b: 200 90% 34%;
+}
+.tone-cyan {
+  --tone-a: 192 85% 30%;
+  --tone-b: 208 80% 40%;
+}
+.tone-teal {
+  --tone-a: 173 80% 25%;
+  --tone-b: 190 82% 29%;
+}
+.tone-emerald {
+  --tone-a: 152 72% 27%;
+  --tone-b: 170 76% 25%;
+}
+.tone-amber {
+  --tone-a: 22 90% 38%;
+  --tone-b: 35 92% 31%;
+}
+.tone-orange {
+  --tone-a: 14 82% 45%;
+  --tone-b: 28 88% 37%;
+}
+.tone-rose {
+  --tone-a: 354 72% 46%;
+  --tone-b: 14 82% 42%;
+}
+.tone-pink {
+  --tone-a: 330 68% 46%;
+  --tone-b: 350 70% 48%;
+}
+.tone-fuchsia {
+  --tone-a: 292 60% 43%;
+  --tone-b: 320 62% 46%;
+}
+.tone-slate {
+  --tone-a: 215 28% 34%;
+  --tone-b: 222 26% 46%;
+}
+
+/* Coloured text on a tint needs a darker ink than the fill: 85% tone keeps 4.8:1 or better.
+   Declared on each user so it follows that element's own tone. */
+.tone-soft,
+.tone-nav-active,
+.tone-tab-active,
+.admin-scope main thead th,
+.admin-scope main [role="tab"][data-state="active"] {
+  --tone-ink: color-mix(in srgb, hsl(var(--tone-a)) 85%, black);
+}
+
+.tone-gradient {
+  background-image: linear-gradient(135deg, hsl(var(--tone-a)), hsl(var(--tone-b)));
+  color: #fff;
+}
+.tone-soft {
+  background-color: hsl(var(--tone-a) / 0.12);
+  color: var(--tone-ink);
+}
+.tone-nav-active {
+  background-color: hsl(var(--tone-a) / 0.12);
+  color: var(--tone-ink);
+  box-shadow: inset 3px 0 0 hsl(var(--tone-a));
+}
+.tone-tab-active {
+  border-color: hsl(var(--tone-a));
+  color: var(--tone-ink);
+}
+
+/* A wash of the module colour behind the top of the page. */
+.admin-scope main {
+  background-image: linear-gradient(180deg, hsl(var(--tone-a) / 0.1), transparent 320px);
+}
+/* Pages not yet on PageHeader still show where they belong. */
+.admin-scope main h1:not([data-page-title]):not(.sr-only)::before {
+  content: "";
+  display: inline-block;
+  width: 6px;
+  height: 0.95em;
+  margin-right: 10px;
+  vertical-align: -0.1em;
+  border-radius: 999px;
+  background-image: linear-gradient(180deg, hsl(var(--tone-a)), hsl(var(--tone-b)));
+}
+.admin-scope main thead {
+  background-color: hsl(var(--tone-a) / 0.09);
+}
+.admin-scope main thead th {
+  color: var(--tone-ink);
+}
+.admin-scope main tbody tr:hover {
+  background-color: hsl(var(--tone-a) / 0.045);
+}
+.admin-scope main [role="tab"][data-state="active"] {
+  color: var(--tone-ink);
+  box-shadow: inset 0 -3px 0 hsl(var(--tone-a));
+}

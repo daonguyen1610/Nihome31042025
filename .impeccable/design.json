@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-26T17:29:00+00:00",
+  "generatedAt": "2026-11-26T17:39:56+00:00",
   "title": "Design System: Nicon Admin",
   "extensions": {
     "colorMeta": {
@@ -486,7 +486,7 @@
       },
       {
         "name": "The Flat Work Surface Rule",
-        "body": "No shadow, glow, gradient, hover lift or blur on cards, rows, forms or buttons. The translucent sticky top bar is the only blur.",
+        "body": "Records, forms and tables stay flat: border and tone, no glow or blur. Gradient and a soft shadow belong only to `StatTile`, the page icon and the attention counts; a stat tile that opens a list may lift 2px on hover. The translucent sticky top bar is the only blur.",
         "section": "elevation"
       },
       {
@@ -517,7 +517,7 @@
       "**Don't** replace business names with internal IDs, abbreviations or raw JSON.",
       "**Don't** invent records, formulas or counts to fill a dashboard, or call a list or chart complete when data is missing or truncated.",
       "**Don't** close a dialog after a failed action or reset the user's work.",
-      "**Don't** add gradients, glow, nested cards or entrance animation to work screens."
+      "**Don't** put gradients on records, forms, buttons or table rows, and don't add glow, nested cards or entrance animation to work screens."
     ]
   }
 }

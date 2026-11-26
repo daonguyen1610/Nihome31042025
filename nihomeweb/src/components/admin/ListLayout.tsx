@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useI18n } from "@/lib/i18n";
+import { usePageIcon } from "@/lib/pageTheme";
 import { cn } from "@/lib/utils";
 
 /** The one page heading: name, how many records, one line of help and the page's actions. */
@@ -22,19 +23,29 @@ export function PageHeader({
   description?: string;
   actions?: ReactNode;
 }) {
+  const Icon = usePageIcon();
   return (
     <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-      <div className="min-w-0">
-        {/* The count sits beside the heading, so the heading is still just the page's name. */}
-        <div className="flex flex-wrap items-baseline gap-x-2">
-          <h1 className="text-2xl font-semibold">{title}</h1>
-          {count !== undefined && (
-            <span className="tabular-nums text-muted-foreground">({count})</span>
+      <div className="flex min-w-0 items-start gap-3">
+        {Icon && (
+          <span className="tone-gradient hidden h-12 w-12 shrink-0 items-center justify-center rounded-md shadow-md sm:flex">
+            <Icon className="h-6 w-6" strokeWidth={1.75} aria-hidden />
+          </span>
+        )}
+        <div className="min-w-0">
+          {/* The count sits beside the heading, so the heading is still just the page's name. */}
+          <div className="flex flex-wrap items-baseline gap-x-2">
+            <h1 data-page-title className="text-2xl font-bold">
+              {title}
+            </h1>
+            {count !== undefined && (
+              <span className="tabular-nums text-muted-foreground">({count})</span>
+            )}
+          </div>
+          {description && (
+            <p className="mt-1 max-w-[75ch] text-sm text-muted-foreground">{description}</p>
           )}
         </div>
-        {description && (
-          <p className="mt-1 max-w-[75ch] text-sm text-muted-foreground">{description}</p>
-        )}
       </div>
       {actions && <div className="flex shrink-0 flex-wrap gap-2">{actions}</div>}
     </header>
@@ -74,7 +85,7 @@ export function ListTabs<T extends string>({
             className={cn(
               "-mb-px flex shrink-0 items-center gap-2 whitespace-nowrap border-b-2 px-3 py-2.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring pointer-coarse:min-h-11",
               active
-                ? "border-primary text-foreground"
+                ? "tone-tab-active"
                 : "border-transparent text-muted-foreground hover:text-foreground",
             )}
           >
@@ -85,7 +96,9 @@ export function ListTabs<T extends string>({
                   "rounded-full px-2 text-xs tabular-nums leading-5",
                   tab.urgent && tab.count > 0
                     ? "bg-danger-soft text-danger-strong"
-                    : "bg-muted text-muted-foreground",
+                    : active
+                      ? "tone-gradient"
+                      : "tone-soft",
                 )}
               >
                 {tab.count}

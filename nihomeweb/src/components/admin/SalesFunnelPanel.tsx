@@ -28,6 +28,8 @@ const rangeFor = (key: RangeKey) => {
 };
 
 /** Sales funnel on the dashboard: how leads turn into opportunities, wins and signed contracts. */
+const FUNNEL_TONES = ["blue", "cyan", "violet", "emerald", "amber"] as const;
+
 export function SalesFunnelPanel() {
   const { t } = useI18n();
   const uiError = useUiError();
@@ -94,26 +96,28 @@ export function SalesFunnelPanel() {
       ) : (
         <>
           <dl className="mb-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-            <div className="rounded-md border p-3">
-              <dt className="text-xs text-muted-foreground">{t("dash.funnel.conversionRate")}</dt>
+            <div className="tone-blue tone-soft rounded-md p-3">
+              <dt className="text-xs font-medium text-foreground">
+                {t("dash.funnel.conversionRate")}
+              </dt>
               <dd className="text-2xl font-semibold tabular-nums">
                 {rate(data.leadConversionRate)}
               </dd>
             </div>
-            <div className="rounded-md border p-3">
-              <dt className="text-xs text-muted-foreground">{t("dash.funnel.winRate")}</dt>
+            <div className="tone-emerald tone-soft rounded-md p-3">
+              <dt className="text-xs font-medium text-foreground">{t("dash.funnel.winRate")}</dt>
               <dd className="text-2xl font-semibold tabular-nums">{rate(data.winRate)}</dd>
             </div>
-            <div className="rounded-md border p-3">
-              <dt className="text-xs text-muted-foreground">{t("dash.funnel.open")}</dt>
+            <div className="tone-violet tone-soft rounded-md p-3">
+              <dt className="text-xs font-medium text-foreground">{t("dash.funnel.open")}</dt>
               <dd className="text-2xl font-semibold tabular-nums">
                 {formatNumber(data.opportunitiesOpen)}
               </dd>
             </div>
           </dl>
           <ol className="space-y-2" aria-label={t("dash.funnel.title")}>
-            {steps.map((step) => (
-              <li key={step.key}>
+            {steps.map((step, index) => (
+              <li key={step.key} className={`tone-${FUNNEL_TONES[index % FUNNEL_TONES.length]}`}>
                 <Link
                   to={step.to}
                   className="group grid grid-cols-[minmax(0,9rem)_1fr_auto] items-center gap-3 rounded-md py-1 text-sm hover:bg-muted/50 sm:grid-cols-[minmax(0,12rem)_1fr_auto]"
@@ -122,9 +126,9 @@ export function SalesFunnelPanel() {
                   <span className="min-w-0 break-words leading-tight text-muted-foreground">
                     {t(`dash.funnel.step.${step.key}`)}
                   </span>
-                  <span className="h-3 overflow-hidden rounded-r bg-muted" aria-hidden>
+                  <span className="h-4 overflow-hidden rounded-r bg-muted" aria-hidden>
                     <span
-                      className="block h-full rounded-r bg-primary transition-[width] group-hover:opacity-80"
+                      className="tone-gradient block h-full rounded-r transition-[width] group-hover:opacity-80"
                       style={{ width: `${(step.value / max) * 100}%` }}
                     />
                   </span>

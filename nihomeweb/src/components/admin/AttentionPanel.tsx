@@ -26,14 +26,14 @@ export function AttentionPanel() {
     {
       label: t("dash.attention.overdue"),
       value: open.filter((item) => item.isOverdue).length,
-      tone: "text-danger-strong",
+      tone: "rose",
     },
     {
       label: t("dash.attention.dueSoon"),
       value: open.filter((item) => item.isDueSoon && !item.isOverdue).length,
-      tone: "text-warning-strong",
+      tone: "amber",
     },
-    { label: t("dash.attention.open"), value: open.length, tone: "text-foreground" },
+    { label: t("dash.attention.open"), value: open.length, tone: "indigo" },
   ];
 
   return (
@@ -59,15 +59,15 @@ export function AttentionPanel() {
         </div>
       ) : (
         <>
-          <dl className="grid grid-cols-3 divide-x border-b">
+          <dl className="grid grid-cols-3 gap-2 border-b p-3 sm:gap-3 sm:p-4">
             {counts.map((count) => (
-              <div key={count.label} className="p-4">
-                <dd
-                  className={cn("text-2xl font-semibold tabular-nums", count.value && count.tone)}
-                >
-                  {count.value}
-                </dd>
-                <dt className="text-sm text-muted-foreground">{count.label}</dt>
+              // Nothing waiting is good news, so a zero never shows in a warning colour.
+              <div
+                key={count.label}
+                className={`tone-${count.value ? count.tone : "emerald"} tone-gradient flex flex-col-reverse justify-end rounded-md p-3 sm:p-4`}
+              >
+                <dt className="text-sm font-medium">{count.label}</dt>
+                <dd className="text-3xl font-bold tabular-nums">{count.value}</dd>
               </div>
             ))}
           </dl>

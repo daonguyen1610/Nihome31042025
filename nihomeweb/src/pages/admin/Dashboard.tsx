@@ -17,6 +17,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { PageLoading } from "@/components/PageState";
 import { PageHeader } from "@/components/admin/ListLayout";
+import { StatTile } from "@/components/admin/StatTile";
 import { AttentionPanel } from "@/components/admin/AttentionPanel";
 import { SalesFunnelPanel } from "@/components/admin/SalesFunnelPanel";
 import { useActivities, useProjects, useJobPositions } from "@/hooks/useContentApi";
@@ -139,24 +140,28 @@ const Dashboard = () => {
 
   const stats = [
     {
+      tone: "indigo" as const,
       label: t("dash.totalPosts"),
       value: activities ? totalPosts : undefined,
       icon: FileText,
       to: "/admin/activities",
     },
     {
+      tone: "rose" as const,
       label: t("dash.activeProjects"),
       value: projects ? `${ongoingProjects}/${totalProjects}` : undefined,
       icon: Building2,
       to: "/admin/projects",
     },
     {
+      tone: "emerald" as const,
       label: t("dash.openPositions"),
       value: jobPositions ? openPositions : undefined,
       icon: Briefcase,
       to: "/admin/recruitment",
     },
     {
+      tone: "blue" as const,
       label: t("dash.totalApplications"),
       value: jobPositions ? totalApplications : undefined,
       icon: Users,
@@ -183,26 +188,9 @@ const Dashboard = () => {
 
         {has(ADMIN_PERMS.workPackages) && <AttentionPanel />}
 
-        {/* One quiet strip of company numbers: context, not the day's work. */}
-        <div className="grid grid-cols-2 overflow-hidden rounded-lg border bg-card xl:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {stats.map((s) => (
-            <Link
-              key={s.label}
-              to={s.to}
-              className="flex items-center gap-3 border-b border-r p-4 transition-colors hover:bg-muted/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring xl:border-b-0"
-            >
-              <s.icon
-                className="h-5 w-5 shrink-0 text-muted-foreground"
-                strokeWidth={1.75}
-                aria-hidden
-              />
-              <span className="min-w-0">
-                <span className="block text-xl font-semibold leading-7 tabular-nums">
-                  {s.value ?? "—"}
-                </span>
-                <span className="block text-sm text-muted-foreground">{s.label}</span>
-              </span>
-            </Link>
+            <StatTile key={s.label} {...s} value={s.value ?? "—"} />
           ))}
         </div>
 
