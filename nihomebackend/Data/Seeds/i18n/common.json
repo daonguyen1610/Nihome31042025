@@ -1558,5 +1558,69 @@
     "en": "Clear filters",
     "zh": "清除筛选",
     "ja": "絞り込みを解除"
+  },
+  {
+    "key": "list.filters",
+    "category": "common",
+    "vi": "Bộ lọc",
+    "en": "Filters",
+    "zh": "筛选",
+    "ja": "絞り込み"
+  },
+  {
+    "key": "list.columns",
+    "category": "common",
+    "vi": "Cột",
+    "en": "Columns",
+    "zh": "列",
+    "ja": "列"
+  },
+  {
+    "key": "dash.attention.title",
+    "category": "dashboard",
+    "vi": "Việc cần xử lý",
+    "en": "Needs your attention",
+    "zh": "待处理事项",
+    "ja": "対応が必要な業務"
+  },
+  {
+    "key": "dash.attention.all",
+    "category": "dashboard",
+    "vi": "Xem tất cả việc của tôi",
+    "en": "See all my work",
+    "zh": "查看我的全部工作",
+    "ja": "自分の業務をすべて見る"
+  },
+  {
+    "key": "dash.attention.overdue",
+    "category": "dashboard",
+    "vi": "Quá hạn",
+    "en": "Overdue",
+    "zh": "已逾期",
+    "ja": "期限超過"
+  },
+  {
+    "key": "dash.attention.dueSoon",
+    "category": "dashboard",
+    "vi": "Sắp đến hạn",
+    "en": "Due soon",
+    "zh": "即将到期",
+    "ja": "期限間近"
+  },
+  {
+    "key": "dash.attention.open",
+    "category": "dashboard",
+    "vi": "Đang mở",
+    "en": "Open",
+    "zh": "进行中",
+    "ja": "未完了"
+  },
+  {
+    "key": "dash.attention.none",
+    "category": "dashboard",
+    "vi": "Bạn không có việc nào đang mở. Việc mới được giao sẽ hiện ở đây.",
+    "en": "You have no open work. New assignments will appear here.",
+    "zh": "当前没有待办工作。新分配的任务会显示在这里。",
+    "ja": "未完了の業務はありません。新しく割り当てられた業務はここに表示されます。"
   }
 ]
