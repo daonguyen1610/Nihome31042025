@@ -102,10 +102,10 @@ const STATUS_VARIANT: Record<ContractStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
   UnderReview: "border-info-strong/30 bg-info-soft text-info-strong",
   Approved: "border-success-strong/30 bg-success-soft text-success-strong",
-  Signed: "border-blue-200 bg-blue-50 text-blue-700",
-  InProgress: "border-success/30 bg-success-soft text-success-strong",
+  Signed: "border-info/40 bg-info-soft text-info-strong",
+  InProgress: "border-info/40 bg-info-soft text-info-strong",
   OnHold: "border-warning/40 bg-warning-soft text-warning-strong",
-  Completed: "border-purple-200 bg-purple-50 text-purple-700",
+  Completed: "border-success/40 bg-success-soft text-success-strong",
   Cancelled: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
@@ -1175,7 +1175,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         </header>
 
         {isFinanceWorkspace && (
-          <div className="flex flex-col gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-2 rounded-lg border border-info/40 bg-info-soft px-4 py-3 text-sm text-info-strong sm:flex-row sm:items-center sm:justify-between">
             <p>{t("contracts.finance.masterManagedElsewhere")}</p>
             {has(ADMIN_PERMS.contracts) && (
               <Button asChild variant="outline" size="sm" className="shrink-0 bg-card">
@@ -1202,7 +1202,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                 {formatVnd(summary.totalCurrentValue)}
               </p>
             </div>
-            <div className="rounded-lg border border-destructive/20 bg-rose-50/60 p-3">
+            <div className="rounded-lg border border-destructive/20 bg-danger-soft/60 p-3">
               <p className="text-xs text-destructive">
                 {t(
                   mode === "downstream"
@@ -1210,11 +1210,11 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                     : "contracts.summary.overdueCollection",
                 )}
               </p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-rose-800">
+              <p className="mt-1 text-xl font-semibold tabular-nums text-danger-strong">
                 {summary.overdueContractCount}
               </p>
             </div>
-            <div className="rounded-lg border border-warning/40 bg-amber-50/60 p-3">
+            <div className="rounded-lg border border-warning/40 bg-warning-soft/60 p-3">
               <p className="text-xs text-warning-strong">
                 {t(
                   mode === "downstream"
@@ -1636,7 +1636,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
         ) : (
           <div className="space-y-2">
             {/* Mobile / tablet cards (<lg) */}
-            <ul className="grid gap-3 lg:hidden">
+            <ul className="grid gap-3 xl:hidden">
               {contracts.map((row) => {
                 const deadlineState = getDeadlineState(row);
                 return (
@@ -1659,7 +1659,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             </h3>
                             <Link
                               to={detailUrl(row.id)}
-                              className="pointer-events-auto mt-0.5 inline-flex items-center gap-1 break-all font-mono text-xs text-primary hover:underline"
+                              className="pointer-events-auto mt-0.5 inline-flex items-center gap-1 break-words [overflow-wrap:anywhere] font-mono text-xs text-primary hover:underline"
                             >
                               {row.contractNumber}
                               <ExternalLink className="h-3 w-3 opacity-70" />
@@ -1675,8 +1675,8 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                               variant="outline"
                               className={
                                 deadlineState === "overdue"
-                                  ? "border-rose-300 bg-destructive/10 text-destructive"
-                                  : "border-amber-300 bg-warning-soft text-warning-strong"
+                                  ? "border-danger/40 bg-destructive/10 text-destructive"
+                                  : "border-warning/40 bg-warning-soft text-warning-strong"
                               }
                               title={t(
                                 deadlineState === "overdue"
@@ -1785,33 +1785,16 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
               })}
             </ul>
 
-            {/* Desktop table (lg+) */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
-              <table className="w-full min-w-[1000px] divide-y text-sm">
+            {/* Desktop table: reference facts sit under the contract number so status stays visible. */}
+            <div className="hidden overflow-x-auto rounded-lg border xl:block">
+              <table className="w-full divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
-                    <th className="min-w-56 px-3 py-3 text-left font-medium">
+                    <th className="px-3 py-3 text-left font-medium">
                       {t("contracts.field.number")}
                     </th>
-                    <th className="min-w-[220px] px-3 py-3 text-left font-medium">
-                      {t("contracts.field.customer")}
-                    </th>
-                    <th className="min-w-[180px] px-3 py-3 text-left font-medium">
-                      {t("contracts.field.operationalProject")}
-                    </th>
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("contracts.field.type")}
-                    </th>
-                    {mode !== "upstream" && (
-                      <th className="min-w-[180px] px-3 py-3 text-left font-medium">
-                        {t("contracts.field.counterparty")}
-                      </th>
-                    )}
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("contracts.field.signedDate")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("contracts.field.endDate")}
+                      {t("contracts.field.signedDate")} / {t("contracts.field.endDate")}
                     </th>
                     <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
                       {t("contracts.field.currentValue")}
@@ -1826,10 +1809,7 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                       </th>
                     )}
                     <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("contracts.field.status")}
-                    </th>
-                    <th className="whitespace-nowrap px-3 py-3 text-left font-medium">
-                      {t("contracts.field.owner")}
+                      {t("contracts.field.status")} / {t("contracts.field.owner")}
                     </th>
                     {canManageMaster && (
                       <th className="whitespace-nowrap px-3 py-3 text-right font-medium">
@@ -1851,55 +1831,46 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                         onMouseEnter={() => setHoveredContractId(row.id)}
                         onMouseLeave={() => setHoveredContractId(null)}
                       >
-                        <td
-                          className="min-w-56 px-3 py-3 align-top font-mono text-xs"
-                          onClick={(event) => event.stopPropagation()}
-                        >
+                        <td className="min-w-64 px-3 py-3 align-top">
                           <Link
                             to={detailUrl(row.id)}
-                            className="inline-flex items-start gap-1 break-all text-primary hover:underline"
+                            className="inline-flex items-start gap-1 break-words font-mono text-xs text-primary [overflow-wrap:anywhere] hover:underline"
+                            onClick={(event) => event.stopPropagation()}
                           >
                             {row.contractNumber}
-                            <ExternalLink className="h-3 w-3 opacity-70" />
+                            <ExternalLink className="h-3 w-3 shrink-0 opacity-70" />
                           </Link>
-                        </td>
-                        <td className="min-w-[220px] px-3 py-3 font-medium">
-                          {row.customerName ?? "—"}
-                        </td>
-                        <td className="min-w-[180px] px-3 py-3">
-                          {row.operationalProjectId ? (
-                            <Link
-                              to={`/admin/operational-projects/${row.operationalProjectId}`}
-                              className="text-primary hover:underline"
-                              onClick={(event) => event.stopPropagation()}
-                            >
-                              {row.operationalProjectCode ?? `#${row.operationalProjectId}`}
-                            </Link>
-                          ) : (
-                            "—"
-                          )}
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3">
-                          {t(`contracts.type.${row.type}`)}
-                        </td>
-                        {mode !== "upstream" && (
-                          <td className="min-w-[180px] px-3 py-3">
-                            {row.vendorName ?? row.customerName ?? "—"}
-                          </td>
-                        )}
-                        <td className="whitespace-nowrap px-3 py-3">
-                          {formatDate(row.signedDate, lang)}
+                          <div className="mt-1 font-medium">{row.customerName ?? "—"}</div>
+                          <div className="mt-0.5 text-xs text-muted-foreground">
+                            {t(`contracts.type.${row.type}`)}
+                            {row.operationalProjectId ? (
+                              <>
+                                {" · "}
+                                <Link
+                                  to={`/admin/operational-projects/${row.operationalProjectId}`}
+                                  className="text-primary hover:underline"
+                                  onClick={(event) => event.stopPropagation()}
+                                >
+                                  {row.operationalProjectCode ?? `#${row.operationalProjectId}`}
+                                </Link>
+                              </>
+                            ) : null}
+                            {mode !== "upstream" && row.vendorName
+                              ? ` · ${t("contracts.field.counterparty")}: ${row.vendorName}`
+                              : ""}
+                          </div>
                         </td>
                         <td className="whitespace-nowrap px-3 py-3">
-                          <div className="flex items-center gap-2">
+                          <div>{formatDate(row.signedDate, lang)}</div>
+                          <div className="mt-1 flex items-center gap-2">
                             {formatDate(row.endDate, lang)}
                             {deadlineState && (
                               <Badge
                                 variant="outline"
                                 className={
                                   deadlineState === "overdue"
-                                    ? "border-rose-300 bg-destructive/10 text-destructive"
-                                    : "border-amber-300 bg-warning-soft text-warning-strong"
+                                    ? "border-danger/40 bg-destructive/10 text-destructive"
+                                    : "border-warning/40 bg-warning-soft text-warning-strong"
                                 }
                                 title={t(
                                   deadlineState === "overdue"
@@ -1950,9 +1921,9 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                           <Badge variant="outline" className={STATUS_VARIANT[row.status]}>
                             {t(`contracts.status.${row.status}`)}
                           </Badge>
-                        </td>
-                        <td className="whitespace-nowrap px-3 py-3 text-xs text-muted-foreground">
-                          {row.ownerName ?? "—"}
+                          <div className="mt-1 max-w-36 whitespace-normal text-xs text-muted-foreground">
+                            {row.ownerName ?? "—"}
+                          </div>
                         </td>
                         {canManageMaster && (
                           <td
@@ -1965,18 +1936,22 @@ const Contracts = ({ mode = "all" }: ContractsProps) => {
                             <div className="inline-flex items-center gap-1">
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                aria-label={t("common.edit")}
+                                title={t("common.edit")}
                                 onClick={() => navigate(detailUrl(row.id, true))}
                               >
-                                <Pencil className="mr-1 h-3.5 w-3.5" /> {t("common.edit")}
+                                <Pencil />
                               </Button>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                aria-label={t("common.delete")}
+                                title={t("common.delete")}
                                 onClick={() => remove(row)}
                                 className="text-destructive hover:text-destructive"
                               >
-                                <Trash2 className="mr-1 h-3.5 w-3.5" /> {t("common.delete")}
+                                <Trash2 />
                               </Button>
                             </div>
                           </td>

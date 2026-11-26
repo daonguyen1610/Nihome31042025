@@ -1643,7 +1643,7 @@ export const OperationalProjectTeamPanel = ({
                   key={assignment.id}
                   className={
                     isSubtask
-                      ? "rounded-lg border border-l-4 border-border border-l-slate-300 p-4"
+                      ? "rounded-lg border border-l-4 border-border border-l-border p-4"
                       : "rounded-lg border border-border p-4"
                   }
                   data-subtask={isSubtask ? "true" : undefined}

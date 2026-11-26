@@ -138,7 +138,7 @@ const TenderStagePanel = ({ tender, canManage, onChanged }: Props) => {
         {tender.status === "Cancelled" ? (
           <p className="text-muted-foreground">{t("tenders.stage.hint.cancelled")}</p>
         ) : pending && needsApproval ? (
-          <div className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-amber-900">
+          <div className="rounded-lg border border-warning/40 bg-warning-soft p-3 text-warning-strong">
             <p data-testid="tender-stage-pending">
               {t("tenders.stage.pending", {
                 approver: tender.stageApproverName ?? "—",
@@ -180,11 +180,13 @@ const TenderStagePanel = ({ tender, canManage, onChanged }: Props) => {
           options == null ? (
             <p className="text-muted-foreground">{t("common.loading")}</p>
           ) : !options.roleCode ? (
-            <p className="text-amber-900">
+            <p className="text-warning-strong">
               {t("tenders.stage.notConfigured", { stage: stageLabel(tender.stage) })}
             </p>
           ) : options.candidates.length === 0 ? (
-            <p className="text-amber-900">{t("tenders.stage.noApprover", { role: roleLabel })}</p>
+            <p className="text-warning-strong">
+              {t("tenders.stage.noApprover", { role: roleLabel })}
+            </p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
               <p className="text-muted-foreground md:col-span-2">

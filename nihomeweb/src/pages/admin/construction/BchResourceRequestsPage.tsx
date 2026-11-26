@@ -265,7 +265,7 @@ export function ResourceRequestsPanel({ projectId, scope = "execute" }: ScopePro
             message={t("construction.resource.empty")}
             action={
               canManage && (
-                <Button onClick={openCreate} data-testid="resource-empty-new">
+                <Button variant="outline" onClick={openCreate} data-testid="resource-empty-new">
                   <Plus className="mr-2 h-4 w-4" />
                   {t("construction.resource.new")}
                 </Button>

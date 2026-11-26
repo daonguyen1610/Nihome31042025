@@ -175,7 +175,7 @@ const BoqTemplateLibrary = () => {
                                   setSelection({ code: template.code, sheet: sheet.name })
                                 }
                               >
-                                <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-600" />
+                                <FileSpreadsheet className="h-4 w-4 shrink-0 text-success-strong" />
                                 <span className="min-w-0 flex-1 break-words">{sheet.name}</span>
                                 <span className="shrink-0 text-xs text-muted-foreground">
                                   {sheet.isData
@@ -233,7 +233,7 @@ const BoqTemplateLibrary = () => {
                           onClick={() => setSelection({ code: selected.code, sheet: sheet.name })}
                         >
                           <span className="flex min-w-0 items-center gap-2">
-                            <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-600" />
+                            <FileSpreadsheet className="h-4 w-4 shrink-0 text-success-strong" />
                             <span className="break-words font-medium">{sheet.name}</span>
                           </span>
                           <Badge variant="outline" className="shrink-0">

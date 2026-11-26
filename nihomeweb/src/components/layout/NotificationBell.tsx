@@ -102,7 +102,7 @@ export function NotificationBell() {
         >
           <Bell className="w-4 h-4" />
           {unreadCount > 0 ? (
-            <Badge className="absolute -right-1 -top-1 min-w-5 h-5 px-1.5 justify-center border-white bg-red-600 text-[10px] leading-none">
+            <Badge className="absolute -right-1 -top-1 min-w-5 h-5 px-1.5 justify-center border-white bg-destructive text-[10px] leading-none">
               {unreadLabel}
             </Badge>
           ) : null}
@@ -175,7 +175,7 @@ export function NotificationBell() {
                         {t(notification.title)}
                       </span>
                       {!notification.isRead ? (
-                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-sky-500" />
+                        <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-info" />
                       ) : null}
                     </span>
                     {notification.body ? (

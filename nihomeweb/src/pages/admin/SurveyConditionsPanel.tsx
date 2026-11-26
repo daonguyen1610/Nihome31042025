@@ -240,7 +240,7 @@ export default function SurveyConditionsPanel({ survey, canManage, onRefresh }: 
             className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3"
             role="alert"
           >
-            <p className="font-medium text-rose-800">{t("surveys.conditions.importErrors")}</p>
+            <p className="font-medium text-danger-strong">{t("surveys.conditions.importErrors")}</p>
             <ul className="mt-1 space-y-1 text-sm text-destructive">
               {errors.map((error, index) => (
                 <li key={`${error.row}-${error.column}-${index}`}>

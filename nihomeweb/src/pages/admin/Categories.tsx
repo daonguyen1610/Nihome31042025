@@ -302,7 +302,7 @@ const Categories = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("cat.title")}</h1>
@@ -380,8 +380,8 @@ const Categories = () => {
                 />
                 <p className="text-xs text-muted-foreground">{t("cat.sourceNameHint")}</p>
               </div>
-              <div className="flex flex-col gap-3 rounded-lg border border-info/30 bg-sky-50/60 p-4 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-sky-900">{t("cat.manageTranslationsHint")}</p>
+              <div className="flex flex-col gap-3 rounded-lg border border-info/30 bg-info-soft/60 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-info-strong">{t("cat.manageTranslationsHint")}</p>
                 {canViewTranslations && (
                   <Button
                     asChild
@@ -471,7 +471,7 @@ const Categories = () => {
                     </div>
                     {item.isActive ? (
                       <Check
-                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        className="h-4 w-4 shrink-0 text-success-strong"
                         aria-label={t("cat.published")}
                       />
                     ) : (
@@ -555,7 +555,7 @@ const Categories = () => {
                       <td className="px-3 py-3 font-medium">{localizedName(item, lang)}</td>
                       <td className="px-3 py-3">
                         {item.isActive ? (
-                          <Check className="h-4 w-4 text-emerald-600" />
+                          <Check className="h-4 w-4 text-success-strong" />
                         ) : (
                           <X className="h-4 w-4 text-muted-foreground" />
                         )}

@@ -56,8 +56,8 @@ const EXPIRY_BADGE_STYLES: Record<CapabilityDocumentExpiryState, string> = {
   none: "border-border bg-muted/30 text-muted-foreground",
   ok: "border-success/30 bg-success-soft text-success-strong",
   warning: "border-warning/40 bg-warning-soft text-warning-strong",
-  critical: "border-orange-300 bg-orange-100 text-orange-800",
-  expired: "border-rose-300 bg-rose-100 text-rose-800",
+  critical: "border-warning/40 bg-warning-soft text-warning-strong",
+  expired: "border-danger/40 bg-danger-soft text-danger-strong",
 };
 
 const formatBytes = (n: number) => {
@@ -681,7 +681,7 @@ const CapabilityDocuments = () => {
         ) : (
           <>
             {/* Mobile / tablet card view (<lg) */}
-            <div className="grid gap-3 lg:hidden">
+            <div className="grid gap-3 xl:hidden">
               {rows.map((r) => (
                 <article key={r.id} className="rounded-lg border bg-card p-3 shadow-sm">
                   <header className="flex items-start gap-2">
@@ -741,7 +741,7 @@ const CapabilityDocuments = () => {
             </div>
 
             {/* Desktop table view (lg+) */}
-            <div className="hidden overflow-x-auto rounded-md border lg:block">
+            <div className="hidden overflow-x-auto rounded-md border xl:block">
               <table className="w-full min-w-[1000px] text-sm">
                 <thead className="bg-muted/30 text-left text-xs uppercase text-muted-foreground">
                   <tr>

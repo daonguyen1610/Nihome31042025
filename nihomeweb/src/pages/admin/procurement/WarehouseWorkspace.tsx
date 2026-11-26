@@ -175,7 +175,7 @@ const WarehouseWorkspace = ({
           </div>
         ) : (
           <>
-            <div className="hidden overflow-x-auto border-y lg:block">
+            <div className="hidden overflow-x-auto border-y xl:block">
               <table className="w-full min-w-[760px] text-sm">
                 <thead>
                   <tr className="border-b text-left text-xs uppercase text-muted-foreground">
@@ -218,7 +218,7 @@ const WarehouseWorkspace = ({
                 </tbody>
               </table>
             </div>
-            <div className="grid gap-3 lg:hidden">
+            <div className="grid gap-3 xl:hidden">
               {stock.map((item) => (
                 <article className="rounded-md border p-4" key={item.projectBoqLineId}>
                   <div className="flex items-start justify-between gap-3">

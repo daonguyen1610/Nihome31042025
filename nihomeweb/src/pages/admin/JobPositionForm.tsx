@@ -226,7 +226,7 @@ const JobPositionForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex items-center gap-3">
           <Button asChild size="icon" variant="outline" className="h-10 w-10 rounded-full">
             <Link to="/admin/recruitment" aria-label={t("common.back")}>

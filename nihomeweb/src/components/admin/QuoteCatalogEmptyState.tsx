@@ -30,7 +30,7 @@ const QuoteCatalogEmptyState = ({ catalogType }: QuoteCatalogEmptyStateProps) =>
 
   return (
     <div
-      className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-amber-900"
+      className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong"
       data-testid={`quote-catalog-empty-${catalogType}`}
     >
       <div className="flex items-start gap-2">

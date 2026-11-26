@@ -433,7 +433,7 @@ export default function RoleList() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("adminRbac.title")}</h1>
@@ -573,7 +573,7 @@ export default function RoleList() {
                                     </span>
                                   </span>
                                   {isDirty(role.id) && (
-                                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-amber-500" />
+                                    <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-warning" />
                                   )}
                                 </span>
                                 <span className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
@@ -617,7 +617,7 @@ export default function RoleList() {
                               <Badge variant="secondary">{t("adminRbac.systemRoleBadge")}</Badge>
                             )}
                             {isDirty(selectedRole.id) && (
-                              <Badge className="bg-amber-100 text-warning-strong hover:bg-amber-100">
+                              <Badge className="bg-warning-soft text-warning-strong hover:bg-warning-soft">
                                 {t("adminRbac.unsaved")}
                               </Badge>
                             )}

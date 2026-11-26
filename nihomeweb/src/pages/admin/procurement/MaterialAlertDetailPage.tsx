@@ -32,14 +32,14 @@ import { useAppSelector } from "@/store";
 import { formatDateTime } from "@/lib/displaySettings";
 
 const statusClass: Record<MaterialAlertStatus, string> = {
-  Open: "border-destructive/20 bg-destructive/10 text-rose-800",
+  Open: "border-destructive/20 bg-destructive/10 text-danger-strong",
   Acknowledged: "border-warning/40 bg-warning-soft text-warning-strong",
   Resolved: "border-success/30 bg-success-soft text-success-strong",
 };
 
 const severityClass: Record<MaterialAlertSeverity, string> = {
-  Critical: "border-rose-300 bg-rose-100 text-rose-900",
-  Warning: "border-amber-300 bg-amber-100 text-amber-900",
+  Critical: "border-danger/40 bg-danger-soft text-danger-strong",
+  Warning: "border-warning/40 bg-warning-soft text-warning-strong",
 };
 
 const MaterialAlertDetailPage = () => {
@@ -189,7 +189,7 @@ const MaterialAlertDetailPage = () => {
               </Link>
             </Button>
             <div className="flex flex-wrap items-center gap-2">
-              <TriangleAlert className="h-6 w-6 text-amber-600" aria-hidden="true" />
+              <TriangleAlert className="h-6 w-6 text-warning-strong" aria-hidden="true" />
               <h1 className="text-2xl font-semibold">
                 {alert.code} · {alert.itemCode}
               </h1>

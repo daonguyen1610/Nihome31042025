@@ -81,7 +81,7 @@ export function WorkPackageBoqSection({
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0 space-y-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <FileSpreadsheet className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <FileSpreadsheet className="h-4 w-4 shrink-0 text-success-strong" />
                     <strong>R{boq.revisionNumber}</strong>
                     <Badge variant="outline">{t(`procurement.status.${boq.status}`)}</Badge>
                   </div>
@@ -104,7 +104,7 @@ export function WorkPackageBoqSection({
                 </Button>
               </div>
               {boq.missingPriceCount > 0 && (
-                <p className="flex gap-2 rounded-md bg-warning-soft p-2 text-xs text-amber-900">
+                <p className="flex gap-2 rounded-md bg-warning-soft p-2 text-xs text-warning-strong">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   {t("workPackageBoq.missingPrices", { count: boq.missingPriceCount })}
                 </p>

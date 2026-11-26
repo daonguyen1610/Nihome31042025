@@ -16,7 +16,13 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
 import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
 import { validateContact } from "@/lib/validation";
-import { InlineWarning, PageLoading, PageError } from "@/components/PageState";
+import {
+  InlineWarning,
+  PageLoading,
+  PageError,
+  PageNoMatches,
+  ListSkeleton,
+} from "@/components/PageState";
 import { ActivityTimeline } from "@/components/admin/ActivityTimeline";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,17 +76,17 @@ const LEAD_STATUS_STYLES: Record<LeadStatus, string> = {
   Contacted: "border-warning/40 bg-warning-soft text-warning-strong",
   Interested: "border-success/30 bg-success-soft text-success-strong",
   NotInterested: "border-border bg-muted text-muted-foreground",
-  Converted: "border-green-300 bg-green-100 text-green-800",
+  Converted: "border-success/40 bg-success-soft text-success-strong",
   Junk: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const LEAD_STATUS_DOT: Record<LeadStatus, string> = {
-  New: "bg-sky-500",
-  Contacted: "bg-amber-500",
-  Interested: "bg-emerald-500",
+  New: "bg-info",
+  Contacted: "bg-warning",
+  Interested: "bg-success",
   NotInterested: "bg-muted-foreground",
-  Converted: "bg-green-600",
-  Junk: "bg-rose-500",
+  Converted: "bg-success",
+  Junk: "bg-destructive",
 };
 
 const emptyCreate: CreateLeadRequest = {
@@ -666,9 +672,20 @@ const AdminLeads = () => {
         </section>
 
         {loading ? (
-          <PageLoading />
+          <ListSkeleton />
         ) : error ? (
           <PageError message={error} onRetry={() => void fetchList()} />
+        ) : leads.length === 0 && Object.keys(listFilters).length > 0 ? (
+          <PageNoMatches
+            onClear={() => {
+              setSearchInput("");
+              setSearch("");
+              setStatusFilter("");
+              setSourceFilter("");
+              setSegmentFilter("");
+              setPage(1);
+            }}
+          />
         ) : leads.length === 0 ? (
           <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-sm text-muted-foreground">
             <div className="rounded-full bg-muted p-3">
@@ -676,7 +693,7 @@ const AdminLeads = () => {
             </div>
             <p>{t("leads.empty")}</p>
             {canManage && (
-              <Button size="sm" onClick={() => setCreating(true)}>
+              <Button size="sm" variant="outline" onClick={() => setCreating(true)}>
                 <Plus className="mr-1.5 h-4 w-4" /> {t("leads.new")}
               </Button>
             )}
@@ -684,7 +701,7 @@ const AdminLeads = () => {
         ) : (
           <div className="space-y-2">
             {/* Mobile / tablet card view (<lg) */}
-            <div className="grid gap-3 lg:hidden">
+            <div className="grid gap-3 xl:hidden">
               {leads.map((lead) => (
                 <article
                   key={lead.id}
@@ -779,7 +796,7 @@ const AdminLeads = () => {
             </div>
 
             {/* Desktop table (lg+) */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border xl:block">
               <table className="w-full divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -1429,8 +1446,8 @@ const AdminLeads = () => {
           )}
 
           {duplicate && (
-            <div className="space-y-2 rounded border border-amber-300 bg-warning-soft p-3 text-sm">
-              <p className="text-amber-900">
+            <div className="space-y-2 rounded border border-warning/40 bg-warning-soft p-3 text-sm">
+              <p className="text-warning-strong">
                 {t("leads.convert.duplicate.found")}{" "}
                 <span className="font-medium">
                   {duplicate.existingCustomerName} (#{duplicate.existingCustomerId})

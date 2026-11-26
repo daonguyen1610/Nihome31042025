@@ -203,7 +203,7 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex items-center gap-3">
           <Button asChild variant="outline" size="icon" className="rounded-full shrink-0">
             <Link to="/admin/activities">
@@ -211,7 +211,7 @@ const ActivityForm = ({ mode }: { mode: "create" | "edit" }) => {
             </Link>
           </Button>
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">
+            <h1 className="tracking-tight text-2xl font-semibold">
               {mode === "create" ? t("activities.addTitle") : t("activities.editTitle")}
             </h1>
             <p className="text-sm text-muted-foreground">{mode === "edit" && data.slug}</p>

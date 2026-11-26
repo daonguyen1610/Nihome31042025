@@ -132,9 +132,9 @@ const permitTypeIcon = (code?: string | null): LucideIcon => {
 const STATUS_BADGE: Record<PermitStatus, string> = {
   NotStarted: "border-border bg-muted/30 text-foreground",
   Preparing: "border-info/30 bg-info-soft text-info-strong",
-  Submitted: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  Submitted: "border-info/40 bg-info-soft text-info-strong",
   UnderReview: "border-warning/40 bg-warning-soft text-warning-strong",
-  NeedMoreDocs: "border-orange-200 bg-orange-50 text-orange-700",
+  NeedMoreDocs: "border-warning/40 bg-warning-soft text-warning-strong",
   Issued: "border-success/30 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
   Expired: "border-destructive/20 bg-destructive/10 text-destructive",
@@ -152,17 +152,17 @@ const formatDate = (iso?: string | null, lang: string = "vi"): string => {
 const permitTypeTone = (code?: string | null) => {
   const value = (code ?? "").toLowerCase();
   if (value.includes("pccc") || value.includes("fire"))
-    return "border-orange-200 bg-orange-50 text-orange-700";
+    return "border-warning/40 bg-warning-soft text-warning-strong";
   if (value.includes("dien") || value.includes("electric"))
     return "border-warning/40 bg-warning-soft text-warning-strong";
   if (value.includes("moi-truong") || value.includes("environment"))
     return "border-success/30 bg-success-soft text-success-strong";
   if (value.includes("nuoc") || value.includes("water"))
-    return "border-cyan-200 bg-cyan-50 text-cyan-700";
+    return "border-info/40 bg-info-soft text-info-strong";
   if (value.includes("via-he") || value.includes("an-toan") || value.includes("safety"))
-    return "border-lime-200 bg-lime-50 text-lime-700";
+    return "border-success/40 bg-success-soft text-success-strong";
   if (value.includes("hoan-cong") || value.includes("completion"))
-    return "border-indigo-200 bg-indigo-50 text-indigo-700";
+    return "border-info/40 bg-info-soft text-info-strong";
   if (value.includes("gpxd") || value.includes("xay-dung") || value.includes("building"))
     return "border-info/30 bg-info-soft text-info-strong";
   return "border-border/70 bg-muted/60 text-muted-foreground";
@@ -212,15 +212,15 @@ type NextTone = "danger" | "warning" | "info" | "success" | "muted";
 const NEXT_TONE: Record<NextTone, string> = {
   danger: "text-destructive",
   warning: "text-warning-strong",
-  info: "text-sky-800",
+  info: "text-info-strong",
   success: "text-success-strong",
   muted: "text-muted-foreground",
 };
 const NEXT_BANNER: Record<NextTone, string> = {
-  danger: "border-destructive/20 bg-destructive/10 text-rose-900",
-  warning: "border-warning/40 bg-warning-soft text-amber-900",
-  info: "border-info/30 bg-info-soft text-sky-900",
-  success: "border-success/30 bg-success-soft text-emerald-900",
+  danger: "border-destructive/20 bg-destructive/10 text-danger-strong",
+  warning: "border-warning/40 bg-warning-soft text-warning-strong",
+  info: "border-info/30 bg-info-soft text-info-strong",
+  success: "border-success/30 bg-success-soft text-success-strong",
   muted: "border-border bg-muted/30 text-foreground",
 };
 
@@ -834,16 +834,14 @@ const AdminPermits = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-3 md:p-4">
+      <div className="space-y-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex items-center gap-3">
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-primary/20 bg-primary/5 text-primary">
               <ShieldCheck className="h-5 w-5" aria-hidden="true" />
             </span>
             <div className="flex flex-col gap-1">
-              <h1 className="text-xl font-bold text-foreground md:text-2xl">
-                {t("permits.title")}
-              </h1>
+              <h1 className="text-foreground text-2xl font-semibold">{t("permits.title")}</h1>
               <p className="text-sm text-muted-foreground">{t("permits.subtitle")}</p>
             </div>
           </div>
@@ -876,7 +874,7 @@ const AdminPermits = () => {
         <section className="grid grid-cols-2 gap-2 md:grid-cols-4">
           <RiskCard
             title={t("permits.risk.overdue")}
-            value={risk.overdue}
+            value={loading ? "—" : risk.overdue}
             tone="rose"
             icon={<ShieldAlert className="h-4 w-4" />}
             onClick={() => {
@@ -887,7 +885,7 @@ const AdminPermits = () => {
           />
           <RiskCard
             title={t("permits.risk.dueSoon")}
-            value={risk.dueSoon}
+            value={loading ? "—" : risk.dueSoon}
             tone="amber"
             icon={<Clock className="h-4 w-4" />}
             onClick={() => {
@@ -898,7 +896,7 @@ const AdminPermits = () => {
           />
           <RiskCard
             title={t("permits.risk.expiringSoon")}
-            value={risk.expiringSoon}
+            value={loading ? "—" : risk.expiringSoon}
             tone="orange"
             icon={<AlertTriangle className="h-4 w-4" />}
             onClick={() => {
@@ -909,7 +907,7 @@ const AdminPermits = () => {
           />
           <RiskCard
             title={t("permits.risk.open")}
-            value={risk.totalOpen}
+            value={loading ? "—" : risk.totalOpen}
             tone="slate"
             icon={<FileCheck2 className="h-4 w-4" />}
           />
@@ -1094,7 +1092,7 @@ const AdminPermits = () => {
                     key={r.id}
                     className={cn(
                       "rounded-lg border bg-card p-3 shadow-sm",
-                      risky && "border-destructive/20 bg-rose-50/30",
+                      risky && "border-destructive/20 bg-danger-soft/30",
                     )}
                   >
                     <header className="flex items-start justify-between gap-2">
@@ -1202,7 +1200,7 @@ const AdminPermits = () => {
                         key={r.id}
                         className={cn(
                           "transition-colors",
-                          risky ? "bg-rose-50/30 hover:bg-rose-50/50" : "hover:bg-muted/70",
+                          risky ? "bg-danger-soft/30 hover:bg-danger-soft/50" : "hover:bg-muted/70",
                         )}
                       >
                         <td className="px-3 py-3 align-top">
@@ -1254,7 +1252,10 @@ const AdminPermits = () => {
                             </div>
                             <div className="h-1.5 overflow-hidden rounded bg-muted">
                               <div
-                                className="h-full bg-primary"
+                                className={cn(
+                                  "h-full",
+                                  r.progressPercent >= 100 ? "bg-success" : "bg-info",
+                                )}
                                 style={{ width: `${r.progressPercent}%` }}
                               />
                             </div>
@@ -1524,7 +1525,7 @@ const AdminPermits = () => {
                   <PermitDocumentField
                     permitId={editing.id}
                     label={t("permits.document.issuedPermit")}
-                    icon={<BadgeCheck className="h-4 w-4 text-emerald-600" aria-hidden="true" />}
+                    icon={<BadgeCheck className="h-4 w-4 text-success-strong" aria-hidden="true" />}
                     path={editing.issuedFilePath}
                     uploadFile={(file) => uploadPermitFile(editing.id, "IssuedPermit", file)}
                     onUploaded={() => refreshPermitAfterUpload(editing.id)}
@@ -1719,7 +1720,7 @@ const AdminPermits = () => {
                       />
                       <div className="flex flex-wrap justify-end gap-2">
                         <Button
-                          variant="destructive"
+                          variant="destructiveOutline"
                           disabled={taskSaving || !taskRejectReason.trim()}
                           onClick={() => void decideViewedTask(false)}
                         >
@@ -1758,7 +1759,7 @@ const AdminPermits = () => {
                 <PermitDocumentField
                   permitId={viewing.id}
                   label={t("permits.document.issuedPermit")}
-                  icon={<BadgeCheck className="h-4 w-4 text-emerald-600" aria-hidden="true" />}
+                  icon={<BadgeCheck className="h-4 w-4 text-success-strong" aria-hidden="true" />}
                   path={viewing.issuedFilePath}
                   uploadFile={(file) => uploadPermitFile(viewing.id, "IssuedPermit", file)}
                   onUploaded={() => refreshPermitAfterUpload(viewing.id)}
@@ -1937,16 +1938,16 @@ const RiskCard = ({
   active,
 }: {
   title: string;
-  value: number;
+  value: number | string;
   tone: "rose" | "amber" | "orange" | "slate";
   icon: React.ReactNode;
   onClick?: () => void;
   active?: boolean;
 }) => {
   const tones: Record<typeof tone, string> = {
-    rose: "border-destructive/20 bg-rose-50/60 text-rose-800",
-    amber: "border-warning/40 bg-amber-50/60 text-warning-strong",
-    orange: "border-orange-200 bg-orange-50/60 text-orange-800",
+    rose: "border-destructive/20 bg-danger-soft/60 text-danger-strong",
+    amber: "border-warning/40 bg-warning-soft/60 text-warning-strong",
+    orange: "border-warning/40 bg-warning-soft/60 text-warning-strong",
     slate: "border-border bg-muted/30 text-foreground",
   };
   const className = cn(
@@ -2006,7 +2007,7 @@ const RiskPills = ({
       {row.isExpiringSoon ? (
         <Badge
           variant="outline"
-          className="gap-1 border-orange-200 bg-orange-50 text-orange-700 whitespace-nowrap"
+          className="gap-1 border-warning/40 bg-warning-soft text-warning-strong whitespace-nowrap"
         >
           <Clock className="h-3 w-3" aria-hidden="true" />
           {t("permits.risk.expiringSoonPill")}

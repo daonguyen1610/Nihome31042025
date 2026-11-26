@@ -120,7 +120,7 @@ function AvailabilityNotice({
   if (availability === "Available") return null;
   return (
     <div
-      className="border-l-2 border-amber-400 bg-amber-50/60 px-3 py-2.5 text-sm text-amber-950 dark:bg-amber-950/20 dark:text-amber-100"
+      className="border-l-2 border-warning/40 bg-warning-soft/60 px-3 py-2.5 text-sm text-warning-strong dark:bg-warning/20 dark:text-amber-100"
       role="status"
     >
       <p className="font-medium text-foreground">{t("projectReports.unavailable")}</p>
@@ -261,7 +261,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
             {partial && (
               <Badge
                 variant="outline"
-                className="border-amber-300 text-warning-strong"
+                className="border-warning/40 text-warning-strong"
                 title={t("projectReports.partialDataHelp")}
               >
                 {t("projectReports.partialData")}
@@ -537,7 +537,7 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
           <AvailabilityNotice availability={report.contractualFinance.availability} />
           {report.contractualFinance.availability === "Available" && (
             <div className="space-y-4">
-              <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
+              <div className="rounded-md border border-info/40 bg-info-soft p-3 text-sm text-info-strong dark:border-info/40 dark:bg-info/30 dark:text-blue-100">
                 <p className="font-medium">{t("projectReports.finance.contractualOnly")}</p>
                 <p className="mt-1">{t("projectReports.finance.notCashRevenue")}</p>
               </div>
@@ -592,11 +592,11 @@ function ProjectReportCard({ report }: { report: ProjectOperationalReportRespons
 
         {unavailableGroups.length > 0 && (
           <section
-            className="border-t border-warning/40 pt-4 dark:border-amber-900"
+            className="border-t border-warning/40 pt-4 dark:border-warning/40"
             aria-labelledby={`project-report-data-quality-${projectValue}`}
           >
             <div className="flex items-start gap-3">
-              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden />
+              <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning-strong" aria-hidden />
               <div>
                 <h3 id={`project-report-data-quality-${projectValue}`} className="font-semibold">
                   {t("projectReports.unavailableMetrics", {
@@ -725,7 +725,7 @@ export default function ProjectReports() {
             <p className="text-xs font-semibold uppercase tracking-wider text-primary">
               {t("projectReports.eyebrow")}
             </p>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight sm:text-3xl">
+            <h1 className="mt-1 tracking-tight text-2xl font-semibold">
               {t("projectReports.title")}
             </h1>
             <p className="mt-2 max-w-3xl text-sm text-muted-foreground">

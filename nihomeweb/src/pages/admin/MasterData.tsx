@@ -297,7 +297,7 @@ const MasterData = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div className="min-w-0">
             <h1 className="text-2xl font-semibold">{t("masterData.title")}</h1>
@@ -403,7 +403,7 @@ const MasterData = () => {
             )}
 
             {/* Mobile / tablet card view (<lg) */}
-            <ul className="grid gap-3 lg:hidden">
+            <ul className="grid gap-3 xl:hidden">
               {filtered.map((o) => (
                 <li key={o.id} className="rounded-lg border bg-card p-3 shadow-sm">
                   <div className="flex items-start justify-between gap-2">
@@ -428,7 +428,7 @@ const MasterData = () => {
                     </div>
                     {o.isActive ? (
                       <Check
-                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        className="h-4 w-4 shrink-0 text-success-strong"
                         aria-label={t("masterData.field.isActive")}
                       />
                     ) : (
@@ -470,7 +470,7 @@ const MasterData = () => {
             </ul>
 
             {/* Desktop table (lg+) */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border xl:block">
               <table className="w-full min-w-[900px] divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>

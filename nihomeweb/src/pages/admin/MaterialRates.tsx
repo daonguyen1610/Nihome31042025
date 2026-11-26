@@ -66,7 +66,7 @@ const STATUS_STYLES: Record<MaterialRateRevisionStatus, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
   Approved: "border-success/30 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
-  Retired: "border-zinc-200 bg-zinc-100 text-zinc-600",
+  Retired: "border-border bg-muted text-muted-foreground",
 };
 
 const catalogType = "InvestmentRate";
@@ -787,7 +787,7 @@ const AdminMaterialRates = () => {
         <MaterialRatesNav active={"investment"} />
 
         <section className="overflow-hidden rounded-xl border bg-card shadow-sm">
-          <div className="border-b bg-gradient-to-r from-primary/10 via-primary/5 to-transparent px-4 py-4 sm:px-5">
+          <div className="border-b bg-muted/40 px-4 py-4 sm:px-5">
             <div className="flex items-start gap-3">
               <div className="rounded-lg bg-primary p-2 text-primary-foreground">
                 <Calculator className="h-5 w-5" />
@@ -819,7 +819,7 @@ const AdminMaterialRates = () => {
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold",
                       complete
-                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        ? "border-success/40 bg-success text-white"
                         : active
                           ? "border-primary bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground",
@@ -991,7 +991,7 @@ const AdminMaterialRates = () => {
                       </Button>
                       <Button
                         size="sm"
-                        variant="destructive"
+                        variant="destructiveOutline"
                         data-testid="material-rates-delete-catalog"
                         onClick={() => {
                           setDeleteCatalogError(null);
@@ -1202,7 +1202,7 @@ const AdminMaterialRates = () => {
                                   data-testid="material-rates-selected-file"
                                 >
                                   <div className="flex min-w-0 flex-1 items-center gap-2">
-                                    <FileCheck2 className="h-5 w-5 shrink-0 text-emerald-600" />
+                                    <FileCheck2 className="h-5 w-5 shrink-0 text-success-strong" />
                                     <div className="min-w-0 flex-1">
                                       <p className="break-all text-sm font-medium">
                                         {pendingImportFile.name}
@@ -1223,7 +1223,7 @@ const AdminMaterialRates = () => {
                                   </Button>
                                 </div>
                               )}
-                              <div className="mt-3 flex gap-2 rounded-md border border-amber-300/70 bg-warning-soft p-3 text-xs leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+                              <div className="mt-3 flex gap-2 rounded-md border border-warning/70 bg-warning-soft p-3 text-xs leading-relaxed text-warning-strong dark:border-warning/40 dark:bg-warning/30 dark:text-amber-100">
                                 <Info className="mt-0.5 h-4 w-4 shrink-0" />
                                 <span>{t("materialRates.import.replaceWarning")}</span>
                               </div>
@@ -1231,7 +1231,7 @@ const AdminMaterialRates = () => {
                           )}
 
                           {importedCount !== null && (
-                            <div className="flex flex-col gap-3 rounded-md border border-emerald-300 bg-success-soft p-3 text-emerald-950 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
+                            <div className="flex flex-col gap-3 rounded-md border border-success/40 bg-success-soft p-3 text-success-strong dark:border-success/40 dark:bg-success/30 dark:text-emerald-100 sm:flex-row sm:items-center sm:justify-between">
                               <div className="flex gap-2">
                                 <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0" />
                                 <div>
@@ -1628,7 +1628,7 @@ const AdminMaterialRates = () => {
               })}
             </DialogDescription>
           </DialogHeader>
-          <div className="rounded-md border border-amber-300/70 bg-warning-soft p-3 text-sm leading-relaxed text-amber-950 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-100">
+          <div className="rounded-md border border-warning/70 bg-warning-soft p-3 text-sm leading-relaxed text-warning-strong dark:border-warning/40 dark:bg-warning/30 dark:text-amber-100">
             {t("materialRates.import.replaceWarning")}
           </div>
           <DialogFooter>

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Clock, Globe2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { MoneyInput } from "@/components/ui/money-input";
 import { Label } from "@/components/ui/label";
 import { PageError, PageLoading } from "@/components/PageState";
 import { SearchableSelect } from "@/components/ui/searchable-select";
@@ -193,14 +193,10 @@ const DisplaySettingsTab = () => {
             <Label htmlFor="display-rate">{t("settings.display.exchangeRate")}</Label>
             <div className="flex items-center gap-2">
               <span className="text-sm text-muted-foreground">1 USD =</span>
-              <Input
+              <MoneyInput
                 id="display-rate"
-                type="number"
-                min={1}
-                step={1}
-                inputMode="decimal"
-                value={usdVndRate}
-                onChange={(event) => setUsdVndRate(event.target.value)}
+                value={Number(usdVndRate) || 0}
+                onChange={(next) => setUsdVndRate(String(next))}
                 disabled={!canManage || saving}
                 aria-invalid={!rateValid}
                 aria-describedby={rateValid ? "display-rate-hint" : "display-rate-error"}

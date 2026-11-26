@@ -1000,8 +1000,8 @@ export function RfqBatchAwardForm({
         />
       </RfqField>
       {needsOverride && (
-        <section className="border-l-4 border-amber-500 bg-warning-soft p-3">
-          <p className="mb-2 text-sm font-medium text-amber-900">
+        <section className="border-l-4 border-warning/40 bg-warning-soft p-3">
+          <p className="mb-2 text-sm font-medium text-warning-strong">
             {t("rfq.award.overrideWarning")}
           </p>
           <RfqField label={t("rfq.award.overrideReason")}>

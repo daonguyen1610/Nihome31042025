@@ -61,8 +61,8 @@ import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 
 const STAGE_BADGE: Record<DesignProjectStage, string> = {
   Concept: "border-info/30 bg-info-soft text-info-strong",
-  BasicDesign: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  ShopDrawing: "border-violet-200 bg-violet-50 text-violet-700",
+  BasicDesign: "border-info/40 bg-info-soft text-info-strong",
+  ShopDrawing: "border-info/40 bg-info-soft text-info-strong",
   Completed: "border-success/30 bg-success-soft text-success-strong",
 };
 
@@ -504,12 +504,10 @@ const AdminDesignProjects = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-3 md:p-4">
+      <div className="space-y-4">
         <header className="flex flex-wrap items-start justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <h1 className="text-xl font-bold text-foreground md:text-2xl">
-              {t("designProjects.title")}
-            </h1>
+            <h1 className="text-foreground text-2xl font-semibold">{t("designProjects.title")}</h1>
             <p className="text-sm text-muted-foreground">{t("designProjects.subtitle")}</p>
           </div>
           {canCreate ? (

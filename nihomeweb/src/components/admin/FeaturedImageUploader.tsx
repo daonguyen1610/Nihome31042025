@@ -56,7 +56,7 @@ const FeaturedImageUploader = ({
             onError={(e) => ((e.target as HTMLImageElement).src = "/placeholder.svg")}
           />
           {pendingPreview && (
-            <span className="absolute top-2 left-2 text-xs px-2 py-1 rounded bg-amber-500 text-white font-bold uppercase tracking-wider">
+            <span className="absolute top-2 left-2 text-xs px-2 py-1 rounded bg-warning text-white font-bold uppercase tracking-wider">
               {t("media.featured.pendingBadge")}
             </span>
           )}
@@ -75,7 +75,7 @@ const FeaturedImageUploader = ({
                 type="button"
                 onClick={onClearPending}
                 disabled={disabled}
-                className="inline-flex items-center justify-center px-2 py-1.5 text-xs font-bold rounded-md bg-card/90 text-red-600 hover:bg-card"
+                className="inline-flex items-center justify-center px-2 py-1.5 text-xs font-bold rounded-md bg-card/90 text-danger-strong hover:bg-card"
                 aria-label={t("media.featured.cancelPending")}
               >
                 <X className="w-3.5 h-3.5" />
@@ -97,7 +97,7 @@ const FeaturedImageUploader = ({
       )}
 
       {pendingFileName && (
-        <p className="text-xs text-amber-600 font-medium">
+        <p className="text-xs text-warning-strong font-medium">
           {t("media.featured.pendingHint").replace("{name}", pendingFileName)}
         </p>
       )}

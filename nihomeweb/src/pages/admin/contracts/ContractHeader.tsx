@@ -64,7 +64,7 @@ export const ContractHeader = ({
             </Link>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-xl font-bold text-foreground md:text-2xl">
+            <h1 className="truncate text-foreground text-2xl font-semibold">
               {contract.contractNumber}
             </h1>
             <Badge className={cn("border capitalize", STATUS_STYLES[contract.status])}>
@@ -134,7 +134,7 @@ export const ContractHeader = ({
           <div className="text-xs text-success-strong">
             {t("contracts.detail.header.currentValue")}
           </div>
-          <div className="mt-1 text-lg font-bold text-emerald-900">
+          <div className="mt-1 text-lg font-bold text-success-strong">
             {formatMoney(contract.currentValue, contract.currency)}
           </div>
         </div>

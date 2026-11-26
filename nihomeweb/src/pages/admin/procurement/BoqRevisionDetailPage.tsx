@@ -69,7 +69,7 @@ const statusClass: Record<string, string> = {
   Draft: "border-border bg-muted/30 text-foreground",
   Submitted: "border-info/30 bg-info-soft text-info-strong",
   Approved: "border-success/30 bg-success-soft text-success-strong",
-  TenderApproved: "border-teal-200 bg-teal-50 text-teal-700",
+  TenderApproved: "border-success/40 bg-success-soft text-success-strong",
   Rejected: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
@@ -423,7 +423,7 @@ const BoqRevisionDetailPage = () => {
                   {t("procurement.action.approve")}
                 </Button>
                 <Button
-                  variant="destructive"
+                  variant="destructiveOutline"
                   onClick={() => {
                     setFormError(null);
                     setDecisionReason("");
@@ -656,7 +656,7 @@ const BoqRevisionDetailPage = () => {
               ))}
             </ol>
             {boq.decisionReason && (
-              <div className="border-l-2 border-rose-400 pl-3">
+              <div className="border-l-2 border-danger/40 pl-3">
                 <p className="text-xs font-medium text-muted-foreground">
                   {t("procurement.field.decisionReason")}
                 </p>
@@ -741,7 +741,7 @@ const BoqRevisionDetailPage = () => {
             <DialogDescription>{t("boqWorkbook.contractConvert.hint")}</DialogDescription>
           </DialogHeader>
           {upstreamContracts.length === 0 ? (
-            <p className="rounded-md border border-amber-300 bg-warning-soft p-3 text-sm text-amber-900">
+            <p className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong">
               {t("boqWorkbook.contractConvert.noContract")}
             </p>
           ) : (

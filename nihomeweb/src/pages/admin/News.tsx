@@ -128,7 +128,7 @@ const AdminNews = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("adminNews.title")}</h1>
@@ -247,7 +247,7 @@ const AdminNews = () => {
                               {label && (
                                 <Badge
                                   variant="outline"
-                                  className="mt-1 whitespace-normal border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                                  className="mt-1 whitespace-normal border-border bg-muted font-medium text-foreground"
                                 >
                                   {label}
                                 </Badge>
@@ -365,7 +365,7 @@ const AdminNews = () => {
                                 <Badge
                                   variant="outline"
                                   className={cn(
-                                    "whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700",
+                                    "whitespace-nowrap font-medium border-border bg-muted text-foreground",
                                   )}
                                 >
                                   {label}

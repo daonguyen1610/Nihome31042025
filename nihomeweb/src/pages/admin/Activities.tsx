@@ -128,7 +128,7 @@ const AdminActivities = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("activities.title")}</h1>
@@ -213,7 +213,7 @@ const AdminActivities = () => {
                 />
 
                 {/* Mobile / tablet card view (<lg) */}
-                <ul className="grid gap-3 lg:hidden">
+                <ul className="grid gap-3 xl:hidden">
                   {filtered.map((a) => {
                     const label = resolveCategoryLabel(
                       a.categoryId,
@@ -247,7 +247,7 @@ const AdminActivities = () => {
                               {label && (
                                 <Badge
                                   variant="outline"
-                                  className="mt-1 whitespace-normal border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                                  className="mt-1 whitespace-normal border-border bg-muted font-medium text-foreground"
                                 >
                                   {label}
                                 </Badge>
@@ -301,7 +301,7 @@ const AdminActivities = () => {
                 </ul>
 
                 {/* Desktop table (lg+) */}
-                <div className="hidden overflow-x-auto rounded-lg border lg:block">
+                <div className="hidden overflow-x-auto rounded-lg border xl:block">
                   <table className="min-w-[800px] w-full divide-y text-sm">
                     <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>
@@ -370,7 +370,7 @@ const AdminActivities = () => {
                                 <Badge
                                   variant="outline"
                                   className={cn(
-                                    "whitespace-nowrap font-medium border-indigo-200 bg-indigo-50 text-indigo-700",
+                                    "whitespace-nowrap font-medium border-border bg-muted text-foreground",
                                   )}
                                 >
                                   {label}

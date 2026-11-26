@@ -207,7 +207,7 @@ export const RequestPanel = ({
       }
     />
     {!hasApprovedBoq && (
-      <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-warning-strong">
+      <p className="mb-4 border-l-2 border-warning/40 px-3 text-sm text-warning-strong">
         {t("procurement.request.requiresBoq")}
       </p>
     )}
@@ -376,7 +376,7 @@ export const ContractLinesPanel = ({
       }
     />
     {!hasDependencies && (
-      <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-warning-strong">
+      <p className="mb-4 border-l-2 border-warning/40 px-3 text-sm text-warning-strong">
         {t("procurement.contractLine.requiresData")}
       </p>
     )}
@@ -679,7 +679,7 @@ export const RatingsPanel = ({
       }
     />
     {!hasContracts && (
-      <p className="mb-4 border-l-2 border-amber-400 px-3 text-sm text-warning-strong">
+      <p className="mb-4 border-l-2 border-warning/40 px-3 text-sm text-warning-strong">
         {t("procurement.rating.requiresContract")}
       </p>
     )}

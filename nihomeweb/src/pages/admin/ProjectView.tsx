@@ -63,7 +63,7 @@ const ProjectView = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Button asChild variant="outline" size="icon" className="rounded-full shrink-0">
@@ -75,7 +75,7 @@ const ProjectView = () => {
               <p className="text-xs font-medium uppercase tracking-wide text-primary">
                 {t("proj.detail")}
               </p>
-              <h1 className="text-2xl font-semibold tracking-tight lg:text-3xl">{project.name}</h1>
+              <h1 className="tracking-tight text-2xl font-semibold">{project.name}</h1>
             </div>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -185,13 +185,13 @@ const ProjectView = () => {
                     "gap-1.5 whitespace-nowrap font-medium",
                     project.status === "ongoing"
                       ? "border-warning/40 bg-warning-soft text-warning-strong"
-                      : "border-green-300 bg-green-100 text-green-800",
+                      : "border-success/40 bg-success-soft text-success-strong",
                   )}
                 >
                   <span
                     className={cn(
                       "h-1.5 w-1.5 rounded-full",
-                      project.status === "ongoing" ? "bg-amber-500" : "bg-green-600",
+                      project.status === "ongoing" ? "bg-warning" : "bg-success",
                     )}
                   />
                   {project.status === "ongoing" ? t("proj.ongoing") : t("proj.completed")}

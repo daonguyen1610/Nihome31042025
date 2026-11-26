@@ -66,7 +66,7 @@ const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
   Submitted: "border-info/30 bg-info-soft text-info-strong",
   Won: "border-success/30 bg-success-soft text-success-strong",
   Lost: "border-destructive/20 bg-destructive/10 text-destructive",
-  Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
+  Cancelled: "border-border bg-muted text-muted-foreground",
 };
 
 /** Fields the tender form requires, in the order they appear. */

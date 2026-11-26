@@ -547,7 +547,7 @@ const DepartmentWorkPackages = () => {
             ref={approvalNoticeRef}
             role={approvalFeedback.failed ? "alert" : "status"}
             data-testid="approval-email-feedback"
-            className={`rounded-lg border p-4 text-sm ${approvalFeedback.failed ? "border-destructive text-destructive" : "border-emerald-300 bg-success-soft text-emerald-900"}`}
+            className={`rounded-lg border p-4 text-sm ${approvalFeedback.failed ? "border-destructive text-destructive" : "border-success/40 bg-success-soft text-success-strong"}`}
           >
             {approvalFeedback.message}
           </div>
@@ -564,7 +564,7 @@ const DepartmentWorkPackages = () => {
               <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="min-w-0 space-y-2">
                   <div className="flex flex-wrap items-center gap-2">
-                    <h1 className="min-w-0 max-w-full text-2xl font-bold [overflow-wrap:anywhere]">
+                    <h1 className="min-w-0 max-w-full [overflow-wrap:anywhere] text-2xl font-semibold">
                       {detail.code} · {detail.name}
                     </h1>
                     <Badge className={statusTone[detail.status]} variant="outline">
@@ -703,7 +703,7 @@ const DepartmentWorkPackages = () => {
                           <span
                             className={cn(
                               step.state === "current" && "font-medium text-foreground",
-                              step.state === "blocked" && "text-amber-900",
+                              step.state === "blocked" && "text-warning-strong",
                               step.state === "pending" && "text-muted-foreground",
                             )}
                           >
@@ -777,7 +777,7 @@ const DepartmentWorkPackages = () => {
                   {detail.completionBlockers.length > 0 && (
                     <div
                       id="work-package-completion-blockers"
-                      className="border-t border-warning/40 bg-warning-soft p-4 text-sm text-amber-900"
+                      className="border-t border-warning/40 bg-warning-soft p-4 text-sm text-warning-strong"
                     >
                       <p className="flex items-center gap-2 font-medium">
                         <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
@@ -1431,7 +1431,7 @@ const DepartmentWorkPackages = () => {
                   <ListChecks className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <div>
-                  <h1 className="text-3xl font-bold">{t(activeSubPage.titleKey)}</h1>
+                  <h1 className="text-2xl font-semibold">{t(activeSubPage.titleKey)}</h1>
                   <p className="mt-1 text-muted-foreground">{t(activeSubPage.descriptionKey)}</p>
                 </div>
               </div>

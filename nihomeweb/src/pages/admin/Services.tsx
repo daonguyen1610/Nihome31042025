@@ -155,7 +155,7 @@ function SectionsEditor({
   return (
     <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-        <span className="w-1 h-4 rounded-full bg-rose-500" />
+        <span className="w-1 h-4 rounded-full bg-destructive" />
         {t("svc.admin.sections")}
         <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal text-xs">
           {form.sections.length}
@@ -167,7 +167,7 @@ function SectionsEditor({
           <div key={si} className="rounded-xl border border-border bg-muted/30 p-4">
             {/* Section header row */}
             <div className="flex items-center gap-2 mb-3">
-              <span className="w-6 h-6 rounded-full bg-rose-100 text-destructive text-xs font-bold flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-danger-soft text-destructive text-xs font-bold flex items-center justify-center shrink-0">
                 {si + 1}
               </span>
               <input
@@ -175,7 +175,7 @@ function SectionsEditor({
                 value={sec.heading}
                 onChange={(e) => updateSectionHeading(si, e.target.value)}
                 placeholder={t("svc.admin.sectionHeadingPh")}
-                className="flex-1 px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                className="flex-1 px-3 py-2 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
               />
               <button
                 type="button"
@@ -191,13 +191,13 @@ function SectionsEditor({
             <div className="ml-8 space-y-2">
               {sec.body.map((bullet, bi) => (
                 <div key={bi} className="flex items-center gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-destructive shrink-0" />
                   <input
                     aria-label={t("a11yUi.bullet")}
                     value={bullet}
                     onChange={(e) => updateBullet(si, bi, e.target.value)}
                     placeholder={t("svc.admin.bulletPh")}
-                    className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                    className="flex-1 px-3 py-1.5 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                   />
                   <button
                     type="button"
@@ -213,7 +213,7 @@ function SectionsEditor({
               <button
                 type="button"
                 onClick={() => addBullet(si)}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-input text-xs font-semibold text-muted-foreground hover:border-rose-400 hover:text-destructive hover:bg-rose-50/40 transition"
+                className="w-full flex items-center justify-center gap-1.5 py-1.5 rounded-lg border border-dashed border-input text-xs font-semibold text-muted-foreground hover:border-danger/40 hover:text-destructive hover:bg-danger-soft/40 transition"
               >
                 {t("svc.admin.addBullet")}
               </button>
@@ -224,7 +224,7 @@ function SectionsEditor({
         <button
           type="button"
           onClick={addSection}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:border-rose-400 hover:text-destructive hover:bg-rose-50/40 transition"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:border-danger/40 hover:text-destructive hover:bg-danger-soft/40 transition"
         >
           {t("svc.admin.addSection")}
         </button>
@@ -296,7 +296,7 @@ function IntroBlocksEditor({
   return (
     <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
       <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-        <span className="w-1 h-4 rounded-full bg-rose-500" />
+        <span className="w-1 h-4 rounded-full bg-destructive" />
         {t("svc.admin.introBlocks")}
         <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal text-xs">
           {form.introBlocks.length}
@@ -307,7 +307,7 @@ function IntroBlocksEditor({
         {form.introBlocks.map((block, i) => (
           <div key={i} className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
             <div className="flex items-center gap-2">
-              <span className="w-6 h-6 rounded-full bg-rose-100 text-destructive text-xs font-bold flex items-center justify-center shrink-0">
+              <span className="w-6 h-6 rounded-full bg-danger-soft text-destructive text-xs font-bold flex items-center justify-center shrink-0">
                 {i + 1}
               </span>
               <span className="text-xs font-semibold text-muted-foreground flex-1">
@@ -330,7 +330,7 @@ function IntroBlocksEditor({
               onChange={(e) => updateText(i, e.target.value)}
               placeholder={t("svc.admin.introBlockTextPh")}
               rows={3}
-              className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition resize-none"
+              className="w-full px-3 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition resize-none"
             />
 
             {/* Image */}
@@ -358,7 +358,7 @@ function IntroBlocksEditor({
                   type="button"
                   disabled={block.uploading}
                   onClick={() => fileInputRefs.current[i]?.click()}
-                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-input text-xs font-semibold text-muted-foreground hover:border-rose-400 hover:text-destructive hover:bg-rose-50/40 disabled:opacity-50 transition"
+                  className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-dashed border-input text-xs font-semibold text-muted-foreground hover:border-danger/40 hover:text-destructive hover:bg-danger-soft/40 disabled:opacity-50 transition"
                 >
                   {block.uploading ? (
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
@@ -373,7 +373,7 @@ function IntroBlocksEditor({
                 type="button"
                 disabled={block.uploading}
                 onClick={() => fileInputRefs.current[i]?.click()}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-xs font-semibold text-muted-foreground hover:border-rose-400 hover:text-destructive hover:bg-rose-50/40 disabled:opacity-50 transition"
+                className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-xs font-semibold text-muted-foreground hover:border-danger/40 hover:text-destructive hover:bg-danger-soft/40 disabled:opacity-50 transition"
               >
                 {block.uploading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
@@ -402,7 +402,7 @@ function IntroBlocksEditor({
         <button
           type="button"
           onClick={addBlock}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:border-rose-400 hover:text-destructive hover:bg-rose-50/40 transition"
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:border-danger/40 hover:text-destructive hover:bg-danger-soft/40 transition"
         >
           {t("svc.admin.addIntroBlock")}
         </button>
@@ -563,7 +563,7 @@ const AdminServices = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         {/* Page header */}
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -628,7 +628,7 @@ const AdminServices = () => {
             {/* Mobile / tablet card view (<lg). Full row is clickable so
                 users can tap the card to open the preview dialog; per-row
                 buttons and the checkbox stopPropagation. */}
-            <ul className="grid gap-3 lg:hidden">
+            <ul className="grid gap-3 xl:hidden">
               {filtered.map((s) => (
                 <li
                   key={s.id}
@@ -655,7 +655,7 @@ const AdminServices = () => {
                     </div>
                     <Badge
                       variant="outline"
-                      className="shrink-0 whitespace-nowrap border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                      className="shrink-0 whitespace-nowrap border-border bg-muted font-medium text-foreground"
                     >
                       {s.shortTitle}
                     </Badge>
@@ -703,7 +703,7 @@ const AdminServices = () => {
             </ul>
 
             {/* Desktop table (lg+) */}
-            <div className="hidden overflow-x-auto rounded-lg border lg:block">
+            <div className="hidden overflow-x-auto rounded-lg border xl:block">
               <table className="min-w-[800px] w-full divide-y text-sm">
                 <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                   <tr>
@@ -751,7 +751,7 @@ const AdminServices = () => {
                       <td className="whitespace-nowrap px-3 py-3">
                         <Badge
                           variant="outline"
-                          className="whitespace-nowrap border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                          className="whitespace-nowrap border-border bg-muted font-medium text-foreground"
                         >
                           {s.shortTitle}
                         </Badge>
@@ -826,16 +826,16 @@ const AdminServices = () => {
         >
           <DialogContent className="admin-scope max-w-2xl max-h-[92vh] flex flex-col p-0 gap-0 overflow-hidden rounded-2xl border-0 shadow-2xl">
             {/* Gradient header */}
-            <DialogHeader className="relative px-6 py-5 text-left space-y-1 bg-gradient-to-br from-rose-500 via-rose-500 to-orange-500 text-white">
+            <DialogHeader className="relative px-6 py-5 text-left space-y-1 border-b">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-card/15 backdrop-blur flex items-center justify-center shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-muted flex items-center justify-center shrink-0">
                   {isEditing ? <Pencil className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                 </div>
                 <div className="min-w-0">
                   <DialogTitle className="text-lg sm:text-xl font-extrabold tracking-tight">
                     {isEditing ? t("svc.admin.editTitle") : t("svc.admin.createTitle")}
                   </DialogTitle>
-                  <DialogDescription className="text-white/85 text-xs sm:text-sm mt-0.5">
+                  <DialogDescription className="text-muted-foreground text-xs sm:text-sm mt-0.5">
                     {t("svc.admin.title")}
                   </DialogDescription>
                 </div>
@@ -847,14 +847,14 @@ const AdminServices = () => {
                 {/* Basic info */}
                 <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    <span className="w-1 h-4 rounded-full bg-destructive" />
                     {t("svc.admin.basicInfo")}
                   </h3>
                   <div className="space-y-4">
                     {/* Title */}
                     <div>
                       <label className="block text-sm font-semibold text-foreground mb-1.5">
-                        {t("form.title")} <span className="text-rose-500">*</span>
+                        {t("form.title")} <span className="text-danger-strong">*</span>
                       </label>
                       <input
                         aria-label={t("form.title")}
@@ -867,7 +867,7 @@ const AdminServices = () => {
                             slug: f.id == null ? slugify(title) : f.slug,
                           }));
                         }}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                         required
                         autoFocus
                       />
@@ -876,13 +876,13 @@ const AdminServices = () => {
                     {/* Short title */}
                     <div>
                       <label className="block text-sm font-semibold text-foreground mb-1.5">
-                        {t("svc.admin.shortTitle")} <span className="text-rose-500">*</span>
+                        {t("svc.admin.shortTitle")} <span className="text-danger-strong">*</span>
                       </label>
                       <input
                         aria-label={t("a11yUi.shortTitle")}
                         value={form.shortTitle}
                         onChange={(e) => setForm((f) => ({ ...f, shortTitle: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                         required
                       />
                     </div>
@@ -890,13 +890,13 @@ const AdminServices = () => {
                     {/* Slug */}
                     <div>
                       <label className="block text-sm font-semibold text-foreground mb-1.5">
-                        {t("svc.admin.slug")} <span className="text-rose-500">*</span>
+                        {t("svc.admin.slug")} <span className="text-danger-strong">*</span>
                       </label>
                       <input
                         aria-label={t("a11yUi.slug")}
                         value={form.slug}
                         onChange={(e) => setForm((f) => ({ ...f, slug: e.target.value }))}
-                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground font-mono placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                        className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground font-mono placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                         required
                       />
                     </div>
@@ -905,13 +905,13 @@ const AdminServices = () => {
                     <div className="grid grid-cols-3 gap-3">
                       <div className="col-span-2">
                         <label className="block text-sm font-semibold text-foreground mb-1.5">
-                          {t("svc.admin.tagline")} <span className="text-rose-500">*</span>
+                          {t("svc.admin.tagline")} <span className="text-danger-strong">*</span>
                         </label>
                         <input
                           aria-label={t("a11yUi.tagline")}
                           value={form.tagline}
                           onChange={(e) => setForm((f) => ({ ...f, tagline: e.target.value }))}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                           required
                         />
                       </div>
@@ -926,7 +926,7 @@ const AdminServices = () => {
                           onChange={(e) =>
                             setForm((f) => ({ ...f, sortOrder: Number(e.target.value) }))
                           }
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                         />
                       </div>
                     </div>
@@ -936,7 +936,7 @@ const AdminServices = () => {
                 {/* Intro */}
                 <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    <span className="w-1 h-4 rounded-full bg-destructive" />
                     {t("svc.admin.intro")}
                   </h3>
                   <textarea
@@ -944,7 +944,7 @@ const AdminServices = () => {
                     value={form.intro}
                     onChange={(e) => setForm((f) => ({ ...f, intro: e.target.value }))}
                     rows={4}
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition resize-none"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition resize-none"
                     required
                   />
                 </section>
@@ -952,7 +952,7 @@ const AdminServices = () => {
                 {/* Highlights */}
                 <section className="bg-card rounded-2xl border border-border p-5 shadow-sm">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-4 flex items-center gap-2">
-                    <span className="w-1 h-4 rounded-full bg-rose-500" />
+                    <span className="w-1 h-4 rounded-full bg-destructive" />
                     {t("svc.admin.highlights")}
                     <span className="ml-auto text-muted-foreground font-normal normal-case tracking-normal text-xs">
                       {form.highlights.length}
@@ -972,7 +972,7 @@ const AdminServices = () => {
                             }));
                           }}
                           placeholder={t("svc.admin.highlightPh")}
-                          className="flex-1 px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-rose-500 focus:ring-4 focus:ring-rose-500/15 transition"
+                          className="flex-1 px-3.5 py-2.5 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-danger/40 focus:ring-4 focus:ring-rose-500/15 transition"
                         />
                         <button
                           type="button"
@@ -992,7 +992,7 @@ const AdminServices = () => {
                     <button
                       type="button"
                       onClick={() => setForm((f) => ({ ...f, highlights: [...f.highlights, ""] }))}
-                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:border-rose-400 hover:text-destructive hover:bg-rose-50/40 transition"
+                      className="w-full flex items-center justify-center gap-2 py-2.5 rounded-xl border-2 border-dashed border-border text-sm font-semibold text-muted-foreground hover:border-danger/40 hover:text-destructive hover:bg-danger-soft/40 transition"
                     >
                       {t("svc.admin.addHighlight")}
                     </button>
@@ -1020,7 +1020,7 @@ const AdminServices = () => {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm text-white bg-gradient-to-br from-rose-500 to-orange-500 shadow-md shadow-rose-500/30 hover:shadow-lg hover:shadow-rose-500/40 hover:brightness-105 disabled:opacity-50 disabled:shadow-none transition"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 rounded-md font-medium text-sm bg-primary text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
                 >
                   {submitting ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -1052,7 +1052,7 @@ const AdminServices = () => {
                 <div className="flex flex-wrap items-center gap-2">
                   <Badge
                     variant="outline"
-                    className="border-indigo-200 bg-indigo-50 font-medium text-indigo-700"
+                    className="border-border bg-muted font-medium text-foreground"
                   >
                     {previewRow.shortTitle}
                   </Badge>

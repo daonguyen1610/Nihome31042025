@@ -711,7 +711,7 @@ export function AsBuiltDocumentsPanel({
               {selected.size} / {rows.length}
             </span>
             <Button
-              variant="destructive"
+              variant="destructiveOutline"
               size="sm"
               onClick={() => setPendingBulk(true)}
               data-testid="asbuilt-bulk-delete"
@@ -731,7 +731,12 @@ export function AsBuiltDocumentsPanel({
             message={t("asbuilt.empty")}
             action={
               canManage && (
-                <Button size="sm" onClick={openCreate} data-testid="asbuilt-empty-new">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={openCreate}
+                  data-testid="asbuilt-empty-new"
+                >
                   <Plus className="mr-2 h-4 w-4" />
                   {t("asbuilt.action.new")}
                 </Button>

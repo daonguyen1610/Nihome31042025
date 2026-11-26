@@ -672,7 +672,7 @@ const OperationalProjects = () => {
                       <Pencil className="mr-2 h-4 w-4" />
                       {t("common.edit")}
                     </Button>
-                    <Button variant="destructive" onClick={() => void openDelete()}>
+                    <Button variant="destructiveOutline" onClick={() => void openDelete()}>
                       <Trash2 className="mr-2 h-4 w-4" />
                       {t("common.delete")}
                     </Button>
@@ -1365,7 +1365,7 @@ const OperationalProjects = () => {
                           </div>
                           <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-muted">
                             <div
-                              className="h-full rounded-full bg-emerald-500"
+                              className="h-full rounded-full bg-success"
                               style={{
                                 width: `${Math.min(Math.max(item.paymentProgressPercent, 0), 100)}%`,
                               }}

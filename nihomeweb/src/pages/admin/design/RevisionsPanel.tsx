@@ -221,7 +221,7 @@ export const RevisionsPanel = ({
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : error ? (
-          <p className="rounded-md border border-destructive/20 bg-rose-50/60 p-3 text-sm text-destructive">
+          <p className="rounded-md border border-destructive/20 bg-danger-soft/60 p-3 text-sm text-destructive">
             {error}
           </p>
         ) : (
@@ -255,7 +255,7 @@ export const RevisionsPanel = ({
                     className={cn(
                       "rounded-md border p-3",
                       row.isCurrent
-                        ? "border-success/30 bg-emerald-50/60"
+                        ? "border-success/30 bg-success-soft/60"
                         : "border-border bg-card",
                     )}
                     data-testid={`revision-row-${row.id}`}
@@ -267,7 +267,7 @@ export const RevisionsPanel = ({
                           {row.isCurrent ? (
                             <Badge
                               variant="outline"
-                              className="border-emerald-300 bg-emerald-100 text-success-strong"
+                              className="border-success/40 bg-success-soft text-success-strong"
                             >
                               <CheckCircle2 className="mr-1 h-3 w-3" />
                               {t("drawingRevision.badge.current")}

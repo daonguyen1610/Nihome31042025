@@ -185,7 +185,7 @@ export const RecordActions = ({
           {t("procurement.action.approve")}
         </ActionButton>
         <ActionButton
-          variant="destructive"
+          variant="destructiveOutline"
           disabled={busy}
           onClick={() => onDecision(false)}
           icon={<X className="mr-2 h-4 w-4" />}

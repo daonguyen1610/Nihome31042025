@@ -185,7 +185,7 @@ export default function VendorDetail() {
               )}
             </div>
             {!vendor.isActive && (
-              <div className="rounded-md border border-amber-300 bg-warning-soft px-4 py-3 text-sm text-amber-900">
+              <div className="rounded-md border border-warning/40 bg-warning-soft px-4 py-3 text-sm text-warning-strong">
                 {t("proc.vendors.inactiveWarning")}
               </div>
             )}

@@ -3,7 +3,7 @@ import { useConfirm } from "@/components/ui/confirmation";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Edit, Plus, RefreshCw, Search, Trash2, UserRound } from "lucide-react";
 import AdminLayout from "@/components/layout/AdminLayout";
-import { PageError, PageLoading } from "@/components/PageState";
+import { PageError, ListSkeleton } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -37,9 +37,9 @@ import UserFormModal from "./UserFormModal";
 const PAGE_SIZE = 20;
 
 const ROLE_STYLES: Record<string, string> = {
-  SUPER_ADMIN: "border-destructive/20 bg-destructive/10 text-destructive",
-  ADMIN: "border-indigo-200 bg-indigo-50 text-indigo-700",
-  USER: "border-success/30 bg-success-soft text-success-strong",
+  SUPER_ADMIN: "border-border bg-muted text-foreground",
+  ADMIN: "border-border bg-muted text-foreground",
+  USER: "border-border bg-muted text-foreground",
 };
 
 const getErrorMessage = (error: unknown, t: (key: string) => string) => {
@@ -259,12 +259,12 @@ export default function UserList() {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("adminUsers.title")}</h1>
             <p className="text-xs italic text-muted-foreground">
-              {total} {t("adminUsers.totalUsers")}
+              {loading ? t("common.loading") : `${total} ${t("adminUsers.totalUsers")}`}
             </p>
           </div>
           <Button onClick={openCreate}>
@@ -341,13 +341,13 @@ export default function UserList() {
               </SelectContent>
             </Select>
           </div>
-          <Button type="submit" className="h-9">
+          <Button type="submit" variant="outline" className="h-9">
             <Search className="mr-1.5 h-4 w-4" /> {t("common.search")}
           </Button>
         </form>
 
         {loading ? (
-          <PageLoading />
+          <ListSkeleton />
         ) : error ? (
           <PageError message={error} onRetry={loadData} />
         ) : (
@@ -367,7 +367,7 @@ export default function UserList() {
               <>
                 {/* Mobile / tablet card view (<lg). Preserves avatar, role
                     badge, active toggle, bulk-select + inline edit/delete. */}
-                <ul className="grid gap-3 lg:hidden">
+                <ul className="grid gap-3 xl:hidden">
                   {items.map((user) => {
                     const disabled = busyUserId === user.id;
                     return (
@@ -398,7 +398,6 @@ export default function UserList() {
                             <p className="truncate text-sm font-semibold">
                               {user.fullName ?? t("adminUsers.unnamed")}
                             </p>
-                            <p className="text-xs text-muted-foreground">ID #{user.id}</p>
                           </div>
                         </header>
 
@@ -478,7 +477,7 @@ export default function UserList() {
                 </ul>
 
                 {/* Desktop table (lg+) */}
-                <div className="hidden overflow-x-auto rounded-lg border lg:block">
+                <div className="hidden overflow-x-auto rounded-lg border xl:block">
                   <table className="min-w-[900px] w-full divide-y text-sm">
                     <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                       <tr>
@@ -542,7 +541,6 @@ export default function UserList() {
                                   <p className="truncate font-medium">
                                     {user.fullName ?? t("adminUsers.unnamed")}
                                   </p>
-                                  <p className="text-xs text-muted-foreground">ID #{user.id}</p>
                                 </div>
                               </div>
                             </td>

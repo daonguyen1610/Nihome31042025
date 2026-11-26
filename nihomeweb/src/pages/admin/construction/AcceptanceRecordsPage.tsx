@@ -884,7 +884,7 @@ export function AcceptanceRecordsPanel({
               {selected.size} / {rows.length}
             </span>
             <Button
-              variant="destructive"
+              variant="destructiveOutline"
               size="sm"
               onClick={() => setPendingBulk(true)}
               data-testid="acceptance-bulk-delete"

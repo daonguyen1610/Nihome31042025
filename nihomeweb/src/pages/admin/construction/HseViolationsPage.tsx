@@ -440,7 +440,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
           </Button>
           <Button
             size="sm"
-            variant="destructive"
+            variant="destructiveOutline"
             disabled={isOwnReport(row)}
             onClick={() => openDecision(row, "reject")}
           >
@@ -560,7 +560,7 @@ export const HseViolationsPanel = ({ projectId, scope = "execute" }: ScopeProps)
             message={t("hse.empty")}
             action={
               canManage && (
-                <Button size="sm" onClick={openCreate}>
+                <Button variant="outline" size="sm" onClick={openCreate}>
                   <Plus className="mr-2 h-4 w-4" />
                   {t("hse.new")}
                 </Button>

@@ -91,7 +91,7 @@ const statusClass: Record<string, string> = {
   InProgress: "border-info/30 bg-info-soft text-info-strong",
   Completed: "border-success/30 bg-success-soft text-success-strong",
   OnHold: "border-warning/40 bg-warning-soft text-warning-strong",
-  WaitingForDepartment: "border-violet-200 bg-violet-50 text-violet-700",
+  WaitingForDepartment: "border-warning/40 bg-warning-soft text-warning-strong",
 };
 
 const isValidProgress = (value: string) =>
@@ -771,7 +771,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         {task.isMilestone ? (
-                          <Diamond className="h-4 w-4 fill-amber-400 text-amber-600" />
+                          <Diamond className="h-4 w-4 fill-amber-400 text-warning-strong" />
                         ) : null}
                         <strong className="break-words text-foreground">{task.name}</strong>
                         <Badge variant="outline" className={statusClass[task.status]}>
@@ -991,7 +991,7 @@ export const DesignScheduleTab = ({ project }: Props) => {
                           {t("designProjects.schedule.action.approve")}
                         </Button>
                         <Button
-                          variant="destructive"
+                          variant="destructiveOutline"
                           className="min-h-11"
                           disabled={busyTaskId === task.id || !reviewReasons[task.id]?.trim()}
                           onClick={() => void mutateTask(task, "reject")}

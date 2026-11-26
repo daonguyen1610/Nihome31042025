@@ -102,20 +102,20 @@ const DATE_MAX = "2099-12-31";
 
 const OPPORTUNITY_STAGE_STYLES: Record<OpportunityStage, string> = {
   Prospecting: "border-info/30 bg-info-soft text-info-strong",
-  Qualification: "border-violet-200 bg-violet-50 text-violet-700",
-  Proposal: "border-indigo-200 bg-indigo-50 text-indigo-700",
+  Qualification: "border-info/40 bg-info-soft text-info-strong",
+  Proposal: "border-info/40 bg-info-soft text-info-strong",
   Negotiation: "border-warning/40 bg-warning-soft text-warning-strong",
-  Won: "border-green-300 bg-green-100 text-green-800",
+  Won: "border-success/40 bg-success-soft text-success-strong",
   Lost: "border-destructive/20 bg-destructive/10 text-destructive",
 };
 
 const OPPORTUNITY_STAGE_DOT: Record<OpportunityStage, string> = {
-  Prospecting: "bg-sky-500",
-  Qualification: "bg-violet-500",
-  Proposal: "bg-indigo-500",
-  Negotiation: "bg-amber-500",
-  Won: "bg-green-600",
-  Lost: "bg-rose-500",
+  Prospecting: "bg-info",
+  Qualification: "bg-info",
+  Proposal: "bg-info",
+  Negotiation: "bg-warning",
+  Won: "bg-success",
+  Lost: "bg-destructive",
 };
 
 const NEXT_PIPELINE_STAGE: Partial<Record<OpportunityStage, OpportunityStage>> = {
@@ -826,10 +826,12 @@ const AdminOpportunities = () => {
             <h1 className="text-2xl font-semibold">{t("opportunities.title")}</h1>
             <p className="text-muted-foreground text-sm max-w-3xl">{t("opportunities.subtitle")}</p>
             <p className="text-xs text-muted-foreground mt-1">
-              {(canSeeAll
-                ? t("opportunities.totalCount")
-                : t("opportunities.myScopeCount")
-              ).replace("{count}", total.toString())}
+              {loading
+                ? t("common.loading")
+                : (canSeeAll
+                    ? t("opportunities.totalCount")
+                    : t("opportunities.myScopeCount")
+                  ).replace("{count}", total.toString())}
             </p>
           </div>
           <div className="flex flex-wrap gap-2 items-center">
@@ -987,7 +989,7 @@ const AdminOpportunities = () => {
             <div className="space-y-2">
               {/* Mobile / tablet card view (<lg). Keeps the row-click-to-detail
                   affordance and inline edit/delete for parity with the table. */}
-              <ul className="grid gap-3 lg:hidden">
+              <ul className="grid gap-3 xl:hidden">
                 {rows.map((o) => {
                   const overdue = isOpportunityOverdue(o.expectedCloseDate, o.stage);
                   return (
@@ -1103,7 +1105,7 @@ const AdminOpportunities = () => {
               </ul>
 
               {/* Desktop table view (lg+) */}
-              <div className="hidden overflow-x-auto rounded-lg border lg:block">
+              <div className="hidden overflow-x-auto rounded-lg border xl:block">
                 <table className="min-w-[960px] w-full divide-y text-sm">
                   <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                     <tr>

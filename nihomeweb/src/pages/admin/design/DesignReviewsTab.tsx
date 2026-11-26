@@ -440,7 +440,7 @@ export const DesignReviewsTab = ({
               <span>{t("designProjects.reviews.guide.taskApproval")}</span>
             </li>
             <li className="flex gap-2">
-              <Users aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-violet-700" />
+              <Users aria-hidden="true" className="mt-0.5 h-4 w-4 shrink-0 text-info-strong" />
               <span>{t("designProjects.reviews.guide.internalReview")}</span>
             </li>
             <li className="flex gap-2">
@@ -829,7 +829,7 @@ export const DesignReviewsTab = ({
                     {t("designProjects.reviews.changes")}
                   </Button>
                   <Button
-                    variant="destructive"
+                    variant="destructiveOutline"
                     disabled={busy === review.id || !notes[review.id]?.trim()}
                     onClick={() => void act(review, "reject")}
                   >

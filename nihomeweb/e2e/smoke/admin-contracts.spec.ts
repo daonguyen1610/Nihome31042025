@@ -660,9 +660,8 @@ test("mobile contract card opens the complete contract detail", async ({
   await expect(page).toHaveURL(
     new RegExp(`/admin/contracts/${contractId?.replace("contract-card-", "")}\\?`),
   );
-  await expect(
-    page.getByRole("link", { name: /Hợp đồng|Contracts|销售合同|販売契約/i }),
-  ).toBeVisible();
+  // The detail's own way back; the closed phone sidebar is hidden from everyone.
+  await expect(page.locator('main a[href^="/admin/contracts"]').first()).toBeVisible();
 });
 
 test("collected milestone date is suggested, customizable, and displayed", async ({

@@ -911,7 +911,7 @@ export function ConstructionTasksPanel({
             )}
             {canManage && selected.size > 0 && (
               <Button
-                variant="destructive"
+                variant="destructiveOutline"
                 size="sm"
                 onClick={() => setConfirmBulkDelete(true)}
                 data-testid="construction-bulk-delete"
@@ -1532,7 +1532,7 @@ export function ConstructionTasksPanel({
                   <div className="flex items-center justify-between pt-2">
                     {canManage ? (
                       <Button
-                        variant="destructive"
+                        variant="destructiveOutline"
                         size="sm"
                         onClick={() => setDeleting(detail)}
                         data-testid="construction-detail-delete"

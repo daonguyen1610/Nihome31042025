@@ -362,7 +362,7 @@ const EmploymentTypes = () => {
 
   return (
     <AdminLayout>
-      <div className="space-y-4 p-4 sm:p-6">
+      <div className="space-y-4">
         <header className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-semibold">{t("empTypes.title")}</h1>
@@ -567,7 +567,7 @@ const EmploymentTypes = () => {
                     </div>
                     {item.isActive ? (
                       <Check
-                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        className="h-4 w-4 shrink-0 text-success-strong"
                         aria-label={t("empTypes.active")}
                       />
                     ) : (
@@ -618,7 +618,7 @@ const EmploymentTypes = () => {
                     </div>
                     {item.isActive ? (
                       <Check
-                        className="h-4 w-4 shrink-0 text-emerald-600"
+                        className="h-4 w-4 shrink-0 text-success-strong"
                         aria-label={t("empTypes.active")}
                       />
                     ) : (
@@ -718,7 +718,7 @@ const EmploymentTypes = () => {
                       <td className="px-3 py-3 font-medium">{item.name}</td>
                       <td className="px-3 py-3">
                         {item.isActive ? (
-                          <Check className="h-4 w-4 text-emerald-600" />
+                          <Check className="h-4 w-4 text-success-strong" />
                         ) : (
                           <X className="h-4 w-4 text-muted-foreground" />
                         )}
@@ -755,7 +755,7 @@ const EmploymentTypes = () => {
                       <td className="px-3 py-3 font-medium">{item.name}</td>
                       <td className="px-3 py-3">
                         {item.isActive ? (
-                          <Check className="h-4 w-4 text-emerald-600" />
+                          <Check className="h-4 w-4 text-success-strong" />
                         ) : (
                           <X className="h-4 w-4 text-muted-foreground" />
                         )}

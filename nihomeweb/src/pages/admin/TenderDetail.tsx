@@ -89,7 +89,7 @@ const STATUS_BADGE_STYLES: Record<TenderStatus, string> = {
   Submitted: "border-info/30 bg-info-soft text-info-strong",
   Won: "border-success/30 bg-success-soft text-success-strong",
   Lost: "border-destructive/20 bg-destructive/10 text-destructive",
-  Cancelled: "border-zinc-200 bg-zinc-100 text-zinc-600",
+  Cancelled: "border-border bg-muted text-muted-foreground",
 };
 
 const CHECKLIST_STATUS_STYLES: Record<TenderChecklistItemStatus, string> = {
@@ -97,7 +97,7 @@ const CHECKLIST_STATUS_STYLES: Record<TenderChecklistItemStatus, string> = {
   Preparing: "border-warning/40 bg-warning-soft text-warning-strong",
   Done: "border-success/30 bg-success-soft text-success-strong",
   Submitted: "border-info/30 bg-info-soft text-info-strong",
-  NotApplicable: "border-zinc-200 bg-zinc-100 text-zinc-600",
+  NotApplicable: "border-border bg-muted text-muted-foreground",
 };
 
 const CHECKLIST_STATUSES: TenderChecklistItemStatus[] = [
@@ -170,7 +170,7 @@ const HeaderCard = ({ tender, canRequestFinance }: HeaderProps) => {
             </Link>
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="min-w-0 break-words text-xl font-bold text-foreground md:text-2xl xl:truncate">
+            <h1 className="min-w-0 break-words text-foreground xl:truncate text-2xl font-semibold">
               {tender.name}
             </h1>
             <Badge className={cn("border", STATUS_BADGE_STYLES[tender.status])} variant="outline">
@@ -982,17 +982,17 @@ const ChecklistTab = ({
 
       {tender.submissions.length > 0 ? (
         <section
-          className="space-y-2 rounded-lg border border-info/30 bg-sky-50/50 p-3 sm:p-4"
+          className="space-y-2 rounded-lg border border-info/30 bg-info-soft/50 p-3 sm:p-4"
           data-testid="tender-submission-snapshots"
         >
           <div>
-            <h3 className="text-sm font-semibold text-sky-950">
+            <h3 className="text-sm font-semibold text-info-strong">
               {t("tenders.detail.checklist.snapshotTitle")}
             </h3>
-            <p className="text-xs text-sky-800">{t("tenders.detail.checklist.snapshotHint")}</p>
+            <p className="text-xs text-info-strong">{t("tenders.detail.checklist.snapshotHint")}</p>
           </div>
           {tender.submissions.map((submission) => (
-            <div key={submission.id} className="rounded-md border border-sky-100 bg-card p-3">
+            <div key={submission.id} className="rounded-md border border-info/40 bg-card p-3">
               <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-3">
                 <span className="font-semibold text-foreground">#{submission.sequence}</span>
                 <span>{formatDateTime(submission.submittedAt, lang)}</span>
@@ -1238,7 +1238,7 @@ const TenderPlanTab = ({
       </div>
       {loadError ? (
         <div
-          className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-rose-800 sm:flex-row sm:items-center sm:justify-between"
+          className="flex flex-col gap-3 rounded-lg border border-destructive/20 bg-destructive/10 p-3 text-sm text-danger-strong sm:flex-row sm:items-center sm:justify-between"
           role="alert"
         >
           <span>{loadError}</span>
@@ -1252,7 +1252,7 @@ const TenderPlanTab = ({
             "rounded-lg border p-3 text-sm",
             complete
               ? "border-success/30 bg-success-soft text-success-strong"
-              : "border-warning/40 bg-warning-soft text-amber-900",
+              : "border-warning/40 bg-warning-soft text-warning-strong",
           )}
         >
           {active.length === 0
@@ -1789,7 +1789,7 @@ const ResultTab = ({
                 <dt className="text-xs text-success-strong">
                   {t("tenders.detail.result.opportunity")}
                 </dt>
-                <dd className="break-words font-medium text-emerald-900">
+                <dd className="break-words font-medium text-success-strong">
                   {tender.wonOpportunityId != null ? (
                     <Link
                       to={`/admin/opportunities/${tender.wonOpportunityId}`}
@@ -1806,7 +1806,7 @@ const ResultTab = ({
                 <dt className="text-xs text-success-strong">
                   {t("tenders.detail.result.closedAt")}
                 </dt>
-                <dd className="font-medium text-emerald-900">
+                <dd className="font-medium text-success-strong">
                   {formatDateTime(tender.closedAt, lang)}
                 </dd>
               </div>
@@ -1814,7 +1814,7 @@ const ResultTab = ({
             {tender.note ? (
               <div className="mt-2">
                 <div className="text-xs text-success-strong">{t("tenders.detail.result.note")}</div>
-                <p className="text-sm text-emerald-900">{tender.note}</p>
+                <p className="text-sm text-success-strong">{tender.note}</p>
               </div>
             ) : null}
             {tender.wonOpportunityId && tender.operationalProjectId ? (
@@ -1829,20 +1829,20 @@ const ResultTab = ({
           </div>
         ) : tender.status === "Lost" ? (
           <div className="mt-3 rounded-md border border-destructive/20 bg-destructive/10 p-3">
-            <div className="inline-flex items-center gap-2 text-sm font-semibold text-rose-800">
+            <div className="inline-flex items-center gap-2 text-sm font-semibold text-danger-strong">
               <XCircle className="h-4 w-4" />
               {t("tenders.detail.result.lostBadge")}
             </div>
             <dl className="mt-2 grid gap-2 text-sm sm:grid-cols-2">
               <div>
                 <dt className="text-xs text-destructive">{t("tenders.detail.result.reason")}</dt>
-                <dd className="font-medium text-rose-900">
+                <dd className="font-medium text-danger-strong">
                   {tender.lostReasonLabel ?? tender.lostReasonCode ?? "—"}
                 </dd>
               </div>
               <div>
                 <dt className="text-xs text-destructive">{t("tenders.detail.result.closedAt")}</dt>
-                <dd className="font-medium text-rose-900">
+                <dd className="font-medium text-danger-strong">
                   {formatDateTime(tender.closedAt, lang)}
                 </dd>
               </div>
@@ -1850,13 +1850,13 @@ const ResultTab = ({
             {tender.lostNote ? (
               <div className="mt-2">
                 <div className="text-xs text-destructive">{t("tenders.detail.result.note")}</div>
-                <p className="text-sm text-rose-900">{tender.lostNote}</p>
+                <p className="text-sm text-danger-strong">{tender.lostNote}</p>
               </div>
             ) : null}
           </div>
         ) : tender.status === "Cancelled" ? (
-          <div className="mt-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
-            <div className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-800">
+          <div className="mt-3 rounded-md border border-border bg-muted p-3">
+            <div className="inline-flex items-center gap-2 text-sm font-semibold text-foreground">
               <X className="h-4 w-4" />
               {t("tenders.detail.result.cancelledBadge")}
             </div>
@@ -2246,7 +2246,7 @@ const AdminTenderDetail = () => {
             />
 
             {showDeadlineAlert ? (
-              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-amber-900">
+              <div className="flex items-start gap-2 rounded-lg border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong">
                 <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
                 <p>
                   {t("tenders.detail.alert.deadlineNear")
