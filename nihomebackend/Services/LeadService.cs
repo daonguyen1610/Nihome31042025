@@ -51,11 +51,6 @@ public class LeadService(
             query = query.Where(l => l.OwnerUserId == ownerUserId.Value);
         }
 
-        if (status.HasValue)
-        {
-            query = query.Where(l => l.Status == status.Value);
-        }
-
         if (!string.IsNullOrWhiteSpace(sourceCode))
         {
             var normalized = sourceCode.Trim();
@@ -79,6 +74,12 @@ public class LeadService(
                 (l.Email != null && EF.Functions.Like(l.Email, like)));
         }
 
+        // Quick views show what each would hold, so count before applying the chosen one.
+        var statusCounts = await query.GroupBy(l => l.Status)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToListAsync(ct);
+        if (status.HasValue) query = query.Where(l => l.Status == status.Value);
+
         var total = await query.CountAsync(ct);
 
         var rows = await query
@@ -97,6 +98,7 @@ public class LeadService(
         return new LeadListResponse
         {
             Total = total,
+            StatusCounts = statusCounts.ToDictionary(row => row.Key.ToString(), row => row.Count),
             Page = page,
             PageSize = pageSize,
             Items = rows.Select(r => MapLead(r.Lead, r.OwnerName, activities: null, today)).ToList(),

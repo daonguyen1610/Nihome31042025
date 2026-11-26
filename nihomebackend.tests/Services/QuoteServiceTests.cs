@@ -1828,6 +1828,28 @@ public class QuoteServiceTests : IDisposable
         Assert.Equal(created.ProjectBoqRevisionId, snapshot.ProjectBoqRevisionId);
     }
 
+    [Fact]
+    public async Task ListAsync_CountsEveryStatusUnderTheOtherFilters()
+    {
+        var (owner, opp) = await SeedOpportunityAsync();
+        Quote Row(string code, QuoteStatus status) => new()
+        {
+            Code = code,
+            OpportunityId = opp.Id,
+            OwnerUserId = owner.Id,
+            Status = status,
+            ValidUntil = DateTime.UtcNow.AddDays(30),
+        };
+        _db.Quotes.AddRange(Row("Q-A1", QuoteStatus.Draft), Row("Q-A2", QuoteStatus.Approved), Row("Q-B1", QuoteStatus.Approved));
+        await _db.SaveChangesAsync();
+
+        var list = await _sut.ListAsync(owner.Id, canSeeAll: true, status: QuoteStatus.Draft, search: "Q-A");
+
+        Assert.Equal(1, list.Total);
+        Assert.Equal(1, list.StatusCounts["Draft"]);
+        Assert.Equal(1, list.StatusCounts["Approved"]);
+    }
+
     private async Task<ApplicationUser> SeedUserAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];

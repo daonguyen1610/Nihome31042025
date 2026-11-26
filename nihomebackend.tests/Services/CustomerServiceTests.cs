@@ -816,6 +816,23 @@ public class CustomerServiceTests : IDisposable
 
     // ---------------- Helpers ----------------
 
+    [Fact]
+    public async Task ListAsync_CountsEveryStatusUnderTheOtherFilters()
+    {
+        var manager = await SeedUserAsync();
+        _db.Customers.AddRange(
+            new Customer { Name = "Alpha", Type = CustomerType.Company, RelationshipStatus = CustomerRelationshipStatus.Prospect, OwnerUserId = manager.Id },
+            new Customer { Name = "Alpha two", Type = CustomerType.Company, RelationshipStatus = CustomerRelationshipStatus.Signed, OwnerUserId = manager.Id },
+            new Customer { Name = "Beta", Type = CustomerType.Company, RelationshipStatus = CustomerRelationshipStatus.Signed, OwnerUserId = manager.Id });
+        await _db.SaveChangesAsync();
+
+        var list = await _sut.ListAsync(manager.Id, canSeeAll: true, status: CustomerRelationshipStatus.Prospect, search: "Alpha");
+
+        Assert.Equal(1, list.Total);
+        Assert.Equal(1, list.StatusCounts["Prospect"]);
+        Assert.Equal(1, list.StatusCounts["Signed"]);
+    }
+
     private async Task<ApplicationUser> SeedUserAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];
