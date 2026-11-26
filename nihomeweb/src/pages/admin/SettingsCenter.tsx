@@ -118,8 +118,10 @@ const DRIVE_STATUS_KEYS: Record<GoogleDriveAdminStatusResponse["status"], string
 const DRIVE_ERROR_KEYS: Partial<Record<GoogleDriveAdminStatusResponse["status"], string>> = {
   InvalidRoot: "settings.drive.error.invalidRoot",
   ReconnectRequired: "settings.drive.error.reconnectRequired",
-  Unavailable: "settings.drive.error.unavailable",
+  Unavailable: "settings.drive.error.unavailableRetrying",
 };
+
+const DRIVE_UNAVAILABLE_RECHECK_MS = 30_000;
 
 const DRIVE_OAUTH_RESULT_KEYS: Record<string, string> = {
   denied: "settings.drive.oauth.denied",
@@ -413,6 +415,13 @@ const DriveTab = () => {
     void loadStatus();
   }, [loadStatus]);
 
+  // Each response is a new status object, so this re-arms until Drive answers again.
+  useEffect(() => {
+    if (status?.status !== "Unavailable") return;
+    const timer = window.setTimeout(() => void loadStatus(), DRIVE_UNAVAILABLE_RECHECK_MS);
+    return () => window.clearTimeout(timer);
+  }, [status, loadStatus]);
+
   const showOAuthResult = useCallback(
     (result: string) => {
       const successful = result === "success";
@@ -485,7 +494,7 @@ const DriveTab = () => {
     const confirmedPopup: { value: Window | null } = { value: null };
     if (
       switchingAccount &&
-      !(await confirmAction(t("settings.drive.switchConfirm"), {
+      !(await confirmAction(t("settings.drive.switchKeepConfirm"), {
         destructive: false,
         onConfirm: () => {
           confirmedPopup.value = openPopup();
@@ -506,16 +515,6 @@ const DriveTab = () => {
     oauthPopup.current = popup;
     setConnecting(true);
     try {
-      if (switchingAccount) {
-        const { data: disconnectResult } = await adminApi.disconnectGoogleDriveOAuth();
-        setConfigurationVersion((value) => value + 1);
-        if (disconnectResult.hadStoredCredential && !disconnectResult.providerRevoked) {
-          toast({
-            title: t("settings.drive.disconnectSuccess"),
-            description: t("settings.drive.disconnectRevokeWarning"),
-          });
-        }
-      }
       const { data } = await adminApi.startGoogleDriveOAuth();
       const authorizationUrl = new URL(data.authorizationUrl);
       if (
@@ -538,7 +537,6 @@ const DriveTab = () => {
       popup.close();
       oauthPopup.current = null;
       setConnecting(false);
-      if (switchingAccount) void loadStatus();
       // The server says what to fix (e.g. re-enter the Client Secret).
       toast({
         title: t("common.error"),

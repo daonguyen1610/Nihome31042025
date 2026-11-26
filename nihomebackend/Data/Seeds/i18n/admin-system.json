@@ -3148,7 +3148,7 @@
     "key": "settings.drive.switchAccount", "category": "settings", "vi": "Đổi tài khoản Google", "en": "Switch Google account", "zh": "切换 Google 帐户", "ja": "Google アカウントを切り替え"
   },
   {
-    "key": "settings.drive.switchConfirm", "category": "settings", "vi": "Ngắt kết nối tài khoản Google Drive hiện tại rồi đăng nhập tài khoản khác? Nếu bạn hủy đăng nhập mới, Nicon sẽ giữ trạng thái chưa kết nối.", "en": "Disconnect the current Google Drive account and sign in with another one? If you cancel the new sign-in, Nicon will remain disconnected.", "zh": "断开当前 Google Drive 帐户并登录其他帐户？如果取消新的登录，Nicon 将保持未连接状态。", "ja": "現在の Google Drive アカウントを解除して別のアカウントでログインしますか？新しいログインをキャンセルした場合、Nicon は未接続のままになります。"
+    "key": "settings.drive.switchKeepConfirm", "category": "settings", "vi": "Đăng nhập tài khoản Google khác? Tài khoản hiện tại vẫn được giữ cho đến khi đăng nhập mới thành công.", "en": "Sign in with a different Google account? The current account is kept until the new sign-in succeeds.", "zh": "登录其他 Google 帐户？在新登录成功之前，将保留当前帐户。", "ja": "別の Google アカウントでログインしますか？新しいログインが成功するまで、現在のアカウントは保持されます。"
   },
   {
     "key": "settings.drive.connecting", "category": "settings", "vi": "Đang mở cửa sổ Google...", "en": "Opening Google sign-in...", "zh": "正在打开 Google 登录窗口…", "ja": "Google ログインを開いています..."
@@ -3214,7 +3214,7 @@
     "key": "settings.drive.error.reconnectRequired", "category": "settings", "vi": "Quyền truy cập đã hết hạn hoặc bị thu hồi. Hãy kết nối lại.", "en": "Access expired or was revoked. Reconnect Google Drive.", "zh": "访问权限已过期或被撤销，请重新连接。", "ja": "アクセスの有効期限が切れたか取り消されました。再接続してください。"
   },
   {
-    "key": "settings.drive.error.unavailable", "category": "settings", "vi": "Không thể xác thực hoặc truy cập Google Drive lúc này.", "en": "Google Drive cannot be authenticated or reached right now.", "zh": "目前无法验证或访问 Google Drive。", "ja": "現在 Google Drive を認証または利用できません。"
+    "key": "settings.drive.error.unavailableRetrying", "category": "settings", "vi": "Google Drive tạm thời không phản hồi. Hệ thống tự thử lại, không cần kết nối lại.", "en": "Google Drive is temporarily not responding. The system retries automatically; there is no need to reconnect.", "zh": "Google Drive 暂时没有响应。系统会自动重试，无需重新连接。", "ja": "Google Drive が一時的に応答していません。システムが自動で再試行するため、再接続は不要です。"
   },
   {
     "key": "settings.drive.oauth.success", "category": "settings", "vi": "Đã kết nối Google Drive.", "en": "Google Drive connected.", "zh": "Google Drive 已连接。", "ja": "Google Drive に接続しました。"

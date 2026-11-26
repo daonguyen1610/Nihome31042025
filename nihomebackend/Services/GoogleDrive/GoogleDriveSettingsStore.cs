@@ -65,7 +65,8 @@ public interface IGoogleDriveSettingsStore
 
 public sealed class GoogleDriveSettingsStore(
     AppDbContext db,
-    IDataProtectionProvider dataProtectionProvider) : IGoogleDriveSettingsStore
+    IDataProtectionProvider dataProtectionProvider,
+    ILogger<GoogleDriveSettingsStore>? logger = null) : IGoogleDriveSettingsStore
 {
     private static readonly Regex ClientIdPattern = new(
         "^[A-Za-z0-9._-]+\\.apps\\.googleusercontent\\.com$",
@@ -258,6 +259,35 @@ public sealed class GoogleDriveSettingsStore(
         catch (DbUpdateConcurrencyException)
         {
             throw new GoogleDriveSettingsConcurrencyException();
+        }
+        await RequeueFailedDocumentsAsync(ct);
+    }
+
+    // A new sign-in is the moment files stranded by the old one can succeed. It is saved
+    // separately so that it can never undo the connection.
+    private async Task RequeueFailedDocumentsAsync(CancellationToken ct)
+    {
+        var failed = await db.ProjectDocuments
+            .Where(item => item.SyncStatus == ProjectDocumentSyncStatus.Failed)
+            .ToListAsync(ct);
+        foreach (var document in failed)
+        {
+            document.SyncStatus = ProjectDocumentSyncStatus.Pending;
+            document.SyncAttemptCount = 0;
+            document.NextSyncAttemptAt = null;
+            document.SyncError = null;
+            document.UpdatedAt = DateTime.UtcNow;
+        }
+        try
+        {
+            await db.SaveChangesAsync(ct);
+        }
+        catch (DbUpdateConcurrencyException exception)
+        {
+            foreach (var document in failed) db.Entry(document).State = EntityState.Detached;
+            logger?.LogWarning(exception,
+                "Google Drive is connected but {DocumentCount} failed documents were not requeued; retry them from the project",
+                failed.Count);
         }
     }
 
