@@ -1,3 +1,4 @@
+import { useUiError } from "@/hooks/useUiError";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { AlertTriangle, Download, FileSpreadsheet, FileUp } from "lucide-react";
@@ -5,7 +6,6 @@ import { BoqWorkbookUploadDialog } from "@/components/admin/BoqWorkbookUploadDia
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { extractApiError } from "@/lib/apiError";
 import { saveBlob } from "@/lib/boqWorkbook";
 import { useI18n } from "@/lib/i18n";
 import { formatVnd } from "@/lib/numberFormat";
@@ -34,6 +34,7 @@ export function WorkPackageBoqSection({
   onDecide: (boq: WorkPackageBoqWorkbook, approved: boolean) => void;
 }) {
   const { t } = useI18n();
+  const uiError = useUiError();
   const { toast } = useToast();
   const [uploadOpen, setUploadOpen] = useState(false);
 
@@ -42,7 +43,7 @@ export function WorkPackageBoqSection({
       const { data } = await adminApi.downloadWorkPackageBoq(packageId, boq.id);
       saveBlob(data, boq.sourceFileName ?? `BOQ-R${boq.revisionNumber}.xlsx`);
     } catch (reason) {
-      toast({ variant: "destructive", title: extractApiError(reason) });
+      toast({ variant: "destructive", title: uiError(reason) });
     }
   };
 

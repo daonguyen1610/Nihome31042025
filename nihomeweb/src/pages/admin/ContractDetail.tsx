@@ -1,6 +1,5 @@
 import { useUiError } from "@/hooks/useUiError";
 import {
-  getErrorMessage,
   MilestoneDraft,
   ContractEditForm,
   toIsoDate,
@@ -63,7 +62,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatVnd, formatVndWithSymbol } from "@/lib/numberFormat";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
+import { isConcurrencyConflict } from "@/lib/apiError";
 import { PageLoading, PageError } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -465,7 +464,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
         if (customersResponse) setCustomers(customersResponse.data.items);
         if (projectsResponse) setProjects(projectsResponse.data.items);
       } catch (err) {
-        toast({ variant: "destructive", title: getErrorMessage(err) ?? t("common.error") });
+        toast({ variant: "destructive", title: uiError(err) });
         return;
       }
     }
@@ -531,7 +530,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
       toast({ title: t("form.updated") });
       await refreshContract();
     } catch (err) {
-      setScheduleError(getErrorMessage(err) ?? t("common.error"));
+      setScheduleError(uiError(err));
       if (isConcurrencyConflict(err)) await refreshContract();
     } finally {
       setScheduleSaving(false);
@@ -629,7 +628,7 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           ? t("contractReminder.directionLocked")
           : code === "CONTRACT_CARE_DIRECTION_LOCKED"
             ? t("contracts.care.directionLocked")
-            : (getErrorMessage(err) ?? t("common.error")),
+            : uiError(err),
       );
       if (isConcurrencyConflict(err)) await refreshContract();
     } finally {

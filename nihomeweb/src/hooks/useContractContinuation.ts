@@ -1,8 +1,9 @@
+import { useUiError } from "@/hooks/useUiError";
 import { useEffect, useRef, useState } from "react";
 import { adminApi, type ContractResponse } from "@/services/adminApi";
-import { extractApiError } from "@/lib/apiError";
 
 export function useContractContinuation(sourceId: number | null, opportunityId?: number | null) {
+  const uiError = useUiError();
   const [source, setSource] = useState<ContractResponse | null>(null);
   const [kind, setKind] = useState("Renewal");
   const [reason, setReason] = useState("");
@@ -42,7 +43,7 @@ export function useContractContinuation(sourceId: number | null, opportunityId?:
           }
         }
       } catch (e) {
-        if (active) setError(extractApiError(e));
+        if (active) setError(uiError(e));
       } finally {
         if (active) setLoading(false);
       }
@@ -67,7 +68,7 @@ export function useContractContinuation(sourceId: number | null, opportunityId?:
       const { data } = await adminApi.getContract(source.id);
       if (generation.current === currentGeneration) setSource(data);
     } catch (e) {
-      if (generation.current === currentGeneration) setError(extractApiError(e));
+      if (generation.current === currentGeneration) setError(uiError(e));
     } finally {
       if (generation.current === currentGeneration) setLoading(false);
     }

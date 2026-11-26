@@ -1,3 +1,4 @@
+import { useUiError } from "@/hooks/useUiError";
 import { useCallback, useEffect, useState } from "react";
 import {
   ChevronDown,
@@ -13,7 +14,6 @@ import { PageError, PageLoading } from "@/components/PageState";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
-import { extractApiError } from "@/lib/apiError";
 import { saveBlob } from "@/lib/boqWorkbook";
 import { useI18n } from "@/lib/i18n";
 import { cn } from "@/lib/utils";
@@ -29,6 +29,7 @@ type Selection = { code: string; sheet?: string };
 // Procurement downloads a form here and uploads the filled file in the input-price work package.
 const BoqTemplateLibrary = () => {
   const { t } = useI18n();
+  const uiError = useUiError();
   const { toast } = useToast();
   const [templates, setTemplates] = useState<BoqLibraryTemplate[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,7 +49,7 @@ const BoqTemplateLibrary = () => {
         setSelection({ code: data[0].code });
       }
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     }
   }, []);
 
@@ -64,7 +65,7 @@ const BoqTemplateLibrary = () => {
     adminApi
       .getBoqLibrarySheet(selection.code, selection.sheet)
       .then(({ data }) => active && setOutline(data))
-      .catch((reason) => active && setOutlineError(extractApiError(reason)));
+      .catch((reason) => active && setOutlineError(uiError(reason)));
     return () => {
       active = false;
     };
@@ -84,7 +85,7 @@ const BoqTemplateLibrary = () => {
       const { data } = await adminApi.downloadBoqLibraryFile(template.code);
       saveBlob(data, template.file);
     } catch (reason) {
-      toast({ variant: "destructive", title: extractApiError(reason) });
+      toast({ variant: "destructive", title: uiError(reason) });
     } finally {
       setDownloading(false);
     }

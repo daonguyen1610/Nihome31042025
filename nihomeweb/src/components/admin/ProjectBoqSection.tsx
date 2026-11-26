@@ -1,3 +1,4 @@
+import { useUiError } from "@/hooks/useUiError";
 import { useCallback, useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { ExternalLink, FileUp } from "lucide-react";
@@ -7,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { extractApiError } from "@/lib/apiError";
 import { useI18n } from "@/lib/i18n";
 import {
   adminApi,
@@ -20,6 +20,7 @@ import {
 // contract BOQ that differs from the tender (or a later change) is uploaded here once signed.
 export function ProjectBoqSection({ projectId }: { projectId: number }) {
   const { t, lang } = useI18n();
+  const uiError = useUiError();
   const { has } = usePermissions();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -41,7 +42,7 @@ export function ProjectBoqSection({ projectId }: { projectId: number }) {
       });
       setRows(data.items);
     } catch (reason) {
-      setError(extractApiError(reason));
+      setError(uiError(reason));
     }
   }, [projectId]);
 
