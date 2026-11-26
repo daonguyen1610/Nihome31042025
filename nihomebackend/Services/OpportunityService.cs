@@ -49,7 +49,7 @@ public class OpportunityService(
 
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
         var query = BuildFilteredQuery(
-            callerUserId, canSeeAll, stage, customerId, ownerUserId,
+            callerUserId, canSeeAll, stage: null, customerId, ownerUserId,
             expectedCloseFrom, expectedCloseTo, minValue, maxValue, search,
             displayCurrency, usdVndRate);
 
@@ -59,6 +59,12 @@ public class OpportunityService(
                 opportunity.Stage != OpportunityStage.Lost &&
                 (opportunity.Stage != OpportunityStage.Won || opportunity.WonQuoteId == null));
         }
+
+        // Quick views show what each would hold, so count before applying the chosen one.
+        var stageCounts = await query.GroupBy(o => o.Stage)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToListAsync(ct);
+        if (stage.HasValue) query = query.Where(o => o.Stage == stage.Value);
 
         var total = await query.CountAsync(ct);
 
@@ -83,6 +89,7 @@ public class OpportunityService(
         return new OpportunityListResponse
         {
             Total = total,
+            StageCounts = stageCounts.ToDictionary(row => row.Key.ToString(), row => row.Count),
             Page = page,
             PageSize = pageSize,
             Items = rows

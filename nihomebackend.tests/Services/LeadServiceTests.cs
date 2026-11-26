@@ -1409,6 +1409,23 @@ public class LeadServiceTests : IDisposable
         Assert.Equal("commercial", item.SegmentCode);
     }
 
+    [Fact]
+    public async Task ListAsync_CountsEveryStatusUnderTheOtherFilters()
+    {
+        var manager = await SeedUserAsync(UserRole.USER);
+        _db.Leads.AddRange(
+            new Lead { Name = "Alpha", Phone = "1", Status = LeadStatus.New },
+            new Lead { Name = "Alpha two", Phone = "1", Status = LeadStatus.Contacted },
+            new Lead { Name = "Beta", Phone = "1", Status = LeadStatus.Contacted });
+        await _db.SaveChangesAsync();
+
+        var list = await _sut.ListAsync(manager.Id, canSeeAll: true, status: LeadStatus.New, search: "Alpha");
+
+        Assert.Equal(1, list.Total);
+        Assert.Equal(1, list.StatusCounts["New"]);
+        Assert.Equal(1, list.StatusCounts["Contacted"]);
+    }
+
     private async Task<ApplicationUser> SeedUserAsync(UserRole role, bool isActive = true)
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];

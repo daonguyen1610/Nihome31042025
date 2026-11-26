@@ -91,8 +91,14 @@ public class QuoteService(
         if (pageSize > MaxPageSize) pageSize = MaxPageSize;
 
         var (displayCurrency, usdVndRate) = await SystemCurrency.ResolveDisplayAsync(db, ct);
-        var q = BuildFiltered(callerUserId, canSeeAll, status, opportunityId, customerId, ownerUserId,
+        var q = BuildFiltered(callerUserId, canSeeAll, status: null, opportunityId, customerId, ownerUserId,
             createdFrom, createdTo, minValue, maxValue, search, displayCurrency, usdVndRate);
+
+        // Quick views show what each would hold, so count before applying the chosen one.
+        var statusCounts = await q.GroupBy(x => x.Status)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToListAsync(ct);
+        if (status.HasValue) q = q.Where(x => x.Status == status.Value);
 
         var total = await q.CountAsync(ct);
 
@@ -115,6 +121,7 @@ public class QuoteService(
         return new QuoteListResponse
         {
             Total = total,
+            StatusCounts = statusCounts.ToDictionary(row => row.Key.ToString(), row => row.Count),
             Page = page,
             PageSize = pageSize,
             Items = rows.Select(r => new QuoteListItemResponse

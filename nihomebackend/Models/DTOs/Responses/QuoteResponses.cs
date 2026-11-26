@@ -206,6 +206,9 @@ public class QuoteListResponse
     public int Page { get; set; }
     public int PageSize { get; set; }
     public List<QuoteListItemResponse> Items { get; set; } = new();
+
+    /// <summary>Records per status under every other filter, for the list quick views.</summary>
+    public Dictionary<string, int> StatusCounts { get; set; } = new();
 }
 
 public class QuoteVersionsResponse

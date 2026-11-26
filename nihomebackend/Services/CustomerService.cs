@@ -52,7 +52,6 @@ public class CustomerService(
         }
 
         if (type.HasValue) query = query.Where(c => c.Type == type.Value);
-        if (status.HasValue) query = query.Where(c => c.RelationshipStatus == status.Value);
 
         if (!string.IsNullOrWhiteSpace(sourceCode))
         {
@@ -80,6 +79,12 @@ public class CustomerService(
                     (ct2.Email != null && EF.Functions.Like(ct2.Email, like))));
         }
 
+        // Quick views show what each would hold, so count before applying the chosen one.
+        var statusCounts = await query.GroupBy(c => c.RelationshipStatus)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToListAsync(ct);
+        if (status.HasValue) query = query.Where(c => c.RelationshipStatus == status.Value);
+
         var total = await query.CountAsync(ct);
 
         var rows = await query
@@ -102,6 +107,7 @@ public class CustomerService(
         return new CustomerListResponse
         {
             Total = total,
+            StatusCounts = statusCounts.ToDictionary(row => row.Key.ToString(), row => row.Count),
             Page = page,
             PageSize = pageSize,
             Items = rows.Select(r =>

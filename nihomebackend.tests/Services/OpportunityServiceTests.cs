@@ -1343,6 +1343,22 @@ public class OpportunityServiceTests : IDisposable
 
     // ---------------- Helpers ----------------
 
+    [Fact]
+    public async Task ListAsync_CountsEveryStageUnderTheOtherFilters()
+    {
+        var owner = await SeedUserAsync();
+        var customer = await SeedCustomerAsync(owner.Id);
+        await SeedOpportunityAsync(customer, owner, OpportunityStage.Prospecting, value: 10m);
+        await SeedOpportunityAsync(customer, owner, OpportunityStage.Proposal, value: 900m);
+        await SeedOpportunityAsync(customer, owner, OpportunityStage.Proposal, value: 10m);
+
+        var list = await _sut.ListAsync(owner.Id, canSeeAll: true, stage: OpportunityStage.Prospecting, maxValue: 100m);
+
+        Assert.Equal(1, list.Total);
+        Assert.Equal(1, list.StageCounts["Prospecting"]);
+        Assert.Equal(1, list.StageCounts["Proposal"]);
+    }
+
     private async Task<ApplicationUser> SeedUserAsync()
     {
         var suffix = Guid.NewGuid().ToString("N")[..12];

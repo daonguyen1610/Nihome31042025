@@ -66,6 +66,9 @@ public class OpportunityListResponse
     public int Page { get; set; }
     public int PageSize { get; set; }
     public List<OpportunityResponse> Items { get; set; } = new();
+
+    /// <summary>Records per stage under every other filter, for the list quick views.</summary>
+    public Dictionary<string, int> StageCounts { get; set; } = new();
 }
 
 /// <summary>

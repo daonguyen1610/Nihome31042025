@@ -74,6 +74,9 @@ public class CustomerListResponse
     public int Page { get; set; }
     public int PageSize { get; set; }
     public List<CustomerResponse> Items { get; set; } = new();
+
+    /// <summary>Records per status under every other filter, for the list quick views.</summary>
+    public Dictionary<string, int> StatusCounts { get; set; } = new();
 }
 
 /// <summary>
