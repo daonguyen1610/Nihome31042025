@@ -174,18 +174,18 @@ public sealed partial class DepartmentWorkPackageService(
     {
         var departments = await DepartmentsAsync(ct);
         var users = await db.Users.AsNoTracking()
-            .Where(item => item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive && item.RoleEntity.RoleGroupId != null)
+            .Where(item => item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive && item.DepartmentRoleGroupId != null)
             .OrderBy(item => item.FullName ?? item.Email)
             .Select(item => new DepartmentUserOptionResponse
             {
                 UserId = item.Id,
                 Name = item.FullName ?? item.Email,
                 Email = item.Email,
-                RoleGroupId = item.RoleEntity!.RoleGroupId!.Value,
+                RoleGroupId = item.DepartmentRoleGroupId!.Value,
                 RoleCode = item.RoleEntity.Code,
                 RoleName = item.RoleEntity.Name,
                 RoleLabelKey = item.RoleEntity.LabelKey,
-                DepartmentLabelKey = item.RoleEntity.RoleGroup!.LabelKey,
+                DepartmentLabelKey = item.Department!.LabelKey,
                 CanLead = item.RoleEntity.RolePermissions.Any(rolePermission =>
                     rolePermission.Permission.IsActive &&
                     rolePermission.Permission.Module == "work.packages" &&
@@ -330,7 +330,7 @@ public sealed partial class DepartmentWorkPackageService(
             };
             var department = await db.Users.AsNoTracking()
                 .Where(item => item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive &&
-                    item.RoleEntity.RoleGroupId == entity.DepartmentRoleGroupId)
+                    item.DepartmentRoleGroupId == entity.DepartmentRoleGroupId)
                 .Select(item => item.Id).ToListAsync(ct);
             foreach (var userId in department.Append(entity.LeadUserId).Distinct())
                 await NotifySafelyAsync(userId, "work-package.input-pricing-requested", data,
@@ -1372,7 +1372,7 @@ public sealed partial class DepartmentWorkPackageService(
     {
         var canLead = await db.Users.AsNoTracking().AnyAsync(item =>
             item.Id == userId && item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive &&
-            item.RoleEntity.RoleGroupId == roleGroupId && item.RoleEntity.RolePermissions.Any(rolePermission =>
+            item.DepartmentRoleGroupId == roleGroupId && item.RoleEntity.RolePermissions.Any(rolePermission =>
                 rolePermission.Permission.IsActive &&
                 rolePermission.Permission.Module == "work.packages" &&
                 rolePermission.Permission.Action == "assign"), ct);
@@ -1389,7 +1389,7 @@ public sealed partial class DepartmentWorkPackageService(
     private async Task<int?> UserRoleGroupIdAsync(int userId, CancellationToken ct)
     {
         var user = await db.Users.AsNoTracking().Where(item => item.Id == userId && item.IsActive)
-            .Select(item => new { item.Role, GroupId = item.RoleEntity == null ? null : item.RoleEntity.RoleGroupId })
+            .Select(item => new { item.Role, GroupId = item.DepartmentRoleGroupId })
             .SingleOrDefaultAsync(ct);
         if (user is null) return null;
         if (user.GroupId.HasValue) return user.GroupId;

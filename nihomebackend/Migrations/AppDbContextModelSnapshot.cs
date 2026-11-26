@@ -531,6 +531,9 @@ namespace nihomebackend.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("nvarchar(500)");
 
+                    b.Property<int?>("DepartmentRoleGroupId")
+                        .HasColumnType("int");
+
                     b.Property<string>("Email")
                         .IsRequired()
                         .HasMaxLength(150)
@@ -561,6 +564,8 @@ namespace nihomebackend.Migrations
                         .HasColumnType("int");
 
                     b.HasKey("Id");
+
+                    b.HasIndex("DepartmentRoleGroupId");
 
                     b.HasIndex("Email")
                         .IsUnique()
@@ -12970,10 +12975,17 @@ namespace nihomebackend.Migrations
 
             modelBuilder.Entity("NihomeBackend.Models.ApplicationUser", b =>
                 {
+                    b.HasOne("NihomeBackend.Models.Rbac.RoleGroup", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentRoleGroupId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.HasOne("NihomeBackend.Models.Rbac.Role", "RoleEntity")
                         .WithMany()
                         .HasForeignKey("RoleEntityId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Department");
 
                     b.Navigation("RoleEntity");
                 });

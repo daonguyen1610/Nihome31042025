@@ -1268,7 +1268,9 @@ Trong **Quản lý vai trò**, quản trị viên:
 - Xem vai trò theo nhóm, tìm vai trò và quyền, so sánh nhiều vai trò trên ma trận. Vai trò hệ thống chỉ xem.
 - Tạo, sửa, xóa vai trò không phải hệ thống. Khi tạo có thể chép bộ quyền mẫu của nhóm làm điểm bắt đầu; sửa bộ quyền mẫu sau đó không đổi các vai trò đã tạo. Không ai cấp được quyền mình không có.
 - Đổi tên hiển thị của vai trò; mã vai trò và quyền giữ nguyên.
-- Tạo nhóm phòng ban với mã cố định và tên 4 ngôn ngữ. Xóa nhóm phải xem trước ảnh hưởng và gõ mã; bị chặn khi còn vai trò, nhóm công việc, công việc hay bộ quyền liên kết. 6 nhóm có sẵn không xóa được.
+- Tạo nhóm phòng ban với mã cố định và tên 4 ngôn ngữ. Xóa nhóm phải xem trước ảnh hưởng và gõ mã; bị chặn khi còn vai trò, người dùng thuộc phòng, nhóm công việc, công việc hay bộ quyền liên kết. 6 nhóm có sẵn không xóa được.
+
+Mỗi người dùng có một phòng ban. Vai trò thuộc một nhóm thì phòng ban tự theo nhóm đó (đổi vai trò hoặc chuyển vai trò sang nhóm khác thì phòng ban đổi theo). Vai trò không thuộc nhóm nào thì người dùng không thuộc phòng ban nào.
 
 **Người dùng** (`/admin/users`): tìm, lọc theo vai trò và phòng ban, tạo/sửa, khóa/mở, xóa (ẩn tài khoản). Chỉ SUPER_ADMIN được thay đổi người dùng.
 

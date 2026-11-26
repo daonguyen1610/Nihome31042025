@@ -34,9 +34,9 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
         var query = db.Users.AsNoTracking();
         if (departmentId.HasValue)
             query = departmentId == 0
-                ? query.Where(user => user.RoleEntity == null || user.RoleEntity.RoleGroup == null || !user.RoleEntity.RoleGroup.IsActive)
-                : query.Where(user => user.RoleEntity != null && user.RoleEntity.RoleGroup != null &&
-                    user.RoleEntity.RoleGroup.IsActive && user.RoleEntity.RoleGroupId == departmentId);
+                ? query.Where(user => user.Department == null || !user.Department.IsActive)
+                : query.Where(user => user.Department != null &&
+                    user.Department.IsActive && user.DepartmentRoleGroupId == departmentId);
 
         if (!string.IsNullOrWhiteSpace(role))
         {
@@ -85,8 +85,8 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
                 RoleId = u.RoleEntityId,
                 RoleName = u.RoleEntity != null ? u.RoleEntity.Name : null,
                 RoleLabelKey = u.RoleEntity != null ? u.RoleEntity.LabelKey : null,
-                DepartmentId = u.RoleEntity != null && u.RoleEntity.RoleGroup != null && u.RoleEntity.RoleGroup.IsActive ? u.RoleEntity.RoleGroupId : null,
-                DepartmentLabelKey = u.RoleEntity != null && u.RoleEntity.RoleGroup != null && u.RoleEntity.RoleGroup.IsActive ? u.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentId = u.Department != null && u.Department.IsActive ? u.DepartmentRoleGroupId : null,
+                DepartmentLabelKey = u.Department != null && u.Department.IsActive ? u.Department.LabelKey : null,
                 IsActive = u.IsActive,
                 AvatarUrl = u.AvatarUrl,
             })
@@ -99,7 +99,7 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
     {
         var user = await db.Users
             .AsNoTracking()
-            .Include(u => u.RoleEntity).ThenInclude(role => role!.RoleGroup)
+            .Include(u => u.RoleEntity).Include(u => u.Department)
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.Id == id);
 
@@ -171,7 +171,7 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
     public async Task<UserDetailResponse?> UpdateAsync(int id, UpdateUserRequest req, int currentUserId)
     {
         var user = await db.Users
-            .Include(u => u.RoleEntity).ThenInclude(role => role!.RoleGroup)
+            .Include(u => u.RoleEntity).Include(u => u.Department)
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.Id == id);
         if (user == null)
@@ -246,7 +246,7 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
     public async Task<UserDetailResponse?> ToggleActiveAsync(int id, int currentUserId)
     {
         var user = await db.Users
-            .Include(u => u.RoleEntity).ThenInclude(role => role!.RoleGroup)
+            .Include(u => u.RoleEntity).Include(u => u.Department)
             .Include(u => u.RefreshTokens)
             .FirstOrDefaultAsync(u => u.Id == id);
         if (user == null)
@@ -469,8 +469,8 @@ public class UserService(AppDbContext db, PasswordService passwordService, INoti
         RoleId = user.RoleEntityId,
         RoleName = user.RoleEntity?.Name,
         RoleLabelKey = user.RoleEntity?.LabelKey,
-        DepartmentId = user.RoleEntity?.RoleGroup is { IsActive: true } group ? group.Id : null,
-        DepartmentLabelKey = user.RoleEntity?.RoleGroup is { IsActive: true } department ? department.LabelKey : null,
+        DepartmentId = user.Department is { IsActive: true } group ? group.Id : null,
+        DepartmentLabelKey = user.Department is { IsActive: true } department ? department.LabelKey : null,
         IsActive = user.IsActive,
         AvatarUrl = user.AvatarUrl,
         RefreshTokenCount = user.RefreshTokens?.Count ?? 0,

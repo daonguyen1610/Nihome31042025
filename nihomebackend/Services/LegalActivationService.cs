@@ -525,13 +525,13 @@ public sealed class LegalActivationService(
                 RoleCode = item.User.RoleEntity != null ? item.User.RoleEntity.Code : item.User.Role.ToString(),
                 RoleName = item.User.RoleEntity != null ? item.User.RoleEntity.Name : item.User.Role.ToString(),
                 RoleLabelKey = item.User.RoleEntity != null ? item.User.RoleEntity.LabelKey : null,
-                DepartmentLabelKey = item.User.RoleEntity != null && item.User.RoleEntity.RoleGroup != null
-                    ? item.User.RoleEntity.RoleGroup.LabelKey : null,
+                DepartmentLabelKey = item.User.Department != null
+                    ? item.User.Department.LabelKey : null,
                 Email = item.User.Email!,
-                RoleGroupId = item.User.RoleEntity != null && item.User.RoleEntity.RoleGroupId.HasValue
-                    ? item.User.RoleEntity.RoleGroupId.Value : 0,
-                RoleGroupCode = item.User.RoleEntity != null && item.User.RoleEntity.RoleGroup != null
-                    ? item.User.RoleEntity.RoleGroup.Code : string.Empty,
+                RoleGroupId = item.User.DepartmentRoleGroupId.HasValue
+                    ? item.User.DepartmentRoleGroupId.Value : 0,
+                RoleGroupCode = item.User.Department != null
+                    ? item.User.Department.Code : string.Empty,
                 CanLeadLegal = item.Roles.Any(role => role.RoleCode == ProjectTeamRoleCode.LegalOfficer &&
                     role.StartedAt <= now && (!role.EndedAt.HasValue || role.EndedAt > now)) ||
                     item.User.RoleEntity != null && item.User.RoleEntity.Code == RbacRoleCodes.LegalOfficer,

@@ -134,7 +134,7 @@ public sealed class DailyWorkReportService(AppDbContext db, MyWorkService myWork
             .OrderBy(item => item.User.FullName).ToListAsync(ct);
         var reported = reports.Select(item => item.UserId).ToHashSet();
         var members = await db.Users.AsNoTracking()
-            .Where(item => item.IsActive && item.RoleEntity != null && item.RoleEntity.RoleGroupId == groupId)
+            .Where(item => item.IsActive && item.RoleEntity != null && item.DepartmentRoleGroupId == groupId)
             .OrderBy(item => item.FullName ?? item.Email)
             .Select(item => new DailyReportMemberResponse { UserId = item.Id, Name = item.FullName ?? item.Email ?? string.Empty })
             .ToListAsync(ct);
@@ -174,7 +174,7 @@ public sealed class DailyWorkReportService(AppDbContext db, MyWorkService myWork
     private Task<int?> DepartmentOfAsync(int userId, CancellationToken ct) =>
         db.Users.AsNoTracking()
             .Where(item => item.Id == userId && item.IsActive && item.RoleEntity != null && item.RoleEntity.IsActive)
-            .Select(item => item.RoleEntity!.RoleGroupId).SingleOrDefaultAsync(ct);
+            .Select(item => item.DepartmentRoleGroupId).SingleOrDefaultAsync(ct);
 
     /// <summary>The department the caller heads: their own, when they hold the review permission.</summary>
     private async Task<int?> HeadedDepartmentAsync(int userId, CancellationToken ct) =>

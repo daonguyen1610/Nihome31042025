@@ -20,6 +20,9 @@ internal static class DeletionImpactPlanner
             AddRaw(items, "roleGroups.seeded", DeletionImpactActions.Block, [group.Code], [group.Code]);
         await AddAsync(items, "roleGroups.roles", DeletionImpactActions.Block,
             db.Roles.Where(item => item.RoleGroupId == id), item => item.Id, item => item.Code, ct);
+        await AddAsync(items, "roleGroups.users", DeletionImpactActions.Block,
+            db.Users.Where(item => item.DepartmentRoleGroupId == id),
+            item => item.Id, item => item.FullName ?? item.Email, ct);
         await AddAsync(items, "roleGroups.packages", DeletionImpactActions.Block,
             db.DepartmentWorkPackages.Where(item => item.DepartmentRoleGroupId == id),
             item => item.Id, item => item.Code, ct);

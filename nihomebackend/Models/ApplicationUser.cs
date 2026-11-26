@@ -29,6 +29,11 @@ public class ApplicationUser
     public int? RoleEntityId { get; set; }
     public Role? RoleEntity { get; set; }
 
+    // The person's department. A role that belongs to a department sets it (AppDbContext keeps
+    // them in step); roles without one, such as BGD or ADMIN, keep the department chosen here.
+    public int? DepartmentRoleGroupId { get; set; }
+    public RoleGroup? Department { get; set; }
+
     public bool IsActive { get; set; } = true;
 
     [MaxLength(500)]

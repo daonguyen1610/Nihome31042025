@@ -141,6 +141,7 @@
   {"key":"deletionImpact.item.contract.careActivities","category":"deletionImpact","vi":"Lịch sử chăm sóc khách hàng theo hợp đồng","en":"Contract customer-care history","zh":"合同客户维护记录","ja":"契約の顧客フォロー履歴"},
   {"key":"deletionImpact.item.roleGroups.seeded","category":"deletionImpact","vi":"Nhóm mặc định của hệ thống (không thể xóa)","en":"System default group (cannot delete)","zh":"系统默认组（不可删除）","ja":"システム既定グループ（削除不可）"},
   {"key":"deletionImpact.item.roleGroups.roles","category":"deletionImpact","vi":"Vai trò đang thuộc nhóm","en":"Roles in this group","zh":"组内角色","ja":"所属ロール"},
+  {"key":"deletionImpact.item.roleGroups.users","category":"deletionImpact","vi":"Người dùng đang thuộc phòng ban","en":"People in this department","zh":"本部门人员","ja":"この部門のユーザー"},
   {"key":"deletionImpact.item.roleGroups.packages","category":"deletionImpact","vi":"Nhóm công việc dùng phòng ban này","en":"Work packages using this department","zh":"使用该部门的工作包","ja":"この部門を使用する作業パッケージ"},
   {"key":"deletionImpact.item.roleGroups.tasks","category":"deletionImpact","vi":"Đầu việc dùng phòng ban này","en":"Tasks using this department","zh":"使用该部门的任务","ja":"この部門を使用するタスク"},
   {"key":"deletionImpact.item.roleGroups.participants","category":"deletionImpact","vi":"Nhóm công việc có phòng ban này tham gia","en":"Work packages with this participating department","zh":"该部门参与的工作包","ja":"この部門が参加する作業パッケージ"},
