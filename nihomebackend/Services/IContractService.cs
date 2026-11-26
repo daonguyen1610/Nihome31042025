@@ -28,7 +28,8 @@ public interface IContractService
         string? sortBy = null,
         string? sortDirection = null,
         bool includeAll = false,
-        CancellationToken ct = default);
+        CancellationToken ct = default,
+        bool overdueOnly = false);
 
     Task<ContractFilterOptionsResponse> GetFilterOptionsAsync(
         int callerUserId,

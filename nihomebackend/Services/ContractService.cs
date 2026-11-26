@@ -51,7 +51,8 @@ public class ContractService(
         string? sortBy = null,
         string? sortDirection = null,
         bool includeAll = false,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        bool overdueOnly = false)
     {
         if (page < 1) page = 1;
         if (!includeAll)
@@ -73,7 +74,6 @@ public class ContractService(
             query = query.Where(c => c.OwnerUserId == ownerUserId.Value);
         }
 
-        if (status.HasValue) query = query.Where(c => c.Status == status.Value);
         if (direction.HasValue) query = query.Where(c => c.Direction == direction.Value);
         if (type.HasValue) query = query.Where(c => c.Type == type.Value);
         if (vendorId.HasValue) query = query.Where(c => c.VendorId == vendorId.Value);
@@ -120,8 +120,19 @@ public class ContractService(
                 (c.Customer.TaxId != null && EF.Functions.Like(c.Customer.TaxId, like)));
         }
 
-        var total = await query.CountAsync(ct);
         var today = DateTime.UtcNow.Date;
+        // The list tabs show what each tab would hold, so count before applying the chosen one.
+        var statusCounts = await query.GroupBy(c => c.Status)
+            .Select(group => new { group.Key, Count = group.Count() })
+            .ToListAsync(ct);
+        var allOverdueCount = await query.CountAsync(c => db.ContractPaymentMilestones.Any(m =>
+            m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid && m.DueDate != null && m.DueDate < today), ct);
+        if (status.HasValue) query = query.Where(c => c.Status == status.Value);
+        if (overdueOnly)
+            query = query.Where(c => db.ContractPaymentMilestones.Any(m =>
+                m.ContractId == c.Id && m.Status != PaymentMilestoneStatus.Paid && m.DueDate != null && m.DueDate < today));
+
+        var total = await query.CountAsync(ct);
         var dueSoonUpperBound = today.AddDays(EndingSoonDays + 1);
         // Each contract keeps its own currency; convert every current value to
         // the display currency before summing so the summary is meaningful.
@@ -233,6 +244,8 @@ public class ContractService(
             TotalCurrentValue = totalCurrentValue,
             OverdueContractCount = overdueContractCount,
             DueSoonContractCount = dueSoonContractCount,
+            StatusCounts = statusCounts.ToDictionary(row => row.Key.ToString(), row => row.Count),
+            AllOverdueCount = allOverdueCount,
             Items = rows.Select(r => MapToResponse(
                 r.Contract, r.CustomerName, r.VendorCode, r.VendorName,
                 r.OpportunityTitle, r.QuoteCode, r.OwnerName,

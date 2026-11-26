@@ -534,5 +534,45 @@
     "en": "Skip to content",
     "zh": "跳到正文",
     "ja": "本文へ移動"
+  },
+  {
+    "key": "nav.findPage",
+    "category": "nav",
+    "vi": "Tìm trang...",
+    "en": "Find a page...",
+    "zh": "查找页面…",
+    "ja": "ページを検索…"
+  },
+  {
+    "key": "nav.section.mine",
+    "category": "nav",
+    "vi": "Việc của tôi",
+    "en": "My work",
+    "zh": "我的工作",
+    "ja": "自分の業務"
+  },
+  {
+    "key": "nav.section.projects",
+    "category": "nav",
+    "vi": "Dự án",
+    "en": "Projects",
+    "zh": "项目",
+    "ja": "プロジェクト"
+  },
+  {
+    "key": "nav.section.company",
+    "category": "nav",
+    "vi": "Công ty",
+    "en": "Company",
+    "zh": "公司",
+    "ja": "会社"
+  },
+  {
+    "key": "nav.section.admin",
+    "category": "nav",
+    "vi": "Quản trị",
+    "en": "Administration",
+    "zh": "系统管理",
+    "ja": "管理"
   }
 ]
