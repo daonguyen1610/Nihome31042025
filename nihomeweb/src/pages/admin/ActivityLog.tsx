@@ -660,7 +660,7 @@ const ActivityLog = () => {
 
           {/* Desktop table (lg+) */}
           <div className="hidden overflow-x-auto xl:block">
-            <table data-testid="audit-log-table" className="w-full min-w-[1100px] divide-y text-sm">
+            <table data-testid="audit-log-table" className="w-full divide-y text-sm">
               <thead className="bg-muted/50 text-xs uppercase tracking-wide text-muted-foreground">
                 <tr>
                   {canManageAudit && (
@@ -676,10 +676,12 @@ const ActivityLog = () => {
                   )}
                   <th className="px-4 py-3 text-left font-medium">{t("log.createdOn")}</th>
                   <th className="px-4 py-3 text-left font-medium">{t("log.detail.status")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("log.action")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("log.detail.resource")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("log.actor")}</th>
-                  <th className="px-4 py-3 text-left font-medium">{t("log.ip")}</th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {t("log.action")} / {t("log.detail.resource")}
+                  </th>
+                  <th className="px-4 py-3 text-left font-medium">
+                    {t("log.actor")} / {t("log.ip")}
+                  </th>
                   <th className="px-4 py-3 text-left font-medium">{t("log.message")}</th>
                   <th className="px-4 py-3 text-right font-medium">{t("common.actions")}</th>
                 </tr>
@@ -687,7 +689,7 @@ const ActivityLog = () => {
               <tbody className="divide-y">
                 {loading && items.length === 0 && (
                   <tr>
-                    <td colSpan={canManageAudit ? 9 : 8} className="px-5 py-10 text-center">
+                    <td colSpan={canManageAudit ? 7 : 6} className="px-5 py-10 text-center">
                       <Loader2 className="inline-block h-5 w-5 animate-spin text-primary" />
                     </td>
                   </tr>
@@ -695,7 +697,7 @@ const ActivityLog = () => {
                 {!loading && items.length === 0 && (
                   <tr>
                     <td
-                      colSpan={canManageAudit ? 9 : 8}
+                      colSpan={canManageAudit ? 7 : 6}
                       className="px-5 py-10 text-center text-sm text-muted-foreground"
                     >
                       {t("common.empty")}
@@ -719,14 +721,12 @@ const ActivityLog = () => {
                     <td className="px-4 py-3">
                       <StatusBadge status={l.status} />
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">{l.action}</td>
                     <td className="px-4 py-3 text-xs">
-                      <div className="font-medium">{l.resourceType}</div>
-                      {l.resourceId && (
-                        <div className="font-mono text-xs text-muted-foreground">
-                          #{l.resourceId}
-                        </div>
-                      )}
+                      <div className="font-mono [overflow-wrap:anywhere]">{l.action}</div>
+                      <div className="mt-0.5 text-muted-foreground">
+                        {l.resourceType}
+                        {l.resourceId ? ` #${l.resourceId}` : ""}
+                      </div>
                     </td>
                     <td className="px-4 py-3 text-xs">
                       {l.actorPhone ? (
@@ -739,14 +739,21 @@ const ActivityLog = () => {
                       ) : (
                         <span className="text-muted-foreground">{l.actorType}</span>
                       )}
+                      <div className="font-mono text-muted-foreground">{l.ipAddress ?? "—"}</div>
                     </td>
-                    <td className="px-4 py-3 font-mono text-xs">{l.ipAddress ?? "—"}</td>
-                    <td className="max-w-xs truncate px-4 py-3 text-xs" title={l.message}>
+                    <td className="max-w-[10rem] truncate px-4 py-3 text-xs" title={l.message}>
                       {l.message}
                     </td>
                     <td className="whitespace-nowrap px-4 py-3 text-right">
-                      <Button size="sm" variant="ghost" onClick={() => setSelected(l)}>
-                        <Eye className="mr-1 h-3.5 w-3.5" /> {t("common.view")}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => setSelected(l)}
+                        aria-label={t("common.view")}
+                        title={t("common.view")}
+                      >
+                        <Eye className="h-3.5 w-3.5" />
                       </Button>
                       {canManageAudit && (
                         <Button

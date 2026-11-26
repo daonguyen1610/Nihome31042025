@@ -666,7 +666,7 @@ export const ConceptOptionsTab = ({ project, onProjectMayHaveChanged, onOpenRevi
           <AlertDialogFooter>
             <AlertDialogCancel disabled={busyFinalize}>{t("common.cancel")}</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-success hover:bg-success"
+              className="bg-success-strong hover:bg-success-strong/90"
               onClick={(e) => {
                 e.preventDefault();
                 void confirmFinalize();
@@ -729,7 +729,7 @@ const RowActions = ({
           {canFinalize ? (
             <Button
               size="sm"
-              className={cn(btn, "bg-success hover:bg-success")}
+              className={cn(btn, "bg-success-strong hover:bg-success-strong/90")}
               onClick={(event) => onFinalize(event.currentTarget)}
               disabled={busy || !finalizeReady}
               aria-describedby={!finalizeReady ? `concept-finalize-hint-${row.id}` : undefined}

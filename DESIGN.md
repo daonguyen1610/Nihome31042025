@@ -178,6 +178,10 @@ is a tone **and** a written label.
 
 `destructive` is for deleting and for error text. It is not a status fill.
 
+**Filled status colour.** `bg-success`, `bg-warning` and `bg-info` are for dots,
+bars and markers only: white text on them is about 2:1. A filled control or label
+with white text uses the `-strong` shade (5.8:1 or better).
+
 ### Construction lifecycles
 
 | Lifecycle  | State interpretation                                                             |

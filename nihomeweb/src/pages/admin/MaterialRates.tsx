@@ -819,7 +819,7 @@ const AdminMaterialRates = () => {
                     className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-sm font-semibold",
                       complete
-                        ? "border-success/40 bg-success text-white"
+                        ? "border-success/40 bg-success-strong text-white"
                         : active
                           ? "border-primary bg-primary text-primary-foreground"
                           : "bg-muted text-muted-foreground",
@@ -842,7 +842,7 @@ const AdminMaterialRates = () => {
           </ol>
         </section>
 
-        <div className="grid gap-4 lg:grid-cols-[minmax(260px,340px)_minmax(0,1fr)]">
+        <div className="grid gap-4 xl:grid-cols-[minmax(240px,300px)_minmax(0,1fr)]">
           <section className="space-y-3">
             <div className="rounded-lg border bg-card p-3">
               <div className="relative">
@@ -921,7 +921,7 @@ const AdminMaterialRates = () => {
                 </p>
               </div>
             ) : (
-              <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-1">
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
                 {catalogs.map((catalog) => (
                   <div
                     key={catalog.id}
@@ -1046,7 +1046,7 @@ const AdminMaterialRates = () => {
                     )}
                   </div>
                 ) : (
-                  <div className="grid gap-3 xl:grid-cols-[260px_minmax(0,1fr)]">
+                  <div className="grid gap-3 2xl:grid-cols-[260px_minmax(0,1fr)]">
                     <div className="space-y-2">
                       {revisions.map((revision) => (
                         <button
@@ -1289,7 +1289,7 @@ const AdminMaterialRates = () => {
                             {selectedRevision.status === "Approved" &&
                               selectedCatalog.isActive &&
                               canViewQuotes && (
-                                <Button size="sm" asChild>
+                                <Button size="sm" variant="outline" asChild>
                                   <Link to="/admin/quotes" data-testid="material-rates-open-quotes">
                                     {t("materialRates.quote.open")}
                                     <ArrowRight className="ml-1.5 h-4 w-4" />
@@ -1333,7 +1333,7 @@ const AdminMaterialRates = () => {
                           ) : (
                             <>
                               <div className="hidden overflow-x-auto md:block">
-                                <table className="w-full min-w-[720px] divide-y text-sm">
+                                <table className="w-full min-w-[540px] divide-y text-sm">
                                   <thead className="bg-muted/40 text-xs text-muted-foreground">
                                     <tr>
                                       <th className="px-2 py-2 text-left">

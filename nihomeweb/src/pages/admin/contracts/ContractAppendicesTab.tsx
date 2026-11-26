@@ -378,7 +378,7 @@ export const VoTab = ({ contract, rows, canManage, canDecide, refresh }: VoTabPr
                           size="sm"
                           disabled={pendingActionId === vo.id}
                           onClick={() => runAction(vo, "approve")}
-                          className="bg-success hover:bg-success"
+                          className="bg-success-strong hover:bg-success-strong/90"
                         >
                           <ShieldCheck className="mr-1 h-3 w-3" />
                           {t("contracts.appendix.approve")}

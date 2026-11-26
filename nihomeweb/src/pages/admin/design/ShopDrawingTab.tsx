@@ -1052,7 +1052,7 @@ const RowActions = ({
           {canApprove ? (
             <Button
               size="sm"
-              className={cn(btn, "bg-success hover:bg-success")}
+              className={cn(btn, "bg-success-strong hover:bg-success-strong/90")}
               disabled={busy}
               onClick={() => onTransition("Approved")}
               data-testid={`shop-drawing-approve-${row.id}`}

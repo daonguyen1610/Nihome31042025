@@ -150,7 +150,11 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
     setError(null);
     try {
       const requests = [
-        adminApi.getKpiDashboard({ year, month, userId }).catch(() => ({ data: null })),
+        // 404 means no result for this period yet; anything else is a real failure.
+        adminApi.getKpiDashboard({ year, month, userId }).catch((reason) => {
+          if (reason?.response?.status === 404) return { data: null };
+          throw reason;
+        }),
         canViewAll
           ? adminApi.listKpiEligibleUsers()
           : Promise.resolve({ data: [] as KpiUserOptionResponse[] }),
@@ -381,42 +385,41 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
                 )}
 
                 <section className="overflow-x-auto border-y">
-                  <table className="w-full min-w-[900px] text-sm">
+                  <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left text-xs font-medium text-muted-foreground">
-                        <th className="px-3 py-3">{t("kpi.metric")}</th>
-                        <th className="px-3 py-3">{t("kpi.source")}</th>
-                        <th className="px-3 py-3">{t("kpi.weight")}</th>
-                        <th className="px-3 py-3">{t("kpi.raw")}</th>
-                        <th className="px-3 py-3">{t("kpi.score")}</th>
-                        <th className="px-3 py-3">{t("kpi.status")}</th>
-                        <th className="px-3 py-3">{t("kpi.version")}</th>
+                        <th className="px-2 py-3 sm:px-3">{t("kpi.metric")}</th>
+                        <th className="px-2 py-3 sm:px-3">{t("kpi.raw")}</th>
+                        <th className="px-2 py-3 sm:px-3">{t("kpi.score")}</th>
+                        <th className="px-2 py-3 sm:px-3">{t("kpi.status")}</th>
                       </tr>
                     </thead>
                     <tbody>
                       {dashboard.scores.map((score) => (
                         <tr key={score.id} className="border-b">
-                          <td className="px-3 py-3 font-medium">
+                          <td className="px-2 py-3 font-medium sm:px-3">
                             {t(score.nameKey)}
+                            <div className="mt-0.5 text-xs font-normal text-muted-foreground">
+                              {score.sourceModule} · {t("kpi.weight")}{" "}
+                              {number.format(score.weight * 100)}% · {t("kpi.version")} v
+                              {score.definitionVersion}
+                            </div>
                             <details className="mt-1 font-normal text-xs text-muted-foreground">
                               <summary className="cursor-pointer">{t("kpi.evidence")}</summary>
                               <KpiEvidence json={score.evidenceJson} />
                             </details>
                           </td>
-                          <td className="px-3 py-3">{score.sourceModule}</td>
-                          <td className="px-3 py-3">{number.format(score.weight * 100)}%</td>
-                          <td className="px-3 py-3">
+                          <td className="px-2 py-3 sm:px-3">
                             {score.rawValue == null ? "—" : number.format(score.rawValue)}
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-2 py-3 sm:px-3">
                             {score.score == null ? "—" : number.format(score.score)}
                           </td>
-                          <td className="px-3 py-3">
+                          <td className="px-2 py-3 sm:px-3">
                             <Badge variant="outline" className={statusStyle[score.status]}>
                               {t(`kpi.scoreStatus.${score.status}`)}
                             </Badge>
                           </td>
-                          <td className="px-3 py-3">v{score.definitionVersion}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -508,14 +511,14 @@ const KpiDashboard = ({ mode = "evaluation" }: KpiDashboardProps) => {
               <table className="block w-full text-sm xl:table xl:min-w-[1200px]">
                 <thead className="hidden xl:table-header-group">
                   <tr className="border-b text-left text-xs font-medium text-muted-foreground">
-                    <th className="px-3 py-3">{t("kpi.metric")}</th>
-                    <th className="px-3 py-3">{t("kpi.role")}</th>
-                    <th className="px-3 py-3">{t("kpi.weight")}</th>
-                    <th className="px-3 py-3">{t("kpi.target")}</th>
-                    <th className="px-3 py-3">{t("kpi.direction")}</th>
-                    <th className="px-3 py-3">{t("kpi.threshold")}</th>
-                    <th className="px-3 py-3">{t("kpi.active")}</th>
-                    <th className="px-3 py-3">{t("kpi.version")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.metric")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.role")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.weight")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.target")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.direction")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.threshold")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.active")}</th>
+                    <th className="px-2 py-3 sm:px-3">{t("kpi.version")}</th>
                     <th />
                   </tr>
                 </thead>
