@@ -739,7 +739,7 @@ public sealed class ConstructionOperationsService(AppDbContext db, IProcurementS
     }
     private async Task<HashSet<long>> ActiveConstructionDocumentIdsAsync(int projectId, IReadOnlyCollection<long> ids, CancellationToken ct) =>
         (await db.ProjectDocuments.AsNoTracking().Where(x => ids.Contains(x.Id) && x.OperationalProjectId == projectId &&
-            x.Category == ProjectDocumentCategory.ConstructionAcceptance && x.DeletedAt == null &&
+            (x.Category == ProjectDocumentCategory.ConstructionAcceptance || x.Category == ProjectDocumentCategory.Handover) && x.DeletedAt == null &&
             x.DesiredOperation != ProjectDocumentDesiredOperation.Delete && x.SyncStatus != ProjectDocumentSyncStatus.Deleted)
             .Select(x => x.Id).ToListAsync(ct)).ToHashSet();
     private static IEnumerable<long?> PreparationDocumentIds(ConstructionPreparation x) =>

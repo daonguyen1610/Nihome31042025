@@ -427,6 +427,39 @@ public sealed class ConstructionOperationsServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Preparation_evidence_may_be_a_handover_category_document()
+    {
+        _db.ProjectDocuments.AddRange(Enumerable.Range(1, 9).Select(index => new ProjectDocument
+        {
+            Id = index,
+            OperationalProjectId = ProjectId,
+            Category = index == 1 ? ProjectDocumentCategory.Handover : ProjectDocumentCategory.ConstructionAcceptance,
+            LocalPath = $"/files/project-documents/readiness-{index}.pdf",
+            OriginalFileName = $"readiness-{index}.pdf",
+            Sha256 = new string('a', 64),
+        }));
+        _db.ConstructionPreparations.Add(new ConstructionPreparation
+        {
+            Id = 901,
+            OperationalProjectId = ProjectId,
+            WbsBaselineDocumentId = 1,
+            ScheduleBaselineDocumentId = 2,
+            SCurveBaselineDocumentId = 3,
+            BchOrganizationDocumentId = 4,
+            ResourcePlanDocumentId = 5,
+            BudgetBaselineDocumentId = 6,
+            CreatedByUserId = CmUserId,
+            UpdatedByUserId = CmUserId,
+        });
+        await _db.SaveChangesAsync();
+
+        var response = await _sut.GetPreparationAsync(ProjectId, default);
+
+        Assert.NotNull(response);
+        Assert.DoesNotContain("published WBS baseline evidence", response.MissingConditions);
+    }
+
+    [Fact]
     public async Task Qs_reversal_must_exactly_mirror_active_approved_predecessor()
     {
         await SeedDownstreamContractAsync();

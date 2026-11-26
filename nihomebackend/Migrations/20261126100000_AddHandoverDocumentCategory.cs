@@ -18,18 +18,18 @@ namespace nihomebackend.Migrations
                 nullable: false,
                 defaultValue: "08_BanGiao_BaoHanh");
 
-            // Handover = 10, ConstructionAcceptance = 6; acceptance records stay in 05/03.
+            // Category is stored as its enum name; acceptance records stay in 05/03.
             migrationBuilder.Sql(
-                "UPDATE project_documents SET Category = 10 WHERE Category = 6 " +
-                "AND SourceEntityType IN ('HandoverRecord', 'AsBuiltDocument')");
+                "UPDATE project_documents SET Category = N'Handover' WHERE Category = N'ConstructionAcceptance' " +
+                "AND SourceEntityType IN (N'HandoverRecord', N'AsBuiltDocument')");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.Sql(
-                "UPDATE project_documents SET Category = 6 WHERE Category = 10 " +
-                "AND SourceEntityType IN ('HandoverRecord', 'AsBuiltDocument')");
+                "UPDATE project_documents SET Category = N'ConstructionAcceptance' WHERE Category = N'Handover' " +
+                "AND SourceEntityType IN (N'HandoverRecord', N'AsBuiltDocument')");
 
             migrationBuilder.DropColumn(
                 name: "HandoverFolder",
