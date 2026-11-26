@@ -526,5 +526,13 @@
     "en": "Services",
     "zh": "服务",
     "ja": "サービス"
+  },
+  {
+    "key": "nav.skipToContent",
+    "category": "nav",
+    "vi": "Bỏ qua tới nội dung",
+    "en": "Skip to content",
+    "zh": "跳到正文",
+    "ja": "本文へ移動"
   }
 ]

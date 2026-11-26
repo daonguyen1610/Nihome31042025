@@ -123,6 +123,39 @@
     scroll-behavior: smooth;
   }
 
+  /* Dialog grids must shrink to the dialog: implicit columns and fieldsets otherwise grow to
+     their longest child and get cut off. Utilities such as sm:grid-cols-2 still win. */
+  [role="dialog"].grid,
+  [role="dialog"] .grid,
+  [role="alertdialog"].grid,
+  [role="alertdialog"] .grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  [role="dialog"] fieldset,
+  [role="dialog"] .grid > *,
+  [role="alertdialog"] fieldset,
+  [role="alertdialog"] .grid > * {
+    min-width: 0;
+  }
+
+  /* DESIGN.md "Reduced Motion Rule": one rule for every screen. Near-zero (not none) keeps
+     animation-end events firing, so dialogs and menus still close. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 1ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 1ms !important;
+      scroll-behavior: auto !important;
+    }
+
+    .animate-spin {
+      animation-duration: 1s !important;
+      animation-iteration-count: infinite !important;
+    }
+  }
+
   /* Rows and list items opened with rowAction() need a visible keyboard focus. */
   tr[tabindex]:focus-visible,
   li[tabindex]:focus-visible {
@@ -309,7 +342,7 @@
   }
   .chip-indigo {
     background: hsl(var(--indigo) / 0.12);
-    color: hsl(var(--indigo));
+    color: hsl(244 60% 48%);
   }
   .chip-success {
     background: hsl(150 62% 45% / 0.12);

@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { UploadTray } from "@/components/admin/UploadTray";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
@@ -741,6 +741,22 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     });
   }, [groups, location.pathname, location.search]);
 
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const menuButton = menuButtonRef.current;
+    closeButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      menuButton?.focus();
+    };
+  }, [open]);
+
   const toggleGroup = (id: string) => setOpenGroups((s) => ({ ...s, [id]: !s[id] }));
 
   const handleLogout = () => {
@@ -757,13 +773,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       { to: myWorkItem.to, label: myWorkItem.label },
       { to: dailyReportItem.to, label: dailyReportItem.label },
     ];
-    for (const g of rawGroups) {
+    // Only visible items: a hidden shortcut must not name the breadcrumb's department.
+    for (const g of groups) {
       for (const it of g.items) {
         all.push({ to: it.to, label: it.label, groupLabel: g.label });
       }
     }
     return all;
-  }, [dashboardItem, notificationsItem, workPackagesItem, myWorkItem, dailyReportItem, rawGroups]);
+  }, [dashboardItem, notificationsItem, workPackagesItem, myWorkItem, dailyReportItem, groups]);
 
   const breadcrumb = useMemo(() => {
     // find longest matching route so nested routes still resolve correctly
@@ -778,6 +795,14 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     crumbs.push({ label: current.label });
     return crumbs;
   }, [flatItems, location.pathname, location.search, t]);
+
+  const pageName = breadcrumb[breadcrumb.length - 1]?.label;
+  useEffect(() => {
+    if (pageName) document.title = `${pageName} · Nicon`;
+    return () => {
+      document.title = "Nicon";
+    };
+  }, [pageName]);
 
   const renderItem = (item: NavItem) => {
     const matches = matchesNavRoute(item.to, location.pathname, location.search, item.end);
@@ -809,13 +834,19 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
   return (
     <div className="admin-scope min-h-screen flex">
+      <a
+        href="#admin-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
+      >
+        {t("nav.skipToContent")}
+      </a>
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed lg:sticky top-0 left-0 z-40 h-screen transition-all duration-300 bg-background border-r flex flex-col",
+          "fixed lg:sticky top-0 left-0 z-40 h-screen transition-[transform,width,visibility] duration-200 ease-out bg-background border-r flex flex-col",
           effectiveCollapsed ? "lg:w-20" : "lg:w-72",
           "w-72",
-          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
+          open ? "translate-x-0" : "-translate-x-full max-lg:invisible lg:translate-x-0",
         )}
       >
         <div
@@ -835,9 +866,10 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
             />
           </Link>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={() => setOpen(false)}
-            className="flex h-9 w-9 items-center justify-center rounded-full bg-muted transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+            className="flex h-9 w-9 pointer-coarse:h-11 pointer-coarse:w-11 items-center justify-center rounded-full bg-muted transition hover:bg-muted/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
             aria-label={t("nav.closeSidebar")}
           >
             <X className="w-4 h-4" />
@@ -874,7 +906,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                   aria-controls={`admin-nav-group-${g.id}`}
                   className={cn(
                     "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors",
-                    isOpen || groupActive
+                    groupActive
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:bg-muted/60",
                   )}
@@ -936,8 +968,9 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         {/* Topbar */}
         <header className="sticky top-0 z-20 h-16 bg-background/85 backdrop-blur-xl border-b flex items-center px-5 lg:px-8 gap-3">
           <button
+            ref={menuButtonRef}
             onClick={() => setOpen(true)}
-            className="lg:hidden w-9 h-9 rounded-full bg-muted flex items-center justify-center"
+            className="lg:hidden w-9 h-9 pointer-coarse:h-11 pointer-coarse:w-11 rounded-full bg-muted flex items-center justify-center"
             aria-label={t("nav.openSidebar")}
           >
             <Menu className="w-4 h-4" />
@@ -989,7 +1022,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                   className="flex items-center gap-3 pl-3 md:border-l md:border-border rounded-full md:rounded-md p-1 hover:bg-muted transition"
                   aria-label={t("nav.userMenu")}
                 >
-                  <div className="w-9 h-9 rounded-full text-primary-foreground flex items-center justify-center font-bold text-xs bg-gradient-to-br from-primary to-orange-500">
+                  <div className="w-9 h-9 rounded-full text-primary-foreground flex items-center justify-center font-bold text-xs bg-primary">
                     {user?.fullName?.[0]?.toUpperCase() ?? "A"}
                   </div>
                   <div className="hidden md:block text-xs text-left">
@@ -1029,7 +1062,13 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
           </div>
         </header>
 
-        <main className="flex-1 overflow-x-hidden bg-muted/15 p-4 sm:p-5 lg:p-8">{children}</main>
+        <main
+          id="admin-content"
+          tabIndex={-1}
+          className="flex-1 overflow-x-hidden bg-muted/15 p-4 sm:p-5 lg:p-8"
+        >
+          {children}
+        </main>
       </div>
       <UploadTray />
     </div>
