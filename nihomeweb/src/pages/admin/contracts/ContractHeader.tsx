@@ -91,7 +91,7 @@ export const ContractHeader = ({
             <h1 className="break-words text-2xl font-semibold text-foreground">
               {contract.contractNumber}
             </h1>
-            <Badge className={cn("border capitalize", STATUS_STYLES[contract.status])}>
+            <Badge className={cn("border", STATUS_STYLES[contract.status])}>
               {t(`contracts.status.${contract.status}`)}
             </Badge>
           </div>
@@ -148,16 +148,8 @@ export const ContractHeader = ({
 
       <dl className="grid divide-y rounded-lg border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
         {facts.map((fact) => (
-          <div
-            key={fact.label}
-            className={cn(
-              "flex flex-col justify-between gap-1 p-4",
-              fact === facts[0] && "tone-gradient rounded-t-lg sm:rounded-l-lg sm:rounded-tr-none",
-            )}
-          >
-            <dt className={cn("text-xs", fact !== facts[0] && "text-muted-foreground")}>
-              {fact.label}
-            </dt>
+          <div key={fact.label} className="flex flex-col justify-between gap-1 p-4">
+            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
             <dd className={cn("text-lg font-semibold tabular-nums", fact.className)}>
               {fact.value}
             </dd>
