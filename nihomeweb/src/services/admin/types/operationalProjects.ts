@@ -1376,6 +1376,8 @@ export interface ContractListResponse {
   totalCurrentValue: number;
   overdueContractCount: number;
   dueSoonContractCount: number;
+  statusCounts?: Record<string, number>;
+  allOverdueCount?: number;
 }
 
 export interface ContractFilterOptionsResponse {
@@ -1385,6 +1387,7 @@ export interface ContractFilterOptionsResponse {
 }
 
 export interface ContractListParams {
+  overdueOnly?: boolean;
   status?: ContractStatus;
   direction?: ContractDirection;
   type?: ContractType;
