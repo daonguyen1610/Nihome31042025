@@ -149,6 +149,8 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<DesignReviewDocument> DesignReviewDocuments => Set<DesignReviewDocument>();
     public DbSet<ProjectDocument> ProjectDocuments => Set<ProjectDocument>();
     public DbSet<ProjectDriveFolder> ProjectDriveFolders => Set<ProjectDriveFolder>();
+    public DbSet<DriveTreeMigration> DriveTreeMigrations => Set<DriveTreeMigration>();
+    public DbSet<DriveTreeMigrationItem> DriveTreeMigrationItems => Set<DriveTreeMigrationItem>();
     public DbSet<GoogleDriveCredential> GoogleDriveCredentials => Set<GoogleDriveCredential>();
 
     // Procurement
@@ -2297,6 +2299,33 @@ public class AppDbContext(DbContextOptions<AppDbContext> options)
             b.HasIndex(f => new { f.OperationalProjectId, f.Category }).IsUnique();
             b.HasIndex(f => f.DriveFolderId).IsUnique();
             b.HasIndex(f => f.ReconciliationClaimExpiresAt);
+        });
+
+        modelBuilder.Entity<DriveTreeMigration>(b =>
+        {
+            b.ToTable("drive_tree_migrations");
+            b.HasKey(m => m.Id);
+            b.Property(m => m.Status).HasConversion<string>().HasMaxLength(20);
+            b.Property(m => m.OldFoldersJson).IsRequired();
+            b.Property(m => m.NewFoldersJson).IsRequired();
+            b.Property(m => m.Error).HasMaxLength(2000);
+            b.HasIndex(m => m.Status);
+        });
+
+        modelBuilder.Entity<DriveTreeMigrationItem>(b =>
+        {
+            b.ToTable("drive_tree_migration_items");
+            b.HasKey(i => i.Id);
+            b.Property(i => i.Category).HasConversion<string>().HasMaxLength(30);
+            b.Property(i => i.Kind).HasConversion<string>().HasMaxLength(20);
+            b.Property(i => i.DriveFileId).HasMaxLength(200);
+            b.Property(i => i.FromFolderId).HasMaxLength(200).IsRequired();
+            b.Property(i => i.ToFolderId).HasMaxLength(200);
+            b.Property(i => i.SkipReason).HasMaxLength(500);
+            b.HasOne(i => i.Migration).WithMany(m => m.Items)
+                .HasForeignKey(i => i.MigrationId).OnDelete(DeleteBehavior.Cascade);
+            b.HasIndex(i => new { i.MigrationId, i.Kind, i.OperationalProjectId, i.Category, i.DriveFileId })
+                .IsUnique().HasFilter(null);
         });
 
         modelBuilder.Entity<OperationalProjectCodeChange>(b =>

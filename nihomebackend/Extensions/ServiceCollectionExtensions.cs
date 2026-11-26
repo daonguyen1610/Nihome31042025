@@ -168,6 +168,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ISurveyMediaStorageService, SurveyMediaStorageService>();
         services.AddScoped<IProjectDriveSyncProcessor, ProjectDriveSyncProcessor>();
         services.AddScoped<IProjectDriveFolderService, ProjectDriveFolderService>();
+        services.AddScoped<IDriveTreeMigrationService, DriveTreeMigrationService>();
         services.AddSingleton<IProjectDriveClaimRenewer, ProjectDriveClaimRenewer>();
         services.AddSingleton<IProjectDriveClaimLease, ProjectDriveClaimLease>();
         services.AddScoped<IGoogleDriveSettingsStore, GoogleDriveSettingsStore>();

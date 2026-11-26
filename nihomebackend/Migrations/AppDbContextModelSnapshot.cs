@@ -4468,6 +4468,102 @@ namespace nihomebackend.Migrations
                     b.ToTable("drawing_revisions", (string)null);
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DriveTreeMigration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(2000)
+                        .HasColumnType("nvarchar(2000)");
+
+                    b.Property<DateTime?>("FinishedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<string>("NewFoldersJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("OldFoldersJson")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("StartedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("StartedByUserId")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("drive_tree_migrations", (string)null);
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DriveTreeMigrationItem", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<long>("Id"));
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("nvarchar(30)");
+
+                    b.Property<string>("DriveFileId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("FromFolderId")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int>("MigrationId")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("MovedAt")
+                        .HasColumnType("datetime2");
+
+                    b.Property<int>("OperationalProjectId")
+                        .HasColumnType("int");
+
+                    b.Property<long?>("ProjectDocumentId")
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("SkipReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("nvarchar(500)");
+
+                    b.Property<string>("ToFolderId")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MigrationId", "Kind", "OperationalProjectId", "Category", "DriveFileId")
+                        .IsUnique();
+
+                    b.ToTable("drive_tree_migration_items", (string)null);
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.EmploymentType", b =>
                 {
                     b.Property<int>("Id")
@@ -14302,6 +14398,17 @@ namespace nihomebackend.Migrations
                     b.Navigation("CreatedBy");
                 });
 
+            modelBuilder.Entity("NihomeBackend.Models.DriveTreeMigrationItem", b =>
+                {
+                    b.HasOne("NihomeBackend.Models.DriveTreeMigration", "Migration")
+                        .WithMany("Items")
+                        .HasForeignKey("MigrationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Migration");
+                });
+
             modelBuilder.Entity("NihomeBackend.Models.HandoverRecord", b =>
                 {
                     b.HasOne("NihomeBackend.Models.DesignProject", "DesignProject")
@@ -16708,6 +16815,11 @@ namespace nihomebackend.Migrations
                     b.Navigation("Predecessors");
 
                     b.Navigation("Successors");
+                });
+
+            modelBuilder.Entity("NihomeBackend.Models.DriveTreeMigration", b =>
+                {
+                    b.Navigation("Items");
                 });
 
             modelBuilder.Entity("NihomeBackend.Models.HandoverRecord", b =>
