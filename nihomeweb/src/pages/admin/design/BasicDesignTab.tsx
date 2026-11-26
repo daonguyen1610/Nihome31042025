@@ -501,7 +501,9 @@ export const BasicDesignTab = ({ project, onProjectMayHaveChanged, onOpenReviews
                 size="sm"
                 className={cn(
                   "gap-1.5",
-                  readiness.readyForDetailDesign ? "bg-success hover:bg-success" : "",
+                  readiness.readyForDetailDesign
+                    ? "bg-success-strong hover:bg-success-strong/90"
+                    : "",
                 )}
                 disabled={!readiness.readyForDetailDesign || busyUnlock}
                 onClick={() => void doUnlock()}
@@ -861,7 +863,7 @@ const RowActions = ({
           {canApprove ? (
             <Button
               size="sm"
-              className={cn(btn, "bg-success hover:bg-success")}
+              className={cn(btn, "bg-success-strong hover:bg-success-strong/90")}
               disabled={busy}
               onClick={() => onTransition("InternallyApproved")}
             >
@@ -912,7 +914,7 @@ const RowActions = ({
         <>
           <Button
             size="sm"
-            className={cn(btn, "bg-success hover:bg-success")}
+            className={cn(btn, "bg-success-strong hover:bg-success-strong/90")}
             disabled={busy}
             onClick={() => onTransition("PermitApproved")}
           >

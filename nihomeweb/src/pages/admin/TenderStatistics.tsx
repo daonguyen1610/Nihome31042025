@@ -243,7 +243,11 @@ export default function TenderStatistics({ onInspect, refreshToken }: Props) {
                 <div className="grid items-center gap-6 md:grid-cols-[220px_1fr]">
                   <div className="relative mx-auto h-48 w-48">
                     <div aria-hidden="true" className="h-full w-full">
-                      <ResponsiveContainer width="100%" height="100%">
+                      <ResponsiveContainer
+                        width="100%"
+                        height="100%"
+                        initialDimension={{ width: 192, height: 192 }}
+                      >
                         <PieChart>
                           <Pie
                             data={segments.filter((s) => s.value > 0)}

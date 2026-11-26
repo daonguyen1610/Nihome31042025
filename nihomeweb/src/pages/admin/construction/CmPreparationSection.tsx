@@ -442,12 +442,9 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                     {t("construction.cm.docReferenceHelp")}
                   </p>
                 </div>
-                <p className="text-xs text-muted-foreground lg:hidden">
-                  {t("construction.cm.scrollTableHint")}
-                </p>
                 <div className="overflow-x-auto">
-                  <table className="w-full min-w-[720px] border-collapse text-sm">
-                    <thead>
+                  <table className="block w-full border-collapse text-sm md:table">
+                    <thead className="hidden md:table-header-group">
                       <tr className="border-b text-left text-xs font-medium text-muted-foreground">
                         <th scope="col" className="pb-2 pr-4">
                           {t("construction.cm.baselineRequirement")}
@@ -465,16 +462,23 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                         </th>
                       </tr>
                     </thead>
-                    <tbody>
+                    <tbody className="block md:table-row-group">
                       {baselineDocumentFields.map(([documentField, referenceField]) => (
-                        <tr key={referenceField} className="border-b last:border-0">
-                          <td className="py-3 pr-4 align-top">
+                        <tr
+                          key={referenceField}
+                          className="block border-b last:border-0 md:table-row"
+                        >
+                          <td className="block py-3 align-top md:table-cell md:pr-4">
                             <p className="font-medium">{t(`construction.cm.${referenceField}`)}</p>
                             <p className="max-w-[18rem] text-xs text-muted-foreground">
                               {t(`construction.cm.${referenceField}Help`)}
                             </p>
                           </td>
-                          <td className="py-3 pr-4 align-top">
+                          <td className="block pb-3 align-top md:table-cell md:py-3 md:pr-4">
+                            {/* The column headings are hidden on a phone: name each field. */}
+                            <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+                              {t("construction.cm.evidenceFileLabel")}
+                            </span>
                             <DocumentSelect
                               id={documentField}
                               label={t("construction.cm.evidenceFileLabel")}
@@ -498,7 +502,11 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
                               }}
                             />
                           </td>
-                          <td className="py-3 align-top">
+                          <td className="block pb-3 align-top md:table-cell md:py-3">
+                            <span className="mb-1 block text-xs font-medium text-muted-foreground md:hidden">
+                              {t("construction.cm.documentNumberLabel")} ·{" "}
+                              {t("construction.cm.requiredTag")}
+                            </span>
                             <Input
                               id={referenceField}
                               required
