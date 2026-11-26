@@ -9,7 +9,7 @@ for (const width of [390, 768, 1440]) {
   }, testInfo) => {
     const token = await loginAs(TEST_USERS.superAdmin);
     const headers = { Authorization: `Bearer ${token}` };
-    const response = await api.get("/api/contracts?pageSize=100", { headers });
+    const response = await api.get("/api/contracts?pageSize=100&search=HD-SAMPLE-001", { headers });
     expect(response.ok()).toBe(true);
     const contracts = (await response.json()).items;
     let matched: { id: number; leads: { id: number; name: string }[] } | undefined;
@@ -66,7 +66,7 @@ test("source lead panel retries and explains empty results", async ({
   loginInBrowserAs,
 }) => {
   const token = await loginAs(TEST_USERS.superAdmin);
-  const response = await api.get("/api/contracts?pageSize=100", {
+  const response = await api.get("/api/contracts?pageSize=100&search=HD-SAMPLE-001", {
     headers: { Authorization: `Bearer ${token}` },
   });
   const contracts = (await response.json()).items;
@@ -100,7 +100,7 @@ test("source lead panel handles direct contracts, multiple leads, languages and 
 }) => {
   const token = await loginAs(TEST_USERS.superAdmin);
   const headers = { Authorization: `Bearer ${token}` };
-  const response = await api.get("/api/contracts?pageSize=100", { headers });
+  const response = await api.get("/api/contracts?pageSize=100&search=HD-SAMPLE-001", { headers });
   const linked = (await response.json()).items.find(
     (item) => item.direction === "Upstream" && item.opportunityId != null,
   );
@@ -176,7 +176,7 @@ test("contract detail shows and links the won source tender", async ({
 }) => {
   const token = await loginAs(TEST_USERS.superAdmin);
   const headers = { Authorization: `Bearer ${token}` };
-  const response = await api.get("/api/contracts?pageSize=100", { headers });
+  const response = await api.get("/api/contracts?pageSize=100&search=HD-SAMPLE-001", { headers });
   expect(response.ok()).toBe(true);
   const linked = (await response.json()).items.find(
     (item) => item.direction === "Upstream" && item.opportunityId != null,

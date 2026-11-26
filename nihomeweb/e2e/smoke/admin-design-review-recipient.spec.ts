@@ -126,7 +126,7 @@ test("design evidence becomes selectable automatically after Drive sync without 
     }
 
     execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
-      UPDATE project_documents SET SyncStatus='Synced', DesiredOperation='None',
+      UPDATE project_documents SET SyncStatus='Synced', DriveCheckedAt=SYSUTCDATETIME(), DesiredOperation='None',
         NextSyncAttemptAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE Id=${documentId};`);
     await expect(documentRow.getByRole("checkbox")).toBeEnabled({ timeout: 12_000 });
     await expect(titleField).toHaveValue(`Basic design review ${unique}`);
@@ -158,7 +158,7 @@ test("design evidence becomes selectable automatically after Drive sync without 
         await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
       ).toBe(true);
     }
-    execSql(`SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus='Synced',
+    execSql(`SET QUOTED_IDENTIFIER ON; UPDATE project_documents SET SyncStatus='Synced', DriveCheckedAt=SYSUTCDATETIME(),
       DesiredOperation='None' WHERE Id=${documentId};`);
     await expect(catalog.locator("article").filter({ hasText: fileName })).toContainText(
       /Đã đồng bộ|Synced/i,
@@ -215,7 +215,7 @@ test("design review can be created by choosing a recipient department only", asy
       'Pending', 0, '2099-01-01', 1, 'None', SYSUTCDATETIME(), SYSUTCDATETIME());`);
   const documentId = Number(inserted.trim());
   execSql(`SET QUOTED_IDENTIFIER ON; SET ANSI_NULLS ON;
-    UPDATE project_documents SET SyncStatus='Synced', DesiredOperation='None',
+    UPDATE project_documents SET SyncStatus='Synced', DriveCheckedAt=SYSUTCDATETIME(), DesiredOperation='None',
       NextSyncAttemptAt=NULL, UpdatedAt=SYSUTCDATETIME() WHERE Id=${documentId};`);
 
   try {
@@ -305,8 +305,9 @@ test("design notification opens recipient evidence and comments without project-
     };
     const saleHeaders = { Authorization: `Bearer ${await loginAs(TEST_USERS.sale)}` };
     expect(
+      // Denied as "not found", so the response does not reveal that the dossier exists.
       (await api.get(`/api/design-projects/${projectId}`, { headers: saleHeaders })).status(),
-    ).toBe(403);
+    ).toBe(404);
     const notifications = await api.get("/api/notifications?take=100", { headers: saleHeaders });
     expect(notifications.ok()).toBeTruthy();
     const notification = (await notifications.json()).find(

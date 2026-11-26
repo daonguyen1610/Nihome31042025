@@ -278,7 +278,9 @@ test("RFQ evidence follows the RFQ limit set in Settings", async ({
   const original = (await (await api.get(settingsPath, { headers: adminHeaders })).json())
     .maxFileSizeMb as number;
   const projects = await (
-    await api.get("/api/operational-projects?pageSize=100", { headers: adminHeaders })
+    await api.get("/api/operational-projects?pageSize=100&search=PJ-SAMPLE-RFQ", {
+      headers: adminHeaders,
+    })
   ).json();
   const project = projects.items.find((item: { code: string }) => item.code === "PJ-SAMPLE-RFQ");
   expect(project, "seeded procurement project required").toBeTruthy();

@@ -104,13 +104,9 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       sourceEntityType: "BasicDesignDoc",
       sourceRecordIds: basicDocumentIds,
     });
-    const unlock = await api.post(
-      `/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`,
-      {
-        headers: authHeader,
-      },
-    );
-    expect(unlock.ok(), await unlock.text()).toBeTruthy();
+    // Client approval of the Basic Design review already moves the project to Detail Design.
+    const advanced = await api.get(`/api/design-projects/${projectId}`, { headers: authHeader });
+    expect((await advanced.json()).currentStage).toBe("ShopDrawing");
 
     // ---------- 2. Open the detail page + switch to Detail Design tab ----------
     await loginInBrowserAs(page, TEST_USERS.superAdmin);
@@ -230,7 +226,7 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       await page.getByTestId(`shop-drawing-delete-${drawing.id}`).first().click();
       await expect(page.locator("#deletion-confirmation")).toBeVisible();
       await page.locator("#deletion-confirmation").fill(drawing.drawingCode);
-      await page.getByRole("button", { name: /Xóa vĩnh viễn|Delete permanently/i }).click();
+      await page.getByRole("button", { name: /(Xóa|Xoá) vĩnh viễn|Delete permanently/i }).click();
       await expect(page.locator(`#shop-drawing-${drawing.id}`)).toHaveCount(0);
     }
 
@@ -323,13 +319,9 @@ test.describe("NIH-116 — Detail Design (real-user flow)", () => {
       sourceEntityType: "BasicDesignDoc",
       sourceRecordIds: prerequisiteDocumentIds,
     });
-    const unlock = await api.post(
-      `/api/basic-design-docs/design-project/${projectId}/unlock-shop-drawing`,
-      {
-        headers: authHeader,
-      },
-    );
-    expect(unlock.ok(), await unlock.text()).toBeTruthy();
+    // Client approval of the Basic Design review already moves the project to Detail Design.
+    const advanced = await api.get(`/api/design-projects/${projectId}`, { headers: authHeader });
+    expect((await advanced.json()).currentStage).toBe("ShopDrawing");
     const drawing = await api.post("/api/shop-drawings", {
       headers: authHeader,
       data: {
