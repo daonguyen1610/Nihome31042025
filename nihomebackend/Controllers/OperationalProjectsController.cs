@@ -55,13 +55,14 @@ public class OperationalProjectsController(
         var driveOptions = await driveSettings.GetRuntimeAsync(ct);
         var categories = Enum.GetValues<ProjectDocumentCategory>()
             .Where(category => category != ProjectDocumentCategory.Unclassified)
-            .OrderBy(category => (int)category)
             .Select(category => new ProjectDocumentCategoryResponse
             {
                 Value = category.ToString(),
                 FolderPath = driveOptions.Folders.For(category),
                 TranslationKey = $"operationalProjects.documents.category.{category}",
             })
+            // Sorted by path, so pickers follow the folder tree even after a folder is renamed.
+            .OrderBy(item => item.FolderPath, StringComparer.Ordinal)
             .ToList();
         return Ok(categories);
     }

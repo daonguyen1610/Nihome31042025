@@ -3388,7 +3388,7 @@
     "key": "settings.drive.configuration.folder.financeContracts", "category": "settings", "vi": "Hợp đồng", "en": "Contracts", "zh": "合同", "ja": "契約"
   },
   {
-    "key": "settings.drive.configuration.folder.designIfc", "category": "settings", "vi": "Thiết kế chi tiết (IFC)", "en": "Detailed design (IFC)", "zh": "施工图设计 (IFC)", "ja": "実施設計 (IFC)"
+    "key": "settings.drive.configuration.folder.designIfc", "category": "settings", "vi": "Bản vẽ IFC", "en": "IFC drawings", "zh": "IFC 图纸", "ja": "IFC 図面"
   },
   {
     "key": "settings.drive.configuration.folder.constructionPreparation", "category": "settings", "vi": "Chuẩn bị thi công", "en": "Construction preparation", "zh": "施工准备", "ja": "施工準備"
