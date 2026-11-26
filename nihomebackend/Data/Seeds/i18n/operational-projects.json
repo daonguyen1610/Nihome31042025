@@ -842,10 +842,66 @@
   {
     "key": "operationalProjects.documents.category.FinanceContracts",
     "category": "operationalProjects",
-    "vi": "Tài chính và hợp đồng",
-    "en": "Finance and contracts",
-    "zh": "财务与合同",
-    "ja": "財務・契約"
+    "vi": "Hợp đồng",
+    "en": "Contracts",
+    "zh": "合同",
+    "ja": "契約"
+  },
+  {
+    "key": "operationalProjects.documents.category.Handover",
+    "category": "operationalProjects",
+    "vi": "Bàn giao và bảo hành",
+    "en": "Handover and warranty",
+    "zh": "交接与保修",
+    "ja": "引き渡し・保証"
+  },
+  {
+    "key": "operationalProjects.documents.category.DesignIfc",
+    "category": "operationalProjects",
+    "vi": "Thiết kế chi tiết (IFC)",
+    "en": "Detailed design (IFC)",
+    "zh": "施工图设计 (IFC)",
+    "ja": "実施設計 (IFC)"
+  },
+  {
+    "key": "operationalProjects.documents.category.ConstructionPreparation",
+    "category": "operationalProjects",
+    "vi": "Chuẩn bị thi công",
+    "en": "Construction preparation",
+    "zh": "施工准备",
+    "ja": "施工準備"
+  },
+  {
+    "key": "operationalProjects.documents.category.ConstructionDiary",
+    "category": "operationalProjects",
+    "vi": "Nhật ký và báo cáo công trường",
+    "en": "Site diary and reports",
+    "zh": "施工日志与报告",
+    "ja": "工事日誌・報告"
+  },
+  {
+    "key": "operationalProjects.documents.category.Hse",
+    "category": "operationalProjects",
+    "vi": "An toàn lao động (HSE)",
+    "en": "Health and safety (HSE)",
+    "zh": "安全生产 (HSE)",
+    "ja": "安全衛生 (HSE)"
+  },
+  {
+    "key": "operationalProjects.documents.category.QuantitySurvey",
+    "category": "operationalProjects",
+    "vi": "Khối lượng (QS)",
+    "en": "Quantity survey (QS)",
+    "zh": "工程量 (QS)",
+    "ja": "数量管理 (QS)"
+  },
+  {
+    "key": "operationalProjects.documents.category.Finance",
+    "category": "operationalProjects",
+    "vi": "Tài chính",
+    "en": "Finance",
+    "zh": "财务",
+    "ja": "財務"
   },
   {
     "key": "operationalProjects.documents.download",

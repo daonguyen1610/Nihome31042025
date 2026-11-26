@@ -23,16 +23,24 @@ import {
   type UpdateGoogleDriveConfigurationRequest,
 } from "@/services/adminApi";
 
+// Listed in the order of the PRD v2 folder tree.
 const FOLDER_FIELDS: Array<keyof GoogleDriveFolderConfiguration> = [
-  "surveyMedia",
   "crmPreDesign",
+  "surveyMedia",
+  "financeContracts",
   "designConcept",
   "designBasic",
+  "designIfc",
   "designShopDrawing",
   "legalPermits",
+  "constructionPreparation",
+  "constructionDiary",
   "constructionAcceptance",
+  "hse",
+  "quantitySurvey",
   "procurement",
-  "financeContracts",
+  "finance",
+  "handover",
 ];
 
 const CLIENT_ID_PATTERN = /^[A-Za-z0-9._-]+\.apps\.googleusercontent\.com$/;

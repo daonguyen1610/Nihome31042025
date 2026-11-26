@@ -85,11 +85,19 @@ public sealed class GoogleDriveOptionsTests
         await service.EnsureTreeAsync(project);
         await service.EnsureTreeAsync(project);
 
-        Assert.Equal(GoogleDriveFolderOptions.StandardTree.Append("01_CoHoi_BaoGia").Order(), paths.Distinct().Order());
-        Assert.Equal(16 + 7, paths.Count); // the repeat only re-checks the unbound folders
+        string[] prdV2Tree =
+        [
+            "01_CoHoi_BaoGia", "01_CoHoi_BaoGia/01_KhaoSat", "02_HopDong",
+            "03_ThietKe/01_Concept", "03_ThietKe/02_CoSo", "03_ThietKe/03_ChiTiet_IFC", "03_ThietKe/04_ShopDrawing",
+            "04_PhapLy",
+            "05_ThiCong/01_ChuanBi", "05_ThiCong/02_NhatKy_BaoCao", "05_ThiCong/03_ChatLuong_NghiemThu",
+            "05_ThiCong/04_ATLD_HSE", "05_ThiCong/05_QS_KhoiLuong",
+            "06_CungUng", "07_TaiChinh", "08_BanGiao_BaoHanh",
+        ];
+        Assert.Equal(prdV2Tree.Order(StringComparer.Ordinal), paths.Order(StringComparer.Ordinal));
         Assert.Equal(8, paths.Select(path => path.Split('/')[0]).Distinct().Count());
         var bindings = await db.ProjectDriveFolders.ToListAsync();
-        Assert.Equal(9, bindings.Count);
+        Assert.Equal(prdV2Tree.Length, bindings.Count);
         Assert.Equal("id-03_ThietKe/02_CoSo",
             bindings.Single(binding => binding.Category == ProjectDocumentCategory.DesignBasic).DriveFolderId);
         drive.Verify(item => item.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
@@ -107,13 +115,6 @@ public sealed class GoogleDriveOptionsTests
         await Assert.ThrowsAsync<ProjectDriveNotConnectedException>(() =>
             service.EnsureTreeAsync(new OperationalProject { Id = 1, Code = "PJ-1", Name = "P" }));
         drive.VerifyNoOtherCalls();
-    }
-
-    [Fact]
-    public void ExtraTreePaths_StayEmptyForAnOlderCustomTopology()
-    {
-        Assert.Equal(7, new GoogleDriveFolderOptions().ExtraTreePaths().Count());
-        Assert.Empty(new GoogleDriveFolderOptions { ConstructionAcceptance = "04_Thi_cong_Nghiem_thu" }.ExtraTreePaths());
     }
 
     [Fact]

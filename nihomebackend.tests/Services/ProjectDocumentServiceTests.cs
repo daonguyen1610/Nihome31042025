@@ -517,6 +517,41 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         storage.Verify(item => item.DeleteOwned(It.IsAny<int>(), It.IsAny<string>()), Times.Never);
     }
 
+    [Theory]
+    [InlineData("design.ifc.view", ProjectDocumentCategory.DesignIfc)]
+    [InlineData("construction.cm-preparation.view", ProjectDocumentCategory.ConstructionPreparation)]
+    [InlineData("construction.diary.view", ProjectDocumentCategory.ConstructionDiary)]
+    [InlineData("construction.hse.view", ProjectDocumentCategory.Hse)]
+    [InlineData("construction.qs.view", ProjectDocumentCategory.QuantitySurvey)]
+    [InlineData("construction.handover.view", ProjectDocumentCategory.Handover)]
+    [InlineData("finance.payments.view", ProjectDocumentCategory.Finance)]
+    public async Task ListAsync_ProjectMember_SeesATreeFolderOnlyWithItsModulePermission(
+        string permission, ProjectDocumentCategory category)
+    {
+        db.Users.Add(new ApplicationUser { Id = 50, FullName = "Thành viên", PhoneNumber = "0900000050", PasswordHash = "x" });
+        db.OperationalProjectMembers.Add(new OperationalProjectMember
+        {
+            OperationalProjectId = project.Id,
+            UserId = 50,
+            StartedAt = DateTime.UtcNow.AddDays(-1),
+        });
+        await db.SaveChangesAsync();
+        foreach (var each in Enum.GetValues<ProjectDocumentCategory>().Skip(1)) AddDocument(each);
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(item => item.GetForUserAsync(50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<string> { permission });
+        var access = new Mock<IProjectAccessService>();
+        access.Setup(item => item.GetAccessibleDesignProjectIdsAsync(50, It.IsAny<CancellationToken>()))
+            .ReturnsAsync(new HashSet<int>());
+        var scoped = new ProjectDocumentService(db, storage.Object, drive.Object, folders.Object,
+            new TestGoogleDriveSettingsStore(new GoogleDriveOptions()), permissions.Object, access.Object);
+
+        var seen = (await scoped.ListAsync(project.Id, 50, false))!.Select(item => item.Category).ToList();
+
+        Assert.Contains(category.ToString(), seen);
+        Assert.Equal(category == ProjectDocumentCategory.Finance, seen.Contains(nameof(ProjectDocumentCategory.Finance)));
+    }
+
     private ProjectDocument AddDocument(ProjectDocumentCategory category)
     {
         var document = new ProjectDocument

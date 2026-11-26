@@ -3385,7 +3385,28 @@
     "key": "settings.drive.configuration.folder.procurement", "category": "settings", "vi": "Cung ứng / Vật tư", "en": "Procurement / Materials", "zh": "采购 / 材料", "ja": "調達 / 資材"
   },
   {
-    "key": "settings.drive.configuration.folder.financeContracts", "category": "settings", "vi": "Tài chính / Hợp đồng", "en": "Finance / Contracts", "zh": "财务 / 合同", "ja": "財務 / 契約"
+    "key": "settings.drive.configuration.folder.financeContracts", "category": "settings", "vi": "Hợp đồng", "en": "Contracts", "zh": "合同", "ja": "契約"
+  },
+  {
+    "key": "settings.drive.configuration.folder.designIfc", "category": "settings", "vi": "Thiết kế chi tiết (IFC)", "en": "Detailed design (IFC)", "zh": "施工图设计 (IFC)", "ja": "実施設計 (IFC)"
+  },
+  {
+    "key": "settings.drive.configuration.folder.constructionPreparation", "category": "settings", "vi": "Chuẩn bị thi công", "en": "Construction preparation", "zh": "施工准备", "ja": "施工準備"
+  },
+  {
+    "key": "settings.drive.configuration.folder.constructionDiary", "category": "settings", "vi": "Nhật ký và báo cáo công trường", "en": "Site diary and reports", "zh": "施工日志与报告", "ja": "工事日誌・報告"
+  },
+  {
+    "key": "settings.drive.configuration.folder.hse", "category": "settings", "vi": "An toàn lao động (HSE)", "en": "Health and safety (HSE)", "zh": "安全生产 (HSE)", "ja": "安全衛生 (HSE)"
+  },
+  {
+    "key": "settings.drive.configuration.folder.quantitySurvey", "category": "settings", "vi": "Khối lượng (QS)", "en": "Quantity survey (QS)", "zh": "工程量 (QS)", "ja": "数量管理 (QS)"
+  },
+  {
+    "key": "settings.drive.configuration.folder.finance", "category": "settings", "vi": "Tài chính", "en": "Finance", "zh": "财务", "ja": "財務"
+  },
+  {
+    "key": "settings.drive.configuration.folder.handover", "category": "settings", "vi": "Bàn giao / Bảo hành", "en": "Handover / Warranty", "zh": "交接 / 保修", "ja": "引き渡し / 保証"
   },
   {
     "key": "settings.drive.configuration.supportsAllDrives", "category": "settings", "vi": "Hỗ trợ cả My Drive và Shared Drive", "en": "Support both My Drive and Shared Drives", "zh": "同时支持 My Drive 和共享云端硬盘", "ja": "My Drive と共有ドライブの両方をサポート"

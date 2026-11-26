@@ -290,6 +290,37 @@ public sealed class GoogleDriveOAuthServiceTests
     }
 
     [Fact]
+    public async Task SettingsStore_PathAlreadyUsedByAnotherFolder_IsRejected()
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var request = ValidConfiguration("client-secret-value");
+        // Finance already uses 07_TaiChinh; two categories cannot share one Drive folder.
+        request.Folders.Procurement = "07_TaiChinh";
+
+        await Assert.ThrowsAsync<GoogleDriveSettingsValidationException>(() => store.UpdateAsync(request, 7));
+        Assert.Empty(db.GoogleDriveCredentials);
+    }
+
+    [Fact]
+    public async Task SettingsStore_EveryTreeFolderCanBeRenamed()
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        var request = ValidConfiguration("client-secret-value");
+        var paths = typeof(GoogleDriveFolderOptions).GetProperties()
+            .Where(property => property.PropertyType == typeof(string) && property.CanWrite).ToList();
+        foreach (var property in paths) property.SetValue(request.Folders, $"NICON_{property.Name}");
+
+        await store.UpdateAsync(request, 7);
+        var saved = (await store.GetRuntimeAsync()).Folders;
+
+        Assert.Equal(Enum.GetValues<ProjectDocumentCategory>().Length - 1, paths.Count);
+        foreach (var category in Enum.GetValues<ProjectDocumentCategory>().Skip(1))
+            Assert.StartsWith("NICON_", saved.For(category));
+    }
+
+    [Fact]
     public async Task SettingsStore_NullString_IsRejectedAsValidationError()
     {
         await using var db = CreateDb();

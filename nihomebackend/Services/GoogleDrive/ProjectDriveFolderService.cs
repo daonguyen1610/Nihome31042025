@@ -70,9 +70,6 @@ public sealed class ProjectDriveFolderService(
         foreach (var category in Enum.GetValues<ProjectDocumentCategory>()
                      .Where(category => category != ProjectDocumentCategory.Unclassified))
             await EnsureAsync(project, category, userId, ct);
-        // Folders no category uses yet are found again by their identity, so they are not stored.
-        foreach (var path in options.Folders.ExtraTreePaths())
-            await drive.EnsureFolderPathAsync(Segments(options, project, path.Split('/')), ct);
     }
 
     private static List<DriveFolderSegment> Segments(

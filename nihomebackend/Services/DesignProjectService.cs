@@ -427,7 +427,7 @@ public class DesignProjectService(
             .ToListAsync(ct);
         foreach (var document in asBuiltDocuments)
             if (document.FileUrl!.StartsWith("/files/business-documents/as-built/", StringComparison.OrdinalIgnoreCase))
-                files.Add(new(ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Acceptance,
+                files.Add(new(ProjectDocumentCategory.Handover, ProjectDocumentSourceModule.Acceptance,
                     nameof(AsBuiltDocument), "file", document.Id, document.FileUrl,
                     Path.GetFileName(document.FileUrl), project.CustomerId, project.ContractId));
 
@@ -436,7 +436,7 @@ public class DesignProjectService(
             .ToListAsync(ct);
         foreach (var record in handovers)
             foreach (var path in ManagedPaths(record.Documents, "/files/business-documents/handover/"))
-                files.Add(new(ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Handover,
+                files.Add(new(ProjectDocumentCategory.Handover, ProjectDocumentSourceModule.Handover,
                     nameof(HandoverRecord), "documents", record.Id, path, Path.GetFileName(path),
                     project.CustomerId, project.ContractId));
         return files;

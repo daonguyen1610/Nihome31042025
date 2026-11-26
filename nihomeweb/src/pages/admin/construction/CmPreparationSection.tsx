@@ -28,6 +28,9 @@ import {
   type ProjectDocumentResponse,
 } from "@/services/adminApi";
 
+// Matches the server rule: preparation evidence may sit in any of these Drive folders.
+const EVIDENCE_CATEGORIES = ["ConstructionPreparation", "ConstructionAcceptance", "Handover"];
+
 const baselineDocumentFields = [
   ["wbsBaselineDocumentId", "wbsBaselineReference"],
   ["scheduleBaselineDocumentId", "scheduleBaselineReference"],
@@ -136,7 +139,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
         setProjectDocuments(
           (documentsList.data ?? []).filter(
             (document) =>
-              document.category === "ConstructionAcceptance" &&
+              EVIDENCE_CATEGORIES.includes(document.category) &&
               document.desiredOperation !== "Delete" &&
               document.syncStatus !== "Deleted",
           ),
@@ -176,7 +179,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
     setProjectDocuments(
       (data ?? []).filter(
         (document) =>
-          document.category === "ConstructionAcceptance" &&
+          EVIDENCE_CATEGORIES.includes(document.category) &&
           document.desiredOperation !== "Delete" &&
           document.syncStatus !== "Deleted",
       ),
@@ -193,7 +196,7 @@ export function CmPreparationSection({ projectId }: { projectId: number }) {
         await adminApi.uploadProjectDocument(
           projectId,
           file,
-          "ConstructionAcceptance",
+          "ConstructionPreparation",
           uploadKeysRef.current.get(file) ?? newIdempotencyKey(),
         );
         uploadKeysRef.current.delete(file);

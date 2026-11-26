@@ -135,7 +135,7 @@ public class AsBuiltDocumentServiceTests : IDisposable
         }, _userId);
 
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
-            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            It.IsAny<int>(), ProjectDocumentCategory.Handover,
             ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument), "file", created.Id,
             "/files/business-documents/as-built/old.pdf", "old.pdf", It.IsAny<int?>(),
             It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);
@@ -144,7 +144,7 @@ public class AsBuiltDocumentServiceTests : IDisposable
             created.Id, "/files/business-documents/as-built/old.pdf", _userId,
             It.IsAny<CancellationToken>()), Times.Once);
         _projectDocuments.Verify(staging => staging.StageExistingManagedFileAsync(
-            It.IsAny<int>(), ProjectDocumentCategory.ConstructionAcceptance,
+            It.IsAny<int>(), ProjectDocumentCategory.Handover,
             ProjectDocumentSourceModule.Acceptance, nameof(AsBuiltDocument), "file", created.Id,
             "/files/business-documents/as-built/new.pdf", "new.pdf", It.IsAny<int?>(),
             It.IsAny<int?>(), _userId, It.IsAny<CancellationToken>()), Times.Once);

@@ -75,3 +75,6 @@ test-results
 .github/agents/
 .github/hooks/impeccable.json
 .github/skills/impeccable/
+
+# Agent plans and notes are local working files; keep them out of the project docs.
+docs/superpowers/

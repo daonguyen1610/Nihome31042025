@@ -142,7 +142,7 @@ Nicon stores Operational Project documents under the configured Drive root using
 <Drive root>/<ProjectCode>_<ProjectName>/<Configured category path>/<File>
 ```
 
-Administrators manage the folder paths at `/admin/settings?tab=drive`. Every category is also available for direct upload and catalog management from `/admin/operational-projects/{operationalProjectId}`. A source workflow stages its managed file automatically only when the source record is linked to an Operational Project.
+Administrators can change every category's folder path at `/admin/settings?tab=drive`. Every category is also available for direct upload and catalog management from `/admin/operational-projects/{operationalProjectId}`. A source workflow stages its managed file automatically only when the source record is linked to an Operational Project.
 
 | Category | Default configured folder | Admin source page | Drive integration |
 |----------|---------------------------|-------------------|-------------------|
@@ -152,11 +152,20 @@ Administrators manage the folder paths at `/admin/settings?tab=drive`. Every cat
 | `DesignBasic` | `03_ThietKe/02_CoSo` | `/admin/design-projects/{id}` → **Basic** tab | Basic Design uploads stage automatically. |
 | `DesignShopDrawing` | `03_ThietKe/04_ShopDrawing` | `/admin/design-projects/{id}` → **Shop** tab | Shop Drawing uploads stage automatically. |
 | `LegalPermits` | `04_PhapLy` | `/admin/permits` | Submitted-package and issued-permit files stage automatically. |
-| `ConstructionAcceptance` | `05_ThiCong/03_ChatLuong_NghiemThu` | `/admin/construction/acceptance`, `/admin/construction/asbuilt`, and `/admin/construction/handover` | Acceptance, as-built, and handover managed files stage automatically. Construction Tasks, Site Diary, and Punch List attachments are not included in this integration. |
+| `ConstructionAcceptance` | `05_ThiCong/03_ChatLuong_NghiemThu` | `/admin/construction/acceptance` | Acceptance files stage automatically. Construction Task and Punch List attachments are not included in this integration. |
 | `Procurement` | `06_CungUng` | `/admin/vendors` and `/admin/vendors/{id}` | Direct Operational Project upload only; Vendor workflows do not currently stage files automatically. |
-| `FinanceContracts` | `02_HopDong` | `/admin/contracts` and `/admin/contracts/{id}` | Contract files, attachments, and appendices stage automatically. |
+| `FinanceContracts` | `02_HopDong` | `/admin/contracts` and `/admin/contracts/{id}` | Contract files, attachments, and appendices of every contract type stage automatically. |
+| `DesignIfc` | `03_ThietKe/03_ChiTiet_IFC` | Operational Project detail | Direct upload only; IFC releases reference the existing shop drawings. |
+| `ConstructionPreparation` | `05_ThiCong/01_ChuanBi` | CM preparation | Files uploaded on the preparation screen. |
+| `ConstructionDiary` | `05_ThiCong/02_NhatKy_BaoCao` | Operational Project detail | Direct upload only; Site Diary entries have no attachments. |
+| `Hse` | `05_ThiCong/04_ATLD_HSE` | Operational Project detail | Direct upload only; HSE evidence is stored as typed internal links. |
+| `QuantitySurvey` | `05_ThiCong/05_QS_KhoiLuong` | Operational Project detail | Direct upload only. |
+| `Finance` | `07_TaiChinh` | Operational Project detail | Direct upload only; payment request attachments are stored as typed links. |
+| `Handover` | `08_BanGiao_BaoHanh` | `/admin/construction/asbuilt` and `/admin/construction/handover` | As-built and handover files stage automatically. |
 
-With these defaults (PRD v2 section 7), the Drive sync worker builds each project's whole tree once Drive is connected: the eight numbered top-level folders plus the `03_ThietKe` and `05_ThiCong` subfolders, including folders no category uses yet (`07_TaiChinh`, `08_BanGiao_BaoHanh`, ...). Project detail shows "Create missing folders" to retry at once when a tree is incomplete. A custom older topology only gets its category folders, never a mixed tree. Existing settings switch to the new defaults on migration only when no project folder is bound yet.
+With these defaults the categories above cover the whole PRD v2 section 7 tree, and the Drive sync worker builds it for each project once Drive is connected. Project detail shows "Create missing folders" to retry at once when a tree is incomplete. These are only defaults: each path can be changed in Settings (no two categories may share one). Turn synchronization off before saving a change; the next sync creates folders at the new paths and nothing already on Drive is renamed, moved or deleted.
+
+Settings still on the old default paths (`01_Khao_sat` ... `06_Tai_chinh_Hop_dong`) switch to these defaults on migration, which also drops their folder links so sync builds the new tree. Nothing on Drive is moved or deleted: old folders and the files in them stay where they are and downloads keep working, but later changes made in those old folders on Drive are no longer picked up. Custom paths are left unchanged.
 
 Nested configured paths are created one segment at a time. For example, a `DesignBasic` file for project `PJ-001 / Sample House` is stored under `<Drive root>/PJ-001_Sample House/03_ThietKe/02_CoSo`.
 

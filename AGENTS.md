@@ -296,10 +296,12 @@ auditable source material used to interpret and validate it.
   approved Execution BOQ revision and Final BOQ. Only the applicable approved
   Execution BOQ constrains MR/warehouse; never promote a workbook based only on
   its module, filename or sheet label.
-- The current Drive registry has separate `Survey` (`01_Khao_sat`) and
-  `CrmPreDesign` (`01_CRM_PreDesign`) categories. The business target nests
-  Survey under CRM Pre-Design. Preserve current bindings until an approved,
-  reversible topology migration moves/rebinds and verifies historical files.
+- Drive folders follow the PRD v2 section 7 tree, one `ProjectDocumentCategory`
+  per folder (`Survey` nests under `01_CoHoi_BaoGia`). The 2026-11-26 switch
+  dropped old folder bindings without moving files because no production data
+  existed. Once customers use Drive in production, preserve current bindings
+  until an approved, reversible topology migration moves/rebinds and verifies
+  historical files.
 
 ## Module 4 construction and acceptance rules
 

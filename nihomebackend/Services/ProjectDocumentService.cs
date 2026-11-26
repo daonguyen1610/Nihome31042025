@@ -460,10 +460,22 @@ public sealed class ProjectDocumentService(
         if (Has("design.basic.view")) categories.Add(ProjectDocumentCategory.DesignBasic);
         if (Has("design.shop.view")) categories.Add(ProjectDocumentCategory.DesignShopDrawing);
         if (Has("permit.checklists.view")) categories.Add(ProjectDocumentCategory.LegalPermits);
-        if (Has("construction.acceptance.view", "construction.qa-qc.view", "construction.qs.view"))
-            categories.Add(ProjectDocumentCategory.ConstructionAcceptance);
+        var acceptanceViewer = Has("construction.acceptance.view", "construction.qa-qc.view", "construction.qs.view");
+        if (acceptanceViewer) categories.Add(ProjectDocumentCategory.ConstructionAcceptance);
+        if (acceptanceViewer || Has("construction.handover.view", "construction.asbuilt.view"))
+            categories.Add(ProjectDocumentCategory.Handover);
+        if (acceptanceViewer || Has("construction.cm-preparation.view"))
+            categories.Add(ProjectDocumentCategory.ConstructionPreparation);
+        if (Has("design.ifc.view")) categories.Add(ProjectDocumentCategory.DesignIfc);
+        if (Has("construction.diary.view")) categories.Add(ProjectDocumentCategory.ConstructionDiary);
+        if (Has("construction.hse.view")) categories.Add(ProjectDocumentCategory.Hse);
+        if (Has("construction.qs.view")) categories.Add(ProjectDocumentCategory.QuantitySurvey);
         if (Has("proc.material-requests.view", "proc.resource-requests.view")) categories.Add(ProjectDocumentCategory.Procurement);
-        if (Has("finance.payments.view")) categories.Add(ProjectDocumentCategory.FinanceContracts);
+        if (Has("finance.payments.view"))
+        {
+            categories.Add(ProjectDocumentCategory.FinanceContracts);
+            categories.Add(ProjectDocumentCategory.Finance);
+        }
 
         var sources = new List<ProjectDocumentSourceModule> { ProjectDocumentSourceModule.General };
         if (Has("crm.opportunities.view", "crm.contracts.view")) sources.Add(ProjectDocumentSourceModule.Crm);

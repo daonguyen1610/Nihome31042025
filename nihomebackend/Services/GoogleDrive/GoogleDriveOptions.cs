@@ -35,6 +35,13 @@ public sealed class GoogleDriveFolderOptions
     public string ConstructionAcceptance { get; set; } = "05_ThiCong/03_ChatLuong_NghiemThu";
     public string Procurement { get; set; } = "06_CungUng";
     public string FinanceContracts { get; set; } = "02_HopDong";
+    public string DesignIfc { get; set; } = "03_ThietKe/03_ChiTiet_IFC";
+    public string ConstructionPreparation { get; set; } = "05_ThiCong/01_ChuanBi";
+    public string ConstructionDiary { get; set; } = "05_ThiCong/02_NhatKy_BaoCao";
+    public string Hse { get; set; } = "05_ThiCong/04_ATLD_HSE";
+    public string QuantitySurvey { get; set; } = "05_ThiCong/05_QS_KhoiLuong";
+    public string Finance { get; set; } = "07_TaiChinh";
+    public string Handover { get; set; } = "08_BanGiao_BaoHanh";
 
     public string For(ProjectDocumentCategory category) => category switch
     {
@@ -47,32 +54,16 @@ public sealed class GoogleDriveFolderOptions
         ProjectDocumentCategory.ConstructionAcceptance => ConstructionAcceptance,
         ProjectDocumentCategory.Procurement => Procurement,
         ProjectDocumentCategory.FinanceContracts => FinanceContracts,
+        ProjectDocumentCategory.DesignIfc => DesignIfc,
+        ProjectDocumentCategory.ConstructionPreparation => ConstructionPreparation,
+        ProjectDocumentCategory.ConstructionDiary => ConstructionDiary,
+        ProjectDocumentCategory.Hse => Hse,
+        ProjectDocumentCategory.QuantitySurvey => QuantitySurvey,
+        ProjectDocumentCategory.Finance => Finance,
+        ProjectDocumentCategory.Handover => Handover,
         _ => throw new ArgumentOutOfRangeException(nameof(category), "Danh mục chưa phân loại không có thư mục Drive đích."),
     };
 
     public IReadOnlyList<string> SegmentsFor(ProjectDocumentCategory category) => For(category)
         .Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-
-    /// <summary>PRD v2 section 7: the eight numbered top-level project folders and their subfolders (leaf paths).</summary>
-    public static readonly IReadOnlyList<string> StandardTree =
-    [
-        "01_CoHoi_BaoGia/01_KhaoSat", "02_HopDong",
-        "03_ThietKe/01_Concept", "03_ThietKe/02_CoSo", "03_ThietKe/03_ChiTiet_IFC", "03_ThietKe/04_ShopDrawing",
-        "04_PhapLy",
-        "05_ThiCong/01_ChuanBi", "05_ThiCong/02_NhatKy_BaoCao", "05_ThiCong/03_ChatLuong_NghiemThu",
-        "05_ThiCong/04_ATLD_HSE", "05_ThiCong/05_QS_KhoiLuong",
-        "06_CungUng", "07_TaiChinh", "08_BanGiao_BaoHanh",
-    ];
-
-    /// <summary>
-    /// Folders a project tree needs beyond its category folders. Empty while an older custom topology is
-    /// configured, so a project never gets a mixed tree.
-    /// </summary>
-    public IEnumerable<string> ExtraTreePaths()
-    {
-        var categoryPaths = Enum.GetValues<ProjectDocumentCategory>()
-            .Where(category => category != ProjectDocumentCategory.Unclassified).Select(For).ToList();
-        var standard = categoryPaths.All(path => StandardTree.Any(leaf => leaf == path || leaf.StartsWith(path + "/", StringComparison.Ordinal)));
-        return standard ? StandardTree.Except(categoryPaths) : [];
-    }
 }

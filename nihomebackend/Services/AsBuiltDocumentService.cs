@@ -287,7 +287,7 @@ public class AsBuiltDocumentService(
                 recordId, oldPath, userId, ct);
         if (newPath is not null && !string.Equals(oldPath, newPath, StringComparison.Ordinal))
             await projectDocuments.StageExistingManagedFileAsync(projectId,
-                ProjectDocumentCategory.ConstructionAcceptance, ProjectDocumentSourceModule.Acceptance,
+                ProjectDocumentCategory.Handover, ProjectDocumentSourceModule.Acceptance,
                 nameof(AsBuiltDocument), "file", recordId, newPath, Path.GetFileName(newPath),
                 project.CustomerId, project.ContractId, userId, ct);
     }
