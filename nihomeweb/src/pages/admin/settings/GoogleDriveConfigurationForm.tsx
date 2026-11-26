@@ -22,6 +22,7 @@ import {
   type GoogleDriveFolderConfiguration,
   type UpdateGoogleDriveConfigurationRequest,
 } from "@/services/adminApi";
+import DriveTreeMigrationPanel from "./DriveTreeMigrationPanel";
 
 const FOLDER_FIELDS: Array<keyof GoogleDriveFolderConfiguration> = [
   "surveyMedia",
@@ -177,6 +178,7 @@ export default function GoogleDriveConfigurationForm({
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<GoogleDriveConnectionTestResponse | null>(null);
   const [testError, setTestError] = useState<string | null>(null);
+  const [migrating, setMigrating] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -289,13 +291,16 @@ export default function GoogleDriveConfigurationForm({
     }
   };
 
-  if (loading) return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
+  // A reload keeps the form mounted, so the folder move panel keeps showing its result.
+  if (loading && !form)
+    return <p className="text-sm text-muted-foreground">{t("common.loading")}</p>;
   if (!form)
     return (
       <p className="text-sm text-destructive">{t("settings.drive.configuration.loadError")}</p>
     );
 
-  const disabled = !canManage || saving;
+  // Saving settings while folders are moving could re-enable sync or drop the new folder bindings.
+  const disabled = !canManage || saving || loading || migrating;
   return (
     <section className="space-y-6 rounded-lg border bg-card p-4 sm:p-6">
       <div className="flex flex-col gap-4 border-b pb-4 sm:flex-row sm:items-start sm:justify-between">
@@ -458,6 +463,13 @@ export default function GoogleDriveConfigurationForm({
         </div>
       </div>
 
+      <DriveTreeMigrationPanel
+        canManage={canManage}
+        reloadKey={reloadKey}
+        onChanged={onSaved}
+        onBusyChange={setMigrating}
+      />
+
       <div className="rounded-lg border bg-muted/20 p-4" data-testid="drive-connection-test">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
@@ -615,7 +627,7 @@ export default function GoogleDriveConfigurationForm({
           </div>
         </div>
         {canManage && (
-          <Button type="button" onClick={save} disabled={saving}>
+          <Button type="button" onClick={save} disabled={disabled}>
             <Save className="mr-1.5 h-4 w-4" />
             {saving ? t("common.saving") : t("settings.drive.configuration.save")}
           </Button>

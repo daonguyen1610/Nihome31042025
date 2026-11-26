@@ -2,6 +2,8 @@ using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using NihomeBackend.Authorization;
+using NihomeBackend.Models;
+using NihomeBackend.Services.Audit;
 using NihomeBackend.Services.GoogleDrive;
 
 namespace NihomeBackend.Controllers;
@@ -19,6 +21,8 @@ public class GoogleDriveOAuthController(
     GoogleDriveOAuthService oauth,
     IGoogleDriveSettingsStore settingsStore,
     IGoogleDriveAdapter drive,
+    IDriveTreeMigrationService treeMigration,
+    IAuditLogger audit,
     ILogger<GoogleDriveOAuthController> logger) : ControllerBase
 {
     [HttpGet("configuration")]
@@ -116,6 +120,65 @@ public class GoogleDriveOAuthController(
                 message = "Không đọc được cấu hình hoặc không kết nối được Google Drive. Kiểm tra quyền truy cập thư mục gốc và kết nối tài khoản.",
             });
         }
+    }
+
+    [HttpGet("tree-migration/preview")]
+    [Authorize]
+    [RequirePermission("system.settings", "view")]
+    public async Task<ActionResult<DriveTreeMigrationPreview>> PreviewTreeMigration(CancellationToken ct) =>
+        Ok(await treeMigration.PreviewAsync(ct));
+
+    // Run and undo take no request token on purpose: closing the tab must not stop a half-done file move.
+    [HttpPost("tree-migration")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public Task<ActionResult<DriveTreeMigrationResult>> RunTreeMigration() =>
+        MoveDriveTreeAsync("drive.tree-migration.run", DriveTreeMigrationStatus.Completed,
+            userId => treeMigration.RunAsync(userId, CancellationToken.None));
+
+    [HttpPost("tree-migration/{id:int}/undo")]
+    [Authorize]
+    [RequirePermission("system.settings", "manage")]
+    public Task<ActionResult<DriveTreeMigrationResult>> UndoTreeMigration(int id) =>
+        MoveDriveTreeAsync("drive.tree-migration.undo", DriveTreeMigrationStatus.RolledBack,
+            userId => treeMigration.UndoAsync(id, userId, CancellationToken.None));
+
+    private async Task<ActionResult<DriveTreeMigrationResult>> MoveDriveTreeAsync(
+        string action,
+        DriveTreeMigrationStatus successStatus,
+        Func<int, Task<DriveTreeMigrationResult>> move)
+    {
+        var rawUserId = User.FindFirstValue(ClaimTypes.NameIdentifier) ?? User.FindFirstValue("uid");
+        if (!int.TryParse(rawUserId, out var userId) || userId <= 0) return Unauthorized();
+        DriveTreeMigrationResult result;
+        try
+        {
+            result = await move(userId);
+        }
+        catch (DriveTreeMigrationBlockedException exception)
+        {
+            return Conflict(new { code = exception.Code, message = exception.Message });
+        }
+
+        var succeeded = result.Status == successStatus;
+        if (!succeeded)
+        {
+            logger.LogWarning(
+                "{Action} stopped on migration {MigrationId} with status {Status}; fix the Drive error and retry.",
+                action, result.MigrationId, result.Status);
+        }
+        audit.Log(new AuditEvent
+        {
+            Action = action,
+            ResourceType = nameof(DriveTreeMigration),
+            ResourceId = result.MigrationId.ToString(),
+            Message = $"{action}: {result.Status}, moved {result.Moved}, skipped {result.Skipped}.",
+            Status = succeeded ? AuditStatus.Success : AuditStatus.Failure,
+            FailureReason = result.Error,
+            TargetSystem = "google-drive",
+            NewValue = result,
+        });
+        return Ok(result);
     }
 
     [HttpPost("oauth/start")]

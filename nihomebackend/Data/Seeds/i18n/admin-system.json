@@ -4756,5 +4756,134 @@
     "en": "You need settings management permission to change this.",
     "zh": "您需要设置管理权限才能更改此设置。",
     "ja": "この設定を変更するには設定管理権限が必要です。"
+  },
+  {
+    "key": "settings.drive.treeMigration.title", "category": "settings", "vi": "Chuyển sang cây thư mục PRD v2", "en": "Move to the PRD v2 folder tree", "zh": "迁移到 PRD v2 文件夹结构", "ja": "PRD v2 フォルダー構成への移行"
+  },
+  {
+    "key": "settings.drive.treeMigration.description", "category": "settings", "vi": "Chuyển thư mục và tệp Google Drive của các dự án hiện có sang cây thư mục mới. Bảng bên dưới chỉ là bản xem trước; chưa có tệp nào được di chuyển cho đến khi bạn xác nhận.", "en": "Move the Google Drive folders and files of existing projects to the new folder tree. What you see below is only a preview; no file moves until you confirm.", "zh": "将现有项目的 Google Drive 文件夹和文件迁移到新的文件夹结构。以下仅为预览；确认之前不会移动任何文件。", "ja": "既存プロジェクトの Google Drive のフォルダーとファイルを新しいフォルダー構成に移します。以下はプレビューのみで、確認するまでファイルは移動しません。"
+  },
+  {
+    "key": "settings.drive.treeMigration.refresh", "category": "settings", "vi": "Kiểm tra lại", "en": "Check again", "zh": "重新检查", "ja": "再確認"
+  },
+  {
+    "key": "settings.drive.treeMigration.loading", "category": "settings", "vi": "Đang xem trước, có thể mất một lúc...", "en": "Preparing the preview, this can take a while...", "zh": "正在生成预览，可能需要一些时间……", "ja": "プレビューを作成中です。時間がかかる場合があります..."
+  },
+  {
+    "key": "settings.drive.treeMigration.loadError", "category": "settings", "vi": "Không tải được bản xem trước nên chưa thể thao tác. Kiểm tra kết nối Google Drive rồi bấm Kiểm tra lại.", "en": "Could not load the preview, so no action is available. Check the Google Drive connection, then select Check again.", "zh": "无法加载预览，因此暂时不能操作。请检查 Google Drive 连接，然后点击“重新检查”。", "ja": "プレビューを読み込めないため操作できません。Google Drive の接続を確認してから「再確認」を押してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.inProgress", "category": "settings", "vi": "Đang xử lý, có thể mất vài phút. Không thay đổi cấu hình Google Drive cho đến khi xong. Đóng trang không làm dừng việc xử lý.", "en": "Working, this can take several minutes. Do not change the Google Drive configuration until it finishes. Closing the page does not stop the work.", "zh": "正在处理，可能需要几分钟。完成前请勿更改 Google Drive 配置。关闭页面不会中止处理。", "ja": "処理中です。数分かかる場合があります。完了するまで Google Drive の設定を変更しないでください。ページを閉じても処理は止まりません。"
+  },
+  {
+    "key": "settings.drive.treeMigration.noResponse", "category": "settings", "vi": "Chưa nhận được kết quả từ máy chủ. Việc xử lý có thể vẫn đang chạy. Chờ vài phút rồi bấm Kiểm tra lại trước khi làm tiếp.", "en": "No result came back from the server. The work may still be running. Wait a few minutes, then select Check again before doing anything else.", "zh": "未收到服务器返回的结果，处理可能仍在进行。请等待几分钟，点击“重新检查”后再继续操作。", "ja": "サーバーから結果が届きませんでした。処理が続いている可能性があります。数分待ってから「再確認」を押し、その後で次の操作をしてください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.actionFailed", "category": "settings", "vi": "Không thực hiện được. Bấm Kiểm tra lại để xem trạng thái hiện tại.", "en": "The action could not be completed. Select Check again to see the current state.", "zh": "操作未能完成。请点击“重新检查”查看当前状态。", "ja": "操作を完了できませんでした。「再確認」を押して現在の状態を確認してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.errorDetail", "category": "settings", "vi": "Chi tiết lỗi (gửi cho bộ phận hỗ trợ):", "en": "Error detail (send this to support):", "zh": "错误详情（请发送给技术支持）：", "ja": "エラー詳細（サポートに送ってください）："
+  },
+  {
+    "key": "settings.drive.treeMigration.count.projects", "category": "settings", "vi": "Dự án có thư mục Drive", "en": "Projects with Drive folders", "zh": "拥有 Drive 文件夹的项目", "ja": "Drive フォルダーがあるプロジェクト"
+  },
+  {
+    "key": "settings.drive.treeMigration.count.documents", "category": "settings", "vi": "Tài liệu có tệp trên Drive", "en": "Documents with a Drive file", "zh": "在 Drive 上有文件的文档", "ja": "Drive にファイルがある文書"
+  },
+  {
+    "key": "settings.drive.treeMigration.count.untracked", "category": "settings", "vi": "Tệp lạ trong thư mục cũ", "en": "Files in old folders unknown to the system", "zh": "旧文件夹中系统未记录的文件", "ja": "旧フォルダー内のシステム未登録ファイル"
+  },
+  {
+    "key": "settings.drive.treeMigration.count.untrackedPending", "category": "settings", "vi": "Tệp lạ (tệp hoặc thư mục con không do hệ thống tạo) chỉ được đếm khi không còn điều kiện chặn. Chúng cũng được chuyển cùng.", "en": "Unknown files (files or subfolders the system did not create) are counted only once nothing blocks the move. They are moved too.", "zh": "系统未记录的文件（非系统创建的文件或子文件夹）仅在没有任何阻止条件时统计，它们也会一并迁移。", "ja": "未登録ファイル（システムが作成していないファイルやサブフォルダー）は、移行を妨げる条件がなくなると件数を表示します。これらも一緒に移動します。"
+  },
+  {
+    "key": "settings.drive.treeMigration.table.label", "category": "settings", "vi": "Đường dẫn thư mục thay đổi theo từng loại", "en": "Folder paths that change, by category", "zh": "按类别列出的文件夹路径变更", "ja": "分類ごとのフォルダーパスの変更"
+  },
+  {
+    "key": "settings.drive.treeMigration.table.category", "category": "settings", "vi": "Loại tài liệu", "en": "Category", "zh": "文档类别", "ja": "分類"
+  },
+  {
+    "key": "settings.drive.treeMigration.table.from", "category": "settings", "vi": "Đường dẫn hiện tại", "en": "Current path", "zh": "当前路径", "ja": "現在のパス"
+  },
+  {
+    "key": "settings.drive.treeMigration.table.to", "category": "settings", "vi": "Đường dẫn PRD v2", "en": "PRD v2 path", "zh": "PRD v2 路径", "ja": "PRD v2 のパス"
+  },
+  {
+    "key": "settings.drive.treeMigration.state.rolledBack", "category": "settings", "vi": "Lần chuyển trước đã được hoàn tác. Bạn có thể chuyển lại.", "en": "The previous move was undone. You can move again.", "zh": "上一次迁移已撤销，可以重新迁移。", "ja": "前回の移行は取り消されました。もう一度移行できます。"
+  },
+  {
+    "key": "settings.drive.treeMigration.state.completed", "category": "settings", "vi": "Đã chuyển sang cây thư mục PRD v2. Nếu cần quay lại thư mục cũ, bấm Hoàn tác.", "en": "The folders were moved to the PRD v2 tree. To go back to the old folders, select Undo.", "zh": "已迁移到 PRD v2 文件夹结构。如需恢复旧文件夹，请点击“撤销”。", "ja": "PRD v2 フォルダー構成に移行しました。旧フォルダーに戻すには「元に戻す」を押してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.state.running", "category": "settings", "vi": "Lần chuyển trước chưa kết thúc: có thể vẫn đang chạy hoặc đã bị gián đoạn. Chờ vài phút rồi bấm Kiểm tra lại; nếu vẫn như vậy, bấm Tiếp tục chuyển.", "en": "The previous move has not finished: it may still be running or was interrupted. Wait a few minutes and select Check again; if nothing changes, select Continue move.", "zh": "上一次迁移尚未结束：可能仍在进行或已中断。请等待几分钟后点击“重新检查”；若状态不变，请点击“继续迁移”。", "ja": "前回の移行が終了していません。実行中か中断された可能性があります。数分待って「再確認」を押し、変わらなければ「移行を再開」を押してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.state.failed", "category": "settings", "vi": "Lần chuyển trước dừng giữa chừng. Khắc phục lỗi Google Drive rồi bấm Tiếp tục chuyển, hoặc bấm Hoàn tác để trả tệp về thư mục cũ.", "en": "The previous move stopped part way. Fix the Google Drive problem and select Continue move, or select Undo to return the files to the old folders.", "zh": "上一次迁移中途停止。请解决 Google Drive 问题后点击“继续迁移”，或点击“撤销”将文件移回旧文件夹。", "ja": "前回の移行は途中で停止しました。Google Drive の問題を解消して「移行を再開」を押すか、「元に戻す」でファイルを旧フォルダーに戻してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.state.undoStarted", "category": "settings", "vi": "Việc hoàn tác đang dở: một số tệp có thể đã về thư mục cũ, một số chưa. Chỉ có thể bấm Hoàn tác để làm cho xong.", "en": "An undo is half done: some files may be back in the old folders and some not. The only option is to select Undo to finish it.", "zh": "撤销操作尚未完成：部分文件可能已移回旧文件夹，部分尚未移回。只能点击“撤销”以完成操作。", "ja": "取り消しが途中です。一部のファイルは旧フォルダーに戻り、一部は戻っていない可能性があります。「元に戻す」で完了させる操作のみ可能です。"
+  },
+  {
+    "key": "settings.drive.treeMigration.state.unknown", "category": "settings", "vi": "Không nhận diện được trạng thái chuyển đổi. Tải lại trang hoặc liên hệ bộ phận hỗ trợ.", "en": "The migration state is not recognised. Reload the page or contact support.", "zh": "无法识别迁移状态。请刷新页面或联系技术支持。", "ja": "移行の状態を認識できません。ページを再読み込みするか、サポートに連絡してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.action.start", "category": "settings", "vi": "Chuyển sang cây thư mục PRD v2", "en": "Move to the PRD v2 folder tree", "zh": "迁移到 PRD v2 文件夹结构", "ja": "PRD v2 フォルダー構成に移行"
+  },
+  {
+    "key": "settings.drive.treeMigration.action.resume", "category": "settings", "vi": "Tiếp tục chuyển", "en": "Continue move", "zh": "继续迁移", "ja": "移行を再開"
+  },
+  {
+    "key": "settings.drive.treeMigration.action.undo", "category": "settings", "vi": "Hoàn tác", "en": "Undo", "zh": "撤销", "ja": "元に戻す"
+  },
+  {
+    "key": "settings.drive.treeMigration.confirm.start", "category": "settings", "vi": "Sẽ di chuyển tối đa {total} tệp sang cây thư mục PRD v2: {documents} tài liệu trên hệ thống và {untracked} tệp lạ hoặc thư mục con trong thư mục cũ, thuộc {projects} dự án. Giữ đồng bộ ở trạng thái tắt cho đến khi chuyển xong.", "en": "Up to {total} files will move to the PRD v2 folder tree: {documents} documents in the system and {untracked} unknown files or subfolders in old folders, across {projects} projects. Keep synchronization off until the move finishes.", "zh": "最多将有 {total} 个文件迁移到 PRD v2 文件夹结构：系统中的 {documents} 个文档，以及旧文件夹中 {untracked} 个系统未记录的文件或子文件夹，涉及 {projects} 个项目。迁移完成前请保持同步关闭。", "ja": "最大 {total} 件を PRD v2 フォルダー構成に移動します。対象は {projects} 件のプロジェクトの、システム内の文書 {documents} 件と、旧フォルダー内の未登録ファイルまたはサブフォルダー {untracked} 件です。移行が終わるまで同期はオフのままにしてください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.confirm.resume", "category": "settings", "vi": "Tiếp tục chuyển sang cây thư mục PRD v2? Còn tối đa {documents} tài liệu cần chuyển, cùng các tệp lạ còn nằm trong thư mục cũ. Tệp đã ở thư mục mới không bị chuyển lại.", "en": "Continue moving to the PRD v2 folder tree? Up to {documents} documents remain to be moved, plus any unknown files still in old folders. Files already in the new folders are not moved again.", "zh": "是否继续迁移到 PRD v2 文件夹结构？最多还有 {documents} 个文档需要迁移，另有仍在旧文件夹中的系统未记录文件。已在新文件夹中的文件不会重复移动。", "ja": "PRD v2 フォルダー構成への移行を再開しますか？移動対象は最大 {documents} 件の文書と、旧フォルダーに残る未登録ファイルです。新しいフォルダーにあるファイルは再移動しません。"
+  },
+  {
+    "key": "settings.drive.treeMigration.confirm.undo", "category": "settings", "vi": "Hoàn tác việc chuyển cây thư mục? Các tệp đã chuyển sẽ trở về thư mục cũ và đường dẫn thư mục cũ được khôi phục. Tệp tải lên sau khi chuyển vẫn nằm ở thư mục mới.", "en": "Undo the folder tree move? Moved files return to their old folders and the old folder paths are restored. Files uploaded after the move stay in the new folders.", "zh": "是否撤销文件夹结构迁移？已迁移的文件将移回旧文件夹，并恢复旧的文件夹路径。迁移后上传的文件仍保留在新文件夹中。", "ja": "フォルダー構成の移行を元に戻しますか？移動したファイルは旧フォルダーに戻り、旧フォルダーパスも復元されます。移行後にアップロードしたファイルは新しいフォルダーに残ります。"
+  },
+  {
+    "key": "settings.drive.treeMigration.result.run.Completed", "category": "settings", "vi": "Đã chuyển xong.", "en": "The move is complete.", "zh": "迁移已完成。", "ja": "移行が完了しました。"
+  },
+  {
+    "key": "settings.drive.treeMigration.result.run.Failed", "category": "settings", "vi": "Việc chuyển dừng giữa chừng. Khắc phục lỗi rồi bấm Tiếp tục chuyển.", "en": "The move stopped part way. Fix the problem, then select Continue move.", "zh": "迁移中途停止。请解决问题后点击“继续迁移”。", "ja": "移行が途中で停止しました。問題を解消してから「移行を再開」を押してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.result.run.counts", "category": "settings", "vi": "Đã chuyển {moved} mục, bỏ qua {skipped} mục.", "en": "Moved: {moved}. Skipped: {skipped}.", "zh": "已迁移 {moved} 项，跳过 {skipped} 项。", "ja": "移動：{moved} 件、スキップ：{skipped} 件"
+  },
+  {
+    "key": "settings.drive.treeMigration.result.undo.RolledBack", "category": "settings", "vi": "Đã hoàn tác. Đường dẫn thư mục cũ được khôi phục.", "en": "The move was undone. The old folder paths are restored.", "zh": "迁移已撤销，旧的文件夹路径已恢复。", "ja": "移行を元に戻しました。旧フォルダーパスを復元しました。"
+  },
+  {
+    "key": "settings.drive.treeMigration.result.undo.Failed", "category": "settings", "vi": "Việc hoàn tác dừng giữa chừng. Khắc phục lỗi rồi bấm Hoàn tác lại để làm cho xong.", "en": "The undo stopped part way. Fix the problem, then select Undo again to finish it.", "zh": "撤销中途停止。请解决问题后再次点击“撤销”以完成操作。", "ja": "取り消しが途中で停止しました。問題を解消してから、もう一度「元に戻す」を押して完了させてください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.result.undo.counts", "category": "settings", "vi": "Đã trả về {moved} mục, bỏ qua {skipped} mục.", "en": "Returned: {moved}. Skipped: {skipped}.", "zh": "已移回 {moved} 项，跳过 {skipped} 项。", "ja": "復元：{moved} 件、スキップ：{skipped} 件"
+  },
+  {
+    "key": "settings.drive.treeMigration.result.skippedHelp", "category": "settings", "vi": "Mục bị bỏ qua là tệp hoặc thư mục không còn trên Drive, hoặc không xác định được thư mục cũ. Hãy kiểm tra trên Google Drive.", "en": "Skipped items are files or folders that are no longer on Drive, or whose old folder is unknown. Check them in Google Drive.", "zh": "跳过的项目是 Drive 上已不存在的文件或文件夹，或无法确定其原文件夹。请在 Google Drive 中核对。", "ja": "スキップされた項目は、Drive に存在しないか、元のフォルダーを特定できないファイルやフォルダーです。Google Drive で確認してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.blocker.DRIVE_SYNC_ENABLED", "category": "settings", "vi": "Tắt đồng bộ trước khi chuyển hoặc hoàn tác: tắt “Bật tích hợp” ở đầu phần cấu hình rồi lưu.", "en": "Turn off synchronization before moving or undoing: switch off “Enable integration” at the top of the configuration, then save.", "zh": "迁移或撤销前请先关闭同步：关闭配置顶部的“启用集成”，然后保存。", "ja": "移行や取り消しの前に同期をオフにしてください。設定上部の「連携を有効化」をオフにして保存します。"
+  },
+  {
+    "key": "settings.drive.treeMigration.blocker.DRIVE_DOCUMENTS_PROCESSING", "category": "settings", "vi": "Còn tài liệu đang được xử lý. Chờ xử lý xong rồi bấm Kiểm tra lại.", "en": "Some documents are still being processed. Wait until they finish, then select Check again.", "zh": "仍有文档正在处理。请等待处理完成后点击“重新检查”。", "ja": "処理中の文書があります。完了を待ってから「再確認」を押してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.blocker.DRIVE_NOT_CONNECTED", "category": "settings", "vi": "Chưa kết nối được thư mục gốc trên Google Drive. Kiểm tra tài khoản đã kết nối và quyền thêm tệp vào thư mục gốc (đồng bộ vẫn để tắt).", "en": "The Google Drive root folder cannot be reached. Check the connected account and its right to add files to the root folder (keep synchronization off).", "zh": "无法访问 Google Drive 根文件夹。请检查已连接的账号及其向根文件夹添加文件的权限（保持同步关闭）。", "ja": "Google Drive のルートフォルダーに接続できません。接続中のアカウントと、ルートフォルダーにファイルを追加する権限を確認してください（同期はオフのままにします）。"
+  },
+  {
+    "key": "settings.drive.treeMigration.blocker.DRIVE_TREE_ALREADY_STANDARD", "category": "settings", "vi": "Cây thư mục đã theo chuẩn PRD v2 nên không cần chuyển.", "en": "The folder tree already follows PRD v2, so there is nothing to move.", "zh": "文件夹结构已符合 PRD v2，无需迁移。", "ja": "フォルダー構成はすでに PRD v2 に準拠しているため、移行は不要です。"
+  },
+  {
+    "key": "settings.drive.treeMigration.blocker.DRIVE_TREE_MIGRATION_RUNNING", "category": "settings", "vi": "Một lần chuyển hoặc hoàn tác đang chạy hoặc chưa kết thúc. Chờ vài phút rồi bấm Kiểm tra lại.", "en": "A move or undo is running or has not finished. Wait a few minutes, then select Check again.", "zh": "有一项迁移或撤销正在进行或尚未结束。请等待几分钟后点击“重新检查”。", "ja": "移行または取り消しが実行中か、終了していません。数分待ってから「再確認」を押してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.blocker.DRIVE_TREE_MIGRATION_NOT_COMPLETED", "category": "settings", "vi": "Lần chuyển này không còn hoàn tác được: nó đã được hoàn tác, chưa kết thúc hoặc đã có lần chuyển mới hơn. Bấm Kiểm tra lại.", "en": "This move can no longer be undone: it was already undone, has not finished, or a newer move exists. Select Check again.", "zh": "此次迁移无法撤销：它已被撤销、尚未结束，或存在更新的迁移。请点击“重新检查”。", "ja": "この移行は元に戻せません。すでに取り消されたか、終了していないか、新しい移行があります。「再確認」を押してください。"
+  },
+  {
+    "key": "settings.drive.treeMigration.blocker.DRIVE_TREE_UNDO_IN_PROGRESS", "category": "settings", "vi": "Việc hoàn tác đang dở. Bấm Hoàn tác để làm cho xong trước khi chuyển lại.", "en": "An undo is half done. Select Undo to finish it before moving again.", "zh": "撤销操作尚未完成。请先点击“撤销”完成操作，然后再迁移。", "ja": "取り消しが途中です。再移行の前に「元に戻す」で完了させてください。"
   }
 ]

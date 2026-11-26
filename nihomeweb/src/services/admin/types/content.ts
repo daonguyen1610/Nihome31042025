@@ -474,6 +474,32 @@ export interface GoogleDriveDisconnectResponse {
   providerRevoked: boolean;
 }
 
+export type DriveTreeMigrationStatus = "Running" | "Completed" | "Failed" | "RolledBack";
+
+export interface DriveTreeMigrationPreview {
+  changes: Array<{ category: string; from: string; to: string }>;
+  projectCount: number;
+  documentCount: number;
+  /** Counted only while nothing blocks the move; 0 otherwise. */
+  untrackedFileCount: number;
+  blockers: string[];
+  latestMigration: {
+    id: number;
+    status: DriveTreeMigrationStatus;
+    undoStarted: boolean;
+    error: string | null;
+  } | null;
+}
+
+export interface DriveTreeMigrationResult {
+  migrationId: number;
+  status: DriveTreeMigrationStatus;
+  /** Files moved by a run, or returned by an undo. */
+  moved: number;
+  skipped: number;
+  error: string | null;
+}
+
 export interface GoogleDriveFolderConfiguration {
   surveyMedia: string;
   crmPreDesign: string;

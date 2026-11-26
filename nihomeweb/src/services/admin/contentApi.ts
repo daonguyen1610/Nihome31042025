@@ -51,6 +51,8 @@ import type {
   UpdateGoogleDriveConfigurationRequest,
   GoogleDriveOAuthStartResponse,
   GoogleDriveDisconnectResponse,
+  DriveTreeMigrationPreview,
+  DriveTreeMigrationResult,
   ContactMessageResponse,
 } from "./types/content";
 import type {
@@ -284,6 +286,14 @@ export const contentApi = {
     api.post<GoogleDriveOAuthStartResponse>("/site-settings/google-drive/oauth/start"),
   disconnectGoogleDriveOAuth: () =>
     api.post<GoogleDriveDisconnectResponse>("/site-settings/google-drive/oauth/disconnect"),
+  getDriveTreeMigrationPreview: () =>
+    api.get<DriveTreeMigrationPreview>("/site-settings/google-drive/tree-migration/preview"),
+  runDriveTreeMigration: () =>
+    api.post<DriveTreeMigrationResult>("/site-settings/google-drive/tree-migration"),
+  undoDriveTreeMigration: (migrationId: number) =>
+    api.post<DriveTreeMigrationResult>(
+      `/site-settings/google-drive/tree-migration/${migrationId}/undo`,
+    ),
   getContacts: (replied?: boolean) => {
     const params = new URLSearchParams();
     if (replied !== undefined) params.append("replied", String(replied));

@@ -210,6 +210,59 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
         Assert.Equal(1, preview.UntrackedFileCount);
     }
 
+    [Fact]
+    public async Task Preview_summarises_the_latest_migration()
+    {
+        Assert.Null((await Service().PreviewAsync(CancellationToken.None)).LatestMigration);
+        db.DriveTreeMigrations.AddRange(
+            new DriveTreeMigration { Status = DriveTreeMigrationStatus.RolledBack, UndoStartedAt = DateTime.UtcNow },
+            new DriveTreeMigration { Status = DriveTreeMigrationStatus.Failed, Error = "boom" });
+        db.SaveChanges();
+        var latest = db.DriveTreeMigrations.OrderBy(m => m.Id).Last();
+
+        Assert.Equal(new DriveTreeMigrationSummary(latest.Id, DriveTreeMigrationStatus.Failed, false, "boom"),
+            (await Service().PreviewAsync(CancellationToken.None)).LatestMigration);
+
+        latest.UndoStartedAt = DateTime.UtcNow;
+        db.SaveChanges();
+
+        Assert.True((await Service().PreviewAsync(CancellationToken.None)).LatestMigration!.UndoStarted);
+    }
+
+    [Fact]
+    public async Task Run_and_undo_are_refused_without_touching_drive_while_another_move_is_executing()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-survey", "old-survey");
+        var reachedDrive = new TaskCompletionSource();
+        var releaseDrive = new TaskCompletionSource();
+        drive.Setup(item => item.MoveAsync("file-survey", It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                reachedDrive.TrySetResult();
+                return releaseDrive.Task;
+            });
+        var first = Service().RunAsync(7, CancellationToken.None);
+        await reachedDrive.Task.WaitAsync(TimeSpan.FromSeconds(10));
+        var untouched = new Mock<IGoogleDriveAdapter>(MockBehavior.Strict);
+        var second = new DriveTreeMigrationService(db, untouched.Object,
+            new TestGoogleDriveSettingsStore(options), folders.Object);
+
+        var run = await Assert.ThrowsAsync<DriveTreeMigrationBlockedException>(() =>
+            second.RunAsync(7, CancellationToken.None));
+        var undo = await Assert.ThrowsAsync<DriveTreeMigrationBlockedException>(() =>
+            second.UndoAsync(1, 7, CancellationToken.None));
+
+        Assert.Equal("DRIVE_TREE_MIGRATION_RUNNING", run.Code);
+        Assert.Equal("DRIVE_TREE_MIGRATION_RUNNING", undo.Code);
+        releaseDrive.SetResult();
+        var finished = await first;
+        Assert.Equal(DriveTreeMigrationStatus.Completed, finished.Status);
+        // The gate is released afterwards, also for the other operation.
+        Assert.Equal(DriveTreeMigrationStatus.RolledBack,
+            (await Service().UndoAsync(finished.MigrationId, 7, CancellationToken.None)).Status);
+    }
+
     private GoogleDriveCredential AddLegacyCredential()
     {
         UseLegacyFolders();

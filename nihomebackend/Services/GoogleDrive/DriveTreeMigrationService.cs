@@ -14,7 +14,15 @@ public sealed record DriveTreeMigrationPreview(
     int ProjectCount,
     int DocumentCount,
     int UntrackedFileCount,
-    IReadOnlyList<string> Blockers);
+    IReadOnlyList<string> Blockers,
+    DriveTreeMigrationSummary? LatestMigration);
+
+/// <summary>What the admin page needs after a reload to offer only safe actions.</summary>
+public sealed record DriveTreeMigrationSummary(
+    int Id,
+    DriveTreeMigrationStatus Status,
+    bool UndoStarted,
+    string? Error);
 
 public sealed record DriveTreeMigrationResult(
     int MigrationId,
@@ -46,6 +54,9 @@ public sealed class DriveTreeMigrationService(
     private const string DriveFileMissing = "DRIVE_FILE_MISSING";
     private const string DriveFolderMissing = "DRIVE_FOLDER_MISSING";
     private const string DriveParentUnknown = "DRIVE_PARENT_UNKNOWN";
+
+    // shortcut: serialises run/undo in this app instance only; use a database lock before running two backends.
+    private static readonly SemaphoreSlim ExecutionGate = new(1, 1);
 
     public async Task<DriveTreeMigrationPreview> PreviewAsync(CancellationToken ct)
     {
@@ -80,7 +91,10 @@ public sealed class DriveTreeMigrationService(
         if (changes.Count == 0 && !misplaced) blockers.Add("DRIVE_TREE_ALREADY_STANDARD");
 
         var untracked = blockers.Count == 0 ? await CountUntrackedAsync(changes, ct) : 0;
-        return new DriveTreeMigrationPreview(changes, projectCount, documentCount, untracked, blockers);
+        var latest = await db.DriveTreeMigrations.AsNoTracking().OrderByDescending(m => m.Id)
+            .Select(m => new DriveTreeMigrationSummary(m.Id, m.Status, m.UndoStartedAt != null, m.Error))
+            .FirstOrDefaultAsync(ct);
+        return new DriveTreeMigrationPreview(changes, projectCount, documentCount, untracked, blockers, latest);
     }
 
     private async Task<bool> IsConnectedAsync(CancellationToken ct)
@@ -127,7 +141,28 @@ public sealed class DriveTreeMigrationService(
         await db.DriveTreeMigrations.OrderByDescending(m => m.Id).FirstOrDefaultAsync(ct) is
         { UndoStartedAt: not null, Status: not DriveTreeMigrationStatus.RolledBack };
 
-    public async Task<DriveTreeMigrationResult> RunAsync(int userId, CancellationToken ct)
+    public Task<DriveTreeMigrationResult> RunAsync(int userId, CancellationToken ct) =>
+        ExecuteExclusivelyAsync(() => ResumeOrStartAsync(userId, ct));
+
+    public Task<DriveTreeMigrationResult> UndoAsync(int migrationId, int userId, CancellationToken ct) =>
+        ExecuteExclusivelyAsync(() => RevertAsync(migrationId, userId, ct));
+
+    private static async Task<DriveTreeMigrationResult> ExecuteExclusivelyAsync(
+        Func<Task<DriveTreeMigrationResult>> move)
+    {
+        if (!await ExecutionGate.WaitAsync(0))
+            throw new DriveTreeMigrationBlockedException("DRIVE_TREE_MIGRATION_RUNNING");
+        try
+        {
+            return await move();
+        }
+        finally
+        {
+            ExecutionGate.Release();
+        }
+    }
+
+    private async Task<DriveTreeMigrationResult> ResumeOrStartAsync(int userId, CancellationToken ct)
     {
         // A run that stopped (Failed) or was interrupted (Running) is resumed; its old bindings exist only in its items.
         var resume = await db.DriveTreeMigrations.OrderByDescending(m => m.Id).FirstOrDefaultAsync(ct);
@@ -311,7 +346,7 @@ public sealed class DriveTreeMigrationService(
         }
     }
 
-    public async Task<DriveTreeMigrationResult> UndoAsync(int migrationId, int userId, CancellationToken ct)
+    private async Task<DriveTreeMigrationResult> RevertAsync(int migrationId, int userId, CancellationToken ct)
     {
         var migration = await db.DriveTreeMigrations.OrderByDescending(m => m.Id).FirstOrDefaultAsync(ct);
         if (migration is not { Status: DriveTreeMigrationStatus.Completed or DriveTreeMigrationStatus.Failed }
