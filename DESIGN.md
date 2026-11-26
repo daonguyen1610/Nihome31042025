@@ -267,6 +267,30 @@ wrapping badges or actions, show cards until `xl`. A table that must stay wide
 scrolls inside its own container with readable headings; the page never scrolls
 sideways. Each paginated dataset has its own pagination and shows its true total.
 
+### Page anatomy
+
+Chosen on 2026-11-26. New and migrated screens follow these; Dashboard, the
+contract list and the contract detail are the reference implementations.
+
+**List.** `PageHeader` (title, total, one line of help, actions with one primary)
+→ `ListTabs`, quick views with counts, overdue first after "All"; empty views are
+left out → `ListPanel`, one bordered surface holding search, a "Filters" button
+with the number in effect, "Columns" for the table, the records and pagination.
+Filter fields open inside the panel. Do not stack a separate filter card or
+summary cards above a list.
+
+**Record detail.** Back link → title with status pill, and the next step as the
+only filled button at the top right → one bordered strip of key figures → from
+`xl`, working tabs on the left and a 352px column on the right saying where the
+record stands and what is next. Below `xl` that column comes first.
+
+**Dashboard.** What is waiting for this person (overdue, due soon, open, most
+urgent first) → one quiet strip of company numbers → charts.
+
+**Sidebar.** Groups sit under four headings: My work, Projects, Company,
+Administration. "Find a page" searches every page the account can open and
+ignores Vietnamese accents.
+
 ## Elevation & Depth
 
 Flat by default. Ordinary content is separated by surface tone, spacing and a 1px
