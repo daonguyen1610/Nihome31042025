@@ -1130,13 +1130,23 @@ Danh mục **Tài liệu dự án** ([3.0](#30-dự-án)) gom tệp của Báo g
 4. Chọn **Kết nối Google Drive**. Cửa sổ đăng nhập Google mở ra; chọn tài khoản đã duyệt và cấp quyền.
 5. Kiểm tra tài khoản và trạng thái **Connected**. Bấm **Kiểm tra kết nối** để xem tài khoản, thư mục gốc, Shared Drive và quyền thêm tệp. Tải thử một ảnh nhỏ: thẻ tệp chuyển từ Pending/Processing sang Synced và có liên kết Drive.
 
-Đổi tài khoản: **Ngắt kết nối** rồi **Kết nối Google Drive**, hoặc **Đổi tài khoản Google**. Nếu đăng nhập tài khoản mới bị hủy hoặc lỗi, hệ thống ở trạng thái chưa kết nối. Ngắt kết nối không đăng xuất Google trên trình duyệt.
+Đổi tài khoản: bấm **Đổi tài khoản Google**. Tài khoản hiện tại vẫn được giữ cho đến khi đăng nhập mới thành công; nếu bạn đóng cửa sổ, đăng nhập lỗi hoặc tài khoản mới không thêm được tệp vào thư mục gốc, kết nối cũ không đổi. **Ngắt kết nối** là cách duy nhất để đăng xuất Drive khỏi hệ thống; thao tác này không đăng xuất Google trên trình duyệt.
+
+**Kết nối được giữ lâu dài.** Kết nối chỉ bị gỡ khi bạn bấm **Ngắt kết nối**, hoặc khi lưu cấu hình đổi Client ID hay Client Secret. Lỗi không gỡ kết nối và không xóa gì trên Drive. Nếu ứng dụng OAuth trên Google Cloud thuộc loại **External** và đang ở trạng thái **Testing**, mã đăng nhập hết hạn sau 7 ngày ([quy định của Google](https://developers.google.com/identity/protocols/oauth2#expiration)). Vào Google Cloud Console, chuyển ứng dụng sang **In production** (hoặc chọn loại **Internal** nếu dùng Google Workspace), rồi quay lại hệ thống **kết nối lại một lần** để Google cấp mã mới: bấm **Đổi tài khoản Google** và chọn đúng tài khoản đang dùng.
+
+| Loại lỗi đồng bộ | Hệ thống làm gì | Quản trị viên cần làm |
+|---|---|---|
+| Tạm thời: hết thời gian chờ, mất mạng, Google đang lỗi, vượt giới hạn tần suất hoặc hết dung lượng | Giữ tệp ở **Pending**, thử lại sau 1 phút, không tính lượt thử | Không cần làm gì. Nếu kéo dài, kiểm tra mạng của máy chủ và dung lượng Drive |
+| Cấu hình hoặc đăng nhập: mã đăng nhập hết hạn hay bị thu hồi, Client ID/Secret sai, chính sách Google Workspace chặn | Giữ tệp ở **Pending**, thử lại sau 5 phút, không tính lượt thử | Client ID/Secret sai thì nhập lại, lưu rồi kết nối lại; bị chính sách chặn thì nhờ quản trị Google Workspace cho phép ứng dụng; còn lại bấm **Đổi tài khoản Google** để đăng nhập lại. Tệp tự đồng bộ tiếp trong vòng 5 phút |
+| Lỗi của riêng tệp: mất tệp nguồn trên máy chủ, không có quyền với tệp trên Drive, không tìm thấy thư mục, nội dung không khớp | Thử tối đa 3 lần rồi chuyển **Failed** và thông báo Admin một lần | Mở dự án trong thông báo, sửa nguyên nhân rồi bấm **Gửi lại lên Drive**. Kết nối lại tài khoản cũng đưa mọi tệp **Failed** về hàng đợi |
 
 | Trạng thái kết nối | Nghĩa |
 |---|---|
 | `Connected` | Đang đồng bộ |
 | `Read only` | Tài khoản thấy thư mục nhưng không thêm tệp được |
-| `Invalid folder` | Mã thư mục không phải thư mục đang tồn tại |
+| `Invalid folder` | Mã thư mục không phải thư mục đang tồn tại, hoặc tài khoản không thấy thư mục đó |
+| `Reconnect required` | Cần quản trị viên: kiểm tra cấu hình OAuth hoặc kết nối lại |
+| `Unavailable` | Chưa kiểm tra được Drive; trang tự kiểm tra lại mỗi 30 giây, không cần kết nối lại. Nếu kéo dài, kiểm tra Google Drive API đã bật và quyền của tài khoản với thư mục gốc |
 
 **Đổi thư mục gốc, định danh triển khai hoặc đường dẫn** chỉ áp dụng cho thư mục tạo sau đó; tệp và thư mục cũ không bị chuyển hay xóa. Với thư mục đã liên kết: lưu đồng bộ ở trạng thái tắt, chờ các tệp đang xử lý xong, lưu cấu trúc mới khi vẫn tắt, kiểm tra đường dẫn rồi mới bật lại. Hệ thống từ chối đổi cấu trúc khi đang xử lý hoặc đồng bộ đang bật.
 
@@ -1155,7 +1165,7 @@ NICON muốn đặt Khảo sát bên trong CRM Pre-Design, nhưng chưa chuyển
 
 #### 3.7.3 Đồng bộ và xóa tệp
 
-- Khi Drive ngắt kết nối vẫn tải lên được: tệp lưu tạm trên máy chủ, hiện **Pending**. Khi kết nối lại, tệp được đẩy lên, kiểm tra nội dung rồi xóa bản tạm. Mỗi tệp thử tự động tối đa 3 lần; tệp lỗi dùng **Gửi lại lên Drive** (vẫn dùng được khi đã hết lượt tự động). Không thử lại hay xóa được tệp đang đồng bộ.
+- Khi Drive ngắt kết nối vẫn tải lên được: tệp lưu tạm trên máy chủ, hiện **Pending**. Khi kết nối lại, tệp được đẩy lên, kiểm tra nội dung rồi xóa bản tạm. Chỉ lỗi của riêng tệp mới tính vào giới hạn 3 lần thử tự động ([3.7.1](#371-kết-nối-google-drive)); tệp lỗi dùng **Gửi lại lên Drive** (vẫn dùng được khi đã hết lượt tự động). Không thử lại hay xóa được tệp đang đồng bộ.
 - Tải tệp luôn qua hệ thống để kiểm quyền. Google Docs/Sheets/Slides gốc chỉ mở qua liên kết Drive, không tải nhị phân được.
 - Tệp thêm hoặc sửa trực tiếp trong thư mục Drive được quản lý sẽ hiện trong danh mục. Hai bên cùng sửa thì giữ cả hai để xác nhận.
 - Tệp thuộc phân hệ khác phải xóa ở phân hệ đó. Tệp đang được hồ sơ QA/QC hoặc QS tham chiếu không xóa được ở đâu cả; xử lý ở hồ sơ nguồn trước. Hồ sơ đã duyệt giữ bằng chứng của nó.

@@ -78,7 +78,9 @@ This project currently requires the full Drive scope because the worker finds, c
 
 Sign in to Nicon with `system.settings.manage` and open **Settings > Google Drive**. Enter the OAuth client ID, write-only client secret, exact callback URI, internal Admin return path, root folder ID, stable deployment instance ID, application name, business folder paths, Drive compatibility mode, and polling interval. Save before selecting **Connect Google Drive**. Nicon opens Google sign-in in a popup, Google asks which account to use and requests consent, then the popup closes after the callback. Nicon encrypts both the client secret and issued refresh token in SQL; revoked access is reported as **Reconnect required**.
 
-To use another Google account, select **Disconnect** to remove the current Nicon credential and request revocation from Google, then select **Connect Google Drive** and choose the replacement account. **Switch Google account** performs the same disconnect first, then opens Google's account chooser. If Google cannot confirm revocation, Nicon remains locally disconnected and shows manual-revocation guidance. If the replacement authorization is cancelled or fails, Nicon remains disconnected rather than silently retaining the previous account.
+To use another Google account, select **Switch Google account**. The current account stays connected until the new sign-in succeeds; if the popup is closed, the sign-in fails, or the new account cannot add files to the root folder, nothing changes. After a successful switch to a different account, Nicon asks Google to revoke the old token. **Disconnect** is the only sign-out: it removes the stored credential and requests revocation, and shows manual-revocation guidance if Google cannot confirm it.
+
+The connection is kept until someone selects **Disconnect** or saves a changed client ID or secret. Errors never remove it and never delete anything on Drive.
 
 ### 6. Create and authorize the root Drive folder
 
@@ -113,12 +115,21 @@ Connection status troubleshooting:
 
 | Status | Check |
 |--------|-------|
-| `Unavailable` | Confirm all four values are present, Drive API is enabled, the refresh token was issued with the Drive scope, and the test user still has access. |
+| `Unavailable` | Usually temporary: the system retries by itself and the page rechecks every 30 seconds, so do not reconnect. If it persists, confirm Drive API is enabled and the account still has access to the root folder. |
+| `ReconnectRequired` | Check the client ID and secret (`invalid_client`, `unauthorized_client`) or the Google Workspace app policy; otherwise reconnect with **Switch Google account**. |
 | `ReadOnly` | Grant the authenticated account permission to add and delete files in the root folder. |
-| `InvalidRoot` | Confirm `RootFolderId` identifies a live folder rather than a file or a trashed folder. |
+| `InvalidRoot` | Confirm `RootFolderId` identifies a live folder rather than a file or a trashed folder, and that the account can see it. |
 | `invalid_grant` in logs | The refresh token was expired, revoked, or issued for a different client. Repeat step 5 with the same OAuth client and account. |
 
-OAuth apps left in **Testing** can issue refresh tokens with a limited lifetime. Before production use, publish the app and complete any Google verification required for the Drive scope. See the [Google installed-app OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app) and [Drive scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) for current requirements.
+Sync errors fall into three kinds:
+
+| Kind | Worker behaviour | Administrator action |
+|------|------------------|----------------------|
+| Temporary: timeout, network, Google 408/429/5xx, rate or storage limit | File stays queued and retries after 1 minute; no attempt is used | None. If it persists, check the server network and Drive storage |
+| Configuration or credential: expired or revoked token, rejected OAuth client, Workspace policy, 401 | File stays queued and retries after 5 minutes; no attempt is used | Fix the client ID/secret or policy, or reconnect; queued files then sync within 5 minutes |
+| File or request: missing source file, no permission on that file, not found, content mismatch | Fails after 3 attempts and notifies admins once | Fix the cause, then retry the file. A successful reconnect also requeues every failed file |
+
+An **External** OAuth app in **Testing** publishing status gets refresh tokens that [expire after 7 days](https://developers.google.com/identity/protocols/oauth2#expiration) when the Drive scope is requested. Publish it (**In production**), or use the **Internal** user type with Google Workspace, then reconnect once so Google issues a new token: select **Switch Google account** and choose the same account. Before production use, also complete any Google verification required for the Drive scope. See the [Google installed-app OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app) and [Drive scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) for current requirements.
 
 ### Project document folder mapping
 

@@ -3217,6 +3217,9 @@
     "key": "settings.drive.error.unavailableRetrying", "category": "settings", "vi": "Google Drive tạm thời không phản hồi. Hệ thống tự thử lại, không cần kết nối lại.", "en": "Google Drive is temporarily not responding. The system retries automatically; there is no need to reconnect.", "zh": "Google Drive 暂时没有响应。系统会自动重试，无需重新连接。", "ja": "Google Drive が一時的に応答していません。システムが自動で再試行するため、再接続は不要です。"
   },
   {
+    "key": "settings.drive.help.stayConnected", "category": "settings", "vi": "Kết nối được giữ cho đến khi bạn ngắt hoặc đổi tài khoản. Lỗi mạng hay hết thời gian chờ sẽ tự thử lại. Nếu ứng dụng OAuth trên Google Cloud đang ở trạng thái Testing, Google sẽ ngắt sau 7 ngày: hãy chuyển sang In production, hoặc chọn loại Internal nếu dùng Google Workspace.", "en": "The connection is kept until you disconnect or switch accounts. Network errors and timeouts are retried automatically. If the OAuth app on Google Cloud is in Testing status, Google disconnects it after 7 days: change it to In production, or choose the Internal user type if you use Google Workspace.", "zh": "连接会一直保持，直到您断开连接或切换帐户。网络错误和超时会自动重试。如果 Google Cloud 上的 OAuth 应用处于 Testing 状态，Google 会在 7 天后断开连接：请改为 In production；如果使用 Google Workspace，也可以选择 Internal 类型。", "ja": "接続は、切断するかアカウントを切り替えるまで維持されます。ネットワークエラーやタイムアウトは自動で再試行されます。Google Cloud の OAuth アプリが Testing 状態の場合、Google は 7 日後に接続を解除します。In production に変更するか、Google Workspace を利用している場合は Internal タイプを選択してください。"
+  },
+  {
     "key": "settings.drive.oauth.success", "category": "settings", "vi": "Đã kết nối Google Drive.", "en": "Google Drive connected.", "zh": "Google Drive 已连接。", "ja": "Google Drive に接続しました。"
   },
   {
