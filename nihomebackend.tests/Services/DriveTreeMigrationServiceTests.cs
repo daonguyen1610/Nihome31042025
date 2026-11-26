@@ -395,5 +395,61 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
         Assert.Empty(db.DriveTreeMigrations);
     }
 
+    [Fact]
+    public async Task Run_moves_a_subfolder_of_an_old_folder_as_one_item()
+    {
+        LegacyProject();
+        drive.Setup(item => item.ListChildrenAsync("old-survey", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Item("anh-hien-truong") with { MimeType = "application/vnd.google-apps.folder" }]);
+
+        var preview = await Service().PreviewAsync(CancellationToken.None);
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(1, preview.UntrackedFileCount);
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        drive.Verify(item => item.MoveAsync("anh-hien-truong", "new-survey", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Single(db.DriveTreeMigrationItems, i => i.Kind == DriveTreeMigrationItemKind.UntrackedFile
+            && i.DriveFileId == "anh-hien-truong");
+    }
+
+    [Fact]
+    public async Task Run_resume_marks_an_untracked_move_that_was_not_recorded()
+    {
+        LegacyProject();
+        drive.Setup(item => item.ListChildrenAsync("old-survey", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Item("stray")]);
+        drive.Setup(item => item.MoveAsync("stray", "new-survey", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleApiException("drive", "Backend error"));
+        Assert.Equal(DriveTreeMigrationStatus.Failed, (await Service().RunAsync(7, CancellationToken.None)).Status);
+        // The file did reach the new folder, so the old folder no longer lists it.
+        drive.Setup(item => item.ListChildrenAsync("old-survey", It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        drive.Setup(item => item.MoveAsync("stray", "new-survey", It.IsAny<CancellationToken>()))
+            .Returns(Task.CompletedTask);
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        db.ChangeTracker.Clear();
+        Assert.NotNull(db.DriveTreeMigrationItems.Single(i => i.DriveFileId == "stray").MovedAt);
+    }
+
+    [Fact]
+    public async Task Run_records_the_drive_parent_of_a_document_without_a_folder()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-known", null!);
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-orphan", null!);
+        drive.Setup(item => item.GetMetadataAsync("file-known", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Item("file-known") with { Parents = ["old-survey"] });
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        Assert.Equal("old-survey", db.DriveTreeMigrationItems.Single(i => i.DriveFileId == "file-known").FromFolderId);
+        drive.Verify(item => item.MoveAsync("file-known", "new-survey", It.IsAny<CancellationToken>()), Times.Once);
+        Assert.Equal("DRIVE_PARENT_UNKNOWN", db.DriveTreeMigrationItems.Single(i => i.DriveFileId == "file-orphan").SkipReason);
+        drive.Verify(item => item.MoveAsync("file-orphan", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
     public void Dispose() => db.Dispose();
 }

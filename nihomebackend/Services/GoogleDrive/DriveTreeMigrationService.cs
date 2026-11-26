@@ -42,9 +42,9 @@ public sealed class DriveTreeMigrationService(
     IGoogleDriveSettingsStore settingsStore,
     IProjectDriveFolderService folderService) : IDriveTreeMigrationService
 {
-    private const string FolderMimeType = "application/vnd.google-apps.folder";
     private const string DriveFileMissing = "DRIVE_FILE_MISSING";
     private const string DriveFolderMissing = "DRIVE_FOLDER_MISSING";
+    private const string DriveParentUnknown = "DRIVE_PARENT_UNKNOWN";
 
     public async Task<DriveTreeMigrationPreview> PreviewAsync(CancellationToken ct)
     {
@@ -104,7 +104,7 @@ public sealed class DriveTreeMigrationService(
         var count = 0;
         foreach (var folderId in bindings)
             count += (await ListExistingFolderAsync(folderId, ct) ?? [])
-                .Count(item => item.MimeType != FolderMimeType && !item.IsTrashed && !known.Contains(item.Id));
+                .Count(item => !item.IsTrashed && !known.Contains(item.Id));
         return count;
     }
 
@@ -228,6 +228,11 @@ public sealed class DriveTreeMigrationService(
             var item = items.FirstOrDefault(i =>
                 i.Kind == DriveTreeMigrationItemKind.Document && i.ProjectDocumentId == document.Id);
             if (item?.SkipReason is not null) continue;
+            var metadata = await drive.GetMetadataAsync(document.DriveFileId!, ct);
+            // Undo needs a real folder to return to; without a recorded one, use the file's current parent.
+            var from = string.IsNullOrEmpty(document.DriveFolderId)
+                ? metadata?.Parents?.FirstOrDefault()
+                : document.DriveFolderId;
             item ??= Track(items, new DriveTreeMigrationItem
             {
                 MigrationId = migration.Id,
@@ -236,19 +241,25 @@ public sealed class DriveTreeMigrationService(
                 Kind = DriveTreeMigrationItemKind.Document,
                 ProjectDocumentId = document.Id,
                 DriveFileId = document.DriveFileId,
-                FromFolderId = document.DriveFolderId ?? string.Empty,
             });
+            if (string.IsNullOrEmpty(item.FromFolderId)) item.FromFolderId = from ?? string.Empty;
             item.ToFolderId = to;
+            item.SkipReason = metadata is null ? DriveFileMissing
+                : string.IsNullOrEmpty(item.FromFolderId) ? DriveParentUnknown : null;
             await db.SaveChangesAsync(ct);
-            if (await drive.GetMetadataAsync(document.DriveFileId!, ct) is null)
-            {
-                item.SkipReason = DriveFileMissing;
-                await db.SaveChangesAsync(ct);
-                continue;
-            }
+            if (item.SkipReason is not null) continue;
             await drive.MoveAsync(document.DriveFileId!, to, ct);
             item.MovedAt = DateTime.UtcNow;
             document.DriveFolderId = to;
+            await db.SaveChangesAsync(ct);
+        }
+
+        // A move that reached Drive but whose MovedAt was not saved; MoveAsync is a no-op once the file is in place.
+        foreach (var item in items.Where(i => i.Kind == DriveTreeMigrationItemKind.UntrackedFile
+                     && i.MovedAt is null && i.SkipReason is null).ToList())
+        {
+            await drive.MoveAsync(item.DriveFileId!, item.ToFolderId!, ct);
+            item.MovedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
         }
 
@@ -264,8 +275,8 @@ public sealed class DriveTreeMigrationService(
                 await db.SaveChangesAsync(ct);
                 continue;
             }
-            // shortcut: only direct files are moved; files in nested subfolders stay put, scan recursively if users nest folders.
-            foreach (var child in children.Where(c => c.MimeType != FolderMimeType && !c.IsTrashed && !known.Contains(c.Id)))
+            // A subfolder is one item: moving it carries its whole subtree.
+            foreach (var child in children.Where(c => !c.IsTrashed && !known.Contains(c.Id)))
             {
                 var item = items.FirstOrDefault(i =>
                     i.Kind == DriveTreeMigrationItemKind.UntrackedFile && i.DriveFileId == child.Id)
