@@ -16,6 +16,12 @@ namespace nihomebackend.Migrations
                 table: "drive_tree_migration_items",
                 type: "datetime2",
                 nullable: true);
+
+            migrationBuilder.AddColumn<DateTime>(
+                name: "UndoStartedAt",
+                table: "drive_tree_migrations",
+                type: "datetime2",
+                nullable: true);
         }
 
         /// <inheritdoc />
@@ -24,6 +30,10 @@ namespace nihomebackend.Migrations
             migrationBuilder.DropColumn(
                 name: "RevertedAt",
                 table: "drive_tree_migration_items");
+
+            migrationBuilder.DropColumn(
+                name: "UndoStartedAt",
+                table: "drive_tree_migrations");
         }
     }
 }

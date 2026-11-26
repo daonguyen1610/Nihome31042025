@@ -65,6 +65,7 @@ public sealed class DriveTreeMigrationService(
         if (!await IsConnectedAsync(ct)) blockers.Add("DRIVE_NOT_CONNECTED");
         if (await db.DriveTreeMigrations.AnyAsync(m => m.Status == DriveTreeMigrationStatus.Running, ct))
             blockers.Add("DRIVE_TREE_MIGRATION_RUNNING");
+        if (await IsUndoInProgressAsync(ct)) blockers.Add("DRIVE_TREE_UNDO_IN_PROGRESS");
 
         var liveDocuments = db.ProjectDocuments.Where(d => d.DeletedAt == null && d.DriveFileId != null);
         var projectCount = await db.ProjectDriveFolders.Select(f => f.OperationalProjectId).Distinct().CountAsync(ct);
@@ -122,15 +123,17 @@ public sealed class DriveTreeMigrationService(
         }
     }
 
+    private async Task<bool> IsUndoInProgressAsync(CancellationToken ct) =>
+        await db.DriveTreeMigrations.OrderByDescending(m => m.Id).FirstOrDefaultAsync(ct) is
+        { UndoStartedAt: not null, Status: not DriveTreeMigrationStatus.RolledBack };
+
     public async Task<DriveTreeMigrationResult> RunAsync(int userId, CancellationToken ct)
     {
         // A run that stopped (Failed) or was interrupted (Running) is resumed; its old bindings exist only in its items.
         var resume = await db.DriveTreeMigrations.OrderByDescending(m => m.Id).FirstOrDefaultAsync(ct);
         if (resume is not { Status: DriveTreeMigrationStatus.Running or DriveTreeMigrationStatus.Failed }) resume = null;
-        // A failed undo has already returned some files; only UndoAsync may finish it.
-        if (resume is not null && await db.DriveTreeMigrationItems.AnyAsync(i => i.MigrationId == resume.Id
-                && i.RevertedAt != null, ct))
-            throw new DriveTreeMigrationBlockedException("DRIVE_TREE_UNDO_IN_PROGRESS");
+        // A started undo may already have returned files; only UndoAsync may finish it.
+        if (await IsUndoInProgressAsync(ct)) throw new DriveTreeMigrationBlockedException("DRIVE_TREE_UNDO_IN_PROGRESS");
         var preview = await PreviewAsync(ct);
         var blocker = preview.Blockers.FirstOrDefault(code => resume is null
             || code is not ("DRIVE_TREE_MIGRATION_RUNNING" or "DRIVE_TREE_ALREADY_STANDARD"));
@@ -263,8 +266,13 @@ public sealed class DriveTreeMigrationService(
         foreach (var item in items.Where(i => i.Kind == DriveTreeMigrationItemKind.UntrackedFile
                      && i.MovedAt is null && i.SkipReason is null).ToList())
         {
-            await drive.MoveAsync(item.DriveFileId!, item.ToFolderId!, ct);
-            item.MovedAt = DateTime.UtcNow;
+            if (await drive.GetMetadataAsync(item.DriveFileId!, ct) is null)
+                item.SkipReason = DriveFileMissing;
+            else
+            {
+                await drive.MoveAsync(item.DriveFileId!, item.ToFolderId!, ct);
+                item.MovedAt = DateTime.UtcNow;
+            }
             await db.SaveChangesAsync(ct);
         }
 
@@ -313,16 +321,23 @@ public sealed class DriveTreeMigrationService(
             throw new DriveTreeMigrationBlockedException("DRIVE_SYNC_ENABLED");
         if (await db.ProjectDocuments.AnyAsync(d => d.SyncStatus == ProjectDocumentSyncStatus.Processing, ct))
             throw new DriveTreeMigrationBlockedException("DRIVE_DOCUMENTS_PROCESSING");
+        if (!await IsConnectedAsync(ct)) throw new DriveTreeMigrationBlockedException("DRIVE_NOT_CONNECTED");
+        // Saved before the first move so RunAsync cannot resume or overtake a half-undone migration.
+        migration.UndoStartedAt ??= DateTime.UtcNow;
+        await db.SaveChangesAsync(ct);
 
         var items = await db.DriveTreeMigrationItems.Where(i => i.MigrationId == migration.Id)
             .OrderBy(i => i.Id).ToListAsync(ct);
         try
         {
             // Each return is saved on its own, so a rerun after a Drive failure skips it.
+            // An item without MovedAt may still have reached Drive; it is returned only if it sits in its target.
             foreach (var item in items.Where(i => i.Kind != DriveTreeMigrationItemKind.Binding
-                         && i.MovedAt != null && i.RevertedAt == null))
+                         && i.SkipReason == null && i.RevertedAt == null))
             {
-                if (await drive.GetMetadataAsync(item.DriveFileId!, ct) is null)
+                var metadata = await drive.GetMetadataAsync(item.DriveFileId!, ct);
+                if (item.MovedAt is null && metadata?.Parents?.Contains(item.ToFolderId) != true) continue;
+                if (metadata is null)
                     item.SkipReason = DriveFileMissing;
                 else
                     await drive.MoveAsync(item.DriveFileId!, item.FromFolderId, ct);
@@ -346,7 +361,10 @@ public sealed class DriveTreeMigrationService(
             settings.UpdatedByUserId = userId;
             settings.UpdatedAt = DateTime.UtcNow;
             db.ProjectDriveFolders.RemoveRange(await db.ProjectDriveFolders.ToListAsync(ct));
-            db.ProjectDriveFolders.AddRange(items.Where(i => i.Kind == DriveTreeMigrationItemKind.Binding)
+            // A project hard-deleted since the run has no folder to bind any more.
+            var projectIds = (await db.OperationalProjects.Select(p => p.Id).ToListAsync(ct)).ToHashSet();
+            db.ProjectDriveFolders.AddRange(items.Where(i => i.Kind == DriveTreeMigrationItemKind.Binding
+                    && projectIds.Contains(i.OperationalProjectId))
                 .Select(i => new ProjectDriveFolder
                 {
                     OperationalProjectId = i.OperationalProjectId,
@@ -361,6 +379,8 @@ public sealed class DriveTreeMigrationService(
                 document.DriveFolderId = returned[document.Id];
             migration.Status = DriveTreeMigrationStatus.RolledBack;
             migration.Error = null;
+            migration.FinishedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
         {
@@ -368,9 +388,9 @@ public sealed class DriveTreeMigrationService(
             migration = await db.DriveTreeMigrations.SingleAsync(m => m.Id == migrationId, ct);
             migration.Status = DriveTreeMigrationStatus.Failed;
             migration.Error = ex.Message;
+            migration.FinishedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct);
         }
-        migration.FinishedAt = DateTime.UtcNow;
-        await db.SaveChangesAsync(ct);
 
         var all = db.DriveTreeMigrationItems.Where(i => i.MigrationId == migration.Id);
         return new DriveTreeMigrationResult(migration.Id, migration.Status,

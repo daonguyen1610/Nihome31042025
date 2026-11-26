@@ -14,6 +14,8 @@ public class DriveTreeMigration
     public int StartedByUserId { get; set; }
     public DateTime? FinishedAt { get; set; }
     public string? Error { get; set; }
+    /// <summary>Set before the first undo move; a half-undone migration must not be resumed forward.</summary>
+    public DateTime? UndoStartedAt { get; set; }
     public List<DriveTreeMigrationItem> Items { get; set; } = [];
 }
 

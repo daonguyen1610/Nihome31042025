@@ -478,10 +478,13 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
         Assert.Equal("04_Thi_cong_Nghiem_thu", settings.ConstructionAcceptanceFolder);
         Assert.Equal("05_Cung_ung_Vat_tu", settings.ProcurementFolder);
         Assert.Equal("06_Tai_chinh_Hop_dong", settings.FinanceContractsFolder);
+        Assert.Equal("08_BanGiao_BaoHanh", settings.HandoverFolder);
         var bindings = db.ProjectDriveFolders.ToDictionary(f => f.Category, f => f.DriveFolderId);
         Assert.Equal(4, bindings.Count);
         Assert.Equal("old-survey", bindings[ProjectDocumentCategory.Survey]);
         Assert.Equal("old-handover", bindings[ProjectDocumentCategory.Handover]);
+        Assert.Equal("old-contract", bindings[ProjectDocumentCategory.FinanceContracts]);
+        Assert.Equal("old-acceptance", bindings[ProjectDocumentCategory.ConstructionAcceptance]);
         Assert.Equal(DriveTreeMigrationStatus.RolledBack, db.DriveTreeMigrations.Single().Status);
         drive.Verify(item => item.DeleteAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
     }
@@ -558,6 +561,166 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
         db.ChangeTracker.Clear();
         Assert.All(db.DriveTreeMigrationItems.Where(i => i.MovedAt != null), i => Assert.NotNull(i.RevertedAt));
         Assert.Equal("new-survey", db.ProjectDocuments.Single(d => d.DriveFileId == "gone").DriveFolderId);
+    }
+
+    [Fact]
+    public async Task Undo_cancelled_on_a_completed_run_blocks_run_and_can_be_finished()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        AddDocument(project, ProjectDocumentCategory.FinanceContracts, "file-2", "old-contract");
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        drive.SetupSequence(item => item.MoveAsync("file-2", "old-contract", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new OperationCanceledException())
+            .Returns(Task.CompletedTask);
+
+        await Assert.ThrowsAsync<OperationCanceledException>(() =>
+            Service().UndoAsync(run.MigrationId, 7, CancellationToken.None));
+        db.ChangeTracker.Clear();
+        Assert.Equal(DriveTreeMigrationStatus.Completed, db.DriveTreeMigrations.Single().Status);
+
+        Assert.Equal("DRIVE_TREE_UNDO_IN_PROGRESS", (await Assert.ThrowsAsync<DriveTreeMigrationBlockedException>(() =>
+            Service().RunAsync(7, CancellationToken.None))).Code);
+        Assert.Contains("DRIVE_TREE_UNDO_IN_PROGRESS", (await Service().PreviewAsync(CancellationToken.None)).Blockers);
+        var result = await Service().UndoAsync(run.MigrationId, 7, CancellationToken.None);
+        Assert.Equal(DriveTreeMigrationStatus.RolledBack, result.Status);
+        db.ChangeTracker.Clear();
+        Assert.All(db.ProjectDocuments, d => Assert.StartsWith("old-", d.DriveFolderId));
+    }
+
+    [Fact]
+    public async Task Undo_that_fails_on_its_first_return_still_blocks_run()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        // Drive applied the move but the response was lost.
+        drive.Setup(item => item.MoveAsync("file-1", "old-survey", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleApiException("drive", "Timeout"));
+
+        Assert.Equal(DriveTreeMigrationStatus.Failed,
+            (await Service().UndoAsync(run.MigrationId, 7, CancellationToken.None)).Status);
+
+        Assert.Equal("DRIVE_TREE_UNDO_IN_PROGRESS", (await Assert.ThrowsAsync<DriveTreeMigrationBlockedException>(() =>
+            Service().RunAsync(7, CancellationToken.None))).Code);
+    }
+
+    [Fact]
+    public async Task Undo_of_a_failed_run_returns_a_move_that_drive_applied_but_the_log_missed()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        AddDocument(project, ProjectDocumentCategory.FinanceContracts, "file-2", "old-contract");
+        AddDocument(project, ProjectDocumentCategory.ConstructionAcceptance, "file-3", "old-acceptance");
+        drive.Setup(item => item.MoveAsync("file-2", "new-contract", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleApiException("drive", "Timeout"));
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        Assert.Equal(DriveTreeMigrationStatus.Failed, run.Status);
+        // file-2 did reach the new folder; file-3 was never recorded or moved.
+        drive.Setup(item => item.GetMetadataAsync("file-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Item("file-2") with { Parents = ["new-contract"] });
+
+        var result = await Service().UndoAsync(run.MigrationId, 7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.RolledBack, result.Status);
+        drive.Verify(item => item.MoveAsync("file-1", "old-survey", It.IsAny<CancellationToken>()), Times.Once);
+        drive.Verify(item => item.MoveAsync("file-2", "old-contract", It.IsAny<CancellationToken>()), Times.Once);
+        drive.Verify(item => item.MoveAsync("file-3", It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        db.ChangeTracker.Clear();
+        Assert.All(db.ProjectDocuments, d => Assert.StartsWith("old-", d.DriveFolderId));
+    }
+
+    [Fact]
+    public async Task Undo_leaves_a_recorded_move_that_drive_never_applied()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.FinanceContracts, "file-2", "old-contract");
+        drive.Setup(item => item.MoveAsync("file-2", "new-contract", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleApiException("drive", "Backend error"));
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        drive.Setup(item => item.GetMetadataAsync("file-2", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(Item("file-2") with { Parents = ["old-contract"] });
+
+        var result = await Service().UndoAsync(run.MigrationId, 7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.RolledBack, result.Status);
+        drive.Verify(item => item.MoveAsync("file-2", "old-contract", It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task Undo_skips_bindings_of_a_project_deleted_after_the_run()
+    {
+        var project = LegacyProject();
+        var other = AddProject("OP-2");
+        Bind(other, ProjectDocumentCategory.Survey, "old-survey-2");
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        db.ProjectDriveFolders.RemoveRange(db.ProjectDriveFolders.Where(f => f.OperationalProjectId == other.Id));
+        db.OperationalProjects.Remove(db.OperationalProjects.Single(p => p.Id == other.Id));
+        db.SaveChanges();
+        db.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON");
+
+        var result = await Service().UndoAsync(run.MigrationId, 7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.RolledBack, result.Status);
+        db.ChangeTracker.Clear();
+        Assert.All(db.ProjectDriveFolders, f => Assert.Equal(project.Id, f.OperationalProjectId));
+        Assert.Equal("old-survey", db.ProjectDocuments.Single().DriveFolderId);
+    }
+
+    [Fact]
+    public async Task Undo_refuses_when_drive_is_not_connected()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new InvalidOperationException("no token"));
+        drive.Invocations.Clear();
+
+        var error = await Assert.ThrowsAsync<DriveTreeMigrationBlockedException>(() =>
+            Service().UndoAsync(run.MigrationId, 7, CancellationToken.None));
+
+        Assert.Equal("DRIVE_NOT_CONNECTED", error.Code);
+        drive.Verify(item => item.GetMetadataAsync(It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        drive.Verify(item => item.MoveAsync(It.IsAny<string>(), It.IsAny<string>(), It.IsAny<CancellationToken>()), Times.Never);
+        db.ChangeTracker.Clear();
+        Assert.Null(db.DriveTreeMigrations.Single().UndoStartedAt);
+    }
+
+    [Fact]
+    public async Task Run_after_a_successful_undo_starts_a_new_migration()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        var first = await Service().RunAsync(7, CancellationToken.None);
+        await Service().UndoAsync(first.MigrationId, 7, CancellationToken.None);
+
+        var second = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, second.Status);
+        Assert.NotEqual(first.MigrationId, second.MigrationId);
+        drive.Verify(item => item.MoveAsync("file-1", "new-survey", It.IsAny<CancellationToken>()), Times.Exactly(2));
+    }
+
+    [Fact]
+    public async Task Run_resume_skips_an_untracked_file_deleted_between_runs()
+    {
+        LegacyProject();
+        drive.Setup(item => item.ListChildrenAsync("old-survey", It.IsAny<CancellationToken>()))
+            .ReturnsAsync([Item("stray")]);
+        drive.Setup(item => item.MoveAsync("stray", "new-survey", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(new GoogleApiException("drive", "Backend error"));
+        Assert.Equal(DriveTreeMigrationStatus.Failed, (await Service().RunAsync(7, CancellationToken.None)).Status);
+        drive.Setup(item => item.ListChildrenAsync("old-survey", It.IsAny<CancellationToken>())).ReturnsAsync([]);
+        drive.Setup(item => item.GetMetadataAsync("stray", It.IsAny<CancellationToken>()))
+            .ReturnsAsync((DriveItem?)null);
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Completed, result.Status);
+        db.ChangeTracker.Clear();
+        Assert.Equal("DRIVE_FILE_MISSING", db.DriveTreeMigrationItems.Single(i => i.DriveFileId == "stray").SkipReason);
     }
 
     public void Dispose() => db.Dispose();
