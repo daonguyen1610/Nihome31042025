@@ -215,7 +215,7 @@ test("first-time setup enables and saves configuration before connection", async
   await expect(connectButton).toBeEnabled();
 });
 
-test("switching Google Drive account disconnects before popup authorization", async ({
+test("switching Google Drive account authorizes without disconnecting first", async ({
   page,
   loginInBrowserAs,
   baseURL,
@@ -313,17 +313,18 @@ test("switching Google Drive account disconnects before popup authorization", as
   await confirmAction(page, false);
 
   await expect(page.getByText("replacement@nicon.test")).toBeVisible();
-  await expect.poll(() => operations).toEqual(["disconnect", "start", "google"]);
+  await expect.poll(() => operations).toEqual(["start", "google"]);
   await expect.poll(() => page.context().pages().length).toBe(1);
 });
 
-test("closing replacement popup refreshes the disconnected status", async ({
+test("closing replacement popup keeps the current account connected", async ({
   page,
   loginInBrowserAs,
   baseURL,
 }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
-  let accountEmail = "current@nicon.test";
+  const accountEmail = "current@nicon.test";
+  let disconnectRequests = 0;
 
   await page
     .context()
@@ -361,7 +362,7 @@ test("closing replacement popup refreshes the disconnected status", async ({
     .route(
       new RegExp("/api/(?:v1/)?site-settings/google-drive/oauth/disconnect$"),
       async (route) => {
-        accountEmail = "";
+        disconnectRequests++;
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -398,13 +399,14 @@ test("closing replacement popup refreshes the disconnected status", async ({
     .click();
   await confirmAction(page, false);
 
-  await expect(page.getByText("current@nicon.test")).not.toBeVisible();
+  await expect.poll(() => page.context().pages().length).toBe(1);
+  await expect(page.getByText("current@nicon.test")).toBeVisible();
   await expect(
     page.getByRole("button", {
-      name: /Connect Google Drive|Kết nối Google Drive|连接 Google Drive|Google Drive に接続/i,
+      name: /Switch Google account|Đổi tài khoản Google|切换 Google 帐户|Google アカウントを切り替え/i,
     }),
-  ).toBeVisible();
-  await expect.poll(() => page.context().pages().length).toBe(1);
+  ).toBeEnabled();
+  expect(disconnectRequests).toBe(0);
 });
 
 test("manual disconnect warns when Google does not confirm revocation", async ({

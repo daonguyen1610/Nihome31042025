@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using System.Net;
 using System.Text;
 using NihomeBackend.Data;
+using NihomeBackend.Models;
 using NihomeBackend.Services;
 using NihomeBackend.Services.GoogleDrive;
 
@@ -352,7 +354,7 @@ public sealed class GoogleDriveOAuthServiceTests
             .Callback(() => operations.Add("clear"));
         var clients = new Mock<IHttpClientFactory>();
         clients.Setup(factory => factory.CreateClient(It.IsAny<string>()))
-            .Returns(new HttpClient(new OAuthHttpHandler(onRevoke: () => operations.Add("revoke"))));
+            .Returns(new HttpClient(new OAuthHttpHandler(onRevoke: _ => operations.Add("revoke"))));
         var service = new GoogleDriveOAuthService(
             new EphemeralDataProtectionProvider(), settings.Object, clients.Object,
             Mock.Of<IGoogleDriveAdapter>(), Mock.Of<IPermissionService>(),
@@ -840,6 +842,201 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.StartsWith("https://accounts.google.com/o/oauth2/v2/auth?", start.AuthorizationUrl);
     }
 
+    [Fact]
+    public async Task Switching_to_another_account_revokes_the_old_token_only_after_success()
+    {
+        var operations = new List<string>();
+        var (service, state) = await ConnectedServiceAsync("previous@example.com", operations);
+
+        var result = await service.CompleteAsync("authorization-code", state, null);
+
+        Assert.Equal(GoogleDriveOAuthResult.Success, result);
+        Assert.Equal(["save", "revoke token=old-refresh-token"], operations);
+    }
+
+    [Fact]
+    public async Task Switch_that_cannot_be_saved_revokes_nothing()
+    {
+        var operations = new List<string>();
+        var (service, state) = await ConnectedServiceAsync("previous@example.com", operations,
+            saveFailure: new GoogleDriveSettingsConcurrencyException());
+
+        var result = await service.CompleteAsync("authorization-code", state, null);
+
+        Assert.Equal(GoogleDriveOAuthResult.ConfigurationChanged, result);
+        Assert.Equal(["save"], operations);
+    }
+
+    [Theory]
+    [InlineData("OWNER@example.com")]
+    [InlineData(null)]
+    public async Task Reconnecting_the_same_account_does_not_revoke(string? storedEmail)
+    {
+        var operations = new List<string>();
+        var (service, state) = await ConnectedServiceAsync(storedEmail, operations);
+
+        var result = await service.CompleteAsync("authorization-code", state, null);
+
+        Assert.Equal(GoogleDriveOAuthResult.Success, result);
+        Assert.Equal(["save"], operations);
+    }
+
+    [Fact]
+    public async Task Failed_root_check_keeps_the_current_token_and_revokes_nothing()
+    {
+        var operations = new List<string>();
+        var (service, state) = await ConnectedServiceAsync("previous@example.com", operations, canManageRoot: false);
+
+        var result = await service.CompleteAsync("authorization-code", state, null);
+
+        Assert.Equal(GoogleDriveOAuthResult.RootValidationFailed, result);
+        Assert.Empty(operations);
+    }
+
+    // A connected installation about to complete a new sign-in as owner@example.com.
+    private static async Task<(GoogleDriveOAuthService Service, string State)> ConnectedServiceAsync(
+        string? storedEmail, List<string> operations, bool canManageRoot = true, Exception? saveFailure = null)
+    {
+        var options = new GoogleDriveOptions
+        {
+            Enabled = true,
+            ClientId = "client-id",
+            ClientSecret = "client-secret",
+            RefreshToken = "old-refresh-token",
+            OAuthRedirectUri = "https://example.com/api/site-settings/google-drive/oauth/callback",
+            RootFolderId = "root-folder",
+        };
+        var settings = new Mock<IGoogleDriveSettingsStore>(MockBehavior.Strict);
+        settings.Setup(store => store.GetRuntimeAsync(It.IsAny<CancellationToken>())).ReturnsAsync(options);
+        settings.Setup(store => store.GetAdminAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AdminMetadata(options, storedEmail));
+        settings.Setup(store => store.SaveRefreshTokenAsync("new-refresh-token", "owner@example.com", 12,
+                It.IsAny<string>(), It.IsAny<CancellationToken>()))
+            .Callback(() => operations.Add("save"))
+            .Returns(saveFailure is null ? Task.CompletedTask : Task.FromException(saveFailure));
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(service => service.HasAsync(12, "system.settings.manage", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var clients = new Mock<IHttpClientFactory>();
+        clients.Setup(factory => factory.CreateClient(It.IsAny<string>()))
+            .Returns(() => new HttpClient(new OAuthHttpHandler(
+                canManageRoot, onRevoke: body => operations.Add($"revoke {body}"))));
+        var service = new GoogleDriveOAuthService(
+            new EphemeralDataProtectionProvider(), settings.Object, clients.Object,
+            Mock.Of<IGoogleDriveAdapter>(), permissions.Object, NullLogger<GoogleDriveOAuthService>.Instance);
+        var start = await service.CreateAuthorizationRequestAsync(12);
+        var state = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(
+            new Uri(start.AuthorizationUrl).Query)["state"].ToString();
+        return (service, state);
+    }
+
+    private static GoogleDriveAdminConfigurationResponse AdminMetadata(GoogleDriveOptions options, string? email) =>
+        new(true, options.ClientId, true, true, options.OAuthRedirectUri,
+            options.FrontendReturnUrl, options.RootFolderId, options.InstanceId,
+            options.ApplicationName, options.Folders, true, false, true, 15,
+            email, DateTime.UtcNow, "row-version");
+
+    public static TheoryData<Exception, string, string> StatusFailures() => new()
+    {
+        { OAuthFailure("invalid_grant"), "ReconnectRequired", "Hãy kết nối lại" },
+        { OAuthFailure("invalid_client"), "ReconnectRequired", "Client ID và Client Secret" },
+        { OAuthFailure("unauthorized_client"), "ReconnectRequired", "Client ID và Client Secret" },
+        {
+            new Google.GoogleApiException("Drive", "File not found") { HttpStatusCode = HttpStatusCode.NotFound },
+            "InvalidRoot", "RootFolderId"
+        },
+        {
+            new TaskCanceledException("timeout"), "Unavailable",
+            "Google Drive tạm thời không phản hồi. Hệ thống tự thử lại, không cần kết nối lại."
+        },
+        { new InvalidOperationException("unexpected"), "Unavailable", "Không thể xác thực hoặc truy cập Google Drive." },
+    };
+
+    [Theory]
+    [MemberData(nameof(StatusFailures))]
+    public async Task GetStatusAsync_SaysWhoMustAct(Exception failure, string expectedStatus, string expectedError)
+    {
+        var options = new GoogleDriveOptions { Enabled = true, ClientId = "client-id" };
+        var settings = new Mock<IGoogleDriveSettingsStore>();
+        settings.Setup(store => store.GetRuntimeAsync(It.IsAny<CancellationToken>())).ReturnsAsync(options);
+        settings.Setup(store => store.GetAdminAsync(It.IsAny<CancellationToken>()))
+            .ReturnsAsync(AdminMetadata(options, "owner@example.com"));
+        var drive = new Mock<IGoogleDriveAdapter>();
+        drive.Setup(adapter => adapter.CheckConnectionAsync(It.IsAny<CancellationToken>())).ThrowsAsync(failure);
+        var service = new GoogleDriveOAuthService(
+            new EphemeralDataProtectionProvider(), settings.Object, Mock.Of<IHttpClientFactory>(), drive.Object,
+            Mock.Of<IPermissionService>(), NullLogger<GoogleDriveOAuthService>.Instance);
+
+        var status = await service.GetStatusAsync();
+
+        Assert.Equal(expectedStatus, status.Status);
+        Assert.Contains(expectedError, status.Error);
+    }
+
+    private static Google.Apis.Auth.OAuth2.Responses.TokenResponseException OAuthFailure(string error) =>
+        new(new Google.Apis.Auth.OAuth2.Responses.TokenErrorResponse { Error = error }, HttpStatusCode.BadRequest);
+
+    [Fact]
+    public async Task Successful_connect_requeues_failed_documents()
+    {
+        await using var db = CreateDb();
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        await store.UpdateAsync(ValidConfiguration("client-secret-value"), 7);
+        db.ProjectDocuments.AddRange(StrandedDocument("NICON-IFC-R02.pdf", ProjectDocumentSyncStatus.Failed),
+            StrandedDocument("NICON-conflict.pdf", ProjectDocumentSyncStatus.Conflict));
+        await db.SaveChangesAsync();
+
+        await store.SaveRefreshTokenAsync("refresh-token-value", "owner@example.com", 7, string.Empty);
+
+        var documents = await db.ProjectDocuments.AsNoTracking().OrderBy(item => item.Id).ToListAsync();
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, documents[0].SyncStatus);
+        Assert.Equal(0, documents[0].SyncAttemptCount);
+        Assert.Null(documents[0].NextSyncAttemptAt);
+        Assert.Null(documents[0].SyncError);
+        Assert.Equal(ProjectDocumentSyncStatus.Conflict, documents[1].SyncStatus);
+        Assert.Equal(3, documents[1].SyncAttemptCount);
+    }
+
+    [Fact]
+    public async Task Requeue_concurrency_conflict_does_not_fail_the_connect()
+    {
+        await using var db = new AppDbContext(new DbContextOptionsBuilder<AppDbContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .AddInterceptors(new ConflictOnDocumentSave())
+            .Options);
+        var store = new GoogleDriveSettingsStore(db, new EphemeralDataProtectionProvider());
+        await store.UpdateAsync(ValidConfiguration("client-secret-value"), 7);
+        db.ProjectDocuments.Add(StrandedDocument("NICON-IFC-R02.pdf", ProjectDocumentSyncStatus.Failed));
+        await db.SaveChangesAsync();
+
+        await store.SaveRefreshTokenAsync("refresh-token-value", "owner@example.com", 7, string.Empty);
+
+        Assert.Equal("refresh-token-value", (await store.GetRuntimeAsync()).RefreshToken);
+        Assert.Equal(ProjectDocumentSyncStatus.Failed,
+            (await db.ProjectDocuments.AsNoTracking().SingleAsync()).SyncStatus);
+        // Nothing half-applied may ride along with a later save on the same request.
+        Assert.DoesNotContain(db.ChangeTracker.Entries(), entry => entry.State == EntityState.Modified);
+    }
+
+    private static ProjectDocument StrandedDocument(string fileName, ProjectDocumentSyncStatus status) => new()
+    {
+        OperationalProjectId = 42,
+        OriginalFileName = fileName,
+        SyncStatus = status,
+        SyncAttemptCount = 3,
+        SyncError = "Không thể đồng bộ Google Drive.",
+        NextSyncAttemptAt = DateTime.UtcNow.AddHours(1),
+    };
+
+    private sealed class ConflictOnDocumentSave : SaveChangesInterceptor
+    {
+        public override ValueTask<InterceptionResult<int>> SavingChangesAsync(
+            DbContextEventData eventData, InterceptionResult<int> result, CancellationToken cancellationToken = default) =>
+            eventData.Context!.ChangeTracker.Entries<ProjectDocument>().Any(entry => entry.State == EntityState.Modified)
+                ? throw new DbUpdateConcurrencyException("document changed by the sync worker")
+                : ValueTask.FromResult(result);
+    }
+
     private static AppDbContext CreateDb() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);
@@ -877,7 +1074,7 @@ public sealed class GoogleDriveOAuthServiceTests
         bool canManageRoot = true,
         bool revokeSucceeds = true,
         bool revokeTimesOut = false,
-        Action? onRevoke = null) : HttpMessageHandler
+        Action<string>? onRevoke = null) : HttpMessageHandler
     {
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
@@ -886,7 +1083,7 @@ public sealed class GoogleDriveOAuthServiceTests
             var isTokenRequest = request.RequestUri?.AbsolutePath.EndsWith("/token", StringComparison.Ordinal) == true;
             var isRootRequest = request.RequestUri?.AbsolutePath.Contains("/drive/v3/files/", StringComparison.Ordinal) == true;
             var isRevokeRequest = request.RequestUri?.AbsolutePath.EndsWith("/revoke", StringComparison.Ordinal) == true;
-            if (isRevokeRequest) onRevoke?.Invoke();
+            if (isRevokeRequest) onRevoke?.Invoke(request.Content!.ReadAsStringAsync(cancellationToken).Result);
             if (isRevokeRequest && revokeTimesOut)
                 return Task.FromException<HttpResponseMessage>(new TaskCanceledException("Provider timeout."));
             var status = isRootRequest && !canManageRoot || isRevokeRequest && !revokeSucceeds

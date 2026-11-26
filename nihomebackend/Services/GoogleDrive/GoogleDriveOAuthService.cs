@@ -1,7 +1,9 @@
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Google;
 using Google.Apis.Auth.OAuth2.Responses;
 using Microsoft.AspNetCore.DataProtection;
 
@@ -52,6 +54,8 @@ public sealed class GoogleDriveOAuthService(
     IPermissionService permissions,
     ILogger<GoogleDriveOAuthService> logger)
 {
+    private const string InvalidRootError =
+        "RootFolderId phải trỏ đến một thư mục Google Drive chưa bị chuyển vào thùng rác.";
     private static readonly JsonSerializerOptions JsonOptions = new(JsonSerializerDefaults.Web);
     private readonly IDataProtector stateProtector = dataProtectionProvider.CreateProtector(
         "Nicon.GoogleDrive.OAuthState.v1");
@@ -156,6 +160,9 @@ public sealed class GoogleDriveOAuthService(
             return GoogleDriveOAuthResult.RootValidationFailed;
 
         var accountEmail = await TryGetAccountEmailAsync(token.AccessToken, ct);
+        var previousEmail = string.IsNullOrEmpty(options.RefreshToken)
+            ? null
+            : (await settingsStore.GetAdminAsync(ct)).AccountEmail;
         try
         {
             await settingsStore.SaveRefreshTokenAsync(
@@ -169,6 +176,11 @@ public sealed class GoogleDriveOAuthService(
         {
             return GoogleDriveOAuthResult.ConfigurationChanged;
         }
+        // Only after the switch is saved, and never for the same (or an unknown) account:
+        // revoking one of an account's tokens can cancel the new grant too.
+        if (!string.IsNullOrWhiteSpace(previousEmail) && !string.IsNullOrWhiteSpace(accountEmail) &&
+            !string.Equals(previousEmail.Trim(), accountEmail.Trim(), StringComparison.OrdinalIgnoreCase))
+            await TryRevokeAsync(options.RefreshToken, ct);
         return GoogleDriveOAuthResult.Success;
     }
 
@@ -197,35 +209,7 @@ public sealed class GoogleDriveOAuthService(
 
         await settingsStore.ClearRefreshTokenAsync(userId, options.ConfigurationVersion, ct);
 
-        var providerRevoked = false;
-        try
-        {
-            using var request = new HttpRequestMessage(HttpMethod.Post, "https://oauth2.googleapis.com/revoke")
-            {
-                Content = new FormUrlEncodedContent(new Dictionary<string, string>
-                {
-                    ["token"] = options.RefreshToken,
-                }),
-            };
-            using var response = await httpClientFactory.CreateClient(nameof(GoogleDriveOAuthService))
-                .SendAsync(request, ct);
-            providerRevoked = response.IsSuccessStatusCode;
-            if (!providerRevoked)
-                logger.LogWarning(
-                    "Google Drive credential revocation returned status {StatusCode}; the local credential will still be removed.",
-                    (int)response.StatusCode);
-        }
-        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
-        {
-            logger.LogWarning(
-                "Google Drive credential revocation timed out; the local credential was already removed.");
-        }
-        catch (Exception exception) when (exception is not OperationCanceledException)
-        {
-            logger.LogWarning(
-                "Google Drive credential revocation failed ({ExceptionType}); the local credential will still be removed.",
-                exception.GetType().Name);
-        }
+        var providerRevoked = await TryRevokeAsync(options.RefreshToken, ct);
 
         return new GoogleDriveDisconnectResponse(hadStoredCredential, providerRevoked);
     }
@@ -266,24 +250,39 @@ public sealed class GoogleDriveOAuthService(
             return new(status, configured, metadata.HasRefreshToken,
                 connection.AccountEmail ?? metadata.AccountEmail, metadata.ConnectedAt,
                 connection.FolderName, connection.FolderLink,
-                status == "InvalidRoot"
-                    ? "RootFolderId phải trỏ đến một thư mục Google Drive chưa bị chuyển vào thùng rác."
-                    : null);
+                status == "InvalidRoot" ? InvalidRootError : null);
         }
         catch (Exception exception)
         {
-            var reconnectRequired = GoogleDriveAuthenticationErrors.IsInvalidGrant(exception);
+            var kind = GoogleDriveFailure.Classify(exception);
             logger.LogWarning(
-                "Google Drive health check failed ({ExceptionType}, reconnect required: {ReconnectRequired}).",
+                "Google Drive health check failed ({ExceptionType}, kind: {FailureKind}).",
                 exception.GetType().Name,
-                reconnectRequired);
-            return new(reconnectRequired ? "ReconnectRequired" : "Unavailable", configured,
-                metadata.HasRefreshToken,
-                metadata.AccountEmail, metadata.ConnectedAt, null, null,
-                reconnectRequired
-                    ? "Quyền truy cập Google Drive đã hết hạn hoặc bị thu hồi. Hãy kết nối lại."
-                    : "Không thể xác thực hoặc truy cập Google Drive.");
+                kind);
+            var (status, error) = kind switch
+            {
+                GoogleDriveFailureKind.Connection => ("ReconnectRequired", IsOAuthClientError(exception)
+                    ? "Google từ chối ứng dụng OAuth. Hãy kiểm tra Client ID và Client Secret, lưu cấu hình rồi kết nối lại."
+                    : "Quyền truy cập Google Drive đã hết hạn hoặc bị thu hồi. Hãy kết nối lại."),
+                _ when exception is GoogleApiException { HttpStatusCode: HttpStatusCode.NotFound } =>
+                    ("InvalidRoot", InvalidRootError),
+                GoogleDriveFailureKind.Transient => ("Unavailable",
+                    "Google Drive tạm thời không phản hồi. Hệ thống tự thử lại, không cần kết nối lại."),
+                _ => ("Unavailable", "Không thể xác thực hoặc truy cập Google Drive."),
+            };
+            return new(status, configured, metadata.HasRefreshToken,
+                metadata.AccountEmail, metadata.ConnectedAt, null, null, error);
         }
+    }
+
+    private static bool IsOAuthClientError(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is TokenResponseException { Error.Error: "invalid_client" or "unauthorized_client" })
+                return true;
+        }
+        return false;
     }
 
     public async Task<string> BuildFrontendResultUrlAsync(
@@ -309,6 +308,39 @@ public sealed class GoogleDriveOAuthService(
             : "/admin/settings?tab=drive";
         return Microsoft.AspNetCore.WebUtilities.QueryHelpers.AddQueryString(
             returnUrl, "driveOAuth", resultValue);
+    }
+
+    /// <summary>Best effort: the token is no longer stored here whatever Google answers.</summary>
+    private async Task<bool> TryRevokeAsync(string refreshToken, CancellationToken ct)
+    {
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "https://oauth2.googleapis.com/revoke")
+            {
+                Content = new FormUrlEncodedContent(new Dictionary<string, string>
+                {
+                    ["token"] = refreshToken,
+                }),
+            };
+            using var response = await httpClientFactory.CreateClient(nameof(GoogleDriveOAuthService))
+                .SendAsync(request, ct);
+            if (response.IsSuccessStatusCode) return true;
+            logger.LogWarning(
+                "Google Drive credential revocation returned status {StatusCode}; the old credential is already removed locally.",
+                (int)response.StatusCode);
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested)
+        {
+            logger.LogWarning(
+                "Google Drive credential revocation timed out; the old credential is already removed locally.");
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(
+                "Google Drive credential revocation failed ({ExceptionType}); the old credential is already removed locally.",
+                exception.GetType().Name);
+        }
+        return false;
     }
 
     private async Task<string?> TryGetAccountEmailAsync(string? accessToken, CancellationToken ct)
