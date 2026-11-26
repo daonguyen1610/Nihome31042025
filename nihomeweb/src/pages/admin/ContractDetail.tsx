@@ -691,15 +691,6 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           onTransition={handleTransition}
           transitionBusy={transitionBusy}
         />
-        <ContractReviewPanel
-          contract={contract}
-          currentUserId={currentUserId}
-          canSubmit={canManageMaster}
-          onChanged={setContract}
-        />
-        {contract.direction === "Upstream" && (
-          <ContractFinanceReviewLink quoteId={contract.quoteId} />
-        )}
         <LegalActivationWizard
           contract={contract}
           open={legalWizardOpen}
@@ -716,194 +707,220 @@ const ContractDetail = ({ mode = "all" }: ContractDetailProps) => {
           </div>
         )}
 
-        <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
-          <ScrollableTabsList previousLabel={t("common.prev")} nextLabel={t("common.next")}>
-            <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
-            <TabsTrigger value="schedule">
-              {t(
-                contract.direction === "Upstream"
-                  ? "contracts.detail.tab.receivableSchedule"
-                  : "contracts.detail.tab.payableSchedule",
-              )}
-              {contract.paymentMilestones.length > 0 ? (
-                <span className="ml-1 text-xs text-muted-foreground">
-                  ({contract.paymentMilestones.length})
-                </span>
-              ) : null}
-            </TabsTrigger>
-            <TabsTrigger value="appendices">
-              {t("contracts.detail.tab.appendices")}
-              {appendices.length > 0 ? (
-                <span className="ml-1 text-xs text-muted-foreground">({appendices.length})</span>
-              ) : null}
-            </TabsTrigger>
-            <TabsTrigger value="documents">
-              {t("contracts.detail.tab.documents")}
-              {attachments.length > 0 ? (
-                <span className="ml-1 text-xs text-muted-foreground">({attachments.length})</span>
-              ) : null}
-            </TabsTrigger>
-            {contract.direction === "Upstream" ? (
-              <TabsTrigger value="care">{t("contracts.care.title")}</TabsTrigger>
-            ) : null}
-            <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
-          </ScrollableTabsList>
-
-          <TabsContent value="info" className="mt-4">
-            {editing && form ? (
-              <div data-testid="contract-inline-edit-form">
-                <EditInfoTab
-                  form={form}
-                  customers={customers}
-                  projects={projects}
-                  classification={classification}
-                  lockDirection={scopedDirection !== undefined}
-                  error={formError}
-                  currency={contract.currency}
-                  onChange={setForm}
-                />
-              </div>
-            ) : (
-              <>
-                <InfoTab
-                  contract={contract}
-                  onEnsureDesignProject={
-                    !isFinanceWorkspace &&
-                    contract.direction === "Upstream" &&
-                    has(ADMIN_PERMS.opportunitiesManage) &&
-                    has(ADMIN_PERMS.operationalProjectsManage)
-                      ? () => void handleEnsureDesignProject()
-                      : undefined
-                  }
-                  ensuringDesignProject={ensuringDesignProject}
-                  canViewDesignProject={has(ADMIN_PERMS.designProjects)}
-                  canViewLeads={has(ADMIN_PERMS.leads)}
-                  canViewTender={has(ADMIN_PERMS.tenders)}
-                  onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
-                />
-                <ContractExecutionProgress
-                  contract={contract}
-                  onPayment={() => {
-                    setTab("schedule");
-                    setSearchParams((current) => {
-                      current.set("tab", "schedule");
-                      return current;
-                    });
-                  }}
-                />
-              </>
+        {/* Working records on the left; where the contract stands and what is next on the right. */}
+        <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <aside className="space-y-4 xl:order-2">
+            <ContractReviewPanel
+              contract={contract}
+              currentUserId={currentUserId}
+              canSubmit={canManageMaster}
+              onChanged={setContract}
+            />
+            {contract.direction === "Upstream" && (
+              <ContractFinanceReviewLink quoteId={contract.quoteId} />
             )}
-          </TabsContent>
-          <TabsContent value="schedule" className="mt-4">
-            {editing && form ? (
-              <div className="space-y-3">
-                <EditScheduleTab
-                  direction={contract.direction}
-                  currency={contract.currency}
-                  value={form.value}
-                  milestones={form.milestones}
-                  onChange={(milestones) => setForm({ ...form, milestones })}
-                />
-                {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
-              </div>
-            ) : editingSchedule ? (
-              <div className="space-y-3" data-testid="contract-finance-schedule-form">
-                <EditScheduleTab
-                  direction={contract.direction}
-                  currency={contract.currency}
-                  value={contract.value}
-                  milestones={scheduleDraft}
-                  onChange={setScheduleDraft}
-                />
-                {scheduleError ? <p className="text-sm text-destructive">{scheduleError}</p> : null}
-                <div className="flex justify-end gap-2">
-                  <Button variant="outline" disabled={scheduleSaving} onClick={cancelScheduleEdit}>
-                    {t("common.cancel")}
-                  </Button>
-                  <Button
-                    data-testid="contract-finance-schedule-save"
-                    disabled={scheduleSaving}
-                    onClick={() => void saveSchedule()}
-                  >
-                    {scheduleSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                    {t("common.save")}
-                  </Button>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {canManageMilestones ? (
-                  <div className="flex justify-end">
-                    <Button
-                      data-testid="contract-finance-schedule-edit"
-                      size="sm"
-                      variant="outline"
-                      onClick={beginScheduleEdit}
-                    >
-                      <Pencil className="mr-1 h-4 w-4" />
-                      {t("contracts.schedule.edit")}
-                    </Button>
-                  </div>
+          </aside>
+          <div className="min-w-0 xl:order-1">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as TabId)}>
+              <ScrollableTabsList previousLabel={t("common.prev")} nextLabel={t("common.next")}>
+                <TabsTrigger value="info">{t("contracts.detail.tab.info")}</TabsTrigger>
+                <TabsTrigger value="schedule">
+                  {t(
+                    contract.direction === "Upstream"
+                      ? "contracts.detail.tab.receivableSchedule"
+                      : "contracts.detail.tab.payableSchedule",
+                  )}
+                  {contract.paymentMilestones.length > 0 ? (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({contract.paymentMilestones.length})
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+                <TabsTrigger value="appendices">
+                  {t("contracts.detail.tab.appendices")}
+                  {appendices.length > 0 ? (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({appendices.length})
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+                <TabsTrigger value="documents">
+                  {t("contracts.detail.tab.documents")}
+                  {attachments.length > 0 ? (
+                    <span className="ml-1 text-xs text-muted-foreground">
+                      ({attachments.length})
+                    </span>
+                  ) : null}
+                </TabsTrigger>
+                {contract.direction === "Upstream" ? (
+                  <TabsTrigger value="care">{t("contracts.care.title")}</TabsTrigger>
                 ) : null}
-                <ScheduleTab
+                <TabsTrigger value="timeline">{t("contracts.detail.tab.timeline")}</TabsTrigger>
+              </ScrollableTabsList>
+
+              <TabsContent value="info" className="mt-4">
+                {editing && form ? (
+                  <div data-testid="contract-inline-edit-form">
+                    <EditInfoTab
+                      form={form}
+                      customers={customers}
+                      projects={projects}
+                      classification={classification}
+                      lockDirection={scopedDirection !== undefined}
+                      error={formError}
+                      currency={contract.currency}
+                      onChange={setForm}
+                    />
+                  </div>
+                ) : (
+                  <>
+                    <InfoTab
+                      contract={contract}
+                      onEnsureDesignProject={
+                        !isFinanceWorkspace &&
+                        contract.direction === "Upstream" &&
+                        has(ADMIN_PERMS.opportunitiesManage) &&
+                        has(ADMIN_PERMS.operationalProjectsManage)
+                          ? () => void handleEnsureDesignProject()
+                          : undefined
+                      }
+                      ensuringDesignProject={ensuringDesignProject}
+                      canViewDesignProject={has(ADMIN_PERMS.designProjects)}
+                      canViewLeads={has(ADMIN_PERMS.leads)}
+                      canViewTender={has(ADMIN_PERMS.tenders)}
+                      onLinkQuote={canLinkQuote ? () => setLinkQuoteOpen(true) : undefined}
+                    />
+                    <ContractExecutionProgress
+                      contract={contract}
+                      onPayment={() => {
+                        setTab("schedule");
+                        setSearchParams((current) => {
+                          current.set("tab", "schedule");
+                          return current;
+                        });
+                      }}
+                    />
+                  </>
+                )}
+              </TabsContent>
+              <TabsContent value="schedule" className="mt-4">
+                {editing && form ? (
+                  <div className="space-y-3">
+                    <EditScheduleTab
+                      direction={contract.direction}
+                      currency={contract.currency}
+                      value={form.value}
+                      milestones={form.milestones}
+                      onChange={(milestones) => setForm({ ...form, milestones })}
+                    />
+                    {formError ? <p className="text-sm text-destructive">{formError}</p> : null}
+                  </div>
+                ) : editingSchedule ? (
+                  <div className="space-y-3" data-testid="contract-finance-schedule-form">
+                    <EditScheduleTab
+                      direction={contract.direction}
+                      currency={contract.currency}
+                      value={contract.value}
+                      milestones={scheduleDraft}
+                      onChange={setScheduleDraft}
+                    />
+                    {scheduleError ? (
+                      <p className="text-sm text-destructive">{scheduleError}</p>
+                    ) : null}
+                    <div className="flex justify-end gap-2">
+                      <Button
+                        variant="outline"
+                        disabled={scheduleSaving}
+                        onClick={cancelScheduleEdit}
+                      >
+                        {t("common.cancel")}
+                      </Button>
+                      <Button
+                        data-testid="contract-finance-schedule-save"
+                        disabled={scheduleSaving}
+                        onClick={() => void saveSchedule()}
+                      >
+                        {scheduleSaving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        {t("common.save")}
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {canManageMilestones ? (
+                      <div className="flex justify-end">
+                        <Button
+                          data-testid="contract-finance-schedule-edit"
+                          size="sm"
+                          variant="outline"
+                          onClick={beginScheduleEdit}
+                        >
+                          <Pencil className="mr-1 h-4 w-4" />
+                          {t("contracts.schedule.edit")}
+                        </Button>
+                      </div>
+                    ) : null}
+                    <ScheduleTab
+                      contract={contract}
+                      canManage={canManageMilestones}
+                      onMilestoneStatus={handleMilestoneStatus}
+                      onEditActualPaymentDate={openPaidDateDialog}
+                      busyMilestoneId={busyMilestoneId}
+                    />
+                  </div>
+                )}
+              </TabsContent>
+              <TabsContent value="appendices" className="mt-4">
+                <VoTab
                   contract={contract}
-                  canManage={canManageMilestones}
-                  onMilestoneStatus={handleMilestoneStatus}
-                  onEditActualPaymentDate={openPaidDateDialog}
-                  busyMilestoneId={busyMilestoneId}
+                  rows={appendices}
+                  canManage={canManageMaster}
+                  canDecide={canDecideVo}
+                  refresh={refreshContract}
                 />
-              </div>
-            )}
-          </TabsContent>
-          <TabsContent value="appendices" className="mt-4">
-            <VoTab
-              contract={contract}
-              rows={appendices}
-              canManage={canManageMaster}
-              canDecide={canDecideVo}
-              refresh={refreshContract}
-            />
-          </TabsContent>
-          <TabsContent value="documents" className="mt-4">
-            <DocumentsTab
-              contract={contract}
-              rows={attachments}
-              canManage={canManageMaster}
-              error={attachmentsError}
-              refresh={refreshContract}
-            />
-          </TabsContent>
-          {contract.direction === "Upstream" ? (
-            <TabsContent value="care" className="mt-4">
-              <ContractContinuations
-                contract={contract}
-                canManage={
-                  canManageMaster &&
-                  (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
-                }
-              />
-              <ContractReminders
-                key={`reminders-${contract.id}`}
-                contractId={contract.id}
-                canManage={
-                  canManageMaster &&
-                  (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
-                }
-              />
-              <ContractCareActivities
-                key={contract.id}
-                contractId={contract.id}
-                canManage={
-                  canManageMaster &&
-                  (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
-                }
-              />
-            </TabsContent>
-          ) : null}
-          <TabsContent value="timeline" className="mt-4">
-            <TimelineTab events={timeline} />
-          </TabsContent>
-        </Tabs>
+              </TabsContent>
+              <TabsContent value="documents" className="mt-4">
+                <DocumentsTab
+                  contract={contract}
+                  rows={attachments}
+                  canManage={canManageMaster}
+                  error={attachmentsError}
+                  refresh={refreshContract}
+                />
+              </TabsContent>
+              {contract.direction === "Upstream" ? (
+                <TabsContent value="care" className="mt-4">
+                  <ContractContinuations
+                    contract={contract}
+                    canManage={
+                      canManageMaster &&
+                      (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
+                    }
+                  />
+                  <ContractReminders
+                    key={`reminders-${contract.id}`}
+                    contractId={contract.id}
+                    canManage={
+                      canManageMaster &&
+                      (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
+                    }
+                  />
+                  <ContractCareActivities
+                    key={contract.id}
+                    contractId={contract.id}
+                    canManage={
+                      canManageMaster &&
+                      (has(ADMIN_PERMS.contractsViewAll) || contract.ownerUserId === currentUserId)
+                    }
+                  />
+                </TabsContent>
+              ) : null}
+              <TabsContent value="timeline" className="mt-4">
+                <TimelineTab events={timeline} />
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
 
         <Dialog
           open={milestoneActionDraft !== null}

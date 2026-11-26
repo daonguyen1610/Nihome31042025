@@ -21,6 +21,7 @@ test("the new contract form suggests an editable contract number", async ({
 test("the new contract form keeps new milestones Pending", async ({ page, loginInBrowserAs }) => {
   await loginInBrowserAs(page, TEST_USERS.superAdmin);
   await page.goto("/admin/contracts");
+  await page.getByRole("button", { name: /^(Bộ lọc|Filters|筛选|絞り込み)$/ }).click();
   await page.locator("#c-project").click();
   await page.getByRole("option").filter({ hasText: /PJ-/ }).first().click();
   await page

@@ -53,18 +53,42 @@ export const ContractHeader = ({
     return t(TRANSITION_LABEL_KEY[target]);
   };
 
+  const showTransitions = !editing && canTransition && transitions.length > 0;
+  const facts = [
+    {
+      label: t("contracts.detail.header.currentValue"),
+      value: formatMoney(contract.currentValue, contract.currency),
+      className: "text-xl",
+    },
+    {
+      label: t("contracts.detail.header.baseValue"),
+      value: formatMoney(contract.value, contract.currency),
+    },
+    {
+      label: t("contracts.detail.header.voTotal"),
+      value: `${contract.approvedVoTotal > 0 ? "+" : ""}${formatMoney(contract.approvedVoTotal, contract.currency)}`,
+      className:
+        contract.approvedVoTotal > 0
+          ? "text-success-strong"
+          : contract.approvedVoTotal < 0
+            ? "text-destructive"
+            : undefined,
+    },
+  ];
+
   return (
-    <div className="rounded-xl border border-border bg-card p-4 shadow-sm md:p-5">
-      <div className="flex flex-wrap items-start justify-between gap-3">
+    <div className="space-y-4">
+      <Link
+        to={returnTo}
+        className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        {t("contracts.detail.back")}
+      </Link>
+      <header className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Link to={returnTo} className="inline-flex items-center gap-1 hover:text-foreground">
-              <ArrowLeft className="h-4 w-4" />
-              {t("contracts.detail.back")}
-            </Link>
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-2">
-            <h1 className="truncate text-foreground text-2xl font-semibold">
+          <div className="flex flex-wrap items-center gap-3">
+            <h1 className="break-words text-2xl font-semibold text-foreground">
               {contract.contractNumber}
             </h1>
             <Badge className={cn("border capitalize", STATUS_STYLES[contract.status])}>
@@ -72,100 +96,69 @@ export const ContractHeader = ({
             </Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            <span className="font-medium">{contract.customerName ?? "—"}</span>
-            {contract.ownerName ? (
-              <span className="ml-2 text-xs text-muted-foreground">• {contract.ownerName}</span>
-            ) : null}
+            <span className="font-medium text-foreground">{contract.customerName ?? "—"}</span>
+            {contract.ownerName ? <span className="ml-2">• {contract.ownerName}</span> : null}
           </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
+          {showTransitions &&
+            // The forward step comes first and is the only filled button; cancelling stays quiet.
+            [...transitions]
+              .sort((x, y) => Number(x === "Cancelled") - Number(y === "Cancelled"))
+              .map((target, index) => (
+                <Button
+                  key={target}
+                  variant={
+                    target === "Cancelled"
+                      ? "destructiveOutline"
+                      : index === 0
+                        ? "default"
+                        : "outline"
+                  }
+                  disabled={transitionBusy !== null}
+                  onClick={() => onTransition(target)}
+                >
+                  {transitionBusy === target ? (
+                    <Loader2 className="animate-spin" />
+                  ) : (
+                    TRANSITION_ICON[target]
+                  )}
+                  {label(target)}
+                </Button>
+              ))}
           {canEdit && !editing ? (
-            <Button variant="outline" size="sm" onClick={onEditInfo}>
-              <Pencil className="mr-1 h-4 w-4" />
+            <Button variant="outline" onClick={onEditInfo}>
+              <Pencil />
               {t("common.edit")}
             </Button>
           ) : null}
           {editing ? (
             <>
-              <Button variant="outline" size="sm" onClick={onCancelEdit} disabled={saving}>
+              <Button variant="outline" onClick={onCancelEdit} disabled={saving}>
                 {t("common.cancel")}
               </Button>
-              <Button size="sm" onClick={onSave} disabled={saving}>
-                {saving ? (
-                  <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-                ) : (
-                  <Save className="mr-1 h-4 w-4" />
-                )}
+              <Button onClick={onSave} disabled={saving}>
+                {saving ? <Loader2 className="animate-spin" /> : <Save />}
                 {t("common.save")}
               </Button>
             </>
           ) : null}
         </div>
-      </div>
+      </header>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-lg bg-muted/30 p-3">
-          <div className="text-xs text-muted-foreground">
-            {t("contracts.detail.header.baseValue")}
+      <dl className="grid divide-y rounded-lg border bg-card sm:grid-cols-3 sm:divide-x sm:divide-y-0">
+        {facts.map((fact) => (
+          <div key={fact.label} className="flex flex-col justify-between gap-1 p-4">
+            <dt className="text-xs text-muted-foreground">{fact.label}</dt>
+            <dd className={cn("text-lg font-semibold tabular-nums", fact.className)}>
+              {fact.value}
+            </dd>
           </div>
-          <div className="mt-1 text-lg font-semibold text-foreground">
-            {formatMoney(contract.value, contract.currency)}
-          </div>
-        </div>
-        <div className="rounded-lg bg-muted/30 p-3">
-          <div className="text-xs text-muted-foreground">
-            {t("contracts.detail.header.voTotal")}
-          </div>
-          <div
-            className={cn(
-              "mt-1 text-lg font-semibold",
-              contract.approvedVoTotal > 0
-                ? "text-success-strong"
-                : contract.approvedVoTotal < 0
-                  ? "text-destructive"
-                  : "text-foreground",
-            )}
-          >
-            {contract.approvedVoTotal > 0 ? "+" : ""}
-            {formatMoney(contract.approvedVoTotal, contract.currency)}
-          </div>
-        </div>
-        <div className="rounded-lg border border-success/30 bg-success-soft p-3">
-          <div className="text-xs text-success-strong">
-            {t("contracts.detail.header.currentValue")}
-          </div>
-          <div className="mt-1 text-lg font-bold text-success-strong">
-            {formatMoney(contract.currentValue, contract.currency)}
-          </div>
-        </div>
-      </div>
+        ))}
+      </dl>
 
-      {!editing && canTransition && transitions.length > 0 ? (
-        <div className="mt-4 flex flex-wrap gap-2">
-          {transitions.map((target) => (
-            <Button
-              key={target}
-              variant={target === "Cancelled" ? "outline" : "default"}
-              size="sm"
-              disabled={transitionBusy !== null}
-              onClick={() => onTransition(target)}
-              className={cn(
-                target === "Cancelled" &&
-                  "border-destructive/20 text-destructive hover:bg-destructive/10",
-              )}
-            >
-              {transitionBusy === target ? (
-                <Loader2 className="mr-1 h-4 w-4 animate-spin" />
-              ) : (
-                <span className="mr-1">{TRANSITION_ICON[target]}</span>
-              )}
-              {label(target)}
-            </Button>
-          ))}
-        </div>
-      ) : null}
       {!editing && contract.type === "Unclassified" ? (
-        <p className="mt-4 rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong">
+        <p className="rounded-md border border-warning/40 bg-warning-soft p-3 text-sm text-warning-strong">
           {t("contracts.validation.classifyBeforeTransition")}
         </p>
       ) : null}
