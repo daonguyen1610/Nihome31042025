@@ -156,7 +156,9 @@ public sealed class OperationalProjectDocumentsControllerTests(
         persisted.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Pending);
         persisted.DesiredOperation.Should().Be(ProjectDocumentDesiredOperation.Upsert);
         persisted.DriveFileId.Should().BeNull();
-        ProjectFiles(projectId).Should().ContainSingle();
+        // Test factories share wwwroot while their databases reuse project ids, so another
+        // class running in parallel can add files to this folder: check only our own.
+        ProjectFiles(projectId).Should().Contain(path => path.Replace('\\', '/').EndsWith(persisted.LocalPath));
 
         var list = await Client.GetAsync($"/api/operational-projects/{projectId}/documents");
         list.StatusCode.Should().Be(HttpStatusCode.OK);
