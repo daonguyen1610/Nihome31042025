@@ -2945,7 +2945,9 @@ audience External (khi Testing, thêm tài khoản sở hữu thư mục làm te
 dùng được); đăng ký đúng callback, ví dụ
 `https://nicon.example.com/api/site-settings/google-drive/oauth/callback`; lấy
 `<FOLDER_ID>` của thư mục gốc. Không tạo refresh token thủ công. Trước khi dùng thật, đưa
-app sang Production (token ở chế độ Testing có hạn).
+app sang Production rồi kết nối lại một lần: app External ở trạng thái Testing nhận refresh
+token [hết hạn sau 7 ngày](https://developers.google.com/identity/protocols/oauth2#expiration)
+khi xin scope Drive (hoặc dùng loại Internal với Google Workspace).
 
 Sau khi giải nén gói trên IIS:
 
@@ -2969,15 +2971,23 @@ Sau khi giải nén gói trên IIS:
 |---|---|
 | `Connected` | Đã xác thực, thư mục gốc tồn tại và được thêm file |
 | `ReadOnly` | Thấy thư mục nhưng không được thêm |
-| `InvalidRoot` | `RootFolderId` không phải thư mục hoặc nằm trong thùng rác |
-| `ReconnectRequired` | Refresh token thiếu, hết hạn, bị thu hồi hoặc không giải mã được; admin kết nối lại |
-| `Unavailable` | Lỗi xác thực hoặc truy cập thư mục |
+| `InvalidRoot` | `RootFolderId` không phải thư mục, nằm trong thùng rác hoặc Google trả 404 |
+| `ReconnectRequired` | Cần admin: refresh token thiếu, hết hạn, bị thu hồi hoặc không giải mã được; `invalid_client`/`unauthorized_client` (kiểm Client ID/Secret), chính sách Workspace, 401 |
+| `Unavailable` | Lỗi tạm thời hoặc chưa phân loại được; trang tự kiểm tra lại mỗi 30 giây |
+
+`GoogleDriveFailure.Classify` chia lỗi thành ba loại, dùng chung cho trạng thái và worker:
+`Transient` (timeout, mạng, 408/429/5xx, giới hạn tần suất hay dung lượng) thử lại sau 1
+phút; `Connection` (cấu hình hoặc credential) thử lại sau 5 phút; cả hai không tính lượt.
+`Permanent` (còn lại, gồm mất tệp nguồn) tính lượt, quá ba lần thì `Failed` và báo Admin
+một lần.
 
 - `FrontendReturnUrl` phải là đường dẫn nội bộ `/admin/` (không backslash, fragment, ký tự
   điều khiển), mặc định quay về `/admin/settings?tab=drive`.
-- Đổi tài khoản: **Disconnect** rồi **Connect**, hoặc **Switch Google account**. NICON xoá
+- Chỉ **Disconnect** hoặc lưu cấu hình đổi Client ID/Secret mới xoá refresh token. Đổi tài
+  khoản dùng **Switch Google account**: token cũ chỉ được thay khi đăng nhập mới thành công
+  và chỉ bị thu hồi (best effort) khi hai email đã biết và khác nhau. **Disconnect** xoá
   credential local trước khi yêu cầu Google thu hồi; thu hồi lỗi thì admin nhận hướng dẫn
-  thu hồi tay.
+  thu hồi tay. Kết nối thành công đưa mọi tài liệu `Failed` về `Pending`.
 - Đổi topology khi đã có binding: lưu tắt đồng bộ, chờ hết `Processing`, lưu thư mục gốc/
   định danh/đường dẫn mới khi vẫn tắt, rồi bật lại ở lần lưu riêng. Server từ chối đổi
   topology khi đang xử lý hoặc binding đang bật. File cũ trên Drive không tự di chuyển.
@@ -2991,8 +3001,8 @@ Sau khi giải nén gói trên IIS:
 - Upload tay bắt buộc `Idempotency-Key`; fingerprint tính trên field và byte file (không
   theo boundary), nên retry cùng ý định tạo tối đa một dòng catalog và một file Drive.
   Form giữ key khi lỗi, đổi key khi đổi file, category hoặc dự án. Scope dự án kiểm trước.
-- Mỗi tài liệu tối đa ba lần claim tự động mỗi vòng; **Retry** (kể cả sau lần ba) reset
-  vòng. Đang `Processing` thì không retry hay xoá được. Đồng bộ tắt hoặc thư mục gốc không
+- Mỗi tài liệu tối đa ba lần claim lỗi `Permanent` mỗi vòng; **Retry** (kể cả sau lần ba)
+  reset vòng. Đang `Processing` thì không retry hay xoá được. Đồng bộ tắt hoặc thư mục gốc không
   ghi được thì không claim, không tốn lượt. Ứng dụng dừng giữa chừng thì lease hết hạn tiếp
   tục đúng lần thử đó. Upload sidecar cũ có heartbeat 5 phút; mất claim thì huỷ request
   Drive, generation fencing chặn hoàn tất cũ; file trùng replica key và generation do race

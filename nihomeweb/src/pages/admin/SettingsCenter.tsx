@@ -687,6 +687,9 @@ const DriveTab = () => {
             )}
           </div>
         )}
+        <p className="mt-4 text-xs text-muted-foreground">
+          {t("settings.drive.help.stayConnected")}
+        </p>
       </section>
     </div>
   );
