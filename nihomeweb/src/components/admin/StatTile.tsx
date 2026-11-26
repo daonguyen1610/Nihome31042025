@@ -1,10 +1,10 @@
-import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { ArrowUpRight, type LucideIcon } from "lucide-react";
-import type { ModuleTone } from "@/lib/moduleTheme";
 import { cn } from "@/lib/utils";
 
-/** A headline number on a module gradient; opens the list behind it when `to` is given. */
+export type StatTileTone = "indigo" | "coral" | "green" | "sky";
+
+/** A headline number on a bright gradient that opens the list behind it. */
 export function StatTile({
   tone,
   icon: Icon,
@@ -12,38 +12,31 @@ export function StatTile({
   value,
   to,
 }: {
-  tone: ModuleTone;
+  tone: StatTileTone;
   icon: LucideIcon;
   label: string;
-  value: ReactNode;
-  to?: string;
+  value: number | string;
+  to: string;
 }) {
-  const body = (
-    <>
-      <span className="mb-4 flex items-start justify-between">
-        <span className="flex h-11 w-11 items-center justify-center rounded-md bg-white/20">
-          <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
-        </span>
-        {to && <ArrowUpRight className="h-4 w-4" aria-hidden />}
-      </span>
-      <span className="block break-words text-3xl font-bold leading-tight tabular-nums">
-        {value}
-      </span>
-      <span className="mt-1 block text-sm font-medium">{label}</span>
-    </>
-  );
-  const className = cn(`tone-${tone} tone-gradient block rounded-lg p-4 shadow-md sm:p-5`);
-  return to ? (
+  return (
     <Link
       to={to}
       className={cn(
-        className,
-        "transition-[transform,box-shadow] duration-150 hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
+        `tile-${tone}`,
+        "block rounded-lg p-5 text-white shadow-md transition-[transform,box-shadow] duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
       )}
     >
-      {body}
+      <span className="mb-5 flex items-start justify-between">
+        <span className="flex h-11 w-11 items-center justify-center rounded-md bg-white/20">
+          <Icon className="h-5 w-5" strokeWidth={1.75} aria-hidden />
+        </span>
+        <ArrowUpRight className="h-4 w-4" aria-hidden />
+      </span>
+      <span className="block break-words text-4xl font-bold leading-none tabular-nums">
+        {value}
+      </span>
+      {/* 19px bold counts as large text, which the bright gradients are measured against. */}
+      <span className="mt-2 block text-[19px] font-bold leading-snug">{label}</span>
     </Link>
-  ) : (
-    <div className={className}>{body}</div>
   );
 }

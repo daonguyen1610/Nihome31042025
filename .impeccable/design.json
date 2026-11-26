@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-26T17:39:56+00:00",
+  "generatedAt": "2026-11-26T17:51:59+00:00",
   "title": "Design System: Nicon Admin",
   "extensions": {
     "colorMeta": {
@@ -461,7 +461,7 @@
     "rules": [
       {
         "name": "The One Red Voice Rule",
-        "body": "Each working area has at most one filled red action. Everything else is outline or ghost.",
+        "body": "Each working area has at most one filled red button. Red tint and red text mark where the person is; every other action is outline or ghost.",
         "section": "colors"
       },
       {
@@ -486,7 +486,7 @@
       },
       {
         "name": "The Flat Work Surface Rule",
-        "body": "Records, forms and tables stay flat: border and tone, no glow or blur. Gradient and a soft shadow belong only to `StatTile`, the page icon and the attention counts; a stat tile that opens a list may lift 2px on hover. The translucent sticky top bar is the only blur.",
+        "body": "Records, forms and tables stay flat: border and tone, no gradient, glow or blur. The headline tiles are the exception: they carry a soft shadow and may lift 2px on hover. The top bar is opaque so scrolled colour never smears through it.",
         "section": "elevation"
       },
       {
@@ -517,7 +517,7 @@
       "**Don't** replace business names with internal IDs, abbreviations or raw JSON.",
       "**Don't** invent records, formulas or counts to fill a dashboard, or call a list or chart complete when data is missing or truncated.",
       "**Don't** close a dialog after a failed action or reset the user's work.",
-      "**Don't** put gradients on records, forms, buttons or table rows, and don't add glow, nested cards or entrance animation to work screens."
+      "**Don't** give a module its own colour, wash a page in colour, or add gradients beyond the headline tiles, glow, nested cards or entrance animation."
     ]
   }
 }

@@ -142,8 +142,7 @@ to apply; it does not claim that every screen already meets it.
 
 ## Colors
 
-Neutral records on a coloured frame: module colour for place, one red voice for
-action, and the status tones.
+Mostly neutral working surfaces, one red voice for action, and five status tones.
 
 Values are the source HSL values. Use semantic Tailwind utilities and CSS
 variables in product code, never literal values or raw palette classes such as
@@ -190,35 +189,34 @@ is a tone **and** a written label.
 
 `constructionStatus.ts` holds these maps. Missing actual progress is not 0%.
 
-### Module colour
+### Colour strategy
 
-Chosen on 2026-11-27: the workspace should feel lively, so each area has one
-colour that follows the person from the menu to the page.
+Chosen on 2026-11-27 after comparing three directions on the real screens
+("A: red on a light ground"). One brand, calm frame, one lively moment.
 
-| Area                 | Tone    | Area               | Tone    |
-| -------------------- | ------- | ------------------ | ------- |
-| Dashboard, analytics | indigo  | Construction (BCH) | cyan    |
-| CRM                  | blue    | CM office          | teal    |
-| Design               | violet  | Content            | pink    |
-| Procurement          | orange  | Branding           | fuchsia |
-| Finance              | emerald | Processes, config  | slate   |
-| Legal                | amber   | Users              | indigo  |
+- **Frame:** white menu and top bar on a light grey desk. No washes behind
+  pages, no colour per module, no coloured bar beside a heading or menu item.
+- **Where you are:** Nicon red only. The current menu group has a red icon tile
+  on a red tint; the current item and open tab read in red; the active quick view
+  has a red underline and count.
+- **What needs you:** a waiting count takes its status tone only when it is above
+  zero. A quiet day stays white.
+- **The lively moment:** the dashboard's four headline tiles use bright
+  gradients. Charts and the funnel use one hue per series.
 
-The tone colours the menu icon and active item, the page icon and the wash behind
-the top of the page, table headings, row hover, active tabs and quick-view counts.
-Headline numbers use the gradient `StatTile`. `lib/moduleTheme.ts` maps areas;
-`index.css` (`.tone-*`) holds the values.
+### Headline tiles
 
-Gradients carry white text at 4.5:1 or better at both ends. Coloured text on a
-tint uses `--tone-ink` (85% tone with black). Check both when adding a tone.
-Module colour says **where you are**; status tones say **what state a record is
-in**. A status never takes its colour from the module, and red stays the main
-action.
+`StatTile` with `.tile-indigo`, `.tile-coral`, `.tile-green` and `.tile-sky`.
+Their white text is large and bold (36px number, 19px label), which needs 3:1;
+each gradient stays at 3.1:1 or better along its length. Do not put smaller text
+on them, and do not reuse these gradients on records, forms or buttons. Coral is
+a tile colour, not a warning: a status never borrows a tile gradient.
 
 ### Named Rules
 
-**The One Red Voice Rule.** Each working area has at most one filled red action.
-Everything else is outline or ghost.
+**The One Red Voice Rule.** Each working area has at most one filled red button.
+Red tint and red text mark where the person is; every other action is outline or
+ghost.
 
 **The Words First Rule.** Remove all colour and every status must still be
 understood from its label.
@@ -327,9 +325,9 @@ popovers, menus, select lists and toasts.
 ### Named Rules
 
 **The Flat Work Surface Rule.** Records, forms and tables stay flat: border and
-tone, no glow or blur. Gradient and a soft shadow belong only to `StatTile`, the
-page icon and the attention counts; a stat tile that opens a list may lift 2px on
-hover. The translucent sticky top bar is the only blur.
+tone, no gradient, glow or blur. The headline tiles are the exception: they carry
+a soft shadow and may lift 2px on hover. The top bar is opaque so scrolled colour
+never smears through it.
 
 **The No Nested Cards Rule.** Express subsections with headings, rows and
 separators.
@@ -462,5 +460,5 @@ decoration.
 - **Don't** invent records, formulas or counts to fill a dashboard, or call a
   list or chart complete when data is missing or truncated.
 - **Don't** close a dialog after a failed action or reset the user's work.
-- **Don't** put gradients on records, forms, buttons or table rows, and don't add
-  glow, nested cards or entrance animation to work screens.
+- **Don't** give a module its own colour, wash a page in colour, or add
+  gradients beyond the headline tiles, glow, nested cards or entrance animation.

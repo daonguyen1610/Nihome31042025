@@ -62,8 +62,6 @@ import {
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { moduleTone } from "@/lib/moduleTheme";
-import { PageIconContext } from "@/lib/pageTheme";
 import { matchesAllTerms } from "@/lib/searchMatch";
 import { Input } from "@/components/ui/input";
 import { useAppSelector } from "@/store";
@@ -789,26 +787,17 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
 
   // Breadcrumb: derive from current path against the flat item list.
   const flatItems = useMemo(() => {
-    // toneKey picks the module colour: the menu group, or the route for the top items.
-    const all: {
-      to: string;
-      label: string;
-      groupLabel?: string;
-      toneKey: string;
-      icon: LucideIcon;
-    }[] = [dashboardItem, notificationsItem, workPackagesItem, myWorkItem, dailyReportItem].map(
-      (item) => ({ to: item.to, label: item.label, toneKey: item.to, icon: item.icon }),
-    );
+    const all: { to: string; label: string; groupLabel?: string }[] = [
+      { to: dashboardItem.to, label: dashboardItem.label },
+      { to: notificationsItem.to, label: notificationsItem.label },
+      { to: workPackagesItem.to, label: workPackagesItem.label },
+      { to: myWorkItem.to, label: myWorkItem.label },
+      { to: dailyReportItem.to, label: dailyReportItem.label },
+    ];
     // Only visible items: a hidden shortcut must not name the breadcrumb's department.
     for (const g of groups) {
       for (const it of g.items) {
-        all.push({
-          to: it.to,
-          label: it.label,
-          groupLabel: g.label,
-          toneKey: g.id,
-          icon: it.icon,
-        });
+        all.push({ to: it.to, label: it.label, groupLabel: g.label });
       }
     }
     return all;
@@ -857,11 +846,6 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
     };
   }, [pageName]);
 
-  const currentPage = flatItems
-    .filter((item) => matchesNavRoute(item.to, location.pathname, location.search))
-    .sort((x, y) => y.to.length - x.to.length)[0];
-  const pageTone = moduleTone(currentPage?.toneKey);
-
   const renderItem = (item: NavItem) => {
     const matches = matchesNavRoute(item.to, location.pathname, location.search, item.end);
     const active =
@@ -881,7 +865,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         className={cn(
           "flex items-center gap-3 rounded-xl text-sm font-semibold transition-all",
           effectiveCollapsed ? "px-3 py-3 justify-center" : "px-4 py-2.5",
-          active ? "tone-nav-active" : "text-foreground/70 hover:bg-muted",
+          active ? "bg-primary/10 text-primary" : "text-foreground/70 hover:bg-muted",
         )}
       >
         <item.icon className="w-4 h-4 shrink-0" strokeWidth={1.75} />
@@ -891,7 +875,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <div className={cn("admin-scope min-h-screen flex", `tone-${pageTone}`)}>
+    <div className="admin-scope min-h-screen flex">
       <a
         href="#admin-content"
         className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-50 focus:rounded-md focus:border focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium"
@@ -1012,7 +996,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                   );
                 }
                 return (
-                  <div key={g.id} className={cn("pt-1", `tone-${moduleTone(g.id)}`)}>
+                  <div key={g.id} className="pt-1">
                     {startsSection && (
                       <p className="px-4 pb-1 pt-4 text-xs font-semibold text-muted-foreground">
                         {t(section.labelKey)}
@@ -1024,13 +1008,17 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
                       aria-controls={`admin-nav-group-${g.id}`}
                       className={cn(
                         "w-full flex items-center gap-3 rounded-xl px-4 py-2.5 text-sm font-medium transition-colors",
-                        groupActive ? "tone-soft" : "text-foreground/70 hover:bg-muted/60",
+                        groupActive
+                          ? "bg-primary/10 text-primary"
+                          : "text-muted-foreground hover:bg-muted/60",
                       )}
                     >
                       <span
                         className={cn(
                           "flex h-7 w-7 shrink-0 items-center justify-center rounded-sm",
-                          groupActive ? "tone-gradient" : "tone-soft",
+                          groupActive
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-muted text-muted-foreground",
                         )}
                       >
                         <g.icon className="h-4 w-4" aria-hidden />
@@ -1094,7 +1082,7 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
       {/* Main */}
       <div className="flex-1 min-w-0 flex flex-col">
         {/* Topbar */}
-        <header className="sticky top-0 z-20 h-16 bg-background/85 backdrop-blur-xl border-b flex items-center px-5 lg:px-8 gap-3">
+        <header className="sticky top-0 z-20 h-16 bg-background border-b flex items-center px-5 lg:px-8 gap-3">
           <button
             ref={menuButtonRef}
             onClick={() => setOpen(true)}
@@ -1193,11 +1181,9 @@ const AdminLayout = ({ children }: { children: ReactNode }) => {
         <main
           id="admin-content"
           tabIndex={-1}
-          className="flex-1 overflow-x-hidden p-4 sm:p-5 lg:p-8"
+          className="flex-1 overflow-x-hidden bg-muted/15 p-4 sm:p-5 lg:p-8"
         >
-          <PageIconContext.Provider value={currentPage?.icon ?? null}>
-            {children}
-          </PageIconContext.Provider>
+          {children}
         </main>
       </div>
       <UploadTray />
