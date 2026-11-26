@@ -104,7 +104,7 @@ test("people going on a survey are listed, can open it and are notified", async 
     // The list shows the lead and the people going along.
     await loginInBrowserAs(page, TEST_USERS.admin);
     await page.goto("/admin/surveys", { waitUntil: "networkidle" });
-    await page.getByPlaceholder(SEARCH_PLACEHOLDER).fill(survey.code);
+    await page.locator("main").getByPlaceholder(SEARCH_PLACEHOLDER).fill(survey.code);
     const row = page.locator("table tbody tr").filter({ hasText: survey.code });
     await expect(row).toContainText(manager.fullName);
     await expect(row).toContainText(sale.fullName);

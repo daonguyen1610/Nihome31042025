@@ -139,10 +139,14 @@ test.describe("NIH-141 — Construction Gantt (real-user flow)", () => {
       )
       .toBe("Completed");
 
-    // Close the sheet before the bulk-delete step. The Sheet primitive
-    // renders its own top-right "Close" X so we scope to the footer
-    // button by its Vietnamese label.
-    await page.getByRole("button", { name: "Đóng", exact: true }).click();
+    // Close the sheet before the bulk-delete step. Its footer button and the
+    // top-right X share one translated name; the footer button comes first.
+    // (Escape would only dismiss the "saved" toast, which sits on top.)
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "Đóng", exact: true })
+      .first()
+      .click();
     await expect(page.getByTestId("construction-detail-save")).toBeHidden();
 
     // ---------- 5. Bulk-delete the task we just created ----------
