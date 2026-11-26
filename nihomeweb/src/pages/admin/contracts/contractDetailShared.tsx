@@ -1,6 +1,5 @@
 import type { VoDraft } from "./ContractAppendicesTab";
 import { CheckCircle2, Clock, Pencil, Play, ShieldCheck, XCircle } from "lucide-react";
-import { extractApiError } from "@/lib/apiError";
 import { formatDate as formatDateInZone } from "@/lib/displaySettings";
 import {
   type ContractAppendixStatus,
@@ -49,10 +48,6 @@ export const formatBytes = (bytes: number | undefined | null): string => {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
-};
-
-export const getErrorMessage = (err: unknown): string | undefined => {
-  return extractApiError(err);
 };
 
 export interface MilestoneDraft {
@@ -158,6 +153,17 @@ export const toMilestoneRequests = (
     requestedAt: milestone.requestedAt,
     note: milestone.note.trim() || null,
   }));
+
+/**
+ * The step that moves a contract forward: the header's only filled button. A draft or a
+ * contract under review moves forward in the review panel, which has its own button.
+ */
+export const FORWARD_TRANSITION: Partial<Record<ContractStatus, ContractStatus>> = {
+  Approved: "Signed",
+  Signed: "InProgress",
+  InProgress: "Completed",
+  OnHold: "InProgress",
+};
 
 export const AVAILABLE_TRANSITIONS: Record<ContractStatus, ContractStatus[]> = {
   Draft: ["Signed", "Cancelled"],

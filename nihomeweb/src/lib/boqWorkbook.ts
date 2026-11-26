@@ -1,4 +1,4 @@
-import { extractApiError } from "@/lib/apiError";
+import { getUiError } from "@/lib/apiError";
 
 export interface BoqWorkbookIssue {
   code: string;
@@ -37,7 +37,7 @@ export async function boqWorkbookProblem(
   if (data?.issues?.length)
     return { count: data.issueCount ?? data.issues.length, issues: data.issues };
   if (data?.messageKey) return { message: t(data.messageKey, { limit: data.limit ?? "" }) };
-  return { message: extractApiError(error) };
+  return { message: getUiError(error, t) };
 }
 
 export function saveBlob(blob: Blob, filename: string) {

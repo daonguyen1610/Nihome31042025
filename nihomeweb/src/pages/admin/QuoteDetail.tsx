@@ -50,7 +50,7 @@ import { useToast } from "@/hooks/use-toast";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useAppSelector } from "@/store";
 import { ADMIN_PERMS } from "@/lib/adminPermissions";
-import { extractApiError, isConcurrencyConflict } from "@/lib/apiError";
+import { isConcurrencyConflict } from "@/lib/apiError";
 import { formatFileSize } from "@/lib/numberFormat";
 import { calculateQuoteTotals, validateQuoteValues } from "@/lib/quoteTotals";
 import { isValidVietnameseOverrideReason } from "@/lib/quoteRate";
@@ -280,7 +280,7 @@ const AdminQuoteDetail = () => {
         .then((response) => setProjectBoq(response.data.latest))
         .catch((reason) => {
           setProjectBoq(null);
-          setProjectBoqError(extractApiError(reason));
+          setProjectBoqError(uiError(reason));
         });
       setInputOffersUnavailable(false);
       // Show requests tied to this quote. Keep legacy opportunity-level offers

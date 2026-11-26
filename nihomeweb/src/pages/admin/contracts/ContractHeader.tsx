@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { type ContractResponse, type ContractStatus } from "@/services/adminApi";
 import {
   AVAILABLE_TRANSITIONS,
+  FORWARD_TRANSITION,
   TRANSITION_LABEL_KEY,
   STATUS_STYLES,
   TRANSITION_ICON,
@@ -54,6 +55,9 @@ export const ContractHeader = ({
   };
 
   const showTransitions = !editing && canTransition && transitions.length > 0;
+  const forward = FORWARD_TRANSITION[contract.status];
+  const rank = (target: ContractStatus) =>
+    target === forward ? 0 : target === "Cancelled" ? 2 : 1;
   const facts = [
     {
       label: t("contracts.detail.header.currentValue"),
@@ -102,17 +106,17 @@ export const ContractHeader = ({
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           {showTransitions &&
-            // The forward step comes first and is the only filled button; cancelling stays quiet.
             [...transitions]
-              .sort((x, y) => Number(x === "Cancelled") - Number(y === "Cancelled"))
-              .map((target, index) => (
+              // Forward step first, cancelling last.
+              .sort((x, y) => rank(x) - rank(y))
+              .map((target) => (
                 <Button
                   key={target}
                   variant={
-                    target === "Cancelled"
-                      ? "destructiveOutline"
-                      : index === 0
-                        ? "default"
+                    target === forward
+                      ? "default"
+                      : target === "Cancelled"
+                        ? "destructiveOutline"
                         : "outline"
                   }
                   disabled={transitionBusy !== null}
