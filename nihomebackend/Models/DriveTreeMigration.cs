@@ -16,6 +16,12 @@ public class DriveTreeMigration
     public string? Error { get; set; }
     /// <summary>Set before the first undo move; a half-undone migration must not be resumed forward.</summary>
     public DateTime? UndoStartedAt { get; set; }
+    /// <summary>
+    /// Running, stopped or half undone, so Drive folders and settings must not change under it.
+    /// An undo keeps the status until it ends, so a half-undone migration may still read Completed.
+    /// </summary>
+    public bool IsUnfinished => Status is DriveTreeMigrationStatus.Running or DriveTreeMigrationStatus.Failed
+        || (UndoStartedAt != null && Status != DriveTreeMigrationStatus.RolledBack);
     public List<DriveTreeMigrationItem> Items { get; set; } = [];
 }
 

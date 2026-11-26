@@ -263,6 +263,103 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
             (await Service().UndoAsync(finished.MigrationId, 7, CancellationToken.None)).Status);
     }
 
+    // HttpClient reports its own timeout as a cancellation nobody asked for.
+    private static TaskCanceledException DriveTimeout() => new("The request was canceled due to the configured timeout.");
+
+    [Fact]
+    public async Task Run_records_a_drive_timeout_as_a_failure()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        drive.Setup(item => item.MoveAsync("file-1", "new-survey", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(DriveTimeout());
+
+        var result = await Service().RunAsync(7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Failed, result.Status);
+        Assert.Contains("timeout", result.Error);
+        db.ChangeTracker.Clear();
+        var migration = db.DriveTreeMigrations.Single();
+        Assert.Equal(DriveTreeMigrationStatus.Failed, migration.Status);
+        Assert.Equal(result.Error, migration.Error);
+    }
+
+    [Fact]
+    public async Task Undo_records_a_drive_timeout_as_a_failure()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        drive.Setup(item => item.MoveAsync("file-1", "old-survey", It.IsAny<CancellationToken>()))
+            .ThrowsAsync(DriveTimeout());
+
+        var result = await Service().UndoAsync(run.MigrationId, 7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.Failed, result.Status);
+        Assert.Contains("timeout", result.Error);
+        db.ChangeTracker.Clear();
+        Assert.Equal(DriveTreeMigrationStatus.Failed, db.DriveTreeMigrations.Single().Status);
+    }
+
+    [Fact]
+    public async Task Preview_reports_not_connected_when_the_connection_check_times_out()
+    {
+        UseLegacyFolders();
+        drive.Setup(item => item.CheckConnectionAsync(It.IsAny<CancellationToken>())).ThrowsAsync(DriveTimeout());
+
+        var preview = await Service().PreviewAsync(CancellationToken.None);
+
+        Assert.Contains("DRIVE_NOT_CONNECTED", preview.Blockers);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Undo_leaves_files_whose_old_folder_is_gone_and_still_finishes(bool onlyTrashed)
+    {
+        var project = LegacyProject();
+        var stuck = AddDocument(project, ProjectDocumentCategory.Survey, "file-survey", "old-survey");
+        var returned = AddDocument(project, ProjectDocumentCategory.FinanceContracts, "file-contract", "old-contract");
+        var run = await Service().RunAsync(7, CancellationToken.None);
+        // A trashed folder counts as gone: moving a file into it would put the file in the trash.
+        drive.Setup(item => item.GetMetadataAsync("old-survey", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(onlyTrashed ? Item("old-survey") with { IsTrashed = true } : null);
+
+        var result = await Service().UndoAsync(run.MigrationId, 7, CancellationToken.None);
+
+        Assert.Equal(DriveTreeMigrationStatus.RolledBack, result.Status);
+        Assert.Equal(1, result.Moved);
+        Assert.Equal(1, result.Skipped);
+        drive.Verify(item => item.MoveAsync("file-survey", "old-survey", It.IsAny<CancellationToken>()), Times.Never);
+        drive.Verify(item => item.MoveAsync("file-contract", "old-contract", It.IsAny<CancellationToken>()), Times.Once);
+        db.ChangeTracker.Clear();
+        var skipped = db.DriveTreeMigrationItems.Single(i => i.DriveFileId == "file-survey");
+        Assert.Equal("DRIVE_FOLDER_MISSING", skipped.SkipReason);
+        Assert.NotNull(skipped.RevertedAt);
+        Assert.Equal("new-survey", db.ProjectDocuments.Single(d => d.Id == stuck.Id).DriveFolderId);
+        Assert.Equal("old-contract", db.ProjectDocuments.Single(d => d.Id == returned.Id).DriveFolderId);
+        Assert.Equal(["old-acceptance", "old-contract", "old-handover"],
+            db.ProjectDriveFolders.Select(f => f.DriveFolderId).ToList().Order());
+    }
+
+    [Fact]
+    public async Task Run_refuses_when_sync_was_enabled_after_the_blockers_were_checked()
+    {
+        var project = LegacyProject();
+        AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
+        // The preview read "disabled"; another admin saved "enabled" while it was listing Drive folders.
+        db.GoogleDriveCredentials.Single().Enabled = true;
+        db.SaveChanges();
+
+        var error = await Assert.ThrowsAsync<DriveTreeMigrationBlockedException>(() =>
+            Service().RunAsync(7, CancellationToken.None));
+
+        Assert.Equal("DRIVE_SYNC_ENABLED", error.Code);
+        db.ChangeTracker.Clear();
+        Assert.Empty(db.DriveTreeMigrations);
+        Assert.Equal(4, db.ProjectDriveFolders.Count());
+    }
+
     private GoogleDriveCredential AddLegacyCredential()
     {
         UseLegacyFolders();
@@ -623,12 +720,19 @@ public sealed class DriveTreeMigrationServiceTests : IDisposable
         AddDocument(project, ProjectDocumentCategory.Survey, "file-1", "old-survey");
         AddDocument(project, ProjectDocumentCategory.FinanceContracts, "file-2", "old-contract");
         var run = await Service().RunAsync(7, CancellationToken.None);
-        drive.SetupSequence(item => item.MoveAsync("file-2", "old-contract", It.IsAny<CancellationToken>()))
-            .ThrowsAsync(new OperationCanceledException())
-            .Returns(Task.CompletedTask);
+        using var cancellation = new CancellationTokenSource();
+        var cancelled = false;
+        drive.Setup(item => item.MoveAsync("file-2", "old-contract", It.IsAny<CancellationToken>()))
+            .Returns(() =>
+            {
+                if (cancelled) return Task.CompletedTask;
+                cancelled = true;
+                cancellation.Cancel();
+                return Task.FromException(new OperationCanceledException(cancellation.Token));
+            });
 
-        await Assert.ThrowsAsync<OperationCanceledException>(() =>
-            Service().UndoAsync(run.MigrationId, 7, CancellationToken.None));
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
+            Service().UndoAsync(run.MigrationId, 7, cancellation.Token));
         db.ChangeTracker.Clear();
         Assert.Equal(DriveTreeMigrationStatus.Completed, db.DriveTreeMigrations.Single().Status);
 

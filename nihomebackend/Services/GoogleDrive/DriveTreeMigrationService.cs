@@ -97,6 +97,10 @@ public sealed class DriveTreeMigrationService(
         return new DriveTreeMigrationPreview(changes, projectCount, documentCount, untracked, blockers, latest);
     }
 
+    /// <summary>HttpClient reports a Drive timeout as a cancellation too; that one is a failure to record.</summary>
+    private static bool IsCallerCancellation(Exception ex, CancellationToken ct) =>
+        ex is OperationCanceledException && ct.IsCancellationRequested;
+
     private async Task<bool> IsConnectedAsync(CancellationToken ct)
     {
         try
@@ -104,7 +108,7 @@ public sealed class DriveTreeMigrationService(
             var connection = await drive.CheckConnectionAsync(ct);
             return connection.IsFolder && !connection.IsTrashed && connection.CanAddChildren;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!IsCallerCancellation(ex, ct))
         {
             return false;
         }
@@ -184,7 +188,7 @@ public sealed class DriveTreeMigrationService(
             await MoveAllAsync(migration, ct);
             migration.Status = DriveTreeMigrationStatus.Completed;
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!IsCallerCancellation(ex, ct))
         {
             // Every finished move is already saved; drop unsaved state and record the failure for a later resume.
             db.ChangeTracker.Clear();
@@ -225,6 +229,8 @@ public sealed class DriveTreeMigrationService(
 
         // Written directly: GoogleDriveSettingsStore.UpdateAsync would also delete the bindings without a record.
         var settings = await db.GoogleDriveCredentials.SingleAsync(item => item.Id == 1, ct);
+        // The preview may have taken long; a save since then could have turned sync back on.
+        if (settings.Enabled) throw new DriveTreeMigrationBlockedException("DRIVE_SYNC_ENABLED");
         settings.SurveyMediaFolder = target.SurveyMedia;
         settings.CrmPreDesignFolder = target.CrmPreDesign;
         settings.DesignConceptFolder = target.DesignConcept;
@@ -363,6 +369,16 @@ public sealed class DriveTreeMigrationService(
 
         var items = await db.DriveTreeMigrationItems.Where(i => i.MigrationId == migration.Id)
             .OrderBy(i => i.Id).ToListAsync(ct);
+        var folderExists = new Dictionary<string, bool>(StringComparer.Ordinal);
+        // A trashed folder counts as gone: a file moved into it would land in the trash.
+        async Task<bool> FolderExistsAsync(string folderId)
+        {
+            if (!folderExists.TryGetValue(folderId, out var exists))
+                folderExists[folderId] = exists =
+                    await drive.GetMetadataAsync(folderId, ct) is { IsTrashed: false };
+            return exists;
+        }
+
         try
         {
             // Each return is saved on its own, so a rerun after a Drive failure skips it.
@@ -374,6 +390,8 @@ public sealed class DriveTreeMigrationService(
                 if (item.MovedAt is null && metadata?.Parents?.Contains(item.ToFolderId) != true) continue;
                 if (metadata is null)
                     item.SkipReason = DriveFileMissing;
+                else if (!await FolderExistsAsync(item.FromFolderId))
+                    item.SkipReason = DriveFolderMissing;
                 else
                     await drive.MoveAsync(item.DriveFileId!, item.FromFolderId, ct);
                 item.RevertedAt = DateTime.UtcNow;
@@ -398,14 +416,18 @@ public sealed class DriveTreeMigrationService(
             db.ProjectDriveFolders.RemoveRange(await db.ProjectDriveFolders.ToListAsync(ct));
             // A project hard-deleted since the run has no folder to bind any more.
             var projectIds = (await db.OperationalProjects.Select(p => p.Id).ToListAsync(ct)).ToHashSet();
-            db.ProjectDriveFolders.AddRange(items.Where(i => i.Kind == DriveTreeMigrationItemKind.Binding
-                    && projectIds.Contains(i.OperationalProjectId))
-                .Select(i => new ProjectDriveFolder
-                {
-                    OperationalProjectId = i.OperationalProjectId,
-                    Category = i.Category,
-                    DriveFolderId = i.FromFolderId,
-                }));
+            foreach (var binding in items.Where(i => i.Kind == DriveTreeMigrationItemKind.Binding
+                         && projectIds.Contains(i.OperationalProjectId)))
+            {
+                // Binding a folder that is gone would send later uploads nowhere; the next sync creates a new one.
+                if (await FolderExistsAsync(binding.FromFolderId))
+                    db.ProjectDriveFolders.Add(new ProjectDriveFolder
+                    {
+                        OperationalProjectId = binding.OperationalProjectId,
+                        Category = binding.Category,
+                        DriveFolderId = binding.FromFolderId,
+                    });
+            }
             var returned = items.Where(i => i.Kind == DriveTreeMigrationItemKind.Document
                     && i.RevertedAt != null && i.SkipReason == null)
                 .ToDictionary(i => i.ProjectDocumentId!.Value, i => i.FromFolderId);
@@ -417,7 +439,7 @@ public sealed class DriveTreeMigrationService(
             migration.FinishedAt = DateTime.UtcNow;
             await db.SaveChangesAsync(ct);
         }
-        catch (Exception ex) when (ex is not OperationCanceledException)
+        catch (Exception ex) when (!IsCallerCancellation(ex, ct))
         {
             db.ChangeTracker.Clear();
             migration = await db.DriveTreeMigrations.SingleAsync(m => m.Id == migrationId, ct);

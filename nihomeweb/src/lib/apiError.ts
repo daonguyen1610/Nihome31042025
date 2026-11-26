@@ -44,6 +44,7 @@ const CODED_ERRORS: Record<string, string> = {
   DRIVE_INVALID_ROOT: "settings.drive.test.invalidRoot",
   DRIVE_RECONNECT_REQUIRED: "settings.drive.test.reconnectRequired",
   DRIVE_TEST_FAILED: "settings.drive.test.failed",
+  DRIVE_TREE_MIGRATION_UNFINISHED: "settings.drive.treeMigration.saveBlocked",
   DAILY_REPORT_NO_DEPARTMENT: "dailyReport.error.noDepartment",
   DAILY_REPORT_REVIEWED: "dailyReport.error.reviewed",
   DAILY_REPORT_OWN_REVIEW: "dailyReport.error.ownReview",

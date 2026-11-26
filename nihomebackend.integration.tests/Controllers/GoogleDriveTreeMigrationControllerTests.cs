@@ -93,6 +93,51 @@ public class GoogleDriveTreeMigrationControllerTests : IntegrationTestBase
         }
     }
 
+    [Fact]
+    public async Task Enabling_sync_during_an_unfinished_migration_is_refused_with_a_code()
+    {
+        var migrationId = await WithDbAsync(async db =>
+        {
+            var migration = new DriveTreeMigration { Status = DriveTreeMigrationStatus.Failed };
+            db.DriveTreeMigrations.Add(migration);
+            await db.SaveChangesAsync();
+            return migration.Id;
+        });
+        try
+        {
+            await AuthTestHelper.AuthenticateAsync(Client, AuthTestHelper.LoginAsAdminAsync);
+            var current = await ReadJsonAsync(await Client.GetAsync("/api/site-settings/google-drive/configuration"));
+
+            var response = await Client.PutAsJsonAsync("/api/site-settings/google-drive/configuration", new
+            {
+                enabled = true,
+                clientId = "123.apps.googleusercontent.com",
+                clientSecret = "valid-secret-value",
+                oAuthRedirectUri = "https://example.com/api/site-settings/google-drive/oauth/callback",
+                frontendReturnUrl = "/admin/settings?tab=drive",
+                rootFolderId = "1234567890root",
+                instanceId = "nicon-integration",
+                applicationName = "Nicon Google Drive Integration",
+                folders = current.GetProperty("folders"),
+                supportsAllDrives = true,
+                pollIntervalSeconds = 15,
+                rowVersion = current.GetProperty("rowVersion").GetString(),
+            });
+
+            response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+            (await ReadJsonAsync(response)).GetProperty("code").GetString()
+                .Should().Be("DRIVE_TREE_MIGRATION_UNFINISHED");
+        }
+        finally
+        {
+            await WithDbAsync(async db =>
+            {
+                db.DriveTreeMigrations.Remove(db.DriveTreeMigrations.Single(item => item.Id == migrationId));
+                await db.SaveChangesAsync();
+            });
+        }
+    }
+
     private Task SetSyncEnabledAsync(bool enabled) => WithDbAsync(async db =>
     {
         var settings = db.GoogleDriveCredentials.SingleOrDefault(item => item.Id == 1);

@@ -840,6 +840,134 @@ public sealed class GoogleDriveOAuthServiceTests
         Assert.StartsWith("https://accounts.google.com/o/oauth2/v2/auth?", start.AuthorizationUrl);
     }
 
+    public static TheoryData<NihomeBackend.Models.DriveTreeMigrationStatus, bool> UnfinishedMigrations => new()
+    {
+        { NihomeBackend.Models.DriveTreeMigrationStatus.Running, false },
+        { NihomeBackend.Models.DriveTreeMigrationStatus.Failed, false },
+        // An undo keeps the status until it ends, so a half-done one still reads Completed.
+        { NihomeBackend.Models.DriveTreeMigrationStatus.Completed, true },
+        { NihomeBackend.Models.DriveTreeMigrationStatus.Failed, true },
+    };
+
+    [Theory]
+    [MemberData(nameof(UnfinishedMigrations))]
+    public async Task SettingsStore_UnfinishedTreeMigration_RefusesEnablingSyncAndMovingFolders(
+        NihomeBackend.Models.DriveTreeMigrationStatus status, bool undoStarted)
+    {
+        await using var db = CreateDb();
+        var (store, version) = await DisabledStoreWithMigrationAsync(db, status, undoStarted);
+        var changes = new Action<UpdateGoogleDriveConfigurationRequest>[]
+        {
+            request => request.Enabled = true,
+            request => request.RootFolderId = "0987654321root",
+            request => request.InstanceId = "nicon-other",
+            request => request.Folders.Handover = "09_BanGiao",
+        };
+
+        foreach (var change in changes)
+        {
+            var request = ValidConfiguration();
+            request.Enabled = false;
+            request.RowVersion = version;
+            change(request);
+
+            var error = await Assert.ThrowsAsync<GoogleDriveSettingsValidationException>(() =>
+                store.UpdateAsync(request, 8));
+
+            Assert.Equal("DRIVE_TREE_MIGRATION_UNFINISHED", error.Code);
+            Assert.Contains("chưa kết thúc", error.Message);
+            db.ChangeTracker.Clear();
+            var saved = await db.GoogleDriveCredentials.SingleAsync();
+            Assert.False(saved.Enabled);
+            Assert.Equal("1234567890root", saved.RootFolderId);
+            Assert.Equal("nicon-test", saved.InstanceId);
+            Assert.Equal("08_BanGiao_BaoHanh", saved.HandoverFolder);
+            Assert.Single(db.ProjectDriveFolders);
+        }
+    }
+
+    [Theory]
+    [InlineData(NihomeBackend.Models.DriveTreeMigrationStatus.Completed, false)]
+    [InlineData(NihomeBackend.Models.DriveTreeMigrationStatus.RolledBack, true)]
+    public async Task SettingsStore_FinishedTreeMigration_AllowsEnablingSync(
+        NihomeBackend.Models.DriveTreeMigrationStatus status, bool undoStarted)
+    {
+        await using var db = CreateDb();
+        var (store, version) = await DisabledStoreWithMigrationAsync(
+            db, NihomeBackend.Models.DriveTreeMigrationStatus.Failed, false);
+        // Only the latest migration counts.
+        db.DriveTreeMigrations.Add(new NihomeBackend.Models.DriveTreeMigration
+        {
+            Status = status,
+            UndoStartedAt = undoStarted ? DateTime.UtcNow : null,
+        });
+        await db.SaveChangesAsync();
+        var request = ValidConfiguration();
+        request.RowVersion = version;
+
+        Assert.True((await store.UpdateAsync(request, 8)).Enabled);
+    }
+
+    [Fact]
+    public async Task SettingsStore_UnfinishedTreeMigration_AllowsNewCredentialsAndReconnectingWithSyncOff()
+    {
+        await using var db = CreateDb();
+        var protection = new EphemeralDataProtectionProvider();
+        var (store, version) = await DisabledStoreWithMigrationAsync(
+            db, NihomeBackend.Models.DriveTreeMigrationStatus.Failed, false, protection);
+        var request = ValidConfiguration("replacement-client-secret");
+        request.Enabled = false;
+        request.ClientId = "456.apps.googleusercontent.com";
+        request.RowVersion = version;
+        await store.UpdateAsync(request, 8);
+        Assert.Single(db.ProjectDriveFolders);
+
+        var permissions = new Mock<IPermissionService>();
+        permissions.Setup(service => service.HasAsync(12, "system.settings.manage", It.IsAny<CancellationToken>()))
+            .ReturnsAsync(true);
+        var clients = new Mock<IHttpClientFactory>();
+        clients.Setup(factory => factory.CreateClient(It.IsAny<string>()))
+            .Returns(() => new HttpClient(new OAuthHttpHandler()));
+        var service = new GoogleDriveOAuthService(protection, store, clients.Object,
+            Mock.Of<IGoogleDriveAdapter>(), permissions.Object, NullLogger<GoogleDriveOAuthService>.Instance);
+
+        Assert.True((await service.GetStatusAsync()).OAuthConfigured);
+        var start = await service.CreateAuthorizationRequestAsync(12);
+        var state = Microsoft.AspNetCore.WebUtilities.QueryHelpers.ParseQuery(
+            new Uri(start.AuthorizationUrl).Query)["state"].ToString();
+        Assert.Equal(GoogleDriveOAuthResult.Success,
+            await service.CompleteAsync("authorization-code", state, null));
+
+        var connected = await store.GetAdminAsync();
+        Assert.True(connected.HasRefreshToken);
+        Assert.False(connected.Enabled);
+    }
+
+    private static async Task<(GoogleDriveSettingsStore Store, string RowVersion)> DisabledStoreWithMigrationAsync(
+        AppDbContext db,
+        NihomeBackend.Models.DriveTreeMigrationStatus status,
+        bool undoStarted,
+        IDataProtectionProvider? protection = null)
+    {
+        var store = new GoogleDriveSettingsStore(db, protection ?? new EphemeralDataProtectionProvider());
+        var initial = ValidConfiguration("client-secret-value");
+        initial.Enabled = false;
+        var saved = await store.UpdateAsync(initial, 7);
+        db.ProjectDriveFolders.Add(new NihomeBackend.Models.ProjectDriveFolder
+        {
+            OperationalProjectId = 42,
+            Category = NihomeBackend.Models.ProjectDocumentCategory.DesignConcept,
+            DriveFolderId = "bound-folder",
+        });
+        db.DriveTreeMigrations.Add(new NihomeBackend.Models.DriveTreeMigration
+        {
+            Status = status,
+            UndoStartedAt = undoStarted ? DateTime.UtcNow : null,
+        });
+        await db.SaveChangesAsync();
+        return (store, saved.RowVersion);
+    }
+
     private static AppDbContext CreateDb() => new(new DbContextOptionsBuilder<AppDbContext>()
         .UseInMemoryDatabase(Guid.NewGuid().ToString())
         .Options);

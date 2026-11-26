@@ -46,7 +46,7 @@ public class GoogleDriveOAuthController(
         }
         catch (GoogleDriveSettingsValidationException exception)
         {
-            return BadRequest(new { message = exception.Message });
+            return BadRequest(new { code = exception.Code, message = exception.Message });
         }
         catch (GoogleDriveSettingsConcurrencyException exception)
         {

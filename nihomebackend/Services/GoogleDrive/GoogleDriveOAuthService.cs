@@ -233,8 +233,7 @@ public sealed class GoogleDriveOAuthService(
     public async Task<GoogleDriveAdminStatusResponse> GetStatusAsync(CancellationToken ct = default)
     {
         var metadata = await settingsStore.GetAdminAsync(ct);
-        var configured = metadata.Enabled &&
-            !string.IsNullOrWhiteSpace(metadata.ClientId) && metadata.HasClientSecret &&
+        var configured = !string.IsNullOrWhiteSpace(metadata.ClientId) && metadata.HasClientSecret &&
             !string.IsNullOrWhiteSpace(metadata.OAuthRedirectUri);
         if (!metadata.Enabled)
             return new("Disabled", configured, metadata.HasRefreshToken,
@@ -362,7 +361,8 @@ public sealed class GoogleDriveOAuthService(
 
     private static void EnsureOAuthConfiguration(GoogleDriveOptions options)
     {
-        if (!options.Enabled || string.IsNullOrWhiteSpace(options.ClientId) ||
+        // Sync may stay off: an unfinished folder move needs a reconnect while it cannot be enabled.
+        if (string.IsNullOrWhiteSpace(options.ClientId) ||
             string.IsNullOrWhiteSpace(options.ClientSecret) ||
             string.IsNullOrWhiteSpace(options.OAuthRedirectUri))
         {

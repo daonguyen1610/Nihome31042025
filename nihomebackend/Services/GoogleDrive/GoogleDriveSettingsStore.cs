@@ -174,6 +174,16 @@ public sealed class GoogleDriveSettingsStore(
             !string.Equals(settings.InstanceId, normalized.InstanceId, StringComparison.Ordinal) ||
             !FolderPathsEqual(settings, normalized.Folders);
 
+        // This is the only write that can enable sync; the OAuth writes touch the credential alone.
+        if ((normalized.Enabled || folderTopologyChanged) &&
+            await db.DriveTreeMigrations.AsNoTracking().OrderByDescending(item => item.Id)
+                .FirstOrDefaultAsync(ct) is { IsUnfinished: true })
+            throw new GoogleDriveSettingsValidationException(
+                "Việc chuyển cây thư mục Drive chưa kết thúc nên chưa thể bật đồng bộ hoặc đổi thư mục gốc, " +
+                "InstanceId, đường dẫn thư mục. Hãy tắt đồng bộ, rồi tiếp tục chuyển hoặc hoàn tác cho xong. " +
+                "Vẫn có thể lưu Client ID, Client Secret và kết nối lại Google Drive khi đồng bộ đang tắt.",
+                "DRIVE_TREE_MIGRATION_UNFINISHED");
+
         if (folderTopologyChanged)
         {
             var hasBindings = await db.ProjectDriveFolders.AnyAsync(ct);
@@ -538,6 +548,11 @@ public sealed class GoogleDriveSettingsStore(
         rowVersion.Length == 0 ? string.Empty : Convert.ToBase64String(rowVersion);
 }
 
-public sealed class GoogleDriveSettingsValidationException(string message) : InvalidOperationException(message);
+public sealed class GoogleDriveSettingsValidationException(string message, string? code = null)
+    : InvalidOperationException(message)
+{
+    /// <summary>Set when the admin page has its own translated text for this refusal.</summary>
+    public string? Code { get; } = code;
+}
 public sealed class GoogleDriveSettingsConcurrencyException()
     : InvalidOperationException("Cấu hình Google Drive đã được thay đổi. Hãy tải lại trang và thử lại.");
