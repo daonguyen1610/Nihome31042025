@@ -404,6 +404,7 @@ export interface OperationalProjectResponse extends OperationalProjectListItemRe
   codeLocked: boolean;
   /** Every category folder of the project's Drive tree exists; null while Drive is off. */
   driveFoldersReady?: boolean | null;
+  driveFoldersDeleted?: boolean | null;
   latestCodeChange?: {
     id: number;
     oldCode: string;
@@ -1173,7 +1174,7 @@ export interface ProjectDocumentCategoryResponse {
 }
 
 export type ProjectDocumentSyncStatus =
-  "Pending" | "Processing" | "Synced" | "Failed" | "Deleted" | "Conflict";
+  "Pending" | "Processing" | "Synced" | "Failed" | "Deleted" | "Conflict" | "Missing" | "Damaged";
 
 export type ProjectDocumentSourceType =
   "ManualUpload" | "ExistingManagedFile" | "GoogleDriveImport";
@@ -1203,6 +1204,8 @@ export interface ProjectDocumentResponse {
   nextSyncAttemptAt?: string | null;
   driveWebViewLink?: string | null;
   driveModifiedAt?: string | null;
+  driveCheckedAt?: string | null;
+  hasServerCopy?: boolean;
   isDownloadable: boolean;
   unsupportedReason?: string | null;
   conflictState: "None" | "PendingConfirmation";

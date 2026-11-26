@@ -53,7 +53,16 @@ public sealed class VendorRfqPortalController(RfqService service, IAuditLogger a
         var token = Request.Headers["X-RFQ-Portal-Token"].FirstOrDefault();
         if (string.IsNullOrWhiteSpace(token)) return NotFound();
         Response.Headers.CacheControl = "no-store";
-        var file = await service.DownloadPortalDocumentAsync(token, documentId, ct);
+        ProjectDocumentDownload? file;
+        try
+        {
+            file = await service.DownloadPortalDocumentAsync(token, documentId, ct);
+        }
+        catch (ProjectDocumentFileMissingException)
+        {
+            // Suppliers are outside the company: say what they can do, nothing about internal storage.
+            return Conflict(new { message = "Tệp hiện không tải được. Vui lòng liên hệ người gửi yêu cầu báo giá." });
+        }
         if (file is null) return NotFound();
         Response.ContentType = file.ContentType;
         Response.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")

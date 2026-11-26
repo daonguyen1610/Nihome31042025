@@ -3313,6 +3313,15 @@
     "key": "settings.drive.configuration.help.applicationName", "category": "settings", "vi": "Tên dễ nhận biết cho Google Drive client của Nicon, ví dụ Nicon Google Drive Integration; tối đa 100 ký tự.", "en": "A recognizable name for Nicon's Google Drive client, for example Nicon Google Drive Integration; maximum 100 characters.", "zh": "Nicon Google Drive 客户端的易识别名称，例如 Nicon Google Drive Integration；最多 100 个字符。", "ja": "Nicon の Google Drive クライアントを識別しやすくする名前です（例: Nicon Google Drive Integration）。最大 100 文字です。"
   },
   {
+    "key": "settings.drive.configuration.fileCheckInterval", "category": "settings", "vi": "Chu kỳ kiểm tra tệp (giờ)", "en": "File check interval (hours)", "zh": "文件检查间隔（小时）", "ja": "ファイル確認の間隔（時間）"
+  },
+  {
+    "key": "settings.drive.configuration.help.fileCheckInterval", "category": "settings", "vi": "Mỗi tệp liên kết Drive được kiểm tra lại sau khoảng thời gian này (1–168 giờ). Tệp bị xoá hoặc hỏng được đổi trạng thái để người vận hành quyết định; lượt kiểm tra này không tự gỡ hồ sơ.", "en": "Each Drive-linked file is checked again after this time (1–168 hours). A deleted or broken file gets a new status so an operator can decide; this check never removes a record.", "zh": "每个关联 Drive 的文件会在此时间后再次检查（1–168 小时）。被删除或损坏的文件会更改状态，由操作人员决定；该检查不会删除记录。", "ja": "Drive に関連付けた各ファイルは、この時間（1～168 時間）が経過すると再確認されます。削除や破損は状態を変えて担当者が判断します。この確認が記録を削除することはありません。"
+  },
+  {
+    "key": "settings.drive.validation.fileCheckInterval", "category": "settings", "vi": "Chu kỳ kiểm tra tệp phải là số nguyên từ 1 đến 168 giờ. Ví dụ: 6.", "en": "The file check interval must be a whole number from 1 to 168 hours. Example: 6.", "zh": "文件检查间隔须为 1 到 168 之间的整数小时。例如：6。", "ja": "ファイル確認の間隔は 1～168 の整数時間で指定してください。例：6。"
+  },
+  {
     "key": "settings.drive.configuration.help.pollInterval", "category": "settings", "vi": "Khoảng thời gian giữa các lượt kiểm tra đồng bộ, từ 5 đến 300 giây. Khuyến nghị 15 giây nếu chưa có yêu cầu khác.", "en": "Time between synchronization checks, from 5 to 300 seconds. Use 15 seconds unless your deployment requires otherwise.", "zh": "同步检查之间的间隔，可设为 5 至 300 秒。如无其他部署要求，建议使用 15 秒。", "ja": "同期チェックの間隔で、5～300 秒を指定します。特別な要件がなければ 15 秒を推奨します。"
   },
   {

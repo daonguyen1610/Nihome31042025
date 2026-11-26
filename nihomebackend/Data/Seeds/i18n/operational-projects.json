@@ -648,6 +648,126 @@
     "ja": "操作"
   },
   {
+    "key": "operationalProjects.documents.syncStatus.Missing",
+    "category": "operationalProjects",
+    "vi": "Không tìm thấy trên Drive",
+    "en": "Not found on Drive",
+    "zh": "Drive 上找不到",
+    "ja": "Drive に見つかりません"
+  },
+  {
+    "key": "operationalProjects.documents.syncStatus.Damaged",
+    "category": "operationalProjects",
+    "vi": "Tệp trên Drive không khớp",
+    "en": "Drive file does not match",
+    "zh": "Drive 文件不一致",
+    "ja": "Drive のファイルが一致しません"
+  },
+  {
+    "key": "operationalProjects.documents.driveProblem.trashed",
+    "category": "operationalProjects",
+    "vi": "Tệp đang ở thùng rác Google Drive. Khôi phục tệp trên Drive rồi bấm Kiểm tra lại.",
+    "en": "The file is in the Google Drive trash. Restore it in Drive, then select Check again.",
+    "zh": "文件在 Google Drive 回收站中。请在 Drive 中恢复后点击“重新检查”。",
+    "ja": "ファイルは Google ドライブのゴミ箱にあります。Drive で復元してから「再確認」を選んでください。"
+  },
+  {
+    "key": "operationalProjects.documents.driveProblem.notFound",
+    "category": "operationalProjects",
+    "vi": "Không tìm thấy tệp trên Google Drive: có thể đã bị xoá vĩnh viễn, hoặc tài khoản đang kết nối không có quyền xem.",
+    "en": "The file was not found on Google Drive: it may be permanently deleted, or the connected account cannot see it.",
+    "zh": "在 Google Drive 上找不到该文件：可能已被永久删除，或当前连接的账号无权查看。",
+    "ja": "Google ドライブでファイルが見つかりません。完全に削除されたか、接続中のアカウントに閲覧権限がない可能性があります。"
+  },
+  {
+    "key": "operationalProjects.documents.driveProblem.neverUploaded",
+    "category": "operationalProjects",
+    "vi": "Tệp chưa từng được tải lên Google Drive và máy chủ không còn bản gốc. Tải tệp lên lại ở đúng chức năng đã tạo tệp.",
+    "en": "The file never reached Google Drive and the server has no original. Upload it again from the screen that created it.",
+    "zh": "该文件从未上传到 Google Drive，服务器也没有原件。请在创建该文件的功能中重新上传。",
+    "ja": "このファイルは Google ドライブにアップロードされておらず、サーバーにも原本がありません。作成元の画面から再アップロードしてください。"
+  },
+  {
+    "key": "operationalProjects.documents.driveProblem.contentChanged",
+    "category": "operationalProjects",
+    "vi": "Nội dung trên Drive khác bản đã tải lên. Khôi phục đúng bản trong lịch sử phiên bản của Drive rồi bấm Kiểm tra lại.",
+    "en": "The Drive file differs from the uploaded one. Restore the right version in Drive version history, then select Check again.",
+    "zh": "Drive 上的内容与上传的版本不同。请在版本记录中恢复正确版本后点击“重新检查”。",
+    "ja": "Drive の内容がアップロード版と異なります。版の履歴で正しい版を復元してから「再確認」を選んでください。"
+  },
+  {
+    "key": "operationalProjects.documents.driveProblem.empty",
+    "category": "operationalProjects",
+    "vi": "Tệp trên Drive bị rỗng (0 byte). Khôi phục phiên bản trước trên Drive rồi bấm Kiểm tra lại.",
+    "en": "The Drive file is empty (0 bytes). Restore an earlier version in Drive, then select Check again.",
+    "zh": "Drive 上的文件为空（0 字节）。请恢复较早版本后点击“重新检查”。",
+    "ja": "Drive のファイルは空です（0 バイト）。以前の版を復元してから「再確認」を選んでください。"
+  },
+  {
+    "key": "operationalProjects.documents.driveProblem.folderMissing",
+    "category": "operationalProjects",
+    "vi": "Thư mục đích trên Drive đã bị xoá nên tệp đang chờ. Khôi phục thư mục từ thùng rác Drive, hoặc tạo lại thư mục ở đầu trang dự án.",
+    "en": "The destination Drive folder was deleted, so the file is waiting. Restore the folder from the Drive trash, or recreate it at the top of the project page.",
+    "zh": "目标 Drive 文件夹已被删除，文件正在等待。请从回收站恢复该文件夹，或在项目页面顶部重新创建。",
+    "ja": "保存先の Drive フォルダーが削除されたため、ファイルは待機中です。ゴミ箱から復元するか、プロジェクトページ上部で再作成してください。"
+  },
+  {
+    "key": "operationalProjects.documents.driveProblem.summary",
+    "category": "operationalProjects",
+    "vi": "{count} tệp không còn dùng được trên Google Drive. Xem lý do ở từng tệp rồi chọn cách xử lý.",
+    "en": "{count} file(s) can no longer be used on Google Drive. See the reason on each file and decide what to do.",
+    "zh": "有 {count} 个文件在 Google Drive 上已无法使用。请查看各文件的原因并决定处理方式。",
+    "ja": "{count} 件のファイルは Google ドライブで使用できません。各ファイルの理由を確認して対応を決めてください。"
+  },
+  {
+    "key": "operationalProjects.documents.verify",
+    "category": "operationalProjects",
+    "vi": "Kiểm tra lại",
+    "en": "Check again",
+    "zh": "重新检查",
+    "ja": "再確認"
+  },
+  {
+    "key": "operationalProjects.documents.verifyAria",
+    "category": "operationalProjects",
+    "vi": "Kiểm tra lại {name} trên Google Drive",
+    "en": "Check {name} on Google Drive again",
+    "zh": "在 Google Drive 上重新检查 {name}",
+    "ja": "Google ドライブで {name} を再確認"
+  },
+  {
+    "key": "operationalProjects.documents.verifySuccess",
+    "category": "operationalProjects",
+    "vi": "Đã kiểm tra lại trên Google Drive. Xem trạng thái mới trong danh sách.",
+    "en": "Checked on Google Drive. See the new status in the list.",
+    "zh": "已在 Google Drive 上检查。请在列表中查看新状态。",
+    "ja": "Google ドライブで確認しました。一覧で新しい状態を確認してください。"
+  },
+  {
+    "key": "operationalProjects.documents.error.fileMissing",
+    "category": "operationalProjects",
+    "vi": "Tệp không còn trên Google Drive và máy chủ không còn bản sao. Khôi phục tệp từ thùng rác Drive rồi bấm Kiểm tra lại, hoặc tải tệp lên lại.",
+    "en": "The file is no longer on Google Drive and the server has no copy. Restore it from the Drive trash and select Check again, or upload it again.",
+    "zh": "该文件已不在 Google Drive 上，服务器也没有副本。请从回收站恢复后点击“重新检查”，或重新上传。",
+    "ja": "ファイルは Google ドライブになく、サーバーにも控えがありません。ゴミ箱から復元して「再確認」を選ぶか、再アップロードしてください。"
+  },
+  {
+    "key": "operationalProjects.documents.error.folderMissing",
+    "category": "operationalProjects",
+    "vi": "Thư mục đích trên Drive đã bị xoá. Khôi phục thư mục từ thùng rác Drive, hoặc tạo lại thư mục ở đầu trang dự án, rồi thử lại.",
+    "en": "The destination Drive folder was deleted. Restore it from the Drive trash, or recreate it at the top of the project page, then try again.",
+    "zh": "目标 Drive 文件夹已被删除。请从回收站恢复，或在项目页面顶部重新创建，然后重试。",
+    "ja": "保存先の Drive フォルダーが削除されています。ゴミ箱から復元するか、プロジェクトページ上部で再作成してから再試行してください。"
+  },
+  {
+    "key": "operationalProjects.documents.error.checkUnavailable",
+    "category": "operationalProjects",
+    "vi": "Chưa kiểm tra được tệp trên Google Drive. Kiểm tra kết nối trong Cài đặt → Google Drive rồi thử lại.",
+    "en": "The file could not be checked on Google Drive. Check the connection under Settings → Google Drive, then try again.",
+    "zh": "暂时无法在 Google Drive 上检查该文件。请在“设置 → Google Drive”中检查连接后重试。",
+    "ja": "Google ドライブでファイルを確認できませんでした。「設定 → Google ドライブ」で接続を確認してから再試行してください。"
+  },
+  {
     "key": "operationalProjects.documents.syncStatus.Pending",
     "category": "operationalProjects",
     "vi": "Đang chờ",
@@ -1182,6 +1302,22 @@
     "en": "Drive folder rename was queued again.",
     "zh": "Drive 文件夹重命名已重新加入队列。",
     "ja": "Drive フォルダー名変更を再度キューに追加しました。"
+  },
+  {
+    "key": "operationalProjects.driveFolders.deleted",
+    "category": "operationalProjects",
+    "vi": "Một số thư mục Drive của dự án đã bị xoá. Khôi phục chúng từ thùng rác Drive, hoặc tạo lại thư mục (nội dung trong thùng rác không bị đụng tới).",
+    "en": "Some of this project's Drive folders were deleted. Restore them from the Drive trash, or recreate them (the trash is not touched).",
+    "zh": "该项目的部分 Drive 文件夹已被删除。请从回收站恢复，或重新创建（不会改动回收站内容）。",
+    "ja": "このプロジェクトの Drive フォルダーの一部が削除されました。ゴミ箱から復元するか、再作成してください（ゴミ箱の内容は変更しません）。"
+  },
+  {
+    "key": "operationalProjects.driveFolders.recreate",
+    "category": "operationalProjects",
+    "vi": "Tạo lại thư mục",
+    "en": "Recreate folders",
+    "zh": "重新创建文件夹",
+    "ja": "フォルダーを再作成"
   },
   {
     "key": "operationalProjects.driveFolders.missing",

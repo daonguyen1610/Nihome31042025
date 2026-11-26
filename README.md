@@ -134,6 +134,10 @@ When sync stops for a reason only a person can fix (configuration, credential, u
 
 An **External** OAuth app in **Testing** publishing status gets refresh tokens that [expire after 7 days](https://developers.google.com/identity/protocols/oauth2#expiration) when the Drive scope is requested. Publish it (**In production**), or use the **Internal** user type with Google Workspace, then reconnect once so Google issues a new token: select **Switch Google account** and choose the same account. Before production use, also complete any Google verification required for the Drive scope. See the [Google installed-app OAuth guide](https://developers.google.com/identity/protocols/oauth2/native-app) and [Drive scope guide](https://developers.google.com/workspace/drive/api/guides/api-specific-auth) for current requirements.
 
+### Drive file health
+
+A background check rechecks every synced document on the interval set under **Settings → Google Drive** (default 6 hours), including files in folders that are no longer linked. A file that is trashed, gone, empty or (outside linked folders) different from the uploaded original gets its own status instead of "Synced"; the check never removes a record or changes Drive, so an operator decides: restore it in Drive and **Check again**, send the server copy again, or delete the record. Folder reconciliation still follows **Delete on Drive → delete on web** (on by default) for linked folders. Uploads into a deleted folder wait until it is restored or recreated from the project page. See the user guide, section 3.7.3.
+
 ### Project document folder mapping
 
 Nicon stores Operational Project documents under the configured Drive root using this hierarchy:

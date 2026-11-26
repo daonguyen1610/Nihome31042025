@@ -1416,7 +1416,7 @@ website hay `DesignProject`. Route `/api/operational-projects` (và `/api/v1`):
 | `POST` | `/{id}/master-schedule/import` (multipart `file`) | `operations.projects.manage`, người được lập tiến độ | Đọc XML MS Project (MSPDI, `MsProjectXmlImporter`, chặn DTD/XXE, ≤ 10 MB, ≤ 500 công việc) thành hạng mục nháp; không ghi DB. Hạng mục lưu thêm `IsMilestone`, `BaselineStart/End`, `PredecessorsJson` (FS/SS/FF/SF + lag ngày) |
 | `GET`/`POST` | `/{id}/master-schedule/emails/needs-review`, `.../{emailId}/resolve` | quản lý dự án được giao | Xử lý email tiến độ gửi lỗi |
 | `GET` | `/document-categories`, `/{id}/documents`, `.../{documentId}/content` | `operations.projects.view` | Danh mục, catalog, tải file riêng tư |
-| `POST`/`DELETE` | `/{id}/documents` (mỗi tệp ≤ `upload-limits/projectDocuments`, mặc định 100 MB, 1–100 MB), `.../retry`, `/classify`, `/resolve-conflict`, `/{documentId}` | `operations.projects.manage` | Upload, thử lại đồng bộ, phân loại file từ Drive, giữ cả hai phiên bản, xoá |
+| `POST`/`DELETE` | `/{id}/documents` (mỗi tệp ≤ `upload-limits/projectDocuments`, mặc định 100 MB, 1–100 MB), `.../retry`, `/verify`, `/classify`, `/resolve-conflict`, `/{documentId}` | `operations.projects.manage` | Upload, thử lại đồng bộ, phân loại file từ Drive, giữ cả hai phiên bản, xoá |
 
 **Mã dự án.** Mã `PJ-`, `TD-`, `SV-` lấy số lớn nhất đang dùng cộng một
 (`SequentialCodes`), không đếm dòng; cấp mã dự án dùng SQL application lock theo năm
@@ -2941,6 +2941,17 @@ python -m unittest discover -s tools/translation_keys -p "test_*.py"
     ở cấp server thấp hơn thì phải nâng ở đó. Tệp trên ~4 GB cần tải theo phần.
 
 ### 18.3 Google Drive trên IIS
+
+**Sức khoẻ tệp.** `ProjectDriveSyncProcessor.VerifyDriveFilesAsync` (`ProjectDriveFileHealth.cs`) chạy trong vòng worker,
+mỗi lượt tối đa 10 tài liệu đến hạn theo `DriveCheckedAt` và cài đặt `FileCheckIntervalHours` (ADMIN, 1–168, mặc định 6).
+Nó chỉ đổi `SyncStatus` sang `Missing` hoặc `Damaged` (lý do là khoá dịch `operationalProjects.documents.driveProblem.*`
+trong `SyncError`) và trả về `Synced` khi tệp lành lại; **không** xoá bản ghi và không ghi gì lên Drive. Chỉ chạy khi thư
+mục gốc ghi được; lỗi tạm thời/kết nối dừng lượt, lỗi như 403 giữ nguyên trạng thái. So checksum (`sha256Checksum`) chỉ áp
+dụng cho tệp ngoài thư mục đang liên kết (trong thư mục liên kết, đối soát hai chiều quyết định); tệp 0 byte luôn là
+`Damaged`. Bản tạm trên host chỉ bị xoá sau khi Drive xác nhận tệp còn và không ở thùng rác. `ProjectDriveFolderService.EnsureAsync`
+từ chối thư mục đã liên kết nhưng bị xoá (`MissingSince`); `RepairTreeAsync` (nút trên trang dự án) bỏ binding hỏng rồi tạo
+lại. API: `POST .../documents/{id}/verify` (503 `DRIVE_CHECK_UNAVAILABLE`), tải nội dung trả 409 `DRIVE_FILE_MISSING`.
+Mọi chỗ coi `Synced` là bằng chứng hợp lệ tự loại `Missing`/`Damaged`; xoá cứng xử lý hai trạng thái này như `Synced`.
 
 Đồng bộ tài liệu dùng Google Drive API v3 với OAuth user. Toàn bộ cấu hình nghiệp vụ ở
 **Settings > Google Drive**, lưu trong dòng `google_drive_credentials`; client secret và

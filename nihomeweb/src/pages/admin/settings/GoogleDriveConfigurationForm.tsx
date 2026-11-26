@@ -65,6 +65,12 @@ function validate(
 ): string | null {
   if (form.pollIntervalSeconds < 5 || form.pollIntervalSeconds > 300)
     return "settings.drive.validation.pollInterval";
+  if (
+    !Number.isInteger(form.fileCheckIntervalHours) ||
+    form.fileCheckIntervalHours < 1 ||
+    form.fileCheckIntervalHours > 168
+  )
+    return "settings.drive.validation.fileCheckInterval";
   const instanceId = form.instanceId.trim();
   if (instanceId && !INSTANCE_ID_PATTERN.test(instanceId))
     return "settings.drive.validation.instanceId";
@@ -258,6 +264,7 @@ export default function GoogleDriveConfigurationForm({
       deleteDriveFilesOnWebDelete: form.deleteDriveFilesOnWebDelete,
       deleteWebRecordsOnDriveDelete: form.deleteWebRecordsOnDriveDelete,
       pollIntervalSeconds: Number(form.pollIntervalSeconds),
+      fileCheckIntervalHours: Number(form.fileCheckIntervalHours),
       rowVersion: form.rowVersion,
     };
     if (clientSecret.trim()) payload.clientSecret = clientSecret.trim();
@@ -441,6 +448,24 @@ export default function GoogleDriveConfigurationForm({
           />
           <p id="drive-poll-help" className="text-xs text-muted-foreground">
             {t("settings.drive.configuration.help.pollInterval")}
+          </p>
+        </div>
+        <div className="space-y-1.5">
+          <Label htmlFor="drive-file-check">
+            {t("settings.drive.configuration.fileCheckInterval")}
+          </Label>
+          <Input
+            id="drive-file-check"
+            type="number"
+            min={1}
+            max={168}
+            value={form.fileCheckIntervalHours}
+            disabled={disabled}
+            onChange={(event) => update("fileCheckIntervalHours", Number(event.target.value))}
+            aria-describedby="drive-file-check-help"
+          />
+          <p id="drive-file-check-help" className="text-xs text-muted-foreground">
+            {t("settings.drive.configuration.help.fileCheckInterval")}
           </p>
         </div>
       </div>

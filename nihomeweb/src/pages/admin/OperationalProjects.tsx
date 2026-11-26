@@ -768,7 +768,13 @@ const OperationalProjects = () => {
 
           {detail.driveFoldersReady === false && canManage && (
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-card p-3 text-sm">
-              <span>{t("operationalProjects.driveFolders.missing")}</span>
+              <span>
+                {t(
+                  detail.driveFoldersDeleted
+                    ? "operationalProjects.driveFolders.deleted"
+                    : "operationalProjects.driveFolders.missing",
+                )}
+              </span>
               <Button
                 size="sm"
                 variant="outline"
@@ -776,7 +782,11 @@ const OperationalProjects = () => {
                 onClick={() => void ensureDriveFolders()}
               >
                 <RefreshCcw className="mr-2 h-4 w-4" />
-                {t("operationalProjects.driveFolders.create")}
+                {t(
+                  detail.driveFoldersDeleted
+                    ? "operationalProjects.driveFolders.recreate"
+                    : "operationalProjects.driveFolders.create",
+                )}
               </Button>
             </div>
           )}

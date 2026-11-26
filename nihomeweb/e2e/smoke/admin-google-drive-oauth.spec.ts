@@ -33,6 +33,7 @@ const configuration = {
   deleteDriveFilesOnWebDelete: false,
   deleteWebRecordsOnDriveDelete: true,
   pollIntervalSeconds: 15,
+  fileCheckIntervalHours: 6,
   accountEmail: "current@nicon.test",
   connectedAt: "2026-08-31T10:00:00Z",
   rowVersion: "AAAAAAAAB9Q=",

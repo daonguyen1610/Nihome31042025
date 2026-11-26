@@ -27,6 +27,7 @@ public class OperationalProjectsController(
     IAuditLogger audit,
     IGoogleDriveSettingsStore driveSettings,
     SiteSettingsService siteSettings,
+    IProjectDriveSyncProcessor driveSync,
     ILogger<OperationalProjectsController> logger) : ControllerBase
 {
     [HttpGet("code-suggestion")]
@@ -418,15 +419,57 @@ public class OperationalProjectsController(
     {
         var scope = await ResolveScopeAsync(ct);
         if (scope is null) return Unauthorized();
-        var content = await documents.DownloadAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll, ct);
-        if (content is null) return NotFound();
-        Response.ContentType = content.ContentType;
-        Response.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+        try
         {
-            FileNameStar = content.OriginalFileName,
-        }.ToString();
-        await content.WriteToAsync(Response.Body, ct);
-        return new EmptyResult();
+            var content = await documents.DownloadAsync(id, documentId, scope.Value.UserId, scope.Value.CanSeeAll, ct);
+            if (content is null) return NotFound();
+            Response.ContentType = content.ContentType;
+            Response.Headers.ContentDisposition = new System.Net.Http.Headers.ContentDispositionHeaderValue("attachment")
+            {
+                FileNameStar = content.OriginalFileName,
+            }.ToString();
+            await content.WriteToAsync(Response.Body, ct);
+            return new EmptyResult();
+        }
+        catch (ProjectDocumentFileMissingException exception)
+        {
+            return FileMissing(exception);
+        }
+        // Gone since the last check: record that now instead of waiting for the next one.
+        catch (Google.GoogleApiException exception) when (
+            exception.HttpStatusCode == System.Net.HttpStatusCode.NotFound && !Response.HasStarted)
+        {
+            await driveSync.VerifyDocumentAsync(documentId, ct);
+            Response.Headers.Remove("Content-Disposition");
+            return FileMissing(new ProjectDocumentFileMissingException());
+        }
+    }
+
+    private ConflictObjectResult FileMissing(ProjectDocumentFileMissingException exception) =>
+        Conflict(new { code = "DRIVE_FILE_MISSING", message = exception.Message });
+
+    [HttpPost("{id:int}/documents/{documentId:long}/verify")]
+    public async Task<ActionResult<ProjectDocumentResponse>> VerifyDocument(int id, long documentId, CancellationToken ct)
+    {
+        var scope = await ResolveScopeAsync(ct);
+        if (scope is null) return Unauthorized();
+        var designManager = await projectAccess.CanManageDesignDocumentAsync(scope.Value.UserId, id, documentId, ct);
+        if (!designManager && !await permissions.HasAsync(scope.Value.UserId, "operations.projects.manage", ct)) return Forbid();
+        var canSeeAll = scope.Value.CanSeeAll || designManager;
+        var listed = (await documents.ListAsync(id, scope.Value.UserId, canSeeAll, ct))?
+            .SingleOrDefault(item => item.Id == documentId);
+        if (listed is null) return NotFound();
+        if (listed.SyncStatus is not (nameof(ProjectDocumentSyncStatus.Synced) or
+            nameof(ProjectDocumentSyncStatus.Missing) or nameof(ProjectDocumentSyncStatus.Damaged)))
+            return Conflict(new { message = "Tệp đang chờ đồng bộ nên chưa kiểm tra được trên Google Drive." });
+        if (!await driveSync.VerifyDocumentAsync(documentId, ct))
+            return StatusCode(StatusCodes.Status503ServiceUnavailable, new
+            {
+                code = "DRIVE_CHECK_UNAVAILABLE",
+                message = "Chưa kiểm tra được tệp trên Google Drive. Kiểm tra kết nối trong Cài đặt → Google Drive rồi thử lại.",
+            });
+        AuditDocument("project-document.verify", id, documentId, "checked on Google Drive");
+        return Ok((await documents.ListAsync(id, scope.Value.UserId, canSeeAll, ct))!.Single(item => item.Id == documentId));
     }
 
     [HttpDelete("{id:int}/documents/{documentId:long}")]
@@ -504,6 +547,10 @@ public class OperationalProjectsController(
         catch (ProjectDocumentConflictException exception)
         {
             return Conflict(new { message = exception.Message });
+        }
+        catch (ProjectDriveFolderMissingException exception)
+        {
+            return Conflict(new { code = "DRIVE_FOLDER_MISSING", message = exception.Message });
         }
     }
 

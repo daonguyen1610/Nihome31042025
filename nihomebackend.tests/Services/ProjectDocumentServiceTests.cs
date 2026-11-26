@@ -552,6 +552,126 @@ public sealed class ProjectDocumentServiceTests : IDisposable
         Assert.Equal(category == ProjectDocumentCategory.Finance, seen.Contains(nameof(ProjectDocumentCategory.Finance)));
     }
 
+    private ProjectDocument AddLostDocument(ProjectDocumentSyncStatus status, string localPath)
+    {
+        var document = AddDocument(ProjectDocumentCategory.Finance);
+        document.SyncStatus = status;
+        document.DesiredOperation = ProjectDocumentDesiredOperation.None;
+        document.SyncError = "operationalProjects.documents.driveProblem.trashed";
+        document.LocalPath = localPath;
+        document.DriveFileId = "lost-file";
+        document.DriveFolderId = "lost-folder";
+        document.DriveCheckedAt = DateTime.UtcNow;
+        db.SaveChanges();
+        return document;
+    }
+
+    [Fact]
+    public async Task RetryAsync_MissingFileWithServerCopy_UploadsItAgainAsANewGeneration()
+    {
+        var document = AddLostDocument(ProjectDocumentSyncStatus.Missing, "/files/contracts/signed.pdf");
+
+        var result = await service.RetryAsync(project.Id, document.Id, 7, true);
+
+        Assert.True(result!.HasServerCopy);
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, document.SyncStatus);
+        Assert.Equal(ProjectDocumentDesiredOperation.Upsert, document.DesiredOperation);
+        Assert.Equal(2, document.Generation);
+        Assert.Null(document.DriveFileId);
+        Assert.Null(document.DriveFolderId);
+        Assert.Null(document.SyncError);
+    }
+
+    [Theory]
+    [InlineData(ProjectDocumentSyncStatus.Missing, "", typeof(ProjectDocumentFileMissingException))]
+    [InlineData(ProjectDocumentSyncStatus.Damaged, "/files/contracts/signed.pdf", typeof(ProjectDocumentValidationException))]
+    public async Task RetryAsync_NothingSafeToUpload_IsRejected(
+        ProjectDocumentSyncStatus status, string localPath, Type expected)
+    {
+        var document = AddLostDocument(status, localPath);
+
+        await Assert.ThrowsAsync(expected, () => service.RetryAsync(project.Id, document.Id, 7, true));
+
+        Assert.Equal(status, document.SyncStatus);
+        Assert.Equal("lost-file", document.DriveFileId);
+    }
+
+    [Theory]
+    [InlineData(ProjectDocumentSyncStatus.Missing)]
+    [InlineData(ProjectDocumentSyncStatus.Damaged)]
+    public async Task DownloadAsync_LostFileWithServerCopy_ServesTheServerOriginal(ProjectDocumentSyncStatus status)
+    {
+        var document = AddLostDocument(status, "/files/contracts/signed.pdf");
+        storage.Setup(item => item.OpenRead(project.Id, document.LocalPath))
+            .Returns(() => new MemoryStream("original"u8.ToArray()));
+
+        var download = await service.DownloadAsync(project.Id, document.Id, 7, true);
+        using var received = new MemoryStream();
+        await download!.WriteToAsync(received, default);
+
+        Assert.Equal("original"u8.ToArray(), received.ToArray());
+        drive.Verify(item => item.DownloadAsync(It.IsAny<string>(), It.IsAny<Stream>(), It.IsAny<CancellationToken>()), Times.Never);
+    }
+
+    [Fact]
+    public async Task DownloadAsync_MissingFileWithoutServerCopy_SaysTheFileIsGone()
+    {
+        var document = AddLostDocument(ProjectDocumentSyncStatus.Missing, "");
+
+        var error = await Assert.ThrowsAsync<ProjectDocumentFileMissingException>(() =>
+            service.DownloadAsync(project.Id, document.Id, 7, true));
+
+        Assert.Contains("Google Drive", error.Message);
+    }
+
+    [Fact]
+    public async Task DeleteAsync_MissingFile_LetsTheOperatorRemoveTheRecord()
+    {
+        var document = AddLostDocument(ProjectDocumentSyncStatus.Missing, "");
+
+        Assert.True(await service.DeleteAsync(project.Id, document.Id, 7, true));
+
+        Assert.Equal(ProjectDocumentDesiredOperation.Delete, document.DesiredOperation);
+    }
+
+    // The survey screen shows a lost photo as failed with its Retry button, which comes through here.
+    [Fact]
+    public async Task RetryExistingManagedFileAsync_MissingFile_QueuesANewCopy()
+    {
+        var document = AddLostDocument(ProjectDocumentSyncStatus.Missing, "/uploads/surveys/photo.jpg");
+        document.SourceModule = ProjectDocumentSourceModule.Survey;
+        document.SourceType = ProjectDocumentSourceType.ExistingManagedFile;
+        document.SourceEntityType = "SurveyMedia";
+        document.SourceSlot = "file";
+        document.SourceRecordId = 5;
+        db.SaveChanges();
+        storage.Setup(item => item.OpenRead(project.Id, document.LocalPath)).Returns(() => new MemoryStream([1]));
+
+        Assert.True(await service.RetryExistingManagedFileAsync(project.Id, ProjectDocumentSourceModule.Survey,
+            "SurveyMedia", "file", 5, "/uploads/surveys/photo.jpg", 7));
+
+        Assert.Equal(ProjectDocumentSyncStatus.Pending, document.SyncStatus);
+        Assert.Equal(ProjectDocumentDesiredOperation.Upsert, document.DesiredOperation);
+        Assert.Equal(2, document.Generation);
+        Assert.Null(document.DriveFileId);
+    }
+
+    // A stored path is not a stored file: offering Download or Send again for it would only fail.
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task ListAsync_LostDocument_ReportsAServerCopyOnlyWhenTheFileIsReallyThere(bool onDisk)
+    {
+        var document = AddLostDocument(ProjectDocumentSyncStatus.Missing, "/files/project-documents/1/concept.jpg");
+        var open = storage.Setup(item => item.OpenRead(project.Id, document.LocalPath));
+        if (onDisk) open.Returns(() => new MemoryStream([1]));
+        else open.Throws(new FileNotFoundException());
+
+        var listed = Assert.Single((await service.ListAsync(project.Id, 7, true))!);
+
+        Assert.Equal(onDisk, listed.HasServerCopy);
+    }
+
     private ProjectDocument AddDocument(ProjectDocumentCategory category)
     {
         var document = new ProjectDocument

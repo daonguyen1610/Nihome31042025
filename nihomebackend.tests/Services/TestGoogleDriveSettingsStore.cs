@@ -23,6 +23,7 @@ internal sealed class TestGoogleDriveSettingsStore(GoogleDriveOptions options) :
             options.DeleteDriveFilesOnWebDelete,
             options.DeleteWebRecordsOnDriveDelete,
             options.PollIntervalSeconds,
+            options.FileCheckIntervalHours,
             null,
             null,
             string.Empty));

@@ -14,6 +14,12 @@ public interface IProjectDriveFolderService
 
     /// <summary>Creates the whole project folder tree and binds every category; safe to repeat.</summary>
     Task EnsureTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Administrator action: forgets bound folders that are gone from Drive, then completes the tree. Nothing
+    /// on Drive is deleted, so a trashed folder can still be restored by hand.
+    /// </summary>
+    Task RepairTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default);
 }
 
 public sealed class ProjectDriveFolderService(
@@ -32,7 +38,11 @@ public sealed class ProjectDriveFolderService(
             throw new ProjectDocumentValidationException("Tệp chưa phân loại không thể được lưu vào thư mục dự án.");
         var existing = await db.ProjectDriveFolders.AsNoTracking().FirstOrDefaultAsync(folder =>
             folder.OperationalProjectId == project.Id && folder.Category == category, ct);
-        if (existing is not null) return existing;
+        if (existing is not null)
+        {
+            await EnsureStillOnDriveAsync(existing, ct);
+            return existing;
+        }
 
         var remote = await drive.EnsureFolderPathAsync(
             Segments(options, project, options.Folders.SegmentsFor(category)), ct);
@@ -67,9 +77,50 @@ public sealed class ProjectDriveFolderService(
         var options = await settingsStore.GetRuntimeAsync(ct);
         if (!options.Enabled || string.IsNullOrWhiteSpace(options.RefreshToken) || string.IsNullOrWhiteSpace(options.RootFolderId))
             throw new ProjectDriveNotConnectedException();
+        var bound = await db.ProjectDriveFolders.AsNoTracking()
+            .Where(folder => folder.OperationalProjectId == project.Id).Select(folder => folder.Category).ToListAsync(ct);
         foreach (var category in Enum.GetValues<ProjectDocumentCategory>()
-                     .Where(category => category != ProjectDocumentCategory.Unclassified))
+                     .Where(category => category != ProjectDocumentCategory.Unclassified).Except(bound))
             await EnsureAsync(project, category, userId, ct);
+    }
+
+    public async Task RepairTreeAsync(OperationalProject project, int? userId = null, CancellationToken ct = default)
+    {
+        var options = await settingsStore.GetRuntimeAsync(ct);
+        if (!options.Enabled || string.IsNullOrWhiteSpace(options.RefreshToken) || string.IsNullOrWhiteSpace(options.RootFolderId))
+            throw new ProjectDriveNotConnectedException();
+        // With the wrong account every folder looks gone, so no link is dropped before the root is writable.
+        var root = await drive.CheckConnectionAsync(ct);
+        if (!root.IsFolder || root.IsTrashed || !root.CanAddChildren) throw new ProjectDriveNotConnectedException();
+        var bindings = await db.ProjectDriveFolders
+            .Where(folder => folder.OperationalProjectId == project.Id).ToListAsync(ct);
+        foreach (var binding in bindings)
+        {
+            if (await IsOnDriveAsync(binding.DriveFolderId, ct)) binding.MissingSince = null;
+            else db.ProjectDriveFolders.Remove(binding);
+        }
+        await db.SaveChangesAsync(ct);
+        await EnsureTreeAsync(project, userId, ct);
+    }
+
+    private async Task<bool> IsOnDriveAsync(string folderId, CancellationToken ct) =>
+        await drive.GetMetadataAsync(folderId, ct) is { IsTrashed: false };
+
+    // A file sent into a trashed folder lands in the trash while looking synced.
+    private async Task EnsureStillOnDriveAsync(ProjectDriveFolder binding, CancellationToken ct)
+    {
+        var onDrive = await IsOnDriveAsync(binding.DriveFolderId, ct);
+        if (onDrive != binding.MissingSince.HasValue)
+        {
+            if (!onDrive) throw new ProjectDriveFolderMissingException();
+            return;
+        }
+        // A bulk update, so the shared context and the reconciliation lease are not disturbed.
+        var missingSince = onDrive ? (DateTime?)null : DateTime.UtcNow;
+        await db.ProjectDriveFolders.Where(folder => folder.Id == binding.Id)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(folder => folder.MissingSince, missingSince), ct);
+        binding.MissingSince = missingSince;
+        if (!onDrive) throw new ProjectDriveFolderMissingException();
     }
 
     private static List<DriveFolderSegment> Segments(
@@ -118,3 +169,6 @@ public sealed class ProjectDriveFolderService(
 
 public sealed class ProjectDriveNotConnectedException()
     : InvalidOperationException("Google Drive chưa được bật hoặc chưa kết nối tài khoản.");
+
+public sealed class ProjectDriveFolderMissingException()
+    : InvalidOperationException("Thư mục đích trên Google Drive đã bị xoá. Hãy khôi phục thư mục từ thùng rác hoặc tạo lại thư mục của dự án.");

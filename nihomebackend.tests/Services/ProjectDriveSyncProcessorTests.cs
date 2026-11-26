@@ -10,7 +10,7 @@ using nihomebackend.tests.Helpers;
 
 namespace nihomebackend.tests.Services;
 
-public sealed class ProjectDriveSyncProcessorTests : IDisposable
+public sealed partial class ProjectDriveSyncProcessorTests : IDisposable
 {
     private readonly NihomeBackend.Data.AppDbContext db = DbContextFactory.CreateRelational();
     private readonly Mock<IProjectDocumentStorageService> storage = new();
@@ -18,6 +18,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     private readonly Mock<IProjectDriveClaimLease> claimLease = new();
     private readonly Mock<IProjectDriveFolderService> folders = new();
     private readonly Mock<INotificationService> notifications = new();
+    private readonly Mock<IAuditLogger> audit = new();
     private readonly OperationalProject project;
     private readonly ProjectDriveFolder folder;
     private readonly ProjectDriveSyncProcessor processor;
@@ -54,7 +55,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
                 operation(ct));
         processor = new ProjectDriveSyncProcessor(db, storage.Object, drive.Object, folders.Object,
             new TestGoogleDriveSettingsStore(options), claimLease.Object,
-            Mock.Of<IAuditLogger>(), notifications.Object, NullLogger<ProjectDriveSyncProcessor>.Instance);
+            audit.Object, notifications.Object, NullLogger<ProjectDriveSyncProcessor>.Instance);
     }
 
     [Fact]
@@ -576,6 +577,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
         replica.SourceType = ProjectDocumentSourceType.ManualUpload;
         replica.Origin = ProjectDocumentOrigin.Nicon;
         db.SaveChanges();
+        DriveReturns("remote-replica", Live("remote-replica"));
         var pending = AddPendingDocument();
         storage.Setup(item => item.StoreDriveImportAsync(It.IsAny<int>(), It.IsAny<string>(), It.IsAny<string>(),
                 It.IsAny<long>(), It.IsAny<Func<Stream, CancellationToken, Task>>(), It.IsAny<CancellationToken>()))
@@ -874,7 +876,7 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
     }
 
     [Fact]
-    public async Task ReconcileProjectAsync_KnownRemoteDeletion_PreservesWebRecordWhenDisabled()
+    public async Task ReconcileProjectAsync_KnownRemoteDeletion_MarksMissingWhenDisabled()
     {
         options.DeleteWebRecordsOnDriveDelete = false;
         var document = AddKnownDocument("remote-missing", "1", DateTime.UtcNow.AddMinutes(-5));
@@ -885,7 +887,8 @@ public sealed class ProjectDriveSyncProcessorTests : IDisposable
 
         Assert.Equal("remote-missing", document.DriveFileId);
         Assert.Equal(ProjectDocumentDesiredOperation.None, document.DesiredOperation);
-        Assert.Equal(ProjectDocumentSyncStatus.Synced, document.SyncStatus);
+        Assert.Equal(ProjectDocumentSyncStatus.Missing, document.SyncStatus);
+        Assert.Null(document.DeletedAt);
     }
 
     [Fact]

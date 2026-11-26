@@ -276,6 +276,56 @@ public sealed class OperationalProjectDocumentsControllerTests(
     }
 
     [Fact]
+    public async Task FileCheck_TrashedFile_ShowsMissingUntilTheOperatorRestoresAndChecksIt()
+    {
+        await AuthenticateAsAsync("SUPER_ADMIN");
+        var projectId = await CreateProjectAsync();
+        using var content = CreateUploadContent("DesignBasic", "NICON-bien-ban-ban-giao.pdf", PdfBytes);
+        var documentId = (await ReadJsonAsync(await SendUploadAsync(projectId, content))).GetProperty("id").GetInt64();
+        await WithDbAsync(async db =>
+        {
+            foreach (var other in await db.ProjectDocuments.Where(item => item.Id != documentId).ToListAsync())
+            {
+                other.NextSyncAttemptAt = DateTime.UtcNow.AddDays(1);
+                other.DriveCheckedAt = DateTime.UtcNow;
+            }
+            await db.SaveChangesAsync();
+        });
+        using (var scope = Factory.Services.CreateScope())
+            (await scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+                .ProcessNextOutboundAsync()).Should().BeTrue();
+        var synced = await LoadDocumentAsync(documentId);
+        synced.SyncStatus.Should().Be(ProjectDocumentSyncStatus.Synced);
+
+        factory.SetDriveTrashed(synced.DriveFileId!, true);
+        using (var scope = Factory.Services.CreateScope())
+            (await scope.ServiceProvider.GetRequiredService<IProjectDriveSyncProcessor>()
+                .VerifyDriveFilesAsync()).Should().BeGreaterThan(0);
+
+        var listUrl = $"/api/operational-projects/{projectId}/documents";
+        var listed = (await ReadJsonAsync(await Client.GetAsync(listUrl))).EnumerateArray()
+            .Single(item => item.GetProperty("id").GetInt64() == documentId);
+        listed.GetProperty("syncStatus").GetString().Should().Be("Missing");
+        listed.GetProperty("syncError").GetString().Should().Be("operationalProjects.documents.driveProblem.trashed");
+        listed.GetProperty("hasServerCopy").GetBoolean().Should().BeFalse();
+        var download = await Client.GetAsync($"{listUrl}/{documentId}/content");
+        download.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        (await ReadJsonAsync(download)).GetProperty("code").GetString().Should().Be("DRIVE_FILE_MISSING");
+        (await Client.PostAsync($"{listUrl}/{documentId}/retry", null)).StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        await AuthenticateAsAsync("ACCOUNTANT");
+        (await Client.PostAsync($"{listUrl}/{documentId}/verify", null)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        await AuthenticateAsAsync("SUPER_ADMIN");
+
+        factory.SetDriveTrashed(synced.DriveFileId!, false);
+        var verified = await Client.PostAsync($"{listUrl}/{documentId}/verify", null);
+        verified.StatusCode.Should().Be(HttpStatusCode.OK);
+        (await ReadJsonAsync(verified)).GetProperty("syncStatus").GetString().Should().Be("Synced");
+        (await (await Client.GetAsync($"{listUrl}/{documentId}/content")).Content.ReadAsByteArrayAsync())
+            .Should().Equal(PdfBytes);
+    }
+
+    [Fact]
     public async Task Upload_FailedReadbackThenDelete_TrashesReplicaAndRemovesStagedFile()
     {
         await AuthenticateAsAsync("SUPER_ADMIN");
@@ -1173,6 +1223,9 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
     public bool CorruptDownloads { get => driveAdapter.CorruptDownloads; set => driveAdapter.CorruptDownloads = value; }
     public int DriveFileCount => driveAdapter.ActiveFileCount;
 
+    /// <summary>What a person does in Drive: move a file to the trash, or restore it.</summary>
+    public void SetDriveTrashed(string fileId, bool trashed) => driveAdapter.SetTrashed(fileId, trashed);
+
     public void FailDriveUploadFor(long documentId) =>
         driveAdapter.FailUploadFor($"project-document:{documentId}");
 
@@ -1263,6 +1316,9 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
     private sealed class InMemoryGoogleDriveAdapter : IGoogleDriveAdapter
     {
         private readonly ConcurrentDictionary<string, DriveEntry> files = new();
+        private readonly ConcurrentDictionary<string, string> folderNamesById = new();
+
+        public void SetTrashed(string fileId, bool trashed) => files[fileId] = files[fileId] with { IsTrashed = trashed };
         private string? failedReplicaKey;
 
         public bool CorruptDownloads { get; set; }
@@ -1314,8 +1370,14 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
             await destination.WriteAsync(bytes, ct);
         }
 
+        // Like Drive, folders created here have metadata too.
         public Task<DriveItem?> GetMetadataAsync(string fileId, CancellationToken ct = default) =>
-            Task.FromResult(files.TryGetValue(fileId, out var entry) ? Item(fileId, entry) : null);
+            Task.FromResult(files.TryGetValue(fileId, out var entry)
+                ? Item(fileId, entry)
+                : folderNamesById.TryGetValue(fileId, out var name)
+                    ? new DriveItem(fileId, name, "application/vnd.google-apps.folder", null, "1", DateTime.UtcNow,
+                        null, new Dictionary<string, string>(), false)
+                    : null);
 
         public Task UpdateFileNameAsync(string fileId, string fileName, CancellationToken ct = default)
         {
@@ -1340,10 +1402,11 @@ public sealed class OperationalProjectDocumentsWebApplicationFactory : NihomeWeb
             CancellationToken ct = default) =>
             throw new NotSupportedException("This document-sync fake does not model permanent ownership checks.");
 
-        private static DriveFolder Folder(IEnumerable<string> names)
+        private DriveFolder Folder(IEnumerable<string> names)
         {
             var key = string.Join('/', names);
             var id = $"folder-{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(key))).ToLowerInvariant()[..16]}";
+            folderNamesById[id] = key;
             return new DriveFolder(id, $"https://drive.test/folders/{id}");
         }
 
